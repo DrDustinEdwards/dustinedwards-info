@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Status } from "capsomer/react/status";
 
 import { CopyButton } from "~/components/admin/copy-button";
 import { DocumentCard } from "~/components/admin/media-document-card";
@@ -17,16 +18,7 @@ import type { Route } from "../../routes/+types/admin.media._index";
 
 type Listing = Extract<Route.ComponentProps["loaderData"], { detail: unknown }>;
 
-/** One file in the library: a grid tile or a list row, the same markup under both layouts. */
-export function MediaTile({
-  object,
-  chosen,
-  selectRange,
-  linkTo,
-  view,
-  scanComplete,
-  tabStop,
-}: {
+type TileProps = {
   object: Listing["objects"][number];
   chosen: string[];
   selectRange: (key: string, shift: boolean) => void;
@@ -35,7 +27,90 @@ export function MediaTile({
   scanComplete: boolean;
   /** Grid only: whether this tile's controls are in the tab order. The arrows move between tiles. */
   tabStop: boolean;
+};
+
+const FLAG_TONE: Record<string, "warn" | "info"> = {
+  duplicate: "info",
+  unattached: "warn",
+  "no-alt": "warn",
+};
+
+const USAGE_TONE: Record<string, "ok" | "warn" | "nodata"> = {
+  used: "ok",
+  unattached: "warn",
+  unknown: "nodata",
+};
+
+/** The select box: a real checkbox, which the bulk form reads, on Capsomer's media markup. */
+function SelectBox({
+  object,
+  name,
+  chosen,
+  selectRange,
+  tabIndex,
+}: {
+  object: TileProps["object"];
+  name: string;
+  chosen: string[];
+  selectRange: TileProps["selectRange"];
+  tabIndex: number | undefined;
 }) {
+  return (
+    <label className="cap-media-check">
+      <input
+        type="checkbox"
+        name="key"
+        value={object.key}
+        tabIndex={tabIndex}
+        checked={chosen.includes(object.key)}
+        onChange={(event) =>
+          selectRange(
+            object.key,
+            // Keyboard activation reports shiftKey false, so Space still toggles one row.
+            (event.nativeEvent as MouseEvent | undefined)?.shiftKey === true,
+          )
+        }
+      />
+      <span className="cap-media-check-box" aria-hidden="true">
+        <svg viewBox="0 0 16 16">
+          <path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <span className="cap-media-check-word" aria-hidden="true">
+        Selected
+      </span>
+      <span className="cap-sr-only">Select {name}</span>
+    </label>
+  );
+}
+
+/** The thumbnail, or the card a document gets because the Images binding can never thumbnail it. */
+function Thumb({ object }: { object: TileProps["object"] }) {
+  return (
+    <span
+      className="cap-media-thumb"
+      // Set only when present: the Images binding does not rasterize SVGs, so the placeholder can be null and url(null) renders black.
+      style={object.placeholder ? { backgroundImage: `url("${object.placeholder}")` } : undefined}
+    >
+      {object.viewable ? (
+        <img src={object.thumb} alt="" loading="lazy" decoding="async" width={320} height={320} />
+      ) : (
+        <DocumentCard object={object} />
+      )}
+    </span>
+  );
+}
+
+/** One file in the grid: Capsomer's tile, with the site's keys, flags, selection and copy. */
+export function MediaTile({
+  object,
+  chosen,
+  selectRange,
+  linkTo,
+  view,
+  scanComplete,
+  tabStop,
+}: TileProps) {
   const name = displayName(object);
   const usage = usageDescriptor(object.usage);
   const flags = flagsFor({
@@ -49,53 +124,28 @@ export function MediaTile({
     usage: object.usage,
     twin: object.twinCount > 0 ? name : null,
   });
-  // Not on hover: the server cannot render hover, and it would reveal a control the keyboard cannot reach first.
-  const showCaption =
-    view.view === "grid" && (chosen.includes(object.key) || view.key === object.key);
-  const grid = view.view === "grid";
-  // Roving: in the grid only one tile's controls take Tab; the list keeps every row in the tab order.
-  const roving = grid && !tabStop ? -1 : undefined;
+  const active = view.key === object.key;
+  // Roving: in the grid only one tile's controls take Tab.
+  const roving = !tabStop ? -1 : undefined;
+
   return (
     <li
-      key={object.key}
-      className="media-card"
+      className="cap-media-tile"
       /* The keyboard navigator addresses tiles by key, not index, so a reflow cannot change what it means. */
       data-tile={object.key}
+      data-state="ready"
       data-selected={chosen.includes(object.key) || undefined}
-      data-active={view.key === object.key || undefined}
+      data-active={active || undefined}
       data-kind={object.viewable ? "image" : "document"}
     >
-      <label className="media-check-label">
-        <input
-          type="checkbox"
-          name="key"
-          value={object.key}
-          tabIndex={roving}
-          checked={chosen.includes(object.key)}
-          onChange={(event) =>
-            selectRange(
-              object.key,
-              // Keyboard activation reports shiftKey false, so Space still toggles one row.
-              (event.nativeEvent as MouseEvent | undefined)?.shiftKey === true,
-            )
-          }
-        />
-        <span className="sr-only">Select {name}</span>
-      </label>
-      {/* `aspect-ratio` on the wrapper reserves the space, so a lazily-loaded tile cannot reflow the rows below. */}
-      {/* The caption is a sibling of the link, not a child: a `<button>` inside an `<a>` is invalid
-          HTML that browsers resolve differently. */}
-      <span className="media-thumb-frame">
       {/* Without `preventScrollReset`, `<ScrollRestoration>` throws the reader back to the top. */}
       <Link
         to={linkTo({ key: object.key })}
-        className="media-thumb-link"
+        className="cap-media-open"
         preventScrollReset
-        /* The grid's tab stop, named for the file. In the list the name link is the stop, so this
-           duplicate of it leaves the tab order and the accessibility tree. */
-        {...(grid
-          ? { "aria-label": name, tabIndex: roving }
-          : { "aria-hidden": true, tabIndex: -1 })}
+        aria-label={name}
+        aria-current={active ? "true" : undefined}
+        tabIndex={roving}
         /* preventDefault only on modified clicks, so a plain click stays a link that works without script. */
         onClick={(event) => {
           if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return;
@@ -103,118 +153,96 @@ export function MediaTile({
           selectRange(object.key, event.shiftKey);
         }}
       >
-        <span
-          className="media-thumb-box"
-          // Set only when present: the Images binding does not rasterize SVGs, so the placeholder can be null and url(null) renders black.
-          style={
-            object.placeholder
-              ? { backgroundImage: `url("${object.placeholder}")` }
-              : undefined
-          }
-          data-placeholder={object.placeholder ? "lqip" : "none"}
-          data-kind={object.viewable ? "image" : "document"}
-        >
-          {/* The Images binding can never thumbnail a document, so it gets a card, not a broken `<img>`. */}
-          {object.viewable ? (
-            <img
-              className="media-thumb"
-              src={object.thumb}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              width={320}
-              height={320}
-            />
-          ) : (
-            <DocumentCard object={object} />
-          )}
+        <Thumb object={object} />
+        <span className="cap-media-name" title={object.key}>
+          {middleTruncate(name)}
+        </span>
+        <span className="cap-media-meta">
+          {byteSize(object.size)}
+          {object.width && object.height ? ` · ${formatDims(object.width, object.height)}` : ""}
+          {/* Never say "unused": the repository scan cannot see a constructed path or an external
+              site linking the file. */}
+          {scanComplete ? ` · ${usage.label}` : ""}
         </span>
       </Link>
 
       {tileFlag ? (
-        <span
-          className="media-tile-flag"
-          data-flag={tileFlag.id}
-          title={tileFlag.title}
-        >
-          <span className="sr-only">{tileFlag.title}</span>
+        <span className="cap-media-flags">
+          <Status tone={FLAG_TONE[tileFlag.id] ?? "info"}>{tileFlag.title}</Status>
         </span>
       ) : null}
 
-      {/* The tile's only copy control when it renders: two same-named buttons would be read twice. */}
-      {showCaption ? (
-        <span className="media-caption">
-          <span className="media-caption-text">
-            <span className="media-caption-name">{name}</span>
-            <span className="media-caption-meta">
-              {byteSize(object.size)}
-              {object.width && object.height
-                ? ` · ${formatDims(object.width, object.height)}`
-                : ""}
-            </span>
-          </span>
-          <CopyButton value={object.url} label={name} tabIndex={roving} />
-        </span>
-      ) : null}
-      </span>
+      <SelectBox object={object} name={name} chosen={chosen} selectRange={selectRange} tabIndex={roving} />
 
-      {/* `display: contents` in both layouts: a row's cells must be grid items of the row, so no
-          wrapper may sit between them. */}
-      <div className="media-card-body">
-        <div className="media-name-row">
-          {/* Content-addressed keys read as noise, so the author's name identifies the file. */}
-          <Link
-            to={linkTo({ key: object.key })}
-            className="media-name"
-            title={object.key}
-            preventScrollReset
-            /* In the grid the thumbnail is the stop and carries this name, so this one steps aside. */
-            {...(grid ? { "aria-hidden": true, tabIndex: -1 } : {})}
-          >
-            {view.view === "list" ? name : middleTruncate(name)}
-          </Link>
-          {/* Without the directory, two same-named files in different directories read as one row twice. */}
-          <span className="media-name-dir">{folderPrefix(object.key)}</span>
-        </div>
-        {/* Never say "unused": the repository scan cannot see a constructed path or an external site
-            linking the file. */}
-        <p className="media-meta">
-          <span className="chip">{object.role}</span> {byteSize(object.size)}
-          {scanComplete ? ` · ${usage.label}` : ""}
-        </p>
-      </div>
+      {/* The tile's only copy control: two same-named buttons would be read twice. */}
+      <CopyButton value={object.url} label={name} tabIndex={roving} />
+    </li>
+  );
+}
 
-      {/* "not measured" rather than 0x0 or blank, which would read as a value, not an absence. */}
-      {/* The dot is a second channel beside the word, never the signal alone, for readers who cannot
-          separate the hues. */}
-      <span className="media-col media-col-usage">
-        <span className="media-usage-line">
-          <span
-            className="media-usage-dot"
-            data-usage={scanComplete ? object.usage : "unknown"}
-            aria-hidden="true"
+/** One file in the list: a table row, so its facts are columns a screen reader can navigate. */
+export function MediaRow({ object, chosen, selectRange, linkTo, view, scanComplete }: TileProps) {
+  const name = displayName(object);
+  const usage = usageDescriptor(object.usage);
+  const flags = flagsFor({
+    viewable: object.viewable,
+    alt: object.alt,
+    size: object.size,
+    twinCount: object.twinCount,
+  });
+  const active = view.key === object.key;
+
+  return (
+    <tr
+      data-tile={object.key}
+      data-selected={chosen.includes(object.key) || undefined}
+      aria-selected={chosen.includes(object.key) || undefined}
+    >
+      <td>
+        <label className="cap-check">
+          <input
+            type="checkbox"
+            name="key"
+            value={object.key}
+            checked={chosen.includes(object.key)}
+            onChange={(event) =>
+              selectRange(object.key, (event.nativeEvent as MouseEvent | undefined)?.shiftKey === true)
+            }
           />
+          <span className="cap-sr-only">Select {name}</span>
+        </label>
+      </td>
+      <th scope="row">
+        {/* Content-addressed keys read as noise, so the author's name identifies the file. */}
+        <Link
+          to={linkTo({ key: object.key })}
+          className="cap-table-open"
+          title={object.key}
+          preventScrollReset
+          aria-current={active ? "true" : undefined}
+        >
+          {name}
+        </Link>
+        {/* Without the directory, two same-named files in different directories read as one row twice. */}
+        <span className="cap-table-aside">{folderPrefix(object.key)}</span>
+      </th>
+      {/* "not measured" rather than 0x0 or blank, which would read as a value, not an absence. */}
+      <td>
+        <Status tone={USAGE_TONE[scanComplete ? object.usage : "unknown"] ?? "nodata"}>
           <span title={scanComplete ? usage.title : undefined}>
             {scanComplete ? usage.label : "unknown"}
           </span>
-        </span>
+        </Status>
         {flags.length > 0 ? (
-          <span className="media-row-flags">
-            {flags.map((f) => f.label).join(" · ")}
-          </span>
+          <span className="cap-table-aside">{flags.map((f) => f.label).join(" · ")}</span>
         ) : null}
-      </span>
-      <span className="media-col media-col-dims">
-        {formatDims(object.width, object.height)}
-      </span>
-      <span className="media-col media-col-size">{byteSize(object.size)}</span>
-      <span className="media-col media-col-added">{formatAdded(object.uploaded)}</span>
-
-      {showCaption ? null : (
-        <span className="media-col-copy">
-          <CopyButton value={object.url} label={name} tabIndex={roving} />
-        </span>
-      )}
-    </li>
+      </td>
+      <td data-num>{formatDims(object.width, object.height)}</td>
+      <td data-num>{byteSize(object.size)}</td>
+      <td data-num>{formatAdded(object.uploaded)}</td>
+      <td>
+        <CopyButton value={object.url} label={name} />
+      </td>
+    </tr>
   );
 }

@@ -13,14 +13,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export const CSS_PATH = join(root, "app", "app.css");
 
-/** Gates reading "the stylesheets" must follow both entries or silently narrow to the public plane. */
-const ADMIN_CSS_PATH = join(root, "app", "admin.css");
-
 /**
- * Root matches every route, so its CSS imports are the sheets every page loads. The order lives
- * here, not in `@import` lines at the bottom of the entry sheet: CSS drops a late `@import`.
+ * The public layout nests every visitor-facing route, so its CSS imports are the sheets every public page
+ * loads. The admin plane is Capsomer's and has its own tokens (app/admin.css imports them from the package),
+ * so it is not read here: these gates are about the site's palette. The order lives here, not in `@import`
+ * lines at the bottom of the entry sheet: CSS drops a late `@import`.
  */
-const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
+const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
+
+/** The admin plane's one sheet: Capsomer's tokens and components, outside the site's palette gates. */
+const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 
 /**
  * CRLF first, because autocrlf gives a fresh clone CRLF and multi-line selectors stop matching;
@@ -60,7 +62,7 @@ export function moduleCssImports(source) {
 }
 
 /**
- * Order comes from root.tsx's CSS imports and each file's own `@import` lines. A sheet named by
+ * Order comes from the public layout's CSS imports and each file's own `@import` lines. A sheet named by
  * an `@import` comes before the file that imports it, recursively, which is what the browser does,
  * and CSS requires `@import` before every other rule, so a late `@import` is silently dropped.
  * Each sheet is listed once, at its first arrival, however many files import it.
@@ -83,15 +85,13 @@ export function stylesheetPaths() {
     out.push(file);
   };
 
+  /** A package's own sheet (a font, Capsomer) is not the site's CSS, so only `~/` and relative paths are followed. */
   /** @param {string} source @param {string} base */
   const cssImportsOf = (source, base) =>
     moduleCssImports(source)
-      // A package's stylesheet (Capsomer's, `capsomer/catalog.css`) is not this site's palette: its names are
-      // mapped onto the site's in app/styles/library.css, which is read, so the sheets here stay the site's own.
       .filter((spec) => spec.startsWith("~/") || spec.startsWith("."))
-      .map((spec) =>
-      spec.startsWith("~/") ? join(root, "app", spec.slice(2)) : join(base, spec),
-    );
+      .map((spec) => (spec.startsWith("~/") ? join(root, "app", spec.slice(2)) : join(base, spec)))
+      .filter((sheet) => sheet !== ADMIN_CSS_PATH);
 
   const rootSheets = cssImportsOf(readFileSync(ROOT_MODULE_PATH, "utf8"), join(root, "app"));
   if (rootSheets.length === 0) {
@@ -111,9 +111,6 @@ export function stylesheetPaths() {
     keep: (name) => /\.(ts|tsx|mts|mjs|js|jsx)$/.test(name),
     skipDir: (name) => name === "enhance",
   }).sort();
-  // Admin first among non-root sheets: an admin page loads root then admin.
-  expand(ADMIN_CSS_PATH);
-
   for (const file of routeFiles) {
     for (const sheet of cssImportsOf(readFileSync(file, "utf8"), dirname(file))) expand(sheet);
   }

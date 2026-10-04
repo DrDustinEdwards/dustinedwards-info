@@ -5,7 +5,7 @@ import { bands, nextTile } from "~/lib/media/tile-nav.mjs";
 /** The tile's tab stop in the grid: the thumbnail link, which carries the file's name. */
 export function tileLink(key: string) {
   return document.querySelector<HTMLElement>(
-    `.media-grid[data-view="grid"] [data-tile="${CSS.escape(key)}"] a.media-thumb-link`,
+    `.cap-media-grid [data-tile="${CSS.escape(key)}"] a.cap-media-open`,
   );
 }
 
@@ -42,7 +42,7 @@ export function useGridKeyboard({
       const move = (dir: "left" | "right" | "up" | "down") => {
         event.preventDefault();
         const rows = bands(
-          [...document.querySelectorAll('.media-grid[data-view="grid"] [data-tile]')].map((el) => {
+          [...document.querySelectorAll(".cap-media-grid [data-tile]")].map((el) => {
             const r = el.getBoundingClientRect();
             return { id: el.getAttribute("data-tile") ?? "", top: r.top, left: r.left, width: r.width };
           }),
@@ -68,7 +68,7 @@ export function useGridKeyboard({
         if (box instanceof HTMLInputElement) box.click();
       } else if (event.key === "c") {
         event.preventDefault();
-        const button = tile.querySelector(".media-copy");
+        const button = tile.querySelector("[data-cap-copy]");
         if (button instanceof HTMLButtonElement) button.click();
       }
     },

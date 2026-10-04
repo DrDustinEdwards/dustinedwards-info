@@ -2,6 +2,8 @@ import { Form, Link, data, redirect } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
 
+import { Alert } from "capsomer/react/banner";
+
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { PostEditor } from "~/components/admin/post-editor";
 import {
@@ -247,36 +249,41 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         previewLinkSlot={previewLinkSlot}
         historySlot={
           <>
-            <p className="muted">
+            <p className="cap-muted">
               Every save is a commit. Nothing is ever rewritten, and a restore
               lands as a new commit on top.
             </p>
             {loaderData.revisionsError ? (
-              <p className="field-alarm">
+              <Alert tone="warn">
                 The version list could not be read, so no revisions are shown: {loaderData.revisionsError}
-              </p>
+              </Alert>
             ) : null}
-            <Link to={`/admin/posts/${loaderData.slug}/history`} className="row-action">
-              Open version history
-            </Link>
+            <div>
+              <Link to={`/admin/posts/${loaderData.slug}/history`} className="cap-btn" data-size="sm">
+                Open version history
+              </Link>
+            </div>
           </>
         }
         dangerSlot={
           <>
-            <p className="muted">
+            <p className="cap-muted">
               Removes content/posts/{loaderData.slug}.md, its entry in the
               generated artifact, and its rows, in one commit.
             </p>
             {/* Associated by the `form` attribute: nested forms are invalid and the browser drops the inner one. */}
-            <button
-              type="submit"
-              form="delete-post"
-              name="intent"
-              value="delete"
-              className="btn-danger"
-            >
-              Delete post
-            </button>
+            <div>
+              <button
+                type="submit"
+                form="delete-post"
+                name="intent"
+                value="delete"
+                className="cap-btn"
+                data-variant="danger"
+              >
+                Delete post
+              </button>
+            </div>
           </>
         }
       />
@@ -300,20 +307,20 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
       ) : null}
 
       {/* Submits no confirmation, so the action answers with the typed one above, script or not. */}
-      <Form id="delete-post" method="post" className="editor-delete-form">
+      <Form id="delete-post" method="post">
         <input type="hidden" name="headSha" value={headSha} />
       </Form>
 
       {/* Outside the editing form: the drawer is a `<dialog>` inside it, and a form inside a form is dropped. */}
       {state === "draft" ? (
         <>
-          <Form id={CREATE_FORM_ID} method="post" className="editor-delete-form" />
+          <Form id={CREATE_FORM_ID} method="post" />
           {loaderData.previewLinks.map((link) => (
             <Form
               key={link.token}
               id={revokeFormId(link.token)}
               method="post"
-              className="editor-delete-form"
+             
             >
               <input type="hidden" name="token" value={link.token} />
             </Form>

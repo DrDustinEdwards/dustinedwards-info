@@ -14,6 +14,10 @@ import {
 } from "../credential.mjs";
 import { countCssRules, ok, overflowScan, skip } from "../harness.mjs";
 
+/** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
+const ADMIN_RULE_MEASURED = 74;
+const ADMIN_RULE_FLOOR = 70;
+
 /**
  * The admin plane, driven on ADMIN_ORIGIN with the supplied credential. Returns whether the admin
  * cases ran, which the closing report needs.
@@ -102,7 +106,7 @@ export async function run({ browser }) {
     await admin.setViewport({ width: 1280, height: 900 });
 
     /*
-     * The shell (sidebar and topbar) is the assertion, not the title, which survives an empty
+     * The shell (rail and top bar) is the assertion, not the title, which survives an empty
      * body. The login page is named, because a bounced session renders a complete page.
      */
     const SURFACES = [
@@ -116,8 +120,8 @@ export async function run({ browser }) {
     for (const [path, what] of SURFACES) {
       await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
       const r = await admin.evaluate(() => ({
-        sidebar: !!document.querySelector(".admin-sidebar"),
-        topbar: !!document.querySelector(".admin-topbar"),
+        sidebar: !!document.querySelector(".cap-shell-rail"),
+        topbar: !!document.querySelector(".cap-shell-top"),
         onLogin: location.pathname === "/login",
         textLen: (document.body.innerText || "").trim().length,
       }));
@@ -171,18 +175,20 @@ export async function run({ browser }) {
       waitUntil: "networkidle0",
     });
     const listHead = await admin.evaluate(() => {
-      const head = document.querySelector(".media-list-head");
+      const head = document.querySelector('table[data-view="list"] thead tr');
       if (!head) return null;
-      const cells = [...head.querySelectorAll(".media-col-head")].map((el) => ({
-        label: (el.textContent || "").trim(),
-        active: el.classList.contains("is-active"),
-        sortable: el.tagName.toLowerCase() === "a",
-        href: el.getAttribute("href") || "",
-        sortKey: el.getAttribute("data-sort") || "",
-        /* The sort state in words inside the link: the header is not a table, so aria-sort would mean nothing. */
-        sorted: (el.querySelector(".sr-only")?.textContent || "").replace(/\s+/g, " ").trim(),
-      }));
-      return { cells };
+      const cells = [...head.querySelectorAll("th")].map((el) => {
+        const link = el.querySelector("a");
+        return {
+          label: (el.textContent || "").replace(/\s+/g, " ").trim(),
+          sortable: !!link,
+          href: link?.getAttribute("href") || "",
+          sortKey: link?.getAttribute("data-sort") || "",
+          /* The sort state in words inside the link: the sorted column says so, with no aria-sort. */
+          sorted: (link?.querySelector(".cap-sr-only")?.textContent || "").replace(/\s+/g, " ").trim(),
+        };
+      });
+      return { cells: cells.map((c) => ({ ...c, active: c.sorted !== "" })) };
     });
 
     ok(
@@ -190,7 +196,7 @@ export async function run({ browser }) {
       !!listHead && listHead.cells.length >= 5,
       listHead
         ? `${listHead.cells.length} header cell(s), expected the five columns`
-        : "no .media-list-head at all, so the sort assertions below examine nothing",
+        : "no list table header at all, so the sort assertions below examine nothing",
     );
     ok(
       "the list header marks exactly the column the URL sorted by",
@@ -199,7 +205,7 @@ export async function run({ browser }) {
         listHead.cells.some((c) => c.active && c.label.startsWith("Size")),
       listHead
         ? `active: ${listHead.cells.filter((c) => c.active).map((c) => c.label).join(", ") || "(none)"}. ` +
-          `The URL asked for sort=size, so Size and nothing else should carry is-active.`
+          `The URL asked for sort=size, so Size and nothing else should say it is sorted.`
         : "not measured",
     );
     /*
@@ -252,28 +258,28 @@ export async function run({ browser }) {
         { waitUntil: "networkidle0" },
       );
       const inspector = await admin.evaluate((wanted) => {
-        const panel = document.querySelector(".media-detail");
+        const panel = document.querySelector("dialog[data-media-inspector]");
         if (!panel) return null;
         const r = panel.getBoundingClientRect();
         return {
           width: Math.round(r.width),
           height: Math.round(r.height),
           namesKey: (panel.textContent || "").includes(wanted.slice(0, 12)),
-          hasClose: !!panel.querySelector(".media-detail-close"),
+          hasClose: !!panel.querySelector(".cap-dialog-close"),
         };
       }, firstKey);
 
       ok(
         "/admin/media?key=: the inspector opens on a key in the URL",
         !!inspector,
-        "no .media-detail rendered for a key taken off the library page itself. The inspector " +
+        "no inspector dialog rendered for a key taken off the library page itself. The inspector " +
           "is URL-driven by design, so this is the whole of that contract.",
       );
       ok(
         "the inspector is actually laid out, not present and collapsed",
         !!inspector && inspector.width > 200 && inspector.height > 100,
         inspector
-          ? `.media-detail measures ${inspector.width}x${inspector.height}. A panel that exists ` +
+          ? `the inspector measures ${inspector.width}x${inspector.height}. A panel that exists ` +
             `in the DOM at zero size is the mount class wearing a different hat.`
           : "not measured",
       );
@@ -289,7 +295,7 @@ export async function run({ browser }) {
 
     /* The size is the half worth asserting: a sum over the wrong subset still renders a plausible number. */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=grid`, { waitUntil: "networkidle0" });
-    const beforeSelect = await admin.evaluate(() => !!document.querySelector(".posts-bulk"));
+    const beforeSelect = await admin.evaluate(() => !!document.querySelector(".cap-bulk"));
     ok(
       "the bulk bar is absent before anything is selected",
       !beforeSelect,
@@ -309,17 +315,17 @@ export async function run({ browser }) {
       // The bar is rendered by React state, so it appears on the next paint
       // rather than synchronously with the click.
       await admin
-        .waitForSelector(".posts-bulk", { timeout: 5000 })
+        .waitForSelector(".cap-bulk", { timeout: 5000 })
         .catch(() => null);
       const bulk = await admin.evaluate(() => {
-        const bar = document.querySelector(".posts-bulk");
+        const bar = document.querySelector(".cap-bulk");
         if (!bar) return null;
-        const count = bar.querySelector(".posts-bulk-count");
-        const size = bar.querySelector(".posts-bulk-size");
+        const count = bar.querySelector(".cap-bulk-count");
+        const size = bar.querySelector(".cap-bulk-detail");
         // The announcement is the form's status region, in the document before the bar mounted.
         const status = bar.closest("form")?.querySelector(':scope > [role="status"]');
         return {
-          count: (count?.textContent || "").trim(),
+          count: (count?.textContent || "").replace(/\s+/g, " ").trim(),
           size: (size?.textContent || "").trim(),
           announced: (status?.textContent || "").trim(),
           label: bar.getAttribute("aria-label") || "",
@@ -329,7 +335,7 @@ export async function run({ browser }) {
       ok(
         "selecting one row opens the bulk bar",
         !!bulk,
-        "clicking a row checkbox did not produce .posts-bulk. Either the page is not hydrated " +
+        "clicking a row checkbox did not produce .cap-bulk. Either the page is not hydrated " +
           "or the selection state is not reaching the bar.",
       );
       ok(
@@ -364,29 +370,29 @@ export async function run({ browser }) {
     });
     /* The Trash chip's count, so "no modal" can be told apart from "empty trash". */
     const trashed = await admin.evaluate(() => {
-      const chip = [...document.querySelectorAll(".admin-chip")].find((a) =>
-        /^\s*Trash\b/.test(a.textContent ?? ""),
+      const chip = [...document.querySelectorAll(".cap-tab")].find((a) =>
+        /^\s*Trash/.test(a.textContent ?? ""),
       );
-      const count = chip?.querySelector(".admin-chip-count")?.textContent?.trim() ?? "";
+      const count = chip?.querySelector(".cap-tab-count")?.textContent?.trim() ?? "";
       return /^\d+$/.test(count) ? Number(count) : null;
     });
     ok(
       "/admin/media shows how many files are in the trash",
       trashed !== null,
-      "no Trash chip with a numeric count, so an absent confirmation could not be told apart " +
+      "no Trash tab with a numeric count, so an absent confirmation could not be told apart " +
         "from an empty trash",
     );
     const modal = await admin.evaluate(() => {
-      const panel = document.querySelector("dialog.confirm-dialog");
+      const panel = document.querySelector('dialog.cap-dialog[role="alertdialog"]');
       if (!panel) return null;
-      const prompt = panel.querySelector(".confirm-dialog-typed span");
+      const prompt = panel.querySelector(".cap-confirm-typed label");
       const typed = /Type\s+(\S+)\s+to confirm/i.exec(prompt?.textContent || "");
       return {
         // showModal() is what makes it modal; the element alone is only a dialog.
         modal: panel.matches(":modal"),
         required: typed ? typed[1] : "",
-        hasInput: !!panel.querySelector(".confirm-dialog-typed input"),
-        confirmDisabled: !!panel.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
+        hasInput: !!panel.querySelector(".cap-confirm-typed input"),
+        confirmDisabled: !!panel.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
       };
     });
 
@@ -427,12 +433,12 @@ export async function run({ browser }) {
       );
 
       if (modal.hasInput && modal.required) {
-        const field = ".confirm-dialog-typed input";
+        const field = ".cap-confirm-typed input";
         // The WRONG value first. A button that enables on any input at all would
         // pass an assertion that only ever typed the right answer.
         await admin.type(field, `${modal.required}x`);
         const afterWrong = await admin.evaluate(
-          () => !!document.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
+          () => !!document.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
         );
         ok(
           "a WRONG value leaves the confirm button disabled",
@@ -454,7 +460,7 @@ export async function run({ browser }) {
         }, field);
         await admin.type(field, modal.required);
         const afterRight = await admin.evaluate(
-          () => !!document.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
+          () => !!document.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
         );
         ok(
           "the exact value ENABLES the confirm button",
@@ -472,13 +478,13 @@ export async function run({ browser }) {
     }
 
     /* Several widths, because the overflow is linear in the viewport; 1280 catches a fix that collapses desktop. */
-    /* A rule count proves `app/admin.css` arrived; the computed style proves the cascade applied it. */
+    /* A rule count proves the admin's sheets arrived; the computed style proves the cascade applied them. */
     await admin.setViewport({ width: 1280, height: 900 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const rules = await admin.evaluate(countCssRules);
     const adminCss = await admin.evaluate(() => {
-      const sidebar = document.querySelector(".admin-sidebar");
-      const style = sidebar ? getComputedStyle(sidebar) : null;
+      const rail = document.querySelector(".cap-shell-rail");
+      const style = rail ? getComputedStyle(rail) : null;
       return {
         sheets: [...document.styleSheets].length,
         display: style?.display ?? "",
@@ -487,24 +493,16 @@ export async function run({ browser }) {
     });
     ok(
       "the ADMIN stylesheet is actually applied where the layout is measured",
-      rules >= 670,
-      `${rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 670, ` +
-        `measured 730 on 2026-08-28. Below this admin.css did not load and every ` +
-        `overflow number below is about browser defaults.` +
-        `
-        RE-MEASURED because the public half shrank, not because the admin ` +
-        `half did. The old figure was 965 on 2026-08-24, read as 351 public plus 614 ` +
-        `admin. The per-route CSS split of 2026-08-27 took the public sheet down to the ` +
-        `chrome, so an admin page now loads roughly 116 public rules beside the same ` +
-        `admin bundle. A floor set against the old sum is a floor no correct build can ` +
-        `clear, which is the unfailable-floor class inverted and is how this same ` +
-        `assertion failed after the 2026-08-23 admin split.`,
+      rules >= ADMIN_RULE_FLOOR,
+      `${rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor ${ADMIN_RULE_FLOOR}, ` +
+        `measured ${ADMIN_RULE_MEASURED} on 2026-10-03, when the admin moved onto Capsomer. Below this the ` +
+        `admin stylesheet did not load and every overflow number below is about browser defaults.`,
     );
     ok(
-      "the admin shell is laid out by admin.css, not by the browser default",
-      adminCss.display === "flex" && adminCss.width > 100,
-      `.admin-sidebar computed display=${adminCss.display || "(none)"} width=${adminCss.width}px. ` +
-        `An unstyled sidebar is a block at full width, which would make the overflow ` +
+      "the admin shell is laid out by Capsomer's CSS, not by the browser default",
+      adminCss.display !== "inline" && adminCss.display !== "block" && adminCss.width > 100,
+      `.cap-shell-rail computed display=${adminCss.display || "(none)"} width=${adminCss.width}px. ` +
+        `An unstyled rail is a block at full width, which would make the overflow ` +
         `readings below meaningless while looking like a real measurement.`,
     );
 
@@ -536,10 +534,10 @@ export async function run({ browser }) {
     await admin.setViewport({ width: 320, height: 800 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const bar = await admin.evaluate(() => {
-      const el = document.querySelector(".admin-topbar");
+      const el = document.querySelector(".cap-shell-top");
       if (!el) return null;
       const r = el.getBoundingClientRect();
-      const kids = [...el.children].map((k) => {
+      const kids = [...el.querySelectorAll("a, button, label, fieldset")].map((k) => {
         const kr = k.getBoundingClientRect();
         const cls = typeof k.className === "string" ? k.className : "";
         return {
@@ -552,12 +550,12 @@ export async function run({ browser }) {
       return { right: Math.round(r.right), out };
     });
     ok(
-      "the admin topbar exists to measure at 320px",
+      "the admin top bar exists to measure at 320px",
       bar !== null,
-      "no .admin-topbar, so the containment assertion below would examine nothing",
+      "no .cap-shell-top, so the containment assertion below would examine nothing",
     );
     ok(
-      "no admin topbar child overflows the bar at 320px",
+      "no admin top bar control overflows the bar at 320px",
       bar !== null && bar.out.length === 0,
       bar === null
         ? "not measured"
@@ -567,43 +565,39 @@ export async function run({ browser }) {
           `controls are being clipped.`,
     );
 
-    // Compared by accessible name, since a swap holds a count steady. Opened via showPopover(), as a
-    // scriptless click on a `popovertarget` button does.
+    // Compared by accessible name, since a swap holds a count steady. On a phone the top bar hides what the
+    // tab bar and its More sheet carry, so the More sheet is opened first, as a tap does.
     const NARROW = 375;
-    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openPanels) => {
+    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openMore) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
-      return admin.evaluate((shouldOpen) => {
-        const bar = document.querySelector(".admin-topbar");
-        if (!bar) return { names: [], popovers: 0, invoked: false };
-        const panels = [...bar.querySelectorAll("[popover]")];
-        if (shouldOpen) for (const p of panels) /** @type {HTMLElement} */ (p).showPopover();
+      if (openMore) {
+        await admin.click('.cap-shell-tabs button[data-cap-part="more"]');
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      return admin.evaluate(() => {
         const names = [];
-        for (const el of bar.querySelectorAll(
-          'a[href], button, summary, input:not([type="hidden"]), select, textarea',
+        for (const el of document.querySelectorAll(
+          ".cap-shell-top, .cap-shell-tabs, dialog.cap-shell-more[open]",
         )) {
-          // display:none is out of the accessibility tree, so it is not
-          // reachable and must not be counted at either width.
-          const r = el.getBoundingClientRect();
-          if (r.width === 0 && r.height === 0) continue;
-          const name = (
-            el.getAttribute("aria-label") ||
-            el.textContent ||
-            ""
-          )
-            .replace(/\s+/g, " ")
-            .trim();
-          if (name) names.push(name);
+          for (const control of el.querySelectorAll(
+            'a[href], button, summary, input:not([type="hidden"]), select, textarea',
+          )) {
+            // display:none is out of the accessibility tree, so it is not
+            // reachable and must not be counted at either width.
+            const r = control.getBoundingClientRect();
+            if (r.width === 0 && r.height === 0) continue;
+            const name = (control.getAttribute("aria-label") || control.textContent || "")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (name) names.push(name);
+          }
         }
         return {
           names: [...new Set(names)].sort(),
-          popovers: panels.length,
-          // Declarative: a button naming the panel by popovertarget opens it with script off.
-          invoked:
-            panels.length > 0 &&
-            bar.querySelector(`button[popovertarget="${CSS.escape(panels[0].id)}"]`) !== null,
+          more: !!document.querySelector('.cap-shell-tabs button[data-cap-part="more"]'),
         };
-      }, openPanels);
+      });
     };
 
     const wide = await topbarActions(1280, false);
@@ -611,23 +605,20 @@ export async function run({ browser }) {
 
     // An empty wide set makes the subset test vacuously true.
     ok(
-      "the wide admin topbar offers actions to compare against",
+      "the wide admin top bar offers actions to compare against",
       wide.names.length >= 2,
       `only ${wide.names.length} named control(s) at 1280px: [${wide.names.join(" | ")}]. ` +
         `The subset assertion below would agree with anything.`,
     );
     ok(
-      `the folded topbar is a native popover disclosure at ${NARROW}px`,
-      narrow.popovers >= 1 && narrow.invoked,
-      `${narrow.popovers} [popover] in the bar, the first one ` +
-        `${narrow.invoked ? "has" : "has NO"} button[popovertarget] naming it. The fold has to open with no script, so a ` +
-        `button plus a state hook is not the shape; the progressive-enhancement rule and the admin plane's ` +
-        `own no-script door.`,
+      `the phone's tab bar has a More sheet at ${NARROW}px`,
+      narrow.more,
+      "no More button in the tab bar, so what the top bar hides on a phone has nowhere to go",
     );
 
     const lost = wide.names.filter((name) => !narrow.names.includes(name));
     ok(
-      `every wide topbar action is still reachable at ${NARROW}px through the disclosure`,
+      `every wide top bar action is still reachable at ${NARROW}px`,
       lost.length === 0,
       `${lost.length} action(s) disappear when the bar folds: [${lost.join(" | ")}].\n` +
         `        1280px offers [${wide.names.join(" | ")}]\n` +

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   FIRST_PUBLICATION_NOTE,
@@ -7,10 +7,12 @@ import {
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
 import { anHourFromNowLocal, toIso, toLocalInput } from "~/lib/editor/datetime-local";
+import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "capsomer/react/dialog";
+
 import { OverflowMenu } from "./overflow-menu";
-import { useDialogOpen } from "./use-dialog-open";
 
 export function PublishActions({
+  formId,
   state,
   everPublished,
   publishAt,
@@ -18,6 +20,8 @@ export function PublishActions({
   busy,
   disabled,
 }: {
+  /** The editing form, which these buttons sit outside of. */
+  formId: string;
   state: PostState;
   everPublished: boolean;
   publishAt: string;
@@ -40,45 +44,45 @@ export function PublishActions({
   };
 
   return (
-    <div className="publish-actions" ref={rootRef}>
-      <OverflowMenu label="More">
-        {secondary.map((transition) => (
-          <button
-            key={transition.id}
-            type="submit"
-            name="intent"
-            value={transition.id}
-            data-menu-item
-            className={
-              transition.danger ? "overflow-menu-item is-danger" : "overflow-menu-item"
-            }
-            disabled={disabled || busy}
-          >
-            {transition.label}
-            <span className="overflow-menu-item-hint">
-              {transition.id === "unpublish"
-                ? "Takes it off the public site. The file and the history stay."
-                : "Commits without changing whether it is public."}
-            </span>
-          </button>
-        ))}
-        {state !== "draft" ? (
-          <button
-            type="button"
-            data-menu-item
-            className="overflow-menu-item"
-            onClick={() => {
-              fromMenu.current = true;
-              setCeremony(true);
-            }}
-          >
-            Reschedule
-            <span className="overflow-menu-item-hint">
-              Change when this goes live.
-            </span>
-          </button>
-        ) : null}
-      </OverflowMenu>
+    <div className="app-actions" ref={rootRef}>
+      {secondary.length > 0 || state !== "draft" ? (
+        <OverflowMenu label="More">
+          {secondary.map((transition) => (
+            <button
+              key={transition.id}
+              type="submit"
+              form={formId}
+              name="intent"
+              value={transition.id}
+              data-menu-item
+              className="cap-option"
+              data-tone={transition.danger ? "crit" : undefined}
+              disabled={disabled || busy}
+            >
+              <span className="cap-option-label">{transition.label}</span>
+              <span className="cap-option-hint">
+                {transition.id === "unpublish"
+                  ? "Takes it off the public site. The file and the history stay."
+                  : "Commits without changing whether it is public."}
+              </span>
+            </button>
+          ))}
+          {state !== "draft" ? (
+            <button
+              type="button"
+              data-menu-item
+              className="cap-option"
+              onClick={() => {
+                fromMenu.current = true;
+                setCeremony(true);
+              }}
+            >
+              <span className="cap-option-label">Reschedule</span>
+              <span className="cap-option-hint">Change when this goes live.</span>
+            </button>
+          ) : null}
+        </OverflowMenu>
+      ) : null}
 
       {primary.ceremony ? (
         <>
@@ -86,9 +90,11 @@ export function PublishActions({
               publication, so a click before hydration still cannot publish. */}
           <button
             type="submit"
+            form={formId}
             name="intent"
             value={primary.id}
-            className="btn"
+            className="cap-btn"
+            data-variant="primary"
             disabled={disabled || busy}
             onClick={(event) => {
               event.preventDefault();
@@ -98,6 +104,7 @@ export function PublishActions({
             {primary.label}
           </button>
           <PublishCeremony
+            formId={formId}
             open={ceremony}
             onClose={closeCeremony}
             publishAt={publishAt}
@@ -108,9 +115,11 @@ export function PublishActions({
         <>
           <button
             type="submit"
+            form={formId}
             name="intent"
             value={primary.id}
-            className="btn"
+            className="cap-btn"
+            data-variant="primary"
             disabled={disabled || busy}
           >
             {busy ? "Saving" : primary.label}
@@ -118,6 +127,7 @@ export function PublishActions({
           {/* Only where it can be opened: its unreachable reschedule submit would send `draft:false`. */}
           {state !== "draft" ? (
             <PublishCeremony
+              formId={formId}
               open={ceremony}
               onClose={closeCeremony}
               publishAt={publishAt}
@@ -131,22 +141,23 @@ export function PublishActions({
   );
 }
 
-// Inside the form on purpose: showModal() moves it to the top layer without moving it in the DOM.
-// Both buttons send the confirmed intent as the submitter, since a closed dialog still submits its fields.
+// Both buttons send the confirmed intent as the submitter, by `form`, since the dialog sits outside the
+// editing form; a closed dialog's fields are not submitted, so nothing here travels unless pressed.
 function PublishCeremony({
+  formId,
   open,
   onClose,
   publishAt,
   onPublishAtChange,
   reschedule,
 }: {
+  formId: string;
   open: boolean;
   onClose: () => void;
   publishAt: string;
   onPublishAtChange: (value: string) => void;
   reschedule?: boolean;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
   const whenRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [when, setWhen] = useState(() => toLocalInput(publishAt) || anHourFromNowLocal());
@@ -161,79 +172,87 @@ function PublishCeremony({
         ? "Pick a time in the future to schedule."
         : null;
 
-  useDialogOpen(ref, open, onClose);
-
-  /* After showModal, which focuses the first control, Publish now: the first focus goes to the
-     least final choice instead, the time when rescheduling and Cancel when publishing. */
-  useEffect(() => {
-    if (open) (reschedule ? whenRef : cancelRef).current?.focus();
-  }, [open, reschedule]);
-
   return (
-    <dialog ref={ref} className="ceremony" aria-labelledby="ceremony-title">
-      <h2 id="ceremony-title">
-        {reschedule ? "When does this go live?" : "Publish this post"}
-      </h2>
-      {reschedule ? null : <p>{FIRST_PUBLICATION_NOTE}</p>}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      placement="center"
+      size="md"
+      aria-labelledby="ceremony-title"
+      /* The first focus goes to the least final choice: the time when rescheduling, Cancel when publishing. */
+      initialFocus={reschedule ? whenRef : cancelRef}
+    >
+      <DialogHeader>
+        <DialogTitle id="ceremony-title">
+          {reschedule ? "When does this go live?" : "Publish this post"}
+        </DialogTitle>
+        {reschedule ? null : <DialogDescription>{FIRST_PUBLICATION_NOTE}</DialogDescription>}
+      </DialogHeader>
 
-      <div className="ceremony-choice">
-        <button
-          type="submit"
-          name="intent"
-          value={intent}
-          className="btn"
-          onClick={() => onPublishAtChange("")}
-        >
-          Publish now
-        </button>
+      <DialogBody>
+        <div className="app-form">
+          <div>
+            <button
+              type="submit"
+              form={formId}
+              name="intent"
+              value={intent}
+              className="cap-btn"
+              data-variant="primary"
+              onClick={() => onPublishAtChange("")}
+            >
+              Publish now
+            </button>
+          </div>
 
-        <div className="ceremony-schedule">
-          <label className="field-label" htmlFor="ceremony-when">
-            Or hold until (your local time)
-          </label>
-          <input
-            ref={whenRef}
-            id="ceremony-when"
-            type="datetime-local"
-            value={when}
-            onChange={(event) => setWhen(event.target.value)}
-            aria-invalid={problem !== null}
-            aria-describedby={problem ? "ceremony-when-problem" : undefined}
-          />
-          <button
-            type="submit"
-            name="intent"
-            value={intent}
-            className="btn-ghost"
-            disabled={problem !== null}
-            onClick={(event) => {
-              if (problem !== null) {
-                event.preventDefault();
-                return;
-              }
-              onPublishAtChange(scheduleAt);
-            }}
-          >
-            Schedule
-          </button>
-          {problem ? (
-            <p className="field-alarm" id="ceremony-when-problem">
-              {problem}
-            </p>
-          ) : null}
+          <div className="cap-field" data-invalid={problem ? "" : undefined}>
+            <label className="cap-field-label" htmlFor="ceremony-when">
+              Or hold until (your local time)
+            </label>
+            <input
+              ref={whenRef}
+              id="ceremony-when"
+              className="cap-input"
+              type="datetime-local"
+              value={when}
+              onChange={(event) => setWhen(event.target.value)}
+              aria-invalid={problem !== null}
+              aria-describedby={problem ? "ceremony-when-problem" : undefined}
+            />
+            {problem ? (
+              <p className="cap-field-error" id="ceremony-when-problem">
+                {problem}
+              </p>
+            ) : null}
+            <div>
+              <button
+                type="submit"
+                form={formId}
+                name="intent"
+                value={intent}
+                className="cap-btn"
+                disabled={problem !== null}
+                onClick={(event) => {
+                  if (problem !== null) {
+                    event.preventDefault();
+                    return;
+                  }
+                  onPublishAtChange(scheduleAt);
+                }}
+              >
+                Schedule
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Closes the element, whose close event reaches `onClose`: focus is moved once the dialog
-          has let go of it, not while it is still modal. */}
-      <button
-        ref={cancelRef}
-        type="button"
-        className="btn-ghost"
-        onClick={() => ref.current?.close()}
-      >
-        Cancel
-      </button>
-    </dialog>
+      </DialogBody>
+      <DialogFooter>
+        <button type="button" className="cap-btn" data-cap-part="cancel" ref={cancelRef}>
+          Cancel
+        </button>
+      </DialogFooter>
+    </Dialog>
   );
 }

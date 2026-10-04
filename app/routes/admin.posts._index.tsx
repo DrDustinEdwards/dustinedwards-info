@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Form, Link, data, useNavigation } from "react-router";
 
-import { AdminAlert } from "~/components/admin/alert";
+import { Alert, Banner } from "capsomer/react/banner";
+import { Button } from "capsomer/react/button";
+import { Empty } from "capsomer/react/empty";
+
+import { PageHead } from "~/components/admin/page-head";
 import { PostsConfirmDialogs } from "~/components/admin/posts-confirm-dialogs";
 import { PostsFilters } from "~/components/admin/posts-filters";
 import { PostsTable } from "~/components/admin/posts-table";
@@ -281,22 +285,22 @@ export default function AdminPosts({
   ].filter(Boolean);
 
   return (
-    <>
-      <div className="admin-page-head">
-        <h1>Posts</h1>
-        <p className="admin-page-status">
-          {`${statusCounts.all} post${statusCounts.all === 1 ? "" : "s"}, ` +
-            `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
-            (askDrifted && ask
-              ? ` ${ask.missing.length + ask.stale.length} of them have changed since search last read them.`
-              : askUnread
-                ? " The search index status could not be read, so whether search is up to date is unknown."
-                : ask
-                  ? " Search is up to date with all of them."
-                  : "")}
-        </p>
-      </div>
-      <PostsToolbar />
+    <div className="app-page">
+      <PageHead
+        title="Posts"
+        lead={
+          `${statusCounts.all} post${statusCounts.all === 1 ? "" : "s"}, ` +
+          `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
+          (askDrifted && ask
+            ? ` ${ask.missing.length + ask.stale.length} of them have changed since search last read them.`
+            : askUnread
+              ? " The search index status could not be read, so whether search is up to date is unknown."
+              : ask
+                ? " Search is up to date with all of them."
+                : "")
+        }
+        actions={<PostsToolbar />}
+      />
 
       <PostsFilters
         filters={filters}
@@ -306,31 +310,16 @@ export default function AdminPosts({
       />
 
       {scheduledTotal > 0 ? (
-        <p className="admin-notice posts-scheduled-note">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 2" />
-          </svg>
+        <Banner tone="info">
           {scheduledTotal} post{scheduledTotal === 1 ? " is" : "s are"} scheduled and not yet
-          public.{" "}
-          <Link to={`/admin/posts?${FILTER_KEYS.status}=scheduled`}>Show the queue</Link>
-        </p>
+          public. <Link to={`/admin/posts?${FILTER_KEYS.status}=scheduled`}>Show the queue</Link>
+        </Banner>
       ) : null}
 
       {loaderData.deleteLeft ? (
-        <p className="admin-notice" role="status">
+        <Banner tone="neutral">
           {`Deleted "${loaderData.deleteLeft.slug}". ${loaderData.deleteLeft.problems.join(" ")}`}
-        </p>
+        </Banner>
       ) : null}
 
       {/*
@@ -338,14 +327,8 @@ export default function AdminPosts({
         status region is always in the DOM, because a region inserted already holding its text is
         often not read; a failure is an alert, which is read on insertion.
       */}
-      <div role="status">
-        {message && !failed ? <p className="admin-notice">{message}</p> : null}
-      </div>
-      {message && failed ? (
-        <p className="admin-notice" role="alert">
-          {message}
-        </p>
-      ) : null}
+      <div role="status">{message && !failed ? <Banner tone="ok">{message}</Banner> : null}</div>
+      {message && failed ? <Alert tone="crit">{message}</Alert> : null}
 
       <PostsConfirmDialogs
         confirmSyncAsk={confirmSyncAsk}
@@ -355,40 +338,39 @@ export default function AdminPosts({
 
       {/* Surfaced here: a save can succeed while its Ask sync fails, and then it redirects. */}
       {askDrifted && ask ? (
-        /* A standing condition, so a named region and never a live one. */
-        <AdminAlert
-          tone="warning"
+        /* A standing condition, so a banner and never an alert. */
+        <Banner
+          tone="warn"
           title="Search is answering from older text"
-          headingId="ask-drift"
-          action={
+          actions={
             <Form method="post">
-              <button type="submit" name="intent" value="sync-ask" className="btn">
+              <Button type="submit" name="intent" value="sync-ask">
                 Rebuild the answer index
-              </button>
+              </Button>
             </Form>
           }
         >
-          <p>
-            {`${ask.missing.length} post(s) are missing from the answer index and ` +
-              `${ask.stale.length} record(s) in it no longer match the site, so an ` +
-              `answer may quote text that has changed.`}
-          </p>
-        </AdminAlert>
+          {`${ask.missing.length} post(s) are missing from the answer index and ` +
+            `${ask.stale.length} record(s) in it no longer match the site, so an ` +
+            `answer may quote text that has changed.`}
+        </Banner>
       ) : null}
 
       {posts.length === 0 ? (
         filtered ? (
-          <div className="posts-empty">
-            <p>
-              No posts match {askedFor.join(", ")}. Searched {total} post
-              {total === 1 ? "" : "s"} by title and slug.
-            </p>
-            <Link to="/admin/posts" className="btn-secondary">
-              Clear filters
-            </Link>
-          </div>
+          <Empty
+            kind="no-match"
+            action={
+              <Link to="/admin/posts" className="cap-btn">
+                Clear filters
+              </Link>
+            }
+          >
+            No posts match {askedFor.join(", ")}. Searched {total} post
+            {total === 1 ? "" : "s"} by title and slug.
+          </Empty>
         ) : (
-          <p className="muted">No posts yet.</p>
+          <Empty kind="nothing-yet">No posts yet.</Empty>
         )
       ) : (
         <PostsTable
@@ -410,6 +392,6 @@ export default function AdminPosts({
           budgetError={budgetError}
         />
       )}
-    </>
+    </div>
   );
 }

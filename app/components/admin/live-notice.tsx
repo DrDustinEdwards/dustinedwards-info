@@ -12,8 +12,8 @@ export function LiveNotice({
 }) {
   return (
     <>
-      <div role="status">{status ? <p className="editor-notice">{status}</p> : null}</div>
-      <div role="alert">{alert ? <p className="editor-notice">{alert}</p> : null}</div>
+      <div role="status">{status ? <p>{status}</p> : null}</div>
+      <div role="alert">{alert ? <p>{alert}</p> : null}</div>
     </>
   );
 }
