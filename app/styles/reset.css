@@ -1,5 +1,5 @@
-/* Vendored from Tailwind's preflight and load-bearing. No @layer base wrapper: nothing else is
-   layered, so it would change which rules win. */
+/* Vendored from Tailwind's preflight and load-bearing. app.css imports it into Capsomer's lowest layer
+   (cap.reset), so the unlayered site CSS and Capsomer's own layers both win over it. */
 
 *,
 ::after,
