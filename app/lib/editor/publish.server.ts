@@ -349,6 +349,8 @@ export async function savePost(
     slug: string;
     raw: string;
     expectedHeadSha?: string | null;
+    /** The blob sha of this post's file as the caller loaded it; Carrel's version of a post. Undefined: no check. */
+    expectedBlobSha?: string | null;
     isNew: boolean;
     /** Required: there is no safe default for an identity. */
     actor: Actor;
@@ -391,6 +393,10 @@ export async function savePost(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs:
+          options.expectedBlobSha === undefined
+            ? undefined
+            : { [postPath(options.slug)]: options.expectedBlobSha },
         message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
         changes: [{ path: postPath(options.slug), content: raw }],
       }),
