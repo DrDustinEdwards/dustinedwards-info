@@ -30,6 +30,14 @@ for (const { file, compiled } of [...sources, ...fixtures]) {
     paths.set(compiled.record.path, file);
   }
 }
+// The library's "Start here" list is ordered by a stored position; two procedures sharing one would make the order a guess.
+const starts = new Map();
+for (const { file, compiled } of sources) {
+  if (!compiled.ok || compiled.record.startHere === null) continue;
+  const other = starts.get(compiled.record.startHere);
+  ok(`${file} has its own Start here position`, !other, `start_here ${compiled.record.startHere} is also ${other}`);
+  starts.set(compiled.record.startHere, file);
+}
 for (const { file, compiled } of fixtures) {
   if (compiled.ok) ok(`${file} is a draft`, compiled.record.draft, "a fixture is never published: set draft: true");
 }
@@ -48,8 +56,9 @@ for (const { file, compiled } of sources) {
 console.log(`\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); ${recorded} value(s) recorded as missing.`);
 
 /* 19 on 2026-09-30, measured by running the gate: two per procedure (five) and per fixture (two), two
-   fixture drafts, two on the directories and one on the profiles. */
-const MINIMUM_CHECKS = 19;
+   fixture drafts, two on the directories and one on the profiles; 21 on 2026-10-04, one more for each procedure that
+   states a Start here position (two). */
+const MINIMUM_CHECKS = 21;
 tally.floor("check:protocols", "checks", MINIMUM_CHECKS, "A procedure or fixture was skipped rather than failing.");
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
