@@ -343,6 +343,33 @@ export const procedures = sqliteTable(
 );
 
 /**
+ * Frozen versions (drizzle/0027_procedure_versions.sql): the rendered copy of every published procedure version, written
+ * once and never changed. Unlike `procedures` this is not derived from the file: the triggers refuse an UPDATE or DELETE
+ * of a sealed row. `record` is the ProcedureRecord JSON and `markdown` its twin, as the live row held them when frozen.
+ */
+export const procedureVersions = sqliteTable(
+  "procedure_versions",
+  {
+    slug: text("slug").notNull(),
+    version: text("version").notNull(),
+    path: text("path").notNull(),
+    profile: text("profile", { enum: ["protocol", "recipe", "computational"] }).notNull(),
+    record: text("record").notNull(),
+    markdown: text("markdown").notNull(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    sealed: integer("sealed").notNull().default(0),
+    frozenAt: integer("frozen_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.slug, t.version] }),
+    check("procedure_versions_profile_check", sql`${t.profile} in ('protocol', 'recipe', 'computational')`),
+    check("procedure_versions_sealed_check", sql`${t.sealed} in (0, 1)`),
+  ],
+);
+
+/**
  * Publications (drizzle/0020_publications.sql, docs/PUBLICATIONS.md): derived from content/publications/*.md
  * by app/lib/publications/compile.mjs. `record` is the compiled publication as JSON, `csl` the raw
  * Crossref record and `markdown` the twin.

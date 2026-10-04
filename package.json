@@ -30,6 +30,7 @@
     "check:content": "node scripts/check-content.mjs",
     "check:machine-readable": "node scripts/check-machine-readable.mjs",
     "sync:content": "node scripts/sync-content.mjs",
+    "zenodo:metadata": "node scripts/zenodo-metadata.mjs",
     "bootstrap:config": "node scripts/bootstrap-config.mjs",
     "postinstall": "node scripts/bootstrap-config.mjs && node scripts/build-identity.mjs && wrangler types",
     "build:og": "node scripts/build-og.mjs",

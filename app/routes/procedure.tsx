@@ -4,6 +4,7 @@ import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
+import { listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
@@ -44,7 +45,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
   // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.
   const proof = await proofFor(env, row.record.proofOfUse);
-  return { record: row.record, draft: row.status === "draft", count, factor, workflow, proof };
+  // The versions with a frozen copy, which the history links.
+  const frozen = await listFrozenVersions(env, row.slug);
+  return { record: row.record, draft: row.status === "draft", count, factor, workflow, proof, frozen };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -58,7 +61,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
-  const { record, draft, count, factor, workflow, proof } = loaderData;
+  const { record, draft, count, factor, workflow, proof, frozen } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
@@ -75,7 +78,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} proof={proof} />
+      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} proof={proof} frozen={frozen} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
     </PageShell>

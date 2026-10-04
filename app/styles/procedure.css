@@ -288,3 +288,34 @@
 .procedure-proof {
   margin-block: 0.5rem 1rem;
 }
+
+/* Version history, the cite block, and the notice a frozen version's page carries when it is not the current one. */
+.procedure-history {
+  padding-left: 1.25rem;
+}
+
+.procedure-cite {
+  overflow-wrap: anywhere;
+}
+
+.procedure-bibtex > summary {
+  min-height: var(--control-min-dense);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.procedure-version-notice {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: var(--line-w) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  font-family: var(--font-sans);
+}
+
+@media print {
+  .procedure-bibtex,
+  .procedure-version-notice {
+    display: none;
+  }
+}

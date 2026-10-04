@@ -20,6 +20,7 @@ import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { freezeSql } from "./lib/freeze-sql.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
@@ -139,9 +140,50 @@ function buildSql(posts) {
 }
 
 /**
+ * Reads the frozen copies back: every published, versioned procedure has a sealed copy, made from the file as it is.
+ * A sealed copy made from other bytes means the file was edited after its version was published; the copy keeps the
+ * published words, and this says so, naming the fix, rather than passing.
+ *
+ * @param {string} target --local or --remote
+ * @param {any[]} rows content/generated/procedures.json's rows
+ */
+function verifyFrozenVersions(target, rows) {
+  const wanted = rows.filter((r) => r.status === "published" && r.version);
+  if (wanted.length === 0) {
+    console.log("sync:content procedure versions: none published with a version, nothing frozen");
+    return;
+  }
+  const read = runWrangler(
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+      '"SELECT slug, version, source_blob_sha FROM procedure_versions WHERE sealed = 1;"',
+  );
+  if (read.status !== 0) {
+    console.error(read.output);
+    throw new Error("the procedure versions read-back failed");
+  }
+  const match = read.stdout.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error(`could not parse the procedure versions read-back:\n${read.output}`);
+  /** @type {Array<{ slug: string, version: string, source_blob_sha: string }>} */
+  const stored = JSON.parse(match[0])[0].results;
+  const byKey = new Map(stored.map((s) => [`${s.slug} ${s.version}`, s]));
+  const missing = wanted.filter((r) => !byKey.has(`${r.slug} ${r.version}`));
+  if (missing.length > 0) {
+    throw new Error(`published versions have no sealed frozen copy after the write: ${missing.map((r) => `${r.slug} ${r.version}`).join(", ")}`);
+  }
+  const changed = wanted.filter((r) => byKey.get(`${r.slug} ${r.version}`)?.source_blob_sha !== r.sourceBlobSha);
+  if (changed.length > 0) {
+    throw new Error(
+      `a file was edited after its version was published: ${changed.map((r) => `${r.slug} ${r.version}`).join(", ")}. ` +
+        `The frozen copy kept the published words and the live page follows the file. Set a new version in the file and add a history entry that says what changed.`,
+    );
+  }
+  console.log(`sync:content procedure versions=${stored.length} sealed, each made from the file it is a copy of`);
+}
+
+/**
  * The procedures table converged to the repository's files (hard rule 18): every row whose file is gone
  * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and
- * never an unscoped delete.
+ * never an unscoped delete. Published, versioned rows are also frozen (freezeSql).
  *
  * @param {any[]} rows content/generated/procedures.json's rows
  */
@@ -161,6 +203,7 @@ function buildProceduresSql(rows) {
         `markdown = excluded.markdown, source_path = excluded.source_path, ` +
         `source_blob_sha = excluded.source_blob_sha, synced_at = excluded.synced_at;`,
     );
+    out.push(...freezeSql(r));
   }
   return `${out.join("\n")}\n`;
 }
@@ -659,6 +702,7 @@ async function main() {
     `sync:content procedures import (${target})`,
     "the procedures import failed",
   );
+  verifyFrozenVersions(target, procedureRows);
 
   // Publications before the search index too: the index then carries the paper records the table matches.
   const publicationRows = JSON.parse(await readFile(PUBLICATIONS_ARTIFACT_PATH, "utf8")).publications;
