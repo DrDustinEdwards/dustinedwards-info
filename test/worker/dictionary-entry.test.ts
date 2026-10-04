@@ -52,3 +52,16 @@ describe("the Enarratio entry", () => {
     expect(html).toContain('<i lang="la">narrare</i>');
   });
 });
+
+describe("the Capsomer entry", () => {
+  const entry = DICTIONARY_ENTRIES.find((e) => e.term === "Capsomer");
+
+  it("is the software's own page, with its French and Greek sources marked and its clip named", () => {
+    expect(entry?.path).toBe("/software/capsomer");
+    expect(entry?.audio).toBe("/audio/capsomer.mp3");
+    if (!entry) return;
+    const html = renderToStaticMarkup(h(DictionaryEntry, { entry }));
+    expect(html).toContain('<i lang="fr">capsomère</i>');
+    expect(html).toContain('<i lang="grc">meros</i>');
+  });
+});
