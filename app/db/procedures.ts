@@ -64,11 +64,16 @@ export async function listProceduresForOperator(env: Env) {
     })
     .from(procedures)
     .orderBy(asc(procedures.slug));
-  return rows.map(({ record, status, ...row }) => ({
-    ...row,
-    draft: status === "draft",
-    gaps: (JSON.parse(record) as ProcedureRecord).gaps.length,
-  }));
+  return rows.map(({ record, status, ...row }) => {
+    const parsed = JSON.parse(record) as ProcedureRecord;
+    return {
+      ...row,
+      draft: status === "draft",
+      gaps: parsed.gaps.length,
+      // The admin's view, so Dustin can find the protocols still to set: the level, or MISSING. Public output never says MISSING.
+      biosafetyLevel: row.profile === "protocol" ? (parsed.biosafetyLevel ?? "MISSING") : null,
+    };
+  });
 }
 
 /** For the protocol library: every published protocol and computational method, with its full record. */

@@ -316,6 +316,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     // Protocol.
     scale: known(d.scale) ? { count: Number(d.scale.count), unit: String(d.scale.unit) } : null,
     biosafety: known(d.biosafety) && d.biosafety !== "not applicable" ? d.biosafety : null,
+    // Dustin's to set per protocol. A gap reads as null, so no page, twin or structured data ever carries "MISSING".
+    biosafetyLevel: /** @type {string | null} */ (known(d.biosafety_level)),
     hostStrain:
       known(d.host_strain) && d.host_strain !== "not applicable" ? list(d.host_strain).map(String).join("; ") : null,
     solutions: list(d.solutions).map((/** @type {any} */ s) => ({
@@ -409,6 +411,7 @@ export function procedureMarkdown(record, parsed) {
     ["Total time", record.time.total],
     ["Hands-on time", record.time.handsOn],
     ["Host strain", record.hostStrain],
+    ["Biosafety level", record.biosafetyLevel],
     [
       "Biosafety",
       record.biosafety
