@@ -82,6 +82,7 @@ export function procedureJsonLd(record, origin, person) {
       "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROTOCOL_PROFILE },
       reagent: record.materials.map((m) => m.display),
       labEquipment: record.equipment.map((e) => e.name),
+      ...(record.biosafetyLevel ? { additionalProperty: { "@type": "PropertyValue", name: "Biosafety level", value: record.biosafetyLevel } } : {}),
       ...(record.biosafety ? { bioSample: [record.biosafety.organism, record.biosafety.strain].filter(Boolean).join(" ") } : {}),
       ...(record.expectedResultsHtml ? { protocolOutcome: text(record.expectedResultsHtml) } : {}),
       ...(record.limitationsHtml ? { protocolLimitation: text(record.limitationsHtml) } : {}),
