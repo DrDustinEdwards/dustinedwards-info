@@ -10,7 +10,8 @@ key_takeaways:
   - "Each site mounts the same small package and implements an adapter over its own code."
   - "Every save carries the version it was based on, so stale edits are refused instead of overwriting newer work."
   - "Preview returns the full page from the site's own renderer, so what you check is what ships."
-draft: true
+draft: false
+first_published: 2026-10-04
 ---
 
 [Part one](/writing/carrel-a-writing-desk-apart-from-the-site) explained why the writing for this site moved into a separate private tool called Carrel. This part covers how Carrel talks to a site, because that contract is the whole design. If it is small and strict, adding a site is an afternoon. If it is large and loose, every site becomes a special case again.
