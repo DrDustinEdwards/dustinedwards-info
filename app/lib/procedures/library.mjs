@@ -6,7 +6,7 @@
 import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
 import { TOOLS } from "../phage-tools.mjs";
-import { LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
+import { COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, ORGANISMS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -226,20 +226,31 @@ export function overviewMarkdown(overview, origin) {
     "### The phage workflow",
     "",
     ...overview.stages.map(stage),
-    "",
-    "### Browse by method",
-    "",
-    ...overview.tiles.map((t) => `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}`),
+    ...overview.browse.flatMap((group) => [
+      "",
+      `### ${group.title}`,
+      "",
+      ...group.tiles.map((t) => {
+        const about = "about" in t && typeof t.about === "string" ? ` ([about the course](${origin}${t.about}))` : "";
+        return `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}${about}`;
+      }),
+    ]),
   ].join("\n");
 }
 
 /**
- * The address of the library narrowed to some methods: the one a person reaches by choosing them in the facet.
+ * The address of the library narrowed to some values of a facet: the one a person reaches by choosing them there.
  *
- * @param {readonly string[]} methods
+ * @param {string} key the facet's parameter (method, organism, course)
+ * @param {readonly string[]} values
  */
+export function facetHref(key, values) {
+  return `${LIBRARY_PATH}?${values.map((v) => `${key}=${encodeURIComponent(v)}`).join("&")}`;
+}
+
+/** The library narrowed to some methods. @param {readonly string[]} methods */
 export function methodHref(methods) {
-  return `${LIBRARY_PATH}?${methods.map((m) => `method=${encodeURIComponent(m)}`).join("&")}`;
+  return facetHref("method", methods);
 }
 
 /**
@@ -262,9 +273,22 @@ export function toolLink(id) {
  * @param {LibraryItem[]} items
  */
 export function libraryOverview(items) {
-  const tiles = Object.keys(METHODS)
-    .map((id) => ({ id, label: methodLabel(id), count: items.filter((p) => p.methods.includes(id)).length, href: methodHref([id]) }))
-    .filter((tile) => tile.count > 0);
+  /** A tile for each id of a closed list that has a protocol: its words, its count and the library narrowed to it. */
+  const tilesOf = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ list, /** @type {(item: LibraryItem) => readonly string[]} */ valuesOf, /** @type {(id: string) => string} */ label) =>
+    Object.keys(list)
+      .map((id) => ({ id, label: label(id), count: items.filter((p) => valuesOf(p).includes(id)).length, href: facetHref(key, [id]) }))
+      .filter((tile) => tile.count > 0);
+  const tiles = tilesOf("method", METHODS, (p) => p.methods, methodLabel);
+  const browse = [
+    { id: "method", title: "Browse by method", tiles },
+    {
+      id: "course",
+      title: "Browse by course",
+      // A course's tile also names the page that describes it, so the course is one click from its protocols.
+      tiles: tilesOf("course", COURSES, (p) => p.courses, courseLabel).map((tile) => ({ ...tile, about: COURSES[/** @type {keyof typeof COURSES} */ (tile.id)].path })),
+    },
+    { id: "organism", title: "Browse by organism", tiles: tilesOf("organism", ORGANISMS, (p) => p.organisms, organismLabel) },
+  ].filter((group) => group.tiles.length > 0);
   const stages = PHAGE_PIPELINE.map((stage) => {
     const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;
     const tools = stage.tools.map((id) => toolLink(id));
@@ -277,6 +301,7 @@ export function libraryOverview(items) {
     organisms: new Set(items.flatMap((p) => p.organisms)).size,
     updated: dates.at(-1) ?? "",
     tiles,
+    browse,
     stages,
   };
 }

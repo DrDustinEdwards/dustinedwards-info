@@ -129,8 +129,9 @@ protocol saved is listed at the next request with no deploy, and no second list 
   workflow (`PHAGE_PIPELINE` in `taxonomy.mjs`, each stage the methods that carry it out, linked to the library
   narrowed to them, and drawn without a link while it has no protocol; each stage's `tools` are calculator ids from
   `TOOLS` in `phage-tools.mjs`, linked under it with the form's own name, and an id the registry lacks is an error),
-  and a tile for each method that has one. Every tile is an address of the filtered library. The twin carries the same
-  figures and the same calculator links.
+  and tiles to browse by method, by course and by organism, one for each id of that closed list (`taxonomy.mjs`) that
+  has a protocol; a course's tile also links the page that describes the course. Every tile is an address of the
+  filtered library. The twin carries the same figures, calculator links and course links.
 - **Tabs are links** (`libraryTabs`, Capsomer's links form): All, then each kind of work in `LIBRARY_TABS` (`taxonomy.mjs`) with its count from the
   rows. A tab is the library narrowed to its methods, so it is also what the method facet gives, and it is current when
   the address's method filter is exactly its methods.
