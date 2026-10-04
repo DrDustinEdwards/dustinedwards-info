@@ -20,9 +20,10 @@ import {
   readProcedureSides,
   readPublicationSides,
   readPhageSides,
+  readRegistrySides,
   readRosterSides,
 } from "~/lib/health/checks.server";
-import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRoster } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRegistry, purgeRoster } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { readCv } from "~/db/cv";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
@@ -45,6 +46,8 @@ import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { listPhages } from "~/db/phages";
 import { PHAGES_DIR, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
 import { compile as compilePhageFile, deletePhageRow, refreshPage as refreshPhagePage, writePhageRow } from "~/lib/phages/save.server";
+import { REGISTRY_DIR } from "~/lib/registry/compile.mjs";
+import { compile as compileRegistryFile, deleteRegistryRow, writeRegistryRow } from "~/lib/registry/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
 import {
@@ -205,6 +208,12 @@ type KindSync<Row extends { slug: string; source_blob_sha: string | null }, Resu
    * drifted, to be retried. Throws to stop the repair.
    */
   settle?: (plan: { files: DriftSides<Row>["files"]; rows: Row[]; drift: ReturnType<typeof contentDriftCompare> }) => Promise<void>;
+  /**
+   * For a kind that legitimately has no files yet (the registry, before any kind brings records): no files AND no
+   * rows is a converged nothing, not a fault. No files while rows exist is still refused, because that is the
+   * listing that came back empty and would delete every row.
+   */
+  emptyOk?: boolean;
 };
 
 /**
@@ -222,6 +231,9 @@ async function convergeKind<
   Result extends CompileResult,
 >(env: OperatorEnv, spec: KindSync<Row, Result>): Promise<ToolResult> {
   const before = await spec.read();
+  if (before.files.length === 0 && before.rows.length === 0 && spec.emptyOk) {
+    return { ok: true, data: { repaired: 0, removed: 0, unpurged: 0, expected: 0, present: 0, converged: true } };
+  }
   if (before.files.length === 0) {
     return {
       ok: false,
@@ -505,6 +517,25 @@ export async function syncPhages(env: OperatorEnv): Promise<ToolResult> {
       for (const slug of drift.unfiled) bySlug.delete(slug);
       await refreshPhagePage(env, [...bySlug.values()]);
     },
+  });
+}
+
+/**
+ * The registry: the compile and write doors a registry save uses. Nothing else is derived from a registry row, so
+ * there is no settle step, and the purge is the registry's tag. It has no files until a kind brings records, so an
+ * empty set with no rows is converged (emptyOk); an empty set with rows is refused like every other kind's.
+ */
+export async function syncRegistry(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_registry",
+    dir: REGISTRY_DIR,
+    noun: "registry item",
+    read: () => readRegistrySides(env),
+    compile: (slug, raw) => compileRegistryFile(env, slug, raw),
+    write: (compiled) => writeRegistryRow(env, compiled),
+    remove: (row) => deleteRegistryRow(env, row),
+    purge: purgeRegistry,
+    emptyOk: true,
   });
 }
 

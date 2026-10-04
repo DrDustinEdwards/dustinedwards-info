@@ -22,6 +22,7 @@
 /content/generated/procedures.json
 /content/generated/roster.json
 /content/generated/phages.json
+/content/generated/registry.json
 
 # The CV's rows, which sync:content writes to D1 (docs/CV.md). Derived from content/cv/ and the publications by
 # build:content, on the same footing as pages.json.

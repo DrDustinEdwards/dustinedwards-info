@@ -530,3 +530,28 @@ export const phages = sqliteTable(
   },
   (t) => [index("phages_year_idx").on(t.year)],
 );
+
+// The lab registry: the primers, strains, reagents and equipment of docs/REGISTRY.md. Derived from
+// content/registry/<kind>/<id>.md, one row per item, written only by writeRegistryRow
+// (app/lib/registry/save.server.ts) and sync:content. The shared columns are what every kind has; `record` is the item
+// as JSON, validated by its kind's own rules.
+export const registry = sqliteTable(
+  "registry",
+  {
+    kind: text("kind").notNull(),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    status: text("status").notNull(),
+    record: text("record").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.kind, t.id] }),
+    index("registry_kind_name_idx").on(t.kind, t.name),
+    check("registry_status_check", sql`${t.status} in ('published', 'draft')`),
+  ],
+);

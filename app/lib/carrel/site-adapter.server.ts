@@ -23,6 +23,7 @@ import { pageHandler } from "~/lib/carrel/page-handler.server";
 import { cvHandler } from "~/lib/carrel/cv-handler.server";
 import { procedureHandler } from "~/lib/carrel/procedure-handler.server";
 import { phageHandler } from "~/lib/carrel/phage-handler.server";
+import { registryHandlers } from "~/lib/carrel/registry-handler.server";
 import { rosterHandler } from "~/lib/carrel/roster-handler.server";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
@@ -308,6 +309,8 @@ export function carrelSiteAdapter(options: {
     rosterHandler(env),
     phageHandler(env),
     procedureHandler(env),
+    // One per registry kind (app/lib/registry/kinds.mjs); none until a kind is defined.
+    ...registryHandlers(env),
   ]);
 
   return {

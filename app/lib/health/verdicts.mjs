@@ -265,6 +265,17 @@ export function phageDriftVerdict(files, rows) {
 }
 
 /**
+ * The same comparison for the registry files and the registry table. An item is read by its address, `<kind>/<id>`.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function registryDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Registry", noun: "registry item", tool: "sync_registry" });
+}
+
+/**
  * The same comparison for content/llms.txt and the settings row /llms.txt is served from: one file, one row.
  *
  * @param {Array<{ slug: string, sha: string }>} files

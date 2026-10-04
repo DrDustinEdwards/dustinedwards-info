@@ -23,6 +23,7 @@ const TOOLS = [
   "sync_cv_pdf",
   "sync_roster",
   "sync_phages",
+  "sync_registry",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -44,6 +45,8 @@ const TOOLS = [
   "get_roster",
   "list_phages",
   "get_phage",
+  "list_registry",
+  "get_registry",
   "purge_zero_results",
 ] as const;
 
@@ -214,6 +217,16 @@ export const TOOL_DESCRIPTORS: Readonly<
       "validator refuses after converging the rest. Idempotent. A read-back reconciliation: expected, present, and a " +
       "converged verdict.",
   },
+  sync_registry: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/registry/<kind>/<id>.md files: re-compiles every item whose file's " +
+      "blob sha differs from its row (or has no row), removes rows whose file is gone, through the same compile and " +
+      "write doors a registry save uses, then purges the registry tag. Refuses an empty file set while rows exist, " +
+      "rather than deleting every row; with no files and no rows there is nothing to do and it says so. Answers 422 " +
+      "naming any file the validator refuses after converging the rest. Idempotent. A read-back reconciliation: " +
+      "expected, present, and a converged verdict.",
+  },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
     returns:
@@ -361,6 +374,20 @@ export const TOOL_DESCRIPTORS: Readonly<
     returns:
       "The phage the committed file holds (the fields the public table shows), its raw file, the head sha, and any " +
       "validation errors the file has now. The format is docs/PHAGES.md. Read only: a phage is saved through Carrel.",
+  },
+  list_registry: {
+    args: { kind: "string, optional: one registry kind, such as primer" },
+    returns:
+      "Every registry row in D1, in the site's order (kind, then name): kind, id, name, status and the kind's own " +
+      "fields, with the count and the head sha. Drafts are included, marked by status. The registry is edited " +
+      "through Carrel, not here (docs/REGISTRY.md).",
+  },
+  get_registry: {
+    args: { slug: "string, an item's address <kind>/<id>, such as primer/m13-forward" },
+    returns:
+      "The item the committed file holds, its raw file, the head sha, the fields recorded as MISSING (what is " +
+      "waiting for Dustin), and any validation errors the file has now. The format is docs/REGISTRY.md. Read only: " +
+      "an item is saved through Carrel.",
   },
   purge_zero_results: {
     args: {},

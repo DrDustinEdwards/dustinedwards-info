@@ -355,7 +355,11 @@
     "app/lib/roster/compile.mjs",
     // The phage table's compile path, the same on both sides (docs/PHAGES.md): the page compile draws the table from
     // it, so build:content and sync:content compile every phage file with the module the phage save runs.
-    "app/lib/phages/compile.mjs"
+    "app/lib/phages/compile.mjs",
+    // The registry's compile path, the same on both sides (docs/REGISTRY.md): build:content and sync:content compile
+    // every registry file with the module the registry save runs, and it reads its kinds from kinds.mjs.
+    "app/lib/registry/compile.mjs",
+    "app/lib/registry/kinds.mjs"
   ],
   "compilerOptions": {
     "composite": true,

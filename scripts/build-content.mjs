@@ -21,6 +21,7 @@ import { buildCvFrom, CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { buildPhages, PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
+import { buildRegistry, REGISTRY_ARTIFACT_PATH } from "./lib/registry.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 import { buildRoster, ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
@@ -346,9 +347,14 @@ async function main() {
   const phageRows = (await phages()).rows;
   await writeFile(fromRoot(PHAGES_ARTIFACT_PATH), `${JSON.stringify({ phages: phageRows }, null, 2)}\n`, "utf8");
 
+  // The registry's rows, which sync:content writes to D1 (docs/REGISTRY.md). Written even when empty: the sync reads
+  // the artifact and refuses one that has no registry list, so an empty registry is a list, not a missing file.
+  const registryRows = (await buildRegistry()).rows;
+  await writeFile(fromRoot(REGISTRY_ARTIFACT_PATH), `${JSON.stringify({ registry: registryRows }, null, 2)}\n`, "utf8");
+
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
-      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files), ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts) and ${PHAGES_ARTIFACT_PATH} (${phageRows.length} phages)`,
+      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files), ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts) and ${PHAGES_ARTIFACT_PATH} (${phageRows.length} phages) and ${REGISTRY_ARTIFACT_PATH} (${registryRows.length} registry items)`,
   );
 }
 
