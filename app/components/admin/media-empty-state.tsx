@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Empty } from "capsomer/react/empty";
 
 import type { hrefWith } from "~/lib/media/view.mjs";
 
@@ -15,45 +16,41 @@ export function MediaEmptyState({
   lensCounts: Listing["lensCounts"];
   linkTo: (over?: Parameters<typeof hrefWith>[1]) => string;
 }) {
+  if (lensCounts.all === 0 && !q) {
+    return (
+      <Empty
+        kind="nothing-yet"
+        title="Nothing here yet"
+        action={
+          /* A button, not a label: a label cannot take focus, so the keyboard could not reach it. */
+          <button
+            type="button"
+            className="cap-btn"
+            data-variant="primary"
+            onClick={() => document.getElementById("media-file")?.click()}
+          >
+            Upload the first file
+          </button>
+        }
+      >
+        Files you upload get a content-hashed address you can paste into any post. Anything committed
+        to the repository shows up automatically after a deploy.
+      </Empty>
+    );
+  }
+  if (q) {
+    return (
+      <Empty kind="no-match" title={<>Nothing matches &ldquo;{q}&rdquo;</>}>
+        Searched paths, names, alt text and tags.{" "}
+        <Link to={linkTo({ q: "", page: 1 })}>Clear the search</Link>, or look in{" "}
+        <Link to={linkTo({ q: "", role: "all", lens: "", page: 1 })}>every group</Link>.
+      </Empty>
+    );
+  }
   return (
-        <div className="media-empty" data-empty={q ? "search" : lensCounts.all === 0 ? "library" : "lens"}>
-          {lensCounts.all === 0 && !q ? (
-            <>
-              <p className="media-empty-title">Nothing here yet</p>
-              <p className="media-empty-body">
-                Files you upload get a content-hashed address you can paste into
-                any post. Anything committed to the repository shows up
-                automatically after a deploy.
-              </p>
-              {/* A button, not a label: a label cannot take focus, so the keyboard could not reach it. */}
-              <button
-                type="button"
-                className="btn media-empty-action"
-                onClick={() => document.getElementById("media-file")?.click()}
-              >
-                Upload the first file
-              </button>
-            </>
-          ) : q ? (
-            <>
-              <p className="media-empty-title">
-                Nothing matches &ldquo;{q}&rdquo;
-              </p>
-              <p className="media-empty-body">
-                Searched paths, names, alt text and tags.{" "}
-                <Link to={linkTo({ q: "", page: 1 })}>Clear the search</Link>, or
-                look in <Link to={linkTo({ q: "", role: "all", lens: "", page: 1 })}>every group</Link>.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="media-empty-title">Nothing in this view</p>
-              <p className="media-empty-body">
-                Every file passes this check.{" "}
-                <Link to={linkTo({ lens: "", role: "all", page: 1 })}>Show everything</Link>.
-              </p>
-            </>
-          )}
-        </div>
+    <Empty kind="all-clear" title="Nothing in this view">
+      Every file passes this check.{" "}
+      <Link to={linkTo({ lens: "", role: "all", page: 1 })}>Show everything</Link>.
+    </Empty>
   );
 }

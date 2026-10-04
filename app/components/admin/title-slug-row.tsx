@@ -43,75 +43,76 @@ export function TitleSlugRow({
 
   return (
     <>
-            <div className="editor-title-row">
-              <label className="sr-only" htmlFor="field-title">
-                Title
-              </label>
-              <input
-                id="field-title"
-                name="title"
-                className="editor-title"
-                value={title}
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  if (isNew && !slugPinned) setSlug(slugify(event.target.value));
-                }}
-                placeholder="Untitled"
-                required
-                autoComplete="off"
-                aria-describedby="title-count"
-              />
-              <span
-                id="title-count"
-                className={title.length > TITLE_LIMIT ? "count over" : "count"}
-              >
-                {title.length}/{TITLE_LIMIT}
-              </span>
-            </div>
+      <div className="cap-field">
+        <label className="cap-field-label" htmlFor="field-title">
+          Title
+        </label>
+        <input
+          id="field-title"
+          name="title"
+          className="cap-input"
+          value={title}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            if (isNew && !slugPinned) setSlug(slugify(event.target.value));
+          }}
+          placeholder="Untitled"
+          required
+          autoComplete="off"
+          aria-describedby="title-count"
+        />
+        <span
+          id="title-count"
+          className="cap-field-help"
+          data-over={title.length > TITLE_LIMIT ? "" : undefined}
+        >
+          {title.length}/{TITLE_LIMIT}
+          {title.length > TITLE_LIMIT ? " (over the length search results show)" : ""}
+        </span>
+      </div>
 
-            {isNew ? (
-              <div className="editor-slug-row">
-                <label className="field-label" htmlFor="field-slug">
-                  Slug
-                  {/* Hidden from the name: the full sentence reaches the field by describedby. */}
-                  {slugProblem ? (
-                    <span className="count over" aria-hidden="true">
-                      {slugProblem}
-                    </span>
-                  ) : null}
-                </label>
-                <div className="editor-slug-input">
-                  <span className="muted">/writing/</span>
-                  <input
-                    id="field-slug"
-                    name="slug"
-                    value={slug}
-                    onChange={(event) => {
-                      setSlugPinned(true);
-                      setSlug(event.target.value);
-                    }}
-                    required
-                    pattern={SLUG_ATTRIBUTE_PATTERN}
-                    /* An HTML pattern cannot carry a length without a lookahead, so the bound is its own attribute. */
-                    maxLength={SLUG_MAX_LENGTH}
-                    aria-invalid={slugProblem !== null}
-                    aria-describedby={slugProblem ? "slug-problem slug-hint" : "slug-hint"}
-                    autoComplete="off"
-                  />
-                </div>
-                {slugProblem ? (
-                  <p className="field-alarm" id="slug-problem">
-                    {slugTaken
-                      ? `A post already lives at /writing/${slug}. Saving would be refused.`
-                      : "Lowercase letters, digits and single hyphens."}
-                  </p>
-                ) : null}
-                <span className="field-hint muted" id="slug-hint">
-                  Derived from the title until you change it. Fixed after the
-                  first save, because it is the filename and the public URL.
-                </span>
-              </div>
-            ) : null}
+      {isNew ? (
+        <div className="cap-field" data-invalid={slugProblem ? "" : undefined}>
+          <label className="cap-field-label" htmlFor="field-slug">
+            Slug
+            {/* Hidden from the name: the full sentence reaches the field by describedby. */}
+            {slugProblem ? <span aria-hidden="true"> ({slugProblem})</span> : null}
+          </label>
+          <div className="cap-input-group" role="group" aria-label="Slug">
+            <div className="cap-input-addon" data-align="inline-start">
+              <span className="cap-input-group-text">/writing/</span>
+            </div>
+            <input
+              id="field-slug"
+              className="cap-input"
+              name="slug"
+              value={slug}
+              onChange={(event) => {
+                setSlugPinned(true);
+                setSlug(event.target.value);
+              }}
+              required
+              pattern={SLUG_ATTRIBUTE_PATTERN}
+              /* An HTML pattern cannot carry a length without a lookahead, so the bound is its own attribute. */
+              maxLength={SLUG_MAX_LENGTH}
+              aria-invalid={slugProblem !== null}
+              aria-describedby={slugProblem ? "slug-problem slug-hint" : "slug-hint"}
+              autoComplete="off"
+            />
+          </div>
+          {slugProblem ? (
+            <p className="cap-field-error" id="slug-problem">
+              {slugTaken
+                ? `A post already lives at /writing/${slug}. Saving would be refused.`
+                : "Lowercase letters, digits and single hyphens."}
+            </p>
+          ) : null}
+          <span className="cap-field-help" id="slug-hint">
+            Derived from the title until you change it. Fixed after the first save, because it is
+            the filename and the public URL.
+          </span>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -1,5 +1,9 @@
 # Admin design
 
+> **Superseded in look (2026-10-03).** The admin plane is built on Capsomer, the shared design system: its shell,
+> tokens, fonts and components, with the page frame in `app/admin.css`. What follows about behaviour, access and
+> what a write means still holds; what it says about the old admin's own styles and `docs/admin-mockups/` does not.
+
 The rules the admin plane's pages follow. A specification, not a record of what
 is built: where the repo disagrees with it, the repo changes. Nothing here adds a
 write path or changes what a save means.

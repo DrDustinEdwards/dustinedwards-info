@@ -1,6 +1,12 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Form, Link, useBlocker, useNavigation } from "react-router";
+import { Alert, Banner } from "capsomer/react/banner";
+import { Button } from "capsomer/react/button";
+import { MarkdownEditor } from "capsomer/react/markdown-editor";
+import { Panel } from "capsomer/react/panel";
+import { Status } from "capsomer/react/status";
 
+import { PageHead } from "~/components/admin/page-head";
 import { ACCEPT_ATTRIBUTE, uploadMedia } from "~/lib/media/upload-contract.mjs";
 
 import { clearAllBuffersFor, type DraftBuffer } from "~/lib/editor/draft-buffer";
@@ -13,6 +19,7 @@ import {
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
 import { EditorBar } from "./editor-bar";
+import { SCAFFOLDS } from "./md-editor-commands";
 import { PostMetadata } from "./post-metadata";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
@@ -22,11 +29,33 @@ import { useLivePreview } from "./use-live-preview";
 
 // There is no `draft` field: the transition rides in the submitter's `intent`, which a scriptless browser still sends.
 
-// The dynamic import keeps editor machinery out of public bundles; first paint is the textarea, which no-script readers keep.
-const MarkdownEditor = lazy(() => import("./markdown-editor"));
+/** A post the link palette can offer; `state` flags one that is not live, since linking a draft would 404. */
+type LinkTarget = { slug: string; title: string; state: "published" | "scheduled" | "draft" };
 
-/** Type-only, so importing it does not pull the CodeMirror chunk in eagerly. */
-type LinkTarget = import("./markdown-editor").LinkTarget;
+// Read off the document, not loader data: the root loader re-runs on client navigation and mints a different nonce.
+// The IDL property, not getAttribute: browsers hide the attribute after parsing so injected script cannot read it.
+function documentCspNonce(): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+}
+
+/** The site's own blocks for the editor's slash menu and toolbar; the editor's behaviour is Capsomer's. */
+const SCAFFOLD_LIST = Object.entries(SCAFFOLDS).map(([id, scaffold]) => ({
+  id,
+  label: scaffold.label,
+  hint: scaffold.hint,
+  text: scaffold.text,
+  cursor: scaffold.cursor,
+}));
+
+/** A dropped or pasted image: the upload, whose failure the editor says in its alert, then the figure. */
+async function uploadImage(file: File): Promise<{ url: string }> {
+  const result = await uploadMedia(file);
+  if ("error" in result) throw new Error(result.error);
+  return { url: result.url };
+}
+
+const TONE_OF_STATE = { published: "ok", draft: "nodata", scheduled: "info" } as const;
 
 const AUTOSAVE_DELAY_MS = 800;
 const FORM_ID = "post-editor";
@@ -93,7 +122,6 @@ export function PostEditor({
   }, [busy]);
 
   const formRef = useRef<HTMLFormElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const keyboardIntentRef = useRef<HTMLInputElement>(null);
 
   const { offer, setOffer, savedAt, ageNow, bufferTried, persist, autosaveTimer } = useDraftBuffer({
@@ -195,31 +223,60 @@ export function PostEditor({
   };
 
   return (
-    <div className="editor-shell">
-      {/* The bar shows the title in a span; the page still needs a heading to be found by. */}
-      <h1 className="sr-only">{isNew ? "New post" : `Edit ${title || "Untitled"}`}</h1>
+    <div className="app-page">
+      <PageHead
+        crumbs={[{ label: "Posts", href: "/admin/posts" }, { label: isNew ? "New post" : title || "Untitled" }]}
+        title={isNew ? "New post" : `Edit ${title || "Untitled"}`}
+        lead={<Status tone={TONE_OF_STATE[state]}>{state}</Status>}
+        actions={
+          <EditorBar
+            formId={FORM_ID}
+            state={state}
+            richBody={richBody}
+            layout={layout}
+            chooseLayout={chooseLayout}
+            dirty={dirty}
+            headSha={headSha}
+            feedback={feedback}
+            savedAt={savedAt}
+            ageNow={ageNow}
+            bufferTried={bufferTried}
+            busy={busy}
+            drawerOpen={drawerOpen}
+            openDrawer={() => setDrawerOpen(true)}
+            everPublished={everPublished}
+            publishAt={publishAt}
+            onPublishAtChange={(value) => {
+              setPublishAt(value);
+              setDirty(true);
+            }}
+          />
+        }
+      />
+
       {/* `role="alert"`, not a modal: the router already stopped the navigation, and a modal would
           trap focus around a question the author can answer by typing on. */}
       {blocker.state === "blocked" ? (
-        <div className="editor-leave-guard" role="alert">
-          <p>
-            <strong>This post has unsaved changes.</strong> Leaving now keeps
-            them in this browser's crash net, and they are not committed.
-          </p>
-          <div className="editor-leave-actions">
-            <button type="button" className="btn" onClick={() => blocker.reset()}>
-              Stay here
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => blocker.proceed()}>
-              Leave without saving
-            </button>
-          </div>
-        </div>
+        <Alert
+          tone="warn"
+          title="This post has unsaved changes."
+          action={
+            <>
+              <Button onClick={() => blocker.reset()}>Stay here</Button>
+              <Button variant="quiet" onClick={() => blocker.proceed()}>
+                Leave without saving
+              </Button>
+            </>
+          }
+        >
+          Leaving now keeps them in this browser's crash net, and they are not committed.
+        </Alert>
       ) : null}
+
       <Form
         id={FORM_ID}
         method="post"
-        className="editor-form"
+        className="app-editor"
         ref={formRef}
         onChange={touched}
         onSubmit={() => setDirty(false)}
@@ -244,181 +301,131 @@ export function PostEditor({
         {/* No `draft` field on purpose: the intent carries the transition, so a scriptless request
             cannot send the post's current state instead of the one the author pressed. */}
 
-        <EditorBar
+        {!headSha ? (
+          <Alert tone="crit" title="Saving unavailable">
+            {headError
+              ? `The repository could not be read, so a save cannot commit: ${headError}`
+              : "GITHUB_TOKEN is not configured on this Worker, so a save cannot commit."}{" "}
+            Preview still works.
+          </Alert>
+        ) : null}
+
+        {loadProblems.length > 0 ? (
+          <Banner tone="warn" title="Some editor data did not load">
+            {loadProblems.join(" ")}
+          </Banner>
+        ) : null}
+
+        {/* Always in the DOM so the live region exists before its content does. */}
+        <div role="status" aria-live="polite">
+          {feedback ? <FeedbackMessage feedback={feedback} /> : null}
+        </div>
+
+        {/* Inside the editing form: a publish re-sends the whole post. Scheduling is script-only
+            because datetime-local reads as local time in the browser and UTC on the server. */}
+        {awaitingPublishConfirmation ? (
+          <Panel
+            title="Publish this post"
+            footer={
+              <>
+                <Link to="/admin/posts" className="cap-btn">
+                  Cancel
+                </Link>
+                <Button type="submit" name="intent" value={PUBLISH_CONFIRMED_INTENT} variant="primary">
+                  Publish now
+                </Button>
+              </>
+            }
+          >
+            <p>{FIRST_PUBLICATION_NOTE}</p>
+            <p className="cap-muted">
+              To hold it until a set time instead, set the schedule in Post settings, which needs
+              scripting.
+            </p>
+          </Panel>
+        ) : null}
+
+        {offer ? (
+          <RestoreOffer
+            buffer={offer}
+            onRestore={restore}
+            onDiscard={() => {
+              clearAllBuffersFor(fields.slug);
+              setOffer(null);
+            }}
+          />
+        ) : null}
+
+        {/* An author returning to this tab must not mistake a loaded revision for the live post. */}
+        {restoredFrom ? (
+          <Banner tone="info">
+            Loaded revision <code className="cap-mono">{restoredFrom.slice(0, 7)}</code> into the
+            editor. Nothing has been written yet. Save to commit it on top, or leave without saving to
+            discard it.
+          </Banner>
+        ) : null}
+
+        <TitleSlugRow
           title={title}
-          state={state}
-          richBody={richBody}
-          layout={layout}
-          chooseLayout={chooseLayout}
-          dirty={dirty}
-          headSha={headSha}
-          feedback={feedback}
-          savedAt={savedAt}
-          ageNow={ageNow}
-          bufferTried={bufferTried}
-          busy={busy}
-          drawerOpen={drawerOpen}
-          openDrawer={() => setDrawerOpen(true)}
-          everPublished={everPublished}
-          publishAt={publishAt}
-          onPublishAtChange={(value) => {
-            setPublishAt(value);
-            setDirty(true);
-          }}
+          setTitle={setTitle}
+          slug={slug}
+          setSlug={setSlug}
+          slugPinned={slugPinned}
+          setSlugPinned={setSlugPinned}
+          isNew={isNew}
+          existingSlugs={existingSlugs}
         />
 
-        <div className="editor-canvas" data-layout={layout}>
-          <div className="editor-page">
-            {!headSha ? (
-              <div className="editor-notice" role="alert">
-                <strong>Saving unavailable</strong>
-                <p>
-                  {headError
-                    ? `The repository could not be read, so a save cannot commit: ${headError}`
-                    : "GITHUB_TOKEN is not configured on this Worker, so a save cannot commit."}{" "}
-                  Preview still works.
-                </p>
-              </div>
-            ) : null}
-
-            {loadProblems.length > 0 ? (
-              <div className="editor-notice">
-                <strong>Some editor data did not load</strong>
-                {loadProblems.map((problem) => (
-                  <p key={problem}>{problem}</p>
-                ))}
-              </div>
-            ) : null}
-
-            {/* Always in the DOM so the live region exists before its content does. */}
-            <div className="editor-feedback-slot" role="status" aria-live="polite">
-              {feedback ? <FeedbackMessage feedback={feedback} /> : null}
-            </div>
-
-            {/* Inside the editing form: a publish re-sends the whole post. Scheduling is script-only
-                because datetime-local reads as local time in the browser and UTC on the server. */}
-            {awaitingPublishConfirmation ? (
-              <div className="editor-confirm-publish">
-                <h2>Publish this post</h2>
-                <p>{FIRST_PUBLICATION_NOTE}</p>
-                <div className="editor-confirm-actions">
-                  <Link to="/admin/posts" className="btn-ghost">
-                    Cancel
-                  </Link>
-                  <button
-                    type="submit"
-                    name="intent"
-                    value={PUBLISH_CONFIRMED_INTENT}
-                    className="btn"
-                  >
-                    Publish now
-                  </button>
-                </div>
-                <p className="muted">
-                  To hold it until a set time instead, set the schedule in Post
-                  settings, which needs scripting.
-                </p>
-              </div>
-            ) : null}
-
-            {offer ? (
-              <RestoreOffer
-                buffer={offer}
-                onRestore={restore}
-                onDiscard={() => {
-                  clearAllBuffersFor(fields.slug);
-                  setOffer(null);
-                }}
-              />
-            ) : null}
-
-            {/* An author returning to this tab must not mistake a loaded revision for the live post. */}
-            {restoredFrom ? (
-              <p className="editor-notice">
-                Loaded revision <code>{restoredFrom.slice(0, 7)}</code> into the
-                editor. Nothing has been written yet. Save to commit it on top,
-                or leave without saving to discard it.
-              </p>
-            ) : null}
-
-            <TitleSlugRow
-              title={title}
-              setTitle={setTitle}
-              slug={slug}
-              setSlug={setSlug}
-              slugPinned={slugPinned}
-              setSlugPinned={setSlugPinned}
-              isNew={isNew}
-              existingSlugs={existingSlugs}
+        <div className="app-editor-canvas" data-layout={layout}>
+          <div className="app-editor-write">
+            {/* The editor's own textarea is the no-script editor and is always submitted: it holds the
+                markdown, and the editor takes over in place once it has loaded. `required` drops once it
+                mounts, since a hidden required control blocks submission unreachably. */}
+            <MarkdownEditor
+              label="Body"
+              ariaLabel="Body, markdown"
+              id="field-body"
+              name="body"
+              value={body}
+              onChange={(next) => {
+                setBody(next);
+                touched();
+              }}
+              onReady={() => setRichBody(true)}
+              required={!richBody}
+              nonce={documentCspNonce()}
+              accept={ACCEPT_ATTRIBUTE}
+              scaffolds={SCAFFOLD_LIST}
+              linkTargets={linkTargets.map((target) => ({
+                href: `/writing/${target.slug}`,
+                title: target.title,
+                note: target.state === "published" ? undefined : `not live yet (${target.state})`,
+              }))}
+              onUpload={uploadImage}
+              imageMarkdown={({ url, alt }) =>
+                `:::figure{src="${url}" alt="${alt.trim().replace(/"/g, "&quot;")}"}\n:::`
+              }
+              help="Markdown. Ctrl or Cmd + K links to a post. A lone / on a line opens the block menu. An image needs alt text."
             />
-
-            <div className="editor-panes">
-              <div className="editor-pane editor-pane-write">
-                <label className="sr-only" htmlFor="field-body">
-                  Body, markdown
-                </label>
-                {/* Always submitted, and the no-script editor. `required` drops once CodeMirror mounts,
-                    since a hidden required control blocks submission unreachably. */}
-                <textarea
-                  id="field-body"
-                  ref={bodyRef}
-                  name="body"
-                  className={richBody ? "editor-body is-replaced" : "editor-body"}
-                  value={body}
-                  onChange={(event) => setBody(event.target.value)}
-                  spellCheck
-                  required={!richBody}
-                  aria-hidden={richBody}
-                  tabIndex={richBody ? -1 : undefined}
-                />
-                <Suspense fallback={null}>
-                  <MarkdownEditor
-                    value={body}
-                    onChange={(next) => {
-                      setBody(next);
-                      touched();
-                    }}
-                    onReady={() => setRichBody(true)}
-                    slug={fields.slug}
-                    linkTargets={linkTargets}
-                  />
-                </Suspense>
-              </div>
-
-              {layout !== "write" ? (
-                <PreviewPane result={preview} busy={previewing} />
-              ) : null}
-            </div>
-
-            {/* The image path until CodeMirror mounts, then drag-drop, paste and the toolbar take over. It needs script too: without script the editor has no image upload. */}
-            {!richBody ? (
-              <ImageUploader
-                onInsert={(snippet) => {
-                  const el = bodyRef.current;
-                  if (!el) return;
-                  const at = el.selectionStart ?? body.length;
-                  setBody(body.slice(0, at) + snippet + body.slice(at));
-                  setDirty(true);
-                }}
-              />
-            ) : null}
           </div>
 
-          {/* In the page, not the drawer: the drawer is a `<dialog>` that only opens with script. */}
-          <PostMetadata
-            formId={FORM_ID}
-            featured={fields.featured}
-            series={fields.series}
-            part={fields.part}
-            furtherReading={fields.furtherReading}
-            ogTitle={fields.ogTitle}
-            ogDescription={fields.ogDescription}
-            title={title}
-            description={description}
-            linkTargets={linkTargets}
-            currentSlug={slug}
-          />
+          {layout !== "write" ? <PreviewPane result={preview} busy={previewing} /> : null}
         </div>
+
+        {/* In the page, not the drawer: the drawer is a `<dialog>` that only opens with script. */}
+        <PostMetadata
+          formId={FORM_ID}
+          featured={fields.featured}
+          series={fields.series}
+          part={fields.part}
+          furtherReading={fields.furtherReading}
+          ogTitle={fields.ogTitle}
+          ogDescription={fields.ogDescription}
+          title={title}
+          description={description}
+          linkTargets={linkTargets}
+          currentSlug={slug}
+        />
 
         <SettingsDrawer
           open={drawerOpen}
@@ -467,10 +474,9 @@ export function PostEditor({
       </Form>
 
       {!richBody && previewHtml !== undefined && previewHtml !== null ? (
-        <section className="editor-preview" aria-label="Preview">
-          <h2>Preview</h2>
-          <div className="prose" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-        </section>
+        <Panel title="Preview">
+          <article data-context="prose" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        </Panel>
       ) : null}
     </div>
   );
@@ -493,40 +499,28 @@ function PreviewPane({
       .map((link) => `<link rel="stylesheet" href="${link.href}">`)
       .join("");
     const theme = document.documentElement.getAttribute("data-theme");
+    // A style attribute, which the policy allows, rather than a style element, which it does not.
     setDoc(
       `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}>` +
-        `<head><meta charset="utf-8">${styles}` +
-        `<style>body{margin:0;padding:2rem 1.5rem;background:var(--paper)}` +
-        `.post{margin:0 auto}</style></head>` +
-        `<body><div class="post"><article class="prose">${result.html}</article></div></body></html>`,
+        `<head><meta charset="utf-8">${styles}</head>` +
+        `<body style="margin:0;padding:2rem 1.5rem">` +
+        `<article data-context="prose">${result.html}</article></body></html>`,
     );
   }, [result]);
 
   return (
-    <section className="editor-pane editor-pane-preview" aria-label="Preview">
-      <div className="editor-pane-head">
-        <span className="field-label">Preview</span>
-        <span className="muted" aria-live="polite">
-          {busy ? "Rendering" : result && "error" in result ? "Not renderable" : ""}
-        </span>
-      </div>
+    <Panel
+      title="Preview"
+      src={busy ? "Rendering" : result && "error" in result ? "Not renderable" : undefined}
+    >
       {result && "error" in result ? (
-        <div className="editor-feedback" data-tone="danger">
-          <Glyph tone="danger" />
-          <div>
-            <strong>The renderer refused this body.</strong>
-            <p>{result.error}</p>
-          </div>
-        </div>
+        <Alert tone="crit" title="The renderer refused this body.">
+          {result.error}
+        </Alert>
       ) : (
-        <iframe
-          className="editor-preview-frame"
-          title="Rendered preview"
-          sandbox=""
-          srcDoc={doc}
-        />
+        <iframe className="app-editor-frame" title="Rendered preview" sandbox="" srcDoc={doc} />
       )}
-    </section>
+    </Panel>
   );
 }
 
@@ -540,220 +534,78 @@ function RestoreOffer({
   onDiscard: () => void;
 }) {
   return (
-    <div className="editor-feedback" data-tone="warning">
-      <svg
-        className="editor-feedback-glyph"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M3 12a9 9 0 1 0 3-6.7" />
-        <path d="M3 4v5h5" />
-      </svg>
-      <div>
-        <strong>Unsaved local changes from an earlier session.</strong>
-        <p>
-          Kept in this browser at {new Date(buffer.at).toLocaleString()}. They
-          were never committed.
-        </p>
-        <p className="editor-restore-actions">
-          <button type="button" className="row-action" onClick={onRestore}>
+    <Banner
+      tone="warn"
+      title="Unsaved local changes from an earlier session."
+      actions={
+        <>
+          <Button size="sm" onClick={onRestore}>
             Restore them
-          </button>
-          <button type="button" className="row-action" onClick={onDiscard}>
+          </Button>
+          <Button size="sm" variant="quiet" onClick={onDiscard}>
             Discard them
-          </button>
-        </p>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      Kept in this browser at {new Date(buffer.at).toLocaleString()}. They were never committed.
+    </Banner>
   );
 }
 
 function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
   if (feedback.state === "failed") {
     return (
-      <div className="editor-feedback" data-tone="danger">
-        <Glyph tone="danger" />
-        <div>
-          <strong>{feedback.conflict ? "Conflict. Not saved." : "Not saved."}</strong>
-          <p>{feedback.message}</p>
-          {/* Shown only when present: an invented location would be worse than none. */}
-          {feedback.field || feedback.line !== undefined ? (
-            <p className="muted">
-              {feedback.field ? <>Field <code>{feedback.field}</code></> : null}
-              {feedback.field && feedback.line !== undefined ? ", " : null}
-              {feedback.line !== undefined ? <>line {feedback.line}</> : null}
-            </p>
-          ) : null}
-        </div>
-      </div>
+      <Alert tone="crit" title={feedback.conflict ? "Conflict. Not saved." : "Not saved."}>
+        {feedback.message}
+        {/* Shown only when present: an invented location would be worse than none. */}
+        {feedback.field || feedback.line !== undefined ? (
+          <>
+            {" "}
+            {feedback.field ? <>Field <code className="cap-mono">{feedback.field}</code></> : null}
+            {feedback.field && feedback.line !== undefined ? ", " : null}
+            {feedback.line !== undefined ? <>line {feedback.line}</> : null}
+          </>
+        ) : null}
+      </Alert>
     );
   }
 
   if (feedback.state === "published-first") {
     return (
-      <div className="editor-feedback" data-tone="success" data-ceremony="">
-        <Glyph tone="published" />
-        <div>
-          <strong>Published for the first time.</strong>
-          <p>
-            Stamped {feedback.at}. Commit {feedback.sha}.
-          </p>
-          <p>
-            Live at{" "}
-            <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
-              /writing/{feedback.slug}
-            </a>
-          </p>
-        </div>
-      </div>
+      <Banner tone="ok" title="Published for the first time.">
+        Stamped {feedback.at}. Commit {feedback.sha}. Live at{" "}
+        <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
+          /writing/{feedback.slug}
+        </a>
+      </Banner>
     );
   }
 
   if (feedback.state === "republished") {
     return (
-      <div className="editor-feedback" data-tone="success">
-        <Glyph tone="published" />
-        <div>
-          <strong>Republished.</strong>
-          <p>
-            Public again at{" "}
-            <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
-              /writing/{feedback.slug}
-            </a>
-            . Commit {feedback.sha}.
-          </p>
-        </div>
-      </div>
+      <Banner tone="ok" title="Republished.">
+        Public again at{" "}
+        <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
+          /writing/{feedback.slug}
+        </a>
+        . Commit {feedback.sha}.
+      </Banner>
     );
   }
 
   if (feedback.state === "unpublished") {
     return (
-      <div className="editor-feedback" data-tone="warning">
-        <Glyph tone="warning" />
-        <div>
-          <strong>Unpublished.</strong>
-          <p>
-            /writing/{feedback.slug} now returns 404, and the post is out of the
-            feed, the sitemap, search and the Ask index. Commit {feedback.sha}.
-          </p>
-        </div>
-      </div>
+      <Banner tone="warn" title="Unpublished.">
+        /writing/{feedback.slug} now returns 404, and the post is out of the feed, the sitemap, search
+        and the Ask index. Commit {feedback.sha}.
+      </Banner>
     );
   }
 
   return (
-    <div className="editor-feedback" data-tone="success">
-      <Glyph tone="success" />
-      <div>
-        <strong>Saved.</strong>
-        <p>Commit {feedback.sha}.</p>
-      </div>
-    </div>
-  );
-}
-
-function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" }) {
-  const shape =
-    tone === "published" ? (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
-      </>
-    ) : tone === "warning" ? (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M6 18 18 6" />
-      </>
-    ) : tone === "danger" ? (
-      <>
-        <path d="M12 3 2 20h20L12 3z" />
-        <path d="M12 10v4M12 17.5v.01" />
-      </>
-    ) : (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="m8 12 3 3 5-6" />
-      </>
-    );
-
-  return (
-    <svg
-      className="editor-feedback-glyph"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {shape}
-    </svg>
-  );
-}
-
-function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
-  const [alt, setAlt] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function upload() {
-    const file = fileRef.current?.files?.[0];
-    if (!file) {
-      setMessage("Choose an image first.");
-      return;
-    }
-    if (!alt.trim()) {
-      setMessage("Alt text is required before an image can be inserted.");
-      return;
-    }
-    setMessage("Uploading");
-
-    const result = await uploadMedia(file);
-    if ("error" in result) {
-      setMessage(result.error);
-      return;
-    }
-    onInsert(`\n![${alt.trim()}](${result.url})\n`);
-    setMessage(`Inserted ${result.url}`);
-    setAlt("");
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  return (
-    <section className="editor-upload" aria-label="Insert image">
-      <h2>Insert image</h2>
-      <div className="editor-upload-row">
-        <input
-          ref={fileRef}
-          type="file"
-          accept={ACCEPT_ATTRIBUTE}
-          aria-label="Image file"
-        />
-        <input
-          value={alt}
-          onChange={(event) => setAlt(event.target.value)}
-          placeholder="Alt text (required)"
-          aria-label="Alt text"
-        />
-        <button type="button" className="btn-ghost" onClick={upload}>
-          Upload and insert
-        </button>
-      </div>
-      {/* Always in the DOM so "Uploading", the failure and the result are all announced. */}
-      <p className="muted" role="status">
-        {message}
-      </p>
-    </section>
+    <Banner tone="ok" title="Saved.">
+      Commit {feedback.sha}.
+    </Banner>
   );
 }

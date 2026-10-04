@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Banner } from "capsomer/react/banner";
 
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import type { hrefWith, sortHref } from "~/lib/media/view.mjs";
@@ -16,25 +17,21 @@ export function MediaTrashControls({
   return (
     <>
       {view.trash ? (
-        <p className="media-usage-note">
-          This is a library view, not a takedown. A trashed file keeps its
-          address, and any published page using it is unchanged. Restore puts it
-          back in the library.{" "}
-          <strong>Only Empty trash deletes anything, and it still refuses
-          anything a post cites.</strong>
-        </p>
+        <Banner tone="info">
+          This is a library view, not a takedown. A trashed file keeps its address, and any published
+          page using it is unchanged. Restore puts it back in the library.{" "}
+          <strong>Only Empty trash deletes anything, and it still refuses anything a post cites.</strong>
+        </Banner>
       ) : null}
 
       {view.trash && trashedCount > 0 ? (
-        <p className="media-empty-trash">
+        <div className="app-actions">
           {/* A link, not `prompt()`, so the confirmation holds without script. */}
-          <Link to={linkTo({ confirm: "empty-trash" })} className="btn-danger">
+          <Link to={linkTo({ confirm: "empty-trash" })} className="cap-btn" data-variant="danger">
             Empty trash
           </Link>
-          <span className="media-facet-hint">
-            Deletes the objects. Anything a post cites is kept and named.
-          </span>
-        </p>
+          <span className="cap-muted">Deletes the objects. Anything a post cites is kept and named.</span>
+        </div>
       ) : null}
 
       {view.confirm === "empty-trash" && trashedCount > 0 ? (

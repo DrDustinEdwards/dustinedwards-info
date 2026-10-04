@@ -15,7 +15,7 @@ const link = (token: string): PreviewLinkView => ({
 });
 
 const buttonNames = (html: string) =>
-  [...html.matchAll(/<button type="button" class="row-action">(.*?)<\/button>/g)].map((m) =>
+  [...html.matchAll(/<button type="button" class="cap-btn" data-size="sm" data-variant="quiet">(.*?)<\/button>/g)].map((m) =>
     (m[1] ?? "").replace(/<[^>]+>/g, ""),
   );
 
@@ -28,5 +28,5 @@ it("names every Copy button by the link it copies, so a row of them is not a row
 
 it("renders the status and alert regions before any copy, empty, so the first result is announced", () => {
   const html = renderToStaticMarkup(h(PreviewLinks, { links: [link("abcdef111111")], created: null }));
-  expect(html).toContain('<div class="sr-only"><div role="status"></div><div role="alert"></div></div>');
+  expect(html).toContain('<div class="cap-sr-only"><div role="status"></div><div role="alert"></div></div>');
 });

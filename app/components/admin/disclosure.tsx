@@ -1,11 +1,12 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "capsomer/react/popover";
 
 /*
  * Deliberately a disclosure, not role="menu": each item is a submit in its own form, which breaks
  * menuitem ownership. The panel is a native popover opened by `popovertarget`, so these repair
  * actions open without script, the panel sits in the top layer (nothing clips it, the posts table's
- * scroll box included), and the browser light-dismisses it on an outside click. CSS anchor
- * positioning puts it under its button; where that is unsupported this hook places it on open.
+ * scroll box included), and the browser light-dismisses it on an outside click. The surface and its
+ * placement are Capsomer's popover; this hook adds the arrow keys and Escape.
  */
 function useDisclosure(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
@@ -61,66 +62,49 @@ function useDisclosure(ref: React.RefObject<HTMLDivElement | null>) {
       if (target?.closest("[data-menu-item]")) close(false);
     };
 
-    // The fallback for a browser without anchor positioning: under the button, right edges aligned.
-    const place = (event: Event) => {
-      if ((event as ToggleEvent).newState !== "open") return;
-      const at = button.getBoundingClientRect();
-      panel.style.inset = "auto";
-      panel.style.margin = "0";
-      panel.style.top = `${at.bottom + 4}px`;
-      panel.style.right = `${document.documentElement.clientWidth - at.right}px`;
-    };
-    const anchored = CSS.supports("anchor-name: --menu");
-
     root.addEventListener("keydown", onKeyDown);
     root.addEventListener("click", onClick);
     root.addEventListener("focusout", onFocusOut);
-    if (!anchored) panel.addEventListener("beforetoggle", place);
     return () => {
       root.removeEventListener("keydown", onKeyDown);
       root.removeEventListener("click", onClick);
       root.removeEventListener("focusout", onFocusOut);
-      panel.removeEventListener("beforetoggle", place);
     };
   }, [ref]);
 }
 
 /**
- * The shared shell of the overflow and row menus. `name` is the class prefix: the wrapper, its
- * `-button` popover invoker and its `-panel` popover. `summaryLabel` names a button whose content is
- * only an icon.
+ * The shared shell of the overflow and row menus, on Capsomer's popover. Items are `cap-option` buttons or
+ * links carrying `data-menu-item`. `summaryLabel` names a button whose content is only an icon.
  */
 export function DisclosureMenu({
-  name,
   summary,
   summaryLabel,
+  iconOnly,
   children,
 }: {
-  name: string;
   summary: React.ReactNode;
   summaryLabel?: string;
+  iconOnly?: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useDisclosure(ref);
-  const id = useId();
-  // One anchor name per menu, or every panel on the page would sit under the last button.
-  const anchor = `--menu${id.replace(/[^A-Za-z0-9_-]/g, "")}`;
 
   return (
-    <div className={name} ref={ref} style={{ "--menu-anchor": anchor } as React.CSSProperties}>
-      <button
-        type="button"
-        className={`${name}-button`}
-        popoverTarget={`${id}-panel`}
-        aria-label={summaryLabel}
-        title={summaryLabel}
-      >
-        {summary}
-      </button>
-      <div className={`${name}-panel`} id={`${id}-panel`} popover="auto">
-        {children}
-      </div>
+    <div ref={ref}>
+      <Popover>
+        <PopoverTrigger
+          aria-label={summaryLabel}
+          title={summaryLabel}
+          {...(iconOnly ? { "data-icon-only": "", "data-variant": "quiet", "data-size": "sm" } : {})}
+        >
+          {summary}
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="end" size="auto" data-flush="" aria-label={summaryLabel ?? "Actions"}>
+          <div className="cap-listbox">{children}</div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

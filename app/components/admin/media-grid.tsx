@@ -3,7 +3,7 @@ import { Form } from "react-router";
 import { BulkBar } from "~/components/admin/media-bulk-bar";
 import { useGridKeyboard } from "~/components/admin/media-keyboard";
 import { MediaListHeader } from "~/components/admin/media-list-header";
-import { MediaTile } from "~/components/admin/media-tile";
+import { MediaRow, MediaTile } from "~/components/admin/media-tile";
 import { groupRows } from "~/lib/media/view.mjs";
 import type { hrefWith, sortHref } from "~/lib/media/view.mjs";
 
@@ -40,69 +40,98 @@ export function MediaGrid({
   setActive: (key: string) => void;
 }) {
   const keys = useGridKeyboard({ setActive, setSelected });
-  const grid = view.view === "grid";
+  const list = view.view === "list";
+  const buckets = groupRows(objects, view.group);
 
   return (
-        // Not role="grid": the column count follows the container width, so positions mean nothing to a screen reader.
-        <Form method="post">
+    // Not role="grid": the column count follows the container width, so positions mean nothing to a screen reader.
+    <Form method="post">
       {/* The form wraps the grid so the checkboxes submit with it; nested in the toolbar it would be
           a form inside a form, which the browser drops. */}
-        {/* In the document before anything is selected, so the first count is announced too; the bar
-            below mounts with its number. */}
-        <p className="sr-only" role="status">
-          {chosen.length > 0 ? `${chosen.length} selected` : ""}
-        </p>
-        {chosen.length > 0 ? (
-          <BulkBar
-            objects={objects}
-            chosen={chosen}
-            setSelected={setSelected}
-            setConfirmingTrash={setConfirmingTrash}
-            tagCounts={tagCounts}
-          />
-        ) : null}
+      {/* In the document before anything is selected, so the first count is announced too; the bar
+          below mounts with its number. */}
+      <p className="cap-sr-only" role="status">
+        {chosen.length > 0 ? `${chosen.length} selected` : ""}
+      </p>
+      {chosen.length > 0 ? (
+        <BulkBar
+          objects={objects}
+          chosen={chosen}
+          setSelected={setSelected}
+          setConfirmingTrash={setConfirmingTrash}
+          tagCounts={tagCounts}
+        />
+      ) : null}
 
-        {/* Grouped page-locally: a group never spans a page, so the heading counts this page. */}
-        {view.view === "list" && objects.length > 0 ? (
-          <MediaListHeader view={view} />
-        ) : null}
-
-        {groupRows(objects, view.group).map((bucket) => (
-        <section key={bucket.label || "ungrouped"} className="media-group">
-          {bucket.label ? (
-            <h2 className="media-group-heading">
-              <span className="media-group-title">{bucket.label}</span>
-              <span className="media-group-count">
-                {bucket.rows.length} on this page
-              </span>
-              {bucket.note ? (
-                <span className="media-group-note">{bucket.note}</span>
+      {list ? (
+        <div className="cap-table-wrap" role="region" tabIndex={0} aria-label="Files">
+          <table className="cap-table" data-view="list" aria-busy={pending || undefined}>
+            <thead>
+              <MediaListHeader view={view} />
+            </thead>
+            {/* Grouped page-locally: a group never spans a page, so the heading counts this page. */}
+            {buckets.map((bucket) => (
+              <tbody key={bucket.label || "ungrouped"}>
+                {bucket.label ? (
+                  <tr>
+                    <th scope="colgroup" colSpan={7}>
+                      {bucket.label}{" "}
+                      <span className="cap-muted">{bucket.rows.length} on this page</span>
+                      {bucket.note ? <span className="cap-muted"> {bucket.note}</span> : null}
+                    </th>
+                  </tr>
+                ) : null}
+                {bucket.rows.map((object) => (
+                  <MediaRow
+                    key={object.key}
+                    object={object}
+                    chosen={chosen}
+                    selectRange={selectRange}
+                    linkTo={linkTo}
+                    view={view}
+                    scanComplete={scanComplete}
+                    tabStop
+                  />
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      ) : (
+        <div className="cap-media" data-view="grid" data-size={view.size}>
+          {buckets.map((bucket) => (
+            <section key={bucket.label || "ungrouped"} className="cap-media-group">
+              {bucket.label ? (
+                <h2 className="cap-media-group-title">
+                  {bucket.label}{" "}
+                  <span className="cap-media-group-count">{bucket.rows.length} on this page</span>
+                  {bucket.note ? <span className="cap-media-group-count"> {bucket.note}</span> : null}
+                </h2>
               ) : null}
-            </h2>
-          ) : null}
-        <ul
-          className="media-grid"
-          data-view={view.view}
-          data-size={view.size}
-          data-pending={pending || undefined}
-          aria-busy={pending || undefined}
-          {...(grid ? keys : {})}
-        >
-          {bucket.rows.map((object) => (
-            <MediaTile
-              key={object.key}
-              object={object}
-              chosen={chosen}
-              selectRange={selectRange}
-              linkTo={linkTo}
-              view={view}
-              scanComplete={scanComplete}
-              tabStop={object.key === tabStop}
-            />
+              <ul
+                className="cap-media-grid"
+                role="list"
+                aria-label={bucket.label ? `Files, ${bucket.label}` : "Files"}
+                aria-busy={pending || undefined}
+                {...keys}
+              >
+                {bucket.rows.map((object) => (
+                  <MediaTile
+                    key={object.key}
+                    object={object}
+                    chosen={chosen}
+                    selectRange={selectRange}
+                    linkTo={linkTo}
+                    view={view}
+                    scanComplete={scanComplete}
+                    tabStop={object.key === tabStop}
+                  />
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
-        </section>
-        ))}
-        </Form>
+        </div>
+      )}
+    </Form>
   );
 }

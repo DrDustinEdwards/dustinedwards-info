@@ -1,9 +1,15 @@
+import { Fragment } from "react";
 import { Link, data } from "react-router";
 
 import { timed, timedLoader } from "~/lib/timing";
 
-import { Panel } from "~/components/admin/panel";
-import { DiffBlock, RevisionMeta } from "~/components/admin/revision-list";
+import { Empty } from "capsomer/react/empty";
+import { Panel } from "capsomer/react/panel";
+import { Pill, Status } from "capsomer/react/status";
+import { Row, RowList } from "capsomer/react/row-list";
+
+import { PageHead } from "~/components/admin/page-head";
+import { DiffBlock } from "~/components/admin/revision-list";
 import { getEnv } from "~/lib/context";
 import {
   getCommitPatch,
@@ -54,49 +60,69 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
   const { slug, commits, selected, patch } = loaderData;
 
   return (
-    <Panel
-      title={`History: ${slug}`}
-      description="Every commit that touched this post. Restoring happens in the editor's drawer, where a revision loads as unsaved changes."
-    >
-      <p className="posts-toolbar">
-        <Link to={`/admin/posts/${slug}/edit`} className="btn-ghost">
-          Back to editor
-        </Link>
-      </p>
+    <div className="app-page">
+      <PageHead
+        crumbs={[
+          { label: "Posts", href: "/admin/posts" },
+          { label: slug, href: `/admin/posts/${slug}/edit` },
+          { label: "History" },
+        ]}
+        title={`History: ${slug}`}
+        lead="Every commit that touched this post. Restoring happens in the editor's drawer, where a revision loads as unsaved changes."
+        actions={
+          <Link to={`/admin/posts/${slug}/edit`} className="cap-btn">
+            Back to editor
+          </Link>
+        }
+      />
 
       {commits.length === 0 ? (
-        <p className="muted">No commits found for this post.</p>
+        <Empty kind="nothing-yet">No commits found for this post.</Empty>
       ) : (
-        <ol className="history-list">
-          {commits.map((commit, index) => (
-            <li key={commit.sha} className="history-entry">
-              <RevisionMeta revision={commit} current={index === 0} />
-
-              <div className="history-actions">
-                <Link
-                  to={
-                    selected === commit.sha
-                      ? `/admin/posts/${slug}/history`
-                      : `/admin/posts/${slug}/history?commit=${commit.sha}`
+        <Panel title="Commits" count={commits.length} flush>
+          <RowList label="Commits">
+            {commits.map((commit, index) => (
+              <Fragment key={commit.sha}>
+                <Row
+                  title={commit.message}
+                  status={<Pill variant="outline">{commit.sha.slice(0, 7)}</Pill>}
+                  meta={
+                    <span>
+                      {commit.author}
+                      {" · "}
+                      {/* UTC, so the server render and hydration agree on which day a commit landed. */}
+                      {new Date(commit.date).toLocaleString("en-US", { timeZone: "UTC" })}
+                    </span>
                   }
-                >
-                  {selected === commit.sha ? "Hide diff" : "View diff"}
-                </Link>
-              </div>
-
-              {selected === commit.sha ? (
-                patch ? (
-                  <DiffBlock patch={patch} label={`Diff for ${commit.sha.slice(0, 7)}`} />
-                ) : (
-                  <p className="muted">
-                    No diff recorded for this commit.
-                  </p>
-                )
-              ) : null}
-            </li>
-          ))}
-        </ol>
+                  detail={index === 0 ? <Status tone="ok">current</Status> : undefined}
+                  actions={
+                    <Link
+                      className="cap-btn"
+                      data-size="sm"
+                      to={
+                        selected === commit.sha
+                          ? `/admin/posts/${slug}/history`
+                          : `/admin/posts/${slug}/history?commit=${commit.sha}`
+                      }
+                    >
+                      {selected === commit.sha ? "Hide diff" : "View diff"}
+                    </Link>
+                  }
+                />
+                {selected === commit.sha ? (
+                  <li>
+                    {patch ? (
+                      <DiffBlock patch={patch} label={`Diff for ${commit.sha.slice(0, 7)}`} />
+                    ) : (
+                      <p className="cap-muted">No diff recorded for this commit.</p>
+                    )}
+                  </li>
+                ) : null}
+              </Fragment>
+            ))}
+          </RowList>
+        </Panel>
       )}
-    </Panel>
+    </div>
   );
 }

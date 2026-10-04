@@ -11,7 +11,7 @@ function focusTile(key: string) {
   const tile = document.querySelector(`[data-tile="${CSS.escape(key)}"]`);
   const grid = tile?.closest("[data-view]")?.getAttribute("data-view") === "grid";
   const target =
-    tile?.querySelector<HTMLElement>(grid ? "a.media-thumb-link" : "a.media-name") ??
+    tile?.querySelector<HTMLElement>(grid ? "a.cap-media-open" : "a.cap-table-open") ??
     document.getElementById("main");
   target?.focus({ preventScroll: false });
 }

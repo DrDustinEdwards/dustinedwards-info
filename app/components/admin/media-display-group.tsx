@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import { TabsNav } from "capsomer/react/tabs";
+
+import { TabLink } from "~/components/admin/tab-link";
 
 // Links, not a select: each option is a URL, so display state is shareable and works with no script.
 export function MediaDisplayGroup({
@@ -13,20 +15,15 @@ export function MediaDisplayGroup({
   hrefFor: (id: string) => string;
 }) {
   return (
-    <div className="media-display-group">
-      <span className="media-display-label">{label}</span>
-      <nav className="media-display-options" aria-label={label}>
+    <div className="cap-field">
+      <span className="cap-field-label">{label}</span>
+      <TabsNav aria-label={label} size="sm">
         {options.map(([id, text]) => (
-          <Link
-            key={id}
-            to={hrefFor(id)}
-            className={`admin-chip${current === id ? " is-active" : ""}`}
-            aria-current={current === id ? "true" : undefined}
-          >
+          <TabLink key={id} to={hrefFor(id)} current={current === id}>
             {text}
-          </Link>
+          </TabLink>
         ))}
-      </nav>
+      </TabsNav>
     </div>
   );
 }
