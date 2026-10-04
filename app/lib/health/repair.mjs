@@ -17,6 +17,8 @@ export const REPAIRABLE = /** @type {const} */ ({
   // Before the pages as well: the phage page is compiled from the phage rows, so a page compile reads them from D1,
   // and a phage write refreshes the page row it is drawn into.
   "phage-drift": "sync_phages",
+  // Beside the phages: nothing is drawn from a registry row into another store, so it converges on its own.
+  "registry-drift": "sync_registry",
   "pages-drift": "sync_pages",
   "publications-drift": "sync_publications",
   // Reads nothing the Ask upload reads; listed with the file-derived stores.

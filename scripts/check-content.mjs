@@ -1,5 +1,6 @@
 import { buildArtifact } from "./build-content.mjs";
 import { buildPhages } from "./lib/phages.mjs";
+import { buildRegistry } from "./lib/registry.mjs";
 import { buildRoster } from "./lib/roster.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
@@ -94,6 +95,11 @@ async function main() {
   // first file that does not compile, which main's catch reports. The page that draws them compiles in buildArtifact.
   const phages = await buildPhages();
   console.log(`check:content ok. ${phages.rows.length} phage(s) compile and each paper they link exists.`);
+
+  // Every registry file through the registry validator, the code the Carrel save runs (docs/REGISTRY.md); it throws on
+  // the first file that does not compile. An empty registry passes: no kind has brought records yet.
+  const registry = await buildRegistry();
+  console.log(`check:content ok. ${registry.rows.length} registry item(s) compile; ${registry.gaps.length} recorded gap(s) waiting for Dustin.`);
 
   // Where further_reading links land is check:links, with every other internal link on the site.
 

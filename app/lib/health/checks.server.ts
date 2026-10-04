@@ -13,6 +13,7 @@ import {
   llmsDriftVerdict,
   rosterDriftVerdict,
   phageDriftVerdict,
+  registryDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
@@ -20,7 +21,9 @@ import {
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
 import { timed, type Timings } from "~/lib/timing";
-import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
+import { GitHubError, listDirectory, listPostFiles } from "~/lib/editor/github.server";
+import { REGISTRY_DIR } from "~/lib/registry/compile.mjs";
+import { KINDS } from "~/lib/registry/kinds.mjs";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
@@ -117,6 +120,28 @@ export async function readPhageSides(env: Env & { GITHUB_TOKEN?: string }) {
   const files = await listMarkdownFiles(env, PHAGES_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM phages",
+  ).all<{ slug: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/**
+ * The same two sides for the registry: `content/registry/<kind>/<id>.md` for every kind, and the registry table's rows,
+ * each read by its address `<kind>/<id>`. A kind's directory that does not exist yet is an empty kind, not a fault: a
+ * kind is defined before its first file is written.
+ */
+export async function readRegistrySides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files: Array<{ slug: string; sha: string; path: string }> = [];
+  for (const kind of Object.keys(KINDS)) {
+    try {
+      for (const file of await listMarkdownFiles(env, `${REGISTRY_DIR}/${kind}`)) {
+        files.push({ ...file, slug: `${kind}/${file.slug}` });
+      }
+    } catch (error) {
+      if (!(error instanceof GitHubError && error.status === 404)) throw error;
+    }
+  }
+  const rows = await env.DB.prepare(
+    "SELECT kind || '/' || id AS slug, source_blob_sha FROM registry",
   ).all<{ slug: string; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }
@@ -235,6 +260,14 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
       // A phage edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readPhageSides(env);
       return phageDriftVerdict(files, rows);
+    }),
+  );
+
+  pending.push(
+    guard("registry-drift", async () => {
+      // An item edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readRegistrySides(env);
+      return registryDriftVerdict(files, rows);
     }),
   );
 
