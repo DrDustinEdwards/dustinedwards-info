@@ -5,7 +5,7 @@ seo_title: "Dustin Edwards research: Tarleton virology, phages, HTLV-1"
 description: "Dustin Edwards's virology research at Tarleton State University: HTLV-1 and avian retroviruses, bacteriophage research in Texas and science education."
 ---
 
-This is the hub for Dustin Edwards's research. Dustin Edwards, Ph.D., is a virologist and Department Head of Biological Sciences at Tarleton State University in Stephenville, Texas. His virology research at Tarleton covers retroviruses, from HTLV-1 in people to REV and LPDV in wild birds, and bacteriophage research in Texas with undergraduates in the SEA-PHAGES program, along with research on how course-based research is taught. This page lists every research area, the phage table, every lab protocol and every publication, with a sentence on each.
+This is the hub for Dustin Edwards's research. {{identity.name}}, {{identity.degree}}, is a {{identity.disciplineLower}} and {{identity.adminTitle}} of {{identity.departmentSubject}} at {{identity.affiliation}} in Stephenville, Texas. His virology research at Tarleton covers retroviruses, from HTLV-1 in people to REV and LPDV in wild birds, and bacteriophage research in Texas with undergraduates in the SEA-PHAGES program, along with research on how course-based research is taught. This page lists every research area, the phage table, every lab protocol and every publication, with a sentence on each.
 
 ## Research areas
 

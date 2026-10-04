@@ -125,7 +125,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
   const hasKind = record.profile === "computational";
   const unitWord = record.scale ? `${count} ${record.scale.unit}${count === 1 ? "" : "s"}` : "";
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" data-run-swap="materials">
       <table className="procedure-materials">
         <thead>
           <tr>
@@ -222,8 +222,8 @@ export function StepItem({
   brief?: boolean;
 }) {
   return (
-    <li value={step.number} className="procedure-step">
-      <p className="procedure-step-text" dangerouslySetInnerHTML={html(fillQuantities(step, factor))} />
+    <li value={step.number} className="procedure-step" data-step={step.number} data-timers={step.timers.length > 0 ? JSON.stringify(step.timers) : undefined}>
+      <p className="procedure-step-text" data-run-swap="step" dangerouslySetInnerHTML={html(fillQuantities(step, factor))} />
       {step.spin.map((s) => (
         <Flag key={s} kind="spin" label="Spin:">
           {s}
@@ -340,7 +340,7 @@ export function ProcedureView({
 }) {
   const [materialsId, equipmentId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   return (
-    <div className="prose procedure" data-profile={record.profile}>
+    <div className="prose procedure" data-profile={record.profile} data-run-path={record.path} data-run-version={record.version ?? ""} data-run-title={record.title}>
       <ProcedureFacts record={record} />
       <p className="procedure-links">
         <a href={`${record.path}/sheet${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}>

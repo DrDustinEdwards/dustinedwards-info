@@ -1,5 +1,6 @@
 ---
 profile: recipe
+method: [media]
 path: /recipes/recipe-fixture
 title: "Test Fixture: Simple Skillet Flatbread"
 seo_title: "Test Fixture: Simple Skillet Flatbread"

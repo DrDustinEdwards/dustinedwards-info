@@ -85,8 +85,21 @@ a missing value rather than printing it.
 ## Front matter by profile
 
 Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`, `updated`, `based_on`,
-`materials`, `references`, `expected_results`, `limitations`; optional `draft`, `equipment`,
-`troubleshooting`, `time` (`total`, `hands_on`), `first_used`.
+`materials`, `references`, `expected_results`, `limitations`, `method`; optional `draft`, `equipment`,
+`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`.
+
+What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
+
+- `method` (required): a list of ids from the closed list: `pcr`, `plating`, `culture`, `extraction`,
+  `sequencing`, `annotation`, `media`, `microscopy`. A procedure that is some of two methods lists both.
+- `organism`: ids from the closed list, which are the phages' host keys (`smegmatis`, `foliorum`) and `avian`.
+- `course`: ids of the courses that teach it (`phage-discovery`, `virus-isolation`, `phage-bioinformatics`).
+- `target`: the genes, regions or samples it works on, in words (free text, since targets are as many as the
+  experiments).
+
+A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
+change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
+pages. When the lab registry holds host strains, `organism` reads from it.
 
 - **protocol** adds `biosafety` (`organism`, `strain`, `atcc`, or `not applicable`; the agent only, per
   protocols.md), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
@@ -98,6 +111,53 @@ Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`
   scale with the servings.
 - **computational** adds `environment` and `prerequisites`. Its materials are software (with `version`),
   data and input files. Every command has its expected output. It does not scale.
+
+## The library
+
+`/research/protocols` is the protocol library (`app/routes/protocols.tsx`): the page's own introduction, then every
+published protocol in Capsomer's catalog, then the page's sections. The rows are the procedure records in D1, so a
+protocol saved is listed at the next request with no deploy, and no second list of protocols exists to keep.
+
+- **Fields are declared once** in `app/lib/procedures/library.mjs` (`LIBRARY`): the search box and its weights, the
+  facets (method, organism, target, course), the columns, the sort menu, the CSV and JSON and the twin's table all read
+  it. A new thing to filter by is one entry there, and a new method, organism or course is one entry in `taxonomy.mjs`.
+- **The key fact is computed**, never typed: the protocol's targets, else its total time (`keyFact`). A computed value
+  such as a product size comes from the lab registry when it exists.
+- **The state is the address**, as the catalog defines it: `?q=pcr&method=pcr&sort=-updated`. It is a GET form, so with
+  script off every control works and every state is a link; `app/enhance/catalog.ts` then updates the page in place.
+- **Machines get the same rows**: `/research/protocols.md` (the introduction and a table of every protocol),
+  `.json` and `.csv` (every fact, ids with their words, for the filter state in the query string), and a
+  `CollectionPage` with an `ItemList` in the page.
+- **Capsomer's colours are the site's**: `app/styles/library.css` maps each of its colour names onto a site token, so the
+  library follows the light and dark themes with no second palette. The site's reset is imported into Capsomer's
+  lowest layer (`cap.reset`, in `app.css`), because an unlayered reset would beat every layered component rule.
+
+## Run mode
+
+Every procedure page offers "Run this procedure". The page is complete as served; run mode is an enhancement
+(`app/enhance/run.ts`, styled by `app/styles/run.css`) that puts a checklist over the steps the page already has,
+for a person working it at the bench, on a phone:
+
+- **Each step** gets a Done check, a note, and a button for every timer the step states (`~{5%minutes}`). A
+  timer's length is the longer end of a range, so it never rings early; it is stored as the moment it ends, so a
+  sleeping phone or a reload still knows what is left. When one finishes it vibrates, beeps, announces itself in an
+  alert region and changes the tab title.
+- **Critical steps** keep their flag in view and their edge in the danger colour until done; **pause points** stay
+  marked. The current step is `aria-current="step"`; "Go to step N" in the bar jumps to it.
+- **Scale** (a tube count, or servings) changes in place: the page is fetched at the new scale and the materials
+  table and each step's words are swapped in, so the server stays the one place amounts are computed. The run's
+  checks and notes are kept. If the fetch fails the browser navigates to the scaled page.
+- **The screen stays on** while a run is open (the Wake Lock API), and the bar says so if the browser refuses.
+- **The record**: finishing shows the run's record, which downloads as Markdown or JSON and prints (the print
+  stylesheet drops the controls and keeps the checks and notes). It names the procedure, its path and its version,
+  the scale, when it started and finished, and each step with its time and note.
+- **It never leaves the device.** A run lives in `localStorage` under `dustinedwards.run:<path>`; nothing is sent to
+  the server. If storage is unavailable the bar says "This run cannot be saved on this device" and the download is
+  the only copy.
+
+The pure half (what a run is, how timers count, the record and its Markdown, and parsing a stored run, which accepts
+only the shape this module writes) is `app/lib/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
+behaviour is the run-mode case of `check:browser`.
 
 ## Where it goes
 

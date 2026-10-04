@@ -1,6 +1,7 @@
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
+import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
 import { getProcedureByPath } from "~/db/procedures";
@@ -16,6 +17,7 @@ import type { Route } from "./+types/procedure";
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
 import "~/styles/procedure.css";
+import "~/styles/run.css";
 
 /**
  * Every procedure page (docs/PROCEDURES.md): a protocol, a recipe or a computational procedure, drawn
@@ -67,6 +69,8 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
       <ProcedureView record={record} count={count} factor={factor} />
+      {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
+      <Enhance module="run" />
     </PageShell>
   );
 }

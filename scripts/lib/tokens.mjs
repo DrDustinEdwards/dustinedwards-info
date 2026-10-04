@@ -85,7 +85,11 @@ export function stylesheetPaths() {
 
   /** @param {string} source @param {string} base */
   const cssImportsOf = (source, base) =>
-    moduleCssImports(source).map((spec) =>
+    moduleCssImports(source)
+      // A package's stylesheet (Capsomer's, `capsomer/catalog.css`) is not this site's palette: its names are
+      // mapped onto the site's in app/styles/library.css, which is read, so the sheets here stay the site's own.
+      .filter((spec) => spec.startsWith("~/") || spec.startsWith("."))
+      .map((spec) =>
       spec.startsWith("~/") ? join(root, "app", spec.slice(2)) : join(base, spec),
     );
 

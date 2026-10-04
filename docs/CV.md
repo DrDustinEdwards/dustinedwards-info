@@ -68,9 +68,31 @@ The profile:
 
 ```yaml
 edition: Fall 2026
-person: { name: Dustin Edwards, degree: Ph.D., title: ..., department: ..., org: ... }
+person: { name: Dustin Edwards, degree: Ph.D., discipline: Virologist, department: ..., org: ... }
 presentations: { international: 26, national: 170, from: 2004, to: 2026 }
 ```
+
+## The site's role, title and headship come from here
+
+The person's title is not typed in the profile. `app/lib/identity.mjs` derives it from this file and the
+appointments, and `scripts/build-identity.mjs` writes the result to `app/lib/identity.generated.mjs` (gitignored;
+`build:content` and the install step write it), which the site imports:
+
+- the one-line **role** is the rank of the one current position (`section: Positions`, `endYear: present`) and the
+  profile's `discipline`: "Professor and Virologist";
+- the Person record's **job title** adds every current leadership appointment marked `headline: true`:
+  "Virologist, Professor, and Department Head". A leadership entry without `headline: true` stays on the CV alone
+  (the biosafety committee chair is one);
+- the CV's header line is the role then the headline titles: "Professor and Virologist, Department Head";
+- `department` and the university (the part of `org` before the first comma) feed the site description, the About
+  text and the structured data.
+
+Pages state these by token, never by typing them: `{{identity.role}}`, `{{identity.adminTitle}}`,
+`{{identity.departmentSubject}}`, `{{identity.affiliation}}`, `{{identity.name}}`, `{{identity.degree}}`,
+`{{identity.discipline}}`, `{{identity.disciplineLower}}`, `{{identity.rank}}`, `{{identity.jobTitle}}`,
+`{{identity.cvTitle}}` and `{{identity.department}}`. `test/identity.test.mjs` fails if a page types the role or
+the headship. A CV change reaches the site with the next deploy, which every green commit to `main` is. A CV with
+no current position, or two, is refused where it is saved.
 
 ## Privacy
 
