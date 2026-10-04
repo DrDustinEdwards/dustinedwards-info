@@ -429,3 +429,12 @@ test("computational software needs its version", () => {
   const raw = COMPUTATIONAL.replace("prerequisites: []", "prerequisites:\n  - a shell").replace('    version: "3.11"\n', "");
   assertError(check("mini", raw).errors, /materials\[grep\] is software and needs its version/);
 });
+
+test("start_here is a position in the Start here list: a positive whole number, or absent", () => {
+  const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
+  assert.deepEqual(check("phage-isolation", base).errors, []);
+  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: 0")).errors, /start_here must be a position/);
+  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: first")).errors, /start_here must be a position/);
+  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: 1.5")).errors, /start_here must be a position/);
+  assert.deepEqual(check("phage-isolation", base.replace("start_here: 1\n", "")).errors, [], "a procedure with none is simply off the list");
+});

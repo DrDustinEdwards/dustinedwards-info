@@ -280,6 +280,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     organisms: /** @type {string[]} */ (list(known(d.organism))),
     targets: /** @type {string[]} */ (list(known(d.target))),
     courses: /** @type {string[]} */ (list(known(d.course))),
+    // The library's "Start here" position, or null: stored, never inferred.
+    startHere: known(d.start_here) === null ? null : Number(d.start_here),
     firstUsed: known(d.first_used),
     lastRun: known(d.last_run),
     status: known(d.status),

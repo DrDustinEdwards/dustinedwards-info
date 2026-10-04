@@ -6,6 +6,7 @@ seo_title: "Phage DNA Extraction Protocol: column-free ZnCl2/TES method"
 description: "Phage DNA extraction from a high-titer lysate by zinc chloride (ZnCl2) precipitation and TES, with no kit or column, plus DNA quantity and quality checks."
 method: [extraction]
 course: [phage-discovery, virus-isolation]
+start_here: 2
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 first_used: fall 2018

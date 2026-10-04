@@ -13,6 +13,23 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         In the library
       </h2>
       <p className="library-counts">{overviewSentence(overview)}</p>
+      {overview.start.length > 0 ? (
+        <>
+          <h3 className="library-subtitle" id="library-start-title">
+            Start here
+          </h3>
+          <ol className="library-start" aria-labelledby="library-start-title">
+            {overview.start.map((p) => (
+              <li key={p.slug}>
+                <a className="library-start-title" href={p.href}>
+                  {p.title}
+                </a>
+                <span className="library-start-why">{p.description}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : null}
       <h3 className="library-subtitle" id="library-pipeline-title">
         The phage workflow
       </h3>

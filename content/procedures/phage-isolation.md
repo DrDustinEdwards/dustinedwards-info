@@ -7,6 +7,7 @@ description: "Tarleton SEA-PHAGES lab variants of the Phage Discovery Guide: dir
 method: [plating, culture]
 organism: [smegmatis, foliorum]
 course: [phage-discovery, virus-isolation]
+start_here: 1
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."

@@ -175,6 +175,12 @@ export function validateProcedure(parsed, expect) {
     if (!Array.isArray(d.target) || d.target.some((t) => !nonEmptyString(t))) errors.push("target must be a list of the genes, regions or samples it works on, each in words");
   }
 
+  // Where it stands in the library's "Start here" list: a position (1, 2, ...), stored, never inferred. A position
+  // two procedures share would make the order a guess, so the corpus check refuses it (checkStartHere).
+  if (d.start_here !== undefined && !isGap(d.start_here)) {
+    if (!Number.isInteger(d.start_here) || d.start_here < 1) errors.push("start_here must be a position in the Start here list: 1, 2, 3 ...");
+  }
+
   // The shared core.
   required("version");
   if (required("updated") && !isGap(d.updated) && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.updated))) {
