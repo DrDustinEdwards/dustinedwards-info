@@ -7,6 +7,9 @@
 // list of what is waiting on Dustin is read off the files. A bare MISSING, or a required field left out,
 // fails. Values are never filled to make this pass.
 
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import { compileDirectory, PROCEDURE_FIXTURES_DIR, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
 import { createTally } from "./lib/tally.mjs";
 
@@ -37,6 +40,16 @@ for (const { file, compiled } of sources) {
   const other = starts.get(compiled.record.startHere);
   ok(`${file} has its own Start here position`, !other, `start_here ${compiled.record.startHere} is also ${other}`);
   starts.set(compiled.record.startHere, file);
+}
+// Proof of use names papers and phages by slug; a name with no file would show on the page as a bare slug.
+for (const { file, compiled } of sources) {
+  const proof = compiled.ok ? compiled.record.proofOfUse : null;
+  if (!proof) continue;
+  const missing = [
+    ...proof.papers.filter((slug) => !existsSync(join("content", "publications", `${slug}.md`))).map((slug) => `paper ${slug}`),
+    ...proof.phages.filter((key) => !existsSync(join("content", "phages", `${key}.md`))).map((key) => `phage ${key}`),
+  ];
+  ok(`${file} proof of use names only papers and phages that exist`, missing.length === 0, `no file for: ${missing.join(", ")}`);
 }
 for (const { file, compiled } of fixtures) {
   if (compiled.ok) ok(`${file} is a draft`, compiled.record.draft, "a fixture is never published: set draft: true");

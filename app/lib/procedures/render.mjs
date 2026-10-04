@@ -10,6 +10,7 @@
 import GithubSlugger from "github-slugger";
 
 import { plainText } from "../search/records.mjs";
+import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { allSteps, procedurePath } from "./parse.mjs";
 
@@ -30,7 +31,7 @@ const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
  */
 export function fixedSectionIds(profile) {
   const materials = profile === "recipe" ? "ingredients" : profile === "computational" ? "software-and-data" : "reagents";
-  return [materials, "equipment", "troubleshooting", "expected-results", "limitations", "references"];
+  return [materials, "equipment", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use"];
 }
 
 /**
@@ -282,6 +283,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     courses: /** @type {string[]} */ (list(known(d.course))),
     // The library's "Start here" position, or null: stored, never inferred.
     startHere: known(d.start_here) === null ? null : Number(d.start_here),
+    // Proof of use: slugs of the papers that used the method and the phages it produced, or null. Stored, never inferred.
+    proofOfUse: proofFromFile(known(d.proof_of_use)),
     firstUsed: known(d.first_used),
     lastRun: known(d.last_run),
     status: known(d.status),
