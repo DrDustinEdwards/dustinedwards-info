@@ -164,3 +164,29 @@
     display: none;
   }
 }
+
+/* A calculator folded under a procedure step (app/components/phage-tool.tsx, StepCalculators). */
+.phage-tool-step {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0 0;
+}
+
+.phage-tool-step > summary {
+  min-height: var(--control-min-dense);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.phage-tool-step[open] > summary {
+  margin-bottom: 1rem;
+}
+
+.phage-tool-more {
+  margin: 1rem 0 0;
+}
+
+@media print {
+  .phage-tool-step {
+    display: none;
+  }
+}

@@ -32,10 +32,11 @@ const FLAG_KEYS = /** @type {const} */ ({
   TROUBLESHOOTING: "troubleshooting",
   EXPECT: "expect",
   SPIN: "spin",
+  CALC: "calc",
 });
 
 /**
- * @typedef {{ critical: string[], pause: string[], why: string[], troubleshooting: string[], expect: string[], spin: string[] }} Flags
+ * @typedef {{ critical: string[], pause: string[], why: string[], troubleshooting: string[], expect: string[], spin: string[], calc: string[] }} Flags
  * @typedef {{ lang: string, code: string, output: string | null }} Command
  * @typedef {{
  *   number: number,
@@ -81,7 +82,7 @@ function readStep(first, rest, line, number) {
   /** @type {string[]} */
   const words = [first];
   /** @type {Flags} */
-  const flags = { critical: [], pause: [], why: [], troubleshooting: [], expect: [], spin: [] };
+  const flags = { critical: [], pause: [], why: [], troubleshooting: [], expect: [], spin: [], calc: [] };
   /** @type {Command[]} */
   const commands = [];
   /** @type {Array<{ alt: string, src: string }>} */
@@ -112,12 +113,12 @@ function readStep(first, rest, line, number) {
       }
       continue;
     }
-    const flag = /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN)\s*:\s*(.*)$/.exec(text);
+    const flag = /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC)\s*:\s*(.*)$/.exec(text);
     if (flag) {
       openFlag = FLAG_KEYS[/** @type {keyof typeof FLAG_KEYS} */ (flag[1])];
       const body = (flag[2] ?? "").trim();
-      if (openFlag === "troubleshooting") {
-        flags.troubleshooting.push(...body.split(/[,\s]+/).filter(Boolean));
+      if (openFlag === "troubleshooting" || openFlag === "calc") {
+        flags[openFlag].push(...body.split(/[,\s]+/).filter(Boolean));
       } else {
         flags[openFlag].push(body);
       }
@@ -125,7 +126,7 @@ function readStep(first, rest, line, number) {
     }
     const more = /^>\s?(.*)$/.exec(text);
     if (more) {
-      if (!openFlag || openFlag === "troubleshooting") {
+      if (!openFlag || openFlag === "troubleshooting" || openFlag === "calc") {
         problems.push(`line ${line}: step ${number} has a quoted line that follows no flag: "${text.trim()}"`);
       } else {
         const list = flags[openFlag];
@@ -294,6 +295,29 @@ export function allSteps(parsed) {
   return parsed.sections.flatMap((section) =>
     section.blocks.flatMap((block) => (block.type === "steps" ? block.steps : [])),
   );
+}
+
+/**
+ * The calculators a step's CALC flag names, each with the values the step itself states for its fields:
+ * `> CALC: webbed-plate volume=10, titer` is webbed-plate with volume 10, then titer. A `name=value` belongs
+ * to the calculator before it; one with none before it is read as a calculator with no id, which validate.mjs refuses.
+ *
+ * @param {string[]} tokens the flag's words, as readStep split them
+ * @returns {Array<{ id: string, values: Record<string, string> }>}
+ */
+export function readCalcs(tokens) {
+  /** @type {Array<{ id: string, values: Record<string, string> }>} */
+  const calcs = [];
+  for (const token of tokens) {
+    const eq = token.indexOf("=");
+    if (eq === -1) {
+      calcs.push({ id: token, values: {} });
+      continue;
+    }
+    if (calcs.length === 0) calcs.push({ id: "", values: {} });
+    /** @type {{ id: string, values: Record<string, string> }} */ (calcs[calcs.length - 1]).values[token.slice(0, eq)] = token.slice(eq + 1);
+  }
+  return calcs;
 }
 
 /**
