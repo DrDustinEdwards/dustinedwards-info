@@ -260,8 +260,16 @@ Remove-Item "$dir\_restore.sql" -ErrorAction Ignore
 $order | ForEach-Object {
   if (Test-Path "$dir\$_.sql") { Get-Content "$dir\$_.sql" | Add-Content -Encoding utf8 "$dir\_restore.sql" }
 }
+node scripts/split-dump.mjs "$dir\_restore.sql"
 npx wrangler d1 execute dustinedwards --remote --file "$dir\_restore.sql"
 ```
+
+`split-dump` is not optional. D1 refuses one statement over 100 KB (`SQLITE_TOOBIG`) and the
+export writes each row as one literal `INSERT`, so a paper's full text in `publications` (five rows
+are over the line, the largest about 141 KB) or a long protocol cannot load as exported. The script
+rewrites such a row as the `INSERT` plus `UPDATE ... SET col = col || '...'` statements that append
+the rest, and throws, naming the statement, if one cannot be cut. Found 2026-10-04 by
+`check:restore`, which failed with `statement too long: SQLITE_TOOBIG` and restored 0 posts.
 
 That order is parents before children. `check:restore` derives it from the
 `REFERENCES` clauses in `drizzle/` on every run and prints it as `load order`,
