@@ -36,13 +36,14 @@ export const COURSES = Object.freeze({
 /**
  * The phage workflow the library draws as a strip, in the order a phage takes through the lab: each stage is the
  * methods that carry it out. A stage with no protocol yet is drawn without a link, so the strip is the lab's own
- * path and a protocol appears under its stage the moment one is saved.
+ * path and a protocol appears under its stage the moment one is saved. `tools` are the ids of the calculators
+ * (TOOLS in phage-tools.mjs) a person uses at that stage, so the strip links them from the one place that says so.
  */
 export const PHAGE_PIPELINE = Object.freeze([
-  { id: "isolate", label: "Isolate and purify", methods: ["plating", "culture"] },
-  { id: "extract", label: "Extract DNA", methods: ["extraction"] },
-  { id: "sequence", label: "Sequence", methods: ["sequencing"] },
-  { id: "annotate", label: "Annotate", methods: ["annotation"] },
+  { id: "isolate", label: "Isolate and purify", methods: ["plating", "culture"], tools: ["titer", "dilution", "webbed-plate", "lysate-volume"] },
+  { id: "extract", label: "Extract DNA", methods: ["extraction"], tools: [] },
+  { id: "sequence", label: "Sequence", methods: ["sequencing"], tools: [] },
+  { id: "annotate", label: "Annotate", methods: ["annotation"], tools: [] },
 ]);
 
 /**

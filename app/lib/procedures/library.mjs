@@ -5,6 +5,7 @@
 
 import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
+import { TOOLS } from "../phage-tools.mjs";
 import { LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
@@ -215,7 +216,8 @@ export function overviewSentence(overview) {
 export function overviewMarkdown(overview, origin) {
   const noun = /** @type {[string, string]} */ (["protocol", "protocols"]);
   const stage = (/** @type {(typeof overview.stages)[number]} */ s) =>
-    s.href ? `- [${s.label}](${origin}${s.href}): ${countOf(s.count, noun)}` : `- ${s.label}`;
+    (s.href ? `- [${s.label}](${origin}${s.href}): ${countOf(s.count, noun)}` : `- ${s.label}`) +
+    s.tools.map((t) => `\n  - [${t.label}](${origin}${t.href})`).join("");
   return [
     "## In the library",
     "",
@@ -241,6 +243,18 @@ export function methodHref(methods) {
 }
 
 /**
+ * A calculator as a link: its page and the name its form carries, both from the one registry. An id the registry does
+ * not know is an error here, not a missing link.
+ *
+ * @param {string} id
+ */
+export function toolLink(id) {
+  const tool = TOOLS[id];
+  if (!tool) throw new Error(`the phage workflow names a calculator "${id}" that phage-tools.mjs does not define`);
+  return { id, label: tool.title, href: tool.path };
+}
+
+/**
  * What the library says about itself, counted from its rows: how many protocols, over how many methods and
  * organisms, when the newest changed, a tile for each method that has a protocol, and the phage workflow with the
  * number of protocols under each stage. Nothing here is typed: a protocol saved changes every figure.
@@ -253,7 +267,8 @@ export function libraryOverview(items) {
     .filter((tile) => tile.count > 0);
   const stages = PHAGE_PIPELINE.map((stage) => {
     const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;
-    return { id: stage.id, label: stage.label, count, href: count > 0 ? methodHref(stage.methods) : null };
+    const tools = stage.tools.map((id) => toolLink(id));
+    return { id: stage.id, label: stage.label, count, href: count > 0 ? methodHref(stage.methods) : null, tools };
   });
   const dates = items.map((p) => p.updated).filter(Boolean).sort();
   return {
