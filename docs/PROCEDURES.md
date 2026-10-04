@@ -176,6 +176,15 @@ page, so the copies never compete with it in search.
 - **Drift covers it.** A published, versioned row with no sealed copy reads as drifted, and the sync that repairs
   drift freezes the copy.
 
+### The printed sheet
+
+`<page>/sheet` is the method without the reasoning, compact enough to print and work from. Its head carries the version id
+and the version's date, and a QR code beside them (`app/lib/procedures/qr.mjs`: an inline SVG drawn on the server, black on
+white, so it needs no script). The code opens the frozen copy of that version, `<page>/v/<version>`, so a sheet printed now
+still opens the words it was printed from after the page has moved on (`sheetAddress` in `cite.mjs`). A frozen version has
+its own sheet at `<page>/v/<version>/sheet`, drawn from the copy, so a sheet reprinted from an old version says, and links
+to, the version it is. A sheet for a procedure with no published version points at the page and says no version is assigned.
+
 `npm run zenodo:metadata -- <slug>` prints the Zenodo deposit metadata for the current version (title, version, date,
 creator and affiliation from the CV, keywords from the method words, the frozen copy and the source DOIs as related
 identifiers) for `.zenodo.json` or the upload form. It leaves out the license, which is Dustin's to choose, and a DOI is
