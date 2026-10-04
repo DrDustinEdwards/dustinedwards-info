@@ -843,6 +843,11 @@ a:active {
   color: var(--text-secondary);
 }
 
+/* A dependency pinned to a git commit has a range with no break in it (the colophon lists them). */
+.dep-range {
+  overflow-wrap: anywhere;
+}
+
 .btn-brand,
 .btn-ghost {
   margin-top: 1.25rem;

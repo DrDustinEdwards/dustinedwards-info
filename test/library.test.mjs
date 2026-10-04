@@ -10,6 +10,7 @@ import {
   libraryItems,
   libraryMarkdown,
   libraryOverview,
+  libraryRedirect,
   libraryTabs,
   methodHref,
   overviewMarkdown,
@@ -154,4 +155,14 @@ test("the tabs are All and each kind of work, counted from the rows; the current
   const phage = libraryTabs(items, ["plating", "culture", "extraction", "sequencing", "annotation"]);
   assert.deepEqual(phage.map((t) => t.current), [false, true, false], "the phage tab is its methods exactly");
   assert.deepEqual(libraryTabs(items, ["pcr", "plating"]).map((t) => t.current), [false, false, false], "a mixed filter is no tab's");
+});
+
+test("an unknown parameter is served, not redirected, so a cache-buster or a tracking link still lands; a known one is made clean", () => {
+  const at = (query) => libraryRedirect(new URL(`https://example.test/research/protocols${query}`));
+  assert.equal(at(""), null);
+  assert.equal(at("?cb=123"), null, "a cache-buster is ignored");
+  assert.equal(at("?utm_source=x&method=pcr"), null, "a tracking parameter beside a clean filter is ignored");
+  assert.equal(at("?method=pcr&q=rev"), "/research/protocols?q=rev&method=pcr", "the order of the known ones is fixed");
+  assert.equal(at("?cb=1&sort=title&q=rev&sort=title"), "/research/protocols?q=rev", "the default sort is dropped, and so is the unknown one, from the redirect");
+  assert.equal(at("?page=1"), "/research/protocols");
 });

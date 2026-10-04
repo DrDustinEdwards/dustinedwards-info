@@ -3,7 +3,7 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
-import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
 import { LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
@@ -287,4 +287,21 @@ export function libraryTabs(items, chosen) {
       current: same(tab.methods),
     })),
   ];
+}
+
+/**
+ * The address a request should have, or null. The catalog's own redirect sends an address with defaults spelled out,
+ * or in another order, to its one clean address; and it drops every parameter it does not know. The library keeps
+ * the first and leaves the second alone: a tracking parameter or a cache-buster on a library address is served, not
+ * redirected, so a link carrying one still lands on the page it names.
+ *
+ * @param {URL} url
+ */
+export function libraryRedirect(url) {
+  const known = new Set(["q", "sort", "page", ...LIBRARY.fields.filter((f) => f.facet).map((f) => f.key)]);
+  const kept = new URLSearchParams();
+  for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
+  const only = new URL(url);
+  only.search = kept.toString();
+  return catalogRedirect(LIBRARY, only);
 }
