@@ -48,3 +48,15 @@
   flex-wrap: wrap;
   gap: 0.25rem 0.75rem;
 }
+
+/* Capsomer's table keeps every cell on one line, which makes this one wider than its column and hides the quick
+   links in a scroll. The cells wrap here, and the title keeps room to read. */
+.library .cap-table tbody :is(td, th) {
+  white-space: normal;
+}
+.library .cap-table tbody :is(td, th):first-child {
+  min-inline-size: 12rem;
+}
+.library-links {
+  white-space: nowrap;
+}
