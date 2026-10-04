@@ -1,33 +1,7 @@
 /*
- * The protocol library (app/routes/protocols.tsx): Capsomer's catalog on this site's palette. Capsomer's components
- * read their own colour names (--muted, --surface, --accent), so this maps each onto the site's tokens in one place
- * and the catalog follows the site's light and dark themes without a second palette to keep. Unlayered, so it wins
- * over Capsomer's layered defaults.
+ * The protocol library (app/routes/protocols.tsx), on the catalog palette in site-catalog.css: its layout only.
  */
 .library {
-  --muted: var(--text-secondary);
-  --dim: var(--text-secondary);
-  --surface: var(--paper);
-  --raised: var(--paper);
-  --sunken: var(--tint-brand);
-  --line: var(--dust);
-  --ui: var(--border);
-  --accent: var(--brand);
-  --accent-hover: var(--brand-hover);
-  --accent-text: var(--brand);
-  --accent-soft: var(--tint-brand);
-  --accent-line: var(--brand);
-  --accent-5: var(--brand);
-  --accent-6: var(--brand-hover);
-  --primary: var(--brand);
-  --primary-hover: var(--brand-hover);
-  --primary-fg: var(--on-brand);
-  --ring: var(--brand);
-  --sel: var(--selection-bg);
-  --crit: var(--text-danger);
-  --crit-soft: var(--tint-danger);
-  --shadow-xs: none;
-  font-family: var(--font-sans);
   margin-block: 2rem;
 }
 

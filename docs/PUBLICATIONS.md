@@ -136,6 +136,20 @@ and the build's artifacts.
 | The sitemap, the home page | the same rows |
 | The CV page, its charts and its markdown | the `publications` table, read per request and joined to the CV by DOI (docs/CV.md), so a corrected paper reaches the CV with no deploy; the CV's search records are rewritten by the save. Its PDF is still rendered at build time |
 
+## The index is a catalog
+
+The index is Capsomer's catalog over the published papers (`app/lib/publications/listing.mjs`, `PUBLICATIONS`): its
+fields are declared once, so the search box (title, authors, journal), the facets (topic, type, selected, open access),
+the sort menu, the counts and the year headings all come from that declaration.
+
+- **Newest first is grouped by year**: a heading for each year, with no Year column. A search, or any other sort
+  (`?sort=year` oldest first, `?sort=title`), is one flat table with a Year column. Filters keep the headings.
+- **Addresses**: `?topic=` is still the address of a topic's papers, and exactly the four bare single-topic addresses
+  canonicalise to themselves (`soleTopic`); every other address is a view of the base page, and an empty result is
+  `noindex, follow`. The page's old spellings (`?sort=year-asc`, `?sort=year-desc`, `?selected=true`) are sent once,
+  with a 301, to the catalog's (`?sort=year`, none, `?selected=1`).
+- **The structured data lists the papers shown; the BibTeX, RIS and CSL JSON exports are always the full list.**
+
 ## Citation counts
 
 `publication_citations` (D1, keyed by the lower-cased DOI, no expiry) holds the last count read from OpenAlex.

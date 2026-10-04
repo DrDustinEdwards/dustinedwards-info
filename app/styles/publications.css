@@ -1,45 +1,53 @@
-.paper-list > section + section {
-  margin-block-start: var(--s-6);
+/*
+ * The publication index (app/routes/publications.tsx): a paper's cell in Capsomer's catalog, on the site's palette
+ * (site-catalog.css). The year headings and the search, sort and filters are the catalog's own.
+ */
+
+/* Capsomer's table keeps every cell on one line; a paper is a title, authors, links and an abstract, so its cells wrap. */
+.papers .cap-table tbody :is(td, th) {
+  white-space: normal;
+}
+.papers .cap-table tbody th[scope="row"] {
+  min-inline-size: 16rem;
+  font-weight: 400;
+}
+.papers .cap-table tbody td[data-num] {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 
-.paper-year {
-  display: grid;
-  grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
-  margin: 0;
-  border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 0.5rem;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.7;
-  text-align: right;
+.papers {
+  margin-block: 1.5rem 0;
 }
 
 .paper-row {
-  display: grid;
-  grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
-  border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 1.125rem;
+  padding-block: 0.25rem;
 }
 
 .paper-marks {
-  grid-column: 1;
-  margin: 0;
+  margin: 0 0 0.125rem;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.7;
-  text-align: right;
 }
 
 .paper-kind,
 .paper-open {
-  display: block;
+  display: inline;
+}
+
+/* The separator belongs between two marks: an unconditional one indents every open-access row. */
+.paper-kind + .paper-open::before {
+  content: "  ";
+  white-space: pre;
+}
+
+.paper-marks:empty {
+  display: none;
 }
 
 .paper-body {
-  grid-column: 3;
   min-width: 0;
 }
 
@@ -88,7 +96,6 @@
 }
 
 .paper-venue {
-  margin: 0.1875rem 0 0;
   color: var(--text-secondary);
   font-family: var(--font-serif);
   font-size: 0.9375rem;
@@ -96,8 +103,7 @@
   line-height: 1.5;
 }
 
-.paper-row-links,
-.paper-links {
+.paper-row-links {
   display: flex;
   flex-wrap: wrap;
   column-gap: 0.875rem;
@@ -130,72 +136,8 @@
   line-height: 1.6;
 }
 
-.paper-search {
-  flex-wrap: wrap;
-  row-gap: var(--s-3);
-  /* publications.tsx sets these from Inter on the element. Declared here so a missing inline style
-     still has a length, and so calc(var(--sort-w)) is not an undeclared custom property. */
-  --sort-w: 5.72em;
-  --apply-w: 2.72em;
-}
-
-.paper-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-
-.paper-field-label {
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  line-height: 1.7;
-}
-
-.paper-field input[type="search"],
-.paper-field select {
-  border: 0;
-  border-block-end: var(--line-w) solid var(--dust);
-  border-radius: 0;
-  padding: 0.375rem 0;
-  background: transparent;
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  /* The UA puts a rounded box back on both of these on some platforms. */
-  appearance: none;
-}
-
-/* Widths from Inter (publications.tsx), not from the face drawing them, so the row cannot re-wrap on
-   the font swap. The field's 13.75em is Inter's intrinsic width for a search input. */
-.paper-field input[type="search"] {
-  width: 13.75em;
-  min-width: 14rem;
-}
-
-.paper-search button {
-  width: var(--apply-w);
-}
-
-.paper-field select {
-  width: calc(var(--sort-w) + 1.25rem);
-  padding-inline-end: 1.25rem;
-  background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
-    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
-  background-position:
-    calc(100% - 10px) calc(50% + 2px),
-    calc(100% - 5px) calc(50% + 2px);
-  background-size: 5px 5px;
-  background-repeat: no-repeat;
-}
-
-.paper-field input[type="search"]:focus-visible,
-.paper-field select:focus-visible {
-  border-block-end-color: var(--text);
-}
-
 .paper-feeds {
+  font-size: 0.875rem;
   display: flex;
   flex-wrap: wrap;
   column-gap: 1.375rem;
@@ -211,24 +153,4 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: var(--line-w);
-}
-
-@media (max-width: 47.99rem) {
-  .paper-year,
-  .paper-row {
-    display: block;
-  }
-  .paper-year,
-  .paper-marks {
-    text-align: left;
-  }
-  .paper-kind,
-  .paper-open {
-    display: inline;
-  }
-  /* The separator belongs between two marks: an unconditional one indents every open-access row. */
-  .paper-kind + .paper-open::before {
-    content: "  ";
-    white-space: pre;
-  }
 }

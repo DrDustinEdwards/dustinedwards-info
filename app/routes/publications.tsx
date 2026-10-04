@@ -1,8 +1,8 @@
-import type { CSSProperties } from "react";
-import { Form, Link } from "react-router";
+import { Catalog } from "capsomer/react/catalog";
+import { Link, redirect } from "react-router";
 
+import { Enhance } from "~/components/enhance";
 import { EvidenceRow } from "~/components/evidence-row";
-import { FilterLink } from "~/components/filter-link";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listPublishedPublications } from "~/db/publications";
@@ -10,9 +10,8 @@ import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
-import { interWidthEm } from "~/lib/inter-width";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { SORTS, publicationListing } from "~/lib/publications/listing.mjs";
+import { PUBLICATIONS, legacyAddress, publicationListing, venue } from "~/lib/publications/listing.mjs";
 import { PUBLICATIONS_CACHE_TAG, PUBLICATIONS_PATH, paperPath } from "~/lib/publications/paths.mjs";
 import type { Publication, TopicId } from "~/lib/publications/types";
 import { italicizeOrganisms } from "~/lib/scientific-names";
@@ -28,19 +27,19 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
+// Route-scoped: the catalog's tokens and components are Capsomer's, mapped onto the site's palette in site-catalog.css.
+import "capsomer/tokens.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
+import "capsomer/table.css";
+import "capsomer/chips.css";
+import "capsomer/empty.css";
+import "capsomer/pagination.css";
+import "capsomer/catalog.css";
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
+import "~/styles/site-catalog.css";
 import "~/styles/publications.css";
-
-/*
- * The search row's controls are sized from Inter's own advances, as the filter links are, so the row
- * wraps the same way in whichever face draws it. Sized by the fallback it fit on one line at 390 px,
- * and Apply dropped to a second when Inter arrived (CLS 0.085 without Arial).
- */
-const SEARCH_CONTROL_WIDTHS = {
-  "--sort-w": `${Math.max(...SORTS.map((s) => interWidthEm(s.label, 400)))}em`,
-  "--apply-w": `${interWidthEm("Apply", 400)}em`,
-} as CSSProperties;
 
 const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   "human-simian-retroviruses": {
@@ -86,11 +85,12 @@ export function headers() {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const params = url.searchParams;
+  // A link written in the page's old parameters (?sort=year-asc, ?selected=true) is sent once to the same view.
+  const moved = legacyAddress(url);
+  if (moved) throw redirect(moved, 301);
 
   const publications = await listPublishedPublications(getEnv(context));
-  const { soleTopic, ...listing } = publicationListing(params, publications);
-  const { items } = listing;
+  const { soleTopic, items } = publicationListing(url.searchParams, publications);
 
   /* A path, not an absolute URL: deriving it from `url.origin` is how a preview host becomes canonical. */
   const canonicalPath = soleTopic
@@ -111,7 +111,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /* The canonical origin, never the request's: this page is shared-cached, so a preview host's JSON-LD would be served to everyone. */
     origin: SITE_ORIGIN,
     citations,
-    ...listing,
+    // Every paper, with the address's query: the catalog is computed from them where it is drawn, because its
+    // result holds functions and a loader's data does not.
+    publications,
+    search: url.search,
     canonicalPath,
     pageTitle,
     pageDescription,
@@ -171,16 +174,10 @@ function AuthorList({ authors }: { authors: string[] }) {
   );
 }
 
-function citation(p: Publication) {
-  return decodeEntities(
-    [p.journal, String(p.year), p.volume, p.pages].filter(Boolean).join(", "),
-  );
-}
-
-function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
+function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   const { slug } = p;
   return (
-    <article className="paper-row">
+    <div className="paper-row">
       <p className="paper-marks">
         {p.type !== "article" ? <span className="paper-kind">{p.type}</span> : null}
         {p.isOpenAccess ? <span className="paper-open">open access</span> : null}
@@ -191,7 +188,6 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           <Link to={paperPath(slug)}>{italicizeOrganisms(decodeEntities(p.title))}</Link>
         </h3>
         <AuthorList authors={p.authors} />
-        <p className="paper-venue">{citation(p)}</p>
         <p className="paper-row-links">
           {p.access === "self-hosted" && p.pdfPath ? <a href={p.pdfPath}>PDF</a> : null}
           {p.doi ? <a href={`https://doi.org/${p.doi}`}>DOI</a> : null}
@@ -223,7 +219,7 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           </details>
         ) : null}
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -245,38 +241,17 @@ function bibliographyFacts(span: {
 }
 
 export default function Publications({ loaderData }: Route.ComponentProps) {
-  const {
-    origin,
-    items,
-    chips,
-    topics,
-    q,
-    sort,
-    selectedOnly,
-    selectedCount,
-    selectedHref,
-    filtered,
-    span,
-    total,
-    citations,
-  } = loaderData;
-
-  const groupByYear = sort !== "title";
-  const groups: { year: number | null; items: typeof items }[] = groupByYear
-    ? items.reduce<{ year: number | null; items: typeof items }[]>((acc, p) => {
-        const last = acc[acc.length - 1];
-        if (last && last.year === p.year) last.items.push(p);
-        else acc.push({ year: p.year, items: [p] });
-        return acc;
-      }, [])
-    : [{ year: null, items }];
+  const { origin, publications, search, citations } = loaderData;
+  const { items, result, span } = publicationListing(new URLSearchParams(search), publications);
 
   return (
     <>
       <SiteHeader />
       <main id="main" className="tracks list-tracks" tabIndex={-1}>
         <header className="list-head">
-          <h1 className="list-label">Publications</h1>
+          <h1 className="list-label" id="publications-title">
+            Publications
+          </h1>
           <p className="list-dek">
             Peer-reviewed work on retroviruses, bacteriophage genomics, and how
             undergraduate research is taught. Full text is hosted here where I have the
@@ -285,106 +260,30 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           <EvidenceRow facts={bibliographyFacts(span)} />
         </header>
 
-        <nav className="list-filter" aria-label="Filter by topic">
-          <span className="list-filter-label">Topics</span>
-          {chips.map((chip) => (
-            <FilterLink
-              key={chip.id}
-              to={chip.href}
-              label={chip.label}
-              count={chip.count}
-              active={chip.active}
-              title={chip.description}
-            />
-          ))}
-          {selectedCount > 0 ? (
-            <FilterLink
-              to={selectedHref}
-              label="Selected"
-              count={selectedCount}
-              active={selectedOnly}
-            />
-          ) : null}
-        </nav>
-
-        <Form
-          method="get"
-          className="list-search paper-search"
-          role="search"
-          style={SEARCH_CONTROL_WIDTHS}
-        >
-          {topics.map((t) => (
-            <input key={t} type="hidden" name="topic" value={t} />
-          ))}
-          {selectedOnly ? <input type="hidden" name="selected" value="1" /> : null}
-          <label className="paper-field">
-            <span className="paper-field-label">Search</span>
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Title, author, or journal"
-            />
-          </label>
-          <label className="paper-field">
-            <span className="paper-field-label">Sort</span>
-            <select name="sort" defaultValue={sort}>
-              {SORTS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit">Apply</button>
-        </Form>
-
-        <p className="list-feeds paper-feeds">
-          <span>
-            {filtered ? `${items.length} of ${total} shown` : `${total} publications`}
-            {filtered ? (
-              <>
-                {" "}
-                <Link to="/research/publications">Clear</Link>
-              </>
-            ) : null}
-          </span>
-          {/* Always the full list: a citation file carrying only the filtered subset is one nobody asked for. */}
-          <span>
-            Export all <a href="/research/publications.bib">BibTeX</a>{" "}
-            <a href="/research/publications.ris">RIS</a> <a href="/research/publications.json">CSL JSON</a>
-          </span>
-        </p>
-
-        {items.length === 0 ? (
-          <p className="list-empty">No publications match this filter.</p>
-        ) : (
-          <div className="paper-list">
-            {groups.map((group) => (
-              <section
-                key={group.year ?? "all"}
-                {...(group.year !== null
-                  ? { "aria-labelledby": `pub-year-${group.year}` }
-                  : { "aria-label": "Publications" })}
-              >
-                {group.year !== null ? (
-                  <h2 id={`pub-year-${group.year}`} className="paper-year">
-                    {group.year}
-                  </h2>
-                ) : null}
-                {group.items.map((p) => (
-                  <Entry key={p.id} p={p} cited={p.doi ? citations[p.doi] : undefined} />
-                ))}
-              </section>
-            ))}
-          </div>
-        )}
+        <div className="papers site-catalog">
+          <Catalog
+            definition={PUBLICATIONS}
+            result={result}
+            labelledBy="publications-title"
+            title={(p) => <PaperCell p={p} cited={p.doi ? citations[p.doi] : undefined} />}
+            cells={{ journal: (p) => <span className="paper-venue">{venue(p)}</span> }}
+            emptyText={{ noMatch: "No publications match this filter." }}
+            actions={
+              /* Always the full list: a citation file carrying only the filtered subset is one nobody asked for. */
+              <span className="paper-feeds">
+                Export all <a href="/research/publications.bib">BibTeX</a>{" "}
+                <a href="/research/publications.ris">RIS</a> <a href="/research/publications.json">CSL JSON</a>
+              </span>
+            }
+          />
+        </div>
 
         {/* `jsonLd`, not `JSON.stringify`: only `</script` ends a script element, and these strings come from third-party registries. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(publicationsJsonLd(origin, items)) }}
         />
+        <Enhance module="catalog" />
       </main>
       <ShellFooter />
     </>
