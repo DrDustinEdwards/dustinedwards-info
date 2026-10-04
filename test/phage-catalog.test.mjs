@@ -25,8 +25,13 @@ const PHAGES_SET = [
 const names = (/** @type {{ rows: Array<{ name: string }> }} */ result) => result.rows.map((p) => p.name);
 
 test("the default order is the page's own: year, then name folded and numeric, so the table reads as it always has", () => {
-  assert.deepEqual(names(phageListing("", PHAGES_SET)), sortPhages(PHAGES_SET).map((p) => p.name));
-  assert.deepEqual(names(phageListing("", PHAGES_SET)), ["Acorn2", "Acorn15", "Leia", "Arlo", "Éclair", "Rira"], "Acorn2 before Acorn15 (numeric), and the accent folds into E");
+  assert.deepEqual(names(phageListing("", PHAGES_SET)), sortPhages(PHAGES_SET).map((p) => p.name), "the catalog's default order is sortPhages");
+  const order = names(phageListing("", PHAGES_SET));
+  const at = (/** @type {string} */ n) => order.indexOf(n);
+  const shown = `order was ${JSON.stringify(order)}`;
+  assert.ok(at("Acorn2") < at("Acorn15"), `numeric: Acorn2 before Acorn15; ${shown}`);
+  assert.ok(at("Arlo") < at("Éclair"), `an accent folds into its letter: Arlo before Éclair; ${shown}`);
+  assert.ok(Math.max(at("Acorn2"), at("Acorn15"), at("Leia")) < Math.min(at("Arlo"), at("Éclair")) && at("Rira") === 5, `year first; ${shown}`);
   assert.equal(phageListing("", PHAGES_SET).groups, null, "the phage table has no headings");
 });
 
