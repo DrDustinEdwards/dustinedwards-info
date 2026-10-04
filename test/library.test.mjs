@@ -10,6 +10,8 @@ import {
   libraryItems,
   libraryMarkdown,
   citeMarkdown,
+  workflowContext,
+  workflowMarkdown,
   libraryCitation,
   libraryDownloads,
   libraryOverview,
@@ -234,4 +236,36 @@ test("the downloads carry the view's filter state, so what is downloaded is what
     json: "/research/protocols.json?q=rev&method=pcr",
     markdown: "/research/protocols.md",
   });
+});
+
+test("a protocol knows its neighbours in the phage workflow from the stages, not from anything typed on it", () => {
+  const items = libraryItems([
+    record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating", "culture"] }),
+    record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),
+    record({ slug: "pcr", path: "/research/protocols/pcr", title: "Primers", methods: ["pcr"] }),
+  ]);
+  const iso = workflowContext(items, "/research/protocols/iso");
+  assert.equal(iso.stage, "Isolate and purify");
+  assert.deepEqual(iso.before, []);
+  assert.deepEqual(iso.after, [{ title: "Extraction", href: "/research/protocols/ext" }], "the nearest later stage that has a protocol");
+  assert.deepEqual(iso.tools.map((t) => t.href), ["/research/tools/titer", "/research/tools/dilution", "/research/tools/webbed-plate", "/research/tools/lysate-volume"]);
+  const ext = workflowContext(items, "/research/protocols/ext");
+  assert.deepEqual(ext.before, [{ title: "Isolation", href: "/research/protocols/iso" }]);
+  assert.deepEqual(ext.after, [], "nothing later has a protocol");
+  assert.deepEqual(ext.tools, []);
+  assert.equal(workflowContext(items, "/research/protocols/pcr"), null, "a primer set is outside the workflow");
+  assert.equal(workflowContext(items, "/research/protocols/nope"), null);
+});
+
+test("the twin lists the same stage, neighbours and calculators, and nothing for a protocol outside the workflow", () => {
+  const items = libraryItems([
+    record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating"] }),
+    record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),
+  ]);
+  const md = workflowMarkdown(workflowContext(items, "/research/protocols/iso"), "https://example.test");
+  assert.ok(md.startsWith("## In the phage workflow\n\nStage: Isolate and purify."));
+  assert.ok(md.includes("After this: [Extraction](https://example.test/research/protocols/ext)."));
+  assert.ok(md.includes("Calculators: [Titer calculator](https://example.test/research/tools/titer)"));
+  assert.ok(!md.includes("Before this"));
+  assert.equal(workflowMarkdown(null, "https://example.test"), "");
 });

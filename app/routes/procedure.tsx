@@ -4,11 +4,12 @@ import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
-import { getProcedureByPath } from "~/db/procedures";
+import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
+import { libraryItems, workflowContext } from "~/lib/procedures/library.mjs";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
@@ -37,7 +38,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!row) throw data(null, { status: 404 });
   if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { count, factor } = readScale(row.record, url);
-  return { record: row.record, draft: row.status === "draft", count, factor };
+  // Where a protocol sits in the phage workflow: its neighbours are the other published protocols, so they are read here.
+  const workflow =
+    row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
+  return { record: row.record, draft: row.status === "draft", count, factor, workflow };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -51,7 +55,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
-  const { record, draft, count, factor } = loaderData;
+  const { record, draft, count, factor, workflow } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
@@ -68,7 +72,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} />
+      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
     </PageShell>
