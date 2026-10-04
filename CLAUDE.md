@@ -1,16 +1,13 @@
 # CLAUDE.md - dustinedwards.info
 
-Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Workers, Drizzle on D1, Cloudflare Access, R2. Also a Capsid CMS consumer.
+Dustin Edwards's personal site and Cloudflare showcase, live at https://dustinedwards.info. React Router 8 on Workers, Drizzle on D1, R2, Cloudflare Access for the admin. Content is written and published through Carrel.
 
-**This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; the design follows the Capsid Portal's design, with paper elements returning only by Dustin's decision and the home page hero kept (ruling 152 in Capsid's `dustinedwards/decisions.md`); the history of what was built and retired, and why, is Capsid's `dustinedwards/build-history.md`, with git and the pull requests behind it.
+The portfolio rules are in Capsid: `capsid/conventions.md`. Read it with this file. Where they disagree, conventions wins. Procedure is `.claude/skills/`; the design system is Capsomer (Paper and Plate is being redone on it, capsid/decisions.md 2026-10-01), with the home page hero kept (ruling 152 in Capsid's `dustinedwards/decisions.md`); what was built and retired, and why, is `dustinedwards/build-history.md`.
 
 ## Principles
 
-- A rule that does not make the site better is changed or deleted.
+- Every fact is stored once as structured data, and every page that shows it renders from that source: names, numbers, dates, sequences, sizes, temperatures, citations, DOIs, people, places, IDs and links. Values that can be computed are computed, not typed. Prose around the facts stays prose.
 - A check earns its place by catching real mistakes; a check that has never caught one is removed, not defended.
-- Before writing new code, search the repo for code that already does the job, and extend or reuse it instead of adding a parallel version. Prefer changing existing code to adding new code.
-- Never swallow an error. A failure is returned or thrown to where it can be seen; it is never logged and ignored while the code carries on or reports success.
-- Every fact is stored once as structured data, and every page that shows it renders from that source. That covers names, numbers, dates, sequences, sizes, temperatures, citations, DOIs, people, places, IDs and links. Values that can be computed are computed, not typed. Prose around the facts stays prose.
 
 ## Hard rules
 
@@ -20,35 +17,31 @@ The numbered ones keep their old numbers, because code cites them by number.
 
 AI-first: everything machines use (content, data, structure, citations, dates, feeds, the .md twins, llms.txt, JSON-LD, microformats) is served without script, and machines get the same facts people do, never a thinner version. For people, the site uses whatever makes it its best, script included.
 
-### 15. Sessions do not change `.claude/settings.json` unless Dustin explicitly asks.
+### 15. `.claude/settings.json` changes only on Dustin's explicit instruction.
 
-That file decides whether the hooks run at all, so a session that changes it can switch off its own limits.
+Portfolio rule 9.3; kept here under its number because code cites it.
 
 ### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI.
 
-Ruling 148, until the domain move: a merge to main deploys through `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. A session merges its own PR only with `node scripts/merge-pr.mjs <number>`, which refuses unless CI is green on the PR's exact head and refuses a PR labelled `visual`; a change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, and converges Ask last. Every step fails closed and none is optional, and there is no override flag, because a flag would be used on exactly the day the check was right. A ship window owns the tree from its first step to its last. Procedure: the `ship` skill.
+A merge to main deploys through `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. Sessions never merge: Capsid's signed auto-merge policy merges a PR once CI is green on its exact head, or the seat does (capsid/decisions.md, 2026-10-04, one merge path). A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, and converges Ask last. Every step fails closed and none is optional, with no override flag. A ship window owns the tree from its first step to its last. Procedure: the `ship` skill.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
-D1, both FTS indexes, the Ask index, the media table and the social cards are DERIVED; the repository and the bucket are the sources. A derived store is repaired THROUGH ITS DERIVATION, never by a hand-written INSERT, and a failed index write NEVER reverts the source. No gate can see how a row got where it is, which is what makes this UNGATED; the gates see DRIFT, the symptom.
+D1, both FTS indexes, the Ask index, the media table and the social cards are DERIVED; the repository and the bucket are the sources. A derived store is repaired THROUGH ITS DERIVATION, never by a hand-written INSERT, and a failed index write NEVER reverts the source. No gate can see how a row got where it is; the gates see DRIFT, the symptom.
 
 ## How a session works
 
-Mainline only until the DNS cutover. Everything lands on `main`, committed and pushed immediately. **The gates are the review.** Small changes (copy, a color or spacing tweak, a quick fix) may be asked of a session directly, without a Capsid job (ruling 148).
+**This folder is the main checkout and the site session's alone (ruling 60).** The site session commits to `main` and pushes; the gates are the review. Every other actor works in a worktree under `C:\Users\email\dev\worktrees\`, on its own branch, landing by pull request on green CI. Small changes (copy, a colour or spacing tweak, a quick fix) may be asked of the site session directly, without a Capsid job (ruling 148). Renovate PRs are not merged by sessions; a red one is a report, repaired by a scoped commit.
 
-**THIS FOLDER IS THE MAIN CHECKOUT AND THE SITE SESSION'S ALONE (ruling 60).** Every other actor works in a worktree under `C:\Users\email\dev\worktrees\`, on its own branch, landing by PULL REQUEST on green CI. Renovate is the other exception and sessions do not merge its PRs; a red one is a REPORT, repaired by a scoped commit on `main`.
+**Two files here are Capsid's and not this repo's to restyle:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. They are kept identical across the roster repos by capsid's `sync-scorer` copier; a change goes to capsid and arrives by the copier.
 
-**TWO FILES HERE ARE CAPSID'S AND NOT THIS REPO'S TO RESTYLE:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. They are byte-identical across five roster repos, written here by capsid's `sync-scorer` copier, and a comment pass that touches either one makes this repo the odd one out. Leave them out of any repo-wide recut; a change goes to capsid and arrives by the copier.
+**Reading is by citation (ruling 129).** A job names the rulings it depends on, by number. A session reads `core.md`, this file, the job body and those rulings. `FAILURES.md` is worth the minute.
 
-**READING IS BY CITATION (ruling 129).** A job names the rulings it depends on, by number. A session reads `core.md`, this file, the job body and those rulings, and nothing else is required reading. `FAILURES.md` is worth the minute anyway, because it is the failure shapes that repeat, but it is a pointer rather than a gate on starting.
-
-**CHECKS SCALE WITH THE CHANGE (ruling 129).** Run the checks that cover what you touched, push, and let CI run the full suite, which `ship` already trusts under hard rule 16. `npm run check:changed` picks them from the diff and falls back to the offline tier when it cannot tell. Screenshots only when something a reader can see changed. A full local `check:ci` before a push is never a ritual on this host: it re-derives what CI is about to derive anyway.
-
-Every gate verifies DISK, not HEAD. `git diff <path>` before `git add <path>`; never `git add -A`. Destructive operations, money paths and auth secrets stay with Dustin. If a session rebases onto commits it did not expect, or finds its own edits absent from disk, that is not a merge conflict: stop and re-establish the baseline before writing anything.
+**Checks scale with the change (ruling 129).** Run the checks that cover what you touched (`npm run check:changed`), push, and let CI run the full suite. Screenshots only when something a reader can see changed.
 
 ## Commands
 
-**`package.json` OWNS THE SCRIPT LIST.** Run `npm run` for it. `npm run check:changed` is what a session runs: it maps the branch's diff to the gates that cover it and runs only those, falling back to the offline tier when a changed path maps to nothing. `npm run check` is the OFFLINE tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is the tier a clean checkout can run, and `ship` trusts CI rather than a local run of it. `npm run verify-live` is NOT a gate: it needs a deploy and its Ask probes are billed. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; the schema test compares the live database when `SCHEMA_LIVE=1` is set, which `check:all` does. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate, so a new gate is tiered in the same commit.
+**`package.json` owns the script list.** `npm run check:changed` maps the diff to the gates that cover it, falling back to the offline tier. `npm run check` is the offline tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `npm run verify-live` is not a gate: it needs a deploy and its Ask probes are billed. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; the schema test compares the live database when `SCHEMA_LIVE=1`. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate.
 
 ## Bindings
 
@@ -56,8 +49,8 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
     DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET
 
-`ASK_BUDGET` IS THE WHOLE SITE'S RATE LIMITER, not an Ask-only budget, and is deliberately not renamed before the cutover. What each one is, with that ruling and the queue consumer, is `wrangler.jsonc.example`. That file is tracked and `wrangler.jsonc` is gitignored, a PORTFOLIO rule; a new binding is added to both in one commit. `workers/watchdog.ts` is a second Worker on the identical split, deployed by a `ship` step and never by `npm run deploy`. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
+`ASK_BUDGET` is the whole site's rate limiter, not an Ask-only budget. What each binding is: `wrangler.jsonc.example` (tracked; `wrangler.jsonc` is gitignored, and a new binding goes in both in one commit). `workers/watchdog.ts` is a second Worker on the same split, deployed by a `ship` step. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
 
 ## Where everything else lives
 
-In this repo, because a gate can reach it: `FAILURES.md` (failure shapes, read at session start), `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, and the skills at `.claude/skills/<name>/SKILL.md`. Everything else is Capsid, namespace `dustinedwards`. Read `core.md` for current state, and read a RULING BY NUMBER when the job cites one: `decisions.md` holds every ruling still in force, and `build-history.md` holds the history. Sessions READ Capsid and never write it.
+In this repo, because a gate can reach it: `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, and the skills at `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` for current state, `decisions.md` for every ruling in force (read one by number when a job cites it), `build-history.md` for history. A session records a reversal or a binding in Capsid, and nothing else.
