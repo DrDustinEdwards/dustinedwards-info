@@ -15,6 +15,7 @@ import {
   methodHref,
   overviewMarkdown,
   overviewSentence,
+  toolLink,
   libraryRecords,
   stepCount,
 } from "../app/lib/procedures/library.mjs";
@@ -165,4 +166,15 @@ test("an unknown parameter is served, not redirected, so a cache-buster or a tra
   assert.equal(at("?method=pcr&q=rev"), "/research/protocols?q=rev&method=pcr", "the order of the known ones is fixed");
   assert.equal(at("?cb=1&sort=title&q=rev&sort=title"), "/research/protocols?q=rev", "the default sort is dropped, and so is the unknown one, from the redirect");
   assert.equal(at("?page=1"), "/research/protocols");
+});
+
+test("a workflow stage links the calculators it names, from the one registry, and an unknown calculator is an error", () => {
+  const o = libraryOverview(libraryItems(RECORDS));
+  const isolate = o.stages.find((s) => s.id === "isolate");
+  assert.deepEqual(isolate.tools.map((t) => t.href), ["/research/tools/titer", "/research/tools/dilution", "/research/tools/webbed-plate", "/research/tools/lysate-volume"]);
+  assert.equal(isolate.tools[0].label, "Titer calculator");
+  assert.deepEqual(o.stages.find((s) => s.id === "extract").tools, [], "a stage with no calculator lists none");
+  assert.throws(() => toolLink("nope"), /does not define/);
+  const md = overviewMarkdown(o, "https://example.test");
+  assert.ok(md.includes("  - [Titer calculator](https://example.test/research/tools/titer)"), "the twin lists the stage's calculators under it");
 });
