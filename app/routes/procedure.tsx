@@ -10,6 +10,7 @@ import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
 import { libraryItems, workflowContext } from "~/lib/procedures/library.mjs";
+import { proofFor } from "~/lib/procedures/proof.server";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
@@ -41,7 +42,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Where a protocol sits in the phage workflow: its neighbours are the other published protocols, so they are read here.
   const workflow =
     row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
-  return { record: row.record, draft: row.status === "draft", count, factor, workflow };
+  // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.
+  const proof = await proofFor(env, row.record.proofOfUse);
+  return { record: row.record, draft: row.status === "draft", count, factor, workflow, proof };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -55,7 +58,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
-  const { record, draft, count, factor, workflow } = loaderData;
+  const { record, draft, count, factor, workflow, proof } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
@@ -72,7 +75,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} />
+      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} proof={proof} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
     </PageShell>

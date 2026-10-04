@@ -86,7 +86,7 @@ a missing value rather than printing it.
 
 Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`, `updated`, `based_on`,
 `materials`, `references`, `expected_results`, `limitations`, `method`; optional `draft`, `equipment`,
-`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`, `start_here`.
+`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`, `start_here`, `proof_of_use`.
 
 What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
 
@@ -99,6 +99,18 @@ What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs
 - `start_here`: a position (1, 2, 3 ...) in the library's "Start here" list, stored and never inferred. The list is
   the procedures that state one, in that order, each with its own `description`; two procedures may not share a
   position (`check:protocols`), and a procedure with none is simply not on the list.
+- `proof_of_use`: what shows the method works, stated and never inferred: `papers` (publication slugs of the papers that
+  used it) and/or `phages` (phage keys it produced).
+
+  ```yaml
+  proof_of_use:
+    papers: [10-1128-mra-01242-18]
+    phages: [arlo]
+  ```
+
+  The file holds slugs only; the page and the twin read each paper's title and each phage's name from their rows
+  (`app/lib/procedures/proof.server.ts`), so a corrected title reaches every protocol that names the paper. The section
+  appears only when the field is filled; `check:protocols` refuses a slug with no file.
 
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
 change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three

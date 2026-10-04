@@ -283,3 +283,8 @@
   gap: 0.25rem 1rem;
   margin: 0;
 }
+
+/* Proof of use: plain lists of the papers and phages the protocol's file names. */
+.procedure-proof {
+  margin-block: 0.5rem 1rem;
+}

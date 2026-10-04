@@ -1,4 +1,6 @@
+import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
+import type { resolveProof } from "~/lib/procedures/proof.mjs";
 import type { workflowContext } from "~/lib/procedures/library.mjs";
 import { fillQuantities, fixedSectionIds, type ProcedureRecord } from "~/lib/procedures/render.mjs";
 import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
@@ -336,11 +338,13 @@ export function ProcedureView({
   count,
   factor,
   workflow = null,
+  proof = null,
 }: {
   record: ProcedureRecord;
   count: number;
   factor: number;
   workflow?: ReturnType<typeof workflowContext>;
+  proof?: ReturnType<typeof resolveProof>;
 }) {
   const [materialsId, equipmentId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   return (
@@ -454,6 +458,8 @@ export function ProcedureView({
           <div dangerouslySetInnerHTML={html(record.limitationsHtml)} />
         </section>
       ) : null}
+
+      <ProtocolProof proof={proof} />
 
       <section aria-labelledby={referencesId}>
         <Heading id={referencesId!}>References</Heading>
