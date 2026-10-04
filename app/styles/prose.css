@@ -109,43 +109,6 @@
   font-size: 0.8125rem;
 }
 
-/* The renderer strips Plot's injected <style>; these rules replace it once, so one SVG serves both
-   themes. */
-.chart-figure svg {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  color: var(--text);
-  --plot-background: var(--paper);
-}
-
-.chart-figure svg text,
-.chart-figure svg tspan {
-  white-space: pre;
-}
-
-.chart-title {
-  margin: 0 0 0.5rem;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  color: var(--text);
-}
-
-/* The accessible name is on the SVG, never on this figure. */
-.chart-data {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-}
-
-.chart-data summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.chart-data table {
-  margin: 0.75rem 0 0;
-}
-
 /* Two images, one per theme: custom properties never reach an SVG in <img>. */
 .diagram-image {
   display: block;
