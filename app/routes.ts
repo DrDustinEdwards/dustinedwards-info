@@ -49,6 +49,8 @@ export default [
     route("research/publications/:slug", "routes/publications.$slug.tsx"),
     // The Research pages (app/lib/content-pages.mjs), drawn from D1 (docs/PAGES.md). A splat, so the
     // more specific research/publications routes above still win; a path with no page answers 404.
+    // The phage page: its prose and sections from the page row, its table as the catalog over the phage rows.
+    route("research/phages", "routes/phages.tsx"),
     // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
     // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
     // page so `.md` is not read as part of a slug.

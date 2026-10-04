@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { isToolName, runTool } from "~/lib/operator/api.server";
 import { savePhage } from "~/lib/phages/save.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
-import ContentPage, { loader as pageLoader } from "~/routes/content-page";
+import Phages, { headers as pageHeaders, loader as pageLoader } from "~/routes/phages";
 import { loader as twinLoader } from "~/routes/content-page[.md]";
 
 import acornPhage from "../../content/phages/acorn15.md?raw";
@@ -64,7 +64,7 @@ async function pageData() {
 }
 /** The page as a visitor's request gets it: the route's loader, then its component, with its JSON-LD blocks. */
 async function html() {
-  return renderRoute(PATH, ContentPage, { loaderData: await pageData() });
+  return renderRoute(PATH, Phages, { loaderData: await pageData() });
 }
 async function twin() {
   return twinLoader({ request: new Request(`${ORIGIN}${PATH}.md`), context: routeContext(), params: {} } as never);
@@ -107,7 +107,9 @@ describe("a phage edit through the adapter is live at the next request", () => {
   // Cold pipeline (shiki, KaTeX) plus the page compile: longer than the default 30 s.
   it("shows the edit on the page, its twin and its search record, with no build or deploy", { timeout: 240_000 }, async () => {
     const before = await html();
-    const acornRow = (county: string) => new RegExp(`<td><a href="#acorn15">Acorn15</a></td>\\s*<td>2017</td>\\s*<td><em>M\\. smegmatis</em> mc²155</td>\\s*<td>${county}</td>`);
+    // One row of the catalog: the name linking to its section, then the year, the host and the county, within one <tr>.
+    const within = "(?:(?!</tr>)[\\s\\S])*?";
+    const acornRow = (county: string) => new RegExp(`<a href="#acorn15">Acorn15</a></th>${within}>2017</td>${within}<em>M\\. smegmatis</em> mc²155</td>${within}>${county}</td>`);
     expect(before).toMatch(acornRow("Hood County"));
     const twinBefore = await (await twin()).text();
     expect(twinBefore).toContain(ROW);
@@ -196,6 +198,8 @@ describe("a phage change purges the pages tag, because the page embeds the table
     // The tag purged is the one the page's twin carries (its HTML carries it beside the long-standing "pages").
     expect((await twin()).headers.get("cache-tag")).toBe("content-pages");
     expect((await pageData()).page.path).toBe(PATH);
+    // The page the catalog is drawn into carries the same purge tag beside the long-standing "pages".
+    expect(pageHeaders().get("Cache-Tag")).toBe("pages,content-pages");
   });
 });
 

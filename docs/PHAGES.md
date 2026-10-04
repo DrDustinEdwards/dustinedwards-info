@@ -3,7 +3,7 @@
 The phage table on `/research/phages`, the section for each phage under it, and each phage's PhagesDB link are
 files in `content/phages/`, one per phage, the source with its history (job_005b85bf32fc). They were two things in
 two places: a markdown table and eighty `###` sections typed into `content/pages/research-phages.md`, and a map of
-PhagesDB records in code (`PHAGESDB_RECORDS` in `app/lib/phage-table.mjs`) that a gate held the table to. Now a
+PhagesDB records in code (`PHAGESDB_RECORDS`, now gone) that a gate held the table to. Now a
 phage is ONE record. `npm run sync:content` and the phage save write each file into the D1 `phages` table
 (migration 0025), and the page is compiled from those rows, so a phage edit goes live without a build or deploy.
 Only a change to the components, the columns or this format goes through a build.
@@ -37,7 +37,7 @@ genes: 96                             # optional: the genome announcement's gene
 `name`, `year`, `host`, `county` and `phagesdb` are required, with `null` where there is none, so a missing field
 is never a silent blank. The two hosts are the two the page's prose names (`HOSTS` in
 `app/lib/phages/compile.mjs`); a third host is a code change, because the table's cell and the section's line
-spell it. Sorting, filtering and the count line stay in code (`app/lib/phage-table.mjs`, `app/enhance/phages.ts`).
+spell it. The table on the page is Capsomer's catalog (`app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx`): search (name, former name, county), facets with counts (year, host, county, genome paper), sort, and the count, declared once in `PHAGES`, working with no script. The page row still holds the markdown table, so the twin, the search records, the Dataset facts and the invariants read the same text as ever; only the HTML table is swapped for the catalog, and the route refuses to draw if the page's HTML does not have exactly one table to swap.
 
 ## One validator
 
@@ -161,7 +161,7 @@ that names the sync, never a page with no phages.
 | The markdown twin | the same text, in the `pages` row's `markdown` |
 | The Dataset JSON-LD | `markdownTableFacts` over that text (rows, year span), in the page's structured data |
 | Search | the page's record in `search_docs`, written by the sync and by the write |
-| Sort and filter | `app/lib/phage-table.mjs` and `app/enhance/phages.ts`, reading the rendered table in the browser |
+| Search, facets, sort and the count | `PHAGES` in `app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx` over the phage rows; `app/enhance/catalog.ts` updates it in place |
 | The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the heading each file's name gives |
 | The check | `phage-drift` on `/api/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs` |
 

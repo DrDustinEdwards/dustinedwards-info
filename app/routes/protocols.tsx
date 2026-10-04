@@ -32,6 +32,7 @@ import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/tabs.css";
 import "~/styles/prose.css";
+import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 
 /**
@@ -124,7 +125,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       {draft ? <p>Draft: only you can see this page.</p> : null}
       <div className="prose" dangerouslySetInnerHTML={{ __html: intro }} />
       <LibraryOverview overview={libraryOverview(items)} />
-      <div className="library">
+      <div className="library site-catalog site-catalog-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
           {libraryTabs(items, result.state.filters.method ?? []).map((tab) => (
             <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>

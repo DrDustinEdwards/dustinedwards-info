@@ -103,6 +103,8 @@ export function run(code) {
       "procedure.sheet.tsx",
       // The protocol library (docs/PROCEDURES.md): its filters are GET parameters, as the publication index's are.
       "protocols.tsx",
+      // The phage page: its table is the catalog over the phage rows (docs/PHAGES.md).
+      "phages.tsx",
       "cv.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",
