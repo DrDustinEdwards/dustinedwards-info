@@ -5,6 +5,7 @@ import { getBlogPost } from "~/db";
 import { previewPost, withPublication } from "~/lib/carrel/site-adapter.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
+import { commitFiles } from "~/lib/editor/github.server";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
@@ -212,6 +213,41 @@ describe("a post's version is its own", () => {
     });
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ currentVersion: await gitBlobSha(raw) });
+  });
+});
+
+/* The check lives in commitFiles, against the head the commit is parented on, so a change that lands between a
+ * writer's read and its write is refused there whichever kind is writing (job_d0ed3f93a4d3). */
+describe("commitFiles refuses a file that is not the one the writer loaded", () => {
+  const commit = (expected: string | null) =>
+    commitFiles(testEnv as never, {
+      message: "Update guarded",
+      changes: [{ path: "content/guarded.md", content: "after\n" }],
+      expectedBlobs: { "content/guarded.md": expected },
+    });
+  const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits")).length;
+
+  it("REFUSES a write over a file that changed since it was loaded, and commits nothing", async () => {
+    const loaded = await gitBlobSha("before\n");
+    gh.files.set("content/guarded.md", "changed by someone else\n");
+    await expect(commit(loaded)).rejects.toMatchObject({ conflict: true, status: 409 });
+    expect(commits()).toBe(0);
+    expect(gh.files.get("content/guarded.md")).toBe("changed by someone else\n");
+  });
+
+  it("REFUSES a write that expects the file absent when it exists", async () => {
+    gh.files.set("content/guarded.md", "there\n");
+    await expect(commit(null)).rejects.toMatchObject({ conflict: true });
+    expect(commits()).toBe(0);
+  });
+
+  it("commits when the file is the one that was loaded, and when an absent one is still absent", async () => {
+    gh.files.set("content/guarded.md", "before\n");
+    await commit(await gitBlobSha("before\n"));
+    expect(gh.files.get("content/guarded.md")).toBe("after\n");
+    gh.files.delete("content/guarded.md");
+    await commit(null);
+    expect(commits()).toBe(2);
   });
 });
 

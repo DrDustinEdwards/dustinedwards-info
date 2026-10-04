@@ -16,11 +16,10 @@ import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { saveCvFile } from "~/lib/cv/save.server";
 import { TYPES } from "~/lib/cv/view.mjs";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 
 type CvEnv = Env & { GITHUB_TOKEN?: string };
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The name a list shows for a file: the section's plural as the CV prints it. */
@@ -55,15 +54,15 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
       const saved = await saveCvFile(env, {
         slug,
         raw,
-        expectedHeadSha: expectedVersion,
+        expectedBlobSha: expectedVersion ?? undefined,
         actor: { kind: "carrel", changeId },
         // The PDF follows the save after the response: Browser Run is seconds, a save should not wait for it.
         background: (work) => ctx.waitUntil(work),
       });
-      return { id: slug, version: saved.commitSha, status: "published", changeId };
+      return { id: slug, version: saved.sourceBlobSha, status: "published", changeId };
     } catch (error) {
       // A CvInvalid carries every message the validator gave; asSiteApiError passes them on.
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, target(slug));
     }
   }
 
@@ -99,10 +98,7 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
       if (!found) return null;
       const file = await readFile(env, found);
       if (!file) return null;
-      const [version, row] = await Promise.all([
-        currentHead(env),
-        env.DB.prepare(`SELECT synced_at FROM cv WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>(),
-      ]);
+      const row = await env.DB.prepare(`SELECT synced_at FROM cv WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>();
       return {
         id: slug,
         kind: "cv",
@@ -114,7 +110,7 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
         updatedAt: row ? new Date(row.synced_at * 1000).toISOString() : null,
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -122,7 +118,7 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
     async saveDraft(slug, input) {
       const found = target(slug);
       const file = await readFile(env, found);
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       if (!file) throw new RefusedError(`The file ${found} is missing from the repository, so it cannot be saved.`);
       return write(slug, input.changeId, input.source, input.expectedVersion);

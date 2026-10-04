@@ -8,7 +8,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
@@ -186,7 +186,9 @@ async function rowIsCurrent(env: ProcedureEnv, slug: string, blobSha: string) {
 /** save_procedure. */
 export async function saveProcedure(
   env: ProcedureEnv,
-  options: { slug: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ) {
   const { slug, raw, actor } = options;
   const path = procedurePath(slug);
@@ -207,6 +209,7 @@ export async function saveProcedure(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(path, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
         changes: [{ path, content: raw }],
       }),
@@ -217,6 +220,7 @@ export async function saveProcedure(
       slug,
       path: compiled.record.path,
       commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
       unchanged: true,
       note: UNCHANGED_NOTE,
       created: false,
@@ -251,6 +255,7 @@ export async function saveProcedure(
     slug,
     path: compiled.record.path,
     commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
     unchanged,
     created: options.isNew,
     draft: compiled.record.draft,

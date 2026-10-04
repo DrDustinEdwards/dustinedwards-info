@@ -10,7 +10,7 @@ import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { GitHubError, currentHead } from "~/lib/editor/publish.server";
+import { GitHubError } from "~/lib/editor/publish.server";
 import { parsePublication, publicationPath } from "~/lib/publications/parse.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { fileIsDraft, savePublication } from "~/lib/publications/save.server";
@@ -18,7 +18,7 @@ import type { Publication } from "~/lib/publications/types";
 
 type PublicationEnv = Env & { GITHUB_TOKEN?: string };
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The deposited date at its own precision, as the timestamp the contract wants (a partial date reads as its first day). */
@@ -36,13 +36,13 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
       const saved = await savePublication(env, {
         slug,
         raw,
-        expectedHeadSha: expectedVersion,
+        expectedBlobSha: expectedVersion ?? undefined,
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.commitSha, status: saved.draft ? "draft" : "published", changeId };
+      return { id: slug, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
     } catch (error) {
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, publicationPath(slug));
     }
   }
 
@@ -81,7 +81,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     async get(slug) {
       const file = await readFile(env, publicationPath(slug));
       if (!file) return null;
-      const [version, rows] = await Promise.all([currentHead(env), listPublicationIdentities(env)]);
+      const rows = await listPublicationIdentities(env);
       const { data } = parsePublication({ file: publicationPath(slug), raw: file.content });
       const draft = data.draft === true;
       const stored = rows.find((row) => row.slug === slug);
@@ -96,7 +96,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
         updatedAt: stored?.syncedAt ? stored.syncedAt.toISOString() : null,
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -104,7 +104,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     // starts as a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(slug, input) {
       const file = await readFile(env, publicationPath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       const raw = withPublication(input.source, { draft: file ? fileIsDraft(file.content) : true });
       return write(slug, input.changeId, raw, input.expectedVersion);

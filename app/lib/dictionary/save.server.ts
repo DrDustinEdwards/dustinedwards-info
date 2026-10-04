@@ -16,7 +16,7 @@ import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, GitHubError, listDirectory, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, GitHubError, listDirectory, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -149,6 +149,8 @@ async function rowIsCurrent(env: DictionaryEnv, key: string, blobSha: string) {
 export type SavedDictionaryEntry = {
   key: string;
   commitSha: string;
+  /** The git blob sha of the committed file: Carrel's version of the item. */
+  sourceBlobSha: string;
   unchanged: boolean;
   created: boolean;
   draft: boolean;
@@ -159,7 +161,9 @@ export type SavedDictionaryEntry = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> derived writes (convergeWithRetry) -> purge by tag. */
 export async function saveDictionaryEntry(
   env: DictionaryEnv,
-  options: { key: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { key: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ): Promise<SavedDictionaryEntry> {
   const { key, raw, actor } = options;
   const path = dictionaryPath(key);
@@ -186,12 +190,13 @@ export async function saveDictionaryEntry(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(path, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} dictionary entry: ${compiled.entry.term}${tag}`,
         changes: [{ path, content: raw }],
       }),
   });
   if (written.action === "noop") {
-    return { key, commitSha: written.commitSha, unchanged: true, created: false, draft: compiled.draft, purged: null, note: UNCHANGED_NOTE };
+    return { key, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, draft: compiled.draft, purged: null, note: UNCHANGED_NOTE };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[path];
@@ -220,6 +225,7 @@ export async function saveDictionaryEntry(
   return {
     key,
     commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
     unchanged: written.action === "repair",
     created: options.isNew,
     draft: compiled.draft,

@@ -13,7 +13,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { combinePurges, purgeCv, purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -217,6 +217,8 @@ export function fileIsDraft(raw: string) {
 export type SavedPublication = {
   slug: string;
   commitSha: string;
+  /** The git blob sha of the committed file: Carrel's version of the item. */
+  sourceBlobSha: string;
   unchanged: boolean;
   created: boolean;
   draft: boolean;
@@ -231,7 +233,9 @@ export type SavedPublication = {
  */
 export async function savePublication(
   env: PublicationEnv,
-  options: { slug: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ): Promise<SavedPublication> {
   const { slug, raw, actor } = options;
   const path = publicationPath(slug);
@@ -261,6 +265,7 @@ export async function savePublication(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(path, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}${tag}`,
         changes: [{ path, content: raw }],
       }),
@@ -269,6 +274,7 @@ export async function savePublication(
     return {
       slug,
       commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
       unchanged: true,
       created: false,
       draft: compiled.draft,
@@ -309,6 +315,7 @@ export async function savePublication(
   return {
     slug,
     commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
     unchanged: written.action === "repair",
     created: options.isNew,
     draft: compiled.draft,

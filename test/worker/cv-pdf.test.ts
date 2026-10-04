@@ -11,7 +11,7 @@ import { action } from "~/routes/api.carrel.v1.$";
 import { loader as pdfLoader } from "~/routes/cv-pdf";
 
 import { collectingContext, fakeAssets, fakeBrowser, fakePdf, workingBrowser } from "./cv-pdf-fixtures";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -23,7 +23,6 @@ import { testEnv } from "./test-env";
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 
 const FILES = import.meta.glob("../../content/cv/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const rawOf = (slug: string) => {
@@ -42,8 +41,6 @@ const withGrant = (title: string, amount: number) =>
   );
 
 let gh: GitHubStub;
-/** The repository's head as the last save left it: a save names the version it was made against. */
-let head = HEAD;
 
 const headersFor = () => ({
   authorization: `Bearer ${testEnv.CARREL_SITE_KEY}`,
@@ -60,12 +57,11 @@ function world(browser: Env["BROWSER"]) {
       request: new Request(`${PREFIX}/content/cv.grants/draft`, {
         method: "PUT",
         headers: headersFor(),
-        body: JSON.stringify({ source, expectedVersion: head, changeId }),
+        body: JSON.stringify({ source, expectedVersion: await versionOf(gh, "content/cv/grants.md"), changeId }),
       }),
       context: routeContext(background.ctx, { BROWSER: browser, ASSETS: fakeAssets }),
       params: {},
     } as never);
-    if (response.ok) head = ((await response.clone().json()) as { version: string }).version;
     return response;
   };
   const save = (title: string, amount: number, changeId: string) => put(withGrant(title, amount), changeId);
@@ -87,7 +83,6 @@ beforeEach(async () => {
   await seedCv();
   await env.OG.delete(CV_PDF_KEY);
   gh = stubGitHub(repository());
-  head = HEAD;
 });
 
 afterEach(() => {

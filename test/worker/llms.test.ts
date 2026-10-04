@@ -10,7 +10,8 @@ import { SITE_ORIGIN } from "~/lib/seo";
 
 import llmsFile from "../../content/llms.txt?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
 import { seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -48,8 +49,12 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const put = (source: string, expectedVersion: string | null = HEAD, changeId = "chg-llms") =>
-  send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion, changeId });
+const put = async (source: string, expectedVersion: string | null | undefined = undefined, changeId = "chg-llms") =>
+  send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    source,
+    expectedVersion: expectedVersion === undefined ? await versionOf(gh, LLMS_PATH) : expectedVersion,
+    changeId,
+  });
 
 /** What a visitor gets from /llms.txt right now. */
 async function served() {
@@ -150,15 +155,15 @@ describe("an edit through the adapter is live at the next request", () => {
   });
 
   it("publish with a source is the same save, and a document cannot be unpublished or created", async () => {
-    const published = await send("POST", `${PREFIX}/content/${ID}/publish`, { source: EDITED, expectedVersion: HEAD, changeId: "chg-pub" });
+    const published = await send("POST", `${PREFIX}/content/${ID}/publish`, { source: EDITED, expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-pub" });
     expect(published.status, await published.clone().text()).toBe(200);
     expect(await served().then((r) => r.text())).toBe(EDITED);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-down" });
     expect(down.status).toBe(422);
     expect(((await down.json()) as { message: string }).message).toMatch(/cannot be unpublished/);
 
-    const other = await send("PUT", `${PREFIX}/content/document.other/draft`, { source: llmsFile, expectedVersion: HEAD, changeId: "chg-new" });
+    const other = await send("PUT", `${PREFIX}/content/document.other/draft`, { source: llmsFile, expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-new" });
     expect(other.status).toBe(422);
     expect(((await other.json()) as { message: string }).message).toMatch(/names no document/);
   });
@@ -197,7 +202,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
     const response = await put(EDITED, "b".repeat(40));
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, LLMS_PATH) });
     expect(commits()).toHaveLength(0);
   });
 });
@@ -269,4 +274,15 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
     }
     expect(await row()).toBe("an older llms.txt");
   });
+});
+
+versionCases({
+  name: "document",
+  id: ID,
+  file: LLMS_PATH,
+  edit: () => EDITED,
+  gh: () => gh,
+  get,
+  send,
+  timeout: 120000,
 });

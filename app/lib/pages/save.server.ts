@@ -24,7 +24,7 @@ import {
   contentPageSearchUid,
 } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
@@ -202,7 +202,9 @@ async function rowIsCurrent(env: PageEnv, slug: string, blobSha: string) {
 /** The page save. */
 export async function savePage(
   env: PageEnv,
-  options: { path: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { path: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ) {
   const { raw, actor } = options;
   const { path, slug, file } = registeredPage(options.path);
@@ -223,6 +225,7 @@ export async function savePage(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(file, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} page: ${compiled.record.title}${tag}`,
         changes: [{ path: file, content: raw }],
       }),
@@ -233,6 +236,7 @@ export async function savePage(
       slug,
       path,
       commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
       unchanged: true,
       note: UNCHANGED_NOTE,
       created: false,
@@ -266,6 +270,7 @@ export async function savePage(
     slug,
     path,
     commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
     unchanged,
     created: options.isNew,
     draft: compiled.draft,

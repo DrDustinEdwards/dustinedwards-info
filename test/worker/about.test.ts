@@ -8,7 +8,7 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 
 import aboutFile from "../../content/pages/about.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -20,7 +20,6 @@ import { testEnv } from "./test-env";
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const SLUG = "about";
 const ID = `page.${SLUG}`;
 const FILE = pageSourcePath(SLUG);
@@ -66,7 +65,7 @@ describe("an About edit through the adapter is live at the next request", () => 
     expect(before).toContain('class="about-photo"');
 
     const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-about" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-about" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-about" });
 
@@ -89,7 +88,7 @@ describe("an About edit through the adapter is live at the next request", () => 
   });
 
   it("an unchanged save commits nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: HEAD, changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
     expect(commits()).toHaveLength(0);
   });
@@ -98,7 +97,7 @@ describe("an About edit through the adapter is live at the next request", () => 
 describe("a save is held to what CI holds", () => {
   it("REFUSES an About with no prose (the render floor check:content held), commits nothing and keeps the page", async () => {
     const blank = `${aboutFile.split("\n---\n")[0]}\n---\n\nToo short.\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: blank, expectedVersion: HEAD, changeId: "chg-blank" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: blank, expectedVersion: await versionOf(gh, FILE), changeId: "chg-blank" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/floor 200/);
     expect(commits()).toHaveLength(0);
@@ -107,12 +106,12 @@ describe("a save is held to what CI holds", () => {
 
   it("REFUSES a missing seo_title and a link the URL allowlist refuses", async () => {
     const noSeo = aboutFile.replace(/^seo_title: .*$/m, "");
-    const first = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: noSeo, expectedVersion: HEAD, changeId: "chg-seo" });
+    const first = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: noSeo, expectedVersion: await versionOf(gh, FILE), changeId: "chg-seo" });
     expect(first.status).toBe(422);
     expect(((await first.json()) as { message: string }).message).toMatch(/seo_title is required/);
 
     const bad = `${aboutFile.trimEnd()}\n\n[x](javascript:alert(1))\n`;
-    const second = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: HEAD, changeId: "chg-link" });
+    const second = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-link" });
     expect(second.status).toBe(422);
     expect(commits()).toHaveLength(0);
   });
@@ -125,14 +124,14 @@ describe("About has a route of its own", () => {
     expect(paths.indexOf("/about")).toBe(1);
 
     const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-search" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-search" });
     expect(response.status, await response.clone().text()).toBe(200);
     const hits = await testEnv.DB.prepare("SELECT count(*) AS n FROM search_docs WHERE url LIKE '/about%'").first<{ n: number }>();
     expect(hits?.n).toBe(0);
   });
 
   it("unpublish takes the page and its sitemap entry down, and publish restores them", { timeout: 180_000 }, async () => {
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
@@ -152,7 +151,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
     await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: HEAD, changeId: "chg-repair" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-repair" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(commits()).toHaveLength(0);
     expect(await aboutHtml()).toContain("Department Head of Biological Sciences");

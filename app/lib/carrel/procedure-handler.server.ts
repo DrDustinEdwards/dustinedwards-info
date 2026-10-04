@@ -12,13 +12,12 @@ import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 import { parseProcedure, procedurePath } from "~/lib/procedures/parse.mjs";
 import { saveProcedure } from "~/lib/procedures/save.server";
 
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** Whether a stored file is a draft, read from the file itself, the only authority. */
@@ -41,14 +40,14 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
       const saved = await saveProcedure(env, {
         slug,
         raw,
-        expectedHeadSha: expectedVersion,
+        expectedBlobSha: expectedVersion ?? undefined,
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.commitSha, status: saved.draft ? "draft" : "published", changeId };
+      return { id: slug, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
     } catch (error) {
       // A ProcedureInvalid carries every message the validator gave; asSiteApiError passes them on.
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, procedurePath(slug));
     }
   }
 
@@ -85,7 +84,6 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
     async get(slug) {
       const file = await readFile(env, procedurePath(slug));
       if (!file) return null;
-      const version = await currentHead(env);
       const { data } = parseProcedure({ file: procedurePath(slug), raw: file.content });
       const draft = data.draft === true;
       return {
@@ -99,7 +97,7 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
         updatedAt: isoDay(data.updated),
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -107,7 +105,7 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
     // as a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(slug, input) {
       const file = await readFile(env, procedurePath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       const raw = withDraft(input.source, file ? fileIsDraft(file.content) : true);
       return write(slug, input.changeId, raw, input.expectedVersion);
