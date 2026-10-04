@@ -218,10 +218,10 @@ describe("everything a save changes carries the tag it purges", () => {
     await testEnv.DB.prepare("UPDATE publications SET status = 'draft' WHERE slug = ?1").bind(SLUG).run();
     try {
       const data = (await indexLoader({ request: new Request(`${ORIGIN}/research/publications`), params: {}, context: routeContext() } as never)) as {
-        items: Array<{ slug: string }>;
+        publications: Array<{ slug: string }>;
       };
-      expect(data.items.some((p) => p.slug === SLUG)).toBe(false);
-      expect(data.items.length).toBeGreaterThan(30);
+      expect(data.publications.some((p) => p.slug === SLUG)).toBe(false);
+      expect(data.publications.length).toBeGreaterThan(30);
       expect(renderRoute("/research/publications", Publications, { loaderData: data })).not.toContain(SLUG);
       await expect(pageData(SLUG)).rejects.toMatchObject({ status: 404 });
     } finally {
