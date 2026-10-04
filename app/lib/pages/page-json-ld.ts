@@ -3,7 +3,7 @@
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, type DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
-import { SITE, SITE_ORIGIN, breadcrumbJsonLd, personId } from "~/lib/seo";
+import { LICENSE_URL, SITE, SITE_ORIGIN, breadcrumbJsonLd, personId } from "~/lib/seo";
 
 type ContentPage = PageRecord;
 
@@ -34,7 +34,8 @@ function pageJsonLd(page: ContentPage): object[] {
     ...(page.applicationCategory ? { applicationCategory: page.applicationCategory } : {}),
     ...(page.programmingLanguage ? { programmingLanguage: page.programmingLanguage } : {}),
     ...(page.runtimePlatform ? { runtimePlatform: page.runtimePlatform } : {}),
-    ...(page.license ? { license: page.license } : {}),
+    // A Dataset's license is the site's terms, whatever the page's frontmatter says, so none can be left out.
+    ...(isDataset ? { license: LICENSE_URL } : page.license ? { license: page.license } : {}),
     ...(page.dataset
       ? {
           // Public on this page with no sign-in, which is all the property claims.

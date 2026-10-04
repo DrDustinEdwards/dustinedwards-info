@@ -94,6 +94,7 @@ export function run(code) {
       "publications.tsx",
       "publications.$slug.tsx",
       "privacy.tsx",
+      "terms.tsx",
       "contact.tsx",
       // The Research and Teaching pages, rendered from markdown at build time (app/lib/content-pages.mjs).
       "content-page.tsx",

@@ -22,6 +22,8 @@
     // project must reach them. The generated one is written by `build:identity` (build:content and install).
     "app/lib/identity.mjs",
     "app/lib/identity.generated.mjs",
+    // The terms path, which `app/lib/seo.ts` builds LICENSE_URL from and export-response.mjs puts in its Link header.
+    "app/lib/license.mjs",
     // Listed because `app/lib/seo.ts` IMPORTS it, not because a script here
     // calls it, which is the same reason `app/lib/media/byte-size.mjs` is
     // listed below. `publicationsJsonLd` decodes character references so the
