@@ -33,6 +33,18 @@ export const COURSES = Object.freeze({
   "phage-bioinformatics": { label: "Phage Bioinformatics Course", path: "/teaching/phage-bioinformatics" },
 });
 
+/**
+ * The phage workflow the library draws as a strip, in the order a phage takes through the lab: each stage is the
+ * methods that carry it out. A stage with no protocol yet is drawn without a link, so the strip is the lab's own
+ * path and a protocol appears under its stage the moment one is saved.
+ */
+export const PHAGE_PIPELINE = Object.freeze([
+  { id: "isolate", label: "Isolate and purify", methods: ["plating", "culture"] },
+  { id: "extract", label: "Extract DNA", methods: ["extraction"] },
+  { id: "sequence", label: "Sequence", methods: ["sequencing"] },
+  { id: "annotate", label: "Annotate", methods: ["annotation"] },
+]);
+
 /** The words for an id in a closed list, or the id itself when the list does not know it. */
 export function methodLabel(/** @type {string} */ id) {
   return /** @type {Record<string, string>} */ (METHODS)[id] ?? id;

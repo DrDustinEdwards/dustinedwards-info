@@ -5,7 +5,7 @@
 
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
-import { LIBRARY_PATH, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
+import { LIBRARY_PATH, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -186,4 +186,82 @@ export function libraryMarkdown(items, origin) {
     `| ${head.map(() => "---").join(" | ")} |`,
     ...rows.map((r) => `| ${r.join(" | ")} |`),
   ].join("\n");
+}
+
+/** @param {number} n @param {[string, string]} noun */
+export const countOf = (n, noun) => `${n} ${n === 1 ? noun[0] : noun[1]}`;
+
+/**
+ * The overview's counts as a sentence: the one the page's count line and the twin both carry.
+ *
+ * @param {ReturnType<typeof libraryOverview>} overview
+ */
+export function overviewSentence(overview) {
+  const parts = [
+    `${countOf(overview.total, ["protocol", "protocols"])} across ${countOf(overview.methods, ["method", "methods"])}`,
+    overview.organisms > 0 ? `${countOf(overview.organisms, ["organism", "organisms"])}` : "",
+    overview.updated ? `newest updated ${overview.updated}` : "",
+  ].filter(Boolean);
+  return `${parts.join(", ")}.`;
+}
+
+/**
+ * The overview for the twin: the count sentence, the workflow as a list with a link for each stage that has
+ * protocols, and the methods with their counts, so a machine reads what the page shows.
+ *
+ * @param {ReturnType<typeof libraryOverview>} overview
+ * @param {string} origin
+ */
+export function overviewMarkdown(overview, origin) {
+  const noun = /** @type {[string, string]} */ (["protocol", "protocols"]);
+  const stage = (/** @type {(typeof overview.stages)[number]} */ s) =>
+    s.href ? `- [${s.label}](${origin}${s.href}): ${countOf(s.count, noun)}` : `- ${s.label}`;
+  return [
+    "## In the library",
+    "",
+    overviewSentence(overview),
+    "",
+    "### The phage workflow",
+    "",
+    ...overview.stages.map(stage),
+    "",
+    "### Browse by method",
+    "",
+    ...overview.tiles.map((t) => `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}`),
+  ].join("\n");
+}
+
+/**
+ * The address of the library narrowed to some methods: the one a person reaches by choosing them in the facet.
+ *
+ * @param {readonly string[]} methods
+ */
+export function methodHref(methods) {
+  return `${LIBRARY_PATH}?${methods.map((m) => `method=${encodeURIComponent(m)}`).join("&")}`;
+}
+
+/**
+ * What the library says about itself, counted from its rows: how many protocols, over how many methods and
+ * organisms, when the newest changed, a tile for each method that has a protocol, and the phage workflow with the
+ * number of protocols under each stage. Nothing here is typed: a protocol saved changes every figure.
+ *
+ * @param {LibraryItem[]} items
+ */
+export function libraryOverview(items) {
+  const tiles = Object.keys(METHODS)
+    .map((id) => ({ id, label: methodLabel(id), count: items.filter((p) => p.methods.includes(id)).length, href: methodHref([id]) }))
+    .filter((tile) => tile.count > 0);
+  const stages = PHAGE_PIPELINE.map((stage) => {
+    const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;
+    return { id: stage.id, label: stage.label, count, href: count > 0 ? methodHref(stage.methods) : null };
+  });
+  const dates = items.map((p) => p.updated).filter(Boolean).sort();
+  return {
+    total: items.length,
+    methods: tiles.length,
+    organisms: new Set(items.flatMap((p) => p.organisms)).size,
+    updated: dates.at(-1) ?? "",
+    tiles,
+    stages,
+  };
 }

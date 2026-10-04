@@ -125,6 +125,10 @@ protocol saved is listed at the next request with no deploy, and no second list 
   such as a product size comes from the lab registry when it exists.
 - **The state is the address**, as the catalog defines it: `?q=pcr&method=pcr&sort=-updated`. It is a GET form, so with
   script off every control works and every state is a link; `app/enhance/catalog.ts` then updates the page in place.
+- **The overview above the catalog is counted, not typed** (`libraryOverview`): a count sentence, the phage
+  workflow (`PHAGE_PIPELINE` in `taxonomy.mjs`, each stage the methods that carry it out, linked to the library
+  narrowed to them, and drawn without a link while it has no protocol), and a tile for each method that has one. Every
+  tile is an address of the filtered library. The twin carries the same figures.
 - **Machines get the same rows**: `/research/protocols.md` (the introduction and a table of every protocol),
   `.json` and `.csv` (every fact, ids with their words, for the filter state in the query string), and a
   `CollectionPage` with an `ItemList` in the page.
