@@ -38,12 +38,12 @@ test("rel=me marks exactly the owner's profiles, and never a social link", () =>
   assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
 });
 
-test("the Software column lists the three products and not Germomics", () => {
+test("the Software column lists the three products and Capsomer, and not Germomics", () => {
   const column = FOOTER_COLUMNS.find((item) => item.id === "software");
   assert.ok(column);
   assert.deepEqual(
     column.items.map((item) => item.to),
-    ["/software/foxhound", "/software/foxing", "/software/foxing-edu"],
+    ["/software/foxhound", "/software/foxing", "/software/foxing-edu", "/software/capsomer"],
   );
   assert.ok(!column.items.some((item) => /germomics/i.test(item.label + item.to)));
 });

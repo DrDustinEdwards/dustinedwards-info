@@ -61,8 +61,9 @@ A page is /software/{name}. /projects 301s to /software.
 - [Capsid](https://dustinedwards.info/software/capsid): infrastructure: versioned markdown in namespaces, with typed edges and search; this site's rulings live in it
 - [Enarratio](https://dustinedwards.info/software/enarratio): an open-source chart library in early alpha, at https://github.com/DrDustinEdwards/enarratio with a gallery at https://enarratio.dustinedwards.info
 - [Carrel](https://dustinedwards.info/software/carrel): the private writing hub this site's articles are written in; it has a page but no public app address
+- [Capsomer](https://dustinedwards.info/software/capsomer): the shared design system of plain-CSS components, color tokens and page patterns these apps are built from; its home is https://capsomer.dustinedwards.info
 
-TXASM (https://txasm.org) is a site of Dustin's and has no page on this site. This site is described at the [colophon](https://dustinedwards.info/colophon). The lab tools are listed above under Lab calculators. Each of the Capsid, Enarratio and Carrel pages opens with a dictionary entry for its name.
+TXASM (https://txasm.org) is a site of Dustin's and has no page on this site. This site is described at the [colophon](https://dustinedwards.info/colophon). The lab tools are listed above under Lab calculators. Each of the Capsid, Enarratio, Carrel and Capsomer pages opens with a dictionary entry for its name.
 
 ## Writing
 

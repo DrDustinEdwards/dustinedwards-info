@@ -13,7 +13,7 @@ import { buildDictionary, compileAllDictionary, repoHost } from "../scripts/lib/
  * when they were code, ported to rules on the files, then one case per rule firing on a real entry with one line
  * changed, so a rule that stopped firing would fail here instead of letting an edit through. */
 
-const PATHS = ["/software/capsid", "/software/enarratio", "/software/carrel"];
+const PATHS = ["/software/capsid", "/software/enarratio", "/software/carrel", "/software/capsomer"];
 const dir = new URL("../content/dictionary/", import.meta.url);
 const read = (/** @type {string} */ key) => readFileSync(new URL(`${key}.md`, dir), "utf8");
 /** @typedef {Array<{ key: string, path: string }>} Others */
@@ -177,7 +177,7 @@ test("sense 2 of each entry is the software, labelled software., in the page's t
 
 test("the build rows carry each file's blob sha and hand the pages their published entries", async () => {
   const built = await buildDictionary();
-  assert.deepEqual(built.rows.map((row) => row.key).sort(), ["capsid", "carrel", "enarratio"]);
+  assert.deepEqual(built.rows.map((row) => row.key).sort(), ["capsid", "capsomer", "carrel", "enarratio"]);
   assert.ok(built.rows.every((row) => row.status === "published" && /^[0-9a-f]{40}$/.test(row.sourceBlobSha)));
   assert.equal(built.entryFor("/software/capsid")?.term, "Capsid");
   assert.equal(built.entryFor("/software/foxing"), undefined);

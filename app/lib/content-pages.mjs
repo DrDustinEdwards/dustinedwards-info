@@ -47,6 +47,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/capsid",
   "/software/enarratio",
   "/software/carrel",
+  "/software/capsomer",
   // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
 ]);
