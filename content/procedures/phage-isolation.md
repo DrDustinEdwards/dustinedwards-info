@@ -298,8 +298,11 @@ The workflow as run in 2025:
 1. Flood the webbed plate from the last purification round to make a low-volume lysate (about 5 ml).
 2. Run a dilution series from the LVL and plate it to find the dilution that webs.
    > TROUBLESHOOTING: wrong-starting-sample
+   > CALC: dilution
 3. Pour 5 to 10 replicate plates at that dilution and volume.
+   > CALC: webbed-plate
 4. Flood them, pool them through one 0.22 µm filter into a 50 ml conical, and titer the pool. That is the HVL.
+   > CALC: titer
 
 ### How much lysate per webbed plate
 

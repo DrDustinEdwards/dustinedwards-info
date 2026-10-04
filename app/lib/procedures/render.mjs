@@ -9,10 +9,11 @@
 
 import GithubSlugger from "github-slugger";
 
+import { TOOLS } from "../phage-tools.mjs";
 import { plainText } from "../search/records.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
-import { allSteps, procedurePath } from "./parse.mjs";
+import { allSteps, procedurePath, readCalcs } from "./parse.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
 export const SLOT = (/** @type {number} */ i) => `QZQ${i}QZQ`;
@@ -158,6 +159,7 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       why: await flagHtml(step.flags.why),
       expect: await flagHtml(step.flags.expect),
       troubleshooting: step.flags.troubleshooting,
+      calculators: readCalcs(step.flags.calc),
       commands: step.commands,
       photos: await Promise.all(step.photos.map(photo)),
     };
@@ -489,6 +491,7 @@ export function procedureMarkdown(record, parsed) {
         flag("Why", step.flags.why);
         flag("Expected", step.flags.expect);
         for (const id of step.flags.troubleshooting) out.push(`   > Troubleshooting: see "${id}" below.`);
+        for (const c of readCalcs(step.flags.calc)) out.push(`   > Calculator: [${TOOLS[c.id]?.title}](${TOOLS[c.id]?.path})${Object.keys(c.values).length ? ` with ${Object.entries(c.values).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`);
         for (const cmd of step.commands) {
           out.push("", `   \`\`\`${cmd.lang}`, ...cmd.code.split("\n").map((l) => `   ${l}`), "   ```");
           if (cmd.output !== null) {

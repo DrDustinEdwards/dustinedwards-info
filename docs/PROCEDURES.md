@@ -72,7 +72,8 @@ not marked, so the sentence stays the one a person wrote.
   (a separate method, such as a rescue).
 - A step's flags are `>` lines indented under it: `CRITICAL:` (with the reason), `PAUSE POINT:`,
   `WHY:` (a "why this" note), `TROUBLESHOOTING:` (a row id in the troubleshooting table), `EXPECT:` (the
-  expected result of the step). In the computational profile a fenced code block under a step is the
+  expected result of the step), `CALC:` (protocol only: the calculators to fold under the step, by id from
+  `TOOLS` in `app/lib/phage-tools.mjs`, such as `> CALC: dilution, titer`). In the computational profile a fenced code block under a step is the
   command to copy, and a fenced block with the info string `output` right after it is its expected
   output.
 
@@ -179,6 +180,19 @@ page, so the copies never compete with it in search.
 creator and affiliation from the CV, keywords from the method words, the frozen copy and the source DOIs as related
 identifiers) for `.zenodo.json` or the upload form. It leaves out the license, which is Dustin's to choose, and a DOI is
 minted only for a version being cited (protocols.md), never for the collection.
+
+## Calculators in steps
+
+A step that needs arithmetic names the calculators it uses: `> CALC: webbed-plate`. Each is folded under the step as
+a `<details>` holding the same form and the same `runTool` the `/research/tools` pages use (`StepCalculators` in
+`app/components/phage-tool.tsx`), so there is no second copy of the arithmetic. Its fields start on the lab's worked
+example, except a value the step itself states: `> CALC: webbed-plate volume=10` fills `volume` with 10, and the
+validator refuses it unless the step's own words contain 10, and refuses a field the calculator does not have, so a
+number is never filled in that the record does not back. The server draws the worked example, so the page reads
+complete with script off, where the form submits to the calculator's own page; with script `app/enhance/tools.ts`
+recomputes in place and, for a calculator inside a step, leaves the address bar alone. It works in run mode, which
+adds its controls beside these and touches neither. The printable sheet omits the calculators, and the markdown
+twin links each one. The ids are checked against `TOOLS`; the cases are `test/procedure-calc.test.mjs`.
 
 ## The library
 

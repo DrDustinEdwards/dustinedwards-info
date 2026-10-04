@@ -7,9 +7,10 @@
 // is an error: a forgotten field cannot pass as a recorded gap.
 
 import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
-import { allSteps, stepConditions } from "./parse.mjs";
+import { allSteps, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, ORGANISMS } from "./taxonomy.mjs";
+import { TOOLS } from "../phage-tools.mjs";
 
 export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
 
@@ -331,6 +332,21 @@ export function validateProcedure(parsed, expect) {
     }
     for (const id of step.flags.troubleshooting) {
       if (!troubleIds.has(id)) errors.push(`${at}: TROUBLESHOOTING names "${id}", which is not a row id in troubleshooting`);
+    }
+    if (step.flags.calc.length > 0 && profile !== "protocol") errors.push(`${at}: CALC belongs to the protocol profile`);
+    const calcs = readCalcs(step.flags.calc);
+    if (new Set(calcs.map((c) => c.id)).size !== calcs.length) errors.push(`${at}: CALC names a calculator twice`);
+    for (const { id, values } of calcs) {
+      const tool = Object.hasOwn(TOOLS, id) ? TOOLS[id] : undefined;
+      if (!tool) {
+        errors.push(id ? `${at}: CALC names "${id}", which is not a calculator (${Object.keys(TOOLS).join(", ")})` : `${at}: CALC gives a value before it names a calculator`);
+        continue;
+      }
+      for (const [name, value] of Object.entries(values)) {
+        if (!tool.fields.some((f) => f.name === name)) errors.push(`${at}: CALC ${id} has no field "${name}" (${tool.fields.map((f) => f.name).join(", ")})`);
+        // Every value is the step's own: a number that is not in the step's words is not from the record.
+        else if (!step.source.includes(value)) errors.push(`${at}: CALC ${id} ${name}=${value}, but the step does not state ${value}; a value is filled in only from the step's own words`);
+      }
     }
     for (const seg of step.segments) {
       if (seg.type === "material") {
