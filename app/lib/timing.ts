@@ -5,8 +5,12 @@ export type Timings = Array<{ name: string; ms: number }>;
 // Shared so the `admin.tsx` middleware and child loaders write into one Server-Timing header.
 export const timingsContext = createContext<{ timings?: Timings }>({});
 
+/**
+ * Whether this request collects Server-Timing marks: every admin request (a signed-in person's, never cached, so the
+ * numbers cost nothing to read and are there when a page is slow), and any other page that asks with `?timing=1`.
+ */
 export function wantsTiming(url: URL) {
-  return url.searchParams.get("timing") === "1";
+  return url.searchParams.get("timing") === "1" || url.pathname === "/admin" || url.pathname.startsWith("/admin/");
 }
 
 export async function timed<T>(

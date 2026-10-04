@@ -18,7 +18,8 @@ import {
   mediaBackupDriftVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
-import { askIndexStatus } from "~/lib/search/ask.server";
+import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
+import { timed, type Timings } from "~/lib/timing";
 import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
@@ -148,89 +149,107 @@ export interface HealthCheck {
   counts?: { expected: number; present: number };
 }
 
+/** What a caller may share with the run: the request's timing marks, and a memoized read of the Ask index. */
+export interface HealthOptions {
+  timings?: Timings;
+  askStatus?: () => Promise<AskIndexStatus | null>;
+}
+
+/** The Ask index's status: the caller's shared read when it has one, else a fresh listing. Unreadable is a failed check. */
+async function askStatusOf(env: Env, options: HealthOptions): Promise<AskIndexStatus> {
+  if (!options.askStatus) return askIndexStatus(env);
+  const status = await options.askStatus();
+  if (!status) throw new Error("the Ask index could not be listed");
+  return status;
+}
+
 interface HealthRun {
   checks: HealthCheck[];
   failed: HealthCheck[];
 }
 
 /** A check that throws is reported as failed, or one broken check would silence every other. */
-export async function runHealthChecks(env: Env): Promise<HealthRun> {
-  const checks: HealthCheck[] = [];
+export async function runHealthChecks(env: Env, options: HealthOptions = {}): Promise<HealthRun> {
+  /* Every check is independent and each has its own timeout, so they run together: the run takes as long as its slowest
+     check, not the sum of all of them. The order of the answers is the order below. */
+  const pending: Array<Promise<HealthCheck>> = [];
+  const guard = (name: string, run: Parameters<typeof guardOne>[1]) =>
+    timed(options.timings, `health_${name}`, () => guardOne(name, run));
 
-  checks.push(
-    await guard("ask-index-drift", async () => askDriftVerdict(await askIndexStatus(env))),
+  pending.push(
+    guard("ask-index-drift", async () => askDriftVerdict(await askStatusOf(env, options))),
   );
 
   // The INDEX; media-backup-drift below compares BYTES. Easy to confuse.
-  checks.push(
-    await guard("media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
+  pending.push(
+    guard("media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
   );
 
-  checks.push(
-    await guard("media-backup-drift", async () => {
+  pending.push(
+    guard("media-backup-drift", async () => {
       // Both buckets listed in full: a truncated read would report a clean sweep of the part it saw.
       return mediaBackupDriftVerdict(await backupStatus(env));
     }),
   );
 
-  checks.push(
-    await guard("content-drift", async () => {
+  pending.push(
+    guard("content-drift", async () => {
       // An unreadable repository fails this check, which the repair plan refuses to act on alone.
       const { files, rows } = await readContentSides(env);
       return contentDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("procedures-drift", async () => {
+  pending.push(
+    guard("procedures-drift", async () => {
       // A procedure edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readProcedureSides(env);
       return procedureDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("dictionary-drift", async () => {
+  pending.push(
+    guard("dictionary-drift", async () => {
       // An entry edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readDictionarySides(env);
       return dictionaryDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("roster-drift", async () => {
+  pending.push(
+    guard("roster-drift", async () => {
       // A cohort edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readRosterSides(env);
       return rosterDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("phage-drift", async () => {
+  pending.push(
+    guard("phage-drift", async () => {
       // A phage edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readPhageSides(env);
       return phageDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("pages-drift", async () => {
+  pending.push(
+    guard("pages-drift", async () => {
       // A page edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readPageSides(env);
       return pageDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("cv-drift", async () => {
+  pending.push(
+    guard("cv-drift", async () => {
       // A CV file edited through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readCvSides(env);
       return cvDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("cv-pdf-drift", async () => {
+  pending.push(
+    guard("cv-pdf-drift", async () => {
       // The PDF is drawn from D1's CV, so it is compared with that and not with the repository: a stale CV row
       // is cv-drift's finding, and sync_cv runs before sync_cv_pdf.
       const [stored, cv] = await Promise.all([storedCvPdfFingerprint(env), readCv(env)]);
@@ -238,23 +257,23 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
     }),
   );
 
-  checks.push(
-    await guard("publications-drift", async () => {
+  pending.push(
+    guard("publications-drift", async () => {
       const { files, rows } = await readPublicationSides(env);
       return publicationDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("llms-drift", async () => {
+  pending.push(
+    guard("llms-drift", async () => {
       // A file edited through git, or a save whose D1 write failed, shows here; the served row is derived.
       const { files, rows } = await readLlmsSides(env);
       return llmsDriftVerdict(files, rows);
     }),
   );
 
-  checks.push(
-    await guard("fts-equality", async () => {
+  pending.push(
+    guard("fts-equality", async () => {
       // Index counts come from the _docsize shadows: COUNT(*) on an external-content fts5 table reads
       // through to its content table and can never disagree with it.
       const row = await env.DB.prepare(
@@ -270,10 +289,11 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
     }),
   );
 
+  const checks = await Promise.all(pending);
   return { checks, failed: checks.filter((c) => !c.ok) };
 }
 
-async function guard(
+async function guardOne(
   name: string,
   run: () => Promise<{ ok: boolean; detail: string; counts?: { expected: number; present: number } }>,
 ): Promise<HealthCheck> {

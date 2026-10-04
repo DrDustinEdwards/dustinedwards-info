@@ -511,21 +511,20 @@ export async function syncPhages(env: OperatorEnv): Promise<ToolResult> {
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
 // than computing a second answer.
 export async function syncStatus(env: OperatorEnv) {
-  const repoPosts = (await listPostFiles(env)).length;
-
   // Counted through Drizzle: interpolating the predicate into a template string stringifies the object and
   // D1 answers `no such column`. `publiclyVisible()` is reused so the visibility rule has one owner.
   const db = getDb(env);
-  const totalRow = await db.select({ n: count() }).from(postsTable).get();
-  const visibleRow = await db
-    .select({ n: count() })
-    .from(postsTable)
-    .where(publiclyVisible())
-    .get();
-
-  const indexed = await env.DB
-    .prepare("SELECT COUNT(*) AS n FROM search_identity_docsize")
-    .first<{ n: number }>();
+  // The stores are separate and each read is independent (GitHub twice, D1 three times, KV once), so they run
+  // together: the status takes as long as the slowest read, not the sum of all of them.
+  const [repoFiles, totalRow, visibleRow, indexed, headSha, divergences] = await Promise.all([
+    listPostFiles(env),
+    db.select({ n: count() }).from(postsTable).get(),
+    db.select({ n: count() }).from(postsTable).where(publiclyVisible()).get(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM search_identity_docsize").first<{ n: number }>(),
+    currentHead(env),
+    listDivergences(env),
+  ]);
+  const repoPosts = repoFiles.length;
 
   // A COUNT always returns one row; a missing one is an unreadable answer, never zero posts.
   const counted = (row: { n: number } | null | undefined, what: string) => {
@@ -534,7 +533,7 @@ export async function syncStatus(env: OperatorEnv) {
   };
 
   return {
-    headSha: await currentHead(env),
+    headSha,
     artifactPosts: repoPosts,
     d1Posts: counted(totalRow, "posts"),
     d1PubliclyVisible: counted(visibleRow, "publicly visible posts"),
@@ -544,6 +543,6 @@ export async function syncStatus(env: OperatorEnv) {
     githubConfigured: Boolean(env.GITHUB_TOKEN),
     // Read from KV: a record of a D1 failure kept in D1 is missing exactly when it matters. `known: false`
     // is not the same answer as an empty list.
-    divergences: await listDivergences(env),
+    divergences,
   };
 }

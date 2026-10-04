@@ -118,14 +118,27 @@ async function listAllAskItems(env: Env, timings?: Timings) {
   const all: Awaited<ReturnType<typeof env.AI_SEARCH.items.list>>["result"] = [];
   // 50 is the API maximum.
   const perPage = 50;
-  for (let page = 1; ; page += 1) {
-    // One mark per page, so round trips are counted rather than inferred from the index size.
-    const listed = await timed(timings, "ask_list_page", () =>
-      env.AI_SEARCH.items.list({ page, per_page: perPage }),
-    );
-    const batch = listed.result ?? [];
-    all.push(...batch);
-    const total = listed.result_info?.total_count;
+  // One mark per page, so round trips are counted rather than inferred from the index size.
+  const listPage = (page: number) =>
+    timed(timings, "ask_list_page", () => env.AI_SEARCH.items.list({ page, per_page: perPage }));
+
+  // The first page says how many items there are, so the rest are fetched together instead of one round trip after
+  // another. The loop below still runs after them: it ends at once when they were all of it, and carries on page by
+  // page when the count was wrong, so a listing is never taken for complete on the count alone.
+  let page = 1;
+  const first = await listPage(1);
+  all.push(...(first.result ?? []));
+  const total = first.result_info?.total_count;
+  let last = first;
+  if (typeof total === "number" && (first.result ?? []).length === perPage && total > perPage) {
+    const lastPage = Math.ceil(total / perPage);
+    const rest = await Promise.all(Array.from({ length: lastPage - 1 }, (_, i) => listPage(i + 2)));
+    for (const listed of rest) all.push(...(listed.result ?? []));
+    page = lastPage;
+    last = rest[rest.length - 1] ?? first;
+  }
+  for (;;) {
+    const batch = last.result ?? [];
     if (batch.length < perPage) break;
     if (typeof total === "number" && all.length >= total) break;
     // Backstop against a server that never shrinks a page. Thrown, not a break: a truncated listing
@@ -136,6 +149,9 @@ async function listAllAskItems(env: Env, timings?: Timings) {
           `refusing to act on a listing that may be truncated.`,
       );
     }
+    page += 1;
+    last = await listPage(page);
+    all.push(...(last.result ?? []));
   }
   return all;
 }
