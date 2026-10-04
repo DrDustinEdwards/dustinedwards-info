@@ -140,11 +140,7 @@ export function carrelSiteAdapter(options: {
       // The record was rendered from the stamped file that was committed, so this is that file's blob sha.
       return { id, version: saved.record.sourceBlobSha, status: statusOf(raw), changeId };
     } catch (error) {
-      // The conflict names the post's current version, which is what the next save must carry.
-      if (error instanceof GitHubError && error.conflict) {
-        throw new VersionConflictError((await readFile(env, postPath(id)))?.sha ?? null);
-      }
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, postPath(id));
     }
   }
 
@@ -281,7 +277,7 @@ export function carrelSiteAdapter(options: {
       try {
         record = await renderRecord(env, slug, input.source);
       } catch (error) {
-        return asSiteApiError(env, error);
+        return asSiteApiError(env, error, postPath(slug));
       }
       const post = await previewPost(env, record);
 

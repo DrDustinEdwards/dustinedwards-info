@@ -16,7 +16,7 @@ A document has no draft state, so it is always published:
 
 | Carrel call | What it does |
 | --- | --- |
-| list, get | the one record: title `llms.txt`, path `/llms.txt`, the file as `source`, the repository head as `version` |
+| list, get | the one record: title `llms.txt`, path `/llms.txt`, the file as `source`, the blob sha of the file as `version` |
 | saveDraft, publish | the same save: a save to a live document edits it live. `publish` may carry a `source` |
 | unpublish | refused: it is the file agents read first |
 | a save with no version, or an id other than `llms` | a version conflict, or refused: a save does not create a document |

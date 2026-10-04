@@ -14,7 +14,8 @@ import researchPage from "../../content/pages/research.md?raw";
 import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?raw";
 import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages, seedPhages } from "./seed";
 import { testEnv } from "./test-env";
@@ -117,7 +118,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
 
     const edited = acornPhage.replace("county: Hood County", "county: Parker County");
     expect(edited).not.toBe(acornPhage);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-phage" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-phage" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-phage" });
 
@@ -168,7 +169,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
   it("a phage that names a genome paper the repository holds saves, and its paper link is in the table and the twin", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/phage.arlo/draft`, {
       source: arloPhage.replace("county: Erath County", "county: Parker County"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/phages/arlo.md"),
       changeId: "chg-arlo",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -177,7 +178,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
   });
 
   it("an unchanged save commits nothing and says so", { timeout: 240_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: acornPhage, expectedVersion: HEAD, changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: acornPhage, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
     expect(commits()).toHaveLength(0);
     expect(purge).not.toHaveBeenCalled();
@@ -188,7 +189,7 @@ describe("a phage change purges the pages tag, because the page embeds the table
   it("purges content-pages, the tag the page's HTML and its twin carry, and only that", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace("county: Hood County", "county: Parker County"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -207,7 +208,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
     const bad = acornPhage.replace("year: 2017", "year: soon").replace("---\n", "---\nsample: soil\n").concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: HEAD, changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
@@ -220,7 +221,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a genome paper this site does not hold, a record that is not the phage's own, and a stale version", async () => {
     const paper = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace(/\n---\n$/, "\npaper: not-a-paper-here\n---\n"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-paper",
     });
     expect(paper.status).toBe(422);
@@ -241,12 +242,12 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(stale.status).toBe(409);
-    expect(await stale.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await stale.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
     expect(commits()).toHaveLength(0);
   });
 
   it("has no draft state: a phage cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(JSON.stringify(await response.json())).toMatch(/delete its file from content\/phages/);
     expect(commits()).toHaveLength(0);
@@ -294,4 +295,15 @@ describe("the operator reads phages and cannot save one", () => {
     // Content is edited through Carrel and nowhere else (docs/PHAGES.md), so no save tool exists.
     expect(isToolName("save_phage")).toBe(false);
   });
+});
+
+versionCases({
+  name: "phage",
+  id: ID,
+  file: FILE,
+  edit: () => acornPhage.replace("county: Hood County", "county: Parker County"),
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });

@@ -20,7 +20,7 @@ import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
@@ -145,7 +145,9 @@ export async function saveCvFile(
   options: {
     slug: string;
     raw: string;
-    expectedHeadSha: string | null;
+    expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null;
     actor: Actor;
     /** ctx.waitUntil, from the caller that has one: the PDF render runs after the response. */
     background?: (work: Promise<unknown>) => void;
@@ -169,6 +171,7 @@ export async function saveCvFile(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(path, options.expectedBlobSha),
         message: `Update CV: ${slug}${tag}`,
         changes: [{ path, content: raw }],
       }),
@@ -177,6 +180,7 @@ export async function saveCvFile(
     return {
       slug,
       commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
       unchanged: true,
       note: UNCHANGED_NOTE,
       purged: null as PurgeOutcome,
@@ -220,5 +224,5 @@ export async function saveCvFile(
     );
   }
 
-  return { slug, commitSha, unchanged: written.action !== "commit", purged, pdf };
+  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action !== "commit", purged, pdf };
 }

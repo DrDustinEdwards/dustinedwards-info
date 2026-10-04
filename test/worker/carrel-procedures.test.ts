@@ -4,7 +4,8 @@ import { action, loader } from "~/routes/api.carrel.v1.$";
 
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
 import { seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
@@ -20,7 +21,6 @@ vi.mock("cloudflare:workers", async (importOriginal) => ({
 }));
 
 const PREFIX = "https://example.com/api/carrel/v1";
-const HEAD = "a".repeat(40);
 const SLUG = "phage-dna-extraction";
 const ID = `procedure.${SLUG}`;
 const FILE = `content/procedures/${SLUG}.md`;
@@ -73,14 +73,14 @@ describe("procedures through Carrel", () => {
   it("reads one procedure as its file, at the repository head", async () => {
     const response = await get(`${PREFIX}/content/${ID}`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, kind: "procedure", status: "published", format: "markdown", source: protocol, version: HEAD });
+    expect(await response.json()).toMatchObject({ id: ID, kind: "procedure", status: "published", format: "markdown", source: protocol, version: await versionOf(gh, FILE) });
     expect((await get(`${PREFIX}/content/procedure.nothing`)).status).toBe(404);
   });
 
   it("saves an edit as the Carrel actor through the one procedure save, and keeps it published", { timeout: 120_000 }, async () => {
     const edited = protocol.replace(OLD_STEP, NEW_STEP);
     expect(edited).not.toBe(protocol);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-proc" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-proc" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-proc" });
     expect(gh.files.get(FILE)).toBe(edited);
@@ -101,7 +101,7 @@ describe("procedures through Carrel", () => {
   });
 
   it("unpublishes, then publishes, writing the status into the file", { timeout: 180_000 }, async () => {
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
@@ -126,7 +126,7 @@ describe("procedures through Carrel", () => {
   it("REFUSES a file the validator fails, with its messages, and commits nothing", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: protocol.replace(/^title: .*$/m, "title: "),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-bad",
     });
     expect(response.status).toBe(422);
@@ -141,15 +141,26 @@ describe("procedures through Carrel", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
     expect(commits()).toHaveLength(0);
     expect(gh.files.get(FILE)).toBe(protocol);
   });
 
   it("refuses to schedule or preview a procedure, in the registry's plain words", async () => {
-    const scheduled = await send("POST", `${PREFIX}/content/${ID}/schedule`, { publishAt: "2999-01-01T00:00:00.000Z", expectedVersion: HEAD, changeId: "chg-sched" });
+    const scheduled = await send("POST", `${PREFIX}/content/${ID}/schedule`, { publishAt: "2999-01-01T00:00:00.000Z", expectedVersion: await versionOf(gh, FILE), changeId: "chg-sched" });
     expect(scheduled.status).toBe(422);
     expect(await scheduled.text()).toMatch(/cannot be scheduled/);
     expect(commits()).toHaveLength(0);
   });
+});
+
+versionCases({
+  name: "procedure",
+  id: ID,
+  file: FILE,
+  edit: () => protocol.replace(OLD_STEP, NEW_STEP),
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });

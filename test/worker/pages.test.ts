@@ -11,7 +11,8 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 
 import foxhound from "../../content/pages/software-foxhound.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -23,7 +24,6 @@ import { testEnv } from "./test-env";
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const PATH = "/software/foxhound";
 const SLUG = "software-foxhound";
 const ID = `page.${SLUG}`;
@@ -85,7 +85,7 @@ describe("an edit through the adapter is live at the next request", () => {
     const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-page",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -119,7 +119,7 @@ describe("an edit through the adapter is live at the next request", () => {
     const before = commits().length;
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: foxhound,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
@@ -133,7 +133,7 @@ describe("a save is held to what CI holds", () => {
     const bad = foxhound.replace(/^title: .*$/m, "title: ").concat(`\nA sentence ${wide} with a dash.\n`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-bad",
     });
     expect(response.status).toBe(422);
@@ -161,7 +161,7 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
     expect(commits()).toHaveLength(0);
   });
 });
@@ -170,7 +170,7 @@ describe("a draft is not public", () => {
   it("unpublish takes the page, its twin and its sitemap entry down, and publish restores them", { timeout: 180_000 }, async () => {
     expect(await sitemapPaths()).toContain(PATH);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
@@ -211,7 +211,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: foxhound,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-repair",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -243,4 +243,15 @@ describe("the operator reads pages and cannot save one", () => {
     // Content is edited through Carrel and nowhere else (docs/PAGES.md), so no save tool exists.
     expect(isToolName("save_page")).toBe(false);
   });
+});
+
+versionCases({
+  name: "page",
+  id: ID,
+  file: FILE,
+  edit: () => `${foxhound.trimEnd()}\n\n${ADDED}\n`,
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });

@@ -7,7 +7,8 @@ import { action, loader } from "~/routes/api.carrel.v1.$";
 import ContentPage, { headers as contentPageHeaders, loader as pageLoader } from "~/routes/content-page";
 import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext, textsOf } from "./route-helpers";
 import { SYNTHETIC_COHORTS, cohortFile, seedPages, seedRoster } from "./seed";
 import { testEnv } from "./test-env";
@@ -27,7 +28,6 @@ vi.mock("cloudflare:workers", async (importOriginal) => ({
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const PAGE = "/teaching/phage-discovery";
 const [CURRENT, EARLIER] = SYNTHETIC_COHORTS;
 const SLUG = String(CURRENT.year);
@@ -101,7 +101,7 @@ describe("an edit through the adapter is live at the next request", () => {
     const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] });
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-roster",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -142,7 +142,7 @@ describe("an edit through the adapter is live at the next request", () => {
   it("an unchanged save commits nothing and purges nothing", { timeout: 180_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: currentFile,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
@@ -155,7 +155,7 @@ describe("a save purges every page that embeds the roster", () => {
   it("sends the content pages' tag and the home page's, and the pages carry exactly those tags", { timeout: 180_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -175,7 +175,7 @@ describe("a save purges every page that embeds the roster", () => {
 describe("a save is held to what CI holds", () => {
   it("REFUSES a field the roster never had, with the message, and commits nothing", async () => {
     const bad = (await cohortFile(CURRENT)).replace("year: 2031", "year: 2031\nemail: someone@example.com");
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: HEAD, changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/email is not a roster field/);
     expect(commits()).toHaveLength(0);
@@ -184,7 +184,7 @@ describe("a save is held to what CI holds", () => {
 
   it("REFUSES a photograph the repository does not hold", async () => {
     const source = await cohortFile({ ...CURRENT, photo: { ...CURRENT.photo, src: "/phage-hunters/not-there.webp" } });
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: HEAD, changeId: "chg-photo" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: await versionOf(gh, FILE), changeId: "chg-photo" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/is not in the repository/);
     expect(commits()).toHaveLength(0);
@@ -204,12 +204,12 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
     expect(commits()).toHaveLength(0);
   });
 
   it("has no draft state: a cohort cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/no draft state/);
     expect(commits()).toHaveLength(0);
@@ -222,7 +222,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
     expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: currentFile, expectedVersion: HEAD, changeId: "chg-repair" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: currentFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-repair" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(commits()).toHaveLength(0);
     expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length);
@@ -268,4 +268,15 @@ describe("Carrel lists cohorts beside posts, and the operator reads them and can
     // The roster is edited through Carrel and nowhere else, so no save tool exists.
     expect(isToolName("save_roster")).toBe(false);
   });
+});
+
+versionCases({
+  name: "roster",
+  id: ID,
+  file: FILE,
+  edit: () => cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });
