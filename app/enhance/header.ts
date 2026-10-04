@@ -1,4 +1,12 @@
 import { aimsAt } from "~/lib/menu-aim.mjs";
+import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
+
+// The header module is on every public page, so the one rejection the browser raises when it abandons a view
+// transition under a reload or a second navigation is let go here (app/lib/transition-abort.mjs). Any other
+// rejection still reaches the console and the page error report.
+window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
+  if (isAbandonedTransition(event.reason)) event.preventDefault();
+});
 
 const MOBILE = "(max-width: 43.99rem)";
 
