@@ -88,7 +88,7 @@
     "gray-matter": "4.0.3",
     "hast-util-from-html": "^2.0.3",
     "hast-util-to-string": "3.0.1",
-    "image-size": "2.0.3",
+    "image-size": "2.0.4",
     "katex": "0.16.47",
     "linkedom": "0.18.13",
     "react": "19.2.7",
