@@ -28,7 +28,6 @@ import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
   GitHubError,
-  currentHead,
   postColumnValues,
   renderRecord,
   savePost,
@@ -42,7 +41,10 @@ type CarrelEnv = Env & { GITHUB_TOKEN?: string };
 
 type RenderDocument = (request: Request, context: RouterContextProvider) => Promise<Response>;
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/**
+ * A revision's version is a commit sha. A post's own version is different: the git blob sha of its file at
+ * head, so only a change to that post moves it, and saving another post no longer makes this one look changed.
+ */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** A preview of a post not yet in D1 needs an id no stored row has, for its neighbours' tie-break. */
@@ -130,12 +132,18 @@ export function carrelSiteAdapter(options: {
       const saved = await savePost(env, {
         slug: id,
         raw,
-        expectedHeadSha: expectedVersion,
+        // A create (null) is guarded by isNew; every other write by the post's own blob sha.
+        expectedBlobSha: expectedVersion ?? undefined,
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id, version: saved.commitSha, status: statusOf(raw), changeId };
+      // The record was rendered from the stamped file that was committed, so this is that file's blob sha.
+      return { id, version: saved.record.sourceBlobSha, status: statusOf(raw), changeId };
     } catch (error) {
+      // The conflict names the post's current version, which is what the next save must carry.
+      if (error instanceof GitHubError && error.conflict) {
+        throw new VersionConflictError((await readFile(env, postPath(id)))?.sha ?? null);
+      }
       return asSiteApiError(env, error);
     }
   }
@@ -177,12 +185,9 @@ export function carrelSiteAdapter(options: {
     async get(id) {
       const file = await readFile(env, postPath(id));
       if (!file) return null;
-      const [version, updated] = await Promise.all([
-        currentHead(env),
-        env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
-          .bind(id)
-          .first<{ updated_at: number }>(),
-      ]);
+      const updated = await env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
+        .bind(id)
+        .first<{ updated_at: number }>();
       const fields = parsePost(file.content);
       const { firstPublished } = readState(file.content);
       const status = statusOf(file.content);
@@ -197,7 +202,7 @@ export function carrelSiteAdapter(options: {
         updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -205,7 +210,7 @@ export function carrelSiteAdapter(options: {
     // edits it live, and a new post starts as a draft.
     async saveDraft(id, input) {
       const file = await readFile(env, postPath(id));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       const raw = file
         ? withPublication(input.source, {
