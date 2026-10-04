@@ -171,3 +171,15 @@
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
+
+/* Download and cite: the citation is set apart as text to copy. */
+.library-cite {
+  margin-block: 2rem;
+  font-family: var(--font-sans);
+}
+.library-cite-text {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--tint-brand);
+  user-select: all;
+}

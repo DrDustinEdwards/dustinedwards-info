@@ -367,3 +367,56 @@ export function libraryRedirect(url) {
   only.search = kept.toString();
   return catalogRedirect(LIBRARY, only);
 }
+
+/**
+ * How to cite the library, from the site's own identity and the library's address: nothing typed here but the shape
+ * of a citation. The date of access is the reader's to add.
+ *
+ * @param {{ name: string, affiliation: string, origin: string }} who
+ */
+export function libraryCitation({ name, affiliation, origin }) {
+  const lab = `${name} Lab`;
+  return {
+    library: `${name}. Protocol library. ${lab}, ${affiliation}. ${origin}${LIBRARY_PATH}`,
+    access: "Add the date you accessed it.",
+    protocol:
+      "To cite one protocol, cite its own page: its title, the lab, the institution, its address and the date you accessed it. " +
+      "A protocol's page names the papers it follows, so cite those for the method itself.",
+  };
+}
+
+/**
+ * The downloads of a view: the CSV and the JSON carry the filter state the address does, so what is downloaded is what is
+ * shown; the markdown twin is always the whole library.
+ *
+ * @param {{ href: () => string }} result the catalog's result, whose `href()` is the clean address of this view
+ */
+export function libraryDownloads(result) {
+  const href = result.href();
+  const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
+  return { csv: `${LIBRARY_PATH}.csv${query}`, json: `${LIBRARY_PATH}.json${query}`, markdown: `${LIBRARY_PATH}.md` };
+}
+
+/**
+ * The twin's "Download and cite": the same addresses and the same citation the page shows, as absolute links.
+ *
+ * @param {ReturnType<typeof libraryCitation>} citation
+ * @param {string} origin
+ */
+export function citeMarkdown(citation, origin) {
+  return [
+    "## Download and cite",
+    "",
+    `- [CSV](${origin}${LIBRARY_PATH}.csv): every protocol with every fact the table shows; a filtered address gives the filtered rows`,
+    `- [JSON](${origin}${LIBRARY_PATH}.json): the same rows`,
+    `- [Markdown](${origin}${LIBRARY_PATH}.md): this page`,
+    "",
+    "### Cite the library",
+    "",
+    citation.library,
+    "",
+    citation.access,
+    "",
+    citation.protocol,
+  ].join("\n");
+}
