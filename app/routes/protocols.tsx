@@ -5,6 +5,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
+import { LibraryCite } from "~/components/library-cite";
 import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
@@ -14,10 +15,10 @@ import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
+import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
 import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
-import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols";
 
@@ -145,6 +146,11 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
           cells={cells}
         />
       </div>
+      <LibraryCite
+        count={result.count}
+        downloads={libraryDownloads(result)}
+        citation={libraryCitation({ name: SITE.name, affiliation: SITE.affiliation, origin: SITE_ORIGIN })}
+      />
       {rest ? <div className="prose" dangerouslySetInnerHTML={{ __html: rest }} /> : null}
       <Enhance module="catalog" />
     </PageShell>
