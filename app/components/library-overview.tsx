@@ -27,6 +27,15 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
             ) : (
               <span className="library-stage-name">{stage.label}</span>
             )}
+            {stage.tools.length > 0 ? (
+              <ul className="library-stage-tools" aria-label={`Calculators for ${stage.label}`}>
+                {stage.tools.map((tool) => (
+                  <li key={tool.id}>
+                    <a href={tool.href}>{tool.label}</a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </li>
         ))}
       </ol>

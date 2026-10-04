@@ -117,3 +117,16 @@
   margin-block-end: 1.25rem;
   scrollbar-width: none;
 }
+
+/* The calculators under a workflow stage: plain links in a short list, below the stage's own link. */
+.library-stage-tools {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.library-stage-tools a {
+  color: var(--brand);
+}
