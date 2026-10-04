@@ -6,7 +6,7 @@
 import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
 import { TOOLS } from "../phage-tools.mjs";
-import { COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, ORGANISMS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
+import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, ORGANISMS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -239,6 +239,10 @@ export function overviewMarkdown(overview, origin) {
         return `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}${about}`;
       }),
     ]),
+    "",
+    "### Calculators",
+    "",
+    `- [Phage Lab Calculators](${origin}${CALCULATORS_PATH}): ${countOf(calculatorCount(), ["calculator", "calculators"])}`,
   ].join("\n");
 }
 
@@ -336,7 +340,15 @@ export function libraryTabs(items, chosen) {
       href: methodHref(tab.methods),
       current: same(tab.methods),
     })),
+    // The calculators are not protocols, so they are not rows of this catalog: their tab is a link to their own page,
+    // counted from the registry that holds them, and never the current one here.
+    { id: "calculators", label: "Calculators", count: calculatorCount(), href: CALCULATORS_PATH, current: false },
   ];
+}
+
+/** How many calculator pages there are: the distinct pages the registry's tools sit on. */
+export function calculatorCount() {
+  return new Set(Object.values(TOOLS).map((tool) => tool.path)).size;
 }
 
 /**

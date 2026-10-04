@@ -149,13 +149,14 @@ test("the overview sentence and the twin say what the page shows, with the singu
 test("the tabs are All and each kind of work, counted from the rows; the current one is the method filter in the address", () => {
   const items = libraryItems(RECORDS);
   const tabs = libraryTabs(items, []);
-  assert.deepEqual(tabs.map((t) => [t.id, t.count, t.current]), [["all", 3, true], ["phage", 1, false], ["pcr", 2, false]]);
+  assert.deepEqual(tabs.map((t) => [t.id, t.count, t.current]), [["all", 3, true], ["phage", 1, false], ["pcr", 2, false], ["calculators", 6, false]]);
+  assert.equal(tabs[3].href, "/research/tools", "the calculators are their own page, counted from the registry");
   assert.equal(tabs[0].href, "/research/protocols");
   assert.equal(tabs[2].href, "/research/protocols?method=pcr");
-  assert.deepEqual(libraryTabs(items, ["pcr"]).map((t) => t.current), [false, false, true]);
+  assert.deepEqual(libraryTabs(items, ["pcr"]).map((t) => t.current), [false, false, true, false]);
   const phage = libraryTabs(items, ["plating", "culture", "extraction", "sequencing", "annotation"]);
-  assert.deepEqual(phage.map((t) => t.current), [false, true, false], "the phage tab is its methods exactly");
-  assert.deepEqual(libraryTabs(items, ["pcr", "plating"]).map((t) => t.current), [false, false, false], "a mixed filter is no tab's");
+  assert.deepEqual(phage.map((t) => t.current), [false, true, false, false], "the phage tab is its methods exactly");
+  assert.deepEqual(libraryTabs(items, ["pcr", "plating"]).map((t) => t.current), [false, false, false, false], "a mixed filter is no tab's");
 });
 
 test("an unknown parameter is served, not redirected, so a cache-buster or a tracking link still lands; a known one is made clean", () => {
@@ -206,4 +207,9 @@ test("Start here lists the protocols that state a position, in that order, with 
   assert.ok(md.includes("### Start here\n\n1. [First](https://example.test/research/protocols/a): Do this first.\n2. [Second](https://example.test/research/protocols/b): Do this second."));
   assert.deepEqual(libraryOverview(libraryItems(RECORDS)).start, [], "no protocol states a position");
   assert.ok(!overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test").includes("Start here"));
+});
+
+test("the twin names the calculators page with its count", () => {
+  const md = overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test");
+  assert.ok(md.includes("### Calculators\n\n- [Phage Lab Calculators](https://example.test/research/tools): 6 calculators"));
 });

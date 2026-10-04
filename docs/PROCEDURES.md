@@ -138,7 +138,10 @@ protocol saved is listed at the next request with no deploy, and no second list 
   filtered library. The twin carries the same figures, calculator links and course links.
 - **Tabs are links** (`libraryTabs`, Capsomer's links form): All, then each kind of work in `LIBRARY_TABS` (`taxonomy.mjs`) with its count from the
   rows. A tab is the library narrowed to its methods, so it is also what the method facet gives, and it is current when
-  the address's method filter is exactly its methods.
+  the address's method filter is exactly its methods. The last tab, Calculators, is a link to `/research/tools`
+  (`CALCULATORS_PATH`) with the number of calculator pages in the registry (`calculatorCount`); calculators are not rows
+  of this catalog, so it is never the current tab here. Registry kinds (primers, strains, reagents, equipment) get
+  their tab as they land.
 - **Machines get the same rows**: `/research/protocols.md` (the introduction and a table of every protocol),
   `.json` and `.csv` (every fact, ids with their words, for the filter state in the query string), and a
   `CollectionPage` with an `ItemList` in the page.
