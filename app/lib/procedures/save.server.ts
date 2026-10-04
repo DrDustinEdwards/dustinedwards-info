@@ -14,6 +14,9 @@ import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.s
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 
+import { freezeStatement, frozenBlobSha } from "~/db/procedure-versions";
+
+import { needsFreeze, versionPath } from "./cite.mjs";
 import { compileProcedure } from "./compile.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchUid } from "./render.mjs";
@@ -27,10 +30,18 @@ export class ProcedureInvalid extends ContentInvalid {
   }
 }
 
-/** The one compile door: save_procedure and sync_procedures both read a file through it. */
+/**
+ * The one compile door: save_procedure, get_procedure and sync_procedures all read a file through it. A file that
+ * changes the words of a version already frozen does not compile here, so a save is refused before it commits, a
+ * sync names the file and converges the rest, and get_procedure shows the error; the frozen copy is never touched.
+ */
 export async function compile(env: ProcedureEnv, slug: string, raw: string) {
   const { renderBody, findWideDashes } = await loadPipeline();
-  return compileProcedure({ slug, raw, pipeline: { renderBody, findWideDashes }, resolveImage: makeResolveImage(env) });
+  const compiled = await compileProcedure({ slug, raw, pipeline: { renderBody, findWideDashes }, resolveImage: makeResolveImage(env) });
+  if (!compiled.ok || !needsFreeze(compiled.record)) return compiled;
+  const frozen = await frozenBlobSha(env, slug, String(compiled.record.version));
+  if (frozen === null || frozen === compiled.sourceBlobSha) return compiled;
+  return { ok: false as const, errors: [frozenEditMessage(compiled.record)], gaps: compiled.gaps };
 }
 
 /** get_procedure: the file, its structure as parsed, and the gaps it records. */
@@ -64,7 +75,23 @@ function decideProcedure(actor: Actor, incomingDraft: boolean, prior: string | n
   });
 }
 
-/** The one write door for a procedure's row and search records: a save and the sync both end here. */
+/**
+ * What a refused or flagged edit to a frozen version says: the words of a published version never change, so a
+ * correction is a new version with a history entry that says what changed.
+ */
+function frozenEditMessage(record: { version: string | null; path: string }) {
+  return (
+    `Version ${record.version} is already published and frozen at ${versionPath(record.path, String(record.version))}, so its words cannot change. ` +
+    `Set a new version in the file and add a history entry that says what changed.`
+  );
+}
+
+/**
+ * The one write door for a procedure's row and search records: a save and the sync both end here. A published
+ * procedure with a version is also frozen, in the same batch: the copy is written once and the database refuses to
+ * change it. `compile` has already refused a file that would change a frozen version, so the check after the batch
+ * is the last line of defence: it fails loudly if the sealed copy is not made from this file.
+ */
 export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
   const db = env.DB;
   const r = compiled.record;
@@ -96,6 +123,19 @@ export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<Retu
         compiled.sourcePath,
         compiled.sourceBlobSha,
       ),
+    ...(needsFreeze(r)
+      ? [
+          freezeStatement(db, {
+            slug: r.slug,
+            version: String(r.version),
+            path: r.path,
+            profile: r.profile,
+            record: JSON.stringify(r),
+            markdown: compiled.markdown,
+            sourceBlobSha: compiled.sourceBlobSha,
+          }),
+        ]
+      : []),
     db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(uid),
     ...records.map((s) =>
       db
@@ -109,6 +149,14 @@ export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<Retu
     db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
+  if (needsFreeze(r)) {
+    const frozen = await frozenBlobSha(env, r.slug, String(r.version));
+    if (frozen !== compiled.sourceBlobSha) {
+      throw new Error(
+        `The frozen copy of version ${r.version} is not made from this file. ${frozenEditMessage(r)}`,
+      );
+    }
+  }
 }
 
 /**
@@ -126,10 +174,13 @@ export async function deleteProcedureRow(env: ProcedureEnv, row: { slug: string;
 
 /** True when D1's row for the procedure was compiled from exactly this file (the git blob sha matches). */
 async function rowIsCurrent(env: ProcedureEnv, slug: string, blobSha: string) {
-  const row = await env.DB.prepare("SELECT source_blob_sha FROM procedures WHERE slug = ?1")
+  const row = await env.DB.prepare("SELECT status, version, source_blob_sha FROM procedures WHERE slug = ?1")
     .bind(slug)
-    .first<{ source_blob_sha: string | null }>();
-  return row?.source_blob_sha === blobSha;
+    .first<{ status: string; version: string | null; source_blob_sha: string | null }>();
+  if (row?.source_blob_sha !== blobSha) return false;
+  // A published version with no frozen copy yet is not current: the save that writes the row freezes it.
+  if (row.status === "published" && row.version) return (await frozenBlobSha(env, slug, row.version)) !== null;
+  return true;
 }
 
 /** save_procedure. */

@@ -4,6 +4,8 @@
 // recipe structured-data guidance, and schema.org HowTo for a computational procedure, the closest type
 // for a sequence of commands with tools and supplies. Only facts the record states: a gap stays out.
 
+import { citeFacts } from "./cite.mjs";
+
 const LAB_PROTOCOL_PROFILE = "https://bioschemas.org/profiles/LabProtocol/0.8-DRAFT";
 
 /** @param {string | null | undefined} html */
@@ -62,6 +64,7 @@ export function procedureJsonLd(record, origin, person) {
     name: s.citation,
     ...(s.doi ? { identifier: `https://doi.org/${s.doi}`, url: `https://doi.org/${s.doi}` } : s.url ? { url: s.url } : {}),
   }));
+  const cite = citeFacts(record);
   const common = {
     "@context": "https://schema.org",
     "@id": `${url}#procedure`,
@@ -71,6 +74,7 @@ export function procedureJsonLd(record, origin, person) {
     author: person,
     ...(record.updated ? { dateModified: record.updated } : {}),
     ...(record.version ? { version: record.version } : {}),
+    ...(cite?.doi ? { identifier: `https://doi.org/${cite.doi}` } : {}),
     ...(basedOn.length ? { isBasedOn: basedOn } : {}),
     ...(record.references.length ? { citation: record.references.map(text) } : {}),
   };

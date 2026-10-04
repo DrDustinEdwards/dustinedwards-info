@@ -51,12 +51,18 @@ export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
 
 /**
  * The same two sides for procedures: `content/procedures/*.md` with their blob shas, and the table's
- * rows with the sha each was compiled from. The check and sync_procedures both read them here.
+ * rows with the sha each was compiled from. The check and sync_procedures both read them here. A published
+ * version with no sealed frozen copy reads as having no sha, so it is drift and the sync that repairs it
+ * freezes the copy (drizzle/0027_procedure_versions.sql).
  */
 export async function readProcedureSides(env: Env & { GITHUB_TOKEN?: string }) {
   const files = await listMarkdownFiles(env, PROCEDURES_DIR);
   const rows = await env.DB.prepare(
-    "SELECT slug, path, source_blob_sha FROM procedures WHERE source_path IS NOT NULL",
+    `SELECT p.slug, p.path,
+        CASE WHEN p.status = 'published' AND p.version IS NOT NULL AND p.version <> ''
+              AND NOT EXISTS (SELECT 1 FROM procedure_versions v WHERE v.slug = p.slug AND v.version = p.version AND v.sealed = 1)
+             THEN NULL ELSE p.source_blob_sha END AS source_blob_sha
+       FROM procedures p WHERE p.source_path IS NOT NULL`,
   ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }

@@ -2,7 +2,9 @@ import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/lib/procedures/proof.mjs";
 import type { workflowContext } from "~/lib/procedures/library.mjs";
+import { bibtex, citationText, citeFacts, versionPath } from "~/lib/procedures/cite.mjs";
 import { fillQuantities, fixedSectionIds, type ProcedureRecord } from "~/lib/procedures/render.mjs";
+import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
 
 /**
@@ -333,29 +335,115 @@ export function TroubleshootingTable({ record }: { record: ProcedureRecord }) {
   );
 }
 
-/** The whole procedure, as its page shows it. `count` is the reader's scale, `factor` the recipe multiplier. */
+/**
+ * What a frozen version's page says when it is not the one the site is at: which version is, and where. `current` is
+ * the procedure's live page, with its version (null when none is assigned); null when the procedure is no longer
+ * published.
+ */
+export function VersionNotice({ record, current }: { record: ProcedureRecord; current: { path: string; version: string | null } | null }) {
+  if (current && current.version === record.version) return null;
+  const date = citeFacts(record)?.date;
+  return (
+    <p className="procedure-version-notice" role="note">
+      This is version {record.version}
+      {date ? <>, dated <time dateTime={date}>{date}</time></> : null}, kept as it was published.{" "}
+      {current ? (
+        <>
+          {current.version ? <>The current version is version {current.version}: </> : <>The procedure has since moved on: </>}
+          <a href={current.path}>read the current page</a>.
+        </>
+      ) : (
+        <>The procedure is no longer on the site, so there is no current version.</>
+      )}
+    </p>
+  );
+}
+
+/** What changed in each version, newest first. Nothing is drawn until the file writes a history. */
+function VersionHistory({ record, basePath, frozen }: { record: ProcedureRecord; basePath: string; frozen: string[] }) {
+  // A row compiled before histories existed has no `history` until the next sync rewrites it.
+  if (!record.history?.length) return null;
+  return (
+    <section aria-labelledby="version-history">
+      <Heading id="version-history">Version history</Heading>
+      <ol className="procedure-history" reversed>
+        {record.history.map((h) => (
+          <li key={h.version}>
+            <strong>{frozen.includes(h.version) ? <a href={versionPath(basePath, h.version)}>Version {h.version}</a> : <>Version {h.version}</>}</strong>,{" "}
+            <time dateTime={h.date}>{h.date}</time>: <span dangerouslySetInnerHTML={html(h.summaryHtml)} />
+            {h.doi ? (
+              <>
+                {" "}
+                <a href={`https://doi.org/${h.doi}`}>doi:{h.doi}</a>
+              </>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * How to cite this version, and the BibTeX for it. Drawn only for a version that has been assigned: a procedure with no
+ * version cannot be cited, and a DOI is minted only for a version that is. The citation points at the version's frozen
+ * copy, or its DOI once it has one. The Zenodo deposit metadata is not on the page; `npm run zenodo:metadata -- <slug>`
+ * prints it from the same file.
+ */
+function CiteBlock({ record }: { record: ProcedureRecord }) {
+  const facts = citeFacts(record);
+  if (!facts) return null;
+  const where = { origin: SITE_ORIGIN, creator: { name: SITE.name, affiliation: SITE.affiliation } };
+  return (
+    <section aria-labelledby="cite-this-procedure">
+      <Heading id="cite-this-procedure">Cite this procedure</Heading>
+      <p className="procedure-cite">{citationText(record, facts, where)}</p>
+      <details className="procedure-bibtex">
+        <summary>BibTeX</summary>
+        <pre>
+          <code>{bibtex(record, facts, where)}</code>
+        </pre>
+      </details>
+    </section>
+  );
+}
+
+/**
+ * The whole procedure, as its page shows it. `count` is the reader's scale, `factor` the recipe multiplier.
+ * `basePath` is the address the page is at: the procedure's own for the live page, its version's for a frozen copy,
+ * so the scale form, run mode and the twin link stay on the version being read. `sheetPath` is the printable sheet's
+ * address, null when the page has none. `frozen` lists the versions that have a frozen copy, which the history links.
+ */
 export function ProcedureView({
   record,
   count,
   factor,
   workflow = null,
   proof = null,
+  basePath = record.path,
+  sheetPath = `${record.path}/sheet`,
+  frozen = [],
 }: {
   record: ProcedureRecord;
   count: number;
   factor: number;
   workflow?: ReturnType<typeof workflowContext>;
   proof?: ReturnType<typeof resolveProof>;
+  basePath?: string;
+  sheetPath?: string | null;
+  frozen?: string[];
 }) {
   const [materialsId, equipmentId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   return (
-    <div className="prose procedure" data-profile={record.profile} data-run-path={record.path} data-run-version={record.version ?? ""} data-run-title={record.title}>
+    <div className="prose procedure" data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
       <ProcedureFacts record={record} />
       <p className="procedure-links">
-        <a href={`${record.path}/sheet${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}>
-          Printable sheet
-        </a>
-        <a href={`${record.path}.md`} type="text/markdown">
+        {sheetPath ? (
+          <a href={`${sheetPath}${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}>
+            Printable sheet
+          </a>
+        ) : null}
+        <a href={`${basePath}.md`} type="text/markdown">
           Markdown
         </a>
       </p>
@@ -372,7 +460,7 @@ export function ProcedureView({
 
       <section aria-labelledby={materialsId}>
         <Heading id={materialsId!}>{materialsHeading(record)}</Heading>
-        <ScaleForm record={record} count={count} action={record.path} />
+        <ScaleForm record={record} count={count} action={basePath} />
         <MaterialsTable record={record} count={count} factor={factor} />
         <Solutions record={record} />
         {record.substitutions.length ? (
@@ -461,6 +549,9 @@ export function ProcedureView({
       ) : null}
 
       <ProtocolProof proof={proof} />
+
+      <VersionHistory record={record} basePath={record.path} frozen={frozen} />
+      <CiteBlock record={record} />
 
       <section aria-labelledby={referencesId}>
         <Heading id={referencesId!}>References</Heading>

@@ -31,7 +31,7 @@ const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
  */
 export function fixedSectionIds(profile) {
   const materials = profile === "recipe" ? "ingredients" : profile === "computational" ? "software-and-data" : "reagents";
-  return [materials, "equipment", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use"];
+  return [materials, "equipment", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure"];
 }
 
 /**
@@ -274,7 +274,16 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     seoTitle: String(d.seo_title),
     description: String(d.description),
     draft: d.draft === true,
-    version: known(d.version),
+    version: known(d.version) === null ? null : String(d.version),
+    // Newest first; the first entry is the version the page is at (validate.mjs). Empty until one is written.
+    history: await Promise.all(
+      list(known(d.history)).map(async (/** @type {any} */ h) => ({
+        version: String(h.version),
+        date: String(h.date),
+        summaryHtml: await md(h.summary, { inline: true }),
+        doi: h.doi ? String(h.doi) : null,
+      })),
+    ),
     updated: known(d.updated),
     // What the protocol library filters and lists by (taxonomy.mjs); ids, so the page draws the words.
     methods: /** @type {string[]} */ (list(known(d.method))),
@@ -505,6 +514,11 @@ export function procedureMarkdown(record, parsed) {
   if (list(d.substitutions).length) {
     out.push("## Substitutions", "");
     for (const s of list(d.substitutions)) out.push(`- For ${s.for}, use ${s.use}${s.note ? `: ${s.note}` : ""}`);
+    out.push("");
+  }
+  if (record.history.length) {
+    out.push("## Version history", "");
+    for (const h of list(d.history)) out.push(`- Version ${h.version}, ${h.date}: ${h.summary}${h.doi ? ` (doi:${h.doi})` : ""}`);
     out.push("");
   }
   const refs = list(known(d.references));
