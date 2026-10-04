@@ -5,6 +5,7 @@ import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/lib/procedures/proof.mjs";
 import type { workflowContext } from "~/lib/procedures/library.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/lib/procedures/cite.mjs";
+import { sheetQr } from "~/lib/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, type ProcedureRecord } from "~/lib/procedures/render.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
@@ -598,17 +599,36 @@ export function ProcedureView({
 }
 
 /** The bench sheet: the method without the reasoning, compact enough to print and work from. */
-export function ProcedureSheet({ record, count, factor, url }: { record: ProcedureRecord; count: number; factor: number; url: string }) {
+export function ProcedureSheet({
+  record,
+  count,
+  factor,
+  address,
+}: {
+  record: ProcedureRecord;
+  count: number;
+  factor: number;
+  /** What the sheet prints and its QR code opens: the address of the version on it (`sheetAddress`). */
+  address: string;
+}) {
+  // The sheet carries the version id and its date, so a printed copy says which version it is.
+  const facts = citeFacts(record);
+  const stamp = facts
+    ? `Version ${facts.version}, ${facts.date}`
+    : [record.version ? `Version ${record.version}` : "Version not yet assigned", record.updated ? `updated ${record.updated}` : null]
+        .filter(Boolean)
+        .join(", ");
   return (
     <article className="procedure-sheet prose">
       <header className="procedure-sheet-head">
         <h1>{record.title}</h1>
         <p>
-          {[record.version ? `Version ${record.version}` : "Version not yet assigned", record.updated ? `updated ${record.updated}` : null]
-            .filter(Boolean)
-            .join(", ")}
-          . {url}
+          {stamp}. {address}
         </p>
+        <figure className="procedure-sheet-qr">
+          <div role="img" aria-label={`QR code for ${address}`} dangerouslySetInnerHTML={html(sheetQr(address))} />
+          <figcaption>Scan to open this version online.</figcaption>
+        </figure>
       </header>
       <ProcedureFacts record={record} />
       <h2>{materialsHeading(record)}</h2>

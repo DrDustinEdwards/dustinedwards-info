@@ -103,6 +103,7 @@ export function run(code) {
       "procedure.sheet.tsx",
       // A frozen version of a procedure, at <page>/v/<version> (drizzle/0027_procedure_versions.sql).
       "procedure.version.tsx",
+      "procedure.version.sheet.tsx",
       // The protocol library (docs/PROCEDURES.md): its filters are GET parameters, as the publication index's are.
       "protocols.tsx",
       // The phage page: its table is the catalog over the phage rows (docs/PHAGES.md).

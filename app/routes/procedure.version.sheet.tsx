@@ -1,49 +1,47 @@
 import { data } from "react-router";
 
 import { ProcedureSheet } from "~/components/procedure";
-import { getProcedureByPath } from "~/db/procedures";
-import { isAdminViewer } from "~/lib/access.server";
+import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
 import { sheetAddress } from "~/lib/procedures/cite.mjs";
 import { PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
 import { SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
 
-import type { Route } from "./+types/procedure.sheet";
+import type { Route } from "./+types/procedure.version.sheet";
 
 import "~/styles/prose.css";
 import "~/styles/procedure.css";
 
 /**
- * A procedure's printable sheet at `<page>/sheet`: the materials (scaled by the same `?n=` or
- * `?servings=` as the page), the steps with their flags and the troubleshooting table, without the site's
- * header and footer or the reasoning notes. Not indexed: the page is the canonical copy.
+ * The printable sheet of a frozen version, at `<page>/v/<version>/sheet`: the method as it was when the version was
+ * published, with that version's id and date and a QR code that opens that version's page. So a sheet reprinted later
+ * from an old version still says, and links to, the version it is. Not indexed: the page is the canonical copy.
  */
 export function headers() {
   return new Headers(publicHtmlHeaders(PROCEDURES_CACHE_TAG));
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const env = getEnv(context);
   const url = new URL(request.url);
-  const path = url.pathname.replace(/\/sheet\/?$/, "");
-  const row = await getProcedureByPath(env, path);
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
-  const { count, factor } = readScale(row.record, url);
-  return { record: row.record, count, factor };
+  const found = /^(.*)\/v\/([^/]+)\/sheet\/?$/.exec(url.pathname);
+  if (!found) throw data(null, { status: 404 });
+  const frozen = await getFrozenVersion(getEnv(context), found[1] ?? "", decodeURIComponent(found[2] ?? ""));
+  if (!frozen) throw data(null, { status: 404 });
+  const { count, factor } = readScale(frozen.record, url);
+  return { record: frozen.record, count, factor };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record } = loaderData;
   return [
-    { title: `${record.title}: printable sheet` },
+    { title: `${record.title} (version ${record.version}): printable sheet` },
     { name: "robots", content: "noindex" },
     { tagName: "link", rel: "canonical", href: `${SITE_ORIGIN}${record.path}` },
   ];
 }
 
-export default function ProcedureSheetRoute({ loaderData }: Route.ComponentProps) {
+export default function ProcedureVersionSheetRoute({ loaderData }: Route.ComponentProps) {
   const { record, count, factor } = loaderData;
   return (
     <main className="procedure-sheet-page" id="main">
