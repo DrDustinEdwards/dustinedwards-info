@@ -86,7 +86,7 @@ a missing value rather than printing it.
 
 Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`, `updated`, `based_on`,
 `materials`, `references`, `expected_results`, `limitations`, `method`; optional `draft`, `equipment`,
-`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`.
+`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`, `start_here`.
 
 What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
 
@@ -96,6 +96,9 @@ What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs
 - `course`: ids of the courses that teach it (`phage-discovery`, `virus-isolation`, `phage-bioinformatics`).
 - `target`: the genes, regions or samples it works on, in words (free text, since targets are as many as the
   experiments).
+- `start_here`: a position (1, 2, 3 ...) in the library's "Start here" list, stored and never inferred. The list is
+  the procedures that state one, in that order, each with its own `description`; two procedures may not share a
+  position (`check:protocols`), and a procedure with none is simply not on the list.
 
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
 change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
@@ -125,7 +128,8 @@ protocol saved is listed at the next request with no deploy, and no second list 
   such as a product size comes from the lab registry when it exists.
 - **The state is the address**, as the catalog defines it: `?q=pcr&method=pcr&sort=-updated`. It is a GET form, so with
   script off every control works and every state is a link; `app/enhance/catalog.ts` then updates the page in place.
-- **The overview above the catalog is counted, not typed** (`libraryOverview`): a count sentence, the phage
+- **The overview above the catalog is counted, not typed** (`libraryOverview`): a count sentence, "Start here"
+  (the procedures that state a `start_here` position, in order, each with its description), the phage
   workflow (`PHAGE_PIPELINE` in `taxonomy.mjs`, each stage the methods that carry it out, linked to the library
   narrowed to them, and drawn without a link while it has no protocol; each stage's `tools` are calculator ids from
   `TOOLS` in `phage-tools.mjs`, linked under it with the form's own name, and an id the registry lacks is an error),

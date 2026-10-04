@@ -141,3 +141,33 @@
   font-size: 0.8125rem;
   color: var(--brand);
 }
+
+/* Start here: the protocols that say where to begin, in their stated order, each with its own one-line description. */
+.library-start {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: start;
+}
+.library-start > li {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  counter-increment: start;
+}
+.library-start > li::before {
+  content: counter(start);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.library-start-title {
+  font-weight: 600;
+  color: var(--brand);
+}
+.library-start-why {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}

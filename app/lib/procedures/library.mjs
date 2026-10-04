@@ -61,6 +61,7 @@ export function libraryItems(records) {
       time: r.time.total ? String(r.time.total) : "",
       steps: stepCount(r),
       keyFact: keyFact(r),
+      startHere: r.startHere ?? null,
     }));
 }
 
@@ -222,6 +223,9 @@ export function overviewMarkdown(overview, origin) {
     "## In the library",
     "",
     overviewSentence(overview),
+    ...(overview.start.length > 0
+      ? ["", "### Start here", "", ...overview.start.map((p, i) => `${i + 1}. [${p.title}](${origin}${p.href}): ${p.description}`)]
+      : []),
     "",
     "### The phage workflow",
     "",
@@ -294,6 +298,11 @@ export function libraryOverview(items) {
     const tools = stage.tools.map((id) => toolLink(id));
     return { id: stage.id, label: stage.label, count, href: count > 0 ? methodHref(stage.methods) : null, tools };
   });
+  // The protocols that say where to begin, in the position each states (never inferred from anything else).
+  const start = items
+    .filter((p) => p.startHere !== null)
+    .sort((a, b) => /** @type {number} */ (a.startHere) - /** @type {number} */ (b.startHere))
+    .map((p) => ({ slug: p.slug, title: p.title, href: p.path, description: p.description }));
   const dates = items.map((p) => p.updated).filter(Boolean).sort();
   return {
     total: items.length,
@@ -303,6 +312,7 @@ export function libraryOverview(items) {
     tiles,
     browse,
     stages,
+    start,
   };
 }
 

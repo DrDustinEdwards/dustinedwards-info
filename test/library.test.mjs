@@ -193,3 +193,17 @@ test("the library browses by method, by course and by organism, each tile an add
   assert.ok(md.includes("### Browse by course") && md.includes("([about the course](https://example.test/teaching/phage-discovery))"));
   assert.ok(md.includes("### Browse by organism") && md.includes("- [Birds](https://example.test/research/protocols?organism=avian): 1 protocol"));
 });
+
+test("Start here lists the protocols that state a position, in that order, with their own description; none stated, no list", () => {
+  const items = libraryItems([
+    record({ slug: "b", path: "/research/protocols/b", title: "Second", description: "Do this second.", startHere: 2, methods: ["pcr"] }),
+    record({ slug: "a", path: "/research/protocols/a", title: "First", description: "Do this first.", startHere: 1, methods: ["pcr"] }),
+    record({ slug: "c", title: "Unplaced", methods: ["pcr"] }),
+  ]);
+  const o = libraryOverview(items);
+  assert.deepEqual(o.start.map((p) => [p.slug, p.href, p.description]), [["a", "/research/protocols/a", "Do this first."], ["b", "/research/protocols/b", "Do this second."]]);
+  const md = overviewMarkdown(o, "https://example.test");
+  assert.ok(md.includes("### Start here\n\n1. [First](https://example.test/research/protocols/a): Do this first.\n2. [Second](https://example.test/research/protocols/b): Do this second."));
+  assert.deepEqual(libraryOverview(libraryItems(RECORDS)).start, [], "no protocol states a position");
+  assert.ok(!overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test").includes("Start here"));
+});
