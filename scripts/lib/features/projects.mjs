@@ -337,7 +337,8 @@ export function checkProjects(ctx) {
   ok("the hub links the Carrel page", hub.includes("](/software/carrel)"));
   ok("the hub links the Enarratio page", hub.includes("](/software/enarratio)"));
 
-  const contentPageSource = codeOf(join(root, "app", "routes", "content-page.tsx"));
+  // The page's node is built in the module the content-page route and the phage page share.
+  const contentPageSource = codeOf(join(root, "app", "lib", "pages", "page-json-ld.ts"));
   ok(
     "software pages emit @type from the page",
     /"@type":\s*page\.schemaType/.test(contentPageSource) &&
