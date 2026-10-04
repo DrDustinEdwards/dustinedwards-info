@@ -46,7 +46,10 @@ export async function run({ page }) {
     await page.evaluate((sel) => document.querySelector(sel)?.setAttribute("open", ""), selector);
     const before = await page.$eval(`${selector} .phage-tool-answer`, (n) => n.textContent ?? "");
     const search = await page.evaluate(() => location.search);
-    await page.click(`${selector} input[name="pfu"]`, { clickCount: 3 });
+    await page.$eval(`${selector} input[name="pfu"]`, (n) => {
+      n.focus();
+      /** @type {HTMLInputElement} */ (n).select();
+    });
     await page.type(`${selector} input[name="pfu"]`, "22200");
     /** @type {string} */
     const after = await pollUntil(
