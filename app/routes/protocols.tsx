@@ -1,4 +1,5 @@
 import { Catalog } from "capsomer/react/catalog";
+import { TabLink, TabsNav } from "capsomer/react/tabs";
 import { parseCatalogParams, queryCatalog, catalogRedirect } from "capsomer/behaviour/catalog";
 import { data, redirect } from "react-router";
 
@@ -13,7 +14,7 @@ import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, type LibraryItem } from "~/lib/procedures/library.mjs";
+import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
 import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -29,6 +30,7 @@ import "capsomer/chips.css";
 import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
+import "capsomer/tabs.css";
 import "~/styles/prose.css";
 import "~/styles/library.css";
 
@@ -123,6 +125,13 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <div className="prose" dangerouslySetInnerHTML={{ __html: intro }} />
       <LibraryOverview overview={libraryOverview(items)} />
       <div className="library">
+        <TabsNav aria-label="Protocols by kind of work" variant="line">
+          {libraryTabs(items, result.state.filters.method ?? []).map((tab) => (
+            <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>
+              {tab.label}
+            </TabLink>
+          ))}
+        </TabsNav>
         <Catalog
           definition={LIBRARY}
           result={result}

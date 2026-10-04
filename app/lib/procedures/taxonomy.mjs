@@ -45,6 +45,15 @@ export const PHAGE_PIPELINE = Object.freeze([
   { id: "annotate", label: "Annotate", methods: ["annotation"] },
 ]);
 
+/**
+ * The tabs above the library: the lab's two kinds of work, each the methods that make it up. "All" is implied. A tab
+ * is a link to the library narrowed to its methods, so it is also what the method facet would give.
+ */
+export const LIBRARY_TABS = Object.freeze([
+  { id: "phage", label: "Phage work", methods: PHAGE_PIPELINE.flatMap((stage) => stage.methods) },
+  { id: "pcr", label: "PCR and primers", methods: ["pcr"] },
+]);
+
 /** The words for an id in a closed list, or the id itself when the list does not know it. */
 export function methodLabel(/** @type {string} */ id) {
   return /** @type {Record<string, string>} */ (METHODS)[id] ?? id;
