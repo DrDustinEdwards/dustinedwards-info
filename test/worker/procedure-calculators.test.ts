@@ -67,7 +67,7 @@ describe("calculators in a procedure's steps", () => {
     ).text();
     expect(twin).toContain("> Calculator: [Webbed plate calculator](/research/tools/webbed-plate)");
     expect(twin).toContain("> Calculator: [Titer calculator](/research/tools/titer)");
-    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record: rec, count: 1, factor: 1, url: PAGE }));
+    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record: rec, count: 1, factor: 1, address: PAGE }));
     expect(sheet).not.toContain("phage-tool");
   });
 });
