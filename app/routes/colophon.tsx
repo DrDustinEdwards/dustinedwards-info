@@ -238,7 +238,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         <ul>
           {stack.dependencies.map((dep) => (
             <li key={dep.name}>
-              <code>{dep.name}</code> <span className="muted">{dep.range}</span>
+              <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
             </li>
           ))}
         </ul>
