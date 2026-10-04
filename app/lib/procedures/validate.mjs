@@ -31,7 +31,10 @@ export const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes",
 /** A recorded gap: the marker and the reason, never the marker alone. */
 const GAP = /^MISSING:\s*(\S.*)$/s;
 
-/** Words protocols.md keeps off a protocol's biosafety note: the agent only. */
+/** The levels a protocol's `biosafety_level` may name (protocols.md, amended 2026-10-04); each is Dustin's to set. */
+export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
+
+/** Words protocols.md keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
 const IUPAC = /^[ACGTRYSWKMBDHVN]+$/;
@@ -352,7 +355,10 @@ export function validateProcedure(parsed, expect) {
  * @param {string} body the page's words, which print the primer tables
  */
 function protocolRules(d, errors, required, materials, body) {
-  for (const field of ["host_strain", "status", "last_run", "biosafety", "scale"]) required(field);
+  for (const field of ["host_strain", "status", "last_run", "biosafety", "biosafety_level", "scale"]) required(field);
+  if (d.biosafety_level !== undefined && !isGap(d.biosafety_level) && !BIOSAFETY_LEVELS.includes(d.biosafety_level)) {
+    errors.push(`biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`);
+  }
   if (d.biosafety && !isGap(d.biosafety) && d.biosafety !== NOT_APPLICABLE) {
     if (typeof d.biosafety !== "object" || !nonEmptyString(d.biosafety.organism)) {
       errors.push('biosafety lists the agent only: { organism, strain, atcc }, or "not applicable"');

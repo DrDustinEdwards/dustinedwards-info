@@ -117,7 +117,10 @@ change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `poly
 pages. When the lab registry holds host strains, `organism` reads from it.
 
 - **protocol** adds `biosafety` (`organism`, `strain`, `atcc`, or `not applicable`; the agent only, per
-  protocols.md), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
+  protocols.md), `biosafety_level` (`BSL-1` or `BSL-2`: Dustin sets it, no agent fills or infers it, and it is
+  written `MISSING: <why>` until he does; required, so a forgotten one fails. It shows among the facts at the top of
+  the page and the sheet, in the twin and in the structured data only once set; the operator API's `list_procedures`
+  shows `MISSING` so he can find the ones left, and `get_procedure` lists it among the gaps), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
   `solutions` (sub-recipes: `id`, `name`, `components`, `storage`, `shelf_life`), `primers`, `cycling`.
   A material may carry `stock` (one or more), `final`, `amount` and `per`, and `solution` (the id of its
   sub-recipe). A spin in rpm needs its `g` (or a recorded gap), and a touchdown annealing its step size.

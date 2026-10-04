@@ -62,6 +62,7 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
   add("First used", record.firstUsed);
   add("Last run", record.lastRun);
   add("Status", record.status);
+  add("Biosafety level", record.biosafetyLevel);
   add("Servings", record.servings);
   add("Prep time", record.prepTime);
   add("Cook time", record.cookTime);

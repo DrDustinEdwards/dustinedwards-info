@@ -1,5 +1,10 @@
 import { env } from "cloudflare:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { ProcedureSheet, ProcedureView } from "~/components/procedure";
+import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
 
 import { runTool } from "~/lib/operator/api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
@@ -175,6 +180,57 @@ describe("save_procedure", () => {
       expect(data.raw).toBe(zncl2);
       expect(data.errors).toEqual([]);
       expect(data.gaps.some((g) => g.field === "version")).toBe(true);
+    }
+  });
+});
+
+describe("the biosafety level", () => {
+  const MISSING_LINE = /^biosafety_level: .*$/m;
+  const person = { "@type": "Person", "@id": "https://example.com/#person", name: "Test", url: "https://example.com" };
+  const twin = async () =>
+    (await twinLoader({ request: new Request(`${PAGE}.md`), context: routeContext(), params: { slug: SLUG } } as never)).text();
+  const everywhere = async () => {
+    const record = await page();
+    const view = renderToStaticMarkup(createElement(ProcedureView, { record, count: 1, factor: 1 }));
+    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record, count: 1, factor: 1, url: PAGE }));
+    return { record, view, sheet, twin: await twin(), ld: JSON.stringify(procedureJsonLd(record, "https://example.com", person)) };
+  };
+
+  it("never shows MISSING on the page, the sheet, the twin or the structured data, and shows it to the operator", { timeout: 120_000 }, async () => {
+    expect(zncl2).toMatch(MISSING_LINE);
+    expect(zncl2.match(MISSING_LINE)?.[0]).toContain("MISSING");
+    const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: zncl2 });
+    expect(saved.ok).toBe(true);
+    const out = await everywhere();
+    expect(out.record.biosafetyLevel).toBeNull();
+    for (const surface of [out.view, out.sheet, out.twin, out.ld]) {
+      expect(surface).not.toMatch(/biosafety level/i);
+      expect(surface).not.toContain("Waiting on Dustin");
+    }
+    const list = await runTool(operatorEnv(), operator, "list_procedures", {});
+    expect(list.ok).toBe(true);
+    if (list.ok) {
+      const rows = (list.data as { procedures: Array<{ slug: string; biosafetyLevel: string | null }> }).procedures;
+      expect(rows.find((p) => p.slug === SLUG)?.biosafetyLevel).toBe("MISSING");
+    }
+    const read = await runTool(operatorEnv(), operator, "get_procedure", { slug: SLUG });
+    expect(read.ok && JSON.stringify(read.data)).toContain("biosafety_level");
+  });
+
+  it("shows the level once Dustin has set it, on the page, the sheet, the twin and the structured data", { timeout: 120_000 }, async () => {
+    const set = zncl2.replace(MISSING_LINE, "biosafety_level: BSL-2");
+    const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: set });
+    expect(saved.ok).toBe(true);
+    const out = await everywhere();
+    expect(out.record.biosafetyLevel).toBe("BSL-2");
+    expect(out.view).toContain("<dt>Biosafety level</dt><dd>BSL-2</dd>");
+    expect(out.sheet).toContain("<dt>Biosafety level</dt><dd>BSL-2</dd>");
+    expect(out.twin).toContain("- Biosafety level: BSL-2");
+    expect(out.ld).toContain('"name":"Biosafety level","value":"BSL-2"');
+    const list = await runTool(operatorEnv(), operator, "list_procedures", {});
+    if (list.ok) {
+      const rows = (list.data as { procedures: Array<{ slug: string; biosafetyLevel: string | null }> }).procedures;
+      expect(rows.find((p) => p.slug === SLUG)?.biosafetyLevel).toBe("BSL-2");
     }
   });
 });

@@ -12,6 +12,7 @@ status: "MISSING: No source in the repo states a status for this protocol."
 last_run: "MISSING: protocols.md: nothing is marked as run in the lab until someone has worked from the rendered page and dated it."
 host_strain: not applicable
 biosafety: "MISSING: Waiting on Dustin: the biosafety officer check (core.md). protocols.md: list the agent only (organism and strain, with its ATCC number); the agent for this protocol is his to name."
+biosafety_level: "MISSING: Waiting on Dustin: he sets BSL-1 or BSL-2 for each protocol himself."
 scale: "MISSING: The page does not record the reaction mix the lab used, so it states no reaction volume or number of reactions to scale by."
 primers:
   - { name: LCO1490, direction: forward, sequence: GGTCAACAAATCATAAAGATATTGG }

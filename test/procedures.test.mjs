@@ -276,6 +276,7 @@ status: draft
 last_run: 2026-09-01
 host_strain: Test strain
 biosafety: not applicable
+biosafety_level: BSL-1
 scale: { count: 1, unit: tube }
 based_on:
   - citation: Test source
@@ -354,6 +355,19 @@ test("an undeclared #equipment in a protocol is an error", () => {
 });
 
 test("biosafety that names a biosafety level is an error", () => {
+  const raw = PROTOCOL.replace("biosafety: not applicable", "biosafety: { organism: Test organism, strain: BSL-2 }");
+  assertError(check("mini", raw).errors, /biosafety names a biosafety level/);
+});
+
+test("biosafety_level is BSL-1, BSL-2 or a recorded gap, and a protocol must have it", () => {
+  assertError(check("mini", PROTOCOL.replace("biosafety_level: BSL-1", "biosafety_level: BSL-3")).errors, /biosafety_level is "BSL-3"; it is one of BSL-1, BSL-2/);
+  assertError(check("mini", PROTOCOL.replace(/biosafety_level: BSL-1\n/, "")).errors, /^biosafety_level is required/);
+  const gap = check("mini", PROTOCOL.replace("biosafety_level: BSL-1", 'biosafety_level: "MISSING: not set yet"'));
+  assert.deepEqual(gap.errors, []);
+  assert.deepEqual(gap.gaps, [{ field: "biosafety_level", reason: "not set yet" }]);
+});
+
+test("the biosafety field still lists the agent only, and holds no level", () => {
   const raw = PROTOCOL.replace("biosafety: not applicable", "biosafety: { organism: Test organism, strain: BSL-2 }");
   assertError(check("mini", raw).errors, /biosafety names a biosafety level/);
 });

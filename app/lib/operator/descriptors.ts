@@ -241,8 +241,9 @@ export const TOOL_DESCRIPTORS: Readonly<
     args: {},
     returns:
       "Every procedure row in D1 (protocols, recipes, computational procedures), drafts included: " +
-      "slug, path, profile, title, draft (boolean), version, updated and the count of recorded gaps, with " +
-      "the head sha and the number of procedures.",
+      "slug, path, profile, title, draft (boolean), version, updated, the count of recorded gaps and, for a " +
+      "protocol, biosafetyLevel (BSL-1, BSL-2 or MISSING until Dustin sets it), with the head sha and the " +
+      "number of procedures.",
   },
   get_procedure: {
     args: { slug: "string" },

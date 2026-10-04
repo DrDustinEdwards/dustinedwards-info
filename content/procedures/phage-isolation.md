@@ -16,6 +16,7 @@ host_strain:
   - Mycobacterium smegmatis mc²155 (ATCC 700084)
   - Microbacterium foliorum NRRL B-24224
 biosafety: "MISSING: Waiting on Dustin: the biosafety officer check (core.md). protocols.md: list the agent only (organism and strain, with its ATCC number); the agent for this protocol is his to name. The page names Mycobacterium smegmatis mc²155 (ATCC 700084) and Microbacterium foliorum NRRL B-24224, which has no ATCC number on the page."
+biosafety_level: "MISSING: Waiting on Dustin: he sets BSL-1 or BSL-2 for each protocol himself."
 scale: "MISSING: The page records the lab's variants of several Guide protocols, each at its own scale (per plate, per soil sample, per batch of webbed plates), and states no single batch size to scale by."
 primers: not applicable
 based_on:
