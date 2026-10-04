@@ -55,6 +55,9 @@ export const LIBRARY_TABS = Object.freeze([
   { id: "pcr", label: "PCR and primers", methods: ["pcr"] },
 ]);
 
+/** The page that lists the phage calculators (docs/PHAGE-TOOLS.md): the library's Calculators tab goes there. */
+export const CALCULATORS_PATH = "/research/tools";
+
 /** The words for an id in a closed list, or the id itself when the list does not know it. */
 export function methodLabel(/** @type {string} */ id) {
   return /** @type {Record<string, string>} */ (METHODS)[id] ?? id;
