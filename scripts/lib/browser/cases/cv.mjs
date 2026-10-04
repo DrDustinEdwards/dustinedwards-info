@@ -20,6 +20,7 @@ const readCv = (page) =>
     grants: document.querySelector('[data-cv-count="grants"]')?.textContent ?? "",
     bars: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key]").length,
     barLinks: document.querySelectorAll("[data-cv-timeline] a[href][data-enarratio-key]").length,
+    drawn: document.querySelector("[data-cv-timeline]")?.getAttribute("data-cv-drawn") ?? "",
     enhanced: document.querySelector("[data-cv]")?.hasAttribute("data-cv-enhanced") ?? false,
   }));
 
@@ -66,7 +67,9 @@ export async function run({ browser }) {
     ok("cv: the enhancement ran", start.enhanced, "no data-cv-enhanced on [data-cv]: app/enhance/cv.ts did not run");
 
     if (await clickOrFail(page, 'input[name="type"][value="publication"]', "cv: the Publications type filter is on the page")) {
-      const pubs = await pollUntil(() => readCv(page), (v) => v.search.includes("type=publication"));
+      /* The URL is written before the charts come back from /cv/charts.json and replace the bars, so the
+         URL is not what says the timeline is settled: data-cv-drawn is, set once its charts are drawn. */
+      const pubs = await pollUntil(() => readCv(page), (v) => v.search.includes("type=publication") && v.drawn === v.search);
       ok(
         "cv: ticking a type filters in place and writes the URL",
         pubs.search === "?type=publication" && pubs.shownTypes.join() === "publication" && pubs.shown === Number(pubs.papers),

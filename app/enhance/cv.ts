@@ -183,6 +183,8 @@ function drawCharts(state: CvState) {
         const host = root.querySelector(`[data-cv-spark="${name}"]`);
         if (host) host.innerHTML = charts[name];
       }
+      // What the drawn charts answer to. The URL is written before they arrive, so it cannot say they are here.
+      timelineHost.dataset.cvDrawn = stateToSearch(state);
     })
     .catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
