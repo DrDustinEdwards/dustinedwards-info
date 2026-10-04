@@ -1,5 +1,6 @@
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
+import { TERMS_PATH } from "./license.mjs";
 import { canonicalAuthor } from "./publications/authors.mjs";
 import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
@@ -9,6 +10,9 @@ import { paperPath } from "./publications/paths.mjs";
  * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
  */
 export const SITE_ORIGIN = "https://dustinedwards.info";
+
+/** The `license` of every Dataset: the site's terms page (app/lib/license.mjs). */
+export const LICENSE_URL = `${SITE_ORIGIN}${TERMS_PATH}`;
 
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 

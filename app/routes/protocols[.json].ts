@@ -1,9 +1,10 @@
 import { listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
+import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { LIBRARY_PATH, libraryItems, libraryRecords } from "~/lib/procedures/library.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
-import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import { LICENSE_URL, SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols[.json]";
 
@@ -11,13 +12,13 @@ import type { Route } from "./+types/protocols[.json]";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const items = libraryItems(await listPublishedLibraryRecords(getEnv(context)));
   const rows = libraryRecords(items, new URL(request.url).searchParams, SITE_ORIGIN);
-  return new Response(`${JSON.stringify({ count: rows.length, protocols: rows }, null, 2)}\n`, {
+  return new Response(`${JSON.stringify({ license: LICENSE_URL, count: rows.length, protocols: rows }, null, 2)}\n`, {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,
       "cache-tag": PROCEDURES_CACHE_TAG,
       "x-robots-tag": "noindex",
-      link: canonicalLink(LIBRARY_PATH),
+      link: `${canonicalLink(LIBRARY_PATH)}, ${LICENSE_LINK}`,
     },
   });
 }

@@ -80,6 +80,7 @@ An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesti
 - [Contact](https://dustinedwards.info/contact): how to reach Dustin Edwards
 - [Colophon](https://dustinedwards.info/colophon): how this site is built
 - [Privacy](https://dustinedwards.info/privacy): what the site collects
+- [Terms](https://dustinedwards.info/terms): what may be done with the site's content and data, and the license named in every data set
 - [CV](https://dustinedwards.info/cv): the CV, with its markdown twin at /cv.md; the page links the current CV as a PDF
 - [Sitemap](https://dustinedwards.info/sitemap.xml): every HTML page on the site and nothing else
 

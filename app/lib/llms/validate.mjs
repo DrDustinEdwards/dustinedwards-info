@@ -40,7 +40,7 @@ export const LLMS_REQUIRED_MENTIONS = [
  * The collection hub /research/publications is a route and not a content page, so it is not read as one.
  */
 const LISTED_PAGE =
-  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/publications)(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)\)/gm;
+  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/publications)(\/(?:research|teaching|software|cv|terms)(?:\/[a-z0-9-]+)*)\)/gm;
 const LISTED_TWIN = /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
 
 /** The page paths the file lists, one per list link. @param {string} text */

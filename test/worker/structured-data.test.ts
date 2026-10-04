@@ -115,7 +115,6 @@ const MISSING: Missing[] = [
     reason: "the source node describes the repository, and the page describes the application, not its code",
   },
   { type: "SoftwareSourceCode", property: "url", page: /^\/software\/capsid$/, reason: "its address is codeRepository" },
-  { type: "Dataset", property: "license", page: /^\/research\/phages$/, reason: "no licence is stated for the phage table" },
   { type: "Dataset", property: "keywords", page: /^\/research\/phages$/, reason: "no keywords are recorded" },
   { type: "Dataset", property: "identifier", page: /^\/research\/phages$/, reason: "the table has no DOI or other identifier" },
 ];
@@ -297,6 +296,18 @@ describe("the types each page states", () => {
     const length = String(dataset?.description).length;
     expect(length).toBeGreaterThanOrEqual(50);
     expect(length).toBeLessThanOrEqual(5000);
+  });
+
+  it("every Dataset any page emits carries the site's terms as its license", () => {
+    const datasets = rendered.flatMap((page) =>
+      blocks(page.html)
+        .flatMap((block) => nodes(block))
+        .filter((node) => node["@type"] === "Dataset")
+        .map((node) => ({ path: page.path, node })),
+    );
+    // One Dataset today (the phage table); a second is held to the same rule, and none at all is a broken audit.
+    expect(datasets.length).toBeGreaterThan(0);
+    for (const { path, node } of datasets) expect(node.license, path).toBe(`${SITE_ORIGIN}/terms`);
   });
 
   it("Enarratio is source code with its repository; Capsid is an application whose source is its own node", () => {

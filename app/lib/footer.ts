@@ -75,6 +75,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
       { to: "/privacy", label: "Privacy" },
+      { to: "/terms", label: "Terms" },
     ],
   },
 ];
