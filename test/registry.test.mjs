@@ -40,8 +40,11 @@ const WIDE = String.fromCharCode(0x2014);
 const compile = (slug, raw) => compileRegistryItem({ slug, raw, host, pipeline, kinds });
 const file = (lines) => `---\n${lines.join("\n")}\n---\n`;
 
-test("the registry ships with no kind and no record", () => {
-  assert.deepEqual(Object.keys(KINDS), []);
+test("every kind the registry defines is a kind with fields and a plural to address it by", () => {
+  for (const [kind, spec] of Object.entries(KINDS)) {
+    assert.match(kind, /^[a-z][a-z-]*$/, kind);
+    assert.ok(spec.singular && spec.plural && Object.keys(spec.fields).length > 0, kind);
+  }
 });
 
 test("an item compiles to shared columns and the kind's own record, with a name stored once", async () => {
@@ -172,8 +175,8 @@ test("the build reads content/registry/<kind>/ for every kind, treats a missing 
   }
 });
 
-test("the real registry, with no kind, builds empty and valid", async () => {
+test("the real registry builds, and every row belongs to a kind it defines", async () => {
   const built = await buildRegistry();
-  assert.deepEqual(built.rows, []);
-  assert.deepEqual(built.gaps, []);
+  assert.ok(built.rows.length > 0);
+  for (const row of built.rows) assert.ok(Object.hasOwn(KINDS, row.kind), `${row.kind}/${row.id}`);
 });

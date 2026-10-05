@@ -1,6 +1,7 @@
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedPagePaths } from "~/db/pages";
 import { listPublishedProcedures } from "~/db/procedures";
+import { listRegistry } from "~/db/registry";
 import { listPublishedPublications } from "~/db/publications";
 import { getEnv } from "~/lib/context";
 import {
@@ -15,6 +16,8 @@ import { tagPath } from "~/lib/tag-path.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
+import { LAB_PATH, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
+import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -37,7 +40,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   /* No `lastmod`: a tag has no modification date of its own. */
-  const [blog, tagList, seriesList, nextPublishAt, procedureRows, papers, pagePaths] = await Promise.all([
+  const [blog, tagList, seriesList, nextPublishAt, procedureRows, papers, pagePaths, registryItems] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
     listBlogSeries(env),
@@ -48,6 +51,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     listPublishedPublications(env),
     // The prose pages live in D1 too (docs/PAGES.md): a draft is left out, and so is a path whose row is missing.
     listPublishedPagePaths(env),
+    // The lab registry lives in D1 too (docs/REGISTRY.md): an item saved through Carrel is listed without a deploy.
+    listRegistry(env, { published: true }),
   ]);
   // In the registry's order, which is the order the sitemap has always listed them in. The CV is generated
   // from data and has no row.
@@ -69,6 +74,11 @@ export async function loader({ context }: Route.LoaderArgs) {
       loc: `${origin}${p.path}`,
       lastmod: p.updated ? new Date(`${p.updated}T00:00:00.000Z`) : null,
     })),
+    // The registry's inventory, each kind that has an item, and each item. No `lastmod`: a row's sync time is not the
+    // date a fact changed.
+    { loc: `${origin}${LAB_PATH}`, lastmod: null as Date | null },
+    ...[...new Set(registryItems.map((item) => item.kind))].map((kind) => ({ loc: `${origin}${kindPath(kind)}`, lastmod: null as Date | null })),
+    ...registryItems.map((item) => ({ loc: `${origin}${itemPath(item.kind, item.id)}`, lastmod: null as Date | null })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/writing/${p.slug}`,
       lastmod: p.updatedAt,
@@ -102,8 +112,8 @@ ${urls
       "content-type": "application/xml; charset=utf-8",
       /* No `Vary`: this document embeds no reader state. */
       "cache-control": SHARED_CACHE_CONTROL,
-      /* Lists posts, tags, series, procedures and the prose pages, so all three purges must reach it. */
-      "cache-tag": `${POSTS_AND_PROCEDURES_CACHE_TAGS},${CONTENT_PAGES_CACHE_TAG}`,
+      /* Lists posts, tags, series, procedures, the prose pages and the registry, so all four purges must reach it. */
+      "cache-tag": `${POSTS_AND_PROCEDURES_CACHE_TAGS},${CONTENT_PAGES_CACHE_TAG},${REGISTRY_CACHE_TAG}`,
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });

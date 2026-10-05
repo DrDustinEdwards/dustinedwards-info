@@ -216,7 +216,7 @@
     {
       "id": "protocol-library-catalog",
       "module": "app/enhance/catalog.ts",
-      "enhancement": "On the protocol library and the publications list, search, filters, sort and paging update the results in place as a person types or chooses, with the counts, the removable filter chips and the phone filter tray kept in step.",
+      "enhancement": "On the protocol library, the lab registry and the publications list, search, filters, sort and paging update the results in place as a person types or chooses, with the counts, the removable filter chips and the phone filter tray kept in step.",
       "fallback": "The library is complete as served: the form is a GET form that reloads the page with the same result (Apply), and the chips, the sort headers and the pages are links, so every state has an address that works with no script.",
       "fallbackKind": "selector",
       "fallbackAt": ".library",

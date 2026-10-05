@@ -10,6 +10,7 @@ import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
 import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listRegistry } from "~/db/registry";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
@@ -17,6 +18,8 @@ import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
 import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
+import { registryTabs } from "~/lib/registry/catalog.mjs";
+import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -43,7 +46,7 @@ import "~/styles/library.css";
  * keep. The catalog is a GET form: with script off every control still works, and every state is an address.
  */
 export function headers() {
-  return new Headers(publicHtmlHeaders(`${CONTENT_PAGE_HTML_TAGS},${PROCEDURES_CACHE_TAG}`));
+  return new Headers(publicHtmlHeaders(`${CONTENT_PAGE_HTML_TAGS},${PROCEDURES_CACHE_TAG},${REGISTRY_CACHE_TAG}`));
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -56,7 +59,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const canonical = libraryRedirect(url);
   if (canonical) throw redirect(canonical, 301);
   const items = libraryItems(await listPublishedLibraryRecords(env));
-  return { page: row.record, draft: row.status === "draft", items, search: url.search };
+  // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
+  const registry = registryTabs(await listRegistry(env, { published: true }));
+  return { page: row.record, draft: row.status === "draft", items, registry, search: url.search };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -81,7 +86,7 @@ const cells = {
 };
 
 export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProps) {
-  const { page, draft, items, search } = loaderData;
+  const { page, draft, items, registry, search } = loaderData;
   const trail: Array<[string, string]> = [
     ["Research", "/research"],
     ["Protocols", LIBRARY_PATH],
@@ -128,7 +133,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <LibraryOverview overview={libraryOverview(items)} />
       <div className="library site-catalog site-catalog-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
-          {libraryTabs(items, result.state.filters.method ?? []).map((tab) => (
+          {libraryTabs(items, result.state.filters.method ?? [], registry).map((tab) => (
             <TabLink key={tab.id} href={tab.href} current={tab.current} count={tab.count}>
               {tab.label}
             </TabLink>

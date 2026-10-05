@@ -359,7 +359,10 @@
     // The registry's compile path, the same on both sides (docs/REGISTRY.md): build:content and sync:content compile
     // every registry file with the module the registry save runs, and it reads its kinds from kinds.mjs.
     "app/lib/registry/compile.mjs",
-    "app/lib/registry/kinds.mjs"
+    "app/lib/registry/kinds.mjs",
+    // The primer kind and the Tm it computes, which kinds.mjs imports.
+    "app/lib/registry/primer.mjs",
+    "app/lib/registry/tm.mjs"
   ],
   "compilerOptions": {
     "composite": true,
