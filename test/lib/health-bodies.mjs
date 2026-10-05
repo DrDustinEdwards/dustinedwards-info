@@ -1,5 +1,5 @@
 /* /api/health bodies for the tests that read one: the readiness step and the watchdog's
- * repair planner. The thirteen checks are the ones the endpoint reports, in its order. */
+ * repair planner. The fourteen checks are the ones the endpoint reports, in its order. */
 
 export const CHECK_NAMES = [
   "ask-index-drift",
@@ -10,6 +10,7 @@ export const CHECK_NAMES = [
   "dictionary-drift",
   "roster-drift",
   "phage-drift",
+  "registry-drift",
   "pages-drift",
   "publications-drift",
   "llms-drift",
@@ -22,7 +23,7 @@ export const CHECK_NAMES = [
 export const HEALTHY = { ok: true, checks: CHECK_NAMES.map((name) => ({ name, ok: true })) };
 
 /**
- * All thirteen checks, with each one named in `drift` failing and carrying its detail.
+ * All fourteen checks, with each one named in `drift` failing and carrying its detail.
  *
  * @param {Record<string, { expected: number, present: number }>} drift
  */
