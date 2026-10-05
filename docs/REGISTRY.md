@@ -59,13 +59,17 @@ one of them with no change to them.
 ## The primer kind
 
 `app/lib/registry/primer.mjs`, twelve records in `content/registry/primer/`, each stating only what the lab's protocols state:
-`sequence` (as stored, upper-case IUPAC), `direction`, `target`, `set`, `product` (a size as a protocol states it, on the forward
-primer of a pair only), and where the sequence came from (`source`, `source_url`, `paper`). A kind's page of its own is
+`sequence` (as stored, upper-case IUPAC), `direction`, `target`, `set`, `reference` (the GenBank accession it is placed on, a
+file in `data/references/`), and what the literature says: `published_in` (citation), `published_doi` or `published_url`,
+`published_name` (the paper's own name for the primer), `published_sequence` (as the paper prints it) and, on a forward primer
+only, `published_product` (the size the paper states). Every `published_*` field is required, and a fact that could not be found in
+a paper that could be read is `"MISSING: <why>"` (paywalled, not stated); nothing is filled from memory or inferred. A printed
+sequence that differs from the stored one is shown as different and reported, never corrected. A kind's page of its own is
 `/research/lab/primers`, an item is `/research/lab/primers/<id>`, and the master inventory is `/research/lab`, which also
 lists the phages by reading their own table and never copying a row. Every registry page has a markdown twin at its path
 plus `.md`.
 
-**Computed, never stored:** length, GC content, reverse complement, Tm, a pair's product on its reverse primer, and the
+**Computed, never stored:** length, GC content, reverse complement, Tm, GenBank positions, a pair's product size, and the
 protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/lib/registry/tm.mjs`) is the
 SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
 it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
@@ -88,8 +92,26 @@ ship rewrites them all. A protocol that no longer compiles with the change (the 
 save with an error that names it. Known gap: a registry primer edited through git is not seen as drift on the protocol until
 `sync_registry` or the next ship runs, because the protocol's own file did not change.
 
-Product sizes are still typed in the protocols' prose (they are stated in the papers), so a test holds each registry product to
-the text of a protocol that uses the pair.
+### Positions and product sizes are computed on a reference
+
+`data/references/*.fasta` are NCBI's own FASTA records, header kept (a slice is `ACCESSION.v:from-to`, and positions are
+reported in the accession's own coordinates). `npm run build:references` generates the gitignored
+`app/lib/registry/references.generated.mjs` from them (`build:content` and `postinstall` run it). `app/lib/registry/align.mjs`
+places a primer on its reference with the existing site finder (`app/lib/primers.mjs`): the fewest mismatches first, up to
+`MAX_MISMATCHES`, each reported, never absorbed; `pairProducts` gives each product from the forward primer's 5' end to the
+reverse primer's 5' end (a pair that binds twice, as the two LTRs of a provirus do, makes a product at each site). A reference
+is genomic unless a protocol amplifies cDNA: the GAPDH pair sits on the chicken gene region (NC_052532.1), with the turkey
+region as a check only. Protocol prose no longer types a product size for the REV, LPDV and GAPDH sets; their Primers tables
+show the computed size. `test/registry-primers.test.mjs` holds each computed size to the size the protocol or paper states
+today; where they differ (COI computes 709 against the 710 and 708 the prose gives) both are shown and the difference is
+reported to the seat.
+
+### Search
+
+A published item has its own search record (`app/lib/registry/search-inputs.mjs`): its name, sequence and reverse complement,
+target, reference, positions and the paper that prints it, so a sequence search finds the primer's page as well as the
+protocols that use it. A save and `sync_registry` write it with the row, in one batch; `build:content` writes the same records
+into the search artifact; a draft has none and a deleted item loses its own (`test/worker/registry-search.test.ts`).
 
 ## Where it goes
 
@@ -122,5 +144,6 @@ at ship and fails closed if the table does not exist yet.
 
 `test/registry.test.mjs` (compile, set rules, build, drift verdict) and `test/worker/registry.test.ts` (save, sync, the
 drift check, the operator's reads and Carrel's handler) hold the framework with a kind of their own, so a change to a real
-kind cannot hide a fault in it. `test/registry-primers.test.mjs`, `test/registry-tm.test.mjs` and `test/worker/lab.test.ts`
+kind cannot hide a fault in it. `test/registry-align.test.mjs` holds placement and products to hand-worked references.
+`test/registry-primers.test.mjs`, `test/registry-tm.test.mjs` and `test/worker/lab.test.ts`
 hold the primer kind and its pages.

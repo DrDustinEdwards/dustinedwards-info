@@ -66,3 +66,17 @@
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
+
+/* The literature and the reference on a primer's page: a section of the page's own, and a fact that could not be found is
+   said so, in the page's secondary colour, with its reason. A sequence that differs from the one a paper prints is never quiet. */
+.registry-facts + h2,
+.registry-note + h2 {
+  margin-block: 2rem 0.5rem;
+  font-size: 1.25rem;
+}
+.registry-missing {
+  color: var(--text-secondary);
+}
+.registry-differs {
+  color: var(--text-danger);
+}

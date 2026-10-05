@@ -118,7 +118,7 @@ cycling:
           - { temperature_c: 68, time: 60 sec. }
       - { stage: extension, temperature_c: 68, time: 10 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "PCR REV 3′ LTR: 281 bp. PCR REV pol (protease and reverse transcriptase): 574 bp. PCR REV pol (reverse transcriptase and integrase): 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
+expected_results: "Each set gives a band at its product size, computed under Primers, in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
 limitations: "The touchdown in the two *pol* sets steps down from 60 to 50 °C over the first 15 cycles. Extension temperature is dependent on polymerase: the 68 °C extensions are for the One*Taq* mix."
 references:
   - "Stewart et al. 2019, *J Wildl Dis* 55(3). [doi:10.7589/2018-08-187](https://doi.org/10.7589/2018-08-187). On this site: [Stewart et al. 2019](/research/publications/10-7589-2018-08-187/)."
@@ -133,15 +133,7 @@ The REV and GAPDH protocols are the ones published in [Stewart et al. 2019, J Wi
 
 ## Where the REV amplicons sit on the genome
 
-The REV provirus has an LTR at each end, the primer binding site near the 5′ LTR, then *gag* (MA, R, CA, NC), *pol* (protease, reverse transcriptase, integrase) and *env* (SU, TM), over about 8 kb. The three amplicons sit as follows:
-
-| Primer set | Product |
-| --- | --- |
-| PCR REV 3′ LTR | 281 bp |
-| PCR REV pol (protease and reverse transcriptase) | 574 bp |
-| PCR REV pol (reverse transcriptase and integrase) | 801 bp |
-
-Product sizes are for GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450) (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019 compared their sequences against. An LTR sits at each end of the provirus, so the LTR product can come from either one. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder.
+The REV provirus has an LTR at each end, the primer binding site near the 5′ LTR, then *gag* (MA, R, CA, NC), *pol* (protease, reverse transcriptase, integrase) and *env* (SU, TM), over about 8 kb. Where each REV set binds the genome, and the size of its product, are computed from the primers and listed under [Primers](#primers). An LTR sits at each end of the provirus, so the LTR product can come from either one. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder.
 
 ## Materials
 
@@ -170,7 +162,7 @@ From Stewart et al. 2019, for each 25 µL reaction:
 
 ## PCR REV 3′ LTR
 
-Amplifies a region of the REV 3′ LTR. Product: 281 bp.
+Amplifies a region of the REV 3′ LTR.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
@@ -185,7 +177,7 @@ The extension in each cycle is 68 °C, 60 s + 1 s per cycle: it starts at 60 s a
 
 ## PCR REV pol (protease and reverse transcriptase)
 
-Amplifies the part of REV *pol* that spans protease and reverse transcriptase. Product: 574 bp.
+Amplifies the part of REV *pol* that spans protease and reverse transcriptase.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
@@ -203,7 +195,7 @@ The first 15 cycles are a touchdown: the annealing temperature steps down from 6
 
 ## PCR REV pol (reverse transcriptase and integrase)
 
-Amplifies the part of REV *pol* that spans reverse transcriptase and integrase. Product: 801 bp.
+Amplifies the part of REV *pol* that spans reverse transcriptase and integrase.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
@@ -223,7 +215,7 @@ The cycling is the same as for the protease and reverse transcriptase set, as in
 
 Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are from [Allison et al. 2014, Virology 450-451:2-12](https://doi.org/10.1016/j.virol.2013.11.037), designed on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). The cycling is from Cox et al. 2022 and its supplement. Use the reaction mix above.
 
-Product: 458 bp (U09568, positions 1041-1498), spanning the partial p31/partial CA fragment Allison et al. 2014 analyzed.
+The product spans the partial p31/partial CA fragment Allison et al. 2014 analyzed.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |

@@ -365,7 +365,13 @@
     "app/lib/registry/tm.mjs",
     // How the registry reads on the site: scripts/check-links.mjs names each page from it, and it reads the primer arithmetic.
     "app/lib/registry/catalog.mjs",
-    "app/lib/primers.mjs"
+    "app/lib/primers.mjs",
+    // Where a primer binds a reference and the product a pair makes (docs/REGISTRY.md), with the references it reads.
+    "app/lib/registry/align.mjs",
+    "app/lib/registry/reference.mjs",
+    "app/lib/registry/references.generated.mjs",
+    // What the site's search finds for an item, which build:content writes into the search artifact.
+    "app/lib/registry/search-inputs.mjs"
   ],
   "compilerOptions": {
     "composite": true,
