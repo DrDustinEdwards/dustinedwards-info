@@ -19,10 +19,12 @@ export const METHODS = Object.freeze({
   microscopy: "Microscopy",
 });
 
-/** The organism a procedure works with or on. */
-export const ORGANISMS = Object.freeze({
-  smegmatis: "Mycobacterium smegmatis",
-  foliorum: "Microbacterium foliorum",
+/**
+ * The organisms a procedure works with or on that are not a cultured strain. The rest of the list is the lab registry's strains
+ * (docs/REGISTRY.md): a strain's id is an organism id, and its organism is the words, so a strain added to the registry is an
+ * organism a protocol can name with no edit here.
+ */
+export const NON_STRAIN_ORGANISMS = Object.freeze({
   avian: "Birds",
 });
 
@@ -62,8 +64,17 @@ export const CALCULATORS_PATH = "/research/tools";
 export function methodLabel(/** @type {string} */ id) {
   return /** @type {Record<string, string>} */ (METHODS)[id] ?? id;
 }
+/**
+ * The words for an organism id: a non-strain organism's own, else the registry strain's organism, as the protocols' records carry
+ * it (compile.mjs reads it from the registry; `libraryItems` hands it here), else the id. The facet's label function is given a
+ * value and nothing else, so the words read so far are kept by id; each request's `libraryItems` refreshes them from its records.
+ */
+const organismWords = /** @type {Map<string, string>} */ (new Map());
+export function rememberOrganisms(/** @type {Record<string, string>} */ names) {
+  for (const [id, words] of Object.entries(names)) organismWords.set(id, words);
+}
 export function organismLabel(/** @type {string} */ id) {
-  return /** @type {Record<string, string>} */ (ORGANISMS)[id] ?? id;
+  return /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id] ?? organismWords.get(id) ?? id;
 }
 export function courseLabel(/** @type {string} */ id) {
   return /** @type {Record<string, { label: string }>} */ (COURSES)[id]?.label ?? id;

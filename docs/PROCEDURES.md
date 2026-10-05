@@ -93,7 +93,8 @@ What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs
 
 - `method` (required): a list of ids from the closed list: `pcr`, `plating`, `culture`, `extraction`,
   `sequencing`, `annotation`, `media`, `microscopy`. A procedure that is some of two methods lists both.
-- `organism`: ids from the closed list, which are the phages' host keys (`smegmatis`, `foliorum`) and `avian`.
+- `organism`: ids that are strains of the lab registry (docs/REGISTRY.md; the phages' host keys, `smegmatis` and `foliorum`) or one of
+  the non-strain organisms in `taxonomy.mjs` (`avian`).
 - `course`: ids of the courses that teach it (`phage-discovery`, `virus-isolation`, `phage-bioinformatics`).
 - `target`: the genes, regions or samples it works on, in words (free text, since targets are as many as the
   experiments).
@@ -115,7 +116,7 @@ What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs
 
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
 change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
-pages. When the lab registry holds host strains, `organism` reads from it.
+pages. `organism` reads from the lab registry's strains, so a strain added there is an organism with no edit here.
 
 - **protocol** adds `biosafety` (`organism`, `strain`, `atcc`, or `not applicable`; the agent only, per
   protocols.md), `biosafety_level` (`BSL-1` or `BSL-2`: Dustin sets it, no agent fills or infers it, and it is

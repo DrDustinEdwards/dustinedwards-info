@@ -15,8 +15,10 @@ import { allSteps, headingId, parseProcedure } from "../app/lib/procedures/parse
 import { validateProcedure } from "../app/lib/procedures/validate.mjs";
 
 /** @param {string} slug @param {string} raw */
+/** The strains the lab registry holds, which an `organism` may name beside the non-strain organisms (docs/REGISTRY.md). */
+const STRAINS = new Set(["smegmatis", "foliorum"]);
 function check(slug, raw) {
-  return validateProcedure(parseProcedure({ file: slug, raw }), { slug });
+  return validateProcedure(parseProcedure({ file: slug, raw }), { slug, strains: STRAINS });
 }
 
 /** @param {string} raw */
@@ -331,7 +333,7 @@ test("the library's facets: method is required, and method, organism and course 
   assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: [pcr, pcr]")).errors, /method names one id twice/);
   const withOthers = PROTOCOL.replace("method: [pcr]\n", "method: [pcr, plating]\norganism: [smegmatis]\ncourse: [virus-isolation]\ntarget: [GAPDH]\n");
   assert.deepEqual(check("mini", withOthers), { errors: [], gaps: [] });
-  assertError(check("mini", withOthers.replace("organism: [smegmatis]", "organism: [mouse]")).errors, /organism "mouse" is not one of: smegmatis, foliorum, avian/);
+  assertError(check("mini", withOthers.replace("organism: [smegmatis]", "organism: [mouse]")).errors, /organism "mouse" is neither one of: avian [^]* nor a strain in the lab registry/);
   assertError(check("mini", withOthers.replace("course: [virus-isolation]", "course: [chemistry]")).errors, /course "chemistry" is not one of/);
   assertError(check("mini", withOthers.replace("target: [GAPDH]", "target: [GAPDH, '']")).errors, /target must be a list of the genes, regions or samples/);
   assert.deepEqual(check("mini", withOthers.replace("organism: [smegmatis]", 'organism: "MISSING: not yet recorded"')).errors, [], "a recorded gap is allowed");

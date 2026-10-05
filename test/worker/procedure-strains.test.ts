@@ -113,3 +113,21 @@ describe("a change to a strain reaches the protocols that name it", () => {
     expect((await stored()).hostStrains[1]?.collectionNumber).toBe("B-24226");
   });
 });
+
+describe("a protocol that names a strain only as an organism", () => {
+  const organismOnly = isolation.replace("host_strain:\n  - strain: smegmatis\n  - strain: foliorum\n", "host_strain: not applicable\n");
+
+  it("carries the registry's words for it, and a strain save rewrites the protocol that names it", { timeout: 120_000 }, async () => {
+    expect(organismOnly).not.toBe(isolation);
+    gh.files.set(procedurePath(SLUG), organismOnly);
+    const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: organismOnly });
+    expect(saved.ok, JSON.stringify(saved)).toBe(true);
+    const names = async () =>
+      (JSON.parse((await env.DB.prepare("SELECT record FROM procedures WHERE slug = ?1").bind(SLUG).first<{ record: string }>())?.record ?? "{}") as { organismNames: Record<string, string> }).organismNames;
+    expect(await names()).toEqual({ smegmatis: "Mycobacterium smegmatis", foliorum: "Microbacterium foliorum" });
+    const edited = (registryFiles[FOLIORUM] ?? "").replace("organism: \"Microbacterium foliorum\"", "organism: \"Microbacterium foliorum (renamed)\"").replace("name: \"Microbacterium foliorum NRRL B-24224\"", "name: \"Microbacterium foliorum (renamed) NRRL B-24224\"");
+    expect(edited).not.toBe(registryFiles[FOLIORUM]);
+    await saveRegistryItem(gitEnv(), { slug: "strain/foliorum", raw: edited, isNew: false, actor: carrel });
+    expect((await names()).foliorum).toBe("Microbacterium foliorum (renamed)");
+  });
+});

@@ -6,7 +6,7 @@
 import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
 import { TOOLS } from "../phage-tools.mjs";
-import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, ORGANISMS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
+import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, NON_STRAIN_ORGANISMS, organismLabel, rememberOrganisms } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -44,6 +44,7 @@ export function stepCount(record) {
  * @param {Array<import("./render.mjs").ProcedureRecord>} records
  */
 export function libraryItems(records) {
+  for (const r of records) rememberOrganisms(r.organismNames ?? {});
   return records
     .filter((r) => r.profile === "protocol" || r.profile === "computational")
     .map((r) => ({
@@ -295,7 +296,7 @@ export function libraryOverview(items) {
       // A course's tile also names the page that describes it, so the course is one click from its protocols.
       tiles: tilesOf("course", COURSES, (p) => p.courses, courseLabel).map((tile) => ({ ...tile, about: COURSES[/** @type {keyof typeof COURSES} */ (tile.id)].path })),
     },
-    { id: "organism", title: "Browse by organism", tiles: tilesOf("organism", ORGANISMS, (p) => p.organisms, organismLabel) },
+    { id: "organism", title: "Browse by organism", tiles: tilesOf("organism", Object.fromEntries([...new Set(items.flatMap((p) => p.organisms))].sort((a, b) => Number(Object.hasOwn(NON_STRAIN_ORGANISMS, a)) - Number(Object.hasOwn(NON_STRAIN_ORGANISMS, b)) || organismLabel(a).localeCompare(organismLabel(b), "en")).map((id) => [id, true])), (p) => p.organisms, organismLabel) },
   ].filter((group) => group.tiles.length > 0);
   const stages = PHAGE_PIPELINE.map((stage) => {
     const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;

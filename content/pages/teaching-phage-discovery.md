@@ -29,14 +29,14 @@ The lab's own bench methods are on the [phage isolation protocol](/research/prot
 
 ## Host strains
 
-- *Mycobacterium smegmatis* mc²155 (ATCC 700084), used in the 2017 notebooks.
-- *Microbacterium foliorum* NRRL B-24224, used from 2018 on.
+- [*Mycobacterium smegmatis*](/research/lab/strains/smegmatis), used in the 2017 notebooks.
+- [*Microbacterium foliorum*](/research/lab/strains/foliorum), used from 2018 on.
 
 ## Tarleton variants
 
 Where this lab does something differently from the July 2025 edition of the Guide, the difference is recorded here, with its reason as the lab notebooks give it.
 
-- **Restriction enzymes for *Microbacterium foliorum* phages** (host *M. foliorum* NRRL B-24224). The lab screens DNA with HaeIII, NspI, SacII and SalI, with MseI added in 2023, because the Guide's enzyme lists are for other hosts' phages.
-- **Adopting a classmate's phage** (host *M. foliorum* NRRL B-24224). After several negative isolations, a student or group adopts a phage from a classmate's positive plate or enrichment, gives it a new sample number and name, and carries it through purification as their own. This is a schedule fallback so every student has a phage to characterize within the semester, not a guarantee: an adopted isolate can also fail.
+- **Restriction enzymes for *Microbacterium foliorum* phages** (host [*M. foliorum*](/research/lab/strains/foliorum)). The lab screens DNA with HaeIII, NspI, SacII and SalI, with MseI added in 2023, because the Guide's enzyme lists are for other hosts' phages.
+- **Adopting a classmate's phage** (host [*M. foliorum*](/research/lab/strains/foliorum)). After several negative isolations, a student or group adopts a phage from a classmate's positive plate or enrichment, gives it a new sample number and name, and carries it through purification as their own. This is a schedule fallback so every student has a phage to characterize within the semester, not a guarantee: an adopted isolate can also fail.
 - **A third archive tube kept at Tarleton.** Two barcoded archive tubes go to Pittsburgh, and a third, unbarcoded tube stays in the Tarleton freezer so the lab keeps its own copy of each phage.
 - **Electron microscopy off site.** Grids are prepared and stained in the lab, then taken or shipped to an outside EM facility for imaging.

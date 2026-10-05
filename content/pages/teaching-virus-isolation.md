@@ -32,8 +32,8 @@ An additional on-site safety training covers lab-specific hazards, the location 
 
 ## Host bacteria
 
-- *Mycobacterium smegmatis* mc²155 (ATCC 700084)
-- *Microbacterium foliorum* NRRL B-24224
+- [*Mycobacterium smegmatis*](/research/lab/strains/smegmatis)
+- [*Microbacterium foliorum*](/research/lab/strains/foliorum)
 
 ## Lab equipment
 

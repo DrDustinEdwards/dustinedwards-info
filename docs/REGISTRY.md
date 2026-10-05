@@ -119,8 +119,7 @@ record is its name, organism, designation, collection and collection number.
 `app/lib/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
 stating only what the lab's own pages state: `organism`, `strain` (the lab's designation where there is one apart from the
 collection's number, `mc²155`), `collection` and `collection_number` (`ATCC 700084`, `NRRL B-24224`), `guide_url` (the
-SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set and is `MISSING` until the biosafety
-officer check is done (core.md). The record's `name` is its organism and designation and a set rule holds it to them, so a name
+SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, his word of 2026-10-05, decisions.md) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
 cannot say a different strain than the fields do. A kind's page is `/research/lab/strains`, an item is
 `/research/lab/strains/<id>`, each with a markdown twin, a search record and a tab on the library.
 
@@ -134,8 +133,13 @@ the twin links it, and a frozen version names the strain it was published with. 
 every protocol that names the changed strain (`app/lib/procedures/primer-dependents.server.ts`, now for both kinds). A free-text
 strain, a strain listed twice, an extra field and an id the registry does not hold are each refused, and a draft strain cannot be
 named by a published protocol (`test/registry-strains.test.mjs`, `test/worker/procedure-strains.test.ts`).
-Known gap: the `organism` list a protocol is filtered by (`ORGANISMS` in `app/lib/procedures/taxonomy.mjs`) still has its own
-two entries, and some pages' prose still types the designations (see the job's report); neither is read from the registry yet.
+A protocol's `organism` ids are read from the registry the same way: an id is a strain of the registry or one of the few non-strain
+organisms typed in `NON_STRAIN_ORGANISMS` (`avian`), and the compile bakes each id's words (`organismNames`, from the strain's
+`organism`) into the record, so a strain added to the registry is an organism a protocol can name with no edit to code. The library's
+facet and browse tiles read those words from the records; a strain save recompiles the protocols that name it, as a host strain or
+an organism. The pages that name the hosts link the strain records and type no designation or collection number
+(`test/registry-strains.test.mjs` holds the content pages to it). Known gap: the phages table's host cell (`HOSTS` in
+`app/lib/phages/compile.mjs`) still types `mc²155`, because the phage compile is not given the registry.
 
 ## Where it goes
 

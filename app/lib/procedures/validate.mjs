@@ -9,7 +9,7 @@
 import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
 import { allSteps, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
-import { COURSES, METHODS, ORGANISMS } from "./taxonomy.mjs";
+import { COURSES, METHODS, NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { TOOLS } from "../phage-tools.mjs";
 
 export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
@@ -194,14 +194,25 @@ export function validateProcedure(parsed, expect) {
 
   // What the library filters by. method, organism and course are ids from the closed lists in taxonomy.mjs; target
   // is the gene, region or sample, in words. Every procedure is some method, so method is required.
-  for (const [field, vocabulary] of /** @type {const} */ ([["method", METHODS], ["organism", ORGANISMS], ["course", COURSES]])) {
+  // An organism is a non-strain organism or a strain of the lab registry (docs/REGISTRY.md), read from it as the host strains are.
+  const organisms = expect.strains ? [...Object.keys(NON_STRAIN_ORGANISMS), ...expect.strains] : null;
+  for (const [field, vocabulary] of /** @type {const} */ ([["method", METHODS], ["organism", null], ["course", COURSES]])) {
     if (field === "method") required(field);
     const value = d[field];
     if (value === undefined || isGap(value)) continue;
-    const allowed = Object.keys(vocabulary);
+    const allowed = vocabulary ? Object.keys(vocabulary) : organisms;
+    // With no registry at hand an organism cannot be judged, and compileProcedure refuses a file that names one.
+    if (!allowed) continue;
     if (!Array.isArray(value)) errors.push(`${field} must be a list of ids from: ${allowed.join(", ")}`);
     else {
-      for (const id of value) if (!allowed.includes(id)) errors.push(`${field} "${id}" is not one of: ${allowed.join(", ")} (taxonomy.mjs)`);
+      for (const id of value) {
+        if (allowed.includes(id)) continue;
+        errors.push(
+          vocabulary
+            ? `${field} "${id}" is not one of: ${allowed.join(", ")} (taxonomy.mjs)`
+            : `organism "${id}" is neither one of: ${Object.keys(NON_STRAIN_ORGANISMS).join(", ")} (taxonomy.mjs) nor a strain in the lab registry (there is no content/registry/strain/${id}.md)`,
+        );
+      }
       if (new Set(value).size !== value.length) errors.push(`${field} names one id twice`);
     }
   }
