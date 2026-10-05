@@ -5,6 +5,7 @@ import dictionaryArtifact from "../../content/generated/dictionary.json";
 import pagesArtifact from "../../content/generated/pages.json";
 import phagesArtifact from "../../content/generated/phages.json";
 import proceduresArtifact from "../../content/generated/procedures.json";
+import registryArtifact from "../../content/generated/registry.json";
 
 type PageArtifactRow = {
   slug: string;
@@ -267,6 +268,26 @@ export async function seedPhages() {
          ON CONFLICT(slug) DO UPDATE SET name = excluded.name, year = excluded.year, record = excluded.record,
            source_blob_sha = excluded.source_blob_sha`,
       ).bind(r.slug, r.name, r.year, r.record, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
+  return rows.length;
+}
+
+/**
+ * The registry table, from the rows build:content compiles (content/generated/registry.json), which is what
+ * sync:content writes at ship, so a case that reads the registry's pages reads the registry the site serves.
+ */
+export async function seedRegistry() {
+  const rows = registryArtifact.registry;
+  if (rows.length === 0) throw new Error("seedRegistry found no registry rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO registry (kind, id, name, status, record, source_path, source_blob_sha)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(kind, id) DO UPDATE SET name = excluded.name, status = excluded.status, record = excluded.record,
+           source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.kind, r.id, r.name, r.status, r.record, r.sourcePath, r.sourceBlobSha),
     ),
   );
   return rows.length;

@@ -323,12 +323,14 @@ export function libraryOverview(items) {
 /**
  * The tabs over the catalog: All, then each kind of work with the number of protocols in it. A tab is a link, so a
  * tab, Back and a bookmark all work with no script. The current one is the tab whose methods are exactly the method
- * filter in the address; All is current while no method is chosen.
+ * filter in the address; All is current while no method is chosen. The registry's kinds (primers, as they land) follow the
+ * calculators as links to their own pages, counted from the registry and never the current tab here.
  *
  * @param {LibraryItem[]} items
  * @param {readonly string[]} chosen the method ids in the address
+ * @param {Array<{ id: string, label: string, count: number, href: string }>} [registry] one entry for each registry kind that has items
  */
-export function libraryTabs(items, chosen) {
+export function libraryTabs(items, chosen, registry = []) {
   const same = (/** @type {readonly string[]} */ methods) =>
     chosen.length === methods.length && methods.every((m) => chosen.includes(m));
   return [
@@ -343,6 +345,7 @@ export function libraryTabs(items, chosen) {
     // The calculators are not protocols, so they are not rows of this catalog: their tab is a link to their own page,
     // counted from the registry that holds them, and never the current one here.
     { id: "calculators", label: "Calculators", count: calculatorCount(), href: CALCULATORS_PATH, current: false },
+    ...registry.map((tab) => ({ ...tab, current: false })),
   ];
 }
 

@@ -1,0 +1,68 @@
+/*
+ * The lab registry's pages (app/routes/lab.tsx, lab.kind.tsx): their layout only, on the site's tokens, so they follow the
+ * light and dark themes with the rest of the site. The catalog's own colours are mapped in site-catalog.css.
+ */
+.registry-lede {
+  max-inline-size: 46rem;
+  margin-block: 0.5rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+.registry {
+  margin-block: 1.5rem;
+}
+
+/* A sequence is read letter by letter, so it is monospace and breaks anywhere rather than scrolling. */
+.registry-seq {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  background: none;
+  padding: 0;
+}
+
+/* Cells wrap here, as the library's do, so a long sequence or target does not widen the table past its column. */
+.registry .cap-table tbody :is(td, th) {
+  white-space: normal;
+}
+.registry .cap-table tbody :is(td, th):first-child {
+  min-inline-size: 10rem;
+}
+
+/* One item: a term and its fact, side by side where there is room and stacked on a phone. */
+.registry-facts {
+  display: grid;
+  grid-template-columns: minmax(9rem, 14rem) 1fr;
+  gap: 0.5rem 1.5rem;
+  margin-block: 1.5rem;
+  max-inline-size: 52rem;
+}
+.registry-facts dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.registry-facts dd {
+  margin: 0;
+  min-inline-size: 0;
+}
+@media (max-width: 36rem) {
+  .registry-facts {
+    grid-template-columns: 1fr;
+    gap: 0.125rem;
+  }
+  .registry-facts dd {
+    margin-block-end: 0.75rem;
+  }
+}
+.registry-used {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+}
+
+.registry-note {
+  max-inline-size: 46rem;
+  margin-block: 1rem 2rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}

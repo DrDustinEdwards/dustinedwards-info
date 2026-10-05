@@ -1,9 +1,9 @@
 // PCR primer arithmetic: reverse complements, primer sites on a template, and product sizes.
 //
 // Dustin's protocol rule: primer sequences and reverse complements are handled by tested code and
-// diffed against the cited paper, never worked out by hand on a page. Melting temperature is out of
-// scope on purpose: it depends on salt, primer and Mg2+ concentrations the papers do not all give,
-// so this module never computes one.
+// diffed against the cited paper, never worked out by hand on a page. Melting temperature is not
+// computed here: the registry computes one under stated conditions (app/lib/registry/tm.mjs), because
+// the papers do not all give salt, primer and Mg2+ concentrations, so no paper's figure is comparable.
 //
 // COORDINATES are 1-based and inclusive, the way GenBank numbers a record, so a site or product
 // reported here can be checked against the accession's own feature table without an off-by-one.

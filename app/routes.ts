@@ -51,6 +51,13 @@ export default [
     // more specific research/publications routes above still win; a path with no page answers 404.
     // The phage page: its prose and sections from the page row, its table as the catalog over the phage rows.
     route("research/phages", "routes/phages.tsx"),
+    // The lab registry (docs/REGISTRY.md): the master inventory, a kind's own page and one item, each with its twin.
+    // The twins come first so `.md` is not read as part of a kind or an id; the item's id is the kind's optional segment.
+    route("research/lab", "routes/lab.tsx"),
+    route("research/lab.md", "routes/lab[.md].ts", { id: "lab-md" }),
+    route("research/lab/:kind.md", "routes/lab[.md].ts", { id: "lab-kind-md" }),
+    route("research/lab/:kind/:id.md", "routes/lab[.md].ts", { id: "lab-item-md" }),
+    route("research/lab/:kind/:id?", "routes/lab.kind.tsx"),
     // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
     // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
     // page so `.md` is not read as part of a slug.

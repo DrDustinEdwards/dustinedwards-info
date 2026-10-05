@@ -109,6 +109,9 @@ export function run(code) {
       "protocols.tsx",
       // The phage page: its table is the catalog over the phage rows (docs/PHAGES.md).
       "phages.tsx",
+      // The lab registry (docs/REGISTRY.md): the inventory, and a kind's page with its items, which are the kind's optional segment.
+      "lab.tsx",
+      "lab.kind.tsx",
       "cv.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",

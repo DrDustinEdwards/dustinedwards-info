@@ -38,6 +38,10 @@ export async function run({ page, browser }) {
     { path: "/research/protocols", module: "protocols.tsx" },
     /* The phage page: prose from the page row and the catalog over the phage rows. */
     { path: "/research/phages", module: "phages.tsx" },
+    /* The lab registry: the inventory, the primers page, and one primer (the item is the kind page's optional segment). */
+    { path: "/research/lab", module: "lab.tsx" },
+    { path: "/research/lab/primers", module: "lab.kind.tsx" },
+    { path: "/research/lab/primers/lco1490", module: "lab.kind.tsx" },
     /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
     { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
     /* The bench sheet is a print page with no site shell, so it has no footer to compare. */
