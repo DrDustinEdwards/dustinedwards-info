@@ -1,3 +1,4 @@
+import { productsForRows } from "~/lib/registry/align.mjs";
 import { primerFacts } from "~/lib/registry/primer.mjs";
 import { NEB_TM_CALCULATOR, tmStatement } from "~/lib/registry/tm.mjs";
 import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
@@ -14,6 +15,16 @@ import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
 export function ProcedurePrimers({ record, brief = false }: { record: ProcedureRecord; brief?: boolean }) {
   if (record.primers.length === 0) return null;
   const rows = record.primers.map((p) => ({ ...p, facts: p.sequence ? primerFacts(p.sequence) : null }));
+  // A pair's product is computed from where its primers bind the reference they share (docs/REGISTRY.md), never typed.
+  const products = productsForRows(record.primers);
+  const productOf = (id: string) => {
+    const pair = products.get(id);
+    if (!pair) return "";
+    const sizes = [...new Set(pair.products.map((p) => p.length))].map((n) => `${n} bp`).join(" or ");
+    return pair.products.length > 1 && new Set(pair.products.map((p) => p.length)).size === 1 ? `${sizes} at ${pair.products.length} sites` : sizes;
+  };
+  const references = [...new Set([...products.values()].map((pair) => pair.reference))];
+  const showProduct = products.size > 0;
   const showSet = rows.some((p) => p.set);
   const showTm = !brief && rows.some((p) => p.facts?.tm != null);
   return (
@@ -28,6 +39,7 @@ export function ProcedurePrimers({ record, brief = false }: { record: ProcedureR
               <th scope="col">Sequence (5′ to 3′)</th>
               {brief ? null : <th scope="col">Length (nt)</th>}
               {showTm ? <th scope="col">Tm estimate (°C)</th> : null}
+              {showProduct ? <th scope="col">Product (computed)</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -39,11 +51,24 @@ export function ProcedurePrimers({ record, brief = false }: { record: ProcedureR
                 <td>{p.sequence ? <code className="registry-seq">{p.sequence}</code> : ""}</td>
                 {brief ? null : <td>{p.facts?.length ?? ""}</td>}
                 {showTm ? <td>{p.facts?.tm ?? ""}</td> : null}
+                {showProduct ? <td>{productOf(p.id)}</td> : null}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {references.length > 0 ? (
+        <p className="procedure-primers-note">
+          Product sizes are computed from where the primers bind{" "}
+          {references.map((reference, i) => (
+            <span key={reference.id}>
+              {i > 0 ? ", " : ""}
+              <a href={`https://www.ncbi.nlm.nih.gov/nuccore/${reference.accession}`}>{reference.id}</a>
+            </span>
+          ))}{" "}
+          ({references.map((reference) => reference.description).join("; ")}), in the accession&rsquo;s own coordinates.
+        </p>
+      ) : null}
       {brief ? null : (
         <p className="procedure-primers-note">
           {tmStatement()} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase,

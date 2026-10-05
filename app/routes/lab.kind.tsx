@@ -10,7 +10,7 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { LAB_PATH, PRIMERS, itemPath, kindFromSegment, kindPath, primerRow, protocolsUsing } from "~/lib/registry/catalog.mjs";
+import { LAB_PATH, PRIMERS, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing } from "~/lib/registry/catalog.mjs";
 import { KINDS } from "~/lib/registry/kinds.mjs";
 import { LAB_CACHE_TAGS } from "~/lib/registry/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -55,7 +55,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   if (params.id === undefined) {
     const canonical = catalogRedirect(PRIMERS, url);
     if (canonical) throw redirect(canonical, 301);
-    const primers = (await listRegistry(env, { kind, published: true })).map(primerRow);
+    const primers = primerRows(await listRegistry(env, { kind, published: true }));
     return { view: "kind" as const, kind, primers, search: url.search };
   }
 

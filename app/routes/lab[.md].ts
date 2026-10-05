@@ -12,6 +12,7 @@ import {
   kindPath,
   primerMarkdown,
   primerRow,
+  primerRows,
   primersMarkdown,
   protocolsUsing,
   tmNote,
@@ -52,11 +53,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
   const kind = kindFromSegment(segment);
   if (kind !== "primer") return notFound();
-  const primers = (await listRegistry(env, { kind, published: true })).map(primerRow);
+  const published = await listRegistry(env, { kind, published: true });
+  const primers = published.map(primerRow);
 
   if (id === undefined) {
     return respond(
-      `# Primers\n\nThe primers the lab's protocols use, with each sequence as stored. Length, GC content and melting temperature are computed from the sequence. A product size is shown only where a protocol states one.\n\n${primersMarkdown(primers, SITE_ORIGIN)}\n\n${tmNote().statement} ${tmNote().annealing}\n`,
+      `# Primers\n\nThe primers the lab's protocols use, with each sequence as stored. Length, GC content and melting temperature are computed from the sequence, and a pair's product is computed from where its primers bind a reference sequence.\n\n${primersMarkdown(primerRows(published), SITE_ORIGIN)}\n\n${tmNote().statement} ${tmNote().annealing}\n`,
       kindPath(kind),
     );
   }

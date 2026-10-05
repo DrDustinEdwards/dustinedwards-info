@@ -10,6 +10,7 @@
 import GithubSlugger from "github-slugger";
 
 import { TOOLS } from "../phage-tools.mjs";
+import { productsForRows } from "../registry/align.mjs";
 import { plainText } from "../search/records.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
@@ -61,7 +62,7 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  * in the record, so the page, the sheet, the twin and a frozen version all print the same sequence, and the protocol's
  * file holds none (docs/REGISTRY.md). Its Tm and length are computed from the sequence where they are shown.
  *
- * @typedef {{ id: string, name: string, status: "published" | "draft", set: string | null, direction: string | null, sequence: string | null }} StoredPrimer
+ * @typedef {{ id: string, name: string, status: "published" | "draft", set: string | null, direction: string | null, sequence: string | null, reference: string | null }} StoredPrimer
  */
 
 /**
@@ -352,7 +353,7 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       shelfLife: known(s.shelf_life),
     })),
     // The registry's rows for the primers the file names, in the file's order (compile.mjs resolves them).
-    primers: (primerRows ?? []).map((p) => ({ id: p.id, name: p.name, set: p.set, direction: p.direction, sequence: p.sequence })),
+    primers: (primerRows ?? []).map((p) => ({ id: p.id, name: p.name, set: p.set, direction: p.direction, sequence: p.sequence, reference: p.reference })),
     cycling: Array.isArray(d.cycling) ? d.cycling : [],
     // Recipe.
     servings: known(d.servings) === null ? null : Number(d.servings),
@@ -481,9 +482,16 @@ export function procedureMarkdown(record, parsed) {
     out.push("");
   }
   if (record.primers.length) {
-    out.push("## Primers", "", "| Primer | Direction | Sequence (5′ to 3′) |", "| --- | --- | --- |");
-    for (const p of record.primers) out.push("| [" + p.name + "](/research/lab/primers/" + p.id + ") | " + (p.direction ?? "") + " | " + (p.sequence ? "`" + p.sequence + "`" : "") + " |");
+    const products = productsForRows(record.primers);
+    out.push("## Primers", "", "| Primer | Direction | Sequence (5′ to 3′) | Product (computed) |", "| --- | --- | --- | --- |");
+    for (const p of record.primers) {
+      const pair = products.get(p.id);
+      const sizes = pair ? [...new Set(pair.products.map((x) => x.length))].map((n) => `${n} bp`).join(" or ") : "";
+      out.push("| [" + p.name + "](/research/lab/primers/" + p.id + ") | " + (p.direction ?? "") + " | " + (p.sequence ? "`" + p.sequence + "`" : "") + " | " + sizes + " |");
+    }
     out.push("");
+    const references = [...new Set([...products.values()].map((pair) => pair.reference.id))];
+    if (references.length > 0) out.push(`Product sizes are computed from where the primers bind ${references.join(", ")}, in that accession's coordinates.`, "");
   }
   if (known(d.environment)) out.push("## Environment", "", String(d.environment), "");
   if (record.prerequisites.length) out.push("## Prerequisites", "", ...list(d.prerequisites).map((p) => `- ${p}`), "");
