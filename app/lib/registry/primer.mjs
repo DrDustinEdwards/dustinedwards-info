@@ -99,3 +99,27 @@ export function primerFacts(sequence) {
   const gc = [...sequence].filter((base) => base === "G" || base === "C").length;
   return { length: sequence.length, gcPercent: Math.round((gc / sequence.length) * 1000) / 10, tm: primerTmRounded(sequence) };
 }
+
+/** A field as text: a recorded gap (MISSING: why) and an absent value are both nothing to show. @param {unknown} value */
+function stated(value) {
+  return typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null;
+}
+
+/**
+ * A primer as a protocol carries it (`StoredPrimer` in app/lib/procedures/render.mjs): the registry's stated facts, none
+ * computed. The protocol's record holds these so its page, sheet, twin and frozen versions print one sequence.
+ *
+ * @param {import("./kinds.mjs").RegistryItem} item
+ * @returns {import("../procedures/render.mjs").StoredPrimer}
+ */
+export function storedPrimer(item) {
+  const f = /** @type {Record<string, unknown>} */ (item.fields);
+  return {
+    id: item.id,
+    name: item.name,
+    status: item.status,
+    set: stated(f.set),
+    direction: stated(f.direction),
+    sequence: stated(f.sequence),
+  };
+}

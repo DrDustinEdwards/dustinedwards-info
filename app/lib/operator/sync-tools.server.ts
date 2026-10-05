@@ -47,6 +47,7 @@ import { listPhages } from "~/db/phages";
 import { PHAGES_DIR, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
 import { compile as compilePhageFile, deletePhageRow, refreshPage as refreshPhagePage, writePhageRow } from "~/lib/phages/save.server";
 import { REGISTRY_DIR } from "~/lib/registry/compile.mjs";
+import { refreshProceduresNaming } from "~/lib/procedures/primer-dependents.server";
 import { compile as compileRegistryFile, deleteRegistryRow, writeRegistryRow } from "~/lib/registry/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
@@ -526,7 +527,7 @@ export async function syncPhages(env: OperatorEnv): Promise<ToolResult> {
  * empty set with no rows is converged (emptyOk); an empty set with rows is refused like every other kind's.
  */
 export async function syncRegistry(env: OperatorEnv): Promise<ToolResult> {
-  return convergeKind(env, {
+  const result = await convergeKind(env, {
     tool: "sync_registry",
     dir: REGISTRY_DIR,
     noun: "registry item",
@@ -537,6 +538,11 @@ export async function syncRegistry(env: OperatorEnv): Promise<ToolResult> {
     purge: purgeRegistry,
     emptyOk: true,
   });
+  // The protocols that print a primer carry its facts in their record, so every one that names a primer is recompiled
+  // from its file after the primers converge: a primer edited through git reaches them here, and a protocol left reading
+  // an old sequence by a failed save is repaired by the same run.
+  const refreshed = await refreshProceduresNaming(env, null);
+  return result.ok ? { ok: true, data: { ...(result.data as object), protocolsRefreshed: refreshed.length } } : result;
 }
 
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather

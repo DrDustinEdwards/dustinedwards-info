@@ -68,29 +68,65 @@ test("the REV 3' LTR forward primer is CATACTGAGCCAATGGTT, its pair's product 28
   assert.equal(mateOf(forward, rows)?.id, "rev-3-ltr-reverse");
 });
 
-test("DRIFT GUARD: every primer a protocol lists is a registry primer with the same sequence, direction and set, and every registry primer is used", async () => {
+test("STORED ONCE: no protocol or page holds a registry primer's sequence, every protocol primer is an id the registry holds, and every registry primer is used", async () => {
   const files = await procedures();
   /** @type {Set<string>} */
   const used = new Set();
-  for (const { file, data } of files) {
+  for (const { file, raw, data } of files) {
+    for (const row of rows) assert.ok(!raw.includes(row.sequence), `${file} holds the sequence of ${row.id}; it is stored once, in content/registry/primer`);
     if (!Array.isArray(data.primers)) continue;
     for (const p of data.primers) {
-      const row = rows.find((r) => r.sequence === p.sequence);
-      assert.ok(row, `${file}: the primer ${p.sequence} has no registry record`);
-      assert.equal(row.direction, p.direction, `${file}: ${p.sequence} direction`);
-      if (p.set) assert.equal(row.set, p.set, `${file}: ${p.sequence} set`);
-      if (p.name) assert.equal(row.name, p.name, `${file}: ${p.sequence} name`);
-      used.add(row.id);
+      assert.deepEqual(Object.keys(p), ["primer"], `${file}: a protocol names a primer by id and nothing else`);
+      assert.ok(byId.has(p.primer), `${file}: ${p.primer} is not in the registry`);
+      used.add(p.primer);
     }
   }
   assert.deepEqual(rows.map((r) => r.id).filter((id) => !used.has(id)), [], "a registry primer no protocol uses");
+  const pages = (await readdir(new URL("content/pages/", root))).filter((n) => n.endsWith(".md"));
+  for (const name of pages) {
+    const raw = await text(`content/pages/${name}`);
+    for (const row of rows) assert.ok(!raw.includes(row.sequence), `${name} holds the sequence of ${row.id}`);
+  }
+});
+
+test("a protocol's record carries the registry's facts for the primers it names, in its own order", async () => {
+  const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
+  const compiled = await compileDirectory("content/procedures");
+  const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
+  assert.ok(coi?.ok, JSON.stringify(coi?.errors));
+  assert.deepEqual(coi.record.primers.map((p) => p.id), ["lco1490", "hco2198"]);
+  assert.deepEqual(coi.record.primers[0], { id: "lco1490", name: "LCO1490", set: "COI primers: LCO1490 and HCO2198", direction: "forward", sequence: "GGTCAACAAATCATAAAGATATTGG" });
+  const rev = compiled.find((c) => c.slug === "rev-lpdv-primers")?.compiled;
+  assert.equal(rev?.ok && rev.record.primers.length, 8);
+  assert.ok(rev.markdown.includes("| [REV 3′ LTR forward](/research/lab/primers/rev-3-ltr-forward) | forward | `CATACTGAGCCAATGGTT` |"), "the twin prints the table from the record");
+});
+
+test("the compile refuses what a protocol may not say about a primer, and refuses a registry it was not given", async () => {
+  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const pipeline = await import("../app/lib/content/pipeline.mjs");
+  const { registryHost } = await import("../scripts/lib/registry.mjs");
+  const original = await text("content/procedures/coi-primers.md");
+  const compile = (raw, registry = registryHost()) => compileProcedure({ slug: "coi-primers", raw, pipeline, registry });
+  assert.equal((await compile(original)).ok, true);
+
+  const unknown = await compile(original.replace("primer: hco2198", "primer: no-such-primer"));
+  assert.match(unknown.errors.join("\n"), /primers\[no-such-primer\] names no primer in the lab registry/);
+  const twice = await compile(original.replace("primer: hco2198", "primer: lco1490"));
+  assert.match(twice.errors.join("\n"), /primers\[lco1490\] is listed twice/);
+  const inline = await compile(original.replace("  - { primer: hco2198 }", "  - { primer: hco2198, sequence: TAAACTTCAGGGTGACCAAAAAATCA }"));
+  assert.match(inline.errors.join("\n"), /\.sequence is not a protocol field/);
+  const old = await compile(original.replace("  - { primer: hco2198 }", "  - { direction: reverse, sequence: TAAACTTCAGGGTGACCAAAAAATCA }"));
+  assert.match(old.errors.join("\n"), /is \{ primer: <id> \}/);
+  const none = await compileProcedure({ slug: "coi-primers", raw: original, pipeline });
+  assert.equal(none.ok, false);
+  assert.match(none.errors.join("\n"), /no lab registry/);
 });
 
 test("a product is stated only where a protocol states it: its size is in the text of a protocol that uses the pair", async () => {
   const files = await procedures();
   for (const row of rows.filter((r) => r.product)) {
     const stated = row.product.replace(/^about /, "");
-    const using = files.filter((f) => Array.isArray(f.data.primers) && f.data.primers.some((p) => p.sequence === row.sequence));
+    const using = files.filter((f) => Array.isArray(f.data.primers) && f.data.primers.some((p) => p.primer === row.id));
     assert.ok(using.length > 0, `${row.id} is used by a protocol`);
     assert.ok(using.some((f) => f.raw.includes(stated)), `${row.id}: no protocol that uses it says ${stated}`);
   }
@@ -163,11 +199,11 @@ test("the inventory is the registry's items and the phages, the phages read and 
   assert.equal(PRIMERS.fields.find((f) => f.key === "tm")?.type, "number");
 });
 
-test("a protocol uses a primer when it lists its sequence; none is listed on the primer", () => {
+test("a protocol uses a primer when it names its id; none is listed on the primer", () => {
   const lco = byId.get("lco1490");
   const protocols = [
-    { path: "/research/protocols/coi-primers", title: "COI", primers: [{ sequence: lco.sequence }] },
-    { path: "/research/protocols/other", title: "Other", primers: [{ sequence: "AAAAAAAAAAAA" }] },
+    { path: "/research/protocols/coi-primers", title: "COI", primers: [{ id: "lco1490" }] },
+    { path: "/research/protocols/other", title: "Other", primers: [{ id: "hco2198" }] },
   ];
   assert.deepEqual(protocolsUsing(lco, protocols), [{ path: "/research/protocols/coi-primers", title: "COI" }]);
 });

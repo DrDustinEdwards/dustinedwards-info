@@ -13,21 +13,20 @@ import matter from "gray-matter";
 import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
-import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import { refreshProceduresNaming } from "~/lib/procedures/primer-dependents.server";
 
 import {
-  compileRegistryItem,
   parseRegistrySlug,
   registryPath,
   registrySetErrors,
   registrySlug,
   type RegistryItem,
 } from "./compile.mjs";
+import { compile } from "./host.server";
 import { KINDS, type KindSpec } from "./kinds.mjs";
 
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
@@ -41,20 +40,8 @@ export class RegistryInvalid extends ContentInvalid {
   }
 }
 
-/**
- * What the repository can answer for a file, which is what CI asks too: a field that names a paper means a paper this
- * site has a file, and so a page, for. Asking the repository rather than D1 keeps a save and a sync_registry
- * independent of whether the publications have been synced yet.
- */
-function githubHost(env: RegistryEnv) {
-  return { paper: async (slug: string) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null };
-}
-
-/** The one compile door: the save, get_registry and sync_registry all read a file through it. */
-export async function compile(env: RegistryEnv, slug: string, raw: string, kinds: Kinds = KINDS) {
-  const { findWideDashes } = await loadPipeline();
-  return compileRegistryItem({ slug, raw, host: githubHost(env), pipeline: { findWideDashes }, kinds });
-}
+/** The one compile door (host.server.ts): the save, get_registry and sync_registry all read a file through it. */
+export { compile };
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
 
@@ -192,6 +179,8 @@ export async function saveRegistryItem(
   await convergeWithRetry({
     write: async () => {
       await writeRegistryRow(env, compiled);
+      // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
+      if (kind === "primer") await refreshProceduresNaming(env, [id]);
       purged = await purgeRegistry(`save registry item ${slug}`);
     },
     // Nothing kept in KV for an item: the thrown error names the commit and the repair (sync_registry), and the

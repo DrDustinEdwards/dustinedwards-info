@@ -53,8 +53,8 @@ equipment:
   - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
-  - { direction: forward, sequence: GTGGTGCTAAGCGTGTTATCATC }
-  - { direction: reverse, sequence: GGCAGCACCTCTGCCATC }
+  - { primer: gapdh-forward }
+  - { primer: gapdh-reverse }
 cycling:
   - program:
       - { stage: initial denaturation, temperature_c: 95, time: 10 min. }
@@ -76,12 +76,7 @@ references:
 
 This is the PCR protocol my lab uses to amplify pan-avian GAPDH (glyceraldehyde-3-phosphate dehydrogenase). It serves as a control for avian DNA: a GAPDH band shows that a bird DNA extraction holds DNA that will amplify, so a negative result in a virus PCR such as the [REV PCR](/research/protocols/rev-lpdv-primers) can be trusted.
 
-## Primer sequences
-
-| Primer | Sequence (5′ to 3′) |
-| --- | --- |
-| Forward | `GTGGTGCTAAGCGTGTTATCATC` |
-| Reverse | `GGCAGCACCTCTGCCATC` |
+## Where the primers come from
 
 The primers are from [Olias et al. 2014](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057121/) (PMC4057121). The protocol on this page is the one published in [Stewart et al. 2019, J Wildl Dis 55(3)](/research/publications/10-7589-2018-08-187/), with the cycling in that paper's supplement; [Cox et al. 2022](/research/publications/10-7589-jwd-d-22-00023/) used the same cycling.
 

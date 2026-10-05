@@ -32,7 +32,7 @@ const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
  */
 export function fixedSectionIds(profile) {
   const materials = profile === "recipe" ? "ingredients" : profile === "computational" ? "software-and-data" : "reagents";
-  return [materials, "equipment", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure"];
+  return [materials, "equipment", "primers", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure"];
 }
 
 /**
@@ -57,15 +57,24 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  */
 
 /**
+ * A primer as a protocol carries it: the lab registry's own facts about it, read when the protocol is compiled and stored
+ * in the record, so the page, the sheet, the twin and a frozen version all print the same sequence, and the protocol's
+ * file holds none (docs/REGISTRY.md). Its Tm and length are computed from the sequence where they are shown.
+ *
+ * @typedef {{ id: string, name: string, status: "published" | "draft", set: string | null, direction: string | null, sequence: string | null }} StoredPrimer
+ */
+
+/**
  * @param {{
  *   slug: string,
  *   parsed: import("./parse.mjs").ParsedProcedure,
  *   gaps: Array<{ field: string, reason: string }>,
  *   renderBody: RenderBody,
  *   resolveImage?: (src: string) => Promise<{ width: number, height: number }>,
+ *   primerRows?: StoredPrimer[],
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage }) {
+export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows }) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
@@ -342,7 +351,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       storage: known(s.storage),
       shelfLife: known(s.shelf_life),
     })),
-    primers: Array.isArray(d.primers) ? d.primers.filter((/** @type {any} */ p) => known(p.sequence) !== null) : [],
+    // The registry's rows for the primers the file names, in the file's order (compile.mjs resolves them).
+    primers: (primerRows ?? []).map((p) => ({ id: p.id, name: p.name, set: p.set, direction: p.direction, sequence: p.sequence })),
     cycling: Array.isArray(d.cycling) ? d.cycling : [],
     // Recipe.
     servings: known(d.servings) === null ? null : Number(d.servings),
@@ -468,6 +478,11 @@ export function procedureMarkdown(record, parsed) {
   if (record.equipment.length) {
     out.push("## Equipment", "");
     for (const e of list(d.equipment)) out.push(typeof e === "string" ? `- ${e}` : `- ${e.name}${e.note ? `: ${e.note}` : ""}`);
+    out.push("");
+  }
+  if (record.primers.length) {
+    out.push("## Primers", "", "| Primer | Direction | Sequence (5′ to 3′) |", "| --- | --- | --- |");
+    for (const p of record.primers) out.push("| [" + p.name + "](/research/lab/primers/" + p.id + ") | " + (p.direction ?? "") + " | " + (p.sequence ? "`" + p.sequence + "`" : "") + " |");
     out.push("");
   }
   if (known(d.environment)) out.push("## Environment", "", String(d.environment), "");

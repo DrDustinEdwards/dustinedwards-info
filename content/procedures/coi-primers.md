@@ -15,8 +15,8 @@ biosafety: "MISSING: Waiting on Dustin: the biosafety officer check (core.md). p
 biosafety_level: "MISSING: Waiting on Dustin: he sets BSL-1 or BSL-2 for each protocol himself."
 scale: "MISSING: The page does not record the reaction mix the lab used, so it states no reaction volume or number of reactions to scale by."
 primers:
-  - { name: LCO1490, direction: forward, sequence: GGTCAACAAATCATAAAGATATTGG }
-  - { name: HCO2198, direction: reverse, sequence: TAAACTTCAGGGTGACCAAAAAATCA }
+  - { primer: lco1490 }
+  - { primer: hco2198 }
 cycling:
   - program:
       - stage: initial denaturation
@@ -70,13 +70,6 @@ This is the PCR protocol my lab uses to amplify the mitochondrial cytochrome c o
 The primers amplify a region of the mitochondrial COI gene in metazoan invertebrates. Folmer et al. (1994) report the product as about 710 bp. In the lab's gels the product runs at about 708 bp beside a 100 bp ladder, with a band in the positive (mtDNA) lane and none in the negative lane.
 
 The primers come from Folmer et al. (1994), who designed them to amplify this region of COI from a wide range of invertebrate phyla.
-
-## Primer sequences
-
-| Primer | Direction | Sequence (5′ to 3′) |
-| --- | --- | --- |
-| LCO1490 | Forward | `GGTCAACAAATCATAAAGATATTGG` |
-| HCO2198 | Reverse | `TAAACTTCAGGGTGACCAAAAAATCA` |
 
 ## Reaction mix
 

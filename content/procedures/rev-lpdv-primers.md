@@ -53,14 +53,14 @@ equipment:
   - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
-  - { set: PCR REV 3′ LTR, direction: forward, sequence: CATACTGAGCCAATGGTT }
-  - { set: PCR REV 3′ LTR, direction: reverse, sequence: AATGTTGTACCGAAGTACT }
-  - { set: PCR REV pol (protease and reverse transcriptase), direction: forward, sequence: CAAATAATAGATTTTCTAGTAGATACGGGA }
-  - { set: PCR REV pol (protease and reverse transcriptase), direction: reverse, sequence: AGTGGACGGGTCTCAGGA }
-  - { set: PCR REV pol (reverse transcriptase and integrase), direction: forward, sequence: CGAGAAGTAGCTATACGTCCTTTG }
-  - { set: PCR REV pol (reverse transcriptase and integrase), direction: reverse, sequence: ACATCGTGCCCGGAGC }
-  - { set: PCR LPDV p31/CA, direction: forward, sequence: ATGAGGACTTGTTAGATTGGTTAC }
-  - { set: PCR LPDV p31/CA, direction: reverse, sequence: TGATGGCGTCAGGGCTATTTG }
+  - { primer: rev-3-ltr-forward }
+  - { primer: rev-3-ltr-reverse }
+  - { primer: rev-pol-pr-rt-forward }
+  - { primer: rev-pol-pr-rt-reverse }
+  - { primer: rev-pol-rt-in-forward }
+  - { primer: rev-pol-rt-in-reverse }
+  - { primer: lpdv-p31-ca-forward }
+  - { primer: lpdv-p31-ca-reverse }
 cycling:
   - set: PCR REV 3′ LTR
     program:
@@ -172,11 +172,6 @@ From Stewart et al. 2019, for each 25 µL reaction:
 
 Amplifies a region of the REV 3′ LTR. Product: 281 bp.
 
-| Primer | Sequence (5′ to 3′) |
-| --- | --- |
-| Forward | `CATACTGAGCCAATGGTT` |
-| Reverse | `AATGTTGTACCGAAGTACT` |
-
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
 | initial denaturation | 95 | 5 min. |
@@ -191,11 +186,6 @@ The extension in each cycle is 68 °C, 60 s + 1 s per cycle: it starts at 60 s a
 ## PCR REV pol (protease and reverse transcriptase)
 
 Amplifies the part of REV *pol* that spans protease and reverse transcriptase. Product: 574 bp.
-
-| Primer | Sequence (5′ to 3′) |
-| --- | --- |
-| Forward | `CAAATAATAGATTTTCTAGTAGATACGGGA` |
-| Reverse | `AGTGGACGGGTCTCAGGA` |
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
@@ -215,11 +205,6 @@ The first 15 cycles are a touchdown: the annealing temperature steps down from 6
 
 Amplifies the part of REV *pol* that spans reverse transcriptase and integrase. Product: 801 bp.
 
-| Primer | Sequence (5′ to 3′) |
-| --- | --- |
-| Forward | `CGAGAAGTAGCTATACGTCCTTTG` |
-| Reverse | `ACATCGTGCCCGGAGC` |
-
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
 | initial denaturation | 95 | 10 min. |
@@ -237,11 +222,6 @@ The cycling is the same as for the protease and reverse transcriptase set, as in
 ## PCR LPDV p31/CA
 
 Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are from [Allison et al. 2014, Virology 450-451:2-12](https://doi.org/10.1016/j.virol.2013.11.037), designed on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). The cycling is from Cox et al. 2022 and its supplement. Use the reaction mix above.
-
-| Primer | Sequence (5′ to 3′) | Length |
-| --- | --- | --- |
-| Forward | `ATGAGGACTTGTTAGATTGGTTAC` | 24 nt |
-| Reverse | `TGATGGCGTCAGGGCTATTTG` | 21 nt |
 
 Product: 458 bp (U09568, positions 1041-1498), spanning the partial p31/partial CA fragment Allison et al. 2014 analyzed.
 
