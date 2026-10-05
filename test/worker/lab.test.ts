@@ -1,6 +1,9 @@
 import { env } from "cloudflare:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { ProcedureView } from "~/components/procedure";
 import Lab, { loader as labLoader } from "~/routes/lab";
 import LabKind, { loader as kindLoader } from "~/routes/lab.kind";
 import { loader as twinLoader } from "~/routes/lab[.md]";
@@ -43,8 +46,10 @@ describe("the master inventory", () => {
     const kinds = new Map<string, number>();
     for (const row of loaderData.rows) kinds.set(row.kind, (kinds.get(row.kind) ?? 0) + 1);
     expect(kinds.get("primer")).toBe(12);
+    expect(kinds.get("strain")).toBe(2);
     expect(kinds.get("phage")).toBe(75);
-    expect(html).toContain("12 primers, 75 phages");
+    expect(html).toContain("12 primers, 2 strains, 75 phages");
+    expect(html).toContain('href="/research/lab/strains/foliorum"');
     expect(html).toContain('href="/research/lab/primers/lco1490"');
     // A phage's row links to its own section on the phages page, and the registry holds no phage row of its own.
     expect(html).toContain('href="/research/phages#acorn15"');
@@ -81,7 +86,7 @@ describe("the primers page", () => {
   });
 
   it("answers 404 for a kind with no records or view yet, and for a kind that does not exist", async () => {
-    for (const kind of ["strains", "reagents", "equipment", "gadgets"]) {
+    for (const kind of ["reagents", "equipment", "gadgets"]) {
       await expect(kindPage(kind)).rejects.toMatchObject({ init: { status: 404 } });
     }
   });
@@ -132,6 +137,53 @@ describe("one primer", () => {
   });
 });
 
+const phagesOn = async (host: string) =>
+  (await env.DB.prepare("SELECT COUNT(*) AS n FROM phages WHERE json_extract(record, '$.host') = ?1").bind(host).first<{ n: number }>())?.n ?? 0;
+
+describe("the strains page", () => {
+  it("lists the two strains with their collection numbers and the phages counted from the phages table", async () => {
+    const { html } = await kindPage("strains");
+    expect(html).toContain("Microbacterium foliorum NRRL B-24224");
+    expect(html).toContain("Mycobacterium smegmatis mc²155");
+    expect(html).toContain("ATCC");
+    expect(html).toContain("700084");
+    expect(html).toContain(String(await phagesOn("foliorum")));
+    await expect(kindPage("strains", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
+  });
+});
+
+describe("one strain", () => {
+  it("states the organism, the collection, the Guide's page and the biosafety gap, and lists its phages and its protocols, all computed", async () => {
+    const { html } = await kindPage("strains", "foliorum");
+    expect(html).toContain("<h1");
+    expect(html).toContain("Microbacterium foliorum");
+    expect(html).toContain("NRRL B-24224");
+    expect(html).toContain('href="https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum"');
+    expect(html).toContain("Not found:");
+    expect(html).toContain("biosafety officer check");
+    expect(html).toContain(`${await phagesOn("foliorum")} phages, found `);
+    expect(html).toContain('href="/research/protocols/phage-isolation"');
+    const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'strain' AND id = 'foliorum'").first<{ record: string }>();
+    for (const field of ["phages", "protocols", "designation"]) expect(Object.keys(JSON.parse(stored?.record ?? "{}"))).not.toContain(field);
+  });
+
+  it("answers 404 for a strain that does not exist, and serves its twin", async () => {
+    await expect(kindPage("strains", "no-such-strain")).rejects.toMatchObject({ init: { status: 404 } });
+    const text = await (await twin({ kind: "strains", id: "smegmatis" })).text();
+    expect(text).toContain("# Mycobacterium smegmatis mc²155");
+    expect(text).toContain("- Collection: ATCC 700084");
+    expect(text).toContain("- Biosafety level: not found (");
+    expect(text).toContain("/research/protocols/phage-isolation");
+    expect(await (await twin({ kind: "strains" })).text()).toContain("| Strain | Organism | Collection | Collection number | Phages isolated |");
+  });
+
+  it("is on the protocol that uses it, as a link from its Host strain fact", async () => {
+    const stored = await env.DB.prepare("SELECT record FROM procedures WHERE slug = 'phage-isolation'").first<{ record: string }>();
+    const html = renderToStaticMarkup(createElement(ProcedureView, { record: JSON.parse(stored?.record ?? "{}"), count: 1, factor: 1 }));
+    expect(html).toContain('<a href="/research/lab/strains/foliorum">Microbacterium foliorum NRRL B-24224</a>');
+  });
+});
+
 describe("the twins", () => {
   it("serve the inventory, the primers and one primer as markdown with the registry's cache tags and a canonical link", async () => {
     const inv = await twin({});
@@ -157,7 +209,8 @@ describe("the twins", () => {
   });
 
   it("answer 404 for what has no page", async () => {
-    expect((await twin({ kind: "strains" })).status).toBe(404);
+    expect((await twin({ kind: "reagents" })).status).toBe(404);
+    expect((await twin({ kind: "strains", id: "nothing" })).status).toBe(404);
     expect((await twin({ kind: "primers", id: "nothing" })).status).toBe(404);
   });
 });

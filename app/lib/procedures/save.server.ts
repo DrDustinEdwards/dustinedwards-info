@@ -10,7 +10,7 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
-import { readPrimers } from "~/lib/registry/host.server";
+import { readPrimers, readStrains } from "~/lib/registry/host.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
@@ -43,8 +43,8 @@ export async function compile(env: ProcedureEnv, slug: string, raw: string) {
     raw,
     pipeline: { renderBody, findWideDashes },
     resolveImage: makeResolveImage(env),
-    // The primers a protocol names are the lab registry's, read from the repository as CI reads them (docs/REGISTRY.md).
-    registry: { primers: (ids) => readPrimers(env, ids) },
+    // The primers and host strains a protocol names are the lab registry's, read from the repository as CI reads them (docs/REGISTRY.md).
+    registry: { primers: (ids) => readPrimers(env, ids), strains: (ids) => readStrains(env, ids) },
   });
   if (!compiled.ok || !needsFreeze(compiled.record)) return compiled;
   const frozen = await frozenBlobSha(env, slug, String(compiled.record.version));

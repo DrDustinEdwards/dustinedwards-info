@@ -292,3 +292,10 @@ export async function seedRegistry() {
   );
   return rows.length;
 }
+
+/* The strain records as the repository holds them, by repo path: a protocol that names its host strains by id (docs/REGISTRY.md)
+ * compiles only where the repository holds those strains, so a case that saves one adds these to its stubbed GitHub. */
+const STRAIN_FILES = import.meta.glob("../../content/registry/strain/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+export const strainRepoFiles: Record<string, string> = Object.fromEntries(
+  Object.entries(STRAIN_FILES).map(([path, raw]) => [`content/registry/strain/${path.split("/").pop()}`, raw]),
+);

@@ -9,6 +9,7 @@ import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/lib/registry/compile.mjs";
 import { KINDS } from "../../app/lib/registry/kinds.mjs";
 import { storedPrimer } from "../../app/lib/registry/primer.mjs";
+import { storedStrain } from "../../app/lib/registry/strain.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -117,11 +118,19 @@ export async function buildRegistry(options = {}) {
 export function registryHost(options) {
   /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredPrimer>> | undefined} */
   let primers;
+  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredStrain>> | undefined} */
+  let strains;
   return {
     /** @param {string[]} ids */
     async primers(ids) {
       primers ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "primer").map((item) => [item.id, storedPrimer(item)])));
       const all = await primers;
+      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+    },
+    /** @param {string[]} ids */
+    async strains(ids) {
+      strains ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "strain").map((item) => [item.id, storedStrain(item)])));
+      const all = await strains;
       return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
     },
   };
