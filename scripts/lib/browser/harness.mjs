@@ -32,7 +32,10 @@ export const skipped = [];
 export const FETCH_TIMEOUT_MS = 30_000;
 
 /**
- * Fails one case on a missing selector, where `page.click` would end the run.
+ * Fails one case on a missing selector or a click that cannot land, where `page.click` would end the run. A click can throw
+ * ("Node is either not clickable or not an Element") when the control is re-drawn between the lookup and the click, as a
+ * chart is when a filter changes, so the element is looked up again once before the case fails: a control that is really
+ * unclickable fails twice and is reported, and one that was only being re-drawn is clicked.
  *
  * @param {any} target
  * @param {string} selector
@@ -40,18 +43,29 @@ export const FETCH_TIMEOUT_MS = 30_000;
  * @returns {Promise<boolean>} whether the click happened
  */
 export async function clickOrFail(target, selector, label) {
-  const handle = await target.$(selector);
-  if (!handle) {
-    ok(
-      label,
-      false,
-      `no element matches ${selector}. The selector has moved or the control is gone. ` +
-        `Every later case still ran, which is the point of failing here rather than throwing.`,
-    );
-    return false;
+  /** @type {unknown} */
+  let failure = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const handle = await target.$(selector);
+    if (!handle) {
+      failure = new Error(`no element matches ${selector}. The selector has moved or the control is gone.`);
+    } else {
+      try {
+        await handle.click();
+        return true;
+      } catch (error) {
+        failure = error;
+      }
+    }
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  await handle.click();
-  return true;
+  ok(
+    label,
+    false,
+    `${failure instanceof Error ? failure.message : String(failure)} (tried twice, ${selector}). ` +
+      `Every later case still ran, which is the point of failing here rather than throwing.`,
+  );
+  return false;
 }
 
 /** @param {string} label @param {string} why */
