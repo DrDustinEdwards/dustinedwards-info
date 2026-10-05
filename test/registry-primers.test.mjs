@@ -237,7 +237,7 @@ test("addresses: the kind's page is its plural, an item sits under it, and a seg
   assert.equal(kindFromSegment("primers"), "primer");
   assert.equal(kindFromSegment("primer"), null);
   assert.equal(kindFromSegment("strains"), "strain");
-  assert.deepEqual(Object.keys(KINDS), ["primer", "strain"]);
+  assert.deepEqual(Object.keys(KINDS), ["primer", "strain", "reagent"]);
 });
 
 test("the inventory is the registry's items and the phages, the phages read and never copied, the lab's own records first", () => {
@@ -246,7 +246,7 @@ test("the inventory is the registry's items and the phages, the phages read and 
     { name: "Zeta", year: 2026, host: null, county: null },
   ];
   const inventory = inventoryRows(built.items, phages);
-  assert.equal(inventory.length, 16, "twelve primers, two strains and two phages");
+  assert.equal(inventory.length, 31, "twelve primers, two strains, fifteen reagents and two phages");
   assert.equal(inventory.filter((r) => r.kind === "phage").length, 2);
   const acorn = inventory.find((r) => r.name === "Acorn15");
   assert.equal(acorn?.path, "/research/phages#acorn15");

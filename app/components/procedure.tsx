@@ -165,7 +165,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
           {record.materials.map((m) => (
             <tr key={m.name} id={`material-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
               <th scope="row">
-                {m.display}
+                {m.reagent ? <a href={m.reagent.path}>{m.display}</a> : m.display}
                 {m.group ? <span className="procedure-group"> ({m.group})</span> : null}
               </th>
               {hasKind ? <td>{m.kind}</td> : null}

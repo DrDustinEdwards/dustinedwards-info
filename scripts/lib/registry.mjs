@@ -9,6 +9,7 @@ import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/lib/registry/compile.mjs";
 import { KINDS } from "../../app/lib/registry/kinds.mjs";
 import { storedPrimer } from "../../app/lib/registry/primer.mjs";
+import { storedReagent } from "../../app/lib/registry/reagent.mjs";
 import { storedStrain } from "../../app/lib/registry/strain.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -120,11 +121,19 @@ export function registryHost(options) {
   let primers;
   /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredStrain>> | undefined} */
   let strains;
+  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredReagent>> | undefined} */
+  let reagents;
   return {
     /** @param {string[]} ids */
     async primers(ids) {
       primers ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "primer").map((item) => [item.id, storedPrimer(item)])));
       const all = await primers;
+      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+    },
+    /** @param {string[]} ids */
+    async reagents(ids) {
+      reagents ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "reagent").map((item) => [item.id, storedReagent(item)])));
+      const all = await reagents;
       return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
     },
     /** @param {string[]} ids */

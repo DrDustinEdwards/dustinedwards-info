@@ -6,11 +6,12 @@
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/editor/github.server";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
-import type { StoredPrimer, StoredStrain } from "~/lib/procedures/render.mjs";
+import type { StoredPrimer, StoredReagent, StoredStrain } from "~/lib/procedures/render.mjs";
 
 import { compileRegistryItem, registryPath, registrySlug } from "./compile.mjs";
 import { KINDS, type KindSpec } from "./kinds.mjs";
 import { storedPrimer } from "./primer.mjs";
+import { storedReagent } from "./reagent.mjs";
 import { storedStrain } from "./strain.mjs";
 
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
@@ -50,6 +51,19 @@ export async function readStrains(env: RegistryEnv, ids: string[]): Promise<Map<
     if (!file) continue;
     const compiled = await compile(env, slug, file.content);
     if (compiled.ok) found.set(id, storedStrain(compiled.item));
+  }
+  return found;
+}
+
+/** The reagents a protocol's materials name, as the repository holds them; an id with no compiling file is left out, and the validator names it. */
+export async function readReagents(env: RegistryEnv, ids: string[]): Promise<Map<string, StoredReagent>> {
+  const found = new Map<string, StoredReagent>();
+  for (const id of ids) {
+    const slug = registrySlug("reagent", id);
+    const file = await readFile(env, registryPath(slug));
+    if (!file) continue;
+    const compiled = await compile(env, slug, file.content);
+    if (compiled.ok) found.set(id, storedReagent(compiled.item));
   }
   return found;
 }

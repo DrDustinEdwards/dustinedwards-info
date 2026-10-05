@@ -214,7 +214,7 @@ export async function saveRegistryItem(
     write: async () => {
       await writeRegistryRow(env, compiled);
       // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
-      if (kind === "primer" || kind === "strain") await refreshProceduresNaming(env, [id], [kind]);
+      if (kind === "primer" || kind === "strain" || kind === "reagent") await refreshProceduresNaming(env, [id], [kind]);
       purged = await purgeRegistry(`save registry item ${slug}`);
     },
     // Nothing kept in KV for an item: the thrown error names the commit and the repair (sync_registry), and the
