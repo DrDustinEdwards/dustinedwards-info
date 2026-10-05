@@ -4,6 +4,7 @@
 
 import { gitBlobSha } from "../content/hashes.mjs";
 import { itemPath } from "../registry/catalog.mjs";
+import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchInput, renderProcedure } from "./render.mjs";
 import { validateProcedure } from "./validate.mjs";
@@ -42,16 +43,19 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
   // compile a protocol that names primers: writing a record with no primer table would be silent.
   const named = Array.isArray(parsed.data.primers) ? parsed.data.primers.flatMap((p) => (typeof p?.primer === "string" ? [p.primer] : [])) : [];
   const namedStrains = Array.isArray(parsed.data.host_strain) ? parsed.data.host_strain.flatMap((s) => (typeof s?.strain === "string" ? [s.strain] : [])) : [];
-  if ((named.length > 0 || namedStrains.length > 0) && !registry) {
-    return { ok: false, errors: ["this compile was given no lab registry, so the primers and host strains the file names cannot be read"], gaps: [] };
+  // An organism that is not a non-strain organism is a strain of the registry, so it is read from there too.
+  const organismIds = Array.isArray(parsed.data.organism) ? parsed.data.organism.filter((id) => typeof id === "string" && !Object.hasOwn(NON_STRAIN_ORGANISMS, id)) : [];
+  if ((named.length > 0 || namedStrains.length > 0 || organismIds.length > 0) && !registry) {
+    return { ok: false, errors: ["this compile was given no lab registry, so the primers, host strains and organisms the file names cannot be read"], gaps: [] };
   }
   const primerRows = named.length > 0 && registry ? await registry.primers(named) : new Map();
-  const strainRows = namedStrains.length > 0 && registry ? await registry.strains(namedStrains) : new Map();
+  const strainIds = [...new Set([...namedStrains, ...organismIds])];
+  const strainRows = strainIds.length > 0 && registry ? await registry.strains(strainIds) : new Map();
   const { errors, gaps } = validateProcedure(parsed, { slug, primers: new Set(primerRows.keys()), strains: new Set(strainRows.keys()) });
   // A draft primer is the admin's alone, so a published protocol may not print it.
   if (parsed.data.draft !== true) {
     for (const [id, row] of primerRows) if (row.status === "draft") errors.push(`primers[${id}] is a draft in the lab registry, so a published protocol cannot print it`);
-    for (const [id, row] of strainRows) if (row.status === "draft") errors.push(`host_strain[${id}] is a draft in the lab registry, so a published protocol cannot name it`);
+    for (const [id, row] of strainRows) if (row.status === "draft") errors.push(`strain ${id} is a draft in the lab registry, so a published protocol cannot name it`);
   }
   errors.unshift(...dashes);
   if (errors.length > 0) return { ok: false, errors, gaps };
@@ -67,6 +71,13 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       primerRows: named.flatMap((id) => (primerRows.has(id) ? [primerRows.get(id)] : [])),
       // The strain's page is where the protocol links it, computed from its id here and not typed anywhere.
       strainRows: namedStrains.flatMap((id) => (strainRows.has(id) ? [{ ...strainRows.get(id), path: itemPath("strain", id) }] : [])),
+      // The words for each organism id the protocol names, from the registry (or the non-strain list), so the library needs no list of its own.
+      organismNames: Object.fromEntries(
+        (Array.isArray(parsed.data.organism) ? parsed.data.organism : []).flatMap((id) => {
+          const words = Object.hasOwn(NON_STRAIN_ORGANISMS, id) ? /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id] : strainRows.get(id)?.organism;
+          return words ? [[id, words]] : [];
+        }),
+      ),
     });
   } catch (error) {
     return { ok: false, errors: [error instanceof Error ? error.message : String(error)], gaps };

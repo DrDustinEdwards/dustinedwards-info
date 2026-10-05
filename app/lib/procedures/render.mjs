@@ -81,9 +81,10 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  *   resolveImage?: (src: string) => Promise<{ width: number, height: number }>,
  *   primerRows?: StoredPrimer[],
  *   strainRows?: Array<StoredStrain & { path: string }>,
+ *   organismNames?: Record<string, string>,
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows }) {
+export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames }) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
@@ -308,6 +309,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     // What the protocol library filters and lists by (taxonomy.mjs); ids, so the page draws the words.
     methods: /** @type {string[]} */ (list(known(d.method))),
     organisms: /** @type {string[]} */ (list(known(d.organism))),
+    // The words for each organism id, read from the lab registry when the protocol was compiled (docs/REGISTRY.md).
+    organismNames: organismNames ?? {},
     targets: /** @type {string[]} */ (list(known(d.target))),
     courses: /** @type {string[]} */ (list(known(d.course))),
     // The library's "Start here" position, or null: stored, never inferred.

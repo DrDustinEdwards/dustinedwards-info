@@ -13,10 +13,10 @@ Bacteriophages are viruses that infect bacteria. They are the most numerous biol
 
 The lab has isolated phages on two hosts, both soil actinobacteria:
 
-- *Mycobacterium smegmatis* mc²155 (ATCC 700084), a fast-growing relative of the bacterium that causes tuberculosis. The lab used this host in 2017.
-- *Microbacterium foliorum* (NRRL B-24224), used from 2018 on. Its phages are called microbacteriophages.
+- [*Mycobacterium smegmatis*](/research/lab/strains/smegmatis), a fast-growing relative of the bacterium that causes tuberculosis. The lab used this host in 2017.
+- [*Microbacterium foliorum*](/research/lab/strains/foliorum), used from 2018 on. Its phages are called microbacteriophages.
 
-The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated {{phages.count}} phages from {{phages.firstYear}} through {{phages.lastYear}}: {{phages.host.smegmatis.count}} on *Mycobacterium smegmatis* mc²155 (all in {{phages.host.smegmatis.years}}) and {{phages.host.foliorum.count}} on *Microbacterium foliorum*. Every phage is listed in the [phage table](/research/phages).
+The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated {{phages.count}} phages from {{phages.firstYear}} through {{phages.lastYear}}: {{phages.host.smegmatis.count}} on [*Mycobacterium smegmatis*](/research/lab/strains/smegmatis) (all in {{phages.host.smegmatis.years}}) and {{phages.host.foliorum.count}} on [*Microbacterium foliorum*](/research/lab/strains/foliorum). Every phage is listed in the [phage table](/research/phages).
 
 Phage research also has a clinical side. A survey of 196 US healthcare providers found that 49 percent knew about phage therapy for resistant bacterial infections and 56 percent would consider using it ([phage therapy survey](/research/publications/10-3390-ijerph22071139/)).
 

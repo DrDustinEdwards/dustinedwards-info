@@ -153,14 +153,13 @@ describe("the strains page", () => {
 });
 
 describe("one strain", () => {
-  it("states the organism, the collection, the Guide's page and the biosafety gap, and lists its phages and its protocols, all computed", async () => {
+  it("states the organism, the collection, the Guide's page and the biosafety level, and lists its phages and its protocols, all computed", async () => {
     const { html } = await kindPage("strains", "foliorum");
     expect(html).toContain("<h1");
     expect(html).toContain("Microbacterium foliorum");
     expect(html).toContain("NRRL B-24224");
     expect(html).toContain('href="https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum"');
-    expect(html).toContain("Not found:");
-    expect(html).toContain("biosafety officer check");
+    expect(html).toContain("BSL-1");
     expect(html).toContain(`${await phagesOn("foliorum")} phages, found `);
     expect(html).toContain('href="/research/protocols/phage-isolation"');
     const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'strain' AND id = 'foliorum'").first<{ record: string }>();
@@ -172,7 +171,7 @@ describe("one strain", () => {
     const text = await (await twin({ kind: "strains", id: "smegmatis" })).text();
     expect(text).toContain("# Mycobacterium smegmatis mc²155");
     expect(text).toContain("- Collection: ATCC 700084");
-    expect(text).toContain("- Biosafety level: not found (");
+    expect(text).toContain("- Biosafety level: BSL-1");
     expect(text).toContain("/research/protocols/phage-isolation");
     expect(await (await twin({ kind: "strains" })).text()).toContain("| Strain | Organism | Collection | Collection number | Phages isolated |");
   });

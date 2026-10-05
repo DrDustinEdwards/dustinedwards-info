@@ -57,6 +57,8 @@ const RECORDS = [
     title: "Phage isolation, a | b",
     methods: ["plating", "culture"],
     organisms: ["smegmatis"],
+    // The words for a strain come from the lab registry, baked into the record when the protocol is compiled.
+    organismNames: { smegmatis: "Mycobacterium smegmatis" },
     courses: ["phage-discovery"],
     time: { total: "2 days", handsOn: null },
   }),

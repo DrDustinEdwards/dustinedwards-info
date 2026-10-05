@@ -16,7 +16,7 @@ import { compile, writeRow } from "./save.server";
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
 
 /** The record field each kind's items are named in. */
-const NAMED_IN = { primer: "$.primers", strain: "$.hostStrains" } as const;
+const NAMED_IN = { primer: ["$.primers"], strain: ["$.hostStrains", "$.organisms"] } as const;
 export type NamedKind = keyof typeof NAMED_IN;
 
 /** The slugs of the procedures whose stored record names one of these items (of these kinds), or any item of the kinds when `ids` is null. */
@@ -24,13 +24,16 @@ export async function procedureSlugsNaming(env: ProcedureEnv, ids: string[] | nu
   const wanted = ids === null ? null : new Set(ids);
   const slugs = new Set<string>();
   for (const kind of kinds) {
-    const rows = await env.DB.prepare(
-      `SELECT DISTINCT p.slug AS slug, json_extract(j.value, '$.id') AS item
-       FROM procedures p, json_each(json_extract(p.record, ?1)) j`,
-    )
-      .bind(NAMED_IN[kind])
-      .all<{ slug: string; item: string }>();
-    for (const row of rows.results ?? []) if (wanted === null || wanted.has(row.item)) slugs.add(row.slug);
+    for (const field of NAMED_IN[kind]) {
+      // A list of items has the id inside each; the organism list is the ids themselves.
+      const rows = await env.DB.prepare(
+        `SELECT DISTINCT p.slug AS slug, CASE WHEN j.type = 'object' THEN json_extract(j.value, '$.id') ELSE j.value END AS item
+         FROM procedures p, json_each(json_extract(p.record, ?1)) j`,
+      )
+        .bind(field)
+        .all<{ slug: string; item: string }>();
+      for (const row of rows.results ?? []) if (wanted === null || wanted.has(row.item)) slugs.add(row.slug);
+    }
   }
   return [...slugs];
 }

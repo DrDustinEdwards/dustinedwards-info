@@ -48,11 +48,9 @@ test("the registry holds the two host strains the lab's pages name, each stating
   assert.match(foliorum?.guideUrl ?? "", /helpdocsonline\.com\/4-1-mfoliorum$/);
 });
 
-test("the biosafety level is Dustin's to set: a gap that says why, the only gap a strain has", () => {
-  const gaps = built.gaps.filter((gap) => gap.slug.startsWith("strain/"));
-  assert.deepEqual(gaps.map((gap) => `${gap.slug}.${gap.field}`).sort(), ["strain/foliorum.biosafety_level", "strain/smegmatis.biosafety_level"]);
-  for (const gap of gaps) assert.match(gap.reason, /biosafety officer check/);
-  for (const row of strainRows(strains, [])) assert.equal(row.biosafetyLevel, null);
+test("the biosafety level is Dustin's word (decisions.md, 2026-10-05): both strains are BSL-1, and a strain has no gap", () => {
+  assert.deepEqual(built.gaps.filter((gap) => gap.slug.startsWith("strain/")), []);
+  for (const row of strainRows(strains, [])) assert.equal(row.biosafetyLevel, "BSL-1");
 });
 
 test("a strain's id is the phages' host key, both ways, so a phage's host and a strain are one word", () => {
@@ -116,13 +114,16 @@ test("a protocol uses a strain when it names its id; none is listed on the strai
   assert.deepEqual(protocolsUsingStrain(foliorum, protocols), [{ path: "/research/protocols/a", title: "A" }]);
 });
 
-test("the twin states what the page states, with the biosafety gap said, never left out", () => {
-  const row = strainRow(strains.find((s) => s.id === "smegmatis"), [{ name: "Acorn15", year: 2017, host: "smegmatis" }]);
+test("the twin states what the page states, and a biosafety level nobody has set is said with its reason, never left out", () => {
+  const smegmatis = strains.find((s) => s.id === "smegmatis");
+  const row = strainRow(smegmatis, [{ name: "Acorn15", year: 2017, host: "smegmatis" }]);
+  const unset = strainRow({ ...smegmatis, fields: { ...smegmatis.fields, biosafety_level: "MISSING: Waiting on Dustin." } }, []);
+  assert.ok(strainMarkdown(unset, [], "https://example.com").includes("- Biosafety level: not found (Waiting on Dustin.)"));
   const md = strainMarkdown(row, [{ path: "/research/protocols/phage-isolation", title: "Phage Isolation" }], "https://example.com");
   for (const line of [
     "# Mycobacterium smegmatis mc²155",
     "- Collection: ATCC 700084",
-    "- Biosafety level: not found (Waiting on Dustin: the biosafety officer check (core.md).)",
+    "- Biosafety level: BSL-1",
     "1 phage, found 2017, counted from the phages table.",
     "- [Acorn15](https://example.com/research/phages#acorn15), 2017",
     "- Used in: [Phage Isolation](https://example.com/research/protocols/phage-isolation)",
@@ -158,6 +159,10 @@ test("STORED ONCE: no protocol types a strain's designation or collection number
     }
   }
   assert.deepEqual([...ids].filter((id) => !used.has(id)), [], "a registry strain no protocol uses");
+  for (const name of (await readdir(new URL("content/pages/", root))).filter((n) => n.endsWith(".md"))) {
+    const raw = await text(`content/pages/${name}`);
+    for (const value of typed) assert.ok(!raw.includes(value), `${name} types "${value}"; link the strain record at /research/lab/strains/<id> instead`);
+  }
   const isolation = compiled.find((c) => c.slug === "phage-isolation")?.compiled;
   assert.ok(isolation?.ok, JSON.stringify(isolation?.errors));
   assert.deepEqual(isolation.record.hostStrains.map((s) => s.id), ["smegmatis", "foliorum"]);
@@ -184,4 +189,23 @@ test("the compile refuses what a protocol may not say about a host strain", asyn
   const none = await compileProcedure({ slug: "phage-isolation", raw: original, pipeline });
   assert.equal(none.ok, false);
   assert.match(none.errors.join("\n"), /no lab registry/);
+});
+
+test("a protocol's organism is a non-strain organism or a strain of the registry, and the words come from the registry", async () => {
+  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const pipeline = await import("../app/lib/content/pipeline.mjs");
+  const { registryHost } = await import("../scripts/lib/registry.mjs");
+  const { NON_STRAIN_ORGANISMS, organismLabel } = await import("../app/lib/procedures/taxonomy.mjs");
+  const original = await text("content/procedures/phage-isolation.md");
+  const compile = (raw) => compileProcedure({ slug: "phage-isolation", raw, pipeline, registry: registryHost() });
+  const ok = await compile(original);
+  assert.ok(ok.ok, JSON.stringify(ok.errors));
+  assert.deepEqual(ok.record.organismNames, { smegmatis: "Mycobacterium smegmatis", foliorum: "Microbacterium foliorum" });
+  assert.deepEqual(Object.keys(NON_STRAIN_ORGANISMS), ["avian"], "only what is not a strain is typed in taxonomy.mjs");
+  const unknown = await compile(original.replace("organism: [smegmatis, foliorum]", "organism: [smegmatis, mouse]"));
+  assert.match(unknown.errors.join("\n"), /organism "mouse" is neither one of: avian .* nor a strain in the lab registry/);
+  const avian = await compile(original.replace("organism: [smegmatis, foliorum]", "organism: [avian]"));
+  assert.ok(avian.ok, JSON.stringify(avian.errors));
+  assert.deepEqual(avian.record.organismNames, { avian: "Birds" });
+  assert.equal(organismLabel("avian"), "Birds");
 });
