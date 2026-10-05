@@ -18,6 +18,7 @@ import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/lib/procedures/primer-dependents.server";
+import { recordsForPapers } from "~/lib/search/records.mjs";
 
 import {
   parseRegistrySlug,
@@ -28,6 +29,7 @@ import {
 } from "./compile.mjs";
 import { compile } from "./host.server";
 import { KINDS, type KindSpec } from "./kinds.mjs";
+import { registrySearchInput, registrySearchUid } from "./search-inputs.mjs";
 
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
 type Kinds = Readonly<Record<string, KindSpec>>;
@@ -78,25 +80,57 @@ async function otherItems(env: RegistryEnv, slug: string): Promise<RegistryItem[
   return (await listRegistry(env)).filter((item) => registrySlug(item.kind, item.id) !== slug);
 }
 
-/** The item's D1 row: the derived store the drift check reads. One row, in one statement. */
-export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
-  const { item } = compiled;
-  await env.DB.prepare(
-    `INSERT INTO registry (kind, id, name, status, record, source_path, source_blob_sha, synced_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())
-     ON CONFLICT(kind, id) DO UPDATE SET name = excluded.name, status = excluded.status, record = excluded.record,
-       source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
-       synced_at = excluded.synced_at`,
-  )
-    .bind(item.kind, item.id, item.name, item.status, compiled.record, compiled.sourcePath, compiled.sourceBlobSha)
-    .run();
+/** The statements that rebuild the two full-text indexes after a change to search_docs, as every kind's write does. */
+function rebuildStatements(db: D1Database) {
+  return [
+    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+  ];
 }
 
-/** An item whose file is gone: its row goes (the row is the drift marker). */
+/**
+ * The item's D1 row, the derived store the drift check reads, and its search record (search-inputs.mjs), in one batch so
+ * they move together: a search for a primer's sequence finds the primer's own page as well as the protocols that use it. A
+ * draft has a row and no record.
+ */
+export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
+  const { item } = compiled;
+  const db = env.DB;
+  const input = registrySearchInput(item);
+  const records = item.status === "draft" || !input ? [] : recordsForPapers([input]);
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO registry (kind, id, name, status, record, source_path, source_blob_sha, synced_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())
+         ON CONFLICT(kind, id) DO UPDATE SET name = excluded.name, status = excluded.status, record = excluded.record,
+           source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
+           synced_at = excluded.synced_at`,
+      )
+      .bind(item.kind, item.id, item.name, item.status, compiled.record, compiled.sourcePath, compiled.sourceBlobSha),
+    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(registrySearchUid(item.kind, item.id)),
+    ...records.map((r) =>
+      db
+        .prepare(
+          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
+             doc_title, doc_url, anchor, ordinal, status, publish_at)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
+        )
+        .bind(r.uid, r.url, r.type, r.title, r.body, r.tags, r.docTags, r.docUid, r.docTitle, r.docUrl, r.anchor, r.ordinal, r.status, null),
+    ),
+    ...rebuildStatements(db),
+  ]);
+}
+
+/** An item whose file is gone: its row and its search record go (the row is the drift marker). */
 export async function deleteRegistryRow(env: RegistryEnv, row: { slug: string }) {
   const address = parseRegistrySlug(row.slug);
   if (!address) throw new Error(`"${row.slug}" is not a registry address, so its row cannot be named`);
-  await env.DB.prepare(`DELETE FROM registry WHERE kind = ?1 AND id = ?2`).bind(address.kind, address.id).run();
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM registry WHERE kind = ?1 AND id = ?2`).bind(address.kind, address.id),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(registrySearchUid(address.kind, address.id)),
+    ...rebuildStatements(env.DB),
+  ]);
 }
 
 /** True when D1's row for the item was compiled from exactly this file (the git blob sha matches). */

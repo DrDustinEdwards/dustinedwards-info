@@ -22,6 +22,7 @@ import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs"
 import { isMain } from "./lib/is-main.mjs";
 import { buildPhages, PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
 import { buildRegistry, REGISTRY_ARTIFACT_PATH } from "./lib/registry.mjs";
+import { registrySearchInputs } from "../app/lib/registry/search-inputs.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 import { buildRoster, ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
@@ -264,7 +265,8 @@ export async function buildArtifact() {
       ...contentPageSearchInputs((await renderContentPages()).filter((page) => !page.draft), (await dictionary()).entryFor),
       ...(await procedures()).searchInputs,
     ],
-    (await publications()).searchInputs,
+    // One record per item: the papers, and the registry's published items, so a sequence search finds a primer's own page.
+    [...(await publications()).searchInputs, ...registrySearchInputs((await buildRegistry()).items)],
   );
 }
 

@@ -98,21 +98,24 @@ describe("one primer", () => {
     expect(html).toContain('href="/research/lab/primers/rev-3-ltr-reverse"');
     expect(html).toContain("281 bp");
     expect(html).toContain("18 nt");
-    expect(html).toContain("Stewart et al. 2019, J Wildl Dis 55(3)");
-    expect(html).toContain('href="/research/publications/10-7589-2018-08-187/"');
+    // Position and product are computed on the named reference, and a paper that could not be read says so.
+    expect(html).toContain("DQ387450.1");
+    expect(html).toContain("258 to 275");
+    expect(html).toContain("Not found:");
   });
 
   it("shows the pair's product on the reverse primer too, though it is stated once, on the forward", async () => {
     const { html } = await kindPage("primers", "rev-3-ltr-reverse");
     expect(html).toContain("281 bp");
     const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'primer' AND id = 'rev-3-ltr-reverse'").first<{ record: string }>();
-    expect(JSON.parse(stored?.record ?? "{}").product).toBeNull();
+    expect(JSON.parse(stored?.record ?? "{}").product).toBeUndefined();
   });
 
   it("links the protocols that use it, found by its sequence and listed nowhere on the primer", async () => {
     const { html } = await kindPage("primers", "lco1490");
     expect(html).toContain('href="/research/protocols/coi-primers"');
-    expect(html).toContain("about 710 bp");
+    expect(html).toContain("710 bp");
+    expect(html).toContain("709 bp");
     const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'primer' AND id = 'lco1490'").first<{ record: string }>();
     expect(Object.keys(JSON.parse(stored?.record ?? "{}"))).not.toContain("protocols");
   });
@@ -148,7 +151,8 @@ describe("the twins", () => {
     const one = await twin({ kind: "primers", id: "rev-3-ltr-forward" });
     expect(one.headers.get("link")).toBe(`<https://dustinedwards.info/research/lab/primers/rev-3-ltr-forward>; rel="canonical"`);
     const text = await one.text();
-    expect(text).toContain("- Product: 281 bp");
+    expect(text).toContain("281 bp");
+    expect(text).toContain("DQ387450.1");
     expect(text).toContain("- Reverse complement (5′ to 3′): `AACCATTGGCTCAGTATG`");
   });
 

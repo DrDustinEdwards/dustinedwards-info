@@ -60,11 +60,17 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
         .join(", "),
   );
 
+  const REGISTRY_ROUTE = "/research/lab/:kind/:id?";
   /* A procedure (docs/PROCEDURES.md) is served by its profile root's parameterized route. */
   const procedures = new Set(publishedProcedurePaths());
   for (const record of otherPageRecords) {
     const path = String(record.url).split("#")[0];
-    const route = procedures.has(path) ? `${path.slice(0, path.lastIndexOf("/"))}/:slug` : path;
+    // A registry item (docs/REGISTRY.md) is served by the lab's kind route.
+    const route = String(record.uid).startsWith("registry:")
+      ? REGISTRY_ROUTE
+      : procedures.has(path)
+        ? `${path.slice(0, path.lastIndexOf("/"))}/:slug`
+        : path;
     ok(
       `page record ${record.uid} resolves to a declared route: ${route}`,
       routes.has(route),

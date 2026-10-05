@@ -3,7 +3,7 @@ profile: protocol
 path: /research/protocols/pan-avian-gapdh
 title: "Pan-avian GAPDH PCR"
 seo_title: "Pan-avian GAPDH primers: avian GAPDH PCR control"
-description: "Pan-avian GAPDH primer sequences and PCR conditions, used as a control that a bird DNA extraction holds amplifiable avian DNA. Product: 534 bp."
+description: "Pan-avian GAPDH primer sequences and PCR conditions, used as a control that a bird DNA extraction holds amplifiable avian DNA."
 method: [pcr]
 organism: [avian]
 target: [GAPDH]
@@ -66,7 +66,7 @@ cycling:
           - { temperature_c: 68, time: 30 sec. }
       - { stage: extension, temperature_c: 68, time: 5 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "A band at 534 bp beside the 100 bp ladder. Olias et al. 2014 give the genomic product as 534 bp. In the lab's gels the product runs at 534 bp, with DNA from DF-1 cells as the positive control and no band in the negative lane."
+expected_results: "A band at the product size computed under Primers, beside the 100 bp ladder. In the lab's gels the product runs at that size, with DNA from DF-1 cells as the positive control and no band in the negative lane."
 limitations: "Extension temperature is dependent on polymerase: the lab runs the extension at 68 °C for the One*Taq* mix, where Olias et al. 2014 used 72 °C."
 references:
   - "Olias et al. 2014. [PMC4057121](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057121/)"
@@ -82,7 +82,7 @@ The primers are from [Olias et al. 2014](https://www.ncbi.nlm.nih.gov/pmc/articl
 
 ## Product size
 
-Olias et al. 2014 give the genomic product as 534 bp. In the lab's gels the product runs at 534 bp beside a 100 bp ladder, with DNA from DF-1 cells as the positive control and no band in the negative lane.
+The product size is computed under Primers, from where the primers bind the chicken genome. In the lab's gels the product runs at that size beside a 100 bp ladder, with DNA from DF-1 cells as the positive control and no band in the negative lane.
 
 ## Materials
 
@@ -118,8 +118,8 @@ Extension temperature is dependent on polymerase. The lab runs the extension at 
 | hold | 10 | ∞ |
 
 2. Run the cycling program in the table above.
-3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{} and look for the band at 534 bp.
-   > EXPECT: A band at 534 bp in the positive control (DNA from DF-1 cells) and no band in the negative lane.
+3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{} and look for the band at the product size listed under Primers.
+   > EXPECT: A band at the product size listed under Primers in the positive control (DNA from DF-1 cells) and no band in the negative lane.
 
 ## Related pages
 

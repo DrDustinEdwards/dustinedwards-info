@@ -7,10 +7,15 @@ import {
   kindLabel,
   mateOf,
   pairProduct,
+  productSpanText,
+  productText,
+  siteText,
   tmNote,
   type InventoryRow,
+  type PrimerListRow,
   type PrimerRow,
 } from "~/lib/registry/catalog.mjs";
+import { MAX_MISMATCHES } from "~/lib/registry/align.mjs";
 
 /**
  * The registry's pages (docs/REGISTRY.md): the master inventory, a kind's own catalog and one item. Each reads the same
@@ -50,15 +55,15 @@ export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: C
   );
 }
 
-const sequenceCell = (p: PrimerRow) => (p.sequence ? <code className="registry-seq">{p.sequence}</code> : "");
+const sequenceCell = (p: PrimerListRow) => (p.sequence ? <code className="registry-seq">{p.sequence}</code> : "");
 
-export function LabPrimers({ result }: { result: CatalogResult<PrimerRow> }) {
+export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> }) {
   const note = tmNote();
   return (
     <>
       <p className="registry-lede">
-        The primers the lab&rsquo;s protocols use, with each sequence as stored. Length, GC content and melting temperature
-        are computed from the sequence. A product size is shown only where a protocol states one.
+        The primers the lab&rsquo;s protocols use, with each sequence as stored. Length, GC content and melting temperature are
+        computed from the sequence, and a pair&rsquo;s product is computed from where its primers bind a reference sequence.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -70,7 +75,7 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerRow> }) {
               {p.name}
             </a>
           )}
-          cells={{ sequence: sequenceCell }}
+          cells={{ sequence: sequenceCell, product: (p) => productText(p.product) ?? "" }}
         />
       </div>
       <p className="registry-note">
@@ -90,6 +95,19 @@ function Fact({ term, children }: { term: string; children: React.ReactNode }) {
   );
 }
 
+/** A fact that could not be found, with the reason it could not, so it is listed rather than left out. */
+function NotFound({ reason }: { reason: string | null }) {
+  return <span className="registry-missing">Not found: {reason ?? "not recorded"}</span>;
+}
+
+/** The size a paper states, compared with the one computed, only where the paper states an exact size. */
+function publishedVersusComputed(published: string, computed: Array<{ length: number }>) {
+  const exact = /^([0-9]+) bp$/.exec(published);
+  const sizes = [...new Set(computed.map((p) => p.length))];
+  if (!exact || sizes.length !== 1) return null;
+  return Number(exact[1]) === sizes[0] ? "equal to the computed size" : `different from the computed size, ${sizes[0]} bp`;
+}
+
 export function LabPrimer({
   primer,
   primers,
@@ -100,7 +118,7 @@ export function LabPrimer({
   usedBy: Array<{ path: string; title: string }>;
 }) {
   const mate = mateOf(primer, primers);
-  const product = pairProduct(primer, primers);
+  const pair = pairProduct(primer, primers);
   const note = tmNote();
   return (
     <>
@@ -123,24 +141,12 @@ export function LabPrimer({
             <a href={mate.path}>{mate.name}</a>
           </Fact>
         ) : null}
-        {product ? <Fact term="Product">{product}</Fact> : null}
         {primer.length ? <Fact term="Length">{primer.length} nt</Fact> : null}
         {primer.gcPercent !== null ? <Fact term="GC content">{primer.gcPercent}%</Fact> : null}
         {primer.tm !== null ? <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact> : null}
         <Fact term="Annealing temperature">
           Depends on the polymerase: <a href={note.calculator.url}>{note.calculator.name}</a>
         </Fact>
-        {primer.source ? (
-          <Fact term="Source">
-            {primer.sourceUrl ? <a href={primer.sourceUrl}>{primer.source}</a> : primer.source}
-            {primer.paper ? (
-              <>
-                {" "}
-                (<a href={`/research/publications/${primer.paper}/`}>on this site</a>)
-              </>
-            ) : null}
-          </Fact>
-        ) : null}
         {usedBy.length > 0 ? (
           <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
             <ul className="registry-used">
@@ -159,6 +165,91 @@ export function LabPrimer({
           <a href={note.calculator.url}>{note.calculator.name}</a>.
         </p>
       ) : null}
+
+      <h2 id="literature">In the literature</h2>
+      <dl className="registry-facts">
+        <Fact term="Published in">
+          {primer.publishedIn ? (
+            primer.publishedDoi ? (
+              <a href={`https://doi.org/${primer.publishedDoi}`}>{primer.publishedIn}</a>
+            ) : primer.publishedUrl ? (
+              <a href={primer.publishedUrl}>{primer.publishedIn}</a>
+            ) : (
+              primer.publishedIn
+            )
+          ) : (
+            <NotFound reason={primer.publishedInMissing} />
+          )}
+        </Fact>
+        <Fact term="Name in the paper">{primer.publishedName ?? <NotFound reason={primer.publishedNameMissing} />}</Fact>
+        <Fact term="Sequence in the paper">
+          {primer.publishedSequence ? (
+            <>
+              <code className="registry-seq">{primer.publishedSequence}</code>{" "}
+              {primer.matchesPublished ? (
+                <span>Identical to the stored sequence.</span>
+              ) : (
+                <strong className="registry-differs">Differs from the stored sequence.</strong>
+              )}
+            </>
+          ) : (
+            <NotFound reason={primer.publishedSequenceMissing} />
+          )}
+        </Fact>
+        {primer.publishedProduct || primer.direction === "forward" ? (
+          <Fact term="Product in the paper">
+            {primer.publishedProduct ? (
+              <>
+                {primer.publishedProduct}
+                {pair && publishedVersusComputed(primer.publishedProduct, pair.products)
+                  ? `, ${publishedVersusComputed(primer.publishedProduct, pair.products)}`
+                  : null}
+              </>
+            ) : (
+              <NotFound reason={primer.publishedProductMissing} />
+            )}
+          </Fact>
+        ) : null}
+      </dl>
+
+      <h2 id="reference">On the reference</h2>
+      <dl className="registry-facts">
+        {primer.placement ? (
+          <>
+            <Fact term="Reference">
+              <a href={`https://www.ncbi.nlm.nih.gov/nuccore/${primer.placement.reference.accession}`}>{primer.placement.reference.id}</a>:{" "}
+              {primer.placement.reference.description}
+            </Fact>
+            <Fact term={primer.placement.sites.length === 1 ? "Position" : "Positions"}>
+              <ul className="registry-used">
+                {primer.placement.sites.map((site) => (
+                  <li key={`${site.start}-${site.strand}`}>{siteText(site)}</li>
+                ))}
+              </ul>
+            </Fact>
+          </>
+        ) : (
+          <Fact term="Reference">
+            {primer.reference
+              ? `${primer.reference}: the primer binds it nowhere within ${MAX_MISMATCHES} mismatches.`
+              : "None recorded."}
+          </Fact>
+        )}
+        {pair ? (
+          <Fact term={`Product with ${mate?.name ?? "its pair"}`}>
+            <ul className="registry-used">
+              {pair.products.map((product) => (
+                <li key={product.start}>{productSpanText(product)}</li>
+              ))}
+            </ul>
+          </Fact>
+        ) : null}
+      </dl>
+      <p className="registry-note">
+        Positions and product sizes are computed from the sequence and the reference by the site&rsquo;s own tested primer code, in
+        the accession&rsquo;s own coordinates, and are not copied from a paper. A primer is looked for exactly first, then with
+        more mismatches up to {MAX_MISMATCHES}, and any mismatch is shown.
+      </p>
     </>
   );
 }
