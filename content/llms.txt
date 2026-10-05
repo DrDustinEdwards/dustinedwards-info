@@ -24,6 +24,8 @@ Every page below has a markdown twin at its path plus .md. The sections after th
 - [REV and LPDV PCR primers](https://dustinedwards.info/research/protocols/rev-lpdv-primers): sequences, reaction mix, cycling and product sizes
 - [Pan-avian GAPDH PCR](https://dustinedwards.info/research/protocols/pan-avian-gapdh): a control that a bird DNA extraction holds amplifiable avian DNA
 
+- [Lab registry](https://dustinedwards.info/research/lab): the lab's reference catalog of primers, with the phages it has isolated; each primer is /research/lab/primers/<id> with its sequence, computed length and melting temperature, and the protocols that use it, and every registry page has a markdown twin at its path plus .md
+
 A protocol is /research/protocols/<slug>, for example /research/protocols/phage-isolation. Its markdown twin is the same path plus .md.
 
 ## Lab calculators

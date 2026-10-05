@@ -3,8 +3,10 @@
 // (compile.mjs), the save, the sync, the drift check and Carrel's handlers all read this one object, so a kind
 // added here is a kind every one of them serves.
 //
-// The set starts EMPTY on purpose. The registry ships as a framework with no records (job_915d43f44cee), and each
-// kind arrives with its own records and pages in its own change: primer, strain, reagent, equipment.
+// The registry shipped as a framework with no kind (job_915d43f44cee), and each kind arrives with its own records and
+// pages in its own change: primer first, then strain, reagent and equipment.
+
+import { PRIMER } from "./primer.mjs";
 
 /**
  * What a kind says about one field. `check` returns a message when the value is wrong and null when it is right; it
@@ -36,7 +38,7 @@
  */
 
 /** @type {Readonly<Record<string, KindSpec>>} */
-export const KINDS = Object.freeze({});
+export const KINDS = Object.freeze({ primer: PRIMER });
 
 /** The kinds in the order the site lists them, which is the order they are defined in. @param {Record<string, KindSpec>} [kinds] */
 export function kindKeys(kinds = KINDS) {

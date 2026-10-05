@@ -3,8 +3,8 @@
 The reference catalog of the lab's primers, strains, reagents and equipment (job_915d43f44cee). It is built the way
 phages and procedures are: a record is a file in the repository, the file is the source, and D1 holds a derived copy
 that a save and `npm run sync:content` write. A record is edited with no build and no deploy. This document is the
-framework. It ships with NO kind and NO record: each kind arrives with its own records, pages and catalog tab in its
-own change.
+framework and the kinds built on it. The framework shipped with no kind and no record; each kind arrives with its own
+records, pages and catalog tab in its own change. Defined so far: **primer**.
 
 Out of scope, on purpose: stock counts, storage locations and sample data. The registry says what a thing is, never
 how much of it the lab has or where it sits.
@@ -56,6 +56,24 @@ null and may be async (a field that names a publication asks `host.paper`). The 
 check, Carrel's handler and the operator's tools all read the one `KINDS` object, so a kind added there is served by every
 one of them with no change to them.
 
+## The primer kind
+
+`app/lib/registry/primer.mjs`, twelve records in `content/registry/primer/`, each stating only what the lab's protocols state:
+`sequence` (as stored, upper-case IUPAC), `direction`, `target`, `set`, `product` (a size as a protocol states it, on the forward
+primer of a pair only), and where the sequence came from (`source`, `source_url`, `paper`). A kind's page of its own is
+`/research/lab/primers`, an item is `/research/lab/primers/<id>`, and the master inventory is `/research/lab`, which also
+lists the phages by reading their own table and never copying a row. Every registry page has a markdown twin at its path
+plus `.md`.
+
+**Computed, never stored:** length, GC content, reverse complement, Tm, a pair's product on its reverse primer, and the
+protocols that use a primer (found by its sequence). Tm (`app/lib/registry/tm.mjs`) is the SantaLucia (1998) nearest-neighbour
+model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one; it is held to Biopython's
+`Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an ambiguity code.
+
+Until the protocols read their primer tables from the registry (the next change), each protocol still lists its primers, and
+`test/registry-primers.test.mjs` fails if a protocol's primer and the registry's ever differ, or a registry primer is used by
+no protocol.
+
 ## Where it goes
 
 | Piece | File |
@@ -68,7 +86,8 @@ one of them with no change to them.
 | Drift: the `registry-drift` check, repaired by `sync_registry` | `app/lib/health/` |
 | Build and sync | `scripts/lib/registry.mjs`, `build:content` (writes `content/generated/registry.json`), `sync:content` |
 | The check | `check:content` compiles every file with the save's own validator |
-| Cache tag a write purges | `registry` (`app/lib/registry/route.ts`) |
+| Cache tag a write purges | `registry` (`app/lib/registry/route.ts`); the pages also carry the content pages' and procedures' tags |
+| Pages | `app/routes/lab.tsx`, `lab.kind.tsx` and the twin `lab[.md].ts`, drawn by `app/components/lab.tsx` from `app/lib/registry/catalog.mjs` |
 
 ### Syncing an empty registry
 
@@ -85,5 +104,6 @@ at ship and fails closed if the table does not exist yet.
 ## Tests
 
 `test/registry.test.mjs` (compile, set rules, build, drift verdict) and `test/worker/registry.test.ts` (save, sync, the
-drift check, the operator's reads and Carrel's handler) hold the framework with a kind of their own, because the registry
-ships with none.
+drift check, the operator's reads and Carrel's handler) hold the framework with a kind of their own, so a change to a real
+kind cannot hide a fault in it. `test/registry-primers.test.mjs`, `test/registry-tm.test.mjs` and `test/worker/lab.test.ts`
+hold the primer kind and its pages.
