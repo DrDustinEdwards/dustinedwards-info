@@ -18,7 +18,7 @@ version: "1"
 updated: 2026-09-30
 status: draft
 last_run: 2026-09-01
-host_strain: Test strain
+host_strain: not applicable
 biosafety: not applicable
 biosafety_level: BSL-1
 scale: { count: 1, unit: tube }

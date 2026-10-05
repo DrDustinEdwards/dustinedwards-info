@@ -145,8 +145,8 @@ function validateHistory(d, errors) {
  * Checks one parsed procedure.
  *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
- * @param {{ slug: string, primers?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers
- *   the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
+ * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
+ *   host strains the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
  * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string }> }}
  */
 export function validateProcedure(parsed, expect) {
@@ -388,7 +388,7 @@ export function validateProcedure(parsed, expect) {
   }
 
   // The profiles.
-  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null);
+  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null);
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);
 
@@ -401,9 +401,34 @@ export function validateProcedure(parsed, expect) {
  * @param {(field: string) => boolean} required
  * @param {Map<string, any>} materials
  * @param {ReadonlySet<string> | null} primerIds the primers the lab registry holds
+ * @param {ReadonlySet<string> | null} strainIds the strains the lab registry holds
  */
-function protocolRules(d, errors, required, materials, primerIds) {
+function protocolRules(d, errors, required, materials, primerIds, strainIds) {
   for (const field of ["host_strain", "status", "last_run", "biosafety", "biosafety_level", "scale"]) required(field);
+  // A host strain is the lab registry's, named by id and never typed (docs/REGISTRY.md): its organism, designation and
+  // collection number are stored once, on its record.
+  if (d.host_strain !== undefined && d.host_strain !== NOT_APPLICABLE && !isGap(d.host_strain)) {
+    if (!Array.isArray(d.host_strain)) errors.push(`host_strain must be a list of { strain: <id> }, "${NOT_APPLICABLE}" or "MISSING: <why>"`);
+    else {
+      /** @type {Set<string>} */
+      const seenStrains = new Set();
+      for (const s of d.host_strain) {
+        const id = s?.strain;
+        const at = `host_strain[${typeof id === "string" ? id : "?"}]`;
+        if (typeof id !== "string" || !PRIMER_ID.test(id)) {
+          errors.push(`${at} is { strain: <id> }: the id of a strain in the lab registry (content/registry/strain/), such as foliorum. A protocol names its host strains and types none`);
+        } else if (seenStrains.has(id)) {
+          errors.push(`${at} is listed twice`);
+        } else {
+          seenStrains.add(id);
+          if (strainIds && !strainIds.has(id)) errors.push(`${at} names no strain in the lab registry (there is no content/registry/strain/${id}.md)`);
+        }
+        for (const key of Object.keys(s ?? {})) {
+          if (key !== "strain") errors.push(`${at}.${key} is not a protocol field: a strain's organism and collection number are stored once, in the lab registry`);
+        }
+      }
+    }
+  }
   if (d.biosafety_level !== undefined && !isGap(d.biosafety_level) && !BIOSAFETY_LEVELS.includes(d.biosafety_level)) {
     errors.push(`biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`);
   }

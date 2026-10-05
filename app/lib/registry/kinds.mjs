@@ -4,9 +4,10 @@
 // added here is a kind every one of them serves.
 //
 // The registry shipped as a framework with no kind (job_915d43f44cee), and each kind arrives with its own records and
-// pages in its own change: primer first, then strain, reagent and equipment.
+// pages in its own change: primer, then strain, then reagent and equipment.
 
 import { PRIMER } from "./primer.mjs";
+import { STRAIN } from "./strain.mjs";
 
 /**
  * What a kind says about one field. `check` returns a message when the value is wrong and null when it is right; it
@@ -38,7 +39,7 @@ import { PRIMER } from "./primer.mjs";
  */
 
 /** @type {Readonly<Record<string, KindSpec>>} */
-export const KINDS = Object.freeze({ primer: PRIMER });
+export const KINDS = Object.freeze({ primer: PRIMER, strain: STRAIN });
 
 /** The kinds in the order the site lists them, which is the order they are defined in. @param {Record<string, KindSpec>} [kinds] */
 export function kindKeys(kinds = KINDS) {

@@ -4,7 +4,7 @@ The reference catalog of the lab's primers, strains, reagents and equipment (job
 phages and procedures are: a record is a file in the repository, the file is the source, and D1 holds a derived copy
 that a save and `npm run sync:content` write. A record is edited with no build and no deploy. This document is the
 framework and the kinds built on it. The framework shipped with no kind and no record; each kind arrives with its own
-records, pages and catalog tab in its own change. Defined so far: **primer**.
+records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**.
 
 Out of scope, on purpose: stock counts, storage locations and sample data. The registry says what a thing is, never
 how much of it the lab has or where it sits.
@@ -111,7 +111,31 @@ reported to the seat.
 A published item has its own search record (`app/lib/registry/search-inputs.mjs`): its name, sequence and reverse complement,
 target, reference, positions and the paper that prints it, so a sequence search finds the primer's page as well as the
 protocols that use it. A save and `sync_registry` write it with the row, in one batch; `build:content` writes the same records
-into the search artifact; a draft has none and a deleted item loses its own (`test/worker/registry-search.test.ts`).
+into the search artifact; a draft has none and a deleted item loses its own (`test/worker/registry-search.test.ts`). A strain's
+record is its name, organism, designation, collection and collection number.
+
+## The strain kind
+
+`app/lib/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
+stating only what the lab's own pages state: `organism`, `strain` (the lab's designation where there is one apart from the
+collection's number, `mc²155`), `collection` and `collection_number` (`ATCC 700084`, `NRRL B-24224`), `guide_url` (the
+SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set and is `MISSING` until the biosafety
+officer check is done (core.md). The record's `name` is its organism and designation and a set rule holds it to them, so a name
+cannot say a different strain than the fields do. A kind's page is `/research/lab/strains`, an item is
+`/research/lab/strains/<id>`, each with a markdown twin, a search record and a tab on the library.
+
+The id is the phages' host key (`HOSTS` in `app/lib/phages/compile.mjs`), so a phage's host and a strain are one word, and a
+test holds the two lists equal. **Computed, never stored:** the phages isolated on a strain (read from the phages table by that
+key, with their years), the protocols that use it (read from the protocols' own `host_strain`), and its designation.
+
+A protocol names its host strains as `host_strain: [{ strain: <id> }]`, as it names primers, and types none: the compile reads the
+strains from the repository into the record (`hostStrains`, and `hostStrain` as their names), so the page links each strain,
+the twin links it, and a frozen version names the strain it was published with. A registry save and `sync_registry` recompile
+every protocol that names the changed strain (`app/lib/procedures/primer-dependents.server.ts`, now for both kinds). A free-text
+strain, a strain listed twice, an extra field and an id the registry does not hold are each refused, and a draft strain cannot be
+named by a published protocol (`test/registry-strains.test.mjs`, `test/worker/procedure-strains.test.ts`).
+Known gap: the `organism` list a protocol is filtered by (`ORGANISMS` in `app/lib/procedures/taxonomy.mjs`) still has its own
+two entries, and some pages' prose still types the designations (see the job's report); neither is read from the registry yet.
 
 ## Where it goes
 

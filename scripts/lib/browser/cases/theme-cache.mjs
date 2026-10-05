@@ -42,6 +42,8 @@ export async function run({ page, browser }) {
     { path: "/research/lab", module: "lab.tsx" },
     { path: "/research/lab/primers", module: "lab.kind.tsx" },
     { path: "/research/lab/primers/lco1490", module: "lab.kind.tsx" },
+    { path: "/research/lab/strains", module: "lab.kind.tsx" },
+    { path: "/research/lab/strains/foliorum", module: "lab.kind.tsx" },
     /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
     { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
     /* The bench sheet is a print page with no site shell, so it has no footer to compare. */

@@ -33,7 +33,8 @@ const root = new URL("../", import.meta.url);
 const text = (path) => readFile(new URL(path, root), "utf8");
 
 const built = await buildRegistry();
-const rows = built.items.map(primerRow);
+const primers = built.items.filter((item) => item.kind === "primer");
+const rows = primers.map(primerRow);
 const byId = new Map(rows.map((row) => [row.id, row]));
 
 /** Every procedure file, parsed: its front matter and its whole text. */
@@ -56,8 +57,9 @@ test("the registry holds twelve primers, every one with a sequence, a direction,
     assert.ok(row.placement, `${row.id} is placed on its reference (${row.reference})`);
   }
   // What could not be read is waiting for Dustin, each with its reason, and only the literature can be missing.
-  assert.ok(built.gaps.length > 0);
-  for (const gap of built.gaps) {
+  const primerGaps = built.gaps.filter((gap) => gap.slug.startsWith("primer/"));
+  assert.ok(primerGaps.length > 0);
+  for (const gap of primerGaps) {
     assert.match(gap.field, /^published_/, `${gap.slug}.${gap.field}: only a literature fact can be missing`);
     assert.ok(gap.reason.length > 20, `${gap.slug}.${gap.field} says why it is missing`);
   }
@@ -147,7 +149,7 @@ const STATED_TODAY = [
 ];
 
 test("the computed product sizes agree with what each protocol states today, and the one that differs is recorded as differing", () => {
-  const primerRowsWithProducts = primerRows(built.items);
+  const primerRowsWithProducts = primerRows(primers);
   for (const { set, stated, computed, rounded } of STATED_TODAY) {
     const forward = primerRowsWithProducts.find((row) => row.set === set && row.direction === "forward");
     assert.ok(forward, set);
@@ -162,13 +164,13 @@ test("the computed product sizes agree with what each protocol states today, and
 });
 
 test("the LPDV product is placed where the protocol said: U09568.1 positions 1041 to 1498", () => {
-  const forward = primerRows(built.items).find((row) => row.id === "lpdv-p31-ca-forward");
+  const forward = primerRows(primers).find((row) => row.id === "lpdv-p31-ca-forward");
   assert.deepEqual(forward?.product?.products.map((p) => [p.start, p.end]), [[1041, 1498]]);
   assert.equal(forward?.product?.reference.id, "U09568.1");
 });
 
 test("the GAPDH product is computed on the chicken genome, not the mRNA, and the turkey genome is a recorded check", async () => {
-  const gapdh = primerRows(built.items).find((row) => row.id === "gapdh-forward");
+  const gapdh = primerRows(primers).find((row) => row.id === "gapdh-forward");
   assert.equal(gapdh?.reference, "NC_052532.1:76902320-76906237");
   assert.deepEqual(gapdh?.product?.products.map((p) => [p.length, p.start, p.end]), [[534, 76904235, 76904768]]);
   const { pairProducts } = await import("../app/lib/registry/align.mjs");
@@ -234,8 +236,8 @@ test("addresses: the kind's page is its plural, an item sits under it, and a seg
   assert.equal(itemPath("primer", "lco1490"), "/research/lab/primers/lco1490");
   assert.equal(kindFromSegment("primers"), "primer");
   assert.equal(kindFromSegment("primer"), null);
-  assert.equal(kindFromSegment("strains"), null, "no strain kind yet");
-  assert.deepEqual(Object.keys(KINDS), ["primer"]);
+  assert.equal(kindFromSegment("strains"), "strain");
+  assert.deepEqual(Object.keys(KINDS), ["primer", "strain"]);
 });
 
 test("the inventory is the registry's items and the phages, the phages read and never copied, the lab's own records first", () => {
@@ -244,11 +246,12 @@ test("the inventory is the registry's items and the phages, the phages read and 
     { name: "Zeta", year: 2026, host: null, county: null },
   ];
   const inventory = inventoryRows(built.items, phages);
-  assert.equal(inventory.length, 14);
+  assert.equal(inventory.length, 16, "twelve primers, two strains and two phages");
   assert.equal(inventory.filter((r) => r.kind === "phage").length, 2);
   const acorn = inventory.find((r) => r.name === "Acorn15");
   assert.equal(acorn?.path, "/research/phages#acorn15");
   assert.equal(acorn?.summary, "found in 2017, M. smegmatis mc²155, Hood County");
+  assert.equal(inventory.find((r) => r.key === "strain/foliorum")?.summary, "Microbacterium foliorum, NRRL B-24224");
   assert.equal(inventory.find((r) => r.name === "Zeta")?.summary, "found in 2026");
   assert.equal(inventory.find((r) => r.key === "primer/lco1490")?.summary, "forward primer, COI (cytochrome c oxidase subunit I), 25 nt");
   // The catalog orders the registry's kinds before the phages by default.
@@ -268,10 +271,10 @@ test("a protocol uses a primer when it names its id; none is listed on the prime
 });
 
 test("the library gets a Primers tab with the count, only while a primer exists", () => {
-  const tabs = libraryTabs([], [], registryTabs(built.items));
+  const tabs = libraryTabs([], [], registryTabs(primers));
   assert.deepEqual(tabs.at(-1), { id: "primers", label: "Primers", count: 12, href: "/research/lab/primers", current: false });
   assert.equal(tabs.at(-2)?.id, "calculators", "the registry's tabs follow the calculators");
   assert.equal(libraryTabs([], [], registryTabs([])).at(-1)?.id, "calculators");
-  assert.deepEqual(registryTabs(built.items), [{ id: "primers", label: "Primers", count: 12, href: "/research/lab/primers" }]);
+  assert.deepEqual(registryTabs(primers), [{ id: "primers", label: "Primers", count: 12, href: "/research/lab/primers" }]);
   assert.deepEqual(registryTabs([]), []);
 });

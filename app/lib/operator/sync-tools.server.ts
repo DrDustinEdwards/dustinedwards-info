@@ -541,7 +541,7 @@ export async function syncRegistry(env: OperatorEnv): Promise<ToolResult> {
   // The protocols that print a primer carry its facts in their record, so every one that names a primer is recompiled
   // from its file after the primers converge: a primer edited through git reaches them here, and a protocol left reading
   // an old sequence by a failed save is repaired by the same run.
-  const refreshed = await refreshProceduresNaming(env, null);
+  const refreshed = await refreshProceduresNaming(env, null, ["primer", "strain"]);
   return result.ok ? { ok: true, data: { ...(result.data as object), protocolsRefreshed: refreshed.length } } : result;
 }
 

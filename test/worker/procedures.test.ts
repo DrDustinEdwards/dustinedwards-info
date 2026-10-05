@@ -19,6 +19,7 @@ import zncl2 from "../../content/procedures/phage-dna-extraction.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
+import { strainRepoFiles } from "./seed";
 
 /* The operator API's procedure tools against the real migrations and a stubbed repository: a save is
  * validated by the same compile CI runs, committed, and written to D1, and the NEXT request for the page
@@ -36,7 +37,7 @@ const NEW_STEP = "Incubate at 60 °C for ~{45%minutes}.";
 let gh: GitHubStub;
 
 beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: zncl2 });
+  gh = stubGitHub({ [procedurePath(SLUG)]: zncl2, ...strainRepoFiles });
 });
 
 afterEach(() => {
@@ -88,7 +89,7 @@ describe("save_procedure", () => {
 
   it("places a protocol in the phage workflow from its neighbours, on the page and in the twin, with nothing stored on it", { timeout: 180_000 }, async () => {
     gh.restore();
-    gh = stubGitHub({ [procedurePath(SLUG)]: zncl2, [procedurePath("phage-isolation")]: isolation });
+    gh = stubGitHub({ [procedurePath(SLUG)]: zncl2, [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles });
     for (const [slug, raw] of [[SLUG, zncl2], ["phage-isolation", isolation]] as const) {
       expect((await runTool(operatorEnv(), operator, "save_procedure", { slug, raw })).ok).toBe(true);
     }

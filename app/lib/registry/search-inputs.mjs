@@ -4,6 +4,8 @@
 // draft has none. Like a paper's, it is one record with no deep links: an item has no sections to link to.
 
 import { itemPath, primerRow, siteText } from "./catalog.mjs";
+import { stated } from "./primer.mjs";
+import { designationOf } from "./strain.mjs";
 
 /** The item's search uid: a removal needs it to find the item's record. @param {string} kind @param {string} id */
 export function registrySearchUid(kind, id) {
@@ -40,13 +42,24 @@ function primerBody(item) {
 }
 
 /**
+ * The words a strain is searched by: its organism, designation, collection and number. The phages isolated on it are the
+ * phages table's own records and are not copied into this one.
+ *
+ * @param {import("./kinds.mjs").RegistryItem} item
+ */
+function strainBody(item) {
+  const f = /** @type {Record<string, unknown>} */ (item.fields);
+  return [item.name, "strain", "host", stated(f.organism), designationOf(f), stated(f.collection), stated(f.collection_number)].filter(Boolean).join(" ");
+}
+
+/**
  * The record input of one item, or null for a kind with no search body yet (so a kind added later is not indexed by accident).
  *
  * @param {import("./kinds.mjs").RegistryItem} item
  * @returns {{ uid: string, url: string, title: string, body: string } | null}
  */
 export function registrySearchInput(item) {
-  const body = item.kind === "primer" ? primerBody(item) : null;
+  const body = item.kind === "primer" ? primerBody(item) : item.kind === "strain" ? strainBody(item) : null;
   if (body === null) return null;
   return { uid: registrySearchUid(item.kind, item.id), url: itemPath(item.kind, item.id), title: item.name, body };
 }

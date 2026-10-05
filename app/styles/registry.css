@@ -80,3 +80,10 @@
 .registry-differs {
   color: var(--text-danger);
 }
+
+/* The phages isolated on a strain can be seventy: a list that wraps into columns rather than one long strip. */
+.registry-phages {
+  columns: 12rem;
+  list-style-position: inside;
+  padding-inline-start: 0;
+}

@@ -4,9 +4,11 @@ import type { CatalogResult } from "capsomer/behaviour/catalog";
 import {
   INVENTORY,
   PRIMERS,
+  STRAINS,
   kindLabel,
   mateOf,
   pairProduct,
+  phageYearsText,
   productSpanText,
   productText,
   siteText,
@@ -14,6 +16,7 @@ import {
   type InventoryRow,
   type PrimerListRow,
   type PrimerRow,
+  type StrainRow,
 } from "~/lib/registry/catalog.mjs";
 import { MAX_MISMATCHES } from "~/lib/registry/align.mjs";
 
@@ -36,7 +39,7 @@ export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: C
   return (
     <>
       <p className="registry-lede">
-        The lab&rsquo;s reference catalog: what each primer is, with the phages it has isolated. It records what a thing is,
+        The lab&rsquo;s reference catalog: its primers and the bacterial strains its phages grow on, with the phages it has isolated. It records what a thing is,
         never how much of it the lab has or where it sits. {inventorySentence(rows)}
       </p>
       <div className="registry site-catalog site-catalog-wide">
@@ -250,6 +253,81 @@ export function LabPrimer({
         the accession&rsquo;s own coordinates, and are not copied from a paper. A primer is looked for exactly first, then with
         more mismatches up to {MAX_MISMATCHES}, and any mismatch is shown.
       </p>
+    </>
+  );
+}
+
+export function LabStrains({ result }: { result: CatalogResult<StrainRow> }) {
+  return (
+    <>
+      <p className="registry-lede">
+        The bacterial hosts the lab&rsquo;s phages are isolated on. Each strain&rsquo;s phages are counted from the phages table,
+        so a phage added there is counted here with no edit to the strain.
+      </p>
+      <div className="registry site-catalog site-catalog-wide">
+        <Catalog
+          definition={STRAINS}
+          result={result}
+          labelledBy="registry-title"
+          title={(s) => (
+            <a className="cap-table-open" href={s.path}>
+              {s.name}
+            </a>
+          )}
+        />
+      </div>
+    </>
+  );
+}
+
+export function LabStrain({ strain, usedBy }: { strain: StrainRow; usedBy: Array<{ path: string; title: string }> }) {
+  const years = phageYearsText(strain);
+  return (
+    <>
+      <dl className="registry-facts">
+        {strain.organism ? <Fact term="Organism">{strain.organism}</Fact> : null}
+        {strain.strain ? <Fact term="Strain">{strain.strain}</Fact> : null}
+        {strain.collection && strain.collectionNumber ? (
+          <Fact term="Culture collection">
+            {strain.collection} {strain.collectionNumber}
+          </Fact>
+        ) : null}
+        {strain.guideUrl ? (
+          <Fact term="SEA-PHAGES Guide page">
+            <a href={strain.guideUrl}>{strain.guideUrl.replace(/^https:\/\//, "")}</a>
+          </Fact>
+        ) : null}
+        <Fact term="Biosafety level">{strain.biosafetyLevel ?? <NotFound reason={strain.biosafetyLevelMissing} />}</Fact>
+        {usedBy.length > 0 ? (
+          <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
+            <ul className="registry-used">
+              {usedBy.map((protocol) => (
+                <li key={protocol.path}>
+                  <a href={protocol.path}>{protocol.title}</a>
+                </li>
+              ))}
+            </ul>
+          </Fact>
+        ) : null}
+      </dl>
+
+      <h2 id="phages">Phages isolated on it</h2>
+      {strain.phages.length === 0 ? (
+        <p>No phage in the lab&rsquo;s table names this host.</p>
+      ) : (
+        <>
+          <p>
+            {strain.phages.length} phage{strain.phages.length === 1 ? "" : "s"}, found {years}, counted from the phages table.
+          </p>
+          <ul className="registry-used registry-phages">
+            {strain.phages.map((phage) => (
+              <li key={phage.name}>
+                <a href={phage.path}>{phage.name}</a>, {phage.year}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   );
 }
