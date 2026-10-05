@@ -456,6 +456,7 @@ if (existsSync(SHIP)) {
     "cv-drift",
     "roster-drift",
     "phage-drift",
+    "registry-drift",
     "cv-pdf-drift",
     "ask-index-drift",
     "media-index-drift",
