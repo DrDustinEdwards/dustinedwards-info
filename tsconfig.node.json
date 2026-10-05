@@ -362,7 +362,10 @@
     "app/lib/registry/kinds.mjs",
     // The primer kind and the Tm it computes, which kinds.mjs imports.
     "app/lib/registry/primer.mjs",
-    "app/lib/registry/tm.mjs"
+    "app/lib/registry/tm.mjs",
+    // How the registry reads on the site: scripts/check-links.mjs names each page from it, and it reads the primer arithmetic.
+    "app/lib/registry/catalog.mjs",
+    "app/lib/primers.mjs"
   ],
   "compilerOptions": {
     "composite": true,

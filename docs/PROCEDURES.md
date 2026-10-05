@@ -122,7 +122,9 @@ pages. When the lab registry holds host strains, `organism` reads from it.
   written `MISSING: <why>` until he does; required, so a forgotten one fails. It shows among the facts at the top of
   the page and the sheet, in the twin and in the structured data only once set; the operator API's `list_procedures`
   shows `MISSING` so he can find the ones left, and `get_procedure` lists it among the gaps), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
-  `solutions` (sub-recipes: `id`, `name`, `components`, `storage`, `shelf_life`), `primers`, `cycling`.
+  `solutions` (sub-recipes: `id`, `name`, `components`, `storage`, `shelf_life`), `primers` (a list of `{ primer: <id> }`, each the id
+  of a primer in the lab registry, docs/REGISTRY.md: the sequence is stored there once and the protocol holds none; the page, sheet
+  and twin draw a Primers section from the registry's facts), `cycling`.
   A material may carry `stock` (one or more), `final`, `amount` and `per`, and `solution` (the id of its
   sub-recipe). A spin in rpm needs its `g` (or a recorded gap), and a touchdown annealing its step size.
 - **recipe** adds `servings`, `cuisine`, `category`, `diet`, `prep_time`, `cook_time`, `substitutions`
@@ -249,8 +251,8 @@ A protocol's page says where it sits in the phage workflow (`workflowContext`, `
 ("Before this", "After this"), and the calculators of its stage. None of it is stored on the protocol: it is read from the
 other published protocols and the stages, so a protocol saved changes its neighbours' links with no edit to them. A
 protocol outside the workflow (a primer set) shows nothing. The markdown twin ends with the same lines
-(`workflowMarkdown`), added when the twin is served because the neighbours are other rows. Links to a protocol's primers,
-reagents and strains wait for the lab registry, which gives them pages to link.
+(`workflowMarkdown`), added when the twin is served because the neighbours are other rows. A protocol's primers are
+linked to their registry pages from its Primers section; reagents and strains will be as their kinds land.
 
 ## Run mode
 

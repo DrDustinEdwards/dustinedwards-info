@@ -42,6 +42,8 @@ import { renderContentPages, renderOwnRoutePages } from "./build-content.mjs";
 import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
+import { buildRegistry } from "./lib/registry.mjs";
+import { itemPath, kindPath } from "../app/lib/registry/catalog.mjs";
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/lib/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
@@ -94,6 +96,21 @@ for (const row of procedureRows) {
   served.add(`${row.path}.md`);
   served.add(`${row.path}/sheet`);
   moduleOf.set(row.path, routes.get(`${row.path.slice(0, row.path.lastIndexOf("/"))}/:slug`) ?? "");
+}
+
+// The lab registry (docs/REGISTRY.md): the inventory and its twin, each kind's page, and each published item with its
+// twin, drawn from D1 by routes, compiled here the way sync:content writes them.
+served.add("/research/lab.md");
+const registryItems = (await buildRegistry()).items.filter((item) => item.status === "published");
+for (const kind of new Set(registryItems.map((item) => item.kind))) {
+  served.add(kindPath(kind));
+  served.add(`${kindPath(kind)}.md`);
+  moduleOf.set(kindPath(kind), routes.get("/research/lab/:kind/:id?") ?? "");
+}
+for (const item of registryItems) {
+  served.add(itemPath(item.kind, item.id));
+  served.add(`${itemPath(item.kind, item.id)}.md`);
+  moduleOf.set(itemPath(item.kind, item.id), routes.get("/research/lab/:kind/:id?") ?? "");
 }
 
 // The papers (docs/PUBLICATIONS.md): each page, its twin and its exports, drawn from D1 by routes, compiled

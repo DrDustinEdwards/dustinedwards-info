@@ -12,7 +12,7 @@ import { HOSTS } from "../phages/compile.mjs";
 import { reverseComplement } from "../primers.mjs";
 import { KINDS } from "./kinds.mjs";
 import { primerFacts } from "./primer.mjs";
-import { TM_CONDITIONS, tmStatement } from "./tm.mjs";
+import { NEB_TM_CALCULATOR, TM_CONDITIONS, annealingSentence, tmStatement } from "./tm.mjs";
 
 /** The master inventory, and the root every kind's page sits under. */
 export const LAB_PATH = "/research/lab";
@@ -114,7 +114,7 @@ export const PRIMERS = defineCatalog(
       { key: "target", label: "Target", value: (p) => p.target, facet: { kind: "many", order: "alpha" }, search: 2, column: { header: "Target", drop: 1 } },
       { key: "set", label: "Set", value: (p) => p.set, search: 1 },
       { key: "length", label: "Length (nt)", value: (p) => p.length, type: "number", sort: true, column: { header: "Length (nt)", align: "end", drop: 2 } },
-      { key: "tm", label: "Tm (°C)", value: (p) => p.tm, type: "number", sort: true, column: { header: "Tm (°C)", align: "end", drop: 2 } },
+      { key: "tm", label: "Tm estimate (°C)", value: (p) => p.tm, type: "number", sort: true, column: { header: "Tm estimate (°C)", align: "end", drop: 2 } },
       { key: "product", label: "Product", value: (p) => p.product, column: { header: "Product", drop: 2 } },
     ],
   }),
@@ -144,16 +144,15 @@ export function pairProduct(primer, primers) {
 }
 
 /**
- * The protocols that use a primer, found by its sequence in each published protocol's own primer list, never listed on
- * the primer. A protocol stores its sequence until it reads its tables from the registry, and a test holds the two equal.
+ * The protocols that use a primer: each published protocol names its primers by id (and carries the registry's facts for
+ * them), so the use is read from the protocols and never listed on the primer.
  *
  * @param {PrimerRow} primer
- * @param {Array<{ path: string, title: string, primers: Array<{ sequence?: unknown }> }>} protocols
+ * @param {Array<{ path: string, title: string, primers: Array<{ id: string }> }>} protocols
  */
 export function protocolsUsing(primer, protocols) {
-  if (!primer.sequence) return [];
   return protocols
-    .filter((protocol) => protocol.primers.some((p) => p.sequence === primer.sequence))
+    .filter((protocol) => protocol.primers.some((p) => p.id === primer.id))
     .map((protocol) => ({ path: protocol.path, title: protocol.title }));
 }
 
@@ -277,15 +276,18 @@ export function primersMarkdown(primers, origin) {
       `| [${cell(p.name)}](${origin}${p.path}) | \`${p.sequence ?? ""}\` | ${cell(p.direction)} | ${cell(p.target)} | ${cell(p.length)} | ${cell(p.tm)} | ${cell(pairProduct(p, primers))} |`,
   );
   return [
-    "| Primer | Sequence (5′ to 3′) | Direction | Target | Length (nt) | Tm (°C) | Product |",
+    "| Primer | Sequence (5′ to 3′) | Direction | Target | Length (nt) | Tm estimate (°C) | Product |",
     "| --- | --- | --- | --- | --- | --- | --- |",
     ...lines,
   ].join("\n");
 }
 
-/** The Tm sentence and its conditions, one place for the page and the twin. */
+/**
+ * The Tm sentence, the sentence that says it is not an annealing temperature, and the calculator that gives one, in one
+ * place for the page and the twin (protocols.md, 2026-10-04: no page presents a computed Tm as the annealing temperature).
+ */
 export function tmNote() {
-  return { statement: tmStatement(), conditions: TM_CONDITIONS };
+  return { statement: tmStatement(), annealing: annealingSentence(), calculator: NEB_TM_CALCULATOR, conditions: TM_CONDITIONS };
 }
 
 /**
@@ -309,10 +311,11 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
     product ? `- Product: ${product}` : "",
     primer.length ? `- Length: ${primer.length} nt` : "",
     primer.gcPercent !== null ? `- GC content: ${primer.gcPercent}%` : "",
-    primer.tm !== null ? `- Melting temperature (Tm): ${primer.tm} °C` : "",
+    primer.tm !== null ? `- Melting temperature estimate (Tm): ${primer.tm} °C` : "",
+    `- Annealing temperature: depends on the polymerase; use the [${NEB_TM_CALCULATOR.name}](${NEB_TM_CALCULATOR.url})`,
     primer.source ? `- Source: ${primer.sourceUrl ? `[${primer.source}](${primer.sourceUrl})` : primer.source}` : "",
     primer.paper ? `- On this site: [${primer.source ?? primer.paper}](${origin}/research/publications/${primer.paper}/)` : "",
     ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
   ].filter(Boolean);
-  return `# ${primer.name}\n\n${lines.join("\n")}\n${primer.tm !== null ? `\n${tmNote().statement}\n` : ""}`;
+  return `# ${primer.name}\n\n${lines.join("\n")}\n${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
 }

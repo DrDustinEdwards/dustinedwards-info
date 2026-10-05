@@ -1,5 +1,6 @@
 import { Enhance } from "~/components/enhance";
 import { StepCalculators } from "~/components/phage-tool";
+import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/lib/procedures/proof.mjs";
@@ -447,7 +448,7 @@ export function ProcedureView({
   sheetPath?: string | null;
   frozen?: string[];
 }) {
-  const [materialsId, equipmentId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
+  const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   return (
     <div className="prose procedure" data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
       <ProcedureFacts record={record} />
@@ -495,6 +496,13 @@ export function ProcedureView({
           </>
         ) : null}
       </section>
+
+      {record.primers.length ? (
+        <section aria-labelledby={primersId}>
+          <Heading id={primersId!}>Primers</Heading>
+          <ProcedurePrimers record={record} />
+        </section>
+      ) : null}
 
       {record.equipment.length ? (
         <section aria-labelledby={equipmentId}>
@@ -638,6 +646,12 @@ export function ProcedureSheet({
         <>
           <h2>Equipment</h2>
           <p>{record.equipment.map((e) => e.name).join("; ")}</p>
+        </>
+      ) : null}
+      {record.primers.length ? (
+        <>
+          <h2>Primers</h2>
+          <ProcedurePrimers record={record} brief />
         </>
       ) : null}
       {record.sections.map((section) => {

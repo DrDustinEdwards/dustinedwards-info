@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/lib/registry/compile.mjs";
 import { KINDS } from "../../app/lib/registry/kinds.mjs";
+import { storedPrimer } from "../../app/lib/registry/primer.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -104,4 +105,24 @@ export async function buildRegistry(options = {}) {
     sourceBlobSha: c.sourceBlobSha,
   }));
   return { rows, items, gaps: ok.flatMap((c) => c.gaps.map((g) => ({ slug: registrySlug(c.item.kind, c.item.id), ...g }))) };
+}
+
+/**
+ * The lab registry as the procedure compile reads it from a clone (docs/REGISTRY.md): the primers a protocol names, as the
+ * stated facts the protocol's record carries. Built once from the same compile the registry save runs, so a primer CI
+ * refuses cannot be printed by a protocol; an id the registry does not hold is left out, and the validator names it.
+ *
+ * @param {Parameters<typeof buildRegistry>[0]} [options]
+ */
+export function registryHost(options) {
+  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredPrimer>> | undefined} */
+  let primers;
+  return {
+    /** @param {string[]} ids */
+    async primers(ids) {
+      primers ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "primer").map((item) => [item.id, storedPrimer(item)])));
+      const all = await primers;
+      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+    },
+  };
 }
