@@ -177,3 +177,39 @@ describe("the rest of the site finds it", () => {
     expect(html.indexOf("Calculators")).toBeLessThan(html.indexOf('href="/research/lab/primers"'));
   });
 });
+
+describe("the melting temperature is an estimate, never an annealing temperature", () => {
+  const ALLOWED = [
+    "The Tm estimate is not an annealing temperature.",
+    "For the annealing temperature of a particular polymerase, use the",
+    "Annealing temperature",
+    "Depends on the polymerase:",
+  ];
+  const stripped = (html: string) => ALLOWED.reduce((text, phrase) => text.replaceAll(phrase, ""), html);
+
+  it("every primer page links NEB's calculator for the polymerase-specific annealing temperature", async () => {
+    for (const id of ["lco1490", "hco2198", "rev-3-ltr-forward", "gapdh-reverse", "lpdv-p31-ca-reverse"]) {
+      const { html } = await kindPage("primers", id);
+      expect(html, id).toContain('href="https://tmcalculator.neb.com/"');
+      expect(html, id).toContain("NEB Tm Calculator");
+      expect(html, id).toContain("Melting temperature estimate (Tm)");
+    }
+  });
+
+  it("the primers page and each primer page say it is an estimate and say nothing else about annealing", async () => {
+    for (const html of [(await kindPage("primers")).html, (await kindPage("primers", "rev-3-ltr-forward")).html]) {
+      expect(html).toContain("is an estimate for comparing primers");
+      expect(html).toContain("The Tm estimate is not an annealing temperature.");
+      const body = /<main[\s\S]*<\/main>/.exec(stripped(html))?.[0] ?? stripped(html);
+      expect(body).not.toMatch(/annealing/i);
+    }
+  });
+
+  it("the twins carry the same sentences and the markdown link", async () => {
+    for (const text of [await (await twin({ kind: "primers" })).text(), await (await twin({ kind: "primers", id: "lco1490" })).text()]) {
+      expect(text).toContain("The Tm estimate is not an annealing temperature.");
+      expect(text).toContain("https://tmcalculator.neb.com/");
+    }
+    expect(await (await twin({ kind: "primers", id: "lco1490" })).text()).toContain("- Annealing temperature: depends on the polymerase; use the [NEB Tm Calculator](https://tmcalculator.neb.com/)");
+  });
+});

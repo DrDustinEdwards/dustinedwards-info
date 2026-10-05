@@ -73,7 +73,10 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerRow> }) {
           cells={{ sequence: sequenceCell }}
         />
       </div>
-      <p className="registry-note">{note.statement}</p>
+      <p className="registry-note">
+        {note.statement} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the{" "}
+        <a href={note.calculator.url}>{note.calculator.name}</a>.
+      </p>
     </>
   );
 }
@@ -123,7 +126,10 @@ export function LabPrimer({
         {product ? <Fact term="Product">{product}</Fact> : null}
         {primer.length ? <Fact term="Length">{primer.length} nt</Fact> : null}
         {primer.gcPercent !== null ? <Fact term="GC content">{primer.gcPercent}%</Fact> : null}
-        {primer.tm !== null ? <Fact term="Melting temperature (Tm)">{primer.tm} °C</Fact> : null}
+        {primer.tm !== null ? <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact> : null}
+        <Fact term="Annealing temperature">
+          Depends on the polymerase: <a href={note.calculator.url}>{note.calculator.name}</a>
+        </Fact>
         {primer.source ? (
           <Fact term="Source">
             {primer.sourceUrl ? <a href={primer.sourceUrl}>{primer.source}</a> : primer.source}
@@ -147,7 +153,12 @@ export function LabPrimer({
           </Fact>
         ) : null}
       </dl>
-      {primer.tm !== null ? <p className="registry-note">{note.statement}</p> : null}
+      {primer.tm !== null ? (
+        <p className="registry-note">
+          {note.statement} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the{" "}
+          <a href={note.calculator.url}>{note.calculator.name}</a>.
+        </p>
+      ) : null}
     </>
   );
 }

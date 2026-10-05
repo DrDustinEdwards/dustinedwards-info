@@ -104,16 +104,24 @@ export function primerTmRounded(sequence) {
   return tm === null ? null : Math.round(tm * 10) / 10;
 }
 
+/** NEB’s Tm calculator, which gives the annealing temperature for a particular polymerase (protocols.md, 2026-10-04). */
+export const NEB_TM_CALCULATOR = Object.freeze({ url: "https://tmcalculator.neb.com/", name: "NEB Tm Calculator" });
+
 /**
- * The sentence every page that shows a Tm carries: what was computed and under what conditions, from the one set of
- * constants, so no page restates a number it could be wrong about.
+ * The sentence every page that shows a Tm carries: what the number is (an estimate, for comparing primers), what was
+ * computed and under what conditions, from the one set of constants, so no page restates a number it could be wrong about.
+ * It never calls the figure an annealing temperature; `annealingSentence` says where that comes from.
  */
 export function tmStatement() {
   const { sodiumMM, primerNM, method, citation } = TM_CONDITIONS;
   return (
-    `Melting temperature (Tm) is computed from the sequence with the ${method} (${citation}), ` +
-    `at ${sodiumMM} mM monovalent cation and ${primerNM / 1000} µM primer. These are standard reporting ` +
-    `conditions, not those of any one reaction buffer, so the working annealing temperature of a master mix differs; ` +
-    `use the figure to compare primers with each other. A sequence with an ambiguity code has no single Tm and shows none.`
+    `The melting temperature (Tm) is an estimate for comparing primers with each other, computed from the sequence with the ${method} ` +
+    `(${citation}) at ${sodiumMM} mM monovalent cation and ${primerNM / 1000} µM primer. These are standard reporting ` +
+    `conditions, not those of any one reaction buffer. A sequence with an ambiguity code has no single Tm and shows none.`
   );
+}
+
+/** Where the annealing temperature comes from: not from the Tm above. Plain text, with the calculator named. */
+export function annealingSentence() {
+  return `The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the ${NEB_TM_CALCULATOR.name} (${NEB_TM_CALCULATOR.url}).`;
 }

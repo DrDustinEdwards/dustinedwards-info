@@ -56,7 +56,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
   if (id === undefined) {
     return respond(
-      `# Primers\n\nThe primers the lab's protocols use, with each sequence as stored. Length, GC content and melting temperature are computed from the sequence. A product size is shown only where a protocol states one.\n\n${primersMarkdown(primers, SITE_ORIGIN)}\n\n${tmNote().statement}\n`,
+      `# Primers\n\nThe primers the lab's protocols use, with each sequence as stored. Length, GC content and melting temperature are computed from the sequence. A product size is shown only where a protocol states one.\n\n${primersMarkdown(primers, SITE_ORIGIN)}\n\n${tmNote().statement} ${tmNote().annealing}\n`,
       kindPath(kind),
     );
   }

@@ -9,6 +9,7 @@ import { imageSize } from "image-size";
 
 import * as pipeline from "../../app/lib/content/pipeline.mjs";
 import { compileProcedure } from "../../app/lib/procedures/compile.mjs";
+import { registryHost } from "./registry.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const PROCEDURES_SOURCE_DIR = path.join("content", "procedures");
@@ -39,6 +40,7 @@ async function resolveImage(src) {
  */
 export async function compileDirectory(dir, options = {}) {
   const names = (await readdir(path.join(ROOT, dir))).filter((n) => n.endsWith(".md")).sort();
+  const registry = registryHost();
   const out = [];
   for (const name of names) {
     const slug = name.slice(0, -3);
@@ -48,6 +50,8 @@ export async function compileDirectory(dir, options = {}) {
       raw,
       pipeline,
       resolveImage: options.measureImages === false ? undefined : resolveImage,
+      // The primers a protocol names are the lab registry's, read from this clone (docs/REGISTRY.md).
+      registry,
     });
     out.push({ file: path.join(dir, name).replaceAll("\\", "/"), slug, compiled });
   }

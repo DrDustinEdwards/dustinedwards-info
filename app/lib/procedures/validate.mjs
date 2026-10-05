@@ -39,7 +39,8 @@ export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
 /** Words protocols.md keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
-const IUPAC = /^[ACGTRYSWKMBDHVN]+$/;
+/** A primer's id in the lab registry (app/lib/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
+const PRIMER_ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 const SEO_TITLE_MAX = 60;
 const DESCRIPTION_MAX = 155;
@@ -98,16 +99,6 @@ function quantityPattern(units) {
 const PROTOCOL_QUANTITY = quantityPattern(PROTOCOL_UNITS);
 
 /**
- * Every word the page's body carries: the intro, the prose and the steps.
- *
- * @param {import("./parse.mjs").ParsedProcedure} parsed
- */
-function bodyText(parsed) {
-  const blocks = parsed.sections.flatMap((s) => s.blocks);
-  return [parsed.intro, ...blocks.map((b) => (b.type === "prose" ? b.markdown : b.steps.map((x) => x.source).join(" ")))].join(" ");
-}
-
-/**
  * @param {unknown} value
  */
 function nonEmptyString(value) {
@@ -154,7 +145,8 @@ function validateHistory(d, errors) {
  * Checks one parsed procedure.
  *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
- * @param {{ slug: string }} expect the slug its file name gives
+ * @param {{ slug: string, primers?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers
+ *   the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
  * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string }> }}
  */
 export function validateProcedure(parsed, expect) {
@@ -396,7 +388,7 @@ export function validateProcedure(parsed, expect) {
   }
 
   // The profiles.
-  if (profile === "protocol") protocolRules(d, errors, required, materials, bodyText(parsed));
+  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null);
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);
 
@@ -408,9 +400,9 @@ export function validateProcedure(parsed, expect) {
  * @param {string[]} errors
  * @param {(field: string) => boolean} required
  * @param {Map<string, any>} materials
- * @param {string} body the page's words, which print the primer tables
+ * @param {ReadonlySet<string> | null} primerIds the primers the lab registry holds
  */
-function protocolRules(d, errors, required, materials, body) {
+function protocolRules(d, errors, required, materials, primerIds) {
   for (const field of ["host_strain", "status", "last_run", "biosafety", "biosafety_level", "scale"]) required(field);
   if (d.biosafety_level !== undefined && !isGap(d.biosafety_level) && !BIOSAFETY_LEVELS.includes(d.biosafety_level)) {
     errors.push(`biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`);
@@ -477,12 +469,22 @@ function protocolRules(d, errors, required, materials, body) {
   if (d.primers !== undefined && d.primers !== NOT_APPLICABLE && !isGap(d.primers)) {
     if (!Array.isArray(d.primers)) errors.push(`primers must be a list, or "${NOT_APPLICABLE}"`);
     else {
+      /** @type {Set<string>} */
+      const seen = new Set();
       for (const p of d.primers) {
-        const at = `primers[${p?.set ? `${p.set} ` : ""}${p?.direction ?? "?"}]`;
-        if (!["forward", "reverse", "probe"].includes(p?.direction)) errors.push(`${at} needs a direction: forward, reverse or probe`);
-        if (!isGap(p?.sequence) && !IUPAC.test(String(p?.sequence ?? ""))) errors.push(`${at}.sequence is not an upper-case IUPAC nucleotide sequence`);
-        // The page prints its primer tables in the text; the record and the table must not drift apart.
-        else if (!isGap(p?.sequence) && !body.includes(String(p.sequence))) errors.push(`${at}.sequence ${p.sequence} is not printed anywhere on the page`);
+        const id = p?.primer;
+        const at = `primers[${typeof id === "string" ? id : "?"}]`;
+        if (typeof id !== "string" || !PRIMER_ID.test(id)) {
+          errors.push(`${at} is { primer: <id> }: the id of a primer in the lab registry (content/registry/primer/), such as lco1490. A protocol names its primers and stores no sequence`);
+        } else if (seen.has(id)) {
+          errors.push(`${at} is listed twice`);
+        } else {
+          seen.add(id);
+          if (primerIds && !primerIds.has(id)) errors.push(`${at} names no primer in the lab registry (there is no content/registry/primer/${id}.md)`);
+        }
+        for (const key of Object.keys(p ?? {})) {
+          if (key !== "primer") errors.push(`${at}.${key} is not a protocol field: a primer's sequence, direction and set are stored once, in the lab registry`);
+        }
       }
     }
   }

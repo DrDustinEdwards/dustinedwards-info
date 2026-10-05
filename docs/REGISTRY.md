@@ -66,13 +66,30 @@ lists the phages by reading their own table and never copying a row. Every regis
 plus `.md`.
 
 **Computed, never stored:** length, GC content, reverse complement, Tm, a pair's product on its reverse primer, and the
-protocols that use a primer (found by its sequence). Tm (`app/lib/registry/tm.mjs`) is the SantaLucia (1998) nearest-neighbour
-model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one; it is held to Biopython's
-`Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an ambiguity code.
+protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/lib/registry/tm.mjs`) is the
+SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
+it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
+ambiguity code. It is labelled an estimate for comparing primers (protocols.md, 2026-10-04), every primer page links NEB's Tm
+Calculator for the polymerase-specific annealing temperature, and no page presents the computed Tm as an annealing temperature.
 
-Until the protocols read their primer tables from the registry (the next change), each protocol still lists its primers, and
-`test/registry-primers.test.mjs` fails if a protocol's primer and the registry's ever differ, or a registry primer is used by
-no protocol.
+### Protocols read their primers from the registry
+
+A protocol's `primers` is a list of `{ primer: <id> }` and nothing else: a primer's sequence, direction and set are stored once,
+in the registry, and the protocol file and its body hold none (`test/registry-primers.test.mjs` fails if one appears). The
+procedure compile (`app/lib/procedures/compile.mjs`) reads the named primers from the repository (the Worker through
+`app/lib/registry/host.server.ts`, Node through `scripts/lib/registry.mjs`), refuses an id the registry does not hold, a primer
+listed twice, a draft primer in a published protocol and any other field, and bakes the registry's facts into the protocol's
+record. So the page's Primers section, the bench sheet, the markdown twin, the search record and a frozen version all print one
+sequence, and a version freezes the sequence it was published with.
+
+A record derived from another store has to follow it: a registry save and `sync_registry` recompile every protocol that names
+the changed primer from its file and rewrite its row (`app/lib/procedures/primer-dependents.server.ts`), and `sync:content` at
+ship rewrites them all. A protocol that no longer compiles with the change (the primer was deleted or made a draft) stops the
+save with an error that names it. Known gap: a registry primer edited through git is not seen as drift on the protocol until
+`sync_registry` or the next ship runs, because the protocol's own file did not change.
+
+Product sizes are still typed in the protocols' prose (they are stated in the papers), so a test holds each registry product to
+the text of a protocol that uses the pair.
 
 ## Where it goes
 
