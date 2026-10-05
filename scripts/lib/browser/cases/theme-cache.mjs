@@ -39,10 +39,13 @@ export async function run({ page, browser }) {
     /* The phage page: prose from the page row and the catalog over the phage rows. */
     { path: "/research/phages", module: "phages.tsx" },
     /* The lab registry: the inventory, the primers page, and one primer (the item is the kind page's optional segment). */
-    { path: "/research/lab", module: "lab.tsx" },
-    { path: "/research/lab/primers", module: "lab.kind.tsx" },
+    /* A catalog page is `bare`: its route 301s any parameter the catalog does not know (catalogRedirect) to the canonical
+     * address, so the run's cache-buster would turn every fetch into a redirect and the case would compare redirects. The
+     * request's own `cache-control: no-cache` still keeps it off a stale copy. */
+    { path: "/research/lab", module: "lab.tsx", bare: true },
+    { path: "/research/lab/primers", module: "lab.kind.tsx", bare: true },
     { path: "/research/lab/primers/lco1490", module: "lab.kind.tsx" },
-    { path: "/research/lab/strains", module: "lab.kind.tsx" },
+    { path: "/research/lab/strains", module: "lab.kind.tsx", bare: true },
     { path: "/research/lab/strains/foliorum", module: "lab.kind.tsx" },
     /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
     { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
@@ -114,10 +117,14 @@ export async function run({ page, browser }) {
    */
   const docStatuses = new Map();
 
+  /** The paths fetched with no cache-buster (see `bare` above). */
+  const bare = new Set(THEME_CACHED.filter((entry) => "bare" in entry && entry.bare).map((entry) => entry.path));
+
   /** @param {string} path @param {Record<string,string>} headers */
   const fetchDoc = async (path, headers) => {
     const sep = path.includes("?") ? "&" : "?";
-    const res = await fetch(`${BASE}${path}${sep}identity=${RUN_IDENTITY}`, {
+    const buster = bare.has(path) ? "" : `${sep}identity=${RUN_IDENTITY}`;
+    const res = await fetch(`${BASE}${path}${buster}`, {
       headers: { "cache-control": "no-cache", ...headers },
       redirect: "manual",
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
