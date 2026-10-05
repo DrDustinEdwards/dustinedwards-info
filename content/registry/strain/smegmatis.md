@@ -5,5 +5,5 @@ strain: "mc²155"
 collection: "ATCC"
 collection_number: "700084"
 guide_url: "https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis"
-biosafety_level: "MISSING: Waiting on Dustin: the biosafety officer check (core.md)."
+biosafety_level: "BSL-1"
 ---
