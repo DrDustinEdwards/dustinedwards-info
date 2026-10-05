@@ -15,6 +15,10 @@ import {
   primerRows,
   primersMarkdown,
   protocolsUsing,
+  protocolsUsingStrain,
+  strainMarkdown,
+  strainRows,
+  strainsMarkdown,
   tmNote,
 } from "~/lib/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/lib/registry/route";
@@ -52,8 +56,23 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   const kind = kindFromSegment(segment);
-  if (kind !== "primer") return notFound();
+  if (kind !== "primer" && kind !== "strain") return notFound();
   const published = await listRegistry(env, { kind, published: true });
+
+  if (kind === "strain") {
+    const strains = strainRows(published, await listPhages(env));
+    if (id === undefined) {
+      return respond(
+        `# Strains\n\nThe bacterial hosts the lab's phages are isolated on. Each strain's phages are counted from the phages table.\n\n${strainsMarkdown(strains, SITE_ORIGIN)}\n`,
+        kindPath(kind),
+      );
+    }
+    const strain = strains.find((s) => s.id === id);
+    if (!strain) return notFound();
+    const usedBy = protocolsUsingStrain(strain, await listPublishedLibraryRecords(env));
+    return respond(strainMarkdown(strain, usedBy, SITE_ORIGIN), itemPath(kind, strain.id));
+  }
+
   const primers = published.map(primerRow);
 
   if (id === undefined) {

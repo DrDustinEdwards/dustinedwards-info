@@ -13,9 +13,9 @@ updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."
 last_run: "MISSING: protocols.md: nothing is marked as run in the lab until someone has worked from the rendered page and dated it."
 host_strain:
-  - Mycobacterium smegmatis mc²155 (ATCC 700084)
-  - Microbacterium foliorum NRRL B-24224
-biosafety: "MISSING: Waiting on Dustin: the biosafety officer check (core.md). protocols.md: list the agent only (organism and strain, with its ATCC number); the agent for this protocol is his to name. The page names Mycobacterium smegmatis mc²155 (ATCC 700084) and Microbacterium foliorum NRRL B-24224, which has no ATCC number on the page."
+  - strain: smegmatis
+  - strain: foliorum
+biosafety: "MISSING: Waiting on Dustin: the biosafety officer check (core.md). protocols.md: list the agent only (organism and strain, with its ATCC number); the agent for this protocol is his to name. The host strains the page uses are the lab registry's, named under Host strain."
 biosafety_level: "MISSING: Waiting on Dustin: he sets BSL-1 or BSL-2 for each protocol himself."
 scale: "MISSING: The page records the lab's variants of several Guide protocols, each at its own scale (per plate, per soil sample, per batch of webbed plates), and states no single batch size to scale by."
 primers: not applicable
@@ -99,16 +99,15 @@ DNA extraction is on the [phage DNA extraction](/research/protocols/phage-dna-ex
 
 ## Host strains
 
-- *Mycobacterium smegmatis* mc²155 (ATCC 700084). Guide host page: [*M. smegmatis*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis).
-- *Microbacterium foliorum* NRRL B-24224. Guide host page: [*M. foliorum*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum).
+The two host strains are named under Host strain at the top of the page. Each links to its lab registry record, which has its culture collection number and the Guide's page for it.
 
 Which host, by year:
 
 | Years | Host | Media | Plate incubation |
 | --- | --- | --- | --- |
-| 2017 | *Mycobacterium smegmatis* mc²155 | Enrichment Broth | 37 °C; 48 h for plaque assays and titers, 24 h for webbed plates |
-| 2018 to 2019 | *Microbacterium foliorum* NRRL B-24224 | PYCa | 23 to 30 °C, 24 to 48 h |
-| 2021 to 2025 | *Microbacterium foliorum* NRRL B-24224 | PYCa liquid media, PYCa plates and PYCa top agar | 29 °C, 24 to 48 h |
+| 2017 | *M. smegmatis* | Enrichment Broth | 37 °C; 48 h for plaque assays and titers, 24 h for webbed plates |
+| 2018 to 2019 | *M. foliorum* | PYCa | 23 to 30 °C, 24 to 48 h |
+| 2021 to 2025 | *M. foliorum* | PYCa liquid media, PYCa plates and PYCa top agar | 29 °C, 24 to 48 h |
 
 Everything below that gives a temperature or time is for *M. foliorum* in PYCa unless it says *M. smegmatis*.
 

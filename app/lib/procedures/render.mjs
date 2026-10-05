@@ -66,6 +66,13 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  */
 
 /**
+ * A host strain as a protocol carries it: the lab registry's stated facts about it, read when the protocol is compiled and
+ * stored in the record, so the page, the twin and a frozen version name one strain and the protocol's file types none.
+ *
+ * @typedef {{ id: string, name: string, status: "published" | "draft", organism: string | null, strain: string | null, collection: string | null, collectionNumber: string | null }} StoredStrain
+ */
+
+/**
  * @param {{
  *   slug: string,
  *   parsed: import("./parse.mjs").ParsedProcedure,
@@ -73,9 +80,10 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  *   renderBody: RenderBody,
  *   resolveImage?: (src: string) => Promise<{ width: number, height: number }>,
  *   primerRows?: StoredPrimer[],
+ *   strainRows?: Array<StoredStrain & { path: string }>,
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows }) {
+export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows }) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
@@ -339,8 +347,9 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     biosafety: known(d.biosafety) && d.biosafety !== "not applicable" ? d.biosafety : null,
     // Dustin's to set per protocol. A gap reads as null, so no page, twin or structured data ever carries "MISSING".
     biosafetyLevel: /** @type {string | null} */ (known(d.biosafety_level)),
-    hostStrain:
-      known(d.host_strain) && d.host_strain !== "not applicable" ? list(d.host_strain).map(String).join("; ") : null,
+    // The strains are the registry's: the names are computed from them, never typed in the protocol.
+    hostStrains: (strainRows ?? []).map((s) => ({ id: s.id, name: s.name, path: s.path, organism: s.organism, strain: s.strain, collection: s.collection, collectionNumber: s.collectionNumber })),
+    hostStrain: (strainRows ?? []).length > 0 ? (strainRows ?? []).map((s) => s.name).join("; ") : null,
     solutions: list(d.solutions).map((/** @type {any} */ s) => ({
       id: s.id,
       name: s.name,
@@ -432,7 +441,7 @@ export function procedureMarkdown(record, parsed) {
     ["Cook time", record.cookTime],
     ["Total time", record.time.total],
     ["Hands-on time", record.time.handsOn],
-    ["Host strain", record.hostStrain],
+    ["Host strain", record.hostStrains.length > 0 ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ") : null],
     ["Biosafety level", record.biosafetyLevel],
     [
       "Biosafety",

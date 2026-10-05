@@ -121,7 +121,7 @@ pages. When the lab registry holds host strains, `organism` reads from it.
   protocols.md), `biosafety_level` (`BSL-1` or `BSL-2`: Dustin sets it, no agent fills or infers it, and it is
   written `MISSING: <why>` until he does; required, so a forgotten one fails. It shows among the facts at the top of
   the page and the sheet, in the twin and in the structured data only once set; the operator API's `list_procedures`
-  shows `MISSING` so he can find the ones left, and `get_procedure` lists it among the gaps), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
+  shows `MISSING` so he can find the ones left, and `get_procedure` lists it among the gaps), `host_strain` (a list of `{ strain: <id> }`, each the id of a strain in the lab registry, docs/REGISTRY.md: the organism, designation and collection number are stored there once and the protocol types none; the page links each strain), `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
   `solutions` (sub-recipes: `id`, `name`, `components`, `storage`, `shelf_life`), `primers` (a list of `{ primer: <id> }`, each the id
   of a primer in the lab registry, docs/REGISTRY.md: the sequence is stored there once and the protocol holds none; the page, sheet
   and twin draw a Primers section from the registry's facts), `cycling`.

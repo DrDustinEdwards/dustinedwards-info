@@ -59,7 +59,7 @@ function total(amount: string | null, per: string | null, record: ProcedureRecor
 }
 
 export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
-  const facts: Array<[string, string]> = [];
+  const facts: Array<[string, React.ReactNode]> = [];
   const add = (label: string, value: string | number | null | undefined) => {
     if (value !== null && value !== undefined && value !== "") facts.push([label, String(value)]);
   };
@@ -77,7 +77,18 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
   add("Cuisine", record.cuisine);
   add("Category", record.category);
   if (record.diet.length) add("Diet", record.diet.join(", "));
-  add("Host strain", record.hostStrain);
+  // The strains are the lab registry's, so each name links to its record.
+  if (record.hostStrains.length > 0) {
+    facts.push([
+      "Host strain",
+      record.hostStrains.map((s, i) => (
+        <span key={s.id}>
+          {i > 0 ? "; " : null}
+          <a href={s.path}>{s.name}</a>
+        </span>
+      )),
+    ]);
+  }
   if (record.biosafety) {
     add(
       "Agent",
