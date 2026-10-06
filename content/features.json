@@ -476,6 +476,63 @@
       ]
     },
     {
+      "component": "Lab registry",
+      "name": "A fact is stored once, in a record, and every page draws it from there",
+      "what": "The lab's primers, host strains, reagents and equipment are records in the repository, one file each, and a protocol names them by id instead of repeating them. A primer's sequence is written in one file, and the protocol that uses it, the primer's own page, the printable bench sheet, the markdown copy and the search records all print that one sequence. A save recompiles every protocol that names the changed record, so no page is left reading an old value. The files are the source and the database holds a derived copy that the health checks compare against the files.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/research/lab"
+        },
+        {
+          "kind": "route",
+          "path": "/research/protocols"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:protocols"
+        }
+      ]
+    },
+    {
+      "component": "Lab registry",
+      "name": "Sizes, positions and melting temperatures are computed, never copied",
+      "what": "A primer's length, GC content, reverse complement and melting temperature come from its sequence, with the conditions stated beside the figure and the figure called an estimate for comparing primers rather than an annealing temperature. Where a primer binds a named GenBank reference, and the size of the product a pair makes, are computed by the site's own tested placement code, and a mismatch is shown rather than absorbed. A reference is genomic unless a protocol amplifies cDNA. The phages isolated on a host strain are counted from the phage table by host, so a phage added there is counted on the strain's page with no edit to the strain.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/research/lab"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:tests"
+        }
+      ]
+    },
+    {
+      "component": "Lab registry",
+      "name": "What no record states is said, with the reason, and listed",
+      "what": "A fact that could not be found in a source the lab can read is written as missing with the reason (paywalled, not stated, waiting on a person), and the page shows it as not found with that reason instead of leaving a blank or filling it from memory. A sequence that differs from the one a paper prints is shown as different and reported, never corrected quietly. The reagents and the equipment are each one table, because the record behind a row has little to say beyond its supplier or maker, and each protocol keeps its own amounts, stocks and settings in its own table.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/research/lab"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:content"
+        }
+      ]
+    },
+    {
       "component": "This page",
       "name": "The stack half is generated",
       "what": "Every binding, migration, gate and dependency above is emitted from the repository's own configuration when the site is built. Nothing in the generator or on this page restates a name.",
