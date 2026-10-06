@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import worker, { cacheDimensions } from "../../workers/app";
 import { enhanceLoaderHash } from "../../workers/csp.mjs";
+import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
 import { STUB_PATHS, STUB_PAGE_BODY, STUB_MARKDOWN_BODY } from "./stub-server-build";
@@ -127,7 +128,7 @@ describe("the cache-header rule: the platform caches silence", () => {
   it("stamps the security headers and a nonce-free CSP on a public response", async () => {
     const first = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.page)}`));
     expect(first.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(first.headers.get("x-frame-options")).toBe("DENY");
+    expect(first.headers.get("x-frame-options")).toBe(SECURITY_HEADERS["X-Frame-Options"]);
     /* The response is shared-cached with its header, so a nonce here would be every reader's.
      * The page's one inline script is allowed by the loader's hash instead. */
     const policy = first.headers.get("content-security-policy") ?? "";
