@@ -159,7 +159,7 @@ export const MAP = [
   {
     what: "a test",
     test: /^test\/.+/,
-    gates: [RELATED],
+    gates: [RELATED, "check:test-assertions"],
   },
   {
     /* No gate or test reads these (the last hook test went with stop-typecheck.sh), so a change here

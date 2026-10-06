@@ -1,0 +1,46 @@
+# The mutation score of the pure app/lib modules, weekly and on demand, and NEVER a gate.
+#
+# Stryker's command runner (scripts/mutation-score.mjs) changes a module one way at a time and runs the node:test files
+# that import it; a change no test notices is a gap. It reports killed over killable per module, not which test killed
+# what (baseline.md in Capsid, dustinedwards/baseline.md: option a). The modules are sliced across a matrix so no job
+# runs long; each slice writes a table to the run's summary and uploads its JSON. A low score is a number to read, so
+# nothing here fails on one; a job fails only when Stryker itself could not run.
+
+name: Mutation score
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  score:
+    name: Slice ${{ matrix.shard }} of 6
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Score this slice
+        run: node scripts/mutation-score.mjs --shard ${{ matrix.shard }}/6
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-summary-${{ matrix.shard }}
+          path: reports/mutation/summary-*.json

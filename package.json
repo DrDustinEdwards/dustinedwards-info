@@ -52,6 +52,7 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:policy": "node scripts/check-policy.mjs",
     "check:ask-guards": "node scripts/check-ask-guards.mjs",
+    "check:test-assertions": "node scripts/check-test-assertions.mjs",
     "check:enhance-a11y": "node scripts/check-enhance-a11y.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:postinstall": "node scripts/check-postinstall.mjs",
