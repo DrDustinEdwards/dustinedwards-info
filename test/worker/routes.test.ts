@@ -175,7 +175,7 @@ describe("/api/health", () => {
     /* The route's own numbers, which it deliberately does not export: 20 per
      * 60 seconds. Spent to the edge, so the next call is the first refusal. */
     let lastOk = true;
-    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit(20, 60)).ok;
+    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit([{ limit: 20, windowSeconds: 60 }])).ok;
     /* The allowance was real: if `hit` had refused early, the assertion below would pass
      * against a limiter this case did not exhaust. */
     expect(lastOk).toBe(true);

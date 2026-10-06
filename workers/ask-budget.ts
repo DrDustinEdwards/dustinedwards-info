@@ -1,16 +1,16 @@
-// aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
-import { DurableObject } from "cloudflare:workers";
+import { RateLimiter } from "@drdustinedwards/rate-limit/durable-object";
 
 /**
- * Not the `ratelimit` binding or KV: the binding is documented as eventually consistent and not for
- * accounting, and KV read-modify-writes race. Synchronous SQL, because a DO sequence spanning
- * `await` is not atomic.
+ * The per-key rate limits are the shared class's `hit` (@drdustinedwards/rate-limit), which this class
+ * extends so the binding and the stored class keep their name and need no migration; `consume` is the
+ * site-wide daily budget, which stays here. Not the `ratelimit` binding or KV: the binding is documented
+ * as eventually consistent and not for accounting, and KV read-modify-writes race. Synchronous SQL,
+ * because a DO sequence spanning `await` is not atomic.
  */
-export class AskBudget extends DurableObject {
+export class AskBudget extends RateLimiter<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    // `day` is the window's key, whatever the window: the UTC date for the daily budget, the window
-    // number for a per-IP limit. Named for the first use; renaming it would strand stored counts.
+    // `day` is the UTC date of the daily budget. Rows an earlier per-IP limit left here are never read again.
     this.ctx.storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS budget (day TEXT PRIMARY KEY, count INTEGER NOT NULL)`,
     );
@@ -45,18 +45,6 @@ export class AskBudget extends DurableObject {
   consume(limit: number): { ok: boolean; spent: number } {
     const { ok, count } = this.increment(new Date().toISOString().slice(0, 10), limit);
     return { ok, spent: count };
-  }
-
-  /**
-   * Per-IP fixed window, one instance per IP. An exact count, not the permissive `ratelimit` binding,
-   * because one bursting client could otherwise burn the whole day's budget for every reader.
-   */
-  hit(limit: number, windowSeconds: number): { ok: boolean; used: number } {
-    const { ok, count } = this.increment(
-      String(Math.floor(Date.now() / 1000 / windowSeconds)),
-      limit,
-    );
-    return { ok, used: count };
   }
 
   peek(): { day: string; count: number } {

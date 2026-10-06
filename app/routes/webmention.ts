@@ -7,6 +7,7 @@ import {
 import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { readCapped } from "~/lib/read-capped.mjs";
+import { limitHit } from "~/lib/rate-limit.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
 
@@ -73,10 +74,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   /* The rate limit precedes the body read: every check below it costs something. */
   const ip = clientIp(request);
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`wm:${ip}`));
-  const { ok: withinRate } = await limiter.hit(RATE_LIMIT, RATE_PERIOD_SECONDS);
-  if (!withinRate) {
-    return answer("Too Many Requests", 429, { "retry-after": String(RATE_PERIOD_SECONDS) });
+  const rate = await limitHit(env, `wm:${ip}`, RATE_LIMIT, RATE_PERIOD_SECONDS);
+  if (rate.status === "unavailable") {
+    return answer("Webmentions unavailable", 503, { "retry-after": String(rate.retryAfterSeconds) });
+  }
+  if (rate.status === "limited") {
+    return answer("Too Many Requests", 429, { "retry-after": String(rate.retryAfterSeconds) });
   }
 
   /* Checked on the header, where it is free. The protocol specifies only this encoding. */

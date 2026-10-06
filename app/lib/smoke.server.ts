@@ -51,19 +51,19 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
   const id = tokenLabel(presented);
 
   const verdict = await limitHit(env, `smoke:${id}`, SMOKE_RATE_LIMIT, SMOKE_RATE_PERIOD_SECONDS);
-  if (verdict === "unavailable") {
+  if (verdict.status === "unavailable") {
     return {
       kind: "refused",
       status: 503,
       error: "Rate limiting is unavailable, so the smoke credential is disabled.",
     };
   }
-  if (verdict === "limited") {
+  if (verdict.status === "limited") {
     return {
       kind: "refused",
       status: 429,
       error: `Rate limit: ${SMOKE_RATE_LIMIT} requests per ${SMOKE_RATE_PERIOD_SECONDS} seconds.`,
-      retryAfter: SMOKE_RATE_PERIOD_SECONDS,
+      retryAfter: verdict.retryAfterSeconds,
     };
   }
 
