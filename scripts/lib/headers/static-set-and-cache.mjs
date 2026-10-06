@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { blockFrom } from "../source-body.mjs";
-import { headerConstant } from "../header-constants.mjs";
+import { declaredSecurityHeaders } from "../header-constants.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
 
@@ -17,11 +17,14 @@ const RATIFIED = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "X-Frame-Options": "DENY",
+  "X-Frame-Options": "deny",
   "Permissions-Policy":
     "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), midi=(), display-capture=()",
   "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
   "Cross-Origin-Resource-Policy": "cross-origin",
+  // The two OSHP recommends and this site had not sent: the shared standard supplies them.
+  "X-DNS-Prefetch-Control": "off",
+  "X-Permitted-Cross-Domain-Policies": "none",
 };
 
 /**
@@ -39,13 +42,14 @@ export function documentHeadersOf(code) {
  * @param {string} code workers/app.ts with its comments stripped
  */
 export function run(code) {
-  const securityHeaders = headerConstant(code, "SECURITY_HEADERS");
+  // The set is built by the shared package from OSHP's values and this site's deviations (workers/security-headers.mjs), and
+  // imported here, so it is the set the Worker applies. app.ts must take it from that module and not declare its own.
+  const declared = declaredSecurityHeaders();
   ok(
-    "workers/app.ts declares a SECURITY_HEADERS constant",
-    Boolean(securityHeaders),
-    "not found after stripping comments. Without it nothing below examines anything.",
+    "workers/app.ts applies the SECURITY_HEADERS built in workers/security-headers.mjs",
+    /import\s*\{\s*SECURITY_HEADERS\s*\}\s*from\s*"\.\/security-headers\.mjs"/.test(code) && !/const\s+SECURITY_HEADERS\b/.test(code),
+    "app.ts does not import SECURITY_HEADERS from ./security-headers.mjs, or declares a set of its own beside it",
   );
-  const declared = securityHeaders ?? {};
 
   ok(
     "the constant is not empty",
@@ -62,7 +66,7 @@ export function run(code) {
     ok(
       `${name} is declared`,
       name in declared,
-      `the ratified set includes it and workers/app.ts does not`,
+      `the ratified set includes it and workers/security-headers.mjs does not build it`,
     );
     if (name in declared) {
       ok(
@@ -82,7 +86,7 @@ export function run(code) {
     ok(
       `${name} is a ratified header`,
       name in RATIFIED,
-      `workers/app.ts declares it and the ratification does not. Add it here in the same commit, or remove it.`,
+      `workers/security-headers.mjs builds it and the ratification does not. Add it here in the same commit, or remove it.`,
     );
   }
 
