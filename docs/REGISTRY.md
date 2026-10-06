@@ -4,7 +4,7 @@ The reference catalog of the lab's primers, strains, reagents and equipment (job
 phages and procedures are: a record is a file in the repository, the file is the source, and D1 holds a derived copy
 that a save and `npm run sync:content` write. A record is edited with no build and no deploy. This document is the
 framework and the kinds built on it. The framework shipped with no kind and no record; each kind arrives with its own
-records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**, **reagent**.
+records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**, **reagent**, **equipment**.
 
 Out of scope, on purpose: stock counts, storage locations and sample data. The registry says what a thing is, never
 how much of it the lab has or where it sits.
@@ -154,11 +154,11 @@ address of a reagent that briefly had a page answers 404.
 A record states what the lab's own pages state. A **bought** reagent states `supplier` and `catalog_number`, each written or
 `MISSING: <why>` where no record in the repository says, and `product_url` where a protocol linked the product (GoTaq Flexi from
 Promega, M8296; OneTaq Hot Start 2X Master Mix and the 100 bp DNA ladder from New England Biolabs, M0484 and N3231, each read from the
-product link the protocols carried). A reagent **prepared in the lab** (phage buffer, PYCa, TES buffer) states `prepared_in_lab: true`
+product link the protocols carried). A reagent **prepared in the lab** (nuclease mix, phage buffer, PYCa, TES buffer) states `prepared_in_lab: true`
 and a `recipe` in place of a supplier and a catalog number: the file key of a procedure with the recipe profile
 (`content/procedures/<key>.md`, `profile: recipe`, checked by the host the way a paper is), shown as a link to `/recipes/<key>`, or
-`MISSING: <why>` where no recipe exists yet, which is listed for Dustin. Recipes are written by the lab, never here, so all three are
-gaps today. A set rule holds each record to one of the two.
+`MISSING: <why>` where no recipe exists yet, which is listed for Dustin. Recipes are written by the lab, never here, so all four are
+gaps today (the nuclease mix is prepared in the lab because the protocol cites the Phage Discovery Guide's recipe for it). A set rule holds each record to one of the two.
 
 **Computed, never stored:** what the protocols use of a reagent. A protocol names a reagent on one of its materials as
 `reagent: <id>` and keeps what is its own (the amount, stock and final, and the name the steps mark it by). The compile reads the
@@ -169,6 +169,28 @@ linked to the recipe), also in the twin as `source ...`. A protocol no longer ty
 registry holds (`test/registry-reagents.test.mjs`). An unknown id, a malformed id and a draft reagent in a published protocol are
 refused, and a registry save or `sync_registry` recompiles every protocol whose materials name the changed reagent. The NEB 100 bp
 ladder is a reagent (Dustin's ruling): it is a material of the three PCR protocols, not an item of their equipment lists.
+
+## The equipment kind
+
+`app/lib/registry/equipment.mjs`, eleven records in `content/registry/equipment/`: the instruments and labware the lab's protocols list
+under Equipment (microcentrifuge, microcentrifuge tubes, heat block, NanoDrop, Qubit 3.0, water bath, plate incubator, shaking incubator,
+tube-top vacuum filter unit, pipettor, light box). Like the reagents it is **one table with no page for an item** (`itemPages: false`): the
+library's Equipment tab at `/research/lab/equipment`, with a twin at `/research/lab/equipment.md`, no item page, twin, search record or
+sitemap entry, and no redirect. The table has the equipment, its manufacturer, its rotor where one matters and the protocols that use
+each; every gap is listed under it with its reason, in the page and the twin.
+
+A record states what the lab's pages state, which is the name. `manufacturer` is required and is `MISSING: <why>` for all eleven, because
+no record in the repository says who makes any of it; `rotor` is carried on the microcentrifuge as a gap (`Waiting on Dustin: the ZnCl2
+rotor (core.md)`), because the protocols give rpm and a g-force needs the rotor. The agarose gels the protocols list stay the
+protocols' own words: the percentage is the protocol's. The settings (55 °C, 29 °C, 220 to 250 rpm, 0.22 µm, 1 to 10 µl) are the
+protocols' too and are never stored here.
+
+A protocol names an item as `equipment: <id>` on an entry of its equipment list (`- name: 55 °C water bath for molten top agar` and
+`equipment: water-bath`) and keeps its own words. The compile reads the items from the repository, bakes the registry's stated facts into
+the entry (`item: { id, name, manufacturer, rotor, rotorGap }`), and the protocol's Equipment section is a table: the protocol's words,
+the manufacturer, the rotor where recorded, and the protocol's notes; the twin carries the same facts. An unknown id, a malformed id and a
+draft item in a published protocol are refused, and a registry save or `sync_registry` recompiles every protocol whose list names the
+changed item (`test/registry-equipment.test.mjs`, `test/worker/lab.test.ts`, `test/worker/procedure-primers.test.ts`).
 
 ## Where it goes
 

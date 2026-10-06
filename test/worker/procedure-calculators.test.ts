@@ -13,7 +13,7 @@ import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
-import { reagentRepoFiles, strainRepoFiles } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* Calculators folded under the steps that name them (docs/PROCEDURES.md): what a reader, a machine and the printed
  * sheet are given. The file is the repository's own phage-isolation, whose steps 2, 3 and 4 name a calculator each. */
@@ -25,7 +25,7 @@ const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
 let gh: GitHubStub;
 beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles });
+  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
 afterEach(() => {
   gh.restore();

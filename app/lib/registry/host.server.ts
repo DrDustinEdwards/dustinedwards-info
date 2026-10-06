@@ -7,11 +7,12 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/editor/github.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
-import type { StoredPrimer, StoredReagent, StoredStrain } from "~/lib/procedures/render.mjs";
+import type { StoredEquipment, StoredPrimer, StoredReagent, StoredStrain } from "~/lib/procedures/render.mjs";
 
 import { compileRegistryItem, registryPath, registrySlug } from "./compile.mjs";
 import { KINDS, type KindSpec } from "./kinds.mjs";
 import { storedPrimer } from "./primer.mjs";
+import { storedEquipment } from "./equipment.mjs";
 import { storedReagent } from "./reagent.mjs";
 import { storedStrain } from "./strain.mjs";
 
@@ -69,6 +70,19 @@ export async function readReagents(env: RegistryEnv, ids: string[]): Promise<Map
     if (!file) continue;
     const compiled = await compile(env, slug, file.content);
     if (compiled.ok) found.set(id, storedReagent(compiled.item));
+  }
+  return found;
+}
+
+/** The equipment a protocol's list names, as the repository holds it; an id with no compiling file is left out, and the validator names it. */
+export async function readEquipment(env: RegistryEnv, ids: string[]): Promise<Map<string, StoredEquipment>> {
+  const found = new Map<string, StoredEquipment>();
+  for (const id of ids) {
+    const slug = registrySlug("equipment", id);
+    const file = await readFile(env, registryPath(slug));
+    if (!file) continue;
+    const compiled = await compile(env, slug, file.content);
+    if (compiled.ok) found.set(id, storedEquipment(compiled.item));
   }
   return found;
 }

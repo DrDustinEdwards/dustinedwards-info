@@ -1,6 +1,6 @@
 ---
 name: "Nuclease mix"
 contents: "DNase I plus RNase A"
-supplier: "MISSING: No record in the repo states who supplies the lab's nuclease mix."
-catalog_number: "MISSING: No record in the repo states the catalog number of the lab's nuclease mix."
+prepared_in_lab: true
+recipe: "MISSING: No procedure with the recipe profile exists yet for the lab's nuclease mix. The protocol cites the Phage Discovery Guide's recipe for it; recipes are written by the lab, not here."
 ---

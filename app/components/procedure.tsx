@@ -145,6 +145,37 @@ function ReagentSource({ reagent }: { reagent: NonNullable<ProcedureRecord["mate
   return source.href ? <a href={source.href}>{source.text}</a> : <>{source.text}</>;
 }
 
+/** The protocol's Equipment as a table: its own words for each item, and who makes it where the registry says. */
+export function EquipmentTable({ record }: { record: ProcedureRecord }) {
+  const hasMaker = record.equipment.some((e) => e.item);
+  const hasRotor = record.equipment.some((e) => e.item && (e.item.rotor || e.item.rotorGap));
+  const hasNote = record.equipment.some((e) => e.noteHtml);
+  return (
+    <div className="table-scroll">
+      <table className="procedure-materials procedure-equipment">
+        <thead>
+          <tr>
+            <th scope="col">Equipment</th>
+            {hasMaker ? <th scope="col">Manufacturer</th> : null}
+            {hasRotor ? <th scope="col">Rotor</th> : null}
+            {hasNote ? <th scope="col">Notes</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {record.equipment.map((e) => (
+            <tr key={e.name}>
+              <th scope="row">{e.name}</th>
+              {hasMaker ? <td>{e.item ? (e.item.manufacturer ?? "Not recorded") : ""}</td> : null}
+              {hasRotor ? <td>{e.item?.rotor ?? (e.item?.rotorGap ? "Not recorded" : "")}</td> : null}
+              {hasNote ? <td>{e.noteHtml ? <span dangerouslySetInnerHTML={html(e.noteHtml)} /> : null}</td> : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function MaterialsTable({ record, count, factor }: { record: ProcedureRecord; count: number; factor: number }) {
   const showTotal = record.profile === "protocol" && record.scale !== null && record.materials.some((m) => m.per === record.scale?.unit);
   const hasStock = record.materials.some((m) => m.stock.length > 0);
@@ -528,18 +559,7 @@ export function ProcedureView({
       {record.equipment.length ? (
         <section aria-labelledby={equipmentId}>
           <Heading id={equipmentId!}>Equipment</Heading>
-          <ul>
-            {record.equipment.map((e) => (
-              <li key={e.name}>
-                {e.name}
-                {e.noteHtml ? (
-                  <>
-                    : <span dangerouslySetInnerHTML={html(e.noteHtml)} />
-                  </>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <EquipmentTable record={record} />
         </section>
       ) : null}
 

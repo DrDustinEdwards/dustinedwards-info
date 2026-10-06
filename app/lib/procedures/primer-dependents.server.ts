@@ -24,6 +24,7 @@ const NAMED_IN = {
     { field: "$.organisms", id: null },
   ],
   reagent: [{ field: "$.materials", id: "$.reagent.id" }],
+  equipment: [{ field: "$.equipment", id: "$.item.id" }],
 } as const;
 export type NamedKind = keyof typeof NAMED_IN;
 

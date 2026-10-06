@@ -455,6 +455,94 @@ export function reagentsMarkdown(reagents, origin) {
   ].join("\n");
 }
 
+/* ------------------------------------------------------------------------------------------------ equipment */
+
+/**
+ * What the protocols do with an item, read from the protocols that name it in their equipment list (`equipment: <id>`). Nothing is
+ * stored on the item, so a protocol that names it later is listed with no edit to the record.
+ *
+ * @param {string} id
+ * @param {Array<{ path: string, title: string, equipment?: Array<{ name: string, item?: { id: string } | null }> }>} protocols
+ */
+export function equipmentUses(id, protocols) {
+  return protocols
+    .filter((protocol) => (protocol.equipment ?? []).some((e) => e.item?.id === id))
+    .map((protocol) => ({ path: protocol.path, title: protocol.title }));
+}
+
+/**
+ * An equipment item as the pages read it: the record's own fields, with a maker or rotor nobody has recorded said with its reason,
+ * and the protocols that use it, computed from the protocols.
+ *
+ * @param {import("./kinds.mjs").RegistryItem} item
+ * @param {Parameters<typeof equipmentUses>[1]} [protocols]
+ */
+export function equipmentRow(item, protocols = []) {
+  const f = /** @type {Record<string, unknown>} */ (item.fields);
+  return {
+    id: item.id,
+    name: item.name,
+    manufacturer: stated(f.manufacturer),
+    manufacturerMissing: missingReason(f.manufacturer),
+    rotor: stated(f.rotor),
+    rotorMissing: missingReason(f.rotor),
+    uses: equipmentUses(item.id, protocols),
+    draft: item.status === "draft",
+  };
+}
+
+/** @typedef {ReturnType<typeof equipmentRow>} EquipmentRow */
+
+/** The equipment as rows, each with the protocols that use it. @param {import("./kinds.mjs").RegistryItem[]} items @param {Parameters<typeof equipmentUses>[1]} protocols */
+export function equipmentRows(items, protocols) {
+  return items.filter((item) => item.kind === "equipment").map((item) => equipmentRow(item, protocols));
+}
+
+/** The equipment catalog: the one table, with the columns an item is read by. */
+export const EQUIPMENT_CATALOG = defineCatalog(
+  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<EquipmentRow>} */ ({
+    id: "equipment",
+    noun: ["item", "items"],
+    basePath: kindPath("equipment"),
+    itemKey: (e) => e.id,
+    defaultSort: "name",
+    pageSize: 50,
+    fields: [
+      { key: "name", label: "Equipment", value: (e) => e.name, search: 3, column: { header: "Equipment" }, sort: true },
+      { key: "manufacturer", label: "Manufacturer", value: (e) => e.manufacturer, facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Manufacturer", drop: 1 } },
+      { key: "rotor", label: "Rotor", value: (e) => e.rotor, search: 1, column: { header: "Rotor", drop: 2 } },
+      { key: "protocols", label: "Protocols", value: (e) => e.uses.map((u) => u.title).join("; "), search: 1, column: { header: "Protocols", drop: 1 } },
+    ],
+  }),
+);
+
+/** What an item's cells say where the record states nothing, with the reason. @param {EquipmentRow} e */
+export function equipmentGapText(e) {
+  const parts = [];
+  if (!e.manufacturer) parts.push(`manufacturer: ${e.manufacturerMissing ?? "not recorded"}`);
+  if (!e.rotor && e.rotorMissing) parts.push(`rotor: ${e.rotorMissing}`);
+  return parts;
+}
+
+/**
+ * The equipment as one markdown table for the twin, then every gap with its reason, so a machine reads what a person sees and what
+ * is still missing.
+ *
+ * @param {EquipmentRow[]} items
+ * @param {string} origin
+ */
+export function equipmentMarkdown(items, origin) {
+  const uses = (/** @type {EquipmentRow} */ e) => e.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+  const lines = items.map((e) => `| ${cell(e.name)} | ${cell(e.manufacturer)} | ${cell(e.rotor)} | ${uses(e)} |`);
+  const gaps = items.flatMap((e) => equipmentGapText(e).map((text) => `- ${e.name}, ${text}`));
+  return [
+    "| Equipment | Manufacturer | Rotor | Protocols |",
+    "| --- | --- | --- | --- |",
+    ...lines,
+    ...(gaps.length > 0 ? ["", "Not found:", "", ...gaps] : []),
+  ].join("\n");
+}
+
 /* ------------------------------------------------------------------------------------------------ inventory */
 
 /** A phage's host as plain words: the table's short form without its emphasis marks. @param {string | null} host */
@@ -485,6 +573,9 @@ function summaryOf(item) {
   if (item.kind === "strain") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);
     return [stated(f.organism), stated(f.collection) && stated(f.collection_number) ? `${stated(f.collection)} ${stated(f.collection_number)}` : null].filter(Boolean).join(", ");
+  }
+  if (item.kind === "equipment") {
+    return [stated(/** @type {Record<string, unknown>} */ (item.fields).manufacturer)].filter(Boolean).join(", ");
   }
   if (item.kind === "reagent") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);

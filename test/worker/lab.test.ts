@@ -48,7 +48,7 @@ describe("the master inventory", () => {
     expect(kinds.get("primer")).toBe(12);
     expect(kinds.get("strain")).toBe(2);
     expect(kinds.get("phage")).toBe(75);
-    expect(html).toContain("12 primers, 2 strains, 16 reagents, 75 phages");
+    expect(html).toContain("12 primers, 2 strains, 16 reagents, 11 equipment, 75 phages");
     expect(html).toContain('href="/research/lab/strains/foliorum"');
     expect(html).toContain('href="/research/lab/primers/lco1490"');
     // A phage's row links to its own section on the phages page, and the registry holds no phage row of its own.
@@ -86,7 +86,7 @@ describe("the primers page", () => {
   });
 
   it("answers 404 for a kind with no records or view yet, and for a kind that does not exist", async () => {
-    for (const kind of ["equipment", "gadgets"]) {
+    for (const kind of ["gadgets"]) {
       await expect(kindPage(kind)).rejects.toMatchObject({ init: { status: 404 } });
     }
   });
@@ -208,7 +208,7 @@ describe("the twins", () => {
   });
 
   it("answer 404 for what has no page", async () => {
-    expect((await twin({ kind: "equipment" })).status).toBe(404);
+    expect((await twin({ kind: "gadgets" })).status).toBe(404);
     expect((await twin({ kind: "strains", id: "nothing" })).status).toBe(404);
     expect((await twin({ kind: "primers", id: "nothing" })).status).toBe(404);
   });
@@ -283,7 +283,7 @@ describe("the reagents table", () => {
     expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
     expect(html).toContain('href="/research/protocols/coi-primers"');
     await expect(kindPage("reagents", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
-    expect((await inventory()).html).toContain("12 primers, 2 strains, 16 reagents, 75 phages");
+    expect((await inventory()).html).toContain("12 primers, 2 strains, 16 reagents, 11 equipment, 75 phages");
   });
 
   it("says Prepared in lab for what the lab makes, with the recipe link as a gap that says why, and says what no record states", async () => {
@@ -320,5 +320,38 @@ describe("the reagents table", () => {
     expect(html).toContain("Not recorded");
     expect(html).toContain("Prepared in the lab");
     expect(html).not.toContain("/research/lab/reagents/");
+  });
+});
+
+describe("the equipment table", () => {
+  it("is one table: the equipment, its manufacturer and rotor where recorded, and the protocols that use each", async () => {
+    const { html } = await kindPage("equipment");
+    for (const name of ["Microcentrifuge", "Water bath", "NanoDrop", "Qubit 3.0", "Light box"]) expect(html).toContain(name);
+    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
+    expect(html).toContain('href="/research/protocols/phage-isolation"');
+    expect(html).toContain("Not found:");
+    expect(html).toContain("Waiting on Dustin: the ZnCl2 rotor (core.md)");
+    expect(html).toContain("who makes the lab&#x27;s water bath");
+    await expect(kindPage("equipment", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
+  });
+
+  it("has no page for an item, no twin for one and none in the sitemap, and serves the table as markdown with its gaps", async () => {
+    await expect(kindPage("equipment", "water-bath")).rejects.toMatchObject({ init: { status: 404 } });
+    expect((await twin({ kind: "equipment", id: "water-bath" })).status).toBe(404);
+    const xml = await ((await sitemapLoader({ context: ctx(), params: {}, request: request("/sitemap.xml") } as never)) as Response).text();
+    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/equipment</loc>");
+    expect(xml).not.toContain("/research/lab/equipment/");
+    const md = await (await twin({ kind: "equipment" })).text();
+    expect(md).toContain("| Equipment | Manufacturer | Rotor | Protocols |");
+    expect(md).toContain("- Microcentrifuge, rotor: Waiting on Dustin: the ZnCl2 rotor (core.md).");
+  });
+
+  it("is on the protocol that uses it, in its Equipment table, beside the protocol's own words", async () => {
+    const stored = await env.DB.prepare("SELECT record FROM procedures WHERE slug = 'phage-dna-extraction'").first<{ record: string }>();
+    const html = renderToStaticMarkup(createElement(ProcedureView, { record: JSON.parse(stored?.record ?? "{}"), count: 1, factor: 1 }));
+    expect(html).toContain('<th scope="col">Manufacturer</th>');
+    expect(html).toContain('<th scope="col">Rotor</th>');
+    expect(html).toContain('<th scope="row">microcentrifuge</th>');
+    expect(html).toContain("Not recorded");
   });
 });
