@@ -140,6 +140,12 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
+    /* check-postinstall reads package.json's scripts and runs the types step against a stub. */
+    what: "the install step",
+    test: /^(scripts\/(wrangler-types|bootstrap-config|check-postinstall)\.mjs|package\.json)$/,
+    gates: ["check:postinstall"],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],
