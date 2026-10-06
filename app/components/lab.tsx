@@ -3,6 +3,7 @@ import type { CatalogResult } from "capsomer/behaviour/catalog";
 
 import {
   INVENTORY,
+  EQUIPMENT_CATALOG,
   PRIMERS,
   REAGENTS,
   STRAINS,
@@ -16,6 +17,7 @@ import {
   reagentLabel,
   reagentSource,
   tmNote,
+  type EquipmentRow,
   type InventoryRow,
   type PrimerListRow,
   type PrimerRow,
@@ -23,6 +25,7 @@ import {
   type StrainRow,
 } from "~/lib/registry/catalog.mjs";
 import { MAX_MISMATCHES } from "~/lib/registry/align.mjs";
+import { KINDS } from "~/lib/registry/kinds.mjs";
 
 /**
  * The registry's pages (docs/REGISTRY.md): the master inventory, a kind's own catalog and one item. Each reads the same
@@ -35,7 +38,8 @@ export function inventorySentence(rows: InventoryRow[]) {
   if (rows.length === 0) return "Nothing is recorded yet.";
   const counts = new Map<string, number>();
   for (const row of rows) counts.set(row.kind, (counts.get(row.kind) ?? 0) + 1);
-  const parts = [...counts].map(([kind, n]) => `${n} ${n === 1 ? kindLabel(kind).toLowerCase() : `${kindLabel(kind).toLowerCase()}s`}`);
+  // A kind's plural is the registry's own (equipment has none other than itself); a phage's is its name and an s.
+  const parts = [...counts].map(([kind, n]) => `${n} ${n === 1 ? kindLabel(kind).toLowerCase() : (KINDS[kind]?.plural ?? `${kindLabel(kind).toLowerCase()}s`)}`);
   return `${parts.join(", ")}.`;
 }
 
@@ -43,7 +47,7 @@ export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: C
   return (
     <>
       <p className="registry-lede">
-        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on and the reagents its protocols use, with the phages it has isolated. It records what a thing is,
+        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on, the reagents and the equipment its protocols use, with the phages it has isolated. It records what a thing is,
         never how much of it the lab has or where it sits. {inventorySentence(rows)}
       </p>
       <div className="registry site-catalog site-catalog-wide">
@@ -366,6 +370,40 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
             protocols: (r) => (
               <>
                 {r.uses.map((u, i) => (
+                  <span key={u.path}>
+                    {i > 0 ? "; " : null}
+                    <a href={u.path}>{u.title}</a>
+                  </span>
+                ))}
+              </>
+            ),
+          }}
+        />
+      </div>
+    </>
+  );
+}
+
+export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }) {
+  return (
+    <>
+      <p className="registry-lede">
+        The instruments and labware the lab&rsquo;s protocols list under Equipment, in one table. A manufacturer appears where a record in
+        the repository states it, and a centrifuge&rsquo;s rotor is recorded as a gap until Dustin names it. Each row lists the protocols
+        that use it, and each protocol&rsquo;s own table has its words and settings for the item.
+      </p>
+      <div className="registry site-catalog site-catalog-wide">
+        <Catalog
+          definition={EQUIPMENT_CATALOG}
+          result={result}
+          labelledBy="registry-title"
+          title={(e) => e.name}
+          cells={{
+            manufacturer: (e) => e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />,
+            rotor: (e) => (e.rotor ?? (e.rotorMissing ? <NotFound reason={e.rotorMissing} /> : "")),
+            protocols: (e) => (
+              <>
+                {e.uses.map((u, i) => (
                   <span key={u.path}>
                     {i > 0 ? "; " : null}
                     <a href={u.path}>{u.title}</a>

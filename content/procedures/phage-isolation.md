@@ -56,12 +56,18 @@ materials:
     amount: 8 ml
     per: plate
 equipment:
-  - 55 °C water bath for molten top agar
-  - plate incubator at 29 °C for M. foliorum
-  - shaking incubator at 220 to 250 rpm
-  - 0.22 µm tube-top vacuum filter units
-  - 1 to 10 µl pipettor for spot titers
-  - light box for counting plaques
+  - name: 55 °C water bath for molten top agar
+    equipment: water-bath
+  - name: plate incubator at 29 °C for M. foliorum
+    equipment: plate-incubator
+  - name: shaking incubator at 220 to 250 rpm
+    equipment: shaking-incubator
+  - name: 0.22 µm tube-top vacuum filter units
+    equipment: vacuum-filter-unit
+  - name: 1 to 10 µl pipettor for spot titers
+    equipment: pipettor
+  - name: light box for counting plaques
+    equipment: light-box
 troubleshooting:
   - id: wrong-starting-sample
     step: "2 to 3"

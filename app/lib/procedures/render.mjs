@@ -72,6 +72,11 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  * A reagent as a protocol carries it: the lab registry's name for it, read when the protocol is compiled, so a material that
  * names a reagent shows the registry's name and links its page and a frozen version keeps the name it was published with.
  *
+ * An equipment item as a protocol carries it: the registry's stated facts (who makes it, and a centrifuge's rotor, or that the rotor
+ * is a recorded gap), read when the protocol is compiled, so the protocol's Equipment table and twin say as it was published.
+ *
+ * @typedef {{ id: string, name: string, status: "published" | "draft", manufacturer: string | null, rotor: string | null, rotorGap: boolean }} StoredEquipment
+ *
  * @typedef {{ id: string, name: string, status: "published" | "draft", preparedInLab: boolean, supplier: string | null, catalogNumber: string | null, productUrl: string | null, recipe: string | null }} StoredReagent
  *
  * @typedef {{ id: string, name: string, status: "published" | "draft", organism: string | null, strain: string | null, collection: string | null, collectionNumber: string | null }} StoredStrain
@@ -103,9 +108,10 @@ export function reagentSource(reagent) {
  *   strainRows?: Array<StoredStrain & { path: string }>,
  *   organismNames?: Record<string, string>,
  *   reagentRows?: StoredReagent[],
+ *   equipmentRows?: StoredEquipment[],
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames, reagentRows }) {
+export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames, reagentRows, equipmentRows }) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
@@ -362,9 +368,10 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     ),
     materials,
     equipment: await Promise.all(
-      list(d.equipment).map(async (/** @type {any} */ e) =>
-        typeof e === "string" ? { name: e, noteHtml: null } : { name: String(e.name), noteHtml: await md(e.note, { inline: true }) },
-      ),
+      list(d.equipment).map(async (/** @type {any} */ e) => {
+        const item = typeof e === "object" && e !== null ? ((equipmentRows ?? []).find((r) => r.id === e.equipment) ?? null) : null;
+        return typeof e === "string" ? { name: e, noteHtml: null, item } : { name: String(e.name), noteHtml: await md(e.note, { inline: true }), item };
+      }),
     ),
     troubleshooting,
     expectedResultsHtml: await md(d.expected_results),
@@ -524,7 +531,14 @@ export function procedureMarkdown(record, parsed) {
   }
   if (record.equipment.length) {
     out.push("## Equipment", "");
-    for (const e of list(d.equipment)) out.push(typeof e === "string" ? `- ${e}` : `- ${e.name}${e.note ? `: ${e.note}` : ""}`);
+    // The registry facts of each item, as the record baked them (the file holds only the ids).
+    const itemOf = new Map(record.equipment.map((e) => [e.name, e.item]));
+    for (const e of list(d.equipment)) {
+      const name = typeof e === "string" ? e : String(e.name);
+      const item = itemOf.get(name) ?? null;
+      const facts = item ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})` : "";
+      out.push(`- ${name}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
+    }
     out.push("");
   }
   if (record.primers.length) {

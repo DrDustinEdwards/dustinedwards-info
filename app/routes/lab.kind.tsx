@@ -3,7 +3,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
-import { LabPrimer, LabPrimers, LabReagents, LabStrain, LabStrains } from "~/components/lab";
+import { LabPrimer, LabEquipment, LabPrimers, LabReagents, LabStrain, LabStrains } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
@@ -11,9 +11,9 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { LAB_PATH, PRIMERS, REAGENTS, STRAINS, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
+import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
 import { KINDS } from "~/lib/registry/kinds.mjs";
-import type { PrimerRow, ReagentRow, StrainRow } from "~/lib/registry/catalog.mjs";
+import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/lib/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/lib/registry/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -53,6 +53,7 @@ type Page =
   | { view: "kind"; kind: "primer"; primers: ReturnType<typeof primerRows>; search: string }
   | { view: "kind"; kind: "strain"; strains: StrainRow[]; search: string }
   | { view: "kind"; kind: "reagent"; reagents: ReagentRow[]; search: string }
+  | { view: "kind"; kind: "equipment"; items: EquipmentRow[]; search: string }
   | { view: "item"; kind: "primer"; primer: PrimerRow; primers: PrimerRow[]; usedBy: Used; draft: boolean }
   | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean };
 
@@ -61,20 +62,27 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
   const url = new URL(request.url);
   const kind = kindFromSegment(params.kind);
   // Only the kinds with a view of their own are served; the others join as their changes land.
-  if (kind !== "primer" && kind !== "strain" && kind !== "reagent") throw data(null, { status: 404 });
+  if (kind !== "primer" && kind !== "strain" && kind !== "reagent" && kind !== "equipment") throw data(null, { status: 404 });
 
   if (params.id === undefined) {
     const canonical =
-      kind === "primer" ? catalogRedirect(PRIMERS, url) : kind === "strain" ? catalogRedirect(STRAINS, url) : catalogRedirect(REAGENTS, url);
+      kind === "primer"
+        ? catalogRedirect(PRIMERS, url)
+        : kind === "strain"
+          ? catalogRedirect(STRAINS, url)
+          : kind === "reagent"
+            ? catalogRedirect(REAGENTS, url)
+            : catalogRedirect(EQUIPMENT_CATALOG, url);
     if (canonical) throw redirect(canonical, 301);
     const published = await listRegistry(env, { kind, published: true });
     if (kind === "primer") return { page: { view: "kind", kind, primers: primerRows(published), search: url.search } };
     if (kind === "strain") return { page: { view: "kind", kind, strains: strainRows(published, await listPhages(env)), search: url.search } };
-    return { page: { view: "kind", kind, reagents: reagentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
+    if (kind === "reagent") return { page: { view: "kind", kind, reagents: reagentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
+    return { page: { view: "kind", kind, items: equipmentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
   }
 
   // A kind that is one table has no page for an item, and no address is kept for one that had a page.
-  if (kind === "reagent" || !hasItemPage(kind)) throw data(null, { status: 404 });
+  if (kind === "reagent" || kind === "equipment" || !hasItemPage(kind)) throw data(null, { status: 404 });
   const item = await getRegistryItem(env, kind, params.id);
   if (!item) throw data(null, { status: 404 });
   // A draft is the signed-in admin's alone; that request carries a cookie, and the Worker never stores it.
@@ -100,6 +108,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
       return pageMeta({
         title: "Strains: the bacterial hosts of the lab's phage work",
         description: `The ${plural(page.strains.length, "bacterial strain")} the lab's phages are isolated on, with each one's culture collection number and the phages counted from the phages table.`,
+        path: kindPath(page.kind),
+      });
+    }
+    if (page.kind === "equipment") {
+      return pageMeta({
+        title: "Equipment: the instruments and labware the lab's protocols use",
+        description: `The ${plural(page.items.length, "item")} the lab's protocols list under Equipment, in one table: manufacturer, rotor where it matters, and the protocols that use each.`,
         path: kindPath(page.kind),
       });
     }
@@ -169,6 +184,8 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
         <LabStrains result={queryCatalog(STRAINS, page.strains, parseCatalogParams(STRAINS, page.search))} />
       ) : page.kind === "reagent" ? (
         <LabReagents result={queryCatalog(REAGENTS, page.reagents, parseCatalogParams(REAGENTS, page.search))} />
+      ) : page.kind === "equipment" ? (
+        <LabEquipment result={queryCatalog(EQUIPMENT_CATALOG, page.items, parseCatalogParams(EQUIPMENT_CATALOG, page.search))} />
       ) : (
         <LabPrimers result={queryCatalog(PRIMERS, page.primers, parseCatalogParams(PRIMERS, page.search))} />
       )}

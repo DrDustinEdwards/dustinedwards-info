@@ -16,6 +16,8 @@ import {
   primersMarkdown,
   protocolsUsing,
   protocolsUsingStrain,
+  equipmentMarkdown,
+  equipmentRows,
   reagentRows,
   reagentsMarkdown,
   strainMarkdown,
@@ -58,8 +60,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   const kind = kindFromSegment(segment);
-  if (kind !== "primer" && kind !== "strain" && kind !== "reagent") return notFound();
+  if (kind !== "primer" && kind !== "strain" && kind !== "reagent" && kind !== "equipment") return notFound();
   const published = await listRegistry(env, { kind, published: true });
+
+  if (kind === "equipment") {
+    // One table, and no twin for an item: an item of equipment has no page.
+    if (id !== undefined) return notFound();
+    const items = equipmentRows(published, await listPublishedLibraryRecords(env));
+    return respond(
+      `# Equipment\n\nThe instruments and labware the lab's protocols list under Equipment, in one table. Each row lists the protocols that use it.\n\n${equipmentMarkdown(items, SITE_ORIGIN)}\n`,
+      kindPath(kind),
+    );
+  }
 
   if (kind === "reagent") {
     // One table, and no twin for an item: a reagent has no page.

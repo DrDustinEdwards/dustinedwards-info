@@ -34,7 +34,7 @@ const text = (path) => readFile(new URL(path, root), "utf8");
 const built = await buildRegistry();
 const reagents = built.items.filter((item) => item.kind === "reagent");
 const byId = new Map(reagents.map((item) => [item.id, item]));
-const PREPARED = ["phage-buffer", "pyca", "tes-buffer"];
+const PREPARED = ["nuclease-mix", "phage-buffer", "pyca", "tes-buffer"];
 
 test("the registry holds the reagents the lab's protocols use, stating only what a record in the repo states", () => {
   assert.equal(reagents.length, 16);
@@ -63,7 +63,7 @@ test("a reagent is bought or prepared in the lab, and what no record states is a
   }
   const gaps = built.gaps.filter((gap) => gap.slug.startsWith("reagent/"));
   const bought = [...byId.keys()].filter((id) => !PREPARED.includes(id) && !["gotaq-flexi-dna-polymerase", "onetaq-hot-start-2x-master-mix", "neb-100-bp-dna-ladder"].includes(id));
-  assert.equal(bought.length, 10);
+  assert.equal(bought.length, 9);
   assert.equal(gaps.length, bought.length * 2 + PREPARED.length, "a supplier and a catalog number for each bought reagent nobody records, a recipe for each prepared one");
   for (const gap of gaps) {
     assert.ok(["supplier", "catalog_number", "recipe"].includes(gap.field), `${gap.slug}.${gap.field}`);

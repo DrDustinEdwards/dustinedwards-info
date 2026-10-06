@@ -22,6 +22,7 @@ export const PROCEDURE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  *     primers: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredPrimer>>,
  *     strains: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredStrain>>,
  *     reagents: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredReagent>>,
+ *     equipment: (ids: string[]) => Promise<Map<string, import("./render.mjs").StoredEquipment>>,
  *   },
  * }} input
  * @returns {Promise<
@@ -48,20 +49,25 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
   const organismIds = Array.isArray(parsed.data.organism) ? parsed.data.organism.filter((id) => typeof id === "string" && !Object.hasOwn(NON_STRAIN_ORGANISMS, id)) : [];
   // A material that is a reagent of the registry names it by id; its facts are the registry's, not typed in the protocol.
   const namedReagents = Array.isArray(parsed.data.materials) ? parsed.data.materials.flatMap((m) => (typeof m?.reagent === "string" ? [m.reagent] : [])) : [];
-  if ((named.length > 0 || namedStrains.length > 0 || organismIds.length > 0 || namedReagents.length > 0) && !registry) {
-    return { ok: false, errors: ["this compile was given no lab registry, so the primers, host strains, organisms and reagents the file names cannot be read"], gaps: [] };
+  // An equipment entry that is an item of the registry names it by id.
+  const namedEquipment = Array.isArray(parsed.data.equipment) ? parsed.data.equipment.flatMap((e) => (typeof e?.equipment === "string" ? [e.equipment] : [])) : [];
+  if ((named.length > 0 || namedStrains.length > 0 || organismIds.length > 0 || namedReagents.length > 0 || namedEquipment.length > 0) && !registry) {
+    return { ok: false, errors: ["this compile was given no lab registry, so the primers, host strains, organisms, reagents and equipment the file names cannot be read"], gaps: [] };
   }
   const primerRows = named.length > 0 && registry ? await registry.primers(named) : new Map();
   const strainIds = [...new Set([...namedStrains, ...organismIds])];
   const strainRows = strainIds.length > 0 && registry ? await registry.strains(strainIds) : new Map();
+  const equipmentIds = [...new Set(namedEquipment)];
+  const equipmentRows = equipmentIds.length > 0 && registry ? await registry.equipment(equipmentIds) : new Map();
   const reagentIds = [...new Set(namedReagents)];
   const reagentRows = reagentIds.length > 0 && registry ? await registry.reagents(reagentIds) : new Map();
-  const { errors, gaps } = validateProcedure(parsed, { slug, primers: new Set(primerRows.keys()), strains: new Set(strainRows.keys()), reagents: new Set(reagentRows.keys()) });
+  const { errors, gaps } = validateProcedure(parsed, { slug, primers: new Set(primerRows.keys()), strains: new Set(strainRows.keys()), reagents: new Set(reagentRows.keys()), equipment: new Set(equipmentRows.keys()) });
   // A draft primer is the admin's alone, so a published protocol may not print it.
   if (parsed.data.draft !== true) {
     for (const [id, row] of primerRows) if (row.status === "draft") errors.push(`primers[${id}] is a draft in the lab registry, so a published protocol cannot print it`);
     for (const [id, row] of strainRows) if (row.status === "draft") errors.push(`strain ${id} is a draft in the lab registry, so a published protocol cannot name it`);
     for (const [id, row] of reagentRows) if (row.status === "draft") errors.push(`reagent ${id} is a draft in the lab registry, so a published protocol cannot name it`);
+    for (const [id, row] of equipmentRows) if (row.status === "draft") errors.push(`equipment ${id} is a draft in the lab registry, so a published protocol cannot name it`);
   }
   errors.unshift(...dashes);
   if (errors.length > 0) return { ok: false, errors, gaps };
@@ -79,6 +85,8 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       strainRows: namedStrains.flatMap((id) => (strainRows.has(id) ? [{ ...strainRows.get(id), path: itemPath("strain", id) }] : [])),
       // The reagents the materials name, as the registry states them, so the table shows where each comes from and types none.
       reagentRows: reagentIds.flatMap((id) => (reagentRows.has(id) ? [reagentRows.get(id)] : [])),
+      // The equipment the list names, as the registry states it, so the table shows who makes each and types none.
+      equipmentRows: equipmentIds.flatMap((id) => (equipmentRows.has(id) ? [equipmentRows.get(id)] : [])),
       // The words for each organism id the protocol names, from the registry (or the non-strain list), so the library needs no list of its own.
       organismNames: Object.fromEntries(
         (Array.isArray(parsed.data.organism) ? parsed.data.organism : []).flatMap((id) => {

@@ -306,3 +306,10 @@ const REAGENT_FILES = import.meta.glob("../../content/registry/reagent/*.md", { 
 export const reagentRepoFiles: Record<string, string> = Object.fromEntries(
   Object.entries(REAGENT_FILES).map(([path, raw]) => [`content/registry/reagent/${path.split("/").pop()}`, raw]),
 );
+
+/* The equipment records as the repository holds them, by repo path: a protocol whose equipment list names registry items by id
+ * compiles only where the repository holds those items, so a case that saves one adds these to its stubbed GitHub. */
+const EQUIPMENT_FILES = import.meta.glob("../../content/registry/equipment/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+export const equipmentRepoFiles: Record<string, string> = Object.fromEntries(
+  Object.entries(EQUIPMENT_FILES).map(([path, raw]) => [`content/registry/equipment/${path.split("/").pop()}`, raw]),
+);

@@ -32,7 +32,7 @@ import { post } from "./fixtures";
 import { seedDictionary, seedPages, seedPublications } from "./seed";
 import { routeContext, throughMiddleware } from "./route-helpers";
 import { stubGitHub } from "./github-stub";
-import { reagentRepoFiles, strainRepoFiles } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /*
  * THE AGENT PATH WITH NO VISIBLE LINK (job_5670dd43eef2, 2026-09-27): nothing a person sees points an
@@ -110,7 +110,7 @@ beforeAll(async () => {
   );
   /* The protocol is a procedure (docs/PROCEDURES.md): its row arrives through save_procedure, the
    * same compile and write sync:content and the operator API use, from the repository's file. */
-  const gh = stubGitHub({ [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles });
+  const gh = stubGitHub({ [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
   try {
     const saved = await runTool(
       env as unknown as Parameters<typeof runTool>[0],

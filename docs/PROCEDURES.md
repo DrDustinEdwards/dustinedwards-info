@@ -89,6 +89,9 @@ Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`
 `materials`, `references`, `expected_results`, `limitations`, `method`; optional `draft`, `equipment`,
 `troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`, `start_here`, `proof_of_use`.
 
+An `equipment` entry is a string, or `{ name, note, equipment }`: `equipment: <id>` names an item of the lab registry (docs/REGISTRY.md), whose
+manufacturer and rotor are stored there once and drawn into the protocol's Equipment table beside the protocol's own words for it.
+
 What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
 
 - `method` (required): a list of ids from the closed list: `pcr`, `plating`, `culture`, `extraction`,
