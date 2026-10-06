@@ -1,11 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "OPERATOR_TOKEN_FILE": "C:\\Users\\email\\.dustinedwards-operator-token"
+  },
   "attribution": {
     "commit": "",
     "pr": ""
-  },
-  "env": {
-    "OPERATOR_TOKEN_FILE": "C:\\Users\\email\\.dustinedwards-operator-token"
   },
   "permissions": {
     "allow": [
@@ -15,6 +15,9 @@
       "Bash(npx:*)",
       "Bash(wrangler:*)",
       "Bash(npx wrangler:*)"
+    ],
+    "deny": [
+      "Bash(gh pr merge:*)"
     ]
   },
   "hooks": {
