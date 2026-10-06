@@ -1,4 +1,6 @@
-import { verifyAccessJwt } from "~/lib/access-jwt.mjs";
+import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
+
+import { verifyAccessToken } from "~/lib/access-verify.mjs";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -19,21 +21,20 @@ export type AccessIdentity =
   | { kind: "absent" }
   | { kind: "refused"; reason: string };
 
-const JWKS_CACHE_SECONDS = 3600;
+const remoteKeys = new Map<string, JWTVerifyGetKey>();
 
-type Jwks = Parameters<typeof verifyAccessJwt>[1];
-
-async function fetchJwks(teamDomain: string): Promise<Jwks> {
-  // Cached at the edge: Access publishes the next signing key before it rotates, so an hour-old copy
-  // holds every key a live token can name. Unknown keys are refused, never refetched, so a forged
-  // `kid` cannot make this Worker hammer the certs endpoint.
-  const response = await fetch(`https://${teamDomain}/cdn-cgi/access/certs`, {
-    cf: { cacheTtl: JWKS_CACHE_SECONDS, cacheEverything: true },
-  });
-  if (!response.ok) {
-    throw new Error(`Cloudflare Access signing keys unavailable: ${teamDomain} answered ${response.status}.`);
+/**
+ * The team's signing keys, fetched and cached by jose, one set per team domain (carrel's, the portfolio's standard). jose refetches
+ * when a token names a key it does not hold, at most once per its cooldown, so a forged `kid` cannot make this Worker hammer the
+ * certs endpoint; an endpoint that is down throws, and the admin layout shows the error.
+ */
+export function accessKeys(teamDomain: string): JWTVerifyGetKey {
+  let keys = remoteKeys.get(teamDomain);
+  if (!keys) {
+    keys = createRemoteJWKSet(new URL(`https://${teamDomain}/cdn-cgi/access/certs`));
+    remoteKeys.set(teamDomain, keys);
   }
-  return (await response.json()) as Jwks;
+  return keys;
 }
 
 /** Local development only: `vite dev` on localhost has no Access in front of it. */
@@ -65,7 +66,7 @@ export const LOCAL_DEV_EMAIL = "dev@localhost";
 export async function accessIdentity(
   env: Env,
   request: Request,
-  keys: (teamDomain: string) => Promise<Jwks> = fetchJwks,
+  keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
 ): Promise<AccessIdentity> {
   if (localDevelopment(request)) return { kind: "human", email: LOCAL_DEV_EMAIL };
 
@@ -79,11 +80,7 @@ export async function accessIdentity(
   const token = request.headers.get("cf-access-jwt-assertion") ?? cookieValue(request, "CF_Authorization");
   if (!token) return { kind: "absent" };
 
-  const verdict = await verifyAccessJwt(token, await keys(teamDomain), {
-    issuer: `https://${teamDomain}`,
-    audience,
-    now: Math.floor(Date.now() / 1000),
-  });
+  const verdict = await verifyAccessToken(token, keys(teamDomain), { issuer: `https://${teamDomain}`, audience });
   if (!verdict.ok) return { kind: "refused", reason: verdict.reason };
 
   const { email, common_name: commonName } = verdict.claims;
