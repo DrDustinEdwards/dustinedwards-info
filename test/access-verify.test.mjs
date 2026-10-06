@@ -44,11 +44,23 @@ test("a token signed by a key Access did not publish is refused, even with the r
   assert.deepEqual(await check(await mint(stranger.privateKey), getKey), { ok: false, reason: "signature" });
 });
 
-test("another application's audience, another issuer, an expired token and a token not yet valid are each refused, by name", async () => {
+test("another application's audience is refused", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { aud: ["other"] } }), getKey)).reason, "audience");
+});
+
+test("another issuer is refused", async () => {
+  const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { iss: "https://evil.example" } }), getKey)).reason, "issuer");
+});
+
+test("an expired token is refused", async () => {
+  const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { exp: NOW - 3600 } }), getKey)).reason, "expired");
+});
+
+test("a token not yet valid is refused", async () => {
+  const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { nbf: NOW + 3600, exp: NOW + 7200 } }), getKey)).reason, "not-yet-valid");
 });
 
