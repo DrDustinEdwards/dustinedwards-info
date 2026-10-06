@@ -44,6 +44,7 @@ export const TIERS = {
   "check:features": "offline",
   "check:protocols": "offline",
   "check:fonts": "offline",
+  "check:postinstall": "offline",
   "check:diagrams": "offline",
   "check:contrast": "offline",
   "check:secrets": "offline",
