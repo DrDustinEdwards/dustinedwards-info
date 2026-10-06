@@ -1,0 +1,40 @@
+# Germomics: full content index
+
+> Microbiology and history, told by a virologist.
+
+This file concatenates the curated written content (show notes and essays) for AI assistants. It is not exhaustive and omits audio transcripts. Canonical URLs are listed per item.
+
+# About Germomics
+
+Germomics is a podcast and writing project about microbiology and history.
+
+Germomics explores the microbial world and the people, places, and discoveries behind it: the organisms, the science, and the stories that shaped how we understand life too small to see.
+Alongside the podcast there is writing, interactive data pages on viruses and bacteria, and short browser games, all made independently by a single author.
+
+# Dustin Edwards
+
+Dr. Dustin Edwards is Professor and Department Head of Biological Sciences in the College of Science and Mathematics at Tarleton State University. He chairs the Institutional Biosafety Committee at the university, and he serves as an officer and the Archivist of the Texas Branch of the American Society for Microbiology. He earned his Ph.D. in Biomedical Sciences from the Department of Molecular Virology and Microbiology at Baylor College of Medicine within the Texas Medical Center in Houston, where he studied how the human T-cell leukemia virus type 1 (HTLV-1) protein Tax disrupts the control of cell growth. He then spent five years as a postdoctoral fellow at the National Cancer Institute, part of the National Institutes of Health in Bethesda, Maryland, working on the regulatory and accessory proteins that HTLV-1 uses to establish and maintain infection. His lab at Tarleton continues work on retroviruses, including molecular studies and field surveillance for reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV) in wild turkeys and other Texas game birds. He also oversees course-based undergraduate research on bacteriophages, viruses that infect bacteria, with the Howard Hughes Medical Institute SEA program. Germomics began as a project for a Science and Society course and is now an independent podcast and writing project about microbiology and history.
+
+Areas: molecular retrovirology, HTLV-1, reticuloendotheliosis virus, bacteriophage genomics, microbiology, science education.
+
+# Episodes
+
+## Episode one: the first cell
+URL: https://germomics.example/episode-one
+Published: April 1, 2026
+
+Notes.
+
+# Writing
+
+## Why phages win: notes & "questions" <draft>
+URL: https://germomics.example/why-phages-win
+Published: June 21, 2026
+
+Body with a link and an emphasis .
+
+## It's alive
+URL: https://germomics.example/its-alive
+Published: May 2, 2026
+
+Second body.

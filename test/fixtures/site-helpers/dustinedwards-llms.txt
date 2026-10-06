@@ -1,0 +1,269 @@
+# dustinedwards.info
+
+> Dustin Edwards, Professor and Virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
+
+Every page below has a markdown twin at its path plus .md. The sections after the link lists, under Optional, explain how search, papers, feeds and the twins work.
+
+## Research
+
+- [Research](https://dustinedwards.info/research): the hub: HTLV-1 and avian retroviruses, bacteriophage research in Texas and science education
+- [Retrovirus research](https://dustinedwards.info/research/retroviruses): HTLV-1, REV and LPDV
+- [Human retrovirus research: HTLV-1](https://dustinedwards.info/research/retroviruses/human): plain-language summaries of the HTLV-1 papers
+- [REV and LPDV in wild turkeys in Texas](https://dustinedwards.info/research/retroviruses/avian): a plain-language guide to two bird retroviruses
+- [Bacteriophage research](https://dustinedwards.info/research/bacteriophages): discovery of Microbacterium and Mycobacterium phages, phage genomics and structure
+- [Science education research](https://dustinedwards.info/research/science-education): course-based undergraduate research experiences and SEA-PHAGES teaching
+- [Publications](https://dustinedwards.info/research/publications): peer-reviewed work, filterable and searchable
+- [Our phages](https://dustinedwards.info/research/phages): every bacteriophage isolated in the Tarleton SEA-PHAGES lab since 2017
+
+## Protocols
+
+- [Lab protocols](https://dustinedwards.info/research/protocols): the protocol library
+- [Phage Isolation and Purification Protocol](https://dustinedwards.info/research/protocols/phage-isolation): direct and enriched isolation, purification, spot titer, webbed plates, high titer lysate
+- [Phage DNA Extraction Protocol](https://dustinedwards.info/research/protocols/phage-dna-extraction): zinc chloride precipitation and TES, with no kit or column
+- [COI primers: LCO1490 and HCO2198](https://dustinedwards.info/research/protocols/coi-primers): COI barcoding PCR of invertebrate mitochondrial DNA
+- [REV and LPDV PCR primers](https://dustinedwards.info/research/protocols/rev-lpdv-primers): sequences, reaction mix, cycling and product sizes
+- [Pan-avian GAPDH PCR](https://dustinedwards.info/research/protocols/pan-avian-gapdh): a control that a bird DNA extraction holds amplifiable avian DNA
+
+- [Lab registry](https://dustinedwards.info/research/lab): the lab's reference catalog of primers, with the phages it has isolated; each primer is /research/lab/primers/<id> with its sequence, computed length and melting temperature, and the protocols that use it, each strain is /research/lab/strains/<id>, the reagents are one table at /research/lab/reagents (supplier, catalog number, link and the protocols that use each), and every registry page has a markdown twin at its path plus .md
+
+A protocol is /research/protocols/<slug>, for example /research/protocols/phage-isolation. Its markdown twin is the same path plus .md.
+
+## Lab calculators
+
+Each states its formula and a worked example.
+
+- [Phage Lab Calculators](https://dustinedwards.info/research/tools): the hub
+- [Phage Titer Calculator](https://dustinedwards.info/research/tools/titer): titer in pfu/ml from a plaque count, for a full plate or spot titer
+- [Serial Dilution Planner](https://dustinedwards.info/research/tools/dilution): plan a serial dilution of a lysate to a target concentration
+- [Webbed Plate Calculator](https://dustinedwards.info/research/tools/webbed-plate): which dilution and how much lysate to plate, and what flooding gives back
+- [MOI Calculator](https://dustinedwards.info/research/tools/moi): multiplicity of infection
+- [Efficiency of Plating Calculator](https://dustinedwards.info/research/tools/eop): EOP on a test host from titers or plaque counts
+- [Lysate Volume Planner](https://dustinedwards.info/research/tools/lysate-volume): how much lysate a set of webbed plates needs
+
+## Teaching
+
+- [Teaching](https://dustinedwards.info/teaching): the hub: Tarleton SEA-PHAGES teaching and undergraduate research in biology
+- [Phage Discovery Program](https://dustinedwards.info/teaching/phage-discovery): the two-semester HHMI SEA-PHAGES program, the courses and how students join
+- [Student roster](https://dustinedwards.info/teaching/phage-discovery#roster): the roster, on the program page (/phage-discovery 301s there)
+- [Virus Isolation Course](https://dustinedwards.info/teaching/virus-isolation): students isolate bacteriophages from soil, purify and image them, and extract phage DNA
+- [Lab Calculations and Common Questions](https://dustinedwards.info/teaching/virus-isolation/faq): worked phage lab calculations from the virus isolation course
+- [Phage Bioinformatics Course](https://dustinedwards.info/teaching/phage-bioinformatics): annotating a phage genome in PHEONA, step by step
+- [Central Dogma Tutorials](https://dustinedwards.info/teaching/central-dogma): replication, transcription, translation and the genetic code
+- [Study Skills Guide](https://dustinedwards.info/teaching/study-skills): learning styles, the VARK model and what research says
+
+## Software
+
+A page is /software/{name}. /projects 301s to /software.
+
+- [Software](https://dustinedwards.info/software): the hub
+- [Foxhound](https://dustinedwards.info/software/foxhound): recovers failed Stripe subscription payments and replaces Recova; live at https://foxhoundapp.com
+- [Foxing](https://dustinedwards.info/software/foxing): a reading application for public-domain books; live at https://foxing.app
+- [Foxing Edu](https://dustinedwards.info/software/foxing-edu): a separate product built on Foxing and sold to schools; no public address is recorded here
+- [Germomics](https://dustinedwards.info/software/germomics): a narrative podcast on microbiology and its history; live at https://germomics.com
+- [Capsid](https://dustinedwards.info/software/capsid): infrastructure: versioned markdown in namespaces, with typed edges and search; this site's rulings live in it
+- [Enarratio](https://dustinedwards.info/software/enarratio): an open-source chart library in early alpha, at https://github.com/DrDustinEdwards/enarratio with a gallery at https://enarratio.dustinedwards.info
+- [Carrel](https://dustinedwards.info/software/carrel): the private writing hub this site's articles are written in; it has a page but no public app address
+- [Capsomer](https://dustinedwards.info/software/capsomer): the shared design system of plain-CSS components, color tokens and page patterns these apps are built from; its home is https://capsomer.dustinedwards.info
+
+TXASM (https://txasm.org) is a site of Dustin's and has no page on this site. This site is described at the [colophon](https://dustinedwards.info/colophon). The lab tools are listed above under Lab calculators. Each of the Capsid, Enarratio, Carrel and Capsomer pages opens with a dictionary entry for its name.
+
+## Writing
+
+- [Writing](https://dustinedwards.info/writing): every article, filterable by tag at /writing?tag=<tag>
+- [RSS feed](https://dustinedwards.info/writing/rss.xml): the feed at /writing/rss.xml
+- [JSON feed](https://dustinedwards.info/writing/feed.json): the feed at /writing/feed.json
+- [Full text of every post](https://dustinedwards.info/llms-full.txt): every published post in one file, /llms-full.txt
+
+An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesting the article URL with Accept: text/markdown returns the same markdown.
+
+## About
+
+- [Home](https://dustinedwards.info/): the home page, which has no markdown twin
+- [About](https://dustinedwards.info/about): about Dustin Edwards
+- [Contact](https://dustinedwards.info/contact): how to reach Dustin Edwards
+- [Colophon](https://dustinedwards.info/colophon): how this site is built
+- [Privacy](https://dustinedwards.info/privacy): what the site collects
+- [Terms](https://dustinedwards.info/terms): what may be done with the site's content and data, and the license named in every data set
+- [CV](https://dustinedwards.info/cv): the CV, with its markdown twin at /cv.md; the page links the current CV as a PDF
+- [Sitemap](https://dustinedwards.info/sitemap.xml): every HTML page on the site and nothing else
+
+## Contact
+
+- [dustinedwards.info](https://dustinedwards.info): the site itself
+
+## Optional
+
+### Markdown twins
+
+Every research, teaching and software page, each lab calculator and the CV has a markdown twin at its path plus .md, for example /research.md, /research/tools/titer.md, /software/enarratio.md and /cv.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above and below. Twins are not in the sitemap.
+
+### About the site
+
+The sections above are the map. The rest of this file is how search, papers and feeds work.
+
+### Colophon
+
+/colophon describes how this site is built: every Cloudflare binding with the
+measurement that put it there, the schema migrations, the build gates, the
+runtime dependencies, and what was deliberately not adopted and why. The stack
+half is generated from the repository's own configuration and reconciled
+against it by a build gate rather than maintained by hand.
+
+### How it looks
+
+The look is a fixed direction rather than a theme that drifts per page. It
+is Swiss editorial on warm limestone paper: ink text, 1px hairlines as the only
+structure, and one accent colour used as ink for links and focus rather than as
+a fill. Titles and prose are a serif, and dates, identifiers and counts are a
+monospace, so the machine-readable values on a page are the ones set in mono.
+The rule is ruled rows rather than cards, no filled public control, no capsule
+and no tracked capitals. The post page and the home page are rebuilt under that
+rule; the index pages still carry the older vocabulary and are being brought to
+it, so a page that contradicts this paragraph is behind, not an exception. The
+theme is an attribute and follows prefers-color-scheme when none is set.
+
+The half of that which never degrades is the machine half. Every public page
+renders its content, data, citations, dates and structure in server HTML,
+complete and correct without script, and keeps its markdown twin, its entry in
+this file, its JSON-LD and its microformats. No public route hydrates and no
+framework runs on a reading page. The script that does load is hand-written and
+adds only what a person would want, such as zooming a figure or filtering
+without a reload, and a filter writes the query string, so a URL you are handed
+shows you what it showed whoever sent it.
+
+### Writing, in detail
+
+Posts are listed at /writing and can be filtered by tag at /writing?tag=<tag>.
+Every post has a plain markdown twin at /writing/<slug>.md, which is the source
+the page was rendered from. Requesting /writing/<slug> with an
+Accept: text/markdown header returns the same markdown. The feed is at
+/writing/rss.xml and /writing/feed.json.
+
+### Publications
+
+Peer-reviewed work is listed at /research/publications, filterable by topic at
+/research/publications?topic=<topic> and searchable at /research/publications?q=<query>. Every
+filter and every search is an ordinary GET, so each view is a real URL.
+
+Each paper has its own page at /research/publications/<doi-slug>/, where the slug is the
+DOI with every run of punctuation folded to a hyphen: 10.1128/mra.00888-24
+becomes /research/publications/10-1128-mra-00888-24/. The page carries the title, the
+full author list, the abstract in visible text, the venue, the DOI, PMC and
+preprint links where they exist, open-access status, and a citation count from
+OpenAlex labelled with the date it was read. Where the licence permits and the
+file is hosted here, the PDF sits beside the page at
+/research/publications/<doi-slug>/<doi-slug>.pdf.
+
+Citations export as files rather than as a copy button:
+
+- [BibTeX, the whole list](https://dustinedwards.info/research/publications.bib): /research/publications.bib
+- [RIS, the whole list](https://dustinedwards.info/research/publications.ris): /research/publications.ris
+- [CSL JSON, every record](https://dustinedwards.info/research/publications.json): /research/publications.json, including the three conference abstracts the page does not show
+- One paper as BibTeX: /research/publications/<slug>.bib
+- One paper as RIS: /research/publications/<slug>.ris
+
+The bibliographic data is from Crossref and DataCite, with abstracts backfilled
+from Europe PMC where a publisher deposited none. Counts are OpenAlex.
+
+Every paper also has a markdown twin at /research/publications/<doi-slug>.md. It carries the
+record as YAML frontmatter, the abstract, and, where the PDF is hosted here,
+the machine-extracted text of that PDF. That is the form to read if you are a
+program: the page says those things across HTML, meta tags and a JSON-LD block,
+and the twin says them once. The twins are kept out of the search index, like
+this file, so the paper's own page is the one that gets indexed.
+
+### The full set of paper twins
+
+Every paper on the index plus the conference abstracts the index does not show:
+
+- [RNA Tumour Viruses](https://dustinedwards.info/research/publications/10-1002-9780470025079-chap06-pub2.md): 2007
+- [Acceptance, perceptions, and compliance for COVID-19 vaccines among students attending a rural university: An interventional study using brief video messages](https://dustinedwards.info/research/publications/10-1080-07448481-2025-2472184.md): 2025
+- [Science communication tools: rubrics for generating posters and manuscripts that are authentic to the practice of science](https://dustinedwards.info/research/publications/10-1128-jmbe-00313-25.md): 2026
+- [Human T-Cell Leukemia Virus Type 1 Tax Relieves Repression of Proliferating Cell Nuclear Antigen Gene Expression](https://dustinedwards.info/research/publications/10-1128-jvi-00356-08.md): 2008
+- [Human T-Cell Leukemia/Lymphoma Virus Type 1 p30, but Not p12/p8, Counteracts Toll-Like Receptor 3 (TLR3) and TLR4 Signaling in Human Monocytes and Dendritic Cells](https://dustinedwards.info/research/publications/10-1128-jvi-01788-13.md): 2014
+- [Discovery and Characterization of Auxiliary Proteins Encoded by Type 3 Simian T-Cell Lymphotropic Viruses](https://dustinedwards.info/research/publications/10-1128-jvi-02150-14.md): 2015
+- [Palmitoylation and p8-Mediated Human T-Cell Leukemia Virus Type 1 Transmission](https://dustinedwards.info/research/publications/10-1128-jvi-03444-13.md): 2014
+- [Near-Complete Proviral Genome Sequence of Reticuloendotheliosis Virus Isolated from an Attwater’s Prairie Chicken (Tympanuchus cupido attwateri)](https://dustinedwards.info/research/publications/10-1128-mra-00173-22.md): 2022
+- [Genome Sequence of Fowlpox Virus-Integrated Reticuloendotheliosis Virus from a Rio Grande Wild Turkey (Meleagris gallopavo intermedia)](https://dustinedwards.info/research/publications/10-1128-mra-00174-22.md): 2022
+- [Complete Genome Sequence of Mycobacteriophage Joy99](https://dustinedwards.info/research/publications/10-1128-mra-00556-21.md): 2021
+- [Complete Genome Sequences of Mycobacterium Phages Tripl3t and Zeuska](https://dustinedwards.info/research/publications/10-1128-mra-00558-21.md): 2021
+- [Complete genome sequence of bacteriophage MrAaronian isolated from an Arthrobacter globiformis culture](https://dustinedwards.info/research/publications/10-1128-mra-00778-23.md): 2023
+- [Complete Genome Sequence of Bacteriophage Loca, Isolated on a Microbacterium foliorum Culture](https://dustinedwards.info/research/publications/10-1128-mra-00783-22.md): 2022
+- [Complete genome sequence of bacteriophage Godfather isolated from Microbacterium foliorum](https://dustinedwards.info/research/publications/10-1128-mra-00888-24.md): 2025
+- [Complete Genome Sequence of Bacteriophage Finny, Isolated from a Microbacterium foliorum Culture](https://dustinedwards.info/research/publications/10-1128-mra-01039-19.md): 2019
+- [Complete Genome Sequence of Bacteriophage Fizzles, Isolated from Microbacterium foliorum](https://dustinedwards.info/research/publications/10-1128-mra-01077-21.md): 2022
+- [Complete Genome Sequence of Bacteriophage IndyLu, Isolated from a Microbacterium foliorum Culture](https://dustinedwards.info/research/publications/10-1128-mra-01079-21.md): 2021
+- [Complete Genome Sequence of Cluster A1 Mycobacterium smegmatis Bacteriophage Arlo](https://dustinedwards.info/research/publications/10-1128-mra-01242-18.md): 2018
+- [Complete Genome Sequence of Cluster O Mycobacterium smegmatis Bacteriophage Ryadel](https://dustinedwards.info/research/publications/10-1128-mra-01594-18.md): 2019
+- [Both orf-I isoforms, p12 and p8, are required for efficient HTLV-1 infection and persistence](https://dustinedwards.info/research/publications/10-1186-1742-4690-11-s1-o13.md): 2014
+- [Role of regulatory proteins in HIV-1/HTLV-1 coinfection](https://dustinedwards.info/research/publications/10-1186-1742-4690-11-s1-p122.md): 2014
+- [Role of dimerization and palmitoylation on the function of HTLV-1 p12 and p8](https://dustinedwards.info/research/publications/10-1186-1742-4690-8-s1-a124.md): 2011
+- [Instructional Models for Course-Based Research Experience (CRE) Teaching](https://dustinedwards.info/research/publications/10-1187-cbe-21-03-0057.md): 2022
+- [A Public HTLV-1 Molecular Epidemiology Database for Sequence Management and Data Mining](https://dustinedwards.info/research/publications/10-1371-journal-pone-0042123.md): 2012
+- [Co-dependence of HTLV-1 p12 and p8 Functions in Virus Persistence](https://dustinedwards.info/research/publications/10-1371-journal-ppat-1004454.md): 2014
+- [Understanding Restriction Enzyme Digests](https://dustinedwards.info/research/publications/10-25334-8cxe-6883.md): 2021
+- [Writing Microbiology Resource Announcements (MRA)](https://dustinedwards.info/research/publications/10-25334-b5bs-f125.md): 2024
+- [Models of classroom assessment for course-based research experiences](https://dustinedwards.info/research/publications/10-3389-feduc-2023-1279921.md): 2023
+- [The professional identity of STEM faculty as instructors of course-based research experiences](https://dustinedwards.info/research/publications/10-3389-feduc-2024-1442306.md): 2024
+- [An inclusive Research and Education Community (iREC) model to facilitate undergraduate science education reform](https://dustinedwards.info/research/publications/10-3389-feduc-2024-1442318.md): 2024
+- [Exploration of Providers’ Perceptions and Attitudes Toward Phage Therapy and Intentions for Future Adoption as an Alternative to Traditional Antibiotics in the US: A Cross-Sectional Study](https://dustinedwards.info/research/publications/10-3390-ijerph22071139.md): 2025
+- [Orf-I and Orf-II-Encoded Proteins in HTLV-1 Infection and Persistence](https://dustinedwards.info/research/publications/10-3390-v3060861.md): 2011
+- [Inhibition of Geranylgeranyl Transferase-I Decreases Cell Viability of HTLV-1-Transformed Cells](https://dustinedwards.info/research/publications/10-3390-v3101815.md): 2011
+- [Survey of Reticuloendotheliosis Virus in Wild Turkeys (Meleagris gallopavo) in Texas, USA](https://dustinedwards.info/research/publications/10-7589-2018-08-187.md): 2019
+- [Detection of Reticuloendotheliosis Virus in Muscovy Ducks, Wild Turkeys, and Chickens in Brazil](https://dustinedwards.info/research/publications/10-7589-2019-04-088.md): 2020
+- [Molecular Surveillance for Lymphoproliferative Disease Virus and Reticuloendotheliosis Virus in Rio Grande Wild Turkeys (Meleagris gallopavo intermedia) in Texas, USA](https://dustinedwards.info/research/publications/10-7589-jwd-d-22-00023.md): 2022
+
+[/research/publications.json](https://dustinedwards.info/research/publications.json) carries the bibliographic record for all of them in CSL JSON,
+if one fetch is better than one per paper.
+
+### Research and teaching pages
+
+The research programme, the lab protocols and the courses are ordinary pages,
+written in markdown and rendered to HTML when the site is built. Each has a
+markdown twin at the same path plus .md, linked from the page head. Every one
+of them is listed in the sections above. The other pages are the home page,
+about, writing, software, colophon, contact and privacy, and
+[/sitemap.xml](https://dustinedwards.info/sitemap.xml) lists every HTML page on the
+site and nothing else.
+
+### Search
+
+[/search?q=<query>](https://dustinedwards.info/search) searches the whole site and returns a normal HTML page.
+
+The same URL returns JSON when requested with Accept: application/json. It is
+the same query against the same index, not a separate API, and the response
+varies on Accept. Parameters: q, type, tag, year, page. Operators inside q:
+tag:<tag>, type:<type>, "quoted phrases", and a bare four-digit year, which is
+read as a date filter rather than as text.
+
+Results are section-grained: a hit carries the heading it was found under and a
+url with that anchor, so a citation can point at the passage rather than the
+page. Each result reports what it matched on (title, tag, body, or filter, the
+last meaning the query was a bare year or tag with no text to match).
+
+For programmatic use prefer the JSON form. It is keyword search over an FTS5
+index: deterministic, the same query returning the same results, with no model
+in the path and no per-request cost.
+
+### Search over MCP
+
+The same corpus is exposed as a Model Context Protocol endpoint, so an agent can
+search this site as a tool without scraping it:
+
+- [Search MCP endpoint](https://2795d719-a4de-4558-9322-8fced66a48e6.search.ai.cloudflare.com/mcp): no authentication, one tool, "search"
+
+Results carry the same section-grained keys the rest of the site uses:
+blog/<slug>.md is a whole post and blog/<slug>__<anchor>.md is one heading
+within it, which maps back to /writing/<slug>#<anchor>.
+
+This is semantic retrieval and it is not the same thing as the JSON endpoint
+above. It finds passages that answer a question phrased in a sentence, and it
+misses short exact tokens that the keyword index finds immediately. Neither
+covers the other, so for a known term use the JSON search and for a question use
+this.
+
+Three ways in, then: a URL for people, JSON for programs, MCP for agents.
+
+### Full text
+
+[/llms-full.txt](https://dustinedwards.info/llms-full.txt) carries every published post in markdown in one document.

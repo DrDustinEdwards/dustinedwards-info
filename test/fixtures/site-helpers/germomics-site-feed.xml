@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Germomics: Writing</title>
+  <link>https://germomics.example/writing</link>
+  <atom:link href="https://germomics.example/feed/site.xml" rel="self" type="application/rss+xml"/>
+  <language>en-us</language>
+  <description><![CDATA[Essays and notes from Germomics.]]></description>
+  <item>
+    <title>Why phages win: notes &amp; &quot;questions&quot; &lt;draft&gt;</title>
+    <link>https://germomics.example/why-phages-win</link>
+    <guid>https://germomics.example/why-phages-win</guid>
+    <pubDate>Sun, 21 Jun 2026 09:30:00 GMT</pubDate>
+    <description><![CDATA[A short summary with <angle> brackets & an ampersand.]]></description>
+    <content:encoded><![CDATA[<p>Body with <a href="/about">a link</a> and an <em>emphasis</em>.</p>]]></content:encoded>
+  </item>
+  <item>
+    <title>It&apos;s alive</title>
+    <link>https://germomics.example/its-alive</link>
+    <guid>https://germomics.example/its-alive</guid>
+    <pubDate>Sat, 02 May 2026 08:00:00 GMT</pubDate>
+    <description><![CDATA[<p>Second body.</p>]]></description>
+    <content:encoded><![CDATA[<p>Second body.</p>]]></content:encoded>
+  </item>
+</channel>
+</rss>

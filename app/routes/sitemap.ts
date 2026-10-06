@@ -18,6 +18,7 @@ import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
+import { sitemapDocument } from "../../packages/site-helpers/sitemap.mjs";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -96,18 +97,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     ),
   ];
 
-  const body = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls
-  .map(
-    (u) =>
-      `  <url><loc>${u.loc}</loc>${
-        u.lastmod ? `<lastmod>${u.lastmod.toISOString().slice(0, 10)}</lastmod>` : ""
-      }</url>`,
-  )
-  .join("\n")}
-</urlset>
-`;
+  const body = sitemapDocument(urls);
 
   return new Response(body, {
     headers: {

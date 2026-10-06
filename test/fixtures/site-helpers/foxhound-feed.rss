@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Foxhound Blog</title>
+    <link>https://foxhoundapp.com/blog</link>
+    <description>Guides on Stripe payment recovery, dispute handling, and subscription intelligence.</description>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 01 Aug 2026 12:00:00 GMT</lastBuildDate>
+    <atom:link href="https://foxhoundapp.com/feed.rss" rel="self" type="application/rss+xml"/>
+    <image>
+      <url>https://foxhoundapp.com/favicon.png</url>
+      <title>Foxhound Blog</title>
+      <link>https://foxhoundapp.com/blog</link>
+    </image>
+    
+    <item>
+      <title><![CDATA[Recovering failed payments: what works & what "doesn't"]]></title>
+      <link>https://foxhoundapp.com/blog/recovering-failed-payments</link>
+      <guid isPermaLink="true">https://foxhoundapp.com/blog/recovering-failed-payments</guid>
+      <description><![CDATA[A summary with <angle> brackets & an ampersand.]]></description>
+      <pubDate>Sat, 01 Aug 2026 12:00:00 GMT</pubDate>
+      <author>support@foxhoundapp.com (Foxhound Team)</author>
+      <category>recovery</category><category>stripe</category>
+    </item>
+    <item>
+      <title><![CDATA[Dispute evidence, drafted]]></title>
+      <link>https://foxhoundapp.com/blog/dispute-evidence</link>
+      <guid isPermaLink="true">https://foxhoundapp.com/blog/dispute-evidence</guid>
+      <description><![CDATA[Second summary.]]></description>
+      <pubDate>Fri, 10 Jul 2026 08:00:00 GMT</pubDate>
+      <author>support@foxhoundapp.com (Foxhound Team)</author>
+      <category>disputes</category>
+    </item>
+    <item>
+      <title><![CDATA[An undated draft]]></title>
+      <link>https://foxhoundapp.com/blog/undated</link>
+      <guid isPermaLink="true">https://foxhoundapp.com/blog/undated</guid>
+      <description><![CDATA[No date.]]></description>
+      <author>support@foxhoundapp.com (Foxhound Team)</author>
+      
+    </item>
+  </channel>
+</rss>
