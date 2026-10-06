@@ -9,6 +9,7 @@ import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/lib/registry/compile.mjs";
 import { KINDS } from "../../app/lib/registry/kinds.mjs";
 import { storedPrimer } from "../../app/lib/registry/primer.mjs";
+import { storedEquipment } from "../../app/lib/registry/equipment.mjs";
 import { storedReagent } from "../../app/lib/registry/reagent.mjs";
 import { storedStrain } from "../../app/lib/registry/strain.mjs";
 
@@ -131,11 +132,19 @@ export function registryHost(options) {
   let strains;
   /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredReagent>> | undefined} */
   let reagents;
+  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredEquipment>> | undefined} */
+  let equipment;
   return {
     /** @param {string[]} ids */
     async primers(ids) {
       primers ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "primer").map((item) => [item.id, storedPrimer(item)])));
       const all = await primers;
+      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+    },
+    /** @param {string[]} ids */
+    async equipment(ids) {
+      equipment ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "equipment").map((item) => [item.id, storedEquipment(item)])));
+      const all = await equipment;
       return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
     },
     /** @param {string[]} ids */

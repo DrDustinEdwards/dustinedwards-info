@@ -145,7 +145,7 @@ function validateHistory(d, errors) {
  * Checks one parsed procedure.
  *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
- * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null, reagents?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
+ * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null, reagents?: ReadonlySet<string> | null, equipment?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
  *   host strains the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
  * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string }> }}
  */
@@ -279,6 +279,19 @@ export function validateProcedure(parsed, expect) {
     }
   }
   if (d.equipment !== undefined && !Array.isArray(d.equipment)) errors.push("equipment must be a list");
+  // An item that is lab-registry equipment names it with `equipment: <id>` (docs/REGISTRY.md): the protocol keeps its own phrase for
+  // it (the setting is the protocol's), and who makes it is stored there once.
+  if (Array.isArray(d.equipment)) {
+    for (const e of d.equipment) {
+      if (typeof e !== "object" || e === null || e.equipment === undefined) continue;
+      const at = `equipment[${String(e.name)}]`;
+      if (typeof e.equipment !== "string" || !PRIMER_ID.test(e.equipment)) {
+        errors.push(`${at}.equipment is the id of an equipment item in the lab registry (content/registry/equipment/), such as water-bath`);
+      } else if (expect.equipment && !expect.equipment.has(e.equipment)) {
+        errors.push(`${at}.equipment names no equipment in the lab registry (there is no content/registry/equipment/${e.equipment}.md)`);
+      }
+    }
+  }
   const equipmentNames = new Set(
     (Array.isArray(d.equipment) ? d.equipment : []).map((/** @type {any} */ e) =>
       String(typeof e === "string" ? e : e?.name ?? "").toLowerCase(),

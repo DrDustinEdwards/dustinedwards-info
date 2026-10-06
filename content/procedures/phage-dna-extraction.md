@@ -131,11 +131,16 @@ solutions:
     storage: "MISSING: No record in the repo states how the lab stores its TES buffer."
     shelf_life: "MISSING: No record in the repo states how long the lab keeps its TES buffer."
 equipment:
-  - microcentrifuge tubes
-  - microcentrifuge
-  - heat block
-  - NanoDrop
-  - Qubit 3.0
+  - name: microcentrifuge tubes
+    equipment: microcentrifuge-tubes
+  - name: microcentrifuge
+    equipment: microcentrifuge
+  - name: heat block
+    equipment: heat-block
+  - name: NanoDrop
+    equipment: nanodrop
+  - name: Qubit 3.0
+    equipment: qubit-3-0
 troubleshooting:
   - id: mix-set-solid
     step: "7"

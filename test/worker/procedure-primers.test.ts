@@ -14,7 +14,7 @@ import coi from "../../content/procedures/coi-primers.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
-import { reagentRepoFiles } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
 /* A protocol reads its primer tables from the lab registry (docs/REGISTRY.md): the file names the primers by id and holds no
  * sequence, the compile reads them from the repository into the record, and a change to a primer reaches every protocol that
@@ -43,7 +43,7 @@ beforeEach(async () => {
   await env.DB.prepare("DELETE FROM procedures").run();
   await env.DB.prepare("DELETE FROM registry").run();
   // The REV primers name the Stewart paper, which is a publication of this site, so the repository holds its file.
-  gh = stubGitHub({ [procedurePath(SLUG)]: coi, ...registryFiles, ...reagentRepoFiles, "content/publications/10-7589-2018-08-187.md": "x" });
+  gh = stubGitHub({ [procedurePath(SLUG)]: coi, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles, "content/publications/10-7589-2018-08-187.md": "x" });
   purge.mockClear();
 });
 afterEach(() => {
@@ -180,5 +180,23 @@ describe("a change to a reagent reaches the protocols whose materials name it", 
     const after = await display();
     expect(after?.display).toBe("GoTaq® Flexi DNA polymerase (renamed)");
     expect(after?.reagent?.name).toBe("GoTaq® Flexi DNA polymerase (renamed)");
+  });
+});
+
+describe("a change to an equipment item reaches the protocols whose list names it", () => {
+  it("a registry save rewrites the protocol's row, so the table shows the new manufacturer", { timeout: 120_000 }, async () => {
+    const extraction = (await import("../../content/procedures/phage-dna-extraction.md?raw")).default as string;
+    gh.files.set(procedurePath("phage-dna-extraction"), extraction);
+    const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: "phage-dna-extraction", raw: extraction });
+    expect(saved.ok, JSON.stringify(saved)).toBe(true);
+    const maker = async () =>
+      (JSON.parse((await env.DB.prepare("SELECT record FROM procedures WHERE slug = 'phage-dna-extraction'").first<{ record: string }>())?.record ?? "{}") as {
+        equipment: Array<{ name: string; item: { manufacturer: string | null } | null }>;
+      }).equipment.find((e) => e.name === "heat block")?.item?.manufacturer;
+    expect(await maker()).toBeNull();
+    const raw = gh.files.get("content/registry/equipment/heat-block.md") ?? "";
+    expect(raw).toContain("manufacturer:");
+    await saveRegistryItem(gitEnv(), { slug: "equipment/heat-block", raw: raw.replace(/^manufacturer: .*$/m, 'manufacturer: "Test Maker"'), isNew: false, actor: carrel });
+    expect(await maker()).toBe("Test Maker");
   });
 });

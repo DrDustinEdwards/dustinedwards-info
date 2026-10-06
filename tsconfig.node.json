@@ -362,6 +362,7 @@
     "app/lib/registry/kinds.mjs",
     // The primer kind and the Tm it computes, which kinds.mjs imports.
     "app/lib/registry/primer.mjs",
+    "app/lib/registry/equipment.mjs",
     "app/lib/registry/reagent.mjs",
     "app/lib/registry/strain.mjs",
     "app/lib/registry/tm.mjs",

@@ -7,7 +7,7 @@ import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 import { versionCases } from "./carrel-version-cases";
 import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
-import { reagentRepoFiles, seedProcedures } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
 
 /* Procedures are edited through Carrel's content group like every other kind: the handler reads the site's own
@@ -49,7 +49,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   purge.mockClear();
-  gh = stubGitHub({ [FILE]: protocol, ...reagentRepoFiles });
+  gh = stubGitHub({ [FILE]: protocol, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
 
 afterEach(() => {

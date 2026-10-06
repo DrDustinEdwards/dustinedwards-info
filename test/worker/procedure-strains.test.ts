@@ -12,7 +12,7 @@ import { loader as pageLoader } from "~/routes/procedure";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
-import { reagentRepoFiles } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
 /* A protocol names its host strains by id (docs/REGISTRY.md): the file types no designation or collection number, the compile
  * reads the strains from the repository into the record, and a change to a strain reaches every protocol that names it. The
@@ -40,7 +40,7 @@ let gh: GitHubStub;
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM procedures").run();
   await env.DB.prepare("DELETE FROM registry").run();
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...registryFiles, ...reagentRepoFiles });
+  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
   purge.mockClear();
 });
 afterEach(() => {

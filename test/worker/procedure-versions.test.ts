@@ -16,7 +16,7 @@ import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
-import { reagentRepoFiles, strainRepoFiles } from "./seed";
+import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* Frozen versions (drizzle/0027_procedure_versions.sql, docs/PROCEDURES.md): a published, versioned procedure keeps a
  * copy of every version at <page>/v/<version>, written once and never changed, so a printed sheet's QR code and a
@@ -45,7 +45,7 @@ const V2 = isolation
 
 let gh: GitHubStub;
 beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles });
+  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
 afterEach(() => {
   gh.restore();
