@@ -59,19 +59,19 @@ export async function meterOperator(
   id: string,
 ): Promise<AuthResult> {
   const verdict = await limitHit(env, `op:${id}`, OPERATOR_RATE_LIMIT, OPERATOR_RATE_PERIOD_SECONDS);
-  if (verdict === "unavailable") {
+  if (verdict.status === "unavailable") {
     return {
       ok: false,
       status: 503,
       error: "Rate limiting is unavailable, so the operator path is disabled.",
     };
   }
-  if (verdict === "limited") {
+  if (verdict.status === "limited") {
     return {
       ok: false,
       status: 429,
       error: `Rate limit: ${OPERATOR_RATE_LIMIT} requests per ${OPERATOR_RATE_PERIOD_SECONDS} seconds.`,
-      retryAfter: OPERATOR_RATE_PERIOD_SECONDS,
+      retryAfter: verdict.retryAfterSeconds,
     };
   }
 

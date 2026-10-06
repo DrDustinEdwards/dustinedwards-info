@@ -137,7 +137,7 @@ export async function checkPreviewRate(
 ): Promise<{ ok: boolean; retryAfter: number }> {
   // Keyed `preview:` rather than `ip:`, so preview traffic does not spend an Ask caller's counter.
   const verdict = await limitHit(env, `preview:${ip}`, PREVIEW_RATE_LIMIT, PREVIEW_RATE_WINDOW_SECONDS);
-  return { ok: verdict === "ok", retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
+  return { ok: verdict.status === "ok", retryAfter: verdict.retryAfterSeconds };
 }
 
 function toLink(token: string, record: PreviewRecord): PreviewLink {

@@ -63,17 +63,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return healthJson({ ok: false, checks: [{ name: "rate-limiter-failed", ok: false }] }, 503);
   }
 
-  if (verdict === "unavailable") {
+  if (verdict.status === "unavailable") {
     return healthJson(
       { ok: false, checks: [{ name: "rate-limiter-unavailable", ok: false }] },
       503,
     );
   }
-  if (verdict === "limited") {
+  if (verdict.status === "limited") {
     return healthJson(
       { ok: false, checks: [{ name: "rate-limited", ok: false }] },
       429,
-      { "Retry-After": String(HEALTH_RATE_PERIOD_SECONDS) },
+      { "Retry-After": String(verdict.retryAfterSeconds) },
     );
   }
 

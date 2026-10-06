@@ -62,11 +62,11 @@ interface GuardVerdict {
 export async function checkAskRate(env: Env, ip: string): Promise<GuardVerdict> {
   // Keyed by IP alone, not IP plus question: the point is to cap how often one caller can spend.
   const verdict = await limitHit(env, `ip:${ip}`, ASK_RATE_LIMIT, ASK_RATE_LIMIT_PERIOD_SECONDS);
-  if (verdict === "ok") return { ok: true };
+  if (verdict.status === "ok") return { ok: true };
   return {
     ok: false,
-    reason: verdict === "unavailable" ? "unprotected" : "rate",
-    retryAfter: ASK_RATE_LIMIT_PERIOD_SECONDS,
+    reason: verdict.status === "unavailable" ? "unprotected" : "rate",
+    retryAfter: verdict.retryAfterSeconds,
   };
 }
 

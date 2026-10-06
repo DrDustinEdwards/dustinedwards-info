@@ -1,17 +1,17 @@
+import { limit } from "@drdustinedwards/rate-limit";
+
 /**
  * One use of a fixed-window limit keyed by `key`, counted exactly by the ASK_BUDGET namespace, which
- * is the whole site's limiter. "unavailable" without the binding, so every caller can fail closed:
- * a guard that passes silently when its counter is gone is never noticed.
+ * is the whole site's limiter. This site refuses when the counter is unavailable, on every call: a
+ * guard that passes silently when its counter is gone is never noticed. The verdict carries the time
+ * left in the window (`retryAfterSeconds`), which is what a refusal sends as Retry-After.
  *
  * @param {Env} env
  * @param {string} key
- * @param {number} limit
+ * @param {number} maxHits
  * @param {number} windowSeconds
- * @returns {Promise<"ok" | "limited" | "unavailable">}
+ * @returns {ReturnType<typeof limit>}
  */
-export async function limitHit(env, key, limit, windowSeconds) {
-  if (!env.ASK_BUDGET) return "unavailable";
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(key));
-  const { ok } = await limiter.hit(limit, windowSeconds);
-  return ok ? "ok" : "limited";
+export function limitHit(env, key, maxHits, windowSeconds) {
+  return limit(env.ASK_BUDGET, key, [{ limit: maxHits, windowSeconds }], { onUnavailable: "refuse" });
 }

@@ -21,8 +21,8 @@ function carrelLimiter(env: Env): RateLimiter {
   return {
     async limit({ key }) {
       const verdict = await limitHit(env, `carrel:${key}`, CARREL_RATE_LIMIT, CARREL_RATE_PERIOD_SECONDS);
-      if (verdict === "unavailable") throw new Error("the rate limiter is unavailable");
-      return { success: verdict === "ok" };
+      if (verdict.status === "unavailable") throw new Error("the rate limiter is unavailable");
+      return { success: verdict.status === "ok" };
     },
   };
 }

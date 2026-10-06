@@ -1,6 +1,7 @@
 import { readCapped } from "~/lib/read-capped.mjs";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
+import { limitHit } from "~/lib/rate-limit.mjs";
 
 import type { Route } from "./+types/api.csp-report";
 
@@ -44,13 +45,13 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   // Keyed on the edge-set client IP, not the body, which the client controls.
   const ip = clientIp(request);
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`csp:${ip}`));
-  const { ok } = await limiter.hit(RATE_LIMIT, RATE_PERIOD_SECONDS);
-  if (!ok) {
-    return new Response("Too Many Requests", {
-      status: 429,
+  const verdict = await limitHit(env, `csp:${ip}`, RATE_LIMIT, RATE_PERIOD_SECONDS);
+  if (verdict.status !== "ok") {
+    const unavailable = verdict.status === "unavailable";
+    return new Response(unavailable ? "Reporting unavailable" : "Too Many Requests", {
+      status: unavailable ? 503 : 429,
       headers: {
-        "retry-after": String(RATE_PERIOD_SECONDS),
+        "retry-after": String(verdict.retryAfterSeconds),
         "cache-control": "private, no-store",
       },
     });
