@@ -1,3 +1,4 @@
+import { createLocalJWKSet } from "jose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { accessIdentity } from "~/lib/access.server";
@@ -42,7 +43,7 @@ describe("accessIdentity", () => {
   it("names the person a verified token carries, lowercased", async () => {
     const { jwks, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ email: "Dustin@Example.com" })), async () => jwks)).toEqual({
+    expect(await accessIdentity(env, request(await mint({ email: "Dustin@Example.com" })), () => createLocalJWKSet(jwks))).toEqual({
       kind: "human",
       email: "dustin@example.com",
     });
@@ -51,7 +52,7 @@ describe("accessIdentity", () => {
   it("reads a service token as a service, never as a person", async () => {
     const { jwks, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ common_name: "ci.access" })), async () => jwks)).toEqual({
+    expect(await accessIdentity(env, request(await mint({ common_name: "ci.access" })), () => createLocalJWKSet(jwks))).toEqual({
       kind: "service",
       id: "ci.access",
     });
@@ -60,17 +61,17 @@ describe("accessIdentity", () => {
   it("refuses a token for another application, and a header with no token is simply absent", async () => {
     const { jwks, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ email: "a@b.c", aud: ["other"] })), async () => jwks)).toEqual({
+    expect(await accessIdentity(env, request(await mint({ email: "a@b.c", aud: ["other"] })), () => createLocalJWKSet(jwks))).toEqual({
       kind: "refused",
       reason: "audience",
     });
-    expect(await accessIdentity(env, request(), async () => jwks)).toEqual({ kind: "absent" });
+    expect(await accessIdentity(env, request(), () => createLocalJWKSet(jwks))).toEqual({ kind: "absent" });
   });
 
   it("treats a Worker with no Access configuration as having no identity, whatever header arrives", async () => {
     const { jwks, mint } = await signer();
     const token = await mint({ email: "a@b.c" });
-    expect(await accessIdentity({} as Env, request(token), async () => jwks)).toEqual({ kind: "absent" });
+    expect(await accessIdentity({} as Env, request(token), () => createLocalJWKSet(jwks))).toEqual({ kind: "absent" });
   });
 });
 
