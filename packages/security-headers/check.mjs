@@ -8,6 +8,7 @@
  * nothing and tell nobody.
  */
 
+import { CLOUDFLARE_WEB_ANALYTICS } from "./csp.mjs";
 import { STANDARD_SECURITY_HEADERS } from "./headers.mjs";
 
 /** @typedef {{ name: string, pass: boolean, detail: string }} CheckResult */
@@ -42,12 +43,14 @@ function deniedFeatures(value) {
 
 /**
  * @param {Headers} headers a real response's headers
- * @param {{ standard?: Readonly<Record<string, string>>, csp?: boolean }} [options]
- *   `standard`: the floor (default STANDARD_SECURITY_HEADERS). `csp`: grade the policy too; false for
- *   a response that carries none by design, such as a feed or an image.
+ * @param {{ standard?: Readonly<Record<string, string>>, csp?: boolean, cloudflareWebAnalytics?: boolean }} [options]
+ *   `standard`: the floor (default STANDARD_SECURITY_HEADERS; a site passes the set it declared). `csp`: grade the
+ *   policy too; false for a response that carries none by design, such as a feed or an image.
+ *   `cloudflareWebAnalytics`: the site is Cloudflare-proxied with Web Analytics on, so the policy must let the injected
+ *   beacon run (its script path prefix) and report (connect-src with the site itself).
  * @returns {CheckResult[]}
  */
-export function checkSecurityHeaders(headers, { standard = STANDARD_SECURITY_HEADERS, csp = true } = {}) {
+export function checkSecurityHeaders(headers, { standard = STANDARD_SECURITY_HEADERS, csp = true, cloudflareWebAnalytics = false } = {}) {
   /** @type {CheckResult[]} */
   const results = [];
   const result = (/** @type {string} */ name, /** @type {boolean} */ pass, /** @type {string} */ detail) =>
@@ -101,6 +104,16 @@ export function checkSecurityHeaders(headers, { standard = STANDARD_SECURITY_HEA
   const base = policy.get("base-uri");
   result("base-uri is 'none' or 'self'", base?.length === 1 && (base[0] === "'none'" || base[0] === "'self'"), `got ${base ? base.join(" ") : "ABSENT (it does not fall back to default-src)"}`);
   result("frame-ancestors is set", policy.has("frame-ancestors"), "ABSENT (it does not fall back to default-src)");
+  if (cloudflareWebAnalytics) {
+    const missingScript = CLOUDFLARE_WEB_ANALYTICS.script.filter((source) => !(scripts ?? []).includes(source));
+    const connect = policy.get("connect-src") ?? policy.get("default-src") ?? [];
+    result(
+      "the policy lets the Cloudflare Web Analytics beacon run: its script path prefix",
+      missingScript.length === 0,
+      `script-src lacks ${missingScript.join(" and ")}: the edge injects /beacon.min.js/v..., which the bare file URL does not match`,
+    );
+    result("the policy lets the beacon report: connect-src includes the site itself", connect.includes("'self'"), `connect-src is ${connect.join(" ") || "ABSENT"}`);
+  }
   result(
     "violations are reported somewhere (report-uri or report-to)",
     policy.has("report-uri") || policy.has("report-to"),

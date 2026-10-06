@@ -9,6 +9,7 @@ import { buildSpeculationRules } from "~/lib/speculation.mjs";
 import worker from "../../workers/app";
 import { enhanceLoaderHash, speculationRulesHash } from "../../workers/csp.mjs";
 import { checkSecurityHeaders, failures } from "../../packages/security-headers/check.mjs";
+import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 
 /*
  * A public page through the REAL root (its Layout, loader and middleware) and the real server
@@ -169,5 +170,5 @@ it("gives a 404 a search form and the header's sections", async () => {
  * territory and is held by test/security-headers-package.test.mjs against the same policy builder. */
 it("passes the shared security-headers check on a rendered public page", async () => {
   const { response } = await render("/");
-  expect(failures(checkSecurityHeaders(response.headers))).toEqual([]);
+  expect(failures(checkSecurityHeaders(response.headers, { standard: SECURITY_HEADERS, cloudflareWebAnalytics: true }))).toEqual([]);
 });
