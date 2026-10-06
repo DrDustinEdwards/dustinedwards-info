@@ -32,7 +32,9 @@ export const skipped = [];
 export const FETCH_TIMEOUT_MS = 30_000;
 
 /**
- * Fails one case on a missing selector, where `page.click` would end the run.
+ * Fails one case on a missing selector or a click that cannot land, where `page.click` would end the run. A click can throw
+ * ("Node is either not clickable or not an Element"), and that is recorded as a failed check with the error, once and with
+ * no retry: a flake shows up as a failed check instead of being retried away, and the later cases still run.
  *
  * @param {any} target
  * @param {string} selector
@@ -50,7 +52,17 @@ export async function clickOrFail(target, selector, label) {
     );
     return false;
   }
-  await handle.click();
+  try {
+    await handle.click();
+  } catch (error) {
+    ok(
+      label,
+      false,
+      `${error instanceof Error ? error.message : String(error)} (clicking ${selector}). ` +
+        `Every later case still ran, which is the point of failing here rather than throwing.`,
+    );
+    return false;
+  }
   return true;
 }
 
