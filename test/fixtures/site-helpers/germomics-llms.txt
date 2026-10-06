@@ -1,0 +1,23 @@
+# Germomics
+
+> Microbiology and history, told by a virologist.
+
+Germomics is a podcast and writing project about microbiology and history by Dustin Edwards. This is a curated index of the canonical hubs and key content for AI assistants and answer engines. Citation is welcome. Please cite Germomics and link the source URL.
+
+## About
+- [About Germomics](https://germomics.example/about): what the project is and how to follow it.
+- [Dustin Edwards, author](https://germomics.example/about/dustin-edwards): professor and department head of biological sciences; bio and research.
+
+## Episodes
+- [Episode one: the first cell](https://germomics.example/episode-one): What a cell is.
+
+## Writing
+- [Why phages win: notes & "questions" <draft>](https://germomics.example/why-phages-win): A short summary with brackets & an ampersand.
+- [It's alive](https://germomics.example/its-alive): Used when there is no excerpt.
+
+## Explore
+- [Subscribe](https://germomics.example/subscribe): podcast apps and the email newsletter.
+- [Podcast RSS feed](https://germomics.example/feed/podcast/): the canonical feed.
+- [Data](https://germomics.example/data): interactive virus & bacteria data pages.
+- [Games](https://germomics.example/games): short browser games.
+- [Archive](https://germomics.example/archive): everything, filterable.

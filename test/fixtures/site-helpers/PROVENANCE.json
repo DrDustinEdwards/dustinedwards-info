@@ -1,0 +1,32 @@
+{
+  "capturedAt": "2026-10-06T04:59:14.938Z",
+  "sources": {
+    "germomics": {
+      "repository": "DrDustinEdwards/germomics",
+      "commit": "f993d51a139484f210eb4c7111b18105567bd79e",
+      "files": [
+        "site-feed.xml",
+        "llms.txt",
+        "llms-full.txt",
+        "sitemap.xml"
+      ]
+    },
+    "foxhound": {
+      "repository": "DrDustinEdwards/foxhound",
+      "commit": "69c122c8cb7f253199e34570b850056e9e536a0e",
+      "files": [
+        "feed.rss",
+        "sitemap.xml",
+        "llms.txt"
+      ]
+    },
+    "dustinedwards": {
+      "repository": "DrDustinEdwards/dustinedwards-info",
+      "live": "https://dustinedwards.info",
+      "files": [
+        "sitemap.xml",
+        "llms.txt"
+      ]
+    }
+  }
+}

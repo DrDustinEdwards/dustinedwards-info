@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://germomics.example/</loc></url>
+  <url><loc>https://germomics.example/episodes</loc></url>
+  <url><loc>https://germomics.example/writing</loc></url>
+  <url><loc>https://germomics.example/archive</loc></url>
+  <url><loc>https://germomics.example/data</loc></url>
+  <url><loc>https://germomics.example/games</loc></url>
+  <url><loc>https://germomics.example/subscribe</loc></url>
+  <url><loc>https://germomics.example/about</loc></url>
+  <url><loc>https://germomics.example/about/dustin-edwards</loc></url>
+  <url><loc>https://germomics.example/privacy</loc></url>
+  <url><loc>https://germomics.example/terms</loc></url>
+  <url><loc>https://germomics.example/contact</loc></url>
+  <url><loc>https://germomics.example/txasm</loc></url>
+  <url><loc>https://germomics.example/season/1</loc></url>
+  <url><loc>https://germomics.example/season/2</loc></url>
+  <url><loc>https://germomics.example/why-phages-win</loc><lastmod>2026-07-01</lastmod></url>
+  <url><loc>https://germomics.example/its-alive</loc><lastmod>2026-05-02</lastmod></url>
+  <url><loc>https://germomics.example/no-date</loc></url>
+</urlset>
