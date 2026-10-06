@@ -135,7 +135,7 @@
     "oxlint": "1.80.0",
     "puppeteer": "25.4.0",
     "satori": "0.29.0",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "typescript": "5.9.3",
     "unpdf": "1.8.1",
     "vite": "8.1.3",
