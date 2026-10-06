@@ -27,9 +27,9 @@ export async function run() {
   const expected = Object.entries(declaredSecurityHeaders() ?? {});
 
   check(
-    "security: the ratified header set was parsed from workers/app.ts",
+    "security: the ratified header set was read from workers/security-headers.mjs",
     expected.length > 0,
-    "SECURITY_HEADERS did not parse; the assertions below would examine nothing",
+    "SECURITY_HEADERS is empty; the assertions below would examine nothing",
   );
 
   /* The 302 has immutable headers, so it takes the rebuild branch. */

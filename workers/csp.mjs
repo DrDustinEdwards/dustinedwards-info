@@ -3,7 +3,7 @@
 import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 import { buildSpeculationRules } from "../app/lib/speculation.mjs";
-import { buildPolicy, scriptHash } from "../packages/security-headers/csp.mjs";
+import { CLOUDFLARE_WEB_ANALYTICS, buildContentSecurityPolicy, buildPolicy, scriptHash } from "../packages/security-headers/csp.mjs";
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -60,13 +60,9 @@ export const MEDIA_CSP = buildPolicy([
  * silently block it within weeks. That is why the policy names the file instead. It reports to this
  * site's own /cdn-cgi/rum, which `connect-src 'self'` already allows.
  */
-export const APPROVED_SCRIPTS = Object.freeze([
-  // Cloudflare Web Analytics, automatic setup. The edge injects it from a VERSIONED path
-  // (/beacon.min.js/v31edd..., measured in a browser 2026-10-03), which the bare file URL does not
-  // match; a source ending in "/" is a path prefix, so the second line covers that one directory.
-  "https://static.cloudflareinsights.com/beacon.min.js",
-  "https://static.cloudflareinsights.com/beacon.min.js/",
-]);
+// Cloudflare Web Analytics, automatic setup, written once in the shared package (CLOUDFLARE_WEB_ANALYTICS): the file URL and
+// its versioned path prefix. The policy below asks the package for it by name.
+export const APPROVED_SCRIPTS = CLOUDFLARE_WEB_ANALYTICS.script;
 
 /** @type {Promise<string> | undefined} */
 let loaderHash;
@@ -113,26 +109,17 @@ export async function contentSecurityPolicy(pathname, adminNonce) {
   if (isMediaPath(pathname)) return MEDIA_CSP;
   const loader = await enhanceLoaderHash();
   const rules = await speculationRulesHash(pathname);
-  const nonce = adminNonce ? ` 'nonce-${adminNonce}'` : "";
-  return buildPolicy([
-    "default-src 'self'",
-    // No 'strict-dynamic': browsers ignore every host source while it is present, so an approved file
-    // could never run. 'self' covers the bundles the loader inserts; APPROVED_SCRIPTS is the rest.
-    `script-src${nonce} '${loader}' '${rules}' 'self' ${APPROVED_SCRIPTS.join(" ")}`,
-    // Admin only: CodeMirror mounts an inline <style> that needs a nonce source, and it cannot be
-    // turned off.
-    `style-src 'self'${nonce}`,
-    // Nonces do not apply to style attributes, and Shiki emits about 117 inline style="" per post.
-    "style-src-attr 'unsafe-inline'",
-    "font-src 'self'",
-    "img-src 'self' data:",
-    `media-src 'self' ${PODCAST_AUDIO_HOSTS.map((host) => `https://${host}`).join(" ")}`,
-    "connect-src 'self'",
-    "object-src 'none'",
-    "base-uri 'none'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    `report-uri ${CSP_REPORT_PATH}`,
-    `report-to ${CSP_ENDPOINT_NAME}`,
-  ]);
+  // What this site loads, the one list the package builds the policy from. No 'strict-dynamic': browsers ignore every host
+  // source while it is present, so an approved file could never run; 'self' covers the bundles the loader inserts. The
+  // admin plane's nonce also covers CodeMirror's inline <style>, which cannot be turned off. Nonces do not apply to style
+  // attributes, and Shiki emits about 117 inline style="" per post, so those are allowed as attributes only.
+  return buildContentSecurityPolicy({
+    sources: { img: ["data:"], media: PODCAST_AUDIO_HOSTS.map((host) => `https://${host}`) },
+    scriptHashes: [loader, rules],
+    nonce: adminNonce || undefined,
+    styleAttributesInline: true,
+    cloudflareWebAnalytics: true,
+    reportUri: CSP_REPORT_PATH,
+    reportTo: CSP_ENDPOINT_NAME,
+  }).value;
 }

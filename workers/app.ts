@@ -25,6 +25,7 @@ import {
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "../packages/security-headers/headers.mjs";
+import { SECURITY_HEADERS } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { isWorkerPreview } from "~/lib/worker-preview";
 
@@ -69,24 +70,6 @@ export function cacheDimensions(
   keyUrl.searchParams.set("theme", theme);
   return { cacheKey: `${keyUrl.pathname}${keyUrl.search}`, props: { theme } };
 }
-
-/**
- * Looks tightenable and is not: CORP `same-origin` would break off-site og:image previews; COOP is
- * left loose so cross-origin popups and redirects keep working; HSTS carries `includeSubDomains` (we
- * own the apex, and every subdomain serves valid HTTPS, checked 2026-10-03) and never `preload`, a
- * one-way door (CUTOVER.md 3.10). Never deny `clipboard-write`: the copy controls swallow the refusal silently.
- */
-const SECURITY_HEADERS: Record<string, string> = {
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  "X-Content-Type-Options": "nosniff",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "X-Frame-Options": "DENY",
-  // One string literal, never a concatenation: two gates parse this object with a regex.
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), midi=(), display-capture=()",
-  "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-  "Cross-Origin-Resource-Policy": "cross-origin",
-};
-
 
 // The shared package's apply, authoritative: this site's set wins over anything a route set.
 function applySecurityHeaders(headers: Headers) {

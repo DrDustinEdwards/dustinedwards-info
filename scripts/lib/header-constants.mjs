@@ -1,9 +1,4 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { stripComments } from "./strip-comments.mjs";
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 
 /**
  * The header object a module assigns to `const NAME`, read from comment-stripped source, or null when
@@ -28,12 +23,12 @@ export function headerConstant(code, name) {
 }
 
 /**
- * workers/app.ts's SECURITY_HEADERS, which check:headers holds to the ratified set and verify-live
- * holds the deployed responses to. Comments first, or docblock prose parses.
+ * The set the Worker sends (workers/security-headers.mjs: the shared standard and this site's deviations), which
+ * check:headers holds to the ratified set and verify-live holds the deployed responses to. Imported, not parsed out of
+ * source, so it is the set the Worker applies.
+ *
+ * @returns {Record<string, string>}
  */
 export function declaredSecurityHeaders() {
-  return headerConstant(
-    stripComments(readFileSync(join(root, "workers", "app.ts"), "utf8")),
-    "SECURITY_HEADERS",
-  );
+  return { ...SECURITY_HEADERS };
 }
