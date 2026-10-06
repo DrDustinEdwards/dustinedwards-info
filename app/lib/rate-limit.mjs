@@ -10,6 +10,7 @@ import { limit } from "@drdustinedwards/rate-limit";
  * @param {string} key
  * @param {number} maxHits
  * @param {number} windowSeconds
+ * @returns {ReturnType<typeof limit>}
  */
 export function limitHit(env, key, maxHits, windowSeconds) {
   return limit(env.ASK_BUDGET, key, [{ limit: maxHits, windowSeconds }], { onUnavailable: "refuse" });
