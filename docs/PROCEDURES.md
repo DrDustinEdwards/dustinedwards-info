@@ -126,8 +126,8 @@ pages. `organism` reads from the lab registry's strains, so a strain added there
   `solutions` (sub-recipes: `id`, `name`, `components`, `storage`, `shelf_life`), `primers` (a list of `{ primer: <id> }`, each the id
   of a primer in the lab registry, docs/REGISTRY.md: the sequence is stored there once and the protocol holds none; the page, sheet
   and twin draw a Primers section from the registry's facts), `cycling`.
-  A material that is a lab-registry reagent (docs/REGISTRY.md) names it with `reagent: <id>`: its supplier, catalog number and
-  product page are stored there once, and the protocol keeps its own amount, stock and final.
+  A material that is a lab-registry reagent (docs/REGISTRY.md) names it with `reagent: <id>`: where it comes from (a supplier and a catalog number, or that the lab prepares it)
+  is stored there once and drawn into the protocol's Reagents table, which keeps the protocol's own amount, stock and final.
   A material may carry `stock` (one or more), `final`, `amount` and `per`, and `solution` (the id of its
   sub-recipe). A spin in rpm needs its `g` (or a recorded gap), and a touchdown annealing its step size.
 - **recipe** adds `servings`, `cuisine`, `category`, `diet`, `prep_time`, `cook_time`, `substitutions`

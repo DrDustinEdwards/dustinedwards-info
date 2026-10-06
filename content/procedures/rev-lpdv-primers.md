@@ -49,8 +49,10 @@ materials:
     display: Eluted DNA
     amount: 5 µL
     per: reaction
+  - name: NEB 100 bp ladder
+    reagent: neb-100-bp-dna-ladder
+    amount: "MISSING: The page does not state how much ladder is loaded beside the product."
 equipment:
-  - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
   - { primer: rev-3-ltr-forward }
@@ -137,8 +139,6 @@ The REV provirus has an LTR at each end, the primer binding site near the 5′ L
 
 ## Materials
 
-- [OneTaq® Hot Start 2X Master Mix](/research/lab/reagents/onetaq-hot-start-2x-master-mix)
-- [NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)
 - 2% agarose gel in TBE
 
 Extension temperature is dependent on polymerase. The 68 °C extensions below are for the One*Taq* mix.
@@ -157,7 +157,7 @@ From Stewart et al. 2019, for each 25 µL reaction:
 
 1. Set up each 25 µL reaction as in the table: @nuclease-free water|Nuclease-free water{5.5%µL}, @OneTaq Hot Start 2X Master Mix|One*Taq* Hot Start 2X Master Mix{12.5%µL} (New England Biolabs), @forward primer|Forward primer (10 µM stock){1%µL}, @reverse primer|Reverse primer (10 µM stock){1%µL} and @eluted DNA|Eluted DNA{5%µL}.
 2. Run the cycling program for the primer set, as in its table below.
-3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{}.
+3. Run the product on the #2% agarose gel in TBE{} beside the @NEB 100 bp ladder{}.
    > EXPECT: A band at the set's product size: see [where the REV amplicons sit on the genome](#where-the-rev-amplicons-sit-on-the-genome) and, for LPDV, [PCR LPDV p31/CA](#pcr-lpdv-p31ca). The REV-positive lane shows the band and the negative lane none.
 
 ## PCR REV 3′ LTR

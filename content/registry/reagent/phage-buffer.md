@@ -1,5 +1,5 @@
 ---
 name: "Phage buffer"
-supplier: "MISSING: No record in the repo states who supplies the lab's phage buffer."
-catalog_number: "MISSING: No record in the repo states the catalog number of the lab's phage buffer."
+prepared_in_lab: true
+recipe: "MISSING: No procedure with the recipe profile exists yet for the lab's Phage buffer. Recipes are written by the lab, not here."
 ---

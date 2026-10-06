@@ -13,8 +13,9 @@ import {
   productSpanText,
   productText,
   siteText,
+  reagentLabel,
+  reagentSource,
   tmNote,
-  useText,
   type InventoryRow,
   type PrimerListRow,
   type PrimerRow,
@@ -339,57 +340,42 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
   return (
     <>
       <p className="registry-lede">
-        The substances the lab&rsquo;s protocols use, apart from the samples they work on. A supplier or catalog number appears where a
-        record in the repository states it, and each reagent&rsquo;s protocols are read from the protocols that name it.
+        The substances the lab&rsquo;s protocols use, apart from the samples they work on, in one table. A reagent is bought (a supplier
+        and a catalog number, where a record in the repository states them) or prepared in the lab (a link to its recipe). Each row
+        lists the protocols that use it, and each protocol&rsquo;s own table has its amount, stock and final concentration.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
           definition={REAGENTS}
           result={result}
           labelledBy="registry-title"
-          title={(r) => (
-            <a className="cap-table-open" href={r.path}>
-              {r.name}
-            </a>
-          )}
+          title={(r) => reagentLabel(r)}
+          cells={{
+            supplier: (r) => (reagentSource(r) ?? <NotFound reason={r.supplierMissing} />),
+            number: (r) => (r.preparedInLab ? "" : (r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />)),
+            link: (r) =>
+              r.productUrl ? (
+                <a href={r.productUrl}>Product page</a>
+              ) : r.recipePath ? (
+                <a href={r.recipePath}>Recipe</a>
+              ) : r.preparedInLab ? (
+                <NotFound reason={r.recipeMissing} />
+              ) : (
+                ""
+              ),
+            protocols: (r) => (
+              <>
+                {r.uses.map((u, i) => (
+                  <span key={u.path}>
+                    {i > 0 ? "; " : null}
+                    <a href={u.path}>{u.title}</a>
+                  </span>
+                ))}
+              </>
+            ),
+          }}
         />
       </div>
-    </>
-  );
-}
-
-export function LabReagent({ reagent }: { reagent: ReagentRow }) {
-  return (
-    <>
-      <dl className="registry-facts">
-        {reagent.abbreviation ? <Fact term="Abbreviation">{reagent.abbreviation}</Fact> : null}
-        {reagent.contents ? <Fact term="Contents">{reagent.contents}</Fact> : null}
-        <Fact term="Supplier">{reagent.supplier ?? <NotFound reason={reagent.supplierMissing} />}</Fact>
-        <Fact term="Catalog number">{reagent.catalogNumber ?? <NotFound reason={reagent.catalogNumberMissing} />}</Fact>
-        {reagent.productUrl ? (
-          <Fact term="Product page">
-            <a href={reagent.productUrl}>{reagent.productUrl.replace(/^https:\/\//, "")}</a>
-          </Fact>
-        ) : null}
-      </dl>
-
-      <h2 id="protocols">Used in</h2>
-      {reagent.uses.length === 0 ? (
-        <p>No published protocol names this reagent.</p>
-      ) : (
-        <ul className="registry-used">
-          {reagent.uses.map((use) => (
-            <li key={use.path}>
-              <a href={use.path}>{use.title}</a>
-              <ul>
-                {use.rows.map((row, i) => (
-                  <li key={i}>{useText(row) || "No amount recorded."}</li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
     </>
   );
 }

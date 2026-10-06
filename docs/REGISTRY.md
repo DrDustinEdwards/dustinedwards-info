@@ -143,25 +143,32 @@ an organism. The pages that name the hosts link the strain records and type no d
 
 ## The reagent kind
 
-`app/lib/registry/reagent.mjs`, fifteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
-from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). A record states
-what the lab's own pages state: `name`, an `abbreviation` or `contents` where a protocol says so (ZnCl2; DNase I plus RNase A), and
-`supplier`, `catalog_number` and `product_url` where a protocol links the product (GoTaq Flexi from Promega, M8296; OneTaq Hot Start 2X
-Master Mix from New England Biolabs, M0484, each read from the product link the protocols carried). A supplier or catalog number that
-no record in the repository states is `MISSING: <why>` and listed for Dustin, never filled from memory: that is thirteen reagents, so
-twenty-six gaps. A kind's page is `/research/lab/reagents`, an item is `/research/lab/reagents/<id>`, each with a markdown twin, a
-search record and a tab on the library.
+`app/lib/registry/reagent.mjs`, sixteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
+from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). **A reagent has no
+page of its own** (`itemPages: false` on the kind): the reagents are one table at `/research/lab/reagents`, which is the library's
+Reagents tab, with a markdown twin at `/research/lab/reagents.md`. The table has the name (with its abbreviation or contents beside it
+where a protocol says), the supplier, the catalog number, a link and the protocols that use each reagent; every gap is listed under it
+with its reason, in the page and in the twin. There is no page, twin, search record or sitemap entry for a reagent, and no redirect: the
+address of a reagent that briefly had a page answers 404.
+
+A record states what the lab's own pages state. A **bought** reagent states `supplier` and `catalog_number`, each written or
+`MISSING: <why>` where no record in the repository says, and `product_url` where a protocol linked the product (GoTaq Flexi from
+Promega, M8296; OneTaq Hot Start 2X Master Mix and the 100 bp DNA ladder from New England Biolabs, M0484 and N3231, each read from the
+product link the protocols carried). A reagent **prepared in the lab** (phage buffer, PYCa, TES buffer) states `prepared_in_lab: true`
+and a `recipe` in place of a supplier and a catalog number: the file key of a procedure with the recipe profile
+(`content/procedures/<key>.md`, `profile: recipe`, checked by the host the way a paper is), shown as a link to `/recipes/<key>`, or
+`MISSING: <why>` where no recipe exists yet, which is listed for Dustin. Recipes are written by the lab, never here, so all three are
+gaps today. A set rule holds each record to one of the two.
 
 **Computed, never stored:** what the protocols use of a reagent. A protocol names a reagent on one of its materials as
-`reagent: <id>` and keeps what is its own (the amount, stock and final concentration, and the name the steps mark it by); the
-reagent's page reads each protocol's stock, final and amount back from the protocols that name it. The compile reads the reagents from
-the repository (`reagents` on the registry host, `readReagents` in the Worker), bakes the registry's name and page into the material
-(`reagent: { id, name, path }`), shows the material by the registry's name unless the protocol gives a `display` of its own, and
-links it on the page, the twin and the sheet's table. A protocol no longer types a product name, product link or catalog number for a
-reagent the registry holds (`test/registry-reagents.test.mjs`). An unknown id, a malformed id and a draft reagent in a published
-protocol are refused, and a registry save or `sync_registry` recompiles every protocol whose materials name the changed reagent.
-Not moved: the NEB 100 bp ladder stays in the protocols' equipment lists, where they classify it, with its link; a ladder is a
-reagent or an equipment item by a lab convention that is Dustin's to state.
+`reagent: <id>` and keeps what is its own (the amount, stock and final, and the name the steps mark it by). The compile reads the
+reagents from the repository, bakes the registry's stated facts into the material (`reagent: { id, name, preparedInLab, supplier,
+catalogNumber, productUrl, recipe }`), shows the material by the registry's name unless the protocol gives a `display` of its own,
+and the protocol's Reagents table gains a Source column (supplier and catalog number linked to the product, or "Prepared in the lab"
+linked to the recipe), also in the twin as `source ...`. A protocol no longer types a product link or catalog number for a reagent the
+registry holds (`test/registry-reagents.test.mjs`). An unknown id, a malformed id and a draft reagent in a published protocol are
+refused, and a registry save or `sync_registry` recompiles every protocol whose materials name the changed reagent. The NEB 100 bp
+ladder is a reagent (Dustin's ruling): it is a material of the three PCR protocols, not an item of their equipment lists.
 
 ## Where it goes
 

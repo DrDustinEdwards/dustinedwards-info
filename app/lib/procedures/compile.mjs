@@ -77,8 +77,8 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       primerRows: named.flatMap((id) => (primerRows.has(id) ? [primerRows.get(id)] : [])),
       // The strain's page is where the protocol links it, computed from its id here and not typed anywhere.
       strainRows: namedStrains.flatMap((id) => (strainRows.has(id) ? [{ ...strainRows.get(id), path: itemPath("strain", id) }] : [])),
-      // The reagents the materials name, with the page each links to, computed from the id here and typed nowhere.
-      reagentRows: reagentIds.flatMap((id) => (reagentRows.has(id) ? [{ ...reagentRows.get(id), path: itemPath("reagent", id) }] : [])),
+      // The reagents the materials name, as the registry states them, so the table shows where each comes from and types none.
+      reagentRows: reagentIds.flatMap((id) => (reagentRows.has(id) ? [reagentRows.get(id)] : [])),
       // The words for each organism id the protocol names, from the registry (or the non-strain list), so the library needs no list of its own.
       organismNames: Object.fromEntries(
         (Array.isArray(parsed.data.organism) ? parsed.data.organism : []).flatMap((id) => {

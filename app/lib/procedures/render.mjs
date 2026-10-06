@@ -72,10 +72,25 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  * A reagent as a protocol carries it: the lab registry's name for it, read when the protocol is compiled, so a material that
  * names a reagent shows the registry's name and links its page and a frozen version keeps the name it was published with.
  *
- * @typedef {{ id: string, name: string, status: "published" | "draft" }} StoredReagent
+ * @typedef {{ id: string, name: string, status: "published" | "draft", preparedInLab: boolean, supplier: string | null, catalogNumber: string | null, productUrl: string | null, recipe: string | null }} StoredReagent
  *
  * @typedef {{ id: string, name: string, status: "published" | "draft", organism: string | null, strain: string | null, collection: string | null, collectionNumber: string | null }} StoredStrain
  */
+
+/**
+ * Where a reagent comes from, in the words a protocol's table and twin use: a bought reagent's supplier and catalog number, linked to
+ * its product page where there is one; a reagent prepared in the lab, linked to its recipe where one exists.
+ *
+ * @param {StoredReagent} reagent
+ * @returns {{ text: string, href: string | null }}
+ */
+export function reagentSource(reagent) {
+  if (reagent.preparedInLab) {
+    return { text: reagent.recipe ? "Prepared in the lab (recipe)" : "Prepared in the lab", href: reagent.recipe ? `/recipes/${reagent.recipe}` : null };
+  }
+  const text = [reagent.supplier, reagent.catalogNumber].filter(Boolean).join(", ");
+  return { text: text || "Not recorded", href: reagent.productUrl };
+}
 
 /**
  * @param {{
@@ -87,7 +102,7 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  *   primerRows?: StoredPrimer[],
  *   strainRows?: Array<StoredStrain & { path: string }>,
  *   organismNames?: Record<string, string>,
- *   reagentRows?: Array<StoredReagent & { path: string }>,
+ *   reagentRows?: StoredReagent[],
  * }} input
  */
 export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames, reagentRows }) {
@@ -230,7 +245,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       name: m.name,
       // A reagent of the registry is shown by the registry's name, linked, so the protocol types no product name for it.
       display: m.display ?? reagentsById.get(m.reagent)?.name ?? m.name,
-      reagent: reagentsById.has(m.reagent) ? { id: m.reagent, name: reagentsById.get(m.reagent)?.name ?? m.reagent, path: reagentsById.get(m.reagent)?.path ?? "" } : null,
+      // What the registry says of it, as it was when the protocol was compiled: the table shows where it comes from.
+      reagent: reagentsById.get(m.reagent) ?? null,
       group: m.group ?? null,
       kind: m.kind ?? null,
       version: known(m.version),
@@ -492,7 +508,11 @@ export function procedureMarkdown(record, parsed) {
     const note = known(m.note) ? ` ${m.note}` : "";
     const reagent = reagentOf.get(m.name) ?? null;
     const shown = m.display ?? reagent?.name ?? m.name;
-    out.push(`- ${reagent ? `[${shown}](${reagent.path})` : shown}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
+    if (reagent) {
+      const source = reagentSource(reagent);
+      parts.push(source.href ? `source [${source.text}](${source.href})` : `source ${source.text}`);
+    }
+    out.push(`- ${shown}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
   }
   out.push("");
   for (const s of record.solutions) {

@@ -16,7 +16,7 @@ import { tagPath } from "~/lib/tag-path.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { LAB_PATH, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
+import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
 import type { Route } from "./+types/sitemap";
 
@@ -78,7 +78,9 @@ export async function loader({ context }: Route.LoaderArgs) {
     // date a fact changed.
     { loc: `${origin}${LAB_PATH}`, lastmod: null as Date | null },
     ...[...new Set(registryItems.map((item) => item.kind))].map((kind) => ({ loc: `${origin}${kindPath(kind)}`, lastmod: null as Date | null })),
-    ...registryItems.map((item) => ({ loc: `${origin}${itemPath(item.kind, item.id)}`, lastmod: null as Date | null })),
+    ...registryItems
+      .filter((item) => hasItemPage(item.kind))
+      .map((item) => ({ loc: `${origin}${itemPath(item.kind, item.id)}`, lastmod: null as Date | null })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/writing/${p.slug}`,
       lastmod: p.updatedAt,

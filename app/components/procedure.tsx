@@ -7,7 +7,7 @@ import type { resolveProof } from "~/lib/procedures/proof.mjs";
 import type { workflowContext } from "~/lib/procedures/library.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/lib/procedures/cite.mjs";
 import { sheetQr } from "~/lib/procedures/qr.mjs";
-import { fillQuantities, fixedSectionIds, type ProcedureRecord } from "~/lib/procedures/render.mjs";
+import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/lib/procedures/render.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
 
@@ -139,11 +139,19 @@ function ScaleForm({ record, count, action }: { record: ProcedureRecord; count: 
   return null;
 }
 
+/** Where a registry reagent comes from: its supplier and catalog number linked to the product, or the lab's recipe for it. */
+function ReagentSource({ reagent }: { reagent: NonNullable<ProcedureRecord["materials"][number]["reagent"]> }) {
+  const source = reagentSource(reagent);
+  return source.href ? <a href={source.href}>{source.text}</a> : <>{source.text}</>;
+}
+
 export function MaterialsTable({ record, count, factor }: { record: ProcedureRecord; count: number; factor: number }) {
   const showTotal = record.profile === "protocol" && record.scale !== null && record.materials.some((m) => m.per === record.scale?.unit);
   const hasStock = record.materials.some((m) => m.stock.length > 0);
   const hasFinal = record.materials.some((m) => m.final);
   const hasVersion = record.materials.some((m) => m.version);
+  // Where each reagent of the lab registry comes from, in one column, drawn from the registry's record.
+  const hasSource = record.materials.some((m) => m.reagent);
   const hasKind = record.profile === "computational";
   const unitWord = record.scale ? `${count} ${record.scale.unit}${count === 1 ? "" : "s"}` : "";
   return (
@@ -158,6 +166,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
             {hasFinal ? <th scope="col">Final</th> : null}
             <th scope="col">Amount</th>
             {showTotal ? <th scope="col">For {unitWord}</th> : null}
+            {hasSource ? <th scope="col">Source</th> : null}
             <th scope="col">Notes</th>
           </tr>
         </thead>
@@ -165,7 +174,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
           {record.materials.map((m) => (
             <tr key={m.name} id={`material-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
               <th scope="row">
-                {m.reagent ? <a href={m.reagent.path}>{m.display}</a> : m.display}
+                {m.display}
                 {m.group ? <span className="procedure-group"> ({m.group})</span> : null}
               </th>
               {hasKind ? <td>{m.kind}</td> : null}
@@ -180,6 +189,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
                     : ""}
               </td>
               {showTotal ? <td>{total(m.amount, m.per, record, count) ?? ""}</td> : null}
+              {hasSource ? <td>{m.reagent ? <ReagentSource reagent={m.reagent} /> : null}</td> : null}
               <td>
                 {m.noteHtml ? <span dangerouslySetInnerHTML={html(m.noteHtml)} /> : null}
                 {m.solution ? (

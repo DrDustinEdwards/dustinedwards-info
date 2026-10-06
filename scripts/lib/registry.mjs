@@ -19,6 +19,14 @@ export const REGISTRY_ARTIFACT_PATH = path.join("content", "generated", "registr
 /** The repository's papers, read from content/publications as a clone has them. */
 export const repoHost = {
   /** @param {string} slug a publication's file key */
+  async recipe(slug) {
+    const raw = await readFile(path.join(ROOT, "content", "procedures", `${slug}.md`), "utf8").catch((error) => {
+      if (error?.code === "ENOENT") return null;
+      throw error;
+    });
+    return raw !== null && /^profile:\s*recipe\s*$/m.test(raw.split(/^---\s*$/m)[1] ?? "");
+  },
+  /** @param {string} slug a publication's file key */
   async paper(slug) {
     const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch((error) => {
       if (error?.code === "ENOENT") return null;
