@@ -24,7 +24,7 @@ import {
   isAdminPath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
-import { applyHeaderSet } from "../packages/security-headers/headers.mjs";
+import { applyHeaderSet } from "@dustinedwards/security-headers/headers";
 import { SECURITY_HEADERS } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { isWorkerPreview } from "~/lib/worker-preview";
