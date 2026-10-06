@@ -5,15 +5,28 @@ import test from "node:test";
 import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { REAGENTS, itemPath, reagentMarkdown, reagentRow, reagentRows, reagentUses, reagentsMarkdown, useText } from "../app/lib/registry/catalog.mjs";
-import { compileRegistryItem } from "../app/lib/registry/compile.mjs";
+import { reagentSource } from "../app/lib/procedures/render.mjs";
+import {
+  REAGENTS,
+  hasItemPage,
+  inventoryRows,
+  kindPath,
+  reagentGapText,
+  reagentLabel,
+  reagentRow,
+  reagentRows,
+  reagentUses,
+  reagentsMarkdown,
+} from "../app/lib/registry/catalog.mjs";
+import { compileRegistryItem, registrySetErrors } from "../app/lib/registry/compile.mjs";
 import { KINDS } from "../app/lib/registry/kinds.mjs";
 import { REAGENT } from "../app/lib/registry/reagent.mjs";
 import { registrySearchInput } from "../app/lib/registry/search-inputs.mjs";
-import { buildRegistry } from "../scripts/lib/registry.mjs";
+import { buildRegistry, repoHost } from "../scripts/lib/registry.mjs";
 
-/* The reagent kind (docs/REGISTRY.md): the substances the lab's protocols use, what is computed from the protocols that name
- * them, and the guard that holds a product's supplier, catalog number and page to the registry, so each is stored once. */
+/* The reagent kind (docs/REGISTRY.md): the substances the lab's protocols use, held as one table with no page for an item; what a
+ * reagent is bought from or how the lab prepares it; and the guard that holds a product's supplier, catalog number and page to the
+ * registry, so each is stored once. */
 
 const root = new URL("../", import.meta.url);
 const text = (path) => readFile(new URL(path, root), "utf8");
@@ -21,9 +34,10 @@ const text = (path) => readFile(new URL(path, root), "utf8");
 const built = await buildRegistry();
 const reagents = built.items.filter((item) => item.kind === "reagent");
 const byId = new Map(reagents.map((item) => [item.id, item]));
+const PREPARED = ["phage-buffer", "pyca", "tes-buffer"];
 
 test("the registry holds the reagents the lab's protocols use, stating only what a record in the repo states", () => {
-  assert.equal(reagents.length, 15);
+  assert.equal(reagents.length, 16);
   assert.equal(KINDS.reagent, REAGENT);
   const rows = new Map(reagentRows(reagents, []).map((row) => [row.id, row]));
   const gotaq = rows.get("gotaq-flexi-dna-polymerase");
@@ -33,113 +47,139 @@ test("the registry holds the reagents the lab's protocols use, stating only what
   );
   const onetaq = rows.get("onetaq-hot-start-2x-master-mix");
   assert.deepEqual([onetaq?.supplier, onetaq?.catalogNumber], ["New England Biolabs", "M0484"]);
-  assert.equal(rows.get("zinc-chloride")?.abbreviation, "ZnCl2");
-  assert.equal(rows.get("nuclease-mix")?.contents, "DNase I plus RNase A");
+  const ladder = rows.get("neb-100-bp-dna-ladder");
+  assert.deepEqual([ladder?.name, ladder?.supplier, ladder?.catalogNumber, ladder?.productUrl], ["100 bp DNA ladder", "New England Biolabs", "N3231", "https://www.neb.com/products/n3231-100-bp-dna-ladder"]);
+  assert.equal(reagentLabel(rows.get("zinc-chloride")), "Zinc chloride (ZnCl2)");
+  assert.equal(reagentLabel(rows.get("nuclease-mix")), "Nuclease mix (DNase I plus RNase A)");
 });
 
-test("a supplier or catalog number no record states is a gap that says why, and only those are gaps", () => {
-  const gaps = built.gaps.filter((gap) => gap.slug.startsWith("reagent/"));
-  assert.equal(gaps.length, 26, "thirteen reagents, a supplier and a catalog number each");
-  for (const gap of gaps) {
-    assert.ok(["supplier", "catalog_number"].includes(gap.field), `${gap.slug}.${gap.field}: only a supplier or a catalog number can be missing`);
-    assert.match(gap.reason, /No record in the repo states/);
+test("a reagent is bought or prepared in the lab, and what no record states is a gap that says why", () => {
+  for (const id of PREPARED) {
+    const row = reagentRow(byId.get(id));
+    assert.equal(row.preparedInLab, true, id);
+    assert.deepEqual([row.supplier, row.catalogNumber, row.productUrl, row.recipe], [null, null, null, null], `${id} has no supplier, number, product link or recipe`);
+    assert.match(row.recipeMissing ?? "", /No procedure with the recipe profile exists yet/);
+    assert.deepEqual(reagentGapText(row).length, 1);
   }
-  const stated = new Set(["gotaq-flexi-dna-polymerase", "onetaq-hot-start-2x-master-mix"]);
-  for (const id of byId.keys()) assert.equal(gaps.some((g) => g.slug === `reagent/${id}`), !stated.has(id), id);
-  const row = reagentRow(byId.get("proteinase-k"));
-  assert.equal(row.supplier, null);
-  assert.match(row.supplierMissing ?? "", /who supplies the lab's proteinase K/);
+  const gaps = built.gaps.filter((gap) => gap.slug.startsWith("reagent/"));
+  const bought = [...byId.keys()].filter((id) => !PREPARED.includes(id) && !["gotaq-flexi-dna-polymerase", "onetaq-hot-start-2x-master-mix", "neb-100-bp-dna-ladder"].includes(id));
+  assert.equal(bought.length, 10);
+  assert.equal(gaps.length, bought.length * 2 + PREPARED.length, "a supplier and a catalog number for each bought reagent nobody records, a recipe for each prepared one");
+  for (const gap of gaps) {
+    assert.ok(["supplier", "catalog_number", "recipe"].includes(gap.field), `${gap.slug}.${gap.field}`);
+    assert.ok(gap.reason.length > 20, `${gap.slug}.${gap.field} says why`);
+  }
+  const proteinase = reagentRow(byId.get("proteinase-k"));
+  assert.equal(proteinase.supplier, null);
+  assert.match(proteinase.supplierMissing ?? "", /who supplies the lab's proteinase K/);
 });
 
-test("the kind refuses what is wrong, with the field named", async () => {
+test("the kind refuses what is wrong, with the field named, and holds a reagent to bought or prepared", async () => {
   const kinds = { reagent: REAGENT };
-  const host = { paper: async () => false };
+  const host = { paper: async () => false, recipe: async (slug) => slug === "phage-buffer-recipe" };
   const compile = (lines) => compileRegistryItem({ slug: "reagent/x", raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
   assert.equal((await compile(["name: X", "supplier: A supplier", "catalog_number: C1"])).ok, true);
-  const bad = await compile(["name: X", "product_url: http://nope", "abbreviation: 12"]);
+  assert.equal((await compile(["name: X", "prepared_in_lab: true", "recipe: phage-buffer-recipe"])).ok, true, "a recipe that exists");
+  const bad = await compile(["name: X", "product_url: http://nope", "abbreviation: 12", "prepared_in_lab: false", "recipe: no-such-recipe"]);
   assert.equal(bad.ok, false);
   const message = bad.errors.join("\n");
-  for (const field of ["supplier", "catalog_number", "product_url", "abbreviation"]) assert.ok(message.includes(field), field);
+  for (const field of ["product_url", "abbreviation", "prepared_in_lab", "recipe"]) assert.ok(message.includes(field), field);
+  const item = (id, fields) => ({ kind: "reagent", id, name: id, status: "published", fields: { abbreviation: null, contents: null, product_url: null, prepared_in_lab: null, recipe: null, supplier: null, catalog_number: null, ...fields } });
+  const set = (...items) => registrySetErrors(items, kinds).join("\n");
+  assert.match(set(item("a", {})), /reagent\/a is bought, so it states its supplier/);
+  assert.match(set(item("a", { supplier: "S", catalog_number: "C", recipe: "x" })), /not prepared in the lab, so it has no recipe/);
+  assert.match(set(item("a", { prepared_in_lab: true })), /prepared in the lab, so it states its recipe/);
+  assert.match(set(item("a", { prepared_in_lab: true, recipe: "MISSING: not yet", supplier: "S" })), /prepared in the lab, so it has no supplier/);
+  assert.equal(set(item("a", { prepared_in_lab: true, recipe: "MISSING: not yet" }), item("b", { supplier: "MISSING: why", catalog_number: "MISSING: why" })), "");
+});
+
+test("the recipe a reagent links is a procedure with the recipe profile, as the repository holds it", async () => {
+  assert.equal(await repoHost.recipe("phage-isolation"), false, "a protocol is not a recipe");
+  assert.equal(await repoHost.recipe("no-such-procedure"), false);
+});
+
+test("a reagent has no page, no twin, no search record and no sitemap entry: the table is the page", () => {
+  assert.equal(REAGENT.itemPages, false);
+  assert.equal(hasItemPage("reagent"), false);
+  assert.equal(hasItemPage("primer"), true);
+  assert.equal(registrySearchInput(byId.get("gotaq-flexi-dna-polymerase")), null);
+  const rows = inventoryRows(reagents, []);
+  assert.ok(rows.every((row) => row.path === kindPath("reagent")), "an inventory row goes to the table");
 });
 
 test("no record stores what is computed: the protocols that use a reagent, or the amounts they use", async () => {
   const names = (await readdir(new URL("content/registry/reagent/", root))).filter((n) => n.endsWith(".md"));
-  assert.equal(names.length, 15);
+  assert.equal(names.length, 16);
   for (const name of names) {
     const data = matter(await text(`content/registry/reagent/${name}`), {}).data;
     for (const field of ["protocols", "used_in", "stock", "final", "amount", "per"]) assert.equal(Object.hasOwn(data, field), false, `${name} stores ${field}`);
   }
 });
 
-test("what the protocols use of a reagent is read from the protocols that name it", () => {
+test("the table lists each reagent's protocols, read from the protocols that name it, and every gap with its reason", () => {
   const protocols = [
-    {
-      path: "/research/protocols/a",
-      title: "A",
-      materials: [
-        { reagent: { id: "zinc-chloride" }, stock: ["2 M"], final: "40 mM", amount: "20 µl", per: "tube", group: null },
-        { reagent: { id: "ethanol" }, stock: ["70%"], final: null, amount: "250 µl", per: "wash", group: null },
-        { reagent: { id: "ethanol" }, stock: ["100%"], final: null, amount: null, per: null, group: "Rescue" },
-      ],
-    },
-    { path: "/research/protocols/b", title: "B", materials: [{ reagent: null, stock: [], final: null, amount: null, per: null }] },
-    { path: "/research/protocols/c", title: "C" },
+    { path: "/research/protocols/a", title: "A", materials: [{ reagent: { id: "zinc-chloride" } }, { reagent: { id: "ethanol" } }, { reagent: { id: "ethanol" } }] },
+    { path: "/research/protocols/b", title: "B", materials: [{ reagent: null }] },
+    { path: "/research/protocols/c" },
   ];
-  assert.deepEqual(reagentUses("zinc-chloride", protocols).map((u) => [u.path, u.rows.length]), [["/research/protocols/a", 1]]);
-  const ethanol = reagentUses("ethanol", protocols);
-  assert.deepEqual(ethanol.map((u) => u.rows.length), [2]);
-  assert.equal(useText(ethanol[0].rows[0]), "stock 70%; 250 µl per wash");
-  assert.equal(useText(ethanol[0].rows[1]), "stock 100%; (Rescue)");
-  assert.equal(REAGENTS.fields.find((f) => f.key === "protocols").value(reagentRow(byId.get("ethanol"), protocols)), 1);
-});
-
-test("the twin states what the page states, with what nobody recorded said with its reason", () => {
-  const protocols = [{ path: "/research/protocols/a", title: "A", materials: [{ reagent: { id: "zinc-chloride" }, stock: ["2 M"], final: "40 mM", amount: "20 µl", per: "tube", group: null }] }];
-  const md = reagentMarkdown(reagentRow(byId.get("zinc-chloride"), protocols), "https://example.com");
+  assert.deepEqual(reagentUses("zinc-chloride", protocols), [{ path: "/research/protocols/a", title: "A" }]);
+  assert.equal(reagentUses("ethanol", protocols).length, 1, "a protocol that names it twice is listed once");
+  const rows = reagentRows(reagents, protocols);
+  assert.equal(REAGENTS.fields.find((f) => f.key === "protocols").value(rows.find((r) => r.id === "zinc-chloride")), "A");
+  const md = reagentsMarkdown(rows, "https://example.com");
   for (const line of [
-    "# Zinc chloride",
-    "- Abbreviation: ZnCl2",
-    "- Supplier: not found (No record in the repo states who supplies the lab's zinc chloride.)",
-    "- [A](https://example.com/research/protocols/a)",
-    "  - stock 2 M; final 40 mM; 20 µl per tube",
+    "| Reagent | Supplier | Catalog number | Link | Protocols |",
+    "| Zinc chloride (ZnCl2) |",
+    "| GoTaq® Flexi DNA polymerase | Promega | M8296 | [product](https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296) |",
+    "| PYCa | Prepared in lab |",
+    "[A](https://example.com/research/protocols/a)",
+    "Not found:",
+    "- Zinc chloride, supplier: No record in the repo states who supplies the lab's zinc chloride.",
+    "- PYCa, recipe: No procedure with the recipe profile exists yet for the lab's PYCa.",
   ]) assert.ok(md.includes(line), line);
-  const gotaq = reagentMarkdown(reagentRow(byId.get("gotaq-flexi-dna-polymerase"), []), "https://example.com");
-  assert.ok(gotaq.includes("- Supplier: Promega") && gotaq.includes("- Catalog number: M8296") && gotaq.includes("No published protocol names this reagent."));
-  assert.ok(reagentsMarkdown(reagentRows(reagents, []), "https://example.com").includes("| [Zinc chloride](https://example.com/research/lab/reagents/zinc-chloride) |"));
-  assert.equal(itemPath("reagent", "zinc-chloride"), "/research/lab/reagents/zinc-chloride");
 });
 
-test("a reagent is found by its name, abbreviation, supplier and catalog number", () => {
-  const found = registrySearchInput(byId.get("gotaq-flexi-dna-polymerase"));
-  assert.equal(found?.uid, "registry:reagent/gotaq-flexi-dna-polymerase");
-  for (const word of ["GoTaq", "Promega", "M8296"]) assert.ok(found?.body.includes(word), word);
-  assert.ok(registrySearchInput(byId.get("zinc-chloride"))?.body.includes("ZnCl2"));
+test("a protocol's Reagents table is drawn from the registry: where each reagent comes from, beside the protocol's own amount, stock and final", async () => {
+  const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
+  const compiled = await compileDirectory("content/procedures");
+  const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
+  assert.ok(coi?.ok, JSON.stringify(coi?.errors));
+  const gotaq = coi.record.materials.find((m) => m.name === "GoTaq Flexi DNA polymerase");
+  assert.equal(gotaq.display, "GoTaq® Flexi DNA polymerase");
+  assert.deepEqual(gotaq.reagent, {
+    id: "gotaq-flexi-dna-polymerase",
+    name: "GoTaq® Flexi DNA polymerase",
+    status: "published",
+    preparedInLab: false,
+    supplier: "Promega",
+    catalogNumber: "M8296",
+    productUrl: "https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296",
+    recipe: null,
+  });
+  assert.deepEqual(reagentSource(gotaq.reagent), { text: "Promega, M8296", href: gotaq.reagent.productUrl });
+  assert.ok(coi.markdown.includes("source [Promega, M8296](https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296)"), "the twin carries the source");
+  assert.ok(coi.record.materials.some((m) => m.reagent?.id === "neb-100-bp-dna-ladder"), "the ladder is a reagent of the protocol");
+  assert.ok(!coi.record.equipment.some((e) => /ladder/i.test(e.name)), "and is no longer listed under equipment");
+  const isolation = compiled.find((c) => c.slug === "phage-isolation")?.compiled;
+  const pyca = isolation.record.materials.find((m) => m.name === "PYCa");
+  assert.deepEqual(reagentSource(pyca.reagent), { text: "Prepared in the lab", href: null });
+  assert.ok(isolation.markdown.includes("source Prepared in the lab"));
 });
 
 test("STORED ONCE: no protocol types a reagent's catalog number or product page, and every reagent a material names is one the registry holds", async () => {
-  const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
-  const compiled = await compileDirectory("content/procedures");
   const typed = reagents.flatMap((r) => [r.fields.product_url, r.fields.catalog_number].filter((v) => typeof v === "string" && !v.startsWith("MISSING")));
-  assert.ok(typed.length >= 4);
+  assert.ok(typed.length >= 6);
   const used = new Set();
   for (const name of (await readdir(new URL("content/procedures/", root))).filter((n) => n.endsWith(".md"))) {
     const raw = await text(`content/procedures/${name}`);
     for (const value of typed) assert.ok(!raw.includes(value), `${name} types "${value}"; it is stored once, in content/registry/reagent`);
-    const data = matter(raw, {}).data;
-    for (const material of data.materials ?? []) {
+    for (const material of matter(raw, {}).data.materials ?? []) {
       if (material.reagent === undefined) continue;
       assert.ok(byId.has(material.reagent), `${name}: ${material.reagent} is not in the registry`);
       used.add(material.reagent);
     }
   }
   assert.deepEqual([...byId.keys()].filter((id) => !used.has(id)), [], "a registry reagent no protocol uses");
-  const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
-  assert.ok(coi?.ok, JSON.stringify(coi?.errors));
-  assert.deepEqual(coi.record.materials[0].reagent, { id: "gotaq-flexi-dna-polymerase", name: "GoTaq® Flexi DNA polymerase", path: "/research/lab/reagents/gotaq-flexi-dna-polymerase" });
-  assert.equal(coi.record.materials[0].display, "GoTaq® Flexi DNA polymerase");
-  const extraction = compiled.find((c) => c.slug === "phage-dna-extraction")?.compiled;
-  assert.ok(extraction?.ok, JSON.stringify(extraction?.errors));
-  assert.ok(extraction.markdown.includes("[ZnCl2](/research/lab/reagents/zinc-chloride)"), "the twin links the reagent");
 });
 
 test("the compile refuses what a protocol may not say about a reagent", async () => {

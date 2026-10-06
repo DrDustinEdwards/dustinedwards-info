@@ -53,24 +53,13 @@ function strainBody(item) {
 }
 
 /**
- * The words a reagent is searched by: its name, abbreviation, contents, supplier and catalog number. The protocols that use
- * it are the protocols' own records and are not copied into this one.
- *
- * @param {import("./kinds.mjs").RegistryItem} item
- */
-function reagentBody(item) {
-  const f = /** @type {Record<string, unknown>} */ (item.fields);
-  return [item.name, "reagent", stated(f.abbreviation), stated(f.contents), stated(f.supplier), stated(f.catalog_number)].filter(Boolean).join(" ");
-}
-
-/**
  * The record input of one item, or null for a kind with no search body yet (so a kind added later is not indexed by accident).
  *
  * @param {import("./kinds.mjs").RegistryItem} item
  * @returns {{ uid: string, url: string, title: string, body: string } | null}
  */
 export function registrySearchInput(item) {
-  const body = item.kind === "primer" ? primerBody(item) : item.kind === "strain" ? strainBody(item) : item.kind === "reagent" ? reagentBody(item) : null;
+  const body = item.kind === "primer" ? primerBody(item) : item.kind === "strain" ? strainBody(item) : null;
   if (body === null) return null;
   return { uid: registrySearchUid(item.kind, item.id), url: itemPath(item.kind, item.id), title: item.name, body };
 }

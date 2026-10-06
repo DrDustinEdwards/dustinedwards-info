@@ -325,53 +325,65 @@ export function strainMarkdown(strain, usedBy, origin) {
 /* ------------------------------------------------------------------------------------------------ reagents */
 
 /**
- * What the protocols use of a reagent, read from the protocols that name it on one of their materials (`reagent: <id>`): each
- * protocol's own stock, final concentration and amount. Nothing is stored on the reagent, so a protocol's change shows here.
+ * Whether a kind has a page for each item. A reagent does not: the lab's reagents are one table on the kind's page, which is the
+ * library's Reagents tab, and a protocol's own table carries what a reader needs of each (docs/REGISTRY.md).
  *
- * @param {string} id
- * @param {Array<{ path: string, title: string, materials?: Array<{ reagent?: { id: string } | null, display?: string, group?: string | null, stock: string[], final: string | null, amount: string | null, per: string | null }> }>} protocols
+ * @param {string} kind
+ * @param {Readonly<Record<string, import("./kinds.mjs").KindSpec>>} [kinds]
  */
-export function reagentUses(id, protocols) {
-  return protocols.flatMap((protocol) => {
-    const rows = (protocol.materials ?? [])
-      .filter((m) => m.reagent?.id === id)
-      .map((m) => ({ group: m.group ?? null, stock: m.stock, final: m.final, amount: m.amount, per: m.per }));
-    return rows.length > 0 ? [{ path: protocol.path, title: protocol.title, rows }] : [];
-  });
-}
-
-/** One use as words: "stock 3 M; final 40 mM; 20 µl per tube". @param {ReturnType<typeof reagentUses>[number]["rows"][number]} row */
-export function useText(row) {
-  return [
-    row.stock.length > 0 ? `stock ${row.stock.join(" or ")}` : null,
-    row.final ? `final ${row.final}` : null,
-    row.amount ? `${row.amount}${row.per ? ` per ${row.per}` : ""}` : null,
-    row.group ? `(${row.group})` : null,
-  ]
-    .filter(Boolean)
-    .join("; ");
+export function hasItemPage(kind, kinds = KINDS) {
+  return kinds[kind]?.itemPages !== false;
 }
 
 /**
- * A reagent as the pages read it: the record's own fields, with a supplier or catalog number nobody has recorded said with its
- * reason, and the protocols that use it, computed from the protocols.
+ * Where a procedure with the recipe profile is: a recipe's address is under /recipes (PROFILE_ROOTS in the procedure validator).
+ *
+ * @param {string} slug
+ */
+export function recipePath(slug) {
+  return `/recipes/${slug}`;
+}
+
+/**
+ * What the protocols use of a reagent, read from the protocols that name it on one of their materials (`reagent: <id>`): the
+ * protocols only, since a protocol's own amounts, stocks and finals are shown in that protocol's table. Nothing is stored on the
+ * reagent, so a protocol that names it later is listed with no edit to the record.
+ *
+ * @param {string} id
+ * @param {Array<{ path: string, title: string, materials?: Array<{ reagent?: { id: string } | null }> }>} protocols
+ */
+export function reagentUses(id, protocols) {
+  return protocols
+    .filter((protocol) => (protocol.materials ?? []).some((m) => m.reagent?.id === id))
+    .map((protocol) => ({ path: protocol.path, title: protocol.title }));
+}
+
+/**
+ * A reagent as the pages read it: the record's own fields and the protocols that use it, computed from the protocols. A reagent is
+ * bought (a supplier and a catalog number, each stated or a gap with its reason) or prepared in the lab (a recipe, which is a
+ * procedure with the recipe profile, or a gap with its reason).
  *
  * @param {import("./kinds.mjs").RegistryItem} item
  * @param {Parameters<typeof reagentUses>[1]} [protocols]
  */
 export function reagentRow(item, protocols = []) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
+  const prepared = f.prepared_in_lab === true;
+  const recipe = stated(f.recipe);
   return {
     id: item.id,
-    path: itemPath("reagent", item.id),
     name: item.name,
     abbreviation: stated(f.abbreviation),
     contents: stated(f.contents),
+    preparedInLab: prepared,
     supplier: stated(f.supplier),
     supplierMissing: missingReason(f.supplier),
     catalogNumber: stated(f.catalog_number),
     catalogNumberMissing: missingReason(f.catalog_number),
     productUrl: stated(f.product_url),
+    recipe,
+    recipePath: recipe ? recipePath(recipe) : null,
+    recipeMissing: missingReason(f.recipe),
     uses: reagentUses(item.id, protocols),
     draft: item.status === "draft",
   };
@@ -384,7 +396,18 @@ export function reagentRows(items, protocols) {
   return items.filter((item) => item.kind === "reagent").map((item) => reagentRow(item, protocols));
 }
 
-/** The reagents catalog: the columns a reagent is read by. */
+/** The name as the table shows it: the abbreviation or what it is made of beside it, where a protocol states one. @param {ReagentRow} r */
+export function reagentLabel(r) {
+  const more = [r.abbreviation, r.contents].filter(Boolean).join("; ");
+  return more ? `${r.name} (${more})` : r.name;
+}
+
+/** The "supplier" cell in words: who makes a bought reagent, or that the lab prepares it. @param {ReagentRow} r */
+export function reagentSource(r) {
+  return r.preparedInLab ? "Prepared in lab" : r.supplier;
+}
+
+/** The reagents catalog: the one table, with the columns a reagent is read by. */
 export const REAGENTS = defineCatalog(
   /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<ReagentRow>} */ ({
     id: "reagents",
@@ -392,49 +415,44 @@ export const REAGENTS = defineCatalog(
     basePath: kindPath("reagent"),
     itemKey: (r) => r.id,
     defaultSort: "name",
-    pageSize: 25,
+    pageSize: 50,
     fields: [
-      { key: "name", label: "Reagent", value: (r) => r.name, search: 3, column: { header: "Reagent" }, sort: true },
-      { key: "abbreviation", label: "Abbreviation", value: (r) => r.abbreviation, search: 2 },
-      { key: "contents", label: "Contents", value: (r) => r.contents, search: 1, column: { header: "Contents", drop: 2 } },
-      { key: "supplier", label: "Supplier", value: (r) => r.supplier, facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Supplier", drop: 1 } },
+      { key: "name", label: "Reagent", value: (r) => reagentLabel(r), search: 3, column: { header: "Reagent" }, sort: true },
+      { key: "supplier", label: "Supplier", value: (r) => reagentSource(r), facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Supplier", drop: 1 } },
       { key: "number", label: "Catalog number", value: (r) => r.catalogNumber, search: 2, column: { header: "Catalog number", drop: 1 } },
-      { key: "protocols", label: "Protocols", value: (r) => r.uses.length, type: "number", sort: true, column: { header: "Protocols", align: "end", drop: 2 } },
+      { key: "link", label: "Link", value: (r) => r.productUrl ?? r.recipePath, column: { header: "Link", drop: 2 } },
+      { key: "protocols", label: "Protocols", value: (r) => r.uses.map((u) => u.title).join("; "), search: 1, column: { header: "Protocols", drop: 2 } },
     ],
   }),
 );
 
-/** The reagents as a markdown table for the twin. @param {ReagentRow[]} reagents @param {string} origin */
-export function reagentsMarkdown(reagents, origin) {
-  const lines = reagents.map(
-    (r) => `| [${cell(r.name)}](${origin}${r.path}) | ${cell(r.abbreviation)} | ${cell(r.supplier)} | ${cell(r.catalogNumber)} | ${r.uses.length} |`,
-  );
-  return ["| Reagent | Abbreviation | Supplier | Catalog number | Protocols |", "| --- | --- | --- | --- | --- |", ...lines].join("\n");
+/** What a reagent's cells say where the record states nothing, with the reason, so a gap is listed and not left blank. @param {ReagentRow} r */
+export function reagentGapText(r) {
+  const parts = [];
+  if (!r.preparedInLab && !r.supplier) parts.push(`supplier: ${r.supplierMissing ?? "not recorded"}`);
+  if (!r.preparedInLab && !r.catalogNumber) parts.push(`catalog number: ${r.catalogNumberMissing ?? "not recorded"}`);
+  if (r.preparedInLab && !r.recipe) parts.push(`recipe: ${r.recipeMissing ?? "not recorded"}`);
+  return parts;
 }
 
 /**
- * One reagent as markdown for the twin: the same facts the page states, with what nobody has recorded said with its reason.
+ * The reagents as one markdown table for the twin, then every gap with its reason, so a machine reads what a person sees and what
+ * is still missing.
  *
- * @param {ReagentRow} reagent
+ * @param {ReagentRow[]} reagents
  * @param {string} origin
  */
-export function reagentMarkdown(reagent, origin) {
-  const lines = [
-    reagent.abbreviation ? `- Abbreviation: ${reagent.abbreviation}` : "",
-    reagent.contents ? `- Contents: ${reagent.contents}` : "",
-    `- Supplier: ${reagent.supplier ?? `not found (${reagent.supplierMissing ?? "not recorded"})`}`,
-    `- Catalog number: ${reagent.catalogNumber ?? `not found (${reagent.catalogNumberMissing ?? "not recorded"})`}`,
-    reagent.productUrl ? `- Product page: ${reagent.productUrl}` : "",
-    "",
-    "## Used in",
-    "",
-    reagent.uses.length === 0 ? "No published protocol names this reagent." : "",
-    ...reagent.uses.flatMap((use) => [
-      `- [${use.title}](${origin}${use.path})`,
-      ...use.rows.map((row) => `  - ${useText(row) || "no amount recorded"}`),
-    ]),
-  ];
-  return `# ${reagent.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+export function reagentsMarkdown(reagents, origin) {
+  const link = (/** @type {ReagentRow} */ r) => (r.productUrl ? `[product](${r.productUrl})` : r.recipePath ? `[recipe](${origin}${r.recipePath})` : "");
+  const uses = (/** @type {ReagentRow} */ r) => r.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+  const lines = reagents.map((r) => `| ${cell(reagentLabel(r))} | ${cell(reagentSource(r))} | ${cell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`);
+  const gaps = reagents.flatMap((r) => reagentGapText(r).map((text) => `- ${r.name}, ${text}`));
+  return [
+    "| Reagent | Supplier | Catalog number | Link | Protocols |",
+    "| --- | --- | --- | --- | --- |",
+    ...lines,
+    ...(gaps.length > 0 ? ["", "Not found:", "", ...gaps] : []),
+  ].join("\n");
 }
 
 /* ------------------------------------------------------------------------------------------------ inventory */
@@ -470,7 +488,7 @@ function summaryOf(item) {
   }
   if (item.kind === "reagent") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);
-    return [stated(f.abbreviation), stated(f.contents), stated(f.supplier)].filter(Boolean).join(", ");
+    return [stated(f.abbreviation), stated(f.contents), f.prepared_in_lab === true ? "prepared in lab" : stated(f.supplier)].filter(Boolean).join(", ");
   }
   return "";
 }
@@ -490,7 +508,8 @@ export function inventoryRows(items, phages) {
       kindLabel: kindLabel(item.kind),
       name: item.name,
       summary: summaryOf(item),
-      path: itemPath(item.kind, item.id),
+      // A kind that is one table has no page for the item: its row goes to the table.
+      path: hasItemPage(item.kind) ? itemPath(item.kind, item.id) : kindPath(item.kind),
     })),
     ...phages.map((phage) => ({
       key: `phage/${phage.name.toLowerCase()}`,

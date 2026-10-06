@@ -49,8 +49,10 @@ materials:
     display: Eluted DNA
     amount: 5 µL
     per: reaction
+  - name: NEB 100 bp ladder
+    reagent: neb-100-bp-dna-ladder
+    amount: "MISSING: The page does not state how much ladder is loaded beside the product."
 equipment:
-  - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
   - { primer: gapdh-forward }
@@ -86,8 +88,6 @@ The product size is computed under Primers, from where the primers bind the chic
 
 ## Materials
 
-- [OneTaq® Hot Start 2X Master Mix](/research/lab/reagents/onetaq-hot-start-2x-master-mix)
-- [NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)
 - 2% agarose gel in TBE
 
 ## Reaction mix
@@ -118,7 +118,7 @@ Extension temperature is dependent on polymerase. The lab runs the extension at 
 | hold | 10 | ∞ |
 
 2. Run the cycling program in the table above.
-3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{} and look for the band at the product size listed under Primers.
+3. Run the product on the #2% agarose gel in TBE{} beside the @NEB 100 bp ladder{} and look for the band at the product size listed under Primers.
    > EXPECT: A band at the product size listed under Primers in the positive control (DNA from DF-1 cells) and no band in the negative lane.
 
 ## Related pages

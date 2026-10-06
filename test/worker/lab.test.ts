@@ -48,7 +48,7 @@ describe("the master inventory", () => {
     expect(kinds.get("primer")).toBe(12);
     expect(kinds.get("strain")).toBe(2);
     expect(kinds.get("phage")).toBe(75);
-    expect(html).toContain("12 primers, 2 strains, 15 reagents, 75 phages");
+    expect(html).toContain("12 primers, 2 strains, 16 reagents, 75 phages");
     expect(html).toContain('href="/research/lab/strains/foliorum"');
     expect(html).toContain('href="/research/lab/primers/lco1490"');
     // A phage's row links to its own section on the phages page, and the registry holds no phage row of its own.
@@ -270,48 +270,55 @@ describe("the melting temperature is an estimate, never an annealing temperature
   });
 });
 
-describe("the reagents pages", () => {
-  it("lists every reagent with its supplier and catalog number where a record states them, and its protocols counted from the protocols", async () => {
+describe("the reagents table", () => {
+  it("is one table: name, supplier, catalog number, a link, and the protocols that use each", async () => {
     const { html } = await kindPage("reagents");
     expect(html).toContain("GoTaq® Flexi DNA polymerase");
     expect(html).toContain("Promega");
     expect(html).toContain("M8296");
+    expect(html).toContain('href="https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296"');
     expect(html).toContain("New England Biolabs");
-    expect(html).toContain('href="/research/lab/reagents/zinc-chloride"');
+    expect(html).toContain("100 bp DNA ladder");
+    expect(html).toContain("Zinc chloride (ZnCl2)");
+    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
+    expect(html).toContain('href="/research/protocols/coi-primers"');
     await expect(kindPage("reagents", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
-    const inv = await inventory();
-    expect(inv.html).toContain("12 primers, 2 strains, 15 reagents, 75 phages");
+    expect((await inventory()).html).toContain("12 primers, 2 strains, 16 reagents, 75 phages");
   });
 
-  it("states one reagent's facts and the protocols that use it with their own stock, final and amount, and says what no record states", async () => {
-    const { html } = await kindPage("reagents", "zinc-chloride");
-    expect(html).toContain("<h1");
-    expect(html).toContain("ZnCl2");
+  it("says Prepared in lab for what the lab makes, with the recipe link as a gap that says why, and says what no record states", async () => {
+    const { html } = await kindPage("reagents");
+    expect(html).toContain("Prepared in lab");
+    expect(html).toContain("No procedure with the recipe profile exists yet for the lab&#x27;s PYCa");
     expect(html).toContain("Not found:");
     expect(html).toContain("who supplies the lab&#x27;s zinc chloride");
-    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
-    expect(html).toContain("stock 2 M; final 40 mM; 20 µl per tube");
-    const gotaq = (await kindPage("reagents", "gotaq-flexi-dna-polymerase")).html;
-    expect(gotaq).toContain('href="https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296"');
-    expect(gotaq).toContain('href="/research/protocols/coi-primers"');
-    const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'reagent' AND id = 'zinc-chloride'").first<{ record: string }>();
-    for (const field of ["protocols", "used_in", "stock", "final", "amount"]) expect(Object.keys(JSON.parse(stored?.record ?? "{}"))).not.toContain(field);
   });
 
-  it("answers 404 for a reagent that does not exist, and serves its twin", async () => {
+  it("has no page for a reagent, no twin for one, and none in the sitemap: no redirect either", async () => {
+    await expect(kindPage("reagents", "zinc-chloride")).rejects.toMatchObject({ init: { status: 404 } });
     await expect(kindPage("reagents", "no-such-reagent")).rejects.toMatchObject({ init: { status: 404 } });
-    const text = await (await twin({ kind: "reagents", id: "zinc-chloride" })).text();
-    expect(text).toContain("# Zinc chloride");
-    expect(text).toContain("- Abbreviation: ZnCl2");
-    expect(text).toContain("- Supplier: not found (");
-    expect(text).toContain("/research/protocols/phage-dna-extraction");
-    expect((await twin({ kind: "reagents", id: "nothing" })).status).toBe(404);
-    expect(await (await twin({ kind: "reagents" })).text()).toContain("| Reagent | Abbreviation | Supplier | Catalog number | Protocols |");
+    expect((await twin({ kind: "reagents", id: "zinc-chloride" })).status).toBe(404);
+    const xml = await ((await sitemapLoader({ context: ctx(), params: {}, request: request("/sitemap.xml") } as never)) as Response).text();
+    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/reagents</loc>");
+    expect(xml).not.toContain("/research/lab/reagents/");
+    const rows = await env.DB.prepare("SELECT COUNT(*) AS n FROM search_docs WHERE doc_uid LIKE 'registry:reagent/%'").first<{ n: number }>();
+    expect(rows?.n).toBe(0);
   });
 
-  it("is on the protocol that uses it, as a link from its Reagents table", async () => {
+  it("serves the table as markdown, with every gap and its reason listed", async () => {
+    const text = await (await twin({ kind: "reagents" })).text();
+    expect(text).toContain("| Reagent | Supplier | Catalog number | Link | Protocols |");
+    expect(text).toContain("| GoTaq® Flexi DNA polymerase | Promega | M8296 |");
+    expect(text).toContain("Not found:");
+    expect(text).toContain("- PYCa, recipe: No procedure with the recipe profile exists yet");
+  });
+
+  it("is on the protocol that uses it, in its Reagents table, with where each comes from", async () => {
     const stored = await env.DB.prepare("SELECT record FROM procedures WHERE slug = 'phage-dna-extraction'").first<{ record: string }>();
     const html = renderToStaticMarkup(createElement(ProcedureView, { record: JSON.parse(stored?.record ?? "{}"), count: 1, factor: 1 }));
-    expect(html).toContain('<a href="/research/lab/reagents/zinc-chloride">ZnCl2</a>');
+    expect(html).toContain('<th scope="col">Source</th>');
+    expect(html).toContain("Not recorded");
+    expect(html).toContain("Prepared in the lab");
+    expect(html).not.toContain("/research/lab/reagents/");
   });
 });

@@ -1,5 +1,5 @@
 ---
 name: "TES buffer"
-supplier: "MISSING: No record in the repo states who supplies the lab's tES buffer."
-catalog_number: "MISSING: No record in the repo states the catalog number of the lab's tES buffer."
+prepared_in_lab: true
+recipe: "MISSING: No procedure with the recipe profile exists yet for the lab's TES buffer. Recipes are written by the lab, not here."
 ---

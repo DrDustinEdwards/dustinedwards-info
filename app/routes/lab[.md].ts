@@ -16,7 +16,6 @@ import {
   primersMarkdown,
   protocolsUsing,
   protocolsUsingStrain,
-  reagentMarkdown,
   reagentRows,
   reagentsMarkdown,
   strainMarkdown,
@@ -63,16 +62,13 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const published = await listRegistry(env, { kind, published: true });
 
   if (kind === "reagent") {
+    // One table, and no twin for an item: a reagent has no page.
+    if (id !== undefined) return notFound();
     const reagents = reagentRows(published, await listPublishedLibraryRecords(env));
-    if (id === undefined) {
-      return respond(
-        `# Reagents\n\nThe substances the lab's protocols use. Each reagent's protocols are read from the protocols that name it.\n\n${reagentsMarkdown(reagents, SITE_ORIGIN)}\n`,
-        kindPath(kind),
-      );
-    }
-    const reagent = reagents.find((r) => r.id === id);
-    if (!reagent) return notFound();
-    return respond(reagentMarkdown(reagent, SITE_ORIGIN), itemPath(kind, reagent.id));
+    return respond(
+      `# Reagents\n\nThe substances the lab's protocols use, in one table. A reagent is bought (supplier and catalog number) or prepared in the lab (a recipe); each row lists the protocols that use it.\n\n${reagentsMarkdown(reagents, SITE_ORIGIN)}\n`,
+      kindPath(kind),
+    );
   }
 
   if (kind === "strain") {

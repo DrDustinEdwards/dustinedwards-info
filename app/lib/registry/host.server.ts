@@ -5,6 +5,7 @@
 
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/editor/github.server";
+import { procedurePath } from "~/lib/procedures/parse.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import type { StoredPrimer, StoredReagent, StoredStrain } from "~/lib/procedures/render.mjs";
 
@@ -17,7 +18,11 @@ import { storedStrain } from "./strain.mjs";
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
 
 export function githubHost(env: RegistryEnv) {
-  return { paper: async (slug: string) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null };
+  return {
+    paper: async (slug: string) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null,
+    // A recipe is a procedure file whose front matter says profile: recipe.
+    recipe: async (slug: string) => /^profile:\s*recipe\s*$/m.test(((await readFile(env, procedurePath(slug)))?.content ?? "").split(/^---\s*$/m)[1] ?? ""),
+  };
 }
 
 /** The one compile door for a registry file: the save, get_registry, sync_registry and the primer reads go through it. */

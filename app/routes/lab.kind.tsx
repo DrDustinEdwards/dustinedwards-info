@@ -3,7 +3,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
-import { LabPrimer, LabPrimers, LabReagent, LabReagents, LabStrain, LabStrains } from "~/components/lab";
+import { LabPrimer, LabPrimers, LabReagents, LabStrain, LabStrains } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
@@ -11,7 +11,7 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { LAB_PATH, PRIMERS, REAGENTS, STRAINS, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRow, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
+import { LAB_PATH, PRIMERS, REAGENTS, STRAINS, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
 import { KINDS } from "~/lib/registry/kinds.mjs";
 import type { PrimerRow, ReagentRow, StrainRow } from "~/lib/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/lib/registry/route";
@@ -54,8 +54,7 @@ type Page =
   | { view: "kind"; kind: "strain"; strains: StrainRow[]; search: string }
   | { view: "kind"; kind: "reagent"; reagents: ReagentRow[]; search: string }
   | { view: "item"; kind: "primer"; primer: PrimerRow; primers: PrimerRow[]; usedBy: Used; draft: boolean }
-  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean }
-  | { view: "item"; kind: "reagent"; reagent: ReagentRow; draft: boolean };
+  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean };
 
 export async function loader({ request, params, context }: Route.LoaderArgs): Promise<{ page: Page }> {
   const env = getEnv(context);
@@ -74,6 +73,8 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
     return { page: { view: "kind", kind, reagents: reagentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
   }
 
+  // A kind that is one table has no page for an item, and no address is kept for one that had a page.
+  if (kind === "reagent" || !hasItemPage(kind)) throw data(null, { status: 404 });
   const item = await getRegistryItem(env, kind, params.id);
   if (!item) throw data(null, { status: 404 });
   // A draft is the signed-in admin's alone; that request carries a cookie, and the Worker never stores it.
@@ -83,9 +84,6 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
     const [phages, protocols] = await Promise.all([listPhages(env), listPublishedLibraryRecords(env)]);
     const strain = strainRow(item, phages);
     return { page: { view: "item", kind, strain, usedBy: protocolsUsingStrain(strain, protocols), draft } };
-  }
-  if (kind === "reagent") {
-    return { page: { view: "item", kind, reagent: reagentRow(item, await listPublishedLibraryRecords(env)), draft } };
   }
   const [others, protocols] = await Promise.all([listRegistry(env, { kind, published: true }), listPublishedLibraryRecords(env)]);
   const primer = primerRow(item);
@@ -108,7 +106,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     if (page.kind === "reagent") {
       return pageMeta({
         title: "Reagents: what the lab's protocols use",
-        description: `The ${plural(page.reagents.length, "reagent")} the lab's protocols use, with each one's supplier and catalog number where a record states them and the protocols that use it.`,
+        description: `The ${plural(page.reagents.length, "reagent")} the lab's protocols use, in one table: supplier, catalog number, a link, and the protocols that use each. A reagent the lab prepares links its recipe.`,
         path: kindPath(page.kind),
       });
     }
@@ -126,11 +124,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
       .join(", ");
     return [...pageMeta({ title: `${strain.name}: strain`, description: `${strain.organism ?? "Bacterial"} host strain, ${facts}.`, path: strain.path }), ...noindex];
   }
-  if (page.kind === "reagent") {
-    const { reagent } = page;
-    const facts = [reagent.supplier, reagent.catalogNumber, reagent.uses.length > 0 ? `used in ${plural(reagent.uses.length, "protocol")}` : null].filter(Boolean).join(", ");
-    return [...pageMeta({ title: `${reagent.name}: reagent`, description: `Reagent${facts ? `, ${facts}` : ""}.`, path: reagent.path }), ...noindex];
-  }
   const { primer } = page;
   const facts = [primer.direction ? `${primer.direction} primer` : "Primer", primer.target ? `for ${primer.target}` : null].filter(Boolean).join(" ");
   const sizes = [primer.length ? `${primer.length} nt` : null, primer.tm !== null ? `Tm ${primer.tm} °C` : null].filter(Boolean).join(", ");
@@ -139,7 +132,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
   const page = loaderData.page;
-  const item = page.view === "item" ? (page.kind === "strain" ? page.strain : page.kind === "reagent" ? page.reagent : page.primer) : null;
+  const item = page.view === "item" ? (page.kind === "strain" ? page.strain : page.primer) : null;
   const trail: Array<[string, string]> = [
     ["Research", "/research"],
     ["Lab registry", LAB_PATH],
@@ -160,8 +153,6 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
         {draft ? <p>Draft: only you can see this page.</p> : null}
         {page.kind === "strain" ? (
           <LabStrain strain={page.strain} usedBy={page.usedBy} />
-        ) : page.kind === "reagent" ? (
-          <LabReagent reagent={page.reagent} />
         ) : (
           <LabPrimer primer={page.primer} primers={page.primers} usedBy={page.usedBy} />
         )}
