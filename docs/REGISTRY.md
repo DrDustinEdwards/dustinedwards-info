@@ -4,7 +4,7 @@ The reference catalog of the lab's primers, strains, reagents and equipment (job
 phages and procedures are: a record is a file in the repository, the file is the source, and D1 holds a derived copy
 that a save and `npm run sync:content` write. A record is edited with no build and no deploy. This document is the
 framework and the kinds built on it. The framework shipped with no kind and no record; each kind arrives with its own
-records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**.
+records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**, **reagent**.
 
 Out of scope, on purpose: stock counts, storage locations and sample data. The registry says what a thing is, never
 how much of it the lab has or where it sits.
@@ -140,6 +140,28 @@ facet and browse tiles read those words from the records; a strain save recompil
 an organism. The pages that name the hosts link the strain records and type no designation or collection number
 (`test/registry-strains.test.mjs` holds the content pages to it). Known gap: the phages table's host cell (`HOSTS` in
 `app/lib/phages/compile.mjs`) still types `mc²155`, because the phage compile is not given the registry.
+
+## The reagent kind
+
+`app/lib/registry/reagent.mjs`, fifteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
+from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). A record states
+what the lab's own pages state: `name`, an `abbreviation` or `contents` where a protocol says so (ZnCl2; DNase I plus RNase A), and
+`supplier`, `catalog_number` and `product_url` where a protocol links the product (GoTaq Flexi from Promega, M8296; OneTaq Hot Start 2X
+Master Mix from New England Biolabs, M0484, each read from the product link the protocols carried). A supplier or catalog number that
+no record in the repository states is `MISSING: <why>` and listed for Dustin, never filled from memory: that is thirteen reagents, so
+twenty-six gaps. A kind's page is `/research/lab/reagents`, an item is `/research/lab/reagents/<id>`, each with a markdown twin, a
+search record and a tab on the library.
+
+**Computed, never stored:** what the protocols use of a reagent. A protocol names a reagent on one of its materials as
+`reagent: <id>` and keeps what is its own (the amount, stock and final concentration, and the name the steps mark it by); the
+reagent's page reads each protocol's stock, final and amount back from the protocols that name it. The compile reads the reagents from
+the repository (`reagents` on the registry host, `readReagents` in the Worker), bakes the registry's name and page into the material
+(`reagent: { id, name, path }`), shows the material by the registry's name unless the protocol gives a `display` of its own, and
+links it on the page, the twin and the sheet's table. A protocol no longer types a product name, product link or catalog number for a
+reagent the registry holds (`test/registry-reagents.test.mjs`). An unknown id, a malformed id and a draft reagent in a published
+protocol are refused, and a registry save or `sync_registry` recompiles every protocol whose materials name the changed reagent.
+Not moved: the NEB 100 bp ladder stays in the protocols' equipment lists, where they classify it, with its link; a ladder is a
+reagent or an equipment item by a lab convention that is Dustin's to state.
 
 ## Where it goes
 

@@ -7,6 +7,7 @@
 // pages in its own change: primer, then strain, then reagent and equipment.
 
 import { PRIMER } from "./primer.mjs";
+import { REAGENT } from "./reagent.mjs";
 import { STRAIN } from "./strain.mjs";
 
 /**
@@ -39,7 +40,7 @@ import { STRAIN } from "./strain.mjs";
  */
 
 /** @type {Readonly<Record<string, KindSpec>>} */
-export const KINDS = Object.freeze({ primer: PRIMER, strain: STRAIN });
+export const KINDS = Object.freeze({ primer: PRIMER, strain: STRAIN, reagent: REAGENT });
 
 /** The kinds in the order the site lists them, which is the order they are defined in. @param {Record<string, KindSpec>} [kinds] */
 export function kindKeys(kinds = KINDS) {

@@ -27,14 +27,14 @@ based_on:
     for: same cycling
 materials:
   - name: nuclease-free water
+    reagent: nuclease-free-water
     display: Nuclease-free water
     amount: 5.5 µL
     per: reaction
   - name: OneTaq Hot Start 2X Master Mix
-    display: One*Taq* Hot Start 2X Master Mix (New England Biolabs)
+    reagent: onetaq-hot-start-2x-master-mix
     amount: 12.5 µL
     per: reaction
-    note: "[NEB One*Taq*® Hot Start 2X Master Mix](https://www.neb.com/products/m0484-onetaq-hot-start-2x-master-mix-with-standard-buffer)"
   - name: forward primer
     display: Forward primer (10 µM stock)
     stock: [10 µM]
@@ -86,7 +86,7 @@ The product size is computed under Primers, from where the primers bind the chic
 
 ## Materials
 
-- [NEB One*Taq*® Hot Start 2X Master Mix](https://www.neb.com/products/m0484-onetaq-hot-start-2x-master-mix-with-standard-buffer)
+- [OneTaq® Hot Start 2X Master Mix](/research/lab/reagents/onetaq-hot-start-2x-master-mix)
 - [NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)
 - 2% agarose gel in TBE
 

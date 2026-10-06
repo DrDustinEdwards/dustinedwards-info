@@ -145,7 +145,7 @@ function validateHistory(d, errors) {
  * Checks one parsed procedure.
  *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
- * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
+ * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null, reagents?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
  *   host strains the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
  * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string }> }}
  */
@@ -399,7 +399,7 @@ export function validateProcedure(parsed, expect) {
   }
 
   // The profiles.
-  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null);
+  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null, expect.reagents ?? null);
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);
 
@@ -413,8 +413,9 @@ export function validateProcedure(parsed, expect) {
  * @param {Map<string, any>} materials
  * @param {ReadonlySet<string> | null} primerIds the primers the lab registry holds
  * @param {ReadonlySet<string> | null} strainIds the strains the lab registry holds
+ * @param {ReadonlySet<string> | null} reagentIds the reagents the lab registry holds
  */
-function protocolRules(d, errors, required, materials, primerIds, strainIds) {
+function protocolRules(d, errors, required, materials, primerIds, strainIds, reagentIds) {
   for (const field of ["host_strain", "status", "last_run", "biosafety", "biosafety_level", "scale"]) required(field);
   // A host strain is the lab registry's, named by id and never typed (docs/REGISTRY.md): its organism, designation and
   // collection number are stored once, on its record.
@@ -486,6 +487,15 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds) {
   }
   for (const m of materials.values()) {
     const at = `materials[${m.name}]`;
+    // A material that is a reagent of the lab registry names it by id (docs/REGISTRY.md): who supplies it and its catalog number
+    // are stored there once, and the protocol keeps its own amount, stock and final.
+    if (m.reagent !== undefined) {
+      if (typeof m.reagent !== "string" || !PRIMER_ID.test(m.reagent)) {
+        errors.push(`${at}.reagent is the id of a reagent in the lab registry (content/registry/reagent/), such as zinc-chloride`);
+      } else if (reagentIds && !reagentIds.has(m.reagent)) {
+        errors.push(`${at}.reagent names no reagent in the lab registry (there is no content/registry/reagent/${m.reagent}.md)`);
+      }
+    }
     for (const key of ["amount", "final", "per"]) {
       const q = m[key];
       if (q === undefined || isGap(q)) continue;

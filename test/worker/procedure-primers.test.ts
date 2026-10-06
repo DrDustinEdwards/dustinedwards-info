@@ -14,6 +14,7 @@ import coi from "../../content/procedures/coi-primers.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
+import { reagentRepoFiles } from "./seed";
 
 /* A protocol reads its primer tables from the lab registry (docs/REGISTRY.md): the file names the primers by id and holds no
  * sequence, the compile reads them from the repository into the record, and a change to a primer reaches every protocol that
@@ -42,7 +43,7 @@ beforeEach(async () => {
   await env.DB.prepare("DELETE FROM procedures").run();
   await env.DB.prepare("DELETE FROM registry").run();
   // The REV primers name the Stewart paper, which is a publication of this site, so the repository holds its file.
-  gh = stubGitHub({ [procedurePath(SLUG)]: coi, ...registryFiles, "content/publications/10-7589-2018-08-187.md": "x" });
+  gh = stubGitHub({ [procedurePath(SLUG)]: coi, ...registryFiles, ...reagentRepoFiles, "content/publications/10-7589-2018-08-187.md": "x" });
   purge.mockClear();
 });
 afterEach(() => {
@@ -160,5 +161,24 @@ describe("a published version keeps the sequence it was published with", () => {
     await saveRegistryItem(gitEnv(), { slug: "primer/lco1490", raw: edited, isNew: false, actor: carrel });
     expect((await stored()).primers[0]?.sequence).toBe("GGTCAACAAATCATAAAGATATTGA");
     expect((await frozen()).primers[0]?.sequence).toBe("GGTCAACAAATCATAAAGATATTGG");
+  });
+});
+
+describe("a change to a reagent reaches the protocols whose materials name it", () => {
+  const GOTAQ = "content/registry/reagent/gotaq-flexi-dna-polymerase.md";
+
+  it("a registry save rewrites the protocol's row from its file, so the material shows the reagent's new name", { timeout: 120_000 }, async () => {
+    await save();
+    const display = async () =>
+      (JSON.parse((await env.DB.prepare("SELECT record FROM procedures WHERE slug = ?1").bind(SLUG).first<{ record: string }>())?.record ?? "{}") as {
+        materials: Array<{ display: string; reagent: { name: string } | null }>;
+      }).materials[0];
+    expect((await display())?.display).toBe("GoTaq® Flexi DNA polymerase");
+    const raw = gh.files.get(GOTAQ) ?? "";
+    expect(raw).toContain("GoTaq® Flexi DNA polymerase");
+    await saveRegistryItem(gitEnv(), { slug: "reagent/gotaq-flexi-dna-polymerase", raw: raw.replace('name: "GoTaq® Flexi DNA polymerase"', 'name: "GoTaq® Flexi DNA polymerase (renamed)"'), isNew: false, actor: carrel });
+    const after = await display();
+    expect(after?.display).toBe("GoTaq® Flexi DNA polymerase (renamed)");
+    expect(after?.reagent?.name).toBe("GoTaq® Flexi DNA polymerase (renamed)");
   });
 });

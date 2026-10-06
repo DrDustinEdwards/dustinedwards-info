@@ -69,6 +69,11 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  * A host strain as a protocol carries it: the lab registry's stated facts about it, read when the protocol is compiled and
  * stored in the record, so the page, the twin and a frozen version name one strain and the protocol's file types none.
  *
+ * A reagent as a protocol carries it: the lab registry's name for it, read when the protocol is compiled, so a material that
+ * names a reagent shows the registry's name and links its page and a frozen version keeps the name it was published with.
+ *
+ * @typedef {{ id: string, name: string, status: "published" | "draft" }} StoredReagent
+ *
  * @typedef {{ id: string, name: string, status: "published" | "draft", organism: string | null, strain: string | null, collection: string | null, collectionNumber: string | null }} StoredStrain
  */
 
@@ -82,9 +87,10 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  *   primerRows?: StoredPrimer[],
  *   strainRows?: Array<StoredStrain & { path: string }>,
  *   organismNames?: Record<string, string>,
+ *   reagentRows?: Array<StoredReagent & { path: string }>,
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames }) {
+export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames, reagentRows }) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
@@ -218,10 +224,13 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     sections.push({ id: sectionId, title: section.title, blocks });
   }
 
+  const reagentsById = new Map((reagentRows ?? []).map((r) => [r.id, r]));
   const materials = await Promise.all(
     list(d.materials).map(async (/** @type {any} */ m) => ({
       name: m.name,
-      display: m.display ?? m.name,
+      // A reagent of the registry is shown by the registry's name, linked, so the protocol types no product name for it.
+      display: m.display ?? reagentsById.get(m.reagent)?.name ?? m.name,
+      reagent: reagentsById.has(m.reagent) ? { id: m.reagent, name: reagentsById.get(m.reagent)?.name ?? m.reagent, path: reagentsById.get(m.reagent)?.path ?? "" } : null,
       group: m.group ?? null,
       kind: m.kind ?? null,
       version: known(m.version),
@@ -261,6 +270,7 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
         materials.push({
           name: seg.name,
           display: seg.name,
+          reagent: null,
           group: null,
           kind: null,
           version: null,
@@ -470,6 +480,8 @@ export function procedureMarkdown(record, parsed) {
 
   const heading = record.profile === "recipe" ? "Ingredients" : record.profile === "computational" ? "Software and data" : "Reagents";
   out.push(`## ${heading}`, "");
+  // The registry reagents the materials name, as the record baked them (the file holds only their ids).
+  const reagentOf = new Map(record.materials.map((m) => [m.name, m.reagent]));
   for (const m of list(d.materials).length ? list(d.materials) : record.materials) {
     const parts = [
       known(m.amount) ? `${m.amount}${known(m.per) ? ` per ${m.per}` : ""}` : null,
@@ -478,7 +490,9 @@ export function procedureMarkdown(record, parsed) {
       known(m.version) ? `version ${m.version}` : null,
     ].filter(Boolean);
     const note = known(m.note) ? ` ${m.note}` : "";
-    out.push(`- ${m.display ?? m.name}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
+    const reagent = reagentOf.get(m.name) ?? null;
+    const shown = m.display ?? reagent?.name ?? m.name;
+    out.push(`- ${reagent ? `[${shown}](${reagent.path})` : shown}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
   }
   out.push("");
   for (const s of record.solutions) {

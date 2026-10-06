@@ -37,6 +37,7 @@ materials:
     group: Enriched isolation
     amount: 10 ml
   - name: PYCa
+    reagent: pyca
     group: Enriched isolation
     amount: 25 ml
     note: "25 ml PYCa to the 35 ml mark, vortex 1 minute."
@@ -44,10 +45,12 @@ materials:
     group: Enriched isolation
     amount: 250 µl
   - name: phage buffer for a plaque pick
+    reagent: phage-buffer
     display: phage buffer
     group: Purification
     amount: 90 µl or 100 µl
   - name: phage buffer for flooding
+    reagent: phage-buffer
     display: phage buffer
     group: Flooding
     amount: 8 ml

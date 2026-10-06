@@ -48,7 +48,7 @@ describe("the master inventory", () => {
     expect(kinds.get("primer")).toBe(12);
     expect(kinds.get("strain")).toBe(2);
     expect(kinds.get("phage")).toBe(75);
-    expect(html).toContain("12 primers, 2 strains, 75 phages");
+    expect(html).toContain("12 primers, 2 strains, 15 reagents, 75 phages");
     expect(html).toContain('href="/research/lab/strains/foliorum"');
     expect(html).toContain('href="/research/lab/primers/lco1490"');
     // A phage's row links to its own section on the phages page, and the registry holds no phage row of its own.
@@ -86,7 +86,7 @@ describe("the primers page", () => {
   });
 
   it("answers 404 for a kind with no records or view yet, and for a kind that does not exist", async () => {
-    for (const kind of ["reagents", "equipment", "gadgets"]) {
+    for (const kind of ["equipment", "gadgets"]) {
       await expect(kindPage(kind)).rejects.toMatchObject({ init: { status: 404 } });
     }
   });
@@ -208,7 +208,7 @@ describe("the twins", () => {
   });
 
   it("answer 404 for what has no page", async () => {
-    expect((await twin({ kind: "reagents" })).status).toBe(404);
+    expect((await twin({ kind: "equipment" })).status).toBe(404);
     expect((await twin({ kind: "strains", id: "nothing" })).status).toBe(404);
     expect((await twin({ kind: "primers", id: "nothing" })).status).toBe(404);
   });
@@ -267,5 +267,51 @@ describe("the melting temperature is an estimate, never an annealing temperature
       expect(text).toContain("https://tmcalculator.neb.com/");
     }
     expect(await (await twin({ kind: "primers", id: "lco1490" })).text()).toContain("- Annealing temperature: depends on the polymerase; use the [NEB Tm Calculator](https://tmcalculator.neb.com/)");
+  });
+});
+
+describe("the reagents pages", () => {
+  it("lists every reagent with its supplier and catalog number where a record states them, and its protocols counted from the protocols", async () => {
+    const { html } = await kindPage("reagents");
+    expect(html).toContain("GoTaq® Flexi DNA polymerase");
+    expect(html).toContain("Promega");
+    expect(html).toContain("M8296");
+    expect(html).toContain("New England Biolabs");
+    expect(html).toContain('href="/research/lab/reagents/zinc-chloride"');
+    await expect(kindPage("reagents", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
+    const inv = await inventory();
+    expect(inv.html).toContain("12 primers, 2 strains, 15 reagents, 75 phages");
+  });
+
+  it("states one reagent's facts and the protocols that use it with their own stock, final and amount, and says what no record states", async () => {
+    const { html } = await kindPage("reagents", "zinc-chloride");
+    expect(html).toContain("<h1");
+    expect(html).toContain("ZnCl2");
+    expect(html).toContain("Not found:");
+    expect(html).toContain("who supplies the lab&#x27;s zinc chloride");
+    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
+    expect(html).toContain("stock 2 M; final 40 mM; 20 µl per tube");
+    const gotaq = (await kindPage("reagents", "gotaq-flexi-dna-polymerase")).html;
+    expect(gotaq).toContain('href="https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296"');
+    expect(gotaq).toContain('href="/research/protocols/coi-primers"');
+    const stored = await env.DB.prepare("SELECT record FROM registry WHERE kind = 'reagent' AND id = 'zinc-chloride'").first<{ record: string }>();
+    for (const field of ["protocols", "used_in", "stock", "final", "amount"]) expect(Object.keys(JSON.parse(stored?.record ?? "{}"))).not.toContain(field);
+  });
+
+  it("answers 404 for a reagent that does not exist, and serves its twin", async () => {
+    await expect(kindPage("reagents", "no-such-reagent")).rejects.toMatchObject({ init: { status: 404 } });
+    const text = await (await twin({ kind: "reagents", id: "zinc-chloride" })).text();
+    expect(text).toContain("# Zinc chloride");
+    expect(text).toContain("- Abbreviation: ZnCl2");
+    expect(text).toContain("- Supplier: not found (");
+    expect(text).toContain("/research/protocols/phage-dna-extraction");
+    expect((await twin({ kind: "reagents", id: "nothing" })).status).toBe(404);
+    expect(await (await twin({ kind: "reagents" })).text()).toContain("| Reagent | Abbreviation | Supplier | Catalog number | Protocols |");
+  });
+
+  it("is on the protocol that uses it, as a link from its Reagents table", async () => {
+    const stored = await env.DB.prepare("SELECT record FROM procedures WHERE slug = 'phage-dna-extraction'").first<{ record: string }>();
+    const html = renderToStaticMarkup(createElement(ProcedureView, { record: JSON.parse(stored?.record ?? "{}"), count: 1, factor: 1 }));
+    expect(html).toContain('<a href="/research/lab/reagents/zinc-chloride">ZnCl2</a>');
   });
 });

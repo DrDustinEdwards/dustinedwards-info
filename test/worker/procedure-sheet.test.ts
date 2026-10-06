@@ -12,7 +12,7 @@ import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
 import { stubGitHub, type GitHubStub } from "./github-stub";
-import { strainRepoFiles } from "./seed";
+import { reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* The printed bench sheet (docs/PROCEDURES.md): its head carries the version id and date, and its QR code opens the
  * frozen copy of that exact version, so a sheet printed now still opens the words it was printed from after the page has
@@ -37,7 +37,7 @@ const V2 = isolation
 
 let gh: GitHubStub;
 beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles });
+  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles });
 });
 afterEach(() => {
   gh.restore();

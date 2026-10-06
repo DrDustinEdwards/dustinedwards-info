@@ -322,6 +322,121 @@ export function strainMarkdown(strain, usedBy, origin) {
   return `# ${strain.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
 }
 
+/* ------------------------------------------------------------------------------------------------ reagents */
+
+/**
+ * What the protocols use of a reagent, read from the protocols that name it on one of their materials (`reagent: <id>`): each
+ * protocol's own stock, final concentration and amount. Nothing is stored on the reagent, so a protocol's change shows here.
+ *
+ * @param {string} id
+ * @param {Array<{ path: string, title: string, materials?: Array<{ reagent?: { id: string } | null, display?: string, group?: string | null, stock: string[], final: string | null, amount: string | null, per: string | null }> }>} protocols
+ */
+export function reagentUses(id, protocols) {
+  return protocols.flatMap((protocol) => {
+    const rows = (protocol.materials ?? [])
+      .filter((m) => m.reagent?.id === id)
+      .map((m) => ({ group: m.group ?? null, stock: m.stock, final: m.final, amount: m.amount, per: m.per }));
+    return rows.length > 0 ? [{ path: protocol.path, title: protocol.title, rows }] : [];
+  });
+}
+
+/** One use as words: "stock 3 M; final 40 mM; 20 µl per tube". @param {ReturnType<typeof reagentUses>[number]["rows"][number]} row */
+export function useText(row) {
+  return [
+    row.stock.length > 0 ? `stock ${row.stock.join(" or ")}` : null,
+    row.final ? `final ${row.final}` : null,
+    row.amount ? `${row.amount}${row.per ? ` per ${row.per}` : ""}` : null,
+    row.group ? `(${row.group})` : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+/**
+ * A reagent as the pages read it: the record's own fields, with a supplier or catalog number nobody has recorded said with its
+ * reason, and the protocols that use it, computed from the protocols.
+ *
+ * @param {import("./kinds.mjs").RegistryItem} item
+ * @param {Parameters<typeof reagentUses>[1]} [protocols]
+ */
+export function reagentRow(item, protocols = []) {
+  const f = /** @type {Record<string, unknown>} */ (item.fields);
+  return {
+    id: item.id,
+    path: itemPath("reagent", item.id),
+    name: item.name,
+    abbreviation: stated(f.abbreviation),
+    contents: stated(f.contents),
+    supplier: stated(f.supplier),
+    supplierMissing: missingReason(f.supplier),
+    catalogNumber: stated(f.catalog_number),
+    catalogNumberMissing: missingReason(f.catalog_number),
+    productUrl: stated(f.product_url),
+    uses: reagentUses(item.id, protocols),
+    draft: item.status === "draft",
+  };
+}
+
+/** @typedef {ReturnType<typeof reagentRow>} ReagentRow */
+
+/** The reagents as rows, each with the protocols that use it. @param {import("./kinds.mjs").RegistryItem[]} items @param {Parameters<typeof reagentUses>[1]} protocols */
+export function reagentRows(items, protocols) {
+  return items.filter((item) => item.kind === "reagent").map((item) => reagentRow(item, protocols));
+}
+
+/** The reagents catalog: the columns a reagent is read by. */
+export const REAGENTS = defineCatalog(
+  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<ReagentRow>} */ ({
+    id: "reagents",
+    noun: ["reagent", "reagents"],
+    basePath: kindPath("reagent"),
+    itemKey: (r) => r.id,
+    defaultSort: "name",
+    pageSize: 25,
+    fields: [
+      { key: "name", label: "Reagent", value: (r) => r.name, search: 3, column: { header: "Reagent" }, sort: true },
+      { key: "abbreviation", label: "Abbreviation", value: (r) => r.abbreviation, search: 2 },
+      { key: "contents", label: "Contents", value: (r) => r.contents, search: 1, column: { header: "Contents", drop: 2 } },
+      { key: "supplier", label: "Supplier", value: (r) => r.supplier, facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Supplier", drop: 1 } },
+      { key: "number", label: "Catalog number", value: (r) => r.catalogNumber, search: 2, column: { header: "Catalog number", drop: 1 } },
+      { key: "protocols", label: "Protocols", value: (r) => r.uses.length, type: "number", sort: true, column: { header: "Protocols", align: "end", drop: 2 } },
+    ],
+  }),
+);
+
+/** The reagents as a markdown table for the twin. @param {ReagentRow[]} reagents @param {string} origin */
+export function reagentsMarkdown(reagents, origin) {
+  const lines = reagents.map(
+    (r) => `| [${cell(r.name)}](${origin}${r.path}) | ${cell(r.abbreviation)} | ${cell(r.supplier)} | ${cell(r.catalogNumber)} | ${r.uses.length} |`,
+  );
+  return ["| Reagent | Abbreviation | Supplier | Catalog number | Protocols |", "| --- | --- | --- | --- | --- |", ...lines].join("\n");
+}
+
+/**
+ * One reagent as markdown for the twin: the same facts the page states, with what nobody has recorded said with its reason.
+ *
+ * @param {ReagentRow} reagent
+ * @param {string} origin
+ */
+export function reagentMarkdown(reagent, origin) {
+  const lines = [
+    reagent.abbreviation ? `- Abbreviation: ${reagent.abbreviation}` : "",
+    reagent.contents ? `- Contents: ${reagent.contents}` : "",
+    `- Supplier: ${reagent.supplier ?? `not found (${reagent.supplierMissing ?? "not recorded"})`}`,
+    `- Catalog number: ${reagent.catalogNumber ?? `not found (${reagent.catalogNumberMissing ?? "not recorded"})`}`,
+    reagent.productUrl ? `- Product page: ${reagent.productUrl}` : "",
+    "",
+    "## Used in",
+    "",
+    reagent.uses.length === 0 ? "No published protocol names this reagent." : "",
+    ...reagent.uses.flatMap((use) => [
+      `- [${use.title}](${origin}${use.path})`,
+      ...use.rows.map((row) => `  - ${useText(row) || "no amount recorded"}`),
+    ]),
+  ];
+  return `# ${reagent.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+}
+
 /* ------------------------------------------------------------------------------------------------ inventory */
 
 /** A phage's host as plain words: the table's short form without its emphasis marks. @param {string | null} host */
@@ -352,6 +467,10 @@ function summaryOf(item) {
   if (item.kind === "strain") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);
     return [stated(f.organism), stated(f.collection) && stated(f.collection_number) ? `${stated(f.collection)} ${stated(f.collection_number)}` : null].filter(Boolean).join(", ");
+  }
+  if (item.kind === "reagent") {
+    const f = /** @type {Record<string, unknown>} */ (item.fields);
+    return [stated(f.abbreviation), stated(f.contents), stated(f.supplier)].filter(Boolean).join(", ");
   }
   return "";
 }
