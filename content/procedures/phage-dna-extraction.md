@@ -45,11 +45,13 @@ materials:
     amount: 5 ml
     note: "Filter-sterilized and titered first. How to make one is on the [phage isolation protocol](/research/protocols/phage-isolation) page."
   - name: nuclease mix
+    reagent: nuclease-mix
     display: nuclease mix (DNase I plus RNase A)
     amount: 20 µl
     per: 5 ml
     note: "20 µl per 5 ml of lysate. The Phage Discovery Guide gives a recipe in its [reagent recipes](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=231)."
   - name: zinc chloride
+    reagent: zinc-chloride
     display: ZnCl2
     stock: [2 M]
     final: 40 mM
@@ -57,53 +59,64 @@ materials:
     per: tube
     note: "2 M ZnCl2, 20 µl per 1 ml of lysate. That is 40 mM final, the concentration Santos (1991) gives."
   - name: TES buffer
+    reagent: tes-buffer
     amount: 500 µl
     per: tube
     solution: tes-buffer
     note: "0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS."
   - name: proteinase K
+    reagent: proteinase-k
     stock: [10 mg/ml, 20 mg/ml]
     final: 50 to 100 µg/ml
     amount: 1.25 to 5 µl
     per: tube
     note: "50 to 100 µg/ml final, from either a 10 mg/ml or a 20 mg/ml stock; the Phage Discovery Guide lists 20 mg/ml. Check the label on your tube, and use the volume for that stock in step 6."
   - name: potassium acetate
+    reagent: potassium-acetate
     display: potassium acetate (pH 5.2)
     stock: [3 M]
     amount: 60 µl
     per: tube
     note: "3 M, pH 5.2."
   - name: isopropanol
+    reagent: isopropanol
     stock: [100%, 80%]
     amount: 500 µl
     per: tube
     note: "500 µl per tube, at room temperature. Either 100% or 80% isopropanol works."
   - name: ethanol
+    reagent: ethanol
     stock: [70%]
     amount: 250 µl
     per: wash
     note: "70%, at room temperature, 250 µl per wash, two washes."
   - name: nuclease-free water
+    reagent: nuclease-free-water
     amount: 50 µl
     note: "Not Tris or TE: the Phage Discovery Guide specifies nuclease-free water for DNA sent for sequencing."
   - name: sodium acetate
+    reagent: sodium-acetate
     group: Rescue
     stock: [3 M]
     amount: 0.1 volume
   - name: sodium chloride
+    reagent: sodium-chloride
     group: Rescue
     final: 0.2 M
     note: "In place of sodium acetate if SDS may remain."
   - name: ice-cold ethanol
+    reagent: ethanol
     group: Rescue
     stock: [100%]
     amount: 2.5 to 3 volumes
   - name: ice-cold ethanol wash
+    reagent: ethanol
     display: ice-cold 75% ethanol
     group: Rescue
     stock: [75%]
     amount: 0.5 ml
   - name: glycogen
+    reagent: glycogen
     display: glycogen carrier (optional)
     group: Rescue
     stock: [20 mg/ml]

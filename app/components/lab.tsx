@@ -4,6 +4,7 @@ import type { CatalogResult } from "capsomer/behaviour/catalog";
 import {
   INVENTORY,
   PRIMERS,
+  REAGENTS,
   STRAINS,
   kindLabel,
   mateOf,
@@ -13,9 +14,11 @@ import {
   productText,
   siteText,
   tmNote,
+  useText,
   type InventoryRow,
   type PrimerListRow,
   type PrimerRow,
+  type ReagentRow,
   type StrainRow,
 } from "~/lib/registry/catalog.mjs";
 import { MAX_MISMATCHES } from "~/lib/registry/align.mjs";
@@ -39,7 +42,7 @@ export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: C
   return (
     <>
       <p className="registry-lede">
-        The lab&rsquo;s reference catalog: its primers and the bacterial strains its phages grow on, with the phages it has isolated. It records what a thing is,
+        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on and the reagents its protocols use, with the phages it has isolated. It records what a thing is,
         never how much of it the lab has or where it sits. {inventorySentence(rows)}
       </p>
       <div className="registry site-catalog site-catalog-wide">
@@ -327,6 +330,65 @@ export function LabStrain({ strain, usedBy }: { strain: StrainRow; usedBy: Array
             ))}
           </ul>
         </>
+      )}
+    </>
+  );
+}
+
+export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
+  return (
+    <>
+      <p className="registry-lede">
+        The substances the lab&rsquo;s protocols use, apart from the samples they work on. A supplier or catalog number appears where a
+        record in the repository states it, and each reagent&rsquo;s protocols are read from the protocols that name it.
+      </p>
+      <div className="registry site-catalog site-catalog-wide">
+        <Catalog
+          definition={REAGENTS}
+          result={result}
+          labelledBy="registry-title"
+          title={(r) => (
+            <a className="cap-table-open" href={r.path}>
+              {r.name}
+            </a>
+          )}
+        />
+      </div>
+    </>
+  );
+}
+
+export function LabReagent({ reagent }: { reagent: ReagentRow }) {
+  return (
+    <>
+      <dl className="registry-facts">
+        {reagent.abbreviation ? <Fact term="Abbreviation">{reagent.abbreviation}</Fact> : null}
+        {reagent.contents ? <Fact term="Contents">{reagent.contents}</Fact> : null}
+        <Fact term="Supplier">{reagent.supplier ?? <NotFound reason={reagent.supplierMissing} />}</Fact>
+        <Fact term="Catalog number">{reagent.catalogNumber ?? <NotFound reason={reagent.catalogNumberMissing} />}</Fact>
+        {reagent.productUrl ? (
+          <Fact term="Product page">
+            <a href={reagent.productUrl}>{reagent.productUrl.replace(/^https:\/\//, "")}</a>
+          </Fact>
+        ) : null}
+      </dl>
+
+      <h2 id="protocols">Used in</h2>
+      {reagent.uses.length === 0 ? (
+        <p>No published protocol names this reagent.</p>
+      ) : (
+        <ul className="registry-used">
+          {reagent.uses.map((use) => (
+            <li key={use.path}>
+              <a href={use.path}>{use.title}</a>
+              <ul>
+                {use.rows.map((row, i) => (
+                  <li key={i}>{useText(row) || "No amount recorded."}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
       )}
     </>
   );

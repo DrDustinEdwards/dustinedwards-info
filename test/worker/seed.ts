@@ -299,3 +299,10 @@ const STRAIN_FILES = import.meta.glob("../../content/registry/strain/*.md", { qu
 export const strainRepoFiles: Record<string, string> = Object.fromEntries(
   Object.entries(STRAIN_FILES).map(([path, raw]) => [`content/registry/strain/${path.split("/").pop()}`, raw]),
 );
+
+/* The reagent records as the repository holds them, by repo path: a protocol whose materials name reagents by id compiles only
+ * where the repository holds those reagents, so a case that saves one adds these to its stubbed GitHub. */
+const REAGENT_FILES = import.meta.glob("../../content/registry/reagent/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+export const reagentRepoFiles: Record<string, string> = Object.fromEntries(
+  Object.entries(REAGENT_FILES).map(([path, raw]) => [`content/registry/reagent/${path.split("/").pop()}`, raw]),
+);

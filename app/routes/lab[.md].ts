@@ -16,6 +16,9 @@ import {
   primersMarkdown,
   protocolsUsing,
   protocolsUsingStrain,
+  reagentMarkdown,
+  reagentRows,
+  reagentsMarkdown,
   strainMarkdown,
   strainRows,
   strainsMarkdown,
@@ -56,8 +59,21 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   const kind = kindFromSegment(segment);
-  if (kind !== "primer" && kind !== "strain") return notFound();
+  if (kind !== "primer" && kind !== "strain" && kind !== "reagent") return notFound();
   const published = await listRegistry(env, { kind, published: true });
+
+  if (kind === "reagent") {
+    const reagents = reagentRows(published, await listPublishedLibraryRecords(env));
+    if (id === undefined) {
+      return respond(
+        `# Reagents\n\nThe substances the lab's protocols use. Each reagent's protocols are read from the protocols that name it.\n\n${reagentsMarkdown(reagents, SITE_ORIGIN)}\n`,
+        kindPath(kind),
+      );
+    }
+    const reagent = reagents.find((r) => r.id === id);
+    if (!reagent) return notFound();
+    return respond(reagentMarkdown(reagent, SITE_ORIGIN), itemPath(kind, reagent.id));
+  }
 
   if (kind === "strain") {
     const strains = strainRows(published, await listPhages(env));

@@ -3,7 +3,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
-import { LabPrimer, LabPrimers, LabStrain, LabStrains } from "~/components/lab";
+import { LabPrimer, LabPrimers, LabReagent, LabReagents, LabStrain, LabStrains } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
@@ -11,9 +11,9 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { LAB_PATH, PRIMERS, STRAINS, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
+import { LAB_PATH, PRIMERS, REAGENTS, STRAINS, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRow, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
 import { KINDS } from "~/lib/registry/kinds.mjs";
-import type { PrimerRow, StrainRow } from "~/lib/registry/catalog.mjs";
+import type { PrimerRow, ReagentRow, StrainRow } from "~/lib/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/lib/registry/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -52,22 +52,26 @@ type Used = Array<{ path: string; title: string }>;
 type Page =
   | { view: "kind"; kind: "primer"; primers: ReturnType<typeof primerRows>; search: string }
   | { view: "kind"; kind: "strain"; strains: StrainRow[]; search: string }
+  | { view: "kind"; kind: "reagent"; reagents: ReagentRow[]; search: string }
   | { view: "item"; kind: "primer"; primer: PrimerRow; primers: PrimerRow[]; usedBy: Used; draft: boolean }
-  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean };
+  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean }
+  | { view: "item"; kind: "reagent"; reagent: ReagentRow; draft: boolean };
 
 export async function loader({ request, params, context }: Route.LoaderArgs): Promise<{ page: Page }> {
   const env = getEnv(context);
   const url = new URL(request.url);
   const kind = kindFromSegment(params.kind);
   // Only the kinds with a view of their own are served; the others join as their changes land.
-  if (kind !== "primer" && kind !== "strain") throw data(null, { status: 404 });
+  if (kind !== "primer" && kind !== "strain" && kind !== "reagent") throw data(null, { status: 404 });
 
   if (params.id === undefined) {
-    const canonical = kind === "primer" ? catalogRedirect(PRIMERS, url) : catalogRedirect(STRAINS, url);
+    const canonical =
+      kind === "primer" ? catalogRedirect(PRIMERS, url) : kind === "strain" ? catalogRedirect(STRAINS, url) : catalogRedirect(REAGENTS, url);
     if (canonical) throw redirect(canonical, 301);
     const published = await listRegistry(env, { kind, published: true });
     if (kind === "primer") return { page: { view: "kind", kind, primers: primerRows(published), search: url.search } };
-    return { page: { view: "kind", kind, strains: strainRows(published, await listPhages(env)), search: url.search } };
+    if (kind === "strain") return { page: { view: "kind", kind, strains: strainRows(published, await listPhages(env)), search: url.search } };
+    return { page: { view: "kind", kind, reagents: reagentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
   }
 
   const item = await getRegistryItem(env, kind, params.id);
@@ -80,6 +84,9 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
     const strain = strainRow(item, phages);
     return { page: { view: "item", kind, strain, usedBy: protocolsUsingStrain(strain, protocols), draft } };
   }
+  if (kind === "reagent") {
+    return { page: { view: "item", kind, reagent: reagentRow(item, await listPublishedLibraryRecords(env)), draft } };
+  }
   const [others, protocols] = await Promise.all([listRegistry(env, { kind, published: true }), listPublishedLibraryRecords(env)]);
   const primer = primerRow(item);
   const primers = others.map(primerRow);
@@ -89,29 +96,40 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const page = loaderData.page;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (page.view === "kind") {
     if (page.kind === "strain") {
-      const n = page.strains.length;
       return pageMeta({
         title: "Strains: the bacterial hosts of the lab's phage work",
-        description: `The ${n} bacterial strain${n === 1 ? "" : "s"} the lab's phages are isolated on, with each one's culture collection number and the phages counted from the phages table.`,
+        description: `The ${plural(page.strains.length, "bacterial strain")} the lab's phages are isolated on, with each one's culture collection number and the phages counted from the phages table.`,
         path: kindPath(page.kind),
       });
     }
-    const n = page.primers.length;
+    if (page.kind === "reagent") {
+      return pageMeta({
+        title: "Reagents: what the lab's protocols use",
+        description: `The ${plural(page.reagents.length, "reagent")} the lab's protocols use, with each one's supplier and catalog number where a record states them and the protocols that use it.`,
+        path: kindPath(page.kind),
+      });
+    }
     return pageMeta({
       title: "Primers: sequences, targets and melting temperatures",
-      description: `The ${n} primer${n === 1 ? "" : "s"} the lab's protocols use, with each sequence as stored and its length and melting temperature computed.`,
+      description: `The ${plural(page.primers.length, "primer")} the lab's protocols use, with each sequence as stored and its length and melting temperature computed.`,
       path: kindPath(page.kind),
     });
   }
   const noindex = page.draft ? [{ name: "robots", content: "noindex" }] : [];
   if (page.kind === "strain") {
     const { strain } = page;
-    const facts = [strain.collection && strain.collectionNumber ? `${strain.collection} ${strain.collectionNumber}` : null, `${strain.phages.length} phage${strain.phages.length === 1 ? "" : "s"} isolated on it`]
+    const facts = [strain.collection && strain.collectionNumber ? `${strain.collection} ${strain.collectionNumber}` : null, `${plural(strain.phages.length, "phage")} isolated on it`]
       .filter(Boolean)
       .join(", ");
     return [...pageMeta({ title: `${strain.name}: strain`, description: `${strain.organism ?? "Bacterial"} host strain, ${facts}.`, path: strain.path }), ...noindex];
+  }
+  if (page.kind === "reagent") {
+    const { reagent } = page;
+    const facts = [reagent.supplier, reagent.catalogNumber, reagent.uses.length > 0 ? `used in ${plural(reagent.uses.length, "protocol")}` : null].filter(Boolean).join(", ");
+    return [...pageMeta({ title: `${reagent.name}: reagent`, description: `Reagent${facts ? `, ${facts}` : ""}.`, path: reagent.path }), ...noindex];
   }
   const { primer } = page;
   const facts = [primer.direction ? `${primer.direction} primer` : "Primer", primer.target ? `for ${primer.target}` : null].filter(Boolean).join(" ");
@@ -121,7 +139,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
   const page = loaderData.page;
-  const item = page.view === "item" ? (page.kind === "strain" ? page.strain : page.primer) : null;
+  const item = page.view === "item" ? (page.kind === "strain" ? page.strain : page.kind === "reagent" ? page.reagent : page.primer) : null;
   const trail: Array<[string, string]> = [
     ["Research", "/research"],
     ["Lab registry", LAB_PATH],
@@ -142,6 +160,8 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
         {draft ? <p>Draft: only you can see this page.</p> : null}
         {page.kind === "strain" ? (
           <LabStrain strain={page.strain} usedBy={page.usedBy} />
+        ) : page.kind === "reagent" ? (
+          <LabReagent reagent={page.reagent} />
         ) : (
           <LabPrimer primer={page.primer} primers={page.primers} usedBy={page.usedBy} />
         )}
@@ -156,6 +176,8 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
       </h1>
       {page.kind === "strain" ? (
         <LabStrains result={queryCatalog(STRAINS, page.strains, parseCatalogParams(STRAINS, page.search))} />
+      ) : page.kind === "reagent" ? (
+        <LabReagents result={queryCatalog(REAGENTS, page.reagents, parseCatalogParams(REAGENTS, page.search))} />
       ) : (
         <LabPrimers result={queryCatalog(PRIMERS, page.primers, parseCatalogParams(PRIMERS, page.search))} />
       )}

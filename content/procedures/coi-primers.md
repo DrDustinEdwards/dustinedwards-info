@@ -50,9 +50,8 @@ based_on:
     for: cycling program
 materials:
   - name: GoTaq Flexi DNA polymerase
-    display: Promega GoTaq® Flexi DNA polymerase
+    reagent: gotaq-flexi-dna-polymerase
     amount: "MISSING: The page says it does not record the reaction mix the lab used; the Folmer et al. (1994) mix it prints is for reference only."
-    note: "[Promega GoTaq® Flexi DNA polymerase](https://www.promega.com/products/pcr/endpoint-pcr/gotaq-flexi-dna-polymerase/?catNum=M8296)"
 equipment:
   - name: NEB 100 bp ladder
     note: "[NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)"
