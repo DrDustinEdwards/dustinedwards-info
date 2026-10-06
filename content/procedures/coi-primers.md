@@ -52,9 +52,10 @@ materials:
   - name: GoTaq Flexi DNA polymerase
     reagent: gotaq-flexi-dna-polymerase
     amount: "MISSING: The page says it does not record the reaction mix the lab used; the Folmer et al. (1994) mix it prints is for reference only."
-equipment:
   - name: NEB 100 bp ladder
-    note: "[NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)"
+    reagent: neb-100-bp-dna-ladder
+    amount: "MISSING: The page does not state how much ladder is loaded beside the product."
+equipment:
   - name: 1% agarose gel in TBE
 expected_results: "Folmer et al. (1994) report the product as about 710 bp. In the lab's gels the product runs at about 708 bp beside a 100 bp ladder, with a band in the positive (mtDNA) lane and none in the negative lane."
 limitations: "MISSING: The page states no limitations of the method; it records only that extension temperature is dependent on polymerase and that the lab's reaction mix and touchdown step size are not recorded."

@@ -43,7 +43,7 @@ import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
-import { itemPath, kindPath } from "../app/lib/registry/catalog.mjs";
+import { hasItemPage, itemPath, kindPath } from "../app/lib/registry/catalog.mjs";
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/lib/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
@@ -107,7 +107,8 @@ for (const kind of new Set(registryItems.map((item) => item.kind))) {
   served.add(`${kindPath(kind)}.md`);
   moduleOf.set(kindPath(kind), routes.get("/research/lab/:kind/:id?") ?? "");
 }
-for (const item of registryItems) {
+// A kind that is one table has no page for an item, so no address is served for one.
+for (const item of registryItems.filter((i) => hasItemPage(i.kind))) {
   served.add(itemPath(item.kind, item.id));
   served.add(`${itemPath(item.kind, item.id)}.md`);
   moduleOf.set(itemPath(item.kind, item.id), routes.get("/research/lab/:kind/:id?") ?? "");

@@ -23,14 +23,16 @@ import { STRAIN } from "./strain.mjs";
  * @typedef {{
  *   singular: string,
  *   plural: string,
+ *   itemPages?: boolean,
  *   fields: Record<string, FieldSpec>,
  *   setErrors?: (items: RegistryItem[]) => string[],
  * }} KindSpec
  *
  * What the host can answer for a file the repository holds, so the Worker (reading GitHub) and Node (reading the
- * clone) judge a file the same way. `paper` is whether the site holds a publication with that file key.
+ * clone) judge a file the same way. `paper` is whether the site holds a publication with that file key, and `recipe` whether the site holds a procedure with the
+ * recipe profile under that file key.
  *
- * @typedef {{ paper: (slug: string) => Promise<boolean> }} RegistryHost
+ * @typedef {{ paper: (slug: string) => Promise<boolean>, recipe: (slug: string) => Promise<boolean> }} RegistryHost
  * @typedef {{ host: RegistryHost, data: Record<string, unknown> }} RegistryContext
  *
  * One item as the table holds it: the shared columns and the kind's own fields, `null` where a kind's field is

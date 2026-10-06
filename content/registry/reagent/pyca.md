@@ -1,5 +1,5 @@
 ---
 name: "PYCa"
-supplier: "MISSING: No record in the repo states who supplies the lab's pYCa."
-catalog_number: "MISSING: No record in the repo states the catalog number of the lab's pYCa."
+prepared_in_lab: true
+recipe: "MISSING: No procedure with the recipe profile exists yet for the lab's PYCa. Recipes are written by the lab, not here."
 ---
