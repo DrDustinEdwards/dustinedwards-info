@@ -8,7 +8,7 @@ import { buildSpeculationRules } from "~/lib/speculation.mjs";
 
 import worker from "../../workers/app";
 import { enhanceLoaderHash, speculationRulesHash } from "../../workers/csp.mjs";
-import { checkSecurityHeaders, failures } from "../../packages/security-headers/check.mjs";
+import { checkSecurityHeaders, failures } from "@dustinedwards/security-headers/check";
 import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 
 /*

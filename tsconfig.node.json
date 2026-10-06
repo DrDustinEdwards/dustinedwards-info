@@ -11,8 +11,6 @@
     // typo in it should fail here rather than at the next test run.
     "vitest.config.ts",
     "scripts/**/*",
-    // The shared security-headers package, which the header gates and their tests import.
-    "packages/**/*",
     // The site origin. `ship.mjs` polls the deploy it just made, so the copy
     // that goes stale is the one that polls the wrong host and reports a
     // healthy site nobody is looking at. It imports the constant rather than

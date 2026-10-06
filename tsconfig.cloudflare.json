@@ -6,13 +6,6 @@
     "app/**/.server/**/*",
     "app/**/.client/**/*",
     "workers/**/*",
-    // The shared security-headers package the Worker imports; not its bin/ or update-owasp.mjs, which are Node CLIs.
-    "packages/security-headers/index.mjs",
-    "packages/security-headers/headers.mjs",
-    "packages/security-headers/csp.mjs",
-    "packages/security-headers/check.mjs",
-    "packages/security-headers/owasp-headers.mjs",
-    "packages/security-headers/oshp-suite.mjs",
     // The Worker test layer. It imports the SAME modules the Worker imports,
     // through the same `~/*` paths, so it belongs to this project and not to
     // the node one: a case that drifts from a loader's signature has to be a

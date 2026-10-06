@@ -77,6 +77,7 @@
     "@codemirror/language": "6.12.4",
     "@codemirror/state": "6.7.1",
     "@codemirror/view": "6.43.7",
+    "@dustinedwards/security-headers": "github:DrDustinEdwards/security-headers#v0.1.1",
     "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#v0.2.0",
     "@fontsource-variable/source-serif-4": "5.3.0",
     "@fontsource/martian-mono": "5.3.0",
