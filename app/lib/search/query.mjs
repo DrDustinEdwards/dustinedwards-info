@@ -1,7 +1,7 @@
 // Rules apply IN ORDER and each consumes its tokens: tag:2019 stays a tag filter only because the
 // operator rule runs before the year rule.
 
-export { RRF_K, fuse, toMatchExpression } from "../../../packages/site-helpers/index.mjs";
+export { RRF_K, fuse, toMatchExpression } from "@drdustinedwards/site-helpers";
 
 /**
  * @typedef {object} ParsedQuery

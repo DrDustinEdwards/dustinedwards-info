@@ -1,4 +1,4 @@
-// This site's RSS builders are the shared package's (packages/site-helpers); re-exported so the routes and gates keep their import.
+// This site's RSS builders are the shared package's (the site-helpers package); re-exported so the routes and gates keep their import.
 export {
   absolutiseUrls,
   cdata,
@@ -6,4 +6,4 @@ export {
   mathToTex,
   rssDocument,
   rssItem,
-} from "../../packages/site-helpers/index.mjs";
+} from "@drdustinedwards/site-helpers";

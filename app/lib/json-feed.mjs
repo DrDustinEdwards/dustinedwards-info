@@ -1,2 +1,2 @@
-// See rss-feed.mjs: the builders live in packages/site-helpers.
-export { feedItem, jsonFeedDocument } from "../../packages/site-helpers/index.mjs";
+// See rss-feed.mjs: the builders live in the site-helpers package.
+export { feedItem, jsonFeedDocument } from "@drdustinedwards/site-helpers";

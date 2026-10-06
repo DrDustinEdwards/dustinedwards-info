@@ -18,7 +18,7 @@ import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
-import { sitemapDocument } from "../../packages/site-helpers/sitemap.mjs";
+import { sitemapDocument } from "@drdustinedwards/site-helpers/sitemap";
 import type { Route } from "./+types/sitemap";
 
 /**

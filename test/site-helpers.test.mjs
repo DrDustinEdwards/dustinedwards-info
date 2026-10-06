@@ -22,7 +22,7 @@ import {
   rssDocument,
   sitemapDocument,
   toMatchExpression,
-} from "../packages/site-helpers/index.mjs";
+} from "@drdustinedwards/site-helpers";
 
 const fixture = (/** @type {string} */ name) =>
   readFileSync(new URL(`./fixtures/site-helpers/${name}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
