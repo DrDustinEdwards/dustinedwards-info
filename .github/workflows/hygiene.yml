@@ -37,6 +37,14 @@ jobs:
       - name: Install
         run: npm ci
 
+      # The generated files the app imports (content/generated/*), built as ci.yml builds them, local only. Without them
+      # Knip reports them missing and the build cannot start.
+      - name: Generate
+        run: |
+          npx wrangler d1 migrations apply dustinedwards --local
+          npm run build:stack
+          npm run build:content
+
       - name: Knip
         continue-on-error: true
         run: |
@@ -60,10 +68,15 @@ jobs:
       - name: Route weight
         continue-on-error: true
         run: |
-          npm run build
-          {
-            echo '### Weight per route (gzip JS and CSS)'
-            echo '```'
-            node scripts/measure-route-weight.mjs
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          # A tool that could not run is a warning on the run, not a silent pass: continue-on-error alone hides it.
+          if npm run build && node scripts/measure-route-weight.mjs > weight.txt; then
+            {
+              echo '### Weight per route (gzip JS and CSS)'
+              echo '```'
+              cat weight.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::the route weight report could not run; see this step's log"
+            exit 1
+          fi
