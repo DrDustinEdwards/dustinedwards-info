@@ -3,7 +3,7 @@
 // calls onto the site's own save, render and history code. Nothing here writes around savePost.
 // Media (v0.2.0) is its own module, over the site's media code.
 
-import { RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
+import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import { getTableColumns } from "drizzle-orm";
 import { RouterContextProvider } from "react-router";
@@ -29,6 +29,7 @@ import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
   GitHubError,
+  deletePost,
   postColumnValues,
   renderRecord,
   savePost,
@@ -266,6 +267,24 @@ export function carrelSiteAdapter(options: {
         // An unknown ref is a missing version, not a failure of the site.
         if (error instanceof GitHubError && error.status === 422) return null;
         throw error;
+      }
+    },
+
+    // The post's own delete, the one the admin uses: the file's commit, the D1 rows, the cache purge and the
+    // Ask index as one unit. The version is checked here for a clean answer and again inside the commit, at
+    // the head it is built on. A check that cannot run (GitHub unreadable) throws, so nothing is deleted.
+    async delete(id, input) {
+      const file = await readFile(env, postPath(id));
+      if (!file) throw new NotFoundError(`No post "${id}" exists.`);
+      if (file.sha !== input.expectedVersion) throw new VersionConflictError(file.sha);
+      try {
+        await deletePost(env, {
+          slug: id,
+          expectedBlobSha: input.expectedVersion,
+          actor: { kind: "carrel", changeId: input.changeId },
+        });
+      } catch (error) {
+        return asSiteApiError(env, error, postPath(id));
       }
     },
 

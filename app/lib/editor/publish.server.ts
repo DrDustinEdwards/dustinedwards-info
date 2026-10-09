@@ -508,7 +508,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
 
 export async function deletePost(
   env: PublishEnv,
-  options: { slug: string; expectedHeadSha?: string | null; actor: Actor },
+  options: { slug: string; expectedHeadSha?: string | null; expectedBlobSha?: string; actor: Actor },
 ) {
   const { actor } = options;
 
@@ -522,6 +522,8 @@ export async function deletePost(
 
   const { commitSha } = await commitFiles(env, {
     expectedHeadSha: options.expectedHeadSha,
+    // Carrel names a post by its blob sha: a file changed since it was loaded is refused at the head.
+    expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
     message: commitMessage(actor, "Remove", options.slug),
     changes: [{ path: postPath(options.slug), content: null }],
   });

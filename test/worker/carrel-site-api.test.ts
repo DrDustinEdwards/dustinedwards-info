@@ -7,6 +7,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { commitFiles } from "~/lib/editor/github.server";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
+import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
 import { runTool } from "~/lib/operator/api.server";
@@ -394,7 +395,7 @@ describe("media: meta declares what the site accepts", () => {
       packageVersion: string;
       capabilities: { media: boolean; mediaUpload: { maxBytes: number; types: string[] } };
     };
-    expect(meta.packageVersion).toBe("0.2.0");
+    expect(meta.packageVersion).toBe("0.5.0");
     expect(meta.capabilities.media).toBe(true);
     expect(meta.capabilities.mediaUpload.maxBytes).toBe(MAX_BYTES);
     expect(meta.capabilities.mediaUpload.types).toEqual(
@@ -578,5 +579,130 @@ describe("media: a delete is decided by the site's reference check", () => {
     expect(await response.json()).toEqual({ id, deleted: true, changeId: "chg-round-trip" });
     expect(await testEnv.MEDIA.get(id)).toBeNull();
     expect(await mediaRowOf(id)).toBeNull();
+  });
+});
+
+/* site-api v0.3.0: the source at a revision, and the optional content delete (job_3839c2d00cb6). */
+describe("a revision's source", () => {
+  it("opens an old revision of a post, and answers 404 for a version the repository does not hold", async () => {
+    gh.files.set(postPath("rev-open"), post("rev-open"));
+    const sha = "c".repeat(40);
+    const found = await get(`${PREFIX}/content/rev-open/revisions/${sha}`);
+    expect(found.status).toBe(200);
+    expect(await found.json()).toMatchObject({ id: "rev-open", version: sha });
+
+    const notAVersion = await get(`${PREFIX}/content/rev-open/revisions/not-a-sha`);
+    expect(notAVersion.status).toBe(404);
+  });
+});
+
+describe("content delete", () => {
+  const remove = (id: string, expectedVersion: string, changeId: string, key?: string) =>
+    mediaCall(
+      "DELETE",
+      `${PREFIX}/content/${id}?expectedVersion=${encodeURIComponent(expectedVersion)}&changeId=${changeId}`,
+      key ? { key } : {},
+    );
+  const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+
+  it("is declared in meta.capabilities", async () => {
+    const meta = (await (await get(`${PREFIX}/meta`)).json()) as { capabilities: { contentDelete?: boolean } };
+    expect(meta.capabilities.contentDelete).toBe(true);
+  });
+
+  it("deletes the post at its current version, records the change id, and clears its rows", async () => {
+    const raw = post("del-ok");
+    gh.files.set(postPath("del-ok"), raw);
+    await seedPost("del-ok");
+
+    const response = await remove("del-ok", await gitBlobSha(raw), "chg-del-ok");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ id: "del-ok", deleted: true, changeId: "chg-del-ok" });
+    expect(gh.files.has(postPath("del-ok"))).toBe(false);
+    expect(commits()).toHaveLength(1);
+    expect(JSON.stringify(commits()[0]?.body)).toContain("[carrel:chg-del-ok]");
+    expect(await getBlogPost(testEnv as never, "del-ok")).toBeNull();
+  });
+
+  it("REFUSES a stale version, names the current one, and deletes nothing", async () => {
+    const raw = post("del-stale");
+    gh.files.set(postPath("del-stale"), raw);
+
+    const response = await remove("del-stale", "b".repeat(40), "chg-del-stale");
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: await gitBlobSha(raw),
+    });
+    expect(gh.files.get(postPath("del-stale"))).toBe(raw);
+    expect(commits()).toHaveLength(0);
+  });
+
+  it("answers 404 for a post the site does not hold", async () => {
+    const response = await remove("del-missing", "a".repeat(40), "chg-del-missing");
+    expect(response.status).toBe(404);
+    expect(commits()).toHaveLength(0);
+  });
+
+  it("REFUSES a kind that has no delete, and deletes nothing", async () => {
+    const response = await remove("page.privacy", "a".repeat(40), "chg-del-page");
+    expect(response.status).toBe(422);
+    expect(commits()).toHaveLength(0);
+  });
+
+  it("REFUSES without the key", async () => {
+    const raw = post("del-nokey");
+    gh.files.set(postPath("del-nokey"), raw);
+    const response = await remove("del-nokey", await gitBlobSha(raw), "chg-del-nokey", "wrong-key");
+    expect(response.status).toBe(401);
+    expect(gh.files.get(postPath("del-nokey"))).toBe(raw);
+  });
+
+  it("does not delete when the version check cannot run", async () => {
+    const raw = post("del-unreadable");
+    gh.files.set(postPath("del-unreadable"), raw);
+    gh.failNext("/contents/", 2);
+    const response = await remove("del-unreadable", await gitBlobSha(raw), "chg-del-unreadable");
+    expect(response.status).toBeGreaterThanOrEqual(500);
+    expect(gh.files.get(postPath("del-unreadable"))).toBe(raw);
+    expect(commits()).toHaveLength(0);
+  });
+});
+
+describe("the site-api conformance suite", () => {
+  it("passes against the real route, with write probes", async () => {
+    const { runConformance } = await import("@dustinedwards/site-api/conformance");
+    // The list is built from D1 and the generated artifacts, the history from the repository, and the stub
+    // repository holds only what a case puts there: the first listed item (llms.txt) gets its file, as the
+    // deployed repository has it.
+    // Other cases seed posts in D1 with no file, so the first item may be a post: it gets its file too.
+    gh.files.set(LLMS_PATH, "# dustinedwards.info\n");
+    const first = ((await (await get(`${PREFIX}/content?limit=1`)).json()) as { items: Array<{ id: string }> }).items[0];
+    if (first && !first.id.includes(".")) gh.files.set(postPath(first.id), post(first.id));
+    gh.history.push({ sha: "d".repeat(40), message: "Update llms.txt", author: "Dustin Edwards", date: "2026-10-01T00:00:00Z" });
+    const report = await runConformance({
+      baseUrl: ORIGIN,
+      key: testEnv.CARREL_SITE_KEY,
+      probeWrites: true,
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, {
+          ...init,
+          headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.9" },
+        });
+        try {
+          return await (request.method === "GET" ? loader(argsFor(request)) : action(argsFor(request)));
+        } catch (thrown) {
+          // A refusal outside the prefix is thrown (a Response or router data); the wire would carry it as its status.
+          if (thrown instanceof Response) return thrown;
+          const status = (thrown as { init?: { status?: number } }).init?.status;
+          if (status) return new Response(null, { status });
+          throw thrown;
+        }
+      }) as typeof fetch,
+    });
+    expect(report.checks.filter((c) => !c.ok)).toEqual([]);
+    expect(report.ok).toBe(true);
   });
 });

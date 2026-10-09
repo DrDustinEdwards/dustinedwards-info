@@ -2,7 +2,7 @@
 // `kind` string on a summary, so each content kind (post, publication, page, cv) is a handler that works in
 // its own slugs, and this module is the only place that turns a slug into a contract id and back.
 
-import { RefusedError } from "@dustinedwards/site-api";
+import { NotFoundError, RefusedError } from "@dustinedwards/site-api";
 import type {
   ContentAdapter,
   ContentDoc,
@@ -34,6 +34,12 @@ export interface ContentKindHandler {
   unpublish(slug: string, input: UnpublishInput): Promise<WriteResult>;
   revisions(slug: string): Promise<Revision[] | null>;
   revisionSource(slug: string, version: string): Promise<string | null>;
+  /**
+   * Deletes the item and whatever must follow it as one unit (v0.3.0). Throws NotFoundError for a missing
+   * item, VersionConflictError for a stale version and RefusedError when the site's rules refuse. A kind
+   * without it cannot be deleted from Carrel.
+   */
+  delete?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<void>;
   /** The page the item would publish; `slug` is null for an unsaved new item. */
   preview?(slug: string | null, input: PreviewInput): Promise<string>;
 }
@@ -118,6 +124,15 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     async revisionSource(id, version) {
       const found = route(id);
       return found ? found.handler.revisionSource(found.slug, version) : null;
+    },
+
+    async delete(id, input) {
+      const found = route(id);
+      if (!found) throw new NotFoundError(`No content kind owns the id ${id}.`);
+      if (!found.handler.delete) {
+        throw new RefusedError(`A ${found.handler.kind} cannot be deleted from Carrel.`);
+      }
+      await found.handler.delete(found.slug, input);
     },
   };
 
