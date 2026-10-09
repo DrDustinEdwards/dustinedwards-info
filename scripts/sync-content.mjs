@@ -9,6 +9,7 @@ import os from "node:os";
 
 import { textChunks } from "../app/lib/content/chunks.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { PROTECTED_PAGE_PATHS, protectedPageReason } from "../app/lib/pages/protected.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, PAGES_ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 import { CV_ARTIFACT_PATH } from "./lib/cv.mjs";
@@ -297,6 +298,12 @@ function verifyPublications(target, rows) {
  */
 function buildPagesSql(rows) {
   if (rows.length === 0) throw new Error("buildPagesSql refuses to delete every page");
+  // A protected page (/terms, the dataset license) with no published file would be deleted by the line below.
+  for (const protectedPath of PROTECTED_PAGE_PATHS) {
+    if (!rows.some((r) => r.path === protectedPath && r.status === "published")) {
+      throw new Error(`buildPagesSql refuses: no published file for ${protectedPath}, and ${protectedPageReason(protectedPath)}`);
+    }
+  }
   const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
   const out = [`DELETE FROM pages WHERE source_path NOT IN (${keep});`];
   for (const r of rows) {

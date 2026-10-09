@@ -27,6 +27,8 @@ function pageJsonLd(page: ContentPage): object[] {
     description: page.description,
     url: page.productUrl ?? pageUrl,
     ...(page.productUrl ? { mainEntityOfPage: pageUrl } : {}),
+    // A legal page's last-updated day, the one the page shows under its title.
+    ...(page.lastUpdated ? { dateModified: page.lastUpdated } : {}),
     ...(isDataset ? { creator: person } : { author: person }),
     ...(page.schemaType === "SoftwareSourceCode" && page.codeRepository
       ? { codeRepository: page.codeRepository }

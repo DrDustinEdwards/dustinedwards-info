@@ -41,7 +41,7 @@ export const LLMS_REQUIRED_MENTIONS = [
  * they are not read as ones.
  */
 const LISTED_PAGE =
-  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/(?:publications|lab)\b)(\/(?:research|teaching|software|cv|terms)(?:\/[a-z0-9-]+)*)\)/gm;
+  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/(?:publications|lab)\b)(\/(?:research|teaching|software|cv|privacy|terms)(?:\/[a-z0-9-]+)*)\)/gm;
 const LISTED_TWIN = /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
 
 /** The page paths the file lists, one per list link. @param {string} text */

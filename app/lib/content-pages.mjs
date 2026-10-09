@@ -10,6 +10,7 @@
 
 import { ogImageKey } from "./content/og-card-text.mjs";
 import { dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
+import { longDateUTC } from "./long-date.mjs";
 import { splitSections } from "./search/records.mjs";
 
 export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
@@ -50,9 +51,23 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/capsomer",
   // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
-  // The terms the site's data is published under: the `license` of every Dataset (app/lib/license.mjs).
+  // The legal pages, in Carrel with the rest (job_044f96426efa). /terms is also the terms the site's data is
+  // published under: the `license` of every Dataset (app/lib/license.mjs).
+  "/privacy",
   "/terms",
 ]);
+
+/**
+ * The legal pages: the only ones whose front matter may state a `banner` (the one word "Draft") and a
+ * `last_updated` date, which the layout draws for every reader and the markdown twin repeats. Carrel writes
+ * both (carrel design-legal-pages.md).
+ *
+ * @type {readonly string[]}
+ */
+export const LEGAL_PAGE_PATHS = ["/privacy", "/terms"];
+
+/** The one word a legal page's `banner` may say. */
+export const LEGAL_BANNER = "Draft";
 
 /**
  * The listed pages whose markdown is GENERATED from structured data rather than read from
@@ -110,13 +125,16 @@ export function contentPageMarkdownPath(path) {
  * followed by the page's dictionary entry where it has one, where the page shows it. The entry is the
  * caller's to give: the build reads it from content/dictionary, the Worker from D1 (docs/DICTIONARY.md).
  *
- * @param {{ path?: string, title: string, markdown: string }} page
+ * @param {{ path?: string, title: string, markdown: string, banner?: string, lastUpdated?: string }} page
  * @param {import("./dictionary-entries.mjs").DictionaryEntry} [entry] the page's published entry, if any
  */
 export function contentPageMarkdownBody(page, entry) {
   const body = String(page.markdown ?? "").replace(/^\n+/, "");
   const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
-  return `# ${page.title}\n\n${lead}${body}`;
+  // A legal page's banner and date are facts a reader sees under the title, so the twin states them too.
+  const stated = [page.banner, page.lastUpdated ? `Last updated: ${longDateUTC(page.lastUpdated)}` : ""].filter(Boolean);
+  const legal = stated.length > 0 ? `${stated.join("\n\n")}\n\n` : "";
+  return `# ${page.title}\n\n${legal}${lead}${body}`;
 }
 
 /**

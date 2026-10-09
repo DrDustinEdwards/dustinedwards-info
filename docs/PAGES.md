@@ -54,6 +54,27 @@ held: title, seo_title and description present, the URL allowlist, no wide dash,
 `ABOUT_HTML_FLOOR` characters of rendered HTML (a blank About would otherwise be a successful build). A
 draft About is the signed-in admin's alone and leaves the sitemap; the header menu still links it.
 
+## The legal pages
+
+`/privacy` and `/terms` are pages like the rest, so Carrel edits and publishes them (`LEGAL_PAGE_PATHS` in
+`app/lib/content-pages.mjs`). Only they may state two more front-matter fields, which Carrel writes:
+
+- `banner: Draft`: the single word, nothing else (`LEGAL_BANNER`). The layout draws it under the title for every
+  reader, and the markdown twin carries it as its own line.
+- `last_updated: 2026-10-06`: a real day. The layout draws "Last updated <date>", the twin repeats it, and the
+  page's JSON-LD node (where the page has a `schema_type`) carries it as `dateModified`. The day is read from the
+  front matter as written, because YAML would roll `2026-02-30` over to March.
+
+Any other page stating either field is refused. `/privacy`'s wording is the page the TSX route used to hold;
+every sentence of it is meant to be derivable from the code, and no retention period is stated that the code does
+not own.
+
+`/terms` can never be unpublished or deleted (`app/lib/pages/protected.mjs`): it is the dataset license behind
+`TERMS_PATH`, the `Link: rel="license"` header on every download and the `license` of every Dataset. A file with
+`draft: true` fails the compile (so CI, the sync and every save refuse it), `deletePageRow` refuses to remove its
+row (so `sync_pages` cannot), and `sync:content` refuses to run without a published file for it. Each refusal
+names the reason.
+
 ## What a save cannot do
 
 A page's ADDRESS is structure. `CONTENT_PAGE_PATHS` (`app/lib/content-pages.mjs`), the header menu's
