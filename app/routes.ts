@@ -130,6 +130,9 @@ export default [
     route("mentions", "routes/admin.mentions.tsx"),
     // The Knowledge Base (docs/KNOWLEDGE-BASE.md): read-only, a tab per base and Needs info.
     route("kb", "routes/admin.kb.tsx"),
+    // One file of it, edited and saved through the save the operator API uses (step 3).
+    route("kb/entry/:slug", "routes/admin.kb.entry.tsx"),
+    route("kb/item/:kind/:id", "routes/admin.kb.item.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     route("media", "routes/admin.media._index.tsx"),

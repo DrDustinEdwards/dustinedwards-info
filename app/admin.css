@@ -322,3 +322,9 @@ main.app-page {
     display: contents;
   }
 }
+
+/* The Knowledge Base editor's form: the file, then its Check and Save, one above the other. */
+.kb-editor-form {
+  display: grid;
+  gap: var(--space-4);
+}
