@@ -17,9 +17,10 @@ export const WRITE_CAPABILITIES = {
   operator: { write: true, firstPublish: false, destroy: false },
   /**
    * Carrel's key, through /api/carrel/v1 only. It may publish for the first time (Carrel design
-   * decision 2: Carrel decides who triggers it) and may not delete, which Carrel's contract never asks.
+   * decision 2: Carrel decides who triggers it) and may delete a post since site-api v0.3.0, which asks for
+   * it (DELETE /content/:id). Carrel's own rules decide who may ask; the site still checks the version.
    */
-  carrel: { write: true, firstPublish: true, destroy: false },
+  carrel: { write: true, firstPublish: true, destroy: true },
   /**
    * Every capability false; check:policy asserts it. Read-only is not safe: it still sees drafts and
    * the operator email (not stubbed, since the topbar's narrow-width measurement depends on it).

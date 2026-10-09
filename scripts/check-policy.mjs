@@ -229,7 +229,7 @@ refuses(
   eq("operator may still write", WRITE_CAPABILITIES.operator.write, true);
   eq("carrel may write", WRITE_CAPABILITIES.carrel.write, true);
   eq("carrel may publish for the first time", WRITE_CAPABILITIES.carrel.firstPublish, true);
-  eq("carrel may not delete", WRITE_CAPABILITIES.carrel.destroy, false);
+  eq("carrel may delete (site-api v0.3.0 content.delete)", WRITE_CAPABILITIES.carrel.destroy, true);
 
   eq(
     "the capability table names the four actor kinds",
