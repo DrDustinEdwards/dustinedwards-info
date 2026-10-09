@@ -59,9 +59,10 @@ test("Needs info lists every entry gap, then every registry gap with its reason 
     { kind: "primer", id: "lco1490", name: "LCO1490", status: "published", fields: { sequence: "GGTC", published_doi: "MISSING: paywalled." } },
     { kind: "reagent", id: "water", name: "Water", status: "published", fields: { supplier: "Promega" } },
   ];
+  // Each gap opens its file in the editor, and keeps the address of the page it is read on.
   assert.deepEqual(needsInfo(entries, items), [
-    { what: "Phage Isolation", kindLabel: "Protocol", href: "/research/protocols/phage-isolation", field: "version", reason: "No version has been assigned." },
-    { what: "NanoDrop", kindLabel: "Equipment", href: "/research/lab/equipment", field: "manufacturer", reason: "no record says." },
-    { what: "LCO1490", kindLabel: "Primer", href: "/research/lab/primers/lco1490", field: "published_doi", reason: "paywalled." },
+    { what: "Phage Isolation", kindLabel: "Protocol", href: "/research/protocols/phage-isolation", editHref: "/admin/kb/entry/phage-isolation", field: "version", reason: "No version has been assigned." },
+    { what: "NanoDrop", kindLabel: "Equipment", href: "/research/lab/equipment", editHref: "/admin/kb/item/equipment/nanodrop", field: "manufacturer", reason: "no record says." },
+    { what: "LCO1490", kindLabel: "Primer", href: "/research/lab/primers/lco1490", editHref: "/admin/kb/item/primer/lco1490", field: "published_doi", reason: "paywalled." },
   ]);
 });

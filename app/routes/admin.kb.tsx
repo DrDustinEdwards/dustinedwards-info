@@ -10,7 +10,7 @@ import { PageHead } from "~/components/admin/page-head";
 import { TabLink } from "~/components/admin/tab-link";
 import { listProceduresForAdmin } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
-import { KB_ADMIN_PATH, NEEDS_INFO, baseEntries, kbTabs, needsInfo, resolveTab, tabHref } from "~/kb/admin.mjs";
+import { KB_ADMIN_PATH, NEEDS_INFO, baseEntries, entryEditHref, kbTabs, needsInfo, resolveTab, tabHref } from "~/kb/admin.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
@@ -18,9 +18,9 @@ import { timed, timedLoader } from "~/lib/timing";
 import type { Route } from "./+types/admin.kb";
 
 /*
- * The Knowledge Base (docs/KNOWLEDGE-BASE.md, step 2): a tab per base listing its entries, and Needs info, every
- * recorded gap on one screen. Read-only, with no action: entries are still edited through their files and the
- * operator API, and the admin editor is a later step. Owner-only like every admin page (admin.tsx's middleware).
+ * The Knowledge Base (docs/KNOWLEDGE-BASE.md, steps 2 and 3): a tab per base listing its entries, and Needs info, every
+ * recorded gap on one screen. This page has no action: a row opens its file in the editor (admin.kb.entry.tsx and
+ * admin.kb.item.tsx), which saves through the save the operator API uses. Owner-only like every admin page.
  */
 
 export function meta() {
@@ -48,11 +48,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   });
 }
 
-/** A link out of the admin is a document navigation: the public pages bring their own stylesheets. */
-function PublicLink({ href, children, ...rest }: RowLinkProps) {
+/** A row opens its file in the editor, inside the admin. */
+function AdminLink({ href, children, ...rest }: RowLinkProps) {
   return (
-    <Link to={href} reloadDocument {...rest}>
+    <Link to={href} {...rest}>
       {children}
+    </Link>
+  );
+}
+
+/** The public page, a document navigation since the public pages bring their own stylesheets; named for its row. */
+function ViewLink({ href, what }: { href: string; what: string }) {
+  return (
+    <Link to={href} reloadDocument className="cap-btn" data-variant="quiet" data-size="sm" aria-label={`View the page for ${what}`}>
+      View page
     </Link>
   );
 }
@@ -121,8 +130,9 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
                   <Row
                     key={entry.slug}
                     title={entry.title}
-                    href={entry.path}
-                    renderLink={PublicLink}
+                    href={entryEditHref(entry.slug)}
+                    renderLink={AdminLink}
+                    actions={<ViewLink href={entry.path} what={entry.title} />}
                     status={<Status tone={entry.draft ? "nodata" : "ok"}>{entry.draft ? "draft" : "published"}</Status>}
                     detail={entry.description}
                     meta={
@@ -152,8 +162,9 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
               <Row
                 key={`${gap.href}#${gap.what}#${gap.field}`}
                 title={gap.what}
-                href={gap.href}
-                renderLink={PublicLink}
+                href={gap.editHref}
+                renderLink={AdminLink}
+                actions={<ViewLink href={gap.href} what={gap.what} />}
                 status={<Status tone="warn">{gap.kindLabel}</Status>}
                 // The field as the file names it, so the gap is found where it is filled in, then the reason.
                 detail={

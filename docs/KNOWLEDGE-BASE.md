@@ -54,8 +54,10 @@ every `MISSING` gap across entries and registry items, with its field and reason
 base and the registry. The Protocols panel's **Inventory** tab (items and lots) waits with step 4.
 
 The editor writes through the save that exists (`save_procedure`'s validator and commit path, `saveRegistryItem`), so
-the admin adds no write path and no second validator: a structured form for the front matter the profile declares and
-the markdown body with its marks, with the live preview the post editor already has.
+the admin adds no write path and no second validator. It starts as the whole file in Capsomer's markdown editor, with
+Check (every check a save runs, nothing committed) and Save; a row of a base's list and a row of Needs info open their
+file in it. A structured form for the front matter the profile declares, with the live preview the post editor already
+has, comes after it.
 
 ## Where the facts live (DECIDE 1)
 
@@ -157,7 +159,11 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
 1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behaviour change. (Done.)
 2. **Admin Knowledge Base**: the rail entry, a panel per base, list and search, Needs info. Read-only. (Done:
    `/admin/kb`, `app/routes/admin.kb.tsx` over `app/kb/admin.mjs`; the Inventory tab waits with step 4.)
-3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go.
+3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go. (Editor
+   done: `/admin/kb/entry/<slug>` and `/admin/kb/item/<kind>/<id>`, `app/kb/editor.server.ts`, the whole file in
+   Capsomer's markdown editor with Check, which runs every check a save runs and commits nothing, and Save, refused
+   when the file moved since it was opened. The structured form for each profile's fields comes after it, and
+   Carrel's two handlers go in their own pull request once this editor is live.)
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.

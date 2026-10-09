@@ -10,6 +10,12 @@ import { KINDS } from "./registry/kinds.mjs";
 
 export const KB_ADMIN_PATH = "/admin/kb";
 
+/** Where an entry's file is edited (step 3). @param {string} slug */
+export const entryEditHref = (slug) => `${KB_ADMIN_PATH}/entry/${slug}`;
+
+/** Where a registry item's file is edited (step 3). @param {string} kind @param {string} id */
+export const itemEditHref = (kind, id) => `${KB_ADMIN_PATH}/item/${kind}/${id}`;
+
 /** The tab that lists every gap, beside one tab per base. */
 export const NEEDS_INFO = "needs-info";
 
@@ -28,7 +34,7 @@ export const NEEDS_INFO = "needs-info";
  *
  * @typedef {{ kind: string, id: string, name: string, status: string, fields: Record<string, unknown> }} KbItem
  *
- * @typedef {{ what: string, kindLabel: string, href: string, field: string, reason: string }} KbGap
+ * @typedef {{ what: string, kindLabel: string, href: string, editHref: string, field: string, reason: string }} KbGap
  */
 
 /** The tab a `?tab=` value names, else the first base. @param {string | null} value */
@@ -92,7 +98,14 @@ export function needsInfo(entries, items) {
   const fromEntries = [...entries]
     .sort((a, b) => foldText(a.title).localeCompare(foldText(b.title), "en", { numeric: true }))
     .flatMap((e) =>
-      e.gaps.map((gap) => ({ what: e.title, kindLabel: profileName[e.profile] ?? e.profile, href: e.path, field: gap.field, reason: gap.reason })),
+      e.gaps.map((gap) => ({
+        what: e.title,
+        kindLabel: profileName[e.profile] ?? e.profile,
+        href: e.path,
+        editHref: entryEditHref(e.slug),
+        field: gap.field,
+        reason: gap.reason,
+      })),
     );
   const fromItems = items.flatMap((item) =>
     Object.entries(item.fields)
@@ -101,6 +114,7 @@ export function needsInfo(entries, items) {
         what: item.name,
         kindLabel: capitalise(KINDS[item.kind]?.singular ?? item.kind),
         href: itemHref(item),
+        editHref: itemEditHref(item.kind, item.id),
         field,
         reason: String(value).replace(/^MISSING:\s*/, ""),
       })),

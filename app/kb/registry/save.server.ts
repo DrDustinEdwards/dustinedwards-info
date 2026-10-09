@@ -75,6 +75,17 @@ export async function readRegistryItem(env: RegistryEnv, slug: string, kinds: Ki
   };
 }
 
+/**
+ * Everything a save checks before it commits, and nothing it writes: the file by its kind's validator, then the set as it
+ * will stand, this item against every other, so a name two items of a kind claim is refused. The admin's Check runs it.
+ */
+export async function checkRegistryItem(env: RegistryEnv, slug: string, raw: string, kinds: Kinds = KINDS) {
+  const compiled = await compile(env, slug, raw, kinds);
+  if (!compiled.ok) return compiled;
+  const setErrors = registrySetErrors([...(await otherItems(env, slug)), compiled.item], kinds);
+  return setErrors.length > 0 ? { ok: false as const, errors: setErrors } : compiled;
+}
+
 /** Every other item, from D1: CI re-checks the whole set on the commit a save makes. */
 async function otherItems(env: RegistryEnv, slug: string): Promise<RegistryItem[]> {
   return (await listRegistry(env)).filter((item) => registrySlug(item.kind, item.id) !== slug);
@@ -174,11 +185,8 @@ export async function saveRegistryItem(
   if (options.isNew && existing) throw new RegistryInvalid(slug, [`the item ${slug} already has a file (${file}); pass isNew false to edit it`]);
   if (!options.isNew && !existing) throw new RegistryInvalid(slug, [`the item ${slug} has no file yet; pass isNew to create it`]);
 
-  const compiled = await compile(env, slug, raw, kinds);
+  const compiled = await checkRegistryItem(env, slug, raw, kinds);
   if (!compiled.ok) throw new RegistryInvalid(slug, compiled.errors);
-  // The set as it will stand: this item against every other, so a name two items of a kind claim is refused here.
-  const setErrors = registrySetErrors([...(await otherItems(env, slug)), compiled.item], kinds);
-  if (setErrors.length > 0) throw new RegistryInvalid(slug, setErrors);
   const isDraft = (text: string) => matter(text, {}).data.draft === true;
   decideFileWrite({ actor, noun: kinds[kind]?.singular ?? "registry item", incomingDraft: compiled.item.status === "draft", priorRaw: existing?.content ?? null, isDraft });
 
