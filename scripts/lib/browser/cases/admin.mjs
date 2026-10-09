@@ -116,6 +116,8 @@ export async function run({ browser }) {
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
       ["/admin/mentions", "the mentions queue"],
+      ["/admin/kb", "the knowledge base"],
+      ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
     ];
     for (const [path, what] of SURFACES) {
       await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
@@ -514,6 +516,7 @@ export async function run({ browser }) {
         ["/admin", "the cockpit"],
         ["/admin/posts", "the posts list"],
         ["/admin/mentions", "the mentions queue"],
+        ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
         const o = await admin.evaluate(overflowScan);

@@ -48,9 +48,10 @@ that (DECIDE 6).
 One rail entry, **Knowledge Base**, at `/admin/kb`. It opens on a panel per knowledge base, drawn from `bases.mjs`, as
 Capsomer's links-form tabs with counts (docs/ADMIN-DESIGN.md: tabs are links, the state is the address). Each panel is
 the one table pattern: title first with its status pill (draft, published, version, gaps), a search box that submits on
-Enter, the per-base facets as tabs, a kebab per row (edit, view, sheet, history). The Protocols panel has two more tabs,
-**Inventory** (items and lots) and **Needs info** (every `MISSING` gap across entries and items, with its reason, which
-is today's `get_procedure` and `get_registry` gap lists on one screen).
+Enter, the per-base facets as tabs, a kebab per row (edit, view, sheet, history). Beside the bases is **Needs info**:
+every `MISSING` gap across entries and registry items, with its field and reason, which is today's `get_procedure` and
+`get_registry` gap lists on one screen. It is a tab of its own, not a part of Protocols, because its gaps span every
+base and the registry. The Protocols panel's **Inventory** tab (items and lots) waits with step 4.
 
 The editor writes through the save that exists (`save_procedure`'s validator and commit path, `saveRegistryItem`), so
 the admin adds no write path and no second validator: a structured form for the front matter the profile declares and
@@ -154,7 +155,8 @@ editor is live, so there is never a week with no editor. The operator API's proc
 Each step is one pull request, labelled `visual` where a reader sees it, and names job_898286365026.
 
 1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behaviour change. (Done.)
-2. **Admin Knowledge Base**: the rail entry, a panel per base, list and search, Needs info. Read-only.
+2. **Admin Knowledge Base**: the rail entry, a panel per base, list and search, Needs info. Read-only. (Done:
+   `/admin/kb`, `app/routes/admin.kb.tsx` over `app/kb/admin.mjs`; the Inventory tab waits with step 4.)
 3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go.
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
