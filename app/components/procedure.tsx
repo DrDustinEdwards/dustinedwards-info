@@ -8,6 +8,7 @@ import type { workflowContext } from "~/kb/procedures/library.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
 import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
+import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/kb/procedures/marks.mjs";
 
@@ -146,6 +147,51 @@ function ReagentSource({ reagent }: { reagent: NonNullable<ProcedureRecord["mate
 }
 
 /** The protocol's Equipment as a table: its own words for each item, and who makes it where the registry says. */
+/**
+ * The Key Resources Table (key-resources.mjs): every strain, reagent, primer and item of equipment the protocol names, with
+ * where it comes from and its identifier, grouped as STAR Methods groups them. Drawn from the record, so it never disagrees
+ * with the tables above it.
+ */
+export function KeyResourcesTable({ groups }: { groups: KeyResourceGroup[] }) {
+  return (
+    <div className="table-scroll">
+      <table className="procedure-materials procedure-key-resources">
+        <thead>
+          <tr>
+            <th scope="col">Reagent or resource</th>
+            <th scope="col">Source</th>
+            <th scope="col">Identifier</th>
+          </tr>
+        </thead>
+        {groups.map((group) => (
+          <tbody key={group.id}>
+            <tr>
+              <th scope="colgroup" colSpan={3}>
+                {group.heading}
+              </th>
+            </tr>
+            {group.rows.map((row) => (
+              <tr key={`${group.id}:${row.resource}`}>
+                <th scope="row">
+                  {row.href ? <a href={row.href}>{row.resource}</a> : row.resource}
+                  {row.sequence ? (
+                    <>
+                      {" "}
+                      <code className="procedure-key-sequence">{row.sequence}</code>
+                    </>
+                  ) : null}
+                </th>
+                <td>{row.source}</td>
+                <td>{row.identifier}</td>
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
+  );
+}
+
 export function EquipmentTable({ record }: { record: ProcedureRecord }) {
   const hasMaker = record.equipment.some((e) => e.item);
   const hasRotor = record.equipment.some((e) => e.item && (e.item.rotor || e.item.rotorGap));
@@ -501,6 +547,7 @@ export function ProcedureView({
   frozen?: string[];
 }) {
   const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
+  const keyGroups = keyResources(record);
   return (
     <div className="prose procedure" data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
       <ProcedureFacts record={record} />
@@ -560,6 +607,13 @@ export function ProcedureView({
         <section aria-labelledby={equipmentId}>
           <Heading id={equipmentId!}>Equipment</Heading>
           <EquipmentTable record={record} />
+        </section>
+      ) : null}
+
+      {keyGroups.length ? (
+        <section aria-labelledby="key-resources">
+          <Heading id="key-resources">Key resources</Heading>
+          <KeyResourcesTable groups={keyGroups} />
         </section>
       ) : null}
 

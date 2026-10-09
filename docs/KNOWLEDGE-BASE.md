@@ -168,7 +168,9 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.
 5. **Roles**: waits for job_4acb6ae89b9f (DECIDE 3); not built here.
-6. **Key Resources Table** (P1) and the RRID field.
+6. **Key Resources Table** (P1) and the RRID field. (Table done: `app/kb/procedures/key-resources.mjs`, on every protocol's
+   page after Equipment and in its twin, computed from the record. No RRID field yet: none of the registry's four kinds
+   is a resource RRIDs cover, so the field arrives with the first kind that is, such as an antibody or a plasmid.)
 7. **Run records with lots** (P2), lot and run pages, the trace from a lot to its runs. Recorded by lab members, so it
    waits for job_4acb6ae89b9f too.
 8. **Public libraries** for Recipes and Software how-tos, item pages for reagents and equipment (A1), the search facet (A2).
