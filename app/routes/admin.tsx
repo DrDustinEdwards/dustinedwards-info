@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { Form, Link, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { Shell, type LinkProps, type ShellEntry } from "capsomer/react/shell";
+import { AdminShell, type AdminEntry, type LinkProps } from "capsomer/react/admin-shell";
 import { ThemeSwitch } from "capsomer/react/theme-switch";
 
 import { SiteLogoHeader } from "~/components/site-logo";
@@ -171,28 +172,21 @@ export async function loader({ context }: Route.LoaderArgs) {
 const THEME_SCRIPT =
   'try{var t=localStorage.getItem("cap-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}';
 
+/* The shell's own family: a 24 box, a 1.6 stroke, drawn in currentColor (admin-shell.md, "Icons"). */
 function Icon({ d }: { d: string }) {
   return (
-    <svg className="cap-shell-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-      <path
-        d={d}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="cap-admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={d} />
     </svg>
   );
 }
 
 const ICONS = {
-  overview: <Icon d="M2.5 7.5 8 3l5.5 4.5V13h-3.5V9.5H6V13H2.5z" />,
-  posts: <Icon d="M4 2.5h5l3 3v8H4zM9 2.5v3h3M6 8.5h4M6 11h4" />,
-  mentions: <Icon d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" />,
-  media: <Icon d="M2.5 3.5h11v9h-11zM2.5 11l3.5-3.5 2.5 2.5 2-2 3 3M10.5 6.2h.01" />,
-  site: <Icon d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM2 8h12M8 2c2 1.8 2 10.2 0 12M8 2c-2 1.8-2 10.2 0 12" />,
-  tools: <Icon d="M2.5 4.5h6M11.5 4.5h2M2.5 8h2M7.5 8h6M2.5 11.5h6M11.5 11.5h2M10 3v3M5.5 6.5v3M10 10v3" />,
+  overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
+  posts: <Icon d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6" />,
+  mentions: <Icon d="M4 5h16v11H11l-5 4v-4H4z" />,
+  media: <Icon d="M3 5h18v14H3zM3 17l6-6 4 4 3-3 5 5M16.5 9.5h.01" />,
+  tools: <Icon d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h10M18 17h2M16 5v4M9 10v4M16 15v4" />,
 };
 
 /** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
@@ -220,6 +214,17 @@ function RouterLink({ href, children, ...rest }: LinkProps) {
   );
 }
 
+const SIGN_OUT_FORM = "admin-signout-form";
+
+/** "Dustin Edwards" -> "DE": the avatar's letters, from the site's own name. */
+const INITIALS = SITE.name
+  .split(/\s+/)
+  .map((word) => word[0])
+  .filter(Boolean)
+  .slice(0, 2)
+  .join("")
+  .toUpperCase();
+
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /* Optional: on the error boundary path the root loader never ran, and a made-up nonce is worse than none. */
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
@@ -227,15 +232,16 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
   const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
-  const nav: ShellEntry[] = [
+  const nav: AdminEntry[] = [
     { id: "overview", label: "Overview", href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
     {
       id: "posts",
       label: "Posts",
       href: "/admin/posts",
+      group: "Content",
       icon: ICONS.posts,
       current: at("/admin/posts"),
-      count: counts.posts,
+      count: counts.posts ?? undefined,
       countNote: countNote(counts.posts, askDrift, askDriftMaxAgeSeconds),
       tone: askDrift === null || askDrift > 0 ? "warn" : undefined,
     },
@@ -243,70 +249,71 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       id: "media",
       label: "Media",
       href: "/admin/media",
+      group: "Content",
       icon: ICONS.media,
       current: at("/admin/media"),
-      count: counts.media,
+      count: counts.media ?? undefined,
       countNote: countNote(counts.media, 0, askDriftMaxAgeSeconds),
     },
     // No count: a pending mention is not worth a third query on every admin page.
-    { id: "mentions", label: "Mentions", href: "/admin/mentions", icon: ICONS.mentions, current: at("/admin/mentions") },
-    { id: "tools", label: "Tools", href: "/admin/tools", icon: ICONS.tools, current: at("/admin/tools") },
+    {
+      id: "mentions",
+      label: "Mentions",
+      href: "/admin/mentions",
+      group: "Content",
+      icon: ICONS.mentions,
+      current: at("/admin/mentions"),
+    },
+    { id: "tools", label: "Tools", href: "/admin/tools", group: "Site", icon: ICONS.tools, current: at("/admin/tools") },
   ];
   const theme = rootData?.theme;
+
+  /* The shell names `[` in the collapse control's tip and leaves binding it to the app. It presses that
+     control, so the choice is remembered by the shell's own preference. Never while someone types. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "[" || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], .cm-editor")) return;
+      document.querySelector<HTMLButtonElement>('[data-cap-part="menu-toggle"]')?.click();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <>
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-      <Shell
-        brand={
-          <>
-            <SiteLogoHeader className="admin-brand-mark" />
-            {SITE.name}
-          </>
-        }
-        brandHref="/admin"
+      <AdminShell
+        title="Site admin"
+        mark={<SiteLogoHeader className="admin-brand-mark" />}
+        apps={[{ id: "site", label: "Site admin", href: "/admin", mono: "D", current: true }]}
         nav={nav}
         tabs={nav.slice(0, 4)}
-        more={[
-          ...nav.slice(4),
-          { id: "site", label: "View site", href: "/", icon: ICONS.site },
-        ]}
+        more={nav.slice(4)}
         renderLink={RouterLink}
-        status={
-          <span className="cap-muted" data-hide="phone">
-            {loaderData.email}
-          </span>
-        }
-        actions={
-          <>
-            <a className="cap-btn" href="/" title="Leaves the admin" data-hide="phone">
-              View site
-            </a>
-            <ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />
-            {/*
-             * An explicit label: the sentence is the description, so the button keeps a short name.
-             */}
-            <Form method="post" action="/admin/logout">
-              <button
-                type="submit"
-                className="cap-btn"
-                aria-label="Sign out"
-                aria-describedby="admin-signout-hint"
-              >
-                Sign out
-              </button>
-              <span className="cap-sr-only" id="admin-signout-hint">
-                Ends this session. You will need to sign in again through Cloudflare Access.
-              </span>
-            </Form>
-          </>
-        }
+        account={{
+          name: SITE.name,
+          initials: INITIALS,
+          role: "Admin",
+          email: loaderData.email,
+          appLinks: [{ label: "View site", href: "/" }],
+          // Access owns the session: the logout route sends the browser to Access's own endpoint, which a
+          // fetch cannot follow into a navigation, so a real form post (reloadDocument) does it.
+          onSignOut: () => (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
+        }}
+        status={<span className="cap-muted">Signed in as {loaderData.email}</span>}
+        actions={<ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />}
         prefKey="admin-rail"
       >
         <MessageProvider>
-          <Outlet />
+          {/* The shell leaves the page frame to the app: padding, width and the gap between blocks are Capsomer's. */}
+          <div className="cap-admin-page">
+            <Outlet />
+          </div>
         </MessageProvider>
-      </Shell>
+      </AdminShell>
+      <Form id={SIGN_OUT_FORM} method="post" action="/admin/logout" reloadDocument hidden />
     </>
   );
 }
