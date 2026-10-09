@@ -79,8 +79,12 @@
 	// property, set it explicitly to the value you want, even when that value is
 	// the default." Keep it false in both files, so turning it on is a diff
 	// somebody has to argue for.
+	//
+	// `head_sampling_rate` IS STATED, at 1: every log is kept. Traffic is small and the
+	// invocation record that would multiply volume is off, so there is nothing to sample away.
 	"observability": {
 		"enabled": true,
+		"head_sampling_rate": 1,
 		"logs": {
 			"invocation_logs": false
 		},
