@@ -186,6 +186,7 @@ const ICONS = {
   posts: <Icon d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6" />,
   mentions: <Icon d="M4 5h16v11H11l-5 4v-4H4z" />,
   media: <Icon d="M3 5h18v14H3zM3 17l6-6 4 4 3-3 5 5M16.5 9.5h.01" />,
+  kb: <Icon d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />,
   tools: <Icon d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h10M18 17h2M16 5v4M9 10v4M16 15v4" />,
 };
 
@@ -263,6 +264,15 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       group: "Content",
       icon: ICONS.mentions,
       current: at("/admin/mentions"),
+    },
+    // No count: the tabs on the page count each base, and the rail needs no second read of the table.
+    {
+      id: "kb",
+      label: "Knowledge Base",
+      href: "/admin/kb",
+      group: "Content",
+      icon: ICONS.kb,
+      current: at("/admin/kb"),
     },
     { id: "tools", label: "Tools", href: "/admin/tools", group: "Site", icon: ICONS.tools, current: at("/admin/tools") },
   ];

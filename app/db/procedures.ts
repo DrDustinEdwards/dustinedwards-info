@@ -85,3 +85,26 @@ export async function listPublishedLibraryRecords(env: Env): Promise<ProcedureRe
     .orderBy(asc(procedures.path));
   return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
 }
+
+/** For the admin's Knowledge Base page: every row, drafts included, with each recorded gap as the compile stated it. */
+export async function listProceduresForAdmin(env: Env) {
+  const rows = await getDb(env)
+    .select({
+      slug: procedures.slug,
+      path: procedures.path,
+      profile: procedures.profile,
+      title: procedures.title,
+      description: procedures.description,
+      status: procedures.status,
+      version: procedures.version,
+      updated: procedures.updated,
+      record: procedures.record,
+    })
+    .from(procedures)
+    .orderBy(asc(procedures.slug));
+  return rows.map(({ record, status, ...row }) => ({
+    ...row,
+    draft: status === "draft",
+    gaps: (JSON.parse(record) as ProcedureRecord).gaps,
+  }));
+}

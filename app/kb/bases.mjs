@@ -7,6 +7,7 @@
  * @typedef {{
  *   id: string,
  *   name: string,
+ *   singular: string,
  *   profile: "protocol" | "recipe" | "computational",
  *   entryRoot: string,
  * }} KnowledgeBase
@@ -14,7 +15,7 @@
 
 /** @type {readonly KnowledgeBase[]} */
 export const BASES = Object.freeze([
-  { id: "protocols", name: "Protocols", profile: "protocol", entryRoot: "/research/protocols/" },
-  { id: "how-tos", name: "Software how-tos", profile: "computational", entryRoot: "/research/methods/" },
-  { id: "recipes", name: "Recipes", profile: "recipe", entryRoot: "/recipes/" },
+  { id: "protocols", name: "Protocols", singular: "Protocol", profile: "protocol", entryRoot: "/research/protocols/" },
+  { id: "how-tos", name: "Software how-tos", singular: "Software how-to", profile: "computational", entryRoot: "/research/methods/" },
+  { id: "recipes", name: "Recipes", singular: "Recipe", profile: "recipe", entryRoot: "/recipes/" },
 ]);
