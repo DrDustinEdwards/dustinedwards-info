@@ -1,6 +1,8 @@
 // The one constant-time comparison: a copy that drifts toward `===` leaks the token a byte at a
 // time and no test notices. Kept `.server` because the secrets boundary is a path rule.
 
+import { timingSafeEqual } from "node:crypto";
+
 import { fnv1a32 } from "./bytes.mjs";
 
 /**
@@ -13,13 +15,9 @@ export async function constantTimeEqual(a: string, b: string): Promise<boolean> 
     crypto.subtle.digest("SHA-256", encoder.encode(a)),
     crypto.subtle.digest("SHA-256", encoder.encode(b)),
   ]);
-  const va = new Uint8Array(ha);
-  const vb = new Uint8Array(hb);
-
-  // Branch-free on purpose. Folding the length difference in first is what makes `?? 0` safe.
-  let diff = va.length ^ vb.length;
-  for (const [i, byte] of va.entries()) diff |= byte ^ (vb[i] ?? 0);
-  return diff === 0;
+  // Equal-length views of fixed size, which is the shape `timingSafeEqual` requires (it throws on a length
+  // mismatch). The runtime's own primitive, as Cloudflare's Workers best-practices page recommends.
+  return timingSafeEqual(new Uint8Array(ha), new Uint8Array(hb));
 }
 
 /**
