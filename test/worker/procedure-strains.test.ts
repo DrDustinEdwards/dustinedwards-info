@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProcedureView } from "~/components/procedure";
 import { runTool } from "~/lib/operator/api.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
-import { saveRegistryItem } from "~/lib/registry/save.server";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
+import { saveRegistryItem } from "~/kb/registry/save.server";
 import { loader as pageLoader } from "~/routes/procedure";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";

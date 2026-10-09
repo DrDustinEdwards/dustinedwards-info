@@ -23,9 +23,9 @@ import {
   type PrimerRow,
   type ReagentRow,
   type StrainRow,
-} from "~/lib/registry/catalog.mjs";
-import { MAX_MISMATCHES } from "~/lib/registry/align.mjs";
-import { KINDS } from "~/lib/registry/kinds.mjs";
+} from "~/kb/registry/catalog.mjs";
+import { MAX_MISMATCHES } from "~/kb/registry/align.mjs";
+import { KINDS } from "~/kb/registry/kinds.mjs";
 
 /**
  * The registry's pages (docs/REGISTRY.md): the master inventory, a kind's own catalog and one item. Each reads the same

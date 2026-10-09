@@ -10,9 +10,9 @@ import { readFileSync } from "node:fs";
 
 import { slug as githubSlug } from "github-slugger";
 
-import { formatQuantity, parseQuantity, readConditions, segmentText, tokenize } from "../app/lib/procedures/marks.mjs";
-import { allSteps, headingId, parseProcedure } from "../app/lib/procedures/parse.mjs";
-import { validateProcedure } from "../app/lib/procedures/validate.mjs";
+import { formatQuantity, parseQuantity, readConditions, segmentText, tokenize } from "../app/kb/procedures/marks.mjs";
+import { allSteps, headingId, parseProcedure } from "../app/kb/procedures/parse.mjs";
+import { validateProcedure } from "../app/kb/procedures/validate.mjs";
 
 /** @param {string} slug @param {string} raw */
 /** The strains the lab registry holds, which an `organism` may name beside the non-strain organisms (docs/REGISTRY.md). */

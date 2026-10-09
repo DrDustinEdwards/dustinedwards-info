@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { bibtex, citationText, citeFacts, familyGiven, needsFreeze, versionPath, zenodoMetadata } from "../app/lib/procedures/cite.mjs";
-import { parseProcedure } from "../app/lib/procedures/parse.mjs";
-import { validateProcedure } from "../app/lib/procedures/validate.mjs";
+import { bibtex, citationText, citeFacts, familyGiven, needsFreeze, versionPath, zenodoMetadata } from "../app/kb/procedures/cite.mjs";
+import { parseProcedure } from "../app/kb/procedures/parse.mjs";
+import { validateProcedure } from "../app/kb/procedures/validate.mjs";
 
-/* How a procedure version is addressed and cited (app/lib/procedures/cite.mjs) and how its history is judged
+/* How a procedure version is addressed and cited (app/kb/procedures/cite.mjs) and how its history is judged
  * (validate.mjs). A citation points at the version's frozen copy, which never changes, or at its DOI once it has one. */
 
 const where = { origin: "https://dustinedwards.info", creator: { name: "Dustin Edwards", affiliation: "Tarleton State University" } };

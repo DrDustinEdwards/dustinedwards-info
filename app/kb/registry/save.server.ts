@@ -17,7 +17,7 @@ import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { refreshProceduresNaming } from "~/lib/procedures/primer-dependents.server";
+import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 
 import {

@@ -33,14 +33,15 @@ view, shopping view), computational (environment, commands with expected output,
 challenges).
 
 **The knowledge bases are declared as data in code**, one frozen list in `app/kb/bases.mjs` (`id`, `name`, `profile`,
-`libraryPath`, `entryRoot`, `library` declaration, admin panel settings), read by the routes, the admin nav and the
-library. A fourth base of an existing profile is one entry there. A D1 table of bases is not worth it: a base without
+`entryRoot` today; the library and admin panel settings join it with the steps that use them), read by the routes and
+the procedure validator, and later the admin nav and the libraries. A fourth base of an existing profile is one entry there. A D1 table of bases is not worth it: a base without
 its profile's components is nothing, and profiles are code, so a table would only move the list somewhere a gate cannot
 read it (DECIDE 2).
 
-**One folder.** New Knowledge Base code goes in `app/kb/` (and its routes in `app/routes/kb.*`), and the existing
-`app/lib/procedures/` and `app/lib/registry/` move into it in one mechanical pull request with no behaviour change, so
-the whole thing could later be lifted out. Nothing is built for lifting it out (DECIDE 6).
+**One folder.** Knowledge Base code lives in `app/kb/`: the procedures in `app/kb/procedures/`, the lab registry in
+`app/kb/registry/` (both moved there from `app/lib/` in step 1, with no behaviour change) and the list of bases in
+`app/kb/bases.mjs`. New routes go in `app/routes/kb.*`. The whole thing could later be lifted out; nothing is built for
+that (DECIDE 6).
 
 ## The admin
 
@@ -72,7 +73,13 @@ Making D1 the source for the item definitions as well was weighed and is not rec
 facts into their records and frozen versions at compile time, from the repository, and that chain (and its drift
 checks) would have to be rebuilt for no gain a reader would see.
 
-## Roles (DECIDE 3)
+## Roles (DECIDE 3: waits for job_4acb6ae89b9f)
+
+**Not approved.** Who signs in and what lab people may do is its own job, job_4acb6ae89b9f (one roles model across the
+family; likely a separate `/lab` workspace for operational lab data, `/admin` owner-only, levels Owner, Lab manager and
+Lab worker). Until it is answered this build adds no non-owner sign-in, no roles and no members page, puts no
+lab-member feature in `/admin`, and keeps the names and paths that design reserves (`/lab`) free. What follows is the
+proposal that was put to Dustin, kept for that job to read.
 
 Today every person Cloudflare Access admits to `/admin` is the admin (`app/routes/admin.tsx`). Students and staff
 cannot simply be added to that Access policy. The design: a `kb_members` table (email, role, added by, added at) and
@@ -94,7 +101,7 @@ knowledge base; the build order below interleaves them. Claims were checked agai
 | P1 | Key Resources Table from the inventory (catalog numbers, RRIDs), grouped as STAR Methods groups it | **Build** | The facts are already in the registry; a table drawn from them is cheap and is what a methods section and a reviewer ask for. Columns are Reagent or resource, Source, Identifier. The identifier is the catalog or collection number the registry holds (`ATCC 700084`); an `rrid` field is added for the kinds RRIDs cover (antibodies, cell lines, plasmids, software), written only from the RRID portal. The lab's two strains have none to cite: published tables give mc²155 as `ATCC: 700084`. The group headings are taken from Cell Press's template when built (see Sources). |
 | P2 | Run records for lab members that record which lots were used, so a bad lot traces to every run | **Build** | The one thing the inventory makes possible that protocols.io cannot do. Run mode already makes the record; this saves it to D1 for a signed-in member, with lot ids per material. A lot's page lists its runs. Private. |
 | P3 | Fork a protocol into a variant with its lineage | **Build, small** | A `forked_from: { slug, version }` field, validated against the frozen copy, shown as "Based on X v2" and in the JSON-LD `isBasedOn`. The admin's "Fork" copies the file under a new slug. No merge-back. |
-| P4 | JSON-LD on Bioschemas LabProtocol 0.9-DRAFT, runs as LabProcess | **Build the version bump; LabProcess only in a run's own download** | The site states 0.8-DRAFT today (`app/lib/procedures/json-ld.mjs`). 0.9-DRAFT adds `parameter` (PropertyValue, a condition such as temperature or time) on the protocol as a whole, not per step, so the bump fills it from the temperatures and spins the compile already reads. Runs are private, so a public LabProcess (0.1-DRAFT: `executesLabProtocol`, `agent`, `object`, `result`, `instrument`) would publish nothing; it is the shape of a run record's JSON download. |
+| P4 | JSON-LD on Bioschemas LabProtocol 0.9-DRAFT, runs as LabProcess | **Build the version bump; LabProcess only in a run's own download** | The site states 0.8-DRAFT today (`app/kb/procedures/json-ld.mjs`). 0.9-DRAFT adds `parameter` (PropertyValue, a condition such as temperature or time) on the protocol as a whole, not per step, so the bump fills it from the temperatures and spins the compile already reads. Runs are private, so a public LabProcess (0.1-DRAFT: `executesLabProtocol`, `agent`, `object`, `result`, `instrument`) would publish nothing; it is the shape of a run record's JSON download. |
 | P5 | Versions, frozen copies, DOIs, scaling, structured steps | **Keep** | Built (docs/PROCEDURES.md). |
 
 ### Recipes
@@ -146,15 +153,16 @@ editor is live, so there is never a week with no editor. The operator API's proc
 
 Each step is one pull request, labelled `visual` where a reader sees it, and names job_898286365026.
 
-1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behaviour change.
+1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behaviour change. (Done.)
 2. **Admin Knowledge Base**: the rail entry, a panel per base, list and search, Needs info. Read-only.
 3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go.
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.
-5. **Roles**: `kb_members` and the middleware check.
+5. **Roles**: waits for job_4acb6ae89b9f (DECIDE 3); not built here.
 6. **Key Resources Table** (P1) and the RRID field.
-7. **Run records with lots** (P2), lot and run pages, the trace from a lot to its runs.
+7. **Run records with lots** (P2), lot and run pages, the trace from a lot to its runs. Recorded by lab members, so it
+   waits for job_4acb6ae89b9f too.
 8. **Public libraries** for Recipes and Software how-tos, item pages for reagents and equipment (A1), the search facet (A2).
 9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4).
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
@@ -162,6 +170,9 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
 12. **Offline** (A3).
 
 ## DECIDE
+
+Answered by Dustin on 2026-10-09: 1, 2, 4, 5, 6, 7 and 8 as recommended; 3 is not approved and waits for
+job_4acb6ae89b9f (see Roles).
 
 1. Entries and item facts stay files with D1 as the served copy; lots, locations, runs, members and the audit start in
    D1. Recommend: yes.

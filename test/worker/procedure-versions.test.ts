@@ -7,7 +7,7 @@ import { ProcedureView, VersionNotice } from "~/components/procedure";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { readProcedureSides } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as versionLoader } from "~/routes/procedure.version";
 import { loader as versionTwinLoader } from "~/routes/procedure.version[.md]";

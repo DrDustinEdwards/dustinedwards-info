@@ -14,11 +14,11 @@ import {
   strainRow,
   strainRows,
   strainsMarkdown,
-} from "../app/lib/registry/catalog.mjs";
-import { compileRegistryItem, registrySetErrors } from "../app/lib/registry/compile.mjs";
-import { KINDS } from "../app/lib/registry/kinds.mjs";
-import { registrySearchInput } from "../app/lib/registry/search-inputs.mjs";
-import { STRAIN, designationOf } from "../app/lib/registry/strain.mjs";
+} from "../app/kb/registry/catalog.mjs";
+import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
+import { KINDS } from "../app/kb/registry/kinds.mjs";
+import { registrySearchInput } from "../app/kb/registry/search-inputs.mjs";
+import { STRAIN, designationOf } from "../app/kb/registry/strain.mjs";
 import { HOSTS } from "../app/lib/phages/compile.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";
 
@@ -172,7 +172,7 @@ test("STORED ONCE: no protocol types a strain's designation or collection number
 });
 
 test("the compile refuses what a protocol may not say about a host strain", async () => {
-  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const original = await text("content/procedures/phage-isolation.md");
@@ -192,10 +192,10 @@ test("the compile refuses what a protocol may not say about a host strain", asyn
 });
 
 test("a protocol's organism is a non-strain organism or a strain of the registry, and the words come from the registry", async () => {
-  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
-  const { NON_STRAIN_ORGANISMS, organismLabel } = await import("../app/lib/procedures/taxonomy.mjs");
+  const { NON_STRAIN_ORGANISMS, organismLabel } = await import("../app/kb/procedures/taxonomy.mjs");
   const original = await text("content/procedures/phage-isolation.md");
   const compile = (raw) => compileProcedure({ slug: "phage-isolation", raw, pipeline, registry: registryHost() });
   const ok = await compile(original);

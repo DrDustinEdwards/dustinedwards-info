@@ -1,8 +1,8 @@
 // The registry table: read by the registry's pages and the operator API. Written only by writeRegistryRow in
-// app/lib/registry/save.server.ts and by sync:content, from a compile (app/lib/registry/compile.mjs).
+// app/kb/registry/save.server.ts and by sync:content, from a compile (app/kb/registry/compile.mjs).
 import { and, asc, eq } from "drizzle-orm";
 
-import { itemFromRow, sortRegistry, type RegistryItem } from "~/lib/registry/compile.mjs";
+import { itemFromRow, sortRegistry, type RegistryItem } from "~/kb/registry/compile.mjs";
 
 import { getDb } from "./client";
 import { registry } from "./schema";

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { deleteRegistryRow, writeRegistryRow } from "~/lib/registry/save.server";
+import { deleteRegistryRow, writeRegistryRow } from "~/kb/registry/save.server";
 
 import { seedRegistry } from "./seed";
 

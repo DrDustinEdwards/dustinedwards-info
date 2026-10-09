@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { proofErrors, proofFromFile, proofMarkdown, resolveProof } from "../app/lib/procedures/proof.mjs";
+import { proofErrors, proofFromFile, proofMarkdown, resolveProof } from "../app/kb/procedures/proof.mjs";
 
-/* Proof of use (app/lib/procedures/proof.mjs): stored slugs, resolved to words and addresses from rows, never inferred. */
+/* Proof of use (app/kb/procedures/proof.mjs): stored slugs, resolved to words and addresses from rows, never inferred. */
 
 test("a proof of papers and phages is valid; every malformed shape is refused with a message that says which", () => {
   assert.deepEqual(proofErrors(undefined), []);

@@ -1,5 +1,5 @@
 // Every procedure (content/procedures/, docs/PROCEDURES.md) and every procedure fixture compiles with no
-// error, through the same code the operator API's save_procedure runs (app/lib/procedures/compile.mjs):
+// error, through the same code the operator API's save_procedure runs (app/kb/procedures/compile.mjs):
 // a file this gate passes is a file the save tool accepts, and one it fails, the save tool refuses with
 // the same words.
 //

@@ -316,14 +316,15 @@
     // The procedure system's compile path. check:protocols, build:content and sync:content compile every
     // procedure with the SAME modules the operator API's save_procedure runs, so a file CI passes is the
     // file the save tool accepts. No Env and no DOM.
-    "app/lib/procedures/marks.mjs",
-    "app/lib/procedures/parse.mjs",
-    "app/lib/procedures/validate.mjs",
-    "app/lib/procedures/taxonomy.mjs",
-    "app/lib/procedures/proof.mjs",
-    "app/lib/procedures/render.mjs",
-    "app/lib/procedures/compile.mjs",
-    "app/lib/procedures/cite.mjs",
+    "app/kb/bases.mjs",
+    "app/kb/procedures/marks.mjs",
+    "app/kb/procedures/parse.mjs",
+    "app/kb/procedures/validate.mjs",
+    "app/kb/procedures/taxonomy.mjs",
+    "app/kb/procedures/proof.mjs",
+    "app/kb/procedures/render.mjs",
+    "app/kb/procedures/compile.mjs",
+    "app/kb/procedures/cite.mjs",
     // The publication file: parsed, judged and compiled by one door that the gates, the build, the sync and the
     // Carrel adapter all call (docs/PUBLICATIONS.md). The content-id rule is shared with the adapter's registry.
     "app/lib/publications/parse.mjs",
@@ -358,23 +359,23 @@
     "app/lib/phages/compile.mjs",
     // The registry's compile path, the same on both sides (docs/REGISTRY.md): build:content and sync:content compile
     // every registry file with the module the registry save runs, and it reads its kinds from kinds.mjs.
-    "app/lib/registry/compile.mjs",
-    "app/lib/registry/kinds.mjs",
+    "app/kb/registry/compile.mjs",
+    "app/kb/registry/kinds.mjs",
     // The primer kind and the Tm it computes, which kinds.mjs imports.
-    "app/lib/registry/primer.mjs",
-    "app/lib/registry/equipment.mjs",
-    "app/lib/registry/reagent.mjs",
-    "app/lib/registry/strain.mjs",
-    "app/lib/registry/tm.mjs",
+    "app/kb/registry/primer.mjs",
+    "app/kb/registry/equipment.mjs",
+    "app/kb/registry/reagent.mjs",
+    "app/kb/registry/strain.mjs",
+    "app/kb/registry/tm.mjs",
     // How the registry reads on the site: scripts/check-links.mjs names each page from it, and it reads the primer arithmetic.
-    "app/lib/registry/catalog.mjs",
+    "app/kb/registry/catalog.mjs",
     "app/lib/primers.mjs",
     // Where a primer binds a reference and the product a pair makes (docs/REGISTRY.md), with the references it reads.
-    "app/lib/registry/align.mjs",
-    "app/lib/registry/reference.mjs",
-    "app/lib/registry/references.generated.mjs",
+    "app/kb/registry/align.mjs",
+    "app/kb/registry/reference.mjs",
+    "app/kb/registry/references.generated.mjs",
     // What the site's search finds for an item, which build:content writes into the search artifact.
-    "app/lib/registry/search-inputs.mjs"
+    "app/kb/registry/search-inputs.mjs"
   ],
   "compilerOptions": {
     "composite": true,

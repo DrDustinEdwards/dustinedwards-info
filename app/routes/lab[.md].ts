@@ -24,8 +24,8 @@ import {
   strainRows,
   strainsMarkdown,
   tmNote,
-} from "~/lib/registry/catalog.mjs";
-import { LAB_CACHE_TAGS } from "~/lib/registry/route";
+} from "~/kb/registry/catalog.mjs";
+import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/lab[.md]";

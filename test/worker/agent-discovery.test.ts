@@ -21,7 +21,7 @@ import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 import { runTool } from "~/lib/operator/api.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { loader as procedureLoader, meta as procedureMeta } from "~/routes/procedure";
 import { loader as procedureTwinLoader } from "~/routes/procedure[.md]";
 

@@ -3,13 +3,13 @@ import { StepCalculators } from "~/components/phage-tool";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
-import type { resolveProof } from "~/lib/procedures/proof.mjs";
-import type { workflowContext } from "~/lib/procedures/library.mjs";
-import { bibtex, citationText, citeFacts, versionPath } from "~/lib/procedures/cite.mjs";
-import { sheetQr } from "~/lib/procedures/qr.mjs";
-import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/lib/procedures/render.mjs";
+import type { resolveProof } from "~/kb/procedures/proof.mjs";
+import type { workflowContext } from "~/kb/procedures/library.mjs";
+import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
+import { sheetQr } from "~/kb/procedures/qr.mjs";
+import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
-import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
+import { formatNumber, formatQuantity, parseNumber } from "~/kb/procedures/marks.mjs";
 
 /**
  * Every procedure page is drawn by these components from its D1 record (docs/PROCEDURES.md): the page,

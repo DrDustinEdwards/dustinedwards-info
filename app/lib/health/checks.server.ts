@@ -22,9 +22,9 @@ import {
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
 import { timed, type Timings } from "~/lib/timing";
 import { GitHubError, listDirectory, listPostFiles } from "~/lib/editor/github.server";
-import { REGISTRY_DIR } from "~/lib/registry/compile.mjs";
-import { KINDS } from "~/lib/registry/kinds.mjs";
-import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
+import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
+import { KINDS } from "~/kb/registry/kinds.mjs";
+import { PROCEDURES_DIR } from "~/kb/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
 import { readCv } from "~/db/cv";

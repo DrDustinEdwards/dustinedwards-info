@@ -81,7 +81,7 @@ export const MAP = [
   {
     /* check-protocols compiles every procedure and fixture with the save tool's own validator. */
     what: "a procedure, a procedure fixture or the procedure system",
-    test: /^(content\/procedures\/.+\.md|test\/fixtures\/procedures\/.+\.md|app\/lib\/procedures\/.+|scripts\/lib\/procedures\.mjs)$/,
+    test: /^(content\/procedures\/.+\.md|test\/fixtures\/procedures\/.+\.md|app\/kb\/procedures\/.+|app\/kb\/bases\.mjs|scripts\/lib\/procedures\.mjs)$/,
     gates: ["check:protocols", RELATED],
   },
   {
@@ -133,10 +133,10 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
-    /* check:content compiles every registry file with its kind's validator (app/lib/registry/compile.mjs); the
+    /* check:content compiles every registry file with its kind's validator (app/kb/registry/compile.mjs); the
        registry save runs the same compile, so a change here changes what a save accepts. */
     what: "the lab registry",
-    test: /^(content\/registry\/.+|app\/lib\/registry\/.+|app\/db\/registry\.ts|scripts\/lib\/registry\.mjs)$/,
+    test: /^(content\/registry\/.+|app\/kb\/registry\/.+|app\/db\/registry\.ts|scripts\/lib\/registry\.mjs)$/,
     gates: ["check:content", "check:links", RELATED],
   },
   {

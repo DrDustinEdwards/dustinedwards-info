@@ -5,7 +5,7 @@ import test from "node:test";
 import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { libraryTabs } from "../app/lib/procedures/library.mjs";
+import { libraryTabs } from "../app/kb/procedures/library.mjs";
 import {
   INVENTORY,
   PRIMERS,
@@ -19,11 +19,11 @@ import {
   primerRows,
   protocolsUsing,
   registryTabs,
-} from "../app/lib/registry/catalog.mjs";
-import { compileRegistryItem, registrySetErrors } from "../app/lib/registry/compile.mjs";
-import { KINDS } from "../app/lib/registry/kinds.mjs";
-import { PRIMER, primerFacts } from "../app/lib/registry/primer.mjs";
-import { primerTm } from "../app/lib/registry/tm.mjs";
+} from "../app/kb/registry/catalog.mjs";
+import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
+import { KINDS } from "../app/kb/registry/kinds.mjs";
+import { PRIMER, primerFacts } from "../app/kb/registry/primer.mjs";
+import { primerTm } from "../app/kb/registry/tm.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";
 
 /* The primer kind (docs/REGISTRY.md): the twelve records the lab's protocols state, what is computed from them, and the
@@ -113,7 +113,7 @@ test("a protocol's record carries the registry's facts for the primers it names,
 });
 
 test("the compile refuses what a protocol may not say about a primer, and refuses a registry it was not given", async () => {
-  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const original = await text("content/procedures/coi-primers.md");
@@ -173,7 +173,7 @@ test("the GAPDH product is computed on the chicken genome, not the mRNA, and the
   const gapdh = primerRows(primers).find((row) => row.id === "gapdh-forward");
   assert.equal(gapdh?.reference, "NC_052532.1:76902320-76906237");
   assert.deepEqual(gapdh?.product?.products.map((p) => [p.length, p.start, p.end]), [[534, 76904235, 76904768]]);
-  const { pairProducts } = await import("../app/lib/registry/align.mjs");
+  const { pairProducts } = await import("../app/kb/registry/align.mjs");
   const turkey = pairProducts("GTGGTGCTAAGCGTGTTATCATC", "GGCAGCACCTCTGCCATC", "NC_139404.1:75777043-75780966");
   // The turkey gene is 24 bases shorter between the primers; the lab's positive control is chicken DF-1 cells.
   assert.deepEqual(turkey?.products.map((p) => p.length), [510]);

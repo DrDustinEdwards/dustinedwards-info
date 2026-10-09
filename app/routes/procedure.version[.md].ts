@@ -1,7 +1,7 @@
 import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure.version[.md]";

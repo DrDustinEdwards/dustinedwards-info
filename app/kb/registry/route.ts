@@ -1,6 +1,6 @@
 // What the registry's pages, listings and twins share: the cache tags a save purges (app/lib/cache-purge.server.ts).
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 
 /** Every registry response carries it; a registry save and sync purge it. */
 export const REGISTRY_CACHE_TAG = "registry";

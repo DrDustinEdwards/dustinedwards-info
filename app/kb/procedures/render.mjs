@@ -9,9 +9,9 @@
 
 import GithubSlugger from "github-slugger";
 
-import { TOOLS } from "../phage-tools.mjs";
+import { TOOLS } from "../../lib/phage-tools.mjs";
 import { productsForRows } from "../registry/align.mjs";
-import { plainText } from "../search/records.mjs";
+import { plainText } from "../../lib/search/records.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { allSteps, procedurePath, readCalcs } from "./parse.mjs";

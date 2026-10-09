@@ -1,9 +1,9 @@
 // Frozen procedure versions (drizzle/0027_procedure_versions.sql): the rendered copy of every published version,
 // written once and never changed. Read by the version pages and the twin at `<page>/v/<version>`; written by
-// freezeStatement, in the same batch as the live row (app/lib/procedures/save.server.ts, writeRow).
+// freezeStatement, in the same batch as the live row (app/kb/procedures/save.server.ts, writeRow).
 import { and, asc, eq } from "drizzle-orm";
 
-import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 import { getDb } from "./client";
 import { procedureVersions } from "./schema";

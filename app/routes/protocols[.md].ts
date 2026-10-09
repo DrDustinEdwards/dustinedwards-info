@@ -3,8 +3,8 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
-import { LIBRARY_PATH, citeMarkdown, libraryCitation, libraryItems, libraryMarkdown, libraryOverview, overviewMarkdown } from "~/lib/procedures/library.mjs";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { LIBRARY_PATH, citeMarkdown, libraryCitation, libraryItems, libraryMarkdown, libraryOverview, overviewMarkdown } from "~/kb/procedures/library.mjs";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols[.md]";

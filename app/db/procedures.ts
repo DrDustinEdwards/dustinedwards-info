@@ -1,9 +1,9 @@
 // The procedures table: read by the procedure pages, the sitemap and the operator API. Written only by
-// writeProcedureRow, from a compile (app/lib/procedures/compile.mjs).
+// writeProcedureRow, from a compile (app/kb/procedures/compile.mjs).
 import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
-import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 import { getDb } from "./client";
 import { procedures } from "./schema";

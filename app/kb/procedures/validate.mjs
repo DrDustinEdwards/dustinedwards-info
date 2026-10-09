@@ -10,16 +10,15 @@ import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
 import { allSteps, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
-import { TOOLS } from "../phage-tools.mjs";
+import { TOOLS } from "../../lib/phage-tools.mjs";
+import { BASES } from "../bases.mjs";
 
 export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
 
-/** Where each profile's pages live; the file's name is the last segment. */
-export const PROFILE_ROOTS = /** @type {const} */ ({
-  protocol: "/research/protocols/",
-  recipe: "/recipes/",
-  computational: "/research/methods/",
-});
+/** Where each profile's pages live (its knowledge base's root, app/kb/bases.mjs); the file's name is the last segment. */
+export const PROFILE_ROOTS = /** @type {Record<(typeof PROFILES)[number], string>} */ (
+  Object.fromEntries(BASES.map((base) => [base.profile, base.entryRoot]))
+);
 
 export const NOT_APPLICABLE = "not applicable";
 
@@ -39,7 +38,7 @@ export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
 /** Words protocols.md keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
-/** A primer's id in the lab registry (app/lib/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
+/** A primer's id in the lab registry (app/kb/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
 const PRIMER_ID = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 const SEO_TITLE_MAX = 60;

@@ -5,14 +5,14 @@
 //
 // An item is ONE file, `content/registry/<kind>/<id>.md`, and the file is its front matter and nothing else. What
 // every kind has (a name, and `draft` for its status) is the table's own columns; what a kind knows beyond that is its `fields`
-// (app/lib/registry/kinds.mjs), judged by that kind's rules. The validator REFUSES any field the kind does not
+// (app/kb/registry/kinds.mjs), judged by that kind's rules. The validator REFUSES any field the kind does not
 // declare, so nothing enters the repository or D1 that a page would not show, and it states a value nobody has yet
 // as "MISSING: <why>", never a guess.
 
 import matter from "gray-matter";
 
-import { gitBlobSha } from "../content/hashes.mjs";
-import { foldText } from "../cv/view.mjs";
+import { gitBlobSha } from "../../lib/content/hashes.mjs";
+import { foldText } from "../../lib/cv/view.mjs";
 import { KINDS, kindKeys } from "./kinds.mjs";
 
 export const REGISTRY_DIR = "content/registry";

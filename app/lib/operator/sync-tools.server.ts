@@ -46,9 +46,9 @@ import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { listPhages } from "~/db/phages";
 import { PHAGES_DIR, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
 import { compile as compilePhageFile, deletePhageRow, refreshPage as refreshPhagePage, writePhageRow } from "~/lib/phages/save.server";
-import { REGISTRY_DIR } from "~/lib/registry/compile.mjs";
-import { refreshProceduresNaming } from "~/lib/procedures/primer-dependents.server";
-import { compile as compileRegistryFile, deleteRegistryRow, writeRegistryRow } from "~/lib/registry/save.server";
+import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
+import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
+import { compile as compileRegistryFile, deleteRegistryRow, writeRegistryRow } from "~/kb/registry/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
 import {
@@ -57,12 +57,12 @@ import {
   seedMissingCitations,
   writePublicationRow,
 } from "~/lib/publications/save.server";
-import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
+import { PROCEDURES_DIR } from "~/kb/procedures/parse.mjs";
 import {
   compile as compileProcedureFile,
   deleteProcedureRow,
   writeRow as writeProcedureRow,
-} from "~/lib/procedures/save.server";
+} from "~/kb/procedures/save.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 import type { OperatorEnv } from "./auth.server";

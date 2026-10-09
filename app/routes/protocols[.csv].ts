@@ -2,8 +2,8 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { LIBRARY_PATH, libraryCsv, libraryItems, libraryRecords } from "~/lib/procedures/library.mjs";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { LIBRARY_PATH, libraryCsv, libraryItems, libraryRecords } from "~/kb/procedures/library.mjs";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols[.csv]";

@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { allSteps, parseProcedure, readCalcs } from "../app/lib/procedures/parse.mjs";
-import { validateProcedure } from "../app/lib/procedures/validate.mjs";
+import { allSteps, parseProcedure, readCalcs } from "../app/kb/procedures/parse.mjs";
+import { validateProcedure } from "../app/kb/procedures/validate.mjs";
 
 /* Calculators in a procedure's steps (docs/PROCEDURES.md): a step's CALC flag names calculators from the tools
  * registry, with any values the step itself states, and validate.mjs refuses what the record cannot back. */

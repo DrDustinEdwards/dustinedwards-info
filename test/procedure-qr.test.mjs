@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { sheetQr } from "../app/lib/procedures/qr.mjs";
+import { sheetQr } from "../app/kb/procedures/qr.mjs";
 
-/* The bench sheet's QR code (app/lib/procedures/qr.mjs): an inline SVG of the address, black on white. */
+/* The bench sheet's QR code (app/kb/procedures/qr.mjs): an inline SVG of the address, black on white. */
 
 test("sheetQr draws an SVG with a white ground and black modules", () => {
   const svg = sheetQr("https://dustinedwards.info/research/protocols/phage-isolation");

@@ -11,10 +11,10 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/lib/registry/catalog.mjs";
-import { KINDS } from "~/lib/registry/kinds.mjs";
-import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/lib/registry/catalog.mjs";
-import { LAB_CACHE_TAGS } from "~/lib/registry/route";
+import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/kb/registry/catalog.mjs";
+import { KINDS } from "~/kb/registry/kinds.mjs";
+import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/kb/registry/catalog.mjs";
+import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/lab.kind";

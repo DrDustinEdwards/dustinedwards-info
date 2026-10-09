@@ -16,11 +16,11 @@ import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
-import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
-import { registryTabs } from "~/lib/registry/catalog.mjs";
-import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/kb/procedures/library.mjs";
+import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
+import { registryTabs } from "~/kb/registry/catalog.mjs";
+import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols";
