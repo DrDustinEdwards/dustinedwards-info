@@ -32,7 +32,7 @@
 @import "capsomer/tabs.css";
 @import "capsomer/tooltip.css";
 @import "capsomer/theme-switch.css";
-@import "capsomer/shell.css";
+@import "capsomer/admin-shell.css";
 @import "capsomer/confirm-dialog.css";
 @import "capsomer/stat-tile.css";
 @import "capsomer/markdown-editor.css";
@@ -40,14 +40,18 @@
 @import "capsomer/pagination.css";
 @import "capsomer/media.css";
 
-/* The page inside the shell: a title, one line saying what the page is for, the page's actions at the
-   right, then panels. */
+/* The page inside the shell: the shell's page frame (.cap-admin-page) owns the padding, the width and the
+   gap between a page's blocks; this is the page's own stack: a title, one line saying what the page is for,
+   the page's actions at the right, then panels. The error page sits outside the shell and frames itself. */
 .app-page {
   display: grid;
   gap: var(--space-6);
+  min-width: 0;
+}
+
+main.app-page {
   padding: var(--space-6) var(--space-6) var(--space-9);
   max-width: 1320px;
-  min-width: 0;
 }
 
 .app-head {
@@ -84,12 +88,12 @@
 }
 
 @media (max-width: 820px) {
-  .app-page {
+  main.app-page {
     padding: var(--space-5) var(--space-5) var(--space-7);
   }
 }
 
-/* The site's mark in the top bar: its own paths, painted in the accent. */
+/* The site's mark above the menu: its own paths, painted in the accent. */
 .admin-brand-mark {
   height: 24px;
   width: auto;

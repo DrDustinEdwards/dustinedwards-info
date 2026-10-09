@@ -120,8 +120,8 @@ export async function run({ browser }) {
     for (const [path, what] of SURFACES) {
       await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
       const r = await admin.evaluate(() => ({
-        sidebar: !!document.querySelector(".cap-shell-rail"),
-        topbar: !!document.querySelector(".cap-shell-top"),
+        sidebar: !!document.querySelector(".cap-admin-menu"),
+        topbar: !!document.querySelector(".cap-admin-bar"),
         onLogin: location.pathname === "/login",
         textLen: (document.body.innerText || "").trim().length,
       }));
@@ -483,7 +483,7 @@ export async function run({ browser }) {
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const rules = await admin.evaluate(countCssRules);
     const adminCss = await admin.evaluate(() => {
-      const rail = document.querySelector(".cap-shell-rail");
+      const rail = document.querySelector(".cap-admin-menu");
       const style = rail ? getComputedStyle(rail) : null;
       return {
         sheets: [...document.styleSheets].length,
@@ -501,7 +501,7 @@ export async function run({ browser }) {
     ok(
       "the admin shell is laid out by Capsomer's CSS, not by the browser default",
       adminCss.display !== "inline" && adminCss.display !== "block" && adminCss.width > 100,
-      `.cap-shell-rail computed display=${adminCss.display || "(none)"} width=${adminCss.width}px. ` +
+      `.cap-admin-menu computed display=${adminCss.display || "(none)"} width=${adminCss.width}px. ` +
         `An unstyled rail is a block at full width, which would make the overflow ` +
         `readings below meaningless while looking like a real measurement.`,
     );
@@ -534,7 +534,7 @@ export async function run({ browser }) {
     await admin.setViewport({ width: 320, height: 800 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const bar = await admin.evaluate(() => {
-      const el = document.querySelector(".cap-shell-top");
+      const el = document.querySelector(".cap-admin-bar");
       if (!el) return null;
       const r = el.getBoundingClientRect();
       const kids = [...el.querySelectorAll("a, button, label, fieldset")].map((k) => {
@@ -552,7 +552,7 @@ export async function run({ browser }) {
     ok(
       "the admin top bar exists to measure at 320px",
       bar !== null,
-      "no .cap-shell-top, so the containment assertion below would examine nothing",
+      "no .cap-admin-bar, so the containment assertion below would examine nothing",
     );
     ok(
       "no admin top bar control overflows the bar at 320px",
@@ -572,13 +572,13 @@ export async function run({ browser }) {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
       if (openMore) {
-        await admin.click('.cap-shell-tabs button[data-cap-part="more"]');
+        await admin.click('.cap-admin-tabs button[data-cap-part="more"]');
         await new Promise((r) => setTimeout(r, 300));
       }
       return admin.evaluate(() => {
         const names = [];
         for (const el of document.querySelectorAll(
-          ".cap-shell-top, .cap-shell-tabs, dialog.cap-shell-more[open]",
+          ".cap-admin-bar, .cap-admin-tabs, dialog.cap-admin-sheet[open]",
         )) {
           for (const control of el.querySelectorAll(
             'a[href], button, summary, input:not([type="hidden"]), select, textarea',
@@ -595,7 +595,7 @@ export async function run({ browser }) {
         }
         return {
           names: [...new Set(names)].sort(),
-          more: !!document.querySelector('.cap-shell-tabs button[data-cap-part="more"]'),
+          more: !!document.querySelector('.cap-admin-tabs button[data-cap-part="more"]'),
         };
       });
     };
