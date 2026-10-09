@@ -34,3 +34,34 @@
 }
 
 /* The shell owns the viewport so the editor has one scroll context; other pages scroll .admin-content. */
+
+/* A legal page's status under its title (content/pages/privacy.md, terms.md): the banner is the single word
+   Draft, the date is when the text last changed. Both come from the page's front matter. */
+.legal-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.legal-status p {
+  margin: 0;
+}
+
+.legal-banner {
+  padding: 0.125rem 0.625rem;
+  border: var(--line-w) solid var(--border-warning);
+  border-radius: 0.375rem;
+  background: var(--tint-warning);
+  color: var(--on-tint-warning);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.legal-updated {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}

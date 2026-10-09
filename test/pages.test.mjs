@@ -151,3 +151,36 @@ test("links: a link that provably goes nowhere is refused, and an address the mo
   assert.ok(errors.some((e) => e.includes("draft or scheduled post")));
   assert.ok(errors.some((e) => e.includes("#Nope")));
 });
+
+/* The legal pages (job_044f96426efa): /privacy is a registered page like /terms, and the two alone may state a
+ * `banner` (the one word "Draft") and a `last_updated` day, which the layout draws and the twin repeats. */
+const withFields = (/** @type {string} */ fields) => (/** @type {string} */ raw) => raw.replace(/^---\n/, `---\n${fields}\n`);
+
+test("legal pages: /privacy is registered and compiles, and the banner and date are read from the front matter", async () => {
+  const privacy = await compile("privacy", read("privacy"));
+  assert.equal(privacy.ok, true, privacy.ok ? "" : privacy.errors.join("; "));
+  const stated = await compile("terms", withFields("banner: Draft\nlast_updated: 2026-10-06")(read("terms")));
+  assert.equal(stated.ok, true, stated.ok ? "" : stated.errors.join("; "));
+  if (!stated.ok) return;
+  assert.equal(stated.page.banner, "Draft");
+  assert.equal(stated.page.lastUpdated, "2026-10-06", "an unquoted YAML date must come back as its day");
+  assert.match(stated.markdown, /^# Terms\n\nDraft\n\nLast updated: October 6, 2026\n\n/, "the twin states what the page shows");
+  const quiet = await compile("terms", read("terms"));
+  assert.equal(quiet.ok && quiet.page.banner, undefined);
+  assert.doesNotMatch(quiet.ok ? quiet.markdown : "", /Last updated/);
+});
+
+test("legal pages: the banner is the one word Draft, the date is a real day, and no other page states either", async () => {
+  assert.match(await refusal("terms", withFields("banner: Draft copy")), /the one word it may say is "Draft"/);
+  assert.match(await refusal("terms", withFields("last_updated: 2026-02-30")), /real day written YYYY-MM-DD/);
+  assert.match(await refusal("terms", withFields("last_updated: yesterday")), /real day written YYYY-MM-DD/);
+  assert.match(await refusal("research-phages", withFields("banner: Draft")), /belong to the legal pages/);
+  assert.match(await refusal("research-phages", withFields("last_updated: 2026-10-06")), /belong to the legal pages/);
+});
+
+test("/terms can never be a draft: it is the dataset license, and the refusal says so", async () => {
+  assert.match(await refusal("terms", withFields("draft: true")), /draft is true, but \/terms is the license on every data set/);
+  // The guard is /terms's alone: another page may still be unpublished.
+  const other = await compile("research-phages", withFields("draft: true")(read("research-phages")));
+  assert.equal(other.ok, true);
+});

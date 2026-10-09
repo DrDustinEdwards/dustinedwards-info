@@ -34,6 +34,7 @@ import { replaceSearchRecords } from "~/lib/search/replace.server";
 
 import { compilePage, pagePathForSlug, pageSlug, pageSourcePath } from "./compile.mjs";
 import { idsIn, pageLinkErrors, type AddressBook } from "./links.mjs";
+import { protectedPageReason } from "./protected.mjs";
 
 type PageEnv = Env & { GITHUB_TOKEN?: string };
 
@@ -183,6 +184,9 @@ export async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnTyp
 
 /** The row of a page whose file is gone and its search records: the one removal sync_pages makes. */
 export async function deletePageRow(env: PageEnv, row: { slug: string; path: string }) {
+  // /terms is the dataset license: a sync that finds its file gone repairs nothing here, it refuses (job_044f96426efa).
+  const keep = protectedPageReason(row.path);
+  if (keep) throw new PolicyError(`Refused: ${keep}.`, "terms-cannot-be-removed");
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM pages WHERE slug = ?1`).bind(row.slug),
     env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(contentPageSearchUid(row.path)),

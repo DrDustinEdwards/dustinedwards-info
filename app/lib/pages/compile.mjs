@@ -8,6 +8,8 @@ import { gitBlobSha } from "../content/hashes.mjs";
 import {
   CONTENT_PAGE_SECTIONS,
   DESCRIPTION_MAX,
+  LEGAL_BANNER,
+  LEGAL_PAGE_PATHS,
   PAGE_FILE_PATHS,
   SEO_TITLE_MAX,
   contentPageFile,
@@ -18,6 +20,7 @@ import {
 import { IDENTITY } from "../identity.generated.mjs";
 import { expandPhagePage, expandPhageTokens } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
+import { protectedPageReason } from "./protected.mjs";
 
 export const PAGES_DIR = "content/pages";
 
@@ -81,6 +84,9 @@ const SCHEMA_TYPES = ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "W
  *   dataset?: { variableMeasured: string[], temporalCoverage: string | null, rows: number },
  * }} PageSchema
  *
+ * What only a legal page states (LEGAL_PAGE_PATHS): `banner` is the one word "Draft", `lastUpdated` an ISO date.
+ * @typedef {{ banner?: string, lastUpdated?: string }} PageLegal
+ *
  * @typedef {{ depth: number, id: string, text: string }} TocEntry
  *
  * The page as the routes, the search index and the gates read it. `markdown` is the body without front
@@ -88,7 +94,7 @@ const SCHEMA_TYPES = ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "W
  * @typedef {{
  *   path: string, title: string, seoTitle: string, description: string, html: string,
  *   markdown: string, toc: TocEntry[],
- * } & PageSchema} CompiledPage
+ * } & PageSchema & PageLegal} CompiledPage
  *
  * What D1's `record` column holds: the page less its markdown, with its file key and draft flag.
  * @typedef {Omit<CompiledPage, "markdown"> & { slug: string, draft: boolean }} PageRecord
@@ -132,6 +138,41 @@ function pageSchema(fm, markdown, errors) {
   const schema = dataset ? { dataset } : {};
   for (const [key, value] of fields) if (value !== "") schema[key] = value;
   return schema;
+}
+
+/**
+ * The banner and the last-updated date a legal page states, each only when it is written there. The banner is
+ * the single word "Draft" and nothing else; the date is a real calendar day. Neither belongs on any other page.
+ * YAML reads an unquoted `2026-10-06` as a Date and rolls an impossible `2026-02-30` over to March, so the
+ * day is read from the front matter's own text, the way it was written, and the parsed value only when the
+ * line cannot be found.
+ *
+ * @param {Record<string, unknown>} fm
+ * @param {string} frontMatter the front matter's text, as written
+ * @param {string} path
+ * @param {string[]} errors
+ * @returns {PageLegal}
+ */
+function pageLegal(fm, frontMatter, path, errors) {
+  /** @type {PageLegal} */
+  const legal = {};
+  const banner = fm.banner == null ? "" : String(fm.banner).trim();
+  if (banner !== "") {
+    if (banner !== LEGAL_BANNER) errors.push(`banner is ${JSON.stringify(banner)}; the one word it may say is "${LEGAL_BANNER}"`);
+    else legal.banner = banner;
+  }
+  const written = /^last_updated:[ \t]*["']?([^"'#\r\n]*?)["']?[ \t]*(?:#.*)?$/m.exec(frontMatter)?.[1];
+  const raw = written ?? fm.last_updated;
+  if (raw != null && raw !== "") {
+    const day = raw instanceof Date ? raw.toISOString().slice(0, 10) : String(raw).trim();
+    const real = /^\d{4}-\d{2}-\d{2}$/.test(day) && new Date(`${day}T00:00:00.000Z`).toISOString().slice(0, 10) === day;
+    if (real) legal.lastUpdated = day;
+    else errors.push(`last_updated is ${JSON.stringify(day)}; it is a real day written YYYY-MM-DD`);
+  }
+  if ((legal.banner || legal.lastUpdated || fm.banner != null || fm.last_updated != null) && !LEGAL_PAGE_PATHS.includes(path)) {
+    errors.push(`banner and last_updated belong to the legal pages (${LEGAL_PAGE_PATHS.join(", ")}), not to ${path}`);
+  }
+  return legal;
 }
 
 /**
@@ -220,6 +261,9 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   if (!drawnBody.ok) errors.push(...drawnBody.errors);
   const body = drawnBody.ok ? drawnBody.text : parsed.content;
   const schema = pageSchema(fm, body, errors);
+  const legal = pageLegal(fm, parsed.matter, page.path, errors);
+  const keep = protectedPageReason(page.path);
+  if (keep && fm.draft === true) errors.push(`draft is true, but ${keep}`);
   if (errors.length > 0) return { ok: false, errors };
 
   let rendered;
@@ -245,7 +289,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   }
 
   /** @type {CompiledPage} */
-  const compiled = { ...page, html: rendered.html, markdown: body, toc: rendered.toc, ...schema };
+  const compiled = { ...page, html: rendered.html, markdown: body, toc: rendered.toc, ...schema, ...legal };
   errors.push(...pageInvariantErrors(compiled, { phages }));
   if (errors.length > 0) return { ok: false, errors };
 
