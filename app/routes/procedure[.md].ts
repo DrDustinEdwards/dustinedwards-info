@@ -1,17 +1,17 @@
 import { getProcedureByPath, getPublishedProcedureMarkdown, listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { libraryItems, workflowContext, workflowMarkdown } from "~/lib/procedures/library.mjs";
-import { proofMarkdown } from "~/lib/procedures/proof.mjs";
-import { proofFor } from "~/lib/procedures/proof.server";
-import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
+import { libraryItems, workflowContext, workflowMarkdown } from "~/kb/procedures/library.mjs";
+import { proofMarkdown } from "~/kb/procedures/proof.mjs";
+import { proofFor } from "~/kb/procedures/proof.server";
+import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure[.md]";
 
 /**
  * A procedure's markdown twin at `<page>.md`, generated from the same file as the page
- * (app/lib/procedures/render.mjs), so an agent reads the facts a person does. Drafts answer 404.
+ * (app/kb/procedures/render.mjs), so an agent reads the facts a person does. Drafts answer 404.
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
   const path = new URL(request.url).pathname.replace(/\.md$/, "");

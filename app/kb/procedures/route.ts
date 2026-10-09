@@ -3,7 +3,7 @@
 import type { ProcedureRecord } from "./render.mjs";
 import { scaleFactor } from "./render.mjs";
 
-/** Every procedure response carries it; a save purges it (app/lib/procedures/save.server.ts). */
+/** Every procedure response carries it; a save purges it (app/kb/procedures/save.server.ts). */
 export const PROCEDURES_CACHE_TAG = "procedures";
 
 /** The trail above a procedure: its hub, the list it sits in, then itself. */

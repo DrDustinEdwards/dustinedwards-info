@@ -2,7 +2,7 @@
 // twin and the search input. check:protocols, sync:content and the operator API's save_procedure all
 // call compileProcedure, so a file CI passes is the file the save tool accepts and the page draws.
 
-import { gitBlobSha } from "../content/hashes.mjs";
+import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { itemPath } from "../registry/catalog.mjs";
 import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";

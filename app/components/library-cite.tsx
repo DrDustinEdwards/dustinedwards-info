@@ -1,4 +1,4 @@
-import { countOf, type libraryCitation, type libraryDownloads } from "~/lib/procedures/library.mjs";
+import { countOf, type libraryCitation, type libraryDownloads } from "~/kb/procedures/library.mjs";
 
 /**
  * Download and cite (docs/PROCEDURES.md): the CSV and JSON of the view shown, the markdown of the whole library, and how

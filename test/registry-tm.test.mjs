@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { NEB_TM_CALCULATOR, TM_CONDITIONS, TM_MIN_LENGTH, annealingSentence, primerTm, primerTmRounded, tmStatement } from "../app/lib/registry/tm.mjs";
+import { NEB_TM_CALCULATOR, TM_CONDITIONS, TM_MIN_LENGTH, annealingSentence, primerTm, primerTmRounded, tmStatement } from "../app/kb/registry/tm.mjs";
 
 /* The reference is Biopython 1.88, Bio.SeqUtils.MeltingTemp.Tm_NN with nn_table=DNA_NN3 (SantaLucia 1998), Na=50 mM, no
  * K, Tris, Mg or dNTPs, dnac1=500 nM, dnac2=0 and saltcorr=5 (the 1998 entropy correction), run on 2026-10-04, with selfcomp=True for the two

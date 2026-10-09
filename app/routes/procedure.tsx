@@ -9,10 +9,10 @@ import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
-import { libraryItems, workflowContext } from "~/lib/procedures/library.mjs";
-import { proofFor } from "~/lib/procedures/proof.server";
-import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
+import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
+import { libraryItems, workflowContext } from "~/kb/procedures/library.mjs";
+import { proofFor } from "~/kb/procedures/proof.server";
+import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure";

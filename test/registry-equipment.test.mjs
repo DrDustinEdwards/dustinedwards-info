@@ -15,11 +15,11 @@ import {
   hasItemPage,
   inventoryRows,
   kindPath,
-} from "../app/lib/registry/catalog.mjs";
-import { compileRegistryItem } from "../app/lib/registry/compile.mjs";
-import { EQUIPMENT } from "../app/lib/registry/equipment.mjs";
-import { KINDS } from "../app/lib/registry/kinds.mjs";
-import { registrySearchInput } from "../app/lib/registry/search-inputs.mjs";
+} from "../app/kb/registry/catalog.mjs";
+import { compileRegistryItem } from "../app/kb/registry/compile.mjs";
+import { EQUIPMENT } from "../app/kb/registry/equipment.mjs";
+import { KINDS } from "../app/kb/registry/kinds.mjs";
+import { registrySearchInput } from "../app/kb/registry/search-inputs.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";
 
 /* The equipment kind (docs/REGISTRY.md): the instruments and labware the protocols list, held as one table with no page for an item,
@@ -123,7 +123,7 @@ test("a protocol's Equipment table is drawn from the registry beside the protoco
 });
 
 test("the compile refuses what a protocol may not say about equipment", async () => {
-  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const original = await text("content/procedures/phage-dna-extraction.md");

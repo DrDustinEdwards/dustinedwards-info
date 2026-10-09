@@ -18,9 +18,9 @@ import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { ID_PATTERN, registryPath, registrySlug } from "~/lib/registry/compile.mjs";
-import { KINDS, type KindSpec } from "~/lib/registry/kinds.mjs";
-import { saveRegistryItem } from "~/lib/registry/save.server";
+import { ID_PATTERN, registryPath, registrySlug } from "~/kb/registry/compile.mjs";
+import { KINDS, type KindSpec } from "~/kb/registry/kinds.mjs";
+import { saveRegistryItem } from "~/kb/registry/save.server";
 
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
 

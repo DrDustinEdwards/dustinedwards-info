@@ -7,7 +7,7 @@
 // a chromosome). A position is reported in the ACCESSION's own coordinates, so a region's offset is added back and a reader
 // can check it against the record at NCBI.
 
-import { parseFasta } from "../primers.mjs";
+import { parseFasta } from "../../lib/primers.mjs";
 
 /** The id a header names: an accession.version, and for a slice of a record its from-to span. */
 const HEADER = /^>?\s*([A-Z]{1,2}_?[0-9]+\.[0-9]+)(?::([0-9]+)-([0-9]+))?\s+(.*)$/;

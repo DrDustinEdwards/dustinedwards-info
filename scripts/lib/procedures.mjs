@@ -1,5 +1,5 @@
 // Every procedure file compiled the one way the operator API's save_procedure compiles it
-// (app/lib/procedures/compile.mjs), for build:content, sync:content and check:protocols.
+// (app/kb/procedures/compile.mjs), for build:content, sync:content and check:protocols.
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { imageSize } from "image-size";
 
 import * as pipeline from "../../app/lib/content/pipeline.mjs";
-import { compileProcedure } from "../../app/lib/procedures/compile.mjs";
+import { compileProcedure } from "../../app/kb/procedures/compile.mjs";
 import { registryHost } from "./registry.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");

@@ -2,7 +2,7 @@
 //
 // Dustin's protocol rule: primer sequences and reverse complements are handled by tested code and
 // diffed against the cited paper, never worked out by hand on a page. Melting temperature is not
-// computed here: the registry computes one under stated conditions (app/lib/registry/tm.mjs), because
+// computed here: the registry computes one under stated conditions (app/kb/registry/tm.mjs), because
 // the papers do not all give salt, primer and Mg2+ concentrations, so no paper's figure is comparable.
 //
 // COORDINATES are 1-based and inclusive, the way GenBank numbers a record, so a site or product

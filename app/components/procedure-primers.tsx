@@ -1,7 +1,7 @@
-import { productsForRows } from "~/lib/registry/align.mjs";
-import { primerFacts } from "~/lib/registry/primer.mjs";
-import { NEB_TM_CALCULATOR, tmStatement } from "~/lib/registry/tm.mjs";
-import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
+import { productsForRows } from "~/kb/registry/align.mjs";
+import { primerFacts } from "~/kb/registry/primer.mjs";
+import { NEB_TM_CALCULATOR, tmStatement } from "~/kb/registry/tm.mjs";
+import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 /**
  * The primers a protocol uses, drawn from the record, which carries the lab registry's facts about each (docs/REGISTRY.md):

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ProcedureSheet, ProcedureView } from "~/components/procedure";
 import { runTool } from "~/lib/operator/api.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 

@@ -10,7 +10,7 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
-import { readEquipment, readPrimers, readReagents, readStrains } from "~/lib/registry/host.server";
+import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";

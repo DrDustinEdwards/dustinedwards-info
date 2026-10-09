@@ -22,7 +22,7 @@ import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs"
 import { isMain } from "./lib/is-main.mjs";
 import { buildPhages, PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
 import { buildRegistry, REGISTRY_ARTIFACT_PATH } from "./lib/registry.mjs";
-import { registrySearchInputs } from "../app/lib/registry/search-inputs.mjs";
+import { registrySearchInputs } from "../app/kb/registry/search-inputs.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 import { buildRoster, ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";

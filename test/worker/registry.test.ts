@@ -5,15 +5,15 @@ import { registryHandlers } from "~/lib/carrel/registry-handler.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
-import { RegistryInvalid, saveRegistryItem } from "~/lib/registry/save.server";
+import { RegistryInvalid, saveRegistryItem } from "~/kb/registry/save.server";
 
 import { stubGitHub, type GitHubStub } from "./github-stub";
 
-/* The registry framework, end to end, with no real kind: the registry ships with none (app/lib/registry/kinds.mjs),
+/* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
  * reads and Carrel's handler to it. Each case starts from an empty registry table and a repository ahead of it. */
 
-vi.mock("~/lib/registry/kinds.mjs", () => ({
+vi.mock("~/kb/registry/kinds.mjs", () => ({
   KINDS: Object.freeze({
     widget: {
       singular: "widget",

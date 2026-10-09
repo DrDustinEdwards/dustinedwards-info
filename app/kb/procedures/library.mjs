@@ -5,7 +5,7 @@
 
 import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
-import { TOOLS } from "../phage-tools.mjs";
+import { TOOLS } from "../../lib/phage-tools.mjs";
 import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, NON_STRAIN_ORGANISMS, organismLabel, rememberOrganisms } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };

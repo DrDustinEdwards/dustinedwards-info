@@ -15,8 +15,8 @@ import {
   registrySetErrors,
   registrySlug,
   sortRegistry,
-} from "../app/lib/registry/compile.mjs";
-import { KINDS } from "../app/lib/registry/kinds.mjs";
+} from "../app/kb/registry/compile.mjs";
+import { KINDS } from "../app/kb/registry/kinds.mjs";
 import { registryDriftVerdict } from "../app/lib/health/verdicts.mjs";
 import { buildRegistry, compileAllRegistry } from "../scripts/lib/registry.mjs";
 

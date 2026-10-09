@@ -3,8 +3,8 @@ import { data } from "react-router";
 import { ProcedureSheet } from "~/components/procedure";
 import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
-import { sheetAddress } from "~/lib/procedures/cite.mjs";
-import { PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
+import { sheetAddress } from "~/kb/procedures/cite.mjs";
+import { PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
 import { SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure.version.sheet";

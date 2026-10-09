@@ -5,7 +5,7 @@ import test from "node:test";
 import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { reagentSource } from "../app/lib/procedures/render.mjs";
+import { reagentSource } from "../app/kb/procedures/render.mjs";
 import {
   REAGENTS,
   hasItemPage,
@@ -17,11 +17,11 @@ import {
   reagentRows,
   reagentUses,
   reagentsMarkdown,
-} from "../app/lib/registry/catalog.mjs";
-import { compileRegistryItem, registrySetErrors } from "../app/lib/registry/compile.mjs";
-import { KINDS } from "../app/lib/registry/kinds.mjs";
-import { REAGENT } from "../app/lib/registry/reagent.mjs";
-import { registrySearchInput } from "../app/lib/registry/search-inputs.mjs";
+} from "../app/kb/registry/catalog.mjs";
+import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
+import { KINDS } from "../app/kb/registry/kinds.mjs";
+import { REAGENT } from "../app/kb/registry/reagent.mjs";
+import { registrySearchInput } from "../app/kb/registry/search-inputs.mjs";
 import { buildRegistry, repoHost } from "../scripts/lib/registry.mjs";
 
 /* The reagent kind (docs/REGISTRY.md): the substances the lab's protocols use, held as one table with no page for an item; what a
@@ -183,7 +183,7 @@ test("STORED ONCE: no protocol types a reagent's catalog number or product page,
 });
 
 test("the compile refuses what a protocol may not say about a reagent", async () => {
-  const { compileProcedure } = await import("../app/lib/procedures/compile.mjs");
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const original = await text("content/procedures/coi-primers.md");

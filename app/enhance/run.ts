@@ -19,7 +19,7 @@ import {
   toggleDone,
   type Run,
   type StepTimer,
-} from "~/lib/procedures/run.mjs";
+} from "~/kb/procedures/run.mjs";
 
 /*
  * Run mode (docs/PROCEDURES.md): a procedure page, worked at the bench. The page is complete as served; this adds,

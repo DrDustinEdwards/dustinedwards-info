@@ -1,4 +1,4 @@
-import type { resolveProof } from "~/lib/procedures/proof.mjs";
+import type { resolveProof } from "~/kb/procedures/proof.mjs";
 
 /**
  * Proof of use: the papers that used the method and the phages it produced, as the protocol's file states them, with the

@@ -8,8 +8,8 @@
 
 import { defineCatalog } from "capsomer/behaviour/catalog";
 
-import { HOSTS } from "../phages/compile.mjs";
-import { reverseComplement } from "../primers.mjs";
+import { HOSTS } from "../../lib/phages/compile.mjs";
+import { reverseComplement } from "../../lib/primers.mjs";
 import { KINDS } from "./kinds.mjs";
 import { MAX_MISMATCHES, pairProducts, placePrimer } from "./align.mjs";
 import { missingReason, primerFacts, stated } from "./primer.mjs";

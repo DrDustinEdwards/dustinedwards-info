@@ -1,17 +1,17 @@
 // Every registry file compiled the one way the Carrel adapter's registry save compiles it
-// (app/lib/registry/compile.mjs), for build:content, sync:content, the gates and the tests.
+// (app/kb/registry/compile.mjs), for build:content, sync:content, the gates and the tests.
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
-import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/lib/registry/compile.mjs";
-import { KINDS } from "../../app/lib/registry/kinds.mjs";
-import { storedPrimer } from "../../app/lib/registry/primer.mjs";
-import { storedEquipment } from "../../app/lib/registry/equipment.mjs";
-import { storedReagent } from "../../app/lib/registry/reagent.mjs";
-import { storedStrain } from "../../app/lib/registry/strain.mjs";
+import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/kb/registry/compile.mjs";
+import { KINDS } from "../../app/kb/registry/kinds.mjs";
+import { storedPrimer } from "../../app/kb/registry/primer.mjs";
+import { storedEquipment } from "../../app/kb/registry/equipment.mjs";
+import { storedReagent } from "../../app/kb/registry/reagent.mjs";
+import { storedStrain } from "../../app/kb/registry/strain.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -57,7 +57,7 @@ async function namesIn(dir) {
  * errors, never skipped: the caller decides what that means. A directory that is not a kind is an error too, so a
  * misspelt kind cannot hide its files.
  *
- * @param {{ host?: import("../../app/lib/registry/kinds.mjs").RegistryHost, kinds?: Readonly<Record<string, import("../../app/lib/registry/kinds.mjs").KindSpec>>, root?: string }} [options]
+ * @param {{ host?: import("../../app/kb/registry/kinds.mjs").RegistryHost, kinds?: Readonly<Record<string, import("../../app/kb/registry/kinds.mjs").KindSpec>>, root?: string }} [options]
  */
 export async function compileAllRegistry(options = {}) {
   const host = options.host ?? repoHost;
@@ -126,13 +126,13 @@ export async function buildRegistry(options = {}) {
  * @param {Parameters<typeof buildRegistry>[0]} [options]
  */
 export function registryHost(options) {
-  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredPrimer>> | undefined} */
+  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredPrimer>> | undefined} */
   let primers;
-  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredStrain>> | undefined} */
+  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredStrain>> | undefined} */
   let strains;
-  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredReagent>> | undefined} */
+  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredReagent>> | undefined} */
   let reagents;
-  /** @type {Promise<Map<string, import("../../app/lib/procedures/render.mjs").StoredEquipment>> | undefined} */
+  /** @type {Promise<Map<string, import("../../app/kb/procedures/render.mjs").StoredEquipment>> | undefined} */
   let equipment;
   return {
     /** @param {string[]} ids */

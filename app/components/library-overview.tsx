@@ -1,4 +1,4 @@
-import { countOf, overviewSentence, type libraryOverview } from "~/lib/procedures/library.mjs";
+import { countOf, overviewSentence, type libraryOverview } from "~/kb/procedures/library.mjs";
 
 /**
  * The library's overview (docs/PROCEDURES.md): its counts, the phage workflow and a tile for each method, all

@@ -23,9 +23,9 @@ import {
   toolLink,
   libraryRecords,
   stepCount,
-} from "../app/lib/procedures/library.mjs";
+} from "../app/kb/procedures/library.mjs";
 
-/* The protocol library's pure half (app/lib/procedures/library.mjs): what a row is made of, how the catalog counts
+/* The protocol library's pure half (app/kb/procedures/library.mjs): what a row is made of, how the catalog counts
  * and filters it, and what the downloads and the twin say. Records here are minimal; the real ones come from D1. */
 
 /** @param {Record<string, unknown>} over */

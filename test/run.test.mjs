@@ -21,9 +21,9 @@ import {
   timerMs,
   timerRemaining,
   toggleDone,
-} from "../app/lib/procedures/run.mjs";
+} from "../app/kb/procedures/run.mjs";
 
-/* Run mode's pure half (app/lib/procedures/run.mjs): what a bench run is, how its timers count, and what the saved
+/* Run mode's pure half (app/kb/procedures/run.mjs): what a bench run is, how its timers count, and what the saved
  * record says. No clock, storage or DOM is read, so each case passes `now` in. */
 
 const T0 = Date.UTC(2026, 9, 3, 15, 0, 0);

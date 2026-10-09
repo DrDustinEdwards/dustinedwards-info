@@ -5,9 +5,9 @@
 
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { readFile } from "~/lib/editor/github.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
-import type { StoredEquipment, StoredPrimer, StoredReagent, StoredStrain } from "~/lib/procedures/render.mjs";
+import type { StoredEquipment, StoredPrimer, StoredReagent, StoredStrain } from "~/kb/procedures/render.mjs";
 
 import { compileRegistryItem, registryPath, registrySlug } from "./compile.mjs";
 import { KINDS, type KindSpec } from "./kinds.mjs";

@@ -12,8 +12,8 @@ import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { parseProcedure, procedurePath } from "~/lib/procedures/parse.mjs";
-import { saveProcedure } from "~/lib/procedures/save.server";
+import { parseProcedure, procedurePath } from "~/kb/procedures/parse.mjs";
+import { saveProcedure } from "~/kb/procedures/save.server";
 
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
 

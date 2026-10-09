@@ -16,8 +16,8 @@ import { tagPath } from "~/lib/tag-path.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/lib/registry/catalog.mjs";
-import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
+import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
+import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { sitemapDocument } from "@drdustinedwards/site-helpers/sitemap";
 import type { Route } from "./+types/sitemap";
 

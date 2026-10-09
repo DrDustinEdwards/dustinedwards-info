@@ -21,7 +21,7 @@ sequence: ...        # then the fields the kind declares, and no others
 ---
 ```
 
-- `<kind>` is a key of `KINDS` in `app/lib/registry/kinds.mjs`. A directory under `content/registry/` that is not a kind
+- `<kind>` is a key of `KINDS` in `app/kb/registry/kinds.mjs`. A directory under `content/registry/` that is not a kind
   fails the build.
 - `<id>` is lower-case letters, digits and hyphens (`ID_PATTERN`), at most 63 characters. It is the item's address,
   `<kind>/<id>`, and a URL segment as written.
@@ -58,7 +58,7 @@ one of them with no change to them.
 
 ## The primer kind
 
-`app/lib/registry/primer.mjs`, twelve records in `content/registry/primer/`, each stating only what the lab's protocols state:
+`app/kb/registry/primer.mjs`, twelve records in `content/registry/primer/`, each stating only what the lab's protocols state:
 `sequence` (as stored, upper-case IUPAC), `direction`, `target`, `set`, `reference` (the GenBank accession it is placed on, a
 file in `data/references/`), and what the literature says: `published_in` (citation), `published_doi` or `published_url`,
 `published_name` (the paper's own name for the primer), `published_sequence` (as the paper prints it) and, on a forward primer
@@ -70,7 +70,7 @@ lists the phages by reading their own table and never copying a row. Every regis
 plus `.md`.
 
 **Computed, never stored:** length, GC content, reverse complement, Tm, GenBank positions, a pair's product size, and the
-protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/lib/registry/tm.mjs`) is the
+protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/kb/registry/tm.mjs`) is the
 SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
 it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
 ambiguity code. It is labelled an estimate for comparing primers (protocols.md, 2026-10-04), every primer page links NEB's Tm
@@ -80,14 +80,14 @@ Calculator for the polymerase-specific annealing temperature, and no page presen
 
 A protocol's `primers` is a list of `{ primer: <id> }` and nothing else: a primer's sequence, direction and set are stored once,
 in the registry, and the protocol file and its body hold none (`test/registry-primers.test.mjs` fails if one appears). The
-procedure compile (`app/lib/procedures/compile.mjs`) reads the named primers from the repository (the Worker through
-`app/lib/registry/host.server.ts`, Node through `scripts/lib/registry.mjs`), refuses an id the registry does not hold, a primer
+procedure compile (`app/kb/procedures/compile.mjs`) reads the named primers from the repository (the Worker through
+`app/kb/registry/host.server.ts`, Node through `scripts/lib/registry.mjs`), refuses an id the registry does not hold, a primer
 listed twice, a draft primer in a published protocol and any other field, and bakes the registry's facts into the protocol's
 record. So the page's Primers section, the bench sheet, the markdown twin, the search record and a frozen version all print one
 sequence, and a version freezes the sequence it was published with.
 
 A record derived from another store has to follow it: a registry save and `sync_registry` recompile every protocol that names
-the changed primer from its file and rewrite its row (`app/lib/procedures/primer-dependents.server.ts`), and `sync:content` at
+the changed primer from its file and rewrite its row (`app/kb/procedures/primer-dependents.server.ts`), and `sync:content` at
 ship rewrites them all. A protocol that no longer compiles with the change (the primer was deleted or made a draft) stops the
 save with an error that names it. Known gap: a registry primer edited through git is not seen as drift on the protocol until
 `sync_registry` or the next ship runs, because the protocol's own file did not change.
@@ -96,7 +96,7 @@ save with an error that names it. Known gap: a registry primer edited through gi
 
 `data/references/*.fasta` are NCBI's own FASTA records, header kept (a slice is `ACCESSION.v:from-to`, and positions are
 reported in the accession's own coordinates). `npm run build:references` generates the gitignored
-`app/lib/registry/references.generated.mjs` from them (`build:content` and `postinstall` run it). `app/lib/registry/align.mjs`
+`app/kb/registry/references.generated.mjs` from them (`build:content` and `postinstall` run it). `app/kb/registry/align.mjs`
 places a primer on its reference with the existing site finder (`app/lib/primers.mjs`): the fewest mismatches first, up to
 `MAX_MISMATCHES`, each reported, never absorbed; `pairProducts` gives each product from the forward primer's 5' end to the
 reverse primer's 5' end (a pair that binds twice, as the two LTRs of a provirus do, makes a product at each site). A reference
@@ -108,7 +108,7 @@ reported to the seat.
 
 ### Search
 
-A published item has its own search record (`app/lib/registry/search-inputs.mjs`): its name, sequence and reverse complement,
+A published item has its own search record (`app/kb/registry/search-inputs.mjs`): its name, sequence and reverse complement,
 target, reference, positions and the paper that prints it, so a sequence search finds the primer's page as well as the
 protocols that use it. A save and `sync_registry` write it with the row, in one batch; `build:content` writes the same records
 into the search artifact; a draft has none and a deleted item loses its own (`test/worker/registry-search.test.ts`). A strain's
@@ -116,7 +116,7 @@ record is its name, organism, designation, collection and collection number.
 
 ## The strain kind
 
-`app/lib/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
+`app/kb/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
 stating only what the lab's own pages state: `organism`, `strain` (the lab's designation where there is one apart from the
 collection's number, `mc²155`), `collection` and `collection_number` (`ATCC 700084`, `NRRL B-24224`), `guide_url` (the
 SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, his word of 2026-10-05, decisions.md) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
@@ -130,7 +130,7 @@ key, with their years), the protocols that use it (read from the protocols' own 
 A protocol names its host strains as `host_strain: [{ strain: <id> }]`, as it names primers, and types none: the compile reads the
 strains from the repository into the record (`hostStrains`, and `hostStrain` as their names), so the page links each strain,
 the twin links it, and a frozen version names the strain it was published with. A registry save and `sync_registry` recompile
-every protocol that names the changed strain (`app/lib/procedures/primer-dependents.server.ts`, now for both kinds). A free-text
+every protocol that names the changed strain (`app/kb/procedures/primer-dependents.server.ts`, now for both kinds). A free-text
 strain, a strain listed twice, an extra field and an id the registry does not hold are each refused, and a draft strain cannot be
 named by a published protocol (`test/registry-strains.test.mjs`, `test/worker/procedure-strains.test.ts`).
 A protocol's `organism` ids are read from the registry the same way: an id is a strain of the registry or one of the few non-strain
@@ -143,7 +143,7 @@ an organism. The pages that name the hosts link the strain records and type no d
 
 ## The reagent kind
 
-`app/lib/registry/reagent.mjs`, sixteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
+`app/kb/registry/reagent.mjs`, sixteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
 from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). **A reagent has no
 page of its own** (`itemPages: false` on the kind): the reagents are one table at `/research/lab/reagents`, which is the library's
 Reagents tab, with a markdown twin at `/research/lab/reagents.md`. The table has the name (with its abbreviation or contents beside it
@@ -172,7 +172,7 @@ ladder is a reagent (Dustin's ruling): it is a material of the three PCR protoco
 
 ## The equipment kind
 
-`app/lib/registry/equipment.mjs`, eleven records in `content/registry/equipment/`: the instruments and labware the lab's protocols list
+`app/kb/registry/equipment.mjs`, eleven records in `content/registry/equipment/`: the instruments and labware the lab's protocols list
 under Equipment (microcentrifuge, microcentrifuge tubes, heat block, NanoDrop, Qubit 3.0, water bath, plate incubator, shaking incubator,
 tube-top vacuum filter unit, pipettor, light box). Like the reagents it is **one table with no page for an item** (`itemPages: false`): the
 library's Equipment tab at `/research/lab/equipment`, with a twin at `/research/lab/equipment.md`, no item page, twin, search record or
@@ -196,16 +196,16 @@ changed item (`test/registry-equipment.test.mjs`, `test/worker/lab.test.ts`, `te
 
 | Piece | File |
 | --- | --- |
-| The one compile door (parse, validate, hash) | `app/lib/registry/compile.mjs`, with the kinds in `kinds.mjs` |
-| The save: validate, policy, commit, row, purge | `app/lib/registry/save.server.ts` (`saveRegistryItem`) |
+| The one compile door (parse, validate, hash) | `app/kb/registry/compile.mjs`, with the kinds in `kinds.mjs` |
+| The save: validate, policy, commit, row, purge | `app/kb/registry/save.server.ts` (`saveRegistryItem`) |
 | Reads | `app/db/registry.ts` |
 | Carrel: one handler per kind, id `<kind>.<id>` | `app/lib/carrel/registry-handler.server.ts` |
 | Operator: `sync_registry`, `list_registry`, `get_registry` | `app/lib/operator/` |
 | Drift: the `registry-drift` check, repaired by `sync_registry` | `app/lib/health/` |
 | Build and sync | `scripts/lib/registry.mjs`, `build:content` (writes `content/generated/registry.json`), `sync:content` |
 | The check | `check:content` compiles every file with the save's own validator |
-| Cache tag a write purges | `registry` (`app/lib/registry/route.ts`); the pages also carry the content pages' and procedures' tags |
-| Pages | `app/routes/lab.tsx`, `lab.kind.tsx` and the twin `lab[.md].ts`, drawn by `app/components/lab.tsx` from `app/lib/registry/catalog.mjs` |
+| Cache tag a write purges | `registry` (`app/kb/registry/route.ts`); the pages also carry the content pages' and procedures' tags |
+| Pages | `app/routes/lab.tsx`, `lab.kind.tsx` and the twin `lab[.md].ts`, drawn by `app/components/lab.tsx` from `app/kb/registry/catalog.mjs` |
 
 ### Syncing an empty registry
 

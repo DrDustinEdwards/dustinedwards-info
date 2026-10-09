@@ -1,8 +1,8 @@
-import type { workflowContext } from "~/lib/procedures/library.mjs";
+import type { workflowContext } from "~/kb/procedures/library.mjs";
 
 /**
  * Where a protocol sits in the phage workflow: the stage, the protocols before and after it, and the calculators used at
- * that stage. Drawn from the same context the markdown twin lists (app/lib/procedures/library.mjs), as plain links, so it
+ * that stage. Drawn from the same context the markdown twin lists (app/kb/procedures/library.mjs), as plain links, so it
  * works with no script. Nothing renders for a protocol outside the workflow.
  */
 export function ProtocolWorkflow({ context }: { context: ReturnType<typeof workflowContext> }) {

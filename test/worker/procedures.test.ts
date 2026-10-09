@@ -4,13 +4,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ProcedureSheet, ProcedureView } from "~/components/procedure";
-import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
+import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 
 import { runTool } from "~/lib/operator/api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
-import { procedureSearchUid } from "~/lib/procedures/render.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
+import { procedureSearchUid } from "~/kb/procedures/render.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-import { MAX_MISMATCHES, pairProducts, placePrimer, productsForRows } from "../app/lib/registry/align.mjs";
-import { accessionPosition, parseReference } from "../app/lib/registry/reference.mjs";
-import { REFERENCES } from "../app/lib/registry/references.generated.mjs";
+import { MAX_MISMATCHES, pairProducts, placePrimer, productsForRows } from "../app/kb/registry/align.mjs";
+import { accessionPosition, parseReference } from "../app/kb/registry/reference.mjs";
+import { REFERENCES } from "../app/kb/registry/references.generated.mjs";
 import { readReferences, referenceFile, referencesModule } from "../scripts/lib/references.mjs";
 
 /* Placing a primer on a reference and computing a pair's product (docs/REGISTRY.md). The cases are worked by hand on
@@ -109,5 +109,5 @@ test("the real references are the records they name, kept as NCBI wrote them, an
     assert.ok(id, `${name} is a reference file`);
     assert.ok(readFileSync(new URL(`../data/references/${name}`, import.meta.url), "utf8").startsWith(">"), `${name} keeps NCBI's header`);
   }
-  assert.equal(readFileSync(new URL("../app/lib/registry/references.generated.mjs", import.meta.url), "utf8"), referencesModule(read), "the module is what the files generate");
+  assert.equal(readFileSync(new URL("../app/kb/registry/references.generated.mjs", import.meta.url), "utf8"), referencesModule(read), "the module is what the files generate");
 });

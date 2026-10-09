@@ -30,7 +30,7 @@ function walk(dir) {
 const posix = (/** @type {string} */ path) => relative(root, path).replaceAll("\\", "/");
 
 /**
- * Every app/lib module a node:test file imports and that needs no Workers runtime, with the files that import it.
+ * Every app/lib and app/kb module a node:test file imports and that needs no Workers runtime, with the files that import it.
  * A module that imports `cloudflare:` cannot run under `node --test`, so it is not mutated here.
  * @returns {Map<string, string[]>}
  */
@@ -39,10 +39,11 @@ function discover() {
     .filter((file) => file.endsWith(".test.mjs"))
     .map((file) => ({ file: posix(file), source: readFileSync(file, "utf8") }));
   const map = new Map();
-  for (const file of walk(join(root, "app", "lib")).map(posix).filter((f) => f.endsWith(".mjs") && !f.endsWith(".generated.mjs"))) {
+  const modules = ["lib", "kb"].flatMap((dir) => walk(join(root, "app", dir)).map(posix));
+  for (const file of modules.filter((f) => f.endsWith(".mjs") && !f.endsWith(".generated.mjs"))) {
     if (/from\s+["']cloudflare:/.test(readFileSync(join(root, file), "utf8"))) continue;
-    const rel = file.slice("app/lib/".length);
-    const importer = new RegExp(`from\\s+["'](?:(?:\\.\\./)+app/lib/|~/lib/)${rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`);
+    const rel = file.slice("app/".length);
+    const importer = new RegExp(`from\\s+["'](?:(?:\\.\\./)+app/|~/)${rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`);
     const covering = tests.filter((test) => importer.test(test.source)).map((test) => test.file);
     if (covering.length > 0) map.set(file, covering);
   }

@@ -92,7 +92,7 @@ Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`
 An `equipment` entry is a string, or `{ name, note, equipment }`: `equipment: <id>` names an item of the lab registry (docs/REGISTRY.md), whose
 manufacturer and rotor are stored there once and drawn into the protocol's Equipment table beside the protocol's own words for it.
 
-What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
+What the protocol library filters and lists by (`app/kb/procedures/taxonomy.mjs`):
 
 - `method` (required): a list of ids from the closed list: `pcr`, `plating`, `culture`, `extraction`,
   `sequencing`, `annotation`, `media`, `microscopy`. A procedure that is some of two methods lists both.
@@ -114,7 +114,7 @@ What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs
   ```
 
   The file holds slugs only; the page and the twin read each paper's title and each phage's name from their rows
-  (`app/lib/procedures/proof.server.ts`), so a corrected title reaches every protocol that names the paper. The section
+  (`app/kb/procedures/proof.server.ts`), so a corrected title reaches every protocol that names the paper. The section
   appears only when the field is filled; `check:protocols` refuses a slug with no file.
 
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
@@ -159,7 +159,7 @@ history:
 
 The first entry must be the current version, so a version is written once; dates may not rise going down the list. The
 page draws "Version history" from it, each version linked to its frozen copy, and, for any assigned version, "Cite this
-procedure": a citation line and BibTeX, derived in `app/lib/procedures/cite.mjs`. A procedure with no version has
+procedure": a citation line and BibTeX, derived in `app/kb/procedures/cite.mjs`. A procedure with no version has
 nothing to cite and draws neither. The DOI of a version is written once, on its history entry. A citation points at the
 version's DOI once it has one, and until then at the version's frozen copy.
 
@@ -187,7 +187,7 @@ page, so the copies never compete with it in search.
 ### The printed sheet
 
 `<page>/sheet` is the method without the reasoning, compact enough to print and work from. Its head carries the version id
-and the version's date, and a QR code beside them (`app/lib/procedures/qr.mjs`: an inline SVG drawn on the server, black on
+and the version's date, and a QR code beside them (`app/kb/procedures/qr.mjs`: an inline SVG drawn on the server, black on
 white, so it needs no script). The code opens the frozen copy of that version, `<page>/v/<version>`, so a sheet printed now
 still opens the words it was printed from after the page has moved on (`sheetAddress` in `cite.mjs`). A frozen version has
 its own sheet at `<page>/v/<version>/sheet`, drawn from the copy, so a sheet reprinted from an old version says, and links
@@ -217,7 +217,7 @@ twin links each one. The ids are checked against `TOOLS`; the cases are `test/pr
 published protocol in Capsomer's catalog, then the page's sections. The rows are the procedure records in D1, so a
 protocol saved is listed at the next request with no deploy, and no second list of protocols exists to keep.
 
-- **Fields are declared once** in `app/lib/procedures/library.mjs` (`LIBRARY`): the search box and its weights, the
+- **Fields are declared once** in `app/kb/procedures/library.mjs` (`LIBRARY`): the search box and its weights, the
   facets (method, organism, target, course), the columns, the sort menu, the CSV and JSON and the twin's table all read
   it. A new thing to filter by is one entry there, and a new method, organism or course is one entry in `taxonomy.mjs`.
 - **The key fact is computed**, never typed: the protocol's targets, else its total time (`keyFact`). A computed value
@@ -284,7 +284,7 @@ for a person working it at the bench, on a phone:
   the only copy.
 
 The pure half (what a run is, how timers count, the record and its Markdown, and parsing a stored run, which accepts
-only the shape this module writes) is `app/lib/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
+only the shape this module writes) is `app/kb/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
 behaviour is the run-mode case of `check:browser`.
 
 ## Where it goes

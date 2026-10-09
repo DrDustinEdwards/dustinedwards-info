@@ -313,7 +313,7 @@ export type Webmention = typeof webmentions.$inferSelect;
 
 /**
  * Procedures (drizzle/0019_procedures.sql, docs/PROCEDURES.md): derived from content/procedures/*.md by
- * app/lib/procedures/compile.mjs. `record` is the rendered procedure as JSON and `markdown` its twin.
+ * app/kb/procedures/compile.mjs. `record` is the rendered procedure as JSON and `markdown` its twin.
  */
 export const procedures = sqliteTable(
   "procedures",
@@ -533,7 +533,7 @@ export const phages = sqliteTable(
 
 // The lab registry: the primers, strains, reagents and equipment of docs/REGISTRY.md. Derived from
 // content/registry/<kind>/<id>.md, one row per item, written only by writeRegistryRow
-// (app/lib/registry/save.server.ts) and sync:content. The shared columns are what every kind has; `record` is the item
+// (app/kb/registry/save.server.ts) and sync:content. The shared columns are what every kind has; `record` is the item
 // as JSON, validated by its kind's own rules.
 export const registry = sqliteTable(
   "registry",

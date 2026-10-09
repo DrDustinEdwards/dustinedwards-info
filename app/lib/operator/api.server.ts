@@ -46,8 +46,8 @@ import { listPublicationIdentities, listPublishedPublications } from "~/db/publi
 import { refreshCitations } from "~/lib/citations.server";
 import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
-import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { ProcedureInvalid, readProcedure, saveProcedure } from "~/kb/procedures/save.server";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { listCvRows } from "~/db/cv";
 import { listPageRows } from "~/db/pages";
 import { CvInvalid, readCvFile } from "~/lib/cv/save.server";
@@ -58,9 +58,9 @@ import { readLlms } from "~/lib/llms/save.server";
 import { listPhageRows } from "~/db/phages";
 import { PHAGE_SLUG, readPhage } from "~/lib/phages/save.server";
 import { listRegistryRows } from "~/db/registry";
-import { parseRegistrySlug } from "~/lib/registry/compile.mjs";
-import { KINDS } from "~/lib/registry/kinds.mjs";
-import { readRegistryItem } from "~/lib/registry/save.server";
+import { parseRegistrySlug } from "~/kb/registry/compile.mjs";
+import { KINDS } from "~/kb/registry/kinds.mjs";
+import { readRegistryItem } from "~/kb/registry/save.server";
 import { listRosterRows } from "~/db/roster";
 import { COHORT_SLUG, readRoster } from "~/lib/roster/save.server";
 

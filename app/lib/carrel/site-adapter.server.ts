@@ -328,7 +328,7 @@ export function carrelSiteAdapter(options: {
     rosterHandler(env),
     phageHandler(env),
     procedureHandler(env),
-    // One per registry kind (app/lib/registry/kinds.mjs); none until a kind is defined.
+    // One per registry kind (app/kb/registry/kinds.mjs); none until a kind is defined.
     ...registryHandlers(env),
   ]);
 

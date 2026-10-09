@@ -7,7 +7,7 @@
 // Coordinates are the accession's own: a slice of a chromosome (`NC_052532.1:76902320-76906237`) is reported on the
 // chromosome, so a reader can check a position against the record at NCBI.
 
-import { amplicons, findSites } from "../primers.mjs";
+import { amplicons, findSites } from "../../lib/primers.mjs";
 import { accessionPosition, parseReference } from "./reference.mjs";
 import { REFERENCES } from "./references.generated.mjs";
 
@@ -49,7 +49,7 @@ function parseReferenceShape(entry) {
   return entry;
 }
 
-/** @param {Reference} reference @param {import("../primers.mjs").Site} site @returns {Placed} */
+/** @param {Reference} reference @param {import("../../lib/primers.mjs").Site} site @returns {Placed} */
 function placed(reference, site) {
   return {
     strand: site.strand,

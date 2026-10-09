@@ -8,9 +8,9 @@ import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { versionPath } from "~/lib/procedures/cite.mjs";
-import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
-import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
+import { versionPath } from "~/kb/procedures/cite.mjs";
+import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
+import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure.version";

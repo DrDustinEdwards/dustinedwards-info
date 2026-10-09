@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { citeFacts, zenodoMetadata } from "../app/lib/procedures/cite.mjs";
+import { citeFacts, zenodoMetadata } from "../app/kb/procedures/cite.mjs";
 import { compileDirectory, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
 
 // The origin is read out of seo.ts as the machine-readable gate does, so it is stored once.

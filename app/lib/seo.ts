@@ -185,7 +185,7 @@ export function cacheTags(slug?: string): string {
 /**
  * The tags of a document that lists both posts and procedures (the sitemap), in the comma-list
  * `cacheTags()` uses. `purgePosts` and `purgeProcedures` each reach it. The literal is the one
- * `PROCEDURES_CACHE_TAG` names (app/lib/procedures/route.ts); test/worker/cache-tags.test.ts pins both.
+ * `PROCEDURES_CACHE_TAG` names (app/kb/procedures/route.ts); test/worker/cache-tags.test.ts pins both.
  */
 export const POSTS_AND_PROCEDURES_CACHE_TAGS = `${cacheTags()},procedures`;
 

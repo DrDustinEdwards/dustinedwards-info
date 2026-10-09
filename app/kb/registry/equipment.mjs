@@ -30,7 +30,7 @@ export const EQUIPMENT = {
 };
 
 /**
- * An equipment item as a protocol carries it (`StoredEquipment` in app/lib/procedures/render.mjs): the registry's stated facts, none
+ * An equipment item as a protocol carries it (`StoredEquipment` in app/kb/procedures/render.mjs): the registry's stated facts, none
  * computed, so the protocol's Equipment table, twin and frozen versions say who makes each as it was when the protocol was published.
  * `rotorGap` is whether a rotor is recorded as missing, so a centrifuge's table says so rather than leaving it blank.
  *

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runTool } from "~/lib/operator/api.server";
-import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedurePath } from "~/kb/procedures/parse.mjs";
 import SheetRoute, { loader as sheetLoader } from "~/routes/procedure.sheet";
 import VersionSheetRoute, { loader as versionSheetLoader } from "~/routes/procedure.version.sheet";
 

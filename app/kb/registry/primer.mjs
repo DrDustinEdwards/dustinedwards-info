@@ -132,7 +132,7 @@ export function missingReason(value) {
 }
 
 /**
- * A primer as a protocol carries it (`StoredPrimer` in app/lib/procedures/render.mjs): the registry's stated facts, none
+ * A primer as a protocol carries it (`StoredPrimer` in app/kb/procedures/render.mjs): the registry's stated facts, none
  * computed. The protocol's record holds these so its page, sheet, twin and frozen versions print one sequence, and a pair's
  * product is computed from them where it is shown.
  *
