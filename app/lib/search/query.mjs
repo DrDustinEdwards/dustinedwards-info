@@ -10,6 +10,7 @@ export { RRF_K, fuse, toMatchExpression } from "@drdustinedwards/site-helpers";
  * @property {string[]} phrases quoted runs, matched as phrases
  * @property {string[]} tags from `tag:` operators and the ?tag= parameter
  * @property {string[]} types from `type:` operators and the ?type= parameter
+ * @property {string[]} bases from `base:` operators and the ?base= parameter: a knowledge base's id (app/kb/search-bases.mjs)
  * @property {number | null} year a bare four-digit year inside the corpus range
  * @property {boolean} isEmpty true when there is nothing to match on
  */
@@ -50,12 +51,16 @@ export function parseQuery(input, options = {}) {
   const tags = [];
   /** @type {string[]} */
   const types = [];
+  /** @type {string[]} */
+  const bases = [];
   rest = rest.replace(
-    /\b(tag|type):([^\s]+)/gi,
+    /\b(tag|type|base):([^\s]+)/gi,
     (/** @type {string} */ _m, /** @type {string} */ field, /** @type {string} */ value) => {
       const clean = value.trim().toLowerCase();
       if (clean) {
-        if (field.toLowerCase() === "tag") tags.push(clean);
+        const f = field.toLowerCase();
+        if (f === "tag") tags.push(clean);
+        else if (f === "base") bases.push(clean);
         else types.push(clean);
       }
       return " ";
@@ -85,6 +90,7 @@ export function parseQuery(input, options = {}) {
     phrases,
     tags,
     types,
+    bases,
     year,
     isEmpty: terms.length === 0 && phrases.length === 0,
   };
@@ -97,5 +103,5 @@ export function parseQuery(input, options = {}) {
  * @returns {boolean}
  */
 export function hasFilters(parsed) {
-  return parsed.tags.length > 0 || parsed.types.length > 0 || parsed.year !== null;
+  return parsed.tags.length > 0 || parsed.types.length > 0 || parsed.bases.length > 0 || parsed.year !== null;
 }
