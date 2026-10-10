@@ -19,12 +19,21 @@
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.2.0-alpha.10",
     "typescript": "^6.0.3",
-    "wrangler": "4.129.0"
+    "wrangler": "4.149.0"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "0.10.3",
     "@modelcontextprotocol/server": "^2.0.0",
     "agents": "^0.20.1",
     "zod": "^4.4.3"
+  },
+  "overrides": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/client": "2.3.1"
+  },
+  "allowScripts": {
+    "core-js-pure": false,
+    "esbuild": false,
+    "workerd": false
   }
 }

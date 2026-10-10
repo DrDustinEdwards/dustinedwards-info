@@ -174,6 +174,27 @@ HTTP. Read it with `wrangler kv` through the Cloudflare API. This also means
 there is no probe credential to exist or leak. Do not add an HTTP control
 endpoint back.
 
+## Dependencies and `npm audit`
+
+Triaged 2026-10-10 (12 findings, 1 critical, 8 high, 3 moderate). The Worker bundle holds
+only zod, `@modelcontextprotocol/server` and its core, `@cfworker/json-schema`, the
+`agents/mcp/server` subpath, workers-oauth-provider and content-type. None of the
+vulnerable packages is in it (check `dist/index.js.map` sources after `npm run build`), so
+none was reachable in production; all were dev or install-time only.
+
+- wrangler 4.129.0 to 4.149.0 clears miniflare, sharp and undici (the local dev runtime).
+- hono, fast-uri, ip-address, proxy-addr and qs came in through the conformance suite's and
+  `agents`' copy of `@modelcontextprotocol/sdk` (an express server the Worker never loads);
+  `npm audit fix` moved them inside their ranges.
+- `agents` pins that SDK and `@modelcontextprotocol/client` exactly, and npm's own "fix" is a
+  downgrade of `agents`, so `overrides` raise the two to the patched versions. Drop the
+  overrides when `agents` pins patched ones.
+
+Install scripts: core-js-pure (a funding banner), esbuild and workerd (both only link the
+platform binary a bundled optional package already carries) are denied in `allowScripts`.
+typecheck, check:wrapper, test, build and check:conformance all pass with every install
+script off, so none is approved. Add one to `allowScripts` only when a gate shows it needed.
+
 ## Not advertised
 
 Absent from `llms.txt`, the sitemap and every public affordance. An authenticated
