@@ -44,12 +44,17 @@ if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
 }
 
 /*
- * The target: the site (no argument), or `mcp`, the admin MCP Worker in mcp/ (`npm run ship:mcp`).
+ * The target: the site (no argument), `mcp`, the admin MCP Worker in mcp/ (`npm run ship:mcp`), or
+ * `mcp-emergency`, the pre-move code in mcp/emergency that puts it back (`npm run ship:mcp-emergency`).
  * Anything else refuses before anything runs.
  */
 const TARGET = process.argv[2] ?? "site";
-if (TARGET !== "site" && TARGET !== "mcp") {
-  console.error(`\n  REFUSED: unknown ship target ${JSON.stringify(TARGET)}. Run \`npm run ship\` or \`npm run ship:mcp\`.\n`);
+const MCP_TARGET = TARGET === "mcp" || TARGET === "mcp-emergency";
+if (TARGET !== "site" && !MCP_TARGET) {
+  console.error(
+    `\n  REFUSED: unknown ship target ${JSON.stringify(TARGET)}. Run \`npm run ship\`, \`npm run ship:mcp\` ` +
+      "or `npm run ship:mcp-emergency`.\n",
+  );
   process.exit(1);
 }
 
@@ -325,8 +330,8 @@ if (early.verdict?.state === "running") {
 }
 
 /* The admin MCP: its own gates, deploy and live checks, after the shared preflight and CI read above. */
-if (TARGET === "mcp") {
-  process.exit(await shipMcp({ root, sha, early, readCi, announce, refuse, run }));
+if (MCP_TARGET) {
+  process.exit(await shipMcp({ root, sha, early, readCi, announce, refuse, run, target: TARGET }));
 }
 
 /** Chooses the path only. The step below decides the deploy, on every path. */
