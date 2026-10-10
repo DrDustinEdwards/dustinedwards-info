@@ -34,12 +34,23 @@ import { readOperatorToken } from "./lib/operator-token.mjs";
 import { missReport } from "./lib/ship-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 import { teeSelfToLog } from "./lib/ship-transcript.mjs";
+import { shipMcp } from "./lib/ship-mcp.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /* The child is recognised by its parent's pid, not by SHIP_TRANSCRIPT, which a shell could have exported. */
 if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
   process.exit(await teeSelfToLog(fileURLToPath(import.meta.url)));
+}
+
+/*
+ * The target: the site (no argument), or `mcp`, the admin MCP Worker in mcp/ (`npm run ship:mcp`).
+ * Anything else refuses before anything runs.
+ */
+const TARGET = process.argv[2] ?? "site";
+if (TARGET !== "site" && TARGET !== "mcp") {
+  console.error(`\n  REFUSED: unknown ship target ${JSON.stringify(TARGET)}. Run \`npm run ship\` or \`npm run ship:mcp\`.\n`);
+  process.exit(1);
 }
 
 /* Imported from `app/lib/seo.ts`, never restated: a stale copy would poll the wrong host. */
@@ -140,7 +151,9 @@ function runStreaming(command, args) {
  * Checked before the build, so a missing token costs no deploy. Never an argument or printed.
  * The length floor matches `auth.server.ts`.
  */
-const operatorToken = readOperatorToken(process.env.OPERATOR_TOKEN_FILE);
+/* The mcp target never calls the operator API, so it reads no token. */
+const operatorToken =
+  TARGET === "site" ? readOperatorToken(process.env.OPERATOR_TOKEN_FILE) : { why: "", remedy: "", token: "" };
 if (operatorToken.why) refuse(operatorToken.why, operatorToken.remedy);
 const OPERATOR_TOKEN = operatorToken.token;
 
@@ -309,6 +322,11 @@ if (early.verdict?.state === "running") {
   if (early.verdict?.state === "running") {
     console.log("  CI did not finish inside the wait. Falling back to the local path.");
   }
+}
+
+/* The admin MCP: its own gates, deploy and live checks, after the shared preflight and CI read above. */
+if (TARGET === "mcp") {
+  process.exit(await shipMcp({ root, sha, early, readCi, announce, refuse, run }));
 }
 
 /** Chooses the path only. The step below decides the deploy, on every path. */

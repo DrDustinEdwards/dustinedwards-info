@@ -134,3 +134,47 @@ jobs:
       # for dev and preview only.
       - name: Build
         run: npm run build
+
+  # THE ADMIN MCP, mcp/ (Dustin Edwards Admin), moved here from its own repo on 2026-10-10 with
+  # the CI it had there. Its own job because it is its own package: its own lockfile, its own SDK
+  # and OAuth versions, its own Worker. Run on every push rather than on a path filter, so CI's
+  # verdict for a sha always covers mcp/ and `npm run ship:mcp` can require it.
+  #
+  #   typecheck            wrangler types plus tsc -b, the folder's src and the one app module
+  #                        it imports (app/lib/health/repair.mjs)
+  #   check:wrapper        the no-policy law and the security floor, read off the real source,
+  #                        the config, and the site's operator tool list
+  #   check:wrapper:plant  that the gate above actually fails, one planted violation at a time
+  #   test                 the tools, ownership, scope, the log and registration, against a fake site
+  #   build                a dry-run bundle: typecheck is not a build
+  mcp:
+    name: Admin MCP, clean checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mcp
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # wrangler.jsonc is gitignored (it carries the live KV ids), and `wrangler types` and the
+      # build read it, so the runner builds from the example's placeholders. `cp -n` never
+      # overwrites. The plant harness edits both files and restores them.
+      - name: Bootstrap wrangler.jsonc from the example
+        run: cp -n wrangler.jsonc.example wrangler.jsonc
+
+      - run: npm run typecheck
+      - run: npm run check:wrapper
+      - run: npm run check:wrapper:plant
+      - run: npm test
+      - run: npm run build
