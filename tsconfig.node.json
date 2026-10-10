@@ -323,6 +323,7 @@
     "app/kb/procedures/taxonomy.mjs",
     "app/kb/procedures/proof.mjs",
     "app/kb/procedures/render.mjs",
+    "app/kb/procedures/key-resources.mjs",
     "app/kb/procedures/compile.mjs",
     "app/kb/procedures/cite.mjs",
     // The publication file: parsed, judged and compiled by one door that the gates, the build, the sync and the

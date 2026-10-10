@@ -96,6 +96,27 @@
   white-space: nowrap;
 }
 
+/* The Key Resources Table (docs/PROCEDURES.md): sources are citations and a primer's name carries its sequence, so it fills
+   the column and wraps rather than growing to its widest cell and scrolling; a primer's sequence, on its own line, may break
+   anywhere. */
+.prose .table-scroll > table.procedure-key-resources {
+  inline-size: 100%;
+}
+
+.procedure-key-resources td:nth-child(n + 2):not(:last-child) {
+  white-space: normal;
+}
+
+.procedure-key-resources .procedure-key-sequence {
+  display: block;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.procedure-key-resources th[scope="colgroup"] {
+  text-align: start;
+}
+
 /* The primers a protocol uses (docs/REGISTRY.md): a sequence is read letter by letter, so it is monospace and breaks anywhere. */
 .procedure-primers td,
 .procedure-primers th {

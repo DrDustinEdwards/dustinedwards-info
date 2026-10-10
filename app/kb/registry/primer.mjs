@@ -149,5 +149,7 @@ export function storedPrimer(item) {
     direction: stated(f.direction),
     sequence: stated(f.sequence),
     reference: stated(f.reference),
+    // The paper that prints it, for a protocol's Key Resources Table; null where the registry records a gap.
+    publishedIn: stated(f.published_in),
   };
 }

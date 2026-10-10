@@ -250,6 +250,17 @@ protocol saved is listed at the next request with no deploy, and no second list 
   library follows the light and dark themes with no second palette. The site's reset is imported into Capsomer's
   lowest layer (`cap.reset`, in `app.css`), because an unlayered reset would beat every layered component rule.
 
+## The Key Resources Table
+
+A protocol's page and twin end their materials with **Key resources**, the table Cell Press's STAR Methods ask for: each
+strain, reagent, primer and item of equipment the protocol names, with its source and identifier, grouped as Bacterial and
+virus strains; Chemicals, peptides, and recombinant proteins; Oligonucleotides; and Other (`keyResources` in
+`app/kb/procedures/key-resources.mjs`). Nothing in it is stored or typed: it is computed from the record, whose registry
+facts the compile baked in, so it agrees with the Reagents, Primers and Equipment tables above it. A strain's identifier is
+its collection and number (`ATCC 700084`), a bought reagent's its catalog number (`Cat# M8296`), a primer's source the paper that prints it,
+equipment's source its manufacturer; a fact the registry records as a gap reads "Not recorded", and an identifier a
+resource does not have reads "N/A". A group with nothing in it is left out; a recipe or a computational procedure has none.
+
 ## A protocol in the phage workflow
 
 A protocol's page says where it sits in the phage workflow (`workflowContext`, `ProtocolWorkflow`): its stage (the first

@@ -105,7 +105,7 @@ test("a protocol's record carries the registry's facts for the primers it names,
   const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
   assert.ok(coi?.ok, JSON.stringify(coi?.errors));
   assert.deepEqual(coi.record.primers.map((p) => p.id), ["lco1490", "hco2198"]);
-  assert.deepEqual(coi.record.primers[0], { id: "lco1490", name: "LCO1490", set: "COI primers: LCO1490 and HCO2198", direction: "forward", sequence: "GGTCAACAAATCATAAAGATATTGG", reference: "X03240.1" });
+  assert.deepEqual(coi.record.primers[0], { id: "lco1490", name: "LCO1490", set: "COI primers: LCO1490 and HCO2198", direction: "forward", sequence: "GGTCAACAAATCATAAAGATATTGG", reference: "X03240.1", publishedIn: "Folmer et al. 1994, Molecular Marine Biology and Biotechnology 3(5):294-299" });
   const rev = compiled.find((c) => c.slug === "rev-lpdv-primers")?.compiled;
   assert.equal(rev?.ok && rev.record.primers.length, 8);
   assert.ok(rev.markdown.includes("| [REV 3′ LTR forward](/research/lab/primers/rev-3-ltr-forward) | forward | `CATACTGAGCCAATGGTT` | 281 bp |"), "the twin prints the table, with the computed product, from the record");
