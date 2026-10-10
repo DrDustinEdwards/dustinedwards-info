@@ -397,7 +397,7 @@ for the seat rather than a detail of this feature.
 
 | Gate | Proves | State |
 |---|---|---|
-| `npm run typecheck` | `wrangler types && tsc -b` | green |
+| `npm run typecheck` | `wrangler types -c wrangler.jsonc && tsc -b` | green |
 | `npm run build` | a dry-run bundle. 1,154.46 KiB raw, 208.00 KiB gzip, measured 2026-09-07 on wrangler 4.129.0 | green |
 | `npm test` | the tools, the request layer, ownership, scope, the log and registration against a fake site | green |
 | `npm run check:wrapper` | the no-policy law and the security floor, mechanically | green |

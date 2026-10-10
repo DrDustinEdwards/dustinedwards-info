@@ -187,6 +187,8 @@ const dev = spawn(
     WRANGLER,
     "dev",
     ENTRY,
+    "-c",
+    "wrangler.jsonc",
     "--port",
     String(DEV_PORT),
     // Each dev process gets its own inspector port: both default to 9229, and
@@ -214,6 +216,8 @@ const authDev = spawn(
   [
     WRANGLER,
     "dev",
+    "-c",
+    "wrangler.jsonc",
     "--port",
     String(AUTH_PORT),
     "--inspector-port",

@@ -150,7 +150,7 @@ than as a transport error.
 
 - `npm run dev`
 - deploy: `npm run ship:mcp` from the repository root, never `wrangler deploy`
-- `npm run typecheck` (`wrangler types && tsc -b`)
+- `npm run typecheck` (`wrangler types -c wrangler.jsonc && tsc -b`)
 - `npm run build` (`wrangler deploy --dry-run`). NOT the same check as typecheck.
 - `npm test` unit tests against a fake site
 - `npm run check:wrapper` gate over the no-policy law

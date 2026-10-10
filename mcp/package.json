@@ -5,14 +5,14 @@
   "type": "module",
   "description": "Dustin Edwards Admin: the admin MCP server for dustinedwards.info, a wrapper over its operator API. Contains no policy.",
   "scripts": {
-    "dev": "wrangler dev",
-    "typecheck": "wrangler types && tsc -b",
+    "dev": "wrangler dev -c wrangler.jsonc",
+    "typecheck": "wrangler types -c wrangler.jsonc && tsc -b",
     "test": "node --experimental-transform-types --import ./test/resolve-ts.mjs --test \"test/**/*.test.ts\"",
     "probe:captures": "node scripts/probe-report.mjs",
     "check:wrapper": "node scripts/check-wrapper.mjs",
     "check:wrapper:plant": "bash scripts/plant-violations.sh",
     "check:conformance": "node scripts/check-conformance.mjs",
-    "build": "wrangler deploy --dry-run --outdir=dist",
+    "build": "wrangler deploy --dry-run -c wrangler.jsonc --outdir=dist",
     "emergency:typecheck": "wrangler types -c emergency/wrangler.jsonc emergency/worker-configuration.d.ts && tsc -b emergency",
     "emergency:build": "wrangler deploy --dry-run -c emergency/wrangler.jsonc --outdir=dist"
   },
