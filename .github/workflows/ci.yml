@@ -31,8 +31,13 @@ on:
 # rebased by Renovate, has its superseded run cancelled, because the run that is
 # anybody's review there is the one against the head that merges. Measured
 # 2026-09-15: Renovate branches re-ran this workflow 20 to 37 times each and
-# cost 602 Actions minutes in the September cycle, against a 2,000-minute month
-# that is a hard stop rather than a bill.
+# cost 602 Actions minutes in the September cycle, while this repository was
+# still private and drew on the account's 2,000 private minutes. The cause was
+# Renovate rebasing every open branch whenever main moved, fixed the same day
+# by rebaseWhen "conflicted" in devkit's shared Renovate policy. The repository
+# is public now, and public repositories run Actions free (Dustin, 2026-10-06,
+# D6 of capsid/research/design-shared-tests.md); the cancellation stays because
+# a superseded run reviews nothing.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
