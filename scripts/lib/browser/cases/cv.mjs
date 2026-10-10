@@ -92,7 +92,24 @@ export async function run({ browser }) {
             .querySelector('[data-cv-timeline] [data-enarratio-key][data-enarratio-series="Publications"]')
             ?.getAttribute("data-enarratio-x") ?? "",
       );
-      if (await clickOrFail(page, `[data-cv-timeline] [data-enarratio-x="${year}"]`, "cv: the timeline has a year to select")) {
+      /*
+       * Drawn is not still: Enarratio grows the redrawn bars in from nothing over about half a second, and
+       * a reader clicks a bar once they can see it. Clicked in the first frames, the bar has no height and
+       * Puppeteer refuses it as "not clickable" (post-deploy run 196, where charts.json's round trip put
+       * the poll right after the draw), so the case waits for the bar's box to stop changing.
+       */
+      const bar = `[data-cv-timeline] [data-enarratio-x="${year}"]`;
+      let lastHeight = -1;
+      await pollUntil(
+        () => page.evaluate((selector) => document.querySelector(selector)?.getBoundingClientRect().height ?? 0, bar),
+        (height) => {
+          const still = height > 0 && height === lastHeight;
+          lastHeight = height;
+          return still;
+        },
+        { everyMs: 100 },
+      );
+      if (await clickOrFail(page, bar, "cv: the timeline has a year to select")) {
         const oneYear = await pollUntil(() => readCv(page), (v) => v.search.includes(`from=${year}`));
         ok(
           "cv: a year's bar filters to that year and keeps the other filters",
