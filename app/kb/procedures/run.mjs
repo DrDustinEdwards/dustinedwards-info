@@ -173,18 +173,36 @@ export function stepBeside(keys, key, by) {
 
 const when = (/** @type {number | null} */ ms) => (ms === null ? "" : new Date(ms).toISOString());
 
+/** The Bioschemas profile a run's download follows (docs/KNOWLEDGE-BASE.md, P4). */
+export const LAB_PROCESS_PROFILE = "https://bioschemas.org/profiles/LabProcess/0.1-DRAFT";
+
 /**
  * The saved record as a plain object: what a download is, and what survives the browser. Only what the person
  * entered or did, with the procedure's own identity so the record says which version it followed.
+ *
+ * It is also a Bioschemas LabProcess (P4): runs are private, so this download is the only place one is written. The
+ * protocol it executes is named by the `@id` the procedure's page gives its LabProtocol, and its version.
  *
  * A step's `key` is unique in the procedure (its section and its number: numbering restarts in a section that starts
  * its own list), `number` is the one the page prints.
  *
  * @param {Run} run
  * @param {Array<{ key?: string, number: number | string, section?: string, text: string }>} steps
+ * @param {string} [origin] the site the run was made on
  */
-export function runRecord(run, steps) {
+export function runRecord(run, steps, origin = "https://dustinedwards.info") {
+  // A run made on a frozen version's page carries its /v/ address; the protocol's identity is its plain page.
+  const page = run.path.replace(/\/v\/[^/]+$/, "");
   return {
+    "@context": "https://schema.org",
+    "@type": "LabProcess",
+    "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROCESS_PROFILE },
+    name: `Run of ${run.title}`,
+    executesLabProtocol: { "@type": "LabProtocol", "@id": `${origin}${page}#procedure`, name: run.title, url: `${origin}${run.path}`, ...(run.version ? { version: run.version } : {}) },
+    startTime: when(run.startedAt),
+    ...(run.finishedAt !== null ? { endTime: when(run.finishedAt) } : {}),
+    ...(run.note.trim() ? { description: run.note.trim() } : {}),
+    ...(run.scale !== null ? { parameterValue: [{ "@type": "PropertyValue", name: "Scale", value: run.scale }] } : {}),
     record: "dustinedwards.info run",
     format: RUN_VERSION,
     procedure: { path: run.path, title: run.title, version: run.version },

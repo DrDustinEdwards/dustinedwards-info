@@ -524,7 +524,7 @@ function finish() {
       "p",
       { class: "run-actions" },
       button("Download as text", "run-download", () => run && download(`${slug}-${stamp}.md`, runMarkdown(run, stepRecords()), "text/markdown")),
-      button("Download as JSON", "run-download", () => run && download(`${slug}-${stamp}.json`, `${JSON.stringify(runRecord(run, stepRecords()), null, 2)}\n`, "application/json")),
+      button("Download as JSON", "run-download", () => run && download(`${slug}-${stamp}.json`, `${JSON.stringify(runRecord(run, stepRecords(), location.origin), null, 2)}\n`, "application/json")),
       button("Print", "run-print", () => window.print()),
       button("Start over", "run-again", () => {
         try {

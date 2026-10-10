@@ -9,6 +9,7 @@ import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/ci
 import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";
+import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
 import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
 import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
@@ -64,7 +65,7 @@ function total(amount: string | null, per: string | null, record: ProcedureRecor
   return m[3] ? `${range} ${m[3]}` : range;
 }
 
-export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
+export function ProcedureFacts({ record, lineage = null }: { record: ProcedureRecord; lineage?: Lineage | null }) {
   const facts: Array<[string, React.ReactNode]> = [];
   const add = (label: string, value: string | number | null | undefined) => {
     if (value !== null && value !== undefined && value !== "") facts.push([label, String(value)]);
@@ -97,16 +98,13 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
       )),
     ]);
   }
-  // A variant made with the editor's Duplicate links the procedure it was copied from, as protocols.io shows a fork's parent.
+  // A variant made with the editor's Duplicate names the procedure it was copied from, as protocols.io shows a fork's
+  // parent (P3): by its title, linked to the frozen copy of the version copied. Where the page is drawn without the
+  // parent's row (the sheet, the admin preview), the parent's address stands in for its title.
   if (record.forkedFrom) {
     const root = BASES.find((b) => b.profile === record.profile)?.entryRoot ?? "/research/protocols/";
-    facts.push([
-      "Variant of",
-      <a key="forked" href={`${root}${record.forkedFrom.slug}`}>
-        {record.forkedFrom.slug}
-        {record.forkedFrom.version ? `, version ${record.forkedFrom.version}` : ""}
-      </a>,
-    ]);
+    const shown = lineage ?? { title: record.forkedFrom.slug, href: `${root}${record.forkedFrom.slug}`, version: record.forkedFrom.version };
+    facts.push(["Based on", shown.href ? <a key="forked" href={shown.href}>{lineageText(shown)}</a> : lineageText(shown)]);
   }
   if (record.biosafety) {
     add(
@@ -720,10 +718,13 @@ export function ProcedureView({
   sheetPath = `${record.path}/sheet`,
   frozen = [],
   units = null,
+  lineage = null,
 }: {
   record: ProcedureRecord;
   count: number;
   factor: number;
+  /** The procedure this one is a variant of, resolved from its row (lineage.server.ts). */
+  lineage?: Lineage | null;
   workflow?: ReturnType<typeof workflowContext>;
   proof?: ReturnType<typeof resolveProof>;
   basePath?: string;
@@ -736,7 +737,7 @@ export function ProcedureView({
   const keyGroups = keyResources(record);
   return (
     <div className="prose procedure" data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
-      <ProcedureFacts record={record} />
+      <ProcedureFacts record={record} lineage={lineage} />
       <p className="procedure-links">
         {sheetPath ? (
           <a href={`${sheetPath}${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}>

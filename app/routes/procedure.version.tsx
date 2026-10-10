@@ -10,6 +10,7 @@ import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { versionPath } from "~/kb/procedures/cite.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
+import { lineageFor } from "~/kb/procedures/lineage.server";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
@@ -43,7 +44,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const live = await getProcedureByPath(env, path);
   const current = live && live.status === "published" ? { path, version: live.record.version } : null;
   const { count, factor, units } = readScale(frozen.record, url);
-  return { record: frozen.record, current, count, factor, units, frozen: await listFrozenVersions(env, frozen.slug) };
+  return { record: frozen.record, current, count, factor, units, frozen: await listFrozenVersions(env, frozen.slug), lineage: await lineageFor(env, frozen.record) };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -57,10 +58,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureVersionRoute({ loaderData }: Route.ComponentProps) {
-  const { record, current, count, factor, units, frozen } = loaderData;
+  const { record, current, count, factor, units, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
-  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
+  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person, lineage)];
   const basePath = versionPath(record.path, String(record.version));
   return (
     <PageShell
@@ -75,7 +76,7 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       <VersionNotice record={record} current={current} />
-      <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} />
+      <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} lineage={lineage} />
       <Enhance module="run" />
     </PageShell>
   );

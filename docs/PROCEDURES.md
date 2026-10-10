@@ -127,8 +127,12 @@ What the protocol library filters and lists by (`app/kb/procedures/taxonomy.mjs`
 - `status` (protocol): where the protocol stands, one of `in-use`, `in-development` or `retired` (`PROTOCOL_STATUSES` in
   `taxonomy.mjs`; the page says In use, In development, Retired), or `"MISSING: <why>"`.
 - `forked_from`: on a variant made with the admin editor's Duplicate, `{ slug, version }`, the file name of the procedure
-  it was copied from and the version it was copied at, if that one had a version. The page and twin say "Variant of" and
-  link it. It may not name the procedure itself.
+  it was copied from and the version it was copied at, if that one had a version. It may not name the procedure itself.
+  `check:protocols` holds it to a procedure here, of the same profile, at a version that procedure states (its current
+  version or one in its history), and a variant is published only when that version of its parent is frozen (the save
+  refuses it otherwise; a draft may wait). The page and twin say "Based on" with the parent's title, linked to the
+  frozen copy of the version copied, and the JSON-LD names it first in `isBasedOn` (`app/kb/procedures/lineage.mjs`,
+  read from the parent's row when the page is served).
 
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
 change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
@@ -312,7 +316,9 @@ for a person working it at the bench, on a phone:
   its ingredients, tools and timers, and Previous and Next to move. It opens on the first step not yet done; the choice
   is remembered on the device. "Show every step" brings the whole page back.
 - **The screen stays on** while a run is open (the Wake Lock API), and the bar says so if the browser refuses.
-- **The record**: finishing shows the run's record, which downloads as Markdown or JSON and prints (the print
+- **The record**: finishing shows the run's record, which downloads as Markdown or JSON and prints. The JSON is a
+  Bioschemas LabProcess (0.1-DRAFT): `executesLabProtocol` names the page's LabProtocol by its `@id` and version, with
+  `startTime`, `endTime`, the run's note as `description` and its scale as a `parameterValue` (the print
   stylesheet drops the controls and keeps the checks and notes). It names the procedure, its path and its version,
   the scale, when it started and finished, and each step with its time and note.
 - **It never leaves the device.** A run lives in `localStorage` under `dustinedwards.run:<path>`; nothing is sent to
@@ -330,6 +336,6 @@ behaviour is the run-mode case of `check:browser`.
 | The page | `app/routes/procedure.tsx`, drawn from the D1 row |
 | The printable sheet | the page's `/sheet` address |
 | The markdown twin | the page's `.md` address, generated from the same record |
-| JSON-LD | Bioschemas LabProtocol, schema.org Recipe, or HowTo for a computational procedure |
+| JSON-LD | Bioschemas LabProtocol 0.9-DRAFT (with every temperature and g-force its steps state as `parameter`), schema.org Recipe, or HowTo for a computational procedure |
 | Search | `search_docs`, written by the sync and by `save_procedure` |
 | The check | `npm run check:protocols` validates every file with the save tool's own validator |

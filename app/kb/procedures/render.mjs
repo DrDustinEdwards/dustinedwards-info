@@ -19,6 +19,7 @@ import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { statusLabel } from "./taxonomy.mjs";
 import { allSteps, PLATFORMS, procedurePath, readCalcs } from "./parse.mjs";
 import { HOWTO_TYPES } from "./validate.mjs";
+import { storedLineage } from "./lineage.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
 export const SLOT = (/** @type {number} */ i) => `QZQ${i}QZQ`;
@@ -509,7 +510,8 @@ export function procedureMarkdown(record, parsed) {
     ["Cook time", record.cookTime],
     ["Total time", record.time.total],
     ["Hands-on time", record.time.handsOn],
-    ["Variant of", record.forkedFrom ? `${record.forkedFrom.slug}${record.forkedFrom.version ? `, version ${record.forkedFrom.version}` : ""}` : null],
+    // The parent's file name and version; the twin's route reads it out as the parent's title and address (lineage.mjs).
+    ["Based on", record.forkedFrom ? storedLineage(record.forkedFrom) : null],
     ["Host strain", record.hostStrains.length > 0 ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ") : null],
     ["Biosafety level", record.biosafetyLevel],
     [

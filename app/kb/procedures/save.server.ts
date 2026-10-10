@@ -46,7 +46,17 @@ export async function compile(env: ProcedureEnv, slug: string, raw: string) {
     // The primers and host strains a protocol names are the lab registry's, read from the repository as CI reads them (docs/REGISTRY.md).
     registry: { primers: (ids) => readPrimers(env, ids), strains: (ids) => readStrains(env, ids), reagents: (ids) => readReagents(env, ids), equipment: (ids) => readEquipment(env, ids) },
   });
-  if (!compiled.ok || !needsFreeze(compiled.record)) return compiled;
+  if (!compiled.ok) return compiled;
+  // A published variant points at words that are frozen (P3): the version of its parent it was copied at has its copy.
+  const from = compiled.record.forkedFrom;
+  if (from?.version && !compiled.record.draft && (await frozenBlobSha(env, from.slug, from.version)) === null) {
+    return {
+      ok: false as const,
+      errors: [`forked_from names version ${from.version} of ${from.slug}, which has no frozen copy: publish that version of ${from.slug} first, or keep this variant a draft`],
+      gaps: compiled.gaps,
+    };
+  }
+  if (!needsFreeze(compiled.record)) return compiled;
   const frozen = await frozenBlobSha(env, slug, String(compiled.record.version));
   if (frozen === null || frozen === compiled.sourceBlobSha) return compiled;
   return { ok: false as const, errors: [frozenEditMessage(compiled.record)], gaps: compiled.gaps };
