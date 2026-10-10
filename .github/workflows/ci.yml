@@ -108,4 +108,7 @@ jobs:
 
       - run: npm run check:wrapper
 
+      # Unit tests against a fake operator API. No network, no credentials.
+      - run: npm test
+
       - run: npm run build

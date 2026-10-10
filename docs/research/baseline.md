@@ -1,5 +1,9 @@
 # dustinedwards-mcp baseline (job_eb5564111e61)
 
+> Superseded in part by job_997c4b5d0f37 (2026-10-10): the repo now has a
+> node:test suite and a measured Stryker score. See "Unit tests and Stryker"
+> at the end. The sections before it are the original audit, unchanged.
+
 Measured 2026-10-10 against main by reading the repository through Capsid
 (`list_repo_tree`, `read_repo_file`). Nothing was deleted or changed, and no
 package.json or lockfile edit was made. This file and `kill-matrix.json` are the
@@ -90,3 +94,77 @@ relay) are guarded only by them.
    measured here.
 3. This repo's CLAUDE.md says mainline only, no branches or PRs. This job asked
    for one PR, which overrides it for this change.
+
+## Unit tests and Stryker (job_997c4b5d0f37)
+
+Measured 2026-10-10 in a checkout, Node 22.22.0, by running the commands.
+
+### The suite
+
+`npm test` runs `node --experimental-transform-types --import
+./test/resolve-ts.mjs --test "test/**/*.test.ts"`. The script is the one
+package.json change. `test/resolve-ts.mjs` lets Node load `src/` as written,
+because the source imports siblings without an extension. CI runs `npm test`
+after `check:wrapper`.
+
+| File | Tests | What it pins |
+|------|-------|--------------|
+| `test/api-client.test.ts` | 15 | `callOperator`: POST of `{ tool, args }` to `OPERATOR_API_URL`, the bearer, the token never logged or echoed, the 32-character floor, every `ApiLegError` kind and message, data and refusals returned unchanged |
+| `test/tools.test.ts` | 82 | The eleven tools by name and annotation, each tool's exact operator request, 403/409/422 refusals relayed in the API's words with policy, field, line and validator messages, wrapper failures worded apart from refusals, input schemas, and that the wrapper forwards what the API must judge (draft:false, wide dashes, mention delete, both or neither upload source) |
+| `test/mcp-handler.test.ts` | 8 | `handleMcp` end to end at 2025-11-25 and 2026-07-28: initialize, tools/list, tools/call to one operator request, the first-publish refusal as a tool result, bad input and unknown tools making no request, no token in any response |
+
+105 tests, about 1 s. Every one runs against a fake operator API that replaces
+`fetch` (`test/fake-operator.ts`), so nothing touches the network.
+
+### Each test seen failing
+
+107 breaks were planted in `src/` one at a time, the suite run, and the file
+restored byte for byte with the baseline re-checked green between plants. All
+105 tests failed against at least one plant. 106 plants were caught. One
+survived: routing every request to the legacy shim, which is close to
+equivalent, because the shim is `legacy: "stateless"` and answers both eras.
+
+### Stryker 9.6.1
+
+Run with `npm install --no-save @stryker-mutator/core@9.6.1`, the command
+runner (`npm test`), `mutate: src/**/*.ts`, coverage analysis off. 985 mutants,
+about 7 minutes at concurrency 4. No timeouts, no errors.
+
+| File | Killed / mutants | Score |
+|------|------------------|-------|
+| `src/api-client.ts` | 60 / 61 | 98.36% |
+| `src/tools.ts` | 232 / 414 | 56.04% |
+| `src/mcp-handler.ts` | 11 / 22 | 50.00% |
+| `src/legacy-era.ts` | 2 / 3 | 66.67% |
+| `src/auth.ts` | 0 / 74 | 0% |
+| `src/github-handler.ts` | 0 / 149 | 0% |
+| `src/index.ts` | 0 / 60 | 0% |
+| `src/rate-limit.ts` | 0 / 37 | 0% |
+| `src/probe.ts` | 0 / 165 | 0% |
+| **All of src** | **305 / 985** | **30.96%** |
+
+The three files this job covers (api-client, tools, mcp-handler) score
+303 / 497, 60.97%. A first run before the annotation, slug anchor and
+modern-era tests scored 28.32% overall.
+
+What survives in the covered files:
+
+- `tools.ts`: 180 of 182 survivors are string literals in tool descriptions
+  and `.describe()` text. The policy names and the "enforced by the API"
+  sentences are pinned; the rest of the prose is not, on purpose.
+- `tools.ts`: the 2 others turn `args.isNew !== undefined` into `true`. That
+  forwards `isNew: undefined`, which `JSON.stringify` drops, so the bytes on the
+  wire are identical. Equivalent.
+- `api-client.ts`: one sub-condition of the payload shape check
+  (`typeof parsed !== "object"` to `false`). A JSON number or string then fails
+  the next check with the same error. Equivalent.
+- `mcp-handler.ts`: 9 string literals (server title, version, instructions
+  prose) and the legacy-routing and route-option mutants described above.
+- `legacy-era.ts`: `{ route, legacy: "stateless" }` to `{}`, which is the
+  library default.
+
+`auth.ts`, `github-handler.ts`, `index.ts`, `rate-limit.ts` and `probe.ts`
+were out of scope for this job and are still untested. The order given under
+"For the seat" still holds for them.
+
+No test found a bug in `src/`, so no source file changed.
