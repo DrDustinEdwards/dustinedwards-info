@@ -69,6 +69,14 @@ export const MAP = [
     gates: ["check:migrations", RELATED],
   },
   {
+    /* The admin MCP is its own package with its own gates, run by CI's mcp job and by `npm test`,
+       `npm run check:wrapper` and `npm run check:wrapper:plant` inside mcp/. Of the site's gates only
+       the tracked-file credential scan reads it. */
+    what: "the admin MCP in mcp/",
+    test: /^mcp\//,
+    gates: ["check:secrets"],
+  },
+  {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
     gates: ["check:headers", "check:policy", "check:secrets", RELATED],
