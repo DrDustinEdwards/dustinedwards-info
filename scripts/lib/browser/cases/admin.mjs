@@ -568,20 +568,30 @@ export async function run({ browser }) {
           `controls are being clipped.`,
     );
 
-    // Compared by accessible name, since a swap holds a count steady. On a phone the top bar hides what the
-    // tab bar and its More sheet carry, so the More sheet is opened first, as a tap does.
+    /*
+     * What each width can reach, compared. Capsomer's AdminShell (#386) puts the wide layout's controls in its side strip and
+     * menu, with the account's links in a popover, and the top bar holds only a page's own actions (none on /admin, so it is
+     * hidden); a phone hides the strip and menu and carries the same places in the tab bar and its More sheet. So every part
+     * of the shell is measured at both widths and what is displayed decides, with the account popover opened at the wide
+     * width and the More sheet at the narrow one, as a click and a tap would. A link is compared by where it goes and a
+     * button by its words, with aria-hidden marks left out (the sheet's app link carries a letter mark) and a parenthesis
+     * dropped (the sheet's sign-out names the account). A control that only opens another (the menu toggle, the account
+     * button, More) is not itself a place to reach.
+     */
     const NARROW = 375;
-    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openMore) => {
+    const shellReach = async (/** @type {number} */ width, /** @type {boolean} */ openMore) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
       if (openMore) {
         await admin.click('.cap-admin-tabs button[data-cap-part="more"]');
-        await new Promise((r) => setTimeout(r, 300));
+      } else {
+        await admin.click(".cap-admin-strip button[popovertarget]").catch(() => {});
       }
+      await new Promise((r) => setTimeout(r, 300));
       return admin.evaluate(() => {
         const names = [];
         for (const el of document.querySelectorAll(
-          ".cap-admin-bar, .cap-admin-tabs, dialog.cap-admin-sheet[open]",
+          ".cap-admin-strip, .cap-admin-menu, .cap-admin-bar, .cap-admin-account, .cap-admin-tabs, dialog.cap-admin-sheet[open]",
         )) {
           for (const control of el.querySelectorAll(
             'a[href], button, summary, input:not([type="hidden"]), select, textarea',
@@ -590,10 +600,16 @@ export async function run({ browser }) {
             // reachable and must not be counted at either width.
             const r = control.getBoundingClientRect();
             if (r.width === 0 && r.height === 0) continue;
-            const name = (control.getAttribute("aria-label") || control.textContent || "")
+            if (control.matches("[aria-controls], [popovertarget], [aria-haspopup]")) continue;
+            const href = control instanceof HTMLAnchorElement ? new URL(control.href) : null;
+            const words = control.cloneNode(true);
+            if (words instanceof Element) for (const mark of words.querySelectorAll('[aria-hidden="true"]')) mark.remove();
+            const name = (control.getAttribute("aria-label") || words.textContent || "")
+              .replace(/\s*\([^)]*\)\s*$/, "")
               .replace(/\s+/g, " ")
               .trim();
-            if (name) names.push(name);
+            if (href && href.origin === location.origin) names.push(`${name} -> ${href.pathname}`);
+            else if (name) names.push(name);
           }
         }
         return {
@@ -603,12 +619,12 @@ export async function run({ browser }) {
       });
     };
 
-    const wide = await topbarActions(1280, false);
-    const narrow = await topbarActions(NARROW, true);
+    const wide = await shellReach(1280, false);
+    const narrow = await shellReach(NARROW, true);
 
     // An empty wide set makes the subset test vacuously true.
     ok(
-      "the wide admin top bar offers actions to compare against",
+      "the wide admin shell offers places to compare against",
       wide.names.length >= 2,
       `only ${wide.names.length} named control(s) at 1280px: [${wide.names.join(" | ")}]. ` +
         `The subset assertion below would agree with anything.`,
@@ -616,14 +632,14 @@ export async function run({ browser }) {
     ok(
       `the phone's tab bar has a More sheet at ${NARROW}px`,
       narrow.more,
-      "no More button in the tab bar, so what the top bar hides on a phone has nowhere to go",
+      "no More button in the tab bar, so what the strip and menu hide on a phone has nowhere to go",
     );
 
     const lost = wide.names.filter((name) => !narrow.names.includes(name));
     ok(
-      `every wide top bar action is still reachable at ${NARROW}px`,
+      `every place the wide admin shell reaches is still reachable at ${NARROW}px`,
       lost.length === 0,
-      `${lost.length} action(s) disappear when the bar folds: [${lost.join(" | ")}].\n` +
+      `${lost.length} place(s) disappear when the shell folds: [${lost.join(" | ")}].\n` +
         `        1280px offers [${wide.names.join(" | ")}]\n` +
         `        ${NARROW}px offers [${narrow.names.join(" | ")}]\n` +
         `        A fold that drops controls passes every width assertion above, ` +
