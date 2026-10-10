@@ -88,7 +88,7 @@
     "@lezer/highlight": "1.2.3",
     "@shikijs/rehype": "4.3.1",
     "@shikijs/transformers": "4.3.1",
-    "capsomer": "github:DrDustinEdwards/capsomer#7612bd5b8349bf08de5073bf522d33bad38e6028",
+    "capsomer": "github:DrDustinEdwards/capsomer#448458f5128af1f1fdb88d2faafe7cba341e765e",
     "drizzle-orm": "0.45.2",
     "enarratio": "0.1.0-alpha.8",
     "github-slugger": "2.0.0",
