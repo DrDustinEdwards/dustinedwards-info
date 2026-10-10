@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { adminActorContext } from "~/lib/admin-actor.server";
 import EditEntry, { action as entryAction, loader as entryLoader } from "~/routes/admin.kb.entry";
 import { action as itemAction, loader as itemLoader } from "~/routes/admin.kb.item";
+import { action as previewAction } from "~/routes/admin.kb.preview";
 
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
@@ -99,13 +100,13 @@ describe("the Knowledge Base editor", () => {
     expect(commits()).toHaveLength(0);
   });
 
-  it("Save commits the edit through the procedure save and redirects back with the commit", { timeout: 120_000 }, async () => {
+  it("Save commits the edit through the procedure save and redirects back to the file view with the commit", { timeout: 120_000 }, async () => {
     const edited = protocol.replace(OLD_STEP, NEW_STEP);
     const result = payload(
       await entryAction({ request: post(entryUrl(), { intent: "save", raw: edited, sha: await versionOf(gh, FILE) }), params: { slug: SLUG }, context: context() } as never),
     );
     expect(result).toBeInstanceOf(Response);
-    expect((result as Response).headers.get("location")).toMatch(new RegExp(`^/admin/kb/entry/${SLUG}\\?saved=\\w{7}$`));
+    expect((result as Response).headers.get("location")).toMatch(new RegExp(`^/admin/kb/entry/${SLUG}\\?saved=\\w{7}&view=file$`));
     expect(gh.files.get(FILE)).toBe(edited);
     expect(commits()).toHaveLength(1);
     const row = await testEnv.DB.prepare("SELECT markdown FROM procedures WHERE slug = ?1").bind(SLUG).first<{ markdown: string }>();
@@ -147,5 +148,126 @@ describe("the Knowledge Base editor", () => {
     const result = payload(await itemAction({ request: post(url, { intent: "save", raw: edited, sha: file.sha }), params, context: context() } as never));
     expect(result).toBeInstanceOf(Response);
     expect(gh.files.get(ITEM_FILE)).toBe(edited);
+  });
+});
+
+describe("the Knowledge Base form", () => {
+  const loadForm = async () =>
+    payload(await entryLoader({ request: new Request(entryUrl()), params: { slug: SLUG }, context: context() } as never)) as {
+      file: { raw: string; sha: string };
+      form: { model: { data: Record<string, unknown>; order: string[]; body: unknown }; fields: Array<{ key: string; kind: string }> };
+      view: string;
+    };
+
+  it("names each gap in words, with the input it is filled in at, and offers references by name", async () => {
+    const loaded = payload(await entryLoader({ request: new Request(entryUrl()), params: { slug: SLUG }, context: context() } as never)) as {
+      file: { gaps: Array<{ field: string; label: string; anchor: string }> };
+      form: { references: Record<"troubleshooting" | "calculators" | "solutions", Array<{ value: string; label: string }>> };
+    };
+    const tes = loaded.file.gaps.find((g) => g.field === "solutions[tes-buffer].storage");
+    expect(tes).toMatchObject({ label: "TES buffer: storage", anchor: "kb-field-solutions" });
+    expect(loaded.file.gaps.find((g) => g.field.startsWith("step 8 "))).toMatchObject({ label: "Step 8: rotor" });
+    expect(loaded.form.references.troubleshooting.find((r) => r.value === "mix-set-solid")?.label).toMatch(/^Step 7: The mix sets solid/);
+    expect(loaded.form.references.solutions).toEqual([{ value: "tes-buffer", label: "TES buffer" }]);
+    expect(loaded.form.references.calculators.find((c) => c.value === "titer")?.label).toBe("Titer calculator");
+  });
+
+  it("draws a step's marks as chips that carry the text they were read from", async () => {
+    const loaded = payload(await entryLoader({ request: new Request(entryUrl()), params: { slug: SLUG }, context: context() } as never)) as Record<string, unknown>;
+    const html = renderRoute(`/admin/kb/entry/${SLUG}`, EditEntry, { loaderData: loaded });
+    expect(html).toContain('class="kb-chip" data-kind="timer" data-raw="~{30 to 60%minutes}"');
+    expect(html).toContain('data-kind="temperature" data-raw="55 to 60 °C"');
+    // A troubleshooting note is picked from the table by its words.
+    expect(html).toMatch(/<option value="mix-set-solid"[^>]*>Step 7: The mix sets solid/);
+    // Needs info names the gap in words and links to its field.
+    expect(html).toContain('href="#kb-field-solutions"');
+    expect(html).toContain("TES buffer: storage");
+    expect(html).not.toContain("solutions[tes-buffer]");
+  });
+
+  it("previews the page the form describes, drawn by the public page's component, and commits nothing", { timeout: 120_000 }, async () => {
+    const { file, form } = await loadForm();
+    const url = `https://example.com/admin/kb/preview/${SLUG}`;
+    const preview = async (model: unknown) =>
+      (await (
+        await previewAction({ request: post(url, { original: file.raw, model: JSON.stringify(model) }), params: { slug: SLUG }, context: context() } as never)
+      ).json()) as { html?: string; styles?: string[]; errors?: string[] };
+    const drawn = await preview({ ...form.model, data: { ...form.model.data, title: "Phage DNA extraction, previewed" } });
+    expect(drawn.errors).toBeUndefined();
+    expect(drawn.html).toContain('<h1 class="page-title">Phage DNA extraction, previewed</h1>');
+    expect(drawn.html).toContain('class="prose procedure"');
+    expect(drawn.styles).toHaveLength(5);
+    const refused = await preview({ ...form.model, data: { ...form.model.data, status: "sometimes" } });
+    expect(refused.errors?.some((e) => e.startsWith('status is "sometimes"'))).toBe(true);
+    expect(commits()).toHaveLength(0);
+    expect(gh.files.get(FILE)).toBe(protocol);
+  });
+
+  it("opens as the form, with the file behind Advanced", async () => {
+    const { view, form } = await loadForm();
+    expect(view).toBe("form");
+    expect(form.fields.find((f) => f.key === "status")?.kind).toBe("select");
+    const advanced = payload(await entryLoader({ request: new Request(entryUrl("?view=file")), params: { slug: SLUG }, context: context() } as never)) as { view: string; form: unknown };
+    expect(advanced).toMatchObject({ view: "file", form: null });
+  });
+
+  it("Save from the form writes only the changed field, through the procedure save", { timeout: 120_000 }, async () => {
+    const { file, form } = await loadForm();
+    const model = { ...form.model, data: { ...form.model.data, status: "in-use" } };
+    const result = payload(
+      await entryAction({
+        request: post(entryUrl(), { intent: "save", sha: file.sha, original: file.raw, model: JSON.stringify(model) }),
+        params: { slug: SLUG },
+        context: context(),
+      } as never),
+    );
+    expect(result).toBeInstanceOf(Response);
+    const saved = gh.files.get(FILE) ?? "";
+    const changed = saved.split("\n").filter((line, i) => line !== protocol.split("\n")[i]);
+    expect(changed).toEqual(["status: in-use"]);
+  });
+
+  it("refuses YAML it cannot read, says why, and commits nothing", async () => {
+    const { file, form } = await loadForm();
+    const model = { ...form.model, data: { ...form.model.data, based_on: { $yaml: "- citation: [unclosed" } } };
+    const result = payload(
+      await entryAction({
+        request: post(entryUrl(), { intent: "check", sha: file.sha, original: file.raw, model: JSON.stringify(model) }),
+        params: { slug: SLUG },
+        context: context(),
+      } as never),
+    ) as { ok: boolean; errors: string[]; model: string };
+    expect(result.ok).toBe(false);
+    expect(result.errors[0]).toMatch(/^based_on is not valid YAML/);
+    expect(result.model).toBe(JSON.stringify(model));
+    expect(commits()).toHaveLength(0);
+  });
+
+  it("Duplicate makes a new draft with its own title and address, recording where it came from", { timeout: 120_000 }, async () => {
+    const result = payload(
+      await entryAction({
+        request: post(entryUrl(), { intent: "duplicate", title: "Phage DNA extraction, half volume", slug: "" }),
+        params: { slug: SLUG },
+        context: context(),
+      } as never),
+    );
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).headers.get("location")).toBe("/admin/kb/entry/phage-dna-extraction-half-volume?created=1");
+    const copy = gh.files.get("content/procedures/phage-dna-extraction-half-volume.md") ?? "";
+    expect(copy).toMatch(/^title: "?Phage DNA extraction, half volume"?$/m);
+    expect(copy).toMatch(/^path: \/research\/protocols\/phage-dna-extraction-half-volume$/m);
+    expect(copy).toMatch(/^draft: true$/m);
+    expect(copy).toMatch(/^forked_from:\n {2}slug: phage-dna-extraction$/m);
+    expect(copy).not.toMatch(/^start_here:/m);
+    // The original is untouched.
+    expect(gh.files.get(FILE)).toBe(protocol);
+  });
+
+  it("Duplicate refuses a file name that is taken or malformed, and makes nothing", async () => {
+    const result = payload(
+      await entryAction({ request: post(entryUrl(), { intent: "duplicate", title: "Copy", slug: "Not A Slug" }), params: { slug: SLUG }, context: context() } as never),
+    ) as { refused: string[] };
+    expect(result.refused[0]).toMatch(/is not a file name/);
+    expect(commits()).toHaveLength(0);
   });
 });

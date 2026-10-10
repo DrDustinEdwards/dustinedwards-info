@@ -11,6 +11,7 @@ import { PolicyError, type Actor } from "~/lib/editor/publish-policy.mjs";
 
 import { NEEDS_INFO, tabHref } from "./admin.mjs";
 import { BASES } from "./bases.mjs";
+import { labelGaps } from "./gap-labels.mjs";
 import { procedurePath } from "./procedures/parse.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
 import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
@@ -23,7 +24,8 @@ type EditorEnv = Env & { GITHUB_TOKEN?: string };
 /** What is being edited: an entry by its slug, or a registry item by its kind and id. */
 export type KbTarget = { type: "entry"; slug: string } | { type: "item"; kind: string; id: string };
 
-export type KbGap = { field: string; reason: string };
+/** A recorded gap: its path in the file, its reason, and the same place in words with the id of the input it is filled in at. */
+export type KbGap = { field: string; reason: string; label: string; anchor: string };
 
 /** The file as the editor opens it, with what the save's checks say of it now. */
 export type KbFile = {
@@ -64,10 +66,11 @@ export function targetFile(target: KbTarget): string | null {
 export async function checkFile(env: EditorEnv, target: KbTarget, raw: string): Promise<CheckResult> {
   if (target.type === "entry") {
     const compiled = await compileProcedure(env, target.slug, raw);
-    return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: compiled.gaps ?? [] };
+    const profile = /^profile:\s*["']?([a-z]+)/m.exec(raw)?.[1] ?? "protocol";
+    return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: labelGaps(compiled.gaps ?? [], profile) };
   }
   const compiled = await checkRegistryItem(env, slugOf(target), raw);
-  return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: compiled.ok ? compiled.gaps : [] };
+  return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: labelGaps(compiled.ok ? compiled.gaps : [], null) };
 }
 
 /** The file from the repository and its checks, or null when there is no such file. */

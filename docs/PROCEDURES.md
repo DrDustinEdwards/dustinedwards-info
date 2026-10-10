@@ -117,6 +117,12 @@ What the protocol library filters and lists by (`app/kb/procedures/taxonomy.mjs`
   (`app/kb/procedures/proof.server.ts`), so a corrected title reaches every protocol that names the paper. The section
   appears only when the field is filled; `check:protocols` refuses a slug with no file.
 
+- `status` (protocol): where the protocol stands, one of `in-use`, `in-development` or `retired` (`PROTOCOL_STATUSES` in
+  `taxonomy.mjs`; the page says In use, In development, Retired), or `"MISSING: <why>"`.
+- `forked_from`: on a variant made with the admin editor's Duplicate, `{ slug, version }`, the file name of the procedure
+  it was copied from and the version it was copied at, if that one had a version. The page and twin say "Variant of" and
+  link it. It may not name the procedure itself.
+
 A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
 change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
 pages. `organism` reads from the lab registry's strains, so a strain added there is an organism with no edit here.

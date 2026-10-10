@@ -166,10 +166,10 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
                 renderLink={AdminLink}
                 actions={<ViewLink href={gap.href} what={gap.what} />}
                 status={<Status tone="warn">{gap.kindLabel}</Status>}
-                // The field as the file names it, so the gap is found where it is filled in, then the reason.
+                // What is missing, in words, then why; the row opens the editor at the field it is filled in at.
                 detail={
                   <>
-                    <code>{gap.field}</code>: {gap.reason}
+                    <strong>{gap.label}</strong>: {gap.reason}
                   </>
                 }
               />

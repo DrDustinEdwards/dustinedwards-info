@@ -4,6 +4,7 @@
 
 import { foldText } from "../lib/cv/view.mjs";
 import { BASES } from "./bases.mjs";
+import { labelGaps } from "./gap-labels.mjs";
 import { hasItemPage, itemPath, kindPath } from "./registry/catalog.mjs";
 import { isGap } from "./registry/compile.mjs";
 import { KINDS } from "./registry/kinds.mjs";
@@ -29,12 +30,12 @@ export const NEEDS_INFO = "needs-info";
  *   draft: boolean,
  *   version: string | null,
  *   updated: string | null,
- *   gaps: Array<{ field: string, reason: string }>,
+ *   gaps: Array<{ field: string, reason: string, where?: string[], section?: string }>,
  * }} KbEntry
  *
  * @typedef {{ kind: string, id: string, name: string, status: string, fields: Record<string, unknown> }} KbItem
  *
- * @typedef {{ what: string, kindLabel: string, href: string, editHref: string, field: string, reason: string }} KbGap
+ * @typedef {{ what: string, kindLabel: string, href: string, editHref: string, field: string, label: string, reason: string }} KbGap
  */
 
 /** The tab a `?tab=` value names, else the first base. @param {string | null} value */
@@ -98,26 +99,31 @@ export function needsInfo(entries, items) {
   const fromEntries = [...entries]
     .sort((a, b) => foldText(a.title).localeCompare(foldText(b.title), "en", { numeric: true }))
     .flatMap((e) =>
-      e.gaps.map((gap) => ({
+      labelGaps(e.gaps, e.profile).map((gap) => ({
         what: e.title,
         kindLabel: profileName[e.profile] ?? e.profile,
         href: e.path,
-        editHref: entryEditHref(e.slug),
+        editHref: `${entryEditHref(e.slug)}#${gap.anchor}`,
         field: gap.field,
+        label: gap.label,
         reason: gap.reason,
       })),
     );
   const fromItems = items.flatMap((item) =>
-    Object.entries(item.fields)
-      .filter(([, value]) => isGap(value))
-      .map(([field, value]) => ({
-        what: item.name,
-        kindLabel: capitalise(KINDS[item.kind]?.singular ?? item.kind),
-        href: itemHref(item),
-        editHref: itemEditHref(item.kind, item.id),
-        field,
-        reason: String(value).replace(/^MISSING:\s*/, ""),
-      })),
+    labelGaps(
+      Object.entries(item.fields)
+        .filter(([, value]) => isGap(value))
+        .map(([field, value]) => ({ field, reason: String(value).replace(/^MISSING:\s*/, "") })),
+      null,
+    ).map((gap) => ({
+      what: item.name,
+      kindLabel: capitalise(KINDS[item.kind]?.singular ?? item.kind),
+      href: itemHref(item),
+      editHref: `${itemEditHref(item.kind, item.id)}#${gap.anchor}`,
+      field: gap.field,
+      label: gap.label,
+      reason: gap.reason,
+    })),
   );
   return [...fromEntries, ...fromItems];
 }

@@ -164,6 +164,23 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    Capsomer's markdown editor with Check, which runs every check a save runs and commits nothing, and Save, refused
    when the file moved since it was opened. The structured form for each profile's fields comes after it, and
    Carrel's two handlers go in their own pull request once this editor is live.)
+3b. **Form editor** (Dustin, 2026-10-09, before step 8): the admin editor becomes a form, as protocols.io and Benchling
+   edit protocols. Every field its own input (`app/kb/form-fields.mjs`: text, dropdowns for method, course and status,
+   a BSL-1/BSL-2 choice, date pickers), the fields that hold `MISSING` at the top as Needs info, and the method as step
+   cards in their sections, reordered by dragging or with Move up and Move down (Alt+Up and Alt+Down), each card with
+   inserts for a reagent, equipment, a primer or a strain from the registry, and a timer, a temperature and an amount.
+   Registry items edit as plain forms. Duplicate makes a new draft variant recording `forked_from` (P3). The file stays
+   the source: the form is read from it and written back over it (`app/kb/form.mjs`), an untouched field or step byte for
+   byte, through the same Check and Save; the raw file is behind Advanced (`?view=file`), which needs no script.
+   After Dustin's review of the first screenshots (2026-10-10): a step's marks show as chips in its text, as protocols.io
+   shows a step's components (`app/kb/step-marks.mjs` reads them with the same `markSpans` the compile tokenizes with;
+   `kb-step-text.tsx` edits each in a popover and deletes it as one unit, and a chip nobody changed keeps its exact
+   text). Needs info says each gap in words ("TES buffer: storage", "Step 4: rotor"), from the `where` the compile
+   records beside its path (`app/kb/gap-labels.mjs`), and links to the input it is filled in at, in the editor and from
+   the Knowledge Base list. A troubleshooting or calculator note, and a reagent made as a lab solution, are picked by
+   name. A live preview of the public page sits beside the form on a wide screen and is a tab on a phone: the form's
+   file compiled by the save's compile and drawn by the page's own component (`/admin/kb/preview/<slug>`, read only),
+   in a sandboxed frame with the public page's stylesheets. The status list stays In use, In development, Retired.
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.

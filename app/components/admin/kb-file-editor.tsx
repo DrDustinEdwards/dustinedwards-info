@@ -12,8 +12,9 @@ import type { KbFile, KbGap } from "~/kb/editor.server";
 
 /** What the action hands back: a check's verdict, or a save that did not land, with the text the reader sent. */
 export type KbEditorActionData =
-  | { intent: "check"; raw: string; ok: boolean; errors: string[]; gaps: KbGap[] }
-  | { intent: "save"; raw: string; refused?: string[]; conflict?: string };
+  | { intent: "check"; raw: string; model?: string; ok: boolean; errors: string[]; gaps: KbGap[] }
+  | { intent: "save"; raw: string; model?: string; refused?: string[]; conflict?: string }
+  | { intent: "duplicate"; raw: string; refused: string[] };
 
 // Read off the document, not loader data, as the post editor does: the IDL property, since browsers hide the attribute.
 function documentCspNonce(): string {
@@ -56,6 +57,11 @@ export function KbFileEditor({
           { label: file.group, href: file.listHref },
         ]}
         title={file.title}
+        actions={
+          <Link to={{ search: "" }} className="cap-btn" data-variant="quiet">
+            Back to the form
+          </Link>
+        }
         lead={
           <>
             <code>{file.file}</code>

@@ -75,20 +75,18 @@ export function parseQuantity(inner) {
  */
 
 /**
- * The text split into words and marks.
+ * Where each mark sits in the text, with the parts it was written with: the one reading of the marks, which tokenize turns
+ * into words and the admin editor turns into chips (app/kb/step-marks.mjs), so the two can never split a step differently.
  *
  * @param {string} text
- * @returns {Segment[]}
+ * @returns {Array<{ start: number, end: number, sign: "@" | "#" | "~", name: string, shown: string, braces: string | null }>}
  */
-export function tokenize(text) {
+export function markSpans(text) {
   const ranges = protectedRanges(text);
   const inRange = (/** @type {number} */ i) => ranges.some(([a, b]) => i >= a && i < b);
-  /** @type {Segment[]} */
+  /** @type {Array<{ start: number, end: number, sign: "@" | "#" | "~", name: string, shown: string, braces: string | null }>} */
   const out = [];
   let last = 0;
-  const pushText = (/** @type {number} */ end) => {
-    if (end > last) out.push({ type: "text", value: text.slice(last, end) });
-  };
   for (const hit of text.matchAll(MARK_START)) {
     const i = hit.index;
     if (i < last || inRange(i)) continue;
@@ -98,28 +96,38 @@ export function tokenize(text) {
     if (rest[0] === "~") {
       const m = TIMER.exec(rest);
       if (!m) continue;
-      pushText(i);
-      out.push({ type: "timer", label: (m[1] ?? "").trim(), quantity: parseQuantity(m[2] ?? "") });
+      out.push({ start: i, end: i + m[0].length, sign: "~", name: (m[1] ?? "").trim(), shown: "", braces: m[2] ?? "" });
       last = i + m[0].length;
       continue;
     }
     const m = BRACED.exec(rest) ?? SINGLE.exec(rest);
     if (!m) continue;
-    pushText(i);
     const [name, shown] = (m[2] ?? "").split("|").map((part) => part.trim());
-    if (m[1] === "@") {
-      out.push({
-        type: "material",
-        name: name ?? "",
-        display: shown || (name ?? ""),
-        quantity: m[3] === undefined ? null : parseQuantity(m[3]),
-      });
-    } else {
-      out.push({ type: "equipment", name: name ?? "", display: shown || (name ?? "") });
-    }
+    out.push({ start: i, end: i + m[0].length, sign: /** @type {"@" | "#"} */ (m[1]), name: name ?? "", shown: shown ?? "", braces: m[3] === undefined ? null : m[3] });
     last = i + m[0].length;
   }
-  pushText(text.length);
+  return out;
+}
+
+/**
+ * The text split into words and marks.
+ *
+ * @param {string} text
+ * @returns {Segment[]}
+ */
+export function tokenize(text) {
+  /** @type {Segment[]} */
+  const out = [];
+  let last = 0;
+  for (const span of markSpans(text)) {
+    if (span.start > last) out.push({ type: "text", value: text.slice(last, span.start) });
+    if (span.sign === "~") out.push({ type: "timer", label: span.name, quantity: parseQuantity(span.braces ?? "") });
+    else if (span.sign === "@") {
+      out.push({ type: "material", name: span.name, display: span.shown || span.name, quantity: span.braces === null ? null : parseQuantity(span.braces) });
+    } else out.push({ type: "equipment", name: span.name, display: span.shown || span.name });
+    last = span.end;
+  }
+  if (text.length > last) out.push({ type: "text", value: text.slice(last) });
   return out;
 }
 
@@ -169,8 +177,8 @@ export function segmentText(segment, factor = 1) {
   }
 }
 
-/** "37 °C", "55 to 60 °C", "-80 °C", "55-60 °C". */
-const TEMPERATURE = /(-?\d+(?:\.\d+)?)(?:\s*(?:to|-)\s*(-?\d+(?:\.\d+)?))?\s*°C/g;
+/** "37 °C", "55 to 60 °C", "-80 °C", "55-60 °C". Exported for the editor, which shows each as a chip. */
+export const TEMPERATURE = /(-?\d+(?:\.\d+)?)(?:\s*(?:to|-)\s*(-?\d+(?:\.\d+)?))?\s*°C/g;
 /** "10,000 rpm", "12,000 x g", "10,000 to 15,000 x g". */
 const SPIN = /(?<![\d.,])(\d[\d,]*(?:\s*to\s*\d[\d,]*)?)\s*(rpm|x g)\b/g;
 

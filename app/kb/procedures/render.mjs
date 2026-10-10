@@ -15,6 +15,7 @@ import { plainText } from "../../lib/search/records.mjs";
 import { keyResources, keyResourcesMarkdown } from "./key-resources.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
+import { statusLabel } from "./taxonomy.mjs";
 import { allSteps, procedurePath, readCalcs } from "./parse.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
@@ -352,7 +353,12 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     proofOfUse: proofFromFile(known(d.proof_of_use)),
     firstUsed: known(d.first_used),
     lastRun: known(d.last_run),
-    status: known(d.status),
+    status: known(d.status) === null ? null : statusLabel(String(d.status)),
+    // The procedure this one was copied from with the editor's Duplicate (validate.mjs checks the shape), or null.
+    forkedFrom:
+      d.forked_from && typeof d.forked_from === "object"
+        ? { slug: String(d.forked_from.slug), version: d.forked_from.version ? String(d.forked_from.version) : null }
+        : null,
     time: {
       total: known(d.time?.total),
       handsOn: known(d.time?.hands_on),
@@ -478,6 +484,7 @@ export function procedureMarkdown(record, parsed) {
     ["Cook time", record.cookTime],
     ["Total time", record.time.total],
     ["Hands-on time", record.time.handsOn],
+    ["Variant of", record.forkedFrom ? `${record.forkedFrom.slug}${record.forkedFrom.version ? `, version ${record.forkedFrom.version}` : ""}` : null],
     ["Host strain", record.hostStrains.length > 0 ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ") : null],
     ["Biosafety level", record.biosafetyLevel],
     [

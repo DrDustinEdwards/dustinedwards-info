@@ -133,6 +133,8 @@ export default [
     // One file of it, edited and saved through the save the operator API uses (step 3).
     route("kb/entry/:slug", "routes/admin.kb.entry.tsx"),
     route("kb/item/:kind/:id", "routes/admin.kb.item.tsx"),
+    // The editor's live preview: the entry the form describes, drawn by the public page's component. Read only.
+    route("kb/preview/:slug", "routes/admin.kb.preview.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     route("media", "routes/admin.media._index.tsx"),
