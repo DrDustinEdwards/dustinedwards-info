@@ -219,6 +219,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
     `check:protocols` and against its frozen copy when it is published; the page, twin and JSON-LD name the parent by
     title as "Based on", linked to that copy (P3, `app/kb/procedures/lineage.mjs`).)
 12. **Offline** (A3).
+    (Done: "Keep on this device" on every procedure page stores that page and the files it uses, and registers
+    `public/sw.js`, which serves the kept copy only when the network fails. Nothing is stored until a reader asks, and
+    removing the last kept page clears the store and unregisters the worker. See "Keep on this device" in
+    `docs/PROCEDURES.md`.)
 
 ## DECIDE
 
