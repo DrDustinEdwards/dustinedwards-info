@@ -241,7 +241,8 @@
   font-size: 1.125rem;
 }
 .run-bar button[disabled] {
-  opacity: 0.45;
+  color: var(--text-disabled);
+  border-color: var(--border);
   cursor: default;
 }
 .run-bar .run-view[aria-pressed="true"] {
