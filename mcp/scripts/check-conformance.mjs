@@ -31,7 +31,9 @@
  */
 
 import { execFileSync, spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -40,6 +42,7 @@ const CONFORMANCE = fileURLToPath(
   new URL("../node_modules/@modelcontextprotocol/conformance/dist/index.js", import.meta.url),
 );
 const ENTRY = fileURLToPath(new URL("../test/conformance-entry.ts", import.meta.url));
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const DEV_PORT = 8789;
 const STUB_PORT = 8790;
@@ -208,7 +211,21 @@ const dev = spawn(
 // Measured here 2026-09-07 on the first run of this section.
 const authDev = spawn(
   process.execPath,
-  [WRANGLER, "dev", "--port", String(AUTH_PORT), "--inspector-port", String(AUTH_PORT + 1000), "--persist-to", ".wrangler/state-conformance-auth"],
+  [
+    WRANGLER,
+    "dev",
+    "--port",
+    String(AUTH_PORT),
+    "--inspector-port",
+    String(AUTH_PORT + 1000),
+    // The config routes the Worker to the admin-mcp Custom Domain, and without
+    // this wrangler dev rewrites every request to that host over http, so the
+    // issuer stops matching the URL the suite fetched (measured 2026-10-10).
+    "--local-upstream",
+    `localhost:${AUTH_PORT}`,
+    "--persist-to",
+    ".wrangler/state-conformance-auth",
+  ],
   { stdio: ["ignore", "pipe", "pipe"] },
 );
 
@@ -356,24 +373,45 @@ if (!(await waitForAuthDev())) {
   }
 
   // An advertised endpoint that does not answer is the same outage with a
-  // second cause, so prove RFC 7591 registration actually mints a client.
-  const reg = await fetch(`http://localhost:${AUTH_PORT}/register`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      client_name: "check-conformance registration proof",
-      redirect_uris: ["http://127.0.0.1:3000/callback"],
-      token_endpoint_auth_method: "none",
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-    }),
-  });
-  const regBody = await reg.json().catch(() => ({}));
-  if (reg.ok && typeof regBody.client_id === "string" && regBody.client_id.length > 0) {
-    log("  PASS       POST /register mints a client_id (RFC 7591 answers, local dev only)");
+  // second cause, so prove RFC 7591 registration actually mints a client for an
+  // allowlisted redirect URI, and (rule 13, tightened) refuses any other.
+  const register = (redirect) =>
+    fetch(`http://localhost:${AUTH_PORT}/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        client_name: "check-conformance registration proof",
+        redirect_uris: [redirect],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+      }),
+    });
+  const configName = existsSync(join(ROOT, "wrangler.jsonc")) ? "wrangler.jsonc" : "wrangler.jsonc.example";
+  const configText = readFileSync(join(ROOT, configName), "utf8");
+  const allowed = ((configText.match(/"DCR_REDIRECT_URIS":\s*"([^"]*)"/) ?? [])[1] ?? "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+  if (allowed.length === 0) {
+    log("  SKIP       no DCR_REDIRECT_URIS configured: registration is closed, so only the refusal is checked");
+  } else {
+    const reg = await register(allowed[0]);
+    const regBody = await reg.json().catch(() => ({}));
+    if (reg.ok && typeof regBody.client_id === "string" && regBody.client_id.length > 0) {
+      log("  PASS       POST /register mints a client_id for an allowlisted redirect URI (local dev only)");
+    } else {
+      failures += 1;
+      log(`  FAIL       POST /register did not mint a client for an allowlisted redirect URI (status ${reg.status})`);
+    }
+  }
+  const refused = await register("http://127.0.0.1:3000/callback");
+  const refusedBody = await refused.json().catch(() => ({}));
+  if (refused.status === 400 && refusedBody.error === "invalid_redirect_uri") {
+    log("  PASS       POST /register refuses a redirect URI that is not allowlisted (rule 13)");
   } else {
     failures += 1;
-    log(`  FAIL       POST /register did not mint a client (status ${reg.status})`);
+    log(`  FAIL       POST /register accepted or mis-refused a non-allowlisted redirect URI (status ${refused.status})`);
   }
 }
 
