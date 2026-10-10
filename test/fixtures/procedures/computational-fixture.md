@@ -1,7 +1,7 @@
 ---
 profile: computational
 method: [annotation]
-path: /research/methods/computational-fixture
+path: /software/how-tos/computational-fixture
 title: "Test Fixture: Count Reads in a FASTA File"
 seo_title: "Test Fixture: Count Reads in a FASTA File"
 description: "A generic test procedure used by the procedure tests and screenshots. It counts reads in a FASTA file and is never published."

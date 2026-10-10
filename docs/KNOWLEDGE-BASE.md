@@ -18,8 +18,8 @@ panel in the admin. Three to start:
 | Knowledge base | Profile | Library | Entry addresses (kept as they are) | Entries today |
 | --- | --- | --- | --- | --- |
 | Protocols | `protocol` | `/research/protocols` (exists) | `/research/protocols/<slug>` | 5 |
-| Software how-tos | `computational` | new (DECIDE 4) | `/research/methods/<slug>` (routed, unused) | 0 |
-| Recipes | `recipe` | `/recipes` (new; only entries are routed today) | `/recipes/<slug>` | 0 |
+| Software how-tos | `computational` | `/software/how-tos` (DECIDE 4) | `/software/how-tos/<slug>` (moved from the unused `/research/methods`) | 0 |
+| Recipes | `recipe` | `/recipes` | `/recipes/<slug>` | 0 |
 
 The Protocols knowledge base also owns the lab inventory: the registry's items and, new, their lots.
 
@@ -191,6 +191,11 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
 7. **Run records with lots** (P2), lot and run pages, the trace from a lot to its runs. Recorded by lab members, so it
    waits for job_4acb6ae89b9f too.
 8. **Public libraries** for Recipes and Software how-tos, item pages for reagents and equipment (A1), the search facet (A2).
+   In three pull requests, in that order. (Libraries done: `/recipes` and `/software/how-tos`, one module over
+   `app/kb/libraries.mjs`, each base's catalog with its markdown twin, JSON and CSV; the protocol library keeps only
+   protocols. A library with no published entry is not a page yet: a visitor gets a 404, the signed-in admin sees it
+   empty, and it joins the sitemap with its first entry. Neither has intro prose: a page's words are Dustin's, so a
+   `content/pages` file for each can come when he writes one.)
 9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4).
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
