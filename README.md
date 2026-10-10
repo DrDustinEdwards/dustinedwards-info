@@ -47,7 +47,7 @@ is the method behind the gates, written from the times it was got wrong.
 | AI | AI Search instance for the Ask layer, guarded by a Durable Object |
 | Images | Images binding, transforms derived on request |
 
-Node 24.14.1 (`.nvmrc`).
+Node at the version in `.nvmrc`.
 
 ## Getting started
 
