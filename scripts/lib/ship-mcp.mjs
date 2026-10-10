@@ -8,6 +8,24 @@ import { join } from "node:path";
 /** The mcp/ scripts that make up its gates, in the order CI's mcp job runs them. */
 export const MCP_GATES = ["typecheck", "check:wrapper", "test", "build"];
 
+/**
+ * What each mcp target deploys. `mcp` is the server; `mcp-emergency` is mcp/emergency, the code that
+ * was live before the move, kept to put the admin MCP back if the cutover fails. The emergency kit is
+ * the old server, so its discovery is checked as the old server answered it: its token audience was
+ * never pinned to a resource, so the resource is not compared.
+ *
+ * @type {Record<string, { title: string, dir: string[], gates: string[], resourceBound: boolean }>}
+ */
+export const MCP_TARGETS = {
+  mcp: { title: "the admin MCP", dir: ["mcp"], gates: MCP_GATES, resourceBound: true },
+  "mcp-emergency": {
+    title: "the admin MCP emergency return (mcp/emergency)",
+    dir: ["mcp", "emergency"],
+    gates: ["test", "emergency:typecheck", "emergency:build"],
+    resourceBound: false,
+  },
+};
+
 const HEALTH_STREAK = 5;
 /** A new Custom Domain can take minutes to get its certificate, so the poll waits longer than the site's. */
 const HEALTH_ATTEMPTS = 36;
@@ -26,25 +44,27 @@ function readJsonc(text) {
  * The real mcp/wrangler.jsonc, or why it cannot be deployed from. The file is gitignored because it
  * carries the live KV namespace ids; the example's placeholders would deploy a Worker bound to nothing.
  * @param {string} root
+ * @param {string[]} [dir] the folder under root holding the config, mcp/ unless a target says otherwise
  * @returns {{ ok: true, origin: string } | { ok: false, why: string, remedy: string }}
  */
-export function mcpConfig(root) {
-  const path = join(root, "mcp", "wrangler.jsonc");
+export function mcpConfig(root, dir = ["mcp"]) {
+  const rel = [...dir, "wrangler.jsonc"].join("/");
+  const path = join(root, ...dir, "wrangler.jsonc");
   if (!existsSync(path)) {
     return {
       ok: false,
-      why: "mcp/wrangler.jsonc does not exist",
+      why: `${rel} does not exist`,
       remedy:
-        "It is gitignored because it carries the live OAUTH_KV and PROBE_KV ids. Copy it from the old " +
-        "dustinedwards-mcp checkout, or copy mcp/wrangler.jsonc.example and fill the two ids from " +
-        "`npx wrangler kv namespace list`. Nothing was deployed.",
+        "It is gitignored because it carries the live OAUTH_KV and PROBE_KV ids. Copy the example beside " +
+        "it and fill the two ids from `npx wrangler kv namespace list` (the same ids mcp/wrangler.jsonc " +
+        "holds). Nothing was deployed.",
     };
   }
   const text = readFileSync(path, "utf8");
   if (text.includes("YOUR_")) {
     return {
       ok: false,
-      why: "mcp/wrangler.jsonc still carries the example's YOUR_ placeholders",
+      why: `${rel} still carries the example's YOUR_ placeholders`,
       remedy: "Fill the KV ids from `npx wrangler kv namespace list`. Nothing was deployed.",
     };
   }
@@ -53,11 +73,11 @@ export function mcpConfig(root) {
     config = readJsonc(text);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, why: `mcp/wrangler.jsonc does not parse: ${message}`, remedy: "Fix it. Nothing was deployed." };
+    return { ok: false, why: `${rel} does not parse: ${message}`, remedy: "Fix it. Nothing was deployed." };
   }
   const origin = String(config?.vars?.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
   if (!origin.startsWith("https://")) {
-    return { ok: false, why: "mcp/wrangler.jsonc names no https PUBLIC_ORIGIN", remedy: "Set it as the example does. Nothing was deployed." };
+    return { ok: false, why: `${rel} names no https PUBLIC_ORIGIN`, remedy: "Set it as the example does. Nothing was deployed." };
   }
   return { ok: true, origin };
 }
@@ -74,12 +94,13 @@ export function mcpConfig(root) {
  *   discover: { status: number, challenge: string },
  * }} readings
  * @param {string} origin
+ * @param {{ resourceBound?: boolean }} [options] false for the old server, whose resource was never pinned
  * @returns {string[]} what is wrong; empty when discovery is right
  */
-export function discoveryProblems({ prm, as, discover }, origin) {
+export function discoveryProblems({ prm, as, discover }, origin, { resourceBound = true } = {}) {
   const problems = [];
   if (prm.status !== 200) problems.push(`protected resource metadata answered ${prm.status}`);
-  else if (prm.body?.resource !== `${origin}/mcp`) {
+  else if (resourceBound && prm.body?.resource !== `${origin}/mcp`) {
     problems.push(`protected resource is ${JSON.stringify(prm.body?.resource)}, not ${origin}/mcp`);
   }
   if (as.status !== 200) problems.push(`authorization server metadata answered ${as.status}`);
@@ -127,11 +148,15 @@ async function readJson(url, init) {
  *   announce: (title: string) => void,
  *   refuse: (why: string, remedy: string) => never,
  *   run: (command: string, args: string[], options?: { capture?: boolean }) => { code: number, text: string },
+ *   target?: string,
  * }} ship
  * @returns {Promise<number>}
  */
-export async function shipMcp({ root, sha, early, readCi, announce, refuse, run }) {
-  announce("mcp: CI is green for this exact commit");
+export async function shipMcp({ root, sha, early, readCi, announce, refuse, run, target = "mcp" }) {
+  const kit = MCP_TARGETS[target];
+  if (!kit) return refuse(`unknown mcp target ${JSON.stringify(target)}`, "Nothing was deployed.");
+  const rel = [...kit.dir, "wrangler.jsonc"].join("/");
+  announce(`${target}: CI is green for this exact commit`);
   /* No local fallback for this target: CI's mcp job is the clean-checkout review, and it must have passed. */
   if (!early.verdict?.ok) {
     return refuse(
@@ -141,47 +166,47 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
   }
   console.log(`  ${early.verdict.why}.`);
 
-  announce("mcp: the real config is present");
-  const config = mcpConfig(root);
+  announce(`${target}: the real config is present`);
+  const config = mcpConfig(root, kit.dir);
   if (!config.ok) return refuse(config.why, config.remedy);
-  console.log(`  mcp/wrangler.jsonc, serving ${config.origin}`);
+  console.log(`  ${rel}, serving ${config.origin}`);
 
   announce("mcp: install from its own lockfile");
   if (run("npm", ["ci", "--prefix", "mcp", "--no-audit", "--no-fund"]).code !== 0) {
     refuse("npm ci in mcp/ failed", "Its package.json and lockfile must agree. Nothing was deployed.");
   }
 
-  announce(`mcp: gates (${MCP_GATES.join(", ")})`);
-  for (const gate of MCP_GATES) {
+  announce(`${target}: gates (${kit.gates.join(", ")})`);
+  for (const gate of kit.gates) {
     if (run("npm", ["run", gate, "--prefix", "mcp"]).code !== 0) {
       refuse(`mcp's ${gate} failed on this machine`, "CI passed it, so this machine differs; find out why. Nothing was deployed.");
     }
   }
 
   /* Read fresh, never reused from the first read, so no deploy is authorized by a stale verdict. */
-  announce("mcp: CI still green for this exact commit");
+  announce(`${target}: CI still green for this exact commit`);
   const { verdict, error } = await readCi();
   if (error || !verdict?.ok) {
     return refuse(error ? `the GitHub API could not be reached: ${error}` : (verdict?.why ?? "CI could not be read"), "Nothing was deployed.");
   }
   console.log(`  ${verdict.why}.`);
 
-  announce("Deploy the admin MCP Worker");
+  announce(`Deploy ${kit.title}`);
   const deployed = run(
     "node",
-    [join("mcp", "node_modules", "wrangler", "bin", "wrangler.js"), "deploy", "-c", join("mcp", "wrangler.jsonc")],
+    [join("mcp", "node_modules", "wrangler", "bin", "wrangler.js"), "deploy", "-c", join(...kit.dir, "wrangler.jsonc")],
     { capture: true },
   );
-  if (deployed.code !== 0) refuse("the admin MCP deploy failed", "The previous version is still serving.");
+  if (deployed.code !== 0) refuse(`the deploy of ${kit.title} failed`, "The previous version is still serving.");
   const version = (deployed.text.match(/Current Version ID:\s*([0-9a-f-]{8,})/i) ?? [])[1] ?? "";
   if (!version) {
     refuse(
       "the deploy reported no Version ID",
-      "It may have succeeded, but a ship that cannot name what it shipped did not ship. Check `npx wrangler deployments list -c mcp/wrangler.jsonc`.",
+      `It may have succeeded, but a ship that cannot name what it shipped did not ship. Check \`npx wrangler deployments list -c ${rel}\`.`,
     );
   }
 
-  announce(`mcp: ${config.origin}/health, ${HEALTH_STREAK} consecutive 200s`);
+  announce(`${target}: ${config.origin}/health, ${HEALTH_STREAK} consecutive 200s`);
   let streak = 0;
   for (let i = 0; i < HEALTH_ATTEMPTS && streak < HEALTH_STREAK; i += 1) {
     const res = await readJson(`${config.origin}/health?ship=${sha}-${i}`, { headers: { "cache-control": "no-cache" } });
@@ -197,7 +222,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
     );
   }
 
-  announce("mcp: discovery describes this server");
+  announce(`${target}: discovery describes this server`);
   const prm = await readJson(`${config.origin}/.well-known/oauth-protected-resource/mcp`);
   const as = await readJson(`${config.origin}/.well-known/oauth-authorization-server`);
   const discover = await readJson(`${config.origin}/mcp`, {
@@ -210,11 +235,11 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "server/discover", params: {} }),
   });
-  const problems = discoveryProblems({ prm, as, discover }, config.origin);
+  const problems = discoveryProblems({ prm, as, discover }, config.origin, { resourceBound: kit.resourceBound });
   if (problems.length > 0) refuse(`discovery is wrong: ${problems.join("; ")}`, `Version ${version} is deployed and serving.`);
   console.log(`  resource ${prm.body.resource}, issuer ${as.body.issuer}, server/discover asks for a token`);
 
-  announce("Shipped the admin MCP");
+  announce(`Shipped ${kit.title}`);
   console.log(`  commit   ${sha}`);
   console.log(`  version  ${version}`);
   console.log(`  serving  ${config.origin}/mcp\n`);
