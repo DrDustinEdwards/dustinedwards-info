@@ -1,7 +1,7 @@
-import { RateLimiter } from "@drdustinedwards/rate-limit/durable-object";
+import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 
 /**
- * The per-key rate limits are the shared class's `hit` (@drdustinedwards/rate-limit), which this class
+ * The per-key rate limits are the shared class's `hit` (@dustinedwards/site-runtime/rate-limit), which this class
  * extends so the binding and the stored class keep their name and need no migration; `consume` is the
  * site-wide daily budget, which stays here. Not the `ratelimit` binding or KV: the binding is documented
  * as eventually consistent and not for accounting, and KV read-modify-writes race. Synchronous SQL,

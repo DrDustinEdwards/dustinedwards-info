@@ -3,7 +3,7 @@
 import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 import { buildSpeculationRules } from "../app/lib/speculation.mjs";
-import { CLOUDFLARE_WEB_ANALYTICS, buildContentSecurityPolicy, buildPolicy, scriptHash } from "@dustinedwards/security-headers/csp";
+import { CLOUDFLARE_WEB_ANALYTICS, buildContentSecurityPolicy, buildPolicy, scriptHash } from "@dustinedwards/site-runtime/csp";
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
