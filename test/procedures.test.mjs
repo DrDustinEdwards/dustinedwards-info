@@ -274,7 +274,7 @@ seo_title: Mini protocol
 description: A small protocol for the tests.
 version: "1"
 updated: 2026-09-30
-status: draft
+status: in-development
 last_run: 2026-09-01
 host_strain: not applicable
 biosafety: not applicable

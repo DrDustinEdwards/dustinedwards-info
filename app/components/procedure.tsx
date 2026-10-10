@@ -9,6 +9,7 @@ import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/ci
 import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
+import { BASES } from "~/kb/bases.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/kb/procedures/marks.mjs";
 
@@ -88,6 +89,17 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
           <a href={s.path}>{s.name}</a>
         </span>
       )),
+    ]);
+  }
+  // A variant made with the editor's Duplicate links the procedure it was copied from, as protocols.io shows a fork's parent.
+  if (record.forkedFrom) {
+    const root = BASES.find((b) => b.profile === record.profile)?.entryRoot ?? "/research/protocols/";
+    facts.push([
+      "Variant of",
+      <a key="forked" href={`${root}${record.forkedFrom.slug}`}>
+        {record.forkedFrom.slug}
+        {record.forkedFrom.version ? `, version ${record.forkedFrom.version}` : ""}
+      </a>,
     ]);
   }
   if (record.biosafety) {

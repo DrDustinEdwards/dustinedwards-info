@@ -101,7 +101,7 @@ history:
     date: 2026-09-01
     summary: First.
 updated: 2026-10-01
-status: draft
+status: in-development
 last_run: 2026-09-01
 host_strain: not applicable
 biosafety: not applicable

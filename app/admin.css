@@ -328,3 +328,176 @@ main.app-page {
   display: grid;
   gap: var(--space-4);
 }
+
+/* The Knowledge Base form (kb-form.tsx): fields in a grid that is one column on a phone, wide fields across it. */
+.kb-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+}
+
+.kb-field-wide {
+  grid-column: 1 / -1;
+}
+
+/* A value nobody has yet: marked by its border and its words, never by colour alone. */
+.kb-field-gap .cap-input {
+  border-style: dashed;
+}
+
+.kb-gap-reason {
+  font-weight: 500;
+}
+
+.kb-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.kb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kb-rows {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.kb-row,
+.kb-inserts,
+.kb-flag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.kb-cell {
+  display: grid;
+  gap: var(--space-1);
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.kb-cell-sm {
+  flex: 0 1 6rem;
+}
+
+.kb-cell-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex: 1 1 14rem;
+}
+
+.kb-flag .cap-input:first-child {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.kb-flag .cap-input:nth-child(2) {
+  flex: 1 1 14rem;
+}
+
+.kb-yaml {
+  font-family: var(--mono);
+}
+
+.kb-readonly {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.kb-steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A step card: its number and moves on top, the words, what can be put into them, then its notes. */
+.kb-step {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.kb-step:focus-visible {
+  outline: var(--ring-width) solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kb-step-dragging {
+  opacity: 0.5;
+}
+
+.kb-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  & .app-actions {
+    margin-inline-start: auto;
+  }
+}
+
+.kb-drag {
+  cursor: grab;
+  color: var(--muted);
+}
+
+.kb-step-number {
+  font-weight: 600;
+}
+
+.kb-inserts {
+  padding: var(--space-3);
+  border-radius: 0.5rem;
+  background: var(--sunken);
+}
+
+.kb-raw-lines pre {
+  overflow-x: auto;
+}
+
+.kb-nested-gaps {
+  margin: var(--space-3) 0 0;
+}
+
+/* Check and Save stay in reach at the foot of a long form. */
+.kb-savebar {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  background: var(--ground);
+}
+
+/* Drag is a pointer's shortcut; on a narrow screen the cards move with their buttons (GOV.UK's reorderable list). */
+@media (max-width: 40rem) {
+  .kb-drag {
+    display: none;
+  }
+}
+
+.kb-insert > summary {
+  cursor: pointer;
+  color: var(--accent-text);
+}
+
+.kb-insert[open] > summary {
+  margin-block-end: var(--space-3);
+}

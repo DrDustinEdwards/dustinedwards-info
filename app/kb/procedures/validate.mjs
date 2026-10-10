@@ -9,7 +9,7 @@
 import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
 import { allSteps, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
-import { COURSES, METHODS, NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
+import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./taxonomy.mjs";
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import { BASES } from "../bases.mjs";
 
@@ -190,6 +190,16 @@ export function validateProcedure(parsed, expect) {
     errors.push(`description is ${d.description.length} characters; Google clips near ${DESCRIPTION_MAX}`);
   }
   if (d.draft !== undefined && typeof d.draft !== "boolean") errors.push("draft must be true or false");
+  // A variant made with the editor's Duplicate names the procedure it was copied from, and the version it was copied at.
+  if (d.forked_from !== undefined) {
+    const f = d.forked_from;
+    if (!f || typeof f !== "object" || Array.isArray(f) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(f.slug ?? ""))) {
+      errors.push("forked_from is { slug, version }: the file name of the procedure this one was copied from, and its version if it had one");
+    } else {
+      for (const key of Object.keys(f)) if (!["slug", "version"].includes(key)) errors.push(`forked_from.${key} is not a forked_from field (slug, version)`);
+      if (f.slug === expect.slug) errors.push("forked_from names this procedure itself");
+    }
+  }
 
   // What the library filters by. method, organism and course are ids from the closed lists in taxonomy.mjs; target
   // is the gene, region or sample, in words. Every procedure is some method, so method is required.
@@ -452,6 +462,9 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
         }
       }
     }
+  }
+  if (d.status !== undefined && !isGap(d.status) && !Object.keys(PROTOCOL_STATUSES).includes(d.status)) {
+    errors.push(`status is ${JSON.stringify(d.status)}; it is one of ${Object.keys(PROTOCOL_STATUSES).join(", ")} (taxonomy.mjs), or "MISSING: <why>"`);
   }
   if (d.biosafety_level !== undefined && !isGap(d.biosafety_level) && !BIOSAFETY_LEVELS.includes(d.biosafety_level)) {
     errors.push(`biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`);

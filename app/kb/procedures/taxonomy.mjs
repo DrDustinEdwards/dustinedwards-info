@@ -36,6 +36,21 @@ export const COURSES = Object.freeze({
 });
 
 /**
+ * Where a protocol stands in the lab, a closed list so the editor offers a choice and the page says it in one set of words
+ * (Dustin, 2026-10-09, the form editor). Each is the protocol's `status`, or "MISSING: <why>" until someone sets it.
+ */
+export const PROTOCOL_STATUSES = Object.freeze({
+  "in-use": "In use",
+  "in-development": "In development",
+  retired: "Retired",
+});
+
+/** A status id's words, or the id itself. @param {string} id */
+export function statusLabel(id) {
+  return /** @type {Record<string, string>} */ (PROTOCOL_STATUSES)[id] ?? id;
+}
+
+/**
  * The phage workflow the library draws as a strip, in the order a phage takes through the lab: each stage is the
  * methods that carry it out. A stage with no protocol yet is drawn without a link, so the strip is the lab's own
  * path and a protocol appears under its stage the moment one is saved. `tools` are the ids of the calculators
