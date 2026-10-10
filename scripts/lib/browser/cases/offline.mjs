@@ -8,9 +8,26 @@ import { BASE, ok, skip } from "../harness.mjs";
  * page offers it, keeping registers the worker and stores the page, and with the network cut the page opens again from
  * the device, styled; a page nobody kept does not. Removing the copy leaves no store and no worker behind.
  *
+ * In a browser context of its own: its network failures are the point, so they must not reach the shared page's console
+ * tally ("no console errors across the public enhancement cases"), and its worker and store must not outlive it into the
+ * cases after it.
+ *
  * @param {import("../harness.mjs").CaseContext} ctx
  */
-export async function run({ page, browser }) {
+export async function run({ browser }) {
+  const context = await browser.createBrowserContext();
+  try {
+    await keepOffline(context, await context.newPage());
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * @param {import("puppeteer").BrowserContext} context
+ * @param {import("puppeteer").Page} page
+ */
+async function keepOffline(context, page) {
   const path = "/research/protocols/phage-isolation";
   const response = await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
   if (!response || response.status() !== 200) {
@@ -44,7 +61,7 @@ export async function run({ page, browser }) {
   // The worker controls the next load; then the network goes, for the page and for the worker, whose own fetches the
   // page's offline mode does not reach.
   await page.reload({ waitUntil: "networkidle0" });
-  const worker = await browser.waitForTarget((t) => t.type() === "service_worker", { timeout: 15_000 }).catch(() => null);
+  const worker = await context.waitForTarget((t) => t.type() === "service_worker", { timeout: 15_000 }).catch(() => null);
   const session = worker ? await worker.createCDPSession() : null;
   const cut = (/** @type {boolean} */ offline) =>
     session?.send("Network.emulateNetworkConditions", { offline, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
