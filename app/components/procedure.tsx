@@ -8,6 +8,8 @@ import type { workflowContext } from "~/kb/procedures/library.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
 import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
+import { PLATFORMS } from "~/kb/procedures/parse.mjs";
+import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
 import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { itemPath } from "~/kb/registry/catalog.mjs";
@@ -67,6 +69,8 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
   const add = (label: string, value: string | number | null | undefined) => {
     if (value !== null && value !== undefined && value !== "") facts.push([label, String(value)]);
   };
+  // A how-to says first whether it is a lesson or a recipe for a task (S1). A row compiled before step 10 has no type.
+  add("Type", record.howtoType ? HOWTO_TYPES[record.howtoType] : null);
   add("Version", record.version);
   add("Updated", record.updated);
   add("First used", record.firstUsed);
@@ -421,21 +425,13 @@ export function StepItem({
           <span dangerouslySetInnerHTML={html(e)} />
         </Flag>
       ))}
-      {step.commands.map((cmd, i) => (
-        <div key={`cmd${i}`} className="procedure-command">
-          <pre data-lang={cmd.lang || "text"}>
-            <code>{cmd.code}</code>
-          </pre>
-          {cmd.output !== null ? (
-            <>
-              <p className="procedure-output-label">Expected output</p>
-              <pre className="procedure-output">
-                <code>{cmd.output}</code>
-              </pre>
-            </>
-          ) : null}
-        </div>
-      ))}
+      {commandGroups(step.commands).map((group, g) =>
+        group.length === 1 && !group[0]!.platform ? (
+          <Command key={`cmd${g}`} cmd={group[0]!} />
+        ) : (
+          <Platforms key={`cmd${g}`} group={group} id={`${scope ? stepId(scope, step.number) : `step-${step.number}`}-${g}`} brief={brief} />
+        ),
+      )}
       {step.photos.map((p) => (
         <img
           key={p.src}
@@ -447,6 +443,20 @@ export function StepItem({
           {...(p.width && p.height ? { width: p.width, height: p.height } : {})}
         />
       ))}
+      {brief
+        ? null
+        : (step.challenges ?? []).map((c, i) => (
+            <div key={`ch${i}`} className="procedure-challenge" role="note">
+              <strong className="procedure-flag-label">Challenge.</strong>
+              <div dangerouslySetInnerHTML={html(c.html)} />
+              {c.solutionHtml ? (
+                <details className="procedure-solution">
+                  <summary>Solution</summary>
+                  <div dangerouslySetInnerHTML={html(c.solutionHtml)} />
+                </details>
+              ) : null}
+            </div>
+          ))}
       {/* A row compiled before calculators existed has no `calculators` until the next sync rewrites it. */}
       {brief || !step.calculators?.length ? null : <StepCalculators calculators={step.calculators} scope={`${scope}s${step.number}`} />}
       {brief
@@ -467,6 +477,80 @@ export function StepItem({
         </p>
       ) : null}
     </li>
+  );
+}
+
+type Cmd = Step["commands"][number];
+
+/** A step's commands in runs: each run of blocks that name a platform is one set of tabs; any other block stands alone. */
+function commandGroups(commands: Cmd[]) {
+  const groups: Cmd[][] = [];
+  for (const cmd of commands) {
+    const last = groups[groups.length - 1];
+    if (cmd.platform && last?.[0]?.platform) last.push(cmd);
+    else groups.push([cmd]);
+  }
+  return groups;
+}
+
+function Command({ cmd }: { cmd: Cmd }) {
+  return (
+    <div className="procedure-command">
+      <pre data-lang={cmd.lang || "text"}>
+        <code>{cmd.code}</code>
+      </pre>
+      {cmd.output !== null ? (
+        <>
+          <p className="procedure-output-label">Expected output</p>
+          <pre className="procedure-output">
+            <code>{cmd.output}</code>
+          </pre>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+const platformName = (p: string | null) => PLATFORMS[p as keyof typeof PLATFORMS] ?? p ?? "";
+
+/**
+ * One command for each platform (S4). With no script every block shows, under its name, and the tabs are links to them;
+ * app/enhance/platforms.ts turns the links into tabs and remembers the reader's platform. The sheet lists them all.
+ */
+function Platforms({ group, id, brief }: { group: Cmd[]; id: string; brief: boolean }) {
+  return (
+    <div className="procedure-platforms" data-platforms="">
+      {brief ? null : (
+        <p className="procedure-platform-tabs">
+          {group.map((cmd) => (
+            <a key={cmd.platform} href={`#${id}-${cmd.platform}`} data-platform={cmd.platform ?? ""}>
+              {platformName(cmd.platform)}
+            </a>
+          ))}
+        </p>
+      )}
+      {group.map((cmd) => (
+        <div key={cmd.platform} id={`${id}-${cmd.platform}`} className="procedure-platform" data-platform={cmd.platform ?? ""}>
+          <p className="procedure-platform-label">{platformName(cmd.platform)}</p>
+          <Command cmd={cmd} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A list of short markdown lines under a heading: a tutorial's questions, objectives or key points (S2). */
+function Bullets({ id, title, items }: { id: string; title: string; items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <>
+      <h3 id={id}>{title}</h3>
+      <ul>
+        {items.map((x, i) => (
+          <li key={i} dangerouslySetInnerHTML={html(x)} />
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -582,6 +666,10 @@ function CiteBlock({ record }: { record: ProcedureRecord }) {
   );
 }
 
+function commandsOf(record: ProcedureRecord) {
+  return record.sections.flatMap((s) => s.blocks.flatMap((b) => (b.type === "steps" ? b.steps.flatMap((st) => st.commands) : [])));
+}
+
 function hasCalculators(record: ProcedureRecord) {
   return record.sections.some((section) =>
     section.blocks.some((block) => block.type === "steps" && block.steps.some((step) => step.calculators?.length)),
@@ -668,6 +756,13 @@ export function ProcedureView({
           {...(record.image.width && record.image.height ? { width: record.image.width, height: record.image.height } : {})}
         />
       ) : null}
+      {(record.questions?.length ?? 0) + (record.objectives?.length ?? 0) > 0 ? (
+        <section className="procedure-overview" aria-labelledby="overview">
+          <Heading id="overview">Overview</Heading>
+          <Bullets id="questions" title="Questions" items={record.questions ?? []} />
+          <Bullets id="objectives" title="Objectives" items={record.objectives ?? []} />
+        </section>
+      ) : null}
       <div dangerouslySetInnerHTML={html(record.introHtml)} />
 
       <section aria-labelledby={materialsId}>
@@ -742,6 +837,31 @@ export function ProcedureView({
           )}
         </section>
       ))}
+
+      {record.keyPoints?.length ? (
+        <section className="procedure-overview" aria-labelledby="key-points">
+          <Heading id="key-points">Key points</Heading>
+          <ul>
+            {record.keyPoints.map((x, i) => (
+              <li key={i} dangerouslySetInnerHTML={html(x)} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {record.explanation?.length ? (
+        <section aria-labelledby="explanation">
+          <Heading id="explanation">Explanation</Heading>
+          <ul>
+            {record.explanation.map((e) => (
+              <li key={e.url}>
+                <a href={e.url}>{e.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {commandsOf(record).some((c) => c.platform) ? <Enhance module="platforms" /> : null}
 
       {record.troubleshooting.length ? (
         <section aria-labelledby={troubleId}>

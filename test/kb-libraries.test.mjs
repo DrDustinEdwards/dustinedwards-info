@@ -16,10 +16,10 @@ test("each base but Protocols has a library at its own address; the how-tos and 
   assert.deepEqual(libraryTrail(/** @type {any} */ (baseAtLibrary("/recipes"))), [["Recipes", "/recipes"]]);
 });
 
-test("a recipe is found by category, cuisine and diet; a how-to by method and course", () => {
+test("a recipe is found by category, cuisine and diet; a how-to by type, method and course", () => {
   const facets = (/** @type {string} */ path) => baseCatalog(/** @type {any} */ (baseAtLibrary(path))).fields.filter((f) => f.facet).map((f) => f.key);
   assert.deepEqual(facets("/recipes"), ["category", "cuisine", "diet"]);
-  assert.deepEqual(facets("/software/how-tos"), ["method", "course"]);
+  assert.deepEqual(facets("/software/how-tos"), ["type", "method", "course"]);
   assert.equal(baseMarkdown(/** @type {any} */ (baseAtLibrary("/recipes")), [], "https://example.com"), "No recipes are published yet.");
 });
 

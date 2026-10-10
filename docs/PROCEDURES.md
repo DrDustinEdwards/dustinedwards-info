@@ -76,6 +76,13 @@ not marked, so the sentence stays the one a person wrote.
   `TOOLS` in `app/lib/phage-tools.mjs`, such as `> CALC: dilution, titer`). In the computational profile a fenced code block under a step is the
   command to copy, and a fenced block with the info string `output` right after it is its expected
   output.
+- A computational command that differs by system is given once per platform: ` ```bash platform=linux `,
+  ` ```bash platform=macos `, ` ```powershell platform=windows `, each with its own output block. A step names
+  each platform once and never one alone. The page shows them as tabs (links to each block with no script;
+  `app/enhance/platforms.ts` makes them tabs and remembers the reader's platform); the twin and the sheet list
+  every one under its name.
+- A tutorial's step may set a task: `> CHALLENGE:` with the task, then `> SOLUTION:` with its answer. The page
+  folds the solution into a `<details>`, which opens with no script, and the twin carries both.
 
 ### A value nobody has yet
 
@@ -147,7 +154,12 @@ pages. `organism` reads from the lab registry's strains, so a strain added there
   from a table of densities. Each ingredient lists the steps it is used in, each step lists its ingredients, and the
   page has a mise-en-place checklist with a shopping list to copy (`app/kb/procedures/recipe-views.mjs`).
 - **computational** adds `environment` and `prerequisites`. Its materials are software (with `version`),
-  data and input files. Every command has its expected output. It does not scale.
+  data and input files. Every command has its expected output. It does not scale. It also says what it is, per
+  Diátaxis: `type: tutorial` (a lesson that teaches) or `type: how-to` (the steps for one task). A tutorial
+  opens as a Carpentries episode does, with `objectives` (required), `questions` and its time (`time.total`,
+  required), and ends with `key_points`; each is a list of lines. Either may link the pages that explain the why,
+  as `explanation:` (a list of `{ title, url }`, a page here or an https address). A how-to keeps a `WHY:` to
+  three sentences and links the rest; `CHALLENGE:` belongs to a tutorial. The how-to library has a Type facet.
 
 ## Versions, history and citing
 

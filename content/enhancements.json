@@ -214,6 +214,15 @@
       "why": null
     },
     {
+      "id": "howto-platform-tabs",
+      "module": "app/enhance/platforms.ts",
+      "enhancement": "On a software how-to whose commands differ by system, the Linux, macOS and Windows blocks become tabs: one platform shows in every set on the page, the arrow keys move between the tabs, and the reader's platform is remembered in this browser.",
+      "fallback": "The page is complete as served: every platform's command shows under its name, and the tab row is links to each block. The printable sheet and the markdown twin list every platform too.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".procedure-platforms",
+      "why": null
+    },
+    {
       "id": "protocol-library-catalog",
       "module": "app/enhance/catalog.ts",
       "enhancement": "On the protocol library, the lab registry and the publications list, search, filters, sort and paging update the results in place as a person types or chooses, with the counts, the removable filter chips and the phone filter tray kept in step.",

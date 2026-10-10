@@ -1,5 +1,6 @@
 ---
 profile: computational
+type: how-to
 method: [annotation]
 path: /software/how-tos/computational-fixture
 title: "Test Fixture: Count Reads in a FASTA File"

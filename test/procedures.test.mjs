@@ -208,7 +208,7 @@ test("a step's flags are read, and a quoted line continues the flag above it", (
 
 test("a fenced block under a step is a command, and an output block after it is its output", () => {
   const step = stepsOf(BODY)[3];
-  assert.deepEqual(step?.commands, [{ lang: "bash", code: "echo hi", output: "hi" }]);
+  assert.deepEqual(step?.commands, [{ lang: "bash", code: "echo hi", output: "hi", platform: null }]);
   assert.deepEqual(step?.photos, [{ alt: "A pellet at the bottom of a tube.", src: "/media/pellet.jpg" }]);
   assert.equal(step?.source, "A separate method restarts at 1.");
 });
@@ -250,6 +250,7 @@ test("headingId drops superscripts and vulgar fractions the way github-slugger d
 for (const [slug, path] of [
   ["recipe-fixture", "test/fixtures/procedures/recipe-fixture.md"],
   ["computational-fixture", "test/fixtures/procedures/computational-fixture.md"],
+  ["tutorial-fixture", "test/fixtures/procedures/tutorial-fixture.md"],
   ["phage-dna-extraction", "content/procedures/phage-dna-extraction.md"],
 ]) {
   test(`${path} validates with no errors`, () => {
@@ -395,6 +396,7 @@ test("step numbering that skips is an error", () => {
 
 const COMPUTATIONAL = `---
 profile: computational
+type: how-to
 method: [annotation]
 path: /software/how-tos/mini
 title: Mini method

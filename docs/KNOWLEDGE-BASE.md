@@ -209,6 +209,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    (`shownStep` and `stepBeside` in `app/kb/procedures/run.mjs`); a scale or units change in a run keeps the units and
    swaps each step's ingredients and the mise-en-place too.)
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
+    (Done: `type: tutorial | how-to` as a fact on the page and the library's Type facet, `explanation:` links, and a
+    how-to's `WHY:` held to three sentences (S1); a tutorial's questions and objectives in an Overview before the
+    method and its key points after it (S2); ` ```bash platform=linux ` blocks as tabs, `app/enhance/platforms.ts`
+    (S4); `> CHALLENGE:` and `> SOLUTION:` with the solution in a `<details>` (S5). Format in `docs/PROCEDURES.md`.)
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
 12. **Offline** (A3).
 

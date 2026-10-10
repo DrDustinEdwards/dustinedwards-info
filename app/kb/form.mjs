@@ -24,7 +24,7 @@ const yaml = {
  */
 
 /** The step flags the procedure format has (docs/PROCEDURES.md), in the order the form offers them. */
-export const STEP_FLAGS = /** @type {const} */ (["CRITICAL", "PAUSE POINT", "WHY", "EXPECT", "SPIN", "TROUBLESHOOTING", "CALC"]);
+export const STEP_FLAGS = /** @type {const} */ (["CRITICAL", "PAUSE POINT", "WHY", "EXPECT", "SPIN", "TROUBLESHOOTING", "CALC", "CHALLENGE", "SOLUTION"]);
 
 const FRONT = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
 const KEY = /^([A-Za-z_][\w-]*):(?:\s|$)/;
@@ -115,7 +115,7 @@ function readStep(lines, i) {
   while (j < lines.length) {
     const next = lines[j] ?? "";
     if (/^\s{2,}\S/.test(next)) {
-      const flag = /^(\s+)>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC)\s*:\s?(.*)$/.exec(next);
+      const flag = /^(\s+)>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s?(.*)$/.exec(next);
       // A flag is the form's to edit when its line is exactly what the form would write back.
       if (flag && next === `${flag[1]}> ${flag[2]}: ${flag[3]}`) stepLines.push({ kind: /** @type {string} */ (flag[2]), text: flag[3] ?? "", indent: flag[1] ?? "   " });
       else stepLines.push({ raw: next });

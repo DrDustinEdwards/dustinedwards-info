@@ -16,6 +16,7 @@ declare module "virtual:enhance" {
     | "login"
     | "palette"
     | "plate"
+    | "platforms"
     | "podcast"
     | "pronounce"
     | "run"
