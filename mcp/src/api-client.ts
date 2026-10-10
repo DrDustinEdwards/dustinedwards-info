@@ -2,16 +2,23 @@
  * The API LEG: wrapper to app.
  *
  * This is the ONLY way this Worker reaches the publish machinery, and that is
- * the whole architecture in one file. Every tool call becomes one authenticated
- * HTTP POST to /api/operator on the dustinedwards Worker, where the zod
- * frontmatter gate, the wide-dash check, the first-publish policy, the atomic
- * Git Data commit, the D1 sync and the AI index sync all live.
+ * the whole architecture in one file. Every tool call becomes authenticated
+ * HTTP to /api/operator on the dustinedwards Worker, where the validators, the
+ * first-publish policy, the atomic Git Data commit, the D1 sync and the AI
+ * index sync all live.
+ *
+ * OVER THE `SITE` SERVICE BINDING since the move into dustinedwards-info
+ * (ruling mcp-2026-10-10, design section 6 step 4). The public operator URL was
+ * one hop through the internet for a call between two Workers on one account,
+ * and on the dustinedwards.info zone it would also be the Worker-to-Worker
+ * fetch the watchdog measured answering Cloudflare error 1042 (2026-08-29). A
+ * service binding is still HTTP: the request carries the same bearer, crosses
+ * the same operator authentication and the same rate limiter, and the site
+ * cannot tell it from any other operator call. It is not an in-process call.
  *
  * Nothing here interprets a rule. It does not know what the first-publish policy
  * is, it cannot tell a policy refusal from a validation failure except by
- * reading what the API said, and it must never learn. If this file started
- * deciding things, there would be two copies of the rules and they would drift,
- * which is the failure the wrapper pattern exists to prevent.
+ * reading what the API said, and it must never learn.
  *
  * The credential here identifies WHAT this Worker may do. It is deliberately a
  * different value from the client-leg credential, which identifies WHO is
@@ -19,17 +26,23 @@
  */
 
 export interface ApiEnv {
-  /** The operator API endpoint, e.g. https://dustinedwards.../api/operator */
-  OPERATOR_API_URL: string;
+  /** Service binding to the dustinedwards Worker. The only route to the app. */
+  SITE: Fetcher;
+  /**
+   * The site's origin, used as the URL the bound Worker sees. A service binding
+   * ignores the host for routing, but the site reads its own request URL, so it
+   * is given the canonical one. check:wrapper asserts it equals SITE_ORIGIN in
+   * app/lib/seo.ts, so it is a checked copy and never a second source.
+   */
+  SITE_ORIGIN: string;
   /** The API leg bearer. Never the client-leg credential. */
   OPERATOR_TOKEN: string;
 }
 
 /**
  * What the operator API returns. This is the CONTRACT between the two Workers,
- * and it is a documented payload shape rather than shared code: this repo
- * imports nothing from the app, so the only thing that can couple them is this
- * interface, which we validate at the edge like the outside caller we are.
+ * a documented payload shape rather than shared code, validated at the edge
+ * like the outside caller this Worker is.
  */
 export type ApiResponse =
   | { ok: true; data: unknown }
@@ -42,12 +55,7 @@ export interface ApiCallResult {
   ok: boolean;
   /** On success, the API's data. On failure, undefined. */
   data?: unknown;
-  /**
-   * On failure, the API's refusal prose VERBATIM. Never summarized, wrapped, or
-   * softened: an agent that receives "invalid frontmatter" and nothing else
-   * cannot fix its own mistake, and the API deliberately names the field and the
-   * line. Rewriting this text would discard the most useful thing it sends.
-   */
+  /** On failure, the API's refusal prose VERBATIM. Never summarized, wrapped, or softened. */
   error?: string;
   /** On failure, the API's structured detail (policy name, field, line, conflict). */
   detail?: unknown;
@@ -63,13 +71,25 @@ export class ApiLegError extends Error {
   }
 }
 
-function assertConfigured(env: Partial<ApiEnv>): asserts env is ApiEnv {
-  if (!env.OPERATOR_API_URL) {
+const USER_AGENT = "dustinedwards-mcp/0.2 (operator MCP wrapper)";
+
+function assertBound(env: Partial<ApiEnv>): asserts env is Pick<ApiEnv, "SITE" | "SITE_ORIGIN"> & Partial<ApiEnv> {
+  if (!env.SITE || typeof env.SITE.fetch !== "function") {
     throw new ApiLegError(
-      "The wrapper is not configured: OPERATOR_API_URL is unset. Not configured means not open.",
+      "The wrapper is not configured: the SITE service binding is missing. Not configured means not open.",
       "unconfigured",
     );
   }
+  if (!env.SITE_ORIGIN) {
+    throw new ApiLegError(
+      "The wrapper is not configured: SITE_ORIGIN is unset. Not configured means not open.",
+      "unconfigured",
+    );
+  }
+}
+
+function assertConfigured(env: Partial<ApiEnv>): asserts env is ApiEnv {
+  assertBound(env);
   // The app refuses its own endpoint below 32 characters, so a token that short
   // could never work and is worth catching here rather than after a round trip.
   if (!env.OPERATOR_TOKEN || env.OPERATOR_TOKEN.length < 32) {
@@ -84,10 +104,7 @@ function assertConfigured(env: Partial<ApiEnv>): asserts env is ApiEnv {
  * Calls one operator tool.
  *
  * The request shape is `{ tool, args }` because that is what the API already
- * takes. It was chosen on 2026-07-28 specifically so an MCP front end could be
- * layered over it with no reshaping, since `tools/call` carries exactly a name
- * and an argument object. This function is the proof that the prediction held:
- * it is a transport, not a translator.
+ * takes. This function is a transport, not a translator.
  */
 export async function callOperator(
   env: Partial<ApiEnv>,
@@ -98,13 +115,13 @@ export async function callOperator(
 
   let response: Response;
   try {
-    response = await fetch(env.OPERATOR_API_URL, {
+    response = await env.SITE.fetch(`${env.SITE_ORIGIN}/api/operator`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${env.OPERATOR_TOKEN}`,
         // Identifies the caller in the app's logs without revealing anything.
-        "user-agent": "dustinedwards-mcp/0.1 (operator MCP wrapper)",
+        "user-agent": USER_AGENT,
       },
       body: JSON.stringify({ tool, args }),
     });
@@ -126,8 +143,6 @@ export async function callOperator(
     );
   }
 
-  // Edge validation. We are an outside caller and treat the payload as untrusted
-  // shape, but we do NOT second-guess its meaning.
   if (!parsed || typeof parsed !== "object" || typeof (parsed as { ok?: unknown }).ok !== "boolean") {
     throw new ApiLegError(
       `The operator API returned status ${response.status} with an unrecognized payload shape.`,
@@ -147,4 +162,29 @@ export async function callOperator(
     error: typeof body.error === "string" ? body.error : `The operator API refused with status ${response.status}.`,
     detail: body.detail,
   };
+}
+
+/** One reading of the site's public readiness endpoint, in the shape the watchdog's repair plan reads. */
+export interface HealthReading {
+  status: number;
+  body: unknown;
+  error?: string;
+}
+
+/**
+ * Reads `/api/health` over the same binding. Public and unauthenticated on the
+ * site, so no bearer is sent: the operator token goes only where it is needed.
+ * Never throws, and keeps the cause, exactly as the watchdog's reader does: a
+ * reading that never happened must not be mistaken for a healthy or failing one.
+ */
+export async function readHealth(env: Partial<ApiEnv>): Promise<HealthReading> {
+  try {
+    assertBound(env);
+    const response = await env.SITE.fetch(`${env.SITE_ORIGIN}/api/health`, {
+      headers: { "user-agent": USER_AGENT, "cache-control": "no-cache" },
+    });
+    return { status: response.status, body: await response.json().catch(() => null) };
+  } catch (cause) {
+    return { status: 0, body: null, error: cause instanceof Error ? cause.message : String(cause) };
+  }
 }

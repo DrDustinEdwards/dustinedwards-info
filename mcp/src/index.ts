@@ -19,7 +19,9 @@
  *                          then apiHandler re-checks the admin grant, rate
  *                          limits, and hands off to the era router
  *   /authorize /callback   the consent flow, github-handler.ts
- *   /token /register       served by the OAuth library
+ *   /register              rate limited per address, then the OAuth library,
+ *                          which refuses any redirect URI not allowlisted
+ *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
  *   /health                liveness
@@ -27,17 +29,26 @@
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
-import { agentPrincipal, isAdminUser, type Props } from "./auth";
+import { agentPrincipal, agentScopes, isAdminUser, SCOPE_READ, SCOPES, type Props } from "./auth";
 import { defaultHandler, type GitHubEnv } from "./github-handler";
 import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
 import { checkRateLimit, type RateLimitEnv } from "./rate-limit";
+import { registrationRefusal } from "./registration";
 import type { ApiEnv } from "./api-client";
+import type { AuditEnv } from "./audit-log";
 
 export { OperatorRateLimit } from "./rate-limit";
+export { ToolCallLog } from "./audit-log";
 
-export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, ProbeEnv, GitHubEnv {
+export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<AuditEnv>, ProbeEnv, GitHubEnv {
   OAUTH_KV: KVNamespace;
+  /** The one public origin, https://admin-mcp.dustinedwards.info. Tokens are bound to its /mcp. */
+  PUBLIC_ORIGIN?: string;
+  /** Comma-separated redirect URIs a dynamically registered client may use, matched exactly. */
+  DCR_REDIRECT_URIS?: string;
+  /** Comma-separated agent principals that hold dei.write. */
+  AGENT_WRITE?: string;
 }
 
 const noStore = (body: string, status: number) =>
@@ -91,7 +102,9 @@ const apiHandler = {
       );
     }
 
-    return handleMcp(request, env, ctx);
+    // A grant minted before scopes existed carries none, and reads only.
+    const scopes = Array.isArray(props.scopes) ? props.scopes : [SCOPE_READ];
+    return handleMcp(request, env, ctx, { kind: "admin", props, scopes });
   },
 };
 
@@ -156,35 +169,63 @@ async function agentHandler(
     );
   }
 
-  return handleMcp(request, env, ctx);
+  return handleMcp(request, env, ctx, { kind: "agent", principal, scopes: agentScopes(env, principal) });
 }
 
-const provider = new OAuthProvider({
-  apiRoute: MCP_ROUTE,
-  apiHandler,
-  defaultHandler: defaultHandler as unknown as ExportedHandler,
-  authorizeEndpoint: "/authorize",
-  tokenEndpoint: "/token",
-  // BOTH client identity paths, each on its own measurement:
-  //
-  // CIMD. Measured 2026-07-30: claude.ai sends its client_id as the URL
-  // https://claude.ai/oauth/mcp-oauth-client-metadata and never calls a
-  // registration endpoint. MCP 2026-07-28 deprecates RFC 7591 in favour of CIMD,
-  // so this stays the design-center path.
-  //
-  // DCR. Measured 2026-09-07: Grok Build 1.0.13's rmcp client cannot do CIMD and
-  // requires RFC 7591 dynamic registration. With no registration_endpoint in the
-  // AS metadata it stopped at "OAuth authorization required" without ever
-  // building an authorization URL, so no browser opened. The earlier note here
-  // ("building one would serve no measured client") was true on 2026-07-30 and
-  // is superseded by that capture.
-  //
-  // Registration only mints a client identity. A registered client still gets a
-  // grant solely through the GitHub consent flow, and isAdminUser admits exactly
-  // the configured administrator, so DCR widens who may ASK, never who is let in.
-  clientIdMetadataDocumentEnabled: true,
-  clientRegistrationEndpoint: "/register",
-});
+/** How many registrations one address may make per minute. */
+const REGISTRATIONS_PER_MINUTE = 5;
+
+/**
+ * The provider, built once per isolate from its env, because three of its
+ * settings are configuration: the canonical resource, and the registration
+ * allowlist the DCR callback reads. The env is fixed for an isolate's life, so
+ * building it on first use is the same object every later request gets.
+ */
+let provider: OAuthProvider<Env> | null = null;
+function oauthProvider(env: Env): OAuthProvider<Env> {
+  if (provider) return provider;
+  const origin = (env.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
+  const built = new OAuthProvider<Env>({
+    apiRoute: MCP_ROUTE,
+    apiHandler,
+    defaultHandler: defaultHandler as unknown as ExportedHandler,
+    authorizeEndpoint: "/authorize",
+    tokenEndpoint: "/token",
+    /*
+     * AUDIENCE BINDING. Rule 12.2, RFC 8707. Naming the resource pins every
+     * grant and every access token to exactly this server's /mcp: a token
+     * issued for any other resource, by this provider or by another server,
+     * is refused, and an authorization that names no resource is bound to this
+     * one. Nothing is passed through: the API leg uses OPERATOR_TOKEN, never the
+     * client's token.
+     */
+    ...(origin ? { resourceMetadata: { resource: `${origin}${MCP_ROUTE}`, scopes_supported: [SCOPE_READ] } } : {}),
+    scopesSupported: [...SCOPES],
+    // BOTH client identity paths. Rule 13.
+    //
+    // CIMD for Claude, Claude Code and ChatGPT. Measured 2026-07-30: claude.ai
+    // sends its client_id as the URL https://claude.ai/oauth/mcp-oauth-client-metadata
+    // and never calls a registration endpoint.
+    //
+    // DCR, TIGHTENED, for Grok and Gemini, which still require RFC 7591 as of
+    // 2026-10-09. registrationRefusal allows only redirect URIs listed exactly in
+    // DCR_REDIRECT_URIS (none listed refuses every registration), the route is
+    // rate limited per address before the provider sees it, and a registration
+    // grants nothing: a grant still comes only from the consent page, the GitHub
+    // login and isAdminUser. Remove when Grok and Gemini support CIMD, at the
+    // latest when the specification removes DCR.
+    clientIdMetadataDocumentEnabled: true,
+    clientRegistrationEndpoint: "/register",
+    clientRegistrationCallback: ({ clientMetadata }) => {
+      const why = registrationRefusal(env.DCR_REDIRECT_URIS, clientMetadata);
+      if (!why) return undefined;
+      console.log(JSON.stringify({ audit: "registration-refused", why }));
+      return { code: "invalid_redirect_uri", description: why };
+    },
+  });
+  provider = built;
+  return built;
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -224,6 +265,24 @@ export default {
       if (principal) return agentHandler(request, env, ctx, principal);
     }
 
-    return provider.fetch(request, env, ctx);
+    if (url.pathname === "/register") {
+      const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+      const limit = await checkRateLimit(env, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
+      if (!limit.allowed) {
+        return new Response(
+          `Rate limited. This server allows ${REGISTRATIONS_PER_MINUTE} client registrations per minute per address.`,
+          {
+            status: 429,
+            headers: {
+              "content-type": "text/plain; charset=utf-8",
+              "cache-control": "no-store",
+              "retry-after": String(limit.retryAfter),
+            },
+          },
+        );
+      }
+    }
+
+    return oauthProvider(env).fetch(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

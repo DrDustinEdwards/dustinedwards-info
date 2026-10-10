@@ -16,7 +16,7 @@
  * the operator API.
  */
 
-import { isAdminUser, type Props } from "./auth";
+import { isAdminUser, SCOPE_READ, SCOPE_WRITE, type Props } from "./auth";
 
 export interface GitHubEnv {
   GITHUB_CLIENT_ID?: string;
@@ -44,6 +44,23 @@ interface AuthRequest {
 }
 
 const STATE_COOKIE = "mcp_oauth_state";
+/**
+ * Binds the consent POST to the consent page this server rendered. The page
+ * sets it as a SameSite=Strict cookie and repeats it in a hidden field, and the
+ * POST must carry both, equal. A cross-site form cannot read the field and its
+ * request carries no Strict cookie, so another site cannot submit consent on
+ * the administrator's behalf and skip the page (the confused-deputy path).
+ */
+const CONSENT_COOKIE = "mcp_consent";
+
+function cookie(request: Request, name: string): string | undefined {
+  return request.headers
+    .get("Cookie")
+    ?.split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
 
 function text(body: string, status = 200): Response {
   return new Response(body, {
@@ -81,12 +98,16 @@ async function handleAuthorizeGet(request: Request, env: GitHubEnv): Promise<Res
   const oauthReq = await env.OAUTH_PROVIDER.parseAuthRequest(request);
   const client = await env.OAUTH_PROVIDER.lookupClient(oauthReq.clientId).catch(() => null);
   const clientName = client?.clientName ?? oauthReq.clientId;
+  // LEAST SCOPE FIRST (rule 12.3): the write box starts ticked only when the
+  // client itself asked for dei.write, and the administrator decides either way.
+  const wantsWrite = oauthReq.scope.includes(SCOPE_WRITE);
+  const consentToken = crypto.randomUUID();
 
   return html(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Authorize access to dustinedwards.info publishing</title>
+<title>Authorize Dustin Edwards Admin</title>
 <style>
   :root { color-scheme: light dark; }
   body { font: 16px/1.6 system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; padding: 0 1.25rem; }
@@ -98,21 +119,29 @@ async function handleAuthorizeGet(request: Request, env: GitHubEnv): Promise<Res
   button { font: inherit; padding: .6rem 1.2rem; border-radius: .4rem; cursor: pointer; }
 </style>
 </head><body>
-<h1>Authorize publishing access to dustinedwards.info</h1>
-<p>A client is asking to use the operator publishing tools. Approving this lets it
-create, edit, unpublish, republish and delete posts on your behalf.</p>
+<h1>Authorize Dustin Edwards Admin</h1>
+<p>A client is asking to use the operator tools that run dustinedwards.info: site
+health, drift repair, webmentions, media, registries, citations and procedures.
+It cannot write posts; Carrel owns writing.</p>
 <dl>
   <dt>Client</dt><dd>${escape(clientName)}</dd>
   <dt>Redirecting to</dt><dd>${escape(oauthReq.redirectUri)}</dd>
 </dl>
-<p>It will <strong>not</strong> be able to publish a post for the first time. That
-stays with you.</p>
+<p>It will always be able to <strong>read</strong>. Changes (repairing drift,
+deciding mentions, uploading and backing up media, refreshing citations, saving a
+procedure) need the box below. It will <strong>not</strong> be able to publish a
+procedure for the first time; that stays with you.</p>
 <p>You will be sent to GitHub to sign in. Only the configured administrator account
 is accepted.</p>
 <form method="post">
+  <input type="hidden" name="consent" value="${consentToken}">
+  <p><label><input type="checkbox" name="allow_write" value="1"${wantsWrite ? " checked" : ""}>
+  Allow changes (dei.write)</label></p>
   <button type="submit">Continue to GitHub</button>
 </form>
-</body></html>`);
+</body></html>`, 200, {
+    "Set-Cookie": `${CONSENT_COOKIE}=${consentToken}; HttpOnly; Secure; SameSite=Strict; Path=/authorize; Max-Age=600`,
+  });
 }
 
 /**
@@ -125,8 +154,16 @@ async function handleAuthorizePost(request: Request, env: GitHubEnv): Promise<Re
   const oauthReq = await env.OAUTH_PROVIDER.parseAuthRequest(request);
   const url = new URL(request.url);
 
+  const form = await request.formData().catch(() => null);
+  const presented = form?.get("consent");
+  const expected = cookie(request, CONSENT_COOKIE);
+  if (!expected || typeof presented !== "string" || presented !== expected) {
+    return text("The consent form did not come from this server's consent page. Start the authorization again.", 403);
+  }
+  const scopes = form?.get("allow_write") === "1" ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
+
   const state = crypto.randomUUID();
-  const payload = btoa(JSON.stringify({ state, req: oauthReq }));
+  const payload = btoa(JSON.stringify({ state, req: oauthReq, scopes }));
 
   const github = new URL("https://github.com/login/oauth/authorize");
   github.searchParams.set("client_id", env.GITHUB_CLIENT_ID ?? "");
@@ -151,17 +188,12 @@ async function handleCallback(request: Request, env: GitHubEnv): Promise<Respons
   const returnedState = url.searchParams.get("state");
   if (!code || !returnedState) return text("Missing code or state on the callback.", 400);
 
-  const cookie = request.headers
-    .get("Cookie")
-    ?.split(";")
-    .map((c) => c.trim())
-    .find((c) => c.startsWith(`${STATE_COOKIE}=`))
-    ?.slice(STATE_COOKIE.length + 1);
-  if (!cookie) return text("The login session expired. Start the authorization again.", 400);
+  const stateCookie = cookie(request, STATE_COOKIE);
+  if (!stateCookie) return text("The login session expired. Start the authorization again.", 400);
 
-  let stashed: { state: string; req: AuthRequest };
+  let stashed: { state: string; req: AuthRequest; scopes?: string[] };
   try {
-    stashed = JSON.parse(atob(cookie));
+    stashed = JSON.parse(atob(stateCookie));
   } catch {
     return text("The login session was unreadable. Start the authorization again.", 400);
   }
@@ -203,12 +235,14 @@ async function handleCallback(request: Request, env: GitHubEnv): Promise<Respons
     );
   }
 
+  const granted = (stashed.scopes ?? []).includes(SCOPE_WRITE) ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
   const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
     request: stashed.req,
     userId: String(user.id),
     metadata: { login: user.login },
-    scope: stashed.req.scope,
-    props: { id: user.id, login: user.login, name: user.name ?? null },
+    // The grant is what the administrator ticked, never what the client asked.
+    scope: granted,
+    props: { id: user.id, login: user.login, name: user.name ?? null, scopes: granted },
   });
 
   const headers = new Headers({ Location: redirectTo });

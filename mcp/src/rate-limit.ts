@@ -43,7 +43,11 @@ export class OperatorRateLimit implements DurableObject {
     );
   }
 
-  async fetch(_request: Request): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
+    // A caller may ask for a LOWER ceiling than LIMIT (registration uses one),
+    // never a higher one.
+    const asked = Number(new URL(request.url).searchParams.get("limit"));
+    const limit = Number.isInteger(asked) && asked >= 1 && asked < LIMIT ? asked : LIMIT;
     const now = Math.floor(Date.now() / 1000);
     const windowStart = now - (now % WINDOW_SECONDS);
 
@@ -62,11 +66,11 @@ export class OperatorRateLimit implements DurableObject {
     this.sql.exec("DELETE FROM hits WHERE window_start < ?", windowStart - WINDOW_SECONDS * 2);
 
     const count = row.count;
-    const allowed = count <= LIMIT;
+    const allowed = count <= limit;
     const retryAfter = windowStart + WINDOW_SECONDS - now;
 
     return Response.json(
-      { allowed, count, limit: LIMIT, retryAfter },
+      { allowed, count, limit, retryAfter },
       { status: allowed ? 200 : 429, headers: allowed ? {} : { "retry-after": String(retryAfter) } },
     );
   }
@@ -91,11 +95,14 @@ export interface RateLimitDecision {
 export async function checkRateLimit(
   env: Partial<RateLimitEnv>,
   identity: string,
+  limit?: number,
 ): Promise<RateLimitDecision> {
   if (!env.OPERATOR_RATE_LIMIT) return { allowed: false, retryAfter: WINDOW_SECONDS };
 
   const id = env.OPERATOR_RATE_LIMIT.idFromName(identity);
-  const response = await env.OPERATOR_RATE_LIMIT.get(id).fetch("https://rate-limit.invalid/check");
+  const response = await env.OPERATOR_RATE_LIMIT.get(id).fetch(
+    `https://rate-limit.invalid/check${limit ? `?limit=${limit}` : ""}`,
+  );
   const body = (await response.json()) as { allowed?: boolean; retryAfter?: number };
 
   return {

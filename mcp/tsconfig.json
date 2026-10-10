@@ -14,10 +14,14 @@
     "skipLibCheck": true,
     "composite": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "allowJs": true,
+    "rootDir": ".."
   },
   "include": [
     "src/**/*.ts",
-    "worker-configuration.d.ts"
+    "worker-configuration.d.ts",
+    "../app/lib/health/repair.mjs",
+    "../app/lib/health/ask-converge.mjs"
   ]
 }

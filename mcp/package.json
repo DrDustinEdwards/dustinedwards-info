@@ -3,10 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "MCP wrapper over the dustinedwards.info operator API. Contains no policy.",
+  "description": "Dustin Edwards Admin: the admin MCP server for dustinedwards.info, a wrapper over its operator API. Contains no policy.",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
     "typecheck": "wrangler types && tsc -b",
     "test": "node --experimental-transform-types --import ./test/resolve-ts.mjs --test \"test/**/*.test.ts\"",
     "probe:captures": "node scripts/probe-report.mjs",

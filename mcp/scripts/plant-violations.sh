@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.." || exit 2
 SNAP="$(mktemp -d)"
 trap 'rm -rf "$SNAP"' EXIT
 
-FILES="src/tools.ts src/api-client.ts src/legacy-era.ts src/mcp-handler.ts src/index.ts wrangler.jsonc wrangler.jsonc.example"
+FILES="src/tools.ts src/api-client.ts src/legacy-era.ts src/mcp-handler.ts src/index.ts src/auth.ts src/registration.ts wrangler.jsonc wrangler.jsonc.example"
 
 snapshot() {
   for f in $FILES; do
@@ -85,9 +85,9 @@ expect_fail "1. d1_databases binding added"
 # 2. Tool surface drift. A renamed tool no longer mirrors the API.
 python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('    name: \"sync_status\",','    name: \"pipeline_status\",',1)
+s=s.replace('    name: \"dei_backup_media\",','    name: \"backup_media\",',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "2. tool renamed away from the API's five"
+expect_fail "2. tool renamed away from the nine dei_ tools"
 
 # 3. The API-leg credential read from a second module.
 python3 -c "
@@ -106,7 +106,7 @@ expect_fail "4. code branches on firstPublished"
 # 5. Hardcoded API path. Would survive a config change and hit the wrong env.
 python3 -c "
 p='src/api-client.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('fetch(env.OPERATOR_API_URL, {','fetch(\"https://dustinedwards.dustin-edwards.workers.dev/api/operator\", {',1)
+s=s.replace('env.SITE.fetch(\`\${env.SITE_ORIGIN}/api/operator\`, {','env.SITE.fetch(\"https://dustinedwards.info/api/operator\", {',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "5. operator API path hardcoded in source"
 
@@ -142,7 +142,7 @@ expect_fail "9. app gate re-implemented (publiclyVisible)"
 # 10. The shim gaining a second call site stops it being a seam.
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('  const factory = buildServer(env);','  const factory = buildServer(env);\n  if (false) { createLegacyEraHandler(factory, MCP_ROUTE); }',1)
+s=s.replace('  const factory = buildServer(env, caller);','  const factory = buildServer(env, caller);\n  if (false) { createLegacyEraHandler(factory, MCP_ROUTE); }',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "10. second call site for the legacy shim"
 
@@ -187,8 +187,64 @@ s=s.replace('clientIdMetadataDocumentEnabled: true,','clientIdMetadataDocumentEn
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "15. clientIdMetadataDocumentEnabled switched off"
 
+# 16. A second service binding: a second door into another Worker.
+python3 -c "
+p='wrangler.jsonc'; s=open(p,encoding='utf-8').read()
+s=s.replace('{ \"binding\": \"SITE\", \"service\": \"dustinedwards\" }','{ \"binding\": \"SITE\", \"service\": \"dustinedwards\" }, { \"binding\": \"CAPSID\", \"service\": \"capsid\" }',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "16. second service binding added"
+
+# 17. A tool registered around invokeTool skips ownership, scope and the log.
+python3 -c "
+p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('invokeTool(env, caller, tool, args ?? {}),','tool.handler(env, args ?? {}),',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "17. tool registered around invokeTool"
+
+# 18. The per-call ownership check removed (rule 12.1).
+python3 -c "
+p='src/auth.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('caller.kind === \"admin\" && !isAdminUser(env, caller.props)','false',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "18. isAdminUser dropped from authorizeCall"
+
+# 19. Registration without the redirect allowlist (rule 13).
+python3 -c "
+p='src/index.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('registrationRefusal(env.DCR_REDIRECT_URIS, clientMetadata)','null',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "19. registration allowlist bypassed"
+
+# 20. A prefix match on a redirect URI.
+python3 -c "
+p='src/registration.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('!allowed.includes(uri)','!allowed.some((a) => uri.startsWith(a))',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "20. redirect URI matched by prefix"
+
+# 21. Tokens no longer bound to this server's resource (rule 12.2).
+python3 -c "
+p='src/index.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('resourceMetadata: { resource: \`\${origin}\${MCP_ROUTE}\`,','resourceMetadata: {',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "21. audience binding removed"
+
+# 22. A post tool called again (rule 11, Carrel owns writing).
+python3 -c "
+p='src/tools.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('handler: (env) => run(env, \"backup_media\", {}),','handler: (env) => run(env, \"save_post\", {}),',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "22. a post tool called"
+
+# 23. A second app module imported.
+python3 -c "
+p='src/tools.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('import { z } from \"zod\";','import { z } from \"zod\";\nimport { SITE_ORIGIN } from \"../../app/lib/seo.ts\";',1)
+open(p,'w',encoding='utf-8',newline='').write(s)"
+expect_fail "23. a second app module imported"
+
 echo
-echo "planted 15: $pass caught, $missed missed, $contaminated contaminated"
+echo "planted 23: $pass caught, $missed missed, $contaminated contaminated"
 final=$(gate)
 echo "final baseline: exit $final"
 if [ "$missed" != "0" ] || [ "$contaminated" != "0" ] || [ "$final" != "0" ]; then

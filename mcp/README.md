@@ -1,36 +1,83 @@
-# dustinedwards-mcp
+# Dustin Edwards Admin (mcp/)
 
-An MCP wrapper over the [dustinedwards.info](https://dustinedwards.info) operator
-publish API. It exposes eleven tools to an AI agent and **contains no policy of
-its own**.
+The admin MCP server for [dustinedwards.info](https://dustinedwards.info): a
+wrapper over the site's operator API that **contains no policy of its own**. Its
+own Worker, `dustinedwards-mcp`, at `https://admin-mcp.dustinedwards.info/mcp`.
+
+Moved into this repository from DrDustinEdwards/dustinedwards-mcp on 2026-10-10
+by `git subtree add`, so the history before the move is in `git log -- mcp/`.
+Governed by Capsid `capsid/rulings/mcp-2026-10-10.md`; the regroup follows
+`capsid/research/design-mcp-servers.md` section 6. The sections below the tools
+and the cutover steps are the server's measurement history, kept as written,
+except where a note says what changed.
 
 ## Tools
 
-Each is one `POST /api/operator` call with the same name; the API owns every rule.
+Nine, each a whole job. Every step of each is an authenticated request to
+`POST /api/operator` over the `SITE` service binding; the API owns every rule.
+Read tools need `dei.read`; the others need `dei.write`, ticked on the consent page.
 
-| Tool | What it does |
-|---|---|
-| `list_posts` | every post, drafts included, with the head sha |
-| `get_post` | one post's complete markdown file, plus `operatorMayPublish` |
-| `save_post` | commit a complete post file; first publication is admin-only (403 `first-publish-requires-admin`) |
-| `delete_post` | remove a post (destructive) |
-| `sync_status` | the repo, D1 and search index states, separately |
-| `list_mentions` | the webmention moderation queue |
-| `decide_mention` | approve, reject or delete a webmention (delete is admin-only) |
-| `upload_media` | put one image in the media bucket, content-addressed |
-| `list_procedures` | every lab procedure, drafts included, with profile and gap count |
-| `get_procedure` | one procedure's complete file as `raw`, its structured `record`, and its gaps |
-| `save_procedure` | commit a complete procedure file; validated server side (422 with the validator's `errors`), first publication admin-only |
+| Tool | Does | Hints (read, destructive, idempotent, open world) |
+|---|---|---|
+| `dei_check_site` | `sync_status` plus `/api/health`, with the failing checks named | read, no, yes, no |
+| `dei_repair_drift` | the watchdog's repair plan: each failing drift check's sync, then a re-read of `/api/health` | write, no, yes, no |
+| `dei_review_mentions` | the webmention queue, a page at a time, stranger text marked as data | read, no, yes, no |
+| `dei_decide_mention` | approve or reject one mention (delete stays in the admin screen) | write, no, yes, no |
+| `dei_upload_media` | one image into the media bucket, content-addressed | write, no, yes, yes |
+| `dei_backup_media` | copy every media object without a twin into the backup bucket | write, no, yes, no |
+| `dei_read_registry` | list or read pages, llms, cv, dictionary, roster, phages, registry, publications | read, no, yes, no |
+| `dei_refresh_citations` | fresh OpenAlex citation counts, all or by DOI | write, no, yes, yes |
+| `dei_manage_procedure` | list, get or save a lab procedure; first publication is admin-only | write, no, no, no |
 
-The procedure file format is documented in the site repository's
-`docs/PROCEDURES.md`. The intended edit is small: read with `get_procedure`,
-change the one value asked for, send the whole file back with `save_procedure`
-and the `headSha` as `expectedHeadSha`, and report the validator's message if
-the save is refused.
+No post tools: Carrel owns all writing on every site (rule 11). Lists page at 25
+by default, at most 100, with `has_more` and `next_offset`.
 
-House standard: Capsid `capsid/mcp-wrapper-standard.md`, ratified 2026-07-30.
-This repo is the reference implementation that standard describes; the foxing
-Workers port and the foxhound ops MCP copy its shape at their cutovers.
+## Security floor (rules 12 and 13)
+
+- Every tool call goes through `invokeTool`: the caller is re-proved to be the
+  administrator (or a configured agent) and to hold the tool's scope, then an
+  append-only `ToolCallLog` row is written before and after the call. A call that
+  cannot be logged does not run.
+- Access tokens are bound to `PUBLIC_ORIGIN/mcp` (RFC 8707); a token for any
+  other resource is refused. The API leg is `OPERATOR_TOKEN`, never the client's token.
+- CIMD for Claude, Claude Code and ChatGPT. DCR at `/register` for Grok and
+  Gemini, tightened: 5 registrations per minute per address, and every redirect
+  URI must be listed exactly in `DCR_REDIRECT_URIS`.
+- Agent keys (`AGENT_KEY_<NAME>`) read only unless `AGENT_WRITE` names them.
+
+## Deploy
+
+Only `npm run ship:mcp` from the repository root deploys this Worker. It needs
+`mcp/wrangler.jsonc` (gitignored: it carries the real `OAUTH_KV` and `PROBE_KV`
+ids; copy it from the old checkout, or fill the example's ids from
+`npx wrangler kv namespace list`). It refuses without green CI for the exact sha,
+runs typecheck, check:wrapper, the tests and the build, deploys, and then proves
+`/health` and a `server/discover` call on `https://admin-mcp.dustinedwards.info`.
+
+## Cutover to admin-mcp.dustinedwards.info, for Dustin
+
+1. Merge the move PR, then run `npm run ship:mcp`. The deploy creates the Custom
+   Domain `admin-mcp.dustinedwards.info` on the dustinedwards.info zone itself
+   (the `routes` entry with `custom_domain: true`) and turns workers.dev off, so
+   the old URL stops answering at this deploy. If wrangler reports it cannot
+   create the domain, add it in the dashboard: Workers & Pages,
+   dustinedwards-mcp, Settings, Domains & Routes, Add, Custom Domain,
+   `admin-mcp.dustinedwards.info`, then run ship:mcp again.
+2. GitHub OAuth App (github.com/settings/developers, the app whose client id is
+   this Worker's `GITHUB_CLIENT_ID`): set the Authorization callback URL to
+   `https://admin-mcp.dustinedwards.info/callback` and save. A GitHub OAuth App
+   has one callback, so do this right after step 1.
+3. claude.ai, Settings, Connectors: remove the old Dustin Edwards Admin
+   connector (its tokens were bound to the workers.dev resource and are refused
+   now), add a custom connector with URL
+   `https://admin-mcp.dustinedwards.info/mcp`, connect, and on the consent page
+   tick "Allow changes" if this connection should repair, decide or save. Do the
+   same in ChatGPT, Gemini and Grok where they are connected.
+4. Grok and Gemini register by DCR. If a registration is refused, the Worker log
+   line `registration-refused` names the redirect URI it asked for; add that
+   exact URI to `DCR_REDIRECT_URIS` in `mcp/wrangler.jsonc.example` by PR.
+5. An agent key (Grok Build's `~/.grok/config.toml`) needs only its URL changed
+   to the new address; add the agent's name to `AGENT_WRITE` if it should write.
 
 ## Status: VERIFIED END TO END, 2026-07-30
 
@@ -314,7 +361,7 @@ in `~/.grok/config.toml`:
 [[mcp_servers]]
 name = "dustinedwards"
 type = "http"
-url = "https://dustinedwards-mcp.dustin-edwards.workers.dev/mcp"
+url = "https://admin-mcp.dustinedwards.info/mcp"
 
 [mcp_servers.headers]
 Authorization = "Bearer PASTE_THE_KEY_HERE"
@@ -352,8 +399,9 @@ for the seat rather than a detail of this feature.
 |---|---|---|
 | `npm run typecheck` | `wrangler types && tsc -b` | green |
 | `npm run build` | a dry-run bundle. 1,154.46 KiB raw, 208.00 KiB gzip, measured 2026-09-07 on wrangler 4.129.0 | green |
-| `npm run check:wrapper` | the no-policy law, mechanically. 230 assertions | green, 15/15 planted violations caught |
-| `npm run check:wrapper:plant` | that `check:wrapper` actually fails | 15 caught, 0 missed |
+| `npm test` | the tools, the request layer, ownership, scope, the log and registration against a fake site | green |
+| `npm run check:wrapper` | the no-policy law and the security floor, mechanically | green |
+| `npm run check:wrapper:plant` | that `check:wrapper` actually fails | 23 caught, 0 missed |
 | `npm run check:conformance` | the official suite against the real protocol layer, per era, plus the authorization server against the real deploy entry | **baseline, not a clean sweep** |
 
 `npm run build` exists because **typecheck is not a build.** Two commits shipped
@@ -374,9 +422,9 @@ use when.
 
 `@modelcontextprotocol/conformance` is genuinely runnable (`server` / `client` /
 `authorization` subcommands, `--spec-version` filtering). It runs against
-`test/conformance-entry.ts`, which mounts the **real** handler and the real five
-tools with only the client leg and the limiter removed, and the API leg aimed at a
-local stub. So what is certified is the code that ships, not a stand-in.
+`test/conformance-entry.ts`, which mounts the **real** handler and the real nine
+tools with only the client leg and the limiter removed, and the SITE binding
+replaced by a fetch to a local stub. So what is certified is the code that ships, not a stand-in.
 
 | Era | Scenario | Result |
 |---|---|---|
@@ -419,9 +467,12 @@ details no prose surfaced: `cacheScope` must be `"public"` or `"private"`, and
 JSON-RPC method values are case-sensitive. Hand-rolling was a correctness
 liability, not a line-count saving.
 
-## Deploy state and the one open risk
+## Deploy state and the one open risk (history, 2026-07-30)
 
-Deployed at `https://dustinedwards-mcp.dustin-edwards.workers.dev`, version
+Since the move: one address, `https://admin-mcp.dustinedwards.info`, and the
+resource is configured, so the risk below is closed by design (tokens are bound
+to exactly `PUBLIC_ORIGIN/mcp`). As first recorded: deployed at
+`https://dustinedwards-mcp.dustin-edwards.workers.dev`, version
 `c2b3a458-f26c-4480-bc25-983ca86751bc`, Worker startup 108 ms.
 
 Verified on the live deploy with **no secrets set**, which is the fails-closed
@@ -481,7 +532,5 @@ affordance. That is a rule from the house standard, not an oversight.
 
 ## Workflow
 
-Mainline only while pre-production, per Capsid
-`dustinedwards/workflow-mainline.md`: no feature branches, no PRs, commit and
-push immediately, gates before every push. That ruling sunsets at the
-dustinedwards.info DNS cutover.
+Part of dustinedwards-info since 2026-10-10: a branch, a pull request with the
+`mcp/` CI job, and `npm run ship:mcp` after the merge.

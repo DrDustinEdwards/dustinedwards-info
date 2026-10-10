@@ -24,6 +24,13 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(ROOT, "src");
+/*
+ * THE SITE'S CHECKOUT, one level up since the move into dustinedwards-info.
+ * The gate READS two site files (the operator API's tool list and the site's
+ * origin) so that what it checks against is derived rather than restated. It
+ * reads them; the Worker imports nothing from them.
+ */
+const SITE_ROOT = join(ROOT, "..");
 
 let failures = 0;
 let assertions = 0;
@@ -120,6 +127,8 @@ if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.j
       keys: Object.keys(c).sort(),
       kv: (c.kv_namespaces ?? []).map((n) => n.binding).sort(),
       dobj: (c.durable_objects?.bindings ?? []).map((b) => b.class_name).sort(),
+      services: (c.services ?? []).map((b) => `${b.binding}:${b.service}`).sort(),
+      routes: JSON.stringify(c.routes ?? []),
       migrations: (c.migrations ?? []).map((m) => m.new_sqlite_classes ?? []).flat().sort(),
       flags: (c.compatibility_flags ?? []).slice().sort(),
       main: c.main,
@@ -145,7 +154,6 @@ const FORBIDDEN_BINDING_KEYS = [
   "vectorize",
   "hyperdrive",
   "queues",
-  "services",
   "browser",
   "mtls_certificates",
   "analytics_engine_datasets",
@@ -169,10 +177,25 @@ check(
   `Expected ${ALLOWED_KV.join(", ")} but found ${actualKv.join(", ") || "(none)"}.`,
 );
 
-const ALLOWED_DO_CLASSES = ["OperatorRateLimit"];
+/*
+ * ONE SERVICE BINDING, to the site Worker, and it is the API leg. Since the
+ * move into dustinedwards-info the operator API is reached over `SITE` instead
+ * of the public URL (design section 6 step 4). It is still an HTTP request
+ * carrying OPERATOR_TOKEN through the operator API's authentication and rate
+ * limiter, so it is the same single door, reached without an internet hop. Any
+ * other service would be a second door.
+ */
+const actualServices = (config.services ?? []).map((b) => `${b.binding}:${b.service}`).sort();
+check(
+  "the only service binding is SITE, to the dustinedwards Worker",
+  JSON.stringify(actualServices) === JSON.stringify(["SITE:dustinedwards"]),
+  `Found ${actualServices.join(", ") || "(none)"}. The API leg is one binding to one Worker.`,
+);
+
+const ALLOWED_DO_CLASSES = ["OperatorRateLimit", "ToolCallLog"];
 const actualDo = (config.durable_objects?.bindings ?? []).map((b) => b.class_name).sort();
 check(
-  "Durable Objects are exactly the rate limiter",
+  "Durable Objects are exactly the rate limiter and the tool-call log",
   JSON.stringify(actualDo) === JSON.stringify([...ALLOWED_DO_CLASSES].sort()),
   `Expected ${ALLOWED_DO_CLASSES.join(", ")} but found ${actualDo.join(", ") || "(none)"}.`,
 );
@@ -183,6 +206,47 @@ check(
   "The rate limiter is registered as a new_sqlite_classes migration",
   (config.migrations ?? []).some((m) => (m.new_sqlite_classes ?? []).includes("OperatorRateLimit")),
   "Without SQLite the counter is not atomic and the limit does not hold.",
+);
+
+// The tool-call log is append-only by construction, and that needs the
+// synchronous SQLite class, as the limiter does.
+check(
+  "The tool-call log is registered as a new_sqlite_classes migration",
+  (config.migrations ?? []).some((m) => (m.new_sqlite_classes ?? []).includes("ToolCallLog")),
+  "Rule 12.4: every tool call is logged, append-only.",
+);
+
+// ONE PUBLIC ADDRESS. Tokens are bound to PUBLIC_ORIGIN + /mcp, so a second
+// host would be a second resource nobody configured.
+check(
+  "workers.dev is off and the one route is the admin-mcp custom domain",
+  config.workers_dev === false &&
+    JSON.stringify(config.routes ?? []) ===
+      JSON.stringify([{ pattern: "admin-mcp.dustinedwards.info", custom_domain: true }]),
+  "The server answers at https://admin-mcp.dustinedwards.info only.",
+);
+check(
+  "PUBLIC_ORIGIN names that custom domain",
+  config.vars?.PUBLIC_ORIGIN === "https://admin-mcp.dustinedwards.info",
+  `Found ${config.vars?.PUBLIC_ORIGIN}. The OAuth resource is PUBLIC_ORIGIN + /mcp.`,
+);
+
+// SITE_ORIGIN is a checked copy of the site's own constant, never a second
+// source: read from app/lib/seo.ts here, compared, and a drift fails.
+{
+  const seo = readFileSync(join(SITE_ROOT, "app/lib/seo.ts"), "utf8");
+  const siteOrigin = (seo.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1];
+  check(
+    "SITE_ORIGIN equals SITE_ORIGIN in app/lib/seo.ts",
+    Boolean(siteOrigin) && config.vars?.SITE_ORIGIN === siteOrigin,
+    `wrangler config says ${config.vars?.SITE_ORIGIN}, app/lib/seo.ts says ${siteOrigin}.`,
+  );
+}
+
+check(
+  "the old public operator URL var is gone",
+  config.vars?.OPERATOR_API_URL === undefined,
+  "The API leg is the SITE binding now; a URL var would be a second route.",
 );
 
 // The deploy target must never be the conformance test entry, which mounts the
@@ -232,8 +296,34 @@ for (const name of FORBIDDEN_NAMES) {
 }
 
 // ---------------------------------------------------------------------------
-// C. No shared code with the app. The contract is the API's payloads.
+// C. No shared code with the app, with ONE named exception.
 // ---------------------------------------------------------------------------
+
+/*
+ * THE ONE APP MODULE THE WORKER IMPORTS: the watchdog's repair plan. Since the
+ * move the two live in one repository, and the site's first principle is that
+ * a fact is stored once. Which failing health check is converged by which
+ * operator repair, and in what order, is that kind of fact: dei_repair_drift
+ * restating it would be a second copy that drifts from the watchdog's. The
+ * module is pure (no binding, no fetch, no import but its pure sibling), it
+ * carries no policy about what is ALLOWED, only which repair converges which
+ * store, and every repair it names still goes through the operator API.
+ */
+const APP_IMPORTS = { "tools.ts": ["../../app/lib/health/repair.mjs"] };
+for (const [file, specs] of Object.entries({ "repair.mjs": "app/lib/health/repair.mjs", "ask-converge.mjs": "app/lib/health/ask-converge.mjs" })) {
+  const text = readFileSync(join(SITE_ROOT, specs), "utf8");
+  const imports = [...withoutComments(text).matchAll(/^\s*import[\s\S]*?from\s*["']([^"']+)["']/gm)].map((m) => m[1]);
+  check(
+    `the imported app module ${file} imports nothing but its pure sibling`,
+    imports.every((spec) => spec === "./ask-converge.mjs"),
+    `Found imports: ${imports.join(", ")}. The one shared module must stay pure.`,
+  );
+  check(
+    `the imported app module ${file} touches no binding and fetches nothing`,
+    !/\benv\.|fetch\(/.test(codeOnly(text)),
+    "A binding or a fetch in shared code would be a second route to the app.",
+  );
+}
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*["']([^"']+)["']/g;
 for (const f of files) {
@@ -241,10 +331,11 @@ for (const f of files) {
   for (const m of stripped.matchAll(IMPORT_RE)) {
     const spec = m[1];
     const local = spec.startsWith(".");
+    const named = (APP_IMPORTS[f.name] ?? []).includes(spec);
     check(
-      `src/${f.name} import "${spec}" does not escape this repo`,
-      !local || !spec.includes(".."),
-      "A relative import climbing out of src/ would be shared code with the app.",
+      `src/${f.name} import "${spec}" does not escape this folder`,
+      !local || !spec.includes("..") || named,
+      "A relative import climbing out of src/ would be shared code with the app. The one allowed is APP_IMPORTS.",
     );
     check(
       `src/${f.name} import "${spec}" is not an app path alias`,
@@ -261,7 +352,7 @@ for (const f of files) {
 // github.com and api.github.com are the LOGIN path only (identity, no scopes
 // requested, no repository access). The operator API is reached through the
 // OPERATOR_API_URL var rather than a literal, so a hardcoded app URL fails here.
-const ALLOWED_HOSTS = ["github.com", "api.github.com", "rate-limit.invalid"];
+const ALLOWED_HOSTS = ["github.com", "api.github.com", "rate-limit.invalid", "tool-call-log.invalid"];
 const URL_RE = /https?:\/\/([a-z0-9.-]+)/gi;
 for (const f of files) {
   for (const m of readFileSync(join(SRC, f.name), "utf8").matchAll(URL_RE)) {
@@ -279,9 +370,12 @@ for (const f of files) {
 }
 
 check(
-  "The operator API URL comes from config, not a literal in source",
-  files.every((f) => !withoutComments(f.text).includes("/api/operator")),
-  "Hardcoding it would survive a config change and reach the wrong environment.",
+  "The operator API is addressed only as SITE_ORIGIN + /api/operator, over SITE, in api-client.ts",
+  files.every((f) => f.name === "api-client.ts" || !withoutComments(f.text).includes("/api/operator")) &&
+    /env\.SITE\.fetch\(`\$\{env\.SITE_ORIGIN\}\/api\/operator`/.test(
+      withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? ""),
+    ),
+  "A literal host would survive a config change and reach the wrong environment.",
 );
 
 // ---------------------------------------------------------------------------
@@ -290,66 +384,99 @@ check(
 
 const toolsText = readFileSync(join(SRC, "tools.ts"), "utf8");
 /*
- * THE API'S TOOL LIST, MIRRORED BY HAND, and the mirror is deliberate.
- *
- * This gate cannot read the site's repository, so the list cannot be derived.
- * That makes it the one hand-kept copy in a file whose whole subject is that
- * the wrapper adds nothing: a tool declared here and absent from the API would
- * be a policy decision made in the wrapper, which is what section E exists to
- * refuse.
- *
- * The cost of a hand mirror is that it goes stale in the SAFE direction only.
- * A tool added to the API and not here is simply unavailable through MCP; a
- * tool added here and not to the API fails this assertion on the next run. The
- * asymmetry is why a hand list is acceptable at all.
- *
- * GREW TO SEVEN 2026-09-05 with the moderation queue. Approving a webmention
- * was the last step in that path that needed a human with a browser, and it
- * was proven to work by asking one to click a button so a cache purge could be
- * measured. A step only a human can take is a step taken late.
- *
- * GREW TO EIGHT 2026-09-07 with `upload_media`, on that same reasoning one step
- * further along: an agent could write a post about anything except a picture,
- * because putting an image on the site needed the browser editor. The API side
- * is an adapter over the one door `/admin/media/upload` already used, so this
- * list growing does not mean a second write path into the bucket exists.
- *
- * GREW TO ELEVEN with the procedure tools, `list_procedures`, `get_procedure`
- * and `save_procedure`, mirroring the post trio. The API validates a procedure
- * against its profile with the validator CI runs; the wrapper only forwards.
- *
- * NOT EVERY API TOOL IS HERE, which is why this list is shorter than the API's
- * and is not the mirror going stale. The four sync and backup repairs are
- * called by `ship` and by the watchdog; exposing an unattended index rebuild to
- * a chat client would be a policy decision made here.
+ * THE NINE TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * section 6. Whole jobs, each prefixed dei_, regrouped from the eleven one-call
+ * tools of the separate repo, with the four post tools removed (Carrel owns
+ * writing, rule 11).
  */
 const EXPECTED_TOOLS = [
-  "list_posts",
-  "get_post",
-  "save_post",
-  "delete_post",
-  "sync_status",
-  "list_mentions",
-  "decide_mention",
-  "upload_media",
-  "list_procedures",
-  "get_procedure",
-  "save_procedure",
+  "dei_check_site",
+  "dei_repair_drift",
+  "dei_review_mentions",
+  "dei_decide_mention",
+  "dei_upload_media",
+  "dei_backup_media",
+  "dei_read_registry",
+  "dei_refresh_citations",
+  "dei_manage_procedure",
 ];
 const declared = [...toolsText.matchAll(/^\s{4}name:\s*"([a-z_]+)",$/gm)].map((m) => m[1]);
 
 check(
-  "The declared tools are exactly the operator API's tools",
+  "The declared tools are exactly the nine dei_ tools",
   JSON.stringify(declared) === JSON.stringify(EXPECTED_TOOLS),
-  `Expected [${EXPECTED_TOOLS.join(", ")}] but found [${declared.join(", ")}]. ` +
-    "A tool the API does not offer would be a policy decision made here.",
+  `Expected [${EXPECTED_TOOLS.join(", ")}] but found [${declared.join(", ")}].`,
 );
 
-// Every tool must reach the API through the one transport. A handler that did
-// anything else would be a second write path.
-const runCalls = [...toolsText.matchAll(/run\(env,\s*"([a-z_]+)"/g)].map((m) => m[1]);
+/*
+ * EVERY OPERATOR TOOL THE WRAPPER NAMES IS ONE THE API OFFERS, read from the
+ * API's own list in app/lib/operator/descriptors.ts. The separate repo kept a
+ * hand mirror of that list because it could not read the site; here it can,
+ * so the mirror is gone and a tool the API does not offer fails on the next run.
+ */
+const descriptors = readFileSync(join(SITE_ROOT, "app/lib/operator/descriptors.ts"), "utf8");
+const apiList = descriptors.slice(descriptors.indexOf("const TOOLS = ["), descriptors.indexOf("] as const;"));
+const API_TOOLS = [...apiList.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+check("the operator API's tool list was read", API_TOOLS.length > 10, `Read ${API_TOOLS.length} names.`);
+
+const toolStrings = withoutComments(toolsText);
+const named = new Set([
+  ...[...toolStrings.matchAll(/\b(?:run|runPaged|callOperator)\(env,\s*"([a-z_]+)"/g)].map((m) => m[1]),
+  ...[...toolStrings.matchAll(/\b(?:list|get):\s*"([a-z_]+)"/g)].map((m) => m[1]),
+]);
+const repairText = readFileSync(join(SITE_ROOT, "app/lib/health/repair.mjs"), "utf8");
+const repairBlock = repairText.slice(repairText.indexOf("REPAIRABLE"), repairText.indexOf("});"));
+for (const m of withoutComments(repairBlock).matchAll(/:\s*"([a-z_]+)"/g)) named.add(m[1]);
+
+for (const name of named) {
+  check(`operator tool ${name} is one the API offers`, API_TOOLS.includes(name), "A tool the API does not offer would be a policy decision made here.");
+}
+
+// NO POST WRITING, and no zero-result purge: neither is this server's job.
+for (const name of ["list_posts", "get_post", "save_post", "delete_post", "purge_zero_results"]) {
+  check(`the wrapper never calls ${name}`, !named.has(name) && !toolStrings.includes(`"${name}"`), "Carrel owns writing (rule 11).");
+}
+
+// Every declared tool reaches the API through the one transport.
 for (const name of EXPECTED_TOOLS) {
-  check(`Tool ${name} dispatches through run() to the operator API`, runCalls.includes(name));
+  const start = toolsText.indexOf(`name: "${name}",`);
+  const next = toolsText.indexOf('\n    name: "', start + 1);
+  const block = codeOnly(toolsText.slice(start, next === -1 ? undefined : next));
+  check(
+    `Tool ${name} reaches the API only through run, runPaged or callOperator`,
+    /\b(run|runPaged|callOperator)\(env,/.test(block) && !/fetch\(/.test(block),
+  );
+}
+
+/*
+ * RULE 12, THE ONE DOOR. The MCP server registers every tool through
+ * invokeTool, and invokeTool checks ownership and scope before it writes the
+ * log or runs a handler. A registration that called tool.handler directly would
+ * skip all three.
+ */
+{
+  const handlerCode = codeOnly(readFileSync(join(SRC, "mcp-handler.ts"), "utf8"));
+  check(
+    "every tool is registered through invokeTool",
+    /invokeTool\(env, caller, tool, args/.test(handlerCode) && !/tool\.handler\(/.test(handlerCode),
+    "Rule 12: ownership, scope and the log are in invokeTool; a direct handler call skips them.",
+  );
+  const invoke = codeOnly(toolsText.slice(toolsText.indexOf("export async function invokeTool(")));
+  const at = (re) => invoke.search(re);
+  check(
+    "invokeTool authorizes, then logs started, then runs the handler, then logs finished",
+    at(/authorizeCall\(/) >= 0 &&
+      at(/authorizeCall\(/) < at(/phase: "", caller: who/) &&
+      at(/tool\.handler\(env, args\)/) > at(/authorizeCall\(/) &&
+      (invoke.match(/appendAudit\(/g) ?? []).length === 3,
+    "Rule 12.1 and 12.4: refuse first, log every call, never run unlogged.",
+  );
+  const authCodeOnly = codeOnly(readFileSync(join(SRC, "auth.ts"), "utf8"));
+  check(
+    "authorizeCall re-runs the administrator check on every call",
+    /caller\.kind === "" && !isAdminUser\(env, caller\.props\)/.test(authCodeOnly),
+    "Rule 12.1: the per-call ownership proof. test/tools.test.ts plants its removal.",
+  );
 }
 
 // The API leg's credential is confined to the module that owns it.
@@ -374,8 +501,8 @@ check(
 );
 
 check(
-  "Only api-client.ts performs the operator API fetch",
-  files.every((f) => f.name === "api-client.ts" || !/fetch\(env\.OPERATOR_API_URL/.test(codeOnly(f.text))),
+  "Only api-client.ts fetches over the SITE binding",
+  files.every((f) => f.name === "api-client.ts" || !/SITE\.fetch\(/.test(codeOnly(f.text))),
 );
 
 // ---------------------------------------------------------------------------
@@ -386,15 +513,8 @@ check(
 // refusal as policy. But no code may BRANCH on it: that would be a second,
 // drifting copy of a rule the API owns. So the assertion is asymmetric on purpose,
 // and it is the subtlest thing this gate does.
-check(
-  "save_post's description states the first-publish policy",
-  /first-publish-requires-admin/.test(toolsText),
-  "An agent that has not been told the rule reads a 403 as a malfunction and retries.",
-);
-
-// The same rule governs a procedure's first publication, and it must be stated
-// in save_procedure's OWN description: an agent reads one tool at a time, so a
-// statement on save_post does not reach an agent editing a procedure.
+// The rule governs a procedure's first publication, and it must be stated in
+// the procedure tool's OWN description: an agent reads one tool at a time.
 const toolBlock = (name) => {
   const start = toolsText.indexOf(`name: "${name}",`);
   if (start === -1) return "";
@@ -402,8 +522,8 @@ const toolBlock = (name) => {
   return toolsText.slice(start, next === -1 ? undefined : next);
 };
 check(
-  "save_procedure's description states the first-publish policy",
-  /first-publish-requires-admin/.test(toolBlock("save_procedure")),
+  "dei_manage_procedure's description states the first-publish policy",
+  /first-publish-requires-admin/.test(toolBlock("dei_manage_procedure")),
   "An agent that has not been told the rule reads a 403 as a malfunction and retries.",
 );
 
@@ -413,7 +533,7 @@ check(
 check(
   "run() relays the API's detail.errors messages into the tool text",
   /\.errors;/.test(codeOnly(toolsText)) && /parts\.push\(message\)/.test(codeOnly(toolsText)),
-  "Without it, save_procedure's 422 reaches the agent with no validator message.",
+  "Without it, a procedure save's 422 reaches the agent with no validator message.",
 );
 
 const POLICY_BRANCHES = [
@@ -523,6 +643,34 @@ check(
     "mint a client identity and stops before opening a browser.",
 );
 
+// RULE 13, TIGHTENED. The registration endpoint stays, and every registration
+// passes the exact redirect allowlist and a per-address rate limit first.
+check(
+  "every registration passes the exact redirect allowlist",
+  /clientRegistrationCallback:[\s\S]*registrationRefusal\(env\.DCR_REDIRECT_URIS, clientMetadata\)/.test(codeOnly(indexText)),
+  "Rule 13: redirect URIs allowlisted exactly; an unchecked registration is the deprecated DCR.",
+);
+check(
+  "registration is rate limited per address before the provider sees it",
+  /url\.pathname === "\/register"/.test(withoutComments(indexText)) &&
+    /checkRateLimit\(env, `register:\$\{ip\}`, REGISTRATIONS_PER_MINUTE\)/.test(withoutComments(indexText)),
+  "Rule 13: registration rate limited.",
+);
+check(
+  "registrationRefusal matches exactly (includes), never by prefix",
+  /!allowed\.includes\(uri\)/.test(codeOnly(readFileSync(join(SRC, "registration.ts"), "utf8"))) &&
+    !/startsWith|endsWith|indexOf/.test(codeOnly(readFileSync(join(SRC, "registration.ts"), "utf8"))),
+  "A prefix match on a redirect URI is how authorization codes are stolen.",
+);
+
+// RULE 12.2, AUDIENCE. The provider names this server's resource, which pins
+// every grant and token to it (RFC 8707) and refuses a token issued for any other.
+check(
+  "access tokens are bound to PUBLIC_ORIGIN + /mcp",
+  /resourceMetadata: \{ resource: `\$\{origin\}\$\{MCP_ROUTE\}`/.test(withoutComments(indexText)),
+  "Rule 12.2: reject any token not issued for this server.",
+);
+
 // --- the agent key path, ruling 37 -----------------------------------------
 
 /*
@@ -561,7 +709,7 @@ check(
 
 check(
   "the agent path reaches the tool surface through the SAME handleMcp",
-  (indexCode.match(/handleMcp\(request, env, ctx\)/g) ?? []).length === 2,
+  (indexCode.match(/handleMcp\(request, env, ctx, \{ kind:/g) ?? []).length === 2,
   "Two handlers would be two places the tool surface is defined, and the first " +
     "time they disagreed one door would offer something the other did not. " +
     "Expected exactly two call sites: the OAuth one and the agent one.",
@@ -664,7 +812,7 @@ if (failures) {
   process.exit(1);
 }
 console.log(
-  `The no-policy law holds: no app imports, no app bindings, ${EXPECTED_TOOLS.length} tools, one API seam.`,
+  `The no-policy law holds: one pure app import, no app bindings, ${EXPECTED_TOOLS.length} tools, one API seam.`,
 );
 
 /*

@@ -186,8 +186,12 @@ const dev = spawn(
     ENTRY,
     "--port",
     String(DEV_PORT),
+    // Each dev process gets its own inspector port: both default to 9229, and
+    // the second one dies on "Address already in use" (measured 2026-10-10).
+    "--inspector-port",
+    String(DEV_PORT + 1000),
     "--var",
-    `OPERATOR_API_URL:http://localhost:${STUB_PORT}/`,
+    `STUB_URL:http://localhost:${STUB_PORT}/`,
     "--var",
     `OPERATOR_TOKEN:${STUB_TOKEN}`,
   ],
@@ -204,7 +208,7 @@ const dev = spawn(
 // Measured here 2026-09-07 on the first run of this section.
 const authDev = spawn(
   process.execPath,
-  [WRANGLER, "dev", "--port", String(AUTH_PORT), "--persist-to", ".wrangler/state-conformance-auth"],
+  [WRANGLER, "dev", "--port", String(AUTH_PORT), "--inspector-port", String(AUTH_PORT + 1000), "--persist-to", ".wrangler/state-conformance-auth"],
   { stdio: ["ignore", "pipe", "pipe"] },
 );
 

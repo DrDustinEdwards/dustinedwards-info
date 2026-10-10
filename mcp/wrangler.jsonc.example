@@ -19,19 +19,46 @@
 
 	"observability": { "enabled": true },
 
+	// ONE PUBLIC ADDRESS. admin-mcp.dustinedwards.info is a Custom Domain on the
+	// dustinedwards.info zone, created by the deploy itself, and workers.dev is
+	// off, so there is one origin, one OAuth resource (PUBLIC_ORIGIN + /mcp) and
+	// one GitHub callback. mcp.dustinedwards.info is Capsid's.
+	"workers_dev": false,
+	"routes": [{ "pattern": "admin-mcp.dustinedwards.info", "custom_domain": true }],
+
 	// Non-secret. The GitHub OAuth App client id is public by design, and
 	// ADMIN_GITHUB_LOGIN is a username or numeric id, not a credential. Prefer the
 	// NUMERIC GitHub user id: a login can be renamed and then claimed by someone
 	// else, an id cannot.
+	//
+	// SITE_ORIGIN is the URL the site Worker is addressed by over the SITE
+	// binding; check:wrapper asserts it equals SITE_ORIGIN in app/lib/seo.ts.
+	// PUBLIC_ORIGIN is this server's own origin, and every access token is bound
+	// to PUBLIC_ORIGIN + /mcp (RFC 8707).
+	// DCR_REDIRECT_URIS is the exact allowlist for dynamically registered
+	// clients (rule 13), comma separated. Empty refuses every registration.
+	// Gemini Enterprise's fixed callback is listed; Grok's is added once it is
+	// measured (a refused registration names its URI in the Worker log).
+	// AGENT_WRITE names the agent principals that may change the site; every
+	// other agent key reads only.
 	"vars": {
-		"OPERATOR_API_URL": "https://dustinedwards.dustin-edwards.workers.dev/api/operator",
-		"ADMIN_GITHUB_LOGIN": "DrDustinEdwards"
+		"SITE_ORIGIN": "https://dustinedwards.info",
+		"PUBLIC_ORIGIN": "https://admin-mcp.dustinedwards.info",
+		"ADMIN_GITHUB_LOGIN": "DrDustinEdwards",
+		"DCR_REDIRECT_URIS": "https://vertexaisearch.cloud.google.com/oauth-redirect",
+		"AGENT_WRITE": ""
 	},
+
+	// THE ONLY ROUTE TO THE SITE: a service binding to the dustinedwards
+	// Worker, the same transport the watchdog uses. Still HTTP, still the
+	// operator bearer, still the operator API's authentication and limiter.
+	// Carries no account-scoped id, so this block is complete as written.
+	"services": [{ "binding": "SITE", "service": "dustinedwards" }],
 
 	// BINDINGS ARE AN ALLOWLIST, and check:wrapper derives its expectations from
 	// this block. There is deliberately NO D1, NO R2, and no binding of any kind
 	// that could reach the publish machinery: the only path to it is an HTTP
-	// request to OPERATOR_API_URL. Adding a binding here that touches app data
+	// request over the SITE binding to /api/operator. Adding a binding here that touches app data
 	// would break the wrapper's central guarantee, so the gate fails on one.
 	"kv_namespaces": [
 		{
@@ -56,6 +83,11 @@
 			{
 				"name": "OPERATOR_RATE_LIMIT",
 				"class_name": "OperatorRateLimit"
+			},
+			{
+				// The append-only tool-call log, rule 12.4. src/audit-log.ts.
+				"name": "TOOL_CALL_LOG",
+				"class_name": "ToolCallLog"
 			}
 		]
 	},
@@ -63,6 +95,10 @@
 		{
 			"tag": "v1",
 			"new_sqlite_classes": ["OperatorRateLimit"]
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": ["ToolCallLog"]
 		}
 	]
 

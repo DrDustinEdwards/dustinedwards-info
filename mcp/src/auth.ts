@@ -14,6 +14,88 @@ export interface Props extends Record<string, unknown> {
   id: number;
   login: string;
   name: string | null;
+  /**
+   * The scopes the administrator granted on the consent page. A grant minted
+   * before scopes existed has none, and is read-only until it is renewed.
+   */
+  scopes?: string[];
+}
+
+/**
+ * LEAST SCOPE FIRST. Ruling mcp-2026-10-10, rule 12.3.
+ *
+ * Read is what every connection gets. Write is ticked on the consent page, or
+ * named for an agent in AGENT_WRITE, and only then do the tools that change the
+ * site run. There is no admin scope here because this Worker has no admin
+ * rights to give: the operator API grants OPERATOR_TOKEN the operator kind.
+ */
+export const SCOPE_READ = "dei.read";
+export const SCOPE_WRITE = "dei.write";
+export const SCOPES = [SCOPE_READ, SCOPE_WRITE] as const;
+export type Scope = (typeof SCOPES)[number];
+
+/**
+ * Who is making one tool call, as the request boundary established it.
+ *
+ * `admin` carries the grant's props so every call can re-run isAdminUser
+ * against them; `agent` carries the principal a configured secret's NAME
+ * produced. Neither is ever read from the request.
+ */
+export type Caller =
+  | { kind: "admin"; props: Props; scopes: readonly string[] }
+  | { kind: "agent"; principal: string; scopes: readonly string[] };
+
+/** The audit name of a caller: the GitHub login, or the agent principal. */
+export function callerName(caller: Caller): string {
+  return caller.kind === "admin" ? `github:${caller.props.login}` : `agent:${caller.principal}`;
+}
+
+/** Scopes an agent holds: read, plus write when AGENT_WRITE names it. */
+export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): string[] {
+  const writers = (env.AGENT_WRITE ?? "")
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean);
+  return writers.includes(principal) ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
+}
+
+/**
+ * THE PER-CALL OWNERSHIP CHECK. Ruling mcp-2026-10-10, rule 12.1.
+ *
+ * Every id a tool takes (a mention id, a procedure slug, a registry address)
+ * names a record on dustinedwards.info, and the owner of every one of them is
+ * the site's single administrator. So proving the caller owns the id is proving
+ * the caller IS that administrator, or an agent the administrator configured,
+ * and it is proved here on every call rather than once at the door: a grant is
+ * long lived, and the door check alone would let a grant outlive its authority.
+ *
+ * Returns null when the call may proceed, or the refusal to show the caller.
+ */
+export function authorizeCall(
+  env: { ADMIN_GITHUB_LOGIN?: string },
+  caller: Caller | undefined,
+  scope: Scope,
+): string | null {
+  if (!caller) {
+    return "Refused: no caller identity reached this tool call. Connect again through the OAuth flow.";
+  }
+  if (caller.kind === "admin" && !isAdminUser(env, caller.props)) {
+    return (
+      "Refused: this grant does not belong to the administrator of dustinedwards.info, " +
+      "so it owns none of the records this tool names."
+    );
+  }
+  if (caller.kind === "agent" && !/^[a-z0-9_]+$/.test(caller.principal)) {
+    return "Refused: the agent principal is malformed.";
+  }
+  if (!caller.scopes.includes(scope)) {
+    return scope === SCOPE_WRITE
+      ? "Refused: this connection holds read access only (dei.read), and this tool changes the site. " +
+          "Reconnect and tick \"Allow changes\" on the consent page, or for an agent key add its name to " +
+          "AGENT_WRITE."
+      : "Refused: this connection holds no read scope. Reconnect through the OAuth flow.";
+  }
+  return null;
 }
 
 /**
