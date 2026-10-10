@@ -39,6 +39,12 @@
 # exactly that way by its own README. That block cost a deploy and was recorded
 # as owed before it was recognised as a scope bug.
 #
+# SINCE 2026-10-10 THE ADMIN MCP IS INSIDE THIS REPO, in mcp/ (ruling
+# mcp-2026-10-10). A deploy from there runs inside the site root, so the arms
+# below refuse it like any other, and `npm run ship:mcp` is its one door,
+# allowed by the same `npm run ship` arm. The `../dustinedwards-mcp` cases
+# above and in the replay stay as the generic outside-the-repo example.
+#
 # The effective directory is the LAST `cd` in the command resolved against the
 # payload's `cwd`, which is what a shell does. Everything unresolvable reads as
 # INSIDE, so the failure direction is unchanged: toward blocking.

@@ -41,7 +41,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## Commands
 
-**`package.json` owns the script list.** `npm run check:changed` maps the diff to the gates that cover it, falling back to the offline tier. `npm run check` is the offline tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `npm run verify-live` is not a gate: it needs a deploy and its Ask probes are billed. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; the schema test compares the live database when `SCHEMA_LIVE=1`. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate.
+**`package.json` owns the script list.** `npm run check:changed` maps the diff to the gates that cover it, falling back to the offline tier. `npm run check` is the offline tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `npm run verify-live` is not a gate: it needs a deploy and its Ask probes are billed. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; the schema test compares the live database when `SCHEMA_LIVE=1`. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate. The admin MCP in `mcp/` (Dustin Edwards Admin, its own Worker and package) has its own gates and CI job, and deploys only by `npm run ship:mcp`; read `mcp/CLAUDE.md` before changing it.
 
 ## Bindings
 
@@ -49,7 +49,7 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
     DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET
 
-`ASK_BUDGET` is the whole site's rate limiter, not an Ask-only budget. What each binding is: `wrangler.jsonc.example` (tracked; `wrangler.jsonc` is gitignored, and a new binding goes in both in one commit). `workers/watchdog.ts` is a second Worker on the same split, deployed by a `ship` step. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
+`ASK_BUDGET` is the whole site's rate limiter, not an Ask-only budget. What each binding is: `wrangler.jsonc.example` (tracked; `wrangler.jsonc` is gitignored, and a new binding goes in both in one commit). `workers/watchdog.ts` is a second Worker on the same split, deployed by a `ship` step. `OPERATOR_TOKEN` has four holders, the site Worker, the watchdog, the admin MCP Worker (`mcp/`) and the `gh` repository secret: rotate all four or none.
 
 ## Where everything else lives
 
