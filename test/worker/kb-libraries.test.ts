@@ -114,10 +114,17 @@ describe("the Recipes library", () => {
 
 describe("the Software how-tos library", () => {
   it("lists a published how-to under /software, and the protocol library no longer counts it", async () => {
-    await addRow("run-blast", "computational", "/software/how-tos/run-blast", { title: "Run BLAST", description: "Search a phage genome.", methods: ["annotation"] });
+    await addRow("run-blast", "computational", "/software/how-tos/run-blast", { title: "Run BLAST", description: "Search a phage genome.", methods: ["annotation"], howtoType: "how-to" });
     const loaderData = await libraryLoader({ request: request("/software/how-tos"), params: {}, context: routeContext() } as never);
     const html = renderRoute("/software/how-tos", KbLibrary, { loaderData });
     expect(html).toContain('href="/software/how-tos/run-blast"');
+    // Tutorial or how-to (S1), in words in the table and the facet, and in the rows machines read.
+    expect(html).toMatch(/<td[^>]*>How-to<\/td>/);
+    expect(html).not.toMatch(/>how-to</);
+    const json = (await (await jsonLoader({ request: request("/software/how-tos.json"), params: {}, context: routeContext() } as never)).json()) as Record<string, Array<Record<string, unknown>>>;
+    expect(Object.values(json).find(Array.isArray)?.[0]).toMatchObject({ id: "run-blast", type: "How-to" });
+    const twin = await ((await twinLoader({ request: request("/software/how-tos.md"), params: {}, context: routeContext() } as never)) as Response).text();
+    expect(twin).toContain(`| [Run BLAST](${SITE_ORIGIN}/software/how-tos/run-blast) | How-to | Genome annotation |`);
     expect(html).toContain('href="/software"');
     const protocols = (await (await protocolsJsonLoader({ request: request("/research/protocols.json"), params: {}, context: routeContext() } as never)).json()) as { protocols: Array<{ id: string }> };
     expect(protocols.protocols.map((p) => p.id)).not.toContain("run-blast");

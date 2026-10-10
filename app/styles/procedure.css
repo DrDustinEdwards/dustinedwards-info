@@ -469,6 +469,10 @@
   margin-top: 0.25rem;
 }
 
+.procedure-challenge > div > :last-child {
+  margin-bottom: 0;
+}
+
 .procedure-solution {
   margin-top: 0.5rem;
 }

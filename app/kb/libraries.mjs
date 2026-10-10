@@ -11,7 +11,7 @@ import { courseLabel, methodLabel } from "./procedures/taxonomy.mjs";
 import { HOWTO_TYPES } from "./procedures/validate.mjs";
 
 /** A how-to's type in words: "how-to" is "How-to". @param {string} id */
-const howtoTypeLabel = (id) => HOWTO_TYPES[/** @type {keyof typeof HOWTO_TYPES} */ (id)] ?? id;
+export const howtoTypeLabel = (id) => HOWTO_TYPES[/** @type {keyof typeof HOWTO_TYPES} */ (id)] ?? id;
 
 /** @typedef {import("./bases.mjs").KnowledgeBase} KnowledgeBase */
 /** @typedef {import("./procedures/render.mjs").ProcedureRecord} ProcedureRecord */
