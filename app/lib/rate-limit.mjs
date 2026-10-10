@@ -1,4 +1,4 @@
-import { limit } from "@drdustinedwards/rate-limit";
+import { limit } from "@dustinedwards/site-runtime/rate-limit";
 
 /**
  * One use of a fixed-window limit keyed by `key`, counted exactly by the ASK_BUDGET namespace, which

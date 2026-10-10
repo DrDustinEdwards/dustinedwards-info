@@ -21,7 +21,7 @@ import {
   generateNonce,
   runOshpSuite,
   scriptHash,
-} from "@dustinedwards/security-headers";
+} from "@dustinedwards/site-runtime";
 import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { SECURITY_HEADERS, SITE_HEADER_OVERRIDES } from "../workers/security-headers.mjs";
 import { contentSecurityPolicy, enhanceLoaderHash } from "../workers/csp.mjs";
@@ -116,7 +116,7 @@ test("the defaults are OWASP's: read from the project, dated, and recorded in th
   assert.match(OWASP_SOURCE.readOn, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(OWASP_SOURCE.lastUpdateUtc, "OSHP states when its list was last updated");
   assert.ok(Object.keys(OWASP_RECOMMENDED).length >= 10 && OWASP_REMOVE.length > 10);
-  const readme = readFileSync(new URL("../node_modules/@dustinedwards/security-headers/README.md", import.meta.url), "utf8");
+  const readme = readFileSync(new URL("../node_modules/@dustinedwards/site-runtime/README.md", import.meta.url), "utf8");
   assert.ok(readme.includes(OWASP_SOURCE.page) && readme.includes(`**${OWASP_SOURCE.readOn}**`), "the README names the page and the date the generated module says");
   // Every value of the standard is OSHP's own string, never a retyped one.
   for (const [name, value] of Object.entries(STANDARD_SECURITY_HEADERS)) assert.equal(value, OWASP_RECOMMENDED[name], name);
@@ -215,7 +215,7 @@ test("red once: a policy whose connect-src is not the site itself", () => {
 
 /* ------------------------------------------------------------------------------------------ OWASP's own suite */
 
-const suite = /** @type {any} */ (matter.engines.yaml.parse(readFileSync(new URL("../node_modules/@dustinedwards/security-headers/oshp-tests-suite.yml", import.meta.url), "utf8")));
+const suite = /** @type {any} */ (matter.engines.yaml.parse(readFileSync(new URL("../node_modules/@dustinedwards/site-runtime/oshp-tests-suite.yml", import.meta.url), "utf8")));
 const headerOf = (/** @type {string} */ caseName) => caseName.replace(/ \(should not exist\)$/, "");
 
 /** @param {Headers} headers @param {Headers | undefined} [logout] */

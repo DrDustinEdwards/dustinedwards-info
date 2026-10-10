@@ -3,7 +3,7 @@
 // verify-live import the set instead of parsing source for it, and so the list of deviations is the one place to read what
 // this site does differently from the standard and why.
 
-import { buildSecurityHeaders } from "@dustinedwards/security-headers/headers";
+import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
 
 /**
  * Looks tightenable and is not. Each entry is a header this site sends differently from OSHP's recommendation; a header
@@ -13,7 +13,7 @@ import { buildSecurityHeaders } from "@dustinedwards/security-headers/headers";
  * HTTPS, checked 2026-10-03) and never `preload`, a one-way door (CUTOVER.md 3.10). Never deny `clipboard-write`: the copy
  * controls swallow the refusal silently.
  *
- * @type {Readonly<Record<string, import("@dustinedwards/security-headers/headers").HeaderOverride>>}
+ * @type {Readonly<Record<string, import("@dustinedwards/site-runtime/headers").HeaderOverride>>}
  */
 export const SITE_HEADER_OVERRIDES = Object.freeze({
   "Strict-Transport-Security": {
