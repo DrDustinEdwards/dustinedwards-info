@@ -1,26 +1,8 @@
-/* The two ways a node test stands in for the network: swapping the global fetch, and a real
- * local server for code that takes a base URL. Both restore in `finally`, so a failing
- * assertion cannot leave the global patched or a port listening. */
+/* A real local server for node tests of code that takes a base URL. It closes in `finally`, so a
+ * failing assertion cannot leave a port listening. Swapping the global fetch is
+ * `installFetch` in `@dustinedwards/devkit/network`. */
 
 import { createServer } from "node:http";
-
-/**
- * Runs `run` with `globalThis.fetch` replaced by `impl`.
- *
- * @template T
- * @param {(url: any, init?: any) => Promise<Response>} impl
- * @param {() => Promise<T>} run
- * @returns {Promise<T>}
- */
-export async function withFetch(impl, run) {
-  const original = globalThis.fetch;
-  globalThis.fetch = /** @type {typeof fetch} */ (impl);
-  try {
-    return await run();
-  } finally {
-    globalThis.fetch = original;
-  }
-}
 
 /**
  * Runs `run` against a loopback server answering with `handler`, then closes it.
