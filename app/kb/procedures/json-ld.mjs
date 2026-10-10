@@ -47,7 +47,7 @@ export function protocolParameters(record) {
  * The procedure a variant was copied from, as `isBasedOn` names it (P3): its address, at the version copied when there is
  * a frozen copy of it, and its title. Resolved at request time from the parent's row (lineage.server.ts).
  *
- * @param {{ title: string, href: string, version: string | null } | null} lineage
+ * @param {import("./lineage.mjs").Lineage | null} lineage
  * @param {string} origin
  */
 function lineageWork(lineage, origin) {
@@ -86,7 +86,7 @@ export function isoDuration(value) {
  * @param {import("./render.mjs").ProcedureRecord} record
  * @param {string} origin
  * @param {{ "@type": string, "@id": string, name: string, url: string }} person
- * @param {{ title: string, href: string, version: string | null } | null} [lineage] the procedure this one is a variant of
+ * @param {import("./lineage.mjs").Lineage | null} [lineage] the procedure this one is a variant of
  */
 export function procedureJsonLd(record, origin, person, lineage = null) {
   const url = `${origin}${record.path}`;
