@@ -293,9 +293,12 @@ for a person working it at the bench, on a phone:
   alert region and changes the tab title.
 - **Critical steps** keep their flag in view and their edge in the danger colour until done; **pause points** stay
   marked. The current step is `aria-current="step"`; "Go to step N" in the bar jumps to it.
-- **Scale** (a tube count, or servings) changes in place: the page is fetched at the new scale and the materials
-  table and each step's words are swapped in, so the server stays the one place amounts are computed. The run's
+- **Scale** (a tube count, or servings, and a recipe's units) changes in place: the page is fetched at the new scale
+  and the materials table, the mise-en-place, each step's words and each step's ingredients are swapped in, so the server stays the one place amounts are computed. The run's
   checks and notes are kept. If the fetch fails the browser navigates to the scaled page.
+- **One step at a time** (the cook view): a toggle in the bar shows only the step being worked, in larger text, with
+  its ingredients, tools and timers, and Previous and Next to move. It opens on the first step not yet done; the choice
+  is remembered on the device. "Show every step" brings the whole page back.
 - **The screen stays on** while a run is open (the Wake Lock API), and the bar says so if the browser refuses.
 - **The record**: finishing shows the run's record, which downloads as Markdown or JSON and prints (the print
   stylesheet drops the controls and keeps the checks and notes). It names the procedure, its path and its version,

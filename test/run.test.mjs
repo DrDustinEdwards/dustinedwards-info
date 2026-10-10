@@ -184,3 +184,23 @@ test("two steps that share a number are two steps: checking one leaves the other
   run = toggleDone(run, "part-b.1", T0 + 2000);
   assert.deepEqual(runProgress(run, KEYS), { done: 2, total: 3 });
 });
+
+test("one step at a time shows the chosen step, else the first not done, else the last, and moves to its neighbours", async () => {
+  const { newRun, shownStep, stepBeside, toggleDone } = await import("../app/kb/procedures/run.mjs");
+  const keys = ["dough.1", "dough.2", "cook.1"];
+  let run = newRun({ path: "/recipes/x", version: "", title: "X", scale: null }, 0);
+  assert.equal(shownStep(run, keys, null), "dough.1");
+  run = toggleDone(run, "dough.1", 1);
+  assert.equal(shownStep(run, keys, null), "dough.2");
+  assert.equal(shownStep(run, keys, "cook.1"), "cook.1");
+  // A step the procedure no longer has is not shown.
+  assert.equal(shownStep(run, keys, "gone.9"), "dough.2");
+  // Every step done: the last is shown.
+  let finished = newRun({ path: "/recipes/x", version: "", title: "X", scale: null }, 0);
+  for (const key of keys) finished = toggleDone(finished, key, 2);
+  assert.equal(shownStep(finished, keys, null), "cook.1");
+  assert.equal(stepBeside(keys, "dough.2", 1), "cook.1");
+  assert.equal(stepBeside(keys, "dough.1", -1), null);
+  assert.equal(stepBeside(keys, "cook.1", 1), null);
+  assert.equal(stepBeside(keys, "gone.9", 1), null, "a step the procedure no longer has has no neighbour");
+});
