@@ -40,13 +40,15 @@
 	// Gemini Enterprise's fixed callback is listed; Grok's is added once it is
 	// measured (a refused registration names its URI in the Worker log).
 	// AGENT_WRITE names the agent principals that may change the site; every
-	// other agent key reads only.
+	// other agent key reads only. grok (the AGENT_KEY_GROK secret) writes, on
+	// Dustin's instruction of 2026-10-10: Grok cannot complete OAuth (measured
+	// 2026-09-07), so its key is its only door.
 	"vars": {
 		"SITE_ORIGIN": "https://dustinedwards.info",
 		"PUBLIC_ORIGIN": "https://admin-mcp.dustinedwards.info",
 		"ADMIN_GITHUB_LOGIN": "DrDustinEdwards",
 		"DCR_REDIRECT_URIS": "https://vertexaisearch.cloud.google.com/oauth-redirect",
-		"AGENT_WRITE": ""
+		"AGENT_WRITE": "grok"
 	},
 
 	// THE ONLY ROUTE TO THE SITE: a service binding to the dustinedwards
