@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
@@ -6,9 +6,11 @@ import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "~/components/admin/page-head";
+import { StepText } from "~/components/admin/kb-step-text";
 import type { KbEditorActionData } from "~/components/admin/kb-file-editor";
 import type { KbFile } from "~/kb/editor.server";
 import type { FormBlock, FormBody, FormModel, FormStep } from "~/kb/form.mjs";
+import { cellAnchor, fieldAnchor, stepAnchor } from "~/kb/gap-labels.mjs";
 import type { Choice, FormField, KbForm } from "~/kb/form.server";
 
 /*
@@ -34,7 +36,7 @@ function plural(count: number, one: string, many: string) {
 }
 
 /** An input's id from a field key, so a Needs info link lands on its input. */
-const fieldId = (key: string) => `kb-field-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+const fieldId = fieldAnchor;
 
 /**
  * A value set from an input: what was typed, or, for an input left empty, the gap the field held, so a field nobody has
@@ -76,13 +78,14 @@ function Checks({ id, options, picked, onChange, label }: { id: string; options:
   );
 }
 
-function MaterialsEditor({ id, rows, reagents, onChange }: { id: string; rows: Material[]; reagents: Choice[]; onChange: (rows: Material[]) => void }) {
+function MaterialsEditor({ id, rows, reagents, solutions, onChange }: { id: string; rows: Material[]; reagents: Choice[]; solutions: Choice[]; onChange: (rows: Material[]) => void }) {
   const set = (i: number, key: string, typed: string) =>
     onChange(rows.map((row, j) => (j === i ? { ...row, [key]: fromInput(typed, row[key]) } : row)));
   const cell = (row: Material, i: number, key: string, label: string) => (
     <label className="kb-cell">
       <span className="cap-field-label">{label}</span>
       <input
+        id={row.name ? cellAnchor("materials", String(row.name), key) : undefined}
         className="cap-input"
         value={shown(row[key])}
         placeholder={reason(row[key]) ?? ""}
@@ -109,6 +112,20 @@ function MaterialsEditor({ id, rows, reagents, onChange }: { id: string; rows: M
           </label>
           {cell(row, i, "amount", "Amount")}
           {cell(row, i, "final", "Final")}
+          {solutions.length > 0 || row.solution ? (
+            <label className="kb-cell">
+              <span className="cap-field-label">Made as</span>
+              <select className="cap-input" value={String(row.solution ?? "")} onChange={(e) => set(i, "solution", e.target.value)}>
+                <option value="">Not a solution made in the lab</option>
+                {solutions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+                {row.solution && !solutions.some((o) => o.value === row.solution) ? <option value={String(row.solution)}>A solution not in the solutions list</option> : null}
+              </select>
+            </label>
+          ) : null}
           <Button type="button" variant="quiet" size="sm" onClick={() => onChange(rows.filter((_, j) => j !== i))} aria-label={`Remove ${shown(row.name) || "this row"}`}>
             Remove
           </Button>
@@ -307,7 +324,7 @@ function FieldInput({
     case "materials":
       return (
         <Field field={field} wide>
-          <MaterialsEditor id={id} rows={list(value) as Material[]} reagents={form.registry.reagent} onChange={(rows) => onValue(rows)} />
+          <MaterialsEditor id={id} rows={list(value) as Material[]} reagents={form.registry.reagent} solutions={form.references.solutions} onChange={(rows) => onValue(rows)} />
         </Field>
       );
     case "equipment":
@@ -325,12 +342,51 @@ function FieldInput({
   }
 }
 
+/**
+ * A note that names something (a troubleshooting row, a calculator) is picked by name. A calculator's preset values
+ * after its id are kept as written.
+ */
+function ReferencePicker({ label, choices, empty, text, onChange }: { label: string; choices: Choice[]; empty: string; text: string; onChange: (text: string) => void }) {
+  const [first = "", ...rest] = text.trim().split(/\s+/).filter(Boolean);
+  const id = first.includes("=") ? "" : first;
+  const extra = first.includes("=") ? [first, ...rest] : rest;
+  return (
+    <select className="cap-input" aria-label={label} value={id} onChange={(e) => onChange([e.target.value, ...extra].filter(Boolean).join(" "))}>
+      <option value="">{empty}</option>
+      {choices.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+      {id && !choices.some((o) => o.value === id) ? <option value={id}>Not found; pick one from the list</option> : null}
+    </select>
+  );
+}
+
+/**
+ * Scrolls to where a gap is filled in and puts the cursor there: the input itself, or in a step card the note that still
+ * says MISSING. Without script the link is a plain #anchor.
+ */
+function goTo(e: React.MouseEvent | null, anchor: string) {
+  const target = document.getElementById(anchor);
+  if (!target) return;
+  e?.preventDefault();
+  target.scrollIntoView({ block: "center" });
+  const inputs = [...target.querySelectorAll<HTMLInputElement>("input")];
+  const field = target.matches("input, select, textarea") ? target : (inputs.find((i) => i.value.startsWith("MISSING:")) ?? target.querySelector<HTMLElement>("input, select, textarea"));
+  (field ?? target).focus({ preventScroll: true });
+  if (e) history.replaceState(null, "", `#${anchor}`);
+}
+
 /** The things a step card can insert, from the protocol's own lists and the lab registry. */
 type Inserts = {
   reagents: Choice[];
   equipment: Choice[];
   primers: Choice[];
   strains: Choice[];
+  /** The names a chip can take: the protocol's reagents and equipment as it lists them. */
+  names: { reagent: string[]; equipment: string[] };
+  references: KbForm["references"];
 };
 
 function StepCard({
@@ -338,6 +394,7 @@ function StepCard({
   index,
   count,
   number,
+  anchor,
   flags,
   inserts,
   onChange,
@@ -350,6 +407,7 @@ function StepCard({
   index: number;
   count: number;
   number: number;
+  anchor: string;
   flags: readonly string[];
   inserts: Inserts;
   onChange: (step: FormStep) => void;
@@ -358,17 +416,18 @@ function StepCard({
   onInsert: (kind: "reagent" | "equipment" | "primer" | "strain", value: string, amount?: string) => string | null;
   dragProps: React.HTMLAttributes<HTMLLIElement>;
 }) {
-  const text = useRef<HTMLTextAreaElement>(null);
+  const caret = useRef<number | null>(null);
   const [amount, setAmount] = useState({ value: "", unit: "µl" });
   const [duration, setDuration] = useState({ value: "", unit: "minutes" });
   const [temperature, setTemperature] = useState("");
   const add = (words: string) => {
     if (!words) return;
-    const at = text.current?.selectionStart ?? step.text.length;
+    const at = Math.min(caret.current ?? step.text.length, step.text.length);
     const before = step.text.slice(0, at);
     const after = step.text.slice(at);
     const pad = before && !before.endsWith(" ") ? " " : "";
     onChange({ ...step, text: `${before}${pad}${words}${after && !after.startsWith(" ") ? " " : ""}${after}` });
+    caret.current = before.length + pad.length + words.length;
   };
   const pick = (kind: "reagent" | "equipment" | "primer" | "strain") => (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -382,6 +441,7 @@ function StepCard({
   const label = `Step ${number}`;
   return (
     <li
+      id={anchor}
       className="kb-step"
       aria-label={label}
       tabIndex={-1}
@@ -410,10 +470,10 @@ function StepCard({
           </Button>
         </div>
       </div>
-      <label className="cap-field-label" htmlFor={`kb-step-${number}`}>
+      <p className="cap-field-label" id={`${anchor}-label`}>
         What to do
-      </label>
-      <textarea id={`kb-step-${number}`} ref={text} className="cap-input" rows={3} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
+      </p>
+      <StepText id={`${anchor}-text`} label={`${label}: what to do`} text={step.text} names={inserts.names} caret={caret} onChange={(next) => onChange({ ...step, text: next })} />
 
       <details className="kb-insert">
         <summary>Insert into this step: a reagent, equipment, a primer, a strain, a timer or a temperature</summary>
@@ -503,12 +563,17 @@ function StepCard({
       {flagLines.map(({ line, i }) => {
         const flag = line as { kind: string; text: string; indent: string };
         return (
-          <div className="kb-flag" key={i}>
+          <div className="kb-flag" key={i} data-flag={flag.kind}>
             <select
               className="cap-input"
               aria-label={`${label}: note kind`}
               value={flag.kind}
-              onChange={(e) => onChange({ ...step, lines: step.lines.map((l, j) => (j === i ? { ...flag, kind: e.target.value } : l)) })}
+              onChange={(e) => {
+                // A note that names something starts empty, to be picked; words carry over between the other kinds.
+                const named = (k: string) => k === "TROUBLESHOOTING" || k === "CALC";
+                const text = named(e.target.value) || named(flag.kind) ? "" : flag.text;
+                onChange({ ...step, lines: step.lines.map((l, j) => (j === i ? { ...flag, kind: e.target.value, text } : l)) });
+              }}
             >
               {flags.map((f) => (
                 <option key={f} value={f}>
@@ -516,12 +581,22 @@ function StepCard({
                 </option>
               ))}
             </select>
-            <input
-              className="cap-input"
-              aria-label={`${label}: ${flag.kind.toLowerCase()} note`}
-              value={flag.text}
-              onChange={(e) => onChange({ ...step, lines: step.lines.map((l, j) => (j === i ? { ...flag, text: e.target.value } : l)) })}
-            />
+            {flag.kind === "TROUBLESHOOTING" || flag.kind === "CALC" ? (
+              <ReferencePicker
+                label={`${label}: ${flag.kind === "CALC" ? "calculator" : "troubleshooting row"}`}
+                choices={flag.kind === "CALC" ? inserts.references.calculators : inserts.references.troubleshooting}
+                empty={flag.kind === "CALC" ? "Choose a calculator" : "Choose a row of the troubleshooting table"}
+                text={flag.text}
+                onChange={(next) => onChange({ ...step, lines: step.lines.map((l, j) => (j === i ? { ...flag, text: next } : l)) })}
+              />
+            ) : (
+              <input
+                className="cap-input"
+                aria-label={`${label}: ${flag.kind.toLowerCase()} note`}
+                value={flag.text}
+                onChange={(e) => onChange({ ...step, lines: step.lines.map((l, j) => (j === i ? { ...flag, text: e.target.value } : l)) })}
+              />
+            )}
             <Button type="button" size="sm" variant="quiet" onClick={() => onChange({ ...step, lines: step.lines.filter((_, j) => j !== i) })} aria-label={`Remove this ${flag.kind.toLowerCase()} note`}>
               Remove
             </Button>
@@ -529,7 +604,7 @@ function StepCard({
         );
       })}
       <Button type="button" size="sm" onClick={() => onChange({ ...step, lines: [...step.lines, { kind: "CRITICAL", text: "", indent: "   " }] })}>
-        Add a note (critical, pause point, why, expected result)
+        Add a note
       </Button>
       {rawLines.length > 0 ? (
         <details className="kb-raw-lines">
@@ -583,6 +658,7 @@ function StepList({
           index={i}
           count={block.steps.length}
           number={block.start + i}
+          anchor={stepAnchor(sectionTitle, block.start + i)}
           flags={flags}
           inserts={inserts}
           onChange={(next) => onChange({ ...block, steps: block.steps.map((s, j) => (j === i ? next : s)) })}
@@ -699,6 +775,79 @@ function BodyEditor({
   );
 }
 
+type PreviewResult = { html: string; styles: string[] } | { errors: string[] } | { error: string };
+
+const PREVIEW_DELAY_MS = 900;
+/** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
+const SIDE_BY_SIDE = "(min-width: 72rem)";
+
+/**
+ * The entry the form describes, rendered as its public page by the server a beat after the form stops changing. A
+ * sequence number keeps a slow answer from landing over a newer one.
+ */
+function useEntryPreview(slug: string | null, original: string, model: string, active: boolean) {
+  const [result, setResult] = useState<PreviewResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const seq = useRef(0);
+  useEffect(() => {
+    if (!slug || !active) return;
+    const mine = (seq.current += 1);
+    setBusy(true);
+    const timer = window.setTimeout(async () => {
+      const body = new FormData();
+      body.set("original", original);
+      body.set("model", model);
+      try {
+        const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body });
+        const json = (await response.json().catch(() => null)) as PreviewResult | null;
+        if (mine !== seq.current) return;
+        setResult(json ?? { error: `The preview request failed with HTTP ${response.status}.` });
+      } catch (error) {
+        if (mine === seq.current) setResult({ error: error instanceof Error ? error.message : String(error) });
+      } finally {
+        if (mine === seq.current) setBusy(false);
+      }
+    }, PREVIEW_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [slug, original, model, active]);
+  return { result, busy };
+}
+
+/**
+ * The public page in a sandboxed frame: no script runs in it, and it links the public page's own stylesheets, so it
+ * looks as the page will. A frame, because the page's styles are the public site's and the admin's are its own.
+ */
+function PreviewPane({ result, busy, publicHref }: { result: PreviewResult | null; busy: boolean; publicHref: string | null }) {
+  const [doc, setDoc] = useState("");
+  useEffect(() => {
+    if (!result || !("html" in result)) return;
+    const styles = result.styles.map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`).join("");
+    const theme = document.documentElement.getAttribute("data-theme");
+    setDoc(`<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${result.html}</body></html>`);
+  }, [result]);
+  const failed = result && "errors" in result ? result.errors : result && "error" in result ? [result.error] : null;
+  return (
+    <Panel title="Preview" src={busy ? "Updating" : failed ? "Not drawn" : "As the page will look"} flush>
+      {failed ? (
+        <div className="kb-preview-note">
+          <Alert tone="warn" title="The page cannot be drawn until these are fixed">
+            <ul>
+              {failed.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          </Alert>
+        </div>
+      ) : null}
+      {doc ? (
+        <iframe className="kb-preview-frame" title={`Preview of the page${publicHref ? ` at ${publicHref}` : ""}`} sandbox="" srcDoc={doc} />
+      ) : (
+        <p className="kb-preview-note">{busy || !result ? "Drawing the page…" : null}</p>
+      )}
+    </Panel>
+  );
+}
+
 /** What the form posts: the model, with each YAML field sent as its text for the server to read. */
 function posted(model: FormModel, values: Values, yaml: Record<string, string>, fields: FormField[], body: FormBody | null) {
   const data: Values = { ...values };
@@ -742,6 +891,10 @@ export function KbFormEditor({
   });
   const [body, setBody] = useState<FormBody | null>(start.body);
   const [duplicating, setDuplicating] = useState(actionData?.intent === "duplicate");
+  // A Needs info link from the Knowledge Base list opens the editor at the gap's field.
+  useEffect(() => {
+    if (window.location.hash.length > 1) goTo(null, decodeURIComponent(window.location.hash.slice(1)));
+  }, []);
 
   const checked = actionData?.intent === "check" ? actionData : null;
   const errors = checked ? checked.errors : actionData?.intent === "save" ? (actionData.refused ?? []) : file.errors;
@@ -767,6 +920,11 @@ export function KbFormEditor({
     ],
     primers: form.registry.primer,
     strains: form.registry.strain,
+    names: {
+      reagent: materials.map((m) => String(m.name ?? "")).filter(Boolean),
+      equipment: equipment.map((e) => (typeof e === "string" ? e : String(e.name ?? ""))).filter(Boolean),
+    },
+    references: form.references,
   };
 
   /** An insert from a step card: a material or equipment the protocol does not list yet is added to its list, so the mark resolves. */
@@ -814,6 +972,18 @@ export function KbFormEditor({
     />
   );
   const isEntry = file.target.type === "entry";
+  const modelJson = posted(form.model, values, yaml, form.fields, body);
+  // The preview is drawn while it can be seen: beside the form on a wide screen, or on the phone when its tab is open.
+  const [pane, setPane] = useState<"form" | "preview">("form");
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia(SIDE_BY_SIDE);
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const preview = useEntryPreview(file.target.type === "entry" ? file.target.slug : null, file.raw, modelJson, wide || pane === "preview");
 
   return (
     <div className="app-page">
@@ -889,10 +1059,22 @@ export function KbFormEditor({
         </Panel>
       ) : null}
 
-      <Form method="post" className="kb-editor-form">
+      {isEntry ? (
+        <div className="kb-pane-tabs" role="tablist" aria-label="Form or preview">
+          <button type="button" role="tab" id="kb-tab-form" aria-controls="kb-pane-form" aria-selected={pane === "form"} className="cap-btn" data-variant={pane === "form" ? "primary" : "quiet"} onClick={() => setPane("form")}>
+            Edit
+          </button>
+          <button type="button" role="tab" id="kb-tab-preview" aria-controls="kb-pane-preview" aria-selected={pane === "preview"} className="cap-btn" data-variant={pane === "preview" ? "primary" : "quiet"} onClick={() => setPane("preview")}>
+            Preview
+          </button>
+        </div>
+      ) : null}
+
+      <div className={isEntry ? "kb-layout" : undefined} data-pane={pane}>
+      <Form method="post" className="kb-editor-form kb-pane-form" id="kb-pane-form" role={isEntry && !wide ? "tabpanel" : undefined} aria-labelledby={isEntry && !wide ? "kb-tab-form" : undefined}>
         <input type="hidden" name="sha" value={file.sha} />
         <input type="hidden" name="original" value={file.raw} />
-        <input type="hidden" name="model" value={posted(form.model, values, yaml, form.fields, body)} />
+        <input type="hidden" name="model" value={modelJson} />
 
         {gapFields.length > 0 || nested.length > 0 ? (
           <Panel title="Needs info" count={gapFields.length + nested.length} description="Values nobody has yet. Fill one in here and it is saved with the rest; leave it empty and it keeps its reason.">
@@ -901,7 +1083,10 @@ export function KbFormEditor({
               <ul className="kb-nested-gaps">
                 {nested.map((g) => (
                   <li key={`${g.field}#${g.reason}`}>
-                    <code>{g.field}</code>: {g.reason}
+                    <a href={`#${g.anchor}`} onClick={(e) => goTo(e, g.anchor)}>
+                      {g.label}
+                    </a>
+                    : {g.reason}
                   </li>
                 ))}
               </ul>
@@ -941,6 +1126,12 @@ export function KbFormEditor({
           ) : null}
         </div>
       </Form>
+      {isEntry ? (
+        <aside className="kb-pane-preview" id="kb-pane-preview" role={wide ? undefined : "tabpanel"} aria-labelledby={wide ? undefined : "kb-tab-preview"} aria-label={wide ? "Preview" : undefined}>
+          <PreviewPane result={preview.result} busy={preview.busy} publicHref={file.publicHref} />
+        </aside>
+      ) : null}
+      </div>
     </div>
   );
 }

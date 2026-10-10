@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { adminActorContext } from "~/lib/admin-actor.server";
 import EditEntry, { action as entryAction, loader as entryLoader } from "~/routes/admin.kb.entry";
 import { action as itemAction, loader as itemLoader } from "~/routes/admin.kb.item";
+import { action as previewAction } from "~/routes/admin.kb.preview";
 
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
@@ -157,6 +158,50 @@ describe("the Knowledge Base form", () => {
       form: { model: { data: Record<string, unknown>; order: string[]; body: unknown }; fields: Array<{ key: string; kind: string }> };
       view: string;
     };
+
+  it("names each gap in words, with the input it is filled in at, and offers references by name", async () => {
+    const loaded = payload(await entryLoader({ request: new Request(entryUrl()), params: { slug: SLUG }, context: context() } as never)) as {
+      file: { gaps: Array<{ field: string; label: string; anchor: string }> };
+      form: { references: Record<"troubleshooting" | "calculators" | "solutions", Array<{ value: string; label: string }>> };
+    };
+    const tes = loaded.file.gaps.find((g) => g.field === "solutions[tes-buffer].storage");
+    expect(tes).toMatchObject({ label: "TES buffer: storage", anchor: "kb-field-solutions" });
+    expect(loaded.file.gaps.find((g) => g.field.startsWith("step 8 "))).toMatchObject({ label: "Step 8: rotor" });
+    expect(loaded.form.references.troubleshooting.find((r) => r.value === "mix-set-solid")?.label).toMatch(/^Step 7: The mix sets solid/);
+    expect(loaded.form.references.solutions).toEqual([{ value: "tes-buffer", label: "TES buffer" }]);
+    expect(loaded.form.references.calculators.find((c) => c.value === "titer")?.label).toBe("Titer calculator");
+  });
+
+  it("draws a step's marks as chips that carry the text they were read from", async () => {
+    const loaded = payload(await entryLoader({ request: new Request(entryUrl()), params: { slug: SLUG }, context: context() } as never)) as Record<string, unknown>;
+    const html = renderRoute(`/admin/kb/entry/${SLUG}`, EditEntry, { loaderData: loaded });
+    expect(html).toContain('class="kb-chip" data-kind="timer" data-raw="~{30 to 60%minutes}"');
+    expect(html).toContain('data-kind="temperature" data-raw="55 to 60 °C"');
+    // A troubleshooting note is picked from the table by its words.
+    expect(html).toMatch(/<option value="mix-set-solid"[^>]*>Step 7: The mix sets solid/);
+    // Needs info names the gap in words and links to its field.
+    expect(html).toContain('href="#kb-field-solutions"');
+    expect(html).toContain("TES buffer: storage");
+    expect(html).not.toContain("solutions[tes-buffer]");
+  });
+
+  it("previews the page the form describes, drawn by the public page's component, and commits nothing", { timeout: 120_000 }, async () => {
+    const { file, form } = await loadForm();
+    const url = `https://example.com/admin/kb/preview/${SLUG}`;
+    const preview = async (model: unknown) =>
+      (await (
+        await previewAction({ request: post(url, { original: file.raw, model: JSON.stringify(model) }), params: { slug: SLUG }, context: context() } as never)
+      ).json()) as { html?: string; styles?: string[]; errors?: string[] };
+    const drawn = await preview({ ...form.model, data: { ...form.model.data, title: "Phage DNA extraction, previewed" } });
+    expect(drawn.errors).toBeUndefined();
+    expect(drawn.html).toContain('<h1 class="page-title">Phage DNA extraction, previewed</h1>');
+    expect(drawn.html).toContain('class="prose procedure"');
+    expect(drawn.styles).toHaveLength(5);
+    const refused = await preview({ ...form.model, data: { ...form.model.data, status: "sometimes" } });
+    expect(refused.errors?.some((e) => e.startsWith('status is "sometimes"'))).toBe(true);
+    expect(commits()).toHaveLength(0);
+    expect(gh.files.get(FILE)).toBe(protocol);
+  });
 
   it("opens as the form, with the file behind Advanced", async () => {
     const { view, form } = await loadForm();

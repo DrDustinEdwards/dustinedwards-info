@@ -62,25 +62,44 @@ function label(item, index) {
   return String(index);
 }
 
+/** What an item in a list is called in words: its name, stage or set, else its id. @param {Record<string, unknown>} item */
+function itemName(item) {
+  for (const key of ["name", "stage", "set", "id", "citation", "for"]) {
+    if (typeof item[key] === "string" && item[key]) return /** @type {string} */ (item[key]);
+  }
+  return null;
+}
+
 /**
- * Every recorded gap under `value`, by path.
+ * Every recorded gap under `value`, by path, with `where`: the same place in words, below the top-level field, so the
+ * admin can say "TES buffer: storage" for solutions[tes-buffer].storage (app/kb/gap-labels.mjs). An unnamed item is its
+ * place in its list ("step 2"), left out when it is the list's only item.
  *
  * @param {unknown} value
  * @param {string} path
- * @param {Array<{ field: string, reason: string }>} gaps
+ * @param {Array<{ field: string, reason: string, where?: string[] }>} gaps
  * @param {string[]} errors
+ * @param {string[]} [where]
+ * @param {string} [key] the key the value sits under
  */
-function collectGaps(value, path, gaps, errors) {
+function collectGaps(value, path, gaps, errors, where = [], key = "") {
   if (typeof value === "string") {
     const m = GAP.exec(value);
-    if (m) gaps.push({ field: path, reason: (m[1] ?? "").trim() });
+    if (m) gaps.push({ field: path, reason: (m[1] ?? "").trim(), ...(where.length > 0 ? { where } : {}) });
     else if (/^MISSING\b/.test(value)) errors.push(`${path} is "${value}": write MISSING: and the reason it is missing`);
   } else if (Array.isArray(value)) {
-    value.forEach((item, i) =>
-      collectGaps(item, `${path}[${item && typeof item === "object" ? label(item, i) : i}]`, gaps, errors),
-    );
+    value.forEach((item, i) => {
+      const object = item && typeof item === "object" ? /** @type {Record<string, unknown>} */ (item) : null;
+      const name = object ? itemName(object) : null;
+      const words = name ? [...where, name] : value.length > 1 ? [...where, `${key.replace(/s$/, "")} ${i + 1}`] : where;
+      collectGaps(item, `${path}[${object ? label(object, i) : i}]`, gaps, errors, words, key);
+    });
   } else if (value && typeof value === "object") {
-    for (const [k, v] of Object.entries(value)) collectGaps(v, path ? `${path}.${k}` : k, gaps, errors);
+    for (const [k, v] of Object.entries(value)) {
+      // A list or a group under a key is named by its items; a value is named by its key.
+      const leaf = path && !(v && typeof v === "object");
+      collectGaps(v, path ? `${path}.${k}` : k, gaps, errors, leaf ? [...where, k.replace(/_c$/, " (°C)").replaceAll("_", " ")] : where, k);
+    }
   }
 }
 
@@ -146,12 +165,12 @@ function validateHistory(d, errors) {
  * @param {import("./parse.mjs").ParsedProcedure} parsed
  * @param {{ slug: string, primers?: ReadonlySet<string> | null, strains?: ReadonlySet<string> | null, reagents?: ReadonlySet<string> | null, equipment?: ReadonlySet<string> | null }} expect the slug its file name gives, and the ids of the primers and
  *   host strains the lab registry holds (null or absent when the registry is not at hand, which `compileProcedure` refuses for a protocol that lists primers)
- * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string }> }}
+ * @returns {{ errors: string[], gaps: Array<{ field: string, reason: string, where?: string[], section?: string }> }}
  */
 export function validateProcedure(parsed, expect) {
   /** @type {string[]} */
   const errors = [...parsed.problems];
-  /** @type {Array<{ field: string, reason: string }>} */
+  /** @type {Array<{ field: string, reason: string, where?: string[], section?: string }>} */
   const gaps = [];
   const d = parsed.data;
   const profile = /** @type {typeof PROFILES[number]} */ (d.profile);
@@ -348,6 +367,8 @@ export function validateProcedure(parsed, expect) {
     }
   }
 
+  // A step's section, so a gap in it can say where it is (app/kb/gap-labels.mjs).
+  const sectionOf = new Map(parsed.sections.flatMap((section) => section.blocks.flatMap((block) => (block.type === "steps" ? block.steps.map((s) => [s, section.title]) : []))));
   for (const step of steps) {
     const at = `line ${step.line}, step ${step.number}`;
     if (!step.source.trim()) errors.push(`${at} has no words`);
@@ -401,7 +422,7 @@ export function validateProcedure(parsed, expect) {
         errors.push(`${at} spins with no g-force: add "> SPIN: <n> x g", or "> SPIN: MISSING: <why>" (a speed in rpm needs the rotor)`);
       }
       for (const spin of step.flags.spin) {
-        if (isGap(spin)) gaps.push({ field: `step ${step.number} (line ${step.line}).spin`, reason: spin.replace(/^MISSING:\s*/, "") });
+        if (isGap(spin)) gaps.push({ field: `step ${step.number} (line ${step.line}).spin`, reason: spin.replace(/^MISSING:\s*/, ""), section: sectionOf.get(step) ?? "" });
         else if (!/x g\b/.test(spin)) errors.push(`${at}: SPIN "${spin}" is not in x g`);
       }
     } else if (step.flags.spin.length > 0) {

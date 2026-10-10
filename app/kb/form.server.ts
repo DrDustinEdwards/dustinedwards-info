@@ -6,6 +6,7 @@ import matter from "gray-matter";
 
 import { listRegistry } from "~/db/registry";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
+import { TOOLS } from "~/lib/phage-tools.mjs";
 
 import { BASES } from "./bases.mjs";
 import type { KbFile } from "./editor.server";
@@ -13,6 +14,7 @@ import { entryFields, gapReason, itemFields, type FieldSpec } from "./form-field
 import { fileToForm, formToFile, STEP_FLAGS, type FormModel } from "./form.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
 import { KINDS } from "./registry/kinds.mjs";
+
 
 type FormEnv = Env & { GITHUB_TOKEN?: string };
 
@@ -27,6 +29,8 @@ export type KbForm = {
   /** The registry's items, by kind, for the pickers. */
   registry: Record<"reagent" | "equipment" | "primer" | "strain", Choice[]>;
   flags: readonly string[];
+  /** What a step note or a reagent can point at, by name: the troubleshooting table's rows, the calculators, the solutions. */
+  references: Record<"troubleshooting" | "calculators" | "solutions", Choice[]>;
 };
 
 /** A value as YAML text, for a field the form edits as YAML. */
@@ -68,7 +72,21 @@ export async function formFor(env: FormEnv, file: KbFile): Promise<KbForm> {
     // A gap opens empty, its reason beside it, like any other input; left empty, it keeps the gap (rawFromForm).
     ...(spec.kind === "yaml" || spec.kind === "readonly" ? { yaml: gapReason(model.data[spec.key]) ? "" : yamlText(model.data[spec.key]) } : {}),
   }));
-  return { model, fields, registry, flags: STEP_FLAGS };
+  return { model, fields, registry, flags: STEP_FLAGS, references: referencesOf(model.data) };
+}
+
+/** The rows of a list field that have an id. */
+function rowsOf(rows: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(rows) ? rows.filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === "object" && typeof (r as { id?: unknown }).id === "string") : [];
+}
+
+/** What a step note or a reagent row can name, each by its words: a row's step and problem, a calculator's title, a solution's name. */
+export function referencesOf(data: Record<string, unknown>): KbForm["references"] {
+  return {
+    troubleshooting: rowsOf(data.troubleshooting).map((row) => ({ value: String(row.id), label: `Step ${String(row.step ?? "?")}: ${String(row.problem ?? row.id)}` })),
+    calculators: Object.entries(TOOLS).map(([value, tool]) => ({ value, label: tool.title })),
+    solutions: rowsOf(data.solutions).map((row) => ({ value: String(row.id), label: String(row.name ?? row.id) })),
+  };
 }
 
 /**

@@ -104,3 +104,56 @@ test("the compile holds status to its closed list and forked_from to its shape, 
   const shape = await compile(raw.replace(/^title: /m, "forked_from: { slug: Not A Slug, by: me }\ntitle: "));
   assert.ok(!shape.ok && shape.errors.some((e) => e.startsWith("forked_from is { slug, version }")));
 });
+
+test("every step reads as words and chips that join back byte for byte, and a chip nobody changed writes back as it was", async () => {
+  const { stepPieces, writePiece } = await import("../app/kb/step-marks.mjs");
+  let chips = 0;
+  for (const path of files("content/procedures")) {
+    for (const line of read(path).split("\n")) {
+      const step = /^\d+\.\s+(.*)$/.exec(line);
+      if (!step) continue;
+      const text = step[1] ?? "";
+      const pieces = stepPieces(text);
+      assert.equal(pieces.map((p) => p.raw).join(""), text, `${path}: ${text}`);
+      for (const piece of pieces) {
+        if (piece.kind === "text") continue;
+        chips += 1;
+        assert.equal(writePiece(piece), piece.raw, `${path}: ${piece.raw}`);
+      }
+    }
+  }
+  assert.ok(chips > 40, `only ${chips} chips across the procedures`);
+});
+
+test("a chip edited in its popover is written in the format's own spelling", async () => {
+  const { stepPieces, writePiece, pieceLabel } = await import("../app/kb/step-marks.mjs");
+  const [, reagent, , timer, , temperature, , equipment] = stepPieces("Add @zinc chloride|ZnCl2{20%µl} for ~{5%minutes} at 55 to 60 °C in the #microcentrifuge.");
+  assert.equal(reagent?.kind, "reagent");
+  assert.equal(pieceLabel(/** @type {any} */ (reagent)), "20 µl ZnCl2");
+  assert.equal(writePiece({ .../** @type {any} */ (reagent), amount: "25", fixed: true }), "@zinc chloride|ZnCl2{=25%µl}");
+  assert.equal(writePiece({ .../** @type {any} */ (timer), amount: "10", label: "spin" }), "~spin{10%minutes}");
+  assert.equal(writePiece({ .../** @type {any} */ (temperature), high: "" }), "55 °C");
+  assert.equal(writePiece(/** @type {any} */ (equipment)), "#microcentrifuge");
+  assert.equal(writePiece({ .../** @type {any} */ (equipment), shown: "the centrifuge" }), "#microcentrifuge|the centrifuge{}");
+});
+
+test("a recorded gap is said in words and points at the input it is filled in at", async () => {
+  const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
+  const pipeline = await import("../app/lib/content/pipeline.mjs");
+  const { registryHost } = await import("../scripts/lib/registry.mjs");
+  const { labelGaps } = await import("../app/kb/gap-labels.mjs");
+  const label = async (slug) => {
+    const compiled = await compileProcedure({ slug, raw: read(`content/procedures/${slug}.md`), pipeline, registry: registryHost() });
+    return Object.fromEntries(labelGaps(compiled.gaps, "protocol").map((g) => [g.label, g.anchor]));
+  };
+  const extraction = await label("phage-dna-extraction");
+  assert.equal(extraction["TES buffer: storage"], "kb-field-solutions");
+  assert.equal(extraction["Biosafety level"], "kb-field-biosafety_level");
+  // Two step 4s with a gap, so each says its section; step 8 is the only one and does not.
+  assert.equal(extraction["Step 4 (Part A): rotor"], "kb-step-part-a-collect-the-phage-and-open-the-capsids-4");
+  assert.equal(extraction["Step 8: rotor"], "kb-step-part-b-remove-the-protein-8");
+  const coi = await label("coi-primers");
+  assert.equal(coi["GoTaq Flexi DNA polymerase: amount"], "kb-field-materials-gotaq-flexi-dna-polymerase-amount");
+  assert.equal(coi["Cycling, 20 cycles, step 2: touchdown step (°C)"], "kb-field-cycling");
+  for (const text of [...Object.keys(extraction), ...Object.keys(coi)]) assert.doesNotMatch(text, /\[|\(line|_/, text);
+});

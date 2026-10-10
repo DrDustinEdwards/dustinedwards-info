@@ -501,3 +501,135 @@ main.app-page {
 .kb-insert[open] > summary {
   margin-block-end: var(--space-3);
 }
+
+/* A step's words with its marks as chips (kb-step-text.tsx), as protocols.io shows a step's components. Each kind has
+   its own tint and its own sign, so it is told apart without colour. */
+.kb-chiptext-wrap {
+  position: relative;
+}
+
+.kb-chiptext {
+  min-height: 4.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+  cursor: text;
+}
+
+.kb-chip {
+  display: inline-block;
+  padding: 0 0.45em;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  line-height: 1.5;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+
+  &::before {
+    margin-inline-end: 0.3em;
+    color: var(--muted);
+  }
+  &[data-kind="reagent"]::before {
+    content: "⚗\FE0E";
+  }
+  &[data-kind="equipment"] {
+    background: var(--info-soft);
+  }
+  &[data-kind="equipment"]::before {
+    content: "⚙\FE0E";
+  }
+  &[data-kind="timer"] {
+    background: var(--warn-soft);
+  }
+  &[data-kind="timer"]::before {
+    content: "⏱\FE0E";
+  }
+  &[data-kind="temperature"] {
+    background: var(--ok-soft);
+  }
+  &[data-kind="temperature"]::before {
+    content: "°";
+  }
+  &:hover {
+    border-color: var(--accent);
+  }
+  &:focus-visible {
+    outline: var(--ring-width) solid var(--ring);
+    outline-offset: 1px;
+  }
+}
+
+/* A chip's own editor, under the chip. */
+.kb-popover {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  gap: var(--space-3);
+  width: min(19rem, 100%);
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 0.5rem;
+  background: var(--raised);
+  box-shadow: var(--shadow-m);
+}
+
+.kb-popover-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.kb-popover-fields {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* The form and the page it makes: side by side on a wide screen, the preview following the form down; tabs below. */
+.kb-pane-tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.kb-layout {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.kb-preview-frame {
+  display: block;
+  width: 100%;
+  height: 80vh;
+  border: 0;
+  background: var(--ground);
+}
+
+.kb-preview-note {
+  margin: 0;
+  padding: var(--space-3);
+}
+
+@media (min-width: 72rem) {
+  .kb-pane-tabs {
+    display: none;
+  }
+  .kb-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .kb-pane-preview {
+    position: sticky;
+    top: var(--space-4);
+  }
+  .kb-preview-frame {
+    height: calc(100vh - 8rem);
+  }
+}
+
+@media (max-width: 71.99rem) {
+  .kb-layout[data-pane="form"] > .kb-pane-preview,
+  .kb-layout[data-pane="preview"] > .kb-pane-form {
+    display: none;
+  }
+}

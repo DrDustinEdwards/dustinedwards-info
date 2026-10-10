@@ -11,6 +11,13 @@ import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./pro
  * @typedef {{ key: string, label: string, kind: FieldKind, help?: string, options?: Array<{ value: string, label: string }> }} FieldSpec
  */
 
+/** A key the form has no label for, in words: "published_doi" is "Published DOI". @param {string} key */
+export const keyWords = (key) =>
+  key
+    .replaceAll("_", " ")
+    .replace(/\b(doi|rrid|url|atcc|id|pmid)\b/gi, (m) => m.toUpperCase())
+    .replace(/^./, (c) => c.toUpperCase());
+
 /** @param {Record<string, string | { label: string }>} map */
 const options = (map) => Object.entries(map).map(([value, label]) => ({ value, label: typeof label === "string" ? label : label.label }));
 
@@ -92,8 +99,19 @@ export function entryFields(profile, data, strains) {
   const named = new Set(specs.map((s) => s.key));
   const rest = Object.keys(data)
     .filter((key) => !named.has(key))
-    .map((key) => ({ key, label: key.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()), kind: /** @type {const} */ ("yaml") }));
+    .map((key) => ({ key, label: keyWords(key), kind: /** @type {const} */ ("yaml") }));
   return [...specs, ...rest];
+}
+
+/**
+ * A field's label as the form shows it, for any key a file of `profile` can have.
+ *
+ * @param {string} profile
+ * @param {string} key
+ */
+export function fieldLabel(profile, key) {
+  const own = profile === "recipe" ? RECIPE : profile === "computational" ? COMPUTATIONAL : PROTOCOL;
+  return [...FIXED, ...COMMON, ...own].find((s) => s.key === key)?.label ?? keyWords(key);
 }
 
 /**
@@ -110,7 +128,7 @@ export function itemFields(declared, data) {
     { key: "draft", label: "Draft (only you can see it)", kind: "checkbox" },
     ...declared.map((key) => ({
       key,
-      label: key.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()),
+      label: keyWords(key),
       kind: /** @type {FieldKind} */ (typeof data[key] === "boolean" || key.startsWith("prepared_") ? "checkbox" : "text"),
     })),
   ];
