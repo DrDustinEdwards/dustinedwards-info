@@ -39,7 +39,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const row = await getProcedureByPath(env, path);
   if (!row) throw data(null, { status: 404 });
   if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
-  const { count, factor } = readScale(row.record, url);
+  const { count, factor, units } = readScale(row.record, url);
   // Where a protocol sits in the phage workflow: its neighbours are the other published protocols, so they are read here.
   const workflow =
     row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
@@ -47,7 +47,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const proof = await proofFor(env, row.record.proofOfUse);
   // The versions with a frozen copy, which the history links.
   const frozen = await listFrozenVersions(env, row.slug);
-  return { record: row.record, draft: row.status === "draft", count, factor, workflow, proof, frozen };
+  return { record: row.record, draft: row.status === "draft", count, factor, units, workflow, proof, frozen };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -61,7 +61,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
-  const { record, draft, count, factor, workflow, proof, frozen } = loaderData;
+  const { record, draft, count, factor, units, workflow, proof, frozen } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
@@ -78,7 +78,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} workflow={workflow} proof={proof} frozen={frozen} />
+      <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
     </PageShell>

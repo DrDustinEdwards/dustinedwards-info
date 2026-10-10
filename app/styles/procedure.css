@@ -75,6 +75,18 @@
   cursor: pointer;
 }
 
+.procedure-scale select {
+  min-height: var(--control-min);
+  margin-inline-start: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  border: var(--line-w) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+}
+
+.procedure-scale select:focus-visible,
 .procedure-scale input:focus-visible,
 .procedure-scale button:focus-visible {
   outline: 2px solid var(--brand);
@@ -394,4 +406,45 @@
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* A recipe step's ingredients, under its words (R2), and the mise-en-place under the ingredient list (R5). */
+.procedure-step-ingredients {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.procedure-step-ingredients-label {
+  font-weight: 600;
+}
+
+.procedure-mise-list {
+  padding: 0;
+  list-style: none;
+}
+
+.procedure-mise-list label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-height: var(--control-min);
+}
+
+.procedure-mise-copy {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 32rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.procedure-mise-copy textarea {
+  padding: 0.5rem;
+  border: var(--line-w) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
 }
