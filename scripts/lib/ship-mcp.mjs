@@ -13,7 +13,11 @@ const HEALTH_STREAK = 5;
 const HEALTH_ATTEMPTS = 36;
 const HEALTH_GAP_MS = 10_000;
 
-/** jsonc: block and line comments stripped, as check:wrapper reads it. */
+/**
+ * jsonc: block and line comments stripped, as check:wrapper reads it.
+ * @param {string} text
+ * @returns {any}
+ */
 function readJsonc(text) {
   return JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""));
 }
@@ -48,7 +52,8 @@ export function mcpConfig(root) {
   try {
     config = readJsonc(text);
   } catch (error) {
-    return { ok: false, why: `mcp/wrangler.jsonc does not parse: ${error.message}`, remedy: "Fix it. Nothing was deployed." };
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, why: `mcp/wrangler.jsonc does not parse: ${message}`, remedy: "Fix it. Nothing was deployed." };
   }
   const origin = String(config?.vars?.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
   if (!origin.startsWith("https://")) {
@@ -90,6 +95,11 @@ export function discoveryProblems({ prm, as, discover }, origin) {
   return problems;
 }
 
+/**
+ * @param {string} url
+ * @param {RequestInit & { headers?: Record<string, string> }} [init]
+ * @returns {Promise<{ status: number, body: any, challenge: string, error?: string }>}
+ */
 async function readJson(url, init) {
   try {
     const res = await fetch(url, { ...init, headers: { "user-agent": "ship", ...init?.headers } });
@@ -124,7 +134,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
   announce("mcp: CI is green for this exact commit");
   /* No local fallback for this target: CI's mcp job is the clean-checkout review, and it must have passed. */
   if (!early.verdict?.ok) {
-    refuse(
+    return refuse(
       early.error ? `CI could not be read: ${early.error}` : (early.verdict?.why ?? "CI could not be read"),
       early.verdict?.remedy ?? "The admin MCP deploys only from a commit CI passed. Nothing was deployed.",
     );
@@ -133,7 +143,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
 
   announce("mcp: the real config is present");
   const config = mcpConfig(root);
-  if (!config.ok) refuse(config.why, config.remedy);
+  if (!config.ok) return refuse(config.why, config.remedy);
   console.log(`  mcp/wrangler.jsonc, serving ${config.origin}`);
 
   announce("mcp: install from its own lockfile");
@@ -152,7 +162,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run 
   announce("mcp: CI still green for this exact commit");
   const { verdict, error } = await readCi();
   if (error || !verdict?.ok) {
-    refuse(error ? `the GitHub API could not be reached: ${error}` : (verdict?.why ?? "CI could not be read"), "Nothing was deployed.");
+    return refuse(error ? `the GitHub API could not be reached: ${error}` : (verdict?.why ?? "CI could not be read"), "Nothing was deployed.");
   }
   console.log(`  ${verdict.why}.`);
 
