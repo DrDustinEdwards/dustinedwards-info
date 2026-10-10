@@ -325,8 +325,8 @@ export function strainMarkdown(strain, usedBy, origin) {
 /* ------------------------------------------------------------------------------------------------ reagents */
 
 /**
- * Whether a kind has a page for each item. A reagent does not: the lab's reagents are one table on the kind's page, which is the
- * library's Reagents tab, and a protocol's own table carries what a reader needs of each (docs/REGISTRY.md).
+ * Whether a kind has a page for each item. Every kind does today (docs/KNOWLEDGE-BASE.md, A1); a kind that is only ever one table
+ * says `itemPages: false`.
  *
  * @param {string} kind
  * @param {Readonly<Record<string, import("./kinds.mjs").KindSpec>>} [kinds]
@@ -373,6 +373,7 @@ export function reagentRow(item, protocols = []) {
   return {
     id: item.id,
     name: item.name,
+    path: itemPath("reagent", item.id),
     abbreviation: stated(f.abbreviation),
     contents: stated(f.contents),
     preparedInLab: prepared,
@@ -455,6 +456,27 @@ export function reagentsMarkdown(reagents, origin) {
   ].join("\n");
 }
 
+/**
+ * One reagent as markdown for its item twin: the same facts as its page, every gap with its reason, and the protocols that use it.
+ *
+ * @param {ReagentRow} r
+ * @param {string} origin
+ */
+export function reagentItemMarkdown(r, origin) {
+  const lines = [
+    r.abbreviation ? `- Abbreviation: ${r.abbreviation}` : "",
+    r.contents ? `- Contents: ${r.contents}` : "",
+    r.preparedInLab
+      ? `- Source: prepared in the lab${r.recipePath ? `, [recipe](${origin}${r.recipePath})` : `; recipe not found (${r.recipeMissing ?? "not recorded"})`}`
+      : `- Supplier: ${r.supplier ?? `not found (${r.supplierMissing ?? "not recorded"})`}`,
+    r.preparedInLab ? "" : `- Catalog number: ${r.catalogNumber ?? `not found (${r.catalogNumberMissing ?? "not recorded"})`}`,
+    r.productUrl ? `- Product page: ${r.productUrl}` : "",
+    "",
+    ...r.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
+  ];
+  return `# ${r.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+}
+
 /* ------------------------------------------------------------------------------------------------ equipment */
 
 /**
@@ -482,6 +504,7 @@ export function equipmentRow(item, protocols = []) {
   return {
     id: item.id,
     name: item.name,
+    path: itemPath("equipment", item.id),
     manufacturer: stated(f.manufacturer),
     manufacturerMissing: missingReason(f.manufacturer),
     rotor: stated(f.rotor),
@@ -541,6 +564,23 @@ export function equipmentMarkdown(items, origin) {
     ...lines,
     ...(gaps.length > 0 ? ["", "Not found:", "", ...gaps] : []),
   ].join("\n");
+}
+
+/**
+ * One item of equipment as markdown for its item twin: who makes it, a centrifuge's rotor, every gap with its reason, and the
+ * protocols that use it.
+ *
+ * @param {EquipmentRow} e
+ * @param {string} origin
+ */
+export function equipmentItemMarkdown(e, origin) {
+  const lines = [
+    `- Manufacturer: ${e.manufacturer ?? `not found (${e.manufacturerMissing ?? "not recorded"})`}`,
+    e.rotor ? `- Rotor: ${e.rotor}` : e.rotorMissing ? `- Rotor: not found (${e.rotorMissing})` : "",
+    "",
+    ...e.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
+  ];
+  return `# ${e.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
 }
 
 /* ------------------------------------------------------------------------------------------------ inventory */

@@ -196,6 +196,9 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    protocols. A library with no published entry is not a page yet: a visitor gets a 404, the signed-in admin sees it
    empty, and it joins the sitemap with its first entry. Neither has intro prose: a page's words are Dustin's, so a
    `content/pages` file for each can come when he writes one.)
+   (Item pages done: every reagent and item of equipment has a page at `/research/lab/<kind>/<id>`, with its twin, search
+   record and sitemap entry, listing the protocols that use it; the kind tables and each protocol's Reagents and Equipment
+   tables, page and twin, link to them. Ingredients and software become items with the first recipe and how-to.)
 9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4).
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).

@@ -3,7 +3,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
-import { LabPrimer, LabEquipment, LabPrimers, LabReagents, LabStrain, LabStrains } from "~/components/lab";
+import { LabEquipment, LabEquipmentItem, LabPrimer, LabPrimers, LabReagent, LabReagents, LabStrain, LabStrains } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
@@ -11,7 +11,7 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentRows, strainRow, strainRows } from "~/kb/registry/catalog.mjs";
+import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRow, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentLabel, reagentRow, reagentRows, reagentSource, strainRow, strainRows } from "~/kb/registry/catalog.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/kb/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
@@ -55,7 +55,9 @@ type Page =
   | { view: "kind"; kind: "reagent"; reagents: ReagentRow[]; search: string }
   | { view: "kind"; kind: "equipment"; items: EquipmentRow[]; search: string }
   | { view: "item"; kind: "primer"; primer: PrimerRow; primers: PrimerRow[]; usedBy: Used; draft: boolean }
-  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean };
+  | { view: "item"; kind: "strain"; strain: StrainRow; usedBy: Used; draft: boolean }
+  | { view: "item"; kind: "reagent"; reagent: ReagentRow; draft: boolean }
+  | { view: "item"; kind: "equipment"; equipment: EquipmentRow; draft: boolean };
 
 export async function loader({ request, params, context }: Route.LoaderArgs): Promise<{ page: Page }> {
   const env = getEnv(context);
@@ -81,13 +83,16 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
     return { page: { view: "kind", kind, items: equipmentRows(published, await listPublishedLibraryRecords(env)), search: url.search } };
   }
 
-  // A kind that is one table has no page for an item, and no address is kept for one that had a page.
-  if (kind === "reagent" || kind === "equipment" || !hasItemPage(kind)) throw data(null, { status: 404 });
+  // A kind that is only one table has no page for an item, and no address is kept for one that had a page.
+  if (!hasItemPage(kind)) throw data(null, { status: 404 });
   const item = await getRegistryItem(env, kind, params.id);
   if (!item) throw data(null, { status: 404 });
   // A draft is the signed-in admin's alone; that request carries a cookie, and the Worker never stores it.
   if (item.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const draft = item.status === "draft";
+  // A reagent's and an item of equipment's protocols are computed from the protocols that name them (docs/KNOWLEDGE-BASE.md, A1).
+  if (kind === "reagent") return { page: { view: "item", kind, reagent: reagentRow(item, await listPublishedLibraryRecords(env)), draft } };
+  if (kind === "equipment") return { page: { view: "item", kind, equipment: equipmentRow(item, await listPublishedLibraryRecords(env)), draft } };
   if (kind === "strain") {
     const [phages, protocols] = await Promise.all([listPhages(env), listPublishedLibraryRecords(env)]);
     const strain = strainRow(item, phages);
@@ -132,6 +137,17 @@ export function meta({ loaderData }: Route.MetaArgs) {
     });
   }
   const noindex = page.draft ? [{ name: "robots", content: "noindex" }] : [];
+  const usedIn = (uses: Used) => (uses.length > 0 ? `, used in ${plural(uses.length, "protocol")}` : "");
+  if (page.kind === "reagent") {
+    const { reagent } = page;
+    const source = reagent.preparedInLab ? "Prepared in the lab" : [reagentSource(reagent), reagent.catalogNumber].filter(Boolean).join(", ") || "Reagent";
+    return [...pageMeta({ title: `${reagentLabel(reagent)}: reagent`, description: `${source}${usedIn(reagent.uses)}.`, path: reagent.path }), ...noindex];
+  }
+  if (page.kind === "equipment") {
+    const { equipment } = page;
+    const maker = equipment.manufacturer ? `Made by ${equipment.manufacturer}` : "Lab equipment";
+    return [...pageMeta({ title: `${equipment.name}: equipment`, description: `${maker}${usedIn(equipment.uses)}.`, path: equipment.path }), ...noindex];
+  }
   if (page.kind === "strain") {
     const { strain } = page;
     const facts = [strain.collection && strain.collectionNumber ? `${strain.collection} ${strain.collectionNumber}` : null, `${plural(strain.phages.length, "phage")} isolated on it`]
@@ -147,7 +163,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
   const page = loaderData.page;
-  const item = page.view === "item" ? (page.kind === "strain" ? page.strain : page.primer) : null;
+  const item =
+    page.view !== "item" ? null : page.kind === "strain" ? page.strain : page.kind === "reagent" ? page.reagent : page.kind === "equipment" ? page.equipment : page.primer;
   const trail: Array<[string, string]> = [
     ["Research", "/research"],
     ["Lab registry", LAB_PATH],
@@ -168,6 +185,10 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
         {draft ? <p>Draft: only you can see this page.</p> : null}
         {page.kind === "strain" ? (
           <LabStrain strain={page.strain} usedBy={page.usedBy} />
+        ) : page.kind === "reagent" ? (
+          <LabReagent reagent={page.reagent} />
+        ) : page.kind === "equipment" ? (
+          <LabEquipmentItem equipment={page.equipment} />
         ) : (
           <LabPrimer primer={page.primer} primers={page.primers} usedBy={page.usedBy} />
         )}

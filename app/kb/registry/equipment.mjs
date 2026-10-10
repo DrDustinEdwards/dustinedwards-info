@@ -1,6 +1,7 @@
 // The equipment kind of the lab registry (docs/REGISTRY.md): the instruments and labware the lab's protocols list under
-// Equipment. Like the reagents, the equipment is one table with no page for an item (the library's Equipment tab), and each
-// protocol's own Equipment table is drawn from these records beside the protocol's own words for the item.
+// Equipment. Like the reagents, the equipment is one table (the library's Equipment tab) with a page for each item that lists the
+// protocols using it (docs/KNOWLEDGE-BASE.md, A1), and each protocol's own Equipment table is drawn from these records beside the
+// protocol's own words for the item.
 //
 // A record states what the lab's own pages state about one item: its name and who makes it, which is `MISSING: <why>` where no
 // record in the repository says and is listed for Dustin. A centrifuge also carries the rotor its speeds are read for, which is
@@ -20,8 +21,6 @@ const oneLine = (value, max) =>
 export const EQUIPMENT = {
   singular: "equipment",
   plural: "equipment",
-  // The equipment is one table, not a page each.
-  itemPages: false,
   fields: {
     manufacturer: { required: true, check: (value) => oneLine(value, 80) },
     // The rotor a centrifuge's speeds are read for: a protocol gives rpm, and x g needs the rotor (core.md: waiting on Dustin).

@@ -16,8 +16,10 @@ import {
   primersMarkdown,
   protocolsUsing,
   protocolsUsingStrain,
+  equipmentItemMarkdown,
   equipmentMarkdown,
   equipmentRows,
+  reagentItemMarkdown,
   reagentRows,
   reagentsMarkdown,
   strainMarkdown,
@@ -64,9 +66,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const published = await listRegistry(env, { kind, published: true });
 
   if (kind === "equipment") {
-    // One table, and no twin for an item: an item of equipment has no page.
-    if (id !== undefined) return notFound();
     const items = equipmentRows(published, await listPublishedLibraryRecords(env));
+    if (id !== undefined) {
+      const item = items.find((e) => e.id === id);
+      return item ? respond(equipmentItemMarkdown(item, SITE_ORIGIN), itemPath(kind, item.id)) : notFound();
+    }
     return respond(
       `# Equipment\n\nThe instruments and labware the lab's protocols list under Equipment, in one table. Each row lists the protocols that use it.\n\n${equipmentMarkdown(items, SITE_ORIGIN)}\n`,
       kindPath(kind),
@@ -74,9 +78,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   if (kind === "reagent") {
-    // One table, and no twin for an item: a reagent has no page.
-    if (id !== undefined) return notFound();
     const reagents = reagentRows(published, await listPublishedLibraryRecords(env));
+    if (id !== undefined) {
+      const reagent = reagents.find((r) => r.id === id);
+      return reagent ? respond(reagentItemMarkdown(reagent, SITE_ORIGIN), itemPath(kind, reagent.id)) : notFound();
+    }
     return respond(
       `# Reagents\n\nThe substances the lab's protocols use, in one table. A reagent is bought (supplier and catalog number) or prepared in the lab (a recipe); each row lists the protocols that use it.\n\n${reagentsMarkdown(reagents, SITE_ORIGIN)}\n`,
       kindPath(kind),

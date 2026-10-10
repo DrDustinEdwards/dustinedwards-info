@@ -294,15 +294,29 @@ describe("the reagents table", () => {
     expect(html).toContain("who supplies the lab&#x27;s zinc chloride");
   });
 
-  it("has no page for a reagent, no twin for one, and none in the sitemap: no redirect either", async () => {
-    await expect(kindPage("reagents", "zinc-chloride")).rejects.toMatchObject({ init: { status: 404 } });
+  it("has a page for each reagent with its facts, its gaps and the protocols that use it, a twin, and a sitemap entry", async () => {
+    const { html, loaderData } = await kindPage("reagents", "zinc-chloride");
+    expect(loaderData.page).toMatchObject({ view: "item", kind: "reagent" });
+    expect(html).toContain("Zinc chloride");
+    expect(html).toContain("who supplies the lab&#x27;s zinc chloride");
+    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
+    // The table links each reagent to its page.
+    expect((await kindPage("reagents")).html).toContain('href="/research/lab/reagents/zinc-chloride"');
     await expect(kindPage("reagents", "no-such-reagent")).rejects.toMatchObject({ init: { status: 404 } });
-    expect((await twin({ kind: "reagents", id: "zinc-chloride" })).status).toBe(404);
+    const one = await twin({ kind: "reagents", id: "zinc-chloride" });
+    expect(one.headers.get("link")).toBe(`<https://dustinedwards.info/research/lab/reagents/zinc-chloride>; rel="canonical"`);
+    const text = await one.text();
+    expect(text).toMatch(/^# Zinc chloride\n/);
+    expect(text).toContain("- Used in: [Phage DNA Extraction Protocol](https://dustinedwards.info/research/protocols/phage-dna-extraction)");
+    expect((await twin({ kind: "reagents", id: "no-such-reagent" })).status).toBe(404);
     const xml = await ((await sitemapLoader({ context: ctx(), params: {}, request: request("/sitemap.xml") } as never)) as Response).text();
-    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/reagents</loc>");
-    expect(xml).not.toContain("/research/lab/reagents/");
-    const rows = await env.DB.prepare("SELECT COUNT(*) AS n FROM search_docs WHERE doc_uid LIKE 'registry:reagent/%'").first<{ n: number }>();
-    expect(rows?.n).toBe(0);
+    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/reagents/zinc-chloride</loc>");
+  });
+
+  it("a prepared reagent's page says so and lists its missing recipe with the reason", async () => {
+    const { html } = await kindPage("reagents", "pyca");
+    expect(html).toContain("Prepared in the lab");
+    expect(html).toContain("No procedure with the recipe profile exists yet for the lab&#x27;s PYCa");
   });
 
   it("serves the table as markdown, with every gap and its reason listed", async () => {
@@ -319,7 +333,8 @@ describe("the reagents table", () => {
     expect(html).toContain('<th scope="col">Source</th>');
     expect(html).toContain("Not recorded");
     expect(html).toContain("Prepared in the lab");
-    expect(html).not.toContain("/research/lab/reagents/");
+    // Each published reagent links its page, which lists every protocol that uses it.
+    expect(html).toContain('href="/research/lab/reagents/zinc-chloride"');
   });
 });
 
@@ -335,12 +350,15 @@ describe("the equipment table", () => {
     await expect(kindPage("equipment", undefined, "?sort=name")).rejects.toMatchObject({ status: 301 });
   });
 
-  it("has no page for an item, no twin for one and none in the sitemap, and serves the table as markdown with its gaps", async () => {
-    await expect(kindPage("equipment", "water-bath")).rejects.toMatchObject({ init: { status: 404 } });
-    expect((await twin({ kind: "equipment", id: "water-bath" })).status).toBe(404);
+  it("has a page for each item, with a twin and a sitemap entry, and serves the table as markdown with its gaps", async () => {
+    const { html } = await kindPage("equipment", "microcentrifuge");
+    expect(html).toContain("Waiting on Dustin: the ZnCl2 rotor (core.md)");
+    expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
+    expect((await kindPage("equipment")).html).toContain('href="/research/lab/equipment/water-bath"');
+    const one = await (await twin({ kind: "equipment", id: "microcentrifuge" })).text();
+    expect(one).toContain("- Rotor: not found (Waiting on Dustin: the ZnCl2 rotor (core.md).");
     const xml = await ((await sitemapLoader({ context: ctx(), params: {}, request: request("/sitemap.xml") } as never)) as Response).text();
-    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/equipment</loc>");
-    expect(xml).not.toContain("/research/lab/equipment/");
+    expect(xml).toContain("<loc>https://dustinedwards.info/research/lab/equipment/water-bath</loc>");
     const md = await (await twin({ kind: "equipment" })).text();
     expect(md).toContain("| Equipment | Manufacturer | Rotor | Protocols |");
     expect(md).toContain("- Microcentrifuge, rotor: Waiting on Dustin: the ZnCl2 rotor (core.md).");
@@ -351,7 +369,7 @@ describe("the equipment table", () => {
     const html = renderToStaticMarkup(createElement(ProcedureView, { record: JSON.parse(stored?.record ?? "{}"), count: 1, factor: 1 }));
     expect(html).toContain('<th scope="col">Manufacturer</th>');
     expect(html).toContain('<th scope="col">Rotor</th>');
-    expect(html).toContain('<th scope="row">microcentrifuge</th>');
+    expect(html).toContain('<th scope="row"><a href="/research/lab/equipment/microcentrifuge">microcentrifuge</a></th>');
     expect(html).toContain("Not recorded");
   });
 });

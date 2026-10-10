@@ -144,12 +144,12 @@ an organism. The pages that name the hosts link the strain records and type no d
 ## The reagent kind
 
 `app/kb/registry/reagent.mjs`, sixteen records in `content/registry/reagent/`: the substances the lab's protocols use up, as distinct
-from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). **A reagent has no
-page of its own** (`itemPages: false` on the kind): the reagents are one table at `/research/lab/reagents`, which is the library's
-Reagents tab, with a markdown twin at `/research/lab/reagents.md`. The table has the name (with its abbreviation or contents beside it
+from the samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). The reagents are one
+table at `/research/lab/reagents`, which is the library's Reagents tab, with a markdown twin at `/research/lab/reagents.md`, and since
+Knowledge Base step 8 (finding A1, docs/KNOWLEDGE-BASE.md) **each reagent has a page of its own** at `/research/lab/reagents/<id>`, with a
+twin, a search record and a sitemap entry: its facts, every gap with its reason, and the protocols that use it, computed. The table has the name (with its abbreviation or contents beside it
 where a protocol says), the supplier, the catalog number, a link and the protocols that use each reagent; every gap is listed under it
-with its reason, in the page and in the twin. There is no page, twin, search record or sitemap entry for a reagent, and no redirect: the
-address of a reagent that briefly had a page answers 404.
+with its reason, in the page and in the twin. A protocol's Reagents table, and its twin, link each published reagent to its page.
 
 A record states what the lab's own pages state. A **bought** reagent states `supplier` and `catalog_number`, each written or
 `MISSING: <why>` where no record in the repository says, and `product_url` where a protocol linked the product (GoTaq Flexi from
@@ -174,9 +174,10 @@ ladder is a reagent (Dustin's ruling): it is a material of the three PCR protoco
 
 `app/kb/registry/equipment.mjs`, eleven records in `content/registry/equipment/`: the instruments and labware the lab's protocols list
 under Equipment (microcentrifuge, microcentrifuge tubes, heat block, NanoDrop, Qubit 3.0, water bath, plate incubator, shaking incubator,
-tube-top vacuum filter unit, pipettor, light box). Like the reagents it is **one table with no page for an item** (`itemPages: false`): the
-library's Equipment tab at `/research/lab/equipment`, with a twin at `/research/lab/equipment.md`, no item page, twin, search record or
-sitemap entry, and no redirect. The table has the equipment, its manufacturer, its rotor where one matters and the protocols that use
+tube-top vacuum filter unit, pipettor, light box). Like the reagents it is one table, the
+library's Equipment tab at `/research/lab/equipment`, with a twin at `/research/lab/equipment.md`, and a page for each item at
+`/research/lab/equipment/<id>` (A1) with its twin, search record and sitemap entry, listing the protocols that use it; a protocol's
+Equipment table links each published item to its page. The table has the equipment, its manufacturer, its rotor where one matters and the protocols that use
 each; every gap is listed under it with its reason, in the page and the twin.
 
 A record states what the lab's pages state, which is the name. `manufacturer` is required and is `MISSING: <why>` for all eleven, because

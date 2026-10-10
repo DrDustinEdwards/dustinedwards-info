@@ -24,7 +24,7 @@ import { REAGENT } from "../app/kb/registry/reagent.mjs";
 import { registrySearchInput } from "../app/kb/registry/search-inputs.mjs";
 import { buildRegistry, repoHost } from "../scripts/lib/registry.mjs";
 
-/* The reagent kind (docs/REGISTRY.md): the substances the lab's protocols use, held as one table with no page for an item; what a
+/* The reagent kind (docs/REGISTRY.md): the substances the lab's protocols use, held as one table with a page for each item (A1); what a
  * reagent is bought from or how the lab prepares it; and the guard that holds a product's supplier, catalog number and page to the
  * registry, so each is stored once. */
 
@@ -98,13 +98,15 @@ test("the recipe a reagent links is a procedure with the recipe profile, as the 
   assert.equal(await repoHost.recipe("no-such-procedure"), false);
 });
 
-test("a reagent has no page, no twin, no search record and no sitemap entry: the table is the page", () => {
-  assert.equal(REAGENT.itemPages, false);
-  assert.equal(hasItemPage("reagent"), false);
-  assert.equal(hasItemPage("primer"), true);
-  assert.equal(registrySearchInput(byId.get("gotaq-flexi-dna-polymerase")), null);
+test("a reagent has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
+  assert.equal(hasItemPage("reagent"), true);
+  const input = registrySearchInput(byId.get("gotaq-flexi-dna-polymerase"));
+  assert.equal(input?.url, "/research/lab/reagents/gotaq-flexi-dna-polymerase");
+  assert.match(input?.body ?? "", /reagent .*Promega M8296/);
+  // A gap is not a word to find.
+  assert.doesNotMatch(registrySearchInput(byId.get("zinc-chloride"))?.body ?? "", /MISSING/);
   const rows = inventoryRows(reagents, []);
-  assert.ok(rows.every((row) => row.path === kindPath("reagent")), "an inventory row goes to the table");
+  assert.ok(rows.every((row) => row.path.startsWith(`${kindPath("reagent")}/`)), "an inventory row goes to the reagent's page");
 });
 
 test("no record stores what is computed: the protocols that use a reagent, or the amounts they use", async () => {

@@ -1,7 +1,7 @@
 // The reagent kind of the lab registry (docs/REGISTRY.md): the substances the lab's protocols use up, as distinct from the
-// samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). A reagent has no
-// page of its own: the reagents are one table (the library's Reagents tab), and each protocol's own Reagents table is drawn from
-// these records with that protocol's amount, stock and final.
+// samples they work on (a lysate, soil, an eluate), the primers (their own kind) and the cultures (strains). The reagents are one
+// table (the library's Reagents tab) and each has a page of its own, listing the protocols that use it (docs/KNOWLEDGE-BASE.md,
+// A1); each protocol's own Reagents table is drawn from these records with that protocol's amount, stock and final.
 //
 // A record states what the lab's own pages state about one substance: its name, an abbreviation or what it is made of where a
 // protocol says so, and where it comes from. A BOUGHT reagent has a supplier and a catalog number (each stated, or
@@ -29,8 +29,6 @@ const isGap = (value) => typeof value === "string" && value.startsWith("MISSING"
 export const REAGENT = {
   singular: "reagent",
   plural: "reagents",
-  // The reagents are one table, not a page each.
-  itemPages: false,
   fields: {
     // What a protocol calls it in one phrase, as the protocols' own words give it: ZnCl2 for zinc chloride.
     abbreviation: { check: (value) => oneLine(value, 40) },

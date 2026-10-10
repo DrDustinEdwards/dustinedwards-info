@@ -72,7 +72,7 @@ test("Needs info lists every entry gap, then every registry gap, each in words, 
     { what: "Phage Isolation", kindLabel: "Protocol", href: "/research/protocols/phage-isolation", editHref: "/admin/kb/entry/phage-isolation#kb-field-version", field: "version", label: "Version", reason: "No version has been assigned." },
     { what: "Phage Isolation", kindLabel: "Protocol", href: "/research/protocols/phage-isolation", editHref: "/admin/kb/entry/phage-isolation#kb-field-solutions", field: "solutions[tes-buffer].storage", label: "TES buffer: storage", reason: "No record says." },
     { what: "Phage Isolation", kindLabel: "Protocol", href: "/research/protocols/phage-isolation", editHref: "/admin/kb/entry/phage-isolation#kb-step-part-a-collect-the-phage-4", field: "step 4 (line 212).spin", label: "Step 4: rotor", reason: "The rotor is not named." },
-    { what: "NanoDrop", kindLabel: "Equipment", href: "/research/lab/equipment", editHref: "/admin/kb/item/equipment/nanodrop#kb-field-manufacturer", field: "manufacturer", label: "Manufacturer", reason: "no record says." },
+    { what: "NanoDrop", kindLabel: "Equipment", href: "/research/lab/equipment/nanodrop", editHref: "/admin/kb/item/equipment/nanodrop#kb-field-manufacturer", field: "manufacturer", label: "Manufacturer", reason: "no record says." },
     { what: "LCO1490", kindLabel: "Primer", href: "/research/lab/primers/lco1490", editHref: "/admin/kb/item/primer/lco1490#kb-field-published_doi", field: "published_doi", label: "Published DOI", reason: "paywalled." },
   ]);
 });
