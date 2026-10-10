@@ -214,6 +214,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
     method and its key points after it (S2); ` ```bash platform=linux ` blocks as tabs, `app/enhance/platforms.ts`
     (S4); `> CHALLENGE:` and `> SOLUTION:` with the solution in a `<details>` (S5). Format in `docs/PROCEDURES.md`.)
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
+    (Done: a protocol states LabProtocol 0.9-DRAFT with its steps' temperatures and g-forces as `parameter`, and a run's
+    JSON download is a LabProcess 0.1-DRAFT (P4). A variant's `forked_from` is checked against its parent's file by
+    `check:protocols` and against its frozen copy when it is published; the page, twin and JSON-LD name the parent by
+    title as "Based on", linked to that copy (P3, `app/kb/procedures/lineage.mjs`).)
 12. **Offline** (A3).
 
 ## DECIDE

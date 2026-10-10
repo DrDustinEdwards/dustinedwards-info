@@ -10,6 +10,7 @@ import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
+import { lineageFor } from "~/kb/procedures/lineage.server";
 import { libraryItems, workflowContext } from "~/kb/procedures/library.mjs";
 import { proofFor } from "~/kb/procedures/proof.server";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
@@ -47,7 +48,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const proof = await proofFor(env, row.record.proofOfUse);
   // The versions with a frozen copy, which the history links.
   const frozen = await listFrozenVersions(env, row.slug);
-  return { record: row.record, draft: row.status === "draft", count, factor, units, workflow, proof, frozen };
+  // A variant's parent: its title and the frozen copy it was taken from are the parent's own facts (P3).
+  const lineage = await lineageFor(env, row.record);
+  return { record: row.record, draft: row.status === "draft", count, factor, units, workflow, proof, frozen, lineage };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -61,10 +64,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
-  const { record, draft, count, factor, units, workflow, proof, frozen } = loaderData;
+  const { record, draft, count, factor, units, workflow, proof, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
-  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
+  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person, lineage)];
   return (
     <PageShell
       trail={
@@ -78,7 +81,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} />
+      <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} lineage={lineage} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
     </PageShell>

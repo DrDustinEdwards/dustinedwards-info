@@ -1,12 +1,59 @@
-// The structured data a procedure page carries, from its D1 record: Bioschemas LabProtocol for a
-// protocol (https://bioschemas.org/profiles/LabProtocol/0.8-DRAFT, the version the profile's page
-// resolves to; every LabProtocol version is a draft), schema.org Recipe for a recipe, following Google's
-// recipe structured-data guidance, and schema.org HowTo for a computational procedure, the closest type
+// The structured data a procedure page carries, from its D1 record: Bioschemas LabProtocol for a protocol
+// (https://bioschemas.org/profiles/LabProtocol/0.9-DRAFT; every LabProtocol version is a draft), schema.org Recipe for a
+// recipe, following Google's recipe structured-data guidance, and schema.org HowTo for a computational procedure, the closest type
 // for a sequence of commands with tools and supplies. Only facts the record states: a gap stays out.
 
 import { citeFacts } from "./cite.mjs";
+import { readConditions } from "./marks.mjs";
 
-const LAB_PROTOCOL_PROFILE = "https://bioschemas.org/profiles/LabProtocol/0.8-DRAFT";
+const LAB_PROTOCOL_PROFILE = "https://bioschemas.org/profiles/LabProtocol/0.9-DRAFT";
+
+/** A number as a step writes it: "13,000" is 13000. @param {string} n */
+const numeral = (n) => Number(n.replaceAll(",", ""));
+
+/**
+ * The protocol's conditions as 0.9-DRAFT's `parameter` (docs/KNOWLEDGE-BASE.md, P4): every temperature and spin its steps
+ * state, once each, in the order first stated. The profile puts them on the protocol as a whole, not on a step, and these
+ * are the conditions the compile already reads (marks.mjs readConditions): from a step's words, and the g-force its
+ * SPIN flag states. Nothing is typed twice.
+ *
+ * @param {import("./render.mjs").ProcedureRecord} record
+ */
+export function protocolParameters(record) {
+  // Keyed by the condition, so one stated in several steps is one parameter, at the place it was first stated.
+  /** @type {Map<string, Record<string, unknown>>} */
+  const seen = new Map();
+  for (const section of record.sections) {
+    for (const block of section.blocks) {
+      if (block.type !== "steps") continue;
+      for (const step of block.steps) {
+        // A row compiled before the conditions were stored has none until the next sync rewrites it.
+        for (const t of step.temperatures ?? []) {
+          seen.set(`t:${t.min}:${t.max}`, { "@type": "PropertyValue", name: "Temperature", ...(t.min === t.max ? { value: t.min } : { minValue: t.min, maxValue: t.max }), unitCode: "CEL", unitText: "°C" });
+        }
+        const flagged = (step.spin ?? []).flatMap((s) => readConditions(s).spins);
+        for (const spin of [...(step.spins ?? []), ...flagged]) {
+          const [low = "", high] = spin.speed.split(/\s*to\s*/);
+          const range = high === undefined ? { value: numeral(low) } : { minValue: numeral(low), maxValue: numeral(high) };
+          seen.set(`s:${spin.speed}:${spin.unit}`, { "@type": "PropertyValue", name: spin.unit === "rpm" ? "Rotor speed" : "Relative centrifugal force", ...range, unitText: spin.unit === "rpm" ? "rpm" : "x g" });
+        }
+      }
+    }
+  }
+  return [...seen.values()];
+}
+
+/**
+ * The procedure a variant was copied from, as `isBasedOn` names it (P3): its address, at the version copied when there is
+ * a frozen copy of it, and its title. Resolved at request time from the parent's row (lineage.server.ts).
+ *
+ * @param {{ title: string, href: string, version: string | null } | null} lineage
+ * @param {string} origin
+ */
+function lineageWork(lineage, origin) {
+  if (!lineage?.href) return [];
+  return [{ "@type": "CreativeWork", name: lineage.title, url: `${origin}${lineage.href}`, ...(lineage.version ? { version: lineage.version } : {}) }];
+}
 
 /** @param {string | null | undefined} html */
 function text(html) {
@@ -39,8 +86,9 @@ export function isoDuration(value) {
  * @param {import("./render.mjs").ProcedureRecord} record
  * @param {string} origin
  * @param {{ "@type": string, "@id": string, name: string, url: string }} person
+ * @param {{ title: string, href: string, version: string | null } | null} [lineage] the procedure this one is a variant of
  */
-export function procedureJsonLd(record, origin, person) {
+export function procedureJsonLd(record, origin, person, lineage = null) {
   const url = `${origin}${record.path}`;
   const steps = record.sections.flatMap((section) => {
     const items = section.blocks.flatMap((b) => (b.type === "steps" ? b.steps : []));
@@ -59,11 +107,11 @@ export function procedureJsonLd(record, origin, person) {
       },
     ];
   });
-  const basedOn = record.basedOn.map((s) => ({
+  const basedOn = [...lineageWork(lineage, origin), ...record.basedOn.map((s) => ({
     "@type": "CreativeWork",
     name: s.citation,
     ...(s.doi ? { identifier: `https://doi.org/${s.doi}`, url: `https://doi.org/${s.doi}` } : s.url ? { url: s.url } : {}),
-  }));
+  }))];
   const cite = citeFacts(record);
   const common = {
     "@context": "https://schema.org",
@@ -91,6 +139,7 @@ export function procedureJsonLd(record, origin, person) {
       ...(record.expectedResultsHtml ? { protocolOutcome: text(record.expectedResultsHtml) } : {}),
       ...(record.limitationsHtml ? { protocolLimitation: text(record.limitationsHtml) } : {}),
       ...(isoDuration(record.time.total) ? { totalTime: isoDuration(record.time.total) } : {}),
+      ...(protocolParameters(record).length ? { parameter: protocolParameters(record) } : {}),
       step: steps,
     };
   }

@@ -10,6 +10,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+import { lineageErrors } from "../app/kb/procedures/lineage.mjs";
 import { compileDirectory, PROCEDURE_FIXTURES_DIR, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
 import { createTally } from "./lib/tally.mjs";
 
@@ -51,6 +52,16 @@ for (const { file, compiled } of sources) {
   ];
   ok(`${file} proof of use names only papers and phages that exist`, missing.length === 0, `no file for: ${missing.join(", ")}`);
 }
+// A variant names the procedure it was copied from (P3): a file here, of its profile, at a version it states. Fixtures
+// name fixtures, and the procedures name procedures.
+for (const set of [sources, fixtures]) {
+  const bySlug = new Map(set.flatMap(({ compiled }) => (compiled.ok ? [[compiled.record.slug, compiled.record]] : [])));
+  for (const { file, compiled } of set) {
+    if (!compiled.ok || !compiled.record.forkedFrom) continue;
+    const errors = lineageErrors(compiled.record, bySlug);
+    ok(`${file} is a variant of a procedure it names rightly`, errors.length === 0, errors.join("; "));
+  }
+}
 for (const { file, compiled } of fixtures) {
   if (compiled.ok) ok(`${file} is a draft`, compiled.record.draft, "a fixture is never published: set draft: true");
 }
@@ -70,8 +81,9 @@ console.log(`\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); 
 
 /* 19 on 2026-09-30, measured by running the gate: two per procedure (five) and per fixture (two), two
    fixture drafts, two on the directories and one on the profiles; 21 on 2026-10-04, one more for each procedure that
-   states a Start here position (two). */
-const MINIMUM_CHECKS = 21;
+   states a Start here position (two); 28 on 2026-10-10, measured by running the gate: the tutorial and variant fixtures
+   (two each, and a draft each) and one for the variant's lineage. */
+const MINIMUM_CHECKS = 28;
 tally.floor("check:protocols", "checks", MINIMUM_CHECKS, "A procedure or fixture was skipped rather than failing.");
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

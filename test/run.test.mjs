@@ -146,6 +146,31 @@ test("the record names the procedure and its version, and holds only what the pe
   assert.equal(finishRun(run, T0 + 9_999_999).finishedAt, T0 + 3_600_000, "finishing twice keeps the first time");
 });
 
+test("the JSON record is a Bioschemas LabProcess that executes the procedure's LabProtocol, at the version run", () => {
+  let run = newRun(procedure, T0);
+  run = setRunNote(run, "second prep of the day");
+  const going = runRecord(run, STEPS, "https://example.com");
+  assert.equal(going["@type"], "LabProcess");
+  assert.deepEqual(going["http://purl.org/dc/terms/conformsTo"], { "@id": "https://bioschemas.org/profiles/LabProcess/0.1-DRAFT" });
+  assert.equal(going.name, "Run of Phage DNA Extraction Protocol");
+  assert.deepEqual(going.executesLabProtocol, {
+    "@type": "LabProtocol",
+    "@id": "https://example.com/research/protocols/phage-dna-extraction#procedure",
+    name: "Phage DNA Extraction Protocol",
+    url: "https://example.com/research/protocols/phage-dna-extraction",
+    version: "3",
+  });
+  assert.equal(going.startTime, "2026-10-03T15:00:00.000Z");
+  assert.equal("endTime" in going, false, "a run still going has no end");
+  assert.equal(going.description, "second prep of the day");
+  assert.deepEqual(going.parameterValue, [{ "@type": "PropertyValue", name: "Scale", value: 5 }]);
+  // A run on a frozen version's page executes the same protocol, at that version's address.
+  const frozen = runRecord(finishRun(newRun({ ...procedure, path: `${procedure.path}/v/3` }, T0), T0 + 1000), STEPS, "https://example.com");
+  assert.equal(frozen.executesLabProtocol["@id"], "https://example.com/research/protocols/phage-dna-extraction#procedure");
+  assert.equal(frozen.executesLabProtocol.url, "https://example.com/research/protocols/phage-dna-extraction/v/3");
+  assert.equal(frozen.endTime, "2026-10-03T15:00:01.000Z");
+});
+
 test("the Markdown record is plain, with checked lines and notes under their steps", () => {
   let run = newRun(procedure, T0);
   run = toggleDone(run, "part-a.1", T0 + 60_000);
