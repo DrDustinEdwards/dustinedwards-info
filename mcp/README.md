@@ -43,7 +43,7 @@ by default, at most 100, with `has_more` and `next_offset`.
 - CIMD for Claude, Claude Code and ChatGPT. DCR at `/register` for Grok and
   Gemini, tightened: 5 registrations per minute per address, and every redirect
   URI must be listed exactly in `DCR_REDIRECT_URIS`.
-- Agent keys (`AGENT_KEY_<NAME>`) read only unless `AGENT_WRITE` names them.
+- Agent keys (`AGENT_KEY_<NAME>`) read only unless `AGENT_WRITE` names them. It names `grok`, whose key is its only door.
 
 ## Deploy
 
@@ -77,7 +77,7 @@ runs typecheck, check:wrapper, the tests and the build, deploys, and then proves
    line `registration-refused` names the redirect URI it asked for; add that
    exact URI to `DCR_REDIRECT_URIS` in `mcp/wrangler.jsonc.example` by PR.
 5. An agent key (Grok Build's `~/.grok/config.toml`) needs only its URL changed
-   to the new address; add the agent's name to `AGENT_WRITE` if it should write.
+   to the new address. `grok` is in `AGENT_WRITE`, so it keeps write.
 
 ## Status: VERIFIED END TO END, 2026-07-30
 
