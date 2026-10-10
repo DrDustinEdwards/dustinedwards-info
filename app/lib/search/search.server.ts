@@ -12,6 +12,7 @@ import { applySort, parseSort, type SearchSort } from "./sort.mjs";
 import { PUBLISHED_STATUS } from "./visibility.mjs";
 import { clampWords } from "~/lib/content/og-card-text.mjs";
 import { escapeXml } from "~/lib/rss-feed.mjs";
+import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
 
 type ParsedQuery = ReturnType<typeof parseQuery>;
 
@@ -51,6 +52,8 @@ export interface SearchHit {
 
 interface SearchFacets {
   types: Array<{ value: string; count: number }>;
+  /** The knowledge bases the hits belong to (app/kb/search-bases.mjs), each with its words. */
+  bases: Array<{ value: string; label: string; count: number }>;
   tags: Array<{ value: string; count: number }>;
   years: Array<{ value: number; count: number }>;
 }
@@ -160,6 +163,14 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
     params.push(...parsed.types);
   }
 
+  // A record is in one knowledge base, read from its address, so base:a base:b widens to either. An id no base has
+  // matches nothing, as an unknown type does.
+  if (parsed.bases.length > 0) {
+    const prefixes = parsed.bases.map(basePrefix);
+    clauses.push(`(${prefixes.map(() => "d.doc_url LIKE ?").join(" OR ")})`);
+    params.push(...prefixes.map((prefix) => (prefix === null ? "\u0000" : `${prefix}%`)));
+  }
+
   // Every tag must be present, so tag:a tag:b narrows rather than widens.
   for (const tag of parsed.tags) {
     clauses.push(`instr(d.doc_tags, ?) > 0`);
@@ -239,6 +250,8 @@ function whyMatched(row: RawRow, parsed: ParsedQuery, inProse: boolean): MatchRe
 interface SearchOptions {
   q: string;
   type?: string | null;
+  /** A knowledge base's id (app/kb/search-bases.mjs). */
+  base?: string | null;
   tag?: string | null;
   year?: string | null;
   page?: number;
@@ -264,6 +277,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   // ?tag=d1 and a typed tag:d1 merge into one parse, so facet links can be plain hrefs.
   const parsed = parseQuery(options.q ?? "");
   if (options.type) parsed.types.push(options.type.toLowerCase());
+  if (options.base) parsed.bases.push(options.base.toLowerCase());
   if (options.tag) parsed.tags.push(options.tag.toLowerCase());
   if (options.year && /^\d{4}$/.test(options.year)) parsed.year = Number(options.year);
 
@@ -273,7 +287,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     total: 0,
     page,
     pageSize,
-    facets: { types: [], tags: [], years: [] },
+    facets: { types: [], bases: [], tags: [], years: [] },
     truncated: false,
     tookMs: 0,
   };
@@ -397,11 +411,14 @@ function explainFor(
 /** Over the whole match set, not the page. If truncated, the caller must present these as a floor. */
 function buildFacets(hits: SearchHit[]): SearchFacets {
   const types = new Map<string, number>();
+  const bases = new Map<string, number>();
   const tags = new Map<string, number>();
   const years = new Map<number, number>();
 
   for (const hit of hits) {
     types.set(hit.type, (types.get(hit.type) ?? 0) + 1);
+    const base = baseOfUrl(hit.docUrl);
+    if (base) bases.set(base, (bases.get(base) ?? 0) + 1);
     for (const tag of hit.tags) tags.set(tag, (tags.get(tag) ?? 0) + 1);
     if (hit.publishAt !== null) {
       const year = new Date(hit.publishAt * 1000).getUTCFullYear();
@@ -411,6 +428,8 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
 
   return {
     types: [...types].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
+    // In the bases' own order, not by count, so the list reads the same from one search to the next.
+    bases: SEARCH_BASES.filter((b) => bases.has(b.id)).map((b) => ({ value: b.id, label: b.label, count: bases.get(b.id) ?? 0 })),
     tags: [...tags].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
     years: [...years].map(([value, count]) => ({ value, count })).sort((a, b) => b.value - a.value),
   };

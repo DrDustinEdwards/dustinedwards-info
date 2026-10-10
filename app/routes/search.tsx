@@ -11,6 +11,7 @@ import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
+import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
 import {
   parseSort,
   search,
@@ -43,6 +44,7 @@ function readParams(url: URL) {
   return {
     q: url.searchParams.get("q") ?? "",
     type: url.searchParams.get("type"),
+    base: url.searchParams.get("base"),
     tag: url.searchParams.get("tag"),
     year: url.searchParams.get("year"),
     sort: parseSort(url.searchParams.get("sort")),
@@ -68,6 +70,7 @@ export const middleware: Route.MiddlewareFunction[] = [
             phrases: result.parsed.phrases,
             tags: result.parsed.tags,
             types: result.parsed.types,
+            bases: result.parsed.bases,
             year: result.parsed.year,
           },
           total: result.total,
@@ -161,7 +164,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 type SearchParams = ReturnType<typeof readParams>;
-type FacetKey = "type" | "tag" | "year";
+type FacetKey = "type" | "base" | "tag" | "year";
 
 /**
  * The current search with some parts changed. A change of filter or sort drops the page, since
@@ -175,6 +178,7 @@ function searchHref(
   const next = new URLSearchParams();
   if (merged.q) next.set("q", merged.q);
   if (merged.type) next.set("type", merged.type);
+  if (merged.base) next.set("base", merged.base);
   if (merged.tag) next.set("tag", merged.tag);
   if (merged.year) next.set("year", merged.year);
   // Relevance is the absent value: two spellings of the default would be two cache entries of one page.
@@ -206,7 +210,7 @@ function FacetSection({
   params: SearchParams;
   facet: FacetKey;
   heading: string;
-  values: Array<{ value: string | number; count: number }>;
+  values: Array<{ value: string | number; label?: string; count: number }>;
   floor: string;
 }) {
   return (
@@ -216,7 +220,7 @@ function FacetSection({
         {values.map((entry) => (
           <li key={entry.value}>
             <Link to={searchHref(params, { [facet]: String(entry.value) })} className="search-chip">
-              {entry.value} <span className="search-chip-count">{entry.count}{floor}</span>
+              {entry.label ?? entry.value} <span className="search-chip-count">{entry.count}{floor}</span>
             </Link>
           </li>
         ))}
@@ -376,11 +380,12 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
         <SearchForm defaultValue={params.q}>
           {params.type ? <input type="hidden" name="type" value={params.type} /> : null}
+          {params.base ? <input type="hidden" name="base" value={params.base} /> : null}
           {params.tag ? <input type="hidden" name="tag" value={params.tag} /> : null}
           {params.year ? <input type="hidden" name="year" value={params.year} /> : null}
           {params.sort === "date" ? <input type="hidden" name="sort" value="date" /> : null}
           <p className="search-hint">
-            Operators: <code>tag:</code>, <code>type:</code>, a bare year, and
+            Operators: <code>tag:</code>, <code>type:</code>, <code>base:</code> ({SEARCH_BASES.map((b) => b.id).join(", ")}), a bare year, and
             &quot;quoted phrases&quot;.
           </p>
         </SearchForm>
@@ -399,10 +404,13 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             : null}
         </p>
 
-        {params.type || params.tag || params.year ? (
+        {params.type || params.base || params.tag || params.year ? (
           <ul className="search-active-filters">
             {params.type ? (
               <ActiveFilterChip params={params} facet="type" label={`type: ${params.type}`} />
+            ) : null}
+            {params.base ? (
+              <ActiveFilterChip params={params} facet="base" label={`in: ${baseLabel(params.base.toLowerCase())}`} />
             ) : null}
             {params.tag ? (
               <ActiveFilterChip params={params} facet="tag" label={`tag: ${params.tag}`} />
@@ -461,6 +469,11 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
                 <FacetSection params={params} facet="type" heading="Type" values={facets.types} floor={floor} />
+              ) : null}
+
+              {/* One search across the knowledge bases (docs/KNOWLEDGE-BASE.md, A2); each library keeps its own facets. */}
+              {facets.bases.length > 1 ? (
+                <FacetSection params={params} facet="base" heading="Knowledge base" values={facets.bases} floor={floor} />
               ) : null}
 
               {facets.tags.length > 0 ? (

@@ -199,6 +199,9 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    (Item pages done: every reagent and item of equipment has a page at `/research/lab/<kind>/<id>`, with its twin, search
    record and sitemap entry, listing the protocols that use it; the kind tables and each protocol's Reagents and Equipment
    tables, page and twin, link to them. Ingredients and software become items with the first recipe and how-to.)
+   (Search facet done: `/search` counts its hits by knowledge base, read from each record's address
+   (`app/kb/search-bases.mjs`: each base's entry root, and `/research/lab/` for the registry), and `?base=` or a typed
+   `base:` narrows to one; its JSON carries the same facet. Each library keeps its own facets.)
 9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4).
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
