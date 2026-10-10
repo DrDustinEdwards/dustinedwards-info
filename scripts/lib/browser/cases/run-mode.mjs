@@ -57,6 +57,54 @@ export async function run({ page }) {
     `${started.tools} tool block(s) for ${started.steps} step(s), mode "${started.mode}", ${started.current} current step(s), progress "${started.progress}".`,
   );
 
+  // The current step's fill is behind every word of the step, in both themes; the cook view makes it the whole page.
+  const stepContrast = await page.evaluate(() => {
+    const rgb = (/** @type {string} */ c) => (c.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+    const lum = (/** @type {number[]} */ c) =>
+      0.2126 * lin(c[0] ?? 0) + 0.7152 * lin(c[1] ?? 0) + 0.0722 * lin(c[2] ?? 0);
+    function lin(/** @type {number} */ v) {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }
+    const root = document.documentElement;
+    const was = root.getAttribute("data-theme");
+    // A colour transition would be read mid-way after the theme flips.
+    // A constructed sheet, because the page's CSP refuses an injected <style>.
+    const still = new CSSStyleSheet();
+    still.replaceSync("*, *::before, *::after { transition: none !important; }");
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, still];
+    /** @type {string[]} */
+    const low = [];
+    let worst = Infinity;
+    for (const theme of ["light", "dark"]) {
+      root.setAttribute("data-theme", theme);
+      const li = document.querySelector('li.procedure-step[aria-current="step"]');
+      if (!li) break;
+      for (const node of li.querySelectorAll("*")) {
+        const own = [...node.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim());
+        if (!own || /** @type {HTMLElement} */ (node).offsetParent === null) continue;
+        // The nearest fill behind the words: a filled button carries its own.
+        /** @type {Element | null} */
+        let at = node;
+        while (at && at !== li && /rgba\(.*, 0\)|transparent/.test(getComputedStyle(at).backgroundColor)) at = at.parentElement;
+        const bg = lum(rgb(getComputedStyle(at ?? li).backgroundColor));
+        const fg = lum(rgb(getComputedStyle(node).color));
+        const ratio = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+        worst = Math.min(worst, ratio);
+        if (ratio < 4.5) low.push(`${theme} ${node.tagName.toLowerCase()}.${node.className} ${ratio.toFixed(2)}`);
+      }
+    }
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((sheet) => sheet !== still);
+    if (was === null) root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", was);
+    return { low, worst };
+  });
+  ok(
+    "every word of the current step reads at 4.5:1 or better on its fill, light and dark",
+    stepContrast.low.length === 0 && Number.isFinite(stepContrast.worst),
+    stepContrast.low.length ? stepContrast.low.slice(0, 6).join(", ") : `no text measured (worst ${stepContrast.worst}).`,
+  );
+
   // The 44px tap target a phone needs, on the controls a gloved hand uses.
   const targets = await page.evaluate(() =>
     [".run-done", ".run-bar button", ".run-timer-act", ".run-note > summary"].map((sel) => {

@@ -84,7 +84,7 @@
 }
 .procedure[data-run="on"] .procedure-step[aria-current="step"] {
   border-inline-start-color: var(--brand);
-  background: var(--dust);
+  background: var(--tint-brand);
 }
 .procedure[data-run="on"] .procedure-step.run-step-done > .procedure-step-text {
   color: var(--text-secondary);
