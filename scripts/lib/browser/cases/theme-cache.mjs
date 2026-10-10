@@ -108,7 +108,13 @@ export async function run({ page, browser }) {
       .replace(
         /(data-health-age="A"[\s\S]*?<p class="evidence-detail[^"]*">)[^<]*/,
         "$1AGE-SENTENCE",
-      );
+      )
+      /*
+       * The verdict is live too: a health run that lands between two fetches turns "14/15 passing" into
+       * "15/15 passing" (post-deploy run 196). Only the tile's link text is masked; the health-tile case
+       * asserts the verdict.
+       */
+      .replace(/(data-health-age="A"><a href="\/api\/health"[^>]*>)[^<]*/, "$1VERDICT");
 
   /**
    * One cache-buster per run, never per fetch: `/research/publications` renders the request URL into its
