@@ -542,3 +542,33 @@
     display: block;
   }
 }
+
+/* Keep on this device (app/enhance/offline.ts, A3): an outline button beside Run this procedure, pressed while kept. */
+.offline-keep {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--text);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.offline-keep:hover {
+  text-decoration: underline;
+}
+
+.offline-keep[aria-pressed="true"] {
+  border-inline-start-width: 4px;
+  border-inline-start-color: var(--brand);
+  font-weight: 600;
+}
+
+.offline-status {
+  align-self: center;
+  color: var(--text-secondary);
+}
+
+.offline-status:empty {
+  display: none;
+}

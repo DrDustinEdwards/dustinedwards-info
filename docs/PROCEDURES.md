@@ -329,6 +329,27 @@ The pure half (what a run is, how timers count, the record and its Markdown, and
 only the shape this module writes) is `app/kb/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
 behaviour is the run-mode case of `check:browser`.
 
+## Keep on this device
+
+Every procedure page offers "Keep on this device" (A3 in `docs/KNOWLEDGE-BASE.md`), for the bench or the kitchen with
+no signal. It needs a script and a service worker, so a browser without them is offered nothing; the printable sheet is
+the copy that needs neither.
+
+- **Only what the reader keeps.** Nothing is stored and no worker is registered until the button is pressed. Pressing it
+  stores the page at its own address (with no scale or units) and the same-origin files it uses (stylesheets, the
+  enhancement bundles, fonts, images) in the `kept-v1` cache, then registers `public/sw.js` at the root.
+- **Online, nothing changes.** The worker answers pages, stylesheets, scripts, fonts and images from the network, and
+  only when the network fails from the kept copy; everything else passes it by. A kept page loaded online is stored
+  again, so the copy follows the page. A scaled address opens the kept page offline; a page nobody kept fails as it
+  would with no worker.
+- **Nothing left behind.** Pressing it again removes the page; removing the last kept page deletes the store and
+  unregisters the worker. A new `kept-` cache name in a later worker drops the old store when it activates.
+- **No policy change.** The page's policy has no `worker-src`, so it falls back to `script-src`, whose `'self'` allows a
+  same-origin worker.
+
+`app/enhance/offline.ts` is the button; `test/offline-keep.test.mjs` and `test/offline-worker.test.mjs` run it and the
+worker with no browser, and the offline case of `check:browser` keeps a protocol, cuts the network and reloads it.
+
 ## Where it goes
 
 | Output | From |

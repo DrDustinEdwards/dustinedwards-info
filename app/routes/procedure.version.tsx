@@ -78,6 +78,8 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       <VersionNotice record={record} current={current} />
       <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} lineage={lineage} />
       <Enhance module="run" />
+      {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}
+      <Enhance module="offline" />
     </PageShell>
   );
 }

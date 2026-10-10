@@ -214,6 +214,15 @@
       "why": null
     },
     {
+      "id": "procedure-keep-offline",
+      "module": "app/enhance/offline.ts",
+      "enhancement": "On a procedure page, \"Keep on this device\" stores that page and the files it uses in this browser and registers a service worker (public/sw.js) that serves the kept copy only when the network fails, so the page opens at the bench or in the kitchen with no connection. Pressing it again removes the copy; removing the last one clears the store and unregisters the worker.",
+      "fallback": "There is deliberately no fallback markup: keeping a page for offline use needs a script and a service worker, so a reader without them is offered nothing, and the page itself is complete as served, with its printable sheet as the copy that works with no connection.",
+      "fallbackKind": "none",
+      "fallbackAt": null,
+      "why": "Offline needs a service worker, which only a script can register. The printable sheet is the no-script way to take a procedure to the bench."
+    },
+    {
       "id": "howto-platform-tabs",
       "module": "app/enhance/platforms.ts",
       "enhancement": "On a software how-to whose commands differ by system, the Linux, macOS and Windows blocks become tabs: one platform shows in every set on the page, the arrow keys move between the tabs, and the reader's platform is remembered in this browser.",

@@ -14,6 +14,7 @@ declare module "virtual:enhance" {
     | "cv"
     | "header"
     | "login"
+    | "offline"
     | "palette"
     | "plate"
     | "platforms"

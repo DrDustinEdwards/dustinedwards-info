@@ -84,6 +84,8 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} lineage={lineage} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <Enhance module="run" />
+      {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}
+      <Enhance module="offline" />
     </PageShell>
   );
 }
