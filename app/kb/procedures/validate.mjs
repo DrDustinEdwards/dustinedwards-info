@@ -7,7 +7,7 @@
 // is an error: a forgotten field cannot pass as a recorded gap.
 
 import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
-import { allSteps, readCalcs, stepConditions } from "./parse.mjs";
+import { allSteps, PLATFORMS, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./taxonomy.mjs";
 import { TOOLS } from "../../lib/phage-tools.mjs";
@@ -21,6 +21,17 @@ export const PROFILE_ROOTS = /** @type {Record<(typeof PROFILES)[number], string
 );
 
 export const NOT_APPLICABLE = "not applicable";
+
+/** A software how-to's form, per Diátaxis (docs/KNOWLEDGE-BASE.md, S1): a lesson that teaches, or a recipe for a task. */
+export const HOWTO_TYPES = /** @type {const} */ ({ tutorial: "Tutorial", "how-to": "How-to" });
+
+/** The sentences a how-to's WHY may run to before its reasoning belongs on an explanation page it links (S1). */
+export const HOWTO_WHY_SENTENCES = 3;
+
+/** The sentences in some markdown: each run of words ended by ., ! or ? before a capital or the end, so "e.g. this" is one. @param {string} text */
+export function sentenceCount(text) {
+  return (text.replace(/`[^`]*`/g, "x").match(/[^.!?]*[A-Za-z0-9][^.!?]*[.!?]+(?=[*_]*(?:\s+[*_]*[A-Z0-9]|\s*$))/g) ?? []).length;
+}
 
 /** protocols.md: "units are a closed list". A unit outside it fails until it is added here on purpose. */
 export const PROTOCOL_UNITS = [
@@ -373,7 +384,7 @@ export function validateProcedure(parsed, expect) {
     const at = `line ${step.line}, step ${step.number}`;
     if (!step.source.trim()) errors.push(`${at} has no words`);
     for (const reason of step.flags.critical) if (!reason) errors.push(`${at}: CRITICAL needs its reason`);
-    for (const kind of /** @type {const} */ (["pause", "why", "expect"])) {
+    for (const kind of /** @type {const} */ (["pause", "why", "expect", "challenge", "solution"])) {
       for (const text of step.flags[kind]) if (!text) errors.push(`${at}: an empty ${kind.toUpperCase()} flag`);
     }
     for (const id of step.flags.troubleshooting) {
@@ -428,6 +439,29 @@ export function validateProcedure(parsed, expect) {
     } else if (step.flags.spin.length > 0) {
       errors.push(`${at}: SPIN belongs to the protocol profile`);
     }
+    // A tutorial teaches with challenges; a how-to links its reasoning out (S1, S5).
+    if (step.flags.challenge.length > 0 && !(profile === "computational" && d.type === "tutorial")) {
+      errors.push(`${at}: CHALLENGE belongs to a tutorial (a computational procedure with type: tutorial)`);
+    }
+    if (step.flags.solution.length < step.flags.challenge.length) errors.push(`${at}: each CHALLENGE needs its SOLUTION after it`);
+    if (profile === "computational" && d.type === "how-to") {
+      for (const why of step.flags.why) {
+        const n = sentenceCount(why);
+        if (n > HOWTO_WHY_SENTENCES) {
+          errors.push(`${at}: WHY runs to ${n} sentences; a how-to keeps a reason to ${HOWTO_WHY_SENTENCES} at most, so put the rest on a page and link it under explanation`);
+        }
+      }
+    }
+    /** @type {Set<string>} */
+    const platforms = new Set();
+    for (const cmd of step.commands) {
+      if (cmd.platform === null) continue;
+      if (profile !== "computational") errors.push(`${at}: platform= belongs to the computational profile`);
+      else if (!Object.hasOwn(PLATFORMS, cmd.platform)) errors.push(`${at}: platform=${cmd.platform} is not a platform (${Object.keys(PLATFORMS).join(", ")})`);
+      else if (platforms.has(cmd.platform)) errors.push(`${at}: two blocks for platform=${cmd.platform}; a step gives each platform one block`);
+      platforms.add(cmd.platform);
+    }
+    if (platforms.size === 1) errors.push(`${at}: a block names one platform alone; give each platform its block, or name none`);
     if (profile === "computational") {
       for (const cmd of step.commands) {
         if (cmd.output === null && step.flags.expect.length === 0) {
@@ -452,6 +486,11 @@ export function validateProcedure(parsed, expect) {
   if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null, expect.reagents ?? null);
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);
+  else {
+    for (const field of ["type", "questions", "objectives", "key_points", "explanation"]) {
+      if (d[field] !== undefined) errors.push(`${field} belongs to the computational profile`);
+    }
+  }
 
   return { errors, gaps };
 }
@@ -636,6 +675,27 @@ function recipeRules(d, errors, required) {
  */
 function computationalRules(d, errors, required, materials) {
   required("environment");
+  if (required("type") && !Object.hasOwn(HOWTO_TYPES, d.type)) {
+    errors.push(`type is ${JSON.stringify(d.type)}; it is one of ${Object.keys(HOWTO_TYPES).join(", ")}`);
+  }
+  // A tutorial opens as a Carpentries episode does: what it answers, what the reader will be able to do, and how long (S2).
+  for (const field of ["questions", "objectives", "key_points"]) {
+    if (d[field] === undefined || isGap(d[field])) continue;
+    if (!Array.isArray(d[field]) || d[field].some((/** @type {unknown} */ x) => !nonEmptyString(x))) errors.push(`${field} must be a list of lines`);
+  }
+  if (d.type === "tutorial") {
+    required("objectives");
+    if (!d.time || !nonEmptyString(d.time.total)) errors.push("a tutorial states its time: time.total, such as 30 minutes");
+  }
+  if (d.explanation !== undefined && !isGap(d.explanation)) {
+    if (!Array.isArray(d.explanation)) errors.push("explanation must be a list of pages, each with a title and a url");
+    else {
+      d.explanation.forEach((/** @type {any} */ e, /** @type {number} */ i) => {
+        if (!e || typeof e !== "object" || !nonEmptyString(e.title)) errors.push(`explanation[${i}] needs a title`);
+        else if (typeof e.url !== "string" || !/^(\/[^/\s]|https:\/\/\S)/.test(e.url)) errors.push(`explanation[${e.title}].url is a page on this site (/...) or an https address`);
+      });
+    }
+  }
   if (required("prerequisites") && !isGap(d.prerequisites) && !Array.isArray(d.prerequisites)) {
     errors.push("prerequisites must be a list");
   }

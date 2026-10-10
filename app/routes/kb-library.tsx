@@ -19,6 +19,7 @@ import {
   baseCitation,
   baseDownloads,
   baseItems,
+  howtoTypeLabel,
   baseRedirect,
   libraryTrail,
   nounOf,
@@ -107,6 +108,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 const cells = {
+  type: (item: BaseItem) => howtoTypeLabel(item.type),
   method: (item: BaseItem) => item.methods.map(methodLabel).join(", "),
   category: (item: BaseItem) => item.category,
 };

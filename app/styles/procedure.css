@@ -448,3 +448,97 @@
   font: inherit;
   resize: vertical;
 }
+
+/* A software how-to (docs/KNOWLEDGE-BASE.md, step 10). A tutorial's overview and key points (S2) sit in a ruled box. */
+.procedure-overview {
+  padding: 0.25rem 1rem 0.5rem;
+  border-inline-start: 3px solid var(--brand);
+}
+
+/* A challenge (S5): the task on the page, its solution folded in a <details> that opens with no script. */
+.procedure-challenge {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--brand);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.procedure-challenge > div > :first-child {
+  margin-top: 0.25rem;
+}
+
+.procedure-challenge > div > :last-child {
+  margin-bottom: 0;
+}
+
+.procedure-solution {
+  margin-top: 0.5rem;
+}
+
+.procedure-solution > summary {
+  min-block-size: 2.75rem;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Platform tabs (S4). With no script every block shows under its name and the tabs are links to them. */
+.procedure-platforms {
+  margin: 0.5rem 0 0;
+}
+
+.procedure-platform-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  border-block-end: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.procedure-platform-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding: 0 0.75rem;
+  color: var(--text);
+  text-decoration: none;
+  border-block-end: 3px solid transparent;
+}
+
+.procedure-platform-tabs a[aria-selected="true"] {
+  border-block-end-color: var(--brand);
+  font-weight: 600;
+}
+
+.procedure-platform-label {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+
+/* Once the tabs work, the tab names the block, so its label goes. */
+[data-platforms][data-enhanced] .procedure-platform-label {
+  display: none;
+}
+
+/* On paper every platform prints, under its name, as the sheet and the twin list them. */
+@media print {
+  .procedure-platform-tabs {
+    display: none;
+  }
+
+  .procedure-platform[hidden] {
+    display: block;
+  }
+
+  [data-platforms][data-enhanced] .procedure-platform-label {
+    display: block;
+  }
+}

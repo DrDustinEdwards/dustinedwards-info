@@ -3,7 +3,7 @@
 // (taxonomy.mjs, validate.mjs), so the form cannot offer a value the save would refuse. A field not named here is still
 // edited, as YAML, so nothing in a file is out of the form's reach.
 
-import { BIOSAFETY_LEVELS } from "./procedures/validate.mjs";
+import { BIOSAFETY_LEVELS, HOWTO_TYPES } from "./procedures/validate.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./procedures/taxonomy.mjs";
 
 /**
@@ -65,6 +65,10 @@ const RECIPE = [
 
 /** @type {FieldSpec[]} */
 const COMPUTATIONAL = [
+  { key: "type", label: "Type", kind: "select", options: options(HOWTO_TYPES), help: "A tutorial teaches, step by step; a how-to gets one task done." },
+  { key: "questions", label: "Questions", kind: "lines", help: "One per line: what the reader will be able to answer." },
+  { key: "objectives", label: "Objectives", kind: "lines", help: "One per line: what the reader will be able to do. A tutorial needs them." },
+  { key: "key_points", label: "Key points", kind: "lines", help: "One per line, shown at the end." },
   { key: "method", label: "Method", kind: "multi", options: options(METHODS) },
   { key: "course", label: "Courses", kind: "multi", options: options(COURSES) },
   { key: "environment", label: "Environment", kind: "textarea" },

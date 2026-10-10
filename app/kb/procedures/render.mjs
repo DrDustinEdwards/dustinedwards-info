@@ -17,7 +17,8 @@ import { keyResources, keyResourcesMarkdown } from "./key-resources.mjs";
 import { proofFromFile } from "./proof.mjs";
 import { formatQuantity, readConditions, segmentText } from "./marks.mjs";
 import { statusLabel } from "./taxonomy.mjs";
-import { allSteps, procedurePath, readCalcs } from "./parse.mjs";
+import { allSteps, PLATFORMS, procedurePath, readCalcs } from "./parse.mjs";
+import { HOWTO_TYPES } from "./validate.mjs";
 
 /** The slot a scalable quantity leaves in a step's HTML, filled at request time (fillQuantities). */
 export const SLOT = (/** @type {number} */ i) => `QZQ${i}QZQ`;
@@ -36,7 +37,9 @@ const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
  */
 export function fixedSectionIds(profile) {
   const materials = profile === "recipe" ? "ingredients" : profile === "computational" ? "software-and-data" : "reagents";
-  return [materials, "equipment", "primers", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure", "key-resources"];
+  const fixed = [materials, "equipment", "primers", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure", "key-resources"];
+  // A how-to's own sections (S2, S1), after the shared ones so no protocol's prose heading changes its id.
+  return profile === "computational" ? [...fixed, "overview", "questions", "objectives", "key-points", "explanation"] : fixed;
 }
 
 /**
@@ -144,6 +147,10 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     return { src: photo.src, alt: photo.alt, width: size.width, height: size.height };
   };
 
+  /** @param {unknown} value */
+  const inlineList = async (value) =>
+    /** @type {string[]} */ ((await Promise.all(list(known(value)).map((/** @type {string} */ x) => md(x, { inline: true })))).filter(Boolean));
+
   const materialsByName = new Map(list(d.materials).map((/** @type {any} */ m) => [String(m.name).toLowerCase(), m]));
 
   /** @param {import("./parse.mjs").Step} step */
@@ -211,6 +218,10 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       expect: await flagHtml(step.flags.expect),
       troubleshooting: step.flags.troubleshooting,
       calculators: readCalcs(step.flags.calc),
+      // A tutorial's challenges, each with the solution the parse paired with it (S5).
+      challenges: await Promise.all(
+        step.flags.challenge.map(async (c, i) => ({ html: await md(c), solutionHtml: await md(step.flags.solution[i] ?? "") })),
+      ),
       commands: step.commands,
       photos: await Promise.all(step.photos.map(photo)),
     };
@@ -429,6 +440,12 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       })),
     ),
     // Computational.
+    // Tutorial or how-to (S1), and a tutorial's questions, objectives and key points (S2), as the file states them.
+    howtoType: /** @type {keyof typeof HOWTO_TYPES | null} */ (d.profile === "computational" && Object.hasOwn(HOWTO_TYPES, d.type) ? d.type : null),
+    questions: await inlineList(d.questions),
+    objectives: await inlineList(d.objectives),
+    keyPoints: await inlineList(d.key_points),
+    explanation: list(known(d.explanation)).map((/** @type {any} */ e) => ({ title: String(e.title), url: String(e.url) })),
     environmentHtml: await md(d.environment),
     prerequisites: /** @type {string[]} */ (
       (await Promise.all(list(known(d.prerequisites)).map((/** @type {string} */ p) => md(p, { inline: true })))).filter(Boolean)
@@ -480,6 +497,7 @@ export function procedureMarkdown(record, parsed) {
   const d = parsed.data;
   const out = [`# ${record.title}`, "", record.description, ""];
   const facts = [
+    ["Type", record.howtoType ? HOWTO_TYPES[record.howtoType] : null],
     ["Version", record.version],
     ["Updated", record.updated],
     ["First used", record.firstUsed],
@@ -505,6 +523,13 @@ export function procedureMarkdown(record, parsed) {
   ].filter(([, v]) => v !== null && v !== undefined && v !== "");
   for (const [k, v] of facts) out.push(`- ${k}: ${v}`);
   if (facts.length) out.push("");
+  // A tutorial opens with what it answers and teaches (S2), as the page does.
+  const bullets = (/** @type {string} */ title, /** @type {unknown} */ value) => {
+    const items = list(known(value));
+    if (items.length) out.push(`## ${title}`, "", ...items.map((x) => `- ${x}`), "");
+  };
+  bullets("Questions", d.questions);
+  bullets("Objectives", d.objectives);
   if (parsed.intro) out.push(parsed.intro, "");
 
   if (record.basedOn.length) {
@@ -594,17 +619,28 @@ export function procedureMarkdown(record, parsed) {
         flag("Expected", step.flags.expect);
         for (const id of step.flags.troubleshooting) out.push(`   > Troubleshooting: see "${id}" below.`);
         for (const c of readCalcs(step.flags.calc)) out.push(`   > Calculator: [${TOOLS[c.id]?.title}](${TOOLS[c.id]?.path})${Object.keys(c.values).length ? ` with ${Object.entries(c.values).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`);
+        // Every platform's block, each under its name (S4): the page's tabs are a view of these.
         for (const cmd of step.commands) {
+          if (cmd.platform) out.push("", `   ${PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (cmd.platform)] ?? cmd.platform}:`);
           out.push("", `   \`\`\`${cmd.lang}`, ...cmd.code.split("\n").map((l) => `   ${l}`), "   ```");
           if (cmd.output !== null) {
             out.push("", "   Expected output:", "", "   ```", ...cmd.output.split("\n").map((l) => `   ${l}`), "   ```");
           }
         }
         for (const p of step.photos) out.push(`   ![${p.alt}](${p.src})`);
+        // A challenge and its solution, both: the page folds the solution away, and a machine reads it anyway.
+        step.flags.challenge.forEach((c, i) => {
+          out.push("", `   > Challenge: ${c.replace(/\n/g, "\n   > ")}`);
+          const solution = step.flags.solution[i];
+          if (solution) out.push("", `   > Solution: ${solution.replace(/\n/g, "\n   > ")}`);
+        });
       }
       out.push("");
     }
   }
+
+  bullets("Key points", d.key_points);
+  if (record.explanation.length) out.push("## Explanation", "", ...record.explanation.map((e) => `- [${e.title}](${e.url})`), "");
 
   if (list(d.troubleshooting).length) {
     out.push("## Troubleshooting", "", "| Step | Problem | Possible reason | Solution |", "| --- | --- | --- | --- |");

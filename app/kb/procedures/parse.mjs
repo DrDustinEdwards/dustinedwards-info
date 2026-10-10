@@ -33,11 +33,16 @@ const FLAG_KEYS = /** @type {const} */ ({
   EXPECT: "expect",
   SPIN: "spin",
   CALC: "calc",
+  CHALLENGE: "challenge",
+  SOLUTION: "solution",
 });
 
+/** The platforms a fenced block may name (docs/PROCEDURES.md, S4): a how-to's commands where they differ by system. */
+export const PLATFORMS = /** @type {const} */ ({ linux: "Linux", macos: "macOS", windows: "Windows" });
+
 /**
- * @typedef {{ critical: string[], pause: string[], why: string[], troubleshooting: string[], expect: string[], spin: string[], calc: string[] }} Flags
- * @typedef {{ lang: string, code: string, output: string | null }} Command
+ * @typedef {{ critical: string[], pause: string[], why: string[], troubleshooting: string[], expect: string[], spin: string[], calc: string[], challenge: string[], solution: string[] }} Flags
+ * @typedef {{ lang: string, code: string, output: string | null, platform: string | null }} Command
  * @typedef {{
  *   number: number,
  *   line: number,
@@ -82,7 +87,7 @@ function readStep(first, rest, line, number) {
   /** @type {string[]} */
   const words = [first];
   /** @type {Flags} */
-  const flags = { critical: [], pause: [], why: [], troubleshooting: [], expect: [], spin: [], calc: [] };
+  const flags = { critical: [], pause: [], why: [], troubleshooting: [], expect: [], spin: [], calc: [], challenge: [], solution: [] };
   /** @type {Command[]} */
   const commands = [];
   /** @type {Array<{ alt: string, src: string }>} */
@@ -92,10 +97,13 @@ function readStep(first, rest, line, number) {
 
   for (let i = 0; i < rest.length; i += 1) {
     const text = rest[i] ?? "";
-    const fence = /^```(\S*)\s*$/.exec(text);
+    // "```bash platform=linux": a language, then attributes; platform is the only one the format has.
+    const fence = /^```(\S*)((?:\s+[a-z]+=\S+)*)\s*$/.exec(text);
     if (fence) {
       openFlag = null;
       const lang = fence[1] ?? "";
+      const attrs = Object.fromEntries([...(fence[2] ?? "").matchAll(/([a-z]+)=(\S+)/g)].map((m) => [m[1], m[2]]));
+      for (const key of Object.keys(attrs)) if (key !== "platform") problems.push(`line ${line}: step ${number} has a code block with "${key}=", and platform= is the only attribute a block takes`);
       /** @type {string[]} */
       const code = [];
       i += 1;
@@ -109,14 +117,18 @@ function readStep(first, rest, line, number) {
         if (!target) problems.push(`line ${line}: step ${number} has an output block with no command before it`);
         else target.output = code.join("\n");
       } else {
-        commands.push({ lang, code: code.join("\n"), output: null });
+        commands.push({ lang, code: code.join("\n"), output: null, platform: attrs.platform ?? null });
       }
       continue;
     }
-    const flag = /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC)\s*:\s*(.*)$/.exec(text);
+    const flag = /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s*(.*)$/.exec(text);
     if (flag) {
       openFlag = FLAG_KEYS[/** @type {keyof typeof FLAG_KEYS} */ (flag[1])];
       const body = (flag[2] ?? "").trim();
+      // A solution answers the challenge before it (the Carpentries challenge with its nested solution), one each.
+      if (openFlag === "solution" && flags.solution.length >= flags.challenge.length) {
+        problems.push(`line ${line}: step ${number} has a SOLUTION with no CHALLENGE before it to answer`);
+      }
       if (openFlag === "troubleshooting" || openFlag === "calc") {
         flags[openFlag].push(...body.split(/[,\s]+/).filter(Boolean));
       } else {
@@ -157,6 +169,8 @@ function readStep(first, rest, line, number) {
         why: flags.why.map((s) => s.trim()),
         expect: flags.expect.map((s) => s.trim()),
         spin: flags.spin.map((s) => s.trim()),
+        challenge: flags.challenge.map((s) => s.trim()),
+        solution: flags.solution.map((s) => s.trim()),
       },
       commands,
       photos,

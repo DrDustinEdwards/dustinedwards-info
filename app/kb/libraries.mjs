@@ -8,6 +8,10 @@ import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from
 import { BASES } from "./bases.mjs";
 import { stepCount } from "./procedures/library.mjs";
 import { courseLabel, methodLabel } from "./procedures/taxonomy.mjs";
+import { HOWTO_TYPES } from "./procedures/validate.mjs";
+
+/** A how-to's type in words: "how-to" is "How-to". @param {string} id */
+export const howtoTypeLabel = (id) => HOWTO_TYPES[/** @type {keyof typeof HOWTO_TYPES} */ (id)] ?? id;
 
 /** @typedef {import("./bases.mjs").KnowledgeBase} KnowledgeBase */
 /** @typedef {import("./procedures/render.mjs").ProcedureRecord} ProcedureRecord */
@@ -59,7 +63,8 @@ export function baseItems(base, records) {
       cuisine: r.cuisine ? String(r.cuisine) : "",
       category: r.category ? String(r.category) : "",
       diet: r.diet ?? [],
-      // Software how-to.
+      // Software how-to: tutorial or how-to (S1), empty for a row compiled before it had one.
+      type: r.howtoType ?? "",
       methods: r.methods ?? [],
       courses: r.courses ?? [],
     }));
@@ -100,6 +105,7 @@ export function baseCatalog(base) {
       : [
           title,
           description,
+          { key: "type", label: "Type", value: (/** @type {BaseItem} */ p) => (p.type ? [p.type] : []), facet: { kind: "many", label: howtoTypeLabel }, column: { header: "Type", drop: 1 } },
           { key: "method", label: "Method", value: (/** @type {BaseItem} */ p) => p.methods, facet: { kind: "many", label: methodLabel }, column: { header: "Method", drop: 1 }, search: 1 },
           { key: "course", label: "Course", value: (/** @type {BaseItem} */ p) => p.courses, facet: { kind: "many", label: courseLabel } },
           { key: "steps", label: "Steps", value: (/** @type {BaseItem} */ p) => p.steps, type: "number", sort: true, column: { header: "Steps", align: "end", drop: 2 } },
@@ -155,7 +161,7 @@ export function baseRecords(base, items, params, origin) {
     url: `${origin}${p.path}`,
     ...(base.profile === "recipe"
       ? { category: p.category, cuisine: p.cuisine, diet: p.diet, servings: p.servings, time: p.time }
-      : { methods: p.methods.map(methodLabel), courses: p.courses.map(courseLabel), steps: p.steps }),
+      : { type: p.type ? howtoTypeLabel(p.type) : "", methods: p.methods.map(methodLabel), courses: p.courses.map(courseLabel), steps: p.steps }),
     updated: p.updated,
     description: p.description,
   }));
@@ -174,11 +180,11 @@ const cell = (text) => text.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
 export function baseMarkdown(base, items, origin) {
   if (items.length === 0) return `No ${base.name.toLowerCase()} are published yet.`;
   const recipe = base.profile === "recipe";
-  const head = recipe ? [base.singular, "Category", "Cuisine", "Diet", "Servings", "Time", "Updated"] : [base.singular, "Method", "Course", "Steps", "Updated"];
+  const head = recipe ? [base.singular, "Category", "Cuisine", "Diet", "Servings", "Time", "Updated"] : [base.singular, "Type", "Method", "Course", "Steps", "Updated"];
   const rows = items.map((p) =>
     (recipe
       ? [`[${cell(p.title)}](${origin}${p.path})`, p.category, p.cuisine, p.diet.join(", "), p.servings === null ? "" : String(p.servings), p.time, p.updated]
-      : [`[${cell(p.title)}](${origin}${p.path})`, p.methods.map(methodLabel).join(", "), p.courses.map(courseLabel).join(", "), String(p.steps), p.updated]
+      : [`[${cell(p.title)}](${origin}${p.path})`, p.type ? howtoTypeLabel(p.type) : "", p.methods.map(methodLabel).join(", "), p.courses.map(courseLabel).join(", "), String(p.steps), p.updated]
     ).map((c, i) => (i === 0 ? c : cell(c))),
   );
   return [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`, ...rows.map((r) => `| ${r.join(" | ")} |`)].join("\n");
