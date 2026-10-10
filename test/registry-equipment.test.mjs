@@ -22,7 +22,7 @@ import { KINDS } from "../app/kb/registry/kinds.mjs";
 import { registrySearchInput } from "../app/kb/registry/search-inputs.mjs";
 import { buildRegistry } from "../scripts/lib/registry.mjs";
 
-/* The equipment kind (docs/REGISTRY.md): the instruments and labware the protocols list, held as one table with no page for an item,
+/* The equipment kind (docs/REGISTRY.md): the instruments and labware the protocols list, held as one table with a page for each item (A1),
  * who makes each (a gap until a record says), a centrifuge's rotor (a gap until Dustin names it), and the protocols that use each. */
 
 const root = new URL("../", import.meta.url);
@@ -69,11 +69,10 @@ test("the kind refuses what is wrong, with the field named", async () => {
   assert.ok(bad.errors.join("\n").includes("manufacturer") && bad.errors.join("\n").includes("rotor"));
 });
 
-test("an item has no page, no twin, no search record and no sitemap entry: the table is the page", () => {
-  assert.equal(EQUIPMENT.itemPages, false);
-  assert.equal(hasItemPage("equipment"), false);
-  assert.equal(registrySearchInput(byId.get("water-bath")), null);
-  assert.ok(inventoryRows(items, []).every((row) => row.path === kindPath("equipment")));
+test("an item has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
+  assert.equal(hasItemPage("equipment"), true);
+  assert.deepEqual(registrySearchInput(byId.get("water-bath")), { uid: "registry:equipment/water-bath", url: "/research/lab/equipment/water-bath", title: "Water bath", body: "Water bath equipment" });
+  assert.ok(inventoryRows(items, []).every((row) => row.path.startsWith(`${kindPath("equipment")}/`)));
   assert.equal(kindPath("equipment"), "/research/lab/equipment");
 });
 
@@ -115,7 +114,10 @@ test("a protocol's Equipment table is drawn from the registry beside the protoco
   assert.ok(extraction?.ok, JSON.stringify(extraction?.errors));
   const centrifuge = extraction.record.equipment.find((e) => e.name === "microcentrifuge");
   assert.deepEqual(centrifuge.item, { id: "microcentrifuge", name: "Microcentrifuge", status: "published", manufacturer: null, rotor: null, rotorGap: true });
-  assert.ok(extraction.markdown.includes("- microcentrifuge (manufacturer not recorded; rotor not recorded)"), "the twin carries the same facts");
+  assert.ok(
+    extraction.markdown.includes("- [microcentrifuge](/research/lab/equipment/microcentrifuge) (manufacturer not recorded; rotor not recorded)"),
+    "the twin carries the same facts, and links the item's page as the table does",
+  );
   const isolation = compiled.find((c) => c.slug === "phage-isolation")?.compiled;
   assert.ok(isolation.record.equipment.some((e) => e.name === "55 °C water bath for molten top agar" && e.item?.id === "water-bath"), "the protocol keeps its own words");
   const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;

@@ -59,6 +59,7 @@ describe("the admin Knowledge Base page", () => {
     expect(loaderData.tabs.find((t) => t.id === "needs-info")?.count).toBe(loaderData.gaps.length);
     // Every equipment record's manufacturer is a recorded gap today (docs/REGISTRY.md).
     expect(loaderData.gaps.filter((g) => g.kindLabel === "Equipment" && g.field === "manufacturer")).toHaveLength(11);
-    expect(html).toContain('href="/research/lab/equipment"');
+    // Each item's "View page" opens its own page (docs/KNOWLEDGE-BASE.md, A1).
+    expect(html).toContain('href="/research/lab/equipment/nanodrop"');
   });
 });

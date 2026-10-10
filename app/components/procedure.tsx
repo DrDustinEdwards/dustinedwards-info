@@ -10,6 +10,7 @@ import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
+import { itemPath } from "~/kb/registry/catalog.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { formatNumber, formatQuantity, parseNumber } from "~/kb/procedures/marks.mjs";
 
@@ -222,7 +223,7 @@ export function EquipmentTable({ record }: { record: ProcedureRecord }) {
         <tbody>
           {record.equipment.map((e) => (
             <tr key={e.name}>
-              <th scope="row">{e.name}</th>
+              <th scope="row">{e.item?.status === "published" ? <a href={itemPath("equipment", e.item.id)}>{e.name}</a> : e.name}</th>
               {hasMaker ? <td>{e.item ? (e.item.manufacturer ?? "Not recorded") : ""}</td> : null}
               {hasRotor ? <td>{e.item?.rotor ?? (e.item?.rotorGap ? "Not recorded" : "")}</td> : null}
               {hasNote ? <td>{e.noteHtml ? <span dangerouslySetInnerHTML={html(e.noteHtml)} /> : null}</td> : null}
@@ -263,7 +264,8 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
           {record.materials.map((m) => (
             <tr key={m.name} id={`material-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
               <th scope="row">
-                {m.display}
+                {/* A published reagent of the lab registry links its page, which lists every protocol that uses it. */}
+                {m.reagent?.status === "published" ? <a href={itemPath("reagent", m.reagent.id)}>{m.display}</a> : m.display}
                 {m.group ? <span className="procedure-group"> ({m.group})</span> : null}
               </th>
               {hasKind ? <td>{m.kind}</td> : null}

@@ -11,6 +11,7 @@ import GithubSlugger from "github-slugger";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import { productsForRows } from "../registry/align.mjs";
+import { itemPath } from "../registry/catalog.mjs";
 import { plainText } from "../../lib/search/records.mjs";
 import { keyResources, keyResourcesMarkdown } from "./key-resources.mjs";
 import { proofFromFile } from "./proof.mjs";
@@ -527,7 +528,9 @@ export function procedureMarkdown(record, parsed) {
       const source = reagentSource(reagent);
       parts.push(source.href ? `source [${source.text}](${source.href})` : `source ${source.text}`);
     }
-    out.push(`- ${shown}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
+    // A published reagent links its page, as the page's table does.
+    const named = reagent?.status === "published" ? `[${shown}](${itemPath("reagent", reagent.id)})` : shown;
+    out.push(`- ${named}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
   }
   out.push("");
   for (const s of record.solutions) {
@@ -545,7 +548,8 @@ export function procedureMarkdown(record, parsed) {
       const name = typeof e === "string" ? e : String(e.name);
       const item = itemOf.get(name) ?? null;
       const facts = item ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})` : "";
-      out.push(`- ${name}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
+      const named = item?.status === "published" ? `[${name}](${itemPath("equipment", item.id)})` : name;
+      out.push(`- ${named}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
     }
     out.push("");
   }

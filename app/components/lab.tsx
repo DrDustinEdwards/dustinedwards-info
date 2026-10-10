@@ -353,7 +353,11 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
           definition={REAGENTS}
           result={result}
           labelledBy="registry-title"
-          title={(r) => reagentLabel(r)}
+          title={(r) => (
+            <a className="cap-table-open" href={r.path}>
+              {reagentLabel(r)}
+            </a>
+          )}
           cells={{
             supplier: (r) => (reagentSource(r) ?? <NotFound reason={r.supplierMissing} />),
             number: (r) => (r.preparedInLab ? "" : (r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />)),
@@ -397,7 +401,11 @@ export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }
           definition={EQUIPMENT_CATALOG}
           result={result}
           labelledBy="registry-title"
-          title={(e) => e.name}
+          title={(e) => (
+            <a className="cap-table-open" href={e.path}>
+              {e.name}
+            </a>
+          )}
           cells={{
             manufacturer: (e) => e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />,
             rotor: (e) => (e.rotor ?? (e.rotorMissing ? <NotFound reason={e.rotorMissing} /> : "")),
@@ -415,5 +423,64 @@ export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }
         />
       </div>
     </>
+  );
+}
+
+/** The protocols that use an item, each linked: computed from the protocols that name it, never stored on the item. */
+function UsedIn({ uses }: { uses: Array<{ path: string; title: string }> }) {
+  if (uses.length === 0) return <Fact term="Used in">No published protocol names it yet.</Fact>;
+  return (
+    <Fact term={uses.length === 1 ? "Used in" : "Used in these protocols"}>
+      <ul className="registry-used">
+        {uses.map((protocol) => (
+          <li key={protocol.path}>
+            <a href={protocol.path}>{protocol.title}</a>
+          </li>
+        ))}
+      </ul>
+    </Fact>
+  );
+}
+
+/**
+ * One reagent (docs/KNOWLEDGE-BASE.md, A1): what it is, where it comes from (a supplier and a catalog number, or the lab's recipe),
+ * every gap with its reason, and the protocols that use it. Each protocol's own table has its amount, stock and final.
+ */
+export function LabReagent({ reagent: r }: { reagent: ReagentRow }) {
+  return (
+    <dl className="registry-facts">
+      {r.abbreviation ? <Fact term="Abbreviation">{r.abbreviation}</Fact> : null}
+      {r.contents ? <Fact term="Contents">{r.contents}</Fact> : null}
+      {r.preparedInLab ? (
+        <Fact term="Source">
+          Prepared in the lab{r.recipePath ? <>, from its <a href={r.recipePath}>recipe</a></> : <>; <NotFound reason={r.recipeMissing} /></>}
+        </Fact>
+      ) : (
+        <>
+          <Fact term="Supplier">{r.supplier ?? <NotFound reason={r.supplierMissing} />}</Fact>
+          <Fact term="Catalog number">{r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />}</Fact>
+        </>
+      )}
+      {r.productUrl ? (
+        <Fact term="Product page">
+          <a href={r.productUrl}>{r.productUrl.replace(/^https:\/\//, "")}</a>
+        </Fact>
+      ) : null}
+      <UsedIn uses={r.uses} />
+    </dl>
+  );
+}
+
+/**
+ * One item of equipment (docs/KNOWLEDGE-BASE.md, A1): who makes it, a centrifuge's rotor, every gap with its reason, and the
+ * protocols that use it. Each protocol's own table has its words and settings for the item.
+ */
+export function LabEquipmentItem({ equipment: e }: { equipment: EquipmentRow }) {
+  return (
+    <dl className="registry-facts">
+      <Fact term="Manufacturer">{e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />}</Fact>
+      {e.rotor || e.rotorMissing ? <Fact term="Rotor">{e.rotor ?? <NotFound reason={e.rotorMissing} />}</Fact> : null}
+      <UsedIn uses={e.uses} />
+    </dl>
   );
 }
