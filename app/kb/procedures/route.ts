@@ -1,5 +1,6 @@
 // What the procedure page, its sheet and its twin share: the cache tag, the trail and the scale a
 // request asks for.
+import { LIBRARY_BASES, libraryTrail } from "../libraries.mjs";
 import type { ProcedureRecord } from "./render.mjs";
 import { scaleFactor } from "./render.mjs";
 
@@ -15,13 +16,9 @@ export function procedureTrail(record: ProcedureRecord): Array<[string, string]>
       [record.title, record.path],
     ];
   }
-  if (record.profile === "computational") {
-    return [
-      ["Research", "/research"],
-      [record.title, record.path],
-    ];
-  }
-  return [[record.title, record.path]];
+  // A how-to sits under Software and a recipe on its own, each in its base's library (app/kb/libraries.mjs).
+  const base = LIBRARY_BASES.find((b) => b.profile === record.profile);
+  return [...(base ? libraryTrail(base) : []), [record.title, record.path]];
 }
 
 /**

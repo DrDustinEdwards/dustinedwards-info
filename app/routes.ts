@@ -2,6 +2,7 @@ import { type RouteConfig, index, layout, route } from "@react-router/dev/routes
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
 import { BASES } from "./kb/bases.mjs";
+import { LIBRARY_BASES } from "./kb/libraries.mjs";
 import { LIBRARY_PATH } from "./kb/procedures/taxonomy.mjs";
 
 export default [
@@ -67,6 +68,13 @@ export default [
     route("research/protocols.md", "routes/protocols[.md].ts"),
     route("research/protocols.json", "routes/protocols[.json].ts"),
     route("research/protocols.csv", "routes/protocols[.csv].ts"),
+    // The other knowledge bases' libraries (app/kb/libraries.mjs): the page, its twin and its downloads, one module for all.
+    ...LIBRARY_BASES.flatMap((base) => [
+      route(base.library.slice(1), "routes/kb-library.tsx", { id: `library-${base.id}` }),
+      route(`${base.library.slice(1)}.md`, "routes/kb-library[.md].ts", { id: `library-${base.id}-md` }),
+      route(`${base.library.slice(1)}.json`, "routes/kb-library[.json].ts", { id: `library-${base.id}-json` }),
+      route(`${base.library.slice(1)}.csv`, "routes/kb-library[.csv].ts", { id: `library-${base.id}-csv` }),
+    ]),
     // One set per knowledge base (app/kb/bases.mjs), at its entry root.
     ...BASES.map((base) => [base.entryRoot.slice(1, -1), base.profile]).flatMap(([root, id]) => [
       route(`${root}/:slug.md`, "routes/procedure[.md].ts", { id: `procedure-${id}-md` }),

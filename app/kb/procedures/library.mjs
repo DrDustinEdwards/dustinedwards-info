@@ -38,15 +38,15 @@ export function stepCount(record) {
 }
 
 /**
- * The library's rows: the published protocols and computational methods, each reduced to what the catalog reads.
- * Recipes are not laboratory protocols and have their own address.
+ * The library's rows: the published protocols, each reduced to what the catalog reads. Software how-tos and recipes
+ * have libraries of their own (app/kb/libraries.mjs).
  *
  * @param {Array<import("./render.mjs").ProcedureRecord>} records
  */
 export function libraryItems(records) {
   for (const r of records) rememberOrganisms(r.organismNames ?? {});
   return records
-    .filter((r) => r.profile === "protocol" || r.profile === "computational")
+    .filter((r) => r.profile === "protocol")
     .map((r) => ({
       slug: r.slug,
       path: r.path,
@@ -150,10 +150,10 @@ export function libraryRecords(items, params, origin) {
  * The same rows as CSV (RFC 4180): a list field is its values joined with "; ". A cell is quoted when it holds a
  * comma, a quote or a line break.
  *
- * @param {ReturnType<typeof libraryRecords>} rows
+ * @param {Array<Record<string, unknown>>} rows a library's download rows, its own or another base's (app/kb/libraries.mjs)
  */
 export function libraryCsv(rows) {
-  const columns = /** @type {Array<keyof (typeof rows)[number]>} */ (Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }));
+  const columns = Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 });
   const cellOf = (/** @type {unknown} */ value) => {
     const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;

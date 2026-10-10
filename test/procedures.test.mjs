@@ -396,7 +396,7 @@ test("step numbering that skips is an error", () => {
 const COMPUTATIONAL = `---
 profile: computational
 method: [annotation]
-path: /research/methods/mini
+path: /software/how-tos/mini
 title: Mini method
 seo_title: Mini method
 description: A small computational method for the tests.

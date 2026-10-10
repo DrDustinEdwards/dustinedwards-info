@@ -107,6 +107,8 @@ export function run(code) {
       "procedure.version.sheet.tsx",
       // The protocol library (docs/PROCEDURES.md): its filters are GET parameters, as the publication index's are.
       "protocols.tsx",
+      // The other knowledge bases' libraries (docs/KNOWLEDGE-BASE.md, step 8): Recipes and Software how-tos, one module.
+      "kb-library.tsx",
       // The phage page: its table is the catalog over the phage rows (docs/PHAGES.md).
       "phages.tsx",
       // The lab registry (docs/REGISTRY.md): the inventory, and a kind's page with its items, which are the kind's optional segment.

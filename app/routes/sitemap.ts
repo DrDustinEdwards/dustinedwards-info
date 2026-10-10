@@ -17,6 +17,7 @@ import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } 
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
+import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { sitemapDocument } from "@drdustinedwards/site-helpers/sitemap";
 import type { Route } from "./+types/sitemap";
@@ -68,6 +69,11 @@ export async function loader({ context }: Route.LoaderArgs) {
      */
     ...papers.map((p) => ({
       loc: `${origin}${paperPath(p.slug)}`,
+      lastmod: null as Date | null,
+    })),
+    // A knowledge base's library is listed once it has a published entry; until then it is not a page (kb-library.tsx).
+    ...LIBRARY_BASES.filter((base) => procedureRows.some((p) => p.path.startsWith(base.entryRoot))).map((base) => ({
+      loc: `${origin}${base.library}`,
       lastmod: null as Date | null,
     })),
     ...procedureRows.map((p) => ({

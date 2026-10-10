@@ -1,6 +1,6 @@
 // The procedures table: read by the procedure pages, the sitemap and the operator API. Written only by
 // writeProcedureRow, from a compile (app/kb/procedures/compile.mjs).
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
@@ -76,12 +76,22 @@ export async function listProceduresForOperator(env: Env) {
   });
 }
 
-/** For the protocol library: every published protocol and computational method, with its full record. */
+/** A knowledge base's published records, for its library (app/kb/libraries.mjs). */
+export async function listPublishedRecordsOfProfile(env: Env, profile: "protocol" | "recipe" | "computational"): Promise<ProcedureRecord[]> {
+  const rows = await getDb(env)
+    .select({ record: procedures.record })
+    .from(procedures)
+    .where(and(eq(procedures.status, PUBLISHED_STATUS), eq(procedures.profile, profile)))
+    .orderBy(asc(procedures.path));
+  return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
+}
+
+/** For the protocol library: every published protocol, with its full record. */
 export async function listPublishedLibraryRecords(env: Env): Promise<ProcedureRecord[]> {
   const rows = await getDb(env)
     .select({ record: procedures.record })
     .from(procedures)
-    .where(and(eq(procedures.status, PUBLISHED_STATUS), inArray(procedures.profile, ["protocol", "computational"])))
+    .where(and(eq(procedures.status, PUBLISHED_STATUS), eq(procedures.profile, "protocol")))
     .orderBy(asc(procedures.path));
   return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
 }

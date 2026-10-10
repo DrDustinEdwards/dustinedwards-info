@@ -9,8 +9,11 @@ export function LibraryCite({
   count,
   downloads,
   citation,
+  noun = ["protocol", "protocols"],
 }: {
   count: number;
+  /** What the library's entries are called: ["recipe", "recipes"]. */
+  noun?: [string, string];
   downloads: ReturnType<typeof libraryDownloads>;
   citation: ReturnType<typeof libraryCitation>;
 }) {
@@ -20,7 +23,7 @@ export function LibraryCite({
         Download and cite
       </h2>
       <p>
-        Download the {countOf(count, ["protocol", "protocols"])} shown as <a href={downloads.csv}>CSV</a> or{" "}
+        Download the {countOf(count, noun)} shown as <a href={downloads.csv}>CSV</a> or{" "}
         <a href={downloads.json}>JSON</a>, with every fact the table shows, or the whole library as{" "}
         <a href={downloads.markdown}>markdown</a>.
       </p>
