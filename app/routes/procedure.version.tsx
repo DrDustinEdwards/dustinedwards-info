@@ -42,8 +42,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // The live page tells this one what is current. A draft or a removed procedure has no current version.
   const live = await getProcedureByPath(env, path);
   const current = live && live.status === "published" ? { path, version: live.record.version } : null;
-  const { count, factor } = readScale(frozen.record, url);
-  return { record: frozen.record, current, count, factor, frozen: await listFrozenVersions(env, frozen.slug) };
+  const { count, factor, units } = readScale(frozen.record, url);
+  return { record: frozen.record, current, count, factor, units, frozen: await listFrozenVersions(env, frozen.slug) };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -57,7 +57,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ProcedureVersionRoute({ loaderData }: Route.ComponentProps) {
-  const { record, current, count, factor, frozen } = loaderData;
+  const { record, current, count, factor, units, frozen } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person)];
@@ -75,7 +75,7 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       <VersionNotice record={record} current={current} />
-      <ProcedureView record={record} count={count} factor={factor} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} />
+      <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} />
       <Enhance module="run" />
     </PageShell>
   );

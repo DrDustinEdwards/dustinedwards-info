@@ -3,6 +3,7 @@
 import { LIBRARY_BASES, libraryTrail } from "../libraries.mjs";
 import type { ProcedureRecord } from "./render.mjs";
 import { scaleFactor } from "./render.mjs";
+import { readUnits } from "./recipe-views.mjs";
 
 /** Every procedure response carries it; a save purges it (app/kb/procedures/save.server.ts). */
 export const PROCEDURES_CACHE_TAG = "procedures";
@@ -33,5 +34,7 @@ export function readScale(record: ProcedureRecord, url: URL) {
   const count = valid ? asked : base;
   // A protocol's steps stay per unit; only its material totals scale, by count. A recipe's steps scale.
   const factor = record.profile === "recipe" ? scaleFactor(record, count) : 1;
-  return { count, factor };
+  // A recipe's amounts in metric or imperial, at its own address (`?units=imperial`), as scaling is (recipe-views.mjs).
+  const units = record.profile === "recipe" ? readUnits(url.searchParams.get("units")) : null;
+  return { count, factor, units };
 }

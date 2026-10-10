@@ -148,7 +148,7 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
 
   /** @param {import("./parse.mjs").Step} step */
   const renderStep = async (step) => {
-    /** @type {Array<{ amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }>} */
+    /** @type {Array<{ name: string, amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }>} */
     const quantities = [];
     /** @type {Array<{ name: string, display: string, amount: string | null }>} */
     const materials = [];
@@ -166,6 +166,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
         });
         if (seg.quantity) {
           quantities.push({
+            // Which ingredient the amount is of, so a recipe can show it in other units (recipe-views.mjs).
+            name: seg.name,
             amount: seg.quantity.amount,
             unit: seg.quantity.unit,
             fixed: seg.quantity.fixed,
@@ -265,6 +267,8 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       per: known(m.per),
       solution: m.solution ?? null,
       noteHtml: await md(m.note, { inline: true }),
+      // A recipe's grams in one cup of it, where the recipe states it: the only way its volume is shown as weight (DECIDE 7).
+      gramsPerCup: typeof m.grams_per_cup === "number" && m.grams_per_cup > 0 ? m.grams_per_cup : null,
       /** @type {{ amount: string, unit: string, fixed: boolean, min: number | null, max: number | null } | null} */
       quantity: null,
     })),
@@ -305,6 +309,7 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
           per: null,
           solution: null,
           noteHtml: null,
+          gramsPerCup: null,
           quantity: markedTotal(seg.name),
         });
       }
@@ -453,14 +458,15 @@ export function scaleFactor(record, asked) {
  * The step's HTML with its quantity slots filled. A protocol's step amounts are per unit and never
  * scale; a recipe's scale unless the file fixed them.
  *
- * @param {{ html: string | null, quantities: Array<{ amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }> }} step
+ * @param {{ html: string | null, quantities: Array<{ name?: string, amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }> }} step
  * @param {number} factor
+ * @param {(q: { name?: string, amount: string, unit: string, fixed: boolean, min: number | null, max: number | null }) => string} [show] how a recipe shows an amount in the reader's units (recipe-views.mjs)
  */
-export function fillQuantities(step, factor) {
+export function fillQuantities(step, factor, show) {
   return (step.html ?? "").replace(SLOT_PATTERN, (_all, i) => {
     const q = step.quantities[Number(i)];
     if (!q) return "";
-    return formatQuantity({ ...q, raw: "" }, factor);
+    return show ? show(q) : formatQuantity({ ...q, raw: "" }, factor);
   });
 }
 

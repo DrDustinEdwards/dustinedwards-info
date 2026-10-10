@@ -11,8 +11,9 @@ import { fillQuantities, fixedSectionIds, reagentSource, type ProcedureRecord } 
 import { keyResources, type KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { itemPath } from "~/kb/registry/catalog.mjs";
+import { UNIT_SYSTEMS, gramsPerCup, ingredientNames, ingredientSteps, miseEnPlace, showQuantity, showTemperatures, stepId, stepIngredients, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
-import { formatNumber, formatQuantity, parseNumber } from "~/kb/procedures/marks.mjs";
+import { formatNumber, parseNumber } from "~/kb/procedures/marks.mjs";
 
 /**
  * Every procedure page is drawn by these components from its D1 record (docs/PROCEDURES.md): the page,
@@ -128,14 +129,26 @@ export function ProcedureFacts({ record }: { record: ProcedureRecord }) {
  * The scaling form: a plain GET, so it works with script off and the state lives in the URL, where an
  * agent reading the page sees the same numbers as a person.
  */
-function ScaleForm({ record, count, action }: { record: ProcedureRecord; count: number; action: string }) {
+function ScaleForm({ record, count, action, units = null }: { record: ProcedureRecord; count: number; action: string; units?: UnitSystem | null }) {
   if (record.profile === "recipe" && record.servings) {
     return (
       <form className="procedure-scale" method="get" action={action}>
         <label>
           Servings <input name="servings" type="number" min={1} max={1000} step="any" defaultValue={count} />
         </label>
-        <button type="submit">Scale</button>
+        {/* Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script. */}
+        <label>
+          Units{" "}
+          <select name="units" defaultValue={units ?? ""}>
+            <option value="">As written</option>
+            {Object.entries(UNIT_SYSTEMS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button type="submit">Show</button>
       </form>
     );
   }
@@ -235,7 +248,9 @@ export function EquipmentTable({ record }: { record: ProcedureRecord }) {
   );
 }
 
-export function MaterialsTable({ record, count, factor }: { record: ProcedureRecord; count: number; factor: number }) {
+export function MaterialsTable({ record, count, factor, units = null }: { record: ProcedureRecord; count: number; factor: number; units?: UnitSystem | null }) {
+  // A recipe's ingredients say every step they are used in (R2), linked, computed from the steps' marks.
+  const usedIn = record.profile === "recipe" ? ingredientSteps(record) : null;
   const showTotal = record.profile === "protocol" && record.scale !== null && record.materials.some((m) => m.per === record.scale?.unit);
   const hasStock = record.materials.some((m) => m.stock.length > 0);
   const hasFinal = record.materials.some((m) => m.final);
@@ -255,6 +270,7 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
             {hasStock ? <th scope="col">Stock</th> : null}
             {hasFinal ? <th scope="col">Final</th> : null}
             <th scope="col">Amount</th>
+            {usedIn ? <th scope="col">Used in steps</th> : null}
             {showTotal ? <th scope="col">For {unitWord}</th> : null}
             {hasSource ? <th scope="col">Source</th> : null}
             <th scope="col">Notes</th>
@@ -276,9 +292,19 @@ export function MaterialsTable({ record, count, factor }: { record: ProcedureRec
                 {m.amount
                   ? `${m.amount}${m.per ? ` per ${m.per}` : ""}`
                   : m.quantity
-                    ? formatQuantity({ ...m.quantity, raw: "" }, factor)
+                    ? showQuantity(m.quantity, factor, units, m.gramsPerCup ?? null)
                     : ""}
               </td>
+              {usedIn ? (
+                <td>
+                  {(usedIn.get(m.name.toLowerCase()) ?? []).map((u, i) => (
+                    <span key={u.id}>
+                      {i > 0 ? ", " : null}
+                      <a href={`#${u.id}`}>{u.number}</a>
+                    </span>
+                  ))}
+                </td>
+              ) : null}
               {showTotal ? <td>{total(m.amount, m.per, record, count) ?? ""}</td> : null}
               {hasSource ? <td>{m.reagent ? <ReagentSource reagent={m.reagent} /> : null}</td> : null}
               <td>
@@ -339,6 +365,9 @@ export function StepItem({
   troubleshooting,
   scope = "",
   brief = false,
+  units = null,
+  densities = null,
+  names,
 }: {
   step: Step;
   factor: number;
@@ -346,10 +375,32 @@ export function StepItem({
   /** Keys this step's calculators apart from the same tool under another list's step 1. */
   scope?: string;
   brief?: boolean;
+  /** A recipe's units as the reader asked for them (recipe-views.mjs). */
+  units?: UnitSystem | null;
+  /** A recipe's grams per cup by ingredient; null for a protocol or a how-to, which list no ingredients under a step. */
+  densities?: Map<string, number> | null;
+  /** A recipe's words for each ingredient, as its ingredient list gives them. */
+  names?: Map<string, string>;
 }) {
+  const show = (q: Parameters<NonNullable<Parameters<typeof fillQuantities>[2]>>[0]) => showQuantity(q, factor, units, densities?.get(q.name?.toLowerCase() ?? "") ?? null);
+  const text = showTemperatures(fillQuantities(step, factor, densities ? show : undefined), units);
+  // A recipe step lists what goes into it (R2), with the amounts the reader asked for.
+  const ingredients = densities && !brief ? stepIngredients(step, factor, units, densities, names) : [];
   return (
-    <li value={step.number} className="procedure-step" data-step={step.number} data-timers={step.timers.length > 0 ? JSON.stringify(step.timers) : undefined}>
-      <p className="procedure-step-text" data-run-swap="step" dangerouslySetInnerHTML={html(fillQuantities(step, factor))} />
+    <li
+      value={step.number}
+      id={scope ? stepId(scope, step.number) : undefined}
+      className="procedure-step"
+      data-step={step.number}
+      data-timers={step.timers.length > 0 ? JSON.stringify(step.timers) : undefined}
+    >
+      <p className="procedure-step-text" data-run-swap="step" dangerouslySetInnerHTML={html(text)} />
+      {ingredients.length > 0 ? (
+        <p className="procedure-step-ingredients">
+          <span className="procedure-step-ingredients-label">Ingredients: </span>
+          {ingredients.map((i) => (i.amount ? `${i.amount} ${i.name}` : i.name)).join(", ")}
+        </p>
+      ) : null}
       {step.spin.map((s) => (
         <Flag key={s} kind="spin" label="Spin:">
           {s}
@@ -419,11 +470,13 @@ export function StepItem({
   );
 }
 
-function Steps({ steps, factor, record, scope }: { steps: Step[]; factor: number; record: ProcedureRecord; scope: string }) {
+function Steps({ steps, factor, record, scope, units = null }: { steps: Step[]; factor: number; record: ProcedureRecord; scope: string; units?: UnitSystem | null }) {
+  const densities = record.profile === "recipe" ? gramsPerCup(record) : null;
+  const names = record.profile === "recipe" ? ingredientNames(record) : undefined;
   return (
     <ol className="procedure-steps" start={steps[0]?.number ?? 1}>
       {steps.map((step) => (
-        <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} scope={scope} />
+        <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} scope={scope} units={units} densities={densities} names={names} />
       ))}
     </ol>
   );
@@ -536,6 +589,34 @@ function hasCalculators(record: ProcedureRecord) {
 }
 
 /**
+ * A recipe's mise-en-place (R5): every ingredient once, at the reader's servings and units, as a checklist that works with no
+ * script, and the same as a plain shopping list to copy. Computed from the ingredient list, so it never says another amount.
+ */
+function MiseEnPlace({ record, factor, units }: { record: ProcedureRecord; factor: number; units: UnitSystem | null }) {
+  const { items, text } = miseEnPlace(record, factor, units);
+  if (items.length === 0) return null;
+  return (
+    <div className="procedure-mise">
+      <h3 id="mise-en-place">Mise en place</h3>
+      <ul className="procedure-mise-list">
+        {items.map((item) => (
+          <li key={item.name}>
+            <label>
+              <input type="checkbox" /> {item.amount ? `${item.amount} ` : ""}
+              {item.name}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <label className="procedure-mise-copy">
+        <span>Shopping list, to copy</span>
+        <textarea readOnly rows={Math.min(12, items.length)} value={text} />
+      </label>
+    </div>
+  );
+}
+
+/**
  * The whole procedure, as its page shows it. `count` is the reader's scale, `factor` the recipe multiplier.
  * `basePath` is the address the page is at: the procedure's own for the live page, its version's for a frozen copy,
  * so the scale form, run mode and the twin link stay on the version being read. `sheetPath` is the printable sheet's
@@ -550,6 +631,7 @@ export function ProcedureView({
   basePath = record.path,
   sheetPath = `${record.path}/sheet`,
   frozen = [],
+  units = null,
 }: {
   record: ProcedureRecord;
   count: number;
@@ -559,6 +641,8 @@ export function ProcedureView({
   basePath?: string;
   sheetPath?: string | null;
   frozen?: string[];
+  /** A recipe's units as the reader asked for them: null is the recipe's own (recipe-views.mjs). */
+  units?: UnitSystem | null;
 }) {
   const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   const keyGroups = keyResources(record);
@@ -588,8 +672,9 @@ export function ProcedureView({
 
       <section aria-labelledby={materialsId}>
         <Heading id={materialsId!}>{materialsHeading(record)}</Heading>
-        <ScaleForm record={record} count={count} action={basePath} />
-        <MaterialsTable record={record} count={count} factor={factor} />
+        <ScaleForm record={record} count={count} action={basePath} units={units} />
+        <MaterialsTable record={record} count={count} factor={factor} units={units} />
+        {record.profile === "recipe" ? <MiseEnPlace record={record} factor={factor} units={units} /> : null}
         <Solutions record={record} />
         {record.substitutions.length ? (
           <>
@@ -652,7 +737,7 @@ export function ProcedureView({
             block.type === "prose" ? (
               <div key={i} dangerouslySetInnerHTML={html(block.html)} />
             ) : (
-              <Steps key={i} steps={block.steps} factor={factor} record={record} scope={`${section.id}-${i}-`} />
+              <Steps key={i} steps={block.steps} factor={factor} record={record} scope={`${section.id}-${i}-`} units={units} />
             ),
           )}
         </section>

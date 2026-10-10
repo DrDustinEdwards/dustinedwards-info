@@ -141,7 +141,11 @@ pages. `organism` reads from the lab registry's strains, so a strain added there
   sub-recipe). A spin in rpm needs its `g` (or a recorded gap), and a touchdown annealing its step size.
 - **recipe** adds `servings`, `cuisine`, `category`, `diet`, `prep_time`, `cook_time`, `substitutions`
   (`for`, `use`, `note`), and step photos (`![alt](/media/...)` on a step's own line). Amounts in steps
-  scale with the servings.
+  scale with the servings. A reader can ask for metric or imperial (`?units=metric` or `?units=imperial`, beside
+  `?servings=`): grams and ounces, millilitres and cups convert, spoons stay, and oven temperatures switch scale. A
+  volume is shown as a weight only for an ingredient whose material states `grams_per_cup` (a number above 0), never
+  from a table of densities. Each ingredient lists the steps it is used in, each step lists its ingredients, and the
+  page has a mise-en-place checklist with a shopping list to copy (`app/kb/procedures/recipe-views.mjs`).
 - **computational** adds `environment` and `prerequisites`. Its materials are software (with `version`),
   data and input files. Every command has its expected output. It does not scale.
 

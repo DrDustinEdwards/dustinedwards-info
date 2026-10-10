@@ -442,6 +442,13 @@ export function validateProcedure(parsed, expect) {
   }
 
   // The profiles.
+  // A recipe's density, so its volume can be shown as weight: a number the recipe states, never a table's (DECIDE 7).
+  for (const m of Array.isArray(d.materials) ? d.materials : []) {
+    if (m?.grams_per_cup === undefined) continue;
+    const at = `materials[${String(m.name)}].grams_per_cup`;
+    if (profile !== "recipe") errors.push(`${at} belongs to the recipe profile`);
+    else if (typeof m.grams_per_cup !== "number" || !(m.grams_per_cup > 0)) errors.push(`${at} is the grams in one US cup of it, a number above 0`);
+  }
   if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null, expect.reagents ?? null);
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);

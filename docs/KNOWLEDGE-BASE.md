@@ -202,7 +202,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    (Search facet done: `/search` counts its hits by knowledge base, read from each record's address
    (`app/kb/search-bases.mjs`: each base's entry root, and `/research/lab/` for the registry), and `?base=` or a typed
    `base:` narrows to one; its JSON carries the same facet. Each library keeps its own facets.)
-9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4).
+9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4). In two pull requests.
+   (R2, R3 and R5 done: `app/kb/procedures/recipe-views.mjs`, rendered on the server at their addresses
+   (`?units=metric|imperial` beside `?servings=`), with `grams_per_cup` the only way a volume becomes a weight. The cook
+   view (R4) follows on run mode.)
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
 12. **Offline** (A3).
