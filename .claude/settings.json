@@ -20,6 +20,10 @@
       "Bash(gh pr merge:*)"
     ]
   },
+  "deniedMcpServers": [
+    { "serverUrl": "https://admin-mcp.dustinedwards.info/mcp" },
+    { "serverUrl": "https://admin-mcp.foxing.app/mcp" }
+  ],
   "hooks": {
     "PreToolUse": [
       {
