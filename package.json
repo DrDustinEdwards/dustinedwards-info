@@ -71,8 +71,7 @@
     "test": "node --test \"test/**/*.test.mjs\"",
     "test:worker": "vitest run --config vitest.config.ts",
     "ship": "node scripts/ship.mjs",
-    "ship:mcp": "node scripts/ship.mjs mcp",
-    "ship:mcp-emergency": "node scripts/ship.mjs mcp-emergency"
+    "ship:mcp": "node scripts/ship.mjs mcp"
   },
   "dependencies": {
     "@codemirror/commands": "6.10.4",

@@ -29,11 +29,8 @@ without green CI for the exact sha, runs this folder's gates, deploys, and
 proves `/health` and the `server/discover` call on the live address.
 `.claude/hooks/no-direct-deploy.sh` refuses a bare `wrangler deploy` here.
 
-`mcp/emergency/` is the pre-move server kept to put it back if the cutover to
-admin-mcp.dustinedwards.info fails, deployed only by `npm run ship:mcp-emergency`
-(its README has the order). It is removed once a sign-in on the new address is
-verified. A Durable Object class or migration added here must be added there
-too; `test/emergency.test.ts` fails until it is.
+The pre-move server (`mcp/emergency/`, kept to put the old address back if the cutover failed) was removed
+once the cutover was settled, 2026-10-10. The old DrDustinEdwards/dustinedwards-mcp repo is the only other copy.
 
 ## The law, and it is not negotiable
 

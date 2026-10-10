@@ -88,29 +88,7 @@ test("the gates are the four CI's mcp job runs, typecheck first", () => {
   assert.deepEqual(MCP_GATES, ["typecheck", "check:wrapper", "test", "build"]);
 });
 
-test("the emergency target deploys mcp/emergency and runs its own gates", () => {
-  assert.deepEqual(MCP_TARGETS["mcp-emergency"].dir, ["mcp", "emergency"]);
-  assert.deepEqual(MCP_TARGETS["mcp-emergency"].gates, ["test", "emergency:typecheck", "emergency:build"]);
+test("the mcp target deploys mcp/ and runs the four gates", () => {
+  assert.deepEqual(MCP_TARGETS.mcp.dir, ["mcp"]);
   assert.deepEqual(MCP_TARGETS.mcp.gates, MCP_GATES);
-});
-
-test("the old server's unpinned resource is not compared, and everything else still is", () => {
-  const OLD = "https://dustinedwards-mcp.dustin-edwards.workers.dev";
-  const r = {
-    prm: { status: 200, body: { resource: OLD } },
-    as: { status: 200, body: { issuer: OLD, client_id_metadata_document_supported: true, registration_endpoint: `${OLD}/register` } },
-    discover: { status: 401, challenge: `Bearer resource_metadata="${OLD}/.well-known/oauth-protected-resource/mcp"` },
-  };
-  assert.deepEqual(discoveryProblems(r, OLD, { resourceBound: false }), []);
-  assert.match(discoveryProblems(r, OLD).join(), /protected resource is/);
-  r.discover.status = 200;
-  assert.match(discoveryProblems(r, OLD, { resourceBound: false }).join(), /not 401/);
-});
-
-test("mcpConfig reads the emergency kit's config from its own folder", () => {
-  const dir = mkdtempSync(join(tmpdir(), "ship-mcp-emergency-"));
-  mkdirSync(join(dir, "mcp", "emergency"), { recursive: true });
-  assert.match(mcpConfig(dir, ["mcp", "emergency"]).why, /mcp\/emergency\/wrangler\.jsonc does not exist/);
-  writeFileSync(join(dir, "mcp", "emergency", "wrangler.jsonc"), '{ "vars": { "PUBLIC_ORIGIN": "https://old.test" } }');
-  assert.deepEqual(mcpConfig(dir, ["mcp", "emergency"]), { ok: true, origin: "https://old.test" });
 });

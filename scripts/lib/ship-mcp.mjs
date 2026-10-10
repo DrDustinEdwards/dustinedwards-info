@@ -9,21 +9,12 @@ import { join } from "node:path";
 export const MCP_GATES = ["typecheck", "check:wrapper", "test", "build"];
 
 /**
- * What each mcp target deploys. `mcp` is the server; `mcp-emergency` is mcp/emergency, the code that
- * was live before the move, kept to put the admin MCP back if the cutover fails. The emergency kit is
- * the old server, so its discovery is checked as the old server answered it: its token audience was
- * never pinned to a resource, so the resource is not compared.
+ * What each mcp target deploys. `mcp` is the server in mcp/.
  *
- * @type {Record<string, { title: string, dir: string[], gates: string[], resourceBound: boolean }>}
+ * @type {Record<string, { title: string, dir: string[], gates: string[] }>}
  */
 export const MCP_TARGETS = {
-  mcp: { title: "the admin MCP", dir: ["mcp"], gates: MCP_GATES, resourceBound: true },
-  "mcp-emergency": {
-    title: "the admin MCP emergency return (mcp/emergency)",
-    dir: ["mcp", "emergency"],
-    gates: ["test", "emergency:typecheck", "emergency:build"],
-    resourceBound: false,
-  },
+  mcp: { title: "the admin MCP", dir: ["mcp"], gates: MCP_GATES },
 };
 
 const HEALTH_STREAK = 5;
@@ -94,13 +85,12 @@ export function mcpConfig(root, dir = ["mcp"]) {
  *   discover: { status: number, challenge: string },
  * }} readings
  * @param {string} origin
- * @param {{ resourceBound?: boolean }} [options] false for the old server, whose resource was never pinned
  * @returns {string[]} what is wrong; empty when discovery is right
  */
-export function discoveryProblems({ prm, as, discover }, origin, { resourceBound = true } = {}) {
+export function discoveryProblems({ prm, as, discover }, origin) {
   const problems = [];
   if (prm.status !== 200) problems.push(`protected resource metadata answered ${prm.status}`);
-  else if (resourceBound && prm.body?.resource !== `${origin}/mcp`) {
+  else if (prm.body?.resource !== `${origin}/mcp`) {
     problems.push(`protected resource is ${JSON.stringify(prm.body?.resource)}, not ${origin}/mcp`);
   }
   if (as.status !== 200) problems.push(`authorization server metadata answered ${as.status}`);
@@ -235,7 +225,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run,
     },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "server/discover", params: {} }),
   });
-  const problems = discoveryProblems({ prm, as, discover }, config.origin, { resourceBound: kit.resourceBound });
+  const problems = discoveryProblems({ prm, as, discover }, config.origin);
   if (problems.length > 0) refuse(`discovery is wrong: ${problems.join("; ")}`, `Version ${version} is deployed and serving.`);
   console.log(`  resource ${prm.body.resource}, issuer ${as.body.issuer}, server/discover asks for a token`);
 
