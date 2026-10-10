@@ -146,6 +146,31 @@ export function runProgress(run, steps) {
   return { done, total: steps.length };
 }
 
+/**
+ * The step one-at-a-time view shows (docs/KNOWLEDGE-BASE.md, R4, the cook view): the one the person chose, while it is still a
+ * step of the procedure; else the first not yet done; else the last, so a finished run still shows a step.
+ *
+ * @param {Run} run
+ * @param {string[]} keys every step's key, in the page's order
+ * @param {string | null} chosen
+ */
+export function shownStep(run, keys, chosen) {
+  if (chosen && keys.includes(chosen)) return chosen;
+  return keys.find((key) => !run.steps[key]?.done) ?? keys[keys.length - 1] ?? null;
+}
+
+/**
+ * The step before or after `key`, or null at either end.
+ *
+ * @param {string[]} keys
+ * @param {string} key
+ * @param {-1 | 1} by
+ */
+export function stepBeside(keys, key, by) {
+  const at = keys.indexOf(key);
+  return at === -1 ? null : (keys[at + by] ?? null);
+}
+
 const when = (/** @type {number | null} */ ms) => (ms === null ? "" : new Date(ms).toISOString());
 
 /**

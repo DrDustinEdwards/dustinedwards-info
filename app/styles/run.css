@@ -222,3 +222,29 @@
     text-decoration: none;
   }
 }
+
+/*
+ * One step at a time (R4, the cook view): only the step being worked shows, under its section's heading, in type large enough
+ * to read from across a bench or a counter. Everything else on the page waits; Show every step brings it back.
+ */
+.procedure[data-view="step"] > :not(:has(.run-step-shown)),
+.procedure[data-view="step"] section > :not(:first-child):not(:has(.run-step-shown)),
+.procedure[data-view="step"] .procedure-step:not(.run-step-shown) {
+  display: none;
+}
+.procedure[data-view="step"] .run-step-shown {
+  font-size: 1.375rem;
+  line-height: 1.5;
+}
+.procedure[data-view="step"] .run-step-shown .run-tools,
+.procedure[data-view="step"] .run-step-shown .procedure-step-ingredients {
+  font-size: 1.125rem;
+}
+.run-bar button[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+.run-bar .run-view[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--paper);
+}

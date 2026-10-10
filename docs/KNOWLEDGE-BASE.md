@@ -204,8 +204,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    `base:` narrows to one; its JSON carries the same facet. Each library keeps its own facets.)
 9. **Recipe views**: both-way ingredients (R2), units (R3), mise-en-place (R5), cook view (R4). In two pull requests.
    (R2, R3 and R5 done: `app/kb/procedures/recipe-views.mjs`, rendered on the server at their addresses
-   (`?units=metric|imperial` beside `?servings=`), with `grams_per_cup` the only way a volume becomes a weight. The cook
-   view (R4) follows on run mode.)
+   (`?units=metric|imperial` beside `?servings=`), with `grams_per_cup` the only way a volume becomes a weight. Cook view
+   (R4) done: run mode's "One step at a time" shows the step being worked alone, in larger text, with Previous and Next
+   (`shownStep` and `stepBeside` in `app/kb/procedures/run.mjs`); a scale or units change in a run keeps the units and
+   swaps each step's ingredients and the mise-en-place too.)
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
 11. **JSON-LD**: LabProtocol 0.9-DRAFT and fork lineage (P3, P4).
 12. **Offline** (A3).

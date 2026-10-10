@@ -138,6 +138,31 @@ export async function run({ page }) {
     skip("run mode scale", `${path} has no scale form`);
   }
 
+  // One step at a time (R4, the cook view): one step shows, Next moves to the next, and the toggle brings every step back.
+  const visibleSteps = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("li.procedure-step[data-step]")]
+        .filter((li) => /** @type {HTMLElement} */ (li).offsetParent !== null)
+        .map((li) => li.getAttribute("data-step")),
+    );
+  const everyStep = (await visibleSteps()).length;
+  await page.click(".run-bar .run-view");
+  const oneShown = await visibleSteps();
+  const pressed = await page.$eval(".run-bar .run-view", (n) => n.getAttribute("aria-pressed"));
+  ok(
+    "one step at a time shows only the step being worked",
+    oneShown.length === 1 && pressed === "true",
+    `${oneShown.length} step(s) visible of ${everyStep}; the toggle says aria-pressed=${pressed}.`,
+  );
+  if (everyStep > 1) {
+    await page.click(".run-bar .run-step-next");
+    const moved = await visibleSteps();
+    ok("Next step shows the following step, alone", moved.length === 1 && moved[0] !== oneShown[0], `before ${oneShown.join(",")}, after ${moved.join(",")}.`);
+  }
+  await page.click(".run-bar .run-view");
+  const back = (await visibleSteps()).length;
+  ok("Show every step brings the whole procedure back", back === everyStep, `${back} of ${everyStep} steps visible.`);
+
   // Reload: the run is kept on this device, and offered.
   await new Promise((r) => setTimeout(r, 500));
   await page.reload({ waitUntil: "networkidle0" });

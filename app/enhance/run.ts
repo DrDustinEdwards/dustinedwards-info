@@ -11,7 +11,9 @@ import {
   setNote,
   setRunNote,
   setScale,
+  shownStep,
   startTimer,
+  stepBeside,
   tickTimers,
   timerKey,
   timerMs,
@@ -26,6 +28,10 @@ import {
  * for a person who starts a run, a checklist over the steps it already has: a Done check, a note and the stored
  * timers on each step, the critical and pause flags kept in view, the scale changed in place, and a record that
  * downloads or prints. The run lives in this browser only (localStorage), and says so if it cannot even do that.
+ *
+ * One step at a time (docs/KNOWLEDGE-BASE.md, R4, the cook view) is a presentation of the same run: only the step being worked
+ * shows, in large type, with its timers and its Done check, and Previous and Next move through the steps. The screen is kept on
+ * as for any run. The choice is remembered in this browser.
  *
  * The server stays the one place amounts are computed: a new scale is fetched as the page at that scale and the
  * materials table and each step's words are swapped in, so nothing here knows a unit conversion. If that fetch
@@ -53,6 +59,16 @@ const scaleForm = root.querySelector<HTMLFormElement>("form.procedure-scale");
 const scaleField = scaleForm?.querySelector<HTMLInputElement>("input[name]") ?? null;
 
 let run: Run | null = null;
+// One step at a time: whether it is on, remembered in this browser, and which step it shows.
+const VIEW_KEY = `${KEY}:view`;
+let oneAtATime = (() => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "step";
+  } catch {
+    return false;
+  }
+})();
+let shownKey: string | null = null;
 let storageNote = "";
 let wakeLock: WakeLockSentinel | null = null;
 let audio: AudioContext | null = null;
@@ -136,18 +152,72 @@ function renderBar() {
   if (!run) return;
   const { done, total } = runProgress(run, stepKeys);
   const current = stepItems.find((li) => !run?.steps[keyOf(li)]?.done);
-  bar.replaceChildren(
-    el("p", { class: "run-progress" }, `${done} of ${total} steps done`),
-    current ? button(`Go to step ${current.dataset.step}`, "run-next", () => focusStep(current)) : el("span", { class: "run-all" }, "Every step is done."),
-    button("Finish run", "run-finish", finish),
-    button("Stop", "run-stop", stop),
-  );
+  const toggle = button(oneAtATime ? "Show every step" : "One step at a time", "run-view", () => setView(!oneAtATime));
+  toggle.setAttribute("aria-pressed", String(oneAtATime));
+  if (oneAtATime) {
+    shownKey = shownStep(run, stepKeys, shownKey);
+    const shown = stepItems[stepKeys.indexOf(shownKey ?? "")];
+    const before = shownKey ? stepBeside(stepKeys, shownKey, -1) : null;
+    const after = shownKey ? stepBeside(stepKeys, shownKey, 1) : null;
+    const prev = button("Previous step", "run-prev", () => before && showStep(before));
+    const next = button("Next step", "run-step-next", () => after && showStep(after));
+    if (!before) prev.setAttribute("disabled", "");
+    if (!after) next.setAttribute("disabled", "");
+    bar.replaceChildren(
+      el("p", { class: "run-progress" }, `Step ${shown?.dataset.step ?? ""}, ${stepKeys.indexOf(shownKey ?? "") + 1} of ${total}; ${done} done`),
+      prev,
+      next,
+      toggle,
+      button("Finish run", "run-finish", finish),
+      button("Stop", "run-stop", stop),
+    );
+  } else {
+    bar.replaceChildren(
+      el("p", { class: "run-progress" }, `${done} of ${total} steps done`),
+      current ? button(`Go to step ${current.dataset.step}`, "run-next", () => focusStep(current)) : el("span", { class: "run-all" }, "Every step is done."),
+      toggle,
+      button("Finish run", "run-finish", finish),
+      button("Stop", "run-stop", stop),
+    );
+  }
+  applyView();
   if (storageNote) add(bar, el("p", { class: "run-warning", role: "note" }, storageNote));
   for (const li of stepItems) {
     const isCurrent = li === current;
     if (isCurrent) li.setAttribute("aria-current", "step");
     else li.removeAttribute("aria-current");
     li.classList.toggle("run-step-done", run.steps[keyOf(li)]?.done === true);
+  }
+}
+
+/** Shows the page as one step at a time, or every step, as the toggle says. */
+function applyView() {
+  if (oneAtATime && run) root!.dataset.view = "step";
+  else delete root!.dataset.view;
+  for (const li of stepItems) li.classList.toggle("run-step-shown", oneAtATime && keyOf(li) === shownKey);
+}
+
+function setView(on: boolean) {
+  oneAtATime = on;
+  try {
+    if (on) localStorage.setItem(VIEW_KEY, "step");
+    else localStorage.removeItem(VIEW_KEY);
+  } catch {
+    // Not remembered on this device; the view still changes for this visit.
+  }
+  renderBar();
+  const li = stepItems[stepKeys.indexOf(shownStep(run!, stepKeys, shownKey) ?? "")];
+  if (li) focusStep(li);
+  say(on ? "One step at a time." : "Every step shown.");
+}
+
+function showStep(key: string) {
+  shownKey = key;
+  renderBar();
+  const li = stepItems[stepKeys.indexOf(key)];
+  if (li) {
+    focusStep(li);
+    say(`Step ${li.dataset.step}.`);
   }
 }
 
@@ -336,7 +406,15 @@ async function applyScale(href: string, focus = false) {
       const mine = li.querySelector('[data-run-swap="step"]');
       const theirs = next.querySelector(`li[data-step="${li.dataset.step}"] [data-run-swap="step"]`);
       if (mine && theirs) mine.innerHTML = theirs.innerHTML;
+      // A recipe step's own ingredient line carries the same amounts.
+      const mineList = li.querySelector(".procedure-step-ingredients");
+      const theirList = next.querySelector(`li[data-step="${li.dataset.step}"] .procedure-step-ingredients`);
+      if (mineList && theirList) mineList.innerHTML = theirList.innerHTML;
     }
+    // So does a recipe's mise-en-place.
+    const mise = root!.querySelector(".procedure-mise");
+    const nextMise = next.querySelector(".procedure-mise");
+    if (mise && nextMise) mise.innerHTML = nextMise.innerHTML;
     const nextField = next.querySelector<HTMLInputElement>("form.procedure-scale input[name]");
     if (nextField && scaleField) scaleField.value = nextField.defaultValue;
     history.replaceState(history.state, "", href);
@@ -351,8 +429,9 @@ async function applyScale(href: string, focus = false) {
 scaleForm?.addEventListener("submit", (e) => {
   if (!run || !scaleField) return;
   e.preventDefault();
+  // Every field of the form, as its GET would send them: the scale, and a recipe's units beside it.
   const url = new URL(scaleForm.action, location.href);
-  url.searchParams.set(scaleField.name, scaleField.value);
+  for (const [name, value] of new FormData(scaleForm)) if (typeof value === "string" && value !== "") url.searchParams.set(name, value);
   void applyScale(`${url.pathname}${url.search}`, true);
 });
 
@@ -407,6 +486,9 @@ function end() {
   void letSleep();
   removeTools();
   delete root!.dataset.run;
+  delete root!.dataset.view;
+  shownKey = null;
+  for (const li of stepItems) li.classList.remove("run-step-shown");
   bar.hidden = true;
   summary.hidden = true;
   start.hidden = false;
