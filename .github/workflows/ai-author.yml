@@ -1,0 +1,16 @@
+name: ai-author
+
+# No AI trailer and no AI author on new commits. The check is devkit's, pinned to the v0.5.0 commit; it runs the bin from the
+# @dustinedwards/devkit tag package.json pins. A gate: it fails the run (ruling in devkit's README).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ai-author:
+    uses: DrDustinEdwards/devkit/.github/workflows/ai-author.yml@2c5c7a5dd2d92b05d005e4f3abc47b001cdc0bf6 # v0.5.0

@@ -1,0 +1,27 @@
+name: no-bloat
+
+# Knip and jscpd against the baseline in .no-bloat.json. Warn-only: it never turns a pull request red (baseline.md in Capsid,
+# dustinedwards/baseline.md, Part 2a). The workflow is devkit's, pinned to the v0.5.0 commit. The route weight stays in
+# hygiene.yml, beside this one.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: no-bloat-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  no-bloat:
+    uses: DrDustinEdwards/devkit/.github/workflows/no-bloat.yml@2c5c7a5dd2d92b05d005e4f3abc47b001cdc0bf6 # v0.5.0
+    with:
+      # The generated files the app imports, built as ci.yml builds them, local only.
+      prepare: |
+        npx wrangler d1 migrations apply dustinedwards --local
+        npm run build:stack
+        npm run build:content
