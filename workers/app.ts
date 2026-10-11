@@ -21,7 +21,7 @@ import {
   CSP_ENDPOINT_NAME,
   CSP_REPORT_PATH,
   contentSecurityPolicy,
-  isAdminPath,
+  isPrivatePath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
@@ -61,7 +61,7 @@ export function cacheDimensions(
 ): { cacheKey: string; props: RendererProps } {
   const themed =
     request.method === "GET" &&
-    !isAdminPath(url.pathname) &&
+    !isPrivatePath(url.pathname) &&
     !negotiatesAwayFromHtml(request);
 
   if (!themed) return { cacheKey: `${url.pathname}${url.search}`, props: {} };
@@ -108,11 +108,11 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // For the Carrel preview, which renders a page through the same routes without a second fetch.
     context.set(documentHandlerContext, requestHandler);
 
-    // Admin only: a public page is edge-cached with its header, so a nonce there would be shared
+    // The private planes only (/admin, /lab): a public page is edge-cached with its header, so a nonce there would be shared
     // by every reader; its one inline script is allowed by hash instead (workers/csp.mjs). A static
     // or derived nonce looks exactly like success: every page renders and the policy is worth
     // nothing.
-    const adminNonce = isAdminPath(url.pathname) ? crypto.randomUUID() : undefined;
+    const adminNonce = isPrivatePath(url.pathname) ? crypto.randomUUID() : undefined;
     context.set(nonceContext, adminNonce);
 
     // Stamped here because loaders run concurrently on one shared `timings` array; only after the

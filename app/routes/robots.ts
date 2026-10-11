@@ -31,7 +31,7 @@ export function loader({ context }: Route.LoaderArgs) {
    * /search/ask, which is disallowed because every answer is billed.
    */
   const block = (agent: string) =>
-    `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /preview\nDisallow: /search/ask\n`;
+    `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /lab\nDisallow: /preview\nDisallow: /search/ask\n`;
 
   const body = [
     ...AI_AGENTS.map(block),

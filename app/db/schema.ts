@@ -617,3 +617,68 @@ export const kbAudit = sqliteTable(
     check("kb_audit_table_check", sql`${t.tableName} in ('kb_lots', 'kb_locations')`),
   ],
 );
+
+// The /lab workspace's people (docs/KNOWLEDGE-BASE.md step 5, drizzle/0030_lab_members.sql). D1 is the source: people
+// change on /lab/members and nowhere else. The rules are site-runtime's `./members`, the titles `app/lab/titles.mjs`;
+// the Primary Owner is PRIMARY_OWNER_EMAIL and never a row.
+export const members = sqliteTable(
+  "members",
+  {
+    email: text("email").primaryKey().notNull(),
+    name: text("name").notNull().default(""),
+    title: text("title").notNull(),
+    endDate: text("end_date"),
+    status: text("status").notNull().default("active"),
+    addedBy: text("added_by").notNull(),
+    addedAt: integer("added_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check("members_status_check", sql`${t.status} in ('active', 'removed', 'expired')`),
+    check("members_email_check", sql`${t.email} = lower(trim(${t.email})) AND instr(${t.email}, '@') > 1`),
+  ],
+);
+
+/** Append-only: one row per change to a person or to the term dates, with the Access sync's answer. */
+export const memberAudit = sqliteTable(
+  "member_audit",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    at: text("at").notNull(),
+    actor: text("actor").notNull(),
+    actorTitle: text("actor_title").notNull(),
+    action: text("action").notNull(),
+    memberEmail: text("member_email"),
+    beforeRow: text("before_row"),
+    afterRow: text("after_row"),
+    reason: text("reason"),
+    cloudflare: text("cloudflare").notNull().default("pending"),
+    cloudflareError: text("cloudflare_error"),
+  },
+  (t) => [
+    index("member_audit_member_idx").on(t.memberEmail, t.at),
+    index("member_audit_cloudflare_idx").on(t.cloudflare),
+    check(
+      "member_audit_action_check",
+      sql`${t.action} in ('add', 'change_title', 'renew', 'remove', 'expire', 'review_keep', 'set_terms')`,
+    ),
+    check("member_audit_cloudflare_check", sql`${t.cloudflare} in ('pending', 'accepted', 'failed', 'not_needed')`),
+  ],
+);
+
+/** The semester end dates an Owner enters once a year; a lab title's end date defaults to the next one. */
+export const memberTerms = sqliteTable(
+  "member_terms",
+  {
+    endDate: text("end_date").primaryKey().notNull(),
+    addedBy: text("added_by").notNull(),
+    addedAt: integer("added_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [check("member_terms_date_check", sql`${t.endDate} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`)],
+);

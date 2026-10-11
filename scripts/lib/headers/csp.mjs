@@ -11,7 +11,7 @@ import {
   APPROVED_SCRIPTS,
   contentSecurityPolicy,
   enhanceLoaderHash,
-  isAdminPath,
+  isPrivatePath,
   speculationRulesHash,
 } from "../../../workers/csp.mjs";
 
@@ -201,11 +201,16 @@ export async function run(code) {
     "/administrator",
     "/admin-tools",
     "/admin.data",
+    "/research/lab",
+    "/research/lab/reagents",
+    "/laboratory",
+    "/lab-notes",
+    "/lab.data",
   ]) {
     ok(
-      path + " is NOT an admin path, so it gets the nonce-free policy",
-      !isAdminPath(path),
-      "isAdminPath(" +
+      path + " is NOT a private path, so it gets the nonce-free policy",
+      !isPrivatePath(path),
+      "isPrivatePath(" +
         JSON.stringify(path) +
         ") is true, so this route would be served a policy carrying a nonce.",
     );
@@ -218,13 +223,17 @@ export async function run(code) {
     // A child route's single-fetch URL. It matches the slash arm, unlike the
     // layout's own `/admin.data`, which does not. Both are JSON either way.
     "/admin/posts.data",
+    "/lab",
+    "/lab/",
+    "/lab/members",
+    "/lab/members.data",
   ]) {
     ok(
-      path + " IS an admin path, so the editor's StyleModule is accepted",
-      isAdminPath(path),
-      "isAdminPath(" +
+      path + " IS a private path (/admin or /lab), so it gets its own nonce",
+      isPrivatePath(path),
+      "isPrivatePath(" +
         JSON.stringify(path) +
-        ") is false, so CodeMirror's injected stylesheet is refused on that route.",
+        ") is false, so that route gets no nonce: its <Scripts> are refused and CodeMirror's injected stylesheet with them.",
     );
   }
 

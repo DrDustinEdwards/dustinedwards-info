@@ -22,7 +22,18 @@ declare global {
      * Two holders, the Worker secret and `.dev.vars`: rotate both or neither.
      */
     OPENALEX_API_KEY: string;
-
+    /**
+     * The /lab workspace's Primary Owner (capsid docs/design/design-identity-roles.md): Dustin, layer 0, never a row
+     * in `members`. A secret so the address stays out of the public repository, and no page can change it. Optional
+     * by contract: absent, /lab refuses everyone and says it is not set up.
+     */
+    PRIMARY_OWNER_EMAIL?: string;
+    /**
+     * This site's Capsid agent key, holding the write grant on the `dustinedwards` namespace, for POST
+     * /ops/access-sync only: Capsid holds the Cloudflare token and writes the lab's Access group. Optional by
+     * contract: absent, /lab/members still records every change and says the allow list was not touched.
+     */
+    CAPSID_ACCESS_SYNC_KEY?: string;
   }
 }
 
