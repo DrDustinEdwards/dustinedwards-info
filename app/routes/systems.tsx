@@ -6,7 +6,7 @@ import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
-import { SYSTEMS_PATH, connectionsOf, loadSystemModel, mapData, partsOf, repoOf, summaryOf, systemPath, wiresOf } from "~/lib/systems.mjs";
+import { SYSTEMS_PATH, connectionsOf, loadSystemModel, mapData, outsideOf, partsOf, repoOf, summaryOf, systemPath, wiresOf } from "~/lib/systems.mjs";
 
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/systems";
@@ -97,6 +97,7 @@ function SystemFacts({ id }: { id: string }) {
   const s = MODEL.systems.find((x) => x.id === id)!;
   const links = connectionsOf(MODEL, id);
   const parts = partsOf(MODEL, id);
+  const outside = outsideOf(MODEL, id);
   const wires = wiresOf(MODEL, id);
   const repo = repoOf(s);
   return (
@@ -122,26 +123,16 @@ function SystemFacts({ id }: { id: string }) {
             </>
           ) : null}
         </dl>
-        {parts.length ? (
+        {parts.length ? <ContainerList title="Inside" containers={parts} /> : null}
+        {outside.length ? <ContainerList title="Outside it" containers={outside} /> : null}
+        {wires.length ? (
           <>
-            <h2>Inside</h2>
+            <h3>How they connect</h3>
             <ul>
-              {parts.map((c) => (
-                <li key={c.id}>
-                  <strong>{c.name}</strong> ({c.technology}){c.description ? `: ${c.description}` : null}
-                </li>
+              {wires.map((w) => (
+                <li key={w}>{w}</li>
               ))}
             </ul>
-            {wires.length ? (
-              <>
-                <h3>How they connect</h3>
-                <ul>
-                  {wires.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
           </>
         ) : null}
         <h2>Connections</h2>
@@ -157,6 +148,21 @@ function SystemFacts({ id }: { id: string }) {
           </ul>
         )}
       </div>
+    </>
+  );
+}
+
+function ContainerList({ title, containers }: { title: string; containers: ReturnType<typeof partsOf> }) {
+  return (
+    <>
+      <h2>{title}</h2>
+      <ul>
+        {containers.map((c) => (
+          <li key={c.id}>
+            <strong>{c.name}</strong> ({c.technology}){c.description ? `: ${c.description}` : null}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
