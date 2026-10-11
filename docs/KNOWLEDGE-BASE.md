@@ -184,6 +184,10 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
 4. **Inventory**: migration for `kb_lots`, `kb_locations`, `kb_audit`. The 41 registry records are already rows (their
    files are the source), so the import is of lots, which start empty; every `MISSING` field of the records is on the
    Needs info list.
+   (Tables done: `drizzle/0029_kb_inventory.sql` and `app/db/schema.ts`, all three empty and unread. A lot names its
+   registry item by `item_kind` and `item_id` with no foreign key, because `sync:content` rewrites the registry;
+   `kb_audit` takes one row per write to a lot or location. Nothing writes them yet and no panel shows them: the
+   Inventory tab and every write path wait for job_4acb6ae89b9f, since lots are edited by lab people.)
 5. **Roles**: waits for job_4acb6ae89b9f (DECIDE 3); not built here.
 6. **Key Resources Table** (P1) and the RRID field. (Table done: `app/kb/procedures/key-resources.mjs`, on every protocol's
    page after Equipment and in its twin, computed from the record. No RRID field yet: none of the registry's four kinds

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   check,
   index,
   integer,
@@ -553,5 +554,66 @@ export const registry = sqliteTable(
     primaryKey({ columns: [t.kind, t.id] }),
     index("registry_kind_name_idx").on(t.kind, t.name),
     check("registry_status_check", sql`${t.status} in ('published', 'draft')`),
+  ],
+);
+
+// The Knowledge Base's inventory (docs/KNOWLEDGE-BASE.md step 4): D1 is the source, not a copy of a file, because a
+// lot changes daily and is private. Nothing reads or writes these tables yet. A lot names a registry item by address,
+// with no foreign key: the registry is rewritten by sync:content.
+export const kbLocations = sqliteTable("kb_locations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  parentId: integer("parent_id").references((): AnySQLiteColumn => kbLocations.id),
+  note: text("note"),
+});
+
+export const kbLots = sqliteTable(
+  "kb_lots",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    itemKind: text("item_kind").notNull(),
+    itemId: text("item_id").notNull(),
+    lotNumber: text("lot_number").notNull(),
+    expiry: text("expiry"),
+    amount: real("amount"),
+    unit: text("unit"),
+    locationId: integer("location_id").references(() => kbLocations.id),
+    received: text("received"),
+    opened: text("opened"),
+    status: text("status").notNull().default("in_stock"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("kb_lots_item_kind_item_id_lot_number_unique").on(t.itemKind, t.itemId, t.lotNumber),
+    index("kb_lots_location_idx").on(t.locationId),
+    check("kb_lots_status_check", sql`${t.status} in ('in_stock', 'empty', 'discarded')`),
+    check("kb_lots_amount_check", sql`${t.amount} IS NULL OR ${t.amount} >= 0`),
+  ],
+);
+
+/** Append-only: one row per write to a lot or a location, with the row before and after as JSON. */
+export const kbAudit = sqliteTable(
+  "kb_audit",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    at: integer("at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    actor: text("actor").notNull(),
+    tableName: text("table_name").notNull(),
+    rowId: integer("row_id").notNull(),
+    action: text("action").notNull(),
+    beforeRow: text("before_row"),
+    afterRow: text("after_row"),
+  },
+  (t) => [
+    index("kb_audit_row_idx").on(t.tableName, t.rowId, t.at),
+    check("kb_audit_action_check", sql`${t.action} in ('insert', 'update', 'delete')`),
+    check("kb_audit_table_check", sql`${t.tableName} in ('kb_lots', 'kb_locations')`),
   ],
 );
