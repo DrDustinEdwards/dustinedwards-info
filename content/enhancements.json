@@ -239,6 +239,15 @@
       "fallbackKind": "selector",
       "fallbackAt": ".library",
       "why": null
+    },
+    {
+      "id": "system-map",
+      "module": "app/enhance/system-map.ts",
+      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbours, choosing a system draws its lines along the seams and fills its detail, choosing Capsid again goes inside it to its parts, and a Plain map view shows the list as columns. On /systems/<id> that system starts chosen.",
+      "fallback": "The page is complete as served: the drawing is one named picture, the list of every system grouped by ring is open beneath it with each system's page linked, and /systems/<id> renders that system's facts and connections on the server.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".systems-map",
+      "why": null
     }
   ]
 }

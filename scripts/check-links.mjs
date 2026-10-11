@@ -44,6 +44,7 @@ import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
 import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/catalog.mjs";
+import { loadSystemModel, systemPath } from "../app/lib/systems.mjs";
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
@@ -112,6 +113,13 @@ for (const item of registryItems.filter((i) => hasItemPage(i.kind))) {
   served.add(itemPath(item.kind, item.id));
   served.add(`${itemPath(item.kind, item.id)}.md`);
   moduleOf.set(itemPath(item.kind, item.id), routes.get("/research/lab/:kind/:id?") ?? "");
+}
+
+// The family of systems (app/lib/systems.mjs): each system's page and twin, drawn from the committed model.
+for (const system of loadSystemModel(JSON.parse(readFileSync(join(root, "data", "system-model.json"), "utf8"))).systems) {
+  served.add(systemPath(system.id));
+  served.add(`${systemPath(system.id)}.md`);
+  moduleOf.set(systemPath(system.id), routes.get("/systems/:system") ?? "");
 }
 
 // The papers (docs/PUBLICATIONS.md): each page, its twin and its exports, drawn from D1 by routes, compiled

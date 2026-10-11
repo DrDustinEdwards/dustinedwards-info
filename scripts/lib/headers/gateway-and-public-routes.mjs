@@ -114,6 +114,8 @@ export function run(code) {
       // The lab registry (docs/REGISTRY.md): the inventory, and a kind's page with its items, which are the kind's optional segment.
       "lab.tsx",
       "lab.kind.tsx",
+      // The family of systems and one system chosen (app/lib/systems.mjs), from the committed model.
+      "systems.tsx",
       "cv.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",

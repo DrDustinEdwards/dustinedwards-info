@@ -377,7 +377,9 @@
     "app/kb/registry/reference.mjs",
     "app/kb/registry/references.generated.mjs",
     // What the site's search finds for an item, which build:content writes into the search artifact.
-    "app/kb/registry/search-inputs.mjs"
+    "app/kb/registry/search-inputs.mjs",
+    // The family of systems: check:links names each system's page from the same checked model the route renders.
+    "app/lib/systems.mjs"
   ],
   "compilerOptions": {
     "composite": true,

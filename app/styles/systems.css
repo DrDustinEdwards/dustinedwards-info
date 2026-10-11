@@ -1,0 +1,69 @@
+/*
+ * The family of systems (app/routes/systems.tsx): the page's layout on the site's tokens. The map itself is
+ * Capsomer's (capsomer/system-map.css), drawn on Capsomer's tokens as the lab registry's catalog is.
+ */
+.systems-lead {
+  max-inline-size: 46rem;
+  margin-block: 0.5rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+.systems-map {
+  margin-block: 2rem 1.5rem;
+}
+
+.systems-facts h2 {
+  margin-block: 1.5rem 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.systems-facts h3 {
+  margin-block: 1rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.systems-facts ul {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  list-style: disc;
+}
+
+.systems-facts li + li {
+  margin-block-start: 0.25rem;
+}
+
+.systems-facts dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin-block: 0 1.5rem;
+}
+
+.systems-facts dt {
+  color: var(--text-secondary);
+}
+
+.systems-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.systems-source {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+/*
+ * Capsomer's screen-reader-only text, which its base sheet defines and the public pages do not load: the map's
+ * list names each "Its page" link by its system with it.
+ */
+.cap-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

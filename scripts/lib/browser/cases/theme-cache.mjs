@@ -24,6 +24,7 @@ export async function run({ page, browser }) {
     /* A markdown page with a route module of its own, like /software: its row's HTML, no per-viewer bytes. */
     { path: "/terms", module: "terms.tsx" },
     { path: "/contact", module: "contact.tsx" },
+    { path: "/systems/capsid", module: "systems.tsx" },
     /* The most-carried tag, so one post being retagged cannot remove the case. */
     { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     { path: "/about", module: "about.tsx" },
