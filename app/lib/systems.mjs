@@ -289,3 +289,15 @@ export function systemMarkdown(model, id, origin) {
   lines.push("", `All systems: ${origin}${SYSTEMS_PATH}.md`, "");
   return lines.join("\n");
 }
+
+/**
+ * Whether two models say the same thing. The date is left out: Capsid stamps its build every
+ * day, and a pull request a day that changes only the date would teach a reviewer to skip them.
+ * @param {SystemModel} a
+ * @param {SystemModel} b
+ */
+export function sameModel(a, b) {
+  const { as_of: _a, ...restA } = a;
+  const { as_of: _b, ...restB } = b;
+  return JSON.stringify(restA) === JSON.stringify(restB);
+}

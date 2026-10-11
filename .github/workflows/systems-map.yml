@@ -1,0 +1,71 @@
+name: systems-map
+
+# The award checklist for /systems (capsid/research/design-system-explorer.md, section 6) on each
+# pull request that touches the map: `npm run check:systems-map` builds the working tree, serves a
+# preview and measures it in Chromium and Lighthouse (scripts/check-systems-map.mjs). The same
+# browser case also runs in check:browser against the deployed site, weekly and after each deploy.
+#
+# Its own workflow rather than a step in ci.yml: check:browser was ruled off the clean checkout
+# (2026-09-14) because a preview boot is the slow, machine-dependent part, and this gate boots one
+# too. The paths below are everything the page is drawn from; anything else cannot move it.
+#
+# Dispatched by system-model.yml on its refresh branch, because GitHub starts no workflow from a
+# pull request that GITHUB_TOKEN opened.
+
+on:
+  pull_request:
+    paths:
+      - data/system-model.json
+      - app/lib/systems.mjs
+      - app/routes/systems.tsx
+      # Brackets are a glob class in a path filter, so the file's own are escaped.
+      - 'app/routes/systems\[.md\].ts'
+      - app/routes.ts
+      - app/enhance/system-map.ts
+      - app/styles/systems.css
+      - scripts/check-systems-map.mjs
+      - scripts/lib/browser/cases/systems.mjs
+      - package.json
+      - package-lock.json
+      - .github/workflows/systems-map.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: systems-map-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  systems-map:
+    name: /systems award checklist
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Puppeteer's postinstall downloads its Chrome and chrome-headless-shell, which Lighthouse drives.
+      - name: Install
+        run: npm ci
+
+      # As ci.yml builds it, and in its order: the preview server's readiness probe and the site's
+      # header read the local D1, so the schema and the content go in first. `--local` only.
+      - name: Migrations, stack and content build, local sync
+        run: |
+          npx wrangler d1 migrations apply dustinedwards --local
+          npm run build:stack
+          npm run build:content
+          npm run sync:content -- --local
+
+      # As in browser.yml: the runner gives up a restriction, Chromium keeps its sandbox.
+      - name: Allow Chromium's sandbox to start
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: check:systems-map
+        run: npm run check:systems-map

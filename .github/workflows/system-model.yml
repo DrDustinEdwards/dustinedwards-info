@@ -1,0 +1,109 @@
+name: system-model
+
+# The daily refresh of data/system-model.json, the copy of Capsid's public model that /systems
+# draws from (capsid/research/design-system-explorer.md, section 7: "a scheduled workflow opens a
+# PR updating the model only when the public model changes, so the page shows only reviewed
+# data").
+#
+# scripts/refresh-system-model.mjs fetches https://mcp.dustinedwards.info/public/model/v1.json,
+# checks it with the module the page loads it with (app/lib/systems.mjs), and writes the file only
+# when the model says something new: a new date alone is not a change. A model the site would
+# refuse fails this run and reaches no pull request.
+#
+# When it changed, the run commits to one branch, system-model/refresh, opens a pull request
+# labelled `visual` (a visitor sees the change, so it waits for Dustin's yes; CLAUDE.md, rule 16)
+# or updates the one already open, and dispatches CI and the map's browser checks on that branch.
+# The dispatch is needed because GitHub starts no workflow from GITHUB_TOKEN's own events
+# (Dustin turned on "Allow GitHub Actions to create and approve pull requests", 2026-10-11, and
+# ruled GITHUB_TOKEN, no extra token).
+#
+# After Capsid's daily build, which runs on the first tick of the UTC day.
+
+on:
+  schedule:
+    - cron: "23 8 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: system-model
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # The refresh needs zod and nothing that postinstall provisions.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      # The open refresh pull request, if any: today's model is compared with it as well as with main.
+      - name: The open refresh
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: system-model/refresh
+        run: |
+          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          if [ -n "$number" ]; then
+            git fetch --depth=1 origin "$BRANCH"
+            git show FETCH_HEAD:data/system-model.json > "$RUNNER_TEMP/open-model.json"
+            echo "model=$RUNNER_TEMP/open-model.json" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Refresh
+        id: refresh
+        env:
+          OPEN_MODEL: ${{ steps.open.outputs.model }}
+        run: node scripts/refresh-system-model.mjs
+
+      # Capsid's model is back to what main holds: the open pull request would publish a model that
+      # is no longer true, so it is closed rather than left for a yes.
+      - name: Close a refresh that no longer applies
+        if: steps.refresh.outputs.changed == 'false' && steps.open.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr close "${{ steps.open.outputs.number }}" --delete-branch \
+            --comment "Capsid's public model says what main's copy says again, so this refresh no longer applies. Closed by .github/workflows/system-model.yml."
+
+      # Only when the model differs from main's and from the open pull request's: a new date alone
+      # pushes nothing, so a branch Dustin is reviewing is not replaced under him.
+      - name: Open or update the pull request
+        if: steps.refresh.outputs.changed == 'true' && steps.refresh.outputs.same_as_open != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: system-model/refresh
+          OPEN_NUMBER: ${{ steps.open.outputs.number }}
+        run: |
+          as_of=$(node -p 'require("./data/system-model.json").as_of')
+          title="System model: Capsid's public model of $as_of"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add data/system-model.json
+          git commit -m "$title"
+          # The branch is this workflow's alone, so each change replaces it with one commit on main.
+          git push --force origin "$BRANCH"
+          if [ -z "$OPEN_NUMBER" ]; then
+            gh pr create --head "$BRANCH" --base main --label visual --title "$title" \
+              --body "The daily refresh (.github/workflows/system-model.yml) found Capsid's public model changed. The diff is data/system-model.json only, checked by app/lib/systems.mjs. /systems shows it once merged. Visual: waits for Dustin's yes."
+          else
+            gh pr edit "$OPEN_NUMBER" --title "$title"
+          fi
+          gh workflow run ci.yml --ref "$BRANCH"
+          gh workflow run systems-map.yml --ref "$BRANCH"
