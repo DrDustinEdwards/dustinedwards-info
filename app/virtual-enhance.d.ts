@@ -22,6 +22,7 @@ declare module "virtual:enhance" {
     | "pronounce"
     | "run"
     | "search"
+    | "system-map"
     | "theme"
     | "tools";
   /** The served URL of each bundle, under Vite's base. */

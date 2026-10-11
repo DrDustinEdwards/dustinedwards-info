@@ -19,7 +19,9 @@ import { paperPath } from "~/lib/publications/paths.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
 import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
+import { loadSystemModel, systemPath } from "~/lib/systems.mjs";
 import { sitemapDocument } from "@drdustinedwards/site-helpers/sitemap";
+import systemModel from "../../data/system-model.json";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -33,6 +35,7 @@ const STATIC_PATHS = [
   "/research/publications",
   "/colophon",
   "/contact",
+  "/systems",
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -80,6 +83,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       loc: `${origin}${p.path}`,
       lastmod: p.updated ? new Date(`${p.updated}T00:00:00.000Z`) : null,
     })),
+    // Each system's page (app/lib/systems.mjs), from the committed model; /systems itself is in STATIC_PATHS.
+    ...loadSystemModel(systemModel).systems.map((s) => ({ loc: `${origin}${systemPath(s.id)}`, lastmod: null as Date | null })),
     // The registry's inventory, each kind that has an item, and each item. No `lastmod`: a row's sync time is not the
     // date a fact changed.
     { loc: `${origin}${LAB_PATH}`, lastmod: null as Date | null },
