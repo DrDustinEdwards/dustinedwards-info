@@ -6,7 +6,7 @@ import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
-import { SYSTEMS_PATH, connectionsOf, loadSystemModel, mapData, outsideOf, partsOf, repoOf, summaryOf, systemPath, wiresOf } from "~/lib/systems.mjs";
+import { EXPLORER_ORIGIN, SYSTEMS_PATH, connectionsOf, explorerLabel, explorerUrl, loadSystemModel, mapData, outsideOf, partsOf, repoOf, summaryOf, systemPath, wiresOf } from "~/lib/systems.mjs";
 
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/systems";
@@ -87,7 +87,8 @@ function SystemsIntro() {
       <h1 className="page-title">{TITLE}</h1>
       <p className="systems-lead">
         The {MODEL.systems.length} systems I run, as one drawing. Choose one to see what it connects to; choose Capsid again to go inside it. {privates} are private, so
-        they show only a name and, where they have one, an address.
+        they show only a name and, where they have one, an address. The <a href={`${EXPLORER_ORIGIN}/`}>Capsid explorer</a> goes deeper, with what
+        Capsid is made of and its daily numbers.
       </p>
     </>
   );
@@ -122,6 +123,10 @@ function SystemFacts({ id }: { id: string }) {
               </dd>
             </>
           ) : null}
+          <dt>Explorer</dt>
+          <dd>
+            <a href={explorerUrl(s.id)}>{explorerLabel(s.id)}</a>
+          </dd>
         </dl>
         {parts.length ? <ContainerList title="Inside" containers={parts} /> : null}
         {outside.length ? <ContainerList title="Outside it" containers={outside} /> : null}
