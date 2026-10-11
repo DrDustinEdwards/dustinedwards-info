@@ -184,6 +184,16 @@ export function loadSystemModel(raw) {
 /** @param {string} id */
 export const systemPath = (id) => `${SYSTEMS_PATH}/${id}`;
 
+/**
+ * The Capsid explorer, built from the same public model, so every system here has a page
+ * there under the same id, private ones included (design section 4, "Deep links both ways").
+ */
+export const EXPLORER_ORIGIN = "https://capsid.dustinedwards.info";
+/** @param {string} id */
+export const explorerUrl = (id) => `${EXPLORER_ORIGIN}/s/${id}/`;
+/** How a page shows that address, as it shows the others: host and path. @param {string} id */
+export const explorerLabel = (id) => `${new URL(EXPLORER_ORIGIN).host}/s/${id}`;
+
 // The word under a capsomer's name. A private system shows "private" (Capsomer adds it).
 /** @type {Record<ModelSystem["family"], string>} */
 const FAMILY_WORD = { system: "system", writing: "writing", product: "product", plumbing: "plumbing", site: "site" };
@@ -320,6 +330,7 @@ export function systemsMarkdown(model, origin) {
     for (const s of inRing) lines.push(`- [${s.name}](${origin}${systemPath(s.id)}.md)${s.private ? " (private)" : ""}${s.private || !s.description ? "" : `: ${s.description}`}`);
     lines.push("");
   }
+  lines.push(`Deeper, in the Capsid explorer: ${EXPLORER_ORIGIN}/`, "");
   return lines.join("\n");
 }
 
@@ -338,6 +349,7 @@ export function systemMarkdown(model, id, origin) {
   if (s.domain) lines.push(`- Address: https://${s.domain}`);
   const repo = repoOf(s);
   if (repo) lines.push(`- Source: ${repo}`);
+  lines.push(`- In the Capsid explorer: ${explorerUrl(s.id)}`);
   const parts = partsOf(model, id);
   const outside = outsideOf(model, id);
   if (parts.length) lines.push("", "## Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));

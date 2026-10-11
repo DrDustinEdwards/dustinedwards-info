@@ -12,8 +12,8 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-import { loadSystemModel } from "../../../../app/lib/systems.mjs";
-import { BASE, ok, report, root } from "../harness.mjs";
+import { EXPLORER_ORIGIN, explorerUrl, loadSystemModel } from "../../../../app/lib/systems.mjs";
+import { BASE, FETCH_TIMEOUT_MS, ok, report, root } from "../harness.mjs";
 
 const require = createRequire(import.meta.url);
 const MODEL = loadSystemModel(JSON.parse(readFileSync(join(root, "data", "system-model.json"), "utf8")));
@@ -61,7 +61,7 @@ export async function run({ browser }) {
   await page.setBypassCSP(true);
   try {
     // Each part on its own: one that throws is a failed check, and the parts after it still run.
-    for (const part of [everyNodeByKeyboard, listMatchesModel, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget]) {
+    for (const part of [everyNodeByKeyboard, listMatchesModel, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget, explorerLinks]) {
       try {
         await part(page);
       } catch (error) {
@@ -298,4 +298,18 @@ async function scriptBudget(/** @type {import("puppeteer").Page} */ page) {
   const response = src ? await fetch(new URL(src, BASE)) : null;
   const bytes = response?.ok ? gzipSync(Buffer.from(await response.arrayBuffer()), { level: 9 }).length : -1;
   ok(`/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`, bytes > 0 && bytes < SCRIPT_BUDGET_GZIP, `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`);
+}
+
+/** Section 4, deep links both ways: /systems links to the explorer, and every system's page to the same system there, as served. */
+async function explorerLinks() {
+  const pages = [["/systems", `${EXPLORER_ORIGIN}/`], ...MODEL.systems.map((s) => [`/systems/${s.id}`, explorerUrl(s.id)])];
+  const missing = await Promise.all(
+    pages.map(async ([path, href]) => {
+      const res = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      if (!res.ok) return `${path} answered ${res.status}`;
+      return (await res.text()).includes(`href="${href}"`) ? null : `${path} has no link to ${href}`;
+    }),
+  );
+  const wrong = missing.filter(Boolean);
+  ok("/systems and every /systems/<id> link to the same place in the Capsid explorer", wrong.length === 0, wrong.length ? wrong.join("; ") : `${pages.length} pages`);
 }

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { PRIVATE_SYSTEM_KEYS, connectionsOf, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { PRIVATE_SYSTEM_KEYS, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -133,6 +133,16 @@ test("the twins hold every system, and a private one only as its name", () => {
   bare.systems[3].domain = "";
   assert.match(systemMarkdown(loadSystemModel(bare), "hidden", "https://example.com"), /^# Hidden\n\nPrivate: its name only\.\n/);
   assert.doesNotMatch(systemMarkdown(model, "kit", "https://example.com"), /## Inside/);
+});
+
+test("every system's twin links to the same system in the Capsid explorer, and the family twin to the explorer", () => {
+  const model = loadSystemModel(fixture());
+  for (const s of model.systems) {
+    assert.match(systemMarkdown(model, s.id, "https://example.com") ?? "", new RegExp(`^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`, "m"));
+  }
+  assert.equal(explorerUrl("hidden"), "https://capsid.dustinedwards.info/s/hidden/");
+  assert.equal(explorerLabel("hidden"), "capsid.dustinedwards.info/s/hidden");
+  assert.match(systemsMarkdown(model, "https://example.com"), /^Deeper, in the Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m);
 });
 
 test("the lines between a system's parts are facts on its page and in its twin", () => {
