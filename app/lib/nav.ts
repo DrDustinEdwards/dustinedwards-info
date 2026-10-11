@@ -1,5 +1,6 @@
 // Relative, so test/nav.test.mjs can import this file under plain node.
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "./content-pages.mjs";
+import { CV_PDF_PATH } from "./cv/entries.mjs";
 import { IDENTITY } from "./identity.generated.mjs";
 import { longDateUTC } from "./long-date.mjs";
 import { NAV_DATA } from "./nav-data.generated.mjs";
@@ -119,7 +120,7 @@ export const SOFTWARE_PRODUCTS: MenuLink[] = [
   { to: "/software/foxing-edu", label: "Foxing Edu", description: "Foxing, sold to schools", icon: "teaching" },
 ];
 
-/** The posts a reader can see at `now`: published and past any scheduled time, newest first. */
+/** The posts in the build snapshot a reader can see at `now`: past any scheduled time, newest first. Drafts never enter the snapshot. */
 export function visiblePosts(now: number = Date.now()) {
   return NAV_DATA.posts.filter((post) => Date.parse(post.publishAt) <= now);
 }
@@ -163,13 +164,16 @@ function researchMenu(): Menu {
         ],
       },
     ],
-    spotlight: {
-      kind: "text",
-      eyebrow: "Latest paper",
-      title: NAV_DATA.latestPaper.title,
-      body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year].filter(Boolean).join(", "),
-      to: paperPath(NAV_DATA.latestPaper.slug),
-    },
+    // None when the build found no published paper: the panel then has no spotlight (test/nav.test.mjs says so).
+    spotlight: NAV_DATA.latestPaper
+      ? {
+          kind: "text",
+          eyebrow: "Latest paper",
+          title: NAV_DATA.latestPaper.title,
+          body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year].filter(Boolean).join(", "),
+          to: paperPath(NAV_DATA.latestPaper.slug),
+        }
+      : undefined,
     footer: [
       { to: "/research", label: "All research", icon: "arrow" },
       { to: "/research/publications", label: "Publications", icon: "publications" },
@@ -297,7 +301,7 @@ function aboutMenu(): Menu {
     blurb: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`,
     tiles: [
       { to: "/about", label: "About", icon: "about" },
-      { to: "/cv", label: "CV", icon: "publications", also: { to: "/dustin-edwards-cv.pdf", label: "Also as a PDF" } },
+      { to: "/cv", label: "CV", icon: "publications", also: { to: CV_PDF_PATH, label: "Also as a PDF" } },
       { to: "/contact", label: "Contact", icon: "mail" },
     ],
     rows: [
@@ -308,7 +312,7 @@ function aboutMenu(): Menu {
       kind: "text",
       eyebrow: "The lab",
       title: NAV_DATA.lab.department,
-      body: `${NAV_DATA.lab.university}, ${NAV_DATA.lab.place}`,
+      body: [NAV_DATA.lab.university, NAV_DATA.lab.place].filter(Boolean).join(", "),
       to: "/research",
     },
     footer: [
@@ -334,7 +338,7 @@ export const ROUTED_PATHS: readonly string[] = [
   "/about",
   "/contact",
   "/colophon",
-  "/dustin-edwards-cv.pdf",
+  CV_PDF_PATH,
 ];
 
 /**
@@ -350,40 +354,47 @@ const SERIES_PREFIX = "/writing/series/";
 const PAPER_PREFIX = "/research/publications/";
 
 /**
- * Whether a panel link has a page to land on: a listed markdown page (for an anchor, a listed heading on
- * it), one of ROUTED_PATHS, a post, tag or series the visible posts have, the newest paper, or another
- * site. Anything else is a page not yet written, and its link stays out of the panel until it is.
+ * The test for "does this link have a page", built once for a moment `now`: the visible posts, their tag
+ * set and series set are worked out here, not again for every link. A listed markdown page (for an anchor,
+ * a listed heading on it), one of ROUTED_PATHS, a library that has an entry, a post, tag or series the
+ * visible posts have, the newest paper, or another site is live. Anything else is a page not yet written,
+ * and its link stays out of the panel until it is.
  */
-export function isLive(to: string, now: number = Date.now()): boolean {
-  if (to.startsWith("https://")) return true;
-  const anchored = to.includes("#");
-  const path = anchored ? to.slice(0, to.indexOf("#")) : to;
-  if ((CONTENT_PAGE_PATHS as readonly string[]).includes(path)) {
-    return !anchored || CONTENT_PAGE_SECTIONS.includes(to);
-  }
-  if (anchored) return false;
-  if (ROUTED_PATHS.includes(path)) return true;
-  const library = BASES.find((base) => base.library === path && base.profile !== "protocol");
-  if (library) return (NAV_DATA.libraries[library.profile] ?? 0) > 0;
+export function makeLive(now: number = Date.now()): (to: string) => boolean {
   const posts = visiblePosts(now);
-  if (path.startsWith(TAG_PREFIX)) {
-    const slug = decodeURIComponent(path.slice(TAG_PREFIX.length));
-    return posts.some((post) => post.tags.includes(slug));
-  }
-  if (path.startsWith(SERIES_PREFIX)) {
-    const slug = decodeURIComponent(path.slice(SERIES_PREFIX.length));
-    return posts.some((post) => post.series !== null && seriesSlug(post.series) === slug);
-  }
-  if (path.startsWith(PAPER_PREFIX)) return path === paperPath(NAV_DATA.latestPaper.slug);
-  if (path.startsWith(POST_PREFIX)) return posts.some((post) => `${POST_PREFIX}${post.slug}` === path);
-  return false;
+  const postPaths = new Set(posts.map((post) => `${POST_PREFIX}${post.slug}`));
+  const tags = new Set(posts.flatMap((post) => post.tags));
+  const series = new Set(posts.flatMap((post) => (post.series ? [seriesSlug(post.series)] : [])));
+  const paper = NAV_DATA.latestPaper ? paperPath(NAV_DATA.latestPaper.slug) : null;
+  return (to) => {
+    if (to.startsWith("https://")) return true;
+    const anchored = to.includes("#");
+    const path = anchored ? to.slice(0, to.indexOf("#")) : to;
+    if ((CONTENT_PAGE_PATHS as readonly string[]).includes(path)) {
+      return !anchored || CONTENT_PAGE_SECTIONS.includes(to);
+    }
+    if (anchored) return false;
+    if (ROUTED_PATHS.includes(path)) return true;
+    const library = BASES.find((base) => base.library === path && base.profile !== "protocol");
+    if (library) return (NAV_DATA.libraries[library.profile] ?? 0) > 0;
+    if (path.startsWith(TAG_PREFIX)) return tags.has(decodeURIComponent(path.slice(TAG_PREFIX.length)));
+    if (path.startsWith(SERIES_PREFIX)) return series.has(decodeURIComponent(path.slice(SERIES_PREFIX.length)));
+    if (path.startsWith(PAPER_PREFIX)) return path === paper;
+    if (path.startsWith(POST_PREFIX)) return postPaths.has(path);
+    return false;
+  };
+}
+
+/** One link, as of `now`. Builds the whole test each call, so a caller with many links uses `makeLive`. */
+export function isLive(to: string, now: number = Date.now()): boolean {
+  return makeLive(now)(to);
 }
 
 /**
  * The menu with every link that has no page taken out, and the tile, row or spotlight that empties. Undefined
  * only when nothing is left to show. A row whose title page is missing keeps its links as plain text above them.
  */
-export function liveMenu(menu: Menu, live: (to: string) => boolean = isLive): Menu | undefined {
+export function liveMenu(menu: Menu, live: (to: string) => boolean = makeLive()): Menu | undefined {
   const tiles = menu.tiles
     .filter((tile) => live(tile.to))
     .map((tile) => (tile.also && !live(tile.also.to) ? { ...tile, also: undefined } : tile));
@@ -421,29 +432,32 @@ export function menusAt(now: number = Date.now()) {
   } as const;
 }
 
-/** The header's five items with their live panels, as of `now`. Built per request so a scheduled post appears on time. */
+/** The five sections, once: the panel id, the hub it lives under and the label on its button. */
+const SECTIONS = [
+  { id: "research", to: "/research", label: "Research" },
+  { id: "teaching", to: "/teaching", label: "Teaching" },
+  { id: "software", to: "/software", label: "Software" },
+  { id: "writing", to: "/writing", label: "Writing" },
+  { id: "about", to: "/about", label: "About" },
+] as const;
+
+/**
+ * The header's five items with their live panels, as of `now`. The posts, the newest paper and the lab's town
+ * are a snapshot taken at build (nav-data.generated.mjs), so a post published, withdrawn or deleted in the
+ * editor shows here after the next deploy (the editor's commit to main starts one), and an edge-cached page
+ * keeps the header it was rendered with for up to a day. A post scheduled for later is in the snapshot and
+ * left out until `now` passes its time, so it appears on the first uncached render after that, not on the dot.
+ */
 export function buildNav(now: number = Date.now()): readonly NavItem[] {
   const menus = menusAt(now);
-  const live = (to: string) => isLive(to, now);
+  const live = makeLive(now);
   const items: NavItem[] = [];
-  for (const [to, label, menu] of [
-    ["/research", "Research", menus.research],
-    ["/teaching", "Teaching", menus.teaching],
-    ["/software", "Software", menus.software],
-    ["/writing", "Writing", menus.writing],
-    ["/about", "About", menus.about],
-  ] as const) {
-    const resolved = liveMenu(menu, live);
+  for (const { id, to, label } of SECTIONS) {
+    const resolved = liveMenu(menus[id], live);
     if (resolved) items.push({ to, label, menu: resolved });
   }
   return items;
 }
 
 /** The names and hubs of the five, for lists that need no panel (the 404 page). */
-export const NAV: readonly Pick<NavItem, "to" | "label">[] = [
-  { to: "/research", label: "Research" },
-  { to: "/teaching", label: "Teaching" },
-  { to: "/software", label: "Software" },
-  { to: "/writing", label: "Writing" },
-  { to: "/about", label: "About" },
-];
+export const NAV: readonly Pick<NavItem, "to" | "label">[] = SECTIONS.map(({ to, label }) => ({ to, label }));

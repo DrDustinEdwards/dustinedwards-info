@@ -1,8 +1,7 @@
 /*
  * Renders real components to HTML under plain node. The components are TSX behind `~/` imports and `?url`
  * assets, so Vite bundles an entry with the React that renders it, the bundle is written to a temporary
- * directory and imported from there. Used by the header and the home hero tests; the header-speculation
- * test keeps its own copy of the same idea.
+ * directory and imported from there. The one harness for the header, header-speculation and home hero tests.
  */
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";

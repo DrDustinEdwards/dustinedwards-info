@@ -8,14 +8,14 @@ import { fileURLToPath } from "node:url";
 import matter from "gray-matter";
 
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
-import { firstLineOf, readNavData, readPosts } from "../scripts/lib/nav-data.mjs";
+import { firstLineOf, navDataProblems, readLabPlace, readLatestPaper, readNavData, readPosts } from "../scripts/lib/nav-data.mjs";
 import { NAV_DATA } from "../app/lib/nav-data.generated.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "../app/lib/seo.ts";
 import { EXPLORER_ORIGIN } from "../app/lib/systems.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
 import { seriesSlug } from "../app/lib/series-path.mjs";
-import { ROUTED_PATHS, buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
+import { NAV, ROUTED_PATHS, buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = Date.parse("2026-10-11T12:00:00Z");
@@ -293,7 +293,7 @@ test("a draft is never in the nav data even when it is the newest file, and a sc
   const dir = mkdtempSync(join(tmpdir(), "nav-posts-"));
   try {
     const post = (slug, extra) =>
-      writeFileSync(join(dir, `${slug}.md`), `---\ntitle: "T ${slug}"\nslug: ${slug}\ndate: 2030-01-01\ntags: [a]\n${extra}\n---\n\nFirst line of ${slug}. More.\n`);
+      writeFileSync(join(dir, `${slug}.md`), `---\ntitle: "T ${slug}"\nslug: ${slug}\ndate: 2030-01-01\ndescription: "d"\ntags: [a]\n${extra}\n---\n\nFirst line of ${slug}. More.\n`);
     post("a-draft", "draft: true");
     post("a-live", "draft: false\nfirst_published: 2029-12-31");
     post("a-scheduled", "draft: false\npublish_at: 2030-06-01T09:00:00Z");
@@ -329,4 +329,53 @@ test("a first line is the first sentence of the first paragraph of prose, withou
   const cut = firstLineOf(long);
   assert.ok(cut.length <= 160 && cut.endsWith("..."), cut);
   assert.equal(firstLineOf("# Only a heading"), "");
+});
+
+test("a first paragraph that opens with emphasis is prose, and footnote markers and links are taken off", () => {
+  assert.equal(firstLineOf("*Italic* opening, then more. Next."), "Italic opening, then more.");
+  assert.equal(firstLineOf("**Bold** opening with a note[^1] and a [link](/x). Next."), "Bold opening with a note and a link.");
+  assert.equal(firstLineOf("* a list item\n\n*Real* start."), "Real start.", "a bullet is still not prose");
+  assert.equal(firstLineOf("1. numbered\n\nAfter it."), "After it.");
+});
+
+test("a content edit that breaks the data does not stop the build: the pieces come back empty, and this test names the problem", () => {
+  const empty = mkdtempSync(join(tmpdir(), "nav-empty-"));
+  try {
+    assert.equal(readLatestPaper(empty), null);
+    writeFileSync(join(empty, "broken.md"), "---\ntype: article\ntitle: x\n---\n");
+    const problems = [];
+    assert.equal(readLatestPaper(empty, problems), null);
+    assert.equal(problems.length, 1, "a paper file that cannot be read is named, not thrown");
+    // A post with a bad publish_at and a missing field is left out and named, never a RangeError.
+    writeFileSync(join(empty, "bad-post.md"), '---\ntitle: "t"\nslug: bad-post\ndate: 2030-01-01\npublish_at: not-a-date\n---\n\nBody.\n');
+    const postProblems = [];
+    assert.deepEqual(readPosts(empty, postProblems), []);
+    assert.ok(postProblems.some((line) => line.startsWith("bad-post.md:")));
+  } finally {
+    rmSync(empty, { recursive: true, force: true });
+  }
+  assert.equal(readLabPlace("A University Nobody Worked At"), null);
+  // The real content is whole: nothing was left out of this build.
+  assert.deepEqual(navDataProblems(), []);
+  assert.ok(NAV_DATA.latestPaper && NAV_DATA.lab.place, "the snapshot is missing the newest paper or the lab's town");
+});
+
+test("the Newest post and the tile order are the /writing listing's order for posts that share a day", () => {
+  // The listing is publish_at desc then row id desc; rows are inserted in the build artifact's order (slug
+  // ascending, scripts/build-content.mjs), so the id of a post is its place in that artifact.
+  const artifact = join(root, "content", "generated", "posts.json");
+  if (!existsSync(artifact)) return;
+  const rows = JSON.parse(readFileSync(artifact, "utf8")).posts.map((p, i) => ({ slug: p.slug, publishAt: new Date(p.publishAt).toISOString(), draft: p.draft, id: i + 1 }));
+  const listing = rows
+    .filter((r) => !r.draft)
+    .sort((a, b) => (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : b.id - a.id))
+    .map((r) => r.slug);
+  assert.deepEqual(NAV_DATA.posts.map((p) => p.slug), listing);
+  assert.equal(panels().writing.spotlight?.to, `/writing/${listing[0]}`);
+  assert.deepEqual(panels().writing.tiles.map((t) => t.to), listing.slice(0, 3).map((slug) => `/writing/${slug}`));
+});
+
+test("the 404 page's section list is the same five hubs the bar has", () => {
+  assert.deepEqual(NAV.map((item) => item.to), buildNav(NOW).map((item) => item.to));
+  assert.deepEqual(NAV.map((item) => item.label), buildNav(NOW).map((item) => item.label));
 });
