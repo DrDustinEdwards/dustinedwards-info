@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { PRIVATE_SYSTEM_KEYS, connectionsOf, loadSystemModel, mapData, parseSystemModel, systemMarkdown, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { PRIVATE_SYSTEM_KEYS, connectionsOf, loadSystemModel, mapData, parseSystemModel, systemMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -145,4 +145,71 @@ test("the lines between a system's parts are facts on its page and in its twin",
   assert.deepEqual(wiresOf(model, "core"), ["Worker writes to Store"]);
   assert.deepEqual(wiresOf(model, "kit"), []);
   assert.match(systemMarkdown(model, "core", "https://example.com"), /How they connect:\n\n- Worker writes to Store\n/);
+});
+
+test("a model that differs only in its date is the same model", () => {
+  const a = loadSystemModel(fixture());
+  const b = loadSystemModel({ ...fixture(), as_of: "2026-10-12" });
+  assert.equal(sameModel(a, b), true);
+  const c = fixture();
+  c.systems[1].description = "Shared parts, renamed.";
+  assert.equal(sameModel(a, loadSystemModel(c)), false);
+});
+
+test("the daily refresh writes only a checked model that says something new", async () => {
+  const { createServer } = await import("node:http");
+  const { execFile } = await import("node:child_process");
+  const { mkdtempSync, writeFileSync, readFileSync: read } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  let served = fixture();
+  const server = createServer((_req, res) => {
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify(served));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(undefined)));
+  const address = server.address();
+  const url = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}/`;
+  const file = join(mkdtempSync(join(tmpdir(), "system-model-")), "model.json");
+  const committed = `${JSON.stringify(fixture(), null, 2)}\n`;
+  writeFileSync(file, committed);
+  const script = new URL("../scripts/refresh-system-model.mjs", import.meta.url).pathname;
+  const refresh = (/** @type {Record<string, string>} */ extra = {}) =>
+    new Promise((resolve) =>
+      execFile(process.execPath, [script, url], { env: { ...process.env, SYSTEM_MODEL_FILE: file, GITHUB_OUTPUT: "", OPEN_MODEL: "", ...extra } }, (error, stdout, stderr) =>
+        resolve({ code: error ? (error.code ?? 1) : 0, stdout, stderr }),
+      ),
+    );
+  try {
+    served = { ...fixture(), as_of: "2026-10-12" };
+    let run = await refresh();
+    assert.equal(run.code, 0, run.stderr);
+    assert.match(run.stdout, /changed=false/);
+    assert.equal(read(file, "utf8"), committed, "a new date alone rewrote the file");
+
+    served = fixture();
+    served.systems[2].description = "What people use, now with more.";
+    run = await refresh();
+    assert.match(run.stdout, /changed=true/);
+    assert.match(run.stdout, /same_as_open=false/);
+    assert.match(read(file, "utf8"), /now with more/);
+
+    // The open pull request already carries this model: a new date alone leaves it alone.
+    const open = join(mkdtempSync(join(tmpdir(), "system-model-open-")), "open.json");
+    writeFileSync(open, read(file, "utf8"));
+    writeFileSync(file, committed);
+    served = { ...served, as_of: "2026-10-13" };
+    run = await refresh({ OPEN_MODEL: open });
+    assert.match(run.stdout, /changed=true/);
+    assert.match(run.stdout, /same_as_open=true/);
+
+    const before = read(file, "utf8");
+    served = fixture();
+    served.systems[3].description = "Leaked.";
+    run = await refresh();
+    assert.notEqual(run.code, 0, "a model the site refuses was accepted");
+    assert.equal(read(file, "utf8"), before, "a refused model was written");
+  } finally {
+    server.close();
+  }
 });

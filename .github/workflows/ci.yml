@@ -22,6 +22,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The daily system-model refresh (system-model.yml) opens its pull request with GITHUB_TOKEN, and
+  # GitHub starts no workflow from that token's events but a dispatch. So that workflow dispatches
+  # this one on its branch, and the checks land on the pull request's head like any other run.
+  workflow_dispatch:
 
 # A second push to main should not race the first, and ON MAIN
 # `cancel-in-progress` stays false: the runs are the review, and cancelling one

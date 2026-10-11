@@ -24,6 +24,7 @@ import * as postControls from "./lib/browser/cases/post-controls.mjs";
 import * as scriptSet from "./lib/browser/cases/script-set.mjs";
 import * as stepCalculators from "./lib/browser/cases/step-calculators.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
+import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
 import { BASE, DRIVES_PREVIEW, countCssRules, ok, skipped, tally } from "./lib/browser/harness.mjs";
 import {
@@ -131,6 +132,7 @@ try {
   await stepCalculators.run(ctx);
   await mediaSvg.run(ctx);
   await cv.run(ctx);
+  await systems.run(ctx);
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });
   adminCasesRan = await admin.run(ctx);
 
