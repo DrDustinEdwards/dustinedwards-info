@@ -618,6 +618,56 @@ export const kbAudit = sqliteTable(
   ],
 );
 
+// Run records (docs/KNOWLEDGE-BASE.md step 7, drizzle/0031_kb_runs.sql): append-only, so the migration's triggers
+// refuse any UPDATE or DELETE and a correction is a new run naming the one it replaces. A run's lot changes are writes to
+// kb_lots, each with its kb_audit row. Private to lab members.
+export const kbRuns = sqliteTable(
+  "kb_runs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    uid: text("uid").notNull().unique(),
+    procedureSlug: text("procedure_slug").notNull(),
+    procedureVersion: text("procedure_version"),
+    actor: text("actor").notNull(),
+    runOn: text("run_on").notNull(),
+    outcome: text("outcome").notNull().default("completed"),
+    note: text("note"),
+    replacesRunId: integer("replaces_run_id")
+      .unique()
+      .references((): AnySQLiteColumn => kbRuns.id),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("kb_runs_actor_idx").on(t.actor, t.createdAt),
+    check("kb_runs_outcome_check", sql`${t.outcome} in ('completed', 'failed', 'abandoned')`),
+    check("kb_runs_run_on_check", sql`${t.runOn} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`),
+  ],
+);
+
+/** The lots one run used, how much of each, and whether it emptied one. Append-only, with its run. */
+export const kbRunLots = sqliteTable(
+  "kb_run_lots",
+  {
+    runId: integer("run_id")
+      .notNull()
+      .references(() => kbRuns.id),
+    lotId: integer("lot_id")
+      .notNull()
+      .references(() => kbLots.id),
+    amountUsed: real("amount_used"),
+    unit: text("unit"),
+    emptied: integer("emptied").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.runId, t.lotId] }),
+    index("kb_run_lots_lot_idx").on(t.lotId),
+    check("kb_run_lots_amount_check", sql`${t.amountUsed} IS NULL OR ${t.amountUsed} >= 0`),
+    check("kb_run_lots_emptied_check", sql`${t.emptied} in (0, 1)`),
+  ],
+);
+
 // The /lab workspace's people (docs/KNOWLEDGE-BASE.md step 5, drizzle/0030_lab_members.sql). D1 is the source: people
 // change on /lab/members and nowhere else. The rules are site-runtime's `./members`, the titles `app/lab/titles.mjs`;
 // the Primary Owner is PRIMARY_OWNER_EMAIL and never a row.
