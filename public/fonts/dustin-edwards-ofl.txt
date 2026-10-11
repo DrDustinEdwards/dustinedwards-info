@@ -7,6 +7,12 @@ variable font, weight axis 100 to 900, upright and italic. They were taken from
 the files fonts.gstatic.com was already serving to every visitor of this site,
 so self-hosting changed who serves them and not what is served.
 
+SPLIT, since 2026-10-11: the site serves each latin file as two, a core with the
+characters every page draws and the rest of the latin range, cut from those
+files by scripts/split-latin-fonts.py with fontTools. Same outlines, same
+OpenType features; a page that draws no character outside the core downloads
+less. The Source Serif 4 latin files are split the same way.
+
 WHERE THEY LIVE, since 2026-08-21: app/fonts/ in the repository, emitted by the
 build to /assets/ with a content hash in the filename. The hash is what lets
 them be cached immutably for a year, because a URL whose contents cannot change

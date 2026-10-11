@@ -117,10 +117,22 @@ for (const dir of [join(root, "app", "fonts"), join(root, "app", "fonts", "katex
 }
 
 const referenced = new Set(withFile.map((b) => b.file));
+// The whole latin files no block names: the sources scripts/split-latin-fonts.py cuts into the core and
+// rest faces the blocks do name (the CV PDF also reads three of them whole). Read from the script, so a
+// source it stops cutting is no longer excused.
+const SPLIT_SCRIPT = join(root, "scripts", "split-latin-fonts.py");
+const splitScript = readFileSync(SPLIT_SCRIPT, "utf8");
+// The latin range the script cuts, which the two halves must cover between them.
+const SPLIT_LATIN = [...(splitScript.match(/^LATIN = \(([^)]*)\)/m)?.[1] ?? "").matchAll(/"([^"]*)"/g)].map((m) => m[1]).join("");
+const splitSources = [...(splitScript.match(/^FACES = \[([^\]]*)\]/m)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
+  (m) => join(root, "app", "fonts", `${m[1]}.woff2`),
+);
+ok("scripts/split-latin-fonts.py names the files it cuts", splitSources.length > 0, "no FACES list was read from it");
 for (const file of shipped) {
+  const source = splitSources.includes(file);
   ok(
-    `${relative(root, file)} is referenced by an @font-face block`,
-    referenced.has(file),
+    `${relative(root, file)} is ${source ? "cut into faces by scripts/split-latin-fonts.py" : "referenced by an @font-face block"}`,
+    source || referenced.has(file),
     `the file ships and no declaration names it, so nothing asserts what it is`,
   );
 }
@@ -348,6 +360,54 @@ for (const face of OG_FACES) {
     font["OS/2"]?.usWeightClass === face.weight,
     `build-og draws at ${face.weight}, the file's usWeightClass is ${font["OS/2"]?.usWeightClass}`,
   );
+}
+
+// The latin core and rest faces (scripts/split-latin-fonts.py). A range the file does not match either
+// leaves a character with no face, so it draws in a fallback, or names a face for a character it
+// lacks. The two halves must cover their source exactly, and come from its current version.
+/** @param {string} range @returns {Set<number>} */
+const codepoints = (range) => {
+  const out = new Set();
+  for (const part of range.split(",")) {
+    const [first, last] = part.trim().replace(/^U\+/i, "").split("-");
+    for (let c = parseInt(first, 16); c <= parseInt(last ?? first, 16); c++) out.add(c);
+  }
+  return out;
+};
+const latin = codepoints(SPLIT_LATIN);
+ok("scripts/split-latin-fonts.py names the latin range it cuts", latin.size > 0, "no LATIN range was read from it");
+for (const source of splitSources) {
+  const rel = relative(root, source);
+  const halves = ["core", "rest"].map((part) => {
+    const file = source.replace("-latin-", `-latin-${part}-`);
+    const block = withFile.find((b) => b.file === file);
+    const range = block?.raw.match(/unicode-range\s*:\s*([^;]+)/i)?.[1];
+    const has = existsSync(file) ? new Set(fontFor(file).characterSet.filter((c) => c !== 0xffff)) : null;
+    return { part, file, declared: range ? codepoints(range) : null, has };
+  });
+  // 0xFFFF is the cmap's end marker, which fontkit reports as a character.
+  const sourceChars = new Set(fontFor(source).characterSet.filter((c) => c !== 0xffff));
+  for (const half of halves) {
+    const name = relative(root, half.file);
+    ok(`${name} exists and a block declares its unicode-range`, half.has !== null && half.declared !== null, `cut ${rel} with the script and declare the face in app.css`);
+    if (half.has === null || half.declared === null) continue;
+    const declared = half.declared;
+    const unreachable = [...half.has].filter((c) => !declared.has(c) && c >= 0x20);
+    const missing = [...declared].filter((c) => sourceChars.has(c) && !half.has?.has(c));
+    ok(`${name} holds exactly the characters its unicode-range declares`, unreachable.length === 0 && missing.length === 0,
+      `in the file but not declared: ${unreachable.map((c) => c.toString(16)).join(" ") || "none"}; declared, in ${rel}, not in the file: ${missing.map((c) => c.toString(16)).join(" ") || "none"}`);
+    ok(`${name} is cut from ${rel} as it is now`, fontFor(half.file).version === fontFor(source).version,
+      `the cut says ${fontFor(half.file).version}, the source ${fontFor(source).version}; re-run scripts/split-latin-fonts.py`);
+  }
+  const [core, rest] = halves;
+  if (core.has && rest.has) {
+    const both = [...core.has].filter((c) => rest.has?.has(c) && c >= 0x20);
+    // Within the latin range: the source also maps a few combining marks outside it, which no face
+    // ever offered.
+    const lost = [...sourceChars].filter((c) => latin.has(c) && !core.has?.has(c) && !rest.has?.has(c));
+    ok(`${rel}'s core and rest share no character and together hold all of it`, both.length === 0 && lost.length === 0,
+      `in both: ${both.map((c) => c.toString(16)).join(" ") || "none"}; in neither: ${lost.map((c) => c.toString(16)).join(" ") || "none"}`);
+  }
 }
 
 // Every assertion above is satisfied by a file re-subsetted with its axes intact, so the bytes are pinned.
