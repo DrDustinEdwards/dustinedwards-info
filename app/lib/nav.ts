@@ -1,56 +1,96 @@
 // Relative, so test/nav.test.mjs can import this file under plain node.
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "./content-pages.mjs";
+import { IDENTITY } from "./identity.generated.mjs";
+import { longDateUTC } from "./long-date.mjs";
+import { NAV_DATA } from "./nav-data.generated.mjs";
+import { OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
+import { seriesPath, seriesSlug } from "./series-path.mjs";
+import { tagPath } from "./tag-path.mjs";
+import { BASES } from "../kb/bases.mjs";
+import { paperPath } from "./publications/paths.mjs";
+import { EXPLORER_ORIGIN } from "./systems.mjs";
 
 /*
- * The header's destinations and the mega menus that hang from them, in the order and with the labels
- * of cutover.md's site structure (approved 2026-09-27). Menu labels are the words people search for;
- * a description is six words at most, and is left off where the label explains itself.
+ * The header's five destinations and the panels that hang from them ("structured panels", decided
+ * 2026-10-11). Every panel has the same parts, top to bottom: a header band, a row of three tiles, a
+ * band of grouped rows beside one spotlight, and three quick links. A link whose page does not exist is
+ * left out (isLive), and so is a row or tile it empties, so no panel link answers 404.
+ *
+ * The facts a panel shows come from the repository, not from a request: the newest paper, the posts and
+ * the lab's town are in nav-data.generated.mjs (scripts/lib/nav-data.mjs, written at build).
  */
 
-/** A line icon from the menu design, drawn in site-nav-panel.tsx. */
+/** A line icon, drawn in site-nav-panel.tsx. */
 export type NavIcon =
   | "retroviruses"
   | "bacteriophages"
   | "science-education"
   | "recipes"
-  | "travel"
-  | "games"
-  | "flying"
-  | "scuba"
-  | "art";
+  | "research"
+  | "teaching"
+  | "software"
+  | "writing"
+  | "about"
+  | "publications"
+  | "collections"
+  | "methods"
+  | "help"
+  | "chat"
+  | "tools"
+  | "series"
+  | "tag"
+  | "colophon"
+  | "arrow"
+  | "rss"
+  | "search"
+  | "mail"
+  | "external"
+  | "users"
+  | "map"
+  | "explorer"
+  | "card";
 
 export type MenuLink = {
   to: string;
   label: string;
   description?: string;
-  /** Mono text beside the label rather than under it: the COI primer names. */
-  aside?: string;
   icon?: NavIcon;
+  /** A second, smaller link under a tile: the CV tile's PDF. */
+  also?: { to: string; label: string };
 };
 
-/** A run of links, under a subheading when `label` is set. */
-export type MenuSection = { label?: string; links: MenuLink[] };
+/**
+ * One grouped row of the left half. `title` is a link when `to` is set; `note` is plain text under it;
+ * `links` are links under it, shown on one line separated by middots.
+ */
+export type MenuRow = { icon: NavIcon; title: string; to?: string; note?: string; links?: MenuLink[] };
 
-export type MenuColumn = {
-  label?: string;
-  sections: MenuSection[];
-  /** Two tracks wide, its links in a three-column grid: About's interests. */
-  wide?: boolean;
+/** The one block of the right half. */
+export type Spotlight = {
+  kind: "text" | "map";
+  eyebrow: string;
+  title: string;
+  body?: string;
+  to: string;
 };
 
 export type Menu = {
-  /** Names the panel and its chevron: `site-nav-research`, "Show Research links". */
+  /** Names the panel and its button: `site-nav-research`. */
   id: string;
-  /** The panel's first line, set larger: "All research". */
-  head: MenuLink;
-  /** Links on the head's line: About's CV and Contact. */
-  beside?: MenuLink[];
-  columns: MenuColumn[];
+  icon: NavIcon;
+  /** The band's first line. */
+  heading: string;
+  /** The band's one-line description. */
+  blurb: string;
+  tiles: MenuLink[];
+  rows: MenuRow[];
+  spotlight?: Spotlight;
+  footer: MenuLink[];
 };
 
-export type NavItem = { to: string; label: string; menu?: Menu };
+export type NavItem = { to: string; label: string; menu: Menu };
 
-/** The three research areas, in the Research menu and on the home page. */
+/** The three research areas, in the Research panel and on the home page. */
 export const RESEARCH_AREAS: MenuLink[] = [
   {
     to: "/research/retroviruses",
@@ -72,145 +112,338 @@ export const RESEARCH_AREAS: MenuLink[] = [
   },
 ];
 
-const RESEARCH: Menu = {
-  id: "research",
-  head: { to: "/research", label: "All research", description: "Areas, phages, protocols and publications" },
-  columns: [
-    {
-      label: "Research areas",
-      sections: [
-        {
-          links: RESEARCH_AREAS,
-        },
-      ],
-    },
-    {
-      label: "Collections",
-      sections: [
-        {
-          links: [
-            { to: "/research/publications", label: "Publications" },
-            { to: "/research/phages", label: "Phages" },
-            { to: "/research/protocols", label: "Protocols: Lab methods and primer library" },
-            { to: "/research/tools", label: "Tools" },
-          ],
-        },
-      ],
-    },
-  ],
-};
-
-// The three products only. Germomics, TXASM, Capsid and this site stay off the header.
+// The three products only. Germomics, TXASM, Capsid and this site stay off the tiles.
 export const SOFTWARE_PRODUCTS: MenuLink[] = [
-  { to: "/software/foxhound", label: "Foxhound", description: "Failed Stripe payment recovery" },
-  { to: "/software/foxing", label: "Foxing", description: "Public-domain reading" },
-  { to: "/software/foxing-edu", label: "Foxing Edu", description: "Foxing, sold to schools" },
+  { to: "/software/foxhound", label: "Foxhound", description: "Failed Stripe payment recovery", icon: "card" },
+  { to: "/software/foxing", label: "Foxing", description: "Public-domain reading", icon: "science-education" },
+  { to: "/software/foxing-edu", label: "Foxing Edu", description: "Foxing, sold to schools", icon: "teaching" },
 ];
 
-// Same panel as Research, with one short column. No new open/close behavior.
-const SOFTWARE: Menu = {
-  id: "software",
-  head: { to: "/software", label: "All software" },
-  columns: [{ sections: [{ links: SOFTWARE_PRODUCTS }] }],
-};
+/** The posts a reader can see at `now`: published and past any scheduled time, newest first. */
+export function visiblePosts(now: number = Date.now()) {
+  return NAV_DATA.posts.filter((post) => Date.parse(post.publishAt) <= now);
+}
 
-// Same panel as Research, with one short column. No new open/close behavior.
-const TEACHING: Menu = {
-  id: "teaching",
-  head: { to: "/teaching", label: "All teaching" },
-  columns: [
-    {
-      sections: [
-        {
-          links: [
-            { to: "/teaching/phage-discovery", label: "Phage Discovery Program" },
-            { to: "/teaching/virus-isolation", label: "Virus Isolation" },
-            { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics" },
-            { to: "/teaching/central-dogma", label: "Tutorials" },
-            { to: "/teaching#join-the-lab", label: "Join the lab" },
-          ],
-        },
-      ],
-    },
-  ],
-};
+/** Tags and series of the visible posts, most used first (then A to Z), with their counts. */
+function counted(names: string[]) {
+  const counts = new Map<string, number>();
+  for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : 1));
+}
 
-// Interests stay in the data and out of the menu until a page exists. CV and Contact show now.
-const ABOUT: Menu = {
-  id: "about",
-  head: { to: "/about", label: "About" },
-  beside: [
-    { to: "/cv", label: "CV" },
-    { to: "/contact", label: "Contact" },
-  ],
-  columns: [
-    {
-      label: "Interests",
-      wide: true,
-      sections: [
-        {
-          links: [
-            { to: "/interests/recipes", label: "Recipes", icon: "recipes" },
-            { to: "/interests/travel", label: "Travel", icon: "travel" },
-            { to: "/interests/games", label: "Games", icon: "games" },
-            { to: "/interests/flying", label: "Flying", icon: "flying" },
-            { to: "/interests/scuba", label: "Scuba", icon: "scuba" },
-            { to: "/interests/art", label: "Art", icon: "art" },
-          ],
-        },
-      ],
+/** How many tags the Writing panel lists, and how many series. */
+export const TAGS_SHOWN = 4;
+export const SERIES_SHOWN = 4;
+
+function researchMenu(): Menu {
+  return {
+    id: "research",
+    icon: "research",
+    heading: "Research",
+    blurb: "Areas, phages, protocols and publications",
+    tiles: RESEARCH_AREAS,
+    rows: [
+      { icon: "publications", title: "Publications", to: "/research/publications", note: "Every paper, with BibTeX and RIS" },
+      {
+        icon: "collections",
+        title: "Collections",
+        links: [
+          { to: "/research/phages", label: "Phages" },
+          { to: "/research/lab", label: "Lab registry" },
+        ],
+      },
+      {
+        icon: "methods",
+        title: "Lab methods",
+        links: [
+          { to: "/research/protocols", label: "Protocols" },
+          { to: "/research/tools", label: "Tools" },
+        ],
+      },
+    ],
+    spotlight: {
+      kind: "text",
+      eyebrow: "Latest paper",
+      title: NAV_DATA.latestPaper.title,
+      body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year].filter(Boolean).join(", "),
+      to: paperPath(NAV_DATA.latestPaper.slug),
     },
-  ],
-};
+    footer: [
+      { to: "/research", label: "All research", icon: "arrow" },
+      { to: "/research/publications", label: "Publications", icon: "publications" },
+      { to: "/research/protocols", label: "Protocols", icon: "methods" },
+    ],
+  };
+}
+
+function teachingMenu(): Menu {
+  return {
+    id: "teaching",
+    icon: "teaching",
+    heading: "Teaching",
+    blurb: "Courses, tutorials and study help",
+    tiles: [
+      { to: "/teaching/phage-discovery", label: "Phage Discovery Program", icon: "bacteriophages" },
+      { to: "/teaching/virus-isolation", label: "Virus Isolation", icon: "research" },
+      { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics", icon: "software" },
+    ],
+    rows: [
+      {
+        icon: "help",
+        title: "Study help",
+        links: [
+          { to: "/teaching/central-dogma", label: "Tutorials" },
+          { to: "/teaching/study-skills", label: "Study skills" },
+        ],
+      },
+      { icon: "chat", title: "Questions about a course", links: [{ to: "/contact", label: "Contact" }] },
+    ],
+    spotlight: {
+      kind: "text",
+      eyebrow: "Prospective students",
+      title: "Join the lab",
+      body: "Undergraduate research beyond the courses",
+      to: "/teaching#join-the-lab",
+    },
+    footer: [
+      { to: "/teaching", label: "All teaching", icon: "arrow" },
+      { to: "/teaching#join-the-lab", label: "Join the lab", icon: "users" },
+      { to: "/contact", label: "Contact", icon: "mail" },
+    ],
+  };
+}
+
+function softwareMenu(): Menu {
+  return {
+    id: "software",
+    icon: "software",
+    heading: "Software",
+    blurb: "Products, open tools and how-tos",
+    tiles: SOFTWARE_PRODUCTS,
+    rows: [
+      {
+        icon: "tools",
+        title: "Open tools",
+        links: [
+          { to: "/software/capsid", label: "Capsid" },
+          { to: "/software/carrel", label: "Carrel" },
+          { to: "/software/capsomer", label: "Capsomer" },
+          { to: "/software/enarratio", label: "Enarratio" },
+        ],
+      },
+      { icon: "methods", title: "Software how-tos", to: "/software/how-tos", note: "Step-by-step guides" },
+    ],
+    spotlight: {
+      kind: "map",
+      eyebrow: "System map",
+      title: "How the systems fit together",
+      body: "Every system and what it connects to, with the Capsid explorer for the detail",
+      to: "/systems",
+    },
+    footer: [
+      { to: "/software", label: "All software", icon: "arrow" },
+      { to: "/systems", label: "System map", icon: "map" },
+      { to: `${EXPLORER_ORIGIN}/`, label: "Capsid explorer", icon: "explorer" },
+    ],
+  };
+}
+
+function writingMenu(now: number): Menu {
+  const posts = visiblePosts(now);
+  const newest = posts[0];
+  const tags = counted(posts.flatMap((post) => post.tags)).slice(0, TAGS_SHOWN);
+  const series = counted(posts.flatMap((post) => (post.series ? [post.series] : []))).slice(0, SERIES_SHOWN);
+  return {
+    id: "writing",
+    icon: "writing",
+    heading: "Writing",
+    blurb: "Articles on building software and sites",
+    tiles: posts.slice(0, 3).map((post) => ({
+      to: `/writing/${post.slug}`,
+      label: post.title,
+      description: longDateUTC(post.publishAt) ?? undefined,
+    })),
+    rows: [
+      {
+        icon: "series",
+        title: "Series",
+        links: series.map(({ name }) => ({ to: seriesPath(name), label: name })),
+      },
+      {
+        icon: "tag",
+        title: "Tags",
+        links: tags.map(({ name }) => ({ to: tagPath(name), label: name })),
+      },
+    ],
+    spotlight: newest
+      ? { kind: "text", eyebrow: "Newest", title: newest.title, body: newest.firstLine, to: `/writing/${newest.slug}` }
+      : undefined,
+    footer: [
+      { to: "/writing", label: "All articles", icon: "arrow" },
+      { to: "/writing/rss.xml", label: "RSS feed", icon: "rss" },
+      { to: "/search", label: "Search", icon: "search" },
+    ],
+  };
+}
+
+function aboutMenu(): Menu {
+  return {
+    id: "about",
+    icon: "about",
+    // The band states the person and the whole identity line, university system included.
+    heading: IDENTITY.name,
+    blurb: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`,
+    tiles: [
+      { to: "/about", label: "About", icon: "about" },
+      { to: "/cv", label: "CV", icon: "publications", also: { to: "/dustin-edwards-cv.pdf", label: "Also as a PDF" } },
+      { to: "/contact", label: "Contact", icon: "mail" },
+    ],
+    rows: [
+      { icon: "recipes", title: "Interests", links: [{ to: "/recipes", label: "Recipes" }] },
+      { icon: "colophon", title: "Colophon", to: "/colophon", note: "How this site is built" },
+    ],
+    spotlight: {
+      kind: "text",
+      eyebrow: "The lab",
+      title: NAV_DATA.lab.department,
+      body: `${NAV_DATA.lab.university}, ${NAV_DATA.lab.place}`,
+      to: "/research",
+    },
+    footer: [
+      { to: OWNER_SCHOLAR, label: "Google Scholar", icon: "external" },
+      { to: OWNER_PUBMED, label: "PubMed", icon: "external" },
+      { to: OWNER_ORCID, label: "ORCID", icon: "external" },
+    ],
+  };
+}
+
 
 /**
- * The pages outside the markdown set that a menu links to. test/nav.test.mjs holds each against
- * app/routes.ts, so a route removed there cannot leave a menu link behind.
+ * The pages outside the markdown set that a panel links to. test/nav.test.mjs holds each against
+ * app/routes.ts, so a route removed there cannot leave a panel link behind.
  */
-export const ROUTED_PATHS: readonly string[] = ["/research/publications", "/about", "/contact"];
+export const ROUTED_PATHS: readonly string[] = [
+  "/research/publications",
+  "/research/lab",
+  "/systems",
+  "/search",
+  "/writing",
+  "/writing/rss.xml",
+  "/about",
+  "/contact",
+  "/colophon",
+  "/dustin-edwards-cv.pdf",
+];
 
 /**
- * Whether a menu link has a page to land on: a listed markdown page (for an anchor, a listed heading
- * on it), one of ROUTED_PATHS, or another site. Anything else is a page not yet written, and its link
- * stays out of the menu until it is, so no menu link answers 404.
+ * The libraries that are pages only once they hold an entry (app/routes/kb-library.tsx answers 404 to the public
+ * for an empty one): Recipes and Software how-tos. Protocols is a listed page and never empty.
  */
-export function isLive(to: string): boolean {
+export const LIBRARY_PATHS: readonly string[] = BASES.filter((base) => base.profile !== "protocol").map((base) => base.library);
+
+/** The prefixes whose pages are data: a post, a tag, a series, the newest paper. */
+const POST_PREFIX = "/writing/";
+const TAG_PREFIX = "/writing/tags/";
+const SERIES_PREFIX = "/writing/series/";
+const PAPER_PREFIX = "/research/publications/";
+
+/**
+ * Whether a panel link has a page to land on: a listed markdown page (for an anchor, a listed heading on
+ * it), one of ROUTED_PATHS, a post, tag or series the visible posts have, the newest paper, or another
+ * site. Anything else is a page not yet written, and its link stays out of the panel until it is.
+ */
+export function isLive(to: string, now: number = Date.now()): boolean {
   if (to.startsWith("https://")) return true;
   const anchored = to.includes("#");
   const path = anchored ? to.slice(0, to.indexOf("#")) : to;
   if ((CONTENT_PAGE_PATHS as readonly string[]).includes(path)) {
     return !anchored || CONTENT_PAGE_SECTIONS.includes(to);
   }
-  return !anchored && ROUTED_PATHS.includes(path);
+  if (anchored) return false;
+  if (ROUTED_PATHS.includes(path)) return true;
+  const library = BASES.find((base) => base.library === path && base.profile !== "protocol");
+  if (library) return (NAV_DATA.libraries[library.profile] ?? 0) > 0;
+  const posts = visiblePosts(now);
+  if (path.startsWith(TAG_PREFIX)) {
+    const slug = decodeURIComponent(path.slice(TAG_PREFIX.length));
+    return posts.some((post) => post.tags.includes(slug));
+  }
+  if (path.startsWith(SERIES_PREFIX)) {
+    const slug = decodeURIComponent(path.slice(SERIES_PREFIX.length));
+    return posts.some((post) => post.series !== null && seriesSlug(post.series) === slug);
+  }
+  if (path.startsWith(PAPER_PREFIX)) return path === paperPath(NAV_DATA.latestPaper.slug);
+  if (path.startsWith(POST_PREFIX)) return posts.some((post) => `${POST_PREFIX}${post.slug}` === path);
+  return false;
 }
 
 /**
- * The menu with every link that has no page taken out, and the sections and columns that empties.
- * An empty column is omitted. It does not hide the head or the links beside it, so About can show
- * CV and Contact before any interest page exists. Undefined when the head itself has no page.
+ * The menu with every link that has no page taken out, and the tile, row or spotlight that empties. Undefined
+ * only when nothing is left to show. A row whose title page is missing keeps its links as plain text above them.
  */
 export function liveMenu(menu: Menu, live: (to: string) => boolean = isLive): Menu | undefined {
-  if (!live(menu.head.to)) return undefined;
-  const columns = menu.columns
-    .map((column) => ({
-      ...column,
-      sections: column.sections
-        .map((section) => ({ ...section, links: section.links.filter((link) => live(link.to)) }))
-        .filter((section) => section.links.length > 0),
+  const tiles = menu.tiles
+    .filter((tile) => live(tile.to))
+    .map((tile) => (tile.also && !live(tile.also.to) ? { ...tile, also: undefined } : tile));
+  const rows = menu.rows
+    .map((row) => ({
+      ...row,
+      to: row.to && live(row.to) ? row.to : undefined,
+      links: row.links?.filter((link) => live(link.to)),
     }))
-    .filter((column) => column.sections.length > 0);
-  const beside = menu.beside?.filter((link) => live(link.to));
-  if (columns.length === 0 && (!beside || beside.length === 0)) return undefined;
-  return { ...menu, beside, columns };
+    .filter((row) => row.to || (row.links && row.links.length > 0));
+  const footer = menu.footer.filter((link) => live(link.to));
+  const spotlight = menu.spotlight && live(menu.spotlight.to) ? menu.spotlight : undefined;
+  if (tiles.length === 0 && rows.length === 0 && footer.length === 0) return undefined;
+  return { ...menu, tiles, rows, spotlight, footer };
 }
 
-/** The menus as written, before any link is taken out, for tests that bring a page into being. */
-export const MENUS = { research: RESEARCH, teaching: TEACHING, software: SOFTWARE, about: ABOUT } as const;
+/** Every address a panel renders, in page order: tiles (and their second links), rows, the spotlight, the quick links. */
+export function menuLinks(menu: Menu): string[] {
+  return [
+    ...menu.tiles.flatMap((tile) => (tile.also ? [tile.to, tile.also.to] : [tile.to])),
+    ...menu.rows.flatMap((row) => [...(row.to ? [row.to] : []), ...(row.links ?? []).map((link) => link.to)]),
+    ...(menu.spotlight ? [menu.spotlight.to] : []),
+    ...menu.footer.map((link) => link.to),
+  ];
+}
 
-export const NAV: readonly NavItem[] = [
-  { to: "/research", label: "Research", menu: liveMenu(RESEARCH) },
-  { to: "/teaching", label: "Teaching", menu: liveMenu(TEACHING) },
-  { to: "/software", label: "Software", menu: liveMenu(SOFTWARE) },
+/** The panels as written, before any link is taken out, for tests that bring a page into being. */
+export function menusAt(now: number = Date.now()) {
+  return {
+    research: researchMenu(),
+    teaching: teachingMenu(),
+    software: softwareMenu(),
+    writing: writingMenu(now),
+    about: aboutMenu(),
+  } as const;
+}
+
+/** The header's five items with their live panels, as of `now`. Built per request so a scheduled post appears on time. */
+export function buildNav(now: number = Date.now()): readonly NavItem[] {
+  const menus = menusAt(now);
+  const live = (to: string) => isLive(to, now);
+  const items: NavItem[] = [];
+  for (const [to, label, menu] of [
+    ["/research", "Research", menus.research],
+    ["/teaching", "Teaching", menus.teaching],
+    ["/software", "Software", menus.software],
+    ["/writing", "Writing", menus.writing],
+    ["/about", "About", menus.about],
+  ] as const) {
+    const resolved = liveMenu(menu, live);
+    if (resolved) items.push({ to, label, menu: resolved });
+  }
+  return items;
+}
+
+/** The names and hubs of the five, for lists that need no panel (the 404 page). */
+export const NAV: readonly Pick<NavItem, "to" | "label">[] = [
+  { to: "/research", label: "Research" },
+  { to: "/teaching", label: "Teaching" },
+  { to: "/software", label: "Software" },
   { to: "/writing", label: "Writing" },
-  { to: "/about", label: "About", menu: liveMenu(ABOUT) },
+  { to: "/about", label: "About" },
 ];

@@ -262,12 +262,16 @@ export async function run({ page, browser }, { codePost, probedPost }) {
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        const link = await noScript.$("[data-site-nav] .site-nav-word");
+        /* The destinations are section buttons now: choosing one opens its panel as a popover over the Menu
+           (no script), and the panel's links are what a reader follows. */
+        await clickOrFail(noScript, "[data-site-nav] [data-nav-button]", "the scriptless Menu offers a section button to open");
+        await noScript.waitForSelector("[data-site-nav] .site-nav-panel:popover-open .site-nav-foot-link", { visible: true, timeout: 5000 }).catch(() => null);
+        const link = await noScript.$("[data-site-nav] .site-nav-panel:popover-open .site-nav-foot-link");
         const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
-          "the open header menu offers a link to follow",
+          "the open header panel offers a link to follow",
           link !== null && Boolean(target),
-          "no destination inside the open nav, so there is nothing for the reader to follow",
+          "no link inside the open section panel, so there is nothing for the reader to follow",
         );
         if (link && target) {
           await Promise.all([

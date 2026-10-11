@@ -99,8 +99,8 @@
     {
       "id": "header-mega-menus",
       "module": "app/enhance/header.ts",
-      "enhancement": "The Research and Teaching panels open after a half-second hover and stay open while the pointer crosses to them, a chevron click pins one open, Escape closes it and returns focus to the chevron, and each chevron carries aria-expanded. On a phone the chevron expands its section in place inside the Menu instead.",
-      "fallback": "Each panel is a popover its chevron opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. The word beside the chevron is a link to the section's hub page, which lists the same pages.",
+      "enhancement": "The five section panels (Research, Teaching, Software, Writing, About) open the instant the pointer reaches their button and stay open while the pointer crosses to them, closing about 300ms after the pointer leaves both the bar and the panel. A click pins one open or closes it, Escape closes it and returns focus to the button, and each button carries aria-expanded. A touch screen opens by click only. On a phone the button expands its section in place inside the Menu instead.",
+      "fallback": "Each panel is a popover its section button opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. The first quick link of each panel goes to the section's hub page, which lists the same pages.",
       "fallbackKind": "selector",
       "fallbackAt": ".site-nav-panel",
       "why": null
