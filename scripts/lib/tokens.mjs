@@ -23,6 +23,8 @@ const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
 
 /** The admin plane's one sheet: Capsomer's tokens and components, outside the site's palette gates. */
 const ADMIN_CSS_PATH = join(root, "app", "admin.css");
+/** The /lab workspace's sheet: Capsomer's plane like admin.css, built on its tokens, not the public palette. */
+const LAB_CSS_PATH = join(root, "app", "lab.css");
 
 /**
  * CRLF first, because autocrlf gives a fresh clone CRLF and multi-line selectors stop matching;
@@ -91,7 +93,7 @@ export function stylesheetPaths() {
     moduleCssImports(source)
       .filter((spec) => spec.startsWith("~/") || spec.startsWith("."))
       .map((spec) => (spec.startsWith("~/") ? join(root, "app", spec.slice(2)) : join(base, spec)))
-      .filter((sheet) => sheet !== ADMIN_CSS_PATH);
+      .filter((sheet) => sheet !== ADMIN_CSS_PATH && sheet !== LAB_CSS_PATH);
 
   const rootSheets = cssImportsOf(readFileSync(ROOT_MODULE_PATH, "utf8"), join(root, "app"));
   if (rootSheets.length === 0) {

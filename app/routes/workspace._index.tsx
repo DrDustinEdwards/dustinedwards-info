@@ -14,7 +14,12 @@ export function meta() {
 export async function loader({ context }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
   return data(
-    { title: titleLabel(actor.title), manages: can(actor, PERMISSION.manageMembers) },
+    {
+      title: titleLabel(actor.title),
+      manages: can(actor, PERMISSION.manageMembers),
+      reads: can(actor, PERMISSION.read),
+      records: can(actor, PERMISSION.recordRun),
+    },
     { headers: { "cache-control": "private, no-store" } },
   );
 }
@@ -23,6 +28,16 @@ export default function LabOverview({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <PageHead title="Lab" lead={`You are signed in as ${loaderData.title}.`} />
+      {loaderData.reads ? (
+        <p>
+          <Link to="/lab/inventory">Inventory</Link>: the lots on the shelf, how much is left and where.
+        </p>
+      ) : null}
+      {loaderData.records ? (
+        <p>
+          <Link to="/lab/runs">Runs</Link>: record a run of a protocol with the lots it used.
+        </p>
+      ) : null}
       {loaderData.manages ? (
         <p>
           <Link to="/lab/members">Members</Link>: who may sign in to the lab, their titles and when their access ends.

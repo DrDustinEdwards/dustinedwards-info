@@ -39,6 +39,7 @@ import {
 
 import { SYNC_NOT_SET_UP, syncAccess } from "./access-sync.server";
 import { labRules } from "./actor.server";
+import { field, isDate } from "./forms.mjs";
 import { LAB_CATALOG, canEditTerms, titleLabel } from "./titles.mjs";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -60,14 +61,7 @@ export type MembersPageData = {
   primaryOwner: boolean;
 };
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** A real calendar date in YYYY-MM-DD: 2027-02-30 and 2026-13-01 are not. */
-function isDate(text: string): boolean {
-  const ms = Date.parse(`${text}T00:00:00Z`);
-  return DATE.test(text) && !Number.isNaN(ms) && new Date(ms).toISOString().slice(0, 10) === text;
-}
 
 function titleOf(id: string): Title | undefined {
   return LAB_CATALOG.titles.get(id);
@@ -210,11 +204,6 @@ export async function membersPage(env: Env, actor: Actor, url: URL, nowMs: numbe
     syncNotice: env.CAPSID_ACCESS_SYNC_KEY?.trim() ? null : SYNC_NOT_SET_UP,
     primaryOwner: actor.layer === 0,
   };
-}
-
-function field(form: FormData, name: string): string {
-  const value = form.get(name);
-  return typeof value === "string" ? value.trim() : "";
 }
 
 function refused(text: string): MembersActionData {

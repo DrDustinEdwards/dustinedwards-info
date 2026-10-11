@@ -169,6 +169,11 @@ export default [
   route("lab", "routes/workspace.tsx", [
     index("routes/workspace._index.tsx"),
     route("members", "routes/workspace.members.tsx"),
+    // Step 7: lots and run records. Append-only runs; every lot change writes its kb_audit row.
+    route("inventory", "routes/workspace.inventory.tsx"),
+    route("inventory/:id", "routes/workspace.inventory.lot.tsx"),
+    route("runs", "routes/workspace.runs.tsx"),
+    route("runs/:id", "routes/workspace.runs.run.tsx"),
   ]),
 
   route("api/health", "routes/api.health.ts"),
