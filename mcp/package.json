@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "wrangler dev -c wrangler.jsonc",
     "typecheck": "wrangler types -c wrangler.jsonc && tsc -b",
-    "test": "node --experimental-transform-types --import ./test/resolve-ts.mjs --test \"test/**/*.test.ts\"",
+    "test": "node --import ./test/resolve-ts.mjs --test \"test/**/*.test.ts\"",
     "probe:captures": "node scripts/probe-report.mjs",
     "check:wrapper": "node scripts/check-wrapper.mjs",
     "check:wrapper:plant": "bash scripts/plant-violations.sh",

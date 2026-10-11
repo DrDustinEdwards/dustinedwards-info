@@ -62,11 +62,11 @@ export interface ApiCallResult {
 }
 
 export class ApiLegError extends Error {
-  constructor(
-    message: string,
-    readonly kind: "unconfigured" | "unreachable" | "malformed",
-  ) {
+  readonly kind: "unconfigured" | "unreachable" | "malformed";
+
+  constructor(message: string, kind: "unconfigured" | "unreachable" | "malformed") {
     super(message);
+    this.kind = kind;
     this.name = "ApiLegError";
   }
 }
