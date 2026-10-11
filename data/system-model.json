@@ -131,10 +131,13 @@
       "id": "dustinedwards-mcp",
       "name": "dustinedwards-mcp",
       "short": "Site MCP",
-      "domain": "",
       "family": "plumbing",
       "ring": "used",
-      "private": true
+      "private": false,
+      "description": "Publishes posts to dustinedwards.info from a chat.",
+      "repos": [
+        "https://github.com/DrDustinEdwards/dustinedwards-mcp"
+      ]
     },
     {
       "id": "skills",
@@ -365,8 +368,8 @@
   ],
   "counts": {
     "systems": 17,
-    "public": 11,
-    "private": 6,
+    "public": 12,
+    "private": 5,
     "containers": 6,
     "relationships": 20
   }
