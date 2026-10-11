@@ -40,9 +40,10 @@ CREATE TABLE kb_lots (
   created_at integer NOT NULL DEFAULT (unixepoch()),
   updated_at integer NOT NULL DEFAULT (unixepoch()),
   CONSTRAINT kb_lots_status_check CHECK (status in ('in_stock', 'empty', 'discarded')),
-  CONSTRAINT kb_lots_amount_check CHECK (amount IS NULL OR amount >= 0),
-  UNIQUE (item_kind, item_id, lot_number)
+  CONSTRAINT kb_lots_amount_check CHECK (amount IS NULL OR amount >= 0)
 );
+
+CREATE UNIQUE INDEX kb_lots_item_kind_item_id_lot_number_unique ON kb_lots (item_kind, item_id, lot_number);
 
 CREATE INDEX kb_lots_location_idx ON kb_lots (location_id);
 
