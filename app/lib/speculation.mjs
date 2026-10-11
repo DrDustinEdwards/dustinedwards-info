@@ -4,7 +4,7 @@
 
 import { jsonLd } from "./json-ld.mjs";
 
-const EXCLUDED_PREFIXES = ["/admin", "/api", "/media"];
+const EXCLUDED_PREFIXES = ["/admin", "/lab", "/api", "/media"];
 
 // `/search/ask` is billed: speculating it would spend model tokens on a click nobody made.
 const EXCLUDED_PATHS = ["/login", "/theme", "/search/ask"];

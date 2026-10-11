@@ -38,11 +38,11 @@ export function run() {
     "the fifth argument to handleRequest is the RouterContextProvider; without it there is nothing to read",
   );
 
-  /* The nonce is minted for admin paths only: a public page is cached with its header. */
+  /* The nonce is minted for the private planes only (/admin, /lab): a public page is cached with its header. */
   const app = source("workers", "app.ts");
   ok(
-    "workers/app.ts mints the nonce only on an admin path",
-    /isAdminPath\(\s*url\.pathname\s*\)\s*\?\s*crypto\.randomUUID\(\)\s*:\s*undefined/.test(app) &&
+    "workers/app.ts mints the nonce only on a private path",
+    /isPrivatePath\(\s*url\.pathname\s*\)\s*\?\s*crypto\.randomUUID\(\)\s*:\s*undefined/.test(app) &&
       (app.match(/crypto\.randomUUID\(\)/g) ?? []).length === 1,
     "a nonce minted for a public render lands in an edge-cached header and body, so every " +
       "reader shares it for the cache lifetime",
