@@ -22,6 +22,28 @@ export function isAdminPath(pathname) {
 }
 
 /**
+ * The /lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members signed in through their own Access application.
+ * Exact-or-slash like the admin plane, so the public `/research/lab` and a future `/laboratory` stay public.
+ *
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+export function isLabPath(pathname) {
+  return pathname === "/lab" || pathname.startsWith("/lab/");
+}
+
+/**
+ * The signed-in planes, /admin and /lab: every response there is `private, no-store`, so each render gets its own
+ * nonce and is never edge-cached or themed into a shared key.
+ *
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+export function isPrivatePath(pathname) {
+  return isAdminPath(pathname) || isLabPath(pathname);
+}
+
+/**
  * The media route is exact-or-slash for the same reason as the admin plane: a future `/mediakit`
  * page must keep the document policy.
  *
@@ -102,7 +124,7 @@ export function speculationRulesHash(pathname) {
  * header.
  *
  * @param {string} pathname the request URL's pathname, for the speculation rules' hash
- * @param {string | undefined} adminNonce this render's nonce on an admin path, else undefined
+ * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab), else undefined
  * @returns {Promise<string>}
  */
 export async function contentSecurityPolicy(pathname, adminNonce) {

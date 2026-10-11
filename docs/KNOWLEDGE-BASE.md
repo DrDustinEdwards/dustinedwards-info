@@ -76,7 +76,10 @@ Making D1 the source for the item definitions as well was weighed and is not rec
 facts into their records and frozen versions at compile time, from the repository, and that chain (and its drift
 checks) would have to be rebuilt for no gain a reader would see.
 
-## Roles (DECIDE 3: waits for job_4acb6ae89b9f)
+## Roles (DECIDE 3: replaced by the identity design, built in step 5)
+
+Built as the /lab workspace in step 5, on capsid docs/design/design-identity-roles.md, which replaced the proposal
+below. Kept for the record.
 
 **Not approved.** Who signs in and what lab people may do is its own job, job_4acb6ae89b9f (one roles model across the
 family; likely a separate `/lab` workspace for operational lab data, `/admin` owner-only, levels Owner, Lab manager and
@@ -188,7 +191,18 @@ Each step is one pull request, labelled `visual` where a reader sees it, and nam
    registry item by `item_kind` and `item_id` with no foreign key, because `sync:content` rewrites the registry;
    `kb_audit` takes one row per write to a lot or location. Nothing writes them yet and no panel shows them: the
    Inventory tab and every write path wait for job_4acb6ae89b9f, since lots are edited by lab people.)
-5. **Roles**: waits for job_4acb6ae89b9f (DECIDE 3); not built here.
+5. **Roles**: the /lab workspace on site-runtime's members (job_4409e06c39d4; capsid docs/design/design-identity-roles.md).
+   (Done: `/lab` is its own Access application (`ACCESS_LAB_AUD`), so a /admin token is refused there and a /lab token
+   at /admin, and /admin stays the Primary Owner's alone. The layout (`app/routes/workspace.tsx`) admits the Primary
+   Owner (`PRIMARY_OWNER_EMAIL`, a secret, never a row) and anyone with an active, unexpired row in `members`, read on
+   every request; anyone else reads "No access. Ask your lab manager to add <email>." The titles are Lab manager and
+   Lab worker (`app/lab/titles.mjs`), and code asks for permissions, never titles. `/lab/members` is Capsomer's
+   people-roles, a 404 to anyone without `manage_members`; every change is checked again by site-runtime's
+   `checkChange`, written with its `member_audit` row in one batch, then sent whole to Capsid's `/ops/access-sync`
+   with `CAPSID_ACCESS_SYNC_KEY`, whose answer lands on the audit row. Without that key the page records the change
+   and says Access was not touched. The semester end dates are `member_terms`, set on the same page by Owners and the
+   Primary Owner. Migration `drizzle/0030_lab_members.sql`. Not built: the daily expiry job and the review emails;
+   an expired row is refused on its end date by the read itself.)
 6. **Key Resources Table** (P1) and the RRID field. (Table done: `app/kb/procedures/key-resources.mjs`, on every protocol's
    page after Equipment and in its twin, computed from the record. No RRID field yet: none of the registry's four kinds
    is a resource RRIDs cover, so the field arrives with the first kind that is, such as an antibody or a plasmid.)

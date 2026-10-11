@@ -29,6 +29,7 @@
     "0026_retire_better_auth.sql": "6a90aa503d4f121cb11343255dd17bb6dacf9c9633fcd868df2f4bb6db7ebb11",
     "0027_procedure_versions.sql": "90a2a8717e67c22d17226e0eebfabab8d2bc3635a30280205e85f10a97b7afe5",
     "0028_registry.sql": "52d75ce9e99e34417b9cfb5c2365afa6930810d4f868d311096edfc0417854b7",
-    "0029_kb_inventory.sql": "031e4021b34e0e4f8867a725219049b7dabfb90e871d5353564eaba25b24d53e"
+    "0029_kb_inventory.sql": "031e4021b34e0e4f8867a725219049b7dabfb90e871d5353564eaba25b24d53e",
+    "0030_lab_members.sql": "d99cc5674f59d8e75565d5a1ce42741bd08e9d93bf3e1fd21581b88cfdc0d521"
   }
 }

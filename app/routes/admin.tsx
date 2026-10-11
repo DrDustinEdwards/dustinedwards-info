@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { Form, Link, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import { Form, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, type AdminEntry, type LinkProps } from "capsomer/react/admin-shell";
+import { AdminShell, type AdminEntry } from "capsomer/react/admin-shell";
 import { ThemeSwitch } from "capsomer/react/theme-switch";
 
+import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
@@ -165,22 +166,6 @@ export async function loader({ context }: Route.LoaderArgs) {
   }, "layout_total");
 }
 
-/**
- * Capsomer's own one-liner (theme-switch.md), run before first paint so a remembered theme never
- * flashes the other one. The admin's nonce is what lets the policy run it.
- */
-const THEME_SCRIPT =
-  'try{var t=localStorage.getItem("cap-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}';
-
-/* The shell's own family: a 24 box, a 1.6 stroke, drawn in currentColor (admin-shell.md, "Icons"). */
-function Icon({ d }: { d: string }) {
-  return (
-    <svg className="cap-admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d={d} />
-    </svg>
-  );
-}
-
 const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
   posts: <Icon d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6" />,
@@ -205,15 +190,8 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
   );
 }
 
-function RouterLink({ href, children, ...rest }: LinkProps) {
-  // A link out of the admin is a document navigation: the public pages bring their own stylesheets, which
-  // would otherwise be loaded beside Capsomer's.
-  return (
-    <Link to={href} reloadDocument={!href.startsWith("/admin")} {...rest}>
-      {children}
-    </Link>
-  );
-}
+
+const RouterLink = shellLink("/admin");
 
 const SIGN_OUT_FORM = "admin-signout-form";
 
