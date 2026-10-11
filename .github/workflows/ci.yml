@@ -174,20 +174,13 @@ jobs:
 
       # wrangler.jsonc is gitignored (it carries the live KV ids), and `wrangler types` and the
       # build read it, so the runner builds from the example's placeholders. `cp -n` never
-      # overwrites. The plant harness edits both files and restores them.
+      # overwrites. The plant harness edits it and restores it.
       - name: Bootstrap wrangler.jsonc from the example
         run: |
           cp -n wrangler.jsonc.example wrangler.jsonc
-          cp -n emergency/wrangler.jsonc.example emergency/wrangler.jsonc
 
       - run: npm run typecheck
       - run: npm run check:wrapper
       - run: npm run check:wrapper:plant
       - run: npm test
       - run: npm run build
-
-      # The emergency return kit (mcp/emergency): the pre-move code that `npm run ship:mcp-emergency`
-      # puts back if the cutover fails. Proved deployable on every push, so it is not first built on
-      # the day it is needed.
-      - run: npm run emergency:typecheck
-      - run: npm run emergency:build

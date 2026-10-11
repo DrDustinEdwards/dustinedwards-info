@@ -12,9 +12,7 @@
     "check:wrapper": "node scripts/check-wrapper.mjs",
     "check:wrapper:plant": "bash scripts/plant-violations.sh",
     "check:conformance": "node scripts/check-conformance.mjs",
-    "build": "wrangler deploy --dry-run -c wrangler.jsonc --outdir=dist",
-    "emergency:typecheck": "wrangler types -c emergency/wrangler.jsonc emergency/worker-configuration.d.ts && tsc -b emergency",
-    "emergency:build": "wrangler deploy --dry-run -c emergency/wrangler.jsonc --outdir=dist"
+    "build": "wrangler deploy --dry-run -c wrangler.jsonc --outdir=dist"
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.2.0-alpha.10",

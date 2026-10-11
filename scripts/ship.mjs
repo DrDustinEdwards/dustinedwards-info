@@ -44,16 +44,14 @@ if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
 }
 
 /*
- * The target: the site (no argument), `mcp`, the admin MCP Worker in mcp/ (`npm run ship:mcp`), or
- * `mcp-emergency`, the pre-move code in mcp/emergency that puts it back (`npm run ship:mcp-emergency`).
+ * The target: the site (no argument), or `mcp`, the admin MCP Worker in mcp/ (`npm run ship:mcp`).
  * Anything else refuses before anything runs.
  */
 const TARGET = process.argv[2] ?? "site";
-const MCP_TARGET = TARGET === "mcp" || TARGET === "mcp-emergency";
+const MCP_TARGET = TARGET === "mcp";
 if (TARGET !== "site" && !MCP_TARGET) {
   console.error(
-    `\n  REFUSED: unknown ship target ${JSON.stringify(TARGET)}. Run \`npm run ship\`, \`npm run ship:mcp\` ` +
-      "or `npm run ship:mcp-emergency`.\n",
+    `\n  REFUSED: unknown ship target ${JSON.stringify(TARGET)}. Run \`npm run ship\` or \`npm run ship:mcp\`.\n`,
   );
   process.exit(1);
 }
