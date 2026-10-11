@@ -1,3 +1,4 @@
+import { stubAccess } from "@dustinedwards/devkit/access";
 import { createLocalJWKSet } from "jose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,26 +13,18 @@ const TEAM = "team.cloudflareaccess.com";
 const AUD = "app-tag-0123";
 const VARS = { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
 
-const b64 = (bytes: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(bytes)))
-  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-const json = (value: unknown) => b64(new TextEncoder().encode(JSON.stringify(value)));
-
 async function signer() {
-  const pair = await crypto.subtle.generateKey(
-    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
-    true,
-    ["sign", "verify"],
-  );
-  const jwk = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  const jwks = { keys: [{ kid: "k1", kty: jwk.kty!, n: jwk.n!, e: jwk.e! }] };
-  const mint = async (claims: Record<string, unknown> = {}) => {
-    const head = json({ alg: "RS256", kid: "k1", typ: "JWT" });
-    const now = Math.floor(Date.now() / 1000);
-    const body = json({ iss: `https://${TEAM}`, aud: [AUD], exp: now + 600, ...claims });
-    const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", pair.privateKey, new TextEncoder().encode(`${head}.${body}`));
-    return `${head}.${body}.${b64(sig)}`;
-  };
-  return { jwks, mint };
+  const stub = await stubAccess({
+    issuer: `https://${TEAM}`,
+    audience: AUD,
+    email: "unused@example.com",
+    jwksUrl: `https://${TEAM}/cdn-cgi/access/certs`,
+    claims: { aud: [AUD] },
+    install: false,
+  });
+  const jwks = { keys: [stub.jwk] };
+  const mint = (claims: Record<string, unknown> = {}) => stub.token({ email: undefined, ...claims });
+  return { jwks, mint, fetch: stub.fetch };
 }
 
 const request = (token?: string, url = `${SITE_ORIGIN}/admin`) =>
@@ -95,24 +88,24 @@ describe("the admin layout with Cloudflare Access", () => {
   }
 
   it("admits the person a verified token names, and records them as the actor", async () => {
-    const { jwks, mint } = await signer();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(jwks));
+    const { mint, fetch } = await signer();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetch);
     const { thrown, actor } = await through(request(await mint({ email: "wife@example.com" })), VARS);
     expect(thrown).toBeNull();
     expect(actor).toEqual({ kind: "admin", email: "wife@example.com" });
   });
 
   it("answers 401 to a token that does not verify, rather than a login page", async () => {
-    const { jwks, mint } = await signer();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(jwks));
+    const { mint, fetch } = await signer();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetch);
     const { thrown } = await through(request(await mint({ email: "a@b.c", aud: ["other"] })), VARS);
     expect(thrown).toBeInstanceOf(Response);
     expect((thrown as Response).status).toBe(401);
   });
 
   it("does not admit a forged header on a Worker where Access is not configured", async () => {
-    const { jwks, mint } = await signer();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(jwks));
+    const { mint, fetch } = await signer();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetch);
     const { thrown, actor } = await through(request(await mint({ email: "a@b.c" })), {
       ACCESS_TEAM_DOMAIN: "",
       ACCESS_AUD: "",
