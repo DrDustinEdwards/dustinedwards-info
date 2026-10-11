@@ -70,6 +70,28 @@ const PublicModel = z.strictObject({
       title: Text(280).optional(),
     })
   ),
+  // Capsid's flows (design section 4): walks the explorer animates. Optional, as Capsid's own
+  // schema has it, so a model written before flows existed still parses. Not drawn here.
+  flows: z
+    .array(
+      z.strictObject({
+        id: Id,
+        name: Text(60),
+        description: Text(280).optional(),
+        steps: z
+          .array(
+            z.strictObject({
+              relationship: Text(200),
+              toward: Id,
+              text: Text(280),
+              lights: z.array(Id).max(8).optional(),
+            })
+          )
+          .min(2)
+          .max(20),
+      })
+    )
+    .optional(),
   counts: z.strictObject({
     systems: z.number().int(),
     public: z.number().int(),
@@ -110,6 +132,30 @@ export function parseSystemModel(raw) {
     const touchesPrivate = [r.from, r.to].some((end) => systems.get(end)?.private);
     if (touchesPrivate && r.title !== undefined) problems.push(`relationships.${r.id}: a title on a line to a private system`);
     if (touchesPrivate && [r.from, r.to].some((end) => containers.has(end))) problems.push(`relationships.${r.id}: reaches inside a system to a private one`);
+  }
+  const edges = new Map(model.relationships.map((r) => [r.id, r]));
+  const flowIds = new Set();
+  for (const f of model.flows ?? []) {
+    if (flowIds.has(f.id)) problems.push(`flows.${f.id}: the id is used twice`);
+    flowIds.add(f.id);
+    f.steps.forEach((step, i) => {
+      const where = `flows.${f.id}.steps.${i + 1}`;
+      const edge = edges.get(step.relationship);
+      if (!edge) {
+        problems.push(`${where}: rides ${step.relationship}, which is not a relationship in the model`);
+        return;
+      }
+      if (step.toward !== edge.from && step.toward !== edge.to) problems.push(`${where}: goes toward ${step.toward}, which is not an end of ${edge.id}`);
+      // Capsid publishes a flow only when every step runs between public parts.
+      if ([edge.from, edge.to].some((end) => systems.get(end)?.private)) problems.push(`${where}: runs to a private system`);
+      // A light is a part the step touches, in a system one of its ends belongs to (Capsid's rule).
+      const within = new Set([edge.from, edge.to].map((end) => containers.get(end)?.system ?? end));
+      for (const l of step.lights ?? []) {
+        const part = containers.get(l);
+        if (!part) problems.push(`${where}: lights ${l}, which is not a container`);
+        else if (!within.has(part.system)) problems.push(`${where}: lights ${l}, a part of ${part.system}, which the step does not run in`);
+      }
+    });
   }
   const counts = model.counts;
   const privates = model.systems.filter((s) => s.private).length;
@@ -211,19 +257,36 @@ const RING_HEADINGS = { core: "Runs everything", shared: "Shared parts", used: "
  * @param {SystemModel} model
  * @param {string} id
  */
-export const partsOf = (model, id) => model.containers.filter((c) => c.system === id);
+export const partsOf = (model, id) => model.containers.filter((c) => c.system === id && c.kind !== "external");
+/**
+ * What a system works with outside its boundary: its `external` containers, such as Capsid's
+ * Agents and GitHub (Dustin, 2026-10-11), never counted among its own parts.
+ * @param {SystemModel} model
+ * @param {string} id
+ */
+export const outsideOf = (model, id) => model.containers.filter((c) => c.system === id && c.kind === "external");
 
 /**
- * The lines between a system's parts, as sentences ("MCP Worker writes to capsid"), in the model's order.
+ * The lines touching a system's parts, to each other or to what is outside it, as sentences
+ * ("MCP Worker writes to capsid"), in the model's order.
  * @param {SystemModel} model
  * @param {string} id
  */
 export function wiresOf(model, id) {
-  const parts = new Map(partsOf(model, id).map((c) => [c.id, c]));
+  // A line to what is outside the system counts too (the Worker serves the Agents); a line
+  // between two outside things does not, since it touches none of the system's parts.
+  const own = new Set(partsOf(model, id).map((c) => c.id));
+  const parts = new Map(model.containers.filter((c) => c.system === id).map((c) => [c.id, c]));
   return model.relationships
-    .filter((r) => parts.has(r.from) && parts.has(r.to))
+    .filter((r) => parts.has(r.from) && parts.has(r.to) && (own.has(r.from) || own.has(r.to)))
     .map((r) => `${parts.get(r.from)?.name} ${VERB[r.kind][0]} ${parts.get(r.to)?.name}`);
 }
+
+/**
+ * One container as the twin and the page write it: name, what it runs on, what it does.
+ * @param {SystemModel["containers"][number]} c
+ */
+export const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
 
 /**
  * What a system's page says in place of a description: a private system is its name, and its
@@ -276,12 +339,11 @@ export function systemMarkdown(model, id, origin) {
   const repo = repoOf(s);
   if (repo) lines.push(`- Source: ${repo}`);
   const parts = partsOf(model, id);
-  if (parts.length) {
-    lines.push("", "## Inside", "");
-    for (const c of parts) lines.push(`- ${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`);
-    const wires = wiresOf(model, id);
-    if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
-  }
+  const outside = outsideOf(model, id);
+  if (parts.length) lines.push("", "## Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
+  if (outside.length) lines.push("", "## Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
+  const wires = wiresOf(model, id);
+  if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
   const links = connectionsOf(model, id);
   lines.push("", "## Connections", "");
   if (links.length === 0) lines.push("None drawn.");
