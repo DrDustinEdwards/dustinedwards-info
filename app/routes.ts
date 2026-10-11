@@ -157,6 +157,14 @@ export default [
     route("posts/:slug/revisions", "routes/admin.posts.$slug.revisions.tsx"),
   ]),
 
+  // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's
+  // middleware admits a person only with an active row in `members`, read on every request. Not /admin, which stays
+  // the Primary Owner's alone. Module files are workspace.* because routes/lab.tsx is the public /research/lab.
+  route("lab", "routes/workspace.tsx", [
+    index("routes/workspace._index.tsx"),
+    route("members", "routes/workspace.members.tsx"),
+  ]),
+
   route("api/health", "routes/api.health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
   route("api/csp-report", "routes/api.csp-report.ts"),

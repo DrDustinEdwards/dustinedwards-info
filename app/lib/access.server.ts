@@ -68,16 +68,29 @@ export async function accessIdentity(
   request: Request,
   keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
 ): Promise<AccessIdentity> {
-  if (localDevelopment(request)) return { kind: "human", email: LOCAL_DEV_EMAIL };
-
-  const teamDomain = env.ACCESS_TEAM_DOMAIN;
-  const audience = env.ACCESS_AUD;
-  if (!teamDomain || !audience) return { kind: "absent" };
-
   // The header is added only on paths the Access application covers (/admin). The same token also
   // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
-  const token = request.headers.get("cf-access-jwt-assertion") ?? cookieValue(request, "CF_Authorization");
+  return verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+}
+
+/**
+ * One Access application's verdict on a request: its token, from the header (or, with `cookie`, the `CF_Authorization`
+ * cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their own application's
+ * tag, so a token for one is refused at the other.
+ */
+export async function verifyAccessRequest(
+  env: Env,
+  request: Request,
+  { audience, cookie }: { audience: string; cookie: boolean },
+  keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
+): Promise<AccessIdentity> {
+  if (localDevelopment(request)) return { kind: "human", email: LOCAL_DEV_EMAIL };
+
+  const teamDomain = env.ACCESS_TEAM_DOMAIN;
+  if (!teamDomain || !audience) return { kind: "absent" };
+
+  const token = request.headers.get("cf-access-jwt-assertion") ?? (cookie ? cookieValue(request, "CF_Authorization") : null);
   if (!token) return { kind: "absent" };
 
   const verdict = await verifyAccessToken(token, keys(teamDomain), { issuer: `https://${teamDomain}`, audience });
