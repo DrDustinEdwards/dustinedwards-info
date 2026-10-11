@@ -153,7 +153,7 @@ export default defineConfig({
         modulesRules: [{ type: "CompiledWasm", include: ["**/*.wasm"] }],
         d1Databases: ["DB"],
         kvNamespaces: ["APP_KV"],
-        r2Buckets: ["MEDIA", "OG"],
+        r2Buckets: ["MEDIA", "OG", "BACKUPS"],
         durableObjects: {
           /*
            * SQLITE-BACKED, matching `new_sqlite_classes` in the wrangler

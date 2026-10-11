@@ -203,6 +203,15 @@
 		{
 			"binding": "MEDIA_BACKUP",
 			"bucket_name": "dustinedwards-media-backup"
+		},
+		// THE D1 DUMPS, nightly, under backups/json/ (app/lib/backup/d1-backup.server.ts). A
+		// SEPARATE BUCKET from the media mirror because this one is pruned by retention
+		// (14 daily, 8 weekly, 6 monthly) and that mirror is never deleted from. The watchdog
+		// cron asks the operator API to run it; the site Worker still has no cron. No preview
+		// binding: a preview has no dump to take.
+		{
+			"binding": "BACKUPS",
+			"bucket_name": "dustinedwards-backups"
 		}
 	],
 	// Media thumbnails. The library derives every size from the one original in

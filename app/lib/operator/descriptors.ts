@@ -25,6 +25,7 @@ const TOOLS = [
   "sync_phages",
   "sync_registry",
   "backup_media",
+  "backup_d1",
   "upload_media",
   "list_mentions",
   "decide_mention",
@@ -408,6 +409,16 @@ export const TOOL_DESCRIPTORS: Readonly<
       "and nothing is ever copied backup to media. Idempotent. A read-back " +
       "reconciliation: objects, twins, missing and mismatched, counted after " +
       "the writes rather than from the loop's own counters.",
+  },
+  backup_d1: {
+    args: {},
+    returns:
+      "Dumps every D1 table to the BACKUPS bucket under backups/json/<run id>/, checks the dump against " +
+      "the backup policy (the required non-derived tables are present, nothing credential-bearing is in it, " +
+      "it is not empty), writes the completion marker only if the check passes, then prunes runs outside " +
+      "the retention policy (14 daily, 8 weekly, 6 monthly). Returns run_id, exported_at, tables, rows, " +
+      "kept and pruned. A failed check answers an error and leaves the run without its marker. The watchdog " +
+      "calls this nightly.",
   },
   upload_media: {
     args: {

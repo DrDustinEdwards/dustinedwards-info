@@ -229,6 +229,13 @@ posture.
 - **Deleting a media object leaves its twin.** That is the point rather than an
   oversight, and it is why pruning the mirror is a human act.
 
+### The D1 dump bucket
+
+`dustinedwards-backups` (`BACKUPS`) holds the nightly D1 dumps, created 2026-10-11 with
+`npx wrangler r2 bucket create dustinedwards-backups`. It is not the media mirror: the dumps are
+pruned by retention, the mirror is never deleted from, and `check:destructive` holds both rules.
+The runbook (docs/RUNBOOK.md, 4-pre) has the schedule, the health fields and the restore.
+
 #### Comparison rule
 
 Byte identity is judged by **etag, corroborated by size**. For a single-part R2
