@@ -86,13 +86,21 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ context }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
   return data(
-    { email: actor.email, title: titleLabel(actor.title), manages: can(actor, PERMISSION.manageMembers) },
+    {
+      email: actor.email,
+      title: titleLabel(actor.title),
+      manages: can(actor, PERMISSION.manageMembers),
+      reads: can(actor, PERMISSION.read),
+      records: can(actor, PERMISSION.recordRun),
+    },
     { headers: { "cache-control": "private, no-store" } },
   );
 }
 
 const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
+  inventory: <Icon d="M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10" />,
+  runs: <Icon d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M7.5 14h9" />,
   members: <Icon d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7M18 14a6 6 0 0 1 4 6v1" />,
 };
 
@@ -106,6 +114,12 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
   const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
   const nav: AdminEntry[] = [
     { id: "overview", label: "Overview", href: "/lab", icon: ICONS.overview, current: pathname === "/lab" || pathname === "/lab/" },
+    ...(loaderData.reads
+      ? [{ id: "inventory", label: "Inventory", href: "/lab/inventory", group: "Bench", icon: ICONS.inventory, current: at("/lab/inventory") }]
+      : []),
+    ...(loaderData.records
+      ? [{ id: "runs", label: "Runs", href: "/lab/runs", group: "Bench", icon: ICONS.runs, current: at("/lab/runs") }]
+      : []),
     ...(loaderData.manages
       ? [{ id: "members", label: "Members", href: "/lab/members", group: "People", icon: ICONS.members, current: at("/lab/members") }]
       : []),

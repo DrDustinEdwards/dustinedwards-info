@@ -2,3 +2,32 @@
    the components only the lab uses. Nothing of the lab's own: the members page is Capsomer's people-roles. */
 @import "capsomer/menu.css";
 @import "capsomer/people-roles.css";
+
+/* The lab's forms: fields side by side on a wide screen, one column on a phone; a run's lot rows likewise. */
+.lab-form {
+  display: grid;
+  gap: var(--space-4);
+}
+.lab-fields {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  align-items: end;
+}
+.lab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.lab-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+.lab-facts dt {
+  color: var(--muted);
+}
+.lab-facts dd {
+  margin: 0;
+}
