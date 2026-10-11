@@ -21,6 +21,10 @@
       "what": "A mirror of MEDIA. Every uploaded original has a byte-identical twin here, written by copy and never by the site itself.",
       "whyLoadBearing": "The realistic way these bytes are lost is this site deleting them: the OG prune, the media delete action and the R2-wins reconciliation can each remove an object with no undo. So no code path deletes from this bucket, check:destructive sweeps for one, and health compares every object against its twin. It replaced an acceptance that held only while MEDIA was empty, which expired on the first upload."
     },
+    "r2:BACKUPS": {
+      "what": "Nightly dumps of every D1 table, one folder per run, each finished by a completion marker, kept 14 daily, 8 weekly and 6 monthly.",
+      "whyLoadBearing": "D1 is derived from the repository except for a handful of tables nothing can rebuild: webmentions, the sealed procedure versions, the Knowledge Base inventory and the lab roster with their audit trails. A dump is the only copy of those rows. It is a bucket of its own because it is pruned by retention while MEDIA_BACKUP is never deleted from, and wrangler d1 export cannot do the job because D1 refuses to export a database holding an FTS5 table."
+    },
     "ai_search:AI_SEARCH": {
       "what": "Retrieval and answer generation for Ask, on built-in storage with uploaded markdown rather than the crawler.",
       "whyLoadBearing": "It sits above classic search rather than replacing it, because the two fail on OPPOSITE inputs. Measured on the same corpus: classic found 2 things AI retrieval missed, all exact tokens, and AI retrieval found 3 that classic missed, all natural-language questions. Neither layer subsumes the other."

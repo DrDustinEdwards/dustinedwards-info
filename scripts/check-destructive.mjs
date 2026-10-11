@@ -291,6 +291,12 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "is what holds that",
     ],
     [
+      "backup_d1",
+      "WRITES a new dump run and deletes only dump runs outside the retention policy, on the BACKUPS " +
+        "binding alone (the sweep below holds that); the newest complete run is never deleted and nothing " +
+        "is pruned while the bucket holds no complete run. The dumps are copies of D1, never the source",
+    ],
+    [
       "upload_media",
       "ADDS ONLY, and cannot overwrite anything with different bytes: the key is " +
         "a digest of the content, so the one object a second upload can land on " +
@@ -453,6 +459,74 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   console.log(
     `  backup bucket: ${sources.length} source file(s) swept, ${mentioning} reach ` +
       `MEDIA_BACKUP, ${violations.length} delete from it`,
+  );
+}
+
+// The dump bucket is pruned by retention, which is a delete, so it gets the opposite rule from the
+// media mirror: the d1-dump package may be handed BACKUPS and nothing else may, and pruneDumps may be
+// handed BACKUPS and never MEDIA_BACKUP. Read off the syntax tree, as the sweep above is.
+{
+  /** @param {string} dir @returns {string[]} */
+  const walk = (dir) =>
+    existsSync(dir)
+      ? walkFiles(dir, {
+          keep: (name) => /\.(ts|tsx|mjs|js)$/.test(name),
+          skipDir: (name) => name === "node_modules" || name === "dist",
+        })
+      : [];
+  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth"]);
+  /** @param {string} text */
+  const dumpUses = (text) => bindingUses(parseSource("c.ts", text), "BACKUPS");
+
+  ok(
+    "the dump-bucket scan sees a delete on BACKUPS",
+    dumpUses("await env.BACKUPS.delete(key);").deletes.length === 1,
+    "a direct delete from the dump bucket would pass unseen; retention must go through pruneDumps",
+  );
+  ok(
+    "the dump-bucket scan sees BACKUPS handed to a function",
+    dumpUses("await pruneDumps(env.BACKUPS);").passedTo.join() === "pruneDumps",
+    "the callee allow-list below would be vacuous",
+  );
+  ok(
+    "the dump-bucket scan does not mistake MEDIA_BACKUP for BACKUPS",
+    dumpUses("await pruneDumps(env.MEDIA_BACKUP);").mentions === 0,
+    "the two bindings must stay distinguishable, or this rule and the media rule collapse into one",
+  );
+
+  const sources = [...walk(join(root, "app")), ...walk(join(root, "workers")), ...walk(join(root, "scripts"))];
+  let reaching = 0;
+  /** @type {string[]} */
+  const stray = [];
+  /** @type {string[]} */
+  const mediaPruned = [];
+  for (const file of sources) {
+    const text = readFileSync(file, "utf8");
+    const rel = file.slice(root.length + 1).replaceAll("\\", "/");
+    if (rel !== "scripts/check-destructive.mjs" && /pruneDumps\s*\(\s*[^)]*MEDIA_BACKUP/.test(text.replace(/\/\/.*$/gm, ""))) mediaPruned.push(rel);
+    if (!text.includes("BACKUPS")) continue;
+    const uses = dumpUses(text);
+    if (uses.mentions === 0) continue;
+    reaching += 1;
+    for (const hit of uses.deletes) stray.push(`${rel}: delete ${hit}`);
+    for (const callee of uses.passedTo) {
+      if (!DUMP_FUNCTIONS.has(callee)) stray.push(`${rel}: handed to ${callee}`);
+    }
+  }
+  ok(
+    "at least one source file reaches the BACKUPS binding",
+    reaching > 0,
+    "no file names it, so this rule is watching a binding that no longer exists",
+  );
+  ok(
+    "BACKUPS is only deleted from through pruneDumps, and only handed to the d1-dump functions",
+    stray.length === 0,
+    `${stray.length} use(s) outside the allow-list: ${stray.join(" | ")}. Read the callee, then add it to DUMP_FUNCTIONS with the reason.`,
+  );
+  ok(
+    "pruneDumps is never aimed at MEDIA_BACKUP",
+    mediaPruned.length === 0,
+    `retention would delete media mirror objects: ${mediaPruned.join(", ")}`,
   );
 }
 

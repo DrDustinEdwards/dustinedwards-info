@@ -177,6 +177,25 @@ rebuilt from anything. That is the one table where a restore is the only option.
 
 Two paths. Try them in this order.
 
+### 4-pre. The retained nightly dump
+
+Since the Knowledge Base, D1 holds rows the repository does not (webmentions, sealed procedure
+versions, inventory lots and locations, lab members and their audit trails). The watchdog asks the
+operator API for `backup_d1` every day at 05:00 UTC. It dumps every table to `dustinedwards-backups`
+(`BACKUPS`) under `backups/json/<run id>/`, checks the dump against `app/lib/backup/policy.mjs`,
+writes `_complete.json` only if the check passes, then prunes to 14 daily, 8 weekly and 6 monthly runs.
+`/api/health` reports `backup.last_ok` and `backup.age_hours`; a failed run throws in the watchdog,
+which is the alert. Nothing in the dump is a credential: see `EXCLUDED_TABLES` in the policy file.
+
+Restore it into a copy first, never over the live database. Download a run, then:
+
+```sh
+npx wrangler r2 object get dustinedwards-backups/backups/json/<run id>/_complete.json --file dump/backups/json/<run id>/_complete.json   # once per object in the run
+npx d1-dump drill --dir dump --backend sqlite
+```
+
+The weekly `restore-drill.yml` is separate and keeps nothing.
+
 ### 4a. Time Travel, first, always
 
 D1 keeps a rolling window of your database and can put it back without any

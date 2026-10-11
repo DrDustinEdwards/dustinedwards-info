@@ -19,6 +19,7 @@ import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { readFile } from "~/lib/editor/github.server";
 
+import { backupD1 } from "~/lib/backup/d1-backup.server";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolName, ToolResult } from "./descriptors";
 import {
@@ -235,6 +236,9 @@ export async function runTool(
 
       case "backup_media":
         return await backupMedia(env);
+
+      case "backup_d1":
+        return { ok: true, data: await backupD1(env) };
 
       case "upload_media":
         return await uploadMediaTool(env, args);

@@ -237,6 +237,50 @@ export async function purgeZeroResultsDaily(
   return null;
 }
 
+/**
+ * The one firing a day that takes the D1 dump: 05:00 to 05:14 UTC, its own quarter hour so it never
+ * shares a firing with the citation refresh (Sunday 03:00) or the zero-result purge (04:00).
+ * Exported only so the worker test can drive it.
+ */
+export function isD1BackupWindow(scheduledTime: number): boolean {
+  const at = new Date(scheduledTime);
+  return at.getUTCHours() === 5 && at.getUTCMinutes() < 15;
+}
+
+/**
+ * Calls the operator API's backup_d1, which dumps D1 to the BACKUPS bucket, checks the dump and prunes
+ * by retention. Returns the problem, or null when nothing was wrong or it was not this firing's turn;
+ * the caller throws it, so the invocation is recorded as failed and the cause is named. A failed run
+ * is retried by nothing until tomorrow, which is why the failure must be loud. Exported only so the
+ * worker test can drive it.
+ */
+export async function backupD1Daily(
+  env: WatchdogEnv,
+  token: string,
+  scheduledTime: number,
+): Promise<string | null> {
+  if (!isD1BackupWindow(scheduledTime)) return null;
+  if (!token) return "the daily D1 backup did not run: OPERATOR_TOKEN is not set on this Worker";
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await env.SITE.fetch(`${SITE_ORIGIN}/api/operator`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "watchdog" },
+      body: JSON.stringify({ tool: "backup_d1", args: {} }),
+    });
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    return `the daily D1 backup did not complete: ${errorMessage(error)}`;
+  }
+  if (!response.ok) {
+    const body = payload as { error?: string } | null;
+    return `the daily D1 backup answered ${response.status}: ${body?.error ?? "(no error was given)"}`;
+  }
+  console.log(JSON.stringify({ watchdog: "d1-backed-up", data: (payload as { data?: unknown } | null)?.data ?? null }));
+  return null;
+}
+
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
   try {
     await env.EMAIL.send({
@@ -537,7 +581,8 @@ export default {
       // each other (they fall in different quarter hours, so this is belt and suspenders).
       const refreshProblem = await refreshCitationsWeekly(env, token, controller.scheduledTime);
       const purgeProblem = await purgeZeroResultsDaily(env, token, controller.scheduledTime);
-      const scheduledProblems = [refreshProblem, purgeProblem].filter((p): p is string => p !== null);
+      const backupProblem = await backupD1Daily(env, token, controller.scheduledTime);
+      const scheduledProblems = [refreshProblem, purgeProblem, backupProblem].filter((p): p is string => p !== null);
       if (scheduledProblems.length > 0) throw new Error(scheduledProblems.join(" "));
     } catch (error) {
       const message = errorMessage(error);
