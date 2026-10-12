@@ -8,8 +8,8 @@ import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, menuUnrolled, ok, pollUntil, sk
  * button per section, never role=menu. Click toggles aria-expanded (so do Enter and Space); hover opens at
  * once; a click right after hover keeps the panel open; leaving the bar and the panel closes it after the
  * grace (about 300ms); Escape closes and hands focus back to the button; a touch pointer opens by click
- * only. All five panels share one width (about 640px), are close to one height, stay in the viewport at
- * every width, meet the header, veil and inert the page, and a click on the veil closes without reaching
+ * only. All five panels share one width (about 640px), are as tall as their content, line up with their own
+ * button (left edge to left edge, else right to right), stay in the viewport at every width, meet the header, veil and inert the page, and a click on the veil closes without reaching
  * the page. A phone gets a full-bleed drawer of expandable groups with 44px rows and the band stacked.
  * Every link the panels render answers 200, and the spotlights point at pages that carry what they say.
  * On pages of its own, so no navigation here voids a later case on the shared page.
@@ -316,7 +316,7 @@ export async function run({ browser }) {
     const measure = async (width) => {
       await page.setViewport({ width, height: 900 });
       return page.evaluate(async (ids) => {
-        /** @type {Record<string, { width: number, height: number, left: number, right: number, clipped: boolean }>} */
+        /** @type {Record<string, { width: number, height: number, left: number, right: number, clipped: boolean, buttonLeft: number, buttonRight: number, inset: number }>} */
         const out = {};
         for (const id of ids) {
           const button = /** @type {HTMLElement | null} */ (document.querySelector(`button[aria-controls="site-nav-${id}"]`));
@@ -324,7 +324,17 @@ export async function run({ browser }) {
           if (!button || !p) continue;
           button.click();
           const box = p.getBoundingClientRect();
-          out[id] = { width: box.width, height: box.height, left: box.left, right: box.right, clipped: p.scrollWidth > p.clientWidth + 1 };
+          const own = button.getBoundingClientRect();
+          out[id] = {
+            width: box.width,
+            height: box.height,
+            left: box.left,
+            right: box.right,
+            clipped: p.scrollWidth > p.clientWidth + 1,
+            buttonLeft: own.left,
+            buttonRight: own.right,
+            inset: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector("[data-site-header]"))).paddingInlineStart),
+          };
           button.click();
         }
         return out;
@@ -332,7 +342,6 @@ export async function run({ browser }) {
     };
     const wide = await measure(1280);
     const widths = Object.values(wide).map((w) => w.width);
-    const heights = Object.values(wide).map((w) => w.height);
     ok(
       "all five panels open at one width of about 640px, and none clips its content",
       Object.keys(wide).length === 5 &&
@@ -341,19 +350,32 @@ export async function run({ browser }) {
         Object.values(wide).every((w) => !w.clipped),
       JSON.stringify(wide),
     );
-    ok(
-      "all five panels are close to one height: the tallest is within 8 percent of the shortest",
-      heights.length === 5 && Math.max(...heights) <= Math.min(...heights) * 1.08,
-      `heights ${heights.map(Math.round).join(", ")} for ${Object.keys(wide).join(", ")}`,
-    );
     /** @type {string[]} */
     const outside = [];
+    /* The gap between each button's edge and its panel's edge: left edge to left edge where the panel fits
+       from there, else right edge to right edge, so the panel is always under its own button (About's sits
+       under About, not shifted left of it). Where the right-aligned panel would cross the left inset, it
+       stops at the inset and still spans its button. */
+    /** @type {string[]} */
+    const misaligned = [];
     for (const width of [1280, 1024, 900]) {
       const at = width === 1280 ? wide : await measure(width);
       for (const [id, w] of Object.entries(at)) {
         if (w.left < 0 || w.right > width) outside.push(`${id} at ${width}: ${Math.round(w.left)} to ${Math.round(w.right)}`);
+        const gapLeft = Math.abs(w.left - w.buttonLeft);
+        const gapRight = Math.abs(w.right - w.buttonRight);
+        const underButton = w.left <= w.buttonLeft + 1 && w.right >= w.buttonRight - 1;
+        const atInset = Math.abs(w.left - w.inset) <= 1;
+        if (!underButton || (Math.min(gapLeft, gapRight) > 1 && !atInset)) {
+          misaligned.push(`${id} at ${width}: left gap ${Math.round(gapLeft)}, right gap ${Math.round(gapRight)}, under button ${underButton}`);
+        }
       }
     }
+    ok(
+      "at 1280, 1024 and 900 wide every panel lines up with its own button: left edge to left edge, or right edge to right edge where the viewport would clamp it (held at the inset when that is not room enough), and spans the button",
+      misaligned.length === 0,
+      misaligned.join("; ") || "all aligned",
+    );
     ok(
       "at 1280, 1024 and 900 wide (the narrowest wide layout) every panel stays within the viewport, clamped under its own button",
       outside.length === 0,
