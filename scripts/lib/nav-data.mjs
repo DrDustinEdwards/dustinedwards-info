@@ -181,30 +181,25 @@ export function readLibraryCounts(dir = PROCEDURES_DIR) {
   return counts;
 }
 
-/** The pages whose own description the Teaching panel's course tiles show. */
-export const COURSE_PATHS = ["/teaching/phage-discovery", "/teaching/virus-isolation", "/teaching/phage-bioinformatics"];
-
 /**
- * The front matter `description` of each page in `paths`, by path, read from content/pages (the same field the
- * page's search snippet and meta description use). A page with no description is left out and named in
- * `problems`; its tile then has no line.
+ * The front matter `description` of every page under /teaching/, by path, read from content/pages (the field the
+ * page's meta description uses). The Teaching panel's course tiles take their line from here by their own address,
+ * so the tiles name the courses once, in app/lib/nav.ts, and test/nav.test.mjs fails a tile whose page has no
+ * description. A page without one is left out.
  *
- * @param {string[]} paths
  * @param {string} [dir]
- * @param {string[]} [problems]
  * @returns {Record<string, string>}
  */
-export function readPageDescriptions(paths = COURSE_PATHS, dir = PAGES_DIR, problems = []) {
+export function readTeachingDescriptions(dir = PAGES_DIR) {
   /** @type {Record<string, string>} */
   const found = {};
-  for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
+  for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
     const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
-    if (typeof data.path === "string" && paths.includes(data.path) && typeof data.description === "string" && data.description.trim() !== "") {
+    if (typeof data.path === "string" && data.path.startsWith("/teaching/") && typeof data.description === "string" && data.description.trim() !== "") {
       found[data.path] = data.description.trim();
     }
   }
-  for (const p of paths) if (!(p in found)) problems.push(`content/pages has no description for ${p}, so its Teaching tile has no line`);
-  return Object.fromEntries(paths.filter((p) => p in found).map((p) => [p, found[p]]));
+  return found;
 }
 
 /**
@@ -218,7 +213,6 @@ export function navDataProblems() {
   const problems = [];
   readPosts(POSTS_DIR, problems);
   if (readLatestPaper(PUBLICATIONS_DIR, problems) === null) problems.push("content/publications has no published paper for the Research panel's Latest paper");
-  readPageDescriptions(COURSE_PATHS, PAGES_DIR, problems);
   if (readLabPlace(readIdentity().affiliation) === null) problems.push("content/cv/appointments.md names no town for the university, so the About spotlight has no place");
   return problems;
 }
@@ -229,7 +223,7 @@ export function readNavData() {
     latestPaper: readLatestPaper(),
     posts: readPosts(),
     libraries: readLibraryCounts(),
-    courses: readPageDescriptions(),
+    courses: readTeachingDescriptions(),
     lab: { department: identity.department, university: identity.affiliation, place: readLabPlace(identity.affiliation) },
   };
 }

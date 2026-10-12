@@ -21,7 +21,9 @@ function textOf(html, className) {
 
 test("the home hero states the whole organization, the university and its system", () => {
   const html = render();
-  assert.equal(textOf(html, "p-org").replace(/\s+/g, " "), "Tarleton State University Texas A&M University System");
+  // Machines read the same fact as the CV's line, comma included, though a reader sees two lines.
+  assert.equal(textOf(html, "p-org"), "Tarleton State University, Texas A&M University System");
+  assert.equal(textOf(html, "p-org"), IDENTITY.org);
   assert.match(html, /Texas A&amp;M University System/);
 });
 

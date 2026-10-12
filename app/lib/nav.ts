@@ -184,7 +184,7 @@ function researchMenu(): Menu {
 
 /** A course tile; its line is the course page's own front matter description, read at build (scripts/lib/nav-data.mjs). */
 function courseTile(to: string, label: string, icon: NavIcon): MenuLink {
-  const description = (NAV_DATA.courses as Record<string, string | undefined>)[to];
+  const description = (NAV_DATA.courses as Record<string, string> | undefined)?.[to];
   return description ? { to, label, icon, description } : { to, label, icon };
 }
 

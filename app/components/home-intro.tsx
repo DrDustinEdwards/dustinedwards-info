@@ -9,7 +9,7 @@ import { SITE } from "~/lib/seo";
  *
  * The hero sets that line on two lines, the university and then its system, split at the first comma of
  * `SITE.org` so no name is typed twice. Only the hero does this: the About panel, structured data and the
- * page title keep their own forms. Both lines sit in one `p-org` element, so the h-card has one organization.
+ * page title keep their own forms. Both lines sit in one `p-org` element, so the h-card has one organization, and a visually hidden comma between them keeps its text equal to `SITE.org`.
  */
 function orgLines(org: string): string[] {
   const at = org.indexOf(",");
@@ -29,7 +29,7 @@ export function HomeIntro() {
         <span className="p-org">
           {orgLines(SITE.org).map((line, i) => (
             <Fragment key={line}>
-              {i > 0 ? " " : null}
+              {i > 0 ? <span className="sr-only">, </span> : null}
               <span className="org-line">{line}</span>
             </Fragment>
           ))}

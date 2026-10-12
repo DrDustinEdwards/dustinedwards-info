@@ -163,8 +163,9 @@
  * anchor-scope gives every item its own --site-nav-item.
  *
  * The right-aligned x is the left-aligned x moved back by the card's width less the button's, and
- * sign() turns "would overflow" into that one step (1 past the limit, 0 at or before it). Without sign()
- * the first left declaration stays: the card is clamped at the right inset, as it was.
+ * sign() turns "would overflow" into that one step (1 past the limit, 0 at or before it). A declaration that
+ * uses var() is only checked when it is applied, so a browser without sign() would drop it to `auto`; the
+ * @supports test therefore names sign() too, and such a browser takes header.ts's path (--nav-card-x).
  */
 @supports (anchor-name: --a) and (anchor-scope: --a) {
   .site-header {
@@ -177,9 +178,13 @@
   }
 
   .site-nav-panel {
-    --nav-card-limit: calc(100% - var(--nav-card-fit) - var(--site-inset));
     top: calc(anchor(--site-header bottom) - var(--line-w));
-    left: clamp(var(--site-inset), anchor(--site-nav-item left), var(--nav-card-limit));
+  }
+}
+
+@supports (anchor-name: --a) and (anchor-scope: --a) and (left: calc(sign(1px) * 1px)) {
+  .site-nav-panel {
+    --nav-card-limit: calc(100% - var(--nav-card-fit) - var(--site-inset));
     left: clamp(
       var(--site-inset),
       anchor(--site-nav-item left) -
@@ -821,9 +826,9 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   /*
    * A row's links sit right under its title, the way a note does. Each link is a 44px target with its text
    * centered, so the list is pulled up by what that centering adds: the link text then lands where a note's
-   * would. Only a plain title (no link of its own) has links under it, so no target is covered.
+   * would. Only a plain title (no link of its own) gets this, so no tap target is covered.
    */
-  .site-nav-row-title + .site-nav-inline {
+  .site-nav-row-title[data-plain] + .site-nav-inline {
     margin-block-start: -1.25rem;
   }
 

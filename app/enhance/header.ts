@@ -146,7 +146,9 @@ function enhanceMenus() {
    * edge on the button's right edge, and held inside the header's inset at both sides. Where anchor
    * positioning exists the stylesheet owns x and this writes nothing.
    */
-  const anchored = CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a");
+  // The same three tests as the stylesheet's @supports, so exactly one of the two owns x.
+  const anchored =
+    CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a") && CSS.supports("left: calc(sign(1px) * 1px)");
   const place = (menu: Menu) => {
     if (anchored || mobile.matches) return;
     const header = document.querySelector<HTMLElement>("[data-site-header]");

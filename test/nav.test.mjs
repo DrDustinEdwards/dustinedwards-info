@@ -383,7 +383,8 @@ test("the Newest post and the tile order are the /writing listing's order for po
 
 test("each Teaching course tile carries its page's own description, read from the page's front matter", () => {
   const tiles = panels().teaching.tiles;
-  assert.deepEqual(tiles.map((t) => t.to), ["/teaching/phage-discovery", "/teaching/virus-isolation", "/teaching/phage-bioinformatics"]);
+  // Every course tile the menu shows, so a new tile whose page has no description fails here.
+  assert.ok(tiles.length > 0 && tiles.every((t) => t.to.startsWith("/teaching/")));
   for (const tile of tiles) {
     const file = join(root, "content", "pages", `teaching-${tile.to.split("/").pop()}.md`);
     const { data } = matter(readFileSync(file, "utf8"), {});
