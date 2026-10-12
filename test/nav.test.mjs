@@ -381,6 +381,18 @@ test("the Newest post and the tile order are the /writing listing's order for po
   assert.deepEqual(panels().writing.tiles.map((t) => t.to), listing.slice(0, 3).map((slug) => `/writing/${slug}`));
 });
 
+test("each Teaching course tile carries its page's own description, read from the page's front matter", () => {
+  const tiles = panels().teaching.tiles;
+  assert.deepEqual(tiles.map((t) => t.to), ["/teaching/phage-discovery", "/teaching/virus-isolation", "/teaching/phage-bioinformatics"]);
+  for (const tile of tiles) {
+    const file = join(root, "content", "pages", `teaching-${tile.to.split("/").pop()}.md`);
+    const { data } = matter(readFileSync(file, "utf8"), {});
+    assert.equal(data.path, tile.to);
+    assert.ok(typeof data.description === "string" && data.description !== "", `${tile.to} has no front matter description`);
+    assert.equal(tile.description, data.description, `${tile.to}: the tile's line is not the page's description`);
+  }
+});
+
 test("the three Carrel posts, all dated one day, show part 3, part 2, part 1, and part 3 is the Newest", () => {
   const parts = ["carrel-ai-drafts-beside-mine", "carrel-one-api-for-every-site", "carrel-a-writing-desk-apart-from-the-site"];
   const bySlug = new Map(readPosts().map((p) => [p.slug, p]));

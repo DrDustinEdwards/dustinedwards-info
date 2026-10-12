@@ -27,6 +27,7 @@ const POSTS_DIR = path.join(ROOT, "content", "posts");
 const PUBLICATIONS_DIR = path.join(ROOT, "content", "publications");
 const CV_DIR = path.join(ROOT, "content", "cv");
 const PROCEDURES_DIR = path.join(ROOT, "content", "procedures");
+const PAGES_DIR = path.join(ROOT, "content", "pages");
 export const NAV_DATA_PATH = path.join(ROOT, "app", "lib", "nav-data.generated.mjs");
 
 /** The longest first line a spotlight carries. */
@@ -180,6 +181,32 @@ export function readLibraryCounts(dir = PROCEDURES_DIR) {
   return counts;
 }
 
+/** The pages whose own description the Teaching panel's course tiles show. */
+export const COURSE_PATHS = ["/teaching/phage-discovery", "/teaching/virus-isolation", "/teaching/phage-bioinformatics"];
+
+/**
+ * The front matter `description` of each page in `paths`, by path, read from content/pages (the same field the
+ * page's search snippet and meta description use). A page with no description is left out and named in
+ * `problems`; its tile then has no line.
+ *
+ * @param {string[]} paths
+ * @param {string} [dir]
+ * @param {string[]} [problems]
+ * @returns {Record<string, string>}
+ */
+export function readPageDescriptions(paths = COURSE_PATHS, dir = PAGES_DIR, problems = []) {
+  /** @type {Record<string, string>} */
+  const found = {};
+  for (const name of readdirSync(dir).filter((n) => n.endsWith(".md"))) {
+    const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+    if (typeof data.path === "string" && paths.includes(data.path) && typeof data.description === "string" && data.description.trim() !== "") {
+      found[data.path] = data.description.trim();
+    }
+  }
+  for (const p of paths) if (!(p in found)) problems.push(`content/pages has no description for ${p}, so its Teaching tile has no line`);
+  return Object.fromEntries(paths.filter((p) => p in found).map((p) => [p, found[p]]));
+}
+
 /**
  * What the build had to leave out, for the gate to report (test/nav.test.mjs): posts that fail the front matter
  * schema, a paper file that cannot be read, no published paper, no town for the lab. The build itself only warns.
@@ -191,6 +218,7 @@ export function navDataProblems() {
   const problems = [];
   readPosts(POSTS_DIR, problems);
   if (readLatestPaper(PUBLICATIONS_DIR, problems) === null) problems.push("content/publications has no published paper for the Research panel's Latest paper");
+  readPageDescriptions(COURSE_PATHS, PAGES_DIR, problems);
   if (readLabPlace(readIdentity().affiliation) === null) problems.push("content/cv/appointments.md names no town for the university, so the About spotlight has no place");
   return problems;
 }
@@ -201,6 +229,7 @@ export function readNavData() {
     latestPaper: readLatestPaper(),
     posts: readPosts(),
     libraries: readLibraryCounts(),
+    courses: readPageDescriptions(),
     lab: { department: identity.department, university: identity.affiliation, place: readLabPlace(identity.affiliation) },
   };
 }
