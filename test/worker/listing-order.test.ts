@@ -46,4 +46,21 @@ describe("the listing order for posts that share an instant", () => {
     expect([part2?.next?.slug, part2?.previous?.slug]).toEqual(["nb-ai-part3", "nb-a-part1"]);
     expect([part1?.next?.slug, part1?.previous?.slug]).toEqual(["nb-one-part2", "nb-before"]);
   });
+
+  it("KEEPS TWO SERIES OF ONE DAY APART, each among the day's plain posts by its newest row, whatever is dated later", async () => {
+    // A year of its own. Ids rise in the order seeded; the later day's series post has the highest series id.
+    const day = DAY - 2 * 365 * 86_400;
+    await seedPost("g-plain-1", { publishAt: day });
+    await seedPost("g-a1", { publishAt: day, series: "GA", part: 1 });
+    await seedPost("g-a2", { publishAt: day, series: "GA", part: 2 });
+    await seedPost("g-plain-2", { publishAt: day });
+    await seedPost("g-b1", { publishAt: day, series: "GB", part: 1 });
+    await seedPost("g-b2", { publishAt: day, series: "GB", part: 2 });
+    await seedPost("g-plain-3", { publishAt: day });
+    await seedPost("g-c1", { publishAt: day + 86_400, series: "GC", part: 1 });
+
+    const { posts } = await listBlogPosts(db, { perPage: 100 });
+    const slugs = posts.map((p) => p.slug).filter((slug) => slug.startsWith("g-"));
+    expect(slugs).toEqual(["g-c1", "g-plain-3", "g-b2", "g-b1", "g-plain-2", "g-a2", "g-a1", "g-plain-1"]);
+  });
 });

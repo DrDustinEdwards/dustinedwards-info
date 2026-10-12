@@ -69,7 +69,7 @@ export async function nextScheduledPublishAt(env: Env): Promise<Date | null> {
  * `groupKey` is the largest id among the published posts sharing this row's instant and series, or the row's
  * own id when it has no series. It is what keeps a series together and sorts it among its day's other posts.
  */
-const groupKey = sql<number>`COALESCE(CASE WHEN ${posts.series} IS NULL THEN NULL ELSE (SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = ${posts.publishAt} AND g.series = ${posts.series}) END, ${posts.id})`;
+const groupKey = sql<number>`COALESCE(CASE WHEN "posts"."series" IS NULL THEN NULL ELSE (SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = "posts"."publish_at" AND g.series = "posts"."series") END, "posts"."id")`;
 const partKey = sql<number>`COALESCE(${posts.part}, 0)`;
 const newestFirstOrder = (direction: typeof desc | typeof asc = desc) => [
   direction(posts.publishAt),
@@ -425,22 +425,10 @@ async function withNeighbours(db: DB, post: PostRow, tagSlugs: string[]) {
   // one, is not its own neighbour.
   const at = post.publishAt ?? new Date();
   // This post's place in the order within its instant: its group key (the newest id of its series that day,
-  // else its own id) and its part.
+  // else its own id), worked out in the same statement as the neighbours so there is one round trip.
   const ownGroup = post.series
-    ? ((
-        await db
-          .select({ key: sql<number | null>`MAX(${posts.id})` })
-          .from(posts)
-          .where(
-            and(
-              eq(posts.kind, "post"),
-              eq(posts.status, PUBLISHED_STATUS),
-              eq(posts.publishAt, at),
-              eq(posts.series, post.series),
-            ),
-          )
-      )[0]?.key ?? post.id)
-    : post.id;
+    ? sql`COALESCE((SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = ${Math.floor(at.getTime() / 1000)} AND g.series = ${post.series}), ${post.id})`
+    : sql`${post.id}`;
   const ownPart = post.part ?? 0;
   /** Strictly before (`lt`) or after (`gt`) this post, by the listing's keys in turn. */
   const beyond = (cmp: typeof lt) =>
