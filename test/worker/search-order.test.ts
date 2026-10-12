@@ -31,7 +31,7 @@ describe("search browse order", () => {
     await indexPost("so-part2");
     await indexPost("so-plain");
 
-    const result = await search(env, { q: "", type: "post", year: "2022" });
+    const result = await search(env as unknown as Parameters<typeof search>[0], { q: "", type: "post", year: "2022" });
     expect(result.hits.map((hit) => hit.url)).toEqual(["/writing/so-part2", "/writing/so-part1", "/writing/so-plain"]);
   });
 });
