@@ -35,19 +35,24 @@ export async function seedPost(
     title = `Title for ${slug}`,
     body = "A body.",
     publishAt = NEW_YEAR,
+    series = null,
+    part = null,
   }: {
     status?: "draft" | "published";
     title?: string;
     body?: string;
     publishAt?: number | null;
+    series?: string | null;
+    part?: number | null;
   } = {},
 ) {
   await env.DB.prepare(
-    `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-     VALUES (?1, 'post', ?2, ?3, ?4, ?5)
-     ON CONFLICT(slug) DO UPDATE SET status = excluded.status, publish_at = excluded.publish_at`,
+    `INSERT INTO posts (slug, kind, title, body, status, publish_at, series, part)
+     VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7)
+     ON CONFLICT(slug) DO UPDATE SET status = excluded.status, publish_at = excluded.publish_at,
+       series = excluded.series, part = excluded.part`,
   )
-    .bind(slug, title, body, status, publishAt)
+    .bind(slug, title, body, status, publishAt, series, part)
     .run();
 }
 

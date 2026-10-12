@@ -17,6 +17,7 @@ import matter from "gray-matter";
 import { decodeEntities } from "../../app/lib/publications/entities.mjs";
 import { recordFromData } from "../../app/lib/publications/record.mjs";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
+import { newestFirst } from "../../app/lib/post-order.mjs";
 import { frontmatterSchema } from "../../app/lib/content/pipeline.mjs";
 import { plainText } from "../../app/lib/search/records.mjs";
 import { readIdentity } from "./identity.mjs";
@@ -63,15 +64,16 @@ export function firstLineOf(body) {
  * at midnight UTC, as renderPost states it), so a bad file cannot give the header a different post than the
  * site has. A file that fails is left out and named in `problems`, for a gate to report; the build goes on.
  *
- * Order: publish instant descending, then slug descending. The listings break a tie by row id descending, the
- * rows are inserted in the build artifact's order (slug ascending), and a build cannot see ids, so slug
- * descending is what matches the listing for posts sharing an instant (test/nav.test.mjs pins it against the artifact).
+ * Order: the listings' rule (app/lib/post-order.mjs): publish instant descending; posts sharing an instant
+ * and a series, latest part first; otherwise the later row first. The listings break that last tie by row id,
+ * the rows are inserted in the build artifact's order (slug ascending), and a build cannot see ids, so slug
+ * descending stands in for it (test/nav.test.mjs pins the result against the artifact).
  *
  * @param {string} [dir]
  * @param {string[]} [problems] filled with one line per file that did not parse
  */
 export function readPosts(dir = POSTS_DIR, problems = []) {
-  return readdirSync(dir)
+  const posts = readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .flatMap((name) => {
       const { data, content } = matter(readFileSync(path.join(dir, name), "utf8"), {});
@@ -90,11 +92,12 @@ export function readPosts(dir = POSTS_DIR, problems = []) {
           publishAt: new Date(fm.publish_at ?? `${fm.date}T00:00:00.000Z`).toISOString(),
           firstLine: firstLineOf(content),
           series: fm.series ?? null,
+          part: fm.part ?? null,
           tags: fm.tags,
         },
       ];
-    })
-    .sort((a, b) => (a.publishAt === b.publishAt ? (a.slug < b.slug ? 1 : -1) : a.publishAt < b.publishAt ? 1 : -1));
+    });
+  return newestFirst(posts, (post) => post.slug);
 }
 
 /**

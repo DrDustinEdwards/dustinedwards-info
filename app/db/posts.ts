@@ -61,6 +61,23 @@ export async function nextScheduledPublishAt(env: Env): Promise<Date | null> {
   return row?.publishAt ?? null;
 }
 
+/**
+ * The listing order, newest first: publish instant, then a series together with its latest part first, then
+ * the later row. app/lib/post-order.mjs states the rule and applies it to the header's build-time list; this is
+ * the same rule in SQL, so the /writing listing, the home page, the feeds and the header cannot disagree.
+ *
+ * `groupKey` is the largest id among the published posts sharing this row's instant and series, or the row's
+ * own id when it has no series. It is what keeps a series together and sorts it among its day's other posts.
+ */
+const groupKey = sql<number>`COALESCE(CASE WHEN ${posts.series} IS NULL THEN NULL ELSE (SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = ${posts.publishAt} AND g.series = ${posts.series}) END, ${posts.id})`;
+const partKey = sql<number>`COALESCE(${posts.part}, 0)`;
+const newestFirstOrder = (direction: typeof desc | typeof asc = desc) => [
+  direction(posts.publishAt),
+  direction(groupKey),
+  direction(partKey),
+  direction(posts.id),
+];
+
 /** Columns the index and feed need. Deliberately excludes body and html. */
 const postCard = {
   slug: posts.slug,
@@ -181,12 +198,12 @@ export async function listBlogPosts(
   const where = and(isBlogPost(), ...narrowing);
 
   // One round trip. The page is a subquery the tag join wraps; joining first would LIMIT
-  // joined rows. `id DESC` breaks ties, or posts sharing `publish_at` interleave by tag.
+  // joined rows. The rest of newestFirstOrder breaks ties, or posts sharing `publish_at` interleave by tag.
   const pageOfPosts = db
-    .select({ ...postCard, id: posts.id })
+    .select({ ...postCard, id: posts.id, groupKey: groupKey.as("group_key") })
     .from(posts)
     .where(where)
-    .orderBy(desc(posts.publishAt), desc(posts.id))
+    .orderBy(...newestFirstOrder())
     .limit(perPage)
     .offset((page - 1) * perPage)
     .as("page_of_posts");
@@ -216,8 +233,14 @@ export async function listBlogPosts(
         // LEFT, so a post with no tags keeps its row.
         .leftJoin(postTags, eq(postTags.postId, pageOfPosts.id))
         .leftJoin(tags, eq(tags.id, postTags.tagId))
-        // Both post keys before the tag key, or ties interleave rows of different posts.
-        .orderBy(desc(pageOfPosts.publishAt), desc(pageOfPosts.id), asc(tags.slug)),
+        // Every post key before the tag key, or ties interleave rows of different posts.
+        .orderBy(
+          desc(pageOfPosts.publishAt),
+          desc(pageOfPosts.groupKey),
+          desc(sql`COALESCE(${pageOfPosts.part}, 0)`),
+          desc(pageOfPosts.id),
+          asc(tags.slug),
+        ),
     ]),
   );
 
@@ -264,7 +287,7 @@ export async function listHomeStartHere(
         .select(postCard)
         .from(posts)
         .where(and(isBlogPost(), eq(posts.featured, true)))
-        .orderBy(desc(posts.publishAt), desc(posts.id))
+        .orderBy(...newestFirstOrder())
         .limit(1),
       db
         .select(postCard)
@@ -274,7 +297,7 @@ export async function listHomeStartHere(
         .select(postCard)
         .from(posts)
         .where(and(isBlogPost(), eq(posts.featured, false)))
-        .orderBy(desc(posts.publishAt), desc(posts.id))
+        .orderBy(...newestFirstOrder())
         .limit(cards),
       db.select({ total: count() }).from(posts).where(isBlogPost()),
     ]),
@@ -396,34 +419,56 @@ export async function previewBlogPost(env: Env, post: PostRow, tagSlugs: string[
 }
 
 async function withNeighbours(db: DB, post: PostRow, tagSlugs: string[]) {
-  // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing
-  // is (publish_at, then id), so two posts sharing a publish_at are neighbors rather than skipped. The
-  // slug is excluded so a previewed post, whose row may differ from the stored one, is not its own neighbour.
+  // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing is
+  // (newestFirstOrder), so posts sharing a publish_at are neighbors rather than skipped, and the parts of a
+  // series follow one another. The slug is excluded so a previewed post, whose row may differ from the stored
+  // one, is not its own neighbour.
   const at = post.publishAt ?? new Date();
+  // This post's place in the order within its instant: its group key (the newest id of its series that day,
+  // else its own id) and its part.
+  const ownGroup = post.series
+    ? ((
+        await db
+          .select({ key: sql<number | null>`MAX(${posts.id})` })
+          .from(posts)
+          .where(
+            and(
+              eq(posts.kind, "post"),
+              eq(posts.status, PUBLISHED_STATUS),
+              eq(posts.publishAt, at),
+              eq(posts.series, post.series),
+            ),
+          )
+      )[0]?.key ?? post.id)
+    : post.id;
+  const ownPart = post.part ?? 0;
+  /** Strictly before (`lt`) or after (`gt`) this post, by the listing's keys in turn. */
+  const beyond = (cmp: typeof lt) =>
+    or(
+      cmp(posts.publishAt, at),
+      and(
+        eq(posts.publishAt, at),
+        or(
+          cmp(groupKey, ownGroup),
+          and(
+            eq(groupKey, ownGroup),
+            or(cmp(partKey, ownPart), and(eq(partKey, ownPart), cmp(posts.id, post.id))),
+          ),
+        ),
+      ),
+    );
   const [[previous], [next]] = await Promise.all([
     db
       .select({ slug: posts.slug, title: posts.title })
       .from(posts)
-      .where(
-        and(
-          isBlogPost(),
-          ne(posts.slug, post.slug),
-          or(lt(posts.publishAt, at), and(eq(posts.publishAt, at), lt(posts.id, post.id))),
-        ),
-      )
-      .orderBy(desc(posts.publishAt), desc(posts.id))
+      .where(and(isBlogPost(), ne(posts.slug, post.slug), beyond(lt)))
+      .orderBy(...newestFirstOrder())
       .limit(1),
     db
       .select({ slug: posts.slug, title: posts.title })
       .from(posts)
-      .where(
-        and(
-          isBlogPost(),
-          ne(posts.slug, post.slug),
-          or(gt(posts.publishAt, at), and(eq(posts.publishAt, at), gt(posts.id, post.id))),
-        ),
-      )
-      .orderBy(asc(posts.publishAt), asc(posts.id))
+      .where(and(isBlogPost(), ne(posts.slug, post.slug), beyond(gt)))
+      .orderBy(...newestFirstOrder(asc))
       .limit(1),
   ]);
 
@@ -609,7 +654,7 @@ function feedScope(db: DB, options: FeedOptions) {
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
   const order =
-    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
+    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : newestFirstOrder();
   return { where: and(...clauses), order };
 }
 
