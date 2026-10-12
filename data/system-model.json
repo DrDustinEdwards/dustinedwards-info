@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "as_of": "2026-10-11",
+  "as_of": "2026-10-12",
   "systems": [
     {
       "id": "capsid",
@@ -131,13 +131,10 @@
       "id": "dustinedwards-mcp",
       "name": "dustinedwards-mcp",
       "short": "Site MCP",
+      "domain": "",
       "family": "plumbing",
       "ring": "used",
-      "private": false,
-      "description": "Publishes posts to dustinedwards.info from a chat.",
-      "repos": [
-        "https://github.com/DrDustinEdwards/dustinedwards-mcp"
-      ]
+      "private": true
     },
     {
       "id": "skills",
@@ -242,6 +239,22 @@
       "kind": "kv",
       "technology": "Workers KV",
       "description": "Caches, rate-limit counters and computed documents."
+    },
+    {
+      "id": "capsid-agents",
+      "system": "capsid",
+      "name": "Agents",
+      "kind": "external",
+      "technology": "Coding sessions over MCP",
+      "description": "The sessions that post, claim and work jobs."
+    },
+    {
+      "id": "capsid-github",
+      "system": "capsid",
+      "name": "GitHub",
+      "kind": "external",
+      "technology": "Repos, pull requests, Actions",
+      "description": "Where the code, the pull requests and CI live. Capsid reaches it through its GitHub App."
     }
   ],
   "relationships": [
@@ -268,6 +281,48 @@
       "from": "capsid-worker",
       "to": "capsid-portal",
       "kind": "serves"
+    },
+    {
+      "id": "capsid-worker--serves--capsid-agents",
+      "from": "capsid-worker",
+      "to": "capsid-agents",
+      "kind": "serves"
+    },
+    {
+      "id": "capsid-worker--writes--capsid-github",
+      "from": "capsid-worker",
+      "to": "capsid-github",
+      "kind": "writes"
+    },
+    {
+      "id": "capsid-worker--reads--capsid-github",
+      "from": "capsid-worker",
+      "to": "capsid-github",
+      "kind": "reads"
+    },
+    {
+      "id": "capsid-tick--reads--capsid-github",
+      "from": "capsid-tick",
+      "to": "capsid-github",
+      "kind": "reads"
+    },
+    {
+      "id": "capsid-tick--writes--capsid-github",
+      "from": "capsid-tick",
+      "to": "capsid-github",
+      "kind": "writes"
+    },
+    {
+      "id": "capsid-github--deploys--capsid-worker",
+      "from": "capsid-github",
+      "to": "capsid-worker",
+      "kind": "deploys"
+    },
+    {
+      "id": "capsid-github--watches--capsid-worker",
+      "from": "capsid-github",
+      "to": "capsid-worker",
+      "kind": "watches"
     },
     {
       "id": "capsid-tick--writes--capsid-db",
@@ -366,11 +421,80 @@
       "kind": "coordinates"
     }
   ],
+  "flows": [
+    {
+      "id": "job-life",
+      "name": "A job's life",
+      "description": "One job from the moment it is posted to the moment GitHub's record is checked against what its agent claimed.",
+      "steps": [
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-worker",
+          "text": "Posted: a session posts a job over MCP. The Worker checks the caller's grant, picks the model, signs the body and stores the job.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-worker",
+          "text": "Claimed: an agent claims it. The Worker verifies the body's signature first, then gives the claim a lease.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-worker",
+          "text": "Worked: the agent works on one branch of one repo and sends heartbeats that keep its lease alive.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--serves--capsid-agents",
+          "toward": "capsid-agents",
+          "text": "Blocked: at a push, a deploy, a secret or a merge the agent stops. The job waits with the exact command a person or the signed policy must approve, and resume hands it back.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-github",
+          "toward": "capsid-github",
+          "text": "Pull request: the pull request opens through Capsid's GitHub App, and CI runs on it."
+        },
+        {
+          "relationship": "capsid-tick--writes--capsid-github",
+          "toward": "capsid-github",
+          "text": "Merged: the five-minute tick merges a pull request whose CI is green on its exact head under the signed auto-merge policy, or the seat merges it."
+        },
+        {
+          "relationship": "capsid-github--deploys--capsid-worker",
+          "toward": "capsid-worker",
+          "text": "Deployed: the merge to master runs CI on GitHub Actions, which deploys the Worker."
+        },
+        {
+          "relationship": "capsid-github--watches--capsid-worker",
+          "toward": "capsid-github",
+          "text": "Verified: CI's live gate reads the Worker's /health and checks it reports the commit that was merged."
+        },
+        {
+          "relationship": "capsid-worker--reads--capsid-github",
+          "toward": "capsid-worker",
+          "text": "Claims checked: when the job completes, the Worker reads the pull request, its commits and CI from GitHub and records each claim beside what GitHub says.",
+          "lights": [
+            "capsid-db"
+          ]
+        }
+      ]
+    }
+  ],
   "counts": {
     "systems": 17,
-    "public": 12,
-    "private": 5,
-    "containers": 6,
-    "relationships": 20
+    "public": 11,
+    "private": 6,
+    "containers": 8,
+    "relationships": 27
   }
 }
