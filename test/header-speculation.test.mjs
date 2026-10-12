@@ -3,21 +3,12 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
-
-import { build } from "vite";
-
-import { enhancePlugin } from "../scripts/lib/enhance-bundle.mjs";
+import { bundleRenderer } from "./lib/render-bundle.mjs";
 
 import {
   DOCUMENT_ACTION,
   buildSpeculationRules,
 } from "../app/lib/speculation.mjs";
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** @param {string} pathname */
 const payloadOn = (pathname) => JSON.parse(buildSpeculationRules({ pathname }));
@@ -41,53 +32,16 @@ function exclusionsIn(rules) {
 /** @param {string} pathname */
 const exclusions = (pathname) => exclusionsIn(rulesOn(pathname));
 
-/*
- * The header is TSX behind `~/` imports and `?url` assets, so Vite bundles it
- * here with the React that renders it, and the bundle is imported from disk.
- */
-const ENTRY = "virtual:header-render";
-const built = await build({
-  configFile: false,
-  root,
-  logLevel: "silent",
-  mode: "production",
-  resolve: { alias: [{ find: /^~\//, replacement: `${join(root, "app")}/` }] },
-  ssr: { noExternal: true },
-  plugins: [
-    // The header renders <Enhance module="header">, which reads its URL from `virtual:enhance`.
-    enhancePlugin(),
-    {
-      name: "header-render-entry",
-      enforce: "pre",
-      resolveId: (id) => (id === ENTRY ? `\0${ENTRY}` : null),
-      load: (id) =>
-        id === `\0${ENTRY}`
-          ? `
-            import { createElement as h } from "react";
-            import { renderToString } from "react-dom/server";
-            import { createMemoryRouter, RouterProvider } from "react-router";
-            import { SiteHeader } from "~/components/site-header";
-            export function render(pathname) {
-              const router = createMemoryRouter([{ path: "*", element: h(SiteHeader) }], {
-                initialEntries: [pathname],
-              });
-              return renderToString(h(RouterProvider, { router }));
-            }`
-          : null,
-    },
-  ],
-  build: {
-    write: false,
-    ssr: true,
-    minify: false,
-    rollupOptions: { input: ENTRY, output: { format: "esm", codeSplitting: false } },
-  },
-});
-const chunk = (Array.isArray(built) ? built[0] : built).output.find((o) => o.type === "chunk");
-const bundleDir = mkdtempSync(join(tmpdir(), "header-render-"));
-writeFileSync(join(bundleDir, "header.mjs"), chunk.code);
-const { render: renderHeader } = await import(pathToFileURL(join(bundleDir, "header.mjs")).href);
-rmSync(bundleDir, { recursive: true, force: true });
+const { render: renderHeader } = await bundleRenderer(`
+  import { createElement as h } from "react";
+  import { renderToString } from "react-dom/server";
+  import { createMemoryRouter, RouterProvider } from "react-router";
+  import { SiteHeader } from "~/components/site-header";
+  export function render(pathname) {
+    const router = createMemoryRouter([{ path: "*", element: h(SiteHeader) }], { initialEntries: [pathname] });
+    return renderToString(h(RouterProvider, { router }));
+  }
+`);
 
 /** @param {string} html */
 const anchorHrefs = (html) => [...html.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map((m) => m[1]);

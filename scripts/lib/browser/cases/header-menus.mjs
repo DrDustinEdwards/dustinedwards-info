@@ -1,39 +1,45 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, FETCH_TIMEOUT_MS, menuUnrolled, ok, pollUntil, skip } from "../harness.mjs";
+import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, menuUnrolled, ok, pollUntil, skip } from "../harness.mjs";
 
 /*
- * The header's mega menus (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
- * button per menu, never role=menu; the chevron toggles aria-expanded by click, Enter and Space;
- * Escape closes and hands focus back to the chevron; hover content stays hoverable; an open card meets
- * the header, stays in the viewport (at 200% zoom too), veils and inerts the page, and a click on the
- * veil closes it without reaching the page; Teaching, Software and About share one width; a phone gets
- * a full-bleed sheet with 44px rows; and every link the menus render answers 200. On pages of its own, so
- * no navigation here voids a later case on the shared page.
+ * The header's structured panels (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
+ * button per section, never role=menu. Click toggles aria-expanded (so do Enter and Space); hover opens at
+ * once; a click right after hover keeps the panel open; leaving the bar and the panel closes it after the
+ * grace (about 300ms); Escape closes and hands focus back to the button; a touch pointer opens by click
+ * only. All five panels share one width (about 640px), are close to one height, stay in the viewport at
+ * every width, meet the header, veil and inert the page, and a click on the veil closes without reaching
+ * the page. A phone gets a full-bleed drawer of expandable groups with 44px rows and the band stacked.
+ * Every link the panels render answers 200, and the spotlights point at pages that carry what they say.
+ * On pages of its own, so no navigation here voids a later case on the shared page.
  */
 
+const SECTIONS = ["research", "teaching", "software", "writing", "about"];
 const PANEL = "#site-nav-research";
-const CHEVRON = '[aria-controls="site-nav-research"]';
+const BUTTON = 'button[aria-controls="site-nav-research"]';
 
-/** @param {import("puppeteer").Page} page */
-const state = (page) =>
-  page.evaluate(
-    (panel, chevron) => {
-      const p = document.querySelector(panel);
-      const c = document.querySelector(chevron);
-      return {
-        open: p instanceof HTMLElement && p.matches(":popover-open"),
-        expanded: c?.getAttribute("aria-expanded") ?? null,
-        focusOnChevron: document.activeElement === c,
-        focusInPanel: Boolean(p && document.activeElement && p.contains(document.activeElement)),
-      };
-    },
-    PANEL,
-    CHEVRON,
-  );
+/** The close grace in header.ts, and the most a hover-closed panel may take to go after it. */
+const CLOSE_GRACE = 300;
+
+/** @param {import("puppeteer").Page} page @param {string} id */
+const stateOf = (page, id = "research") =>
+  page.evaluate((id) => {
+    const p = document.getElementById(`site-nav-${id}`);
+    const b = document.querySelector(`button[aria-controls="site-nav-${id}"]`);
+    return {
+      open: p instanceof HTMLElement && p.matches(":popover-open"),
+      expanded: b?.getAttribute("aria-expanded") ?? null,
+      focusOnButton: document.activeElement === b,
+      focusInPanel: Boolean(p && document.activeElement && p.contains(document.activeElement)),
+    };
+  }, id);
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
+
+/** @param {import("puppeteer").Page} page */
+const anyInert = (page) =>
+  page.evaluate(() => [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")));
 
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ browser }) {
@@ -43,20 +49,24 @@ export async function run({ browser }) {
   const navHtml = html.match(/<nav[^>]*data-site-nav[^>]*>[^]*?<\/nav>/)?.[0] ?? "";
   const hrefs = [...new Set([...navHtml.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]))];
   ok(
-    "the header nav is in the server HTML with its menu links as anchors",
-    hrefs.includes("/research") &&
-      hrefs.includes("/research/protocols") &&
+    "the header nav is in the server HTML with every panel's links as anchors",
+    ["/research", "/research/publications", "/research/protocols", "/teaching/virus-isolation", "/teaching#join-the-lab", "/software/capsid", "/systems", "/writing", "/writing/rss.xml", "/about", "/cv", "/dustin-edwards-cv.pdf"].every((href) => hrefs.includes(href)) &&
       !hrefs.some((href) => href.startsWith("/research/protocols/")) &&
-      hrefs.includes("/teaching/virus-isolation") &&
-      navHtml.includes("Protocols: Lab methods and primer library"),
-    `found ${hrefs.length} href(s) in the served nav: ${hrefs.join(", ") || "none"}. A menu link that ` +
+      !hrefs.some((href) => href.startsWith("/interests/")) &&
+      !navHtml.includes("Protocols: Lab methods and primer library"),
+    `found ${hrefs.length} href(s) in the served nav: ${hrefs.join(", ") || "none"}. A panel link that ` +
       `only script renders is one no crawler and no reader without script can follow. Protocols is one ` +
-      `Research entry, the hub, not a primer page.`,
+      `Research entry, the library hub, not a primer page, and the old Interests pages are gone.`,
   );
   ok(
     "the served header carries no role=menu, menubar or menuitem",
     !/role="(menu|menubar|menuitem)"/.test(navHtml),
-    "the menus are disclosures of links; menu roles promise arrow-key menus they do not have",
+    "the panels are disclosures of links; menu roles promise arrow-key menus they do not have",
+  );
+  ok(
+    "the Lab sign-in link is in the served header outside the nav",
+    /<a [^>]*href="\/lab"[^>]*>Lab/.test(html) || /<a [^>]*data-lab-link[^>]*href="\/lab"/.test(html),
+    "the lab workspace link must be on the bar at every width, beside Search",
   );
 
   /** @type {string[]} */
@@ -65,15 +75,39 @@ export async function run({ browser }) {
     const url = new URL(href, BASE);
     if (url.origin !== new URL(BASE).origin) continue;
     const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    /* The CV's PDF is the one R2 object the Worker renders after a CV save (app/routes/cv-pdf.ts), and a
+       preview's empty local bucket has none: there it must answer 404 from the route, never an error. On a
+       deployed origin it must be a 200 like the rest. */
+    if (DRIVES_PREVIEW && href === "/dustin-edwards-cv.pdf" && res.status === 404) continue;
     if (res.status !== 200) broken.push(`${href} ${res.status}`);
   }
   ok(
     `every one of the ${hrefs.length} header link(s) answers 200 on this build`,
-    // The header since #229 serves 18 links; fewer than 15 means a menu went missing, not a thin nav.
-    hrefs.length >= 15 && broken.length === 0,
+    // The five panels serve about 70 links; fewer than 40 means a panel went missing, not a thin nav.
+    hrefs.length >= 40 && broken.length === 0,
     broken.length > 0
-      ? `${broken.join(", ")}. A menu item stays out until its page exists (app/lib/nav.ts isLive).`
+      ? `${broken.join(", ")}. A panel link stays out until its page exists (app/lib/nav.ts isLive).`
       : `only ${hrefs.length} link(s) found, so the sweep examined too little to mean anything`,
+  );
+
+  /* The spotlights say what they point at: the page behind each carries the title shown. */
+  const spots = [...html.matchAll(/<a [^>]*class="site-nav-spot"[^>]*>[^]*?<\/a>/g)].map((m) => ({
+    href: m[0].match(/href="([^"]+)"/)?.[1] ?? "",
+    title: (m[0].match(/class="site-nav-spot-title">([^<]*)</)?.[1] ?? "").replaceAll("&amp;", "&"),
+  }));
+  /** @type {string[]} */
+  const unsaid = [];
+  for (const spot of spots.filter((s) => s.href.startsWith("/research/publications/") || s.href.startsWith("/writing/"))) {
+    const page = await (await fetch(new URL(spot.href, BASE), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })).text();
+    /* The page's own main, never the whole document: the header, spotlight included, is on every page, so
+       the whole document would carry the title whatever the page is about. */
+    const main = (page.match(/<main[^>]*>[^]*<\/main>/)?.[0] ?? "").replaceAll("&amp;", "&").replaceAll("&#x27;", "'");
+    if (!main.includes(spot.title)) unsaid.push(`${spot.href} does not carry "${spot.title}" in its main`);
+  }
+  ok(
+    "the Latest paper and Newest spotlights point at pages that carry the title they show",
+    spots.length === 5 && unsaid.length === 0,
+    `${spots.length} spotlight(s) found; ${unsaid.join("; ") || "all matched"}`,
   );
 
   const page = await browser.newPage();
@@ -81,76 +115,115 @@ export async function run({ browser }) {
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto(`${BASE}/research/phages`, { waitUntil: "networkidle0" });
 
-    const chevrons = await page.evaluate(() =>
-      [...document.querySelectorAll("[data-nav-chevron]")].map((c) => {
+    const buttons = await page.evaluate(() =>
+      [...document.querySelectorAll("[data-nav-button]")].map((c) => {
         const box = c.getBoundingClientRect();
         const target = document.getElementById(c.getAttribute("aria-controls") ?? "");
         return {
           tag: c.tagName,
           expanded: c.getAttribute("aria-expanded"),
           controls: Boolean(target),
-          name: c.getAttribute("aria-label"),
+          name: (c.textContent ?? "").trim(),
           size: [box.width, box.height],
         };
       }),
     );
     ok(
-      "each chevron is a button with aria-expanded, aria-controls naming its panel, a name and a 24px target",
-      chevrons.length >= 2 &&
-        chevrons.every(
-          (c) => c.tag === "BUTTON" && c.expanded === "false" && c.controls && c.name && c.size[0] >= 24 && c.size[1] >= 24,
-        ),
-      JSON.stringify(chevrons),
+      "the bar has five section buttons, each with aria-expanded, aria-controls naming its panel, a name and a 24px target",
+      buttons.length === 5 &&
+        buttons.map((b) => b.name).join() === "Research,Teaching,Software,Writing,About" &&
+        buttons.every((c) => c.tag === "BUTTON" && c.expanded === "false" && c.controls && c.size[0] >= 24 && c.size[1] >= 24),
+      JSON.stringify(buttons),
     );
 
-    const section = await page.evaluate(() => {
-      const word = document.querySelector('.site-nav-word[href="/research"]');
-      return word
-        ? { marked: word.hasAttribute("data-section"), current: word.getAttribute("aria-current"), line: getComputedStyle(word).textDecorationLine }
+    const section = await page.evaluate((sel) => {
+      const button = document.querySelector(sel);
+      const label = button?.querySelector(".site-nav-button-label");
+      return button && label
+        ? { marked: button.hasAttribute("data-section"), current: button.getAttribute("aria-current"), line: getComputedStyle(label).textDecorationLine }
         : null;
-    });
+    }, BUTTON);
     ok(
-      "inside Research the word is marked as the current section, underlined, and not aria-current",
+      "inside Research its button is marked as the current section, underlined, and not aria-current",
       section !== null && section.marked && section.line.includes("underline") && section.current === null,
       JSON.stringify(section),
     );
 
-    await page.click(CHEVRON);
-    const clicked = await state(page);
-    await page.click(CHEVRON);
-    const reclicked = await state(page);
+    const lab = await page.evaluate(() => {
+      const link = document.querySelector("[data-lab-link]");
+      const box = link?.getBoundingClientRect();
+      return link && box ? { href: link.getAttribute("href"), shown: box.width > 0 && box.right <= document.documentElement.clientWidth, text: (link.textContent ?? "").trim() } : null;
+    });
     ok(
-      "a click on the chevron opens the panel with aria-expanded true, and a second click closes it",
+      "Lab sign-in sits on the bar at 1280, visible, and goes to /lab",
+      lab !== null && lab.href === "/lab" && lab.shown && lab.text === "Lab sign-in",
+      JSON.stringify(lab),
+    );
+
+    /* Click toggles. With no hovering pointer this page is the touch case: a mouse that only moves over
+       a button opens nothing, and the click is what opens it. */
+    const touchLike = await page.evaluate(() => !window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    if (touchLike) {
+      const box = await page.evaluate((sel) => {
+        const r = document.querySelector(sel)?.getBoundingClientRect();
+        return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+      }, BUTTON);
+      if (box) {
+        await page.mouse.move(640, 880);
+        await page.mouse.move(box.x, box.y, { steps: 4 });
+        await sleep(100);
+        const moved = await stateOf(page);
+        await page.click(BUTTON);
+        const tapped = await stateOf(page);
+        await page.click(BUTTON);
+        ok(
+          "with no hovering pointer, moving over a button opens nothing and a click opens it (touch uses click only)",
+          !moved.open && moved.expanded === "false" && tapped.open && tapped.expanded === "true",
+          `after the move ${JSON.stringify(moved)}, after the click ${JSON.stringify(tapped)}`,
+        );
+      } else {
+        ok("the Research button is laid out for the touch check", false, "no box");
+      }
+    } else {
+      skip("a touch pointer opens by click only", "this browser reports a fine, hovering pointer already");
+    }
+
+    await page.click(BUTTON);
+    const clicked = await stateOf(page);
+    await page.click(BUTTON);
+    const reclicked = await stateOf(page);
+    ok(
+      "a click on the button opens the panel with aria-expanded true, and a second click closes it with aria-expanded false",
       clicked.open && clicked.expanded === "true" && !reclicked.open && reclicked.expanded === "false",
       `after one click ${JSON.stringify(clicked)}, after two ${JSON.stringify(reclicked)}`,
     );
 
-    await page.focus(CHEVRON);
+    await page.focus(BUTTON);
     await page.keyboard.press("Enter");
-    const entered = await state(page);
+    const entered = await stateOf(page);
     await page.keyboard.press("Escape");
-    const escaped = await state(page);
+    const escaped = await stateOf(page);
     ok(
-      "Enter opens the panel and Escape closes it with focus back on the chevron",
-      entered.open && entered.expanded === "true" && !escaped.open && escaped.expanded === "false" && escaped.focusOnChevron,
+      "Enter opens the panel and Escape closes it with focus back on the button and aria-expanded false",
+      entered.open && entered.expanded === "true" && !escaped.open && escaped.expanded === "false" && escaped.focusOnButton,
       `after Enter ${JSON.stringify(entered)}, after Escape ${JSON.stringify(escaped)}`,
     );
 
     await page.keyboard.press("Space");
-    const spaced = await state(page);
+    const spaced = await stateOf(page);
     await page.keyboard.press("Tab");
-    const tabbed = await state(page);
+    const tabbed = await stateOf(page);
     await page.keyboard.press("Escape");
-    const escapedInside = await state(page);
+    const escapedInside = await stateOf(page);
     ok(
-      "Space opens it, Tab moves into its links, and Escape from a link closes it back to the chevron",
-      spaced.open && tabbed.focusInPanel && !escapedInside.open && escapedInside.focusOnChevron,
+      "Space opens it, Tab moves into its links, and Escape from a link closes it back to the button",
+      spaced.open && tabbed.focusInPanel && !escapedInside.open && escapedInside.focusOnButton,
       `after Space ${JSON.stringify(spaced)}, Tab ${JSON.stringify(tabbed)}, Escape ${JSON.stringify(escapedInside)}`,
     );
 
     /* The open card: hung from the header's foot with no gap (the hover path crosses that edge),
        inside the viewport, and the page under it inert and veiled while the header stays live. */
-    await page.click(CHEVRON);
+    await page.click(BUTTON);
     const card = await page.evaluate((panel) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
       const box = p.getBoundingClientRect();
@@ -170,7 +243,7 @@ export async function run({ browser }) {
       };
     }, PANEL);
     ok(
-      "an open card meets the header's foot with no gap, has an edge on all four sides, and stays inside the viewport",
+      "an open panel meets the header's foot with no gap, has an edge on all four sides, and stays inside the viewport",
       card.top <= card.headerBottom &&
         card.top >= card.headerBottom - 2 &&
         card.edges.every((w) => parseFloat(w) >= 1) &&
@@ -180,7 +253,7 @@ export async function run({ browser }) {
       JSON.stringify(card),
     );
     ok(
-      "while a card is open, main and the footer are inert and the header is not",
+      "while a panel is open, main and the footer are inert and the header is not",
       card.inert.length >= 1 && card.inert.every(Boolean) && !card.headerInert,
       `inert per region ${JSON.stringify(card.inert)}, header inside an inert region: ${card.headerInert}`,
     );
@@ -205,72 +278,93 @@ export async function run({ browser }) {
       const before = page.url();
       await page.mouse.click(target.x, target.y);
       await sleep(400);
-      const after = await state(page);
-      const inertAfter = await page.evaluate(() =>
-        [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
-      );
+      const after = await stateOf(page);
+      const inertAfter = await anyInert(page);
       ok(
-        "a click on the veil closes the card and does not reach the link beneath it",
+        "a click on the veil closes the panel and does not reach the link beneath it",
         target.veiled && !after.open && after.expanded === "false" && page.url() === before,
         `link ${target.href} at (${Math.round(target.x)}, ${Math.round(target.y)}), veil on top: ${target.veiled}, ` +
           `after the click ${JSON.stringify(after)}, url ${page.url()} (was ${before})`,
       );
       ok(
-        "once the card closes, main and the footer are no longer inert",
+        "once the panel closes, main and the footer are no longer inert",
         !inertAfter,
-        "inert left behind after the veil closed the card would freeze the page",
+        "inert left behind after the veil closed the panel would freeze the page",
       );
     } else {
-      ok("a link sits on the page beside the open card for the veil check", false, "none found in #main");
+      ok("a link sits on the page beside the open panel for the veil check", false, "none found in #main");
     }
 
-    /* Every other way it closes clears inert too: the chevron again, and Escape. */
-    await page.click(CHEVRON);
-    await page.click(CHEVRON);
-    const afterToggle = await page.evaluate(() =>
-      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
-    );
-    await page.click(CHEVRON);
+    /* Every other way it closes clears inert too: the button again, and Escape. */
+    await page.click(BUTTON);
+    await page.click(BUTTON);
+    const afterToggle = await anyInert(page);
+    await page.click(BUTTON);
     await page.keyboard.press("Escape");
     await sleep(100);
-    const afterEscape = await page.evaluate(() =>
-      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
-    );
+    const afterEscape = await anyInert(page);
     ok(
-      "closing by the chevron or by Escape leaves nothing inert",
+      "closing by the button or by Escape leaves nothing inert",
       !afterToggle && !afterEscape,
-      `inert after the chevron ${afterToggle}, after Escape ${afterEscape}`,
+      `inert after the button ${afterToggle}, after Escape ${afterEscape}`,
     );
 
-    /* Teaching, Software and About share one width, so moving among them never resizes the card;
-       Research is wider. No card cuts its content off sideways. */
-    const widths = await page.evaluate(async () => {
-      /** @type {Record<string, { width: number, clipped: boolean }>} */
-      const out = {};
-      for (const id of ["research", "teaching", "software", "about"]) {
-        const chevron = /** @type {HTMLElement | null} */ (document.querySelector(`[aria-controls="site-nav-${id}"]`));
-        const p = /** @type {HTMLElement | null} */ (document.getElementById(`site-nav-${id}`));
-        if (!chevron || !p) continue;
-        chevron.click();
-        out[id] = { width: p.getBoundingClientRect().width, clipped: p.scrollWidth > p.clientWidth + 1 };
-        chevron.click();
-      }
-      return out;
-    });
-    const narrow = ["teaching", "software", "about"].map((id) => widths[id]?.width);
+    /* All five panels, one width and close to one height, at each desktop width: none clips its content
+       sideways, each stays inside the viewport, and the widest case (About, at the right edge) is
+       pushed back inside the inset. */
+    /** @param {number} width */
+    const measure = async (width) => {
+      await page.setViewport({ width, height: 900 });
+      return page.evaluate(async (ids) => {
+        /** @type {Record<string, { width: number, height: number, left: number, right: number, clipped: boolean }>} */
+        const out = {};
+        for (const id of ids) {
+          const button = /** @type {HTMLElement | null} */ (document.querySelector(`button[aria-controls="site-nav-${id}"]`));
+          const p = /** @type {HTMLElement | null} */ (document.getElementById(`site-nav-${id}`));
+          if (!button || !p) continue;
+          button.click();
+          const box = p.getBoundingClientRect();
+          out[id] = { width: box.width, height: box.height, left: box.left, right: box.right, clipped: p.scrollWidth > p.clientWidth + 1 };
+          button.click();
+        }
+        return out;
+      }, SECTIONS);
+    };
+    const wide = await measure(1280);
+    const widths = Object.values(wide).map((w) => w.width);
+    const heights = Object.values(wide).map((w) => w.height);
     ok(
-      "Teaching, Software and About open at one shared width, narrower than Research, and none clips its content",
-      narrow.every((w) => typeof w === "number" && Math.abs(w - narrow[0]) < 0.5) &&
-        typeof widths.research?.width === "number" &&
-        widths.research.width > narrow[0] &&
-        Object.values(widths).every((w) => !w.clipped),
-      JSON.stringify(widths),
+      "all five panels open at one width of about 640px, and none clips its content",
+      Object.keys(wide).length === 5 &&
+        widths.every((w) => Math.abs(w - widths[0]) < 0.5) &&
+        Math.abs(widths[0] - 640) <= 1 &&
+        Object.values(wide).every((w) => !w.clipped),
+      JSON.stringify(wide),
     );
+    ok(
+      "all five panels are close to one height: the tallest is within 8 percent of the shortest",
+      heights.length === 5 && Math.max(...heights) <= Math.min(...heights) * 1.08,
+      `heights ${heights.map(Math.round).join(", ")} for ${Object.keys(wide).join(", ")}`,
+    );
+    /** @type {string[]} */
+    const outside = [];
+    for (const width of [1280, 1024, 900]) {
+      const at = width === 1280 ? wide : await measure(width);
+      for (const [id, w] of Object.entries(at)) {
+        if (w.left < 0 || w.right > width) outside.push(`${id} at ${width}: ${Math.round(w.left)} to ${Math.round(w.right)}`);
+      }
+    }
+    ok(
+      "at 1280, 1024 and 900 wide (the narrowest wide layout) every panel stays within the viewport, clamped under its own button",
+      outside.length === 0,
+      outside.join("; ") || "all inside",
+    );
+    await page.setViewport({ width: 1280, height: 900 });
 
-    /* 200% zoom on a 1440 screen: a 720x405 viewport, still the wide layout. The card stays inside the
-       viewport and scrolls inside itself rather than running off the bottom. */
-    await page.setViewport({ width: 720, height: 405 });
-    await page.click(CHEVRON);
+    /* 200% zoom on a 1800 screen: a 900x405 viewport, still the wide layout (it begins at 880px). The card
+       stays inside the viewport and scrolls inside itself rather than running off the bottom. */
+    await page.setViewport({ width: 900, height: 405 });
+    await page.click(BUTTON);
     const zoomed = await page.evaluate((panel) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
       const box = p.getBoundingClientRect();
@@ -284,7 +378,7 @@ export async function run({ browser }) {
     }, PANEL);
     await page.keyboard.press("Escape");
     ok(
-      "at 200% zoom (720x405) the open card stays inside the viewport and scrolls inside itself",
+      "at 200% zoom (900x405) the open panel stays inside the viewport and scrolls inside itself",
       zoomed.open &&
         zoomed.box[0] >= 0 &&
         zoomed.box[2] <= zoomed.viewport[0] &&
@@ -294,31 +388,35 @@ export async function run({ browser }) {
     );
     await page.setViewport({ width: 1280, height: 900 });
 
-    /* Hover (app/enhance/header.ts): a word opens its card the moment the pointer arrives, whole on
-       that frame; a pointer crossing another word on its way down to the open card keeps that card (the
-       safe triangle), and takes the crossed word's card once it comes to rest there; a level move to
-       another word takes over at once; the card survives the trip from its word down into it; and
-       leaving closes it once the close grace (150ms) runs out. Every "at once" read below is taken with
-       no wait after the move, so an intent timer or a grow would fail it. */
-    const words = await page.evaluate(() => {
-      /** @param {string} href */
-      const at = (href) => {
-        const box = document.querySelector(`.site-nav-word[href="${href}"]`)?.getBoundingClientRect();
+    /* Hover (app/enhance/header.ts): a button opens its panel the moment the pointer arrives, whole on
+       that frame; a click right after keeps it open; a pointer crossing another button on its way down to
+       the open panel keeps that panel (the safe triangle), and takes the crossed button's panel once it
+       comes to rest there; a level move to another button takes over at once; the panel survives the
+       trip from its button down into it; and leaving closes it after the grace (300ms). Every "at once"
+       read below is taken with no wait after the move, so an intent timer or a grow would fail it. */
+    const buttonsAt = await page.evaluate(() => {
+      /** @param {string} id */
+      const at = (id) => {
+        const box = document.querySelector(`button[aria-controls="site-nav-${id}"]`)?.getBoundingClientRect();
         return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
       };
-      return { research: at("/research"), teaching: at("/teaching") };
+      return { research: at("research"), teaching: at("teaching") };
     });
     /* The header opens on hover only for a fine, hovering pointer (app/enhance/header.ts), and a
        headless Linux runner reports neither, which failed this check on every deploy from
        2026-09-27. Emulate a mouse through the protocol (Puppeteer's own helper refuses these two
        features); if the browser still does not match, the check is skipped, never passed. */
     const cdp = await page.createCDPSession();
-    await cdp.send("Emulation.setEmulatedMedia", {
-      features: [
-        { name: "hover", value: "hover" },
-        { name: "pointer", value: "fine" },
-      ],
-    });
+    // A browser that already has a fine, hovering pointer needs no emulation, and emulating over it can undo it.
+    const realHover = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    if (!realHover) {
+      await cdp.send("Emulation.setEmulatedMedia", {
+        features: [
+          { name: "hover", value: "hover" },
+          { name: "pointer", value: "fine" },
+        ],
+      });
+    }
     await page.reload({ waitUntil: "networkidle0" });
     const canHover = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
     /** @param {string} id */
@@ -335,25 +433,69 @@ export async function run({ browser }) {
         };
       }, id);
     if (!canHover) {
-      skip("hover opens, switches and closes the cards", "this browser reports no fine, hovering pointer even under emulation");
-    } else if (words.research && words.teaching) {
-      // From off the header, or the pointer left on the chevron by the clicks above is already inside.
+      skip("hover opens, switches and closes the panels", "this browser reports no fine, hovering pointer even under emulation");
+    } else if (buttonsAt.research && buttonsAt.teaching) {
+      // From off the header, or the pointer left on the button by the clicks above is already inside.
       await page.mouse.move(640, 880);
-      await page.mouse.move(words.research.x, words.research.y, { steps: 4 });
+      /* Timestamps taken inside the page: the pointer arriving, and the panel's toggle to open. */
+      await page.evaluate(() => {
+        const stamps = { enter: 0, open: 0 };
+        Object.assign(window, { __navStamps: stamps });
+        document.querySelector('button[aria-controls="site-nav-research"]')?.closest("li")?.addEventListener("pointerenter", () => {
+          stamps.enter = stamps.enter || performance.now();
+        });
+        document.getElementById("site-nav-research")?.addEventListener("toggle", (event) => {
+          if (/** @type {ToggleEvent} */ (event).newState === "open") stamps.open = stamps.open || performance.now();
+        });
+      });
+      await page.mouse.move(buttonsAt.research.x, buttonsAt.research.y, { steps: 4 });
       const opened = await cardState("research");
+      const stamps = await page.evaluate(() => /** @type {{ enter: number, open: number }} */ (Reflect.get(window, "__navStamps")));
+      const delay = Math.round(stamps.open - stamps.enter);
       ok(
-        "hover opens the card at once, whole on the first read, with no intent wait and no grow",
-        opened !== null && opened.open && opened.whole,
-        JSON.stringify(opened),
+        "hover opens the panel at once, whole on the first read, with no intent wait and no grow",
+        opened !== null && opened.open && opened.whole && stamps.enter > 0 && delay >= 0 && delay < 60,
+        `${JSON.stringify(opened)}, pointerenter to open ${delay}ms (the page's own clock; a delay is more than 60)`,
       );
 
-      /* The diagonal: from the top of the Research word, down and right across the foot of the Teaching
-         word, into the right part of Research's card. The line is solved backward from its end in the
-         card through a point low in Teaching's item, so the path really crosses Teaching. Every card
-         that opens on the way is counted, so a Teaching card open for one frame fails it. */
+      /* Hover then click: the panel hover opened stays open, with aria-expanded true; the next click closes it. */
+      await page.mouse.click(buttonsAt.research.x, buttonsAt.research.y);
+      const kept = await stateOf(page);
+      await page.mouse.click(buttonsAt.research.x, buttonsAt.research.y);
+      await sleep(50);
+      const toggledOff = await stateOf(page);
+      ok(
+        "a click right after hover keeps the panel open, and the next click closes it",
+        kept.open && kept.expanded === "true" && !toggledOff.open && toggledOff.expanded === "false",
+        `after hover and click ${JSON.stringify(kept)}, after the second click ${JSON.stringify(toggledOff)}`,
+      );
+
+      /* Hover opens it again; Escape (focus is nowhere near the panel) closes it and puts focus on the button. */
+      await page.mouse.move(640, 880);
+      await sleep(CLOSE_GRACE + 200);
+      await page.mouse.move(buttonsAt.research.x, buttonsAt.research.y, { steps: 4 });
+      /* Focus off the button first (the clicks above left it there), so the return is header.ts's own doing
+         and not focus that never moved. */
+      await page.evaluate(() => /** @type {HTMLElement | null} */ (document.activeElement)?.blur());
+      const hoverOpen = await stateOf(page);
+      await page.keyboard.press("Escape");
+      const hoverEscaped = await stateOf(page);
+      ok(
+        "Escape after a hover returns focus to the button, closes the panel and sets aria-expanded false",
+        hoverOpen.open && hoverOpen.expanded === "true" && !hoverOpen.focusOnButton && !hoverEscaped.open && hoverEscaped.expanded === "false" && hoverEscaped.focusOnButton,
+        `after hover ${JSON.stringify(hoverOpen)}, after Escape ${JSON.stringify(hoverEscaped)}`,
+      );
+
+      /* The diagonal: from the top of the Research button, down and right across the foot of the Teaching
+         button, into the right part of Research's panel. The line is solved backward from its end in the
+         panel through a point low in Teaching's item, so the path really crosses Teaching. Every panel
+         that opens on the way is counted, so a Teaching panel open for one frame fails it. */
+      await page.mouse.move(640, 880);
+      await sleep(CLOSE_GRACE + 200);
+      await page.mouse.move(buttonsAt.research.x, buttonsAt.research.y, { steps: 4 });
       const path = await page.evaluate(() => {
-        const research = document.querySelector('.site-nav-word[href="/research"]')?.getBoundingClientRect();
-        const teaching = document.querySelector('.site-nav-word[href="/teaching"]')?.closest("[data-nav-menu]")?.getBoundingClientRect();
+        const research = document.querySelector('button[aria-controls="site-nav-research"]')?.getBoundingClientRect();
+        const teaching = document.querySelector('button[aria-controls="site-nav-teaching"]')?.closest("[data-nav-menu]")?.getBoundingClientRect();
         const card = document.getElementById("site-nav-research")?.getBoundingClientRect();
         if (!research || !teaching || !card) return null;
         const sx = research.left + research.width / 2;
@@ -383,64 +525,67 @@ export async function run({ browser }) {
         const [kept, crossed] = [await cardState("research"), await cardState("teaching")];
         const opens = await page.evaluate(() => /** @type {string[]} */ (Reflect.get(window, "__navOpened")));
         ok(
-          "a diagonal move from Research across the Teaching word into Research's card keeps Research open and never opens Teaching",
+          "a diagonal move from Research across the Teaching button into Research's panel keeps Research open and never opens Teaching",
           kept !== null && crossed !== null && kept.open && !crossed.open && opens.length === 0 &&
             path.end.x >= kept.box[0] && path.end.x <= kept.box[2] && path.end.y >= kept.box[1] && path.end.y <= kept.box[3],
           `path ${JSON.stringify(path)}, research ${JSON.stringify(kept)}, teaching ${JSON.stringify(crossed)}, ` +
-            `cards opened on the way ${JSON.stringify(opens)}`,
+            `panels opened on the way ${JSON.stringify(opens)}`,
         );
 
-        /* The same line, stopped on the Teaching word: at rest, the crossed word takes the card within
-           one look (80ms). Back to the Research word first, inside its card and up the word's strip. */
+        /* The same line, stopped on the Teaching button: at rest, the crossed button takes the panel within
+           one look (80ms). Back to the Research button first, inside its panel and up the button's strip. */
         await page.mouse.move(path.start.x, path.card + 30, { steps: 4 });
         await page.mouse.move(path.start.x, path.start.y, { steps: 4 });
         await page.mouse.move(path.via.x, path.via.y, { steps: 20 });
         await sleep(300);
         const [left, rested] = [await cardState("research"), await cardState("teaching")];
         ok(
-          "a pointer that comes to rest on the word it was crossing opens that word's card",
+          "a pointer that comes to rest on the button it was crossing opens that button's panel",
           left !== null && rested !== null && !left.open && rested.open,
           `pointer at (${Math.round(path.via.x)}, ${Math.round(path.via.y)}), research ${JSON.stringify(left)}, teaching ${JSON.stringify(rested)}`,
         );
       } else {
-        ok("the header lays out a diagonal from Research across Teaching into Research's card", false, JSON.stringify(words));
+        ok("the header lays out a diagonal from Research across Teaching into Research's panel", false, JSON.stringify(buttonsAt));
       }
 
       /* Level along the header from Research to Teaching: outside the triangle, so it switches on the
          move itself, with no look and no wait. */
-      await page.mouse.move(words.research.x, words.research.y, { steps: 4 });
+      await page.mouse.move(buttonsAt.research.x, buttonsAt.research.y, { steps: 4 });
       const back = await cardState("research");
-      await page.mouse.move(words.teaching.x, words.teaching.y, { steps: 4 });
+      await page.mouse.move(buttonsAt.teaching.x, buttonsAt.teaching.y, { steps: 4 });
       const [from, to] = [await cardState("research"), await cardState("teaching")];
       ok(
-        "moving level to another word switches cards at once: the new one open and whole, the old one shut",
+        "moving level to another button switches panels at once: the new one open and whole, the old one shut",
         back !== null && back.open && from !== null && to !== null && !from.open && to.open && to.whole,
         `research before ${JSON.stringify(back)}, research after ${JSON.stringify(from)}, teaching ${JSON.stringify(to)}`,
       );
 
-      /* Straight down off the word, across the header's foot, and into the card: leaving the word
-         starts the grace, and arriving in the card ends it. Waiting well past the grace proves it did. */
-      const into = to ? { x: words.teaching.x, y: to.box[1] + 40 } : { x: words.teaching.x, y: words.teaching.y + 120 };
+      /* Straight down off the button, across the header's foot, and into the panel: leaving the button
+         starts the grace, and arriving in the panel ends it. Waiting well past the grace proves it did. */
+      const into = to ? { x: buttonsAt.teaching.x, y: to.box[1] + 40 } : { x: buttonsAt.teaching.x, y: buttonsAt.teaching.y + 120 };
       await page.mouse.move(into.x, into.y, { steps: 8 });
-      await sleep(450);
+      await sleep(CLOSE_GRACE + 250);
       const inside = await cardState("teaching");
       ok(
-        "the card stays open through the move from its word down into it, and after resting there past the grace",
+        "the panel stays open through the move from its button down into it, and after resting there past the grace",
         inside !== null && inside.open,
-        `pointer at (${Math.round(into.x)}, ${Math.round(into.y)}), card ${JSON.stringify(inside)}`,
+        `pointer at (${Math.round(into.x)}, ${Math.round(into.y)}), panel ${JSON.stringify(inside)}`,
       );
 
+      /* Leaving both the bar and the panel: still open right after (the pointer is on its way), closed once
+         the 300ms grace has run. */
       await page.mouse.move(640, 880, { steps: 4 });
+      const right = await cardState("teaching");
       const started = performance.now();
-      const gone = await pollUntil(() => cardState("teaching"), (c) => c !== null && !c.open, { tries: 12, everyMs: 50 });
+      const gone = await pollUntil(() => cardState("teaching"), (c) => c !== null && !c.open, { tries: 20, everyMs: 50, sleepFirst: false });
       const took = Math.round(performance.now() - started);
       ok(
-        "leaving the card closes it once the short close grace runs out",
-        gone !== null && !gone.open,
-        `still ${JSON.stringify(gone)} ${took}ms after leaving; the grace is 150ms`,
+        "leaving the bar and the panel closes it after the grace, not before it",
+        right !== null && right.open && gone !== null && !gone.open && took >= 150 && took <= CLOSE_GRACE + 450,
+        `open straight after leaving: ${right?.open}; closed ${took}ms later (the grace is ${CLOSE_GRACE}ms), ${JSON.stringify(gone)}`,
       );
     } else {
-      ok("the Research and Teaching words are laid out for the hover checks", false, JSON.stringify(words));
+      ok("the Research and Teaching buttons are laid out for the hover checks", false, JSON.stringify(buttonsAt));
     }
 
     // Back to the browser's own profile, so the phone checks below see a touch screen's media.
@@ -450,30 +595,42 @@ export async function run({ browser }) {
     const roles = await page.evaluate(() => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length);
     ok("no role=menu, menubar or menuitem after the enhancement ran", roles === 0, `${roles} found`);
 
-    /* Phone: the section opens, shows, and has 44px touch targets. Whether it expands in place or as
-       a popover is a design default and is not asserted. */
+    /* Phone: the drawer opens, each section is a group that expands in place with its tiles, rows,
+       spotlight and quick links, rows are 44px, the two-column band stacks, and nothing opens by hover. */
     await page.setViewport({ width: 390, height: 844 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     await page.click("[data-header-menu]");
     const unrolled = await menuUnrolled(page);
-    await page.click(CHEVRON);
-    const phone = await page.evaluate((panel, chevron) => {
+    await page.click(BUTTON);
+    const phone = await page.evaluate((panel, button) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
       const rows = [...p.querySelectorAll("a")].map((a) => a.getBoundingClientRect().height);
+      const list = p.querySelector(".site-nav-rows")?.getBoundingClientRect();
+      const spot = p.querySelector(".site-nav-spot")?.getBoundingClientRect();
+      const lab = document.querySelector("[data-lab-link]")?.getBoundingClientRect();
       return {
         menuOpen: /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]")).matches(":popover-open"),
         menuExpanded: document.querySelector("[data-header-menu]")?.getAttribute("aria-expanded"),
-        expanded: document.querySelector(chevron)?.getAttribute("aria-expanded"),
+        expanded: document.querySelector(button)?.getAttribute("aria-expanded"),
         shown: getComputedStyle(p).display !== "none",
         shortest: Math.min(...rows),
+        links: rows.length,
+        stacked: Boolean(list && spot && spot.top >= list.bottom - 1),
+        parts: ["site-nav-tiles", "site-nav-rows", "site-nav-spot", "site-nav-foot"].map((c) => Boolean(p.querySelector(`.${c}`))),
+        labShown: Boolean(lab && lab.width > 0 && lab.left >= 0 && lab.right <= document.documentElement.clientWidth),
       };
-    }, PANEL, CHEVRON);
-    await page.click(CHEVRON);
-    const collapsed = await page.evaluate((chevron) => document.querySelector(chevron)?.getAttribute("aria-expanded"), CHEVRON);
+    }, PANEL, BUTTON);
+    await page.click(BUTTON);
+    const collapsed = await page.evaluate((button) => document.querySelector(button)?.getAttribute("aria-expanded"), BUTTON);
     ok(
-      "on a phone the Menu opens, a chevron shows its section with rows at least 44px, and collapses it again",
+      "on a phone the Menu opens, a section button expands its group with rows at least 44px, and collapses it again",
       unrolled && phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.shown && phone.shortest >= 44 && collapsed === "false",
       `${JSON.stringify({ unrolled, ...phone })}, then aria-expanded ${collapsed}`,
+    );
+    ok(
+      "on a phone a group holds the same parts as the wide panel, the two-column band stacks, and Lab sign-in stays on the bar",
+      phone.links >= 10 && phone.parts.every(Boolean) && phone.stacked && phone.labShown,
+      JSON.stringify(phone),
     );
 
     /* The open Menu is a sheet: full bleed from the header's foot to the bottom, opaque, square, the
@@ -519,13 +676,11 @@ export async function run({ browser }) {
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     await page.click("[data-header-menu]");
     await menuUnrolled(page);
-    await page.click(CHEVRON);
+    await page.click(BUTTON);
     const small = await sheet();
     await page.click("[data-header-menu]");
     await sleep(300);
-    const closedInert = await page.evaluate(() =>
-      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
-    );
+    const closedInert = await anyInert(page);
     ok(
       "at 200% zoom (640x360) the open Menu stays inside the viewport and scrolls inside, and closing it clears inert",
       small.box[0] >= 0 &&
@@ -536,20 +691,40 @@ export async function run({ browser }) {
         !closedInert,
       `${JSON.stringify(small)}, inert after closing ${closedInert}`,
     );
+
+    /* The bar fits on one line at every width, on both sides of the 55rem breakpoint: the wide layout
+       wanted 867px when Lab sign-in joined it, so it is the Menu below 880px. */
+    /** @type {string[]} */
+    const cramped = [];
+    for (const width of [320, 360, 390, 704, 800, 879, 880, 1024]) {
+      await page.setViewport({ width, height: 800 });
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
+      const fit = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+        height: Math.round(document.querySelector("[data-site-header]")?.getBoundingClientRect().height ?? 0),
+      }));
+      if (fit.scroll > fit.client || fit.height > 84) cramped.push(`${width}: ${JSON.stringify(fit)}`);
+    }
+    ok(
+      "the header fits on one line with no sideways scroll at 320, 360, 390, 704, 800, 879, 880 and 1024 wide",
+      cramped.length === 0,
+      cramped.join("; ") || "all fit",
+    );
   } finally {
     await page.close();
   }
 
-  /* No script: the chevron is still a working popover invoker, and what it opens is links. */
+  /* No script: the button is still a working popover invoker, and what it opens is links. */
   const noScript = await browser.newPage();
   try {
     await noScript.setJavaScriptEnabled(false);
     await noScript.setViewport({ width: 1280, height: 900 });
     await noScript.goto(`${BASE}/`, { waitUntil: "networkidle0" });
-    await noScript.click(CHEVRON);
-    const opened = await state(noScript);
+    await noScript.click(BUTTON);
+    const opened = await stateOf(noScript);
     ok(
-      "with no script the chevron still opens its panel",
+      "with no script the section button still opens its panel",
       opened.open,
       "popovertarget is what makes the panel open without the enhancement; a panel that needs script is not the fallback",
     );

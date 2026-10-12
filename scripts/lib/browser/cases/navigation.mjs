@@ -51,8 +51,8 @@ export async function run({ browser }) {
   reveals.length = 0;
 
   /*
-   * A hidden element's zero box clicks the document corner, so it fails. Falls back to
-   * the overflow menu's copy; fails if neither is laid out.
+   * A hidden element's zero box clicks the document corner, so it fails. A link in a closed section
+   * panel is hidden, so its panel is opened first; fails if the link is laid out nowhere.
    */
   /** @param {string} href */
   const openTarget = async (href) => {
@@ -71,19 +71,22 @@ export async function run({ browser }) {
         };
         const bar = pick(`.site-header-nav a[href="${path}"]`);
         if (bar) return { ...bar, via: "the header nav" };
-        const menu = pick(`.site-shell-menu a[href="${path}"]`);
-        return menu ? { ...menu, via: "the overflow menu" } : null;
+        return null;
       }, href);
 
     const first = await read();
     if (first) return first;
 
-    const opened = await probe.evaluate(() => {
-      const d = document.querySelector("details.site-shell-overflow");
-      if (!(d instanceof HTMLDetailsElement)) return false;
-      d.open = true;
+    /* The link sits in a section panel, closed until its button is pressed: open that panel (a click pins
+       it) and read again. A link no panel holds is not laid out anywhere. */
+    const opened = await probe.evaluate((path) => {
+      const link = document.querySelector(`.site-header-nav .site-nav-panel a[href="${path}"]`);
+      const panel = link?.closest("[data-nav-panel]");
+      const button = panel ? document.querySelector(`button[aria-controls="${panel.id}"]`) : null;
+      if (!(button instanceof HTMLElement)) return false;
+      button.click();
       return true;
-    });
+    }, href);
     if (!opened) return null;
     await new Promise((r) => setTimeout(r, 250));
     return read();
@@ -119,8 +122,8 @@ export async function run({ browser }) {
   ok(
     "the header carries a laid-out /writing link for the navigation case to click",
     clickable,
-    'neither `.site-header-nav a[href="/writing"]` nor `.site-shell-menu a[href="/writing"]` ' +
-      "is present with a non-zero box, even with the overflow disclosure opened. A " +
+    '`.site-header-nav a[href="/writing"]` is not laid out with a non-zero box, even with its ' +
+      "section panel opened. A " +
       "hidden link puts the click at the document corner and the navigation " +
       "assertions below then measure nothing, which is how one breakpoint read as " +
       "three unrelated failures.",

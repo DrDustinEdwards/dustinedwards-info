@@ -37,88 +37,85 @@
   align-items: center;
 }
 
-/* (0,2,0) against a:visited at (0,1,1), so this wins rather than ties. */
-.site-nav-word,
-.site-nav-word:visited {
+/*
+ * A section's button: the label and a small chevron, ink at rest and purple while its panel is open or the
+ * pointer is on it. The chevron is purple at rest like search and theme, so the label and the mark read
+ * as one control that is not a link.
+ */
+.site-nav-button {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 0.25rem;
+  min-block-size: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
-  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  font-variation-settings: inherit;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .site-nav-word {
+  .site-nav-button {
     transition: color 120ms ease;
   }
 }
 
-.site-nav-word:hover,
-.site-nav-item:has(> .site-nav-panel:popover-open) > .site-nav-word,
-.site-nav-item[data-expanded] > .site-nav-word {
+.site-nav-button:hover,
+.site-nav-item:has(> .site-nav-panel:popover-open) > .site-nav-button,
+.site-nav-item[data-expanded] > .site-nav-button {
   color: var(--brand);
 }
 
-.site-nav-word:active {
+.site-nav-button:active {
   color: var(--brand-pressed);
 }
 
-/* The current section, from the menu design's state sheet: the word bold and underlined in ink. */
-.site-nav-word[data-section] {
+/* The current section: the label bold and underlined in ink, as the state sheet drew the word. */
+.site-nav-button[data-section] .site-nav-button-label {
   font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
   text-decoration: underline;
   text-decoration-thickness: var(--line-w-thick);
   text-underline-offset: 0.35em;
 }
 
-/* Purple at rest like search and theme, so the word and the chevron read as different controls. */
 .site-nav-chevron {
-  display: grid;
-  place-items: center;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  flex: none;
   color: var(--brand);
-  cursor: pointer;
 }
 
-.site-nav-chevron:hover {
+.site-nav-button:hover .site-nav-chevron {
   color: var(--brand-hover);
 }
 
-.site-nav-chevron:active {
-  color: var(--brand-pressed);
-}
-
-/* The chevron turns with the panel. header.ts morphs the panel's height; this is only the mark. */
-.site-nav-item:has(> .site-nav-panel:popover-open) .site-nav-chevron svg,
-.site-nav-item[data-expanded] .site-nav-chevron svg {
+/* The chevron turns with the panel. */
+.site-nav-item:has(> .site-nav-panel:popover-open) .site-nav-chevron,
+.site-nav-item[data-expanded] .site-nav-chevron {
   transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .site-nav-chevron svg {
+  .site-nav-chevron {
     transition: transform 160ms ease;
   }
 }
 
 /*
- * An open menu is a card hung from its word: the popover step, one strong edge all round, a small
- * radius, and the soft popover shadow in light only. In the top layer when open, so nothing clips it
- * and it sits above the pinned bar with no z-index. Its top edge sits one rule up, on the header's
- * own rule, so the card meets the header with no gap for the pointer to fall through and no doubled
- * line.
+ * An open panel is a card hung from its own button: the popover step, one strong edge all round, a small
+ * radius, and the soft popover shadow in light only. In the top layer when open, so nothing clips it and
+ * it sits above the pinned bar with no z-index. Its top edge sits one rule up, on the header's own rule,
+ * so the card meets the header with no gap for the pointer to fall through and no doubled line.
  *
- * Two widths. Research fits its two columns; Teaching, Software and About share one, set by the
- * widest of the three, so moving among them never resizes the card. Never wider than the viewport
- * less both insets, so at 200% zoom the card still fits and scrolls inside.
+ * ONE width for all five, about 640px, so moving among them never resizes the card. Never wider than the
+ * viewport less both insets, so at 200% zoom the card still fits and scrolls inside.
  *
- * Where anchor positioning is missing, header.ts writes --nav-card-x inline from the word's box;
- * with neither, the card sits at the right inset, under the words.
+ * Where anchor positioning is missing, header.ts writes --nav-card-x inline from the button's box; with
+ * neither, the card sits at the right inset, under the buttons.
  */
 .site-nav-panel {
-  --nav-card-w: 15.5rem;
-  --nav-card-pad: 1.5rem;
+  --nav-card-w: 40rem;
   --nav-card-fit: min(var(--nav-card-w), 100% - 2 * var(--site-inset));
   --nav-card-x: calc(100% - var(--nav-card-fit) - var(--site-inset));
   position: fixed;
@@ -130,7 +127,7 @@
   block-size: auto;
   max-block-size: calc(100dvh - var(--header-h) - var(--site-inset));
   margin: 0;
-  padding: 1.25rem var(--nav-card-pad) 1.5rem;
+  padding: 0;
   overflow: auto;
   overscroll-behavior: contain;
   border: var(--line-w) solid var(--border-strong);
@@ -143,8 +140,9 @@
   font-variation-settings: var(--t-nav-vars);
 }
 
-#site-nav-research {
-  --nav-card-w: 30rem;
+.site-nav-panel:popover-open {
+  display: flex;
+  flex-direction: column;
 }
 
 /* A shadow on a dark page reads as a smudge, not a lift; the strong edge alone carries the card. */
@@ -159,8 +157,8 @@
 }
 
 /*
- * The card starts one padding left of its word, so the title lines up under it, and is pushed back
- * inside the inset at either edge. anchor-scope gives every item its own --site-nav-item.
+ * The card starts at its button's left edge, and is pushed back inside the inset at either side.
+ * anchor-scope gives every item its own --site-nav-item.
  */
 @supports (anchor-name: --a) and (anchor-scope: --a) {
   .site-header {
@@ -176,7 +174,7 @@
     top: calc(anchor(--site-header bottom) - var(--line-w));
     left: clamp(
       var(--site-inset),
-      anchor(--site-nav-item left) - var(--nav-card-pad),
+      anchor(--site-nav-item left),
       100% - var(--nav-card-fit) - var(--site-inset)
     );
   }
@@ -223,93 +221,208 @@
   }
 }
 
-.site-nav-panel-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.375rem 1.25rem;
-  padding-block-end: 1.125rem;
+/*
+ * The panel's parts, top to bottom. Each is separated from the next by a hairline; the sizes below are what
+ * make the five panels close to one height whatever they hold (the band, the tiles and the body each have a
+ * floor).
+ */
+.site-nav-band {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: center;
+  align-content: center;
+  /* Two lines of description: the About band's identity line runs to two, and the others keep its height. */
+  min-block-size: 5.25rem;
+  padding: 0.875rem 1.25rem;
+  border-block-end: var(--line-w) solid var(--dust);
+  color: var(--brand);
 }
 
-.site-nav-panel-title,
-.site-nav-panel-title:visited {
+.site-nav-band-title {
+  margin: 0;
   color: var(--brand);
   font-family: var(--font-serif);
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   font-variation-settings: normal;
   line-height: 1.2;
+}
+
+.site-nav-band-line {
+  grid-column: 2;
+  margin: 0.125rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.site-nav-icon {
+  display: block;
+  flex: none;
+}
+
+.site-nav-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.875rem 1.25rem;
+  list-style: none;
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.site-nav-tile-item {
+  display: flex;
+  flex-direction: column;
+  /* One floor for every tile in every panel (three lines of description), so the five panels' tile rows match. */
+  min-block-size: 6.25rem;
+  min-inline-size: 0;
+  border: var(--line-w) solid var(--dust);
+  border-radius: 0.25rem;
+  background: var(--paper);
+}
+
+.site-nav-tile-item:hover,
+.site-nav-tile-item:focus-within {
+  border-color: var(--brand);
+}
+
+.site-nav-tile,
+.site-nav-tile:visited {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.625rem;
+  align-items: start;
+  padding: 0.625rem 0.75rem;
+  color: var(--text);
   text-decoration: none;
 }
 
-.site-nav-panel-title:hover {
+/* No icon: the text takes the whole tile (the Writing tiles, which carry a date instead). */
+.site-nav-tile:not(:has(> .site-nav-icon)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.site-nav-tile .site-nav-icon {
+  margin-block-start: 0.0625rem;
+  color: var(--brand);
+}
+
+.site-nav-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-inline-size: 0;
+}
+
+.site-nav-tile-label {
+  color: var(--brand);
+  font-variation-settings: "opsz" 16, "wght" 560;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  /* A long article title stops at three lines so the tiles stay one height. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.site-nav-tile:hover .site-nav-tile-label {
   color: var(--brand-hover);
   text-decoration: underline;
-  text-underline-offset: 0.18em;
+  text-underline-offset: 0.2em;
 }
 
-/* As many equal tracks as the menu has columns: two for Research, one for the narrow cards. */
-.site-nav-columns {
-  display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: 1.5rem;
-}
-
-.site-nav-column[data-wide] {
-  grid-column: span 2;
-}
-
-.site-nav-column-label,
-.site-nav-section-label {
-  margin: 0 0 0.125rem;
+.site-nav-tile-also,
+.site-nav-tile-also:visited {
+  align-self: flex-start;
+  min-block-size: 1.5rem;
+  margin: 0 0.75rem 0.5rem;
+  color: var(--brand);
   font-size: 0.8125rem;
-  line-height: 1.5;
 }
 
-.site-nav-column-label {
+.site-nav-desc {
+  display: block;
   color: var(--text-secondary);
-  font-variation-settings: "opsz" 16, "wght" 600;
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
-.site-nav-section-label {
-  margin-block-start: 0.5rem;
-  color: var(--text);
-  font-variation-settings: "opsz" 16, "wght" 500;
+/* Two columns: the grouped rows, and the one spotlight. */
+.site-nav-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  min-block-size: 14rem;
 }
 
-.site-nav-section + .site-nav-section .site-nav-section-label {
-  margin-block-start: 0.75rem;
-}
-
-.site-nav-links {
+.site-nav-rows {
   margin: 0;
-  padding: 0;
+  padding: 0.625rem 1.25rem;
   list-style: none;
 }
 
-.site-nav-column[data-wide] .site-nav-links {
+.site-nav-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 2rem;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: start;
+  padding-block: 0.5rem;
+}
+
+.site-nav-row .site-nav-icon {
+  margin-block-start: 0.125rem;
+  color: var(--text-secondary);
+}
+
+.site-nav-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-inline-size: 0;
+}
+
+.site-nav-row-title,
+.site-nav-row-title:visited {
+  color: var(--text);
+  font-variation-settings: "opsz" 16, "wght" 560;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+a.site-nav-row-title:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* A row's links on one line, a middot between them. */
+.site-nav-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+/* After each link but the last, so a line that wraps ends in a dot rather than starting with one. */
+.site-nav-inline li:not(:last-child)::after {
+  content: "\00b7";
+  margin-inline: 0.4375rem;
+  color: var(--text-secondary);
 }
 
 .site-nav-link,
 .site-nav-link:visited {
-  display: inline-flex;
-  align-items: center;
-  max-inline-size: 100%;
-  min-block-size: 1.75rem;
+  display: inline-block;
+  min-block-size: 1.5rem;
+  line-height: 1.5rem;
   color: var(--brand);
   text-decoration: none;
-}
-
-.site-nav-links > li {
-  max-inline-size: 100%;
-}
-
-.site-nav-label {
-  min-inline-size: 0;
-  text-wrap: balance;
 }
 
 .site-nav-link:hover {
@@ -318,66 +431,130 @@
   text-underline-offset: 0.2em;
 }
 
-/* An icon row: the icon is ink at rest and purple with the label on hover and focus. */
-.site-nav-link[data-icon],
-.site-nav-link[data-icon]:visited {
-  display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1fr);
-  column-gap: 0.625rem;
-  align-items: start;
-  min-block-size: 2.25rem;
-  padding-block: 0.375rem;
+/* The spotlight: one block, tinted, the whole of it a link. */
+.site-nav-spot,
+.site-nav-spot:visited {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  margin: 0.75rem 1.25rem 0.75rem 0;
+  padding: 0.875rem 1rem;
+  border-radius: 0.25rem;
+  background: var(--tint-brand);
   color: var(--text);
+  text-decoration: none;
 }
 
-/* Labels alone, so the icon centers on the one line. */
-.site-nav-column[data-wide] .site-nav-link[data-icon] {
+.site-nav-spot:hover .site-nav-spot-title {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.site-nav-spot-eyebrow {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-variation-settings: "opsz" 16, "wght" 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.site-nav-spot-title {
+  color: var(--brand);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-variation-settings: normal;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  overflow: hidden;
+}
+
+.site-nav-spot-body {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+.site-nav-map {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 7.5rem;
+  block-size: auto;
+  color: var(--brand);
+}
+
+.site-nav-map-hub {
+  fill: var(--brand);
+}
+
+/* Three quick links, the last row. */
+.site-nav-foot {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 0.75rem;
+  margin: 0;
+  padding: 0.25rem 1.25rem;
+  list-style: none;
+  border-block-start: var(--line-w) solid var(--dust);
+}
+
+.site-nav-foot-link,
+.site-nav-foot-link:visited {
+  display: inline-flex;
   align-items: center;
-}
-
-.site-nav-link[data-icon]:hover,
-.site-nav-link[data-icon]:focus-visible {
+  column-gap: 0.5rem;
+  min-block-size: 2.25rem;
   color: var(--brand);
   text-decoration: none;
 }
 
-.site-nav-link[data-icon] .site-nav-label {
+.site-nav-foot-link:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.site-nav-foot-link .site-nav-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+/* The lab's sign-in, always on the bar beside Search; the second word shows from the breakpoint up. */
+.site-lab-link,
+.site-lab-link:visited {
+  color: var(--text);
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-lab-link:hover {
   color: var(--brand);
-  line-height: 1.35;
 }
 
-.site-nav-icon {
-  display: block;
-}
-
-.site-nav-link-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.site-nav-desc {
-  display: block;
-  margin-block: -0.25rem 0.375rem;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  line-height: 1.4;
-}
-
-.site-nav-panel-head .site-nav-desc,
-.site-nav-link-text .site-nav-desc {
-  margin: 0;
-}
-
-.site-nav-panel-head .site-nav-desc {
-  font-size: 0.875rem;
-}
-
-.site-nav-aside {
-  margin-inline-start: 0.625rem;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+@media (max-width: 54.99rem) {
+  .site-lab-more {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 /* Both spellings for the marker went with the <details> this replaced; a button has none. */
@@ -451,18 +628,20 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
 }
 
-@media (min-width: 44rem) {
+@media (min-width: 55rem) {
   .site-header-menu-button {
     display: none;
   }
 }
 
 /*
- * MEASURED: below this the labels, chevrons, wordmark and controls stop fitting one line (851px wanted
- * on 2026-09-27, with Research bold as the current section); re-measure when a destination is added. Below it the same nav is the Menu's popover, hanging from the header,
- * with each menu a section that expands in place (header.ts) and rows 44px tall.
+ * MEASURED: below this the labels, buttons, wordmark and controls stop fitting one line (867px wanted on
+ * 2026-10-11, with the Lab sign-in link on the bar; it was 778px before, which already overflowed the old
+ * 44rem breakpoint between 704 and 800). Re-measure by running, never by arithmetic, when a destination
+ * or a label changes. Below it the same nav is the Menu's popover, hanging from the header, with each
+ * section a group that expands in place (header.ts) and rows 44px tall.
  */
-@media (max-width: 43.99rem) {
+@media (max-width: 54.99rem) {
   .site-header {
     column-gap: 0.75rem;
   }
@@ -532,28 +711,20 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
     border-block-end: 0;
   }
 
-  .site-nav-word {
-    display: flex;
-    align-items: center;
+  /* The whole row is the button: the label at the left, the chevron at the right. */
+  .site-nav-button {
+    flex: 1;
+    justify-content: space-between;
     min-block-size: 2.75rem;
     font-size: 1.0625rem;
   }
 
-  /* The rest of the row, so the whole width past the word expands the section. */
   .site-nav-chevron {
-    display: flex;
-    flex: 1;
-    justify-content: flex-end;
-    min-block-size: 2.75rem;
-  }
-
-  .site-nav-chevron svg {
     inline-size: 1rem;
     block-size: 1rem;
   }
 
-  /* In the flow of the Menu, not the top layer: header.ts opens a section with data-expanded. */
-  /* Part of the sheet here, not a card of its own. */
+  /* In the flow of the Menu, not the top layer: header.ts opens a group with data-expanded. */
   .site-nav-panel {
     position: static;
     flex-basis: 100%;
@@ -568,10 +739,11 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   }
 
   .site-nav-item[data-expanded] > .site-nav-panel {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* With no script the chevron opens the panel as a popover, over the Menu it came from: a sheet too. */
+  /* With no script the button opens the panel as a popover, over the Menu it came from: a sheet too. */
   .site-nav-panel:popover-open {
     position: fixed;
     inset: var(--header-h) 0 0;
@@ -580,76 +752,118 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
     background: var(--surface-popover);
   }
 
-  .site-nav-panel-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
-    padding-block-end: 1.125rem;
+  /* The group's button already names the section, so the band is left out of the drawer. */
+  .site-nav-band {
+    display: none;
   }
 
-  .site-nav-panel-title {
-    display: inline-flex;
-    align-items: center;
+  .site-nav-tiles,
+  .site-nav-rows,
+  .site-nav-foot {
+    padding-inline: 0;
+    border-block: 0;
+  }
+
+  .site-nav-tiles {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+    padding-block: 0.25rem 0.75rem;
+  }
+
+  .site-nav-tile-item {
+    min-block-size: 0;
+  }
+
+  .site-nav-tile,
+  .site-nav-tile:visited {
     min-block-size: 2.75rem;
-    font-size: 1.25rem;
+    align-items: center;
   }
 
-  .site-nav-panel-head .site-nav-desc {
-    margin-block-start: -0.5rem;
-    font-size: 0.8125rem;
-  }
-
-  .site-nav-columns {
+  .site-nav-body {
     display: flex;
     flex-direction: column;
-    gap: 1.125rem;
+    min-block-size: 0;
+  }
+
+  .site-nav-row {
+    padding-block: 0.25rem;
+  }
+
+  .site-nav-row-title,
+  .site-nav-row-title:visited {
+    display: flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+  }
+
+  /* The icon sits at the middle of the 44px title line, whether the title is a link or plain. */
+  .site-nav-row .site-nav-icon {
+    margin-block-start: 0.8125rem;
+  }
+
+  .site-nav-row-title + .site-nav-desc {
+    margin-block: -0.5rem 0.25rem;
   }
 
   .site-nav-link,
   .site-nav-link:visited {
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     min-block-size: 2.75rem;
+  }
+
+  .site-nav-spot,
+  .site-nav-spot:visited {
+    margin: 0.5rem 0;
+  }
+
+  .site-nav-foot {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0.25rem 0;
+  }
+
+  .site-nav-foot-link,
+  .site-nav-foot-link:visited {
+    min-block-size: 2.75rem;
+  }
+
+  .site-nav-tile-also,
+  .site-nav-tile-also:visited {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+  }
+}
+
+/*
+ * The narrowest phones (320 to 360): the bar now carries the wordmark, Search, the theme control, Lab
+ * sign-in and the Menu button, which no longer fit on one line at the usual gaps. Tighter gaps and a
+ * smaller mark and wordmark keep them on it with no horizontal scroll.
+ */
+@media (max-width: 23.5rem) {
+  .site-header {
+    column-gap: 0.5rem;
+  }
+
+  .site-header-tools {
+    gap: 0.5rem;
+  }
+
+  .site-header-brand {
+    gap: 0.375rem;
     font-size: 1rem;
   }
 
-  .site-nav-panel-head .site-nav-link {
-    display: inline-flex;
-  }
-
-  .site-nav-link[data-icon],
-  .site-nav-link[data-icon]:visited {
-    column-gap: 0.75rem;
-    align-items: center;
-    min-block-size: 2.75rem;
-    padding-block: 0.25rem;
-  }
-
-  .site-nav-link-text {
-    gap: 0;
-  }
-
-  .site-nav-column[data-wide] .site-nav-links {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 1rem;
-  }
-
-  /* The COI primer names sit on the link's line, as on the wide panel. */
-  .site-nav-links li:has(> .site-nav-aside) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    column-gap: 0.625rem;
-  }
-
-  .site-nav-aside {
-    margin: 0;
+  .site-header-mark {
+    height: 1.75rem;
   }
 }
 
 /* The module never writes the attribute under reduced motion; this is doubly conditioned on purpose.
    The phone menu unrolls down from under the header rule. It is a popover, so display and overlay
    stay discrete until the clip finishes; without motion it opens and closes at once. */
-@media (max-width: 43.99rem) and (prefers-reduced-motion: no-preference) {
+@media (max-width: 54.99rem) and (prefers-reduced-motion: no-preference) {
   .site-header-nav {
     clip-path: inset(0 0 100% 0);
     transition:
