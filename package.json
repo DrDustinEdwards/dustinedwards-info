@@ -92,7 +92,7 @@
     "@lezer/highlight": "1.2.3",
     "@shikijs/rehype": "4.3.1",
     "@shikijs/transformers": "4.3.1",
-    "capsomer": "github:DrDustinEdwards/capsomer#2c16bbfed4b0a8fc85012ff724f15372cb43043c",
+    "capsomer": "github:DrDustinEdwards/capsomer#275c9360907164616b1d727b1fc191c4411f1ffe",
     "drizzle-orm": "0.45.2",
     "enarratio": "0.1.0-alpha.8",
     "github-slugger": "2.0.0",
