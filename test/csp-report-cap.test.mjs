@@ -20,34 +20,34 @@ function post(bytes, { contentLength } = {}) {
   });
 }
 
-test("a body under the cap is returned whole", async () => {
+await test("a body under the cap is returned whole", async () => {
   const text = await readCapped(post(100), MAX);
   assert.equal(text?.length, 100);
 });
 
-test("a body exactly at the cap is accepted", async () => {
+await test("a body exactly at the cap is accepted", async () => {
   const text = await readCapped(post(MAX), MAX);
   assert.equal(text?.length, MAX);
 });
 
-test("a body over the cap is refused, not truncated", async () => {
+await test("a body over the cap is refused, not truncated", async () => {
   // NULL rather than a short string: the caller returns 413. Truncating would
   // log a fragment of a body we should not have accepted.
   const text = await readCapped(post(MAX + 1), MAX);
   assert.equal(text, null);
 });
 
-test("a LYING small content-length does not buy a large body", async () => {
+await test("a LYING small content-length does not buy a large body", async () => {
   const text = await readCapped(post(64 * 1024, { contentLength: 10 }), MAX);
   assert.equal(text, null, "the declared length must not decide this");
 });
 
-test("an ABSENT content-length does not buy a large body", async () => {
+await test("an ABSENT content-length does not buy a large body", async () => {
   const text = await readCapped(post(64 * 1024), MAX);
   assert.equal(text, null);
 });
 
-test("a body stream that errors mid-read THROWS, and is never handed back as a body", async () => {
+await test("a body stream that errors mid-read THROWS, and is never handed back as a body", async () => {
   const body = new ReadableStream({
     start(controller) {
       controller.enqueue(new TextEncoder().encode("source=https://a.example/"));
@@ -57,7 +57,7 @@ test("a body stream that errors mid-read THROWS, and is never handed back as a b
   await assert.rejects(readCapped({ body }, MAX), /body stream failed.*planted connection reset/);
 });
 
-test("an empty body reads as the empty string, not null", async () => {
+await test("an empty body reads as the empty string, not null", async () => {
   // Null is reserved for "over the cap", so an empty POST must not 413.
   const req = new Request("https://example.test/api/csp-report", { method: "POST" });
   assert.equal(await readCapped(req, MAX), "");

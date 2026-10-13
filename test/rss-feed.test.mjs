@@ -14,20 +14,20 @@ const FULL = {
   tags: ["cloudflare", "d1"],
 };
 
-test("the item carries the rendered body in content:encoded", () => {
+await test("the item carries the rendered body in content:encoded", () => {
   const item = rssItem(FULL, ORIGIN);
   assert.match(item, /<content:encoded><!\[CDATA\[/);
   assert.match(item, /Body with/);
 });
 
-test("the summary stays in description and is NOT the body", () => {
+await test("the summary stays in description and is NOT the body", () => {
   const item = rssItem(FULL, ORIGIN);
   assert.match(item, /<description>One sentence about it\.<\/description>/);
   // The list view a reader shows must not become the first paragraph of markup.
   assert.doesNotMatch(item, /<description>[^<]*Body with/);
 });
 
-test("a row with no rendered html omits the element rather than emitting it empty", () => {
+await test("a row with no rendered html omits the element rather than emitting it empty", () => {
   // An empty content:encoded tells a reader the post IS empty. An absent one
   // tells it to follow the link.
   const item = rssItem({ ...FULL, html: null }, ORIGIN);
@@ -35,13 +35,13 @@ test("a row with no rendered html omits the element rather than emitting it empt
   assert.match(item, /<link>https:\/\/example\.test\/writing\/a-post<\/link>/);
 });
 
-test("a title with an ampersand is escaped, and escaped once", () => {
+await test("a title with an ampersand is escaped, and escaped once", () => {
   const item = rssItem(FULL, ORIGIN);
   assert.match(item, /<title>A post about D1 &amp; FTS5<\/title>/);
   assert.doesNotMatch(item, /&amp;amp;/, "double-escaped");
 });
 
-test("CDATA survives a `]]>` inside the content", () => {
+await test("CDATA survives a `]]>` inside the content", () => {
   /* A CDATA section ends at the FIRST `]]>`, so content carrying that sequence spills the
    * rest of the post into the document as markup. */
   const source = "before ]]> after";
@@ -69,13 +69,13 @@ test("CDATA survives a `]]>` inside the content", () => {
   assert.equal(textOf(naive), "before ", "the naive form loses everything after the sequence");
 });
 
-test("CDATA leaves ordinary content alone", () => {
+await test("CDATA leaves ordinary content alone", () => {
   assert.equal(cdata("<p>plain</p>"), "<![CDATA[<p>plain</p>]]>");
 });
 
 /* ------------------------------------------------------------------- URLs */
 
-test("root-relative href and src become absolute", () => {
+await test("root-relative href and src become absolute", () => {
   const out = absolutiseUrls(
     '<a href="/writing/x">x</a><img src="/media/y.png">',
     ORIGIN,
@@ -84,7 +84,7 @@ test("root-relative href and src become absolute", () => {
   assert.match(out, /src="https:\/\/example\.test\/media\/y\.png"/);
 });
 
-test("srcset candidates are absolutised, all of them", () => {
+await test("srcset candidates are absolutised, all of them", () => {
   const out = absolutiseUrls(
     '<img srcset="/media/a.png 320w, /media/b.png 640w" src="/media/a.png">',
     ORIGIN,
@@ -96,21 +96,21 @@ test("srcset candidates are absolutised, all of them", () => {
   );
 });
 
-test("absolute and protocol-relative URLs are left alone", () => {
+await test("absolute and protocol-relative URLs are left alone", () => {
   const input =
     '<a href="https://elsewhere.test/x">x</a><a href="//cdn.test/y">y</a>' +
     '<a href="mailto:someone@example.test">z</a>';
   assert.equal(absolutiseUrls(input, ORIGIN), input);
 });
 
-test("a fragment or a query-only href is left alone", () => {
+await test("a fragment or a query-only href is left alone", () => {
   // Heading permalinks are `#anchor`. Rewriting one would send a reader to the
   // site root instead of to the heading they clicked.
   const input = '<a href="#a-heading">jump</a>';
   assert.equal(absolutiseUrls(input, ORIGIN), input);
 });
 
-test("the item's body is absolutised, which is the whole point of the pass", () => {
+await test("the item's body is absolutised, which is the whole point of the pass", () => {
   const item = rssItem(FULL, ORIGIN);
   assert.match(item, /href="https:\/\/example\.test\/writing\/other"/);
   assert.match(item, /src="https:\/\/example\.test\/media\/x\.png"/);
@@ -119,7 +119,7 @@ test("the item's body is absolutised, which is the whole point of the pass", () 
 
 /* ------------------------------------------------------- shared machinery */
 
-test("escapeXml handles all five entities and nothing else", () => {
+await test("escapeXml handles all five entities and nothing else", () => {
   assert.equal(escapeXml(`&<>"'`), "&amp;&lt;&gt;&quot;&apos;");
   assert.equal(escapeXml("plain text"), "plain text");
 });

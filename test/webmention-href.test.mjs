@@ -6,14 +6,14 @@ import { safeHttpHref } from "../app/lib/webmention/urls.mjs";
 /* The last of three href checks, and the only one that runs on the value that actually
  * reaches the attribute. */
 
-test("it accepts http and https and returns the parser's own output", () => {
+await test("it accepts http and https and returns the parser's own output", () => {
   assert.equal(safeHttpHref("https://a.example/post"), "https://a.example/post");
   assert.equal(safeHttpHref("http://a.example/post"), "http://a.example/post");
   /* The PARSER'S output, not the input: a bare origin gains its root path. */
   assert.equal(safeHttpHref("https://a.example"), "https://a.example/");
 });
 
-test("it REFUSES every scheme that is not http or https", () => {
+await test("it REFUSES every scheme that is not http or https", () => {
   const refused = [
     "javascript:alert(1)",
     "JavaScript:alert(1)",
@@ -28,18 +28,18 @@ test("it REFUSES every scheme that is not http or https", () => {
   }
 });
 
-test("it REFUSES anything that is not an absolute URL at all", () => {
+await test("it REFUSES anything that is not an absolute URL at all", () => {
   for (const value of ["/relative/path", "not a url", "//protocol-relative", ""]) {
     assert.equal(safeHttpHref(value), null, `${JSON.stringify(value)} was not refused`);
   }
 });
 
-test("it REFUSES absence without throwing, since a column is nullable", () => {
+await test("it REFUSES absence without throwing, since a column is nullable", () => {
   assert.equal(safeHttpHref(null), null);
   assert.equal(safeHttpHref(undefined), null);
 });
 
-test("a leading-whitespace javascript URL is still refused", () => {
+await test("a leading-whitespace javascript URL is still refused", () => {
   /* `new URL` trims leading control characters and whitespace, which makes a naive
    * `startsWith("javascript:")` guard useless, so the PARSER is asked for the protocol. */
   assert.equal(safeHttpHref("  javascript:alert(1)"), null);

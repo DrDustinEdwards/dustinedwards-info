@@ -20,7 +20,7 @@ const SEQUENCE = `CCCCC${F}AAAAAAAAAA${RC_R}CCCCC`;
 const whole = parseReference(fasta("AB000001.1 A built-for-the-test record", SEQUENCE));
 const region = parseReference(fasta("NC_000001.1:1000-1047 A slice of a chromosome", SEQUENCE));
 
-test("a reference is NCBI's own FASTA, whole or a slice, and its header must say the length the sequence is", () => {
+await test("a reference is NCBI's own FASTA, whole or a slice, and its header must say the length the sequence is", () => {
   assert.deepEqual([whole.id, whole.accession, whole.from, whole.to], ["AB000001.1", "AB000001.1", 1, 48]);
   assert.deepEqual([region.id, region.accession, region.from, region.to], ["NC_000001.1:1000-1047", "NC_000001.1", 1000, 1047]);
   assert.equal(whole.description, "A built-for-the-test record");
@@ -29,13 +29,13 @@ test("a reference is NCBI's own FASTA, whole or a slice, and its header must say
   assert.throws(() => parseReference(fasta("AB000001.1 With an ambiguity", `${SEQUENCE.slice(0, 10)}N${SEQUENCE.slice(11)}`)), /other than A, C, G and T/);
 });
 
-test("a position is in the accession's own coordinates: a slice's offset is added back", () => {
+await test("a position is in the accession's own coordinates: a slice's offset is added back", () => {
   assert.equal(accessionPosition(whole, 6), 6);
   assert.equal(accessionPosition(region, 1), 1000);
   assert.equal(accessionPosition(region, 6), 1005);
 });
 
-test("a primer is placed with its strand, span and mismatches, exactly first", () => {
+await test("a primer is placed with its strand, span and mismatches, exactly first", () => {
   const forward = placePrimer(F, whole.id, { [whole.id]: whole });
   assert.deepEqual(forward?.reference, { id: "AB000001.1", accession: "AB000001.1", description: "A built-for-the-test record" });
   assert.deepEqual(forward?.sites, [{ strand: "+", start: 6, end: 20, mismatches: 0, mismatchPositions: [] }]);
@@ -45,7 +45,7 @@ test("a primer is placed with its strand, span and mismatches, exactly first", (
   assert.equal(placePrimer(F, region.id, { [region.id]: region })?.sites[0]?.start, 1005, "a slice reports chromosome coordinates");
 });
 
-test("a primer that binds only with mismatches is placed at the fewest, and each is reported, never absorbed", () => {
+await test("a primer that binds only with mismatches is placed at the fewest, and each is reported, never absorbed", () => {
   // The second base of F is changed (G to T) and the last is changed (C to A): two mismatches, at primer bases 2 and 15.
   const twisted = `${F.slice(0, 1)}T${F.slice(2, 14)}A`;
   const placed = placePrimer(twisted, whole.id, { [whole.id]: whole });
@@ -58,14 +58,14 @@ test("a primer that binds only with mismatches is placed at the fewest, and each
   assert.equal(placePrimer("ACGRTACGTACG", whole.id, { [whole.id]: whole }), null, "an ambiguity code has no single placement");
 });
 
-test("a pair's product runs from the forward primer's 5' end to the reverse primer's 5' end, inclusive", () => {
+await test("a pair's product runs from the forward primer's 5' end to the reverse primer's 5' end, inclusive", () => {
   const pair = pairProducts(F, R, whole.id, { [whole.id]: whole });
   assert.deepEqual(pair?.products.map((p) => [p.length, p.start, p.end]), [[38, 6, 43]]);
   assert.deepEqual(pairProducts(F, R, region.id, { [region.id]: region })?.products.map((p) => [p.length, p.start, p.end]), [[38, 1005, 1042]]);
   assert.equal(pairProducts(F, "GGGGGGGGGGGGG", whole.id, { [whole.id]: whole }), null, "a primer that binds nowhere makes no product");
 });
 
-test("a pair that binds twice makes two products, as the two LTRs of a provirus do", () => {
+await test("a pair that binds twice makes two products, as the two LTRs of a provirus do", () => {
   const twice = parseReference(fasta("AB000002.1 Two copies", `${SEQUENCE}GGGGG${SEQUENCE}`));
   const pair = pairProducts(F, R, twice.id, { [twice.id]: twice });
   // Both copies' own products, and the longer one between the first copy's forward and the second copy's reverse, which a PCR
@@ -74,7 +74,7 @@ test("a pair that binds twice makes two products, as the two LTRs of a provirus 
   assert.deepEqual(pair?.products.map((p) => [p.length, p.start, p.end]), [[38, 6, 43], [38, 59, 96], [91, 6, 96]]);
 });
 
-test("a protocol's primers give each set's product on both of its rows, and only where the set pairs on one reference", () => {
+await test("a protocol's primers give each set's product on both of its rows, and only where the set pairs on one reference", () => {
   const rows = [
     { id: "a-f", set: "S", direction: "forward", sequence: F, reference: whole.id },
     { id: "a-r", set: "S", direction: "reverse", sequence: R, reference: whole.id },
@@ -98,7 +98,7 @@ test("a protocol's primers give each set's product on both of its rows, and only
   assert.equal(lpdv.get("f"), lpdv.get("r"));
 });
 
-test("the real references are the records they name, kept as NCBI wrote them, and the generated module is built from them", () => {
+await test("the real references are the records they name, kept as NCBI wrote them, and the generated module is built from them", () => {
   const read = readReferences();
   assert.deepEqual(Object.keys(read).sort(), ["DQ387450.1", "NC_052532.1:76902320-76906237", "NC_139404.1:75777043-75780966", "U09568.1", "X03240.1"]);
   assert.equal(read["DQ387450.1"].sequence.length, 8286, "the REV APC-566 genome is the 8,286 nt the protocol cites");

@@ -93,7 +93,7 @@ function load({ kept = {}, others = [] } = {}) {
   return { listeners, state, caches, keptCache, request };
 }
 
-test("online, the worker answers from the network and stores nothing nobody kept", async () => {
+await test("online, the worker answers from the network and stores nothing nobody kept", async () => {
   const sw = load();
   assert.equal(await sw.request("/recipes/flatbread"), "fresh /recipes/flatbread");
   assert.equal(sw.keptCache.entries.size, 0, "a page nobody kept is never stored");
@@ -101,7 +101,7 @@ test("online, the worker answers from the network and stores nothing nobody kept
   assert.equal(sw.keptCache.entries.size, 0);
 });
 
-test("a kept page fetched online is stored again, so the copy follows the page", async () => {
+await test("a kept page fetched online is stored again, so the copy follows the page", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "old copy" } });
   assert.equal(await sw.request("/recipes/flatbread"), "fresh /recipes/flatbread");
   assert.equal(await (await sw.keptCache.match("/recipes/flatbread"))?.text(), "fresh /recipes/flatbread");
@@ -110,7 +110,7 @@ test("a kept page fetched online is stored again, so the copy follows the page",
   assert.equal(await (await sw.keptCache.match("/recipes/flatbread"))?.text(), "fresh /recipes/flatbread");
 });
 
-test("offline, the kept page and its files open from the device, at any scale; anything else fails as it would", async () => {
+await test("offline, the kept page and its files open from the device, at any scale; anything else fails as it would", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "kept page", "/assets/app-1.css": "kept css" } });
   sw.state.online = false;
   assert.equal(await sw.request("/recipes/flatbread"), "kept page");
@@ -120,7 +120,7 @@ test("offline, the kept page and its files open from the device, at any scale; a
   await assert.rejects(sw.request("/assets/app-1.css?v=2", { mode: "no-cors", destination: "style" }), /Failed to fetch/, "a file is matched exactly");
 });
 
-test("the worker lets everything else pass: other methods, other sites, and data requests", async () => {
+await test("the worker lets everything else pass: other methods, other sites, and data requests", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "kept page" } });
   assert.equal(await sw.request("/recipes/flatbread", { method: "POST" }), null);
   assert.equal(await sw.request("/recipes/flatbread", { origin: "https://elsewhere.example" }), null);
@@ -128,7 +128,7 @@ test("the worker lets everything else pass: other methods, other sites, and data
   assert.deepEqual(sw.state.fetched, [], "it did not even touch the network for them");
 });
 
-test("installing takes over at once, and activating drops an older kept store and nothing else", async () => {
+await test("installing takes over at once, and activating drops an older kept store and nothing else", async () => {
   const sw = load({ others: ["kept-v0", "some-other-cache"] });
   sw.listeners.install?.({});
   assert.equal(sw.state.skipped, true);

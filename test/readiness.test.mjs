@@ -12,13 +12,13 @@ const HEALTHY = JSON.stringify(HEALTHY_BODY);
 
 const UNHEALTHY = JSON.stringify(bodyDrifted({ "ask-index-drift": { expected: 99, present: 90 } }));
 
-test("a healthy report passes and carries its checks", () => {
+await test("a healthy report passes and carries its checks", () => {
   const verdict = readinessVerdict(200, HEALTHY);
   assert.equal(verdict.ok, true);
   assert.equal(verdict.checks.length, CHECK_NAMES.length);
 });
 
-test("THE PLANT: a 200 whose body does not say ok refuses, naming the check", () => {
+await test("THE PLANT: a 200 whose body does not say ok refuses, naming the check", () => {
   // 200 is the plant: the status alone would pass. 503 is what the endpoint really sends.
   for (const status of [200, 503]) {
     const verdict = readinessVerdict(status, UNHEALTHY);
@@ -29,7 +29,7 @@ test("THE PLANT: a 200 whose body does not say ok refuses, naming the check", ()
   }
 });
 
-test("THE PLANT, second form: a 200 carrying ok:true but no checks still refuses", () => {
+await test("THE PLANT, second form: a 200 carrying ok:true but no checks still refuses", () => {
   // Any JSON document on this origin can carry ok:true; only a health report carries a
   // checks array, so this is what stops the step passing against the wrong URL.
   const verdict = readinessVerdict(200, JSON.stringify({ ok: true }));
@@ -37,7 +37,7 @@ test("THE PLANT, second form: a 200 carrying ok:true but no checks still refuses
   assert.match(verdict.why, /no checks in its body/);
 });
 
-test("a real non-health JSON document on this origin refuses", () => {
+await test("a real non-health JSON document on this origin refuses", () => {
   const feed = JSON.stringify({
     version: "https://jsonfeed.org/version/1.1",
     title: "Dustin Edwards blog",
@@ -48,7 +48,7 @@ test("a real non-health JSON document on this origin refuses", () => {
   assert.match(verdict.why, /no checks in its body/);
 });
 
-test("429 is told apart from unhealthy, because the repairs differ", () => {
+await test("429 is told apart from unhealthy, because the repairs differ", () => {
   const verdict = readinessVerdict(429, JSON.stringify({ ok: false, checks: [{ name: "rate-limited", ok: false }] }));
   assert.equal(verdict.ok, false);
   assert.match(verdict.why, /rate limited/);
@@ -56,20 +56,20 @@ test("429 is told apart from unhealthy, because the repairs differ", () => {
   assert.doesNotMatch(verdict.why, /not healthy/);
 });
 
-test("an unparseable body refuses rather than being treated as absent", () => {
+await test("an unparseable body refuses rather than being treated as absent", () => {
   const verdict = readinessVerdict(200, "<!DOCTYPE html><html>a 404 page</html>");
   assert.equal(verdict.ok, false);
   assert.match(verdict.why, /not JSON/);
 });
 
-test("JSON that is not an object refuses", () => {
+await test("JSON that is not an object refuses", () => {
   for (const body of ["null", "[]", '"ok"', "42", "true"]) {
     const verdict = readinessVerdict(200, body);
     assert.equal(verdict.ok, false, `for ${body}`);
   }
 });
 
-test("ok is required to be exactly true, not merely truthy", () => {
+await test("ok is required to be exactly true, not merely truthy", () => {
   const verdict = readinessVerdict(200, JSON.stringify({ ok: "yes", checks: [{ name: "a", ok: true }] }));
   assert.equal(verdict.ok, false);
 });
@@ -80,7 +80,7 @@ const DRIFTED_CORPUS = JSON.stringify(
   bodyDrifted({ "content-drift": { expected: 16, present: 14 } }),
 );
 
-test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", () => {
+await test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", () => {
   const gated = readinessVerdict(503, DRIFTED_CORPUS);
   assert.equal(gated.ok, false, "undeferred, this is still a refusal");
   assert.match(gated.why, /content-drift/);
@@ -95,7 +95,7 @@ test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", ()
   assert.equal(deferred.checks.length, CHECK_NAMES.length, "every check is still carried for the table");
 });
 
-test("deferring content-drift does not defer anything else", () => {
+await test("deferring content-drift does not defer anything else", () => {
   const alsoAsk = JSON.stringify({
     ok: false,
     checks: [
@@ -111,7 +111,7 @@ test("deferring content-drift does not defer anything else", () => {
   assert.doesNotMatch(verdict.why, /content-drift/, "the deferred one is not the reason");
 });
 
-test("an endpoint disagreeing with itself still refuses, even with a deferral", () => {
+await test("an endpoint disagreeing with itself still refuses, even with a deferral", () => {
   // ok:false while every check says ok. Nothing to subtract, so nothing excuses it.
   const incoherent = JSON.stringify({
     ok: false,
@@ -132,7 +132,7 @@ const ASK_DRIFTED = JSON.stringify(
   bodyDrifted({ "ask-index-drift": { expected: 121, present: 120 } }),
 );
 
-test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
+await test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
   const gated = readinessVerdict(503, ASK_DRIFTED);
   assert.equal(gated.ok, false, "undeferred, this still refuses");
   assert.match(gated.why, /ask-index-drift/);
@@ -146,7 +146,7 @@ test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
   );
 });
 
-test("THE OTHER HALF: the same body fails the post-repair assertion, by name", () => {
+await test("THE OTHER HALF: the same body fails the post-repair assertion, by name", () => {
   const { misses, converged } = deferredMisses(JSON.parse(ASK_DRIFTED).checks, DEFERRED_CHECKS);
   assert.equal(misses.length, 1, "one deferred check is still failing");
   assert.match(misses[0], /ask-index-drift is STILL failing after the Ask converge/);
@@ -171,7 +171,7 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
   );
 });
 
-test("a deferred check the endpoint stopped reporting is a MISS, not a pass", () => {
+await test("a deferred check the endpoint stopped reporting is a MISS, not a pass", () => {
   const { misses } = deferredMisses([{ name: "content-drift", ok: true }], DEFERRED_CHECKS);
   const absent = Object.keys(DEFERRED_CHECKS).filter((name) => name !== "content-drift");
   assert.ok(absent.length > 0, "the case needs at least one deferred check left unreported");
@@ -181,7 +181,7 @@ test("a deferred check the endpoint stopped reporting is a MISS, not a pass", ()
   }
 });
 
-test("every deferred check converging leaves no miss", () => {
+await test("every deferred check converging leaves no miss", () => {
   const healthy = JSON.parse(HEALTHY).checks;
   const { misses, converged } = deferredMisses(healthy, DEFERRED_CHECKS);
   assert.deepEqual(misses, [], "a clean run reports nothing");
@@ -192,7 +192,7 @@ test("every deferred check converging leaves no miss", () => {
   );
 });
 
-test("a check whose ok is not exactly true is a failure, not a pass", () => {
+await test("a check whose ok is not exactly true is a failure, not a pass", () => {
   for (const ok of ["false", 1, null, undefined]) {
     const body = JSON.stringify({ ok: true, checks: [{ name: "content-drift", ok }] });
     const verdict = readinessVerdict(200, body);

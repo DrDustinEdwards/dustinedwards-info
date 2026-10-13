@@ -35,7 +35,7 @@ const GOOD = { year: 2031, photo: PHOTO, researchers: NAMES };
 const compile = (raw, { slug = "2031", photo = true } = {}) =>
   compileCohort({ slug, raw, host: { photo: async () => photo }, pipeline: PIPELINE });
 
-test("a well-formed cohort compiles to exactly the three fields the data file carried", async () => {
+await test("a well-formed cohort compiles to exactly the three fields the data file carried", async () => {
   const result = await compile(file(GOOD));
   assert.equal(result.ok, true, result.errors.join("\n"));
   assert.deepEqual(result.cohort, GOOD);
@@ -44,12 +44,12 @@ test("a well-formed cohort compiles to exactly the three fields the data file ca
   assert.match(result.sourceBlobSha, /^[0-9a-f]{40}$/);
 });
 
-test("a cohort with no photograph and no names is allowed (the page says the roster is to be added)", async () => {
+await test("a cohort with no photograph and no names is allowed (the page says the roster is to be added)", async () => {
   const result = await compile(file({ year: 2031, photo: null, researchers: [] }));
   assert.equal(result.ok, true, result.errors.join("\n"));
 });
 
-test("REFUSES any field that is not in the existing shape, so no new personal data can enter", async () => {
+await test("REFUSES any field that is not in the existing shape, so no new personal data can enter", async () => {
   for (const extra of ["email", "phone", "location", "sample_location", "draft", "notes"]) {
     const result = await compile(file({ ...GOOD, [extra]: "x" }));
     assert.equal(result.ok, false, `${extra} was accepted`);
@@ -60,7 +60,7 @@ test("REFUSES any field that is not in the existing shape, so no new personal da
   assert.match(inPhoto.errors.join("\n"), /photo\.credit is not a roster field/);
 });
 
-test("REFUSES names that are not plain strings (a person is a name and nothing else)", async () => {
+await test("REFUSES names that are not plain strings (a person is a name and nothing else)", async () => {
   const mapped = await compile(file({ ...GOOD, researchers: [{ name: "Example Person", email: "x" }] }));
   assert.equal(mapped.ok, false);
   assert.match(mapped.errors.join("\n"), /researchers\[0\] is/);
@@ -72,7 +72,7 @@ test("REFUSES names that are not plain strings (a person is a name and nothing e
   assert.match(repeated.errors.join("\n"), /repeats a name/);
 });
 
-test("REFUSES a body, a missing file, a wrong year and a slug that is not a year, with every message", async () => {
+await test("REFUSES a body, a missing file, a wrong year and a slug that is not a year, with every message", async () => {
   assert.match((await compile(file(GOOD, "A paragraph.\n"))).errors.join("\n"), /body must be empty/);
   assert.match((await compile(file(GOOD), { photo: false })).errors.join("\n"), /is not in the repository/);
   assert.match((await compile(file({ ...GOOD, year: 2030 }))).errors.join("\n"), /file is named for its year/);
@@ -84,7 +84,7 @@ test("REFUSES a body, a missing file, a wrong year and a slug that is not a year
   assert.ok(many.errors.length >= 5, `every message, got ${many.errors.length}`);
 });
 
-test("REFUSES a photograph outside /phage-hunters/ or not a .webp, and one with no alt text", async () => {
+await test("REFUSES a photograph outside /phage-hunters/ or not a .webp, and one with no alt text", async () => {
   for (const src of ["/media/x.webp", "/phage-hunters/x.jpg", "https://example.com/phage-hunters/x.webp", "/phage-hunters/../x.webp"]) {
     assert.equal((await compile(file({ ...GOOD, photo: { ...PHOTO, src } }))).ok, false, src);
   }
@@ -92,27 +92,27 @@ test("REFUSES a photograph outside /phage-hunters/ or not a .webp, and one with 
   assert.match(noAlt.errors.join("\n"), /photo\.alt is required/);
 });
 
-test("REFUSES a wide dash, as every content file does", async () => {
+await test("REFUSES a wide dash, as every content file does", async () => {
   const wide = String.fromCharCode(0x2014);
   const result = await compile(file({ ...GOOD, researchers: [`Example${wide}Person`] }));
   assert.equal(result.ok, false);
   assert.match(result.errors.join("\n"), /wide dash/);
 });
 
-test("the set rules: it cannot be empty and two files cannot be one year", () => {
+await test("the set rules: it cannot be empty and two files cannot be one year", () => {
   assert.match(rosterSetErrors([]).join("\n"), /cannot be empty/);
   assert.match(rosterSetErrors([GOOD, GOOD]).join("\n"), /two files are the 2031 cohort/);
   assert.deepEqual(rosterSetErrors([GOOD, { ...GOOD, year: 2030 }]), []);
 });
 
-test("cohorts list newest first, whatever order they are read in", () => {
+await test("cohorts list newest first, whatever order they are read in", () => {
   const years = (list) => list.map((c) => c.year);
   const cohorts = [2019, 2025, 2021].map((year) => ({ ...GOOD, year }));
   assert.deepEqual(years(sortCohorts(cohorts)), [2025, 2021, 2019]);
   assert.deepEqual(years(cohorts), [2019, 2025, 2021], "the input is not reordered in place");
 });
 
-test("the home page's counts are counted from the cohorts, never typed", () => {
+await test("the home page's counts are counted from the cohorts, never typed", () => {
   const cohorts = [
     { year: 2024, photo: null, researchers: ["A One", "B Two", "C Three"] },
     { year: 2021, photo: null, researchers: ["D Four"] },
@@ -122,7 +122,7 @@ test("the home page's counts are counted from the cohorts, never typed", () => {
   assert.throws(() => rosterFacts([]), /no cohorts/);
 });
 
-test("the committed roster compiles, in the shape the data file had, and every photograph exists", async () => {
+await test("the committed roster compiles, in the shape the data file had, and every photograph exists", async () => {
   const compiled = await compileAllRoster();
   assert.ok(compiled.length >= 9, `the roster has ${compiled.length} files; it had nine cohorts when it moved to files`);
   const failed = compiled.filter((c) => !c.compiled.ok).map((c) => `${c.file}: ${c.compiled.errors.join("; ")}`);
@@ -146,7 +146,7 @@ test("the committed roster compiles, in the shape the data file had, and every p
   for (const row of rows) assert.equal(row.sourcePath, rosterPath(row.slug));
 });
 
-test("the roster's place: one registered page, the anchor the redirects land on, and the heading that carries it", () => {
+await test("the roster's place: one registered page, the anchor the redirects land on, and the heading that carries it", () => {
   assert.ok(CONTENT_PAGE_PATHS.includes(ROSTER_PAGE_PATH), `${ROSTER_PAGE_PATH} is a registered page`);
   assert.equal(PROFILE_TARGET, `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
   assert.equal(movedPathTarget("/phage-discovery"), `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
@@ -157,7 +157,7 @@ test("the roster's place: one registered page, the anchor the redirects land on,
   assert.doesNotMatch(route, /"\/teaching\/phage-discovery"/, "no second, typed copy of the path");
 });
 
-test("no module reads a roster out of code any more", () => {
+await test("no module reads a roster out of code any more", () => {
   const home = readFileSync(new URL("../app/routes/home.tsx", import.meta.url), "utf8");
   const component = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
   for (const [name, text] of [["home.tsx", home], ["phage-roster.tsx", component]]) {

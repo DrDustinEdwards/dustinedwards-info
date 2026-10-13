@@ -14,7 +14,7 @@ const T3 = "2026-09-02T13:45:00.000Z";
 
 const green = { red: false, since: T0, checks: [] };
 
-test("PLANT: red, red, green mails exactly once, never, once", () => {
+await test("PLANT: red, red, green mails exactly once, never, once", () => {
   const first = alertTransition({
     stored: green,
     alerting: true,
@@ -48,7 +48,7 @@ test("PLANT: red, red, green mails exactly once, never, once", () => {
   assert.equal(third.state.red, false);
 });
 
-test("a long red spell mails once however many polls it takes", () => {
+await test("a long red spell mails once however many polls it takes", () => {
   let state = green;
   let mails = 0;
   for (let i = 0; i < 28; i += 1) {
@@ -64,7 +64,7 @@ test("a long red spell mails once however many polls it takes", () => {
   assert.equal(mails, 1, "28 red polls is one alert, not 28");
 });
 
-test("NO STORED STATE IS A BASELINE, not a change, even when red", () => {
+await test("NO STORED STATE IS A BASELINE, not a change, even when red", () => {
   const out = alertTransition({ stored: null, alerting: true, failing: ["fts-equality"], now: T1 });
   assert.equal(out.email, null);
   assert.equal(out.write, true, "but it must record what it saw");
@@ -72,13 +72,13 @@ test("NO STORED STATE IS A BASELINE, not a change, even when red", () => {
   assert.match(out.reason, /baseline/);
 });
 
-test("a baseline recorded red still mails when it recovers", () => {
+await test("a baseline recorded red still mails when it recovers", () => {
   const base = alertTransition({ stored: null, alerting: true, failing: ["x"], now: T1 });
   const back = alertTransition({ stored: base.state, alerting: false, failing: [], now: T2 });
   assert.equal(back.email?.kind, "recovered");
 });
 
-test("garbage in the store is treated as absent, never coerced", () => {
+await test("garbage in the store is treated as absent, never coerced", () => {
   // A half-parsed record would produce a duration measured from a timestamp
   // nobody wrote.
   for (const junk of [7, "red", {}, { red: "yes", since: T0 }, { red: true }, { since: T0 }]) {
@@ -88,7 +88,7 @@ test("garbage in the store is treated as absent, never coerced", () => {
   }
 });
 
-test("AN UNREADABLE STORE MAILS RATHER THAN GOING QUIET", () => {
+await test("AN UNREADABLE STORE MAILS RATHER THAN GOING QUIET", () => {
   // Unreadable means the dedupe is blind, and a blind dedupe that stays silent stops monitoring.
   const out = alertTransition({
     stored: null,
@@ -101,7 +101,7 @@ test("AN UNREADABLE STORE MAILS RATHER THAN GOING QUIET", () => {
   assert.match(out.reason, /could not be read/);
 });
 
-test("an unreadable store on a HEALTHY poll still mails nothing", () => {
+await test("an unreadable store on a HEALTHY poll still mails nothing", () => {
   const out = alertTransition({
     stored: null,
     storedReadable: false,
@@ -113,7 +113,7 @@ test("an unreadable store on a HEALTHY poll still mails nothing", () => {
   assert.equal(out.write, true);
 });
 
-test("a new check joining an existing outage is recorded, not mailed", () => {
+await test("a new check joining an existing outage is recorded, not mailed", () => {
   const red = alertTransition({ stored: green, alerting: true, failing: ["a"], now: T1 });
   const wider = alertTransition({
     stored: red.state,
@@ -129,7 +129,7 @@ test("a new check joining an existing outage is recorded, not mailed", () => {
   assert.deepEqual(back.email?.checks, ["a", "b"], "recovery names everything that broke");
 });
 
-test("names are normalized, so ordering cannot cause a spurious write", () => {
+await test("names are normalized, so ordering cannot cause a spurious write", () => {
   const red = alertTransition({ stored: green, alerting: true, failing: ["b", "a"], now: T1 });
   const same = alertTransition({
     stored: red.state,
@@ -140,13 +140,13 @@ test("names are normalized, so ordering cannot cause a spurious write", () => {
   assert.equal(same.write, false, "the same set in a different order is not a change");
 });
 
-test("healthy to healthy writes nothing at all", () => {
+await test("healthy to healthy writes nothing at all", () => {
   const out = alertTransition({ stored: green, alerting: false, failing: [], now: T1 });
   assert.equal(out.email, null);
   assert.equal(out.write, false);
 });
 
-test("an unparseable since yields NO duration rather than zero", () => {
+await test("an unparseable since yields NO duration rather than zero", () => {
   // "recovered after 0 seconds" reads as a measurement and is not one.
   const out = alertTransition({
     stored: { red: true, since: "not a date", checks: ["x"] },
@@ -158,7 +158,7 @@ test("an unparseable since yields NO duration rather than zero", () => {
   assert.equal(formatDuration(null), "an unknown time");
 });
 
-test("formatDuration keeps to two units", () => {
+await test("formatDuration keeps to two units", () => {
   assert.equal(formatDuration(45 * 1000), "45s");
   assert.equal(formatDuration(90 * 1000), "1m");
   assert.equal(formatDuration(3 * 60 * 60 * 1000), "3h");
@@ -167,7 +167,7 @@ test("formatDuration keeps to two units", () => {
   assert.equal(formatDuration(-1), "an unknown time");
 });
 
-test("a clock that went backwards is unknown, not negative", () => {
+await test("a clock that went backwards is unknown, not negative", () => {
   const out = alertTransition({
     stored: { red: true, since: T3, checks: ["x"] },
     alerting: false,
@@ -177,7 +177,7 @@ test("a clock that went backwards is unknown, not negative", () => {
   assert.equal(out.email?.durationMs, null);
 });
 
-test("PLANT: a failed unhealthy mail leaves the state green, so the next firing mails again", async () => {
+await test("PLANT: a failed unhealthy mail leaves the state green, so the next firing mails again", async () => {
   let stored = green;
   const firing = async (sendWorks) => {
     const transition = alertTransition({ stored, alerting: true, failing: ["fts-equality"], now: T1 });
@@ -200,7 +200,7 @@ test("PLANT: a failed unhealthy mail leaves the state green, so the next firing 
   assert.equal(stored.red, true);
 });
 
-test("a transition with nothing to mail still records its state", async () => {
+await test("a transition with nothing to mail still records its state", async () => {
   const transition = alertTransition({ stored: null, alerting: true, failing: ["x"], now: T1 });
   let wrote = false;
   const delivered = await deliverTransition(transition, {

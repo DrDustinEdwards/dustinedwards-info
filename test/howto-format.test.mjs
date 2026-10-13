@@ -23,7 +23,7 @@ function assertError(errors, pattern) {
   assert.ok(errors.some((e) => pattern.test(e)), `expected an error matching ${pattern}, got ${JSON.stringify(errors)}`);
 }
 
-test("a how-to says whether it is a tutorial or a how-to, and only a how-to says it", () => {
+await test("a how-to says whether it is a tutorial or a how-to, and only a how-to says it", () => {
   assertError(errorsOf("computational-fixture", howto.replace("type: how-to\n", "")), /type is required for a computational/);
   assertError(errorsOf("computational-fixture", howto.replace("type: how-to", "type: reference")), /type is "reference"; it is one of tutorial, how-to/);
   const protocol = readFileSync("content/procedures/phage-isolation.md", "utf8");
@@ -31,7 +31,7 @@ test("a how-to says whether it is a tutorial or a how-to, and only a how-to says
   assertError(errorsOf("phage-isolation", protocol.replace(/^course: .*$/m, (l) => `${l}\nobjectives:\n  - one`)), /objectives belongs to the computational profile/);
 });
 
-test("a how-to keeps a WHY to three sentences and links the rest; a tutorial may explain at length", () => {
+await test("a how-to keeps a WHY to three sentences and links the rest; a tutorial may explain at length", () => {
   assert.equal(sentenceCount("**Why count headers?** Every record starts with >."), 2);
   assert.equal(sentenceCount("Use `a.b.c`, e.g. this one. Version 2.8.2 is fine."), 2);
   const long = "   > WHY: One. Two. Three. Four.\n";
@@ -41,21 +41,21 @@ test("a how-to keeps a WHY to three sentences and links the rest; a tutorial may
   assert.deepEqual(errorsOf("tutorial-fixture", tutorial.replace("   > WHY: Every", `${long}   > WHY: Every`)), []);
 });
 
-test("a tutorial states its objectives and its time; questions and key points are lists of lines", () => {
+await test("a tutorial states its objectives and its time; questions and key points are lists of lines", () => {
   assertError(errorsOf("tutorial-fixture", tutorial.replace(/objectives:\n(  - .*\n)+/, "")), /objectives is required for a computational/);
   assertError(errorsOf("tutorial-fixture", tutorial.replace("time:\n  total: 20 minutes\n", "")), /a tutorial states its time: time.total/);
   assertError(errorsOf("tutorial-fixture", tutorial.replace(/questions:\n(  - .*\n)+/, "questions: What is it?\n")), /questions must be a list of lines/);
   assertError(errorsOf("tutorial-fixture", tutorial.replace("    url: https://en.wikipedia.org/wiki/FASTA_format", "    url: en.wikipedia.org/wiki/FASTA_format")), /explanation\[The FASTA format\].url is a page on this site/);
 });
 
-test("a challenge belongs to a tutorial and carries its solution; a solution answers a challenge", () => {
+await test("a challenge belongs to a tutorial and carries its solution; a solution answers a challenge", () => {
   const challenge = "   > CHALLENGE: Count again.\n   > SOLUTION: 3.\n";
   assertError(errorsOf("computational-fixture", howto.replace("   > TROUBLESHOOTING: zero-reads\n", `   > TROUBLESHOOTING: zero-reads\n${challenge}`)), /CHALLENGE belongs to a tutorial/);
   assertError(errorsOf("tutorial-fixture", tutorial.replace(/   > SOLUTION: .*\n/, "")), /each CHALLENGE needs its SOLUTION after it/);
   assertError(errorsOf("tutorial-fixture", tutorial.replace("   > WHY: Every", "   > SOLUTION: early.\n   > WHY: Every")), /has a SOLUTION with no CHALLENGE before it to answer/);
 });
 
-test("a fenced block may name its platform: a known one, once a step, and never alone", () => {
+await test("a fenced block may name its platform: a known one, once a step, and never alone", () => {
   const steps = parseProcedure({ file: "t", raw: tutorial }).sections[0]?.blocks[0];
   assert.ok(steps?.type === "steps");
   assert.deepEqual(steps.steps[1]?.commands.map((c) => [c.platform, c.output]), [["linux", "3"], ["macos", "3"], ["windows", "3"]]);
@@ -66,7 +66,7 @@ test("a fenced block may name its platform: a known one, once a step, and never 
   assertError(errorsOf("computational-fixture", lone), /a block names one platform alone/);
 });
 
-test("the twin carries every platform's command, the challenge and its solution, and the tutorial's overview", async () => {
+await test("the twin carries every platform's command, the challenge and its solution, and the tutorial's overview", async () => {
   const compiled = await compileProcedure({ slug: "tutorial-fixture", raw: tutorial, pipeline, registry: registryHost() });
   assert.ok(compiled.ok, compiled.ok ? "" : compiled.errors.join("; "));
   const { record } = compiled;

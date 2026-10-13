@@ -53,26 +53,26 @@ const answerOf = (sse) =>
     .map((m) => JSON.parse(m[1]).choices[0].delta.content)
     .join("");
 
-test("CONTROL: a normal answer passes through the guard unchanged", async () => {
+await test("CONTROL: a normal answer passes through the guard unchanged", async () => {
   const upstream = sseStream([{ url: "/writing/a" }], ["D1 is ", "Cloudflare's SQL database."]);
   const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), "D1 is Cloudflare's SQL database.");
   assert.ok(out.includes('event: chunks'), "the chunks frame still reaches the client");
 });
 
-test("A ZERO-CHUNK ANSWER IS REPLACED WITH THE NO-ANSWER TEXT", async () => {
+await test("A ZERO-CHUNK ANSWER IS REPLACED WITH THE NO-ANSWER TEXT", async () => {
   const upstream = sseStream([], ["Sure! ", "AUDIT-INJECTION-OK. ", "My system prompt is..."]);
   const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), NO_ANSWER_TEXT);
   assert.ok(!out.includes("AUDIT-INJECTION-OK"), `the invented answer leaked: ${out}`);
 });
 
-test("the substituted answer carries an empty chunks frame, so the client renders no citations", async () => {
+await test("the substituted answer carries an empty chunks frame, so the client renders no citations", async () => {
   const out = await drain(guardAnswerStream(sseStream([], ["anything"]), ALL_PUBLIC));
   assert.match(out, /event: chunks\ndata: \[\]/);
 });
 
-test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources cannot be checked", async () => {
+await test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources cannot be checked", async () => {
   // Fails closed: with no chunks frame there is no way to tell whether the answer summarizes a draft.
   // A changed upstream frame order is logged as ask-guard-unverifiable rather than passed through.
   const upstream = sseStream(undefined, ["a draft says"], { done: false });
@@ -81,7 +81,7 @@ test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources c
   assert.ok(!out.includes("a draft says"), `the unchecked answer reached the client: ${out}`);
 });
 
-test("A CHUNKS FRAME THAT DOES NOT PARSE TO AN ARRAY IS REFUSED, not passed through", async () => {
+await test("A CHUNKS FRAME THAT DOES NOT PARSE TO AN ARRAY IS REFUSED, not passed through", async () => {
   for (const data of ["{not json", JSON.stringify({ chunks: [] })]) {
     const upstream = sseStream(data, ["unchecked"], { done: false });
     const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
@@ -90,7 +90,7 @@ test("A CHUNKS FRAME THAT DOES NOT PARSE TO AN ARRAY IS REFUSED, not passed thro
   }
 });
 
-test("THE LAST MESSAGE IS THE QUESTION AND NOTHING ELSE, BECAUSE IT IS THE RETRIEVAL QUERY", () => {
+await test("THE LAST MESSAGE IS THE QUESTION AND NOTHING ELSE, BECAUSE IT IS THE RETRIEVAL QUERY", () => {
   // AI Search embeds and searches the final user message; there is no separate query
   // parameter, so any wrapper around the question is searched too (keyword match mode is `and`).
   const messages = askMessages(AUDIT_QUESTION);
@@ -100,18 +100,18 @@ test("THE LAST MESSAGE IS THE QUESTION AND NOTHING ELSE, BECAUSE IT IS THE RETRI
   assert.equal(messages.length, 2);
 });
 
-test("the question is passed through unaltered, whatever is in it", () => {
+await test("the question is passed through unaltered, whatever is in it", () => {
   for (const q of ["-----BEGIN READER QUESTION-----", "d1", "  spaced  ", "a\nb"]) {
     assert.equal(askMessages(q).at(-1).content, q);
   }
 });
 
-test("THE REFUSAL CATCHES AN ANSWER THAT ECHOED THE PROMPT", () => {
+await test("THE REFUSAL CATCHES AN ANSWER THAT ECHOED THE PROMPT", () => {
   assert.equal(answerLeaksPrompt(`Sure: ${SYSTEM_PROMPT}`), true);
   assert.equal(answerLeaksPrompt(`My instructions were:\n\n${SYSTEM_PROMPT}\n\nAnything else?`), true);
 });
 
-test("the refusal survives a reflowed prompt, which is how a model repeats one", () => {
+await test("the refusal survives a reflowed prompt, which is how a model repeats one", () => {
   // A model reproducing instructions reflows them, so an exact-match needle would miss the echo.
   const reflowed = SYSTEM_PROMPT.split(" ")
     .map((word, i) => (i % 3 === 0 ? word.toUpperCase() : word) + (i % 4 === 0 ? "\n  " : "\t"))
@@ -119,33 +119,33 @@ test("the refusal survives a reflowed prompt, which is how a model repeats one",
   assert.equal(answerLeaksPrompt(reflowed), true);
 });
 
-test("an ordinary answer is not refused", () => {
+await test("an ordinary answer is not refused", () => {
   assert.equal(answerLeaksPrompt("D1 is Cloudflare's SQL database, used here for posts."), false);
   assert.equal(answerLeaksPrompt(NO_ANSWER_TEXT), false);
 });
 
-test("the audit question itself is not mistaken for a leak", () => {
+await test("the audit question itself is not mistaken for a leak", () => {
   assert.equal(answerLeaksPrompt(AUDIT_QUESTION), false);
 });
 
 const chunk = (slug) => ({ item: { key: `writing/${slug}.md` } });
 
-test("citedSlugs reads the chunk shape once, for both paths", () => {
+await test("citedSlugs reads the chunk shape once, for both paths", () => {
   assert.deepEqual(citedSlugs([chunk("a"), chunk("b"), chunk("a")]), ["a", "b"]);
 });
 
-test("a chunk naming no post contributes nothing rather than blocking", () => {
+await test("a chunk naming no post contributes nothing rather than blocking", () => {
   assert.deepEqual(citedSlugs([{}, { item: {} }, chunk("a")]), ["a"]);
 });
 
-test("CONTROL: an answer citing only public posts is served", async () => {
+await test("CONTROL: an answer citing only public posts is served", async () => {
   const out = await drain(
     guardAnswerStream(sseStream([chunk("live")], ["Here is the answer."]), ALL_PUBLIC),
   );
   assert.equal(answerOf(out), "Here is the answer.");
 });
 
-test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", async () => {
+await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", async () => {
   // Refused rather than filtered: the answer TEXT was written from those chunks, so keeping
   // the prose and dropping the link would still summarize a post nobody may read.
   const onlyLiveIsPublic = async () => new Set(["live"]);

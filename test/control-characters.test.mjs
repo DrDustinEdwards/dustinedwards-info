@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { collector, root } from "./lib/invariants-harness.mjs";
 
-test("no tracked text file carries a raw control or invisible character", async (t) => {
+await test("no tracked text file carries a raw control or invisible character", async (t) => {
   const { ok, done } = collector();
 
   /* A shell-expanded escape reaches disk as one byte and still looks right. An intended one is

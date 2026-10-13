@@ -31,14 +31,14 @@ const refused = (raw) => {
   return result.problems.join("\n");
 };
 
-test("the committed model passes, and its private systems carry only the allowed keys", () => {
+await test("the committed model passes, and its private systems carry only the allowed keys", () => {
   const model = loadSystemModel(JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")));
   const privates = model.systems.filter((s) => s.private);
   assert.ok(model.systems.length >= 10 && privates.length >= 1, `read ${model.systems.length} systems, ${privates.length} private`);
   for (const s of privates) assert.deepEqual(Object.keys(s).sort(), [...PRIVATE_SYSTEM_KEYS].sort(), `${s.id} carries more than its name and address`);
 });
 
-test("a private system carrying anything more is refused, whichever key it is", () => {
+await test("a private system carrying anything more is refused, whichever key it is", () => {
   for (const extra of [{ description: "Its internals." }, { repos: ["https://github.com/example/hidden"] }, { secret: "x" }]) {
     const raw = fixture();
     Object.assign(raw.systems[3], extra);
@@ -50,7 +50,7 @@ test("a private system carrying anything more is refused, whichever key it is", 
   assert.match(refused(raw), /systems\.3/);
 });
 
-test("an unknown key anywhere is refused", () => {
+await test("an unknown key anywhere is refused", () => {
   const top = fixture();
   top.extra = 1;
   refused(top);
@@ -62,7 +62,7 @@ test("an unknown key anywhere is refused", () => {
   refused(line);
 });
 
-test("nothing reaches inside a private system", () => {
+await test("nothing reaches inside a private system", () => {
   const inside = fixture();
   inside.containers.push({ id: "hidden-db", system: "hidden", name: "DB", kind: "database", technology: "D1" });
   inside.counts.containers = 2;
@@ -75,7 +75,7 @@ test("nothing reaches inside a private system", () => {
   assert.match(refused(wired), /reaches inside a system to a private one/);
 });
 
-test("lines name things that exist, ids are unique and the counts agree", () => {
+await test("lines name things that exist, ids are unique and the counts agree", () => {
   const dangling = fixture();
   dangling.relationships[0].to = "nowhere";
   assert.match(refused(dangling), /no element nowhere/);
@@ -89,7 +89,7 @@ test("lines name things that exist, ids are unique and the counts agree", () => 
   }
 });
 
-test("the map draws every system once, each linking to its page, with no private description", () => {
+await test("the map draws every system once, each linking to its page, with no private description", () => {
   const model = loadSystemModel(fixture());
   const data = mapData(model);
   assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
@@ -103,7 +103,7 @@ test("the map draws every system once, each linking to its page, with no private
   assert.deepEqual(data.containers, [{ id: "core-worker", system: "core", name: "Worker", kind: "worker" }]);
 });
 
-test("a system's connections read from its own end", () => {
+await test("a system's connections read from its own end", () => {
   const model = loadSystemModel(fixture());
   const read = (id) => connectionsOf(model, id).map((c) => `${c.verb} ${c.name}`);
   assert.deepEqual(read("kit"), ["Is installed by Core", "Is installed by App"]);
@@ -111,7 +111,7 @@ test("a system's connections read from its own end", () => {
   assert.deepEqual(read("core"), ["Installs Kit", "Coordinates Hidden"]);
 });
 
-test("the twins hold every system, and a private one only as its name", () => {
+await test("the twins hold every system, and a private one only as its name", () => {
   const model = loadSystemModel(fixture());
   const all = systemsMarkdown(model, "https://example.com");
   for (const s of model.systems) assert.ok(all.includes(`[${s.name}](https://example.com/systems/${s.id}.md)`), `${s.id} missing from /systems.md`);
@@ -135,7 +135,7 @@ test("the twins hold every system, and a private one only as its name", () => {
   assert.doesNotMatch(systemMarkdown(model, "kit", "https://example.com"), /## Inside/);
 });
 
-test("every system's twin links to the same system in the Capsid explorer, and the family twin to the explorer", () => {
+await test("every system's twin links to the same system in the Capsid explorer, and the family twin to the explorer", () => {
   const model = loadSystemModel(fixture());
   for (const s of model.systems) {
     assert.match(systemMarkdown(model, s.id, "https://example.com") ?? "", new RegExp(`^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`, "m"));
@@ -145,7 +145,7 @@ test("every system's twin links to the same system in the Capsid explorer, and t
   assert.match(systemsMarkdown(model, "https://example.com"), /^Deeper, in the Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m);
 });
 
-test("the lines between a system's parts are facts on its page and in its twin", () => {
+await test("the lines between a system's parts are facts on its page and in its twin", () => {
   const raw = fixture();
   raw.containers.push({ id: "core-db", system: "core", name: "Store", kind: "database", technology: "D1" });
   raw.relationships.push({ id: "core-worker--writes--core-db", from: "core-worker", to: "core-db", kind: "writes" });
@@ -177,7 +177,7 @@ const withFlows = () => {
   return raw;
 };
 
-test("a model with flows passes, and a flow off the model's edges or into a private system is refused", () => {
+await test("a model with flows passes, and a flow off the model's edges or into a private system is refused", () => {
   assert.equal(loadSystemModel(withFlows()).flows?.length, 1);
   const bad = withFlows();
   bad.containers.push({ id: "app-worker", system: "app", name: "App worker", kind: "worker", technology: "Sample" });
@@ -205,7 +205,7 @@ test("a model with flows passes, and a flow off the model's edges or into a priv
   assert.match(refused(extra), /flows\.0\.steps\.0/);
 });
 
-test("an external container is outside the system: not a part, but its lines are drawn", () => {
+await test("an external container is outside the system: not a part, but its lines are drawn", () => {
   const model = loadSystemModel(withFlows());
   assert.deepEqual(partsOf(model, "core").map((c) => c.id), ["core-worker"]);
   assert.deepEqual(outsideOf(model, "core").map((c) => c.id), ["core-agents"]);
@@ -224,7 +224,7 @@ test("an external container is outside the system: not a part, but its lines are
   assert.doesNotMatch(twin, /## Inside|How they connect|Agents reads GitHub/);
 });
 
-test("a model that differs only in its date is the same model", () => {
+await test("a model that differs only in its date is the same model", () => {
   const a = loadSystemModel(fixture());
   const b = loadSystemModel({ ...fixture(), as_of: "2026-10-12" });
   assert.equal(sameModel(a, b), true);
@@ -233,7 +233,7 @@ test("a model that differs only in its date is the same model", () => {
   assert.equal(sameModel(a, loadSystemModel(c)), false);
 });
 
-test("the daily refresh writes only a checked model that says something new", async () => {
+await test("the daily refresh writes only a checked model that says something new", async () => {
   const { createServer } = await import("node:http");
   const { execFile } = await import("node:child_process");
   const { mkdtempSync, writeFileSync, readFileSync: read } = await import("node:fs");

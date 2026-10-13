@@ -32,7 +32,7 @@ function faces(family) {
 }
 
 for (const family of ["Inter Fallback", "Inter Prose Fallback"]) {
-  test(`${family} has a regular and a bold face, each with Inter's ascent and descent`, () => {
+  await test(`${family} has a regular and a bold face, each with Inter's ascent and descent`, () => {
     const found = faces(family);
     assert.deepEqual(
       found.map((f) => f.weight),
@@ -47,7 +47,7 @@ for (const family of ["Inter Fallback", "Inter Prose Fallback"]) {
   });
 }
 
-test("sans prose falls back to the face sized at prose size, not the UI one", () => {
+await test("sans prose falls back to the face sized at prose size, not the UI one", () => {
   // Inter's opsz axis narrows it as the size grows, so the 109% UI face ran every 17px prose line about
   // 4% wide and the swap re-wrapped paragraphs (/teaching/phage-discovery, CLS 0.177).
   const rule = proseCss.match(/(?:^|\})\s*\.prose\s*\{([^}]*)\}/)?.[1] ?? "";

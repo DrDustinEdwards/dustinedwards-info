@@ -31,7 +31,7 @@ const text = (path) => readFile(new URL(path, root), "utf8");
 const built = await buildRegistry();
 const strains = built.items.filter((item) => item.kind === "strain");
 
-test("the registry holds the two host strains the lab's pages name, each stating only what the pages state", () => {
+await test("the registry holds the two host strains the lab's pages name, each stating only what the pages state", () => {
   assert.deepEqual(strains.map((s) => s.id).sort(), ["foliorum", "smegmatis"]);
   const smegmatis = strainRows(strains, []).find((s) => s.id === "smegmatis");
   const foliorum = strainRows(strains, []).find((s) => s.id === "foliorum");
@@ -48,16 +48,16 @@ test("the registry holds the two host strains the lab's pages name, each stating
   assert.match(foliorum?.guideUrl ?? "", /helpdocsonline\.com\/4-1-mfoliorum$/);
 });
 
-test("the biosafety level is Dustin's word (decisions.md, 2026-10-05): both strains are BSL-1, and a strain has no gap", () => {
+await test("the biosafety level is Dustin's word (decisions.md, 2026-10-05): both strains are BSL-1, and a strain has no gap", () => {
   assert.deepEqual(built.gaps.filter((gap) => gap.slug.startsWith("strain/")), []);
   for (const row of strainRows(strains, [])) assert.equal(row.biosafetyLevel, "BSL-1");
 });
 
-test("a strain's id is the phages' host key, both ways, so a phage's host and a strain are one word", () => {
+await test("a strain's id is the phages' host key, both ways, so a phage's host and a strain are one word", () => {
   assert.deepEqual(Object.keys(HOSTS).sort(), strains.map((s) => s.id).sort());
 });
 
-test("the kind refuses what is wrong, with the field named, and a name that says a different strain than its fields", async () => {
+await test("the kind refuses what is wrong, with the field named, and a name that says a different strain than its fields", async () => {
   const kinds = { strain: STRAIN };
   const host = { paper: async () => false };
   const compile = (lines) => compileRegistryItem({ slug: "strain/x", raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
@@ -77,7 +77,7 @@ test("the kind refuses what is wrong, with the field named, and a name that says
   assert.equal(designationOf({ collection: "NRRL", collection_number: "MISSING: not stated" }), null);
 });
 
-test("no record stores what is computed: the phages isolated on a strain, the protocols that use it, its designation", async () => {
+await test("no record stores what is computed: the phages isolated on a strain, the protocols that use it, its designation", async () => {
   const names = (await readdir(new URL("content/registry/strain/", root))).filter((n) => n.endsWith(".md"));
   assert.equal(names.length, 2);
   for (const name of names) {
@@ -86,7 +86,7 @@ test("no record stores what is computed: the phages isolated on a strain, the pr
   }
 });
 
-test("the phages isolated on a strain are read from the phages table by the strain's id, and counted, never copied", () => {
+await test("the phages isolated on a strain are read from the phages table by the strain's id, and counted, never copied", () => {
   const phages = [
     { name: "Zeta", year: 2023, host: "foliorum" },
     { name: "Acorn15", year: 2017, host: "smegmatis" },
@@ -104,7 +104,7 @@ test("the phages isolated on a strain are read from the phages table by the stra
   assert.equal(STRAINS.fields.find((f) => f.key === "phages").value(foliorum), 3);
 });
 
-test("a protocol uses a strain when it names its id; none is listed on the strain", () => {
+await test("a protocol uses a strain when it names its id; none is listed on the strain", () => {
   const foliorum = { id: "foliorum" };
   const protocols = [
     { path: "/research/protocols/a", title: "A", hostStrains: [{ id: "foliorum" }, { id: "smegmatis" }] },
@@ -114,7 +114,7 @@ test("a protocol uses a strain when it names its id; none is listed on the strai
   assert.deepEqual(protocolsUsingStrain(foliorum, protocols), [{ path: "/research/protocols/a", title: "A" }]);
 });
 
-test("the twin states what the page states, and a biosafety level nobody has set is said with its reason, never left out", () => {
+await test("the twin states what the page states, and a biosafety level nobody has set is said with its reason, never left out", () => {
   const smegmatis = strains.find((s) => s.id === "smegmatis");
   const row = strainRow(smegmatis, [{ name: "Acorn15", year: 2017, host: "smegmatis" }]);
   const unset = strainRow({ ...smegmatis, fields: { ...smegmatis.fields, biosafety_level: "MISSING: Waiting on Dustin." } }, []);
@@ -133,14 +133,14 @@ test("the twin states what the page states, and a biosafety level nobody has set
   assert.equal(KINDS.strain, STRAIN);
 });
 
-test("a strain is found by its organism, designation and collection number", () => {
+await test("a strain is found by its organism, designation and collection number", () => {
   const found = registrySearchInput(strains.find((s) => s.id === "foliorum"));
   assert.equal(found?.uid, "registry:strain/foliorum");
   assert.equal(found?.url, "/research/lab/strains/foliorum");
   for (const word of ["Microbacterium foliorum", "NRRL", "B-24224", "NRRL B-24224"]) assert.ok(found?.body.includes(word), word);
 });
 
-test("STORED ONCE: no protocol types a strain's designation or collection number, and every host strain a protocol names is an id the registry holds", async () => {
+await test("STORED ONCE: no protocol types a strain's designation or collection number, and every host strain a protocol names is an id the registry holds", async () => {
   const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
   const compiled = await compileDirectory("content/procedures");
   const ids = new Set(strains.map((s) => s.id));
@@ -171,7 +171,7 @@ test("STORED ONCE: no protocol types a strain's designation or collection number
   assert.ok(isolation.markdown.includes("[Microbacterium foliorum NRRL B-24224](/research/lab/strains/foliorum)"), "the twin links the strain");
 });
 
-test("the compile refuses what a protocol may not say about a host strain", async () => {
+await test("the compile refuses what a protocol may not say about a host strain", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
@@ -191,7 +191,7 @@ test("the compile refuses what a protocol may not say about a host strain", asyn
   assert.match(none.errors.join("\n"), /no lab registry/);
 });
 
-test("a protocol's organism is a non-strain organism or a strain of the registry, and the words come from the registry", async () => {
+await test("a protocol's organism is a non-strain organism or a strain of the registry, and the words come from the registry", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");

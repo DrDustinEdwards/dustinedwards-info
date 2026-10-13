@@ -24,7 +24,7 @@ const PHAGES_SET = [
 
 const names = (/** @type {{ rows: Array<{ name: string }> }} */ result) => result.rows.map((p) => p.name);
 
-test("the default order is the page's own: year, then name folded and numeric, so the table reads as it always has", () => {
+await test("the default order is the page's own: year, then name folded and numeric, so the table reads as it always has", () => {
   const order = names(phageListing("", PHAGES_SET));
   assert.deepEqual(order, sortPhages(PHAGES_SET).map((p) => p.name), "the catalog's default order is sortPhages");
   const at = (/** @type {string} */ n) => order.indexOf(n);
@@ -33,12 +33,12 @@ test("the default order is the page's own: year, then name folded and numeric, s
   assert.ok(Math.max(at("Acorn2"), at("Acorn15"), at("Leia")) < Math.min(at("Arlo"), at("Éclair")) && at("Rira") === 5, "year first");
 });
 
-test("sorting by name or by year both ways; newest first is the whole order reversed", () => {
+await test("sorting by name or by year both ways; newest first is the whole order reversed", () => {
   assert.deepEqual(names(phageListing("sort=name", PHAGES_SET)), ["Acorn2", "Acorn15", "Arlo", "Éclair", "Leia", "Rira"]);
   assert.deepEqual(names(phageListing("sort=-year", PHAGES_SET)), ["Rira", "Éclair", "Arlo", "Leia", "Acorn15", "Acorn2"]);
 });
 
-test("host and county facets count what choosing them would give; the host reads without markdown emphasis", () => {
+await test("host and county facets count what choosing them would give; the host reads without markdown emphasis", () => {
   const result = phageListing("", PHAGES_SET);
   const host = result.facets.find((f) => f.key === "host");
   assert.deepEqual(host.options.map((o) => [o.label, o.count]), [["Microbacterium foliorum", 3], ["Mycobacterium smegmatis mc²155", 3]]);
@@ -47,19 +47,19 @@ test("host and county facets count what choosing them would give; the host reads
   assert.deepEqual(names(phageListing("host=foliorum&county=Erath+County", PHAGES_SET)), ["Éclair"]);
 });
 
-test("search finds a name, a county, or the name a phage was formerly given, folded", () => {
+await test("search finds a name, a county, or the name a phage was formerly given, folded", () => {
   assert.deepEqual(names(phageListing("q=eclair", PHAGES_SET)), ["Éclair"]);
   assert.deepEqual(names(phageListing("q=hood", PHAGES_SET)).sort(), ["Acorn15", "Acorn2"]);
   assert.deepEqual(names(phageListing("q=leia2", PHAGES_SET)), ["Leia"]);
 });
 
-test("the genome-paper facet is a yes: published, or all", () => {
+await test("the genome-paper facet is a yes: published, or all", () => {
   assert.deepEqual(names(phageListing("paper=published", PHAGES_SET)), ["Arlo"]);
   const paper = phageListing("", PHAGES_SET).facets.find((f) => f.key === "paper");
   assert.deepEqual(paper.options.map((o) => [o.label, o.count]), [["Published", 1]]);
 });
 
-test("every field is declared once: the catalog's columns are the table the page has always had", () => {
+await test("every field is declared once: the catalog's columns are the table the page has always had", () => {
   const columns = PHAGES.fields.filter((f) => f.column).map((f) => f.column.header);
   assert.deepEqual(columns, ["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
 });

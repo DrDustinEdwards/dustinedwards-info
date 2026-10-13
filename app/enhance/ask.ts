@@ -12,6 +12,8 @@ interface AskCitation {
 
 interface AskHandle {
   cancel(): void;
+  /** Settles when the stream has been read to its end, or has failed and said so. */
+  done: Promise<void>;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -189,7 +191,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     }
   }
 
-  (async () => {
+  const done = (async () => {
     let response: Response;
     try {
       // POST because the endpoint bills: a GET would be spendable by crawlers, prefetch or a foreign `<img src>`.
@@ -237,6 +239,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   }
 
   return {
+    done,
     cancel() {
       controller.abort();
       container.textContent = "";

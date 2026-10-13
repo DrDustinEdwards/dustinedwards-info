@@ -6,7 +6,7 @@ import { bundler, collector, root } from "./lib/invariants-harness.mjs";
 
 const bundle = bundler("visibility");
 
-test("drafts never public: publiclyVisible() and visibilityClause() agree", { timeout: 180_000 }, async (t) => {
+await test("drafts never public: publiclyVisible() and visibilityClause() agree", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
   /* `NOW` comes from `publiclyVisible()`'s own params, because the two halves read the clock differently. */

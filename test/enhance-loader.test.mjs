@@ -43,7 +43,7 @@ function paletteAllows(raw) {
   return src.startsWith(new URL(PAGE).origin + ENHANCE_URL_PREFIX) ? src : null;
 }
 
-test("the palette trigger's rule allows only same-origin, normalized /assets/ URLs", () => {
+await test("the palette trigger's rule allows only same-origin, normalized /assets/ URLs", () => {
   for (const [raw, expected] of CASES) {
     assert.equal(paletteAllows(raw), expected, `palette rule on ${JSON.stringify(raw)}`);
   }
@@ -88,7 +88,7 @@ function runLoader(markers) {
   return { inserted, error };
 }
 
-test("the loader text applies the same rule, in order, deduplicated, and past a clobbered document", () => {
+await test("the loader text applies the same rule, in order, deduplicated, and past a clobbered document", () => {
   const markers = CASES.map(([raw]) => raw);
   markers.push("/assets/header-AbCdEfGh.js");
   const { inserted, error } = runLoader(markers);
@@ -108,7 +108,7 @@ test("the loader text applies the same rule, in order, deduplicated, and past a 
   }
 });
 
-test("the loader throws nothing when every marker is good", () => {
+await test("the loader throws nothing when every marker is good", () => {
   const { inserted, error } = runLoader(["/assets/a-AbCdEfGh.js", "/assets/b-AbCdEfGh.js"]);
   assert.equal(error, null);
   assert.equal(inserted.length, 2);
