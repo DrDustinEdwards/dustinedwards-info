@@ -15,7 +15,11 @@ Every change lands by pull request (portfolio rule 5.4); nothing is pushed to ma
    then `npm run lint` (a separate CI step no gate tier runs). Reach for a local
    `check:all` only when the change touches a network gate's subject (ruling 129).
 2. Scoped commits, one concern each, named paths only. Push the branch.
-3. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
+3. Open the PR. Its body names the Capsid job it does (`Job: job_<12 hex>`), and that
+   job's `complete` (or `block`) names the PR. If no job was posted, post one in the
+   `dustinedwards` namespace first. Without both, Capsid's merge tick never reads the
+   PR: it never auto-merges, and it never reaches Dustin's Portal for a one-tap
+   Approve. If it changes anything a visitor would see (copy, layout, a page, a
    color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and stop:
    it waits for Dustin's yes on the Worker Preview link or on shots. Say so in the PR.
 4. Otherwise, stop there: a session never merges. Capsid's signed auto-merge
