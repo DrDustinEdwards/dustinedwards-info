@@ -44,3 +44,10 @@
 .site-map-list a:visited {
   color: var(--visited);
 }
+
+/* A count with no index page of its own (Tags): text, not a link. */
+.site-map-plain {
+  display: inline-block;
+  padding-block: 2px;
+  color: var(--text);
+}

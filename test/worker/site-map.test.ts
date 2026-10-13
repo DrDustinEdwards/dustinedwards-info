@@ -20,7 +20,7 @@ async function xmlPaths() {
   return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/");
 }
 
-type Loaded = { data: { sections: Array<{ id: string; heading: string; lines: Array<{ to: string; label: string; count?: number }> }> }; init: ResponseInit | null };
+type Loaded = { data: { sections: Array<{ id: string; heading: string; lines: Array<{ to: string; label: string; count?: number; plain?: boolean }> }> }; init: ResponseInit | null };
 const pageData = async () => (await siteMapLoader(args("/site-map"))) as unknown as Loaded;
 
 let papers = 0;
@@ -44,7 +44,7 @@ describe("the site map and sitemap.xml", () => {
   it("every link on the page is an address sitemap.xml lists, and the draft is on neither", async () => {
     const xml = new Set(await xmlPaths());
     const { data } = await pageData();
-    const links = data.sections.flatMap((s) => s.lines.map((l) => l.to));
+    const links = data.sections.flatMap((s) => s.lines.filter((l) => !l.plain).map((l) => l.to));
     expect(links.filter((to) => !xml.has(to))).toEqual([]);
     expect(links).not.toContain("/accessibility");
   });
@@ -71,6 +71,14 @@ describe("the site map and sitemap.xml", () => {
     expect(html).toContain("<h1 class=\"page-title\">Site map</h1>");
     for (const section of data.sections) expect(html).toContain(`id="site-map-${section.id}"`);
     expect(html).toMatch(/<a [^>]*href="\/research\/publications"[^>]*>Publications \(\d+\)<\/a>/);
+    // No two links with different text go to one address (WCAG 2.4.4): Tags is text, not a second /writing link.
+    const body = html.slice(html.indexOf('<div class="site-map">'), html.indexOf("site-shell-footer"));
+    expect(body.length).toBeGreaterThan(100);
+    const hrefs = [...body.matchAll(/<a [^>]*href="([^"]+)"[^>]*>([^<]*)<\/a>/g)];
+    const texts = new Map<string, Set<string>>();
+    for (const [, href, text] of hrefs) texts.set(href ?? "", (texts.get(href ?? "") ?? new Set()).add(text ?? ""));
+    expect([...texts].filter(([href, set]) => href.startsWith("/") && href !== "/" && set.size > 1).map(([href]) => href)).toEqual([]);
+    expect(hrefs.length).toBeGreaterThan(10);
     const headers = siteMapHeaders({ loaderHeaders: new Headers() } as never);
     expect(headers.get("Cache-Tag")).toContain("content-pages");
     expect(headers.get("Cache-Tag")).toContain("registry");

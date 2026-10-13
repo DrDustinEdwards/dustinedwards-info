@@ -1,5 +1,5 @@
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
-import { getPublishedPageTitles } from "~/db/pages";
+import { listPublishedPageTitles } from "~/db/pages";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import { listPublishedPublications } from "~/db/publications";
@@ -8,7 +8,7 @@ import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE, PAGE_FILE_PATHS } from "~/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
@@ -21,7 +21,7 @@ import systemModel from "../../data/system-model.json";
 /**
  * The public pages with a route of their own, each with the title the site map shows. Kept in step with
  * `routes.ts` by hand: every public page route is listed here, drawn from data below, or exempted by name
- * in test/site-urls.test.mjs with a reason. check:links resolves each one. In the order the sitemap lists
+ * in test/site-map.test.mjs with a reason. check:links resolves each one. In the order the sitemap lists
  * them; a page with a row of its own (About) is listed only while its row is published.
  */
 export const STATIC_PAGES = [
@@ -36,9 +36,6 @@ export const STATIC_PAGES = [
   { path: "/systems", title: "System map" },
 ] as const;
 
-/** The paths alone, for check:links and the route test. */
-export const STATIC_PATHS: readonly string[] = STATIC_PAGES.map((page) => page.path);
-
 /** The CV is generated from data and has no page row (CONTENT_PAGES_FROM_DATA), so its title is stated here. */
 const DATA_PAGE_TITLES: Record<string, string> = { "/cv": "CV" };
 
@@ -49,6 +46,7 @@ const DATA_PAGE_TITLES: Record<string, string> = { "/cv": "CV" };
 export const SITE_URLS_CACHE_TAGS = `${POSTS_AND_PROCEDURES_CACHE_TAGS},${CONTENT_PAGES_CACHE_TAG},${REGISTRY_CACHE_TAG}`;
 
 const POSTS: Tally = { key: "posts", label: "Articles", to: "/writing", merge: true };
+// No tag index page and no stable anchor on /writing's tag list, so the count is plain text (site-map.mjs).
 const TAGS: Tally = { key: "tags", label: "Tags", to: "/writing", merge: false };
 const PAPERS: Tally = { key: "papers", label: "Publications", to: "/research/publications", merge: true };
 const REGISTRY_ITEMS: Tally = { key: "registry", label: "Lab registry", to: LAB_PATH, merge: true };
@@ -81,7 +79,7 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; nextP
     // Papers live in D1 too, so one saved through Carrel is listed without a deploy.
     listPublishedPublications(env),
     // The prose pages live in D1 too (docs/PAGES.md): a draft is left out, and so is a path whose row is missing.
-    getPublishedPageTitles(env, [...PAGE_FILE_PATHS]),
+    listPublishedPageTitles(env),
     // The lab registry lives in D1 too (docs/REGISTRY.md): an item saved through Carrel is listed without a deploy.
     listRegistry(env, { published: true }),
   ]);

@@ -49,7 +49,7 @@ export default function SiteMap({ loaderData }: Route.ComponentProps) {
             <ul className="site-map-list">
               {section.lines.map((line) => (
                 <li key={`${line.to} ${line.label}`}>
-                  <Link to={line.to}>{lineText(line)}</Link>
+                  {line.plain ? <span className="site-map-plain">{lineText(line)}</span> : <Link to={line.to}>{lineText(line)}</Link>}
                 </li>
               ))}
             </ul>

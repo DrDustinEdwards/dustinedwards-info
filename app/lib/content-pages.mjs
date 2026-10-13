@@ -84,16 +84,27 @@ export const LEGAL_BANNER = "Draft";
 export const CONTENT_PAGES_FROM_DATA = ["/cv"];
 
 /**
- * The listed pages a reader can open: every one whose file is published, and the ones generated from data.
- * llms.txt lists exactly these, so a draft (an address that answers 404) is never advertised, and publishing a
- * page asks for its llms.txt line in the same change. `published` is the page files' published paths: the
- * build's list (app/lib/published-pages.generated.mjs) in the Worker, readPublishedPages() in the scripts.
+ * The listed pages a reader can open: every one whose page is published, and the ones generated from data.
+ * llms.txt must list each of these. `published` is the published paths from whichever source the caller
+ * judges against: the page files (readPublishedPages()) in CI and the gates, the D1 rows in the llms.txt save.
  *
  * @param {readonly string[]} published
  * @returns {string[]}
  */
 export function publishedContentPagePaths(published) {
   return CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.includes(path));
+}
+
+/**
+ * The listed pages that are drafts: llms.txt may name them (so a page's line can land before or after it is
+ * published, in either order) but need not.
+ *
+ * @param {readonly string[]} published as for publishedContentPagePaths
+ * @returns {string[]}
+ */
+export function draftContentPagePaths(published) {
+  const open = publishedContentPagePaths(published);
+  return CONTENT_PAGE_PATHS.filter((path) => !open.includes(path));
 }
 
 /**

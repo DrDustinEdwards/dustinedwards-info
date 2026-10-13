@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
-import { publishedContentPagePaths } from "../../app/lib/content-pages.mjs";
+import { draftContentPagePaths, publishedContentPagePaths } from "../../app/lib/content-pages.mjs";
 import { readPublishedPages } from "../lib/published-pages.mjs";
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY, llmsChecks } from "../../app/lib/llms/validate.mjs";
@@ -48,6 +48,8 @@ ok(
 );
 for (const check of llmsChecks(fileText, {
   pagePaths: [...publishedContentPagePaths(readPublishedPages()), ...publishedProcedurePaths()],
+  // A draft page may be listed ahead of its publish, and need not be.
+  optionalPagePaths: draftContentPagePaths(readPublishedPages()),
   origin,
   findWideDashes,
 })) {

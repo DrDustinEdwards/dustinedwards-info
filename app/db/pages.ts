@@ -41,13 +41,25 @@ export async function getPublishedPageMarkdown(env: Env, path: string) {
   return row?.markdown ?? null;
 }
 
-/** Published pages' titles by path: the trail above a page that sits under one, and the sitemap's list (app/lib/site-urls.server.ts). */
+/** The titles of other pages, for the trail above a page that sits under one. Published rows only. */
 export async function getPublishedPageTitles(env: Env, paths: string[]) {
   if (paths.length === 0) return new Map<string, string>();
   const rows = await getDb(env)
     .select({ path: pages.path, title: pages.title })
     .from(pages)
     .where(and(inArray(pages.path, paths), eq(pages.status, PUBLISHED_STATUS)));
+  return new Map(rows.map((row) => [row.path, row.title]));
+}
+
+/**
+ * Every published page's title, by path: the sitemap's list (app/lib/site-urls.server.ts) and the llms.txt save.
+ * No IN list: D1 binds at most 100 parameters, and the page registry is not bounded by that.
+ */
+export async function listPublishedPageTitles(env: Env) {
+  const rows = await getDb(env)
+    .select({ path: pages.path, title: pages.title })
+    .from(pages)
+    .where(eq(pages.status, PUBLISHED_STATUS));
   return new Map(rows.map((row) => [row.path, row.title]));
 }
 

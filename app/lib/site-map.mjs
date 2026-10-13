@@ -11,9 +11,12 @@
 /**
  * @typedef {{ key: string, label: string, to: string, merge: boolean }} Tally
  *   An item counted rather than listed. `to` is its index; with `merge`, the count goes on the index's own
- *   line (Publications (36)), and without it, the count is a line of its own (Tags (34)).
+ *   line (Publications (36)). Without it, the count is a line of its own in `to`'s section, as plain text
+ *   (Tags (34)): the kind has no index of its own, and a second link to `to` under another name would make
+ *   two links with different text go to one place.
  * @typedef {{ path: string, lastmod: Date | null, title: string, tally?: Tally }} SiteUrl
- * @typedef {{ to: string, label: string, count?: number }} SiteMapLine
+ * @typedef {{ to: string, label: string, count?: number, plain?: boolean }} SiteMapLine
+ *   `plain`: shown as text, not a link; `to` then only places it in its section.
  * @typedef {{ id: string, heading: string, to: string | null, lines: SiteMapLine[] }} SiteMapSection
  */
 
@@ -66,14 +69,14 @@ export function siteMapSections(urls) {
     lines.push({ to: url.path, label: url.title });
   }
   for (const { tally, count } of tallies.values()) {
-    const index = tally.merge ? lines.find((line) => line.to === tally.to && line.count === undefined) : undefined;
+    const index = tally.merge ? lines.find((line) => line.to === tally.to && line.count === undefined && !line.plain) : undefined;
     if (index) index.count = count;
-    else lines.push({ to: tally.to, label: tally.label, count });
+    else lines.push({ to: tally.to, label: tally.label, count, ...(tally.merge ? {} : { plain: true }) });
   }
   return SITE_MAP_SECTIONS.map(({ id, heading, to }) => {
     const own = lines.filter((line) => sectionOf(line.to) === id);
-    const hub = own.filter((line) => line.to === to);
-    return { id, heading, to, lines: [...hub, ...own.filter((line) => line.to !== to)] };
+    const isHub = (/** @type {SiteMapLine} */ line) => line.to === to && !line.plain;
+    return { id, heading, to, lines: [...own.filter(isHub), ...own.filter((line) => !isHub(line))] };
   }).filter((section) => section.lines.length > 0);
 }
 

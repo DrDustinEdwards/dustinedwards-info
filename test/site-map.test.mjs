@@ -109,19 +109,19 @@ test("papers, registry items, procedures, posts and tags collapse to one counted
     { path: "/writing/series/s", lastmod: none, title: "A series" },
     { path: "/privacy", lastmod: none, title: "Privacy" },
   ]);
-  const shown = Object.fromEntries(sections.map((s) => [s.id, s.lines.map((line) => [lineText(line), line.to])]));
+  const shown = Object.fromEntries(sections.map((s) => [s.id, s.lines.map((line) => [lineText(line), line.plain ? "(text)" : line.to])]));
   assert.deepEqual(shown, {
-    // The hub first, then the list's order; the counts sit on the index's own line.
+    // The hub first, then the list's order (a count with no index of its own last); the counts sit on the index's own line.
     research: [
       ["Research", "/research"],
       ["Publications (2)", "/research/publications"],
       ["Protocol library (1)", "/research/protocols"],
     ],
-    // Tags have no index of their own, so their count is its own line, to the article list. Series are pages.
+    // Tags have no index of their own, so their count is its own line, as plain text. Series are pages.
     writing: [
       ["Articles (2)", "/writing"],
-      ["Tags (3)", "/writing"],
       ["A series", "/writing/series/s"],
+      ["Tags (3)", "(text)"],
     ],
     site: [
       ["Home", "/"],

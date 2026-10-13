@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { publishedContentPagePaths } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS as CONTENT_PAGES_ALL, draftContentPagePaths, publishedContentPagePaths } from "../app/lib/content-pages.mjs";
 import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
 import {
   LLMS_MAX_BYTES,
@@ -29,8 +29,9 @@ const WIDE_DASH = String.fromCharCode(0x2014);
 /** The Capsid list item: one page's line, which the cases below remove or change. */
 const CAPSID = /^- \[Capsid\]\(https:\/\/dustinedwards\.info\/software\/capsid\).*\n/m;
 
+const optionalPagePaths = draftContentPagePaths(readPublishedPages());
 const judge = (/** @type {string} */ text, /** @type {Iterable<string> | undefined} */ twinUrls = undefined) =>
-  llmsErrors(llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }));
+  llmsErrors(llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls, optionalPagePaths }));
 
 /** The errors a changed file raises: asserts it was refused, and returns them joined. */
 function refusal(/** @type {(text: string) => string} */ mutate) {
@@ -97,4 +98,27 @@ test("a contact URL that is not the site's origin is refused", () => {
   const inContact = /(## Contact\s*\n\s*\n- \[[^\]]*\]\()https?:\/\/[^\s)]+/;
   assert.match(file, inContact, "the Contact section is a list link, so the case below changes the real one");
   assert.match(refusal((t) => t.replace(inContact, "$1https://example.com")), /contact URL is SITE_ORIGIN/);
+});
+
+test("a draft page may be listed ahead of its publish, and need not be: the two changes land in either order", () => {
+  const DRAFT = "/teaching/study-skills";
+  const line = `- [Draft](https://dustinedwards.info${DRAFT}): a page not yet published\n`;
+  const required = pagePaths.filter((p) => p !== DRAFT);
+  const withLine = file.replace(CAPSID, (m) => `${m}${line}`);
+  const check = (/** @type {string} */ text, /** @type {string[]} */ optional) =>
+    llmsErrors(llmsChecks(text, { pagePaths: required, origin, findWideDashes, optionalPagePaths: optional }));
+  // A draft: listed or not, the file passes.
+  assert.deepEqual(check(withLine, [DRAFT]), []);
+  assert.deepEqual(check(file.replace(new RegExp(`^.*\\]\\(https://dustinedwards\\.info${DRAFT}\\).*\\n`, "m"), ""), [DRAFT]), []);
+  // Not a registered page at all: still stray.
+  assert.equal(check(withLine.replaceAll(DRAFT, "/teaching/nowhere"), [DRAFT]).length, 1);
+});
+
+test("a line for any registered page is read as listing it, whatever its first segment", () => {
+  // The rule reads list items by address; a page whose root it did not know would read as absent forever.
+  const roots = [...new Set(CONTENT_PAGES_ALL.map((path) => path.split("/")[1]))];
+  const lines = roots.map((root) => `- [Probe](https://dustinedwards.info/${root}): probe\n`).join("");
+  const text = file.replace(CAPSID, (m) => `${m}${lines}`);
+  const required = [...pagePaths, ...roots.map((root) => `/${root}`)];
+  assert.deepEqual(llmsErrors(llmsChecks(text, { pagePaths: required, origin, findWideDashes })), []);
 });

@@ -26,7 +26,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath, publishedContentPagePaths } from "../app/lib/content-pages.mjs";
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
@@ -50,6 +50,7 @@ import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { readPublishedPages } from "./lib/published-pages.mjs";
 import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -86,8 +87,12 @@ const PUBLIC = join(root, "public");
 const publicFiles = walkFiles(PUBLIC).map((file) => `/${relative(PUBLIC, file).split(sep).join("/")}`);
 for (const path of publicFiles) served.add(path);
 
-// The page twins are written by build:content and gitignored, so they are named from the page list.
-for (const path of CONTENT_PAGE_PATHS) served.add(contentPageMarkdownPath(path));
+// The page twins are written by build:content and gitignored, so they are named from the page list. A draft page
+// and its twin answer 404 to a reader, so they are not served; `postVisibility` below marks them as drafts.
+const PUBLISHED_PAGE_PATHS = publishedContentPagePaths(readPublishedPages());
+const DRAFT_PAGE_PATHS = CONTENT_PAGE_PATHS.filter((path) => !PUBLISHED_PAGE_PATHS.includes(path));
+for (const path of DRAFT_PAGE_PATHS) served.delete(path);
+for (const path of PUBLISHED_PAGE_PATHS) served.add(contentPageMarkdownPath(path));
 
 // The procedures (docs/PROCEDURES.md): each page, its sheet and its twin, drawn from D1 by one
 // parameterized route per profile root, compiled here the way sync:content writes them.
@@ -153,8 +158,12 @@ const now = Date.now();
 const isPublic = (post) =>
   isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt }, now);
 
-/** @type {Map<string, boolean>} post path to whether a reader can open it */
+/** @type {Map<string, boolean>} post (or draft page) path to whether a reader can open it */
 const postVisibility = new Map();
+for (const path of DRAFT_PAGE_PATHS) {
+  postVisibility.set(path, false);
+  postVisibility.set(contentPageMarkdownPath(path), false);
+}
 const postModule = routes.get("/writing/:slug") ?? "";
 for (const { post } of posts) {
   const path = `/writing/${post.slug}`;
@@ -440,7 +449,15 @@ for (const file of appFiles) {
       candidate = literalText(n.initializer);
     }
     if (candidate !== null && candidate.startsWith("/") && !candidate.startsWith("//")) {
-      add("app", { where, href: candidate, page: null, isPublic: true });
+      // A footer link marked `page: true` renders only while its page is published (app/lib/footer.ts,
+      // siteLinks), so it may name a draft; every other link to a draft fails below.
+      const whilePublished =
+        ts.isPropertyAssignment(n) &&
+        ts.isObjectLiteralExpression(n.parent) &&
+        n.parent.properties.some(
+          (p) => ts.isPropertyAssignment(p) && p.name.getText(sf) === "page" && p.initializer.kind === ts.SyntaxKind.TrueKeyword,
+        );
+      add("app", { where, href: candidate, page: null, isPublic: !whilePublished });
     }
 
     // `${SITE_ORIGIN}/path`: the path is a link; a fragment here is a JSON-LD id, not an anchor.
@@ -610,7 +627,7 @@ for (const link of links) {
     ok(
       label,
       !link.isPublic,
-      `${result.path} is a draft or scheduled post${via}, so every reader of this public page gets a 404`,
+      `${result.path} is a draft page, or a draft or scheduled post${via}, so every reader of this public page gets a 404`,
     );
     continue;
   }
