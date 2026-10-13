@@ -14,7 +14,8 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeLlms, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
+import { publishedContentPagePaths } from "~/lib/content-pages.mjs";
+import { PUBLISHED_PAGES } from "~/lib/published-pages.generated.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
@@ -45,7 +46,7 @@ async function judgeLlms(env: LlmsEnv, raw: string) {
     listPublishedPublicationTwins(env),
   ]);
   return llmsChecks(raw, {
-    pagePaths: [...CONTENT_PAGE_PATHS, ...procedures.map((p) => p.path)],
+    pagePaths: [...publishedContentPagePaths(PUBLISHED_PAGES), ...procedures.map((p) => p.path)],
     origin: SITE_ORIGIN,
     findWideDashes,
     twinUrls: twins.map((t) => paperMarkdownPath(t.slug)),

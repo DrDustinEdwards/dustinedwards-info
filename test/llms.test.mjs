@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { CONTENT_PAGE_PATHS } from "../app/lib/content-pages.mjs";
+import { publishedContentPagePaths } from "../app/lib/content-pages.mjs";
+import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
 import {
   LLMS_MAX_BYTES,
   LLMS_REQUIRED_MENTIONS,
@@ -20,7 +21,8 @@ import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 
 const file = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
 const origin = (readFileSync(new URL("../app/lib/seo.ts", import.meta.url), "utf8").match(/SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
-const pagePaths = [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()];
+// A draft page answers 404, so llms.txt must not list it (publishedContentPagePaths).
+const pagePaths = [...publishedContentPagePaths(readPublishedPages()), ...publishedProcedurePaths()];
 /** Built from its code point, so this file carries no literal wide dash. */
 const WIDE_DASH = String.fromCharCode(0x2014);
 

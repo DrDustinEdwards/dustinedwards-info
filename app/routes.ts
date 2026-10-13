@@ -115,6 +115,8 @@ export default [
     route("colophon", "routes/colophon.tsx"),
     route("privacy", "routes/privacy.tsx"),
     route("terms", "routes/terms.tsx"),
+    // The accessibility statement, a markdown page like privacy and terms (docs/PAGES.md).
+    route("accessibility", "routes/accessibility.tsx"),
     route("contact", "routes/contact.tsx"),
     // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
     route("gone", "routes/gone.tsx"),
@@ -122,6 +124,8 @@ export default [
     route("search/ask", "routes/search.ask.ts"),
     route("search", "routes/search.tsx"),
     route("sitemap.xml", "routes/sitemap.ts"),
+    // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
+    route("site-map", "routes/site-map.tsx"),
     route("robots.txt", "routes/robots.ts"),
     route(".well-known/security.txt", "routes/security-txt.ts"),
     route("llms.txt", "routes/llms.ts"),

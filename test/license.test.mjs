@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FOOTER_COLUMNS } from "../app/lib/footer.ts";
+import { SITE_LINKS } from "../app/lib/footer.ts";
 import { LICENSE_LINK, TERMS_PATH } from "../app/lib/license.mjs";
 import { exportHeaders } from "../app/lib/publications/export-response.mjs";
 import { LICENSE_URL, SITE_ORIGIN } from "../app/lib/seo.ts";
@@ -27,6 +27,6 @@ test("every publications export names the terms as its license in the Link heade
 });
 
 test("the footer links the terms page", () => {
-  const links = FOOTER_COLUMNS.flatMap((column) => column.items).filter((item) => item.to === TERMS_PATH);
+  const links = SITE_LINKS.filter((item) => item.to === TERMS_PATH);
   assert.equal(links.length, 1);
 });

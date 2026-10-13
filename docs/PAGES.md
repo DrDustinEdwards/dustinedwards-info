@@ -75,6 +75,17 @@ not own.
 row (so `sync_pages` cannot), and `sync:content` refuses to run without a published file for it. Each refusal
 names the reason.
 
+## The accessibility page
+
+`/accessibility` is a listed page like `/privacy` (it is not a legal page: no `banner`, no `last_updated`). Every
+claim on it names the gate or file it rests on, and the page claims no conformance level no gate tests. It shipped
+with `draft: true` (job_fea2f94832b3) until Dustin approves its text: a draft answers 404 to a reader, is left out
+of sitemap.xml, the site map page and llms.txt, and the footer's Accessibility link is hidden. The footer reads
+which pages are published from `app/lib/published-pages.generated.mjs`, a build product of the page files
+(`scripts/lib/published-pages.mjs`), so the link appears with the deploy that publishing starts. Publishing it
+also needs its line in `content/llms.txt` (`publishedContentPagePaths`), and its route moves from
+`THEME_CACHED_PENDING` to `THEME_CACHED` in `scripts/lib/browser/cases/theme-cache.mjs`.
+
 ## What a save cannot do
 
 A page's ADDRESS is structure. `CONTENT_PAGE_PATHS` (`app/lib/content-pages.mjs`), the header menu's

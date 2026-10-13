@@ -41,7 +41,7 @@ export async function getPublishedPageMarkdown(env: Env, path: string) {
   return row?.markdown ?? null;
 }
 
-/** The titles of other pages, for the trail above a page that sits under one. Published rows only. */
+/** Published pages' titles by path: the trail above a page that sits under one, and the sitemap's list (app/lib/site-urls.server.ts). */
 export async function getPublishedPageTitles(env: Env, paths: string[]) {
   if (paths.length === 0) return new Map<string, string>();
   const rows = await getDb(env)
@@ -49,16 +49,6 @@ export async function getPublishedPageTitles(env: Env, paths: string[]) {
     .from(pages)
     .where(and(inArray(pages.path, paths), eq(pages.status, PUBLISHED_STATUS)));
   return new Map(rows.map((row) => [row.path, row.title]));
-}
-
-/** For the sitemap: the published pages' paths. */
-export async function listPublishedPagePaths(env: Env) {
-  const rows = await getDb(env)
-    .select({ path: pages.path })
-    .from(pages)
-    .where(eq(pages.status, PUBLISHED_STATUS))
-    .orderBy(asc(pages.path));
-  return rows.map((row) => row.path);
 }
 
 /** For the save-time link check: every published page's rendered HTML, by path. */

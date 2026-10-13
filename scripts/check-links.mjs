@@ -9,7 +9,7 @@
  *              own pipeline, so a link is read the way a reader gets it; a post's further_reading too
  *   app        every href/to/url in the route components, menus, footer and data (read off the syntax
  *              tree), every `${SITE_ORIGIN}/path`, and every https://dustinedwards.info/ URL in a string
- *   machines   content/llms.txt, the sitemap's static paths, every page twin and every paper twin
+ *   machines   content/llms.txt, the sitemap's static pages, every page twin and every paper twin
  *   redirects  the targets of the WordPress map and the PDF map, since a 301 into a 404 is a broken link
  *
  * WHAT A LINK MAY BE
@@ -468,18 +468,24 @@ for (const file of appFiles) {
       }
     }
 
-    // The sitemap's static paths are its own list, not link props.
+    // The sitemap's static pages are their own list ({ path, title }), not link props. `as const` wraps the array.
     if (
-      where === "app/routes/sitemap.ts" &&
+      where === "app/lib/site-urls.server.ts" &&
       ts.isVariableDeclaration(n) &&
-      n.name.getText(sf) === "STATIC_PATHS" &&
-      n.initializer &&
-      ts.isArrayLiteralExpression(n.initializer)
+      n.name.getText(sf) === "STATIC_PAGES" &&
+      n.initializer
     ) {
-      for (const element of n.initializer.elements) {
-        if (ts.isStringLiteral(element)) {
-          sitemapPaths += 1;
-          add("sitemap", { where: `${where} STATIC_PATHS`, href: element.text, page: null, isPublic: true });
+      const list = ts.isAsExpression(n.initializer) ? n.initializer.expression : n.initializer;
+      if (ts.isArrayLiteralExpression(list)) {
+        for (const element of list.elements) {
+          if (!ts.isObjectLiteralExpression(element)) continue;
+          for (const prop of element.properties) {
+            if (!ts.isPropertyAssignment(prop) || prop.name.getText(sf) !== "path") continue;
+            if (!ts.isStringLiteral(prop.initializer)) continue;
+            const href = prop.initializer.text;
+            sitemapPaths += 1;
+            add("sitemap", { where: `${where} STATIC_PAGES`, href, page: null, isPublic: true });
+          }
         }
       }
     }
@@ -646,7 +652,7 @@ const SCOPES = [
 for (const scope of SCOPES) {
   ok(`scope: ${scope} contributed links`, (perClass.get(scope) ?? 0) > 0, "0 links read, so this source was not examined");
 }
-ok("scope: the sitemap's STATIC_PATHS were located", sitemapPaths >= 5, `read ${sitemapPaths}`);
+ok("scope: the sitemap's STATIC_PAGES were located", sitemapPaths >= 5, `read ${sitemapPaths}`);
 ok("scope: anchors were checked", anchorsChecked > 0, "0 anchors resolved, so the anchor check examined nothing");
 ok("scope: posts were rendered", posts.length > 0, "content/posts produced no posts");
 ok("scope: public/ was read", publicFiles.length > 0, "no static files found under public/");

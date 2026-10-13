@@ -7,7 +7,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
-import { CONTENT_PAGE_PATHS } from "../../app/lib/content-pages.mjs";
+import { publishedContentPagePaths } from "../../app/lib/content-pages.mjs";
+import { readPublishedPages } from "../lib/published-pages.mjs";
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY, llmsChecks } from "../../app/lib/llms/validate.mjs";
 import { publishedProcedurePaths } from "../lib/procedure-paths.mjs";
@@ -46,7 +47,7 @@ ok(
   `parsed ${JSON.stringify(origin)}; without it the comparison below is vacuous`,
 );
 for (const check of llmsChecks(fileText, {
-  pagePaths: [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()],
+  pagePaths: [...publishedContentPagePaths(readPublishedPages()), ...publishedProcedurePaths()],
   origin,
   findWideDashes,
 })) {

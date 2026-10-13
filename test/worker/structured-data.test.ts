@@ -6,9 +6,11 @@ import {
   CONTENT_PAGES_FROM_DATA,
   contentPageCardPath,
   hasPageCard,
+  publishedContentPagePaths,
 } from "~/lib/content-pages.mjs";
 import { listPublishedPublications } from "~/db/publications";
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
+import { PUBLISHED_PAGES } from "~/lib/published-pages.generated.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import ContentPage, { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
@@ -123,6 +125,8 @@ type Page = { path: string; html: string };
 
 const context = () => routeContext();
 
+const READABLE_PAGE_PATHS = publishedContentPagePaths(PUBLISHED_PAGES);
+
 async function contentPage(path: string): Promise<Page> {
   const request = new Request(`${SITE_ORIGIN}${path}`);
   const loaderData = await contentPageLoader({ request, params: {}, context: context() } as never);
@@ -131,7 +135,8 @@ async function contentPage(path: string): Promise<Page> {
 
 async function pages(): Promise<Page[]> {
   const out: Page[] = [];
-  for (const path of CONTENT_PAGE_PATHS) {
+  // A draft answers 404 to a reader and has no JSON-LD a crawler sees, so only the published pages are rendered.
+  for (const path of READABLE_PAGE_PATHS) {
     if (!CONTENT_PAGES_FROM_DATA.includes(path)) out.push(await contentPage(path));
   }
   {
@@ -211,7 +216,7 @@ const rendered = await pages();
 
 describe("every JSON-LD block on the pages", () => {
   it("covers every content page, the CV, the publications list and every paper", () => {
-    expect(rendered.length).toBe(CONTENT_PAGE_PATHS.length + 1 + PAPER_COUNT);
+    expect(rendered.length).toBe(READABLE_PAGE_PATHS.length + 1 + PAPER_COUNT);
     // Scope, so a pattern that matched no script element cannot pass every case below: only the two
     // hubs emit nothing.
     expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([
