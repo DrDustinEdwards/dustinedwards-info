@@ -36,17 +36,17 @@ which is what repeats across people and sessions.
   result is read, and must produce the NAMED failure.** Exit 1 only proves
   something failed. A 30 KB constant planted in source was folded to 3e4 by the
   minifier: the gated chunk grew 17 bytes and the plant never applied.
-  `VERIFICATION.md` (the since-retired page-payload gate)
+  `VERIFICATION.md` (retired 2026-10-13; in git history) (the since-retired page-payload gate)
 - **A search with an empty scope or an empty needle returns a plausible
   number.** A scan that examined no files reports what a clean sweep reports;
   an empty needle matched every line and two files reported "436 CRLF lines"
-  and "521 CRLF lines", which are their line counts. `VERIFICATION.md`
+  and "521 CRLF lines", which are their line counts. `VERIFICATION.md` (retired 2026-10-13; in git history)
 - **A limit positioned where it cannot bite is not a limit, and it drifts there
   quietly.** Three forms: a 10,000-character ceiling over an 8,479-character
   file; a floor 54 under its own count, so 54 assertions could stop running and
   still pass; and a breach that set `process.exitCode = 1` one line above an
   unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
-  old number. `VERIFICATION.md` `scripts/check-floors.mjs`
+  old number. `VERIFICATION.md` (retired 2026-10-13; in git history) `scripts/check-floors.mjs`
 - **A rule whose instrument the instrument-checker cannot reach is not gated.**
   A scope floor over a GROWING set is an executed-count floor in disguise:
   `MINIMUM_FILES` drifted eleven files unseen, printing no floor line for
