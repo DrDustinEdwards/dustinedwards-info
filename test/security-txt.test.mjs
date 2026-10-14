@@ -6,7 +6,7 @@ import { SECURITY_CONTACT, SECURITY_TXT_EXPIRES, securityTxt } from "../app/lib/
 const ORIGIN = "https://example.test";
 const DAY = 24 * 60 * 60 * 1000;
 
-test("security.txt names the security address and its own canonical URL (RFC 9116)", () => {
+await test("security.txt names the security address and its own canonical URL (RFC 9116)", () => {
   const body = securityTxt(ORIGIN);
   assert.equal(SECURITY_CONTACT, "security@dustinedwards.info");
   assert.match(body, /^Contact: mailto:security@dustinedwards\.info$/m);
@@ -14,7 +14,7 @@ test("security.txt names the security address and its own canonical URL (RFC 911
   assert.match(body, /^Expires: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/m);
 });
 
-test("security.txt is renewed before it lapses: Expires is at least 30 days and at most a year away", () => {
+await test("security.txt is renewed before it lapses: Expires is at least 30 days and at most a year away", () => {
   const remaining = Date.parse(SECURITY_TXT_EXPIRES) - Date.now();
   assert.ok(
     remaining > 30 * DAY,

@@ -23,17 +23,17 @@ function serve(page) {
   );
 }
 
-test("a short page ends the listing", async () => {
+await test("a short page ends the listing", async () => {
   serve(() => ({ data: [{ id: 1 }, { id: 2 }] }));
   assert.deepEqual(await listMonitors("k"), [{ id: 1 }, { id: 2 }]);
 });
 
-test("REPLAY: a body with no data array throws rather than reading as no monitors", async () => {
+await test("REPLAY: a body with no data array throws rather than reading as no monitors", async () => {
   serve(() => ({ monitors: [{ id: 1 }] }));
   await assert.rejects(listMonitors("k"), /no data array/);
 });
 
-test("REPLAY: a listing still full at the page cap throws rather than truncating", async () => {
+await test("REPLAY: a listing still full at the page cap throws rather than truncating", async () => {
   serve((offset) => ({ data: Array.from({ length: 50 }, (_, i) => ({ id: offset + i })) }));
   await assert.rejects(listMonitors("k"), /listing is incomplete/);
 });

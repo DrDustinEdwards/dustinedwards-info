@@ -10,7 +10,7 @@ import { render } from "./lib/render.mjs";
 // `<template` and `data-enhance` too: the loader turns such a marker into a trusted script.
 const EXECUTABLE = /<script|<iframe|<object|<embed|<template|data-enhance|\son\w+\s*=/i;
 
-test("raw HTML in a post body never reaches the output", async () => {
+await test("raw HTML in a post body never reaches the output", async () => {
   const cases = [
     ["a bare script tag", "<script>alert(1)</script>"],
     ["an inline event handler", '<img src=x onerror="alert(1)">'],
@@ -30,20 +30,20 @@ test("raw HTML in a post body never reaches the output", async () => {
   }
 });
 
-test("an inline tag mid-paragraph is stripped and its text kept", async () => {
+await test("an inline tag mid-paragraph is stripped and its text kept", async () => {
   // Asserted separately: "no script" would also pass if the whole paragraph vanished.
   const { html } = await render('text with <span onclick="alert(1)">a span</span> inside');
   assert.equal(html.trim(), "<p>text with a span inside</p>");
 });
 
-test("CONTROL: ordinary links still become anchors", async () => {
+await test("CONTROL: ordinary links still become anchors", async () => {
   const absolute = await render("[click](https://example.com)");
   assert.match(absolute.html, /<a href="https:\/\/example\.com">click<\/a>/);
   const relative = await render("[click](/writing/a-post)");
   assert.match(relative.html, /<a href="\/writing\/a-post">click<\/a>/);
 });
 
-test("an executable URL protocol produces no anchor and is recorded", async () => {
+await test("an executable URL protocol produces no anchor and is recorded", async () => {
   for (const protocol of ["javascript:alert(1)", "vbscript:msgbox", "data:text/html;base64,PHNjcmlwdD4="]) {
     const { html, blockedUrls } = await render(`[click](${protocol})`);
     assert.equal(

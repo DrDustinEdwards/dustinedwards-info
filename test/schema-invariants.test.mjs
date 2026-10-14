@@ -130,7 +130,7 @@ async function loadSources() {
 let sources;
 const loaded = () => (sources ??= loadSources());
 
-test("schema: columns agree across schema.ts, the migrations and the database", { timeout: 180_000 }, async (t) => {
+await test("schema: columns agree across schema.ts, the migrations and the database", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
   try {
@@ -198,7 +198,7 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
  * Names and ordered columns only: drizzle cannot express partial predicates, collations or
  * directions. Implicit indexes go by `origin`.
  */
-test("schema: indexes agree across schema.ts and the migrations", { timeout: 180_000 }, async (t) => {
+await test("schema: indexes agree across schema.ts and the migrations", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
   try {
@@ -311,7 +311,7 @@ test("schema: indexes agree across schema.ts and the migrations", { timeout: 180
  * place an unapplied migration or a hand-altered column shows up.
  */
 const live = process.env.SCHEMA_LIVE === "1";
-test(
+await test(
   "schema: the live database matches the migrations",
   {
     timeout: 180_000,

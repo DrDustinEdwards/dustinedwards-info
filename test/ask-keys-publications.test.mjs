@@ -6,14 +6,14 @@ import assert from "node:assert/strict";
 
 import { keyForUrl, labelForUrl, slugForKey, urlForKey } from "../app/lib/search/ask-keys.mjs";
 
-test("a paper's key is its twin's own path", () => {
+await test("a paper's key is its twin's own path", () => {
   assert.equal(
     keyForUrl("/research/publications/10-1128-mra-00888-24/"),
     "research/publications/10-1128-mra-00888-24.md",
   );
 });
 
-test("a paper's key maps back to the page, with the trailing slash", () => {
+await test("a paper's key maps back to the page, with the trailing slash", () => {
   // Not to the twin. A citation should land on the page that carries the
   // abstract, the PDF and the exports, and the slashed form is the canonical
   // one, so a citation costs no redirect.
@@ -23,25 +23,25 @@ test("a paper's key maps back to the page, with the trailing slash", () => {
   );
 });
 
-test("the paper round trip is stable", () => {
+await test("the paper round trip is stable", () => {
   const url = "/research/publications/10-3390-v3060861/";
   assert.equal(urlForKey(keyForUrl(url)), url);
 });
 
-test("a paper key with a section anchor is refused rather than guessed", () => {
+await test("a paper key with a section anchor is refused rather than guessed", () => {
   // A paper is indexed as ONE document, so no such key can be written by this
   // site. One arriving is an item from somewhere else, and a citation pointing
   // at an invented heading is worse than no citation.
   assert.equal(urlForKey("research/publications/10-3390-v3060861__abstract.md"), null);
 });
 
-test("a paper contributes no post slug to the visibility replay", () => {
+await test("a paper contributes no post slug to the visibility replay", () => {
   /* A paper has no row in `posts`: without this guard its URL would reach
    * `publiclyVisibleSlugs` as a slug and make every cached answer citing a paper unreplayable. */
   assert.equal(slugForKey("research/publications/10-3390-v3060861.md"), null);
 });
 
-test("a paper's citation label names the identifier and says what it is", () => {
+await test("a paper's citation label names the identifier and says what it is", () => {
   // The chunk carries no title, and the slug is a LOSSY fold of the DOI, so a
   // reconstructed DOI would sometimes be wrong. An identifier a reader might
   // copy is not a place to guess.
@@ -51,7 +51,7 @@ test("a paper's citation label names the identifier and says what it is", () => 
   );
 });
 
-test("posts are unchanged by the trailing-slash strip", () => {
+await test("posts are unchanged by the trailing-slash strip", () => {
   // The strip is a general rule, so a post URL, which has no trailing slash, must key and
   // label exactly as before.
   assert.equal(keyForUrl("/writing/a-post"), "writing/a-post.md");
@@ -61,7 +61,7 @@ test("posts are unchanged by the trailing-slash strip", () => {
   assert.equal(labelForUrl("/writing/a-post#a-heading"), "A heading");
 });
 
-test("a key from another source is refused, not translated", () => {
+await test("a key from another source is refused, not translated", () => {
   assert.equal(urlForKey("elsewhere/thing.md"), null);
   assert.equal(urlForKey("publications.md"), null);
   assert.equal(urlForKey("not-markdown"), null);

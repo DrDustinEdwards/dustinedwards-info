@@ -51,7 +51,7 @@ function fire(target, type, props = {}) {
   return event;
 }
 
-test("the links become tabs and only the reader's platform shows, guessed from the browser when nothing is remembered", async () => {
+await test("the links become tabs and only the reader's platform shows, guessed from the browser when nothing is remembered", async () => {
   const { document, shown } = await load({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" });
   assert.deepEqual([shown("a"), shown("b")], [["windows"], ["windows"]]);
   const list = document.querySelector(".procedure-platform-tabs");
@@ -65,12 +65,12 @@ test("the links become tabs and only the reader's platform shows, guessed from t
   assert.ok(document.querySelector("[data-platforms]").hasAttribute("data-enhanced"), "the set says it is enhanced, so the CSS drops the labels");
 });
 
-test("a remembered platform wins over the guess; a browser that says nothing starts on the first tab", async () => {
+await test("a remembered platform wins over the guess; a browser that says nothing starts on the first tab", async () => {
   assert.deepEqual((await load({ userAgent: "Mozilla/5.0 (Windows NT 10.0)", stored: "macos" })).shown("a"), ["macos"]);
   assert.deepEqual((await load({ userAgent: "Mozilla/5.0" })).shown("a"), ["linux"]);
 });
 
-test("choosing a tab shows that platform in every set and remembers it; the arrow keys move along the tabs", async () => {
+await test("choosing a tab shows that platform in every set and remembers it; the arrow keys move along the tabs", async () => {
   const { document, storage, shown } = await load();
   const click = fire(document.querySelector('a[data-platform="macos"]'), "click");
   assert.equal(click.defaultPrevented, true, "the link does not jump: the tab shows its panel in place");
@@ -84,7 +84,7 @@ test("choosing a tab shows that platform in every set and remembers it; the arro
   assert.deepEqual(shown("a"), ["windows"], "left from the first tab wraps to the last");
 });
 
-test("a set without the reader's platform shows its own first, and leaves the choice alone", async () => {
+await test("a set without the reader's platform shows its own first, and leaves the choice alone", async () => {
   const partial = set("a").replace(/<a href="#a-windows"[^>]*>Windows<\/a>/, "").replace(/<div id="a-windows"[\s\S]*?<\/div>\n/, "");
   const { shown, storage } = await load({ stored: "windows", html: partial + set("b") });
   assert.deepEqual([shown("a"), shown("b")], [["linux"], ["windows"]]);

@@ -55,14 +55,14 @@ async function refusal(slug, mutate, host = paperHost) {
 
 const { phages, rows } = await buildPhages();
 
-test("every phage file compiles against the repository's papers, and the set is a table", () => {
+await test("every phage file compiles against the repository's papers, and the set is a table", () => {
   const files = readdirSync(dir).filter((name) => name.endsWith(".md"));
   assert.equal(files.length, rows.length);
   assert.deepEqual(phageSetErrors(phages), []);
   assert.equal(phages.length, 75);
 });
 
-test("the files are in the page's order: year, then name, with the slug the name in lower case", () => {
+await test("the files are in the page's order: year, then name, with the slug the name in lower case", () => {
   assert.deepEqual(phages.map((p) => p.name), sortPhages(phages).map((p) => p.name));
   for (const row of rows) assert.equal(row.slug, row.name.toLowerCase());
   const years = phages.map((p) => p.year);
@@ -71,7 +71,7 @@ test("the files are in the page's order: year, then name, with the slug the name
   assert.deepEqual(names.slice(0, 4), ["Besitos", "CutiePie", "DaddyP", "DJDoc"], "case-folded: DaddyP before DJDoc");
 });
 
-test("a row and a section say what the page has always said", () => {
+await test("a row and a section say what the page has always said", () => {
   const by = (/** @type {string} */ name) => phages.find((p) => p.name === name);
   assert.equal(
     phageTableRow(/** @type {any} */ (by("Ryadel"))),
@@ -94,7 +94,7 @@ test("a row and a section say what the page has always said", () => {
   assert.ok(phageTableMarkdown(phages).startsWith("| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|\n| [Acorn15](#acorn15)"));
 });
 
-test("front matter: only the table's fields, each in its shape", async () => {
+await test("front matter: only the table's fields, each in its shape", async () => {
   assert.match(await refusal("acorn15", (r) => r.replace("---\n", "---\nsample: soil\n")), /sample is not a phage field/);
   assert.match(await refusal("acorn15", (r) => r.replace("---\n", "---\nlocation: a farm\n")), /location is not a phage field.*no samples, locations beyond the county/);
   assert.match(await refusal("acorn15", (r) => r.replace(/^host: .*$/m, "")), /host is required/);
@@ -111,7 +111,7 @@ test("front matter: only the table's fields, each in its shape", async () => {
   assert.match(await refusal("acorn15", (r) => r.replace(/^---\n/, "")), /must start with a --- front matter block/);
 });
 
-test("PhagesDB: the record's format, and that it is this phage's own", async () => {
+await test("PhagesDB: the record's format, and that it is this phage's own", async () => {
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: Acorn 15")), /phagesdb is "Acorn 15"/);
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: ../etc")), /phagesdb is "\.\.\/etc"/);
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: Fambo")), /which is not Acorn15's record/);
@@ -123,7 +123,7 @@ test("PhagesDB: the record's format, and that it is this phage's own", async () 
   assert.doesNotMatch(unlinked.ok ? phageTableRow(unlinked.phage) : "", /phagesdb/);
 });
 
-test("the genome paper is a paper the site holds, and the note is one plain sentence", async () => {
+await test("the genome paper is a paper the site holds, and the note is one plain sentence", async () => {
   assert.match(await refusal("arlo", (r) => r.replace(/^paper: .*$/m, "paper: Not A Slug")), /paper is "Not A Slug"/);
   const missing = await compile("arlo", read("arlo"), { paper: async () => false });
   assert.equal(missing.ok, false);
@@ -133,11 +133,11 @@ test("the genome paper is a paper the site holds, and the note is one plain sent
   assert.match(await refusal("strudel", (r) => r.replace(/^formerly: .*$/m, "formerly: Two Words")), /formerly is "Two Words"/);
 });
 
-test("prose rules: a wide dash fails", async () => {
+await test("prose rules: a wide dash fails", async () => {
   assert.match(await refusal("ryadel", (r) => r.replace(/^note: (.*)$/m, `note: $1 ${WIDE_DASH}`)), /wide dash/);
 });
 
-test("the set: an empty set is a fault, two files cannot be one phage, and a record is one phage's", () => {
+await test("the set: an empty set is a fault, two files cannot be one phage, and a record is one phage's", () => {
   assert.match(phageSetErrors([]).join(" "), /holds no phage files/);
   const a = /** @type {any} */ (phages[0]);
   const b = /** @type {any} */ (phages[1]);
@@ -145,12 +145,12 @@ test("the set: an empty set is a fault, two files cannot be one phage, and a rec
   assert.match(phageSetErrors([a, { ...b, phagesdb: a.phagesdb }]).join(" "), /claim the same PhagesDB record/);
 });
 
-test("every file, compiled one at a time, is the compile the build ran", async () => {
+await test("every file, compiled one at a time, is the compile the build ran", async () => {
   const all = await compileAllPhages();
   assert.equal(all.every((c) => c.compiled.ok), true);
 });
 
-test("the repository host: a paper is a file under content/publications", async () => {
+await test("the repository host: a paper is a file under content/publications", async () => {
   assert.equal(await repoHost.paper("10-1128-mra-01242-18"), true);
   assert.equal(await repoHost.paper("no-such-paper"), false);
 });
@@ -161,7 +161,7 @@ const pageRaw = readFileSync(new URL("../content/pages/research-phages.md", impo
 const compilePhagePage = (/** @type {string} */ raw, /** @type {typeof phages | undefined} */ rowsFor = phages) =>
   compilePage({ slug: "research-phages", raw, pipeline: { renderBody, findWideDashes }, phages: rowsFor });
 
-test("the page file carries each marker once, and the compiled page is drawn from the rows", async () => {
+await test("the page file carries each marker once, and the compiled page is drawn from the rows", async () => {
   assert.equal(pageRaw.split(TABLE_MARKER).length - 1, 1);
   assert.equal(pageRaw.split(SECTIONS_MARKER).length - 1, 1);
   assert.doesNotMatch(pageRaw, /^\| \[/m, "no phage row is typed in the page's own file");
@@ -176,7 +176,7 @@ test("the page file carries each marker once, and the compiled page is drawn fro
   assert.equal(result.page.dataset?.rows, phages.length);
 });
 
-test("a phage added to the rows is drawn into the page, its twin and its dataset facts, with nothing else changed", async () => {
+await test("a phage added to the rows is drawn into the page, its twin and its dataset facts, with nothing else changed", async () => {
   const added = { name: "Zeta", year: 2026, host: /** @type {const} */ ("foliorum"), county: "Erath County", phagesdb: null, paper: null, formerly: null, note: null };
   const before = await compilePhagePage(pageRaw);
   const after = await compilePhagePage(pageRaw, [...phages, added]);
@@ -193,7 +193,7 @@ test("a phage added to the rows is drawn into the page, its twin and its dataset
   assert.equal(after.page.description, before.page.description);
 });
 
-test("the markers: each exactly once and alone on its line, only on the phage page, and rows must exist", async () => {
+await test("the markers: each exactly once and alone on its line, only on the phage page, and rows must exist", async () => {
   assert.equal(expandPhagePage("/research/other", "text", undefined).ok, true);
   assert.match(JSON.stringify(expandPhagePage("/research/other", `a\n${TABLE_MARKER}\n`, undefined)), /belongs on \/research\/phages only/);
   assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `x\n${SECTIONS_MARKER}\n`, phages)), /exactly once.*it has 0/);
@@ -208,7 +208,7 @@ test("the markers: each exactly once and alone on its line, only on the phage pa
   assert.equal(stray.ok, false);
 });
 
-test("the page's own text cannot undo the table: a hand-written PhagesDB link, a second table and a repeated heading fail", async () => {
+await test("the page's own text cannot undo the table: a hand-written PhagesDB link, a second table and a repeated heading fail", async () => {
   const withProse = (/** @type {string} */ extra) => pageRaw.replace("## All phages", `${extra}\n\n## All phages`);
   const link = await compilePhagePage(withProse("See [a record](https://phagesdb.org/phages/Nothing/)."));
   assert.equal(link.ok, false);
@@ -221,7 +221,7 @@ test("the page's own text cannot undo the table: a hand-written PhagesDB link, a
   assert.match(heading.ok ? "" : heading.errors.join(" "), /Acorn15 has 2 ### sections/);
 });
 
-test("the table has a PhagesDB link for exactly the phages with a verified record, and no other", async () => {
+await test("the table has a PhagesDB link for exactly the phages with a verified record, and no other", async () => {
   const result = await compilePhagePage(pageRaw);
   assert.equal(result.ok, true);
   if (!result.ok) return;
@@ -232,7 +232,7 @@ test("the table has a PhagesDB link for exactly the phages with a verified recor
   }
 });
 
-test("the page states the count and the span its rows give, by token, so an added phage updates it", async () => {
+await test("the page states the count and the span its rows give, by token, so an added phage updates it", async () => {
   assert.doesNotMatch(pageRaw, /\b\d+ phages\b/, "the intro types no count: a token reads it from the rows");
   const result = await compilePhagePage(pageRaw);
   assert.equal(result.ok, true);
@@ -245,7 +245,7 @@ test("the page states the count and the span its rows give, by token, so an adde
   assert.doesNotMatch(text, /\{\{/, "no token is left unexpanded");
 });
 
-test("every phage fact a page states is a token: no page types a count of phages, and the list of token pages is exact", () => {
+await test("every phage fact a page states is a token: no page types a count of phages, and the list of token pages is exact", () => {
   const pagesDir = new URL("../content/pages/", import.meta.url);
   const using = [];
   for (const file of readdirSync(pagesDir).filter((name) => name.endsWith(".md"))) {
@@ -258,7 +258,7 @@ test("every phage fact a page states is a token: no page types a count of phages
   assert.deepEqual(others, [...listed].sort(), "PHAGE_FACT_PAGES is every page that uses a token, besides the table's: a phage write refreshes exactly these");
 });
 
-test("phage tokens read the rows, format numbers, and refuse a name that names nothing", () => {
+await test("phage tokens read the rows, format numbers, and refuse a name that names nothing", () => {
   const rows = /** @type {any[]} */ (phages);
   const ok = (/** @type {string} */ text) => {
     const result = expandPhageTokens(text, rows);
@@ -278,7 +278,7 @@ test("phage tokens read the rows, format numbers, and refuse a name that names n
   assert.deepEqual(expandPhageTokens("plain text", undefined), { ok: true, text: "plain text" });
 });
 
-test("the genome fields are whole numbers in range, or absent", async () => {
+await test("the genome fields are whole numbers in range, or absent", async () => {
   const bad = async (/** @type {string} */ line) => (await refusal("loca", (raw) => raw.replace("genes: 25", line)));
   assert.match(await bad("genes: 0"), /genes is 0/);
   assert.match(await bad("genes: 2.5"), /genes is 2\.5/);
@@ -289,7 +289,7 @@ test("the genome fields are whole numbers in range, or absent", async () => {
   if (result.ok) assert.deepEqual([result.phage.genomeBp, result.phage.genes], [17475, 25]);
 });
 
-test("the hosts the table names are the two the page's prose names", () => {
+await test("the hosts the table names are the two the page's prose names", () => {
   assert.deepEqual(Object.keys(HOSTS), ["smegmatis", "foliorum"]);
   assert.equal(PHAGES_DIR, "content/phages");
 });

@@ -3,12 +3,12 @@ import { test } from "node:test";
 
 import { DELETE_LEFT_PARAM, deleteLeftBehind } from "../app/lib/editor/delete-left.mjs";
 
-test("a clean delete carries nothing to say", () => {
+await test("a clean delete carries nothing to say", () => {
   assert.equal(deleteLeftBehind(new URLSearchParams()), null);
   assert.equal(deleteLeftBehind(new URLSearchParams({ deleted: "a-post" })), null);
 });
 
-test("each known code becomes its sentence, and an unknown code is dropped", () => {
+await test("each known code becomes its sentence, and an unknown code is dropped", () => {
   const params = new URLSearchParams({ deleted: "a-post" });
   params.append(DELETE_LEFT_PARAM, "ask");
   params.append(DELETE_LEFT_PARAM, "purge");

@@ -48,7 +48,7 @@ async function procedures() {
   );
 }
 
-test("the registry holds twelve primers, every one with a sequence, a direction, a target and a reference, and every gap says why", () => {
+await test("the registry holds twelve primers, every one with a sequence, a direction, a target and a reference, and every gap says why", () => {
   assert.equal(rows.length, 12);
   for (const row of rows) {
     assert.ok(row.sequence && /^[ACGT]+$/.test(row.sequence), row.id);
@@ -65,7 +65,7 @@ test("the registry holds twelve primers, every one with a sequence, a direction,
   }
 });
 
-test("the REV 3' LTR forward primer is CATACTGAGCCAATGGTT and its pair's product is computed as 281 bp, as the protocol stated", () => {
+await test("the REV 3' LTR forward primer is CATACTGAGCCAATGGTT and its pair's product is computed as 281 bp, as the protocol stated", () => {
   const forward = byId.get("rev-3-ltr-forward");
   assert.equal(forward?.sequence, "CATACTGAGCCAATGGTT");
   assert.equal(forward?.length, 18);
@@ -78,7 +78,7 @@ test("the REV 3' LTR forward primer is CATACTGAGCCAATGGTT and its pair's product
   }
 });
 
-test("STORED ONCE: no protocol or page holds a registry primer's sequence, every protocol primer is an id the registry holds, and every registry primer is used", async () => {
+await test("STORED ONCE: no protocol or page holds a registry primer's sequence, every protocol primer is an id the registry holds, and every registry primer is used", async () => {
   const files = await procedures();
   /** @type {Set<string>} */
   const used = new Set();
@@ -99,7 +99,7 @@ test("STORED ONCE: no protocol or page holds a registry primer's sequence, every
   }
 });
 
-test("a protocol's record carries the registry's facts for the primers it names, in its own order", async () => {
+await test("a protocol's record carries the registry's facts for the primers it names, in its own order", async () => {
   const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
   const compiled = await compileDirectory("content/procedures");
   const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
@@ -112,7 +112,7 @@ test("a protocol's record carries the registry's facts for the primers it names,
   assert.ok(rev.markdown.includes("Product sizes are computed from where the primers bind DQ387450.1"), "and says what the sizes were computed from");
 });
 
-test("the compile refuses what a protocol may not say about a primer, and refuses a registry it was not given", async () => {
+await test("the compile refuses what a protocol may not say about a primer, and refuses a registry it was not given", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
@@ -148,7 +148,7 @@ const STATED_TODAY = [
   { set: "COI primers: LCO1490 and HCO2198", stated: 710, computed: [709], rounded: true },
 ];
 
-test("the computed product sizes agree with what each protocol states today, and the one that differs is recorded as differing", () => {
+await test("the computed product sizes agree with what each protocol states today, and the one that differs is recorded as differing", () => {
   const primerRowsWithProducts = primerRows(primers);
   for (const { set, stated, computed, rounded } of STATED_TODAY) {
     const forward = primerRowsWithProducts.find((row) => row.set === set && row.direction === "forward");
@@ -163,13 +163,13 @@ test("the computed product sizes agree with what each protocol states today, and
   }
 });
 
-test("the LPDV product is placed where the protocol said: U09568.1 positions 1041 to 1498", () => {
+await test("the LPDV product is placed where the protocol said: U09568.1 positions 1041 to 1498", () => {
   const forward = primerRows(primers).find((row) => row.id === "lpdv-p31-ca-forward");
   assert.deepEqual(forward?.product?.products.map((p) => [p.start, p.end]), [[1041, 1498]]);
   assert.equal(forward?.product?.reference.id, "U09568.1");
 });
 
-test("the GAPDH product is computed on the chicken genome, not the mRNA, and the turkey genome is a recorded check", async () => {
+await test("the GAPDH product is computed on the chicken genome, not the mRNA, and the turkey genome is a recorded check", async () => {
   const gapdh = primerRows(primers).find((row) => row.id === "gapdh-forward");
   assert.equal(gapdh?.reference, "NC_052532.1:76902320-76906237");
   assert.deepEqual(gapdh?.product?.products.map((p) => [p.length, p.start, p.end]), [[534, 76904235, 76904768]]);
@@ -179,7 +179,7 @@ test("the GAPDH product is computed on the chicken genome, not the mRNA, and the
   assert.deepEqual(turkey?.products.map((p) => p.length), [510]);
 });
 
-test("what the papers print: every sequence a paper prints equals the stored one, and each that could not be read says why", () => {
+await test("what the papers print: every sequence a paper prints equals the stored one, and each that could not be read says why", () => {
   const read = rows.filter((row) => row.publishedSequence);
   assert.deepEqual(read.map((row) => row.id).sort(), ["gapdh-forward", "gapdh-reverse", "hco2198", "lco1490", "lpdv-p31-ca-forward", "lpdv-p31-ca-reverse"]);
   // A difference is never corrected silently: this lists it, by name, for the seat.
@@ -194,7 +194,7 @@ test("what the papers print: every sequence a paper prints equals the stored one
   assert.equal(byId.get("lpdv-p31-ca-forward")?.publishedDoi, "10.1016/j.virol.2013.11.037");
 });
 
-test("every Tm is computed from the sequence, never stored: no record carries one", async () => {
+await test("every Tm is computed from the sequence, never stored: no record carries one", async () => {
   const names = (await readdir(new URL("content/registry/primer/", root))).filter((n) => n.endsWith(".md"));
   assert.equal(names.length, 12);
   for (const name of names) {
@@ -204,7 +204,7 @@ test("every Tm is computed from the sequence, never stored: no record carries on
   }
 });
 
-test("the kind refuses what is wrong, with the field named", async () => {
+await test("the kind refuses what is wrong, with the field named", async () => {
   const kinds = { primer: PRIMER };
   const host = { paper: async (slug) => slug === "real-paper" };
   const compile = (slug, lines) => compileRegistryItem({ slug, raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
@@ -221,7 +221,7 @@ test("the kind refuses what is wrong, with the field named", async () => {
   assert.equal(primerRow({ ...gap.item }).tm, null, "a gap has no Tm");
 });
 
-test("the set rules: a sequence is stored once, a set has one forward and one reverse, a product is on the forward primer", () => {
+await test("the set rules: a sequence is stored once, a set has one forward and one reverse, a product is on the forward primer", () => {
   const item = (id, fields) => ({ kind: "primer", id, name: id, status: "published", fields: { target: "T", ...fields } });
   const set = (...items) => registrySetErrors(items, { primer: PRIMER }).join("\n");
   assert.match(set(item("a", { sequence: "ACGTACGTACGT", direction: "forward" }), item("b", { sequence: "ACGTACGTACGT", direction: "reverse" })), /hold the same sequence/);
@@ -231,7 +231,7 @@ test("the set rules: a sequence is stored once, a set has one forward and one re
   assert.equal(set(item("a", { sequence: "ACGTACGTACGT", direction: "forward", set: "S", published_product: "100 bp", reference: "DQ387450.1" }), item("b", { sequence: "TTGGCCAATTGG", direction: "reverse", set: "S", reference: "DQ387450.1" })), "");
 });
 
-test("addresses: the kind's page is its plural, an item sits under it, and a segment maps back to its kind", () => {
+await test("addresses: the kind's page is its plural, an item sits under it, and a segment maps back to its kind", () => {
   assert.equal(kindPath("primer"), "/research/lab/primers");
   assert.equal(itemPath("primer", "lco1490"), "/research/lab/primers/lco1490");
   assert.equal(kindFromSegment("primers"), "primer");
@@ -240,7 +240,7 @@ test("addresses: the kind's page is its plural, an item sits under it, and a seg
   assert.deepEqual(Object.keys(KINDS), ["primer", "strain", "reagent", "equipment"]);
 });
 
-test("the inventory is the registry's items and the phages, the phages read and never copied, the lab's own records first", () => {
+await test("the inventory is the registry's items and the phages, the phages read and never copied, the lab's own records first", () => {
   const phages = [
     { name: "Acorn15", year: 2017, host: "smegmatis", county: "Hood County" },
     { name: "Zeta", year: 2026, host: null, county: null },
@@ -261,7 +261,7 @@ test("the inventory is the registry's items and the phages, the phages read and 
   assert.equal(PRIMERS.fields.find((f) => f.key === "tm")?.type, "number");
 });
 
-test("a protocol uses a primer when it names its id; none is listed on the primer", () => {
+await test("a protocol uses a primer when it names its id; none is listed on the primer", () => {
   const lco = byId.get("lco1490");
   const protocols = [
     { path: "/research/protocols/coi-primers", title: "COI", primers: [{ id: "lco1490" }] },
@@ -270,7 +270,7 @@ test("a protocol uses a primer when it names its id; none is listed on the prime
   assert.deepEqual(protocolsUsing(lco, protocols), [{ path: "/research/protocols/coi-primers", title: "COI" }]);
 });
 
-test("the library gets a Primers tab with the count, only while a primer exists", () => {
+await test("the library gets a Primers tab with the count, only while a primer exists", () => {
   const tabs = libraryTabs([], [], registryTabs(primers));
   assert.deepEqual(tabs.at(-1), { id: "primers", label: "Primers", count: 12, href: "/research/lab/primers", current: false });
   assert.equal(tabs.at(-2)?.id, "calculators", "the registry's tabs follow the calculators");

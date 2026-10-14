@@ -9,7 +9,7 @@ import { renderBody, setWasmLoader } from "../app/lib/content/pipeline.mjs";
 const render = () =>
   renderBody({ file: "test.md", body: "```js\nconst x = 1;\n```\n", resolveImage: () => null });
 
-test("A FAILED HIGHLIGHTER BUILD IS RETRIED by the next render, not cached", async () => {
+await test("A FAILED HIGHLIGHTER BUILD IS RETRIED by the next render, not cached", async () => {
   let calls = 0;
   setWasmLoader(() => {
     calls += 1;

@@ -24,7 +24,7 @@ function snapshotAgedBy(secondsAgo, overrides = {}) {
   };
 }
 
-test("a snapshot inside the window is fresh and carries its age", () => {
+await test("a snapshot inside the window is fresh and carries its age", () => {
   const tile = healthTile(snapshotAgedBy(120), NOW);
   assert.equal(tile.state, "fresh");
   assert.equal(tile.ageSeconds, 120);
@@ -33,7 +33,7 @@ test("a snapshot inside the window is fresh and carries its age", () => {
   assert.equal(tile.failed, 0);
 });
 
-test("THE BOUNDARY IS INCLUSIVE: exactly three intervals old is still fresh", () => {
+await test("THE BOUNDARY IS INCLUSIVE: exactly three intervals old is still fresh", () => {
   assert.equal(healthTile(snapshotAgedBy(HEALTH_SNAPSHOT_STALE_AFTER_SECONDS), NOW).state, "fresh");
   assert.equal(
     healthTile(snapshotAgedBy(HEALTH_SNAPSHOT_STALE_AFTER_SECONDS + 1), NOW).state,
@@ -41,7 +41,7 @@ test("THE BOUNDARY IS INCLUSIVE: exactly three intervals old is still fresh", ()
   );
 });
 
-test("a FAILING verdict is still shown, with the failed count intact", () => {
+await test("a FAILING verdict is still shown, with the failed count intact", () => {
   // A snapshot that recorded only healthy runs would let the tile keep showing
   // the last good answer while the site was failing.
   const tile = healthTile(snapshotAgedBy(60, { ok: false, failed: 2 }), NOW);
@@ -50,13 +50,13 @@ test("a FAILING verdict is still shown, with the failed count intact", () => {
   assert.equal(tile.failed, 2);
 });
 
-test("absence is missing, in every form KV can hand back", () => {
+await test("absence is missing, in every form KV can hand back", () => {
   for (const value of [null, undefined, "", 0, false, "a string", 42]) {
     assert.equal(healthTile(value, NOW).state, "missing", `for ${JSON.stringify(value)}`);
   }
 });
 
-test("FAILS CLOSED on every malformed field, one at a time", () => {
+await test("FAILS CLOSED on every malformed field, one at a time", () => {
   const cases = {
     "readAt absent": { readAt: undefined },
     "readAt not a string": { readAt: 1787779776701 },
@@ -70,13 +70,13 @@ test("FAILS CLOSED on every malformed field, one at a time", () => {
   }
 });
 
-test("A FUTURE TIMESTAMP IS REFUSED, not clamped to zero", () => {
+await test("A FUTURE TIMESTAMP IS REFUSED, not clamped to zero", () => {
   // It means the writer's clock or the shape is wrong, and neither is a state
   // to render a green tile from. Clamping would show it as freshest of all.
   assert.equal(healthTile(snapshotAgedBy(-60), NOW).state, "missing");
 });
 
-test("formatAge never claims a precision the fifteen minute schedule lacks", () => {
+await test("formatAge never claims a precision the fifteen minute schedule lacks", () => {
   assert.equal(formatAge(0), "under a minute ago");
   assert.equal(formatAge(59), "under a minute ago");
   assert.equal(formatAge(60), "1 minute ago");
@@ -89,7 +89,7 @@ test("formatAge never claims a precision the fifteen minute schedule lacks", () 
   assert.equal(formatAge(86400 * 3), "3 days ago");
 });
 
-test("snapshotFromBody counts what the endpoint answered with, not a HealthRun", () => {
+await test("snapshotFromBody counts what the endpoint answered with, not a HealthRun", () => {
   const body = {
     ok: false,
     checks: [
@@ -108,7 +108,7 @@ test("snapshotFromBody counts what the endpoint answered with, not a HealthRun",
   });
 });
 
-test("body to snapshot to tile round trips the counts the page renders", () => {
+await test("body to snapshot to tile round trips the counts the page renders", () => {
   const body = { ok: true, checks: [{ ok: true }, { ok: true }, { ok: true }] };
   const tile = healthTile(snapshotFromBody(body, new Date(NOW - 30_000).toISOString()), NOW);
   assert.equal(tile.state, "fresh");

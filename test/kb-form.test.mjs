@@ -11,7 +11,7 @@ import { entryFields, gapReason, itemFields } from "../app/kb/form-fields.mjs";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const files = (dir) => readdirSync(new URL(`../${dir}`, import.meta.url)).filter((f) => f.endsWith(".md")).map((f) => `${dir}/${f}`);
 
-test("every procedure and every registry item round-trips through the form byte for byte, through JSON as a browser sends it", () => {
+await test("every procedure and every registry item round-trips through the form byte for byte, through JSON as a browser sends it", () => {
   const registry = readdirSync(new URL("../content/registry", import.meta.url)).flatMap((kind) => files(`content/registry/${kind}`));
   for (const path of [...files("content/procedures"), ...registry]) {
     const raw = read(path);
@@ -20,7 +20,7 @@ test("every procedure and every registry item round-trips through the form byte 
   }
 });
 
-test("a changed field is written alone; every other line keeps its text", () => {
+await test("a changed field is written alone; every other line keeps its text", () => {
   const raw = read("content/procedures/coi-primers.md");
   const model = fileToForm(raw);
   model.data.status = "in-use";
@@ -34,7 +34,7 @@ test("a changed field is written alone; every other line keeps its text", () => 
   assert.deepEqual(changed, ["updated: 2026-10-10", "status: in-use", "biosafety_level: BSL-1"]);
 });
 
-test("a field the form removes is left out, and a new one goes after the rest", () => {
+await test("a field the form removes is left out, and a new one goes after the rest", () => {
   const raw = read("content/registry/equipment/nanodrop.md");
   const model = fileToForm(raw, { body: false });
   model.data.manufacturer = "Thermo Fisher Scientific";
@@ -45,7 +45,7 @@ test("a field the form removes is left out, and a new one goes after the rest", 
   assert.equal(splitFile(formToFile(raw, model)).fields.map((f) => f.key).join(","), "name");
 });
 
-test("steps moved in the form are renumbered from where their list starts, and their notes move with them", () => {
+await test("steps moved in the form are renumbered from where their list starts, and their notes move with them", () => {
   const raw = read("content/procedures/phage-dna-extraction.md");
   const model = fileToForm(raw);
   const partB = model.body?.sections.find((s) => s.heading.startsWith("Part B"));
@@ -60,7 +60,7 @@ test("steps moved in the form are renumbered from where their list starts, and t
   assert.match(out, /8\. Add @potassium acetate[^\n]*\n(?: {3}[^\n]*\n)* {3}> CRITICAL: Mix until the precipitate/);
 });
 
-test("a protocol is edited with its closed lists, and a field the form has no input for is edited as YAML", () => {
+await test("a protocol is edited with its closed lists, and a field the form has no input for is edited as YAML", () => {
   const model = fileToForm(read("content/procedures/coi-primers.md"));
   const fields = entryFields("protocol", model.data, [{ value: "smegmatis", label: "M. smegmatis" }]);
   const byKey = new Map(fields.map((f) => [f.key, f]));
@@ -74,12 +74,12 @@ test("a protocol is edited with its closed lists, and a field the form has no in
   assert.equal(gapReason("in-use"), null);
 });
 
-test("a registry item is its name, its draft flag and its kind's fields", () => {
+await test("a registry item is its name, its draft flag and its kind's fields", () => {
   const fields = itemFields(["supplier", "catalog_number", "prepared_in_lab"], { prepared_in_lab: true });
   assert.deepEqual(fields.map((f) => [f.key, f.kind]), [["name", "text"], ["draft", "checkbox"], ["supplier", "text"], ["catalog_number", "text"], ["prepared_in_lab", "checkbox"]]);
 });
 
-test("the compile holds status to its closed list and forked_from to its shape, and the page reads both", async () => {
+await test("the compile holds status to its closed list and forked_from to its shape, and the page reads both", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
@@ -105,7 +105,7 @@ test("the compile holds status to its closed list and forked_from to its shape, 
   assert.ok(!shape.ok && shape.errors.some((e) => e.startsWith("forked_from is { slug, version }")));
 });
 
-test("every step reads as words and chips that join back byte for byte, and a chip nobody changed writes back as it was", async () => {
+await test("every step reads as words and chips that join back byte for byte, and a chip nobody changed writes back as it was", async () => {
   const { stepPieces, writePiece } = await import("../app/kb/step-marks.mjs");
   let chips = 0;
   for (const path of files("content/procedures")) {
@@ -125,7 +125,7 @@ test("every step reads as words and chips that join back byte for byte, and a ch
   assert.ok(chips > 40, `only ${chips} chips across the procedures`);
 });
 
-test("a chip edited in its popover is written in the format's own spelling", async () => {
+await test("a chip edited in its popover is written in the format's own spelling", async () => {
   const { stepPieces, writePiece, pieceLabel } = await import("../app/kb/step-marks.mjs");
   const [, reagent, , timer, , temperature, , equipment] = stepPieces("Add @zinc chloride|ZnCl2{20%µl} for ~{5%minutes} at 55 to 60 °C in the #microcentrifuge.");
   assert.equal(reagent?.kind, "reagent");
@@ -137,7 +137,7 @@ test("a chip edited in its popover is written in the format's own spelling", asy
   assert.equal(writePiece({ .../** @type {any} */ (equipment), shown: "the centrifuge" }), "#microcentrifuge|the centrifuge{}");
 });
 
-test("a recorded gap is said in words and points at the input it is filled in at", async () => {
+await test("a recorded gap is said in words and points at the input it is filled in at", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");

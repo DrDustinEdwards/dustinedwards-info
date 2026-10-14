@@ -18,7 +18,7 @@ const compiled = await compileProcedure({ slug: "phage-dna-extraction", raw, pip
 assert.ok(compiled.ok, compiled.ok ? "" : compiled.errors.join("; "));
 const { record } = compiled;
 
-test("a protocol states LabProtocol 0.9-DRAFT and carries every condition its steps state, once each, as parameter", () => {
+await test("a protocol states LabProtocol 0.9-DRAFT and carries every condition its steps state, once each, as parameter", () => {
   const ld = /** @type {any} */ (procedureJsonLd(record, "https://example.com", person));
   assert.equal(ld["@type"], "LabProtocol");
   assert.deepEqual(ld["http://purl.org/dc/terms/conformsTo"], { "@id": "https://bioschemas.org/profiles/LabProtocol/0.9-DRAFT" });
@@ -41,13 +41,13 @@ test("a protocol states LabProtocol 0.9-DRAFT and carries every condition its st
   for (const p of params) assert.ok(stepText.includes(String(p.value ?? p.minValue)), `${JSON.stringify(p)} is stated in a step`);
 });
 
-test("a recipe and a how-to carry no LabProtocol parameter", async () => {
+await test("a recipe and a how-to carry no LabProtocol parameter", async () => {
   const recipe = await compileProcedure({ slug: "recipe-fixture", raw: readFileSync("test/fixtures/procedures/recipe-fixture.md", "utf8"), pipeline, registry: registryHost() });
   assert.ok(recipe.ok);
   assert.equal("parameter" in procedureJsonLd(recipe.record, "https://example.com", person), false);
 });
 
-test("a variant's parent is its frozen copy where there is one, else its live page, else its name", () => {
+await test("a variant's parent is its frozen copy where there is one, else its live page, else its name", () => {
   const from = { slug: "phage-isolation", version: "2" };
   const parent = { title: "Phage Isolation", path: "/research/protocols/phage-isolation" };
   assert.deepEqual(resolveLineage(from, "protocol", { live: parent, frozen: { title: "Phage Isolation v2" } }), {
@@ -74,7 +74,7 @@ test("a variant's parent is its frozen copy where there is one, else its live pa
   assert.equal(/** @type {any} */ (procedureJsonLd(record, "https://example.com", person, { ...lineage, href: null })).isBasedOn[0].name, record.basedOn[0]?.citation, "a parent with no page is not linked data");
 });
 
-test("a variant names a procedure here, of its profile, at a version that procedure states", () => {
+await test("a variant names a procedure here, of its profile, at a version that procedure states", () => {
   const procedures = new Map([
     ["phage-isolation", { profile: "protocol", version: "2", history: [{ version: "2" }, { version: "1" }] }],
     ["tomato-soup", { profile: "recipe", version: null, history: [] }],

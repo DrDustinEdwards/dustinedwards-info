@@ -25,7 +25,8 @@ export function MediaPicker({
   const media = useFetcher<{ objects: PickerRow[]; truncated: boolean }>();
 
   useEffect(() => {
-    if (media.state === "idle" && !media.data) media.load("/admin/media?picker=1");
+    // The router reports a failed load to the error boundary; the promise has nothing left to say.
+    if (media.state === "idle" && !media.data) media.load("/admin/media?picker=1").catch(() => undefined);
   }, [media]);
 
   const objects = media.data?.objects ?? [];

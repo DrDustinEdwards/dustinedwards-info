@@ -6,7 +6,7 @@ import { test } from "node:test";
 
 import { contentsCapMessage } from "../app/lib/editor/contents-cap.mjs";
 
-test("a capped response produces a message naming the transport", () => {
+await test("a capped response produces a message naming the transport", () => {
   const message = contentsCapMessage(
     { size: 1_200_000, content: "", encoding: "none" },
     "content/posts/enormous.md",
@@ -16,7 +16,7 @@ test("a capped response produces a message naming the transport", () => {
   assert.match(message, /content\/posts\/enormous\.md/, "the message names the file");
 });
 
-test("an ordinary base64 response passes", () => {
+await test("an ordinary base64 response passes", () => {
   const ok = contentsCapMessage(
     { size: 4096, content: "aGVsbG8=", encoding: "base64" },
     "content/posts/fine.md",
@@ -24,7 +24,7 @@ test("an ordinary base64 response passes", () => {
   assert.equal(ok, null);
 });
 
-test("a zero-size response passes, because absent content is not capped content", () => {
+await test("a zero-size response passes, because absent content is not capped content", () => {
   const ok = contentsCapMessage({ size: 0, content: "", encoding: "none" }, "content/posts/empty.md");
   assert.equal(ok, null);
 });

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 
-test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does", () => {
+await test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does", () => {
   // What the browser does with the attribute: compile it as ^(?:...)$.
   const asBrowser = new RegExp(`^(?:${SLUG_ATTRIBUTE_PATTERN})$`);
   const cases = [
@@ -23,7 +23,7 @@ test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does", () =>
   }
 });
 
-test("a multiline value cannot slip past the attribute's anchoring", () => {
+await test("a multiline value cannot slip past the attribute's anchoring", () => {
   // With `$` embedded a reader has to reason about which anchor binds where.
   const asBrowser = new RegExp(`^(?:${SLUG_ATTRIBUTE_PATTERN})$`);
   assert.equal(asBrowser.test("good-slug\nbad slug"), false);

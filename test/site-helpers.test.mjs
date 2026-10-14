@@ -42,17 +42,17 @@ function entriesOf(/** @type {string} */ xml, /** @type {RegExp} */ lastmodPatte
   });
 }
 
-test("sitemap: this site's document is reproduced byte for byte", () => {
+await test("sitemap: this site's document is reproduced byte for byte", () => {
   const xml = fixture("dustinedwards-sitemap.xml");
   assert.equal(sitemapDocument(entriesOf(xml, /^\d{4}-\d{2}-\d{2}$/)), xml);
 });
 
-test("sitemap: germomics' compact document with no trailing newline is reproduced byte for byte", () => {
+await test("sitemap: germomics' compact document with no trailing newline is reproduced byte for byte", () => {
   const xml = fixture("germomics-sitemap.xml");
   assert.equal(sitemapDocument(entriesOf(xml, /^\d{4}-\d{2}-\d{2}$/), { trailingNewline: false }), xml);
 });
 
-test("sitemap: foxhound's expanded document with datetimes, changefreq and priority is reproduced byte for byte", () => {
+await test("sitemap: foxhound's expanded document with datetimes, changefreq and priority is reproduced byte for byte", () => {
   const xml = fixture("foxhound-sitemap.xml");
   assert.equal(
     sitemapDocument(entriesOf(xml, /^\d{4}-\d{2}-\d{2}T/), { layout: "expanded", lastmodFormat: "datetime" }),
@@ -60,7 +60,7 @@ test("sitemap: foxhound's expanded document with datetimes, changefreq and prior
   );
 });
 
-test("sitemap: a loc with an ampersand does not end the document", () => {
+await test("sitemap: a loc with an ampersand does not end the document", () => {
   const xml = sitemapDocument([{ loc: "https://x.test/a?b=1&c=2" }]);
   assert.match(xml, /<loc>https:\/\/x\.test\/a\?b=1&amp;c=2<\/loc>/);
 });
@@ -87,12 +87,12 @@ function llmsParts(/** @type {string} */ text) {
   };
 }
 
-test("llms: germomics' file is reproduced byte for byte from its parts", () => {
+await test("llms: germomics' file is reproduced byte for byte from its parts", () => {
   const text = fixture("germomics-llms.txt");
   assert.equal(llmsDocument(llmsParts(text)), text);
 });
 
-test("llms: a link title's brackets are escaped and an empty section is dropped", () => {
+await test("llms: a link title's brackets are escaped and an empty section is dropped", () => {
   const text = llmsDocument({
     title: "T",
     summary: "S",
@@ -105,20 +105,20 @@ test("llms: a link title's brackets are escaped and an empty section is dropped"
   assert.doesNotMatch(text, /## Empty/);
 });
 
-test("xml: escapeXml covers all five entities and escapeXmlText leaves the quotes", () => {
+await test("xml: escapeXml covers all five entities and escapeXmlText leaves the quotes", () => {
   assert.equal(escapeXml(`&<>"'`), "&amp;&lt;&gt;&quot;&apos;");
   assert.equal(escapeXmlText(`&<>"'`), `&amp;&lt;&gt;"'`);
 });
 
-test("xml: escaping the ampersand first does not double-escape", () => {
+await test("xml: escaping the ampersand first does not double-escape", () => {
   assert.equal(escapeXml("a &lt; b"), "a &amp;lt; b");
 });
 
-test("xml: a CDATA section survives a ]]> inside its text", () => {
+await test("xml: a CDATA section survives a ]]> inside its text", () => {
   assert.equal(cdata("a ]]> b"), "<![CDATA[a ]]]]><![CDATA[> b]]>");
 });
 
-test("xml: the sites' feed fragments are the primitives' output", () => {
+await test("xml: the sites' feed fragments are the primitives' output", () => {
   const germomics = fixture("germomics-site-feed.xml");
   assert.ok(germomics.includes(`<title>${escapeXml(`Why phages win: notes & "questions" <draft>`)}</title>`));
   assert.ok(germomics.includes(`<pubDate>${rfc822("2026-06-21 09:30:00")}</pubDate>`));
@@ -128,7 +128,7 @@ test("xml: the sites' feed fragments are the primitives' output", () => {
   assert.ok(foxhound.includes(`<pubDate>${rfc822(new Date("2026-08-01T12:00:00.000Z"))}</pubDate>`));
 });
 
-test("xml: dates read as UTC and an unreadable one is the epoch, never today", () => {
+await test("xml: dates read as UTC and an unreadable one is the epoch, never today", () => {
   assert.equal(rfc822("2026-06-21 09:30:00"), "Sun, 21 Jun 2026 09:30:00 GMT");
   assert.equal(rfc822("not a date"), "Thu, 01 Jan 1970 00:00:00 GMT");
   assert.equal(isoDay("2026-07-01 12:00:00"), "2026-07-01");
@@ -136,7 +136,7 @@ test("xml: dates read as UTC and an unreadable one is the epoch, never today", (
   assert.equal(isoDay("not a date"), null);
 });
 
-test("xml: only a single-slash root-relative URL is made absolute", () => {
+await test("xml: only a single-slash root-relative URL is made absolute", () => {
   const html = `<a href="/a">x</a><img src="//cdn.test/i.png" srcset="/s1.png 1x, /s2.png 2x">`;
   assert.equal(
     absolutiseUrls(html, "https://x.test"),
@@ -144,12 +144,12 @@ test("xml: only a single-slash root-relative URL is made absolute", () => {
   );
 });
 
-test("xml: KaTeX markup becomes its TeX", () => {
+await test("xml: KaTeX markup becomes its TeX", () => {
   const html = `<span class="katex"><span class="katex-mathml"><math><semantics><annotation encoding="application/x-tex">x^2</annotation></semantics></math></span><span class="katex-html">x</span></span>`;
   assert.equal(mathToTex(html), "$x^2$");
 });
 
-test("feeds: itemPath moves a post's URL in all three formats", () => {
+await test("feeds: itemPath moves a post's URL in all three formats", () => {
   const post = { slug: "p", title: "T", html: null, description: null, publishAt: null, updatedAt: null, tags: [] };
   const base = { title: "F", link: "https://x.test", description: "d", selfUrl: "https://x.test/f", origin: "https://x.test", posts: [post], itemPath: "/blog" };
   assert.match(rssDocument(base), /<link>https:\/\/x\.test\/blog\/p<\/link>/);
@@ -159,21 +159,21 @@ test("feeds: itemPath moves a post's URL in all three formats", () => {
   );
 });
 
-test("search: a quote inside a term is doubled, so the term cannot leave its quotes", () => {
+await test("search: a quote inside a term is doubled, so the term cannot leave its quotes", () => {
   assert.equal(ftsLiteral(`say "hi"`), `"say ""hi"""`);
   assert.equal(toMatchExpression({ terms: [`a"b`] }), `"a""b"`);
 });
 
-test("search: operators and hyphens stay literal text", () => {
+await test("search: operators and hyphens stay literal text", () => {
   assert.equal(toMatchExpression({ terms: ["NEAR", "t-cell"], phrases: ["exact words"] }), `"exact words" AND "NEAR" AND "t-cell"`);
 });
 
-test("search: only the last term takes the prefix star, and nothing to match is null", () => {
+await test("search: only the last term takes the prefix star, and nothing to match is null", () => {
   assert.equal(toMatchExpression({ terms: ["a", "cloudf"] }, true), `"a" AND "cloudf"*`);
   assert.equal(toMatchExpression({ terms: [] }), null);
 });
 
-test("search: fusion uses k = 60 and adds a document's contributions from every list", () => {
+await test("search: fusion uses k = 60 and adds a document's contributions from every list", () => {
   assert.equal(RRF_K, 60);
   const [top] = fuse([[{ uid: "a" }, { uid: "b" }], [{ uid: "b" }]]);
   assert.equal(top.item.uid, "b");
@@ -181,7 +181,7 @@ test("search: fusion uses k = 60 and adds a document's contributions from every 
   assert.deepEqual(top.ranks, [2, 1]);
 });
 
-test("search: the fusion constant is the argument's, not a baked-in one", () => {
+await test("search: the fusion constant is the argument's, not a baked-in one", () => {
   const [only] = fuse([[{ uid: "a" }]], 10);
   assert.equal(only.score, 1 / 11);
 });

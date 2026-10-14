@@ -11,7 +11,7 @@ const NUL = String.fromCharCode(0);
 /** @param {string} mediaKey @param {string} form @param {string | null} detail */
 const ref = (mediaKey, form, detail = null) => ({ mediaKey, form, detail });
 
-test("THE COLLISION: a printable separator would merge two distinct refs", () => {
+await test("THE COLLISION: a printable separator would merge two distinct refs", () => {
   const a = mediaRefKey(ref("a|b", "c"));
   const b = mediaRefKey(ref("a", "b|c"));
   assert.notEqual(
@@ -21,7 +21,7 @@ test("THE COLLISION: a printable separator would merge two distinct refs", () =>
   );
 });
 
-test("a null detail is an empty part, not a missing one", () => {
+await test("a null detail is an empty part, not a missing one", () => {
   assert.equal(mediaRefKey(ref("m", "f", null)), `m${NUL}f${NUL}`);
   assert.equal(
     mediaRefKey(ref("m", "f", null)),
@@ -30,11 +30,11 @@ test("a null detail is an empty part, not a missing one", () => {
   );
 });
 
-test("identical refs produce identical keys, so dedup actually dedups", () => {
+await test("identical refs produce identical keys, so dedup actually dedups", () => {
   assert.equal(mediaRefKey(ref("m", "f", "d")), mediaRefKey(ref("m", "f", "d")));
 });
 
-test("a difference in ANY component produces a different key", () => {
+await test("a difference in ANY component produces a different key", () => {
   const base = mediaRefKey(ref("m", "f", "d"));
   assert.notEqual(base, mediaRefKey(ref("M", "f", "d")));
   assert.notEqual(base, mediaRefKey(ref("m", "F", "d")));

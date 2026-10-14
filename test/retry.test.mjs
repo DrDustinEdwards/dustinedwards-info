@@ -15,7 +15,7 @@ async function capturingStderr(fn) {
   }
 }
 
-test("a first-attempt success returns the value and does NOT retry", async () => {
+await test("a first-attempt success returns the value and does NOT retry", async () => {
   let calls = 0;
   const { value, lines } = await capturingStderr(() =>
     retryRead(
@@ -31,7 +31,7 @@ test("a first-attempt success returns the value and does NOT retry", async () =>
   assert.deepEqual(lines, [], "nothing is printed when nothing went wrong");
 });
 
-test("REPLAY fast death: one rejection, then the retry's value", async () => {
+await test("REPLAY fast death: one rejection, then the retry's value", async () => {
   let calls = 0;
   const { value } = await capturingStderr(() =>
     retryRead(
@@ -47,7 +47,7 @@ test("REPLAY fast death: one rejection, then the retry's value", async () => {
   assert.equal(calls, 2, "exactly one retry, never more");
 });
 
-test("IT PRINTS BEFORE IT RETRIES: the label and the first error reach stderr", async () => {
+await test("IT PRINTS BEFORE IT RETRIES: the label and the first error reach stderr", async () => {
   const { lines } = await capturingStderr(() => {
     let calls = 0;
     return retryRead(
@@ -68,7 +68,7 @@ test("IT PRINTS BEFORE IT RETRIES: the label and the first error reach stderr", 
   assert.match(printed, /SQLITE_CANTOPEN/, "the first error must be printed, not swallowed");
 });
 
-test("a SECOND failure propagates the original error unchanged", async () => {
+await test("a SECOND failure propagates the original error unchanged", async () => {
   await capturingStderr(async () => {
     await assert.rejects(
       () =>
@@ -84,7 +84,7 @@ test("a SECOND failure propagates the original error unchanged", async () => {
   });
 });
 
-test("REPLAY hang: a read that never settles becomes a rejection, and is retried", async () => {
+await test("REPLAY hang: a read that never settles becomes a rejection, and is retried", async () => {
   let calls = 0;
   const { value } = await capturingStderr(() =>
     retryRead(
@@ -100,7 +100,7 @@ test("REPLAY hang: a read that never settles becomes a rejection, and is retried
   assert.equal(calls, 2);
 });
 
-test("a hang on BOTH attempts rejects, naming the timeout rather than hanging the gate", async () => {
+await test("a hang on BOTH attempts rejects, naming the timeout rather than hanging the gate", async () => {
   await capturingStderr(async () => {
     await assert.rejects(
       () => retryRead(() => new Promise(() => {}), { label: "permanent hang", timeoutMs: 30 }),
@@ -109,7 +109,7 @@ test("a hang on BOTH attempts rejects, naming the timeout rather than hanging th
   });
 });
 
-test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync", async () => {
+await test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync", async () => {
   // spawnSync returns rather than rejecting; raising on a non-zero status is each call site's job.
   const { value } = await capturingStderr(() =>
     retryRead(() => ({ status: 0, stdout: "[]" }), { label: "sync" }),
@@ -117,7 +117,7 @@ test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync", asy
   assert.deepEqual(value, { status: 0, stdout: "[]" });
 });
 
-test("THE PLANT: a hung child spawned synchronously fails at its bound instead of hanging", () => {
+await test("THE PLANT: a hung child spawned synchronously fails at its bound instead of hanging", () => {
   const started = Date.now();
   const r = spawnSyncBounded(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], { timeoutMs: 1000 });
   assert.ok(Date.now() - started < 30_000, "the bound fired, rather than the child's own minute");
@@ -125,7 +125,7 @@ test("THE PLANT: a hung child spawned synchronously fails at its bound instead o
   assert.match(r.error, /timed out after 1000ms/);
 });
 
-test("a bounded spawn that finishes reports its status and output with no error", () => {
+await test("a bounded spawn that finishes reports its status and output with no error", () => {
   const r = spawnSyncBounded(process.execPath, ["-e", "process.stdout.write('hi'); process.exit(3)"], {
     timeoutMs: 30_000,
   });
@@ -134,7 +134,7 @@ test("a bounded spawn that finishes reports its status and output with no error"
   assert.equal(r.error, "");
 });
 
-test("a bounded spawn that cannot start says so, and has no status", () => {
+await test("a bounded spawn that cannot start says so, and has no status", () => {
   const r = spawnSyncBounded("definitely-not-a-command-ohnine", [], { timeoutMs: 5000 });
   assert.equal(r.status, null);
   assert.match(r.error, /could not run/);

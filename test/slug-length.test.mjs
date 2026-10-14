@@ -27,7 +27,7 @@ const rest = {
   description: "A description.",
 };
 
-test("the fixture builder produces slugs of the exact length, shape-valid", () => {
+await test("the fixture builder produces slugs of the exact length, shape-valid", () => {
   /* A builder that returned 119 characters when asked for 121 would make every refusal below
    * prove the wrong thing. */
   for (const n of [1, 120, 121, 200]) {
@@ -36,7 +36,7 @@ test("the fixture builder produces slugs of the exact length, shape-valid", () =
   }
 });
 
-test("a 121-character slug is REFUSED by the frontmatter schema", () => {
+await test("a 121-character slug is REFUSED by the frontmatter schema", () => {
   const result = frontmatterSchema.safeParse({ ...rest, slug: slugOfLength(121) });
   assert.equal(result.success, false, "121 characters must not parse");
   /* A slug that failed the shape rule instead would satisfy `success === false` while this cap
@@ -45,14 +45,14 @@ test("a 121-character slug is REFUSED by the frontmatter schema", () => {
   assert.match(issues, /too_big|at most 120/, `the issues were ${issues}`);
 });
 
-test("a 120-character slug is ACCEPTED, so the bound is where it says it is", () => {
+await test("a 120-character slug is ACCEPTED, so the bound is where it says it is", () => {
   /* The other direction. A cap accidentally written as `.max(1)` refuses 121
    * perfectly well and is not the rule anybody meant. */
   const result = frontmatterSchema.safeParse({ ...rest, slug: slugOfLength(120) });
   assert.equal(result.success, true, JSON.stringify(result.error?.issues ?? []));
 });
 
-test("the shape rule still bites, so the cap did not replace it", () => {
+await test("the shape rule still bites, so the cap did not replace it", () => {
   for (const bad of ["Not-Kebab", "trailing-", "double--hyphen", "under_score", ""]) {
     const result = frontmatterSchema.safeParse({ ...rest, slug: bad });
     assert.equal(result.success, false, `${JSON.stringify(bad)} must not parse`);

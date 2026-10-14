@@ -49,7 +49,7 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
       keys: async () => [...store.keys()].map((url) => ({ url })),
     };
   };
-  for (const path of kept) (await open("kept-v1")).put(path, new Response("kept"));
+  for (const path of kept) await (await open("kept-v1")).put(path, new Response("kept"));
   const registration = { active: { scriptURL: `${ORIGIN}/sw.js` }, unregister: async () => (state.unregistered += 1) };
   const globals = {
     document,
@@ -89,12 +89,12 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
   return { document, state, stores, button, press, keptPaths };
 }
 
-test("a browser with no service workers is offered nothing", async () => {
+await test("a browser with no service workers is offered nothing", async () => {
   const { button } = await load({ supported: false });
   assert.equal(button(), null);
 });
 
-test("nothing is stored or registered until the reader asks", async () => {
+await test("nothing is stored or registered until the reader asks", async () => {
   const { button, state, keptPaths, stores } = await load();
   assert.equal(stores.size, 0, "viewing the page creates no store at all");
   assert.equal(button()?.textContent, "Keep on this device");
@@ -103,7 +103,7 @@ test("nothing is stored or registered until the reader asks", async () => {
   assert.deepEqual(keptPaths(), []);
 });
 
-test("keeping stores the page at its own address and every same-origin file it uses, and registers the worker", async () => {
+await test("keeping stores the page at its own address and every same-origin file it uses, and registers the worker", async () => {
   const { button, press, state, keptPaths, document } = await load();
   await press();
   assert.deepEqual(state.registered, [{ url: "/sw.js", scope: "/" }]);
@@ -113,12 +113,12 @@ test("keeping stores the page at its own address and every same-origin file it u
   assert.match(document.querySelector(".offline-status")?.textContent ?? "", /opens with no connection/);
 });
 
-test("a page already kept says so when it opens", async () => {
+await test("a page already kept says so when it opens", async () => {
   const { button } = await load({ kept: [PAGE] });
   assert.equal(button()?.getAttribute("aria-pressed"), "true");
 });
 
-test("a page that will not load is not kept, and the reader is told", async () => {
+await test("a page that will not load is not kept, and the reader is told", async () => {
   const { button, press, keptPaths, document, state } = await load({ pageStatus: 503 });
   await press();
   assert.match(String(state.reported[0]), /the page answered 503/, "the failure is reported to the console, not swallowed");
@@ -128,7 +128,7 @@ test("a page that will not load is not kept, and the reader is told", async () =
   assert.match(document.querySelector(".offline-status")?.textContent ?? "", /could not be kept/);
 });
 
-test("removing the last kept page clears the store and unregisters the worker; with another kept, the files stay", async () => {
+await test("removing the last kept page clears the store and unregisters the worker; with another kept, the files stay", async () => {
   const last = await load({ kept: [PAGE, "/assets/root-1.css"] });
   await last.press();
   assert.equal(last.stores.has("kept-v1"), false, "the store is gone with the last page");
