@@ -31,7 +31,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## How a session works
 
-**Every session works on a branch and lands by pull request** (capsid/decisions.md, 2026-10-04). The PR gets a Worker Preview and full CI before main. This folder is the site session's checkout (ruling 60); others use a worktree under `C:\Users\email\dev\worktrees\`. Small changes (copy, colour, spacing, quick fixes) may go to the site session without a Capsid job (ruling 148), still by PR, merged automatically. Sessions leave Renovate PRs unmerged; a red one is a report.
+**Every session works on a branch and lands by pull request** (capsid/decisions.md, 2026-10-04). The PR gets a Worker Preview and full CI before main. This folder is the site session's checkout (ruling 60); others use a worktree under `C:\Users\email\dev\worktrees\`. Small changes (copy, colour, spacing, quick fixes) may go to the site session without a Capsid job (ruling 148), still by PR, merged automatically. Renovate self-merges per `renovate.json`; a red one is a report.
 
 **Two files here are Capsid's:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. Capsid's `sync-scorer` copier (`npm run sync:scorer` in capsid) keeps them identical across the roster repos; change them in capsid and they arrive by the copier.
 

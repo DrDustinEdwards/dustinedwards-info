@@ -1,4 +1,18 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>DrDustinEdwards/devkit"]
+  "extends": ["github>DrDustinEdwards/devkit"],
+  "packageRules": [
+    {
+      "description": "Dustin, 2026-10-14: non-major updates merge themselves once CI is green and the version is 3 days old. Renovate merges directly because GitHub auto-merge is off here.",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest", "lockFileMaintenance"],
+      "minimumReleaseAge": "3 days",
+      "automerge": true,
+      "platformAutomerge": false
+    },
+    {
+      "description": "Capsomer changes what visitors see, so its updates wait for Dustin's look.",
+      "matchPackageNames": ["capsomer"],
+      "automerge": false
+    }
+  ]
 }
