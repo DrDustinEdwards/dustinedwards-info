@@ -69,9 +69,9 @@ export function ConfirmDialog({
 
   const satisfied = requireTyped === undefined || typed.trim() === requireTyped;
   // Cancel keeps the scroll position: the page behind the dialog is where the reader still is.
-  const cancel = () => {
+  const cancel = async () => {
     if (cancelHref === undefined) onCancel?.();
-    else navigate(cancelHref, { preventScrollReset: true });
+    else await navigate(cancelHref, { preventScrollReset: true });
   };
 
   return (
@@ -84,9 +84,9 @@ export function ConfirmDialog({
       data-inline={hydrated ? undefined : ""}
       aria-labelledby={titleId}
       /* Escape leaves the way Cancel does: a natively closed dialog would leave the page still asking. */
-      onCancel={(event) => {
+      onCancel={async (event) => {
         event.preventDefault();
-        cancel();
+        await cancel();
       }}
     >
       {/* The form holds the caller's hidden fields; the typed field and the submit button join it by

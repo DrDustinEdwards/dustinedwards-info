@@ -53,4 +53,4 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
 ## Where everything else lives
 
-In this repo, because a gate can reach it: `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, and the skills at `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` for current state, `decisions.md` for every ruling in force (read one by number when a job cites it), `build-history.md` for history. A session records a reversal or a binding in Capsid, and nothing else.
+In this repo, because a gate can reach it: `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `README.md`, and the skills at `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` for current state, `decisions.md` for every ruling in force (read one by number when a job cites it), `build-history.md` for history. A session records a reversal or a binding in Capsid, and nothing else.

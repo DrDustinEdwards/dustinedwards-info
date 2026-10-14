@@ -31,7 +31,7 @@ function panelHtml(id) {
 
 const hrefsIn = (markup) => [...markup.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map((m) => m[1]);
 
-test("the bar has five section buttons, each a disclosure of its own panel", () => {
+await test("the bar has five section buttons, each a disclosure of its own panel", () => {
   const buttons = [...html.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)].map((m) => m[0]);
   assert.equal(buttons.length, 5);
   for (const [i, id] of SECTIONS.entries()) {
@@ -47,11 +47,11 @@ test("the bar has five section buttons, each a disclosure of its own panel", () 
   assert.ok(!html.includes("site-nav-word"));
 });
 
-test("no menu, menubar or menuitem role anywhere in the header", () => {
+await test("no menu, menubar or menuitem role anywhere in the header", () => {
   assert.doesNotMatch(html, /role="(menu|menubar|menuitem)"/);
 });
 
-test("every panel has its parts in order: band, three tiles, rows with a spotlight, three quick links", () => {
+await test("every panel has its parts in order: band, three tiles, rows with a spotlight, three quick links", () => {
   for (const id of SECTIONS) {
     const panel = panelHtml(id);
     const order = ["site-nav-band", "site-nav-tiles", "site-nav-body", "site-nav-rows", "site-nav-spot", "site-nav-foot"].map((cls) => panel.indexOf(`class="${cls}`));
@@ -63,7 +63,7 @@ test("every panel has its parts in order: band, three tiles, rows with a spotlig
   }
 });
 
-test("the panels' links are real anchors in the HTML, so a crawler and a reader without script can follow them", () => {
+await test("the panels' links are real anchors in the HTML, so a crawler and a reader without script can follow them", () => {
   const all = hrefsIn(html);
   for (const must of [
     "/research",
@@ -94,7 +94,7 @@ test("the panels' links are real anchors in the HTML, so a crawler and a reader 
   assert.ok(!all.includes("/recipes") && !all.includes("/software/how-tos"));
 });
 
-test("the Lab sign-in link is on the bar beside Search, outside the nav, and goes to the lab workspace", () => {
+await test("the Lab sign-in link is on the bar beside Search, outside the nav, and goes to the lab workspace", () => {
   const tools = html.slice(html.indexOf('class="site-header-tools"'));
   assert.match(tools, /<a\b[^>]*data-lab-link[^>]*href="\/lab"/);
   assert.ok(tools.indexOf("data-search-trigger") < tools.indexOf('href="/lab"'));
@@ -103,12 +103,12 @@ test("the Lab sign-in link is on the bar beside Search, outside the nav, and goe
   assert.match(tools, /Lab<span class="site-lab-more"> sign-in<\/span>/);
 });
 
-test("a panel names no heading, so the page outline is not opened by the menu", () => {
+await test("a panel names no heading, so the page outline is not opened by the menu", () => {
   const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
   assert.doesNotMatch(nav, /<h[1-6]\b/);
 });
 
-test("inside a section its button is marked as the section, and no other is", () => {
+await test("inside a section its button is marked as the section, and no other is", () => {
   const onWriting = render("/writing/ten-years-on-cloudflare");
   const marked = [...onWriting.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)].map((m) => m[0]).filter((b) => b.includes("data-section"));
   assert.equal(marked.length, 1);
@@ -117,7 +117,7 @@ test("inside a section its button is marked as the section, and no other is", ()
   assert.doesNotMatch(onWriting, /href="\/writing"[^>]*aria-current/);
 });
 
-test("the spotlight and the tiles show the newest paper and the newest articles from build-time data", () => {
+await test("the spotlight and the tiles show the newest paper and the newest articles from build-time data", () => {
   const research = panelHtml("research");
   assert.match(research, /Latest paper/);
   assert.match(research, /Science communication tools/);

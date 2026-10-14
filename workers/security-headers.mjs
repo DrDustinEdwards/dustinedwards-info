@@ -10,7 +10,7 @@ import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
  * not listed here is OSHP's value exactly. Dustin ratified these values (the gate's RATIFIED set holds them), and none is
  * changed by the package: CORP `same-origin` would break off-site og:image previews; COOP is left loose so cross-origin
  * popups and redirects keep working; HSTS carries `includeSubDomains` (we own the apex, and every subdomain serves valid
- * HTTPS, checked 2026-10-03) and never `preload`, a one-way door (CUTOVER.md 3.10). Never deny `clipboard-write`: the copy
+ * HTTPS, checked 2026-10-03) and never `preload`, a one-way door. Never deny `clipboard-write`: the copy
  * controls swallow the refusal silently.
  *
  * @type {Readonly<Record<string, import("@dustinedwards/site-runtime/headers").HeaderOverride>>}
@@ -18,7 +18,7 @@ import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
 export const SITE_HEADER_OVERRIDES = Object.freeze({
   "Strict-Transport-Security": {
     value: "max-age=31536000; includeSubDomains",
-    reason: "One year with includeSubDomains is the ratified value, and preload is never sent (a one-way door, CUTOVER.md 3.10). OSHP's two years has not been ruled on for this site.",
+    reason: "One year with includeSubDomains is the ratified value, and preload is never sent (a one-way door). OSHP's two years has not been ruled on for this site.",
   },
   "Referrer-Policy": {
     value: "strict-origin-when-cross-origin",

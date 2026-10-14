@@ -7,12 +7,12 @@ import { amplicon, amplicons, findSites, normalize, parseFasta, reverseComplemen
 const reference = (/** @type {string} */ accession) =>
   parseFasta(readFileSync(new URL(`./fixtures/references/${accession}.fasta`, import.meta.url), "utf8")).sequence;
 
-test("normalize upper-cases, maps U to T, drops whitespace, and refuses anything not a nucleotide code", () => {
+await test("normalize upper-cases, maps U to T, drops whitespace, and refuses anything not a nucleotide code", () => {
   assert.equal(normalize(" acgu\n ACGT "), "ACGTACGT");
   assert.throws(() => normalize("ACG1T"));
 });
 
-test("reverseComplement, by hand, including the IUPAC ambiguity codes", () => {
+await test("reverseComplement, by hand, including the IUPAC ambiguity codes", () => {
   assert.equal(reverseComplement("AACG"), "CGTT");
   assert.equal(reverseComplement("ATGC"), "GCAT");
   // R<->Y, K<->M, B<->V, D<->H; S, W and N map to themselves.
@@ -20,7 +20,7 @@ test("reverseComplement, by hand, including the IUPAC ambiguity codes", () => {
   assert.equal(reverseComplement(reverseComplement("CATACTGAGCCAATGGTT")), "CATACTGAGCCAATGGTT");
 });
 
-test("parseFasta reads the header and joins the sequence lines", () => {
+await test("parseFasta reads the header and joins the sequence lines", () => {
   const { header, sequence } = parseFasta(">X1 test\nACGT\nacgt\n");
   assert.equal(header, "X1 test");
   assert.equal(sequence, "ACGTACGT");
@@ -34,7 +34,7 @@ const F = "ACGTACGTAC";
 const R = "GGATCCTTAG";
 const TEMPLATE = `AAAA${F}CCCCCCCCCC${reverseComplement(R)}TTTT`;
 
-test("findSites finds a primer on each strand, 1-based and inclusive", () => {
+await test("findSites finds a primer on each strand, 1-based and inclusive", () => {
   assert.deepEqual(
     findSites(TEMPLATE, F).map((s) => [s.strand, s.start, s.end, s.mismatches]),
     [["+", 5, 14, 0]],
@@ -45,7 +45,7 @@ test("findSites finds a primer on each strand, 1-based and inclusive", () => {
   );
 });
 
-test("the synthetic product is 30 bases, 5 to 34, with no edits", () => {
+await test("the synthetic product is 30 bases, 5 to 34, with no edits", () => {
   const product = amplicon(TEMPLATE, F, R);
   assert.deepEqual(
     [product.start, product.end, product.length, product.templateLength, product.forwardMismatches, product.reverseMismatches],
@@ -53,7 +53,7 @@ test("the synthetic product is 30 bases, 5 to 34, with no edits", () => {
   );
 });
 
-test("a mismatch is counted at its primer position, and refused past the allowance", () => {
+await test("a mismatch is counted at its primer position, and refused past the allowance", () => {
   const mutated = `AAAA${F.slice(0, 3)}A${F.slice(4)}CCCCCCCCCC${reverseComplement(R)}TTTT`; // F's 4th base T -> A
   assert.throws(() => amplicon(mutated, F, R));
   const product = amplicon(mutated, F, R, { maxMismatches: 1 });
@@ -62,7 +62,7 @@ test("a mismatch is counted at its primer position, and refused past the allowan
   assert.equal(product.length, 30);
 });
 
-test("a primer with a base the template lacks is reported, and adds that base to the product", () => {
+await test("a primer with a base the template lacks is reported, and adds that base to the product", () => {
   const shorter = `AAAA${F.slice(0, 5)}${F.slice(6)}CCCCCCCCCC${reverseComplement(R)}TTTT`; // drop F's 6th base
   assert.throws(() => amplicon(shorter, F, R, { maxMismatches: 1 }));
   const product = amplicon(shorter, F, R, { maxIndels: 1 });
@@ -71,7 +71,7 @@ test("a primer with a base the template lacks is reported, and adds that base to
   assert.equal(product.length, 30);
 });
 
-test("a reference filed in the other orientation gives the same product", () => {
+await test("a reference filed in the other orientation gives the same product", () => {
   assert.equal(amplicon(reverseComplement(TEMPLATE), F, R).length, 30);
 });
 
@@ -82,11 +82,11 @@ test("a reference filed in the other orientation gives the same product", () => 
  */
 const REV = reference("DQ387450");
 
-test("the fixture is the whole DQ387450 genome", () => {
+await test("the fixture is the whole DQ387450 genome", () => {
   assert.equal(REV.length, 8286);
 });
 
-test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with no indel and the reverse one mismatch", () => {
+await test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with no indel and the reverse one mismatch", () => {
   const all = amplicons(REV, "CATACTGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", { maxMismatches: 1, maxIndels: 1, maxLength: 1000 });
   assert.deepEqual(
     all.map((p) => [p.start, p.end, p.length]),
@@ -101,12 +101,12 @@ test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with 
   assert.equal(product?.reverseMismatches, 1);
 });
 
-test("REV pol 2500-3075: 574 bp at 2492-3065, both primers exact", () => {
+await test("REV pol 2500-3075: 574 bp at 2492-3065, both primers exact", () => {
   const product = amplicon(REV, "CAAATAATAGATTTTCTAGTAGATACGGGA", "AGTGGACGGGTCTCAGGA");
   assert.deepEqual([product.start, product.end, product.length], [2492, 3065, 574]);
 });
 
-test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () => {
+await test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () => {
   const product = amplicon(REV, "CGAGAAGTAGCTATACGTCCTTTG", "ACATCGTGCCCGGAGC", { maxMismatches: 1 });
   assert.deepEqual([product.start, product.end, product.length, product.reverseMismatches], [4766, 5566, 801, 1]);
 });
@@ -119,11 +119,11 @@ test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () =
 const LPDV = reference("U09568");
 const LPDV_FORWARD = "ATGAGGACTTGTTAGATTGGTTAC";
 
-test("the U09568 fixture is the whole 7,143 nt sequence", () => {
+await test("the U09568 fixture is the whole 7,143 nt sequence", () => {
   assert.equal(LPDV.length, 7143);
 });
 
-test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp between them", () => {
+await test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp between them", () => {
   const product = amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTATTTG");
   assert.deepEqual([product.start, product.end, product.length, product.forwardMismatches, product.reverseMismatches], [1041, 1498, 458, 0, 0]);
   assert.equal(product.length - LPDV_FORWARD.length - "TGATGGCGTCAGGGCTATTTG".length, 413);

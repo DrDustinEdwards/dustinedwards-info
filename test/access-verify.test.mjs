@@ -26,45 +26,45 @@ const mint = (privateKey, { kid = "k1", claims = {} } = {}) =>
 
 const check = (token, getKey, now = NOW) => verifyAccessToken(token, getKey, { issuer: ISSUER, audience: AUD, now });
 
-test("a token signed by a published key for this application verifies, and its claims come back", async () => {
+await test("a token signed by a published key for this application verifies, and its claims come back", async () => {
   const { privateKey, getKey } = await keys();
   const verdict = await check(await mint(privateKey), getKey);
   assert.equal(verdict.ok, true);
   assert.equal(verdict.claims.email, "a@example.com");
 });
 
-test("a string audience is read as well as an array", async () => {
+await test("a string audience is read as well as an array", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { aud: AUD } }), getKey)).ok, true);
 });
 
-test("a token signed by a key Access did not publish is refused, even with the right claims", async () => {
+await test("a token signed by a key Access did not publish is refused, even with the right claims", async () => {
   const { getKey } = await keys();
   const stranger = await keys();
   assert.deepEqual(await check(await mint(stranger.privateKey), getKey), { ok: false, reason: "signature" });
 });
 
-test("another application's audience is refused", async () => {
+await test("another application's audience is refused", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { aud: ["other"] } }), getKey)).reason, "audience");
 });
 
-test("another issuer is refused", async () => {
+await test("another issuer is refused", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { iss: "https://evil.example" } }), getKey)).reason, "issuer");
 });
 
-test("an expired token is refused", async () => {
+await test("an expired token is refused", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { exp: NOW - 3600 } }), getKey)).reason, "expired");
 });
 
-test("a token not yet valid is refused", async () => {
+await test("a token not yet valid is refused", async () => {
   const { privateKey, getKey } = await keys();
   assert.equal((await check(await mint(privateKey, { claims: { nbf: NOW + 3600, exp: NOW + 7200 } }), getKey)).reason, "not-yet-valid");
 });
 
-test("the 60 second tolerance holds: a token a minute late or early is read, one beyond it is not", async () => {
+await test("the 60 second tolerance holds: a token a minute late or early is read, one beyond it is not", async () => {
   assert.equal(CLOCK_TOLERANCE_SECONDS, 60);
   const { privateKey, getKey } = await keys();
   const expiredBy = (seconds) => mint(privateKey, { claims: { exp: NOW - seconds } });
@@ -75,7 +75,7 @@ test("the 60 second tolerance holds: a token a minute late or early is read, one
   assert.equal((await check(await startsIn(61), getKey)).reason, "not-yet-valid");
 });
 
-test("alg none, an unknown kid and a malformed token are refused", async () => {
+await test("alg none, an unknown kid and a malformed token are refused", async () => {
   const { privateKey, getKey } = await keys();
   const b64 = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const none = `${b64({ alg: "none", typ: "JWT" })}.${b64({ iss: ISSUER, aud: [AUD], exp: NOW + 600, email: "a@example.com" })}.`;
@@ -85,7 +85,7 @@ test("alg none, an unknown kid and a malformed token are refused", async () => {
   assert.equal((await check("a.b.c", getKey)).reason, "malformed");
 });
 
-test("a signing algorithm the token chooses is not trusted: an HS256 token signed with the public key is refused", async () => {
+await test("a signing algorithm the token chooses is not trusted: an HS256 token signed with the public key is refused", async () => {
   const { getKey } = await keys();
   const secret = new TextEncoder().encode("a-secret-the-attacker-chose-for-hmac-0123456789");
   const forged = await new SignJWT({ iss: ISSUER, aud: [AUD], exp: NOW + 600, email: "a@example.com" })
@@ -94,7 +94,7 @@ test("a signing algorithm the token chooses is not trusted: an HS256 token signe
   assert.equal((await check(forged, getKey)).reason, "algorithm");
 });
 
-test("a key set that cannot be reached is thrown, not read as a refused token", async () => {
+await test("a key set that cannot be reached is thrown, not read as a refused token", async () => {
   const { privateKey } = await keys();
   const down = async () => {
     throw new errors.JWKSTimeout();

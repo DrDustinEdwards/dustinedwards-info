@@ -7,7 +7,7 @@ import { bundler, collector, root } from "./lib/invariants-harness.mjs";
 const bundle = bundler("write-paths");
 
 /* Bundling cold took 62s on a loaded host, past the suite's 60s default. */
-test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180_000 }, async (t) => {
+await test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
   /**

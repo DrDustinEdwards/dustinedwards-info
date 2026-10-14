@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { cssRelativeImports, moduleCssImports } from "../scripts/lib/tokens.mjs";
 
-test("every spelling of a relative @import is followed", () => {
+await test("every spelling of a relative @import is followed", () => {
   const css = [
     '@import "./a.css";',
     "@import './b.css';",
@@ -13,12 +13,12 @@ test("every spelling of a relative @import is followed", () => {
   assert.deepEqual(cssRelativeImports(css), ["./a.css", "./b.css", "./c.css", "./d.css"]);
 });
 
-test("a commented-out @import and a package import are not followed", () => {
+await test("a commented-out @import and a package import are not followed", () => {
   const css = '/* @import "./gone.css"; */\n@import "tailwindcss";\n@import "./kept.css";';
   assert.deepEqual(cssRelativeImports(css), ["./kept.css"]);
 });
 
-test("module CSS imports in either quote, with or without a semicolon, with ?url", () => {
+await test("module CSS imports in either quote, with or without a semicolon, with ?url", () => {
   const source = [
     'import "./a.css";',
     "import './b.css'",

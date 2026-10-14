@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 
 import { WINDOWS_CRASH_CODES } from "../scripts/lib/tier-outcome.mjs";
 
-test("importing check-all with --all on the command line does not set SCHEMA_LIVE", async () => {
+await test("importing check-all with --all on the command line does not set SCHEMA_LIVE", async () => {
   const before = process.env.SCHEMA_LIVE;
   delete process.env.SCHEMA_LIVE;
   process.argv.push("--all");
@@ -19,7 +19,7 @@ test("importing check-all with --all on the command line does not set SCHEMA_LIV
   }
 });
 
-test("check-all names every crash code ship's verdict names, from the same table", async () => {
+await test("check-all names every crash code ship's verdict names, from the same table", async () => {
   const { ntstatusName } = await import("../scripts/check-all.mjs");
   for (const [code, name] of WINDOWS_CRASH_CODES) {
     assert.match(ntstatusName(code), new RegExp(name));

@@ -24,12 +24,12 @@ const CLEAN = {
   "ls-files --others --exclude-standard": { status: 0, stdout: "" },
 };
 
-test("THE PLANT: a failed git diff throws instead of reading as nothing changed", () => {
+await test("THE PLANT: a failed git diff throws instead of reading as nothing changed", () => {
   const git = fakeGit({ ...CLEAN, "diff --name-only": { status: 128, stderr: "fatal: index file corrupt" } });
   assert.throws(() => changedFiles("origin/main", git), /git diff --name-only failed.*index file corrupt/);
 });
 
-test("a git that cannot be spawned throws, even on the base probe", () => {
+await test("a git that cannot be spawned throws, even on the base probe", () => {
   const git = fakeGit({
     ...CLEAN,
     "rev-parse --verify --quiet origin/main": { status: null, error: new Error("spawn git ENOENT") },
@@ -37,12 +37,12 @@ test("a git that cannot be spawned throws, even on the base probe", () => {
   assert.throws(() => changedFiles("origin/main", git), /ENOENT/);
 });
 
-test("an unknown base is reported as unknown, not as an error and not as a base", () => {
+await test("an unknown base is reported as unknown, not as an error and not as a base", () => {
   const git = fakeGit({ ...CLEAN, "rev-parse --verify --quiet origin/main": { status: 1 } });
   assert.deepEqual(changedFiles("origin/main", git), { files: [], baseUsed: null });
 });
 
-test("untracked, staged, unstaged and committed paths are all listed, once each", () => {
+await test("untracked, staged, unstaged and committed paths are all listed, once each", () => {
   const git = fakeGit({
     ...CLEAN,
     "diff --name-only origin/main...HEAD": { status: 0, stdout: "app/a.ts\nshared.md\n" },
@@ -67,7 +67,7 @@ const DECLARED = new Set([
   "check:urls",
 ]);
 
-test("THE PLANT: a route edit reaches the three gates that parse routes", () => {
+await test("THE PLANT: a route edit reaches the three gates that parse routes", () => {
   const { gates } = gatesFor("app/routes/search.ask.ts", DECLARED);
   for (const gate of ["check:policy", "check:ask-guards", "check:headers"]) {
     assert.ok(gates.includes(gate), `${gate} reads route modules and must run on a route edit`);
@@ -75,12 +75,12 @@ test("THE PLANT: a route edit reaches the three gates that parse routes", () => 
   assert.ok(gates.includes(RELATED));
 });
 
-test("root.tsx and entry.server.tsx reach headers", () => {
+await test("root.tsx and entry.server.tsx reach headers", () => {
   assert.ok(gatesFor("app/root.tsx", DECLARED).gates.includes("check:headers"));
   assert.ok(gatesFor("app/entry.server.tsx", DECLARED).gates.includes("check:headers"));
 });
 
-test("the related-test walk follows ~/ and relative imports, is cycle-safe, and skips what it cannot resolve", () => {
+await test("the related-test walk follows ~/ and relative imports, is cycle-safe, and skips what it cannot resolve", () => {
   /** @type {Record<string, string>} */
   const files = {
     "/test/x.test.mjs": `import { Body } from "../app/components/body.tsx";`,
@@ -106,12 +106,12 @@ test("the related-test walk follows ~/ and relative imports, is cycle-safe, and 
   ]);
 });
 
-test("a component edit does not pull in the route-only gates", () => {
+await test("a component edit does not pull in the route-only gates", () => {
   const { gates } = gatesFor("app/components/site-footer.tsx", DECLARED);
   assert.ok(!gates.includes("check:policy"));
 });
 
-test("a hook edit maps to no gate, because no gate or test runs a hook", () => {
+await test("a hook edit maps to no gate, because no gate or test runs a hook", () => {
   const { rules, gates } = gatesFor(".claude/hooks/no-em-dash.sh", DECLARED);
   assert.deepEqual(gates, []);
   assert.ok(rules.length > 0, "argued safe by a row, not unmapped");

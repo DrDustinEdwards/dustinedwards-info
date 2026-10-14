@@ -9,7 +9,7 @@ import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/th
 const request = (cookie) =>
   new Request("https://example.com/", cookie === undefined ? {} : { headers: { cookie } });
 
-test("a legacy system cookie resolves to exactly the no-cookie state", () => {
+await test("a legacy system cookie resolves to exactly the no-cookie state", () => {
   /* A legacy `theme=system` cookie means "follow the machine", which is what no cookie means,
    * so both readers must receive the same document. */
   const cookieless = themeFromRequest(request());
@@ -26,7 +26,7 @@ test("a legacy system cookie resolves to exactly the no-cookie state", () => {
   assert.equal(colorSchemeMeta(legacy), "light dark");
 });
 
-test("THREE resolved states are kept, because the cache key still carries them", () => {
+await test("THREE resolved states are kept, because the cache key still carries them", () => {
   /* `workers/app.ts` keys its cache on this value, so light, dark and the default must stay
    * three distinct answers. */
   const dark = themeFromRequest(request("theme=dark"));
@@ -37,6 +37,6 @@ test("THREE resolved states are kept, because the cache key still carries them",
   assert.equal(themeAttribute(light), "light");
 });
 
-test("junk in the cookie is the default, never the page failing", () => {
+await test("junk in the cookie is the default, never the page failing", () => {
   assert.equal(themeAttribute(themeFromRequest(request("theme=%%%bogus"))), undefined);
 });

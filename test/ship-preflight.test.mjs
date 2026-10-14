@@ -21,7 +21,7 @@ import {
 const tableOf = (rows) =>
   new Map(rows.map(([pid, command]) => [pid, { ppid: 1, command: normaliseCommand(command) }]));
 
-test("THE PLANT: an orphaned preview server is found, and named by pid", () => {
+await test("THE PLANT: an orphaned preview server is found, and named by pid", () => {
   const found = busyProcesses(
     tableOf([
       [111, "C:/Program Files/nodejs/node.exe C:/repo/node_modules/vite/bin/vite.js preview --port 4173"],
@@ -42,7 +42,7 @@ const shipTree = (base) => [
   [base + 3, { ppid: base + 2, command: normaliseCommand("C:\\nodejs\\node.exe C:\\repo\\scripts\\ship.mjs") }],
 ];
 
-test("THE PLANT: a second ship is found, and the running ship's own launchers are not", () => {
+await test("THE PLANT: a second ship is found, and the running ship's own launchers are not", () => {
   const table = new Map([...shipTree(100), ...shipTree(200)]);
   const found = busyProcesses(table, SHIP_BUSY_NEEDLES, 103);
   assert.deepEqual(
@@ -53,11 +53,11 @@ test("THE PLANT: a second ship is found, and the running ship's own launchers ar
   assert.ok(found.every(({ what }) => what === "another ship"));
 });
 
-test("a lone ship passes its own preflight", () => {
+await test("a lone ship passes its own preflight", () => {
   assert.deepEqual(busyProcesses(new Map(shipTree(100)), SHIP_BUSY_NEEDLES, 103), []);
 });
 
-test("a parentage cycle from reused pids ends the ancestor walk", () => {
+await test("a parentage cycle from reused pids ends the ancestor walk", () => {
   const table = new Map([
     [1, { ppid: 2, command: "node scripts/ship.mjs" }],
     [2, { ppid: 1, command: "node scripts/ship.mjs" }],
@@ -65,7 +65,7 @@ test("a parentage cycle from reused pids ends the ancestor walk", () => {
   assert.deepEqual(busyProcesses(table, SHIP_BUSY_NEEDLES, 1), []);
 });
 
-test("backslashes and case do not hide a match", () => {
+await test("backslashes and case do not hide a match", () => {
   const found = busyProcesses(
     tableOf([[7, "node.exe C:\\Repo\\Scripts\\Check-All.mjs --all"]]),
     SHIP_BUSY_NEEDLES,
@@ -73,7 +73,7 @@ test("backslashes and case do not hide a match", () => {
   assert.deepEqual(found, [{ pid: 7, what: "a check:all run" }]);
 });
 
-test("ship never refuses on itself", () => {
+await test("ship never refuses on itself", () => {
   const table = tableOf([[42, "node C:/repo/scripts/check-all.mjs"]]);
   assert.deepEqual(busyProcesses(table, SHIP_BUSY_NEEDLES, 42), [], "self is excluded by pid");
   assert.equal(
@@ -83,7 +83,7 @@ test("ship never refuses on itself", () => {
   );
 });
 
-test("an unrelated node process is not a match", () => {
+await test("an unrelated node process is not a match", () => {
   // By command line, not by name: a name-based needle would refuse on every node process.
   const found = busyProcesses(
     tableOf([
@@ -98,12 +98,12 @@ test("an unrelated node process is not a match", () => {
   assert.deepEqual(found, [], "none of these writes build/client or D1");
 });
 
-test("a process with no readable command line can never match", () => {
+await test("a process with no readable command line can never match", () => {
   const found = busyProcesses(new Map([[5, { ppid: 1, command: "" }]]), SHIP_BUSY_NEEDLES);
   assert.deepEqual(found, [], "unverifiable is left alone, never refused on");
 });
 
-test("one process matching two needles is reported once", () => {
+await test("one process matching two needles is reported once", () => {
   const found = busyProcesses(
     tableOf([[9, "node scripts/check-all.mjs && vite preview --port 4173"]]),
     SHIP_BUSY_NEEDLES,
@@ -111,12 +111,12 @@ test("one process matching two needles is reported once", () => {
   assert.equal(found.length, 1, "a pid is a process, not a count of its needles");
 });
 
-test("an empty table finds nothing, so reporting it unread is the caller's job", () => {
+await test("an empty table finds nothing, so reporting it unread is the caller's job", () => {
   // `readProcessTable` returns an empty map when the listing itself failed.
   assert.deepEqual(busyProcesses(new Map(), SHIP_BUSY_NEEDLES), []);
 });
 
-test("THE PLANT: a second taker is refused while the holder is alive", () => {
+await test("THE PLANT: a second taker is refused while the holder is alive", () => {
   const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
   const lock = join(dir, "ship.lock");
   const table = new Map([[500, { ppid: 1, command: normaliseCommand("C:/nodejs/node.exe C:/repo/scripts/ship.mjs") }]]);
@@ -129,7 +129,7 @@ test("THE PLANT: a second taker is refused while the holder is alive", () => {
   }
 });
 
-test("a lock left by a dead ship, or by a pid now reused, is taken over and reported", () => {
+await test("a lock left by a dead ship, or by a pid now reused, is taken over and reported", () => {
   const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
   const lock = join(dir, "ship.lock");
   try {
@@ -143,7 +143,7 @@ test("a lock left by a dead ship, or by a pid now reused, is taken over and repo
   }
 });
 
-test("release removes only the releaser's own lock", () => {
+await test("release removes only the releaser's own lock", () => {
   const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
   const lock = join(dir, "ship.lock");
   try {

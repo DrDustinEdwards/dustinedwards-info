@@ -37,7 +37,7 @@ const STEPS = [
 ];
 const KEYS = STEPS.map((s) => s.key);
 
-test("timerMs: the longer end of a range, in the mark's own unit, so a timer never rings early", () => {
+await test("timerMs: the longer end of a range, in the mark's own unit, so a timer never rings early", () => {
   assert.equal(timerMs({ label: "", text: "5 minutes", min: 5, max: 5, unit: "minutes" }), 300_000);
   assert.equal(timerMs({ label: "", text: "5 to 10 minutes", min: 5, max: 10, unit: "minutes" }), 600_000);
   assert.equal(timerMs({ label: "", text: "30 sec.", min: 30, max: null, unit: "sec" }), 30_000);
@@ -48,7 +48,7 @@ test("timerMs: the longer end of a range, in the mark's own unit, so a timer nev
   assert.equal(timerMs({ label: "", text: "5 furlongs", min: 5, max: 5, unit: "furlongs" }), null);
 });
 
-test("steps: a check records when it was done and unchecks cleanly; notes are kept and bounded", () => {
+await test("steps: a check records when it was done and unchecks cleanly; notes are kept and bounded", () => {
   let run = newRun(procedure, T0);
   assert.deepEqual([run.v, run.path, run.version, run.scale, run.finishedAt], [RUN_VERSION, procedure.path, "3", 5, null]);
   run = toggleDone(run, 1, T0 + 1000);
@@ -63,7 +63,7 @@ test("steps: a check records when it was done and unchecks cleanly; notes are ke
   assert.equal(setScale(newRun(procedure, T0), 8).scale, 8);
 });
 
-test("run functions never change the run they are given", () => {
+await test("run functions never change the run they are given", () => {
   const run = newRun(procedure, T0);
   const frozen = JSON.stringify(run);
   toggleDone(run, 1, T0);
@@ -73,7 +73,7 @@ test("run functions never change the run they are given", () => {
   assert.equal(JSON.stringify(run), frozen);
 });
 
-test("a timer counts to the moment it ends, so a reload or a sleeping phone still knows what is left", () => {
+await test("a timer counts to the moment it ends, so a reload or a sleeping phone still knows what is left", () => {
   const key = timerKey(1, 0);
   assert.equal(key, "1.0");
   let run = startTimer(newRun(procedure, T0), key, 300_000, T0);
@@ -86,7 +86,7 @@ test("a timer counts to the moment it ends, so a reload or a sleeping phone stil
   assert.equal(timerRemaining(restored, key, T0 + 240_000), 60_000);
 });
 
-test("pause keeps what is left and resume continues from there", () => {
+await test("pause keeps what is left and resume continues from there", () => {
   const key = "1.0";
   let run = startTimer(newRun(procedure, T0), key, 300_000, T0);
   run = pauseTimer(run, key, T0 + 100_000);
@@ -99,7 +99,7 @@ test("pause keeps what is left and resume continues from there", () => {
   assert.equal(Object.keys(resetTimer(run, key).timers).length, 0, "reset forgets the timer");
 });
 
-test("tickTimers: a timer whose time has come is done once, and reported once", () => {
+await test("tickTimers: a timer whose time has come is done once, and reported once", () => {
   let run = startTimer(newRun(procedure, T0), "1.0", 60_000, T0);
   run = startTimer(run, "2.0", 600_000, T0);
   const early = tickTimers(run, T0 + 30_000);
@@ -113,7 +113,7 @@ test("tickTimers: a timer whose time has come is done once, and reported once", 
   assert.equal(timerRemaining(later.run, "1.0", T0 + 90_000), 0);
 });
 
-test("clock: minutes and seconds, hours when there are any, rounding up so 0:00 means done", () => {
+await test("clock: minutes and seconds, hours when there are any, rounding up so 0:00 means done", () => {
   assert.equal(clock(125_000), "2:05");
   assert.equal(clock(5_400_000), "1:30:00");
   assert.equal(clock(999), "0:01");
@@ -121,14 +121,14 @@ test("clock: minutes and seconds, hours when there are any, rounding up so 0:00 
   assert.equal(clock(-5), "0:00");
 });
 
-test("progress counts the steps the procedure has, not the steps the run mentions", () => {
+await test("progress counts the steps the procedure has, not the steps the run mentions", () => {
   let run = newRun(procedure, T0);
   run = toggleDone(toggleDone(run, "part-a.1", T0), "part-b.1", T0);
   assert.deepEqual(runProgress(run, KEYS), { done: 2, total: 3 });
   assert.deepEqual(runProgress(toggleDone(run, "nowhere.99", T0), KEYS), { done: 2, total: 3 }, "a stray step is not counted");
 });
 
-test("the record names the procedure and its version, and holds only what the person did and wrote", () => {
+await test("the record names the procedure and its version, and holds only what the person did and wrote", () => {
   let run = newRun(procedure, T0);
   run = toggleDone(run, "part-a.1", T0 + 60_000);
   run = setNote(run, "part-a.2", "centrifuge 2 was out");
@@ -146,7 +146,7 @@ test("the record names the procedure and its version, and holds only what the pe
   assert.equal(finishRun(run, T0 + 9_999_999).finishedAt, T0 + 3_600_000, "finishing twice keeps the first time");
 });
 
-test("the JSON record is a Bioschemas LabProcess that executes the procedure's LabProtocol, at the version run", () => {
+await test("the JSON record is a Bioschemas LabProcess that executes the procedure's LabProtocol, at the version run", () => {
   let run = newRun(procedure, T0);
   run = setRunNote(run, "second prep of the day");
   const going = runRecord(run, STEPS, "https://example.com");
@@ -171,7 +171,7 @@ test("the JSON record is a Bioschemas LabProcess that executes the procedure's L
   assert.equal(frozen.endTime, "2026-10-03T15:00:01.000Z");
 });
 
-test("the Markdown record is plain, with checked lines and notes under their steps", () => {
+await test("the Markdown record is plain, with checked lines and notes under their steps", () => {
   let run = newRun(procedure, T0);
   run = toggleDone(run, "part-a.1", T0 + 60_000);
   run = setNote(run, "part-a.2", "line one\nline two");
@@ -187,7 +187,7 @@ test("the Markdown record is plain, with checked lines and notes under their ste
   assert.ok(md.endsWith("\n") && !md.endsWith("\n\n"));
 });
 
-test("parseRun accepts only what this module wrote and ignores everything else", () => {
+await test("parseRun accepts only what this module wrote and ignores everything else", () => {
   const run = toggleDone(newRun(procedure, T0), 1, T0);
   assert.deepEqual(parseRun(JSON.stringify(run)), run);
   assert.equal(parseRun(null), null);
@@ -199,7 +199,7 @@ test("parseRun accepts only what this module wrote and ignores everything else",
   assert.deepEqual([tidy.title, tidy.scale, tidy.version, tidy.finishedAt, tidy.note], ["", null, "", null, ""], "a wrong-typed field falls back, it is never trusted");
 });
 
-test("two steps that share a number are two steps: checking one leaves the other, in progress and in the record", () => {
+await test("two steps that share a number are two steps: checking one leaves the other, in progress and in the record", () => {
   let run = newRun(procedure, T0);
   run = toggleDone(run, "part-a.1", T0 + 1000);
   assert.equal(run.steps["part-b.1"], undefined);
@@ -210,7 +210,7 @@ test("two steps that share a number are two steps: checking one leaves the other
   assert.deepEqual(runProgress(run, KEYS), { done: 2, total: 3 });
 });
 
-test("one step at a time shows the chosen step, else the first not done, else the last, and moves to its neighbours", async () => {
+await test("one step at a time shows the chosen step, else the first not done, else the last, and moves to its neighbours", async () => {
   const { newRun, shownStep, stepBeside, toggleDone } = await import("../app/kb/procedures/run.mjs");
   const keys = ["dough.1", "dough.2", "cook.1"];
   let run = newRun({ path: "/recipes/x", version: "", title: "X", scale: null }, 0);

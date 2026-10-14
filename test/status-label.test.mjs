@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 import { STATUS_LABEL, statusLabel } from "../app/lib/colophon-sections.mjs";
 
-test("every declared status maps to a non-empty label", () => {
+await test("every declared status maps to a non-empty label", () => {
   const keys = Object.keys(STATUS_LABEL);
   assert.ok(keys.length > 0, "STATUS_LABEL is empty, so every assertion below is vacuous");
   for (const key of keys) {
@@ -22,7 +22,7 @@ test("every declared status maps to a non-empty label", () => {
   }
 });
 
-test("an unknown status THROWS rather than returning the raw value, and names it", () => {
+await test("an unknown status THROWS rather than returning the raw value, and names it", () => {
   assert.throws(
     () => statusLabel("wibble"),
     (error) => {

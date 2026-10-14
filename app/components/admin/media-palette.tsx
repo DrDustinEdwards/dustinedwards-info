@@ -106,7 +106,7 @@ export function MediaPalette({
   };
 
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
+    const onKey = async (event: KeyboardEvent) => {
       const key = paletteKey(
         event,
         event.target === inputRef.current,
@@ -144,7 +144,7 @@ export function MediaPalette({
       if (!hit) return;
       if (key.open) {
         // Router navigation: assigning window.location rebuilds the whole document just to show a panel.
-        navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
+        await navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
           preventScrollReset: true,
         });
       } else {

@@ -15,7 +15,7 @@ const CODE = TEXT.split("\n")
   .filter((line) => !/^\s*#/.test(line))
   .join("\n");
 
-test("the only trigger is the dispatch Capsid sends", () => {
+await test("the only trigger is the dispatch Capsid sends", () => {
   const on = /^on:\n([\s\S]*?)\n\S/m.exec(CODE);
   assert.ok(on, "no on: block parsed");
   const triggers = [...on[1].matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]);
@@ -23,7 +23,7 @@ test("the only trigger is the dispatch Capsid sends", () => {
   assert.match(on[1], /types: \[capsid-seat-start\]/);
 });
 
-test("one named bot, never a wildcard, and no API key anywhere", () => {
+await test("one named bot, never a wildcard, and no API key anywhere", () => {
   assert.match(CODE, /allowed_bots: "capsid-repo-access"/);
   assert.doesNotMatch(CODE, /allowed_bots: "\*"/);
   assert.doesNotMatch(CODE, /allowed_non_write_users/);
@@ -31,7 +31,7 @@ test("one named bot, never a wildcard, and no API key anywhere", () => {
   assert.match(CODE, /claude_code_oauth_token: \$\{\{ secrets\.CLAUDE_CODE_OAUTH_TOKEN \}\}/);
 });
 
-test("the payload never reaches a script or the prompt unvalidated", () => {
+await test("the payload never reaches a script or the prompt unvalidated", () => {
   const payloadUses = [...CODE.matchAll(/github\.event\.client_payload/g)];
   assert.equal(payloadUses.length, 1, "the payload is read somewhere besides the validating step");
   assert.match(CODE, /JOB_ID: \$\{\{ github\.event\.client_payload\.job_id \}\}/);
@@ -39,7 +39,7 @@ test("the payload never reaches a script or the prompt unvalidated", () => {
   assert.match(CODE, /steps\.job\.outputs\.id/);
 });
 
-test("secrets come from the seat environment, the transcript stays out of the public log, and deploy tools are refused", () => {
+await test("secrets come from the seat environment, the transcript stays out of the public log, and deploy tools are refused", () => {
   assert.match(CODE, /^ {4}environment: seat$/m);
   assert.match(CODE, /show_full_output: false/);
   const refused = list("disallowedTools");
@@ -51,7 +51,7 @@ test("secrets come from the seat environment, the transcript stays out of the pu
   assert.match(CODE, /^permissions:\n {2}contents: write\n {2}pull-requests: read\n {2}issues: read\n {2}id-token: write\n\n/m);
 });
 
-test("the Capsid key comes from the OIDC exchange, before checkout, and no long-lived runner key is read", () => {
+await test("the Capsid key comes from the OIDC exchange, before checkout, and no long-lived runner key is read", () => {
   assert.doesNotMatch(CODE, /CAPSID_RUNNER_KEY/, "a long-lived runner key is still read");
   const exchange = CODE.indexOf("name: Exchange this run's OIDC token");
   const validate = CODE.indexOf("name: Validate the job id");
@@ -77,7 +77,7 @@ function list(flag) {
   return m[1].split(",").map((e) => e.trim());
 }
 
-test("no allowed Bash pattern is an unbounded interpreter", () => {
+await test("no allowed Bash pattern is an unbounded interpreter", () => {
   const bash = list("allowedTools").filter((e) => /^Bash(\(|$)/.test(e));
   // The scan must see the npm entries it sits beside, or it passes on nothing.
   assert.ok(bash.includes("Bash(npm test:*)") && bash.includes("Bash(npm run check:*)"), `parsed Bash entries: ${bash.join(" ")}`);
@@ -98,11 +98,11 @@ function settings() {
   return JSON.parse(m[1]);
 }
 
-test("the Action gets its GitHub token from the workflow, so the first run does not need an OIDC exchange", () => {
+await test("the Action gets its GitHub token from the workflow, so the first run does not need an OIDC exchange", () => {
   assert.match(CODE, /^ {10}github_token: \$\{\{ github\.token \}\}$/m);
 });
 
-test("subprocess credentials are scrubbed, git reads no global or system config, and installs need no extra host", () => {
+await test("subprocess credentials are scrubbed, git reads no global or system config, and installs need no extra host", () => {
   const env = /^ {4}env:\n((?: {6}.*\n)+)/m.exec(CODE);
   assert.ok(env, "no job-level env parsed");
   assert.match(env[1], /^ {6}CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"$/m);
@@ -114,7 +114,7 @@ test("subprocess credentials are scrubbed, git reads no global or system config,
   assert.match(env[1], /^ {6}WRANGLER_SEND_ERROR_REPORTS: "false"$/m);
 });
 
-test("the repo's git config runs no hooks and no fsmonitor, set after checkout and before the session", () => {
+await test("the repo's git config runs no hooks and no fsmonitor, set after checkout and before the session", () => {
   const checkout = CODE.indexOf("actions/checkout@");
   const hooks = CODE.indexOf("git config core.hooksPath /dev/null");
   const fsmonitor = CODE.indexOf("git config core.fsmonitor false");
@@ -136,7 +136,7 @@ const GIT_ALLOWED = new Set([
   "Bash(git rev-parse:*)",
 ]);
 
-test("git is allowed by named subcommand only, and the config-changing forms are refused", () => {
+await test("git is allowed by named subcommand only, and the config-changing forms are refused", () => {
   const git = list("allowedTools").filter((e) => /^Bash\(git\b/.test(e));
   assert.ok(git.length > 0, "no git entries parsed");
   for (const entry of git) assert.ok(GIT_ALLOWED.has(entry), `${entry} is not a named git subcommand`);
@@ -146,14 +146,14 @@ test("git is allowed by named subcommand only, and the config-changing forms are
   }
 });
 
-test("the session cannot read the key file or process environments, or edit git config", () => {
+await test("the session cannot read the key file or process environments, or edit git config", () => {
   const deny = settings().permissions?.deny ?? [];
   for (const rule of ["Read(//proc/**)", "Read(/${{ runner.temp }}/**)", "Edit(**/.git/**)", "Edit(~/.gitconfig)", "Edit(~/.config/git/**)"]) {
     assert.ok(deny.includes(rule), `${rule} is not in permissions.deny`);
   }
 });
 
-test("the credential variables are named in the sandbox deny list", () => {
+await test("the credential variables are named in the sandbox deny list", () => {
   const envVars = settings().sandbox?.credentials?.envVars ?? [];
   for (const name of ["CLAUDE_CODE_OAUTH_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "DEFAULT_WORKFLOW_TOKEN"]) {
     assert.ok(envVars.some((v) => v.name === name && v.mode === "deny"), `${name} is not denied`);
@@ -169,7 +169,7 @@ function steps() {
 
 const stepIndex = (marker) => steps().findIndex((s) => marker.test(s));
 
-test("harden-runner is the first step, pinned, in block mode, and carries no sudo option", () => {
+await test("harden-runner is the first step, pinned, in block mode, and carries no sudo option", () => {
   const all = steps();
   assert.ok(all.length > 5, `only ${all.length} steps parsed`);
   assert.match(all[0], /^uses: step-security\/harden-runner@[0-9a-f]{40} # v\d+\.\d+\.\d+/, "harden-runner is not the first step, pinned by sha");
@@ -209,7 +209,7 @@ function allowedEndpoints() {
   return { indicator: m[1], entries: value.split(" ").filter((e) => e.length > 0) };
 }
 
-test("the egress list is capsid's recorded one, folded so the agent reads one entry per host", () => {
+await test("the egress list is capsid's recorded one, folded so the agent reads one entry per host", () => {
   const { indicator, entries } = allowedEndpoints();
   // A literal block keeps its newlines, and the agent would read "a:443\nb:443" as one host.
   assert.ok(indicator.startsWith(">"), `allowed-endpoints is a ${indicator} scalar, not folded`);
@@ -220,7 +220,7 @@ test("the egress list is capsid's recorded one, folded so the agent reads one en
   }
 });
 
-test("the steps run in the ruled order: harden-runner, sandbox setup, lockdown, key exchange, checkout, session", () => {
+await test("the steps run in the ruled order: harden-runner, sandbox setup, lockdown, key exchange, checkout, session", () => {
   const order = [
     /^uses: step-security\/harden-runner@/,
     /^name: Validate the job id/,
@@ -235,7 +235,7 @@ test("the steps run in the ruled order: harden-runner, sandbox setup, lockdown, 
   for (let i = 1; i < order.length; i++) assert.ok(order[i] > order[i - 1], `step ${i} of the ruled order runs before step ${i - 1}`);
 });
 
-test("the sandbox setup installs bubblewrap and socat and writes Anthropic's bwrap profile as published", () => {
+await test("the sandbox setup installs bubblewrap and socat and writes Anthropic's bwrap profile as published", () => {
   const setup = steps()[stepIndex(/^name: Install the sandbox's prerequisites/)] ?? "";
   assert.match(setup, /apt-get install -y --no-install-recommends bubblewrap socat/);
   const profile = ["abi <abi/4.0>,", "include <tunables/global>", "", "profile bwrap /usr/bin/bwrap flags=(unconfined) {", "  userns,", "  include if exists <local/bwrap>", "}"];
@@ -250,7 +250,7 @@ test("the sandbox setup installs bubblewrap and socat and writes Anthropic's bwr
   assert.match(setup, /bwrap --ro-bind \/ \/ --dev \/dev --unshare-all true/);
 });
 
-test("the lockdown mirrors disable-sudo-and-containers, removes every sudo grant last, and fails closed", () => {
+await test("the lockdown mirrors disable-sudo-and-containers, removes every sudo grant last, and fails closed", () => {
   const lock = steps()[stepIndex(/^name: Remove sudo and containers/)] ?? "";
   assert.match(lock, /set -euo pipefail/);
   for (const line of [
@@ -268,7 +268,7 @@ test("the lockdown mirrors disable-sudo-and-containers, removes every sudo grant
   assert.match(lock, /\/var\/run\/docker\.sock[^\n]*exit 1|exit 1[^\n]*\/var\/run\/docker\.sock/);
 });
 
-test("the sandbox is required, allows only github.com, and denies writes to the repo's git config and hooks", () => {
+await test("the sandbox is required, allows only github.com, and denies writes to the repo's git config and hooks", () => {
   const sandbox = settings().sandbox ?? {};
   assert.equal(sandbox.enabled, true);
   assert.equal(sandbox.failIfUnavailable, true, "a sandbox that cannot start would fall back to unsandboxed Bash");
@@ -282,14 +282,14 @@ test("the sandbox is required, allows only github.com, and denies writes to the 
 
 const actionStep = () => steps()[stepIndex(/^uses: anthropics\/claude-code-action@/)] ?? "";
 
-test("the session loads its MCP tools at startup and sends no nonessential traffic", () => {
+await test("the session loads its MCP tools at startup and sends no nonessential traffic", () => {
   const step = actionStep();
   assert.match(step, /^ {8}id: session$/m, "the Action step has no id for the diagnostics step to read");
   assert.match(step, /^ {8}env:\n {10}ENABLE_TOOL_SEARCH: "false"$/m, "ENABLE_TOOL_SEARCH is not false on the Action step");
   assert.match(step, /^ {8}env:\n(?: {10}.*\n)*? {10}CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"$/m);
 });
 
-test("the prompt stops the session at once when the Capsid jobs tool is missing, and claims in this namespace", () => {
+await test("the prompt stops the session at once when the Capsid jobs tool is missing, and claims in this namespace", () => {
   assert.match(actionStep(), /If the capsid `jobs` tool \(mcp__capsid__jobs\) is not available, stop at once/);
   assert.match(actionStep(), /action "claim", namespace "dustinedwards"/);
 });
@@ -298,11 +298,11 @@ test("the prompt stops the session at once when the Capsid jobs tool is missing,
 // every actor but the site session to a worktree, and the project hooks run outside the
 // sandbox, one of them running lint on every push.
 
-test("the prompt tells the session its runner checkout is its own clone", () => {
+await test("the prompt tells the session its runner checkout is its own clone", () => {
   assert.match(actionStep(), /This runner checkout is your own clone\. It is not the main checkout that\n {12}CLAUDE\.md or a ruling reserves for another session; work here, on a new branch\./);
 });
 
-test("every hook is off through flag settings, which outrank the repo's own settings", () => {
+await test("every hook is off through flag settings, which outrank the repo's own settings", () => {
   const m = /--settings '([^']*)'/.exec(actionStep());
   assert.ok(m, "no --settings in claude_args");
   assert.deepEqual(JSON.parse(m[1]), { disableAllHooks: true });
@@ -313,7 +313,7 @@ test("every hook is off through flag settings, which outrank the repo's own sett
 
 const TRIPWIRE_PATH = "${{ runner.temp }}/hook-tripwire";
 
-test("a local-scope hook tripwire is planted after checkout and before the session, and never overwrites a file", () => {
+await test("a local-scope hook tripwire is planted after checkout and before the session, and never overwrites a file", () => {
   const at = stepIndex(/^name: Plant a hook tripwire/);
   assert.ok(at > stepIndex(/^uses: actions\/checkout@/) && at < stepIndex(/^uses: anthropics\/claude-code-action@/), "the tripwire is not between checkout and the session");
   const step = steps()[at];
@@ -349,7 +349,7 @@ function runDiagnostics(executionFile, tripwire = join(tmpdir(), "no-such-hook-t
 
 const parseDiag = (out) => JSON.parse(out.trim().slice("SESSION_DIAG ".length));
 
-test("the diagnostics step prints names, statuses and booleans only, from a transcript full of secrets", () => {
+await test("the diagnostics step prints names, statuses and booleans only, from a transcript full of secrets", () => {
   const dir = mkdtempSync(join(tmpdir(), "seat-diag-"));
   const file = join(dir, "claude-execution-output.json");
   const SECRET = "sk-ant-oat01-canary-not-a-real-token";
@@ -386,13 +386,13 @@ test("the diagnostics step prints names, statuses and booleans only, from a tran
   assert.equal(diag.read_error, false);
 });
 
-test("the diagnostics step says so when there is no transcript, rather than printing nothing", () => {
+await test("the diagnostics step says so when there is no transcript, rather than printing nothing", () => {
   const diag = parseDiag(runDiagnostics(join(tmpdir(), "no-such-execution-file.json")));
   assert.equal(diag.read_error, true);
   assert.equal(diag.init_seen, false);
 });
 
-test("a fired hook tripwire is reported and fails the run", () => {
+await test("a fired hook tripwire is reported and fails the run", () => {
   const dir = mkdtempSync(join(tmpdir(), "seat-tripwire-"));
   const tripwire = join(dir, "hook-tripwire");
   writeFileSync(tripwire, "");

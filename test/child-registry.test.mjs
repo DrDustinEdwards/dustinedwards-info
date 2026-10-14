@@ -16,7 +16,7 @@ function registryWith(content) {
   return { registry: new ChildRegistry(file), cleanup: () => rmSync(dir, { recursive: true, force: true }) };
 }
 
-test("THE PLANT: one torn line does not empty the registry", () => {
+await test("THE PLANT: one torn line does not empty the registry", () => {
   const { registry, cleanup } = registryWith(
     `${JSON.stringify({ pid: 101, kind: "vite preview", needles: ["preview --port 4173"] })}\n` +
       `{"pid": 102, "kind": "chro\n` +
@@ -36,7 +36,7 @@ test("THE PLANT: one torn line does not empty the registry", () => {
   }
 });
 
-test("a parseable line with no needles is counted as unreadable, never killed on its pid", () => {
+await test("a parseable line with no needles is counted as unreadable, never killed on its pid", () => {
   const { registry, cleanup } = registryWith(`${JSON.stringify({ pid: 7, kind: "x", needles: [] })}\n`);
   try {
     assert.deepEqual(registry.readAll(), { entries: [], torn: 1 });
@@ -45,12 +45,12 @@ test("a parseable line with no needles is counted as unreadable, never killed on
   }
 });
 
-test("a missing registry is empty, not an error", () => {
+await test("a missing registry is empty, not an error", () => {
   const registry = new ChildRegistry(join(tmpdir(), "child-registry-absent", "none.jsonl"));
   assert.deepEqual(registry.readAll(), { entries: [], torn: 0 });
 });
 
-test("THE PLANT: a recorded pid now owned by something else is not a leftover", () => {
+await test("THE PLANT: a recorded pid now owned by something else is not a leftover", () => {
   // Pid 30 was a gate's child; Windows handed it to a browser tab whose parent is the browser.
   const table = new Map([
     [10, { ppid: 5, command: "cmd.exe /c npm run check:tests" }],
@@ -60,18 +60,18 @@ test("THE PLANT: a recorded pid now owned by something else is not a leftover", 
   assert.deepEqual(recordedTreeLeftovers([10, 11, 30], table, 5), [10, 11]);
 });
 
-test("a dead runner's orphans are still found through the runner's recorded pid", () => {
+await test("a dead runner's orphans are still found through the runner's recorded pid", () => {
   const table = new Map([[10, { ppid: 5, command: "cmd.exe" }]]);
   assert.deepEqual(recordedTreeLeftovers([10], table, 5), [10]);
   assert.deepEqual(recordedTreeLeftovers([10], table, null), [], "without the runner, its direct child is unproven");
 });
 
-test("the runner itself and dead pids are never leftovers", () => {
+await test("the runner itself and dead pids are never leftovers", () => {
   const table = new Map([[5, { ppid: 1, command: "node scripts/check-all.mjs" }]]);
   assert.deepEqual(recordedTreeLeftovers([5, 6], table, 5), []);
 });
 
-test("THE PLANT: a dead shell's reused pid does not adopt an unrelated orphan", () => {
+await test("THE PLANT: a dead shell's reused pid does not adopt an unrelated orphan", () => {
   // explorer.exe's parent died long ago with pid 40; the timed-out shell was later handed pid 40.
   const table = new Map([
     [7, { ppid: 40, command: "c:/windows/explorer.exe" }],

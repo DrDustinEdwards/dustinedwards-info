@@ -19,19 +19,19 @@ const entry = (over = {}) => ({
   ...over,
 });
 
-test("an unknown or absent tab falls back to the first base; a base id and needs-info are kept", () => {
+await test("an unknown or absent tab falls back to the first base; a base id and needs-info are kept", () => {
   assert.equal(resolveTab(null), "protocols");
   assert.equal(resolveTab("nope"), "protocols");
   assert.equal(resolveTab("recipes"), "recipes");
   assert.equal(resolveTab(NEEDS_INFO), NEEDS_INFO);
 });
 
-test("a tab's address keeps the search for a base and drops it for Needs info", () => {
+await test("a tab's address keeps the search for a base and drops it for Needs info", () => {
   assert.equal(tabHref("recipes", "soup"), `${KB_ADMIN_PATH}?tab=recipes&q=soup`);
   assert.equal(tabHref(NEEDS_INFO, "soup"), `${KB_ADMIN_PATH}?tab=${NEEDS_INFO}`);
 });
 
-test("every tab is counted from the rows it lists, zero included", () => {
+await test("every tab is counted from the rows it lists, zero included", () => {
   const entries = [entry(), entry({ slug: "b", profile: "recipe" })];
   const tabs = kbTabs(entries, [{ what: "x", kindLabel: "Protocols", href: "/", field: "f", reason: "r" }]);
   assert.deepEqual(
@@ -40,7 +40,7 @@ test("every tab is counted from the rows it lists, zero included", () => {
   );
 });
 
-test("a base lists only its profile, searched over title, description and slug with case and accents folded", () => {
+await test("a base lists only its profile, searched over title, description and slug with case and accents folded", () => {
   const entries = [
     entry({ slug: "zinc", title: "Zinc Extraction", description: "Column-free." }),
     entry({ slug: "pcr", title: "COI primers", description: "Préparation of barcodes." }),
@@ -52,7 +52,7 @@ test("a base lists only its profile, searched over title, description and slug w
   assert.deepEqual(baseEntries(entries, NEEDS_INFO), []);
 });
 
-test("Needs info lists every entry gap, then every registry gap, each in words, opening the editor at its field", () => {
+await test("Needs info lists every entry gap, then every registry gap, each in words, opening the editor at its field", () => {
   const entries = [
     entry({
       gaps: [

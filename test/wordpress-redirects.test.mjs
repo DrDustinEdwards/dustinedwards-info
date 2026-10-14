@@ -24,7 +24,7 @@ const targetPath = (location) => location.split("#")[0];
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
 const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/dustin-edwards-cv.pdf", "/research/publications"]);
 
-test("the apex host is dustinedwards.info and www, and nothing else", () => {
+await test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
   assert.equal(isApexHost("www.dustinedwards.info"), true);
   assert.equal(isApexHost("WWW.DustinEdwards.info"), true);
@@ -32,7 +32,7 @@ test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("localhost"), false);
 });
 
-test("www redirects to the apex in one hop, merging the old-address map, and no other host does", () => {
+await test("www redirects to the apex in one hop, merging the old-address map, and no other host does", () => {
   assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/", ""), "https://dustinedwards.info/");
   assert.equal(wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"), "https://dustinedwards.info/research/phages?x=1");
   assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"), "https://dustinedwards.info/teaching/virus-isolation");
@@ -41,7 +41,7 @@ test("www redirects to the apex in one hop, merging the old-address map, and no 
   assert.equal(wwwRedirectTarget("dustinedwards.dustin-edwards.workers.dev", "/", ""), null);
 });
 
-test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapped", () => {
+await test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapped", () => {
   assert.equal(gsc.paths.length + gsc.profilePaths, gsc.total, "the fixture accounts for all 271");
   assert.equal(gsc.total, 271);
 
@@ -70,7 +70,7 @@ test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapp
   assert.deepEqual(problems, []);
 });
 
-test("the profile paths the fixture counts all 301 to the roster in one hop", () => {
+await test("the profile paths the fixture counts all 301 to the roster in one hop", () => {
   // 146 counted here plus Dustin's own /author/dustin/, listed in the fixture: the 147 profile URLs.
   assert.equal(gsc.profilePaths, 146);
   assert.ok(gsc.paths.includes("/author/dustin/"));
@@ -85,7 +85,7 @@ test("the profile paths the fixture counts all 301 to the roster in one hop", ()
   assert.deepEqual(wordpressDisposition("/user/"), { status: 410 });
 });
 
-test("every explicit row's target is a page or pending, and never chains", () => {
+await test("every explicit row's target is a page or pending, and never chains", () => {
   for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
     const to = targetPath(location);
     assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${location}`);
@@ -93,14 +93,14 @@ test("every explicit row's target is a page or pending, and never chains", () =>
   }
 });
 
-test("every explicit row lands in one hop: no target is a moved or retired new-site path", () => {
+await test("every explicit row lands in one hop: no target is a moved or retired new-site path", () => {
   for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
     const to = targetPath(location);
     assert.equal(movedPathTarget(to), null, `${from} -> ${to} is redirected again by path-moves`);
   }
 });
 
-test("the molarity and metric prefix calculators answer 410: nothing on the new site replaces them", () => {
+await test("the molarity and metric prefix calculators answer 410: nothing on the new site replaces them", () => {
   for (const path of ["/molarity-calculator/", "/molarity-calculator", "/knowledge-base/metric-prefix/"]) {
     assert.deepEqual(wordpressDisposition(path), { status: 410 }, path);
   }
@@ -108,7 +108,7 @@ test("the molarity and metric prefix calculators answer 410: nothing on the new 
   assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/knowledge-base/metric-prefix"), false);
 });
 
-test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia page", () => {
+await test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia page", () => {
   const to = (path) => wordpressDisposition(path)?.location;
   for (const path of ["/wolbachia-project-genetic-techniques/", "/knowledge-base/pcr-wolbachia-16s-rrna/", "/gentech-2018a/"]) {
     assert.equal(to(path), "/research/protocols", path);
@@ -130,7 +130,7 @@ test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia p
   }
 });
 
-test("the pages written after the map: study skills, Join the lab and Teaching philosophy", () => {
+await test("the pages written after the map: study skills, Join the lab and Teaching philosophy", () => {
   const to = (path) => wordpressDisposition(path)?.location;
   assert.equal(to("/study-skills-guide/"), "/teaching/study-skills");
   assert.equal(to("/teaching-philosophy/"), "/teaching#teaching-philosophy");
@@ -140,14 +140,14 @@ test("the pages written after the map: study skills, Join the lab and Teaching p
   assert.equal(to("/directory-2019-phage-researchers/"), "/teaching/phage-discovery");
 });
 
-test("slashed and bare forms match; a row rebuilt in place never loops", () => {
+await test("slashed and bare forms match; a row rebuilt in place never loops", () => {
   assert.deepEqual(wordpressDisposition("/virus-isolation/"), { status: 301, location: "/teaching/virus-isolation" });
   assert.deepEqual(wordpressDisposition("/virus-isolation"), { status: 301, location: "/teaching/virus-isolation" });
   assert.deepEqual(wordpressDisposition("/research/"), { status: 301, location: "/research" });
   assert.equal(wordpressDisposition("/research"), null);
 });
 
-test("kept pages and the new site's own paths pass through", () => {
+await test("kept pages and the new site's own paths pass through", () => {
   for (const path of ["/", "/contact/", "/login/", "/about", "/writing/a-post", "/research/publications"]) {
     assert.equal(wordpressDisposition(path), null, path);
   }
@@ -290,7 +290,7 @@ function anchorExists(target) {
   return false;
 }
 
-test("cutover.md's redirect map: every explicit row and every pattern rule answers as the doc says", () => {
+await test("cutover.md's redirect map: every explicit row and every pattern rule answers as the doc says", () => {
   const wrong = [];
   for (const [from, expected] of [...CUTOVER_EXPLICIT_ROWS, ...CUTOVER_PATTERN_EXAMPLES]) {
     const actual = apexAnswer(new URL(from, "https://dustinedwards.info").pathname);
@@ -299,12 +299,12 @@ test("cutover.md's redirect map: every explicit row and every pattern rule answe
   assert.deepEqual(wrong, []);
 });
 
-test("cutover.md's redirect map: every code row is a row of the doc", () => {
+await test("cutover.md's redirect map: every code row is a row of the doc", () => {
   const docRows = new Set(CUTOVER_EXPLICIT_ROWS.map(([from]) => from.replace(/\/$/, "")));
   assert.deepEqual(Object.keys(EXPLICIT_ROWS).filter((from) => !docRows.has(from)), []);
 });
 
-test("cutover.md's redirect map: every target is a real page, every anchor is on it, and nothing chains", () => {
+await test("cutover.md's redirect map: every target is a real page, every anchor is on it, and nothing chains", () => {
   const broken = [];
   for (const [from, target] of [...CUTOVER_EXPLICIT_ROWS, ...CUTOVER_PATTERN_EXAMPLES]) {
     if (target === null || target === GONE) continue;
@@ -318,7 +318,7 @@ test("cutover.md's redirect map: every target is a real page, every anchor is on
   assert.deepEqual(broken, []);
 });
 
-test("the Baylor PDF goes to its protocol page, which the switch checklist lists as pending", () => {
+await test("the Baylor PDF goes to its protocol page, which the switch checklist lists as pending", () => {
   assert.deepEqual(wordpressDisposition(BAYLOR_PDF), { status: 301, location: "/research/protocols/phage-dna-extraction" });
   assert.ok(PENDING_TARGETS.includes("/research/protocols/phage-dna-extraction"));
   assert.ok(PENDING_TARGETS.includes("/research/protocols/coi-primers"));

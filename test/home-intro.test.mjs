@@ -19,7 +19,7 @@ function textOf(html, className) {
   return match[1].replace(/<[^>]+>/g, "").replaceAll("&amp;", "&");
 }
 
-test("the home hero states the whole organization, the university and its system", () => {
+await test("the home hero states the whole organization, the university and its system", () => {
   const html = render();
   // Machines read the same fact as the CV's line, comma included, though a reader sees two lines.
   assert.equal(textOf(html, "p-org"), "Tarleton State University, Texas A&M University System");
@@ -27,7 +27,7 @@ test("the home hero states the whole organization, the university and its system
   assert.match(html, /Texas A&amp;M University System/);
 });
 
-test("the hero keeps the role and department, and the Person record keeps the short university in worksFor", () => {
+await test("the hero keeps the role and department, and the Person record keeps the short university in worksFor", () => {
   const html = render();
   assert.equal(textOf(html, "p-job-title"), IDENTITY.role);
   assert.match(html, new RegExp(IDENTITY.department));

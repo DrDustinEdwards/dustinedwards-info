@@ -36,7 +36,7 @@ const reagents = built.items.filter((item) => item.kind === "reagent");
 const byId = new Map(reagents.map((item) => [item.id, item]));
 const PREPARED = ["nuclease-mix", "phage-buffer", "pyca", "tes-buffer"];
 
-test("the registry holds the reagents the lab's protocols use, stating only what a record in the repo states", () => {
+await test("the registry holds the reagents the lab's protocols use, stating only what a record in the repo states", () => {
   assert.equal(reagents.length, 16);
   assert.equal(KINDS.reagent, REAGENT);
   const rows = new Map(reagentRows(reagents, []).map((row) => [row.id, row]));
@@ -53,7 +53,7 @@ test("the registry holds the reagents the lab's protocols use, stating only what
   assert.equal(reagentLabel(rows.get("nuclease-mix")), "Nuclease mix (DNase I plus RNase A)");
 });
 
-test("a reagent is bought or prepared in the lab, and what no record states is a gap that says why", () => {
+await test("a reagent is bought or prepared in the lab, and what no record states is a gap that says why", () => {
   for (const id of PREPARED) {
     const row = reagentRow(byId.get(id));
     assert.equal(row.preparedInLab, true, id);
@@ -74,7 +74,7 @@ test("a reagent is bought or prepared in the lab, and what no record states is a
   assert.match(proteinase.supplierMissing ?? "", /who supplies the lab's proteinase K/);
 });
 
-test("the kind refuses what is wrong, with the field named, and holds a reagent to bought or prepared", async () => {
+await test("the kind refuses what is wrong, with the field named, and holds a reagent to bought or prepared", async () => {
   const kinds = { reagent: REAGENT };
   const host = { paper: async () => false, recipe: async (slug) => slug === "phage-buffer-recipe" };
   const compile = (lines) => compileRegistryItem({ slug: "reagent/x", raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
@@ -93,12 +93,12 @@ test("the kind refuses what is wrong, with the field named, and holds a reagent 
   assert.equal(set(item("a", { prepared_in_lab: true, recipe: "MISSING: not yet" }), item("b", { supplier: "MISSING: why", catalog_number: "MISSING: why" })), "");
 });
 
-test("the recipe a reagent links is a procedure with the recipe profile, as the repository holds it", async () => {
+await test("the recipe a reagent links is a procedure with the recipe profile, as the repository holds it", async () => {
   assert.equal(await repoHost.recipe("phage-isolation"), false, "a protocol is not a recipe");
   assert.equal(await repoHost.recipe("no-such-procedure"), false);
 });
 
-test("a reagent has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
+await test("a reagent has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
   assert.equal(hasItemPage("reagent"), true);
   const input = registrySearchInput(byId.get("gotaq-flexi-dna-polymerase"));
   assert.equal(input?.url, "/research/lab/reagents/gotaq-flexi-dna-polymerase");
@@ -109,7 +109,7 @@ test("a reagent has a page of its own, found by search and from the inventory (d
   assert.ok(rows.every((row) => row.path.startsWith(`${kindPath("reagent")}/`)), "an inventory row goes to the reagent's page");
 });
 
-test("no record stores what is computed: the protocols that use a reagent, or the amounts they use", async () => {
+await test("no record stores what is computed: the protocols that use a reagent, or the amounts they use", async () => {
   const names = (await readdir(new URL("content/registry/reagent/", root))).filter((n) => n.endsWith(".md"));
   assert.equal(names.length, 16);
   for (const name of names) {
@@ -118,7 +118,7 @@ test("no record stores what is computed: the protocols that use a reagent, or th
   }
 });
 
-test("the table lists each reagent's protocols, read from the protocols that name it, and every gap with its reason", () => {
+await test("the table lists each reagent's protocols, read from the protocols that name it, and every gap with its reason", () => {
   const protocols = [
     { path: "/research/protocols/a", title: "A", materials: [{ reagent: { id: "zinc-chloride" } }, { reagent: { id: "ethanol" } }, { reagent: { id: "ethanol" } }] },
     { path: "/research/protocols/b", title: "B", materials: [{ reagent: null }] },
@@ -141,7 +141,7 @@ test("the table lists each reagent's protocols, read from the protocols that nam
   ]) assert.ok(md.includes(line), line);
 });
 
-test("a protocol's Reagents table is drawn from the registry: where each reagent comes from, beside the protocol's own amount, stock and final", async () => {
+await test("a protocol's Reagents table is drawn from the registry: where each reagent comes from, beside the protocol's own amount, stock and final", async () => {
   const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
   const compiled = await compileDirectory("content/procedures");
   const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
@@ -168,7 +168,7 @@ test("a protocol's Reagents table is drawn from the registry: where each reagent
   assert.ok(isolation.markdown.includes("source Prepared in the lab"));
 });
 
-test("STORED ONCE: no protocol types a reagent's catalog number or product page, and every reagent a material names is one the registry holds", async () => {
+await test("STORED ONCE: no protocol types a reagent's catalog number or product page, and every reagent a material names is one the registry holds", async () => {
   const typed = reagents.flatMap((r) => [r.fields.product_url, r.fields.catalog_number].filter((v) => typeof v === "string" && !v.startsWith("MISSING")));
   assert.ok(typed.length >= 6);
   const used = new Set();
@@ -184,7 +184,7 @@ test("STORED ONCE: no protocol types a reagent's catalog number or product page,
   assert.deepEqual([...byId.keys()].filter((id) => !used.has(id)), [], "a registry reagent no protocol uses");
 });
 
-test("the compile refuses what a protocol may not say about a reagent", async () => {
+await test("the compile refuses what a protocol may not say about a reagent", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
