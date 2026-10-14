@@ -214,6 +214,19 @@ async function runIndex(
 }
 
 /**
+ * The posts' listing order for the search index (app/lib/post-order.mjs, app/db/posts.ts newestFirstOrder): publish
+ * instant, then a series kept together by the newest id among its posts of that instant, then part, then the
+ * later row. The index has its own row ids, so a post reads its series, part and id from the posts table through
+ * its address; a page has none of those and falls back to its index id.
+ */
+const NEWEST_JOIN = `LEFT JOIN posts p ON d.type = 'post' AND p.kind = 'post' AND d.url = '/writing/' || p.slug`;
+const NEWEST_ORDER = `d.publish_at DESC,
+      CASE WHEN p.series IS NULL THEN COALESCE(p.id, d.id)
+           ELSE COALESCE((SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = '${PUBLISHED_STATUS}' AND g.publish_at = p.publish_at AND g.series = p.series), p.id) END DESC,
+      COALESCE(p.part, 0) DESC,
+      COALESCE(p.id, d.id) DESC`;
+
+/**
  * Document records only: returning each section separately would present the corpus as a multiple of
  * its size. Date-ordered, since with no relevance signal recency is the only defensible order.
  */
@@ -223,9 +236,10 @@ async function runBrowse(db: D1Database, filters: FilterSql): Promise<RawRow[]> 
            d.doc_tags, d.publish_at,
            substr(d.body, 1, 240) AS snippet
     FROM search_docs d
+    ${NEWEST_JOIN}
     WHERE d.anchor IS NULL
       AND ${filters.clause}
-    ORDER BY d.publish_at DESC, d.id DESC
+    ORDER BY ${NEWEST_ORDER}
     LIMIT ${CANDIDATE_LIMIT}
   `;
   const result = await db.prepare(sql).bind(...filters.params).all<RawRow>();
@@ -485,10 +499,13 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
     .slice(0, 6);
 
   const recent = await env.DB.prepare(
-    `SELECT uid, url, title, publish_at FROM search_docs ` +
-      `WHERE anchor IS NULL AND type = 'post' AND ` +
-      visibilityClause(NO_ALIAS) +
-      ` ORDER BY publish_at DESC LIMIT 5`,
+    `SELECT d.uid, d.url, d.title, d.publish_at FROM search_docs d ` +
+      NEWEST_JOIN +
+      ` WHERE d.anchor IS NULL AND d.type = 'post' AND ` +
+      visibilityClause() +
+      ` ORDER BY ` +
+      NEWEST_ORDER +
+      ` LIMIT 5`,
   )
     .bind(nowSeconds)
     .all<{ uid: string; url: string; title: string; publish_at: number | null }>();

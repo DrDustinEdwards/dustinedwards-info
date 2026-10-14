@@ -3,6 +3,8 @@ title: "Carrel, part 2: one small API for every site"
 slug: carrel-one-api-for-every-site
 description: "The contract every site exposes to Carrel: list, read, save with a version check, preview the real page, publish. How this site implements it, and the one rule about first publication."
 date: 2026-10-04
+series: Carrel
+part: 2
 tags: [carrel, api, architecture, cloudflare-workers]
 writing_status: finished
 assumed_audience: "Developers connecting a writing tool to sites they already run, without rebuilding those sites."

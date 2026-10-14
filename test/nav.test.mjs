@@ -14,6 +14,7 @@ import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "../app/lib/seo.ts";
 import { EXPLORER_ORIGIN } from "../app/lib/systems.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
+import { newestFirst } from "../app/lib/post-order.mjs";
 import { seriesSlug } from "../app/lib/series-path.mjs";
 import { NAV, ROUTED_PATHS, buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
 
@@ -361,18 +362,45 @@ await test("a content edit that breaks the data does not stop the build: the pie
 });
 
 await test("the Newest post and the tile order are the /writing listing's order for posts that share a day", () => {
-  // The listing is publish_at desc then row id desc; rows are inserted in the build artifact's order (slug
+  // The listing is publish_at desc, then a series together with its latest part first, then row id desc
+  // (app/lib/post-order.mjs, app/db/posts.ts); rows are inserted in the build artifact's order (slug
   // ascending, scripts/build-content.mjs), so the id of a post is its place in that artifact.
   const artifact = join(root, "content", "generated", "posts.json");
   if (!existsSync(artifact)) return;
-  const rows = JSON.parse(readFileSync(artifact, "utf8")).posts.map((p, i) => ({ slug: p.slug, publishAt: new Date(p.publishAt).toISOString(), draft: p.draft, id: i + 1 }));
-  const listing = rows
-    .filter((r) => !r.draft)
-    .sort((a, b) => (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : b.id - a.id))
-    .map((r) => r.slug);
+  const rows = JSON.parse(readFileSync(artifact, "utf8")).posts.map((p, i) => ({
+    slug: p.slug,
+    publishAt: new Date(p.publishAt).toISOString(),
+    draft: p.draft,
+    series: p.series ?? null,
+    part: p.part ?? null,
+    id: i + 1,
+  }));
+  const listing = newestFirst(rows.filter((r) => !r.draft), (r) => r.id).map((r) => r.slug);
   assert.deepEqual(NAV_DATA.posts.map((p) => p.slug), listing);
   assert.equal(panels().writing.spotlight?.to, `/writing/${listing[0]}`);
   assert.deepEqual(panels().writing.tiles.map((t) => t.to), listing.slice(0, 3).map((slug) => `/writing/${slug}`));
+});
+
+await test("each Teaching course tile carries its page's own description, read from the page's front matter", () => {
+  const tiles = panels().teaching.tiles;
+  // Every course tile the menu shows, so a new tile whose page has no description fails here.
+  assert.ok(tiles.length > 0 && tiles.every((t) => t.to.startsWith("/teaching/")));
+  for (const tile of tiles) {
+    const file = join(root, "content", "pages", `teaching-${tile.to.split("/").pop()}.md`);
+    const { data } = matter(readFileSync(file, "utf8"), {});
+    assert.equal(data.path, tile.to);
+    assert.ok(typeof data.description === "string" && data.description !== "", `${tile.to} has no front matter description`);
+    assert.equal(tile.description, data.description, `${tile.to}: the tile's line is not the page's description`);
+  }
+});
+
+await test("the three Carrel posts, all dated one day, show part 3, part 2, part 1, and part 3 is the Newest", () => {
+  const parts = ["carrel-ai-drafts-beside-mine", "carrel-one-api-for-every-site", "carrel-a-writing-desk-apart-from-the-site"];
+  const bySlug = new Map(readPosts().map((p) => [p.slug, p]));
+  assert.deepEqual(parts.map((slug) => [bySlug.get(slug)?.series, bySlug.get(slug)?.part]), [["Carrel", 3], ["Carrel", 2], ["Carrel", 1]]);
+  assert.deepEqual(NAV_DATA.posts.slice(0, 3).map((p) => p.slug), parts);
+  assert.equal(panels().writing.spotlight?.to, `/writing/${parts[0]}`);
+  assert.deepEqual(panels().writing.tiles.map((t) => t.to), parts.map((slug) => `/writing/${slug}`));
 });
 
 await test("the 404 page's section list is the same five hubs the bar has", () => {

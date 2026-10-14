@@ -34,6 +34,11 @@
   display: block;
 }
 
+/* The organization, one line per name: the university, then its system. */
+.intro-affil .org-line {
+  display: block;
+}
+
 .intro-affil > .intro-affil-system {
   margin-block-start: 0.125rem;
   color: var(--text-secondary);

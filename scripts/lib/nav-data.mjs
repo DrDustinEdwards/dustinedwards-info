@@ -17,6 +17,7 @@ import matter from "gray-matter";
 import { decodeEntities } from "../../app/lib/publications/entities.mjs";
 import { recordFromData } from "../../app/lib/publications/record.mjs";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
+import { newestFirst } from "../../app/lib/post-order.mjs";
 import { frontmatterSchema } from "../../app/lib/content/pipeline.mjs";
 import { plainText } from "../../app/lib/search/records.mjs";
 import { readIdentity } from "./identity.mjs";
@@ -26,6 +27,7 @@ const POSTS_DIR = path.join(ROOT, "content", "posts");
 const PUBLICATIONS_DIR = path.join(ROOT, "content", "publications");
 const CV_DIR = path.join(ROOT, "content", "cv");
 const PROCEDURES_DIR = path.join(ROOT, "content", "procedures");
+const PAGES_DIR = path.join(ROOT, "content", "pages");
 export const NAV_DATA_PATH = path.join(ROOT, "app", "lib", "nav-data.generated.mjs");
 
 /** The longest first line a spotlight carries. */
@@ -63,15 +65,16 @@ export function firstLineOf(body) {
  * at midnight UTC, as renderPost states it), so a bad file cannot give the header a different post than the
  * site has. A file that fails is left out and named in `problems`, for a gate to report; the build goes on.
  *
- * Order: publish instant descending, then slug descending. The listings break a tie by row id descending, the
- * rows are inserted in the build artifact's order (slug ascending), and a build cannot see ids, so slug
- * descending is what matches the listing for posts sharing an instant (test/nav.test.mjs pins it against the artifact).
+ * Order: the listings' rule (app/lib/post-order.mjs): publish instant descending; posts sharing an instant
+ * and a series, latest part first; otherwise the later row first. The listings break that last tie by row id,
+ * the rows are inserted in the build artifact's order (slug ascending), and a build cannot see ids, so slug
+ * descending stands in for it (test/nav.test.mjs pins the result against the artifact).
  *
  * @param {string} [dir]
  * @param {string[]} [problems] filled with one line per file that did not parse
  */
 export function readPosts(dir = POSTS_DIR, problems = []) {
-  return readdirSync(dir)
+  const posts = readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .flatMap((name) => {
       const { data, content } = matter(readFileSync(path.join(dir, name), "utf8"), {});
@@ -90,11 +93,12 @@ export function readPosts(dir = POSTS_DIR, problems = []) {
           publishAt: new Date(fm.publish_at ?? `${fm.date}T00:00:00.000Z`).toISOString(),
           firstLine: firstLineOf(content),
           series: fm.series ?? null,
+          part: fm.part ?? null,
           tags: fm.tags,
         },
       ];
-    })
-    .sort((a, b) => (a.publishAt === b.publishAt ? (a.slug < b.slug ? 1 : -1) : a.publishAt < b.publishAt ? 1 : -1));
+    });
+  return newestFirst(posts, (post) => post.slug);
 }
 
 /**
@@ -178,6 +182,27 @@ export function readLibraryCounts(dir = PROCEDURES_DIR) {
 }
 
 /**
+ * The front matter `description` of every page under /teaching/, by path, read from content/pages (the field the
+ * page's meta description uses). The Teaching panel's course tiles take their line from here by their own address,
+ * so the tiles name the courses once, in app/lib/nav.ts, and test/nav.test.mjs fails a tile whose page has no
+ * description. A page without one is left out.
+ *
+ * @param {string} [dir]
+ * @returns {Record<string, string>}
+ */
+export function readTeachingDescriptions(dir = PAGES_DIR) {
+  /** @type {Record<string, string>} */
+  const found = {};
+  for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
+    const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
+    if (typeof data.path === "string" && data.path.startsWith("/teaching/") && typeof data.description === "string" && data.description.trim() !== "") {
+      found[data.path] = data.description.trim();
+    }
+  }
+  return found;
+}
+
+/**
  * What the build had to leave out, for the gate to report (test/nav.test.mjs): posts that fail the front matter
  * schema, a paper file that cannot be read, no published paper, no town for the lab. The build itself only warns.
  *
@@ -198,6 +223,7 @@ export function readNavData() {
     latestPaper: readLatestPaper(),
     posts: readPosts(),
     libraries: readLibraryCounts(),
+    courses: readTeachingDescriptions(),
     lab: { department: identity.department, university: identity.affiliation, place: readLabPlace(identity.affiliation) },
   };
 }

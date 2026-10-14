@@ -141,18 +141,23 @@ function enhanceMenus() {
   };
 
   /*
-   * Where anchor positioning is missing, the card's x from the button's box, held inside the header's
-   * inset as the stylesheet's clamp does. Where it exists the stylesheet owns x and this writes nothing.
+   * Where anchor positioning is missing, the card's x from the button's box, as the stylesheet works it out:
+   * the card's left edge on the button's left edge, or where that would run past the right inset, its right
+   * edge on the button's right edge, and held inside the header's inset at both sides. Where anchor
+   * positioning exists the stylesheet owns x and this writes nothing.
    */
-  const anchored = CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a");
+  // The same three tests as the stylesheet's @supports, so exactly one of the two owns x.
+  const anchored =
+    CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a") && CSS.supports("left: calc(sign(1px) * 1px)");
   const place = (menu: Menu) => {
     if (anchored || mobile.matches) return;
     const header = document.querySelector<HTMLElement>("[data-site-header]");
     const inset = header ? parseFloat(getComputedStyle(header).paddingInlineStart) : 0;
-    const pad = parseFloat(getComputedStyle(menu.panel).paddingInlineStart);
-    const right = document.documentElement.clientWidth - menu.panel.offsetWidth - inset;
-    const x = Math.max(inset, Math.min(menu.item.getBoundingClientRect().left - pad, right));
-    menu.panel.style.setProperty("--nav-card-x", `${x}px`);
+    const width = menu.panel.offsetWidth;
+    const limit = document.documentElement.clientWidth - width - inset;
+    const button = menu.item.getBoundingClientRect();
+    const x = button.left > limit ? button.right - width : button.left;
+    menu.panel.style.setProperty("--nav-card-x", `${Math.max(inset, Math.min(x, limit))}px`);
   };
 
   const rectHas = (rect: DOMRect, x: number, y: number) =>

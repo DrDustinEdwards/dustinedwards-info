@@ -182,6 +182,12 @@ function researchMenu(): Menu {
   };
 }
 
+/** A course tile; its line is the course page's own front matter description, read at build (scripts/lib/nav-data.mjs). */
+function courseTile(to: string, label: string, icon: NavIcon): MenuLink {
+  const description = (NAV_DATA.courses as Record<string, string> | undefined)?.[to];
+  return description ? { to, label, icon, description } : { to, label, icon };
+}
+
 function teachingMenu(): Menu {
   return {
     id: "teaching",
@@ -189,9 +195,9 @@ function teachingMenu(): Menu {
     heading: "Teaching",
     blurb: "Courses, tutorials and study help",
     tiles: [
-      { to: "/teaching/phage-discovery", label: "Phage Discovery Program", icon: "bacteriophages" },
-      { to: "/teaching/virus-isolation", label: "Virus Isolation", icon: "research" },
-      { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics", icon: "software" },
+      courseTile("/teaching/phage-discovery", "Phage Discovery Program", "bacteriophages"),
+      courseTile("/teaching/virus-isolation", "Virus Isolation", "research"),
+      courseTile("/teaching/phage-bioinformatics", "Phage Bioinformatics", "software"),
     ],
     rows: [
       {
