@@ -23,7 +23,7 @@ Portfolio rule 6.3.
 
 ### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI.
 
-Every change lands by pull request (portfolio rule 4.3). A merge to main deploys via `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. Sessions never merge: Capsid's signed auto-merge does once CI is green on the exact head, or the seat. A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. A ship window owns the tree throughout. See the `ship` skill.
+Every change lands by pull request (portfolio rule 4.3). A merge to main deploys via `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. A session merges once CI is green on the exact head and Dustin said yes in chat, as do Capsid's signed auto-merge and the seat. A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. A ship window owns the tree throughout. See the `ship` skill.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
