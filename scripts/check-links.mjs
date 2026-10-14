@@ -9,7 +9,7 @@
  *              own pipeline, so a link is read the way a reader gets it; a post's further_reading too
  *   app        every href/to/url in the route components, menus, footer and data (read off the syntax
  *              tree), every `${SITE_ORIGIN}/path`, and every https://dustinedwards.info/ URL in a string
- *   machines   content/llms.txt, the sitemap's static paths, every page twin and every paper twin
+ *   machines   content/llms.txt, the sitemap's static pages, every page twin and every paper twin
  *   redirects  the targets of the WordPress map and the PDF map, since a 301 into a 404 is a broken link
  *
  * WHAT A LINK MAY BE
@@ -26,7 +26,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath, publishedContentPagePaths } from "../app/lib/content-pages.mjs";
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
@@ -50,6 +50,7 @@ import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { readPublishedPages } from "./lib/published-pages.mjs";
 import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -86,8 +87,12 @@ const PUBLIC = join(root, "public");
 const publicFiles = walkFiles(PUBLIC).map((file) => `/${relative(PUBLIC, file).split(sep).join("/")}`);
 for (const path of publicFiles) served.add(path);
 
-// The page twins are written by build:content and gitignored, so they are named from the page list.
-for (const path of CONTENT_PAGE_PATHS) served.add(contentPageMarkdownPath(path));
+// The page twins are written by build:content and gitignored, so they are named from the page list. A draft page
+// and its twin answer 404 to a reader, so they are not served; `postVisibility` below marks them as drafts.
+const PUBLISHED_PAGE_PATHS = publishedContentPagePaths(readPublishedPages());
+const DRAFT_PAGE_PATHS = CONTENT_PAGE_PATHS.filter((path) => !PUBLISHED_PAGE_PATHS.includes(path));
+for (const path of DRAFT_PAGE_PATHS) served.delete(path);
+for (const path of PUBLISHED_PAGE_PATHS) served.add(contentPageMarkdownPath(path));
 
 // The procedures (docs/PROCEDURES.md): each page, its sheet and its twin, drawn from D1 by one
 // parameterized route per profile root, compiled here the way sync:content writes them.
@@ -153,8 +158,12 @@ const now = Date.now();
 const isPublic = (post) =>
   isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt }, now);
 
-/** @type {Map<string, boolean>} post path to whether a reader can open it */
+/** @type {Map<string, boolean>} post (or draft page) path to whether a reader can open it */
 const postVisibility = new Map();
+for (const path of DRAFT_PAGE_PATHS) {
+  postVisibility.set(path, false);
+  postVisibility.set(contentPageMarkdownPath(path), false);
+}
 const postModule = routes.get("/writing/:slug") ?? "";
 for (const { post } of posts) {
   const path = `/writing/${post.slug}`;
@@ -440,7 +449,15 @@ for (const file of appFiles) {
       candidate = literalText(n.initializer);
     }
     if (candidate !== null && candidate.startsWith("/") && !candidate.startsWith("//")) {
-      add("app", { where, href: candidate, page: null, isPublic: true });
+      // A footer link marked `page: true` renders only while its page is published (app/lib/footer.ts,
+      // siteLinks), so it may name a draft; every other link to a draft fails below.
+      const whilePublished =
+        ts.isPropertyAssignment(n) &&
+        ts.isObjectLiteralExpression(n.parent) &&
+        n.parent.properties.some(
+          (p) => ts.isPropertyAssignment(p) && p.name.getText(sf) === "page" && p.initializer.kind === ts.SyntaxKind.TrueKeyword,
+        );
+      add("app", { where, href: candidate, page: null, isPublic: !whilePublished });
     }
 
     // `${SITE_ORIGIN}/path`: the path is a link; a fragment here is a JSON-LD id, not an anchor.
@@ -468,18 +485,24 @@ for (const file of appFiles) {
       }
     }
 
-    // The sitemap's static paths are its own list, not link props.
+    // The sitemap's static pages are their own list ({ path, title }), not link props. `as const` wraps the array.
     if (
-      where === "app/routes/sitemap.ts" &&
+      where === "app/lib/site-urls.server.ts" &&
       ts.isVariableDeclaration(n) &&
-      n.name.getText(sf) === "STATIC_PATHS" &&
-      n.initializer &&
-      ts.isArrayLiteralExpression(n.initializer)
+      n.name.getText(sf) === "STATIC_PAGES" &&
+      n.initializer
     ) {
-      for (const element of n.initializer.elements) {
-        if (ts.isStringLiteral(element)) {
-          sitemapPaths += 1;
-          add("sitemap", { where: `${where} STATIC_PATHS`, href: element.text, page: null, isPublic: true });
+      const list = ts.isAsExpression(n.initializer) ? n.initializer.expression : n.initializer;
+      if (ts.isArrayLiteralExpression(list)) {
+        for (const element of list.elements) {
+          if (!ts.isObjectLiteralExpression(element)) continue;
+          for (const prop of element.properties) {
+            if (!ts.isPropertyAssignment(prop) || prop.name.getText(sf) !== "path") continue;
+            if (!ts.isStringLiteral(prop.initializer)) continue;
+            const href = prop.initializer.text;
+            sitemapPaths += 1;
+            add("sitemap", { where: `${where} STATIC_PAGES`, href, page: null, isPublic: true });
+          }
         }
       }
     }
@@ -604,7 +627,7 @@ for (const link of links) {
     ok(
       label,
       !link.isPublic,
-      `${result.path} is a draft or scheduled post${via}, so every reader of this public page gets a 404`,
+      `${result.path} is a draft page, or a draft or scheduled post${via}, so every reader of this public page gets a 404`,
     );
     continue;
   }
@@ -646,7 +669,7 @@ const SCOPES = [
 for (const scope of SCOPES) {
   ok(`scope: ${scope} contributed links`, (perClass.get(scope) ?? 0) > 0, "0 links read, so this source was not examined");
 }
-ok("scope: the sitemap's STATIC_PATHS were located", sitemapPaths >= 5, `read ${sitemapPaths}`);
+ok("scope: the sitemap's STATIC_PAGES were located", sitemapPaths >= 5, `read ${sitemapPaths}`);
 ok("scope: anchors were checked", anchorsChecked > 0, "0 anchors resolved, so the anchor check examined nothing");
 ok("scope: posts were rendered", posts.length > 0, "content/posts produced no posts");
 ok("scope: public/ was read", publicFiles.length > 0, "no static files found under public/");

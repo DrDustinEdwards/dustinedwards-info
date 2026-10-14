@@ -41,7 +41,7 @@ export const LLMS_REQUIRED_MENTIONS = [
  * they are not read as ones.
  */
 const LISTED_PAGE =
-  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/(?:publications|lab)\b)(\/(?:research|teaching|software|cv|privacy|terms)(?:\/[a-z0-9-]+)*)\)/gm;
+  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/(?:publications|lab)\b)(\/(?:research|teaching|software|cv|privacy|terms|accessibility)(?:\/[a-z0-9-]+)*)\)/gm;
 const LISTED_TWIN = /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
 
 /** The page paths the file lists, one per list link. @param {string} text */
@@ -75,11 +75,14 @@ export function overAdvertisedTwins(text, twinUrls) {
  *   origin: string,
  *   findWideDashes: (text: string) => Array<{ line: number, char: string, excerpt: string }>,
  *   twinUrls?: Iterable<string>,
- * }} options pagePaths is every Research, Teaching and Software path, the procedures' included; twinUrls
- *   is every paper twin the corpus produces, left out where the corpus is judged elsewhere
+ *   optionalPagePaths?: readonly string[],
+ * }} options pagePaths is every Research, Teaching and Software path a reader can open, the procedures'
+ *   included, and the file must list each; optionalPagePaths are registered pages that are drafts, which the
+ *   file may list (so its line can land before the page is published) but need not; twinUrls is every paper
+ *   twin the corpus produces, left out where the corpus is judged elsewhere
  * @returns {LlmsCheck[]} every rule, passed or failed, in the order they read
  */
-export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }) {
+export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls, optionalPagePaths = [] }) {
   /** @type {LlmsCheck[]} */
   const checks = [];
   /** @param {string} name @param {boolean} ok @param {string} [detail] */
@@ -149,7 +152,7 @@ export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }
     unlisted.length === 0,
     `absent from ${LLMS_PATH}: ${unlisted.join(", ")}`,
   );
-  const known = new Set(pagePaths);
+  const known = new Set([...pagePaths, ...optionalPagePaths]);
   const stray = [...listed].filter((path) => !known.has(path));
   check(
     "llms.txt lists no Research, Teaching or Software page that is neither in CONTENT_PAGE_PATHS nor a procedure",

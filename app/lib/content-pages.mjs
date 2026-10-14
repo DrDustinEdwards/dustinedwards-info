@@ -55,6 +55,9 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   // published under: the `license` of every Dataset (app/lib/license.mjs).
   "/privacy",
   "/terms",
+  // The accessibility statement (job_fea2f94832b3): what the gates check, in Carrel with the legal pages but
+  // not one of them. It ships as a draft until Dustin approves its text, and the footer links it once published.
+  "/accessibility",
 ]);
 
 /**
@@ -79,6 +82,30 @@ export const LEGAL_BANNER = "Draft";
  * @type {readonly string[]}
  */
 export const CONTENT_PAGES_FROM_DATA = ["/cv"];
+
+/**
+ * The listed pages a reader can open: every one whose page is published, and the ones generated from data.
+ * llms.txt must list each of these. `published` is the published paths from whichever source the caller
+ * judges against: the page files (readPublishedPages()) in CI and the gates, the D1 rows in the llms.txt save.
+ *
+ * @param {readonly string[]} published
+ * @returns {string[]}
+ */
+export function publishedContentPagePaths(published) {
+  return CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.includes(path));
+}
+
+/**
+ * The listed pages that are drafts: llms.txt may name them (so a page's line can land before or after it is
+ * published, in either order) but need not.
+ *
+ * @param {readonly string[]} published as for publishedContentPagePaths
+ * @returns {string[]}
+ */
+export function draftContentPagePaths(published) {
+  const open = publishedContentPagePaths(published);
+  return CONTENT_PAGE_PATHS.filter((path) => !open.includes(path));
+}
 
 /**
  * The pages that have a file in content/pages/, a row in the pages table and the page save, but whose

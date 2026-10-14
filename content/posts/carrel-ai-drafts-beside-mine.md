@@ -3,6 +3,8 @@ title: "Carrel, part 3: AI drafts sit beside mine, never on top"
 slug: carrel-ai-drafts-beside-mine
 description: "How Carrel lets an AI assistant draft, check and preview writing without ever replacing the writer's text or publishing on its own."
 date: 2026-10-04
+series: Carrel
+part: 3
 tags: [carrel, ai, writing, agents]
 writing_status: finished
 assumed_audience: "Writers and developers deciding how much an AI assistant should be allowed to touch."

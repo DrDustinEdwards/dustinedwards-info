@@ -24,6 +24,8 @@ export async function run({ page, browser }) {
     /* A markdown page with a route module of its own, like /software: its row's HTML, no per-viewer bytes. */
     { path: "/terms", module: "terms.tsx" },
     { path: "/contact", module: "contact.tsx" },
+    /* The site map for people: drawn from D1 at request time, the same bytes for every reader. */
+    { path: "/site-map", module: "site-map.tsx" },
     { path: "/systems/capsid", module: "systems.tsx" },
     /* The most-carried tag, so one post being retagged cannot remove the case. */
     { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
@@ -69,6 +71,9 @@ export async function run({ page, browser }) {
     "kb-library.tsx":
       "neither Recipes nor Software how-tos has a published entry yet, so both libraries are a 404 for a visitor " +
       "and a case here would compare two renders of the error page. Add one when the first entry is published.",
+    "accessibility.tsx":
+      "the accessibility page ships as a draft until Dustin approves its text, so a visitor gets a 404 and a case " +
+      "here would compare two renders of the error page. Move it to THEME_CACHED when the page is published.",
     "procedure.version.sheet.tsx":
       "the sheet of a frozen version has no corpus URL for the same reason as procedure.version.tsx.",
   };

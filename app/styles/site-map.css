@@ -1,0 +1,53 @@
+/* The site map (/site-map): one column of sections on a phone, as many as fit beside each other on a wider screen. */
+.site-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--s-6) var(--s-7);
+  margin-block-start: var(--s-6);
+}
+
+.site-map-heading {
+  margin: 0 0 var(--s-3);
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.site-map-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.site-map-list li + li {
+  margin-block-start: var(--s-1);
+}
+
+.site-map-list a {
+  display: inline-block;
+  min-block-size: var(--control-min-dense);
+  padding-block: 2px;
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+.site-map-list a:hover {
+  color: var(--brand-hover);
+}
+
+.site-map-list a:visited {
+  color: var(--visited);
+}
+
+/* A count with no index page of its own (Tags): text, not a link. */
+.site-map-plain {
+  display: inline-block;
+  padding-block: 2px;
+  color: var(--text);
+}

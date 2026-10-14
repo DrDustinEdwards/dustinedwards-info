@@ -3,6 +3,8 @@ title: "Carrel, part 1: a writing desk that lives apart from the site"
 slug: carrel-a-writing-desk-apart-from-the-site
 description: "Why the writing for this site moved out of the site's own admin and into a separate private tool, and what that separation buys."
 date: 2026-10-04
+series: Carrel
+part: 1
 tags: [carrel, writing, architecture, cloudflare]
 writing_status: finished
 assumed_audience: "People who run more than one site and are tired of a different editor in each."

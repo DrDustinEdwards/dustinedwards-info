@@ -45,6 +45,9 @@
 # The facts the header panels read from content (newest paper, posts, the lab's town), written by
 # build-nav-data from the markdown sources for the same reason: derived, so never committed to go stale.
 /app/lib/nav-data.generated.mjs
+
+# Which prose pages are published, for the footer (scripts/lib/published-pages.mjs), for the same reason.
+/app/lib/published-pages.generated.mjs
 /app/kb/registry/references.generated.mjs
 
 # The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records
