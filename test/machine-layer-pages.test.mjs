@@ -35,14 +35,14 @@ const ROOTS = ["/software", "/research/tools", "/cv"];
 const added = pages.filter((page) => ROOTS.some((root) => page.path === root || page.path.startsWith(`${root}/`)));
 const records = recordsForPages(contentPageSearchInputs(pages, entryFor));
 
-test("the pages under test are the software pages, the calculators and the CV", () => {
+await test("the pages under test are the software pages, the calculators and the CV", () => {
   // Scope, so an empty list cannot pass every case below: the eight software pages, four tool pages, the CV.
   assert.ok(added.length >= 13, `only ${added.length} pages`);
   for (const root of ROOTS) assert.ok(added.some((page) => page.path === root), `${root} has no page`);
   assert.ok(added.every((page) => CONTENT_PAGE_PATHS.includes(/** @type {any} */ (page.path))));
 });
 
-test("each page is in the search index: a page record with text, and a record per section heading", () => {
+await test("each page is in the search index: a page record with text, and a record per section heading", () => {
   for (const page of added) {
     const own = records.find((record) => record.url === page.path);
     assert.ok(own, `${page.path} has no search record`);
@@ -56,7 +56,7 @@ test("each page is in the search index: a page record with text, and a record pe
   }
 });
 
-test("a term only a page says finds it: the CV, a calculator and a software page", () => {
+await test("a term only a page says finds it: the CV, a calculator and a software page", () => {
   const find = (/** @type {string} */ term) =>
     new Set(records.filter((record) => record.body.toLowerCase().includes(term)).map((record) => record.docUrl));
   assert.ok(find("pfu/ml").has("/research/tools/titer"));
@@ -64,7 +64,7 @@ test("a term only a page says finds it: the CV, a calculator and a software page
   assert.ok(find("tarleton").has("/cv"));
 });
 
-test("each page has its markdown twin, led by its title, and is listed in llms.txt", () => {
+await test("each page has its markdown twin, led by its title, and is listed in llms.txt", () => {
   const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
   for (const page of added) {
     const twin = contentPageMarkdownBody(page, entryFor(page.path));
@@ -74,14 +74,14 @@ test("each page has its markdown twin, led by its title, and is listed in llms.t
   }
 });
 
-test("the carded roots are exactly these pages' roots", () => {
+await test("the carded roots are exactly these pages' roots", () => {
   assert.deepEqual([...CARDED_PAGE_ROOTS], ROOTS);
   assert.ok(added.every((page) => hasPageCard(page.path)));
   assert.equal(hasPageCard("/research/phages"), false);
   assert.equal(hasPageCard("/softwarex"), false);
 });
 
-test("each page names its own card, keyed on what the card draws, and a retitle names a new one", () => {
+await test("each page names its own card, keyed on what the card draws, and a retitle names a new one", () => {
   const keys = new Set();
   for (const page of added) {
     const card = contentPageCardPath(page);
@@ -94,7 +94,7 @@ test("each page names its own card, keyed on what the card draws, and a retitle 
   assert.equal(contentPageCardPath({ path: "/research/phages", seoTitle: "t", description: "d" }), null);
 });
 
-test("the phage table's Dataset facts come from the table itself", () => {
+await test("the phage table's Dataset facts come from the table itself", () => {
   const phages = pages.find((page) => page.path === "/research/phages");
   assert.ok(phages);
   const facts = markdownTableFacts(phages.markdown);

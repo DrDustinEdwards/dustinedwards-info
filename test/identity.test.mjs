@@ -31,7 +31,7 @@ const derive = (/** @type {any} */ person, /** @type {any[]} */ entries) => {
   return result.ok ? result.identity : /** @type {never} */ (null);
 };
 
-test("the role is the current rank and the discipline; the headline leadership title joins the job title, others do not", () => {
+await test("the role is the current rank and the discipline; the headline leadership title joins the job title, others do not", () => {
   const id = derive(PERSON, ENTRIES);
   assert.equal(id.role, "Professor and Virologist");
   assert.equal(id.jobTitle, "Virologist, Professor, and Department Head");
@@ -42,7 +42,7 @@ test("the role is the current rank and the discipline; the headline leadership t
   assert.equal(id.disciplineLower, "virologist");
 });
 
-test("a promotion in the CV changes the role everywhere it is derived", () => {
+await test("a promotion in the CV changes the role everywhere it is derived", () => {
   const promoted = [...ENTRIES.slice(0, 1).map((e) => ({ ...e, endYear: 2030 })), appointment({ title: "Distinguished Professor" }), ...ENTRIES.slice(1)];
   assert.equal(derive(PERSON, promoted).role, "Distinguished Professor and Virologist");
   const noHead = ENTRIES.filter((e) => e.title !== "Department Head");
@@ -50,7 +50,7 @@ test("a promotion in the CV changes the role everywhere it is derived", () => {
   assert.equal(derive(PERSON, noHead).cvTitle, "Professor and Virologist");
 });
 
-test("a CV with no current position, two, or an incomplete person cannot give the site a role", () => {
+await test("a CV with no current position, two, or an incomplete person cannot give the site a role", () => {
   const none = deriveIdentity(PERSON, ENTRIES.filter((e) => e.title !== "Professor"));
   assert.equal(none.ok, false);
   assert.match(JSON.stringify(none), /0 current positions/);
@@ -62,18 +62,18 @@ test("a CV with no current position, two, or an incomplete person cannot give th
   assert.match(JSON.stringify(noDiscipline), /person\.discipline is missing/);
 });
 
-test("joinList writes one, two and three or more", () => {
+await test("joinList writes one, two and three or more", () => {
   assert.equal(joinList([]), "");
   assert.equal(joinList(["a"]), "a");
   assert.equal(joinList(["a", "b"]), "a and b");
   assert.equal(joinList(["a", "b", "c"]), "a, b, and c");
 });
 
-test("the generated module is exactly what the CV files derive, so no copy of the identity goes stale", () => {
+await test("the generated module is exactly what the CV files derive, so no copy of the identity goes stale", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(IDENTITY)), JSON.parse(JSON.stringify(readIdentity())));
 });
 
-test("the site settings, the person record, the home title source and the CV header all read the derived identity", () => {
+await test("the site settings, the person record, the home title source and the CV header all read the derived identity", () => {
   assert.equal(SITE.role, IDENTITY.role);
   assert.equal(SITE.jobTitle, IDENTITY.jobTitle);
   assert.equal(SITE.description.startsWith(`${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`), true);
@@ -90,7 +90,7 @@ test("the site settings, the person record, the home title source and the CV hea
   assert.equal(cv.person.discipline, "Virologist");
 });
 
-test("page tokens read the identity, refuse an unknown fact, and leave other text alone", () => {
+await test("page tokens read the identity, refuse an unknown fact, and leave other text alone", () => {
   const ok = expandPageTokens("{{identity.name}} is {{identity.adminTitle}} of {{identity.departmentSubject}} at {{identity.affiliation}}", undefined);
   assert.equal(ok.ok, true);
   assert.equal(ok.ok && ok.text, `${IDENTITY.name} is ${IDENTITY.adminTitle} of ${IDENTITY.departmentSubject} at ${IDENTITY.affiliation}`);
@@ -101,7 +101,7 @@ test("page tokens read the identity, refuse an unknown fact, and leave other tex
   for (const key of IDENTITY_TOKEN_KEYS) assert.equal(typeof (/** @type {any} */ (IDENTITY))[key], "string", `${key} is a text fact of the identity`);
 });
 
-test("no page types the headship or the role: each is a token, so a CV change updates every page", () => {
+await test("no page types the headship or the role: each is a token, so a CV change updates every page", () => {
   const dir = new URL("../content/pages/", import.meta.url);
   for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
     const raw = readFileSync(new URL(file, dir), "utf8");
@@ -112,7 +112,7 @@ test("no page types the headship or the role: each is a token, so a CV change up
   }
 });
 
-test("the profile states no title and the validator says why", () => {
+await test("the profile states no title and the validator says why", () => {
   const raw = readFileSync(new URL("../content/cv/profile.md", import.meta.url), "utf8");
   const file = { slug: "profile", type: /** @type {const} */ ("profile") };
   assert.equal(parseCvFile(file, raw).ok, true, "the committed profile is accepted");
@@ -123,7 +123,7 @@ test("the profile states no title and the validator says why", () => {
   assert.match(JSON.stringify(result), /derived from the current appointment/);
 });
 
-test("a headline marker is a boolean on an appointment, and nowhere else", () => {
+await test("a headline marker is a boolean on an appointment, and nowhere else", () => {
   const raw = readFileSync(new URL("../content/cv/appointments.md", import.meta.url), "utf8");
   const file = { slug: "appointments", type: /** @type {const} */ ("appointment") };
   assert.equal(parseCvFile(file, raw).ok, true);

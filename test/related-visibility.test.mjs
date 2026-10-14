@@ -32,15 +32,15 @@ const relatedFor = (slug) => {
   return out.related.map((r) => r.slug);
 };
 
-test("CONTROL: a published post DOES get its published neighbor", () => {
+await test("CONTROL: a published post DOES get its published neighbor", () => {
   assert.deepEqual(relatedFor("live-one"), ["live-two"]);
 });
 
-test("a draft is absent from a related list", () => {
+await test("a draft is absent from a related list", () => {
   assert.ok(!relatedFor("live-one").includes("a-draft"));
 });
 
-test("A SCHEDULED POST IS ABSENT, which is the defect", () => {
+await test("A SCHEDULED POST IS ABSENT, which is the defect", () => {
   const related = relatedFor("live-one");
   assert.ok(
     !related.includes("scheduled"),
@@ -48,7 +48,7 @@ test("A SCHEDULED POST IS ABSENT, which is the defect", () => {
   );
 });
 
-test("a post that becomes visible in the past IS included", () => {
+await test("a post that becomes visible in the past IS included", () => {
   // The other direction of the same rule: `publishAt` in the past is visible,
   // and a filter that excluded it would hide most of the site.
   const corpus = [
@@ -59,7 +59,7 @@ test("a post that becomes visible in the past IS included", () => {
   assert.deepEqual(out.related.map((r) => r.slug), ["just-live"]);
 });
 
-test("a post with NO publish date is treated as published, not as hidden", () => {
+await test("a post with NO publish date is treated as published, not as hidden", () => {
   /* `publishAt` absent means "publish immediately", not "never": excluding it would hide every
    * post that never set one. */
   const corpus = [post({ slug: "anchor" }), post({ slug: "dateless", publishAt: null })];

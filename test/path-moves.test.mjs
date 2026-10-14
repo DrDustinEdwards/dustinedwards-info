@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 
-test("/blog and everything under it moves to /writing", () => {
+await test("/blog and everything under it moves to /writing", () => {
   assert.equal(movedPathTarget("/blog"), "/writing");
   assert.equal(movedPathTarget("/blog/"), "/writing/");
   assert.equal(movedPathTarget("/blog/site-search-on-d1"), "/writing/site-search-on-d1");
@@ -12,7 +12,7 @@ test("/blog and everything under it moves to /writing", () => {
   assert.equal(movedPathTarget("/blog/series/ten-years"), "/writing/series/ten-years");
 });
 
-test("/publications and everything beside or under it moves to /research/publications", () => {
+await test("/publications and everything beside or under it moves to /research/publications", () => {
   assert.equal(movedPathTarget("/publications"), "/research/publications");
   assert.equal(movedPathTarget("/publications.bib"), "/research/publications.bib");
   assert.equal(movedPathTarget("/publications.ris"), "/research/publications.ris");
@@ -24,7 +24,7 @@ test("/publications and everything beside or under it moves to /research/publica
   );
 });
 
-test("/software/abscissa, renamed Enarratio, moves to /software/enarratio with its twin", () => {
+await test("/software/abscissa, renamed Enarratio, moves to /software/enarratio with its twin", () => {
   assert.equal(movedPathTarget("/software/abscissa"), "/software/enarratio");
   assert.equal(movedPathTarget("/software/abscissa/"), "/software/enarratio/");
   assert.equal(movedPathTarget("/software/abscissa.md"), "/software/enarratio.md");
@@ -32,7 +32,7 @@ test("/software/abscissa, renamed Enarratio, moves to /software/enarratio with i
   assert.equal(movedPathTarget("/software/enarratio"), null);
 });
 
-test("the old feed addresses do not move: they keep answering with the feed", () => {
+await test("the old feed addresses do not move: they keep answering with the feed", () => {
   for (const path of [
     "/blog/rss.xml",
     "/blog/feed.json",
@@ -46,20 +46,20 @@ test("the old feed addresses do not move: they keep answering with the feed", ()
   }
 });
 
-test("/projects moves to /software, and only as a whole path", () => {
+await test("/projects moves to /software, and only as a whole path", () => {
   assert.equal(movedPathTarget("/projects"), "/software");
   assert.equal(movedPathTarget("/projects/"), "/software");
   assert.equal(movedPathTarget("/projects/foxhound"), null);
   assert.equal(movedPathTarget("/software"), null);
 });
 
-test("/phage-discovery moves to the roster anchor on every host", () => {
+await test("/phage-discovery moves to the roster anchor on every host", () => {
   assert.equal(movedPathTarget("/phage-discovery"), "/teaching/phage-discovery#roster");
   assert.equal(movedPathTarget("/phage-discovery/"), "/teaching/phage-discovery#roster");
   assert.equal(movedPathTarget("/teaching/phage-discovery"), null);
 });
 
-test("/playground and everything under it is retired to the home page", () => {
+await test("/playground and everything under it is retired to the home page", () => {
   for (const path of [
     "/playground",
     "/playground/",
@@ -74,7 +74,7 @@ test("/playground and everything under it is retired to the home page", () => {
   assert.equal(movedPathTarget("/"), null);
 });
 
-test("a path that only starts with the same letters is not a moved section", () => {
+await test("a path that only starts with the same letters is not a moved section", () => {
   for (const path of [
     "/blogs",
     "/blogroll",

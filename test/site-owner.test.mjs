@@ -6,19 +6,19 @@ import assert from "node:assert/strict";
 
 import { isSiteOwner, publicationsJsonLd } from "../app/lib/seo.ts";
 
-test("every spelling of the owner in the corpus is the owner", () => {
+await test("every spelling of the owner in the corpus is the owner", () => {
   for (const name of ["Dustin Edwards", "Dustin C. Edwards", "Dustin Cole Edwards", " Dustin  Edwards "]) {
     assert.equal(isSiteOwner(name), true, name);
   }
 });
 
-test("A CO-AUTHOR WITH A D AND THE SAME SURNAME IS NOT THE OWNER", () => {
+await test("A CO-AUTHOR WITH A D AND THE SAME SURNAME IS NOT THE OWNER", () => {
   for (const name of ["David Edwards", "D. Edwards", "Dana M. Edwards", "Julie Edwards"]) {
     assert.equal(isSiteOwner(name), false, name);
   }
 });
 
-test("a co-author's name reaches JSON-LD decoded, and only the owner becomes an @id", () => {
+await test("a co-author's name reaches JSON-LD decoded, and only the owner becomes an @id", () => {
   const [, article] = publicationsJsonLd("https://example.test", [
     {
       title: "A paper",

@@ -14,7 +14,7 @@ const fixture = readFileSync(new URL("fixtures/procedures/recipe-fixture.md", im
 const compile = async (raw = fixture) => compileProcedure({ slug: "recipe-fixture", raw, pipeline, registry: registryHost() });
 const q = (amount, unit, extra = {}) => ({ amount: String(amount), unit, fixed: false, min: Number(amount), max: Number(amount), ...extra });
 
-test("an amount converts between metric and imperial; spoons, unknown units and the recipe's own units stay as written", () => {
+await test("an amount converts between metric and imperial; spoons, unknown units and the recipe's own units stay as written", () => {
   assert.equal(readUnits("imperial"), "imperial");
   assert.equal(readUnits("kelvin"), null);
   assert.equal(showQuantity(q(250, "g"), 1, null), "250 g");
@@ -30,21 +30,21 @@ test("an amount converts between metric and imperial; spoons, unknown units and 
   assert.equal(showQuantity({ amount: "80 to 100", unit: "ml", fixed: false, min: 80, max: 100 }, 1, "imperial"), "0.25 to 0.5 cup");
 });
 
-test("volume becomes weight only where the recipe states grams per cup", () => {
+await test("volume becomes weight only where the recipe states grams per cup", () => {
   assert.equal(showQuantity(q(2, "cup"), 1, "metric", 120), "240 g");
   assert.equal(showQuantity(q(2, "cup"), 1, "metric"), "473 ml");
   // Imperial keeps a volume a volume.
   assert.equal(showQuantity(q(2, "cup"), 1, "imperial", 120), "2 cup");
 });
 
-test("a temperature in a step reads in the other scale, to the nearest 5 degrees", () => {
+await test("a temperature in a step reads in the other scale, to the nearest 5 degrees", () => {
   assert.equal(showTemperatures("Bake at 180 °C for 20 minutes.", "imperial"), "Bake at 355 °F for 20 minutes.");
   assert.equal(showTemperatures("Heat to 350 °F.", "metric"), "Heat to 175 °C.");
   assert.equal(showTemperatures("Proof at 25 to 30 °C.", "imperial"), "Proof at 75 to 85 °F.");
   assert.equal(showTemperatures("Bake at 180 °C.", null), "Bake at 180 °C.");
 });
 
-test("the fixture's ingredients say their steps, each step says its ingredients, and the mise-en-place lists each once", async () => {
+await test("the fixture's ingredients say their steps, each step says its ingredients, and the mise-en-place lists each once", async () => {
   const compiled = await compile();
   assert.ok(compiled.ok, JSON.stringify(compiled.errors));
   const { record } = compiled;
@@ -66,7 +66,7 @@ test("the fixture's ingredients say their steps, each step says its ingredients,
   assert.equal(mise.text.split("\n")[0], "- 250 g plain flour");
 });
 
-test("grams_per_cup is a recipe's own number above 0, and the record carries it", async () => {
+await test("grams_per_cup is a recipe's own number above 0, and the record carries it", async () => {
   const stated = await compile(fixture.replace("  - name: flour\n    display: plain flour", "  - name: flour\n    display: plain flour\n    grams_per_cup: 120"));
   assert.ok(stated.ok, JSON.stringify(stated.errors));
   assert.equal(stated.record.materials.find((m) => m.name === "flour")?.gramsPerCup, 120);

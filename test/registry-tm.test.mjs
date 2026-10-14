@@ -27,7 +27,7 @@ const REFERENCE = {
   AAAAAAAAAAAAAAAAAAAA: 40.8506,
 };
 
-test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbour to a thousandth of a degree", () => {
+await test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbour to a thousandth of a degree", () => {
   for (const [sequence, expected] of Object.entries(REFERENCE)) {
     const tm = primerTm(sequence);
     assert.notEqual(tm, null, sequence);
@@ -35,24 +35,24 @@ test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbour to a thou
   }
 });
 
-test("a Tm is rounded to one decimal for display, and only for what has one", () => {
+await test("a Tm is rounded to one decimal for display, and only for what has one", () => {
   assert.equal(primerTmRounded("CATACTGAGCCAATGGTT"), 51.7);
   assert.equal(primerTmRounded("GGCAGCACCTCTGCCATC"), 60.8);
 });
 
-test("a sequence with an ambiguity code, another base or too few bases has no Tm: null, never a guess", () => {
+await test("a sequence with an ambiguity code, another base or too few bases has no Tm: null, never a guess", () => {
   for (const sequence of ["ACGTRYACGTAC", "ACGTNNACGTAC", "ACGUACGUACGU", "acgtacgtacgt", "", "ACGTACGT".slice(0, TM_MIN_LENGTH - 2)]) {
     assert.equal(primerTm(sequence), null, JSON.stringify(sequence));
     assert.equal(primerTmRounded(sequence), null);
   }
 });
 
-test("a longer, GC-richer primer melts hotter than a shorter, A-T-richer one, and the order of the bases matters", () => {
+await test("a longer, GC-richer primer melts hotter than a shorter, A-T-richer one, and the order of the bases matters", () => {
   assert.ok(/** @type {number} */ (primerTm("GGCAGCACCTCTGCCATC")) > /** @type {number} */ (primerTm("CATACTGAGCCAATGGTT")));
   assert.notEqual(primerTm("ACGTACGTAAGGCC"), primerTm("CCGGAATGCATGCA"));
 });
 
-test("the page's statement names the method, its citation, and the stored conditions, from the constants", () => {
+await test("the page's statement names the method, its citation, and the stored conditions, from the constants", () => {
   const text = tmStatement();
   assert.ok(text.includes(TM_CONDITIONS.method));
   assert.ok(text.includes(TM_CONDITIONS.citation));
@@ -64,7 +64,7 @@ test("the page's statement names the method, its citation, and the stored condit
   assert.ok(!wide.test(text), "no wide dash");
 });
 
-test("no Tm is presented as an annealing temperature: the sentence that follows it says it is not, and names the NEB calculator", () => {
+await test("no Tm is presented as an annealing temperature: the sentence that follows it says it is not, and names the NEB calculator", () => {
   const text = annealingSentence();
   assert.match(text, /The Tm estimate is not an annealing temperature./);
   assert.ok(text.includes(NEB_TM_CALCULATOR.url) && NEB_TM_CALCULATOR.url === "https://tmcalculator.neb.com/");

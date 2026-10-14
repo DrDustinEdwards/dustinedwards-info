@@ -16,7 +16,7 @@ const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
 const HEX16 = "0001020304050607";
 const P = "dustin-edwards-";
 
-test("classify() accepts every served extension and refuses executable ones", () => {
+await test("classify() accepts every served extension and refuses executable ones", () => {
   const accepted = [
     "png", "jpg", "jpeg", "webp", "avif", "gif", "svg", "ico",
     "pdf", "webmanifest", "txt",
@@ -60,13 +60,13 @@ const DIMENSION_CASES = [
   [`${HEX16}-1600x900.webp`, null],
 ];
 
-test("dimensionsFromKey measures exactly the keys the writer emits", () => {
+await test("dimensionsFromKey measures exactly the keys the writer emits", () => {
   for (const [input, expected] of DIMENSION_CASES) {
     assert.deepEqual(dimensionsFromKey(input), expected, JSON.stringify(input));
   }
 });
 
-test("on the two inputs that differ, all three readers now give one answer", () => {
+await test("on the two inputs that differ, all three readers now give one answer", () => {
   for (const key of [`${P}${HEX16}-0800x600.webp`, `${P}${HEX16}-800x0600.webp`]) {
     assert.equal(isContentKey(key), false, `isContentKey(${key})`);
     assert.equal(digestFromKey(key), null, `digestFromKey(${key})`);

@@ -33,7 +33,7 @@ function item(over = {}) {
 
 const feed = (/** @type {string[]} */ ...items) => `<rss><channel><title>Germomics</title>${items.join("")}</channel></rss>`;
 
-test("an episode in the live feed's shape parses whole", () => {
+await test("an episode in the live feed's shape parses whole", () => {
   const [ep] = parsePodcastFeed(feed(item()));
   assert.deepEqual(ep, {
     guid: "https://germomics.com/?p=563",
@@ -49,13 +49,13 @@ test("an episode in the live feed's shape parses whole", () => {
   });
 });
 
-test("entities in a title decode, and the channel title is not an episode", () => {
+await test("entities in a title decode, and the channel title is not an episode", () => {
   const eps = parsePodcastFeed(feed(item({ title: "There&#8217;s Something About Typhoid Mary" })));
   assert.equal(eps.length, 1);
   assert.equal(eps[0].title, "There’s Something About Typhoid Mary");
 });
 
-test("AN EPISODE OFF THE ALLOWLIST IS DROPPED, never rendered", () => {
+await test("AN EPISODE OFF THE ALLOWLIST IS DROPPED, never rendered", () => {
   const refused = [
     { audio: "http://media.germomics.com/a.mp3" },
     { audio: "https://evil.example/a.mp3" },
@@ -72,7 +72,7 @@ test("AN EPISODE OFF THE ALLOWLIST IS DROPPED, never rendered", () => {
   }
 });
 
-test("episodes come back newest first whatever the feed's order", () => {
+await test("episodes come back newest first whatever the feed's order", () => {
   const eps = parsePodcastFeed(
     feed(
       item({ guid: "old", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" }),
@@ -82,7 +82,7 @@ test("episodes come back newest first whatever the feed's order", () => {
   assert.deepEqual(eps.map((e) => e.guid), ["new", "old"]);
 });
 
-test("durations in all three itunes forms, and garbage is null", () => {
+await test("durations in all three itunes forms, and garbage is null", () => {
   assert.equal(parseDuration("00:21:17"), 1277);
   assert.equal(parseDuration("21:17"), 1277);
   assert.equal(parseDuration("1277"), 1277);
@@ -91,7 +91,7 @@ test("durations in all three itunes forms, and garbage is null", () => {
   assert.equal(clockTime(3849), "1:04:09");
 });
 
-test("the home page's episode is episodes[0], which is always the newest: no picker, no stored choice", () => {
+await test("the home page's episode is episodes[0], which is always the newest: no picker, no stored choice", () => {
   const eps = parsePodcastFeed(
     feed(item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }), item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" })),
   );
@@ -99,7 +99,7 @@ test("the home page's episode is episodes[0], which is always the newest: no pic
   assert.deepEqual(parsePodcastFeed(feed()), []);
 });
 
-test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
+await test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
   for (const adminNonce of [undefined, "a-test-nonce-0123456789"]) {
     const media = (await contentSecurityPolicy("/", adminNonce))
       .split("; ")

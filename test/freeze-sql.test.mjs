@@ -30,13 +30,13 @@ const row = (over = {}) => ({
 });
 const stored = (db) => db.prepare("SELECT * FROM procedure_versions WHERE slug = 'mini' AND version = '2'").get();
 
-test("a draft and an unversioned procedure are frozen to nothing", () => {
+await test("a draft and an unversioned procedure are frozen to nothing", () => {
   assert.deepEqual(freezeSql(row({ status: "draft" })), []);
   assert.deepEqual(freezeSql(row({ version: null })), []);
   assert.deepEqual(freezeSql(row({ version: "" })), []);
 });
 
-test("a large record and twin go in pieces, each statement under D1's 100 KB, and end sealed and whole", () => {
+await test("a large record and twin go in pieces, each statement under D1's 100 KB, and end sealed and whole", () => {
   const r = row();
   const statements = freezeSql(r);
   assert.ok(statements.length > 5, "the record and the twin are split into pieces");
@@ -51,7 +51,7 @@ test("a large record and twin go in pieces, each statement under D1's 100 KB, an
   assert.equal(got.path, "/research/protocols/mini");
 });
 
-test("a sealed copy is left alone when the same version is written again with other words", () => {
+await test("a sealed copy is left alone when the same version is written again with other words", () => {
   const db = newDb();
   db.exec(freezeSql(row()).join("\n"));
   const first = stored(db);
@@ -59,7 +59,7 @@ test("a sealed copy is left alone when the same version is written again with ot
   assert.deepEqual(stored(db), first);
 });
 
-test("the database refuses to change or delete a sealed copy, and allows it on an unsealed one", () => {
+await test("the database refuses to change or delete a sealed copy, and allows it on an unsealed one", () => {
   const db = newDb();
   db.exec(freezeSql(row()).join("\n"));
   assert.throws(() => db.exec("UPDATE procedure_versions SET record = 'x' WHERE slug = 'mini'"), /never changed/);
@@ -71,7 +71,7 @@ test("the database refuses to change or delete a sealed copy, and allows it on a
   db.exec("DELETE FROM procedure_versions WHERE slug = 'half'");
 });
 
-test("a run that stopped half way leaves an unsealed row, which the next run replaces and seals", () => {
+await test("a run that stopped half way leaves an unsealed row, which the next run replaces and seals", () => {
   const db = newDb();
   const r = row();
   const statements = freezeSql(r);

@@ -14,14 +14,14 @@ function fresh() {
 
 const member = "INSERT INTO members (email, title, status, added_by) VALUES (?, ?, ?, 'dustin@example.org')";
 
-test("the three tables start empty", () => {
+await test("the three tables start empty", () => {
   const db = fresh();
   for (const t of ["members", "member_audit", "member_terms"]) {
     assert.equal(db.prepare(`SELECT count(*) AS n FROM ${t}`).get().n, 0, t);
   }
 });
 
-test("a member's email is stored lower-cased and trimmed, once, and their status is one of three", () => {
+await test("a member's email is stored lower-cased and trimmed, once, and their status is one of three", () => {
   const db = fresh();
   db.prepare(member).run("rosa@example.org", "lab_worker", "active");
   assert.throws(() => db.prepare(member).run("rosa@example.org", "lab_worker", "active"), /UNIQUE|PRIMARY/);
@@ -31,7 +31,7 @@ test("a member's email is stored lower-cased and trimmed, once, and their status
   assert.equal(db.prepare("SELECT status FROM members").get().status, "active");
 });
 
-test("the audit takes only the actions and sync states it names, and a term change has no member", () => {
+await test("the audit takes only the actions and sync states it names, and a term change has no member", () => {
   const db = fresh();
   const audit = "INSERT INTO member_audit (at, actor, actor_title, action, member_email, cloudflare) VALUES ('2026-10-11T00:00:00.000Z', 'a@b.c', 'owner', ?, ?, ?)";
   db.prepare(audit).run("add", "rosa@example.org", "pending");
@@ -40,7 +40,7 @@ test("the audit takes only the actions and sync states it names, and a term chan
   assert.throws(() => db.prepare(audit).run("add", "rosa@example.org", "maybe"), /CHECK/);
 });
 
-test("a term end is a YYYY-MM-DD date, once", () => {
+await test("a term end is a YYYY-MM-DD date, once", () => {
   const db = fresh();
   const term = "INSERT INTO member_terms (end_date, added_by) VALUES (?, 'dustin@example.org')";
   db.prepare(term).run("2026-12-18");

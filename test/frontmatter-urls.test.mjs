@@ -37,7 +37,7 @@ const CASES = [
 ];
 
 for (const [label, field, value, expected] of CASES) {
-  test(`${label} is ${expected ? "accepted" : "REFUSED"}`, () => {
+  await test(`${label} is ${expected ? "accepted" : "REFUSED"}`, () => {
     assert.equal(
       field(value),
       expected,

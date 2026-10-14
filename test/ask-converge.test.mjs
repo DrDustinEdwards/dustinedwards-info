@@ -41,7 +41,7 @@ function readingAfter(
   };
 }
 
-test("converges on the first poll when the index has already caught up", async () => {
+await test("converges on the first poll when the index has already caught up", async () => {
   const clock = fakeClock();
   const { reading } = readingAfter(0);
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
@@ -53,7 +53,7 @@ test("converges on the first poll when the index has already caught up", async (
   assert.deepEqual(clock.state.slept, [ASK_POLL_INTERVAL_MS]);
 });
 
-test("keeps polling through not-yet-converged readings and reports the count", async () => {
+await test("keeps polling through not-yet-converged readings and reports the count", async () => {
   const clock = fakeClock();
   const { reading } = readingAfter(4);
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
@@ -62,7 +62,7 @@ test("keeps polling through not-yet-converged readings and reports the count", a
   assert.equal(out.polls, 5);
 });
 
-test("a permanent miss stays a miss, and carries the latest counts", async () => {
+await test("a permanent miss stays a miss, and carries the latest counts", async () => {
   const clock = fakeClock();
   const { reading, state } = readingAfter(Infinity, { expected: 99, present: 90 });
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
@@ -75,7 +75,7 @@ test("a permanent miss stays a miss, and carries the latest counts", async () =>
   assert.ok(state.calls > 1, "a permanent miss must have been read more than once");
 });
 
-test("THE BOUND: a permanent miss stops at the attempt limit", async () => {
+await test("THE BOUND: a permanent miss stops at the attempt limit", async () => {
   const clock = fakeClock();
   const { reading, state } = readingAfter(Infinity);
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
@@ -84,7 +84,7 @@ test("THE BOUND: a permanent miss stops at the attempt limit", async () => {
   assert.equal(state.calls, ASK_POLL_ATTEMPTS);
 });
 
-test("THE BOUND: no poll begins after the window has elapsed", async () => {
+await test("THE BOUND: no poll begins after the window has elapsed", async () => {
   const clock = fakeClock();
   const start = clock.now();
   const { reading } = readingAfter(Infinity);
@@ -105,7 +105,7 @@ test("THE BOUND: no poll begins after the window has elapsed", async () => {
   );
 });
 
-test("THE BOUND: a clock that never advances still terminates", async () => {
+await test("THE BOUND: a clock that never advances still terminates", async () => {
   // Each bound is asserted with the other disabled: a bound only ever exercised alongside a
   // second one has not been shown to do anything.
   const { reading, state } = readingAfter(Infinity);
@@ -119,7 +119,7 @@ test("THE BOUND: a clock that never advances still terminates", async () => {
   assert.equal(state.calls, ASK_POLL_ATTEMPTS);
 });
 
-test("an unreadable poll is neither convergence nor a miss", async () => {
+await test("an unreadable poll is neither convergence nor a miss", async () => {
   const clock = fakeClock();
   const { reading } = readingAfter(3, { before: () => null });
 
@@ -128,7 +128,7 @@ test("an unreadable poll is neither convergence nor a miss", async () => {
   assert.equal(out.polls, 4);
 });
 
-test("a reading that throws is an unreadable poll, not a crash", async () => {
+await test("a reading that throws is an unreadable poll, not a crash", async () => {
   const clock = fakeClock();
   const { reading } = readingAfter(1, {
     before: () => {
@@ -141,7 +141,7 @@ test("a reading that throws is an unreadable poll, not a crash", async () => {
   assert.equal(out.polls, 2);
 });
 
-test("a malformed reading is not mistaken for convergence", async () => {
+await test("a malformed reading is not mistaken for convergence", async () => {
   const clock = fakeClock();
   // `ok` absent entirely: a truthy object whose shape changed must not read as a pass.
   const reading = async () => ({ name: "ask-index-drift", status: "fine" });
@@ -151,7 +151,7 @@ test("a malformed reading is not mistaken for convergence", async () => {
   assert.equal(out.latest, null);
 });
 
-test("a thrown read's reason reaches the poll callback and the result", async () => {
+await test("a thrown read's reason reaches the poll callback and the result", async () => {
   const clock = fakeClock();
   /** @type {Array<string | null>} */
   const seen = [];
@@ -173,7 +173,7 @@ test("a thrown read's reason reaches the poll callback and the result", async ()
 const SHORT_ROW = { name: "ask-index-drift", ok: false, expected: 157, present: 155 };
 const ASK_ONLY = { "ask-index-drift": DEFERRED_CHECKS["ask-index-drift"] };
 
-test("THE LATE COUNT: a row that lists short after the upload settles, and is no miss", async () => {
+await test("THE LATE COUNT: a row that lists short after the upload settles, and is no miss", async () => {
   const clock = fakeClock();
   const { reading, state } = readingAfter(2, { expected: 157, present: 156 });
   const row = await settleAskDrift({ row: SHORT_ROW, reading, sleep: clock.sleep, now: clock.now });
@@ -185,7 +185,7 @@ test("THE LATE COUNT: a row that lists short after the upload settles, and is no
   assert.deepEqual(converged, ["ask-index-drift"]);
 });
 
-test("THE REAL SHORTFALL: a count that never arrives is a miss naming the last count and the wait", async () => {
+await test("THE REAL SHORTFALL: a count that never arrives is a miss naming the last count and the wait", async () => {
   const clock = fakeClock();
   const { reading } = readingAfter(Infinity, { expected: 157, present: 154 });
   const row = await settleAskDrift({ row: SHORT_ROW, reading, sleep: clock.sleep, now: clock.now });
@@ -202,7 +202,7 @@ test("THE REAL SHORTFALL: a count that never arrives is a miss naming the last c
   );
 });
 
-test("a row that is already ok is not re-read", async () => {
+await test("a row that is already ok is not re-read", async () => {
   const clock = fakeClock();
   const { reading, state } = readingAfter(0);
   const ok = { name: "ask-index-drift", ok: true };

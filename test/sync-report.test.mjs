@@ -8,7 +8,7 @@ import {
   mediaSyncSummary,
 } from "../app/lib/operator/sync-report.mjs";
 
-test("a real convergence reports converged and zero drift", () => {
+await test("a real convergence reports converged and zero drift", () => {
   const r = askSyncReport({ uploaded: 122, removed: 0, cacheDropped: 3, expected: 122, present: 122 });
   assert.equal(r.converged, true);
   assert.equal(r.drift, 0);
@@ -16,7 +16,7 @@ test("a real convergence reports converged and zero drift", () => {
   assert.equal(r.present, 122);
 });
 
-test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
+await test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
   // The counts are the only thing that can tell, so they are the only thing trusted.
   const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 122, present: 90 });
   assert.equal(r.converged, false, "an untouched short index must never read as converged");
@@ -24,14 +24,14 @@ test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
   assert.match(askSyncSummary(r), /STILL SHORT/);
 });
 
-test("uploading a lot and still being short is NOT converged either", () => {
+await test("uploading a lot and still being short is NOT converged either", () => {
   // `uploaded` is what the loop THINKS it did; only the read-back can contradict it.
   const r = askSyncReport({ uploaded: 122, removed: 0, cacheDropped: 0, expected: 122, present: 121 });
   assert.equal(r.converged, false);
   assert.equal(r.drift, 1);
 });
 
-test("DRIFT IS ABSOLUTE, because a too-large index is also wrong", () => {
+await test("DRIFT IS ABSOLUTE, because a too-large index is also wrong", () => {
   // More present than expected is stale items, which is how a withdrawn post keeps answering.
   // A negative drift would read as healthy to any caller comparing drift > 0.
   const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 90, present: 122 });
@@ -39,7 +39,7 @@ test("DRIFT IS ABSOLUTE, because a too-large index is also wrong", () => {
   assert.equal(r.converged, false);
 });
 
-test("AN UNREADABLE COUNT FAILS CLOSED", () => {
+await test("AN UNREADABLE COUNT FAILS CLOSED", () => {
   // A count that could not be read must not average out to agreement.
   for (const bad of [null, undefined, Number.NaN, "122", 1.5]) {
     assert.equal(
@@ -50,7 +50,7 @@ test("AN UNREADABLE COUNT FAILS CLOSED", () => {
   }
 });
 
-test("converged is never taken from the caller", () => {
+await test("converged is never taken from the caller", () => {
   // Passing it in must change nothing: it is derived or it is worthless.
   const r = askSyncReport({
     uploaded: 0, removed: 0, cacheDropped: 0, expected: 122, present: 90,
@@ -60,7 +60,7 @@ test("converged is never taken from the caller", () => {
   assert.equal(r.drift, 32);
 });
 
-test("the summary carries both counts either way, so a log line is diagnosable", () => {
+await test("the summary carries both counts either way, so a log line is diagnosable", () => {
   const good = askSyncSummary(askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 7, present: 7 }));
   assert.match(good, /7 expected/);
   assert.match(good, /7 present/);
@@ -83,7 +83,7 @@ const CLEAN = {
   extra: [],
 };
 
-test("media: a real convergence reports converged and zero drift", () => {
+await test("media: a real convergence reports converged and zero drift", () => {
   const r = mediaSyncReport(CLEAN);
   assert.equal(r.converged, true);
   assert.equal(r.drift, 0);
@@ -91,7 +91,7 @@ test("media: a real convergence reports converged and zero drift", () => {
   assert.equal(r.present, 69);
 });
 
-test("media: THE CASE A COUNT COMPARISON CANNOT SEE", () => {
+await test("media: THE CASE A COUNT COMPARISON CANNOT SEE", () => {
   /* Identical totals and the index wrong twice: this is why the media report compares key
    * SETS rather than reusing the count comparison. */
   const r = mediaSyncReport({
@@ -105,7 +105,7 @@ test("media: THE CASE A COUNT COMPARISON CANNOT SEE", () => {
   assert.equal(r.drift, 2);
 });
 
-test("media: THE OFL.txt CASE, which is the one this door was built for", () => {
+await test("media: THE OFL.txt CASE, which is the one this door was built for", () => {
   const r = mediaSyncReport({
     ...CLEAN,
     expected: 69,
@@ -117,7 +117,7 @@ test("media: THE OFL.txt CASE, which is the one this door was built for", () => 
   assert.deepEqual(r.missing, ["/fonts/OFL.txt"]);
 });
 
-test("media: a key that FAILED to derive is not convergence", () => {
+await test("media: a key that FAILED to derive is not convergence", () => {
   /* A key that threw leaves no row and an unchanged source, so both key sets agree; only the
    * failure list says anything is wrong. */
   const r = mediaSyncReport({ ...CLEAN, failures: ["/x.png: IMAGES returned 500"] });
@@ -128,7 +128,7 @@ test("media: a key that FAILED to derive is not convergence", () => {
   assert.deepEqual(r.failures, ["/x.png: IMAGES returned 500"]);
 });
 
-test("media: converged is never taken from the caller", () => {
+await test("media: converged is never taken from the caller", () => {
   const r = mediaSyncReport({
     ...CLEAN,
     present: 60,
@@ -140,14 +140,14 @@ test("media: converged is never taken from the caller", () => {
   assert.equal(r.converged, false);
 });
 
-test("media: an unreadable count is not a passing count", () => {
+await test("media: an unreadable count is not a passing count", () => {
   for (const bad of [null, undefined, NaN, "69", 1.5]) {
     assert.equal(mediaSyncReport({ ...CLEAN, expected: bad }).converged, false, `expected=${bad}`);
     assert.equal(mediaSyncReport({ ...CLEAN, present: bad }).converged, false, `present=${bad}`);
   }
 });
 
-test("media: a non-array missing, extra or failure list fails closed without a crash", () => {
+await test("media: a non-array missing, extra or failure list fails closed without a crash", () => {
   // A report that cannot say what failed has not converged (Dustin's ruling, job_acaa730fcbc8).
   const r = mediaSyncReport({ ...CLEAN, missing: "nope", extra: null, failures: 7 });
   assert.deepEqual(r.missing, []);
@@ -162,13 +162,13 @@ test("media: a non-array missing, extra or failure list fails closed without a c
   }
 });
 
-test("media: a failure entry that is not a string still counts as a failure", () => {
+await test("media: a failure entry that is not a string still counts as a failure", () => {
   const r = mediaSyncReport({ ...CLEAN, failures: [{ key: "/x.png" }] });
   assert.equal(r.converged, false);
   assert.equal(r.unreadable, true);
 });
 
-test("ask: an unreadable failure list is not converged, an absent one is", () => {
+await test("ask: an unreadable failure list is not converged, an absent one is", () => {
   const counts = { uploaded: 5, removed: 0, cacheDropped: 0, expected: 5, present: 5 };
   for (const bad of [7, null, "nope", {}]) {
     const r = askSyncReport({ ...counts, failed: bad });
@@ -178,7 +178,7 @@ test("ask: an unreadable failure list is not converged, an absent one is", () =>
   assert.equal(askSyncReport(counts).converged, true);
 });
 
-test("media: the summary names what is wrong, not just that something is", () => {
+await test("media: the summary names what is wrong, not just that something is", () => {
   const good = mediaSyncSummary(mediaSyncReport(CLEAN));
   assert.match(good, /converged/);
   assert.match(good, /69 expected/);

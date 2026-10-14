@@ -30,14 +30,14 @@ const CLEAN_REAL = [
   "✅ No migrations to apply!",
 ].join("\n");
 
-test("THE DEFECT: a pending migration is REFUSED and named", () => {
+await test("THE DEFECT: a pending migration is REFUSED and named", () => {
   const verdict = readMigrationList({ code: 0, text: PENDING_REAL });
   assert.equal(verdict.state, "pending");
   assert.deepEqual(verdict.pending, ["0011_media_trash_tags.sql"]);
   assert.match(verdict.reason, /not applied/);
 });
 
-test("THE INVERSE: nothing pending proceeds", () => {
+await test("THE INVERSE: nothing pending proceeds", () => {
   // The name pattern is anchored to the four-digit prefix, so the wrangler
   // version line and its update notice cannot be read as filenames.
   const verdict = readMigrationList({ code: 0, text: CLEAN_REAL });
@@ -45,7 +45,7 @@ test("THE INVERSE: nothing pending proceeds", () => {
   assert.deepEqual(verdict.pending, []);
 });
 
-test("several pending migrations are all named, not just the first", () => {
+await test("several pending migrations are all named, not just the first", () => {
   const text = PENDING_REAL.replace(
     "│ 0011_media_trash_tags.sql │",
     "│ 0011_media_trash_tags.sql │\n│ 0012_something_else.sql   │",
@@ -55,7 +55,7 @@ test("several pending migrations are all named, not just the first", () => {
   assert.deepEqual(verdict.pending, ["0011_media_trash_tags.sql", "0012_something_else.sql"]);
 });
 
-test("FAILS CLOSED: a non-zero exit is unreadable, never clean", () => {
+await test("FAILS CLOSED: a non-zero exit is unreadable, never clean", () => {
   // Network down, auth expired, database renamed: each exits non-zero and prints no names.
   for (const text of ["", "Authentication error [code: 10000]", CLEAN_REAL]) {
     const verdict = readMigrationList({ code: 1, text });
@@ -63,20 +63,20 @@ test("FAILS CLOSED: a non-zero exit is unreadable, never clean", () => {
   }
 });
 
-test("FAILS CLOSED: output this parser does not recognize is unreadable", () => {
+await test("FAILS CLOSED: output this parser does not recognize is unreadable", () => {
   // An empty parse of CHANGED output looks exactly like a clean database.
   const verdict = readMigrationList({ code: 0, text: "wrangler said something new" });
   assert.equal(verdict.state, "unreadable");
   assert.match(verdict.reason, /format has changed/);
 });
 
-test("FAILS CLOSED: names without the heading are unreadable, not clean", () => {
+await test("FAILS CLOSED: names without the heading are unreadable, not clean", () => {
   const verdict = readMigrationList({ code: 0, text: "0011_media_trash_tags.sql" });
   assert.equal(verdict.state, "unreadable");
   assert.deepEqual(verdict.pending, ["0011_media_trash_tags.sql"]);
 });
 
-test("AMBIGUITY RESOLVES TOWARD REFUSING, never toward shipping", () => {
+await test("AMBIGUITY RESOLVES TOWARD REFUSING, never toward shipping", () => {
   const verdict = readMigrationList({
     code: 0,
     text: `${CLEAN_REAL}\nMigrations to be applied:\n│ 0011_media_trash_tags.sql │`,
@@ -84,12 +84,12 @@ test("AMBIGUITY RESOLVES TOWARD REFUSING, never toward shipping", () => {
   assert.equal(verdict.state, "pending");
 });
 
-test("the empty match set alone is never evidence of a clean database", () => {
+await test("the empty match set alone is never evidence of a clean database", () => {
   const noNames = readMigrationList({ code: 0, text: "Resource location: remote" });
   assert.notEqual(noNames.state, "clean");
 });
 
-test("the refusal carries the exact next command, database filled in", () => {
+await test("the refusal carries the exact next command, database filled in", () => {
   assert.equal(
     applyCommand("dustinedwards"),
     "npx wrangler d1 migrations apply dustinedwards --remote",

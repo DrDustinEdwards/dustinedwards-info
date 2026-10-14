@@ -52,7 +52,7 @@ function newestPaperOnDisk() {
   return papers[0];
 }
 
-test("every page a panel links to outside the markdown set is a route app/routes.ts declares", async () => {
+await test("every page a panel links to outside the markdown set is a route app/routes.ts declares", async () => {
   const routes = await declaredRouteModules();
   assert.deepEqual(
     ROUTED_PATHS.filter((path) => !routes.has(path)),
@@ -60,7 +60,7 @@ test("every page a panel links to outside the markdown set is a route app/routes
   );
 });
 
-test("every link the five panels render resolves: a declared route, a real post, tag, series or paper, or another site", async () => {
+await test("every link the five panels render resolves: a declared route, a real post, tag, series or paper, or another site", async () => {
   const routes = await declaredRouteModules();
   const posts = postsOnDisk().filter((p) => !p.draft);
   const paper = newestPaperOnDisk();
@@ -92,17 +92,17 @@ test("every link the five panels render resolves: a declared route, a real post,
   assert.ok(checked >= 40, `only ${checked} panel links were examined, so the sweep proves little`);
 });
 
-test("the header's own sign-in link and the 404 page's sections are routes too", async () => {
+await test("the header's own sign-in link and the 404 page's sections are routes too", async () => {
   const routes = await declaredRouteModules();
   assert.ok(routes.has("/lab"), "the Lab sign-in link needs /lab");
   assert.ok(routes.has("/search"));
 });
 
-test("the generated data is current: building it again from the content gives the file the header imports", () => {
+await test("the generated data is current: building it again from the content gives the file the header imports", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(NAV_DATA)), JSON.parse(JSON.stringify(readNavData())));
 });
 
-test("a link whose page is not written stays out, with the tile, row or spotlight it empties, and returns once the page exists", () => {
+await test("a link whose page is not written stays out, with the tile, row or spotlight it empties, and returns once the page exists", () => {
   const menus = menusAt(NOW);
   const unwritten = new Set(["/teaching/virus-isolation", "/teaching/study-skills", "/contact", "/teaching#join-the-lab"]);
   const before = liveMenu(menus.teaching, (to) => isLive(to, NOW) && !unwritten.has(to));
@@ -119,14 +119,14 @@ test("a link whose page is not written stays out, with the tile, row or spotligh
   assert.equal(after.rows.length, 2);
 });
 
-test("an anchor is live only when its heading is listed, never on its page alone", () => {
+await test("an anchor is live only when its heading is listed, never on its page alone", () => {
   assert.equal(isLive("/teaching"), true);
   assert.equal(isLive("/teaching#join-the-lab"), true);
   assert.equal(isLive("/teaching#courses"), false);
   assert.equal(isLive("/research/publications#2024"), false);
 });
 
-test("Recipes and Software how-tos are links only while their library has a published entry, because an empty library answers 404", () => {
+await test("Recipes and Software how-tos are links only while their library has a published entry, because an empty library answers 404", () => {
   const published = (profile) =>
     readdirSync(join(root, "content", "procedures"))
       .filter((name) => name.endsWith(".md"))
@@ -150,7 +150,7 @@ test("Recipes and Software how-tos are links only while their library has a publ
   );
 });
 
-test("a tag, a series or a post nobody published is not live", () => {
+await test("a tag, a series or a post nobody published is not live", () => {
   assert.equal(isLive("/writing/tags/no-such-tag", NOW), false);
   assert.equal(isLive("/writing/series/no-such-series", NOW), false);
   assert.equal(isLive("/writing/no-such-post", NOW), false);
@@ -158,7 +158,7 @@ test("a tag, a series or a post nobody published is not live", () => {
   assert.equal(isLive("/interests/recipes", NOW), false);
 });
 
-test("every panel has the same parts: three tiles, rows beside a spotlight, three quick links", () => {
+await test("every panel has the same parts: three tiles, rows beside a spotlight, three quick links", () => {
   const all = panels();
   assert.deepEqual(Object.keys(all), ["research", "teaching", "software", "writing", "about"]);
   for (const [id, menu] of Object.entries(all)) {
@@ -171,7 +171,7 @@ test("every panel has the same parts: three tiles, rows beside a spotlight, thre
   }
 });
 
-test("the old Interests column and the long Protocols label are gone, and no panel names a single-item subhead", () => {
+await test("the old Interests column and the long Protocols label are gone, and no panel names a single-item subhead", () => {
   const html = JSON.stringify(panels());
   assert.ok(!html.includes("Protocols: Lab methods and primer library"));
   assert.ok(!/\/interests\//.test(html));
@@ -180,7 +180,7 @@ test("the old Interests column and the long Protocols label are gone, and no pan
   assert.ok(protocolsLinks.every((to) => to === "/research/protocols"), `Protocols is the library hub, not a primer page: ${protocolsLinks}`);
 });
 
-test("Research: the three areas, the three row groups, and the footer", () => {
+await test("Research: the three areas, the three row groups, and the footer", () => {
   const research = panels().research;
   assert.deepEqual(research.tiles.map((t) => t.label), ["Retroviruses", "Bacteriophages", "Science education"]);
   assert.equal(research.tiles[0].description, "HTLV-1, REV and LPDV");
@@ -191,7 +191,7 @@ test("Research: the three areas, the three row groups, and the footer", () => {
   assert.deepEqual(research.footer.map((l) => l.label), ["All research", "Publications", "Protocols"]);
 });
 
-test("Teaching: the programs, study help, the join-the-lab spotlight and footer", () => {
+await test("Teaching: the programs, study help, the join-the-lab spotlight and footer", () => {
   const teaching = panels().teaching;
   assert.deepEqual(teaching.tiles.map((t) => t.label), ["Phage Discovery Program", "Virus Isolation", "Phage Bioinformatics"]);
   assert.deepEqual(teaching.rows.map((r) => r.title), ["Study help", "Questions about a course"]);
@@ -203,7 +203,7 @@ test("Teaching: the programs, study help, the join-the-lab spotlight and footer"
   assert.deepEqual(teaching.footer.map((l) => l.label), ["All teaching", "Join the lab", "Contact"]);
 });
 
-test("Software: the three products and not Germomics, the open tools, the system map with the explorer", () => {
+await test("Software: the three products and not Germomics, the open tools, the system map with the explorer", () => {
   const software = panels().software;
   assert.deepEqual(software.tiles.map((t) => t.label), ["Foxhound", "Foxing", "Foxing Edu"]);
   const everything = menuLinks(software);
@@ -218,7 +218,7 @@ test("Software: the three products and not Germomics, the open tools, the system
   assert.equal(software.footer[2].to, `${EXPLORER_ORIGIN}/`);
 });
 
-test("About: the name and the whole identity line, the CV with its PDF, recipes at the library, the profile links", () => {
+await test("About: the name and the whole identity line, the CV with its PDF, recipes at the library, the profile links", () => {
   const about = panels().about;
   assert.equal(about.heading, "Dustin Edwards");
   assert.match(about.blurb, /Texas A&M University System/);
@@ -231,7 +231,7 @@ test("About: the name and the whole identity line, the CV with its PDF, recipes 
   assert.deepEqual(about.footer.map((l) => l.to), [OWNER_SCHOLAR, OWNER_PUBMED, OWNER_ORCID]);
 });
 
-test("the spotlights read real data: the newest paper, the newest article, the lab as the CV states it", () => {
+await test("the spotlights read real data: the newest paper, the newest article, the lab as the CV states it", () => {
   const all = panels();
   const paper = newestPaperOnDisk();
   assert.equal(all.research.spotlight?.eyebrow, "Latest paper");
@@ -258,7 +258,7 @@ test("the spotlights read real data: the newest paper, the newest article, the l
   assert.ok(cv.includes("Stephenville, TX"), "the town the lab spotlight prints is no longer in the CV");
 });
 
-test("the Writing tiles are the three newest published articles, with their dates, and no draft or future post", () => {
+await test("the Writing tiles are the three newest published articles, with their dates, and no draft or future post", () => {
   const tiles = panels().writing.tiles;
   const onDisk = postsOnDisk();
   const drafts = new Set(onDisk.filter((p) => p.draft).map((p) => p.slug));
@@ -277,7 +277,7 @@ test("the Writing tiles are the three newest published articles, with their date
   }
 });
 
-test("a post scheduled for later is left out until its time, as the listings leave it out", () => {
+await test("a post scheduled for later is left out until its time, as the listings leave it out", () => {
   const newest = NAV_DATA.posts[0];
   const before = Date.parse(newest.publishAt) - 1000;
   assert.ok(!visiblePosts(before).some((p) => p.slug === newest.slug));
@@ -289,7 +289,7 @@ test("a post scheduled for later is left out until its time, as the listings lea
   assert.equal(isLive(`/writing/${newest.slug}`, before + 2000), true);
 });
 
-test("a draft is never in the nav data even when it is the newest file, and a scheduled post keeps its instant", () => {
+await test("a draft is never in the nav data even when it is the newest file, and a scheduled post keeps its instant", () => {
   const dir = mkdtempSync(join(tmpdir(), "nav-posts-"));
   try {
     const post = (slug, extra) =>
@@ -307,7 +307,7 @@ test("a draft is never in the nav data even when it is the newest file, and a sc
   }
 });
 
-test("the Writing panel lists the most-used tags as links, and only series that exist", () => {
+await test("the Writing panel lists the most-used tags as links, and only series that exist", () => {
   const writing = panels().writing;
   const tags = writing.rows.find((r) => r.title === "Tags");
   assert.ok(tags && tags.links && tags.links.length >= 3);
@@ -322,7 +322,7 @@ test("the Writing panel lists the most-used tags as links, and only series that 
   assert.deepEqual(writing.footer.map((l) => l.to), ["/writing", "/writing/rss.xml", "/search"]);
 });
 
-test("a first line is the first sentence of the first paragraph of prose, without markdown", () => {
+await test("a first line is the first sentence of the first paragraph of prose, without markdown", () => {
   assert.equal(firstLineOf("# Title\n\n:::chart\nx\n:::\n\nA **bold** claim with [a link](/x). Then more."), "A bold claim with a link.");
   assert.equal(firstLineOf("![alt](a.png)\n\n- a list\n\nThe real start.\nSecond line of it."), "The real start.");
   const long = `${"word ".repeat(60)}end.`;
@@ -331,14 +331,14 @@ test("a first line is the first sentence of the first paragraph of prose, withou
   assert.equal(firstLineOf("# Only a heading"), "");
 });
 
-test("a first paragraph that opens with emphasis is prose, and footnote markers and links are taken off", () => {
+await test("a first paragraph that opens with emphasis is prose, and footnote markers and links are taken off", () => {
   assert.equal(firstLineOf("*Italic* opening, then more. Next."), "Italic opening, then more.");
   assert.equal(firstLineOf("**Bold** opening with a note[^1] and a [link](/x). Next."), "Bold opening with a note and a link.");
   assert.equal(firstLineOf("* a list item\n\n*Real* start."), "Real start.", "a bullet is still not prose");
   assert.equal(firstLineOf("1. numbered\n\nAfter it."), "After it.");
 });
 
-test("a content edit that breaks the data does not stop the build: the pieces come back empty, and this test names the problem", () => {
+await test("a content edit that breaks the data does not stop the build: the pieces come back empty, and this test names the problem", () => {
   const empty = mkdtempSync(join(tmpdir(), "nav-empty-"));
   try {
     assert.equal(readLatestPaper(empty), null);
@@ -360,7 +360,7 @@ test("a content edit that breaks the data does not stop the build: the pieces co
   assert.ok(NAV_DATA.latestPaper && NAV_DATA.lab.place, "the snapshot is missing the newest paper or the lab's town");
 });
 
-test("the Newest post and the tile order are the /writing listing's order for posts that share a day", () => {
+await test("the Newest post and the tile order are the /writing listing's order for posts that share a day", () => {
   // The listing is publish_at desc then row id desc; rows are inserted in the build artifact's order (slug
   // ascending, scripts/build-content.mjs), so the id of a post is its place in that artifact.
   const artifact = join(root, "content", "generated", "posts.json");
@@ -375,7 +375,7 @@ test("the Newest post and the tile order are the /writing listing's order for po
   assert.deepEqual(panels().writing.tiles.map((t) => t.to), listing.slice(0, 3).map((slug) => `/writing/${slug}`));
 });
 
-test("the 404 page's section list is the same five hubs the bar has", () => {
+await test("the 404 page's section list is the same five hubs the bar has", () => {
   assert.deepEqual(NAV.map((item) => item.to), buildNav(NOW).map((item) => item.to));
   assert.deepEqual(NAV.map((item) => item.label), buildNav(NOW).map((item) => item.label));
 });

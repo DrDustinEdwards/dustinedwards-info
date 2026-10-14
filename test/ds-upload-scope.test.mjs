@@ -47,7 +47,7 @@ const upload = (deletePaths = []) => ({
   upload: { any: true, components: [], deletePaths, bundle: true, styling: true, aux: true },
 });
 
-test("a real build's upload is inside scope, and what stays local is not planned", () => {
+await test("a real build's upload is inside scope, and what stays local is not planned", () => {
   const dir = outDirWith(REAL_BUILD);
   try {
     const writes = plannedWrites(dir);
@@ -61,7 +61,7 @@ test("a real build's upload is inside scope, and what stays local is not planned
   }
 });
 
-test("PLANTED: a plan deleting templates/visual-system is refused before upload", () => {
+await test("PLANTED: a plan deleting templates/visual-system is refused before upload", () => {
   const dir = outDirWith(REAL_BUILD);
   try {
     const { verdict, violations } = enforceVerdict(
@@ -78,7 +78,7 @@ test("PLANTED: a plan deleting templates/visual-system is refused before upload"
   }
 });
 
-test("PLANTED: a plan writing a root .html page is refused before upload", () => {
+await test("PLANTED: a plan writing a root .html page is refused before upload", () => {
   const dir = outDirWith([...REAL_BUILD, "Home page - Plate I, locked system.html"]);
   try {
     const { verdict, violations } = enforceVerdict(upload(), dir);
@@ -92,20 +92,20 @@ test("PLANTED: a plan writing a root .html page is refused before upload", () =>
   }
 });
 
-test("github.md and the old canvas folders are never in scope", () => {
+await test("github.md and the old canvas folders are never in scope", () => {
   for (const p of ["github.md", "part-c/09-solid-lawn.html", "references/home-1280-light.png", "uploads/Capture.PNG"]) {
     assert.notEqual(refusal(p), null, p);
   }
   assert.match(refusal("github.md"), /protected/);
 });
 
-test("_preview/ is build-owned only for the component scripts directly in it", () => {
+await test("_preview/ is build-owned only for the component scripts directly in it", () => {
   assert.equal(refusal("_preview/SiteLogo.js"), null);
   assert.notEqual(refusal("_preview/reskin.png"), null);
   assert.notEqual(refusal("_preview/nested/x.js"), null);
 });
 
-test("cards/ is build-owned only for one preview card per directory", () => {
+await test("cards/ is build-owned only for one preview card per directory", () => {
   assert.equal(refusal("cards/colors/page-colors/page-colors.html"), null);
   assert.equal(refusal("cards/components/header-phone/header-phone.html"), null);
   for (const p of [
@@ -119,7 +119,7 @@ test("cards/ is build-owned only for one preview card per directory", () => {
   }
 });
 
-test("PLANTED: a stray file beside the cards is refused before upload", () => {
+await test("PLANTED: a stray file beside the cards is refused before upload", () => {
   const cards = ["cards/type/values/values.html", "cards/components/footer/footer.html"];
   const clean = outDirWith([...REAL_BUILD, ...cards]);
   const planted = outDirWith([...REAL_BUILD, ...cards, "cards/components/footer/notes.md"]);
@@ -134,20 +134,20 @@ test("PLANTED: a stray file beside the cards is refused before upload", () => {
   }
 });
 
-test("a path that is not plain and relative is refused, not normalized", () => {
+await test("a path that is not plain and relative is refused, not normalized", () => {
   for (const p of ["../styles.css", "/styles.css", "fonts/../templates/x", "components\\x.html", "", "fonts//a"]) {
     assert.notEqual(refusal(p), null, JSON.stringify(p));
   }
 });
 
-test("a verdict that uploads nothing is passed through untouched", () => {
+await test("a verdict that uploads nothing is passed through untouched", () => {
   const v = { ok: true, upload: { any: false, deletePaths: [] } };
   assert.equal(enforceVerdict(v, "/nonexistent").verdict, v);
   const n = { ok: false, upload: null };
   assert.equal(enforceVerdict(n, "/nonexistent").verdict, n);
 });
 
-test("a hand-built plan names every refused path, writes and deletes both", () => {
+await test("a hand-built plan names every refused path, writes and deletes both", () => {
   const v = planViolations({ writes: ["styles.css", "index.html"], deletes: ["github.md", "fonts/a.woff2"] });
   assert.equal(v.length, 2);
   assert.ok(v.some((line) => line.includes("index.html")), "the root page write is refused");
@@ -155,14 +155,14 @@ test("a hand-built plan names every refused path, writes and deletes both", () =
   assert.ok(!v.some((line) => line.includes("styles.css") || line.includes("fonts/")), "build-owned paths pass");
 });
 
-test("REPLAY: an upload with no build output is refused, not read as zero writes", () => {
+await test("REPLAY: an upload with no build output is refused, not read as zero writes", () => {
   const { verdict, violations } = enforceVerdict(upload(), "/nonexistent-ds-build-output");
   assert.equal(verdict.ok, false);
   assert.equal(verdict.upload, null);
   assert.match(violations[0], /the build output is missing/);
 });
 
-test("an upload whose deletePaths is not a list is refused, not read as no deletes", () => {
+await test("an upload whose deletePaths is not a list is refused, not read as no deletes", () => {
   const dir = outDirWith(REAL_BUILD);
   try {
     const { verdict, violations } = enforceVerdict(upload(/** @type {any} */ ("github.md")), dir);

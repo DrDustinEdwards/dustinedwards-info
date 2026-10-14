@@ -5,7 +5,7 @@ import { proofErrors, proofFromFile, proofMarkdown, resolveProof } from "../app/
 
 /* Proof of use (app/kb/procedures/proof.mjs): stored slugs, resolved to words and addresses from rows, never inferred. */
 
-test("a proof of papers and phages is valid; every malformed shape is refused with a message that says which", () => {
+await test("a proof of papers and phages is valid; every malformed shape is refused with a message that says which", () => {
   assert.deepEqual(proofErrors(undefined), []);
   assert.deepEqual(proofErrors({ papers: ["10-1128-mra-01242-18"], phages: ["arlo", "finny"] }), []);
   assert.deepEqual(proofErrors({ phages: ["arlo"] }), []);
@@ -19,7 +19,7 @@ test("a proof of papers and phages is valid; every malformed shape is refused wi
   assert.match(proofErrors({ papers: ["a"], cited: ["x"] })[0], /no field "cited"/);
 });
 
-test("the record keeps slugs only, and null when nothing is stated", () => {
+await test("the record keeps slugs only, and null when nothing is stated", () => {
   assert.deepEqual(proofFromFile({ papers: ["p"], phages: ["arlo"] }), { papers: ["p"], phages: ["arlo"] });
   assert.deepEqual(proofFromFile({ phages: ["arlo"] }), { papers: [], phages: ["arlo"] });
   assert.equal(proofFromFile(null), null);
@@ -32,7 +32,7 @@ const ROWS = {
   phages: new Map([["arlo", "Arlo"]]),
 };
 
-test("the words and addresses come from the rows; a slug the rows lack stays visible, unlinked", () => {
+await test("the words and addresses come from the rows; a slug the rows lack stays visible, unlinked", () => {
   const proof = resolveProof({ papers: ["p1", "gone"], phages: ["arlo", "nobody"] }, ROWS);
   assert.deepEqual(proof.papers, [
     { slug: "p1", title: "A genome announcement", year: 2018, href: "/research/publications/p1/" },
@@ -45,7 +45,7 @@ test("the words and addresses come from the rows; a slug the rows lack stays vis
   assert.equal(resolveProof(null, ROWS), null);
 });
 
-test("the twin lists the same papers and phages with absolute links, and nothing when there is no proof", () => {
+await test("the twin lists the same papers and phages with absolute links, and nothing when there is no proof", () => {
   const md = proofMarkdown(resolveProof({ papers: ["p1"], phages: ["arlo"] }, ROWS), "https://example.test");
   assert.ok(md.startsWith("## Proof of use\n\nPapers that used this method:"));
   assert.ok(md.includes("- [A genome announcement](https://example.test/research/publications/p1/) (2018)"));

@@ -20,7 +20,7 @@ const json = (rel) =>
 const stack = json("../content/generated/stack.json");
 const features = json("../content/features.json");
 
-test("EVERY colophon section has a fact list", () => {
+await test("EVERY colophon section has a fact list", () => {
   const missing = [];
   for (const section of COLOPHON_SECTIONS) {
     try {
@@ -37,14 +37,14 @@ test("EVERY colophon section has a fact list", () => {
   );
 });
 
-test("no section's fact list is empty", () => {
+await test("no section's fact list is empty", () => {
   const empty = COLOPHON_SECTIONS.filter(
     (section) => colophonFacts(stack, features, section.id).length === 0,
   ).map((section) => section.id);
   assert.deepEqual(empty, [], "a section swept with zero facts proves nothing about its content");
 });
 
-test("every fact is a non-empty string", () => {
+await test("every fact is a non-empty string", () => {
   const bad = [];
   for (const section of COLOPHON_SECTIONS) {
     for (const fact of colophonFacts(stack, features, section.id)) {
@@ -54,7 +54,7 @@ test("every fact is a non-empty string", () => {
   assert.deepEqual(bad, [], "an empty needle matches every page and cannot fail");
 });
 
-test("an UNKNOWN section still fails closed", () => {
+await test("an UNKNOWN section still fails closed", () => {
   assert.throws(
     () => colophonFacts(stack, features, "no-such-section"),
     /no fact list for colophon section "no-such-section"/,

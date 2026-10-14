@@ -11,7 +11,7 @@ const compiledProtocols = async () => {
   return new Map((await compileDirectory("content/procedures")).map((c) => [c.slug, c.compiled]));
 };
 
-test("a PCR protocol lists its reagents and its primers, each with the source and identifier the registry states", async () => {
+await test("a PCR protocol lists its reagents and its primers, each with the source and identifier the registry states", async () => {
   const coi = (await compiledProtocols()).get("coi-primers");
   assert.ok(coi?.ok, JSON.stringify(coi?.errors));
   const groups = keyResources(coi.record);
@@ -43,7 +43,7 @@ test("a PCR protocol lists its reagents and its primers, each with the source an
   );
 });
 
-test("a reagent named by two materials is listed once, a lab-prepared reagent has no catalog number, and a gap reads Not recorded", async () => {
+await test("a reagent named by two materials is listed once, a lab-prepared reagent has no catalog number, and a gap reads Not recorded", async () => {
   const record = {
     profile: "protocol",
     hostStrains: [{ id: "smegmatis", name: "Mycobacterium smegmatis mc²155", path: "/research/lab/strains/smegmatis", collection: "ATCC", collectionNumber: "700084" }],
@@ -72,18 +72,18 @@ test("a reagent named by two materials is listed once, a lab-prepared reagent ha
   ]);
 });
 
-test("a recipe or a computational procedure has no table, and an empty table prints nothing", () => {
+await test("a recipe or a computational procedure has no table, and an empty table prints nothing", () => {
   assert.deepEqual(keyResources(/** @type {any} */ ({ profile: "recipe" })), []);
   assert.deepEqual(keyResources(/** @type {any} */ ({ profile: "computational" })), []);
   assert.deepEqual(keyResourcesMarkdown([]), []);
 });
 
-test("a pipe in a citation cannot split a twin row", () => {
+await test("a pipe in a citation cannot split a twin row", () => {
   const lines = keyResourcesMarkdown([{ id: "other", heading: "Other", rows: [{ resource: "A | B", href: null, source: "S", identifier: "N/A" }] }]);
   assert.ok(lines.includes("| A \\| B | S | N/A |"));
 });
 
-test("a protocol's host strains are listed with their collection and number, as the registry states them", async () => {
+await test("a protocol's host strains are listed with their collection and number, as the registry states them", async () => {
   const isolation = (await compiledProtocols()).get("phage-isolation");
   assert.ok(isolation?.ok, JSON.stringify(isolation?.errors));
   const strains = keyResources(isolation.record).find((g) => g.id === "strains");
