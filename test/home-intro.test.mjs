@@ -37,7 +37,7 @@ await test("the hero keeps the role and department, and the Person record keeps 
   assert.doesNotMatch(JSON.stringify(person.worksFor), /Texas A&M/);
 });
 
-test("the hero sets the organization on two lines, the university then its system, split from the CV's own line", () => {
+await test("the hero sets the organization on two lines, the university then its system, split from the CV's own line", () => {
   const html = render();
   const lines = [...html.matchAll(/<span class="org-line">([^<]*)<\/span>/g)].map((m) => m[1].replaceAll("&amp;", "&"));
   const [first, ...rest] = IDENTITY.org.split(",");
