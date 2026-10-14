@@ -20,7 +20,7 @@ function staticPaths() {
 
 const tally = (/** @type {string} */ key, /** @type {string} */ label, /** @type {string} */ to, merge = true) => ({ key, label, to, merge });
 
-test("both the XML sitemap and the site map page are drawn from the one shared list", () => {
+await test("both the XML sitemap and the site map page are drawn from the one shared list", () => {
   const xml = read("../app/routes/sitemap.ts");
   const page = read("../app/routes/site-map.tsx");
   for (const [name, source] of [["sitemap.ts", xml], ["site-map.tsx", page]]) {
@@ -30,7 +30,7 @@ test("both the XML sitemap and the site map page are drawn from the one shared l
   }
 });
 
-test("the site map page is in sitemap.xml, at the address routes.ts gives it", async () => {
+await test("the site map page is in sitemap.xml, at the address routes.ts gives it", async () => {
   assert.equal(SITE_MAP_PATH, "/site-map");
   assert.ok(staticPaths().includes(SITE_MAP_PATH));
   assert.ok((await declaredRouteModules()).has(SITE_MAP_PATH));
@@ -49,7 +49,7 @@ const EXEMPT = new Map([
   ["/login", "forwards to /admin"],
 ]);
 
-test("every public page route is in the sitemap's list or exempted by name with a reason", async () => {
+await test("every public page route is in the sitemap's list or exempted by name with a reason", async () => {
   const listed = new Set([
     ...staticPaths(),
     ...CONTENT_PAGE_PATHS,
@@ -66,7 +66,7 @@ test("every public page route is in the sitemap's list or exempted by name with 
   assert.deepEqual(stale, [], "an exemption for a route routes.ts no longer declares");
 });
 
-test("the sections are the header's five, in its order, then Site", () => {
+await test("the sections are the header's five, in its order, then Site", () => {
   assert.deepEqual(
     SITE_MAP_SECTIONS.slice(0, -1).map(({ heading, to }) => ({ label: heading, to })),
     NAV.map(({ label, to }) => ({ label, to })),
@@ -74,7 +74,7 @@ test("the sections are the header's five, in its order, then Site", () => {
   assert.equal(SITE_MAP_SECTIONS.at(-1)?.heading, "Site");
 });
 
-test("a path goes to the section that owns its root, and anything else to Site", () => {
+await test("a path goes to the section that owns its root, and anything else to Site", () => {
   assert.equal(sectionOf("/research/tools/titer"), "research");
   assert.equal(sectionOf("/systems/capsid"), "software");
   assert.equal(sectionOf("/software/how-tos"), "software");
@@ -86,7 +86,7 @@ test("a path goes to the section that owns its root, and anything else to Site",
   assert.equal(sectionOf("/researcher"), "site", "a root matches whole segments only");
 });
 
-test("papers, registry items, procedures, posts and tags collapse to one counted line each", () => {
+await test("papers, registry items, procedures, posts and tags collapse to one counted line each", () => {
   const none = null;
   const papers = tally("papers", "Publications", "/research/publications");
   const posts = tally("posts", "Articles", "/writing");
@@ -130,7 +130,7 @@ test("papers, registry items, procedures, posts and tags collapse to one counted
   });
 });
 
-test("a counted kind whose index is not listed still gets its line", () => {
+await test("a counted kind whose index is not listed still gets its line", () => {
   const sections = siteMapSections([
     { path: "/recipes/bread", lastmod: null, title: "Bread", tally: tally("procedures:recipes", "Recipes", "/recipes") },
   ]);

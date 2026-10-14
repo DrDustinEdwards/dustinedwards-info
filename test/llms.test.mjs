@@ -100,7 +100,7 @@ await test("a contact URL that is not the site's origin is refused", () => {
   assert.match(refusal((t) => t.replace(inContact, "$1https://example.com")), /contact URL is SITE_ORIGIN/);
 });
 
-test("a draft page may be listed ahead of its publish, and need not be: the two changes land in either order", () => {
+await test("a draft page may be listed ahead of its publish, and need not be: the two changes land in either order", () => {
   const DRAFT = "/teaching/study-skills";
   const line = `- [Draft](https://dustinedwards.info${DRAFT}): a page not yet published\n`;
   const required = pagePaths.filter((p) => p !== DRAFT);
@@ -114,7 +114,7 @@ test("a draft page may be listed ahead of its publish, and need not be: the two 
   assert.equal(check(withLine.replaceAll(DRAFT, "/teaching/nowhere"), [DRAFT]).length, 1);
 });
 
-test("a line for any registered page is read as listing it, whatever its first segment", () => {
+await test("a line for any registered page is read as listing it, whatever its first segment", () => {
   // The rule reads list items by address; a page whose root it did not know would read as absent forever.
   const roots = [...new Set(CONTENT_PAGES_ALL.map((path) => path.split("/")[1]))];
   const lines = roots.map((root) => `- [Probe](https://dustinedwards.info/${root}): probe\n`).join("");
