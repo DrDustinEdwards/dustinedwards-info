@@ -94,13 +94,9 @@ await test("the panels' links are real anchors in the HTML, so a crawler and a r
   assert.ok(!all.includes("/recipes") && !all.includes("/software/how-tos"));
 });
 
-await test("the Lab sign-in link is on the bar beside Search, outside the nav, and goes to the lab workspace", () => {
-  const tools = html.slice(html.indexOf('class="site-header-tools"'));
-  assert.match(tools, /<a\b[^>]*data-lab-link[^>]*href="\/lab"/);
-  assert.ok(tools.indexOf("data-search-trigger") < tools.indexOf('href="/lab"'));
-  const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
-  assert.ok(!nav.includes('href="/lab"'));
-  assert.match(tools, /Lab<span class="site-lab-more"> sign-in<\/span>/);
+await test("the Lab sign-in link is not in the header: it lives in the footer's Workspace group (Dustin, 2026-10-14)", () => {
+  assert.ok(!html.includes('href="/lab"'), "the header links /lab");
+  assert.ok(!html.includes("data-lab-link") && !html.includes("site-lab-"), "the bar still carries the Lab link's markup");
 });
 
 await test("a panel names no heading, so the page outline is not opened by the menu", () => {

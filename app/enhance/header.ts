@@ -8,8 +8,8 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
   if (isAbandonedTransition(event.reason)) event.preventDefault();
 });
 
-// Kept in step with the breakpoint in chrome-nav.css (55rem, measured there).
-const MOBILE = "(max-width: 54.99rem)";
+// Kept in step with the breakpoint in chrome-nav.css (50rem, measured there).
+const MOBILE = "(max-width: 49.99rem)";
 
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";

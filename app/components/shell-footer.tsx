@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { GermomicsMark } from "~/components/germomics-mark";
-import { CapsidIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-tool-icons";
+import { CapsidIcon, FlaskIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-tool-icons";
 import { SiteLogoHeader } from "~/components/site-logo";
 import {
   BRAND_PROFILES,
@@ -19,6 +19,7 @@ const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
   lamp: LampIcon,
   gear: GearIcon,
   capsid: CapsidIcon,
+  flask: FlaskIcon,
 };
 
 /** X's own logo path, unaltered, in the footer's ink. */
