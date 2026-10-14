@@ -95,7 +95,11 @@ export function run(code) {
       "publications.$slug.tsx",
       "privacy.tsx",
       "terms.tsx",
+      // The accessibility statement, a markdown page like privacy and terms (docs/PAGES.md).
+      "accessibility.tsx",
       "contact.tsx",
+      // The site map for people, from the URL list sitemap.xml reads (app/lib/site-urls.server.ts).
+      "site-map.tsx",
       // The Research and Teaching pages, rendered from markdown at build time (app/lib/content-pages.mjs).
       "content-page.tsx",
       "teaching.tsx",

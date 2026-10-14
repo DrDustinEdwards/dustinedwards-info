@@ -88,9 +88,10 @@
 }
 
 /*
- * Dustin, 2026-09-27: the brand block (logo and social links, nothing else) on the left, and the link
- * columns beside it, three across and two deep. The brand column is only as wide as its content, so the
- * two read as one footer rather than a block and a distant grid.
+ * Dustin, 2026-10-11: the brand block (logo, social and profile links) on the left, and the two groups,
+ * Workspace and Site, side by side beside it. The brand column is only as wide as its content, so the
+ * two read as one footer rather than a block and a distant grid. Below 48rem everything stacks: the
+ * brand block, then Workspace, then Site.
  */
 @media (min-width: 48rem) {
   .footer-grid {
@@ -99,7 +100,8 @@
   }
 
   .footer-columns {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    column-gap: var(--s-8);
   }
 }
 

@@ -7,6 +7,7 @@
 // write fails (hard rule 18); the error says the commit landed and how to repair the row. A document has no
 // draft state: it is always the published file, and a save edits it live.
 
+import { listPublishedPageTitles } from "~/db/pages";
 import { listPublishedPublicationTwins } from "~/db/publications";
 import { listPublishedProcedures } from "~/db/procedures";
 import { getSetting, setSetting } from "~/db/settings";
@@ -14,7 +15,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeLlms, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
+import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
@@ -39,13 +40,17 @@ class LlmsInvalid extends ContentInvalid {
  * protocols are pages, drawn from D1), and the papers the publications table serves.
  */
 async function judgeLlms(env: LlmsEnv, raw: string) {
-  const [{ findWideDashes }, procedures, twins] = await Promise.all([
+  const [{ findWideDashes }, procedures, twins, pageTitles] = await Promise.all([
     loadPipeline(),
     listPublishedProcedures(env),
     listPublishedPublicationTwins(env),
+    // The page rows the route serves from: a page published through Carrel can have its line saved at once.
+    listPublishedPageTitles(env),
   ]);
+  const published = [...pageTitles.keys()];
   return llmsChecks(raw, {
-    pagePaths: [...CONTENT_PAGE_PATHS, ...procedures.map((p) => p.path)],
+    pagePaths: [...publishedContentPagePaths(published), ...procedures.map((p) => p.path)],
+    optionalPagePaths: draftContentPagePaths(published),
     origin: SITE_ORIGIN,
     findWideDashes,
     twinUrls: twins.map((t) => paperMarkdownPath(t.slug)),

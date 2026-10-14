@@ -51,14 +51,16 @@ export async function getPublishedPageTitles(env: Env, paths: string[]) {
   return new Map(rows.map((row) => [row.path, row.title]));
 }
 
-/** For the sitemap: the published pages' paths. */
-export async function listPublishedPagePaths(env: Env) {
+/**
+ * Every published page's title, by path: the sitemap's list (app/lib/site-urls.server.ts) and the llms.txt save.
+ * No IN list: D1 binds at most 100 parameters, and the page registry is not bounded by that.
+ */
+export async function listPublishedPageTitles(env: Env) {
   const rows = await getDb(env)
-    .select({ path: pages.path })
+    .select({ path: pages.path, title: pages.title })
     .from(pages)
-    .where(eq(pages.status, PUBLISHED_STATUS))
-    .orderBy(asc(pages.path));
-  return rows.map((row) => row.path);
+    .where(eq(pages.status, PUBLISHED_STATUS));
+  return new Map(rows.map((row) => [row.path, row.title]));
 }
 
 /** For the save-time link check: every published page's rendered HTML, by path. */

@@ -5,10 +5,11 @@ import { CapsidIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-t
 import { SiteLogoHeader } from "~/components/site-logo";
 import {
   BRAND_PROFILES,
-  FOOTER_COLUMNS,
   type FooterLink,
   PRIVATE_TOOLS,
   type PrivateTool,
+  SITE_HEADING,
+  SITE_LINKS,
   SOCIAL_LINKS,
   TOOLS_HEADING,
 } from "~/lib/footer";
@@ -45,14 +46,15 @@ function FooterAnchor({ link }: { link: FooterLink }) {
 
 /**
  * The links live in app/lib/footer.ts, where test/footer.test.mjs checks each one. The profile links carry
- * rel="me", and `check:machine-readable` asserts that set equals `OWNER_PROFILES`.
+ * rel="me", and `check:machine-readable` asserts that set equals `OWNER_PROFILES`. The bottom line is the
+ * copyright and nothing else (Dustin, 2026-10-11).
  */
 export function ShellFooter() {
   return (
     <footer className="site-shell-footer">
       <div className="tracks">
         <div className="footer-grid">
-          {/* The brand block: logo, name, social marks, then the profile links. */}
+          {/* The brand block: logo, name, social marks, then the profile links and the feed. No title line: the hero carries it. */}
           <div className="footer-identity">
             <Link to="/" className="footer-home">
               <SiteLogoHeader className="footer-logo" />
@@ -85,22 +87,8 @@ export function ShellFooter() {
             </ul>
           </div>
 
-          {/* Beside the brand block: five link columns and Workspace, three across and two deep. */}
+          {/* Beside the brand block: Workspace, then Site (Dustin, 2026-10-11). */}
           <div className="footer-columns">
-            {FOOTER_COLUMNS.map((column) => (
-              <nav key={column.id} className="footer-col" aria-labelledby={`footer-${column.id}`}>
-                <h2 className="footer-heading" id={`footer-${column.id}`}>
-                  {column.heading}
-                </h2>
-                <ul className="footer-links">
-                  {column.items.map((item) => (
-                    <li key={item.label}>
-                      <FooterAnchor link={item} />
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            ))}
             <nav className="footer-col" aria-labelledby="footer-workspace">
               <h2 className="footer-heading" id="footer-workspace">
                 {TOOLS_HEADING}
@@ -129,6 +117,18 @@ export function ShellFooter() {
                     </li>
                   );
                 })}
+              </ul>
+            </nav>
+            <nav className="footer-col" aria-labelledby="footer-site">
+              <h2 className="footer-heading" id="footer-site">
+                {SITE_HEADING}
+              </h2>
+              <ul className="footer-links">
+                {SITE_LINKS.map((item) => (
+                  <li key={item.to}>
+                    <FooterAnchor link={item} />
+                  </li>
+                ))}
               </ul>
             </nav>
           </div>

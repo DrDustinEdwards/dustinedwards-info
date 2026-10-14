@@ -13,7 +13,7 @@ import llmsFile from "../../content/llms.txt?raw";
 import { versionCases } from "./carrel-version-cases";
 import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { routeContext } from "./route-helpers";
-import { seedProcedures, seedPublications } from "./seed";
+import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
 /* An llms.txt edit goes live with no build and no deploy: Carrel saves the document through site-api's
@@ -82,6 +82,8 @@ beforeAll(async () => {
   // What the rules hold the file to: the pages and procedures the site has, and the papers it serves.
   await seedProcedures();
   await seedPublications();
+  // One page row, the case below's: the list case reads the first 50 content items.
+  await seedPages(["/accessibility"]);
 }, 240_000);
 
 beforeEach(async () => {
@@ -197,6 +199,30 @@ describe("a save is held to what CI holds", () => {
     expect(stray.status).toBe(422);
     expect(((await stray.json()) as { message: string }).message).toMatch(/listed but not a page: \/software\/not-a-page/);
     expect(commits()).toHaveLength(0);
+  });
+
+  it("judges pages by their D1 rows: a draft's line may land before its publish, and is required after", async () => {
+    const LINE = "- [Accessibility](https://dustinedwards.info/accessibility): what the site's checks test";
+    const withLine = llmsFile.replace(/^.*\/terms\).*\n/m, (line) => `${line}${LINE}\n`);
+    expect(withLine).not.toBe(llmsFile);
+    const status = (s: string) => testEnv.DB.prepare("UPDATE pages SET status = ?1 WHERE path = '/accessibility'").bind(s).run();
+    try {
+      await status("draft");
+      // A draft: listing it is allowed, and so is leaving it out.
+      expect((await put(withLine, undefined, "chg-a11y-draft")).status).toBe(200);
+      gh.restore();
+      gh = stubGitHub({ [LLMS_PATH]: llmsFile });
+      await setRow(llmsFile);
+      await status("published");
+      // Published through Carrel: the line saves at once, with no deploy in between, and leaving it out is refused.
+      const missing = await put(EDITED, undefined, "chg-a11y-missing");
+      expect(missing.status).toBe(422);
+      expect(((await missing.json()) as { message: string }).message).toMatch(/absent from content\/llms\.txt: \/accessibility/);
+      const saved = await put(withLine, undefined, "chg-a11y-published");
+      expect(saved.status, await saved.clone().text()).toBe(200);
+    } finally {
+      await status("draft");
+    }
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {

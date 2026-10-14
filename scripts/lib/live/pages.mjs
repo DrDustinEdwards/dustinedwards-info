@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { COLOPHON_SECTIONS } from "../../../app/lib/colophon-sections.mjs";
-import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
+import { publishedContentPagePaths } from "../../../app/lib/content-pages.mjs";
+import { readPublishedPages } from "../published-pages.mjs";
 import { colophonFacts } from "../colophon-facts.mjs";
 import { check, get, ORIGIN, root, SLUG, strip, unescape } from "./client.mjs";
 
@@ -24,8 +25,9 @@ export async function run() {
   }
 
   {
-    // Once retired, now real: the Research and Teaching pages, read off their one list.
-    for (const path of [...CONTENT_PAGE_PATHS, "/research/publications"]) {
+    // Once retired, now real: the Research and Teaching pages, read off their one list. A draft answers 404
+    // to a reader, so only the published ones (their files, as deployed) are held to 200.
+    for (const path of [...publishedContentPagePaths(readPublishedPages()), "/research/publications"]) {
       const { status } = await get(path);
       check(`page: ${path} returns 200`, status === 200, `got ${status}`);
     }

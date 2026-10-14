@@ -7,6 +7,7 @@ import {
   CONTENT_PAGES_FROM_DATA,
   contentPageFile,
   contentPageTrail,
+  publishedContentPagePaths,
 } from "../app/lib/content-pages.mjs";
 import { PENDING_TARGETS } from "../app/lib/wordpress-redirects.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
@@ -68,4 +69,13 @@ await test("a page trails back to its hub, through the page it sits under; a hub
   );
   assert.deepEqual(contentPageTrail({ path: "/research", title: "Research" }), [["Research", "/research"]]);
   assert.deepEqual(contentPageTrail({ path: "/teaching", title: "Teaching" }), [["Teaching", "/teaching"]]);
+});
+
+await test("a draft page is left out of the pages a reader can open; the CV, generated from data, never is", () => {
+  const all = CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path));
+  assert.deepEqual(publishedContentPagePaths(all), [...CONTENT_PAGE_PATHS]);
+  const withoutAccessibility = publishedContentPagePaths(all.filter((path) => path !== "/accessibility"));
+  assert.ok(!withoutAccessibility.includes("/accessibility"));
+  assert.ok(withoutAccessibility.includes("/cv"));
+  assert.deepEqual(publishedContentPagePaths([]), [...CONTENT_PAGES_FROM_DATA]);
 });

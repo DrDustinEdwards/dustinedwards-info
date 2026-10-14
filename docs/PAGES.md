@@ -75,6 +75,28 @@ not own.
 row (so `sync_pages` cannot), and `sync:content` refuses to run without a published file for it. Each refusal
 names the reason.
 
+## The accessibility page
+
+`/accessibility` is a listed page like `/privacy` (it is not a legal page: no `banner`, no `last_updated`). Every
+claim on it names the gate or file it rests on, and the page claims no conformance level no gate tests. It shipped
+with `draft: true` (job_fea2f94832b3) until Dustin approves its text. While it is a draft it answers 404 to a reader
+and is left out of sitemap.xml, the site map page, check:links' served set and verify-live's page list.
+
+Publishing it, in either order:
+
+- **Publish the page** through Carrel. The route and the sitemaps read the D1 row, so they change at once.
+- **Save its line in `content/llms.txt`** (through Carrel or a commit). A draft page may be listed and need not
+  be, so the line can land before the publish. Once the page is published the line is required: CI judges the
+  page files, and the llms.txt save judges the D1 rows, so the line can be saved straight after a Carrel publish
+  with no deploy in between.
+- **Move `accessibility.tsx`** from `THEME_CACHED_PENDING` to `THEME_CACHED` in
+  `scripts/lib/browser/cases/theme-cache.mjs`.
+
+The footer's Accessibility link does not read D1. It follows `app/lib/published-pages.generated.mjs`, a build
+product of the page files (`scripts/lib/published-pages.mjs`), so the footer is the same bytes for every reader.
+The link therefore appears (or, after an unpublish, disappears) with the deploy that the publishing commit starts,
+not at the moment of the save.
+
 ## What a save cannot do
 
 A page's ADDRESS is structure. `CONTENT_PAGE_PATHS` (`app/lib/content-pages.mjs`), the header menu's
