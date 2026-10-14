@@ -23,7 +23,7 @@ Portfolio rule 6.3.
 
 ### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI.
 
-Every change lands by pull request (portfolio rule 4.3). A merge to main deploys via `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. Sessions never merge: Capsid's signed auto-merge does once CI is green on the exact head, or the seat. A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. A ship window owns the tree throughout. See the `ship` skill.
+Every change lands by pull request (portfolio rule 4.3). A merge to main deploys via `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. A session merges a PR once CI is green on its exact head and Dustin has said yes in chat; Capsid’s signed auto-merge and the seat merge too.. A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. A ship window owns the tree throughout. See the `ship` skill.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
@@ -31,7 +31,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## How a session works
 
-**Every session works on a branch and lands by pull request** (capsid/decisions.md, 2026-10-04). The PR gets a Worker Preview and full CI before main. This folder is the site session's checkout (ruling 60); others use a worktree under `C:\Users\email\dev\worktrees\`. Small changes (copy, colour, spacing, quick fixes) may go to the site session without a Capsid job (ruling 148), still by PR, merged automatically. Sessions leave Renovate PRs unmerged; a red one is a report.
+**Every session works on a branch and lands by pull request** (capsid/decisions.md, 2026-10-04). The PR gets a Worker Preview and full CI before main. This folder is the site session's checkout (ruling 60); others use a worktree under `C:\Users\email\dev\worktrees\`. Small changes (copy, colour, spacing, quick fixes) may go to the site session without a Capsid job (ruling 148), still by PR, merged automatically.
 
 **Two files here are Capsid's:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. Capsid's `sync-scorer` copier (`npm run sync:scorer` in capsid) keeps them identical across the roster repos; change them in capsid and they arrive by the copier.
 
