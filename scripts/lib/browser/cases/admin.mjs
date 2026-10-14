@@ -570,28 +570,29 @@ export async function run({ browser }) {
 
     /*
      * What each width can reach, compared. Capsomer's AdminShell (#386) puts the wide layout's controls in its side strip and
-     * menu, with the account's links in a popover, and the top bar holds only a page's own actions (none on /admin, so it is
-     * hidden); a phone hides the strip and menu and carries the same places in the tab bar and its More sheet. So every part
-     * of the shell is measured at both widths and what is displayed decides, with the account popover opened at the wide
-     * width and the More sheet at the narrow one, as a click and a tap would. A link is compared by where it goes and a
-     * button by its words, with aria-hidden marks left out (the sheet's app link carries a letter mark) and a parenthesis
-     * dropped (the sheet's sign-out names the account). A control that only opens another (the menu toggle, the account
-     * button, More) is not itself a place to reach.
+     * menu, with the account's links in the header's avatar panel, and the top bar holds a page's own actions. A phone hides
+     * the strip and menu; since Capsomer 0.9.0 the bottom bar holds up to five pages and no More, and the header's menu
+     * button opens one sheet with the apps, every page and the account rows. So every part of the shell is measured at both
+     * widths and what is displayed decides, with the avatar panel opened at the wide width and the menu sheet at the narrow
+     * one, as a click and a tap would. A link is compared by where it goes and a button by its words, with aria-hidden marks
+     * left out (the sheet's app link carries a letter mark) and a parenthesis dropped (the sheet's sign-out names the
+     * account). A control that only opens another (the menu toggle, the avatar, the menu button) is not itself a place to
+     * reach.
      */
     const NARROW = 375;
-    const shellReach = async (/** @type {number} */ width, /** @type {boolean} */ openMore) => {
+    const shellReach = async (/** @type {number} */ width, /** @type {boolean} */ openSheet) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
-      if (openMore) {
-        await admin.click('.cap-admin-tabs button[data-cap-part="more"]');
+      if (openSheet) {
+        await admin.click(".cap-site-header-menu");
       } else {
-        await admin.click(".cap-admin-strip button[popovertarget]").catch(() => {});
+        await admin.click(".cap-site-header-avatar").catch(() => {});
       }
       await new Promise((r) => setTimeout(r, 300));
       return admin.evaluate(() => {
         const names = [];
         for (const el of document.querySelectorAll(
-          ".cap-admin-strip, .cap-admin-menu, .cap-admin-bar, .cap-admin-account, .cap-admin-tabs, dialog.cap-admin-sheet[open]",
+          ".cap-admin-strip, .cap-admin-menu, .cap-admin-bar, .cap-site-header, .cap-site-tabs, dialog.cap-site-header-sheet[open]",
         )) {
           for (const control of el.querySelectorAll(
             'a[href], button, summary, input:not([type="hidden"]), select, textarea',
@@ -614,7 +615,7 @@ export async function run({ browser }) {
         }
         return {
           names: [...new Set(names)].sort(),
-          more: !!document.querySelector('.cap-admin-tabs button[data-cap-part="more"]'),
+          sheet: !!document.querySelector("dialog.cap-site-header-sheet[open]"),
         };
       });
     };
@@ -630,9 +631,9 @@ export async function run({ browser }) {
         `The subset assertion below would agree with anything.`,
     );
     ok(
-      `the phone's tab bar has a More sheet at ${NARROW}px`,
-      narrow.more,
-      "no More button in the tab bar, so what the strip and menu hide on a phone has nowhere to go",
+      `the phone's header menu button opens the menu sheet at ${NARROW}px`,
+      narrow.sheet,
+      "no open .cap-site-header-sheet after pressing the menu button, so what the strip and menu hide on a phone has nowhere to go",
     );
 
     const lost = wide.names.filter((name) => !narrow.names.includes(name));

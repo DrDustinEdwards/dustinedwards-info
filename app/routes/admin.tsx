@@ -275,8 +275,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         title="Site admin"
         apps={[{ id: "site", label: "Site admin", href: "/admin", mono: "D", current: true }]}
         nav={nav}
-        tabs={nav.slice(0, 4)}
-        more={nav.slice(4)}
+        tabs={nav.slice(0, 5)}
         renderLink={RouterLink}
         account={{
           name: SITE.name,
