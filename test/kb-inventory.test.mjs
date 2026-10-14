@@ -15,14 +15,14 @@ function fresh() {
 
 const lot = "INSERT INTO kb_lots (item_kind, item_id, lot_number, amount) VALUES (?, ?, ?, ?)";
 
-test("the three tables start empty", () => {
+await test("the three tables start empty", () => {
   const db = fresh();
   for (const t of ["kb_locations", "kb_lots", "kb_audit"]) {
     assert.equal(db.prepare(`SELECT count(*) AS n FROM ${t}`).get().n, 0, t);
   }
 });
 
-test("a lot is unique per item and lot number, and a lot starts in stock", () => {
+await test("a lot is unique per item and lot number, and a lot starts in stock", () => {
   const db = fresh();
   db.prepare(lot).run("reagents", "tes-buffer", "L1", 10);
   assert.equal(db.prepare("SELECT status FROM kb_lots").get().status, "in_stock");
@@ -30,14 +30,14 @@ test("a lot is unique per item and lot number, and a lot starts in stock", () =>
   db.prepare(lot).run("reagents", "tes-buffer", "L2", 5);
 });
 
-test("a lot refuses a negative amount and an unknown status", () => {
+await test("a lot refuses a negative amount and an unknown status", () => {
   const db = fresh();
   assert.throws(() => db.prepare(lot).run("reagents", "x", "L1", -1), /CHECK/);
   db.prepare(lot).run("reagents", "x", "L2", 1);
   assert.throws(() => db.prepare("UPDATE kb_lots SET status = 'lost'").run(), /CHECK/);
 });
 
-test("a lot's location must exist", () => {
+await test("a lot's location must exist", () => {
   const db = fresh();
   assert.throws(() => db.prepare("INSERT INTO kb_lots (item_kind, item_id, lot_number, location_id) VALUES ('a','b','c',99)").run(), /FOREIGN KEY/);
   db.prepare("INSERT INTO kb_locations (name) VALUES ('Freezer 1')").run();
@@ -45,7 +45,7 @@ test("a lot's location must exist", () => {
   assert.throws(() => db.prepare("INSERT INTO kb_locations (name) VALUES ('Freezer 1')").run(), /UNIQUE/);
 });
 
-test("the audit takes only the actions and tables it names", () => {
+await test("the audit takes only the actions and tables it names", () => {
   const db = fresh();
   const audit = "INSERT INTO kb_audit (actor, table_name, row_id, action) VALUES (?, ?, 1, ?)";
   db.prepare(audit).run("a@example.org", "kb_lots", "insert");

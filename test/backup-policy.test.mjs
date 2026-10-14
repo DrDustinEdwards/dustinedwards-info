@@ -31,16 +31,16 @@ const healthy = {
   schema,
 };
 
-test("the real schema passes the policy", () => {
+await test("the real schema passes the policy", () => {
   assert.deepEqual(dumpProblems(healthy), []);
 });
 
-test("every required table exists in the migrated schema, so the list cannot name a dropped table", () => {
+await test("every required table exists in the migrated schema, so the list cannot name a dropped table", () => {
   for (const name of REQUIRED_TABLES) assert.ok(tableNames.includes(name), `${name} is not a table`);
   assert.deepEqual(REQUIRED_TABLES, Object.keys(NON_DERIVED_TABLES));
 });
 
-test("no table in the migrated schema holds a credential column, which is why EXCLUDED_TABLES is empty", () => {
+await test("no table in the migrated schema holds a credential column, which is why EXCLUDED_TABLES is empty", () => {
   for (const entry of schema) {
     if (/^\s*CREATE\s+VIRTUAL/i.test(entry.sql)) continue;
     const bad = columnNames(entry.sql).filter((c) => CREDENTIAL_COLUMN.test(c));
@@ -49,14 +49,14 @@ test("no table in the migrated schema holds a credential column, which is why EX
   assert.deepEqual([...EXCLUDED_TABLES], []);
 });
 
-test("PLANTED: an empty dump is refused", () => {
+await test("PLANTED: an empty dump is refused", () => {
   const problems = dumpProblems({ tables: [], excluded: [], schema });
   assert.ok(problems.some((p) => /holds no rows/.test(p)), problems.join("\n"));
   const zeroRows = dumpProblems({ ...healthy, tables: healthy.tables.map((t) => ({ ...t, rows: 0 })) });
   assert.ok(zeroRows.some((p) => /holds no rows/.test(p)), "tables with no rows are an empty dump");
 });
 
-test("PLANTED: a credential table left in is refused, by table and column", () => {
+await test("PLANTED: a credential table left in is refused, by table and column", () => {
   const planted = [
     ...schema,
     { type: "table", name: "session", sql: 'CREATE TABLE session (id text PRIMARY KEY, token text NOT NULL UNIQUE, "userId" text)' },
@@ -71,13 +71,13 @@ test("PLANTED: a credential table left in is refused, by table and column", () =
   assert.ok(problems.some((p) => /table account .*accessToken, refreshToken, password/.test(p)), problems.join("\n"));
 });
 
-test("PLANTED: a missing required table is refused by name", () => {
+await test("PLANTED: a missing required table is refused by name", () => {
   const without = { ...healthy, tables: healthy.tables.filter((t) => t.name !== "kb_lots") };
   const problems = dumpProblems(without);
   assert.deepEqual(problems, ["required table kb_lots is missing from the dump"]);
 });
 
-test("a table excluded without being listed is refused, and a listed one is allowed to be absent", () => {
+await test("a table excluded without being listed is refused, and a listed one is allowed to be absent", () => {
   const unlisted = dumpProblems({ ...healthy, excluded: ["settings"] });
   assert.ok(unlisted.some((p) => /settings was excluded but is not on the excluded list/.test(p)));
   const credential = { type: "table", name: "api_keys", sql: "CREATE TABLE api_keys (id integer, secret text)" };
@@ -88,7 +88,7 @@ test("a table excluded without being listed is refused, and a listed one is allo
   assert.deepEqual(allowed, []);
 });
 
-test("columnNames reads quoted names, skips constraints and ignores commas inside parentheses", () => {
+await test("columnNames reads quoted names, skips constraints and ignores commas inside parentheses", () => {
   const sql = 'CREATE TABLE t (id integer PRIMARY KEY, "user token" text, `x` real DEFAULT (abs(1, 2)), CONSTRAINT c CHECK (a in (1,2)), UNIQUE (a, b))';
   assert.deepEqual(columnNames(sql), ["id", "user token", "x"]);
 });

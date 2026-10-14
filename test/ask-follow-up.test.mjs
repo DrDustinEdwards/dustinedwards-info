@@ -5,26 +5,26 @@ import { FOLLOW_UP_MARKER, splitFollowUp } from "../app/lib/search/follow-up.mjs
 import { FOLLOW_UP_INSTRUCTION, SYSTEM_PROMPT } from "../app/lib/search/ask-prompt.mjs";
 import { bundleEnhancement } from "../scripts/lib/enhance-bundle.mjs";
 
-test("an answer with a follow-up splits into both", () => {
+await test("an answer with a follow-up splits into both", () => {
   assert.deepEqual(splitFollowUp("The answer.\nNEXT: What else is here?"), {
     answer: "The answer.",
     followUp: "What else is here?",
   });
 });
 
-test("no marker is the normal case and returns the answer untouched", () => {
+await test("no marker is the normal case and returns the answer untouched", () => {
   const raw = "An answer with no follow up at all.";
   assert.deepEqual(splitFollowUp(raw), { answer: raw, followUp: null });
 });
 
-test("a marker with nothing after it is not a question", () => {
+await test("a marker with nothing after it is not a question", () => {
   assert.deepEqual(splitFollowUp("The answer.\nNEXT:"), {
     answer: "The answer.",
     followUp: null,
   });
 });
 
-test("a mid-sentence marker is prose and does NOT truncate the answer", () => {
+await test("a mid-sentence marker is prose and does NOT truncate the answer", () => {
   const raw = "The NEXT: release is covered here.";
   assert.deepEqual(
     splitFollowUp(raw),
@@ -33,14 +33,14 @@ test("a mid-sentence marker is prose and does NOT truncate the answer", () => {
   );
 });
 
-test("the last marker wins, so an earlier mention cannot steal the split", () => {
+await test("the last marker wins, so an earlier mention cannot steal the split", () => {
   const raw = "A line about NEXT: things.\nMore answer.\nNEXT: The real one?";
   const out = splitFollowUp(raw);
   assert.equal(out.followUp, "The real one?");
   assert.match(out.answer, /More answer\.$/);
 });
 
-test("an answer written the way the prompt asks splits into the right follow-up", () => {
+await test("an answer written the way the prompt asks splits into the right follow-up", () => {
   assert.ok(SYSTEM_PROMPT.includes(FOLLOW_UP_INSTRUCTION), "the model must be sent the instruction");
   // The prefix the model is told to write, read off the instruction rather than the splitter.
   const prefix = FOLLOW_UP_INSTRUCTION.trim().split(/\s+/).at(-1);
@@ -53,7 +53,7 @@ test("an answer written the way the prompt asks splits into the right follow-up"
 
 // Reads the built artifact: the import that leaked the prompt was correct-looking source. Built here
 // by the app build's own bundler, so the bytes are the ones the page is served.
-test("the built client bundle carries NO system prompt text", async () => {
+await test("the built client bundle carries NO system prompt text", async () => {
   const { code: built } = await bundleEnhancement("ask");
 
   /* The needle is the prompt itself, so it cannot drift from what is actually secret. */

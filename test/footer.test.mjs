@@ -9,7 +9,7 @@ import { PUBLISHED_PAGES } from "../app/lib/published-pages.generated.mjs";
 import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
 import { OWNER_PROFILES } from "../app/lib/seo.ts";
 
-test("every internal footer link is a route app/routes.ts declares", async () => {
+await test("every internal footer link is a route app/routes.ts declares", async () => {
   const routes = await declaredRouteModules();
   const missing = footerHrefs()
     .filter((link) => !link.external)
@@ -20,12 +20,12 @@ test("every internal footer link is a route app/routes.ts declares", async () =>
 
 // Link integrity (search standing), rel=me honesty, and AI access staying invisible.
 
-test("the footer never links the retired /phage-discovery address", () => {
+await test("the footer never links the retired /phage-discovery address", () => {
   const hrefs = footerHrefs().map((link) => link.to);
   assert.ok(!hrefs.includes("/phage-discovery"));
 });
 
-test("nothing in the footer is for machines only (job_5670dd43eef2): agents find these through the head and robots.txt", () => {
+await test("nothing in the footer is for machines only (job_5670dd43eef2): agents find these through the head and robots.txt", () => {
   const hrefs = footerHrefs().map((link) => link.to);
   for (const machineOnly of ["/llms.txt", "/llms-full.txt"]) {
     assert.ok(!hrefs.includes(machineOnly), machineOnly);
@@ -33,7 +33,7 @@ test("nothing in the footer is for machines only (job_5670dd43eef2): agents find
   assert.ok(!hrefs.some((to) => to.endsWith(".md")), "a markdown twin linked from the footer");
 });
 
-test("rel=me marks exactly the owner's profiles, and never a social link", () => {
+await test("rel=me marks exactly the owner's profiles, and never a social link", () => {
   assert.ok(SOCIAL_LINKS.every((link) => !link.me));
   const me = footerHrefs().filter((link) => link.me).map((link) => link.to);
   assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
@@ -41,7 +41,7 @@ test("rel=me marks exactly the owner's profiles, and never a social link", () =>
 
 // Dustin, 2026-10-11: the brand block, then Workspace and Site, then the copyright line. These pin his decision.
 
-test("the footer has no Research, Teaching, Software or Writing column: the header carries those", () => {
+await test("the footer has no Research, Teaching, Software or Writing column: the header carries those", () => {
   const source = readFileSync(new URL("../app/lib/footer.ts", import.meta.url), "utf8");
   assert.ok(!/FOOTER_COLUMNS/.test(source));
   const hrefs = footerHrefs().map((link) => link.to);
@@ -50,7 +50,7 @@ test("the footer has no Research, Teaching, Software or Writing column: the head
   }
 });
 
-test("the brand block keeps the social marks and the profiles, adds RSS from the feed route, and nothing else", () => {
+await test("the brand block keeps the social marks and the profiles, adds RSS from the feed route, and nothing else", () => {
   assert.deepEqual(SOCIAL_LINKS.map((link) => link.label), ["Germomics podcast", "X"]);
   assert.deepEqual(BRAND_PROFILES.map((link) => link.label), ["Google Scholar", "PubMed", "ORCID", "RSS"]);
   const rss = BRAND_PROFILES.find((link) => link.label === "RSS");
@@ -62,7 +62,7 @@ test("the brand block keeps the social marks and the profiles, adds RSS from the
   assert.ok(!rss?.me, "the feed is not a profile, so it carries no rel=me");
 });
 
-test("the Workspace group lists Admin, Portal and Carrel in that order, each with its icon", () => {
+await test("the Workspace group lists Admin, Portal and Carrel in that order, each with its icon", () => {
   assert.deepEqual(
     PRIVATE_TOOLS.map((tool) => [tool.label, tool.icon]),
     [["Admin", "gear"], ["Portal", "capsid"], ["Carrel", "lamp"]],
@@ -73,7 +73,7 @@ test("the Workspace group lists Admin, Portal and Carrel in that order, each wit
   assert.equal(portal?.hover, "Capsid Portal");
 });
 
-test("the Site group is Contact, Site map, Colophon, Privacy, Terms, Accessibility", () => {
+await test("the Site group is Contact, Site map, Colophon, Privacy, Terms, Accessibility", () => {
   assert.deepEqual(
     SITE_LINKS_ALL.map((link) => [link.label, link.to]),
     [
@@ -87,7 +87,7 @@ test("the Site group is Contact, Site map, Colophon, Privacy, Terms, Accessibili
   );
 });
 
-test("Accessibility is listed only while its page is published; the other Site links always are", () => {
+await test("Accessibility is listed only while its page is published; the other Site links always are", () => {
   const without = siteLinks([]).map((link) => link.to);
   assert.deepEqual(without, ["/contact", "/site-map", "/colophon", "/privacy", "/terms"]);
   assert.ok(siteLinks(["/accessibility"]).some((link) => link.to === "/accessibility"));
@@ -96,18 +96,18 @@ test("Accessibility is listed only while its page is published; the other Site l
   assert.equal(SITE_LINKS.some((link) => link.to === "/accessibility"), PUBLISHED_PAGES.includes("/accessibility"));
 });
 
-test("a page file marked draft is not in the published list", () => {
+await test("a page file marked draft is not in the published list", () => {
   const draft = readFileSync(new URL("../content/pages/accessibility.md", import.meta.url), "utf8");
   const isDraft = /^draft: true$/m.test(draft);
   assert.equal(readPublishedPages().includes("/accessibility"), !isDraft);
 });
 
-test("Admin, when the footer lists it, goes to the admin, where Cloudflare Access signs in", () => {
+await test("Admin, when the footer lists it, goes to the admin, where Cloudflare Access signs in", () => {
   const admin = PRIVATE_TOOLS.find((tool) => tool.label === "Admin");
   if (admin) assert.equal(admin.to, "/admin");
 });
 
-test("the copyright year is computed at render, never hard-coded", () => {
+await test("the copyright year is computed at render, never hard-coded", () => {
   const source = readFileSync(new URL("../app/components/shell-footer.tsx", import.meta.url), "utf8");
   const start = source.indexOf('className="site-shell-footer-note"');
   const note = source.slice(start, source.indexOf("</p>", start));
@@ -115,7 +115,7 @@ test("the copyright year is computed at render, never hard-coded", () => {
   assert.deepEqual(note.match(/\b20\d\d\b/g), ["2006"]);
 });
 
-test("the bottom line is the copyright and the name, nothing else", () => {
+await test("the bottom line is the copyright and the name, nothing else", () => {
   const source = readFileSync(new URL("../app/components/shell-footer.tsx", import.meta.url), "utf8");
   const start = source.indexOf('className="site-shell-footer-note"');
   const note = source.slice(source.indexOf(">", start) + 1, source.indexOf("</p>", start)).replace(/\s+/g, " ").trim();

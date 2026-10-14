@@ -23,8 +23,7 @@ writers produce (the local build product and the Worker's saves alike), it is
 covered by `check:content`'s determinism pass exactly like prose, and it works
 with scripting off. You never write SVG and you never pick a colour.
 
-Ruling and measurements: Capsid `dustinedwards/chart-stack.md`. Mechanics: the
-repo CLAUDE.md. Directive:
+Directive:
 `app/lib/content/chart.mjs`, which validates the attributes, parses the CSV and
 hands the rows to Enarratio's `barChart`, `lineChart`, `areaChart` or
 `scatterPlot` (`dot`). Gate: `npm run check:content`.

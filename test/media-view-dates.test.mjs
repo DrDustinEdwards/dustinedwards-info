@@ -17,14 +17,14 @@ const FULL = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-test("every month renders its full name in the heading", () => {
+await test("every month renders its full name in the heading", () => {
   assert.deepEqual(
     MIDMONTH.map((iso) => monthOf(iso)),
     FULL.map((name) => `${name} 2025`),
   );
 });
 
-test("THE DERIVATION: every abbreviation is the first three letters of its name", () => {
+await test("THE DERIVATION: every abbreviation is the first three letters of its name", () => {
   // MONTH_ABBR is derived with `.slice(0, 3)`, which is legal only because that holds for all
   // twelve English months.
   const rendered = MIDMONTH.map((iso) => formatAdded(iso).split(" ")[1]);
@@ -35,7 +35,7 @@ test("THE DERIVATION: every abbreviation is the first three letters of its name"
   ]);
 });
 
-test("both renderings are UTC, so a late-evening upload cannot split them", () => {
+await test("both renderings are UTC, so a late-evening upload cannot split them", () => {
   // 23:30 UTC on the last day of a month is the case both docblocks name: read
   // in local time, a reader east of UTC sees the next day and possibly the next
   // month, and the heading and the cell then disagree on one screen.
@@ -46,12 +46,12 @@ test("both renderings are UTC, so a late-evening upload cannot split them", () =
   assert.equal(formatAdded("2025-02-01T00:30:00.000Z"), "01 Feb 2025");
 });
 
-test("the day is zero padded, so the column stays aligned", () => {
+await test("the day is zero padded, so the column stays aligned", () => {
   assert.equal(formatAdded("2025-03-05T12:00:00.000Z"), "05 Mar 2025");
   assert.equal(formatAdded("2025-03-25T12:00:00.000Z"), "25 Mar 2025");
 });
 
-test("leap day is a real date to both", () => {
+await test("leap day is a real date to both", () => {
   assert.equal(monthOf("2024-02-29T00:00:00.000Z"), "February 2024");
   assert.equal(formatAdded("2024-02-29T00:00:00.000Z"), "29 Feb 2024");
 });
@@ -59,20 +59,20 @@ test("leap day is a real date to both", () => {
 /* The words differ on purpose: a heading says the date is missing, a cell says where the file
  * came from instead. */
 for (const unusable of [null, undefined, "", "   ", "not a date", "2026-13-45"]) {
-  test(`both refuse ${JSON.stringify(unusable)}, and refuse it together`, () => {
+  await test(`both refuse ${JSON.stringify(unusable)}, and refuse it together`, () => {
     assert.equal(monthOf(unusable), "No upload date");
     assert.equal(formatAdded(unusable), "in repo");
   });
 }
 
-test("a real uploaded_at from the deployed table renders in both", () => {
+await test("a real uploaded_at from the deployed table renders in both", () => {
   // From the media table. The real corpus sits inside one minute of one day, which is why every
   // other test here is synthetic: it cannot exercise a month boundary.
   assert.equal(monthOf("2026-08-23T20:38:59.620Z"), "August 2026");
   assert.equal(formatAdded("2026-08-23T20:38:59.620Z"), "23 Aug 2026");
 });
 
-test("NO CLOCK IS READ: the same input renders the same string whatever today is", (t) => {
+await test("NO CLOCK IS READ: the same input renders the same string whatever today is", (t) => {
   const iso = "2020-06-15T12:00:00.000Z";
   t.mock.timers.enable({ apis: ["Date"] });
   for (const today of [Date.UTC(2020, 5, 15, 12), Date.UTC(2031, 0, 1), Date.UTC(1999, 11, 31, 23, 59)]) {

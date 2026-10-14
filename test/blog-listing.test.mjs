@@ -17,7 +17,7 @@ const page = [
   { slug: "c", featured: false },
 ];
 
-test("the featured post is removed from the list it was found in", () => {
+await test("the featured post is removed from the list it was found in", () => {
   const { featured, posts } = splitFeatured(page, true);
   assert.equal(featured?.slug, "b");
   assert.deepEqual(
@@ -27,7 +27,7 @@ test("the featured post is removed from the list it was found in", () => {
   );
 });
 
-test("order is preserved for the posts that remain", () => {
+await test("order is preserved for the posts that remain", () => {
   const { posts } = splitFeatured(
     [
       { slug: "x", featured: true },
@@ -39,7 +39,7 @@ test("order is preserved for the posts that remain", () => {
   assert.deepEqual(posts.map((p) => p.slug), ["y", "z"]);
 });
 
-test("an ineligible page keeps its list intact and shows no hero", () => {
+await test("an ineligible page keeps its list intact and shows no hero", () => {
   const { featured, posts } = splitFeatured(page, false);
   assert.equal(featured, null);
   assert.deepEqual(
@@ -49,7 +49,7 @@ test("an ineligible page keeps its list intact and shows no hero", () => {
   );
 });
 
-test("no featured post on the page means no hero and no removal", () => {
+await test("no featured post on the page means no hero and no removal", () => {
   const plain = [
     { slug: "a", featured: false },
     { slug: "b", featured: false },
@@ -59,7 +59,7 @@ test("no featured post on the page means no hero and no removal", () => {
   assert.deepEqual(posts.map((p) => p.slug), ["a", "b"]);
 });
 
-test("the first featured post wins when the data carries more than one", () => {
+await test("the first featured post wins when the data carries more than one", () => {
   const two = [
     { slug: "a", featured: true },
     { slug: "b", featured: true },
@@ -73,7 +73,7 @@ test("the first featured post wins when the data carries more than one", () => {
   );
 });
 
-test("the input array is not mutated", () => {
+await test("the input array is not mutated", () => {
   const input = [...page];
   splitFeatured(input, true);
   assert.deepEqual(
@@ -86,7 +86,7 @@ test("the input array is not mutated", () => {
 const flagship = { slug: "flagship" };
 const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }, { slug: "n5" }];
 
-test("the featured post leads and the others fill in behind it", () => {
+await test("the featured post leads and the others fill in behind it", () => {
   const { featured, recent } = startHere([flagship], others);
   assert.equal(featured.slug, "flagship");
   assert.deepEqual(
@@ -96,7 +96,7 @@ test("the featured post leads and the others fill in behind it", () => {
   );
 });
 
-test("the featured post is never also one of the others", () => {
+await test("the featured post is never also one of the others", () => {
   const { featured, recent } = startHere([flagship], others);
   assert.ok(
     !recent.some((p) => p.slug === featured.slug),
@@ -105,7 +105,7 @@ test("the featured post is never also one of the others", () => {
   );
 });
 
-test("with nothing featured the first of the others leads and the section still shows three", () => {
+await test("with nothing featured the first of the others leads and the section still shows three", () => {
   const { featured, recent } = startHere([], others);
   assert.equal(featured.slug, "n1", "ruling 57: the newest leads");
   assert.deepEqual(
@@ -116,7 +116,7 @@ test("with nothing featured the first of the others leads and the section still 
   assert.equal(HOME_CARDS, 3);
 });
 
-test("the home page's picks come first, in pick order, then the rest newest first", () => {
+await test("the home page's picks come first, in pick order, then the rest newest first", () => {
   const rows = [{ slug: "n1" }, { slug: "p2" }, { slug: "n2" }, { slug: "p1" }];
   assert.deepEqual(
     picksFirst(rows, ["p1", "p2"]).map((p) => p.slug),
@@ -124,14 +124,14 @@ test("the home page's picks come first, in pick order, then the rest newest firs
   );
 });
 
-test("a pick that is not published drops out and the newest fill its place", () => {
+await test("a pick that is not published drops out and the newest fill its place", () => {
   assert.deepEqual(
     picksFirst([{ slug: "n1" }, { slug: "p2" }, { slug: "n2" }], ["gone", "p2"]).map((p) => p.slug),
     ["p2", "n1", "n2"],
   );
 });
 
-test("a post in both queries appears once", () => {
+await test("a post in both queries appears once", () => {
   assert.deepEqual(
     picksFirst([{ slug: "p1" }, { slug: "n1" }, { slug: "p1" }], ["p1"]).map((p) => p.slug),
     ["p1", "n1"],
@@ -139,7 +139,7 @@ test("a post in both queries appears once", () => {
   );
 });
 
-test("every home pick is a published, unfeatured post in content/posts", () => {
+await test("every home pick is a published, unfeatured post in content/posts", () => {
   for (const slug of HOME_PICKS) {
     const source = readFileSync(new URL(`../content/posts/${slug}.md`, import.meta.url), "utf8");
     const front = source.split(/^---$/m)[1] ?? "";
@@ -153,19 +153,19 @@ test("every home pick is a published, unfeatured post in content/posts", () => {
   assert.ok(HOME_PICKS.length >= HOME_CARDS - 1, "the picks fill the rows behind the lead");
 });
 
-test("an empty corpus yields a null lead, which renders the section dark", () => {
+await test("an empty corpus yields a null lead, which renders the section dark", () => {
   const { featured, recent } = startHere([], []);
   assert.equal(featured, null, "home guards on {featured ? ... : null}");
   assert.deepEqual(recent, []);
 });
 
-test("a short corpus returns what it has rather than padding", () => {
+await test("a short corpus returns what it has rather than padding", () => {
   const { featured, recent } = startHere([], [{ slug: "only" }]);
   assert.equal(featured.slug, "only");
   assert.deepEqual(recent, [], "one post is one card, not one card and three holes");
 });
 
-test("cards is honored, so the count has one owner", () => {
+await test("cards is honored, so the count has one owner", () => {
   const { recent } = startHere([flagship], others, 2);
   assert.deepEqual(
     recent.map((p) => p.slug),
@@ -174,7 +174,7 @@ test("cards is honored, so the count has one owner", () => {
   );
 });
 
-test("readPage accepts only a positive whole number and reads anything else as page 1", () => {
+await test("readPage accepts only a positive whole number and reads anything else as page 1", () => {
   assert.equal(readPage("3"), 3);
   for (const raw of [null, "", "0", "-3", "1.5", "2abc", "abc", "1e3", " 2"]) {
     assert.equal(readPage(raw), 1, `?page=${raw} must read as 1`);

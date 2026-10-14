@@ -21,21 +21,21 @@ const CONFIRM = [
   "sync:content ok. FTS and search index row counts match.",
 ].join("\n");
 
-test("the first run carries drift and no counts, which is what ship refused on", () => {
+await test("the first run carries drift and no counts, which is what ship refused on", () => {
   assert.equal(driftCount(FIRST), 3);
   assert.equal(searchCounts(FIRST), null);
 });
 
-test("the confirming run carries zero drift and the counts", () => {
+await test("the confirming run carries zero drift and the counts", () => {
   assert.equal(driftCount(CONFIRM), 0);
   assert.deepEqual(searchCounts(CONFIRM), ["200", "200", "200"]);
 });
 
-test("a run with no drift line reads as null, not zero", () => {
+await test("a run with no drift line reads as null, not zero", () => {
   assert.equal(driftCount("sync:content failed before the drift pass"), null);
 });
 
-test("ship reads the counts from the run that wrote last, not the first", () => {
+await test("ship reads the counts from the run that wrote last, not the first", () => {
   const first = { code: 1, text: FIRST };
   const confirm = { code: 0, text: CONFIRM };
   assert.deepEqual(searchCounts(standingRun(first, confirm).text), ["200", "200", "200"]);

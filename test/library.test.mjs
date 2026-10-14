@@ -65,23 +65,23 @@ const RECORDS = [
   record({ slug: "cake", profile: "recipe", path: "/recipes/cake", title: "Cake" }),
 ];
 
-test("the library lists protocols and computational methods, and no recipe", () => {
+await test("the library lists protocols and computational methods, and no recipe", () => {
   const items = libraryItems(RECORDS);
   assert.deepEqual(items.map((i) => i.slug), ["coi", "gapdh", "isolation"]);
 });
 
-test("the key fact is the targets, else the total time, else nothing: it is never typed", () => {
+await test("the key fact is the targets, else the total time, else nothing: it is never typed", () => {
   assert.equal(keyFact(record({ targets: ["COI", "GAPDH"] })), "COI, GAPDH");
   assert.equal(keyFact(record({ time: { total: "2 days" } })), "2 days");
   assert.equal(keyFact(record({})), "");
 });
 
-test("steps are counted over every method section", () => {
+await test("steps are counted over every method section", () => {
   assert.equal(stepCount(RECORDS[0]), 3);
   assert.equal(stepCount(RECORDS[1]), 0);
 });
 
-test("facets count what choosing would give, and filters combine: or inside a facet, and between facets", () => {
+await test("facets count what choosing would give, and filters combine: or inside a facet, and between facets", () => {
   const items = libraryItems(RECORDS);
   const all = queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, ""));
   assert.equal(all.total, 3);
@@ -95,7 +95,7 @@ test("facets count what choosing would give, and filters combine: or inside a fa
   assert.equal(either.count, 3);
 });
 
-test("search ranks by field weight: a title match comes before a description match", () => {
+await test("search ranks by field weight: a title match comes before a description match", () => {
   const items = libraryItems([
     record({ slug: "a", title: "Gel", description: "A protocol that mentions plating once." }),
     record({ slug: "b", title: "Plating", description: "Plates." }),
@@ -104,7 +104,7 @@ test("search ranks by field weight: a title match comes before a description mat
   assert.deepEqual(hit.rows.map((r) => r.slug), ["b", "a"]);
 });
 
-test("the downloads carry every fact with words for the ids, honour the filters, and quote what needs it", () => {
+await test("the downloads carry every fact with words for the ids, honour the filters, and quote what needs it", () => {
   const items = libraryItems(RECORDS);
   const rows = libraryRecords(items, "method=plating", "https://example.test");
   assert.equal(rows.length, 1);
@@ -119,7 +119,7 @@ test("the downloads carry every fact with words for the ids, honour the filters,
   assert.match(csv, /Plating and titering; Culture/, "a list is joined with a semicolon");
 });
 
-test("the twin's table links each protocol by its address and escapes a pipe in a cell", () => {
+await test("the twin's table links each protocol by its address and escapes a pipe in a cell", () => {
   const md = libraryMarkdown(libraryItems(RECORDS), "https://example.test");
   assert.match(md, /^\| Protocol \| Method \|/);
   assert.match(md, /\[COI primers\]\(https:\/\/example\.test\/research\/protocols\/coi\)/);
@@ -127,7 +127,7 @@ test("the twin's table links each protocol by its address and escapes a pipe in 
   assert.equal(md.split("\n").length, 2 + 3, "a header, a rule and a row for each protocol");
 });
 
-test("the overview is counted from the rows: a method with a protocol gets a tile, and the workflow counts each stage", () => {
+await test("the overview is counted from the rows: a method with a protocol gets a tile, and the workflow counts each stage", () => {
   const o = libraryOverview(libraryItems(RECORDS));
   assert.deepEqual([o.total, o.methods, o.organisms, o.updated], [3, 3, 2, "2026-09-30"]);
   assert.deepEqual(o.tiles.map((t) => [t.id, t.count]), [["pcr", 2], ["plating", 1], ["culture", 1]]);
@@ -138,13 +138,13 @@ test("the overview is counted from the rows: a method with a protocol gets a til
   assert.equal(stage.sequence.count, 0);
 });
 
-test("a tile and a stage link to the address the facet itself would produce", () => {
+await test("a tile and a stage link to the address the facet itself would produce", () => {
   assert.equal(methodHref(["pcr"]), "/research/protocols?method=pcr");
   const hit = queryCatalog(LIBRARY, libraryItems(RECORDS), parseCatalogParams(LIBRARY, "method=plating&method=culture"));
   assert.deepEqual(hit.rows.map((r) => r.slug), ["isolation"]);
 });
 
-test("the overview sentence and the twin say what the page shows, with the singular where there is one", () => {
+await test("the overview sentence and the twin say what the page shows, with the singular where there is one", () => {
   const o = libraryOverview(libraryItems([record({ slug: "a", methods: ["pcr"], organisms: ["avian"] })]));
   assert.equal(overviewSentence(o), "1 protocol across 1 method, 1 organism, newest updated 2026-09-30.");
   const md = overviewMarkdown(o, "https://example.test");
@@ -153,7 +153,7 @@ test("the overview sentence and the twin say what the page shows, with the singu
   assert.match(md, /- \[PCR\]\(https:\/\/example\.test\/research\/protocols\?method=pcr\): 1 protocol/);
 });
 
-test("the tabs are All and each kind of work, counted from the rows; the current one is the method filter in the address", () => {
+await test("the tabs are All and each kind of work, counted from the rows; the current one is the method filter in the address", () => {
   const items = libraryItems(RECORDS);
   const tabs = libraryTabs(items, []);
   assert.deepEqual(tabs.map((t) => [t.id, t.count, t.current]), [["all", 3, true], ["phage", 1, false], ["pcr", 2, false], ["calculators", 6, false]]);
@@ -166,7 +166,7 @@ test("the tabs are All and each kind of work, counted from the rows; the current
   assert.deepEqual(libraryTabs(items, ["pcr", "plating"]).map((t) => t.current), [false, false, false, false], "a mixed filter is no tab's");
 });
 
-test("an unknown parameter is served, not redirected, so a cache-buster or a tracking link still lands; a known one is made clean", () => {
+await test("an unknown parameter is served, not redirected, so a cache-buster or a tracking link still lands; a known one is made clean", () => {
   const at = (query) => libraryRedirect(new URL(`https://example.test/research/protocols${query}`));
   assert.equal(at(""), null);
   assert.equal(at("?cb=123"), null, "a cache-buster is ignored");
@@ -176,7 +176,7 @@ test("an unknown parameter is served, not redirected, so a cache-buster or a tra
   assert.equal(at("?page=1"), "/research/protocols");
 });
 
-test("a workflow stage links the calculators it names, from the one registry, and an unknown calculator is an error", () => {
+await test("a workflow stage links the calculators it names, from the one registry, and an unknown calculator is an error", () => {
   const o = libraryOverview(libraryItems(RECORDS));
   const isolate = o.stages.find((s) => s.id === "isolate");
   assert.deepEqual(isolate.tools.map((t) => t.href), ["/research/tools/titer", "/research/tools/dilution", "/research/tools/webbed-plate", "/research/tools/lysate-volume"]);
@@ -187,7 +187,7 @@ test("a workflow stage links the calculators it names, from the one registry, an
   assert.ok(md.includes("  - [Titer calculator](https://example.test/research/tools/titer)"), "the twin lists the stage's calculators under it");
 });
 
-test("the library browses by method, by course and by organism, each tile an address of the filtered library", () => {
+await test("the library browses by method, by course and by organism, each tile an address of the filtered library", () => {
   const o = libraryOverview(libraryItems(RECORDS));
   assert.deepEqual(o.browse.map((g) => g.id), ["method", "course", "organism"]);
   const course = o.browse.find((g) => g.id === "course");
@@ -202,7 +202,7 @@ test("the library browses by method, by course and by organism, each tile an add
   assert.ok(md.includes("### Browse by organism") && md.includes("- [Birds](https://example.test/research/protocols?organism=avian): 1 protocol"));
 });
 
-test("Start here lists the protocols that state a position, in that order, with their own description; none stated, no list", () => {
+await test("Start here lists the protocols that state a position, in that order, with their own description; none stated, no list", () => {
   const items = libraryItems([
     record({ slug: "b", path: "/research/protocols/b", title: "Second", description: "Do this second.", startHere: 2, methods: ["pcr"] }),
     record({ slug: "a", path: "/research/protocols/a", title: "First", description: "Do this first.", startHere: 1, methods: ["pcr"] }),
@@ -216,12 +216,12 @@ test("Start here lists the protocols that state a position, in that order, with 
   assert.ok(!overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test").includes("Start here"));
 });
 
-test("the twin names the calculators page with its count", () => {
+await test("the twin names the calculators page with its count", () => {
   const md = overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test");
   assert.ok(md.includes("### Calculators\n\n- [Phage Lab Calculators](https://example.test/research/tools): 6 calculators"));
 });
 
-test("the citation is built from the site's identity and the library's address, and the twin carries the same text", () => {
+await test("the citation is built from the site's identity and the library's address, and the twin carries the same text", () => {
   const citation = libraryCitation({ name: "Ada Lovelace", affiliation: "Analytical University", origin: "https://example.test" });
   assert.equal(citation.library, "Ada Lovelace. Protocol library. Ada Lovelace Lab, Analytical University. https://example.test/research/protocols");
   const md = citeMarkdown(citation, "https://example.test");
@@ -229,7 +229,7 @@ test("the citation is built from the site's identity and the library's address, 
   assert.ok(md.includes("[CSV](https://example.test/research/protocols.csv)") && md.includes("[JSON](https://example.test/research/protocols.json)"));
 });
 
-test("the downloads carry the view's filter state, so what is downloaded is what is shown; the markdown is always the library", () => {
+await test("the downloads carry the view's filter state, so what is downloaded is what is shown; the markdown is always the library", () => {
   const items = libraryItems(RECORDS);
   const view = (query) => queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, query));
   assert.deepEqual(libraryDownloads(view("")), { csv: "/research/protocols.csv", json: "/research/protocols.json", markdown: "/research/protocols.md" });
@@ -240,7 +240,7 @@ test("the downloads carry the view's filter state, so what is downloaded is what
   });
 });
 
-test("a protocol knows its neighbours in the phage workflow from the stages, not from anything typed on it", () => {
+await test("a protocol knows its neighbours in the phage workflow from the stages, not from anything typed on it", () => {
   const items = libraryItems([
     record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating", "culture"] }),
     record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),
@@ -259,7 +259,7 @@ test("a protocol knows its neighbours in the phage workflow from the stages, not
   assert.equal(workflowContext(items, "/research/protocols/nope"), null);
 });
 
-test("the twin lists the same stage, neighbours and calculators, and nothing for a protocol outside the workflow", () => {
+await test("the twin lists the same stage, neighbours and calculators, and nothing for a protocol outside the workflow", () => {
   const items = libraryItems([
     record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating"] }),
     record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),

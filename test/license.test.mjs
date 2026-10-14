@@ -10,12 +10,12 @@ import { LICENSE_URL, SITE_ORIGIN } from "../app/lib/seo.ts";
 // test/worker/structured-data.test.ts; these hold the downloads, which have no field to put it in, and the
 // footer link, which is how a visitor finds the page.
 
-test("the license address is the terms page, stored once", () => {
+await test("the license address is the terms page, stored once", () => {
   assert.equal(TERMS_PATH, "/terms");
   assert.equal(LICENSE_URL, `${SITE_ORIGIN}${TERMS_PATH}`);
 });
 
-test("every publications export names the terms as its license in the Link header", () => {
+await test("every publications export names the terms as its license in the Link header", () => {
   for (const [type, filename] of [
     ["application/vnd.citationstyles.csl+json", "publications.json"],
     ["application/x-research-info-systems", "publications.ris"],
@@ -26,7 +26,7 @@ test("every publications export names the terms as its license in the Link heade
   assert.equal(LICENSE_LINK, '</terms>; rel="license"');
 });
 
-test("the footer links the terms page", () => {
+await test("the footer links the terms page", () => {
   const links = SITE_LINKS.filter((item) => item.to === TERMS_PATH);
   assert.equal(links.length, 1);
 });

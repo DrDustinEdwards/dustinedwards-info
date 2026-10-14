@@ -59,24 +59,24 @@ The body, with a --- line inside it that must not be read as a delimiter.
 More body.
 `;
 
-test("stamps a value into frontmatter that has no such key", () => {
+await test("stamps a value into frontmatter that has no such key", () => {
   const out = roundTrip(PLAIN, "2026-08-28");
   assert.match(out, /^first_published: 2026-08-28$/m);
 });
 
-test("overwrites a value the document already carried", () => {
+await test("overwrites a value the document already carried", () => {
   const seeded = PLAIN.replace("draft: false", "draft: false\nfirst_published: 2020-01-01");
   const out = roundTrip(seeded, "2026-08-28");
   assert.doesNotMatch(out, /2020-01-01/, "the old value survived, which is the security case");
 });
 
-test("removes the key when the value is null", () => {
+await test("removes the key when the value is null", () => {
   const seeded = PLAIN.replace("draft: false", "draft: false\nfirst_published: 2020-01-01");
   const out = roundTrip(seeded, null);
   assert.doesNotMatch(out, /first_published/, "the key survived a null stamp");
 });
 
-test("an unquoted YAML date survives as the same day", () => {
+await test("an unquoted YAML date survives as the same day", () => {
   // gray-matter hands this back as a Date, not a string, which is why the
   // comparison in the implementation normalizes before comparing.
   const dated = PLAIN.replace("draft: false", "draft: false\ndate: 2026-07-30");
@@ -84,7 +84,7 @@ test("an unquoted YAML date survives as the same day", () => {
   assert.equal(fields(out).date, "2026-07-30");
 });
 
-test("a document with no frontmatter is returned untouched", () => {
+await test("a document with no frontmatter is returned untouched", () => {
   const bare = "Just a body.\n";
   assert.equal(forceFirstPublished(bare, "2026-08-28"), bare);
 });
@@ -112,13 +112,13 @@ first_published:
 Body.
 `;
 
-test("A QUOTED KEY: the edit would append a duplicate and break the document", () => {
+await test("A QUOTED KEY: the edit would append a duplicate and break the document", () => {
   // The naive edit leaves `"first_published"` in place and adds a second key, which YAML refuses.
   const out = roundTrip(QUOTED_KEY, "2026-08-28");
   assert.doesNotMatch(out, /2020-01-01/, "the old value survived, which is the security case");
 });
 
-test("A LIST VALUE: the edit would orphan the items onto the key above", () => {
+await test("A LIST VALUE: the edit would orphan the items onto the key above", () => {
   /* Does not throw: removing the key line folds `  - 2020-01-01` into the preceding key, so
    * the post's TITLE silently becomes "A post - 2020-01-01". */
   const out = roundTrip(LIST_VALUE, "2026-08-28");

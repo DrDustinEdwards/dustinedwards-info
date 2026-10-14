@@ -25,17 +25,17 @@ function good() {
   };
 }
 
-test("discovery that describes this server has no problems", () => {
+await test("discovery that describes this server has no problems", () => {
   assert.deepEqual(discoveryProblems(good(), ORIGIN), []);
 });
 
-test("a token audience other than ORIGIN/mcp is a problem", () => {
+await test("a token audience other than ORIGIN/mcp is a problem", () => {
   const r = good();
   r.prm.body.resource = "https://dustinedwards-mcp.dustin-edwards.workers.dev/mcp";
   assert.match(discoveryProblems(r, ORIGIN).join(), /protected resource is/);
 });
 
-test("an issuer on another host, no CIMD, or no registration endpoint is a problem", () => {
+await test("an issuer on another host, no CIMD, or no registration endpoint is a problem", () => {
   const r = good();
   r.as.body = { issuer: "http://admin-mcp.dustinedwards.info" };
   const problems = discoveryProblems(r, ORIGIN).join(" | ");
@@ -44,7 +44,7 @@ test("an issuer on another host, no CIMD, or no registration endpoint is a probl
   assert.match(problems, /registration endpoint/);
 });
 
-test("server/discover answered without a token is a problem, and so is a challenge naming no document", () => {
+await test("server/discover answered without a token is a problem, and so is a challenge naming no document", () => {
   const open = good();
   open.discover = { status: 200, challenge: "" };
   assert.match(discoveryProblems(open, ORIGIN).join(), /answered 200, not 401/);
@@ -53,7 +53,7 @@ test("server/discover answered without a token is a problem, and so is a challen
   assert.match(discoveryProblems(vague, ORIGIN).join(), /path-scoped/);
 });
 
-test("unreachable documents are named by status", () => {
+await test("unreachable documents are named by status", () => {
   const r = good();
   r.prm = { status: 0, body: null };
   r.as = { status: 404, body: null };
@@ -70,13 +70,13 @@ function root(config) {
   return dir;
 }
 
-test("mcpConfig refuses a missing config, the example's placeholders, and a non-https origin", () => {
+await test("mcpConfig refuses a missing config, the example's placeholders, and a non-https origin", () => {
   assert.match(mcpConfig(root(null)).why, /does not exist/);
   assert.match(mcpConfig(root('{ "kv_namespaces": [{ "id": "YOUR_OAUTH_KV_ID" }] }')).why, /placeholders/);
   assert.match(mcpConfig(root('{ "vars": { "PUBLIC_ORIGIN": "http://x.test" } }')).why, /https PUBLIC_ORIGIN/);
 });
 
-test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
+await test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
   const config = `{
     // the one public address
     "vars": { "PUBLIC_ORIGIN": "${ORIGIN}/" }
@@ -84,11 +84,11 @@ test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
   assert.deepEqual(mcpConfig(root(config)), { ok: true, origin: ORIGIN });
 });
 
-test("the gates are the four CI's mcp job runs, typecheck first", () => {
+await test("the gates are the four CI's mcp job runs, typecheck first", () => {
   assert.deepEqual(MCP_GATES, ["typecheck", "check:wrapper", "test", "build"]);
 });
 
-test("the mcp target deploys mcp/ and runs the four gates", () => {
+await test("the mcp target deploys mcp/ and runs the four gates", () => {
   assert.deepEqual(MCP_TARGETS.mcp.dir, ["mcp"]);
   assert.deepEqual(MCP_TARGETS.mcp.gates, MCP_GATES);
 });

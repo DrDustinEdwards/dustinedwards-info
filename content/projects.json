@@ -85,21 +85,21 @@
     },
     {
       "slug": "dustinedwards-mcp",
-      "name": "Operator MCP wrapper",
-      "oneLiner": "A thin MCP server over this site's operator API that contains no policy of its own.",
-      "description": "An MCP server exposing this site's publishing operations to an agent, deliberately built as a transport with no rules in it: every constraint, including the refusal to let an operator perform a post's first publication, is enforced by the site's API and not by the wrapper. The surface an agent talks to should never be the thing deciding what is allowed, and keeping the wrapper empty is how that stays true.",
+      "name": "Dustin Edwards Admin",
+      "oneLiner": "The MCP server that runs this site from a chat, a thin wrapper over its operator API with no policy of its own.",
+      "description": "An MCP server exposing this site's operations to an agent: site health and drift repair, webmention moderation, media, registries, citations and lab procedures. Writing is Carrel's, so it has no post tools. It is deliberately built as a transport with no rules in it: every constraint, including the refusal to let an operator perform a procedure's first publication, is enforced by the site's API and not by the wrapper. The surface an agent talks to should never be the thing deciding what is allowed, and keeping the wrapper empty is how that stays true.",
       "notable": [
-        "Every constraint lives in the HTTP API underneath, including the one operation an operator may never perform, a post's first publication. The wrapper can therefore be rewritten or replaced without a rule moving with it, and a refusal it returns is the site's refusal rather than its own.",
+        "Every constraint lives in the HTTP API underneath, including the one operation an operator may never perform, a first publication. The wrapper can therefore be rewritten or replaced without a rule moving with it, and a refusal it returns is the site's refusal rather than its own.",
         "The protocol implementation was chosen by conformance score rather than by preference, and support for the superseded protocol revision is isolated in a single deletable module with a stated retirement condition instead of being spread through the request path.",
-        "An agent writes through the same door a human editor writes through, so an agent's change arrives as an ordinary commit and an ordinary row, and the audit trail does not need to know which of the two made it."
+        "An agent writes through the same door the admin writes through, so an agent's change arrives as an ordinary commit and an ordinary row, and the audit trail does not need to know which of the two made it."
       ],
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
       "status": "live",
       "url": null,
-      "repo": "https://github.com/DrDustinEdwards/dustinedwards-mcp",
+      "repo": "https://github.com/DrDustinEdwards/dustinedwards-info/tree/main/mcp",
       "stack": ["Cloudflare Workers", "MCP", "TypeScript"],
-      "metric": { "label": "operations exposed to the agent", "value": "5", "asOf": "2026-08-30" },
+      "metric": { "label": "tools exposed to the agent", "value": "9", "asOf": "2026-10-13" },
       "evidence": [
         {
           "kind": "post",
@@ -118,7 +118,7 @@
         },
         {
           "kind": "repo",
-          "ref": "https://github.com/DrDustinEdwards/dustinedwards-mcp",
+          "ref": "https://github.com/DrDustinEdwards/dustinedwards-info/tree/main/mcp",
           "label": "The server, public and checkable"
         }
       ]

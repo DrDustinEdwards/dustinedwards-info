@@ -45,13 +45,13 @@ async function entries() {
   });
 }
 
-test("each named software page has its entry, and each entry is a listed page", async () => {
+await test("each named software page has its entry, and each entry is a listed page", async () => {
   const all = await entries();
   assert.deepEqual(all.map((entry) => entry.path).sort(), [...PATHS].sort());
   for (const path of PATHS) assert.ok(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(path), path);
 });
 
-test("every entry is complete: IPA between slashes, a respelling, two senses and an origin", async () => {
+await test("every entry is complete: IPA between slashes, a respelling, two senses and an origin", async () => {
   for (const entry of await entries()) {
     assert.match(entry.ipa, /^\/.+\/$/, entry.term);
     assert.match(entry.respelling, /^[A-Za-z-]+$/, entry.term);
@@ -72,7 +72,7 @@ test("every entry is complete: IPA between slashes, a respelling, two senses and
   assert.match(await refusal("capsid", (r) => r.replace("  - [la, capsa]", "  - [latin, capsa]")), /etymology\[3\]: is text, or a \[language, word\] pair/);
 });
 
-test("the entries say nothing possessive about the owner and carry no em dash", async () => {
+await test("the entries say nothing possessive about the owner and carry no em dash", async () => {
   const text = JSON.stringify(await entries());
   assert.ok(!text.includes("Dustin"));
   assert.ok(!text.includes(EM_DASH));
@@ -80,7 +80,7 @@ test("the entries say nothing possessive about the owner and carry no em dash", 
   assert.match(await refusal("carrel", (r) => `${r}\nA sentence ${EM_DASH} with a dash.\n`), /wide dash/);
 });
 
-test("each clip is a small MP3 served from the site's own origin, and a referenced clip must exist", async () => {
+await test("each clip is a small MP3 served from the site's own origin, and a referenced clip must exist", async () => {
   // The repository's own clips: the host reads their first bytes, so the frame sync is judged here (CI), as the
   // old test judged it. A clip that is missing, oversized or not MPEG is refused by the compile.
   for (const entry of await entries()) {
@@ -105,7 +105,7 @@ test("each clip is a small MP3 served from the site's own origin, and a referenc
   assert.equal(workerSide.ok, true, "the Worker's host cannot read bytes, so the frame sync is judged in CI only");
 });
 
-test("the path is a registered Software page, named by the file, and one entry opens it", async () => {
+await test("the path is a registered Software page, named by the file, and one entry opens it", async () => {
   assert.match(await refusal("capsid", (r) => r.replace("path: /software/capsid", "path: /research/phages")), /not a registered Software page/);
   assert.match(await refusal("capsid", (r) => r.replace("path: /software/capsid", "path: /software/nothing")), /not a registered Software page/);
   assert.match(await refusal("capsid", (r) => r.replace("path: /software/capsid", "path: /software/carrel")), /belongs in content\/dictionary\/carrel\.md/);
@@ -114,14 +114,14 @@ test("the path is a registered Software page, named by the file, and one entry o
   assert.match(taken.ok ? "" : taken.errors.join(" "), /already has an entry \(elder\)/);
 });
 
-test("front matter: an unknown field and a bad draft flag are refused, and a draft flag is read", async () => {
+await test("front matter: an unknown field and a bad draft flag are refused, and a draft flag is read", async () => {
   assert.match(await refusal("capsid", (r) => r.replace("term: Capsid", "term: Capsid\nspelling: oops")), /spelling: is not a field/);
   assert.match(await refusal("capsid", (r) => r.replace("audio: /audio/capsid.mp3", "audio: /audio/capsid.mp3\ndraft: maybe")), /draft: is "maybe"/);
   const draft = await compile("capsid", read("capsid").replace("audio: /audio/capsid.mp3", "audio: /audio/capsid.mp3\ndraft: true"));
   assert.equal(draft.ok && draft.draft, true);
 });
 
-test("the markdown twin carries the same entry under its title", async () => {
+await test("the markdown twin carries the same entry under its title", async () => {
   const enarratio = (await entries()).find((entry) => entry.term === "Enarratio");
   assert.ok(enarratio);
   const twin = contentPageMarkdownBody({ path: "/software/enarratio", title: "Enarratio", markdown: "Body.\n" }, enarratio);
@@ -136,7 +136,7 @@ test("the markdown twin carries the same entry under its title", async () => {
   assert.equal(plain, "# Foxing\n\nBody.\n");
 });
 
-test("the search record leads with the entry, so the definition is findable", async () => {
+await test("the search record leads with the entry, so the definition is findable", async () => {
   const carrel = (await entries()).find((entry) => entry.term === "Carrel");
   const page = { path: "/software/carrel", title: "Carrel", description: "d", markdown: "Intro.\n", toc: [] };
   const [record] = contentPageSearchInputs([page], (path) => (path === page.path ? carrel : undefined));
@@ -145,7 +145,7 @@ test("the search record leads with the entry, so the definition is findable", as
   assert.ok(!bare?.intro.includes("KAIR-uhl"), "a page given no entry has no lead in its record");
 });
 
-test("the DefinedTerm describes the software (sense 2) and sits in the Software set", async () => {
+await test("the DefinedTerm describes the software (sense 2) and sits in the Software set", async () => {
   const entry = (await entries()).find((e) => e.path === "/software/capsid");
   assert.ok(entry);
   const ld = definedTermJsonLd(entry, "https://example.test");
@@ -155,7 +155,7 @@ test("the DefinedTerm describes the software (sense 2) and sits in the Software 
   assert.equal(ld.inDefinedTermSet.url, "https://example.test/software");
 });
 
-test("the colophon links the Carrel page", () => {
+await test("the colophon links the Carrel page", () => {
   const page = readFileSync(new URL("../content/pages/software-carrel.md", import.meta.url), "utf8");
   assert.ok(!page.includes("carrel.dustinedwards.info"));
   // Nor its code: the repository is public only for now, so a link would rot.
@@ -164,7 +164,7 @@ test("the colophon links the Carrel page", () => {
   assert.ok(colophon.includes("<Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>"));
 });
 
-test("sense 2 of each entry is the software, labelled software., in the page's twin and its JSON-LD", async () => {
+await test("sense 2 of each entry is the software, labelled software., in the page's twin and its JSON-LD", async () => {
   // The old test pinned each sense to the owner's exact wording, which no Carrel edit could ever change. What
   // survives an edit is the structure: the label, the twin's own line for it and the DefinedTerm's description.
   for (const entry of await entries()) {
@@ -175,7 +175,7 @@ test("sense 2 of each entry is the software, labelled software., in the page's t
   }
 });
 
-test("the build rows carry each file's blob sha and hand the pages their published entries", async () => {
+await test("the build rows carry each file's blob sha and hand the pages their published entries", async () => {
   const built = await buildDictionary();
   assert.deepEqual(built.rows.map((row) => row.key).sort(), ["capsid", "capsomer", "carrel", "enarratio"]);
   assert.ok(built.rows.every((row) => row.status === "published" && /^[0-9a-f]{40}$/.test(row.sourceBlobSha)));

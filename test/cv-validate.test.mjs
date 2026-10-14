@@ -25,7 +25,7 @@ async function errorsOf(slug, raw) {
 
 const GRANT = "  - year: 2026\n    amount: 10\n    title: A grant\n    areas: []\n    role: recipient\n";
 
-test("every file in the repository compiles, and the whole is a CV", async () => {
+await test("every file in the repository compiles, and the whole is a CV", async () => {
   const records = [];
   for (const { slug } of CV_FILES) {
     const compiled = await compileCvFile({ slug, raw: read(slug), publications: PUBLICATIONS });
@@ -37,18 +37,18 @@ test("every file in the repository compiles, and the whole is a CV", async () =>
   assert.match(cvTwin(whole.cv), /^# Curriculum Vitae\n\n/);
 });
 
-test("a file that is not in the registry is refused, and a save cannot create one", async () => {
+await test("a file that is not in the registry is refused, and a save cannot create one", async () => {
   const errors = await errorsOf("brand-new", read("grants"));
   assert.match(errors.join("\n"), /is not a CV file/);
   assert.match(errors.join("\n"), /cannot create a new one/);
 });
 
-test("the front matter must be YAML, and the file is the front matter alone", async () => {
+await test("the front matter must be YAML, and the file is the front matter alone", async () => {
   assert.match((await errorsOf("grants", "---\nentries: [unclosed\n---\n")).join("\n"), /not valid YAML/);
   assert.match((await errorsOf("profile", `${read("profile")}\nSome text.\n`)).join("\n"), /text after its front matter/);
 });
 
-test("a section file states its own type, a non-empty list, and no field it does not know", async () => {
+await test("a section file states its own type, a non-empty list, and no field it does not know", async () => {
   const grants = read("grants");
   assert.match((await errorsOf("grants", grants.replace("type: grant", "type: talk"))).join("\n"), /holds grant entries/);
   assert.match((await errorsOf("grants", "---\ntype: grant\nentries: []\n---\n")).join("\n"), /non-empty list/);
@@ -57,7 +57,7 @@ test("a section file states its own type, a non-empty list, and no field it does
   assert.match((await errorsOf("grants", grants.replace("  - year: 2026\n", "  - type: grant\n    year: 2026\n"))).join("\n"), /does not state its type/);
 });
 
-test("an entry's dates: a year in range, an endYear that is not before it, and null only for an undated line", async () => {
+await test("an entry's dates: a year in range, an endYear that is not before it, and null only for an undated line", async () => {
   const grants = read("grants");
   const withFirst = (text) => grants.replace("entries:\n", `entries:\n${text}`);
   assert.match((await errorsOf("grants", withFirst(GRANT.replace("2026", "2205")))).join("\n"), /year must be a whole year from 1950 to 2100/);
@@ -66,7 +66,7 @@ test("an entry's dates: a year in range, an endYear that is not before it, and n
   assert.deepEqual(await errorsOf("grants", withFirst(GRANT.replace("role: recipient", "endYear: present\n    role: recipient"))), []);
 });
 
-test("areas and roles come from the site's lists, and amounts are dollars to the cent", async () => {
+await test("areas and roles come from the site's lists, and amounts are dollars to the cent", async () => {
   const grants = read("grants");
   const withFirst = (text) => grants.replace("entries:\n", `entries:\n${text}`);
   assert.match((await errorsOf("grants", withFirst(GRANT.replace("areas: []", "areas: [cooking]")))).join("\n"), /areas must be a list/);
@@ -75,7 +75,7 @@ test("areas and roles come from the site's lists, and amounts are dollars to the
   assert.match((await errorsOf("grants", withFirst(GRANT.replace("title: A grant", "title: ' padded '")))).join("\n"), /title must be non-empty text/);
 });
 
-test("the edition stamp is a season and a year", async () => {
+await test("the edition stamp is a season and a year", async () => {
   const profile = read("profile");
   assert.match((await errorsOf("profile", profile.replace("edition: Fall 2026", "edition: Autumn 26"))).join("\n"), /season and a year/);
   assert.deepEqual(await errorsOf("profile", profile.replace("edition: Fall 2026", "edition: Spring 2027")), []);
@@ -83,7 +83,7 @@ test("the edition stamp is a season and a year", async () => {
   assert.match((await errorsOf("profile", profile.replace("from: 2004", "from: 2030"))).join("\n"), /presentations.from is after presentations.to/);
 });
 
-test("privacy: no email, phone, room or private group, and mentoring is counts with no name field", async () => {
+await test("privacy: no email, phone, room or private group, and mentoring is counts with no name field", async () => {
   const grants = read("grants");
   const withNote = (note) => grants.replace("note: with a student researcher", `note: ${note}`);
   assert.match((await errorsOf("grants", withNote("write to someone@example.com"))).join("\n"), /an email address/);
@@ -99,12 +99,12 @@ test("privacy: no email, phone, room or private group, and mentoring is counts w
   assert.deepEqual(await errorsOf("grants", grants.replace("---\n", "---\n# never an email such as a@b.co\n")), []);
 });
 
-test("the house style: no wide dash anywhere in a file", async () => {
+await test("the house style: no wide dash anywhere in a file", async () => {
   const errors = await errorsOf("grants", read("grants").replace("title: Student Research Grant", `title: Student ${EM_DASH} Research Grant`));
   assert.match(errors.join("\n"), /wide dash U\+2014/);
 });
 
-test("a paper named by DOI states nothing else, exists as a published record, appears once, and lists the owner", async () => {
+await test("a paper named by DOI states nothing else, exists as a published record, appears once, and lists the owner", async () => {
   const publications = read("publications");
   const first = /- doi: (\S+)/.exec(publications)?.[1];
   assert.ok(first);
@@ -120,7 +120,7 @@ test("a paper named by DOI states nothing else, exists as a published record, ap
   assert.match(compiled.errors.join("\n"), /does not list Dustin Edwards among its authors/);
 });
 
-test("an inline paper carries its own citation and no more than the fields of one", async () => {
+await test("an inline paper carries its own citation and no more than the fields of one", async () => {
   const publications = read("publications");
   const inline = "  - year: 2001\n    areas: []\n    role: co-author\n    title: A paper the site holds no record of\n    authors: [A. Author, D. Edwards]\n    journal: A Journal\n";
   const asLast = publications.trimEnd().replace(/\n---$/, "") + `\n${inline}---\n`;
@@ -128,7 +128,7 @@ test("an inline paper carries its own citation and no more than the fields of on
   assert.match((await errorsOf("publications", asLast.replace("journal: A Journal", "journal: A Journal\n    pubmed: 1"))).join("\n"), /"pubmed" is not a field of a publication entry/);
 });
 
-test("each section reads newest first and undated lines last, judged on the resolved entries", () => {
+await test("each section reads newest first and undated lines last, judged on the resolved entries", () => {
   const e = (id, type, year, section = null) => ({ id, type, section, year });
   assert.deepEqual(orderErrors([e("a", "grant", 2020), e("b", "grant", 2020), e("c", "grant", 2019), e("d", "grant", null)]), []);
   assert.match(orderErrors([e("a", "grant", 2019), e("b", "grant", 2020)]).join("\n"), /b \(2020\) follows a \(2019\); each section reads newest first/);
@@ -138,7 +138,7 @@ test("each section reads newest first and undated lines last, judged on the reso
   assert.deepEqual(orderErrors([e("a", "service", 2015, "Department"), e("b", "service", 2023, "Department")]), []);
 });
 
-test("the files assemble in the registry's order, each present once", async () => {
+await test("the files assemble in the registry's order, each present once", async () => {
   const records = [];
   for (const { slug } of CV_FILES) records.push((await compileCvFile({ slug, raw: read(slug), publications: PUBLICATIONS })).record);
   const missing = assembleCvSource(records.filter((r) => r.slug !== "honors"));

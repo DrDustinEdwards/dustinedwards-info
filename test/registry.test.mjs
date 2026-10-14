@@ -40,14 +40,14 @@ const WIDE = String.fromCharCode(0x2014);
 const compile = (slug, raw) => compileRegistryItem({ slug, raw, host, pipeline, kinds });
 const file = (lines) => `---\n${lines.join("\n")}\n---\n`;
 
-test("every kind the registry defines is a kind with fields and a plural to address it by", () => {
+await test("every kind the registry defines is a kind with fields and a plural to address it by", () => {
   for (const [kind, spec] of Object.entries(KINDS)) {
     assert.match(kind, /^[a-z][a-z-]*$/, kind);
     assert.ok(spec.singular && spec.plural && Object.keys(spec.fields).length > 0, kind);
   }
 });
 
-test("an item compiles to shared columns and the kind's own record, with a name stored once", async () => {
+await test("an item compiles to shared columns and the kind's own record, with a name stored once", async () => {
   const result = await compile("widget/a-red", file(["name: A red widget", "color: red", "paper: real-paper"]));
   assert.equal(result.ok, true, JSON.stringify(result.errors));
   assert.deepEqual(result.item, { kind: "widget", id: "a-red", name: "A red widget", status: "published", fields: { color: "red", paper: "real-paper" } });
@@ -57,7 +57,7 @@ test("an item compiles to shared columns and the kind's own record, with a name 
   assert.deepEqual(itemFromRow({ kind: "widget", id: "a-red", name: "A red widget", status: "published", record: result.record }), result.item);
 });
 
-test("draft: true is the draft status, and anything else but a boolean is refused", async () => {
+await test("draft: true is the draft status, and anything else but a boolean is refused", async () => {
   const draft = await compile("widget/a-draft", file(["name: A draft widget", "color: red", "draft: true"]));
   assert.equal(draft.ok && draft.item.status, "draft");
   const bad = await compile("widget/a-draft", file(["name: A draft widget", "color: red", "draft: yes"]));
@@ -65,7 +65,7 @@ test("draft: true is the draft status, and anything else but a boolean is refuse
   assert.match(bad.errors.join("\n"), /draft is "yes"; it is true or false/);
 });
 
-test("a value nobody has is MISSING with a reason: accepted and returned as a gap, never a guess", async () => {
+await test("a value nobody has is MISSING with a reason: accepted and returned as a gap, never a guess", async () => {
   const result = await compile("widget/a-gap", file(["name: A gap widget", "color: red", 'paper: "MISSING: Dustin has not named the paper"']));
   assert.equal(result.ok, true, JSON.stringify(result.errors));
   assert.deepEqual(result.gaps, [{ field: "paper", reason: "Dustin has not named the paper" }]);
@@ -78,7 +78,7 @@ test("a value nobody has is MISSING with a reason: accepted and returned as a ga
   assert.equal(isGap("MISSING"), false);
 });
 
-test("every message the file has is returned together: a field the kind lacks, a missing required one, a body, a wide dash", async () => {
+await test("every message the file has is returned together: a field the kind lacks, a missing required one, a body, a wide dash", async () => {
   const raw = `---\nname: A bad widget ${WIDE} here\nstock: 40\npaper: nope\n---\nA body.\n`;
   const result = await compile("widget/a-bad", raw);
   assert.equal(result.ok, false);
@@ -90,7 +90,7 @@ test("every message the file has is returned together: a field the kind lacks, a
   assert.match(text, /the body must be empty/);
 });
 
-test("a name is one line, trimmed and bounded", async () => {
+await test("a name is one line, trimmed and bounded", async () => {
   for (const name of ['""', '" padded"', `"${"x".repeat(121)}"`]) {
     const result = await compile("widget/a-name", file([`name: ${name}`, "color: red"]));
     assert.equal(result.ok, false, name);
@@ -98,7 +98,7 @@ test("a name is one line, trimmed and bounded", async () => {
   }
 });
 
-test("the address is <kind>/<id> and nothing else, and a kind the registry lacks is refused", async () => {
+await test("the address is <kind>/<id> and nothing else, and a kind the registry lacks is refused", async () => {
   assert.deepEqual(parseRegistrySlug("widget/a-red"), { kind: "widget", id: "a-red" });
   for (const bad of ["widget", "widget/", "/a-red", "widget/a/red", "widget/A-red", "Widget/a-red", "widget/a_red", "../pages/about", "widget/..", ""]) {
     assert.equal(parseRegistrySlug(bad), null, JSON.stringify(bad));
@@ -112,7 +112,7 @@ test("the address is <kind>/<id> and nothing else, and a kind the registry lacks
   assert.match(malformed.errors.join("\n"), /is not a registry address/);
 });
 
-test("front matter must open the file and parse", async () => {
+await test("front matter must open the file and parse", async () => {
   const noMatter = await compile("widget/a-red", "name: A red widget\ncolor: red\n");
   assert.equal(noMatter.ok, false);
   assert.match(noMatter.errors.join("\n"), /must start with a --- front matter block/);
@@ -121,7 +121,7 @@ test("front matter must open the file and parse", async () => {
   assert.match(notYaml.errors.join("\n"), /not valid YAML/);
 });
 
-test("the set refuses two items of a kind with one name, folded, and runs the kind's own set rules", async () => {
+await test("the set refuses two items of a kind with one name, folded, and runs the kind's own set rules", async () => {
   const item = (id, name) => ({ kind: "widget", id, name, status: "published", fields: {} });
   assert.deepEqual(registrySetErrors([item("a", "Taq"), item("b", "Phusion")], kinds), []);
   assert.match(registrySetErrors([item("a", "Taq"), item("b", "TAQ")], kinds).join("\n"), /widget\/b and widget\/a are both named "TAQ"/);
@@ -131,13 +131,13 @@ test("the set refuses two items of a kind with one name, folded, and runs the ki
   assert.match(registrySetErrors([item("a", "A"), item("b", "B"), item("c", "C"), item("d", "D")], kinds).join("\n"), /at most three/);
 });
 
-test("items sort by kind as defined, then by name folded", () => {
+await test("items sort by kind as defined, then by name folded", () => {
   const item = (kind, name) => ({ kind, id: name.toLowerCase(), name, status: "published", fields: {} });
   const sorted = sortRegistry([item("gadget", "Zed"), item("widget", "Émile"), item("widget", "Adam"), item("gadget", "Abe")], kinds);
   assert.deepEqual(sorted.map((i) => `${i.kind}:${i.name}`), ["widget:Adam", "widget:Émile", "gadget:Abe", "gadget:Zed"]);
 });
 
-test("registry-drift reads files and rows by address, and names sync_registry", () => {
+await test("registry-drift reads files and rows by address, and names sync_registry", () => {
   const ok = registryDriftVerdict([{ slug: "widget/a", sha: "1" }], [{ slug: "widget/a", source_blob_sha: "1" }]);
   assert.equal(ok.ok, true);
   const empty = registryDriftVerdict([], []);
@@ -147,7 +147,7 @@ test("registry-drift reads files and rows by address, and names sync_registry", 
   assert.match(drifted.detail, /sync_registry/);
 });
 
-test("the build reads content/registry/<kind>/ for every kind, treats a missing directory as empty and refuses a stray one", async () => {
+await test("the build reads content/registry/<kind>/ for every kind, treats a missing directory as empty and refuses a stray one", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "registry-"));
   try {
     const empty = await buildRegistry({ kinds, root, host });
@@ -175,7 +175,7 @@ test("the build reads content/registry/<kind>/ for every kind, treats a missing 
   }
 });
 
-test("the real registry builds, and every row belongs to a kind it defines", async () => {
+await test("the real registry builds, and every row belongs to a kind it defines", async () => {
   const built = await buildRegistry();
   assert.ok(built.rows.length > 0);
   for (const row of built.rows) assert.ok(Object.hasOwn(KINDS, row.kind), `${row.kind}/${row.id}`);
