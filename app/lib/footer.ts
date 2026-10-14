@@ -69,11 +69,12 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
   { to: GERMOMICS_X_URL, label: "X", external: true, mark: "x" },
 ];
 
-export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid"; name: string; hover?: string };
+export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid" | "flask"; name: string; hover?: string };
 
 /**
- * The three logins, the Workspace group, in Dustin's order (2026-10-11): Admin, Portal, Carrel. Every reader
- * sees all three; each one's own sign-in is what keeps it private. The accessible names say what each one is
+ * The logins, the Workspace group, in Dustin's order (2026-10-11): Admin, Portal, Carrel, then Lab, which
+ * moved here from the header bar (Dustin, 2026-10-14: too prominent for a handful of members). Every reader
+ * sees all four; each one's own sign-in is what keeps it private. The accessible names say what each one is
  * for, begin with the visible word so speech input still works, and end with SIGN_IN_NOTE so a link read
  * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's admin, behind Cloudflare Access.
  */
@@ -94,6 +95,8 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
   },
   // Behind Cloudflare Access since 2026-09-26.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: `Carrel, writing ${SIGN_IN_NOTE}`, icon: "lamp", external: true },
+  // The lab members' workspace (app/routes/workspace.tsx), behind Access. Its sign-in link was on the header bar until 2026-10-14.
+  { to: "/lab", label: "Lab", name: `Lab, the members' workspace ${SIGN_IN_NOTE}`, icon: "flask" },
 ];
 
 /** Every href the footer renders, in page order: social links, profiles and feed, Workspace, Site. */

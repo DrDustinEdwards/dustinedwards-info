@@ -3,7 +3,8 @@
  * currentColor so the link's ink-to-purple hover (ruling 122) reaches them. Decorative: the link
  * text carries the name, so each is aria-hidden.
  *
- * Identity marks (Dustin, 2026-09-28): the lamp for Carrel, a gear for Admin, the capsid for Portal.
+ * Identity marks (Dustin, 2026-09-28): the lamp for Carrel, a gear for Admin, the capsid for Portal; a
+ * flask for the Lab (2026-10-14).
  * The lock after each label says the link needs a sign-in.
  */
 
@@ -71,6 +72,17 @@ export function CapsidIcon(props: IconProps) {
     <Mark {...props}>
       <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z" />
       <path d="M12 2.5L7.5 9.5h9zM7.5 9.5L3.8 16.75M16.5 9.5l3.7 7.25M7.5 9.5L12 16.5l4.5-7M12 16.5v5M12 16.5l-8.2.25M12 16.5l8.2.25" />
+    </Mark>
+  );
+}
+
+/** Lab: a conical flask, the bench. */
+export function FlaskIcon(props: IconProps) {
+  return (
+    <Mark {...props}>
+      <path d="M9 3h6" />
+      <path d="M10 3v6.5L4.6 18.6A1.6 1.6 0 0 0 6 21h12a1.6 1.6 0 0 0 1.4-2.4L14 9.5V3" />
+      <path d="M7.2 15h9.6" />
     </Mark>
   );
 }

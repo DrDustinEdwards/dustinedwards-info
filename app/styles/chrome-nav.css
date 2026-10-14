@@ -551,34 +551,6 @@ a.site-nav-row-title:hover {
   block-size: 1rem;
 }
 
-/* The lab's sign-in, always on the bar beside Search; the second word shows from the breakpoint up. */
-.site-lab-link,
-.site-lab-link:visited {
-  color: var(--text);
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.site-lab-link:hover {
-  color: var(--brand);
-}
-
-@media (max-width: 54.99rem) {
-  .site-lab-more {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-}
-
 /* Both spellings for the marker went with the <details> this replaced; a button has none. */
 .site-header-menu-button {
   display: flex;
@@ -650,20 +622,21 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
 }
 
-@media (min-width: 55rem) {
+@media (min-width: 50rem) {
   .site-header-menu-button {
     display: none;
   }
 }
 
 /*
- * MEASURED: below this the labels, buttons, wordmark and controls stop fitting one line (867px wanted on
- * 2026-10-11, with the Lab sign-in link on the bar; it was 778px before, which already overflowed the old
- * 44rem breakpoint between 704 and 800). Re-measure by running, never by arithmetic, when a destination
+ * MEASURED: below this the labels, buttons, wordmark and controls stop fitting one line (796px wanted on
+ * 2026-10-14, once the Lab sign-in link left the bar for the footer's Workspace group; with it the bar
+ * wanted 867px and the breakpoint was 55rem, and before it 778px overflowed the old 44rem breakpoint
+ * between 704 and 800). Re-measure by running, never by arithmetic, when a destination
  * or a label changes. Below it the same nav is the Menu's popover, hanging from the header, with each
  * section a group that expands in place (header.ts) and rows 44px tall.
  */
-@media (max-width: 54.99rem) {
+@media (max-width: 49.99rem) {
   .site-header {
     column-gap: 0.75rem;
   }
@@ -901,7 +874,7 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
 /* The module never writes the attribute under reduced motion; this is doubly conditioned on purpose.
    The phone menu unrolls down from under the header rule. It is a popover, so display and overlay
    stay discrete until the clip finishes; without motion it opens and closes at once. */
-@media (max-width: 54.99rem) and (prefers-reduced-motion: no-preference) {
+@media (max-width: 49.99rem) and (prefers-reduced-motion: no-preference) {
   .site-header-nav {
     clip-path: inset(0 0 100% 0);
     transition:

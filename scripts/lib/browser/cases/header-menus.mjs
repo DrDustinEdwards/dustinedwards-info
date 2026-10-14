@@ -63,11 +63,16 @@ export async function run({ browser }) {
     !/role="(menu|menubar|menuitem)"/.test(navHtml),
     "the panels are disclosures of links; menu roles promise arrow-key menus they do not have",
   );
-  ok(
-    "the Lab sign-in link is in the served header outside the nav",
-    /<a [^>]*href="\/lab"[^>]*>Lab/.test(html) || /<a [^>]*data-lab-link[^>]*href="\/lab"/.test(html),
-    "the lab workspace link must be on the bar at every width, beside Search",
-  );
+  {
+    const header = html.slice(html.indexOf("data-site-header"), html.indexOf("</header>"));
+    const footer = html.slice(html.indexOf('class="site-shell-footer"'));
+    const workspace = footer.slice(footer.indexOf('id="footer-workspace"'), footer.indexOf("</nav>"));
+    ok(
+      "the Lab sign-in link is in the served footer's Workspace group, and not in the header",
+      !header.includes('href="/lab"') && /<a [^>]*href="\/lab"[^>]*>/.test(workspace),
+      "the lab workspace link moved from the bar to the footer's Workspace group (Dustin, 2026-10-14)",
+    );
+  }
 
   /** @type {string[]} */
   const broken = [];
@@ -150,13 +155,20 @@ export async function run({ browser }) {
     );
 
     const lab = await page.evaluate(() => {
-      const link = document.querySelector("[data-lab-link]");
+      const link = document.querySelector('[aria-labelledby="footer-workspace"] a[href="/lab"]');
       const box = link?.getBoundingClientRect();
-      return link && box ? { href: link.getAttribute("href"), shown: box.width > 0 && box.right <= document.documentElement.clientWidth, text: (link.textContent ?? "").trim() } : null;
+      return link && box
+        ? {
+            onBar: Boolean(document.querySelector('[data-site-header] a[href="/lab"]')),
+            shown: box.width > 0 && box.right <= document.documentElement.clientWidth,
+            text: (link.textContent ?? "").trim(),
+            locked: Boolean(link.querySelector(".footer-private-lock")),
+          }
+        : null;
     });
     ok(
-      "Lab sign-in sits on the bar at 1280, visible, and goes to /lab",
-      lab !== null && lab.href === "/lab" && lab.shown && lab.text === "Lab sign-in",
+      "Lab sign-in is off the bar at 1280 and sits in the footer's Workspace group, visible, with the lock, going to /lab",
+      lab !== null && !lab.onBar && lab.shown && lab.text === "Lab" && lab.locked,
       JSON.stringify(lab),
     );
 
@@ -358,7 +370,7 @@ export async function run({ browser }) {
        stops at the inset and still spans its button. */
     /** @type {string[]} */
     const misaligned = [];
-    for (const width of [1280, 1024, 900]) {
+    for (const width of [1280, 1024, 900, 800]) {
       const at = width === 1280 ? wide : await measure(width);
       for (const [id, w] of Object.entries(at)) {
         if (w.left < 0 || w.right > width) outside.push(`${id} at ${width}: ${Math.round(w.left)} to ${Math.round(w.right)}`);
@@ -372,18 +384,18 @@ export async function run({ browser }) {
       }
     }
     ok(
-      "at 1280, 1024 and 900 wide every panel lines up with its own button: left edge to left edge, or right edge to right edge where the viewport would clamp it (held at the inset when that is not room enough), and spans the button",
+      "at 1280, 1024, 900 and 800 wide every panel lines up with its own button: left edge to left edge, or right edge to right edge where the viewport would clamp it (held at the inset when that is not room enough), and spans the button",
       misaligned.length === 0,
       misaligned.join("; ") || "all aligned",
     );
     ok(
-      "at 1280, 1024 and 900 wide (the narrowest wide layout) every panel stays within the viewport, clamped under its own button",
+      "at 1280, 1024, 900 and 800 wide (800 is the narrowest wide layout) every panel stays within the viewport, clamped under its own button",
       outside.length === 0,
       outside.join("; ") || "all inside",
     );
     await page.setViewport({ width: 1280, height: 900 });
 
-    /* 200% zoom on a 1800 screen: a 900x405 viewport, still the wide layout (it begins at 880px). The card
+    /* 200% zoom on a 1800 screen: a 900x405 viewport, still the wide layout (it begins at 800px). The card
        stays inside the viewport and scrolls inside itself rather than running off the bottom. */
     await page.setViewport({ width: 900, height: 405 });
     await page.click(BUTTON);
@@ -629,7 +641,7 @@ export async function run({ browser }) {
       const rows = [...p.querySelectorAll("a")].map((a) => a.getBoundingClientRect().height);
       const list = p.querySelector(".site-nav-rows")?.getBoundingClientRect();
       const spot = p.querySelector(".site-nav-spot")?.getBoundingClientRect();
-      const lab = document.querySelector("[data-lab-link]")?.getBoundingClientRect();
+      const lab = document.querySelector('[aria-labelledby="footer-workspace"] a[href="/lab"]');
       return {
         menuOpen: /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]")).matches(":popover-open"),
         menuExpanded: document.querySelector("[data-header-menu]")?.getAttribute("aria-expanded"),
@@ -639,7 +651,7 @@ export async function run({ browser }) {
         links: rows.length,
         stacked: Boolean(list && spot && spot.top >= list.bottom - 1),
         parts: ["site-nav-tiles", "site-nav-rows", "site-nav-spot", "site-nav-foot"].map((c) => Boolean(p.querySelector(`.${c}`))),
-        labShown: Boolean(lab && lab.width > 0 && lab.left >= 0 && lab.right <= document.documentElement.clientWidth),
+        labInFooter: Boolean(lab) && !document.querySelector('[data-site-header] a[href="/lab"]'),
       };
     }, PANEL, BUTTON);
     await page.click(BUTTON);
@@ -650,8 +662,8 @@ export async function run({ browser }) {
       `${JSON.stringify({ unrolled, ...phone })}, then aria-expanded ${collapsed}`,
     );
     ok(
-      "on a phone a group holds the same parts as the wide panel, the two-column band stacks, and Lab sign-in stays on the bar",
-      phone.links >= 10 && phone.parts.every(Boolean) && phone.stacked && phone.labShown,
+      "on a phone a group holds the same parts as the wide panel, the two-column band stacks, and Lab sign-in is in the footer, not the bar",
+      phone.links >= 10 && phone.parts.every(Boolean) && phone.stacked && phone.labInFooter,
       JSON.stringify(phone),
     );
 
@@ -714,11 +726,12 @@ export async function run({ browser }) {
       `${JSON.stringify(small)}, inert after closing ${closedInert}`,
     );
 
-    /* The bar fits on one line at every width, on both sides of the 55rem breakpoint: the wide layout
-       wanted 867px when Lab sign-in joined it, so it is the Menu below 880px. */
+    /* The bar fits on one line at every width, on both sides of the 50rem breakpoint: the wide layout
+       wants 796px since Lab sign-in left it for the footer (it wanted 867px with it), so it is the Menu
+       below 800px. */
     /** @type {string[]} */
     const cramped = [];
-    for (const width of [320, 360, 390, 704, 800, 879, 880, 1024]) {
+    for (const width of [320, 360, 390, 704, 799, 800, 880, 1024]) {
       await page.setViewport({ width, height: 800 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
       const fit = await page.evaluate(() => ({
@@ -729,7 +742,7 @@ export async function run({ browser }) {
       if (fit.scroll > fit.client || fit.height > 84) cramped.push(`${width}: ${JSON.stringify(fit)}`);
     }
     ok(
-      "the header fits on one line with no sideways scroll at 320, 360, 390, 704, 800, 879, 880 and 1024 wide",
+      "the header fits on one line with no sideways scroll at 320, 360, 390, 704, 799, 800, 880 and 1024 wide",
       cramped.length === 0,
       cramped.join("; ") || "all fit",
     );

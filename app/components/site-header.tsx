@@ -82,12 +82,6 @@ export function SiteHeader() {
       <div className="site-header-tools">
         <SearchTrigger />
         <ThemeToggle />
-        {/* Always visible, at every width, beside Search: the members' workspace, behind Access. The
-            second word is read aloud and shown from the breakpoint up, so the link's name is the
-            visible word and the whole phrase. */}
-        <Link to="/lab" className="site-lab-link" data-lab-link="">
-          Lab<span className="site-lab-more"> sign-in</span>
-        </Link>
         {/* Rendered at every width and hidden by CSS on wide screens, because the server cannot know
             the viewport. As the popover's invoker, the open nav follows it in the focus order. */}
         <button

@@ -62,10 +62,10 @@ await test("the brand block keeps the social marks and the profiles, adds RSS fr
   assert.ok(!rss?.me, "the feed is not a profile, so it carries no rel=me");
 });
 
-await test("the Workspace group lists Admin, Portal and Carrel in that order, each with its icon", () => {
+await test("the Workspace group lists Admin, Portal, Carrel and Lab in that order, each with its icon", () => {
   assert.deepEqual(
     PRIVATE_TOOLS.map((tool) => [tool.label, tool.icon]),
-    [["Admin", "gear"], ["Portal", "capsid"], ["Carrel", "lamp"]],
+    [["Admin", "gear"], ["Portal", "capsid"], ["Carrel", "lamp"], ["Lab", "flask"]],
   );
   const portal = PRIVATE_TOOLS.find((tool) => tool.label === "Portal");
   assert.equal(portal?.name, "Capsid Portal (requires sign-in)");
@@ -100,6 +100,12 @@ await test("a page file marked draft is not in the published list", () => {
   const draft = readFileSync(new URL("../content/pages/accessibility.md", import.meta.url), "utf8");
   const isDraft = /^draft: true$/m.test(draft);
   assert.equal(readPublishedPages().includes("/accessibility"), !isDraft);
+});
+
+await test("Lab, moved from the header bar (Dustin, 2026-10-14), goes to the lab workspace as a routed link", () => {
+  const lab = PRIVATE_TOOLS.find((tool) => tool.label === "Lab");
+  assert.equal(lab?.to, "/lab");
+  assert.ok(!lab?.external, "/lab is this site's route, so it renders through Link");
 });
 
 await test("Admin, when the footer lists it, goes to the admin, where Cloudflare Access signs in", () => {

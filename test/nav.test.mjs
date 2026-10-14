@@ -93,9 +93,9 @@ await test("every link the five panels render resolves: a declared route, a real
   assert.ok(checked >= 40, `only ${checked} panel links were examined, so the sweep proves little`);
 });
 
-await test("the header's own sign-in link and the 404 page's sections are routes too", async () => {
+await test("the Lab sign-in link and the 404 page's sections are routes too", async () => {
   const routes = await declaredRouteModules();
-  assert.ok(routes.has("/lab"), "the Lab sign-in link needs /lab");
+  assert.ok(routes.has("/lab"), "the Lab sign-in link (the footer's Workspace group) needs /lab");
   assert.ok(routes.has("/search"));
 });
 
