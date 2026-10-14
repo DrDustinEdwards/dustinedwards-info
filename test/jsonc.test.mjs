@@ -18,7 +18,7 @@ function parse(text) {
   }
 }
 
-test("a /* inside a line comment does not swallow the keys up to a later */", () => {
+await test("a /* inside a line comment does not swallow the keys up to a later */", () => {
   const config = parse(
     [
       "{",
@@ -32,11 +32,11 @@ test("a /* inside a line comment does not swallow the keys up to a later */", ()
   assert.deepEqual(config, { kept: 1, also: 2 });
 });
 
-test("a /* inside a string is a string, and a trailing comma is accepted", () => {
+await test("a /* inside a string is a string, and a trailing comma is accepted", () => {
   const config = parse('{ "pattern": "example.com/*", "n": 1, }');
   assert.deepEqual(config, { pattern: "example.com/*", n: 1 });
 });
 
-test("invalid JSONC throws with the path", () => {
+await test("invalid JSONC throws with the path", () => {
   assert.throws(() => parse('{ "a": }'), /is not valid JSONC/);
 });

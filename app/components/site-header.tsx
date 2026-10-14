@@ -6,46 +6,35 @@ import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
 import { SiteSpeculation } from "~/components/site-speculation";
 import { ThemeToggle } from "~/components/theme-toggle";
-import { NAV, type NavItem } from "~/lib/nav";
+import { buildNav, type NavItem } from "~/lib/nav";
 import { SITE } from "~/lib/seo";
 
 const NAV_ID = "site-nav";
 
 /**
- * A destination, and for a menu the chevron and panel beside it. The word is always a link to the
- * hub; the chevron is a disclosure button, never a menuitem, because everything it shows is a link.
+ * A section and the panel that hangs from it. The label is a disclosure button, never a link and never
+ * a menuitem, because everything it shows is a link (the hub is the panel's first quick link).
  * `popoverTarget` opens the panel with no script, and the browser maps it to an expanded state;
  * header.ts then writes `aria-expanded` and keeps it true to the panel.
  */
 function NavEntry({ item, pathname }: { item: NavItem; pathname: string }) {
-  // Only the hub's own page is `aria-current`; below it the word is marked as the section, so a post
-  // page's Writing is bold and underlined without claiming to be the post.
-  const here = pathname === item.to;
-  const word = (
-    <Link
-      to={item.to}
-      className="site-nav-word"
-      aria-current={here ? "page" : undefined}
-      data-section={here || pathname.startsWith(`${item.to}/`) ? "" : undefined}
-    >
-      {item.label}
-    </Link>
-  );
-  if (!item.menu) return <li className="site-nav-item">{word}</li>;
-
+  // The button is marked as the section while the reader is inside it, so a post page's Writing is bold
+  // and underlined without claiming to be a link to the post.
+  const inside = pathname === item.to || pathname.startsWith(`${item.to}/`);
   const panel = `${NAV_ID}-${item.menu.id}`;
   return (
     <li className="site-nav-item" data-nav-menu="">
-      {word}
       <button
         type="button"
-        className="site-nav-chevron"
+        className="site-nav-button"
         popoverTarget={panel}
         aria-controls={panel}
-        aria-label={`Show ${item.label} links`}
-        data-nav-chevron=""
+        data-nav-button=""
+        data-section={inside ? "" : undefined}
       >
+        <span className="site-nav-button-label">{item.label}</span>
         <svg
+          className="site-nav-chevron"
           width="14"
           height="14"
           viewBox="0 0 24 24"
@@ -84,7 +73,7 @@ export function SiteHeader() {
       {/* Named, so the landmark reads as the site's own navigation. */}
       <nav className="site-header-nav" id={NAV_ID} aria-label="Main" popover="auto" data-site-nav="">
         <ul className="site-nav-list">
-          {NAV.map((item) => (
+          {buildNav().map((item) => (
             <NavEntry key={item.to} item={item} pathname={pathname} />
           ))}
         </ul>
@@ -93,6 +82,12 @@ export function SiteHeader() {
       <div className="site-header-tools">
         <SearchTrigger />
         <ThemeToggle />
+        {/* Always visible, at every width, beside Search: the members' workspace, behind Access. The
+            second word is read aloud and shown from the breakpoint up, so the link's name is the
+            visible word and the whole phrase. */}
+        <Link to="/lab" className="site-lab-link" data-lab-link="">
+          Lab<span className="site-lab-more"> sign-in</span>
+        </Link>
         {/* Rendered at every width and hidden by CSS on wide screens, because the server cannot know
             the viewport. As the popover's invoker, the open nav follows it in the focus order. */}
         <button

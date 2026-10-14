@@ -49,7 +49,7 @@ function headersFor(path) {
   return out;
 }
 
-test("no header rule names the paper twins, which are a route now and set their own headers", () => {
+await test("no header rule names the paper twins, which are a route now and set their own headers", () => {
   const rules = headerRules().filter((rule) => rule.path.startsWith("/research/publications"));
   assert.deepEqual(
     rules.map((rule) => rule.path),
@@ -61,7 +61,7 @@ test("no header rule names the paper twins, which are a route now and set their 
 
 // Every page twin is a route, drawn from D1 (docs/PAGES.md, docs/CV.md): test/worker/pages.test.ts and
 // test/worker/cv.test.ts assert their headers. The CV's was the last static one, so no page twin has a file or a rule.
-test("no page twin is a static file or a header rule: each is a route that sets its own headers", () => {
+await test("no page twin is a static file or a header rule: each is a route that sets its own headers", () => {
   assert.ok(CONTENT_PAGES_FROM_DATA.length > 0);
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     const twin = contentPageMarkdownPath(pagePath);
@@ -70,7 +70,7 @@ test("no page twin is a static file or a header rule: each is a route that sets 
   }
 });
 
-test("the canonical rule reaches no path it was not written for", () => {
+await test("the canonical rule reaches no path it was not written for", () => {
   for (const path of ["/research/publications/", "/research/publications.json", "/writing/a-post.md", "/llms.txt"]) {
     assert.equal(headersFor(path).get("link"), undefined, path);
   }

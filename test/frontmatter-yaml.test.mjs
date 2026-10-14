@@ -23,19 +23,19 @@ const fields = (overrides) => ({
   ...overrides,
 });
 
-test("A TAG CARRYING YAML PUNCTUATION STAYS ONE TAG and adds no key", () => {
+await test("A TAG CARRYING YAML PUNCTUATION STAYS ONE TAG and adds no key", () => {
   const hostile = ["plain", "a], draft: false, x: [y", "has # hash", 'quote "in" it'];
   const parsed = parsePost(serializePost(fields({ tags: hostile, draft: true })));
   assert.deepEqual(parsed.tags, hostile);
   assert.equal(parsed.draft, true);
 });
 
-test("a plain tag is still written bare, so existing files keep their bytes", () => {
+await test("a plain tag is still written bare, so existing files keep their bytes", () => {
   const raw = serializePost(fields({ tags: ["cloudflare", "machine learning", "d1"] }));
   assert.match(raw, /^tags: \[cloudflare, machine learning, d1\]$/m);
 });
 
-test("AN UNQUOTED KEY WITH A NEWLINE OR YAML PUNCTUATION IS REFUSED BY NAME", () => {
+await test("AN UNQUOTED KEY WITH A NEWLINE OR YAML PUNCTUATION IS REFUSED BY NAME", () => {
   const cases = [
     { slug: "a-post\nfeatured: true" },
     { date: "2026-01-01 # note" },
@@ -53,7 +53,7 @@ test("AN UNQUOTED KEY WITH A NEWLINE OR YAML PUNCTUATION IS REFUSED BY NAME", ()
   }
 });
 
-test("every committed post still serializes, with the same slug, date and tags", () => {
+await test("every committed post still serializes, with the same slug, date and tags", () => {
   const dir = join(import.meta.dirname, "..", "content", "posts");
   const files = readdirSync(dir).filter((name) => name.endsWith(".md"));
   assert.ok(files.length > 0, "no committed posts were read");
@@ -66,7 +66,7 @@ test("every committed post still serializes, with the same slug, date and tags",
   }
 });
 
-test("A FURTHER READING VALUE THAT IS NOT A JSON LIST IS REFUSED, never saved as empty", () => {
+await test("A FURTHER READING VALUE THAT IS NOT A JSON LIST IS REFUSED, never saved as empty", () => {
   for (const furtherReading of ["{not json", '{"title":"x"}']) {
     assert.throws(
       () => serializePost(fields({ furtherReading })),

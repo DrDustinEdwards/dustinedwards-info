@@ -14,7 +14,7 @@ import {
 /** A word per index, so a range form's two ends are identifiable rather than just long. */
 const longPassage = Array.from({ length: 60 }, (_, index) => `word${index}`).join(" ");
 
-test("a short selection is refused rather than encoded", () => {
+await test("a short selection is refused rather than encoded", () => {
   assert.equal(textFragment("too short"), null);
   assert.equal(textFragment("   "), null);
   assert.equal(textFragment(""), null);
@@ -22,18 +22,18 @@ test("a short selection is refused rather than encoded", () => {
   assert.equal(textFragment(atFloor), atFloor);
 });
 
-test("an ordinary passage takes the exact form", () => {
+await test("an ordinary passage takes the exact form", () => {
   assert.equal(textFragment("a sentence worth linking to"), "a%20sentence%20worth%20linking%20to");
 });
 
-test("the three reserved characters are all escaped", () => {
+await test("the three reserved characters are all escaped", () => {
   /* The hyphen is the one `encodeURIComponent` leaves behind, and it changes what the
    * directive MEANS: `a-,b` is a prefix match. */
   assert.equal(textFragment("first-class, and cheap & fast"), "first%2Dclass%2C%20and%20cheap%20%26%20fast");
   assert.ok(!textFragment("first-class, and cheap & fast").includes("-"));
 });
 
-test("a passage over the ceiling becomes a start,end range", () => {
+await test("a passage over the ceiling becomes a start,end range", () => {
   assert.ok(longPassage.length > FRAGMENT_MAX_CHARS);
   const fragment = textFragment(longPassage);
   const [start, end] = fragment.split(",");
@@ -42,7 +42,7 @@ test("a passage over the ceiling becomes a start,end range", () => {
   assert.equal(start.split("%20").length, FRAGMENT_EDGE_WORDS);
 });
 
-test("a selection crossing a block takes the range form however short it is", () => {
+await test("a selection crossing a block takes the range form however short it is", () => {
   /* Well under the ceiling, so a length test alone would emit the exact form, which can never
    * match: the directive is matched within one block and this text spans two. */
   const crossing = "the end of one paragraph\nthe start of the next";
@@ -52,12 +52,12 @@ test("a selection crossing a block takes the range form however short it is", ()
   assert.ok(!textFragment(crossing.replace("\n", " ")).includes(","));
 });
 
-test("runs of spaces and tabs collapse, and newlines survive to be detected", () => {
+await test("runs of spaces and tabs collapse, and newlines survive to be detected", () => {
   assert.equal(textFragment("spaced   out \t words"), "spaced%20out%20words");
   assert.ok(textFragment("a line of text\nand another line").includes(","));
 });
 
-test("a two-word selection across a block does not fold into a degenerate range", () => {
+await test("a two-word selection across a block does not fold into a degenerate range", () => {
   /* One word each side is still two distinct ends; a single word would give `start,start`. */
   const fragment = textFragment("paragraphing\nsentences");
   assert.equal(fragment, "paragraphing,sentences");

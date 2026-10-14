@@ -51,4 +51,4 @@ Read via `getEnv(context)` from `app/lib/context.ts`; never import bindings glob
 
 ## Where everything else lives
 
-Here (a gate can reach it): `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` (current state), `decisions.md` (every ruling in force), `build-history.md`. A session records a reversal or a binding in Capsid, and nothing else.
+Here (a gate can reach it): `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `README.md`, `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` (current state), `decisions.md` (every ruling in force), `build-history.md`. A session records a reversal or a binding in Capsid, and nothing else.

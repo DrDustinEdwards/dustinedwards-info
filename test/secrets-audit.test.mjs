@@ -14,11 +14,11 @@ const { auditSecrets } = await import("../app/lib/admin/secrets.server.ts");
  * `present`). The collision guard below asserts that rather than assuming it. */
 const SENTINEL = "ZZZZ" + "9174630852".repeat(4);
 
-test("the ratified list is non-empty, so nothing below passes vacuously", () => {
+await test("the ratified list is non-empty, so nothing below passes vacuously", () => {
   assert.ok(REQUIRED_SECRETS.length >= 5, `only ${REQUIRED_SECRETS.length} secret(s) listed`);
 });
 
-test("the sentinel cannot collide with the payload's own structure", () => {
+await test("the sentinel cannot collide with the payload's own structure", () => {
   /* Audit with every secret ABSENT: if any window of the sentinel appears in that scaffolding,
    * the leak test would fail on a bad needle rather than on a leak. */
   const scaffolding = JSON.stringify(auditSecrets({}));
@@ -32,14 +32,14 @@ test("the sentinel cannot collide with the payload's own structure", () => {
   }
 });
 
-test("a secret that is set reports present", () => {
+await test("a secret that is set reports present", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, SENTINEL]));
   const rows = auditSecrets(env);
   assert.equal(rows.length, REQUIRED_SECRETS.length);
   assert.ok(rows.every((r) => r.present === true), "a set secret reported absent");
 });
 
-test("a MISSING secret cannot report present", () => {
+await test("a MISSING secret cannot report present", () => {
   // Every secret set except one. This is the plant the audit exists to fail.
   for (const missing of REQUIRED_SECRETS) {
     const env = Object.fromEntries(
@@ -52,7 +52,7 @@ test("a MISSING secret cannot report present", () => {
   }
 });
 
-test("an EMPTY secret is absence, not presence", () => {
+await test("an EMPTY secret is absence, not presence", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, ""]));
   assert.ok(
     auditSecrets(env).every((r) => r.present === false),
@@ -60,7 +60,7 @@ test("an EMPTY secret is absence, not presence", () => {
   );
 });
 
-test("the result carries EXACTLY name and present, and nothing else", () => {
+await test("the result carries EXACTLY name and present, and nothing else", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, SENTINEL]));
   for (const row of auditSecrets(env)) {
     assert.deepEqual(
@@ -74,7 +74,7 @@ test("the result carries EXACTLY name and present, and nothing else", () => {
   }
 });
 
-test("NO VALUE, NO PARTIAL VALUE, NO LENGTH reaches the result", () => {
+await test("NO VALUE, NO PARTIAL VALUE, NO LENGTH reaches the result", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, SENTINEL]));
   const serialised = JSON.stringify(auditSecrets(env));
 

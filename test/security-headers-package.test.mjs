@@ -49,7 +49,7 @@ function response(changes = {}) {
 
 const failed = (/** @type {Headers} */ headers) => failures(checkSecurityHeaders(headers)).map((r) => r.name);
 
-test("a response with the standard set and a strict enforced policy passes every check", () => {
+await test("a response with the standard set and a strict enforced policy passes every check", () => {
   const results = checkSecurityHeaders(response());
   assert.ok(results.length >= 14, `only ${results.length} checks ran`);
   assert.deepEqual(failures(results), []);
@@ -79,14 +79,14 @@ const PLANTED = [
 ];
 
 for (const [label, changes, expected] of PLANTED) {
-  test(`red once: ${label}`, () => {
+  await test(`red once: ${label}`, () => {
     const names = failed(response(/** @type {Record<string, string | null>} */ (changes)));
     assert.equal(names.length, 1, `expected exactly one failure, got ${JSON.stringify(names)}`);
     assert.match(names[0] ?? "", /** @type {RegExp} */ (expected));
   });
 }
 
-test("a response with no security headers at all fails every header check (foxing and txasm today)", () => {
+await test("a response with no security headers at all fails every header check (foxing and txasm today)", () => {
   const names = failed(new Headers({ "content-type": "text/html" }));
   for (const name of Object.keys(STANDARD_SECURITY_HEADERS)) {
     assert.ok(names.includes(`${name} is present`), name);
@@ -94,7 +94,7 @@ test("a response with no security headers at all fails every header check (foxin
   assert.ok(names.some((n) => n.startsWith("the Content-Security-Policy is enforced")));
 });
 
-test("applyHeaderSet overwrites by default and merges when asked", () => {
+await test("applyHeaderSet overwrites by default and merges when asked", () => {
   const headers = new Headers({ "X-Frame-Options": "SAMEORIGIN" });
   applyHeaderSet(headers, STANDARD_SECURITY_HEADERS, { overwrite: false });
   assert.equal(headers.get("X-Frame-Options"), "SAMEORIGIN");
@@ -102,7 +102,7 @@ test("applyHeaderSet overwrites by default and merges when asked", () => {
   assert.equal(headers.get("X-Frame-Options"), STANDARD_SECURITY_HEADERS["X-Frame-Options"]);
 });
 
-test("generateNonce is fresh per call and long enough; buildPolicy refuses an empty directive", () => {
+await test("generateNonce is fresh per call and long enough; buildPolicy refuses an empty directive", () => {
   const a = generateNonce();
   assert.ok(a.length >= 22);
   assert.notEqual(a, generateNonce());
@@ -111,7 +111,7 @@ test("generateNonce is fresh per call and long enough; buildPolicy refuses an em
 
 /* ---------------------------------------------------------------------------------------------- the defaults */
 
-test("the defaults are OWASP's: read from the project, dated, and recorded in the README with the page", () => {
+await test("the defaults are OWASP's: read from the project, dated, and recorded in the README with the page", () => {
   assert.match(OWASP_SOURCE.page, /^https:\/\/owasp\.org\/www-project-secure-headers\/$/);
   assert.match(OWASP_SOURCE.readOn, /^\d{4}-\d{2}-\d{2}$/);
   assert.ok(OWASP_SOURCE.lastUpdateUtc, "OSHP states when its list was last updated");
@@ -122,7 +122,7 @@ test("the defaults are OWASP's: read from the project, dated, and recorded in th
   for (const [name, value] of Object.entries(STANDARD_SECURITY_HEADERS)) assert.equal(value, OWASP_RECOMMENDED[name], name);
 });
 
-test("what OSHP recommends and the standard leaves out is exactly the skipped list, each with its reason", () => {
+await test("what OSHP recommends and the standard leaves out is exactly the skipped list, each with its reason", () => {
   const left = Object.keys(OWASP_RECOMMENDED).filter((name) => !(name in STANDARD_SECURITY_HEADERS));
   assert.deepEqual(left.sort(), Object.keys(OWASP_SKIPPED).sort());
   assert.deepEqual(Object.keys(OWASP_SKIPPED).sort(), ["Cache-Control", "Clear-Site-Data", "Content-Security-Policy", "Cross-Origin-Embedder-Policy"]);
@@ -130,7 +130,7 @@ test("what OSHP recommends and the standard leaves out is exactly the skipped li
   assert.equal(LOGOUT_HEADERS["Clear-Site-Data"], OWASP_RECOMMENDED["Clear-Site-Data"]);
 });
 
-test("a site's overrides each carry a reason and change something", () => {
+await test("a site's overrides each carry a reason and change something", () => {
   assert.deepEqual(buildSecurityHeaders(), { ...STANDARD_SECURITY_HEADERS });
   const set = buildSecurityHeaders({ overrides: { "Referrer-Policy": { value: "same-origin", reason: "a documented reason" } } });
   assert.equal(set["Referrer-Policy"], "same-origin");
@@ -147,7 +147,7 @@ test("a site's overrides each carry a reason and change something", () => {
 
 const SITE = { sources: { img: ["data:"], media: ["https://media.example.com"] }, scriptHashes: ["sha256-abcdef"], cloudflareWebAnalytics: true, reportUri: "/csp", reportTo: "csp-endpoint" };
 
-test("the policy is built from the site's list, with the fixed parts and the beacon written once", () => {
+await test("the policy is built from the site's list, with the fixed parts and the beacon written once", () => {
   const { name, value } = buildContentSecurityPolicy(SITE);
   assert.equal(name, "Content-Security-Policy");
   assert.equal(
@@ -171,7 +171,7 @@ test("the policy is built from the site's list, with the fixed parts and the bea
   assert.deepEqual([...CLOUDFLARE_WEB_ANALYTICS.script], ["https://static.cloudflareinsights.com/beacon.min.js", "https://static.cloudflareinsights.com/beacon.min.js/"]);
 });
 
-test("a nonce goes on scripts and styles, report-only changes the header's name, frames are listed only when asked", () => {
+await test("a nonce goes on scripts and styles, report-only changes the header's name, frames are listed only when asked", () => {
   const nonce = generateNonce();
   const { value } = buildContentSecurityPolicy({ ...SITE, nonce, styleAttributesInline: true, sources: { ...SITE.sources, frame: ["https://embed.example.com"] } });
   assert.ok(value.includes(`script-src 'nonce-${nonce}' 'sha256-abcdef' 'self'`));
@@ -182,7 +182,7 @@ test("a nonce goes on scripts and styles, report-only changes the header's name,
   assert.ok(!buildContentSecurityPolicy(SITE).value.includes("frame-src"));
 });
 
-test("the builder refuses a list the check would fail", () => {
+await test("the builder refuses a list the check would fail", () => {
   assert.throws(() => buildContentSecurityPolicy({ ...SITE, sources: { script: ["*"] } }), /not an acceptable script source/);
   assert.throws(() => buildContentSecurityPolicy({ ...SITE, sources: { script: ["https:"] } }), /not an acceptable script source/);
   assert.throws(() => buildContentSecurityPolicy({ ...SITE, sources: { script: ["'unsafe-inline'"] } }), /not an acceptable script source/);
@@ -192,21 +192,21 @@ test("the builder refuses a list the check would fail", () => {
   assert.throws(() => buildContentSecurityPolicy({ ...SITE, scriptHashes: ["md5-xyz"] }), /hash source/);
 });
 
-test("a built policy on the standard set passes the check, beacon included", () => {
+await test("a built policy on the standard set passes the check, beacon included", () => {
   const headers = new Headers(STANDARD_SECURITY_HEADERS);
   headers.set("Content-Security-Policy", buildContentSecurityPolicy(SITE).value);
   assert.deepEqual(failures(checkSecurityHeaders(headers, { cloudflareWebAnalytics: true })), []);
 });
 
 /* Seen failing, for the beacon: a policy that names the file but not its versioned path, and one that cannot report. */
-test("red once: a policy without the beacon's path prefix", () => {
+await test("red once: a policy without the beacon's path prefix", () => {
   const headers = new Headers(STANDARD_SECURITY_HEADERS);
   headers.set("Content-Security-Policy", buildContentSecurityPolicy({ ...SITE, cloudflareWebAnalytics: false, sources: { script: [CLOUDFLARE_WEB_ANALYTICS.script[0] ?? ""] } }).value);
   const names = failures(checkSecurityHeaders(headers, { cloudflareWebAnalytics: true })).map((r) => r.name);
   assert.deepEqual(names, ["the policy lets the Cloudflare Web Analytics beacon run: its script path prefix"]);
 });
 
-test("red once: a policy whose connect-src is not the site itself", () => {
+await test("red once: a policy whose connect-src is not the site itself", () => {
   const headers = new Headers(STANDARD_SECURITY_HEADERS);
   headers.set("Content-Security-Policy", buildContentSecurityPolicy(SITE).value.replace("connect-src 'self'", "connect-src https://elsewhere.example.com"));
   const names = failures(checkSecurityHeaders(headers, { cloudflareWebAnalytics: true })).map((r) => r.name);
@@ -233,7 +233,7 @@ const logoutResponse = () => {
   return headers;
 };
 
-test("OWASP's suite is read whole, and the runner understands every operator in it", () => {
+await test("OWASP's suite is read whole, and the runner understands every operator in it", () => {
   assert.ok(suite.testcases.length >= 15, "the suite has its test cases");
   const results = runSuite(standardResponse(), logoutResponse());
   assert.equal(results.length, suite.testcases.length);
@@ -241,20 +241,20 @@ test("OWASP's suite is read whole, and the runner understands every operator in 
   assert.throws(() => runOshpSuite({ testcases: [] }, { page: { status: 200, headers: new Headers() } }), /no test cases/);
 });
 
-test("OWASP's suite against the package's output: it fails the cases for the headers the package skips on every response, and no others", () => {
+await test("OWASP's suite against the package's output: it fails the cases for the headers the package skips on every response, and no others", () => {
   const failing = runSuite(standardResponse(), logoutResponse()).filter((r) => !r.pass).map((r) => headerOf(r.name));
   assert.deepEqual(failing.sort(), ["Cache-Control", "Cross-Origin-Embedder-Policy"], "Cache-Control and COEP are skipped, with their reasons, in OWASP_SKIPPED");
   assert.ok("Cache-Control" in OWASP_SKIPPED && "Cross-Origin-Embedder-Policy" in OWASP_SKIPPED);
 });
 
-test("Clear-Site-Data belongs to the logout response: the suite passes it there and fails it on a page", () => {
+await test("Clear-Site-Data belongs to the logout response: the suite passes it there and fails it on a page", () => {
   const onLogout = runSuite(standardResponse(), logoutResponse()).find((r) => r.name === "Clear-Site-Data");
   assert.equal(onLogout?.pass, true);
   const noLogout = runSuite(standardResponse()).find((r) => r.name === "Clear-Site-Data");
   assert.equal(noLogout?.pass, false);
 });
 
-test("red once: OWASP's suite names the header a response lacks", () => {
+await test("red once: OWASP's suite names the header a response lacks", () => {
   const headers = standardResponse();
   headers.delete("X-Content-Type-Options");
   const failing = runSuite(headers, logoutResponse()).filter((r) => !r.pass).map((r) => headerOf(r.name));
@@ -266,7 +266,7 @@ test("red once: OWASP's suite names the header a response lacks", () => {
 
 /* ----------------------------------------------------------------------------------------------- this site */
 
-test("this site's set is the standard plus its deviations, each with a reason, and the suite names them", async () => {
+await test("this site's set is the standard plus its deviations, each with a reason, and the suite names them", async () => {
   assert.deepEqual(SECURITY_HEADERS, buildSecurityHeaders({ overrides: SITE_HEADER_OVERRIDES }));
   for (const [name, { reason }] of Object.entries(SITE_HEADER_OVERRIDES)) assert.ok(reason.length > 40, `${name} says why`);
   const headers = new Headers(SECURITY_HEADERS);
@@ -279,7 +279,7 @@ test("this site's set is the standard plus its deviations, each with a reason, a
   assert.deepEqual([...new Set(failing)].sort(), [...expected].sort());
 });
 
-test("dustinedwards.info's declared set and policy pass the shared check, beacon included", async () => {
+await test("dustinedwards.info's declared set and policy pass the shared check, beacon included", async () => {
   assert.ok(Object.keys(SECURITY_HEADERS).length > 0);
   for (const nonce of [undefined, generateNonce()]) {
     const headers = new Headers(SECURITY_HEADERS);
@@ -289,7 +289,7 @@ test("dustinedwards.info's declared set and policy pass the shared check, beacon
   assert.equal(await enhanceLoaderHash(), await scriptHash(ENHANCE_LOADER));
 });
 
-test("this site's policy is what it was before the package built it", async () => {
+await test("this site's policy is what it was before the package built it", async () => {
   const loader = await scriptHash(ENHANCE_LOADER);
   const policy = await contentSecurityPolicy("/", undefined);
   assert.ok(policy.startsWith(`default-src 'self'; script-src '${loader}' '`), policy);

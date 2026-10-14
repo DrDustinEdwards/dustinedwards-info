@@ -13,7 +13,7 @@ import {
   median,
 } from "../scripts/lib/web-vitals.mjs";
 
-test("the thresholds are the job's: LCP 2.5s, CLS 0.1, and TBT 200ms as the named INP proxy", () => {
+await test("the thresholds are the job's: LCP 2.5s, CLS 0.1, and TBT 200ms as the named INP proxy", () => {
   const byKey = Object.fromEntries(METRICS.map((m) => [m.key, m]));
   assert.equal(byKey.lcp.threshold, 2500);
   assert.equal(byKey.cls.threshold, 0.1);
@@ -21,7 +21,7 @@ test("the thresholds are the job's: LCP 2.5s, CLS 0.1, and TBT 200ms as the name
   assert.match(byKey.tbt.label, /proxy for INP/, "TBT must never be printed as if it were INP");
 });
 
-test("at or under the threshold is ok; strictly over is WARN", () => {
+await test("at or under the threshold is ok; strictly over is WARN", () => {
   assert.equal(grade(0, 2500), "ok");
   assert.equal(grade(2500, 2500), "ok", "exactly at the threshold is not over it");
   assert.equal(grade(2501, 2500), "WARN");
@@ -29,7 +29,7 @@ test("at or under the threshold is ok; strictly over is WARN", () => {
   assert.equal(grade(0.1001, 0.1), "WARN");
 });
 
-test("exactly twice the threshold is WARN; strictly more than twice is FAIL", () => {
+await test("exactly twice the threshold is WARN; strictly more than twice is FAIL", () => {
   assert.equal(grade(5000, 2500), "WARN", "exactly 2x is not MORE than twice");
   assert.equal(grade(5001, 2500), "FAIL");
   assert.equal(grade(400, 200), "WARN");
@@ -38,13 +38,13 @@ test("exactly twice the threshold is WARN; strictly more than twice is FAIL", ()
   assert.equal(grade(0.21, 0.1), "FAIL");
 });
 
-test("a value that is not a measurement is refused, never graded ok", () => {
+await test("a value that is not a measurement is refused, never graded ok", () => {
   assert.throws(() => grade(Number.NaN, 200));
   assert.throws(() => grade(Number.POSITIVE_INFINITY, 200));
   assert.throws(() => grade(-1, 200));
 });
 
-test("median: odd counts take the middle, even counts average the middle two", () => {
+await test("median: odd counts take the middle, even counts average the middle two", () => {
   assert.equal(median([3000]), 3000);
   assert.equal(median([9000, 1000, 2000]), 2000, "one slow outlier run does not decide");
   assert.equal(median([1, 4, 2, 3]), 2.5);
@@ -53,12 +53,12 @@ test("median: odd counts take the middle, even counts average the middle two", (
   assert.deepEqual(input, [3, 1, 2], "median must not reorder the caller's array");
 });
 
-test("median of no runs throws, because an unmeasured page has no number", () => {
+await test("median of no runs throws, because an unmeasured page has no number", () => {
   assert.throws(() => median([]), /no runs/);
   assert.throws(() => median([1, Number.NaN, 3]));
 });
 
-test("gradeRuns grades the median of each metric, not the worst or the first run", () => {
+await test("gradeRuns grades the median of each metric, not the worst or the first run", () => {
   const grades = gradeRuns([
     { lcp: 6000, cls: 0, tbt: 0 },
     { lcp: 2000, cls: 0.05, tbt: 450 },
@@ -71,7 +71,7 @@ test("gradeRuns grades the median of each metric, not the worst or the first run
   assert.equal(byKey.tbt.value, 100);
 });
 
-test("exit code: 0 with only warnings, 1 on any FAIL, 2 when any page is unmeasured", () => {
+await test("exit code: 0 with only warnings, 1 on any FAIL, 2 when any page is unmeasured", () => {
   const ok = { grades: [{ grade: "ok" }, { grade: "ok" }] };
   const warn = { grades: [{ grade: "WARN" }, { grade: "ok" }] };
   const fail = { grades: [{ grade: "FAIL" }, { grade: "ok" }] };
@@ -84,7 +84,7 @@ test("exit code: 0 with only warnings, 1 on any FAIL, 2 when any page is unmeasu
   assert.equal(exitCode([{}]), 2, "a page with neither grades nor an error is not a pass");
 });
 
-test("firstArticlePath takes the first single-segment /writing link and skips tags", () => {
+await test("firstArticlePath takes the first single-segment /writing link and skips tags", () => {
   const html =
     '<a href="/writing">All</a><a href="/writing/tags/cloudflare">t</a>' +
     '<a href="/writing/ten-years-on-cloudflare">p</a><a href="/writing/other-post">q</a>';

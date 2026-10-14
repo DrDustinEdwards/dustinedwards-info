@@ -18,7 +18,7 @@ const FIXTURE = twoImages(
   "Some prose between them, so the two images are not siblings.",
 );
 
-test("CONTROL: the fixture renders two images, in order", async () => {
+await test("CONTROL: the fixture renders two images, in order", async () => {
   const { html } = await render(FIXTURE);
   const tags = images(html);
   assert.equal(tags.length, 2, `expected 2 images, got: ${html}`);
@@ -26,14 +26,14 @@ test("CONTROL: the fixture renders two images, in order", async () => {
   assert.ok(attr(tags[1], "src")?.includes(SECOND), `second image is ${attr(tags[1], "src")}`);
 });
 
-test("THE FIRST IMAGE IS EAGER AND HIGH PRIORITY", async () => {
+await test("THE FIRST IMAGE IS EAGER AND HIGH PRIORITY", async () => {
   const { html } = await render(FIXTURE);
   const [first] = images(html);
   assert.equal(attr(first, "loading"), "eager", first);
   assert.equal(attr(first, "fetchpriority"), "high", first);
 });
 
-test("every later image stays lazy and claims no priority", async () => {
+await test("every later image stays lazy and claims no priority", async () => {
   const { html } = await render(FIXTURE);
   const [, second] = images(html);
   assert.equal(attr(second, "loading"), "lazy", second);
@@ -44,14 +44,14 @@ test("every later image stays lazy and claims no priority", async () => {
   );
 });
 
-test("a post with ONE image gives it the eager pair", async () => {
+await test("a post with ONE image gives it the eager pair", async () => {
   const { html } = await render(`![Only image](${FIRST})\n`);
   const [only] = images(html);
   assert.equal(attr(only, "loading"), "eager", only);
   assert.equal(attr(only, "fetchpriority"), "high", only);
 });
 
-test("THE COUNTER RESETS BETWEEN DOCUMENTS", async () => {
+await test("THE COUNTER RESETS BETWEEN DOCUMENTS", async () => {
   /* The counter lives in the per-render plugin closure. Hoisted to module scope, only the
    * first post of a multi-post build would get an eager image. */
   await render(FIXTURE);
@@ -60,7 +60,7 @@ test("THE COUNTER RESETS BETWEEN DOCUMENTS", async () => {
   assert.equal(attr(first, "loading"), "eager", `second render lost the eager image: ${first}`);
 });
 
-test("decoding stays async on every image", async () => {
+await test("decoding stays async on every image", async () => {
   const { html } = await render(FIXTURE);
   for (const tag of images(html)) assert.equal(attr(tag, "decoding"), "async", tag);
 });

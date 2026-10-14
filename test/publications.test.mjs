@@ -47,7 +47,7 @@ const MANUSCRIPT = {
   abstract: "An abstract.",
 };
 
-test("every file round-trips through the one writer, byte for byte", () => {
+await test("every file round-trips through the one writer, byte for byte", () => {
   const names = readdirSync(DIR).filter((n) => n.endsWith(".md"));
   assert.ok(names.length >= 36, `${names.length} files`);
   for (const name of names) {
@@ -57,7 +57,7 @@ test("every file round-trips through the one writer, byte for byte", () => {
   }
 });
 
-test("every file compiles, and a file named for any other slug does not", async () => {
+await test("every file compiles, and a file named for any other slug does not", async () => {
   const all = await compileAllPublications();
   assert.ok(all.length >= 36);
   assert.deepEqual(all.filter((f) => !f.compiled.ok).map((f) => f.file), []);
@@ -66,7 +66,7 @@ test("every file compiles, and a file named for any other slug does not", async 
   assert.ok(wrong.errors.some((e) => e.startsWith("doi: its page slug would be")), wrong.errors.join("\n"));
 });
 
-test("a minimal manuscript with no DOI compiles, with no citation tags and no DOI line anywhere", async () => {
+await test("a minimal manuscript with no DOI compiles, with no citation tags and no DOI line anywhere", async () => {
   const out = await compile(MANUSCRIPT.slug, renderPublicationFile(MANUSCRIPT, null));
   assert.equal(out.ok, true, out.errors?.join("\n"));
   assert.equal(out.record.doi, null);
@@ -78,14 +78,14 @@ test("a minimal manuscript with no DOI compiles, with no citation tags and no DO
   assert.equal(out.draft, true);
 });
 
-test("a manuscript without its own slug is refused: there is no DOI to derive one from", async () => {
+await test("a manuscript without its own slug is refused: there is no DOI to derive one from", async () => {
   const { slug: _slug, ...rest } = MANUSCRIPT;
   const out = await compile("cryo-em-example-manuscript", renderPublicationFile(rest, null));
   assert.equal(out.ok, false);
   assert.ok(out.errors.some((e) => e.startsWith("slug:")), out.errors.join("\n"));
 });
 
-test("a refusal names every defect, each starting with its field path and none with a dot", async () => {
+await test("a refusal names every defect, each starting with its field path and none with a dot", async () => {
   const raw = renderPublicationFile(
     {
       ...MANUSCRIPT,
@@ -107,13 +107,13 @@ test("a refusal names every defect, each starting with its field path and none w
   assert.equal(out.errors.filter((e) => e.startsWith("title:")).length, 2, "the quote and the character reference are two findings");
 });
 
-test("a field the format does not have is refused rather than silently kept", async () => {
+await test("a field the format does not have is refused rather than silently kept", async () => {
   const out = await compile(MANUSCRIPT.slug, renderPublicationFile({ ...MANUSCRIPT }, null).replace("---\n", "---\nmystery: 1\n"));
   assert.equal(out.ok, false);
   assert.ok(out.errors.some((e) => e === "mystery: is not a publication field"));
 });
 
-test("a hosted paper: the PDF's hash, its derived path, its text and its accessions are all held", async () => {
+await test("a hosted paper: the PDF's hash, its derived path, its text and its accessions are all held", async () => {
   assert.equal((await compile(GODFATHER, godfather())).ok, true);
 
   const sha = await compile(GODFATHER, withField(godfather(), { pdfSha256: "0".repeat(64) }));
@@ -139,20 +139,20 @@ test("a hosted paper: the PDF's hash, its derived path, its text and its accessi
   assert.ok(noFile.errors.some((e) => e.startsWith("pdfPath:") && e.includes("is not in the repository")), noFile.errors.join("\n"));
 });
 
-test("hosting a paper with no redistribution licence is Dustin's call, per DOI", async () => {
+await test("hosting a paper with no redistribution licence is Dustin's call, per DOI", async () => {
   const out = await compile(GODFATHER, withField(godfather(), { license: null, licenseSource: "none-deposited" }));
   assert.equal(out.ok, false);
   assert.ok(out.errors.some((e) => e.startsWith("license:") && e.includes("Dustin's call")), out.errors.join("\n"));
 });
 
-test("an id or a DOI another paper holds is refused, whatever the DOI's case", async () => {
+await test("an id or a DOI another paper holds is refused, whatever the DOI's case", async () => {
   const others = [{ slug: "other-paper", id: "edwards-2025-godfather", doi: "10.1128/MRA.00888-24" }];
   const out = await compile(GODFATHER, godfather(), { others });
   assert.ok(out.errors.some((e) => e.startsWith("id:") && e.includes("other-paper")), out.errors.join("\n"));
   assert.ok(out.errors.some((e) => e.startsWith("doi:") && e.includes("case-insensitive")), out.errors.join("\n"));
 });
 
-test("a slug that cannot carry the publication. prefix inside 200 characters is refused", async () => {
+await test("a slug that cannot carry the publication. prefix inside 200 characters is refused", async () => {
   assert.equal(contentIdFits("publication", "a".repeat(188)), true);
   assert.equal(contentIdFits("publication", "a".repeat(189)), false);
   const slug = "a".repeat(195);
@@ -160,7 +160,7 @@ test("a slug that cannot carry the publication. prefix inside 200 characters is 
   assert.ok(out.errors.some((e) => e.startsWith("slug:") && e.includes("too long")), out.errors.join("\n"));
 });
 
-test("the corpus rule catches a duplicate id, a case-folded DOI and an empty corpus", () => {
+await test("the corpus rule catches a duplicate id, a case-folded DOI and an empty corpus", () => {
   const dupes = validateCorpus([
     { file: "a.md", slug: "a", id: "x", doi: "10.1/A" },
     { file: "b.md", slug: "b", id: "x", doi: "10.1/a" },
@@ -169,7 +169,7 @@ test("the corpus rule catches a duplicate id, a case-folded DOI and an empty cor
   assert.ok(validateCorpus([]).some((e) => e.includes("empty")));
 });
 
-test("content ids: a post keeps its bare slug, every other kind is kind.slug, and the first dot splits", () => {
+await test("content ids: a post keeps its bare slug, every other kind is kind.slug, and the first dot splits", () => {
   assert.equal(encodeContentId("post", "my-post"), "my-post");
   assert.equal(encodeContentId("publication", "10-1128-mra-00888-24"), "publication.10-1128-mra-00888-24");
   assert.deepEqual(decodeContentId("my-post"), { kind: "post", slug: "my-post" });
@@ -179,7 +179,7 @@ test("content ids: a post keeps its bare slug, every other kind is kind.slug, an
   }
 });
 
-test("the write policy: an operator may edit but never first-publish, Carrel may, a read-only credential may not write", () => {
+await test("the write policy: an operator may edit but never first-publish, Carrel may, a read-only credential may not write", () => {
   const isDraft = (raw) => raw === "draft";
   const base = { noun: "publication", isDraft };
   assert.throws(
@@ -191,7 +191,7 @@ test("the write policy: an operator may edit but never first-publish, Carrel may
   assert.throws(() => decideFileWrite({ ...base, actor: { kind: "smoke", id: "s" }, incomingDraft: true, priorRaw: null }), /READ ONLY/);
 });
 
-test("the build's rows hold the file's blob sha, the twin and a Crossref record for exactly the papers that have one", async () => {
+await test("the build's rows hold the file's blob sha, the twin and a Crossref record for exactly the papers that have one", async () => {
   const { rows, records } = await buildPublications();
   assert.equal(rows.length, records.length);
   for (const row of rows) {

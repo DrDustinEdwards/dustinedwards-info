@@ -22,7 +22,7 @@ function buffer(...values) {
 
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-test("THE SUCCESS BODY: exactly url and key, and url is the public path", () => {
+await test("THE SUCCESS BODY: exactly url and key, and url is the public path", () => {
   const body = uploadSuccessBody("abc123.png");
 
   assert.deepEqual(Object.keys(body).sort(), ["key", "url"]);
@@ -30,14 +30,14 @@ test("THE SUCCESS BODY: exactly url and key, and url is the public path", () => 
   assert.equal(body.key, "abc123.png");
 });
 
-test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
+await test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
   const body = uploadErrorBody("Unsupported image type \"application/zip\".");
 
   assert.deepEqual(Object.keys(body), ["error"]);
   assert.equal(body.error, 'Unsupported image type "application/zip".');
 });
 
-test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () => {
+await test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () => {
   assert.equal(isFormUpload(UPLOAD_FORM_INTENT), true);
 
   for (const value of [undefined, null, "", "1", "true", "upload", "UPLOAD-FORM", " upload-form"]) {
@@ -45,7 +45,7 @@ test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () => {
   }
 });
 
-test("THE REDIRECTS carry the key on success and a code on failure", () => {
+await test("THE REDIRECTS carry the key on success and a code on failure", () => {
   assert.equal(uploadRedirectTo({ ok: true, key: "abc123.png" }), `${UPLOAD_RETURN_PATH}?uploaded=abc123.png`);
   assert.equal(
     uploadRedirectTo({ ok: false, code: "too-large" }),
@@ -58,11 +58,11 @@ test("THE REDIRECTS carry the key on success and a code on failure", () => {
   );
 });
 
-test("VALIDATION ACCEPTS a plausible image of an allowed type", () => {
+await test("VALIDATION ACCEPTS a plausible image of an allowed type", () => {
   assert.equal(validateUpload({ type: "image/png", bytes: buffer(...PNG_MAGIC) }), null);
 });
 
-test("VALIDATION REFUSES a type outside the allowlist, naming what arrived", () => {
+await test("VALIDATION REFUSES a type outside the allowlist, naming what arrived", () => {
   const refusal = validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) });
 
   assert.equal(refusal.code, "unsupported-type");
@@ -72,7 +72,7 @@ test("VALIDATION REFUSES a type outside the allowlist, naming what arrived", () 
   assert.match(validateUpload({ type: "", bytes: buffer(0) }).message, /"unknown"/);
 });
 
-test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", () => {
+await test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", () => {
   const refusal = validateUpload({
     type: "image/png",
     bytes: new ArrayBuffer(MAX_BYTES + 1),
@@ -90,7 +90,7 @@ test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", () => {
   );
 });
 
-test("VALIDATION REFUSES markup declared as a raster, which is the origin rule", () => {
+await test("VALIDATION REFUSES markup declared as a raster, which is the origin rule", () => {
   // `media.$.ts` serves SVG as an attachment based on the STORED content type,
   // so SVG bytes stored as image/png would escape it.
   const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
@@ -102,7 +102,7 @@ test("VALIDATION REFUSES markup declared as a raster, which is the origin rule",
   assert.doesNotMatch(refusal.message, /Upload an SVG/, "the repair must not point at a refused type");
 });
 
-test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to do", () => {
+await test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to do", () => {
   const svg = new TextEncoder().encode(
     '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
   );
@@ -124,14 +124,14 @@ test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to 
   );
 });
 
-test("SVG is in neither the allowlist nor the picker's accept attribute", () => {
+await test("SVG is in neither the allowlist nor the picker's accept attribute", () => {
   assert.equal(ALLOWED.has("image/svg+xml"), false);
   assert.ok(![...ALLOWED.values()].includes("svg"));
   assert.doesNotMatch(ACCEPT_ATTRIBUTE, /svg/);
   assert.doesNotMatch(uploadErrorSentence("unsupported-type"), /svg/);
 });
 
-test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
+await test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
   const encode = (text) => new TextEncoder().encode(text).buffer;
 
   assert.equal(beginsAsMarkup(encode("<svg/>")), true);
@@ -149,7 +149,7 @@ test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
   assert.equal(beginsAsMarkup(buffer(0x20, 0x20, 0x20)), false);
 });
 
-test("EVERY REFUSAL validateUpload can return is a code the form can render", () => {
+await test("EVERY REFUSAL validateUpload can return is a code the form can render", () => {
   const svg = new TextEncoder().encode("<svg/>").buffer;
   const refusals = [
     validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) }),
@@ -168,7 +168,7 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
   }
 });
 
-test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
+await test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
   for (const code of ["no-file", "unsupported-type", "svg-refused", "too-large", "content-mismatch"]) {
     const sentence = uploadErrorSentence(code);
     assert.equal(typeof sentence, "string");
@@ -197,7 +197,7 @@ const EXECUTABLE_TYPES = [
 
 const EXECUTABLE_EXTENSIONS = ["js", "mjs", "cjs", "jsx", "ts", "wasm", "html", "htm", "xhtml"];
 
-test("the upload allowlist contains no directly executable type", () => {
+await test("the upload allowlist contains no directly executable type", () => {
   for (const type of ALLOWED.keys()) {
     assert.ok(
       !EXECUTABLE_TYPES.includes(type),

@@ -5,7 +5,7 @@ import { interfaceMembers, parseSource, propertyReads } from "../scripts/lib/syn
 
 const NAMES = new Set(["OPERATOR_TOKEN"]);
 
-test("a secret read off any receiver, bracketed or destructured, is a read", () => {
+await test("a secret read off any receiver, bracketed or destructured, is a read", () => {
   for (const src of [
     "env.OPERATOR_TOKEN;",
     "getEnv(context).OPERATOR_TOKEN;",
@@ -17,7 +17,7 @@ test("a secret read off any receiver, bracketed or destructured, is a read", () 
   }
 });
 
-test("a comment, a string and an object-literal key are not reads", () => {
+await test("a comment, a string and an object-literal key are not reads", () => {
   const src = [
     "// env.OPERATOR_TOKEN is read on the server",
     'const label = "env.OPERATOR_TOKEN";',
@@ -27,7 +27,7 @@ test("a comment, a string and an object-literal key are not reads", () => {
   assert.equal(propertyReads(parseSource("x.tsx", src), NAMES).length, 0);
 });
 
-test("interface members survive a nested type and merge across declarations", () => {
+await test("interface members survive a nested type and merge across declarations", () => {
   const src = `declare global {
     interface Env { A: string; NESTED: { inner: string }; B?: string }
     interface Env { C: string }

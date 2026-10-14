@@ -14,12 +14,12 @@ const RASTER_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 });
 const SVG_KEY = contentKey(DIGEST, "svg", null);
 const NAMED_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 }, "Cohort Photo.WEBP");
 
-test("contentKey emits the two documented shapes from the fixed digest", () => {
+await test("contentKey emits the two documented shapes from the fixed digest", () => {
   assert.equal(RASTER_KEY, `dustin-edwards-${HEX16}-1600x900.webp`);
   assert.equal(SVG_KEY, `dustin-edwards-${HEX16}.svg`);
 });
 
-test("an upload's filename becomes the descriptive segment, and the prefix is never doubled", () => {
+await test("an upload's filename becomes the descriptive segment, and the prefix is never doubled", () => {
   assert.equal(NAMED_KEY, `dustin-edwards-cohort-photo-${HEX16}-1600x900.webp`);
   assert.equal(
     contentKey(DIGEST, "webp", null, "dustin-edwards-2017.webp"),
@@ -46,7 +46,7 @@ const CASES = [
   { name: "pre-127 unprefixed key", input: `${HEX16}-1600x900.webp`, isContent: false, digest: null },
 ];
 
-test("isContentKey and digestFromKey agree with the writer on every case", () => {
+await test("isContentKey and digestFromKey agree with the writer on every case", () => {
   for (const c of CASES) {
     assert.equal(isContentKey(c.input), c.isContent, `isContentKey(${c.name})`);
     assert.equal(digestFromKey(c.input), c.digest, `digestFromKey(${c.name})`);

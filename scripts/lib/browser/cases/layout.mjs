@@ -90,13 +90,15 @@ export async function run({ page, browser }) {
 
   if (firstPost) {
     await page.goto(`${BASE}${firstPost}`, { waitUntil: "networkidle0" });
-    const marked = await page.evaluate(() =>
+    /* A panel link to this very post (a Writing tile) is rightly the current page; any other marked link, the
+       Writing hub included, is a link claiming a page the reader is not on. */
+    const marked = await page.evaluate((path) =>
       [...document.querySelectorAll(".site-header-nav a")]
-        .filter((a) => a.getAttribute("aria-current"))
+        .filter((a) => a.getAttribute("aria-current") && a.getAttribute("href") !== path)
         .map((a) => `${(a.textContent || "").trim()} -> ${a.getAttribute("href")}`),
-    );
+    firstPost);
     ok(
-      "no header nav link claims to be the current page on a post page",
+      "no header nav link claims to be the current page on a post page unless it is the link to that page",
       marked.length === 0,
       `${marked.join(", ")} carries aria-current on ${firstPost}, which is not that link's ` +
         `page. NavLink needs \`end\`, exactly as the admin nav already has.`,

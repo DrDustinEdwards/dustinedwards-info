@@ -12,7 +12,7 @@ import {
 
 const RETRACTED = "10.1016/S0140-6736(97)11096-0";
 
-test("a real retraction produces the sentence, the label and the notice link", () => {
+await test("a real retraction produces the sentence, the label and the notice link", () => {
   const notice = { type: "retraction", doi: RETRACTED, date: "2010-02-02" };
   assert.equal(updateNoticeProblem(notice), null);
 
@@ -22,14 +22,14 @@ test("a real retraction produces the sentence, the label and the notice link", (
   assert.equal(rendered.url, `https://doi.org/${RETRACTED}`);
 });
 
-test("the date is in the sentence when there is one, and absent when there is not", () => {
+await test("the date is in the sentence when there is one, and absent when there is not", () => {
   // "Retracted" with no date invites the reader to assume it just happened.
   const undated = updateNoticeText({ type: "retraction", doi: RETRACTED, date: null });
   assert.equal(undated.sentence, "This paper was retracted by the publisher.");
   assert.ok(!undated.sentence.includes("on "));
 });
 
-test("a correction and an expression of concern each read as themselves", () => {
+await test("a correction and an expression of concern each read as themselves", () => {
   assert.equal(
     updateNoticeText({ type: "correction", doi: RETRACTED, date: "2011-01-01" }).sentence,
     "This paper was corrected on 2011-01-01 by the publisher.",
@@ -48,7 +48,7 @@ test("a correction and an expression of concern each read as themselves", () => 
   assert.equal(concern.label, "Expression of concern");
 });
 
-test("every declared type renders rather than throwing", () => {
+await test("every declared type renders rather than throwing", () => {
   // A type in the union with no label would throw at render time on the one day
   // it mattered. The union is the scope, so the sweep cannot be empty.
   assert.ok(UPDATE_TYPES.length >= 3);
@@ -59,12 +59,12 @@ test("every declared type renders rather than throwing", () => {
   }
 });
 
-test("absence is not a problem, because most records have no notice", () => {
+await test("absence is not a problem, because most records have no notice", () => {
   assert.equal(updateNoticeProblem(null), null);
   assert.equal(updateNoticeProblem(undefined), null);
 });
 
-test("a malformed notice is refused, and the reason names the field", () => {
+await test("a malformed notice is refused, and the reason names the field", () => {
   // Otherwise `https://doi.org/undefined` would render as the link on the most serious
   // sentence this site can print.
   assert.match(updateNoticeProblem({ type: "retraction", doi: "" }), /doi/);
@@ -81,7 +81,7 @@ test("a malformed notice is refused, and the reason names the field", () => {
   assert.match(updateNoticeProblem("retracted"), /not an object/);
 });
 
-test("rendering a malformed notice throws rather than half rendering one", () => {
+await test("rendering a malformed notice throws rather than half rendering one", () => {
   assert.throws(
     () => updateNoticeText({ type: "retraction", doi: "not-a-doi", date: null }),
     /unusable update notice/,

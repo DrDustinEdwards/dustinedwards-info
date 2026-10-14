@@ -8,20 +8,21 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
   if (isAbandonedTransition(event.reason)) event.preventDefault();
 });
 
-const MOBILE = "(max-width: 43.99rem)";
+// Kept in step with the breakpoint in chrome-nav.css (55rem, measured there).
+const MOBILE = "(max-width: 54.99rem)";
 
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";
 
-// Hover opens at once and moving to another word switches at once, unless the pointer is only crossing
-// that word on its way down to the open card (the safe triangle below); nothing else waits on intent
-// and nothing animates the card in. The one wait is the close grace: leaving the word or its card
-// starts it, and entering the word, its card, or another word ends it, so the pointer can cross the
-// header's foot between the word and the card. Grace is not motion, so reduced motion keeps it.
-const CLOSE_GRACE = 150;
+// Hover opens at once and moving to another button switches at once, unless the pointer is only crossing
+// that button on its way down to the open card (the safe triangle below); nothing else waits on intent
+// and nothing animates the card in. The one wait is the close grace, about 300ms: leaving the bar and the
+// card starts it, and entering the button, its card, or another button ends it, so the pointer can
+// travel across the header's foot into the panel. Grace is not motion, so reduced motion keeps it.
+const CLOSE_GRACE = 300;
 
 /*
- * The safe triangle (app/lib/menu-aim.mjs). A pointer that enters another word while heading down for
+ * The safe triangle (app/lib/menu-aim.mjs). A pointer that enters another button while heading down for
  * the open card, inside the triangle from where it was to the card's top corners, does not take the
  * card over. It is looked at again every AIM_RECHECK ms: one that has come to rest (moved under AIM_REST
  * px since the last look) or has turned out of the triangle takes the card at once. A move along the
@@ -30,14 +31,14 @@ const CLOSE_GRACE = 150;
 const AIM_RECHECK = 80;
 const AIM_REST = 2;
 
-// How many recent pointer points to keep; the oldest is the triangle's apex on entering a word.
+// How many recent pointer points to keep; the oldest is the triangle's apex on entering a button.
 const TRAIL = 4;
 
 const RETURN_AFTER = 8;
 
 const HIDE_BELOW = 64;
 
-type Menu = { item: HTMLElement; chevron: HTMLButtonElement; panel: HTMLElement };
+type Menu = { item: HTMLElement; trigger: HTMLButtonElement; panel: HTMLElement };
 
 function nav(): HTMLElement | null {
   return document.querySelector<HTMLElement>("[data-site-nav]");
@@ -98,35 +99,35 @@ function enhanceMenu(element: HTMLElement) {
 }
 
 /*
- * Each chevron's panel is a popover it opens with no script. On a wide screen this adds hover, a click
- * that pins the panel, Escape back to the chevron, and aria-expanded; on a phone, where the panels sit
- * inside the Menu, the chevron expands its section in place instead.
+ * Each trigger's panel is a popover it opens with no script. On a wide screen this adds hover, a click
+ * that pins the panel, Escape back to the trigger, and aria-expanded; on a phone, where the panels sit
+ * inside the Menu, the trigger expands its section in place instead.
  *
- * Each panel is a card hung from its own word (chrome-nav.css). It shows whole on the frame it opens,
- * with no grow or fade, and switching to another word swaps cards in that same frame.
+ * Each panel is a card hung from its own button (chrome-nav.css). It shows whole on the frame it opens,
+ * with no grow or fade, and switching to another button swaps cards in that same frame.
  */
 function enhanceMenus() {
   const mobile = window.matchMedia(MOBILE);
   const hover = window.matchMedia(HOVER);
 
   const menus: Menu[] = Array.from(document.querySelectorAll<HTMLElement>("[data-nav-menu]"), (item) => {
-    const chevron = item.querySelector<HTMLButtonElement>("[data-nav-chevron]");
+    const trigger = item.querySelector<HTMLButtonElement>("[data-nav-button]");
     const panel = item.querySelector<HTMLElement>("[data-nav-panel]");
-    if (!chevron || !panel) throw new Error("header: a nav menu is missing its chevron or its panel");
-    return { item, chevron, panel };
+    if (!trigger || !panel) throw new Error("header: a nav menu is missing its trigger or its panel");
+    return { item, trigger, panel };
   });
 
   let pinned: Menu | null = null;
   let closeTimer = 0;
   let lastX = 0;
   let lastY = 0;
-  // The pointer's last few points, oldest first, and the word it crossed without taking the card.
+  // The pointer's last few points, oldest first, and the button it crossed without taking the card.
   const trail: { x: number; y: number }[] = [];
   let aim: { menu: Menu; from: { x: number; y: number }; timer: number } | null = null;
 
   const isOpen = (menu: Menu) =>
     mobile.matches ? menu.item.hasAttribute("data-expanded") : isShowing(menu.panel);
-  const sync = (menu: Menu) => menu.chevron.setAttribute("aria-expanded", String(isOpen(menu)));
+  const sync = (menu: Menu) => menu.trigger.setAttribute("aria-expanded", String(isOpen(menu)));
   const showing = () => menus.find((menu) => isShowing(menu.panel));
 
   const cancelClose = () => {
@@ -140,7 +141,7 @@ function enhanceMenus() {
   };
 
   /*
-   * Where anchor positioning is missing, the card's x from the word's box, held inside the header's
+   * Where anchor positioning is missing, the card's x from the button's box, held inside the header's
    * inset as the stylesheet's clamp does. Where it exists the stylesheet owns x and this writes nothing.
    */
   const anchored = CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a");
@@ -157,7 +158,7 @@ function enhanceMenus() {
   const rectHas = (rect: DOMRect, x: number, y: number) =>
     x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
-  // The word, its card, and the strip of header between them, where a pointer resting on its way down
+  // The button, its card, and the strip of header between them, where a pointer resting on its way down
   // is still on its way.
   const overOwn = (menu: Menu, x: number, y: number) => {
     const item = menu.item.getBoundingClientRect();
@@ -232,7 +233,7 @@ function enhanceMenus() {
     });
 
     // Cancelled, so the popover's own toggle never runs: a click on a panel hover opened pins it open.
-    menu.chevron.addEventListener("click", (event) => {
+    menu.trigger.addEventListener("click", (event) => {
       event.preventDefault();
       if (mobile.matches) {
         menu.item.toggleAttribute("data-expanded");
@@ -243,7 +244,7 @@ function enhanceMenus() {
       else show(menu, true);
     });
 
-    // The card is inside its item, so this fires on the word and on the card alike: open or keep it.
+    // The card is inside its item, so this fires on the button and on the card alike: open or keep it.
     menu.item.addEventListener("pointerenter", (event) => {
       if (event.pointerType !== "mouse" || !hover.matches || mobile.matches) return;
       lastX = event.clientX;
@@ -254,7 +255,7 @@ function enhanceMenus() {
         cancelAim();
         return;
       }
-      // Crossing this word on the way down to another word's card: hold the card and look again.
+      // Crossing this button on the way down to another button's card: hold the card and look again.
       const from = trail.find((point) => point.x !== lastX || point.y !== lastY);
       if (open && from && heading(open, from, lastX, lastY)) {
         cancelClose();
@@ -269,7 +270,7 @@ function enhanceMenus() {
       if (event.pointerType !== "mouse" || mobile.matches) return;
       lastX = event.clientX;
       lastY = event.clientY;
-      // Off the word it was crossing without taking over: the open card's close grace starts again.
+      // Off the button it was crossing without taking over: the open card's close grace starts again.
       if (aim?.menu === menu) {
         cancelAim();
         const open = showing();
@@ -282,7 +283,7 @@ function enhanceMenus() {
       scheduleClose(menu);
     });
 
-    // Tabbing out of the word, chevron and panel closes it, as the Menu does (WCAG 2.4.11).
+    // Tabbing out of the button, trigger and panel closes it, as the Menu does (WCAG 2.4.11).
     menu.item.addEventListener("focusout", (event) => {
       const next = event.relatedTarget;
       if (mobile.matches || !(next instanceof Node) || menu.item.contains(next)) return;
@@ -291,9 +292,9 @@ function enhanceMenus() {
   }
 
   /*
-   * Where the pointer is when the grace runs out: on its way down the strip under the word, the card
+   * Where the pointer is when the grace runs out: on its way down the strip under the button, the card
    * stays. The trail is the safe triangle's apex, and a move that turns out of the triangle while a
-   * word is being crossed takes the card at once rather than at the next look.
+   * button is being crossed takes the card at once rather than at the next look.
    */
   document.addEventListener("pointermove", (event) => {
     if (event.pointerType !== "mouse") return;
@@ -332,7 +333,7 @@ function enhanceMenus() {
     if (!open) return;
     event.preventDefault();
     hide(open);
-    open.chevron.focus();
+    open.trigger.focus();
   });
 
   /*

@@ -7,7 +7,7 @@ import { ERROR_MIN_SAMPLE, errorRateQuery, errorRateVerdict } from "../app/lib/h
 const rows = (pairs) =>
   pairs.map(([status, requests]) => ({ sum: { requests }, dimensions: { status } }));
 
-test("PLANT: the 2026-08-27T00:00Z window, 59 of 180 failing, is reported unhealthy", () => {
+await test("PLANT: the 2026-08-27T00:00Z window, 59 of 180 failing, is reported unhealthy", () => {
   const verdict = errorRateVerdict(
     rows([
       ["success", 121],
@@ -22,7 +22,7 @@ test("PLANT: the 2026-08-27T00:00Z window, 59 of 180 failing, is reported unheal
   assert.match(verdict.detail, /32\.8%/);
 });
 
-test("the other real firing window, 12 of 36, is reported unhealthy", () => {
+await test("the other real firing window, 12 of 36, is reported unhealthy", () => {
   const verdict = errorRateVerdict(
     rows([
       ["success", 24],
@@ -33,7 +33,7 @@ test("the other real firing window, 12 of 36, is reported unhealthy", () => {
   assert.equal(verdict.errors, 12);
 });
 
-test("a 1/1 window is NOT an outage, however bad the ratio looks", () => {
+await test("a 1/1 window is NOT an outage, however bad the ratio looks", () => {
   // A bare ratio rule would page on each of the eight 1/1 windows in the measured 30 days.
   const verdict = errorRateVerdict(rows([["scriptThrewException", 1]]));
   assert.equal(verdict.ok, true);
@@ -41,7 +41,7 @@ test("a 1/1 window is NOT an outage, however bad the ratio looks", () => {
   assert.match(verdict.detail, /Not judged/);
 });
 
-test("the sample floor is exclusive: one under is not judged, exactly at it is", () => {
+await test("the sample floor is exclusive: one under is not judged, exactly at it is", () => {
   const under = errorRateVerdict(
     rows([["scriptThrewException", ERROR_MIN_SAMPLE - 1]]),
   );
@@ -51,7 +51,7 @@ test("the sample floor is exclusive: one under is not judged, exactly at it is",
   assert.equal(at.ok, false, "exactly at the floor must be judged");
 });
 
-test("the ratio threshold is inclusive at the boundary", () => {
+await test("the ratio threshold is inclusive at the boundary", () => {
   const exact = errorRateVerdict(rows([["success", 75], ["scriptThrewException", 25]]));
   assert.equal(exact.ok, false, "at the threshold must fail, not squeak through");
 
@@ -59,7 +59,7 @@ test("the ratio threshold is inclusive at the boundary", () => {
   assert.equal(under.ok, true);
 });
 
-test("clientDisconnected is not counted as this Worker failing", () => {
+await test("clientDisconnected is not counted as this Worker failing", () => {
   // The dataset reports errors: 0 for it, and counting it would make a mobile audience read as an outage.
   const verdict = errorRateVerdict(
     rows([["success", 60], ["clientDisconnected", 40]]),
@@ -68,7 +68,7 @@ test("clientDisconnected is not counted as this Worker failing", () => {
   assert.equal(verdict.errors, 0);
 });
 
-test("an unreadable response is UNHEALTHY, never silently zero errors", () => {
+await test("an unreadable response is UNHEALTHY, never silently zero errors", () => {
   for (const bad of [null, undefined, {}, "nope", 42]) {
     const verdict = errorRateVerdict(bad);
     assert.equal(verdict.ok, false, `${JSON.stringify(bad)} must not read as healthy`);
@@ -76,7 +76,7 @@ test("an unreadable response is UNHEALTHY, never silently zero errors", () => {
   }
 });
 
-test("a row whose count does not parse is skipped, not coerced to zero", () => {
+await test("a row whose count does not parse is skipped, not coerced to zero", () => {
   const verdict = errorRateVerdict([
     { sum: { requests: 30 }, dimensions: { status: "success" } },
     { sum: { requests: "banana" }, dimensions: { status: "scriptThrewException" } },
@@ -86,7 +86,7 @@ test("a row whose count does not parse is skipped, not coerced to zero", () => {
   assert.equal(verdict.ok, true);
 });
 
-test("an empty window does not divide by zero", () => {
+await test("an empty window does not divide by zero", () => {
   const verdict = errorRateVerdict([]);
   assert.equal(verdict.ok, true);
   assert.equal(verdict.ratio, 0);
@@ -100,7 +100,7 @@ const WINDOW = {
   until: "2026-09-07T20:15:00Z",
 };
 
-test("the query carries the account, the script and both window bounds", () => {
+await test("the query carries the account, the script and both window bounds", () => {
   const built = errorRateQuery(WINDOW);
   assert.equal(built.variables.account, "acct");
   assert.equal(built.variables.script, "dustinedwards");

@@ -29,7 +29,7 @@ import { fileURLToPath } from "node:url";
 import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
-import { NAV } from "../app/lib/nav.ts";
+import { buildNav, menuLinks } from "../app/lib/nav.ts";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { paperSlashTarget, pdfRedirectTarget } from "../app/lib/publications/pdf-redirect.mjs";
 import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
@@ -423,7 +423,7 @@ let sitemapPaths = 0;
 for (const file of appFiles) {
   const where = rel(file);
   // The menus hold links to pages not yet written, which liveMenu keeps out of the header; the
-  // header's own links are read from NAV below, as they render.
+  // header's own links are read from buildNav() below, as they render.
   if (where === "app/lib/nav.ts") continue;
   const sf = parseSource(file, readFileSync(file, "utf8"));
   const visit = (/** @type {ts.Node} */ n) => {
@@ -488,22 +488,11 @@ for (const file of appFiles) {
   visit(sf);
 }
 
-// The header: each item and every link its live menu renders.
-for (const item of NAV) {
-  const menu = item.menu;
-  const hrefs = [
-    item.to,
-    ...(menu
-      ? [
-          menu.head.to,
-          ...(menu.beside ?? []).map((link) => link.to),
-          ...menu.columns.flatMap((column) =>
-            column.sections.flatMap((section) => section.links.map((link) => link.to)),
-          ),
-        ]
-      : []),
-  ];
-  for (const href of hrefs) add("header menus", { where: `app/lib/nav.ts ${item.label}`, href, page: null, isPublic: true });
+// The header: each item and every link its live panel renders.
+for (const item of buildNav()) {
+  for (const href of [item.to, ...menuLinks(item.menu)]) {
+    add("header menus", { where: `app/lib/nav.ts ${item.label}`, href, page: null, isPublic: true });
+  }
 }
 
 // llms.txt names pages as markdown list links with absolute URLs, and paths in prose. A path written just

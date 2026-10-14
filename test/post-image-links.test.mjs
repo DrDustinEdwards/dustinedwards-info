@@ -28,7 +28,7 @@ const FIXTURE = [
   "",
 ].join("\n");
 
-test("CONTROL: the fixture renders both images", async () => {
+await test("CONTROL: the fixture renders both images", async () => {
   const { html } = await render(FIXTURE);
   assert.equal(
     (html.match(/<img\b/g) ?? []).length,
@@ -37,7 +37,7 @@ test("CONTROL: the fixture renders both images", async () => {
   );
 });
 
-test("a media image is wrapped in an anchor to the UNSIZED original", async () => {
+await test("a media image is wrapped in an anchor to the UNSIZED original", async () => {
   const { html } = await render(FIXTURE);
   const anchor = anchorFor(html, MEDIA_SRC);
   assert.ok(anchor, `no anchor wraps the media image:\n${html}`);
@@ -49,7 +49,7 @@ test("a media image is wrapped in an anchor to the UNSIZED original", async () =
   assert.equal(attr(anchor, "class"), "image-link");
 });
 
-test("a static image is wrapped in an anchor to its own path", async () => {
+await test("a static image is wrapped in an anchor to its own path", async () => {
   const { html } = await render(FIXTURE);
   const anchor = anchorFor(html, STATIC_SRC);
   assert.ok(anchor, `no anchor wraps the static image:\n${html}`);
@@ -57,7 +57,7 @@ test("a static image is wrapped in an anchor to its own path", async () => {
   assert.equal(attr(anchor, "class"), "image-link");
 });
 
-test("the wrap costs the image none of its own attributes", async () => {
+await test("the wrap costs the image none of its own attributes", async () => {
   const { html } = await render(FIXTURE);
 
   const media = html.match(new RegExp(`<img\\b[^>]*src="${MEDIA_SRC}"[^>]*>`))?.[0];
@@ -82,7 +82,7 @@ test("the wrap costs the image none of its own attributes", async () => {
   assert.equal(attr(asset, "alt"), "A hand-drawn sketch of the same shape");
 });
 
-test("an image the author already linked keeps the author's href", async () => {
+await test("an image the author already linked keeps the author's href", async () => {
   // The author's href is a decision; the wrap is a default and must not retarget it.
   const { html } = await render(`[![Linked by hand](${MEDIA_SRC})](https://example.com/paper)`);
   assert.equal((html.match(/<a\b/g) ?? []).length, 1, `expected one anchor:\n${html}`);
@@ -90,7 +90,7 @@ test("an image the author already linked keeps the author's href", async () => {
   assert.ok(!html.includes("image-link"), "the pipeline wrapped an already-linked image");
 });
 
-test("a diagram's image pair is NOT wrapped", async () => {
+await test("a diagram's image pair is NOT wrapped", async () => {
   // `display: none` on the hidden half does not hide its parent, so an anchor around it
   // would be a focusable link with no accessible name.
   const { html } = await render(

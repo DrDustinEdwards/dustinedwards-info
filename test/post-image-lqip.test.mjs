@@ -22,7 +22,7 @@ const FIXTURE = twoImages(
   "Prose between them, so the two images are not siblings.",
 );
 
-test("CONTROL: the fixture renders two images, in order", async () => {
+await test("CONTROL: the fixture renders two images, in order", async () => {
   const { html } = await render(FIXTURE);
   const tags = images(html);
   assert.equal(tags.length, 2, `expected 2 images, got: ${html}`);
@@ -30,7 +30,7 @@ test("CONTROL: the fixture renders two images, in order", async () => {
   assert.ok(attr(tags[1], "src")?.includes(MEDIA_SRC));
 });
 
-test("AN IMAGE WITH A PLACEHOLDER GETS THE CLASS AND THE BACKGROUND", async () => {
+await test("AN IMAGE WITH A PLACEHOLDER GETS THE CLASS AND THE BACKGROUND", async () => {
   const { html } = await render(FIXTURE);
   const [first] = images(html);
 
@@ -44,7 +44,7 @@ test("AN IMAGE WITH A PLACEHOLDER GETS THE CLASS AND THE BACKGROUND", async () =
   assert.ok(style.includes(LQIP), `the style carries no placeholder: "${style}"`);
 });
 
-test("AN IMAGE WITHOUT ONE GETS NEITHER, which is the /media/ exclusion", async () => {
+await test("AN IMAGE WITHOUT ONE GETS NEITHER, which is the /media/ exclusion", async () => {
   const { html } = await render(FIXTURE);
   const [, second] = images(html);
 
@@ -55,7 +55,7 @@ test("AN IMAGE WITHOUT ONE GETS NEITHER, which is the /media/ exclusion", async 
   );
 });
 
-test("a figure directive's image gets it too", async () => {
+await test("a figure directive's image gets it too", async () => {
   const { html } = await render(
     `:::figure{src="${STATIC_SRC}" alt="A static content image"}\nA caption.\n:::\n`,
   );

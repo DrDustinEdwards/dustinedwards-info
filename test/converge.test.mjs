@@ -28,7 +28,7 @@ function recorder() {
   return { state, recordDivergence: async (facts) => void state.recorded.push(facts) };
 }
 
-test("the happy path writes once and records nothing", async () => {
+await test("the happy path writes once and records nothing", async () => {
   const w = writerFailing(0);
   const r = recorder();
   const result = await convergeWithRetry({ ...w, ...r, slug: SLUG, commitSha: SHA });
@@ -38,7 +38,7 @@ test("the happy path writes once and records nothing", async () => {
   assert.deepEqual(r.state.recorded, [], "nothing diverged, so nothing is recorded");
 });
 
-test("FAILURE POINT 1: D1 fails once, the retry converges, NO drift is recorded", async () => {
+await test("FAILURE POINT 1: D1 fails once, the retry converges, NO drift is recorded", async () => {
   const w = writerFailing(1);
   const r = recorder();
   const result = await convergeWithRetry({ ...w, ...r, slug: SLUG, commitSha: SHA });
@@ -54,7 +54,7 @@ test("FAILURE POINT 1: D1 fails once, the retry converges, NO drift is recorded"
   );
 });
 
-test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error names the post", async () => {
+await test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error names the post", async () => {
   const w = writerFailing(2);
   const r = recorder();
 
@@ -80,7 +80,7 @@ test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error names
   );
 });
 
-test("a recorder that throws does not swallow the divergence error", async () => {
+await test("a recorder that throws does not swallow the divergence error", async () => {
   // Replacing the operator's explanation with the recorder's own failure is worse than losing the entry.
   const w = writerFailing(2);
   await assert.rejects(
@@ -102,7 +102,7 @@ test("a recorder that throws does not swallow the divergence error", async () =>
   );
 });
 
-test("attempts is honored, so the retry count is not hardcoded in the loop", async () => {
+await test("attempts is honored, so the retry count is not hardcoded in the loop", async () => {
   const w = writerFailing(2);
   const r = recorder();
   const result = await convergeWithRetry({ ...w, ...r, slug: SLUG, commitSha: SHA, attempts: 3 });

@@ -6,7 +6,6 @@ import { AdminShell, type AdminEntry } from "capsomer/react/admin-shell";
 import { ThemeSwitch } from "capsomer/react/theme-switch";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
-import { SiteLogoHeader } from "~/components/site-logo";
 import { labIdentity } from "~/lab/access.server";
 import { labActorContext, loadLabActor, primaryOwnerSet } from "~/lab/actor.server";
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
@@ -132,7 +131,6 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
         title="Lab"
-        mark={<SiteLogoHeader className="admin-brand-mark" />}
         apps={[{ id: "lab", label: "Lab", href: "/lab", mono: "L", current: true }]}
         nav={nav}
         tabs={nav}

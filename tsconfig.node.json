@@ -313,6 +313,9 @@
     "app/lib/tag-path.mjs",
     "app/lib/series-path.mjs",
     "app/lib/nav.ts",
+    // The newest paper, the posts and the lab's town the header panels show. Written by build:nav-data (build:content and install),
+    // like identity.generated.mjs; nav.ts imports it, so this project has to reach it.
+    "app/lib/nav-data.generated.mjs",
     // The procedure system's compile path. check:protocols, build:content and sync:content compile every
     // procedure with the SAME modules the operator API's save_procedure runs, so a file CI passes is the
     // file the save tool accepts. No Env and no DOM.

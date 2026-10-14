@@ -13,7 +13,7 @@ import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 
 const pagesDir = new URL("../content/pages/", import.meta.url);
 
-test("every listed page has its markdown file, unless its markdown is generated from data", () => {
+await test("every listed page has its markdown file, unless its markdown is generated from data", () => {
   for (const path of CONTENT_PAGE_PATHS) {
     if (CONTENT_PAGES_FROM_DATA.includes(path)) {
       assert.ok(!existsSync(new URL(contentPageFile(path), pagesDir)), `${path}: a stale ${contentPageFile(path)}`);
@@ -23,19 +23,19 @@ test("every listed page has its markdown file, unless its markdown is generated 
   }
 });
 
-test("a page's file is its path with slashes as hyphens", () => {
+await test("a page's file is its path with slashes as hyphens", () => {
   assert.equal(contentPageFile("/research/protocols/coi-primers"), "research-protocols-coi-primers.md");
   assert.equal(contentPageFile("/teaching"), "teaching.md");
 });
 
-test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
+await test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
   // The protocols are procedures, drawn from D1 (docs/PROCEDURES.md), so their files say they exist.
   const procedures = publishedProcedurePaths();
   const notHere = PENDING_TARGETS.filter((p) => !CONTENT_PAGE_PATHS.includes(p) && !procedures.includes(p));
   assert.deepEqual(notHere, []);
 });
 
-test("every old phage address Google knows lands on a heading of /research/phages", () => {
+await test("every old phage address Google knows lands on a heading of /research/phages", () => {
   // /discovery-of-{name}/ 301s to /research/phages#{name}; rehype-slug gives a plain-name heading that id. The
   // headings are drawn from the phage files (docs/PHAGES.md), one per file, named for it, and the page compile
   // holds each to its ### section (app/lib/pages/invariants.mjs), so the file names are the ids.
@@ -52,7 +52,7 @@ test("every old phage address Google knows lands on a heading of /research/phage
   assert.deepEqual([...removed].filter((n) => ids.has(n)), [], "a phage back in the table needs no exception");
 });
 
-test("a page trails back to its hub, through the page it sits under; a hub stands alone", () => {
+await test("a page trails back to its hub, through the page it sits under; a hub stands alone", () => {
   assert.deepEqual(contentPageTrail({ path: "/research/phages", title: "Phages" }), [
     ["Research", "/research"],
     ["Phages", "/research/phages"],

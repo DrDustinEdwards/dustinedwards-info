@@ -41,6 +41,10 @@
 # The owner's identity, derived from the CV (app/lib/identity.mjs). build:content and the install step write
 # it, so a CV change reaches the site through the next deploy and no copy of it is committed to go stale.
 /app/lib/identity.generated.mjs
+
+# The facts the header panels read from content (newest paper, posts, the lab's town), written by
+# build-nav-data from the markdown sources for the same reason: derived, so never committed to go stale.
+/app/lib/nav-data.generated.mjs
 /app/kb/registry/references.generated.mjs
 
 # The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records

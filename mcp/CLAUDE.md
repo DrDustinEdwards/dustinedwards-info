@@ -30,7 +30,7 @@ proves `/health` and the `server/discover` call on the live address.
 `.claude/hooks/no-direct-deploy.sh` refuses a bare `wrangler deploy` here.
 
 The pre-move server (`mcp/emergency/`, kept to put the old address back if the cutover failed) was removed
-once the cutover was settled, 2026-10-10. The old DrDustinEdwards/dustinedwards-mcp repo is the only other copy.
+once the cutover was settled, 2026-10-10. The old DrDustinEdwards/dustinedwards-mcp repo has since been deleted; the history before the move is in `git log -- mcp/`.
 
 ## The law, and it is not negotiable
 

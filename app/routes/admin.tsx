@@ -6,7 +6,6 @@ import { AdminShell, type AdminEntry } from "capsomer/react/admin-shell";
 import { ThemeSwitch } from "capsomer/react/theme-switch";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
-import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { accessIdentity } from "~/lib/access.server";
@@ -274,7 +273,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
         title="Site admin"
-        mark={<SiteLogoHeader className="admin-brand-mark" />}
         apps={[{ id: "site", label: "Site admin", href: "/admin", mono: "D", current: true }]}
         nav={nav}
         tabs={nav.slice(0, 4)}

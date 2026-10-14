@@ -11,7 +11,7 @@ const NOW = Date.parse("2026-08-23T12:00:00Z");
 const PAST = "2026-08-01T00:00:00Z";
 const FUTURE = "2026-12-01T00:00:00Z";
 
-test("A DRAFT IS EXCLUDED, which is the July leak", () => {
+await test("A DRAFT IS EXCLUDED, which is the July leak", () => {
   assert.equal(
     isPubliclyVisible({ status: "draft", publishAt: PAST }, NOW),
     false,
@@ -22,7 +22,7 @@ test("A DRAFT IS EXCLUDED, which is the July leak", () => {
   assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
 });
 
-test("A FUTURE-DATED POST IS EXCLUDED", () => {
+await test("A FUTURE-DATED POST IS EXCLUDED", () => {
   assert.equal(
     isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: FUTURE }, NOW),
     false,
@@ -30,19 +30,19 @@ test("A FUTURE-DATED POST IS EXCLUDED", () => {
   );
 });
 
-test("FLIP THE STATUS: draft to published, with the date held, flips inclusion", () => {
+await test("FLIP THE STATUS: draft to published, with the date held, flips inclusion", () => {
   const held = { publishAt: PAST };
   assert.equal(isPubliclyVisible({ ...held, status: "draft" }, NOW), false);
   assert.equal(isPubliclyVisible({ ...held, status: PUBLISHED_STATUS }, NOW), true);
 });
 
-test("FLIP THE DATE: future to past, with the status held, flips inclusion", () => {
+await test("FLIP THE DATE: future to past, with the status held, flips inclusion", () => {
   const held = { status: PUBLISHED_STATUS };
   assert.equal(isPubliclyVisible({ ...held, publishAt: FUTURE }, NOW), false);
   assert.equal(isPubliclyVisible({ ...held, publishAt: PAST }, NOW), true);
 });
 
-test("no publish date means publish immediately, not never", () => {
+await test("no publish date means publish immediately, not never", () => {
   // The Drizzle form is isNull(publishAt) OR publishAt <= now. Reading a missing
   // date as a reason to EXCLUDE would hide every post that never set one.
   for (const publishAt of [null, undefined, ""]) {
@@ -54,12 +54,12 @@ test("no publish date means publish immediately, not never", () => {
   }
 });
 
-test("the boundary is inclusive: a date exactly now is visible", () => {
+await test("the boundary is inclusive: a date exactly now is visible", () => {
   assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: NOW }, NOW), true);
   assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: NOW + 1 }, NOW), false);
 });
 
-test("FAIL CLOSED: an unparseable date is not yet visible", () => {
+await test("FAIL CLOSED: an unparseable date is not yet visible", () => {
   // A date this cannot read is a date this cannot prove has passed, and on the
   // Ask upload path being wrong the other way is a draft answering the public.
   assert.equal(
@@ -68,14 +68,14 @@ test("FAIL CLOSED: an unparseable date is not yet visible", () => {
   );
 });
 
-test("a Date object and an epoch number are read the same as a string", () => {
+await test("a Date object and an epoch number are read the same as a string", () => {
   const shapes = [PAST, new Date(PAST), Date.parse(PAST)];
   for (const publishAt of shapes) {
     assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt }, NOW), true);
   }
 });
 
-test("statusForDraft maps the artifact's boolean to the row's string", () => {
+await test("statusForDraft maps the artifact's boolean to the row's string", () => {
   assert.equal(statusForDraft(true), "draft");
   assert.equal(statusForDraft(false), PUBLISHED_STATUS);
   assert.equal(statusForDraft(undefined), PUBLISHED_STATUS, "absent means not a draft");

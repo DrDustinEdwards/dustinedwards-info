@@ -21,7 +21,7 @@ const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 // so a CV change reaches the site settings, the titles, the About text and the structured data. What stays typed
 // here is the one sentence about the work, which is prose and not a CV fact.
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
-// (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal.
+// (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
 // The description names the department in full. It is a few characters over the 155 SERP estimate;
 // the role and the university come first so a clip keeps them.
 const WORK = "Research in retroviruses and bacteriophages; builds software on Cloudflare.";
@@ -30,6 +30,8 @@ export const SITE = {
   role: IDENTITY.role,
   jobTitle: IDENTITY.jobTitle,
   affiliation: IDENTITY.affiliation,
+  // The university and its system, for the home hero and the About panel. `affiliation` stays the short form worksFor needs.
+  org: IDENTITY.org,
   department: IDENTITY.department,
   eyebrow: IDENTITY.role,
   tagline: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`,

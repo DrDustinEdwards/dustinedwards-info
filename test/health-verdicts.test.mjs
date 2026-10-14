@@ -24,7 +24,7 @@ import {
 
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
 
-test("nine missing records is a breach, and the nine reaches the message", () => {
+await test("nine missing records is a breach, and the nine reaches the message", () => {
   const verdict = askDriftVerdict({
     expected: 46,
     present: 37,
@@ -38,13 +38,13 @@ test("nine missing records is a breach, and the nine reaches the message", () =>
   assert.match(verdict.detail, /sync-ask/, "a breach must name its repair");
 });
 
-test("an index in step is not a breach", () => {
+await test("an index in step is not a breach", () => {
   const verdict = askDriftVerdict({ expected: 46, present: 46, missing: [], stale: [] });
   assert.equal(verdict.ok, true);
   assert.match(verdict.detail, /46 expected/);
 });
 
-test("STALE counts as drift too, in the other direction", () => {
+await test("STALE counts as drift too, in the other direction", () => {
   // A record the corpus no longer knows about is a wrong answer too: a verdict that only
   // counted `missing` would pass while Ask cited a deleted post.
   const verdict = askDriftVerdict({ expected: 12, present: 15, missing: [], stale: ["a", "b", "c"] });
@@ -53,7 +53,7 @@ test("STALE counts as drift too, in the other direction", () => {
   assert.match(verdict.detail, /3 stale/);
 });
 
-test("both directions are summed, not maxed", () => {
+await test("both directions are summed, not maxed", () => {
   const verdict = askDriftVerdict({ expected: 10, present: 10, missing: ["x"], stale: ["y"] });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /drift 2\b/, "one missing plus one stale is two problems");
@@ -61,7 +61,7 @@ test("both directions are summed, not maxed", () => {
 
 const mirror = (over = {}) => ({ objects: 0, twins: 0, missing: [], mismatched: [], ...over });
 
-test("a fully mirrored bucket passes and reports all three counts", () => {
+await test("a fully mirrored bucket passes and reports all three counts", () => {
   const verdict = mediaBackupDriftVerdict(mirror({ objects: 3, twins: 3 }));
   assert.equal(verdict.ok, true);
   assert.match(verdict.detail, /3 objects/);
@@ -69,7 +69,7 @@ test("a fully mirrored bucket passes and reports all three counts", () => {
   assert.match(verdict.detail, /0 missing/);
 });
 
-test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
+await test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
   // An empty bucket and a perfectly mirrored one both have no missing keys, so "0 missing"
   // alone is exactly how a vacuous pass reads as a real one.
   const verdict = mediaBackupDriftVerdict(mirror());
@@ -77,7 +77,7 @@ test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
   assert.match(verdict.detail, /examined nothing rather than verified anything/);
 });
 
-test("a missing twin fails, names the key, and names the repair", () => {
+await test("a missing twin fails, names the key, and names the repair", () => {
   const verdict = mediaBackupDriftVerdict(
     mirror({ objects: 2, twins: 1, missing: ["abc123-800x600.webp"] }),
   );
@@ -87,7 +87,7 @@ test("a missing twin fails, names the key, and names the repair", () => {
   assert.match(verdict.detail, /backup_media/, "a failing check must name its repair");
 });
 
-test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
+await test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
   // A twin that exists but differs is a copy that is WRONG, not one that never ran, and
   // folding it into `missing` would hide that something rewrote the mirror.
   const verdict = mediaBackupDriftVerdict(
@@ -98,18 +98,18 @@ test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
   assert.match(verdict.detail, /1 mismatched/);
 });
 
-test("the failing verdict carries the two counts it compared", () => {
+await test("the failing verdict carries the two counts it compared", () => {
   const verdict = mediaBackupDriftVerdict(mirror({ objects: 5, twins: 4, missing: ["k"] }));
   assert.deepEqual(verdict.counts, { expected: 5, present: 4 });
 });
 
-test("agreeing FTS counts are healthy", () => {
+await test("agreeing FTS counts are healthy", () => {
   const verdict = ftsEqualityVerdict(HEALTHY_FTS);
   assert.equal(verdict.ok, true);
   assert.match(verdict.detail, /search_docs=46/);
 });
 
-test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", () => {
+await test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", () => {
   // After DELETE FROM posts_fts the index count still reads 1 of 1 through the content table
   // while the docsize shadow goes to 0.
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, postsFts: 0 });
@@ -119,20 +119,20 @@ test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", 
   assert.match(verdict.detail, /Do NOT DELETE FROM/, "and the way to make it worse");
 });
 
-test("one half of the three-way going stale is a breach", () => {
+await test("one half of the three-way going stale is a breach", () => {
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, prose: 37 });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /search_prose_docsize=37/);
 });
 
-test("both equalities are reported, not just the first", () => {
+await test("both equalities are reported, not just the first", () => {
   const verdict = ftsEqualityVerdict({ posts: 12, postsFts: 9, docs: 46, identity: 46, prose: 40 });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /posts_fts_docsize=9/, "the blog index half");
   assert.match(verdict.detail, /search_prose_docsize=40/, "and the search half");
 });
 
-test("FAIL CLOSED: a count that could not be read is not a passing check", () => {
+await test("FAIL CLOSED: a count that could not be read is not a passing check", () => {
   // An empty row is what `.first()` returns when the query matched nothing. A
   // verdict that compared undefined against undefined would report health.
   for (const row of [{}, { ...HEALTHY_FTS, docs: undefined }, { ...HEALTHY_FTS, prose: null }]) {
@@ -142,7 +142,7 @@ test("FAIL CLOSED: a count that could not be read is not a passing check", () =>
   }
 });
 
-test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
+await test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
   // A string "46" is unequal to 46 under ===, so a lenient verdict reports drift and a
   // coercing one reports health; both are wrong answers to "can this check determine anything".
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, identity: "46" });
@@ -151,7 +151,7 @@ test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
   assert.match(verdict.detail, /identity/);
 });
 
-test("the wire body carries names and booleans only", () => {
+await test("the wire body carries names and booleans only", () => {
   // Row counts, index sizes and an R2 object key: none of it may reach an unauthenticated endpoint.
   const run = {
     checks: [
@@ -180,7 +180,7 @@ test("the wire body carries names and booleans only", () => {
   );
 });
 
-test("ok is true only when every check passed", () => {
+await test("ok is true only when every check passed", () => {
   const pass = { name: "a", ok: true, detail: "" };
   const fail = { name: "b", ok: false, detail: "" };
 
@@ -189,7 +189,7 @@ test("ok is true only when every check passed", () => {
   assert.equal(publicHealthBody({ checks: [fail] }).ok, false);
 });
 
-test("a field added to a check later cannot leak by inheritance", () => {
+await test("a field added to a check later cannot leak by inheritance", () => {
   // The body is rebuilt field by field rather than spread, so this stays true
   // when someone adds a field to HealthCheck without thinking about the wire.
   const body = publicHealthBody({
@@ -199,12 +199,12 @@ test("a field added to a check later cannot leak by inheritance", () => {
   assert.deepEqual(Object.keys(body.checks[0]), ["name", "ok"]);
 });
 
-test("a check that answers in time is passed through untouched", async () => {
+await test("a check that answers in time is passed through untouched", async () => {
   const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
   assert.deepEqual(verdict, { ok: true, detail: "fine" });
 });
 
-test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
+await test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
   // Never settles. Without the timeout this hangs the endpoint, which is indistinguishable
   // from the site being down.
   const started = Date.now();
@@ -215,13 +215,13 @@ test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
   assert.ok(Date.now() - started < 5000, "the timeout did not actually bound the wait");
 });
 
-test("a rejecting check is a failed check carrying its message", async () => {
+await test("a rejecting check is a failed check carrying its message", async () => {
   const verdict = await withTimeout(Promise.reject(new Error("D1 unreachable")), 50, "db");
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /D1 unreachable/);
 });
 
-test("the timeout clears the day's slowest measured healthy path", () => {
+await test("the timeout clears the day's slowest measured healthy path", () => {
   // ask-index-drift was measured at a 2332ms maximum on production 2026-08-19.
   // A timeout at or under that turns a known-healthy tail into a false alarm.
   assert.ok(
@@ -230,7 +230,7 @@ test("the timeout clears the day's slowest measured healthy path", () => {
   );
 });
 
-test("A FAILING drift check carries its two counts, and nothing else new", () => {
+await test("A FAILING drift check carries its two counts, and nothing else new", () => {
   // A drift check's body must say how far apart the sides are: one record apart mid-rebuild
   // is not the same event as a hundred.
   const body = publicHealthBody({
@@ -248,7 +248,7 @@ test("A FAILING drift check carries its two counts, and nothing else new", () =>
   assert.equal(body.checks[0].present, 108);
 });
 
-test("A PASSING check stays exactly as narrow as it was", () => {
+await test("A PASSING check stays exactly as narrow as it was", () => {
   const body = publicHealthBody({
     checks: [
       { name: "fts-equality", ok: true, detail: "counts", counts: { expected: 1, present: 1 } },
@@ -257,7 +257,7 @@ test("A PASSING check stays exactly as narrow as it was", () => {
   assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
 });
 
-test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
+await test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
   // detail carries an R2 OBJECT KEY on media-backup-drift and the shadow table
   // names on fts-equality. That is what the names-and-booleans rule is for.
   const serialised = JSON.stringify(
@@ -273,7 +273,7 @@ test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
   assert.doesNotMatch(serialised, /detail/, "the field itself must be absent");
 });
 
-test("a failing check with NO counts is still just name and ok", () => {
+await test("a failing check with NO counts is still just name and ok", () => {
   // fts-equality has no two-sided comparison to report, so it opts out by
   // simply not carrying counts rather than by being special-cased.
   const body = publicHealthBody({
@@ -282,19 +282,19 @@ test("a failing check with NO counts is still just name and ok", () => {
   assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
 });
 
-test("askDriftVerdict supplies the counts it fails on", () => {
+await test("askDriftVerdict supplies the counts it fails on", () => {
   const v = askDriftVerdict({ missing: ["a"], stale: [], expected: 113, present: 112 });
   assert.equal(v.ok, false);
   assert.deepEqual(v.counts, { expected: 113, present: 112 });
 });
 
-test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
+await test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
   const v = askDriftVerdict({ missing: [], stale: [], expected: 113, present: 113 });
   assert.equal(v.ok, true);
   assert.equal(v.counts, undefined);
 });
 
-test("media drift: agreement is ok and says both counts", () => {
+await test("media drift: agreement is ok and says both counts", () => {
   const v = mediaDriftVerdict({ expected: 69, present: 69, missing: [], extra: [] });
   assert.equal(v.ok, true);
   assert.match(v.detail, /69 expected/);
@@ -304,7 +304,7 @@ test("media drift: agreement is ok and says both counts", () => {
   assert.equal(v.counts, undefined);
 });
 
-test("media drift: THE OFL.txt SHAPE, one file with no row", () => {
+await test("media drift: THE OFL.txt SHAPE, one file with no row", () => {
   const v = mediaDriftVerdict({
     expected: 69,
     present: 68,
@@ -317,7 +317,7 @@ test("media drift: THE OFL.txt SHAPE, one file with no row", () => {
   assert.deepEqual(v.counts, { expected: 69, present: 68 });
 });
 
-test("media drift: BOTH DIRECTIONS AT ONCE, which equal totals would hide", () => {
+await test("media drift: BOTH DIRECTIONS AT ONCE, which equal totals would hide", () => {
   // One asset unindexed and one row for something deleted. The totals agree;
   // the index is wrong twice. Summing the key sets is what sees it.
   const v = mediaDriftVerdict({
@@ -331,19 +331,19 @@ test("media drift: BOTH DIRECTIONS AT ONCE, which equal totals would hide", () =
   assert.deepEqual(v.counts, { expected: 69, present: 69 });
 });
 
-test("media drift: a row for a deleted object is drift on its own", () => {
+await test("media drift: a row for a deleted object is drift on its own", () => {
   const v = mediaDriftVerdict({ expected: 68, present: 69, missing: [], extra: ["/gone.png"] });
   assert.equal(v.ok, false);
   assert.match(v.detail, /1 extra/);
 });
 
-test("media drift: the detail names a repair a reader can actually run", () => {
+await test("media drift: the detail names a repair a reader can actually run", () => {
   const v = mediaDriftVerdict({ expected: 2, present: 1, missing: ["/a.png"], extra: [] });
   assert.match(v.detail, /sync_media/);
   assert.match(v.detail, /admin\/media/);
 });
 
-test("content drift: agreement on every sha is the quiet case", () => {
+await test("content drift: agreement on every sha is the quiet case", () => {
   const files = [
     { slug: "a", sha: "s1" },
     { slug: "b", sha: "s2" },
@@ -358,7 +358,7 @@ test("content drift: agreement on every sha is the quiet case", () => {
   assert.equal(v.counts, undefined, "a passing check carries no counts");
 });
 
-test("content drift: one sha changed, one file unrowed, one row unfiled, all three counted", () => {
+await test("content drift: one sha changed, one file unrowed, one row unfiled, all three counted", () => {
   const files = [
     { slug: "changed", sha: "new-sha" },
     { slug: "agreeing", sha: "same" },
@@ -385,7 +385,7 @@ test("content drift: one sha changed, one file unrowed, one row unfiled, all thr
   assert.deepEqual(v.counts, { expected: 3, present: 1 });
 });
 
-test("content drift: a NULL source_blob_sha is drift, not agreement", () => {
+await test("content drift: a NULL source_blob_sha is drift, not agreement", () => {
   // A row written before migration 0013 carries NULL; the repository file has
   // a sha. Treating NULL as a match would hide every pre-migration row
   // forever, which is the substituting-fallback shape.
@@ -397,7 +397,7 @@ test("content drift: a NULL source_blob_sha is drift, not agreement", () => {
   assert.match(v.detail, /1 sha-changed/);
 });
 
-test("content drift: equal totals with one sha changed is still drift", () => {
+await test("content drift: equal totals with one sha changed is still drift", () => {
   const v = contentDriftVerdict(
     [{ slug: "a", sha: "x" }],
     [{ slug: "a", source_blob_sha: "y" }],
@@ -406,7 +406,7 @@ test("content drift: equal totals with one sha changed is still drift", () => {
   assert.deepEqual(v.counts, { expected: 1, present: 0 });
 });
 
-test("procedure drift: the same comparison, naming procedures and sync_procedures", () => {
+await test("procedure drift: the same comparison, naming procedures and sync_procedures", () => {
   const files = [
     { slug: "edited", sha: "new" },
     { slug: "agreeing", sha: "same" },
@@ -436,7 +436,7 @@ test("procedure drift: the same comparison, naming procedures and sync_procedure
   assert.match(quiet.detail, /1 procedure file/);
 });
 
-test("dictionary drift: the same comparison, naming dictionary entries and sync_dictionary", () => {
+await test("dictionary drift: the same comparison, naming dictionary entries and sync_dictionary", () => {
   const drifted = dictionaryDriftVerdict(
     [{ slug: "capsid", sha: "new" }],
     [{ slug: "capsid", source_blob_sha: "old" }],
@@ -449,7 +449,7 @@ test("dictionary drift: the same comparison, naming dictionary entries and sync_
   assert.equal(dictionaryDriftVerdict([{ slug: "a", sha: "s" }], [{ slug: "a", source_blob_sha: "s" }]).ok, true);
 });
 
-test("page and publication drift: the same comparison, each naming its own noun and repair", () => {
+await test("page and publication drift: the same comparison, each naming its own noun and repair", () => {
   const files = [
     { slug: "research-phages", sha: "new" },
     { slug: "teaching-labs", sha: "same" },
@@ -487,7 +487,7 @@ test("page and publication drift: the same comparison, each naming its own noun 
   assert.equal(cvDriftVerdict(agreeing, matching).ok, true);
 });
 
-test("llms.txt drift: one file against one row, naming its own repair", () => {
+await test("llms.txt drift: one file against one row, naming its own repair", () => {
   const stale = llmsDriftVerdict([{ slug: "llms", sha: "new" }], [{ slug: "llms", source_blob_sha: "old" }]);
   assert.equal(stale.ok, false);
   assert.match(stale.detail, /^llms.txt drift 1: 1 sha-changed/);
@@ -500,7 +500,7 @@ test("llms.txt drift: one file against one row, naming its own repair", () => {
   assert.equal(llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok, true);
 });
 
-test("roster drift: the same comparison, naming cohorts and sync_roster", () => {
+await test("roster drift: the same comparison, naming cohorts and sync_roster", () => {
   const files = [
     { slug: "2031", sha: "new" },
     { slug: "2030", sha: "same" },
@@ -521,7 +521,7 @@ test("roster drift: the same comparison, naming cohorts and sync_roster", () => 
   assert.equal(rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok, true);
 });
 
-test("phage drift: the same comparison, naming phages and sync_phages", () => {
+await test("phage drift: the same comparison, naming phages and sync_phages", () => {
   const files = [
     { slug: "zeta", sha: "new" },
     { slug: "acorn15", sha: "same" },
@@ -542,7 +542,7 @@ test("phage drift: the same comparison, naming phages and sync_phages", () => {
   assert.equal(phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok, true);
 });
 
-test("CV PDF drift: the stored fingerprint against the data's, naming sync_cv_pdf", () => {
+await test("CV PDF drift: the stored fingerprint against the data's, naming sync_cv_pdf", () => {
   assert.equal(cvPdfDriftVerdict({ stored: "ab12cd34", expected: "ab12cd34" }).ok, true);
 
   const stale = cvPdfDriftVerdict({ stored: "00000000", expected: "ab12cd34" });

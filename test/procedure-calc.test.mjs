@@ -55,11 +55,11 @@ const parsed = (raw) => parseProcedure({ file: "mini", raw });
 /** @param {string} raw */
 const errorsOf = (raw) => validateProcedure(parsed(raw), { slug: "mini" }).errors.join("\n");
 
-test("the small protocol is valid before any calculator is added", () => {
+await test("the small protocol is valid before any calculator is added", () => {
   assert.equal(errorsOf(PROTOCOL.replace("biosafety: not applicable", "biosafety: not applicable")), "");
 });
 
-test("readCalcs gives each calculator the values written after it", () => {
+await test("readCalcs gives each calculator the values written after it", () => {
   assert.deepEqual(readCalcs(["titer", "dilution", "volume=10", "plates=6"]), [
     { id: "titer", values: {} },
     { id: "dilution", values: { volume: "10", plates: "6" } },
@@ -67,13 +67,13 @@ test("readCalcs gives each calculator the values written after it", () => {
   assert.deepEqual(readCalcs(["volume=10"]), [{ id: "", values: { volume: "10" } }]);
 });
 
-test("a CALC flag is read from a step, with commas or spaces between calculators", () => {
+await test("a CALC flag is read from a step, with commas or spaces between calculators", () => {
   assert.deepEqual(allSteps(parsed(withFlag("titer, dilution")))[0]?.flags.calc, ["titer", "dilution"]);
   assert.deepEqual(allSteps(parsed(withFlag("titer dilution")))[0]?.flags.calc, ["titer", "dilution"]);
   assert.equal(errorsOf(withFlag("titer, dilution")), "");
 });
 
-test("a calculator must exist in the registry, be named once, and belong to a protocol", () => {
+await test("a calculator must exist in the registry, be named once, and belong to a protocol", () => {
   assert.match(errorsOf(withFlag("no-such-tool")), /CALC names "no-such-tool", which is not a calculator/);
   assert.match(errorsOf(withFlag("titer titer")), /CALC names a calculator twice/);
   assert.match(errorsOf(withFlag("volume=10")), /CALC gives a value before it names a calculator/);
@@ -81,7 +81,7 @@ test("a calculator must exist in the registry, be named once, and belong to a pr
   assert.match(errorsOf(recipe), /CALC belongs to the protocol profile/);
 });
 
-test("a value is filled in only from the step's own words, into a field the calculator has", () => {
+await test("a value is filled in only from the step's own words, into a field the calculator has", () => {
   assert.equal(errorsOf(withFlag("webbed-plate volume=10 plates=6")), "");
   assert.match(errorsOf(withFlag("webbed-plate volume=25")), /does not state 25; a value is filled in only from the step's own words/);
   assert.match(errorsOf(withFlag("webbed-plate colour=10")), /CALC webbed-plate has no field "colour" \(titer, pfu, volume, plates\)/);

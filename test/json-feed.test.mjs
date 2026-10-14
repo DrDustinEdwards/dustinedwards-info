@@ -18,12 +18,12 @@ const FULL = {
   tags: ["cloudflare", "d1"],
 };
 
-test("content_text is the body, verbatim", () => {
+await test("content_text is the body, verbatim", () => {
   const item = feedItem(FULL, ORIGIN);
   assert.equal(item.content_text, FULL.body);
 });
 
-test("a full item carries every field the feed emits, and only those", () => {
+await test("a full item carries every field the feed emits, and only those", () => {
   const item = feedItem(FULL, ORIGIN);
 
   // Sorted and counted, so a field added or dropped fails here by name. The JSON Feed 1.1
@@ -51,7 +51,7 @@ test("a full item carries every field the feed emits, and only those", () => {
   assert.equal(item.image, `${ORIGIN}/images/cover.webp`);
 });
 
-test("optional fields serialize away rather than emitting null", () => {
+await test("optional fields serialize away rather than emitting null", () => {
   const item = feedItem(
     { ...FULL, description: null, updatedAt: null, coverImage: null, tags: [] },
     ORIGIN,

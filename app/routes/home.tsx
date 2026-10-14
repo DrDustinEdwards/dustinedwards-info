@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link, data } from "react-router";
 
 import { ShellFooter } from "~/components/shell-footer";
+import { HomeIntro } from "~/components/home-intro";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
@@ -196,19 +197,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <main className="tracks home-tracks" id="main" tabIndex={-1}>
         {/* `rel="me"` links live in the footer; only `u-url` needed a home here. No `u-photo`: the site publishes none. */}
         <div className="home-hero u-wide">
-          <section className="home-intro h-card" aria-labelledby="intro-h">
-            <h1 className="intro-name p-name" id="intro-h">
-              {SITE.name}
-            </h1>
-            <p className="intro-affil">
-              <span className="p-job-title">{SITE.role}</span>
-              <span>{SITE.department}</span>
-              <span className="p-org">{SITE.affiliation}</span>
-            </p>
-            <a className="u-url" href="/" hidden>
-              {SITE.name}
-            </a>
-          </section>
+          <HomeIntro />
 
           <figure className="home-plate">
             <PlateI />

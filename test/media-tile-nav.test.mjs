@@ -20,11 +20,11 @@ function grid(count, cols) {
 
 const ids = (rows) => rows.map((b) => b.items.map((i) => i.id));
 
-test("bands groups tiles into rows by top and orders each row by centre", () => {
+await test("bands groups tiles into rows by top and orders each row by centre", () => {
   assert.deepEqual(ids(bands(grid(5, 2))), [["t0", "t1"], ["t2", "t3"], ["t4"]]);
 });
 
-test("bands treats tops within 6px as one row and orders rows top to bottom", () => {
+await test("bands treats tops within 6px as one row and orders rows top to bottom", () => {
   const rows = bands([
     { id: "low", top: 200, left: 0, width: 50 },
     { id: "b", top: 4, left: 100, width: 50 },
@@ -35,7 +35,7 @@ test("bands treats tops within 6px as one row and orders rows top to bottom", ()
   assert.deepEqual(ids(rows), [["a", "b"], ["c"], ["low"]]);
 });
 
-test("bands skips a tile with no width, which is not laid out", () => {
+await test("bands skips a tile with no width, which is not laid out", () => {
   const rows = bands([
     { id: "shown", top: 0, left: 0, width: 100 },
     { id: "hidden", top: 0, left: 110, width: 0 },
@@ -43,24 +43,24 @@ test("bands skips a tile with no width, which is not laid out", () => {
   assert.deepEqual(ids(rows), [["shown"]]);
 });
 
-test("nextTile on an empty page stays put", () => {
+await test("nextTile on an empty page stays put", () => {
   assert.equal(nextTile([], "", "right"), null);
   assert.equal(nextTile([], "t0", "down"), null);
 });
 
-test("nextTile with nothing active, or an active tile gone from the page, starts at the first", () => {
+await test("nextTile with nothing active, or an active tile gone from the page, starts at the first", () => {
   const rows = bands(grid(4, 2));
   assert.equal(nextTile(rows, "", "down"), "t0");
   assert.equal(nextTile(rows, "gone", "left"), "t0");
 });
 
-test("nextTile moves left and right within a row", () => {
+await test("nextTile moves left and right within a row", () => {
   const rows = bands(grid(6, 3));
   assert.equal(nextTile(rows, "t0", "right"), "t1");
   assert.equal(nextTile(rows, "t2", "left"), "t1");
 });
 
-test("nextTile wraps left and right across rows in reading order, and stops at the ends", () => {
+await test("nextTile wraps left and right across rows in reading order, and stops at the ends", () => {
   const rows = bands(grid(6, 3));
   assert.equal(nextTile(rows, "t2", "right"), "t3");
   assert.equal(nextTile(rows, "t3", "left"), "t2");
@@ -68,7 +68,7 @@ test("nextTile wraps left and right across rows in reading order, and stops at t
   assert.equal(nextTile(rows, "t5", "right"), null);
 });
 
-test("nextTile moves up and down to the nearest centre, and stops at the top and bottom", () => {
+await test("nextTile moves up and down to the nearest centre, and stops at the top and bottom", () => {
   const rows = bands(grid(5, 3));
   assert.equal(nextTile(rows, "t1", "down"), "t4");
   assert.equal(nextTile(rows, "t4", "up"), "t1");
@@ -78,11 +78,11 @@ test("nextTile moves up and down to the nearest centre, and stops at the top and
   assert.equal(nextTile(rows, "t3", "down"), null);
 });
 
-test("rovingKey keeps the tile focus was last on while it is still on the page", () => {
+await test("rovingKey keeps the tile focus was last on while it is still on the page", () => {
   assert.equal(rovingKey(["a", "b", "c"], "b", "c"), "b");
 });
 
-test("rovingKey falls back to the inspected tile, then the first, never a key off the page", () => {
+await test("rovingKey falls back to the inspected tile, then the first, never a key off the page", () => {
   assert.equal(rovingKey(["a", "b", "c"], "gone", "c"), "c");
   assert.equal(rovingKey(["a", "b", "c"], "", "gone"), "a");
   assert.equal(rovingKey([], "a", "b"), "");

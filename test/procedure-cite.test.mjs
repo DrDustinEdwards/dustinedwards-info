@@ -26,7 +26,7 @@ const record = {
   history,
 };
 
-test("a version's frozen copy is at <page>/v/<version>, and only a published, versioned procedure is frozen", () => {
+await test("a version's frozen copy is at <page>/v/<version>, and only a published, versioned procedure is frozen", () => {
   assert.equal(versionPath("/research/protocols/x", "2"), "/research/protocols/x/v/2");
   assert.equal(versionPath("/research/protocols/x", "1.1"), "/research/protocols/x/v/1.1");
   assert.equal(needsFreeze({ draft: false, version: "2" }), true);
@@ -35,7 +35,7 @@ test("a version's frozen copy is at <page>/v/<version>, and only a published, ve
   assert.equal(needsFreeze({ draft: false, version: "" }), false);
 });
 
-test("an unversioned procedure cannot be cited, and a version takes its history entry's date", () => {
+await test("an unversioned procedure cannot be cited, and a version takes its history entry's date", () => {
   assert.equal(citeFacts({ ...record, version: null }), null);
   assert.deepEqual(citeFacts(record), { version: "2", date: "2026-10-01", doi: null });
   assert.deepEqual(citeFacts({ ...record, history: [] }), { version: "2", date: "2026-10-02", doi: null });
@@ -43,12 +43,12 @@ test("an unversioned procedure cannot be cited, and a version takes its history 
   assert.equal(citeFacts({ ...record, history: undefined, version: "1.1" })?.date, "2026-10-02");
 });
 
-test("familyGiven reads a name written given-first", () => {
+await test("familyGiven reads a name written given-first", () => {
   assert.deepEqual(familyGiven("Dustin Edwards"), { family: "Edwards", given: "Dustin" });
   assert.deepEqual(familyGiven("Mary Jane Watson"), { family: "Watson", given: "Mary Jane" });
 });
 
-test("the citation points at the version's frozen copy, or at its DOI once the version has one", () => {
+await test("the citation points at the version's frozen copy, or at its DOI once the version has one", () => {
   const frozen = citationText(record, citeFacts(record), where);
   assert.equal(
     frozen,
@@ -58,7 +58,7 @@ test("the citation points at the version's frozen copy, or at its DOI once the v
   assert.match(minted, /\(2026\)\. .*\(Version 1\.1\).* https:\/\/doi\.org\/10\.5281\/zenodo\.111$/);
 });
 
-test("the BibTeX entry carries the version, and the doi only when there is one", () => {
+await test("the BibTeX entry carries the version, and the doi only when there is one", () => {
   const entry = bibtex(record, citeFacts(record), where);
   assert.match(entry, /^@misc\{edwards2026phage-dna-extractionv2,/);
   assert.match(entry, /  version = \{2\},/);
@@ -67,7 +67,7 @@ test("the BibTeX entry carries the version, and the doi only when there is one",
   assert.match(bibtex(record, { version: "1.1", date: "2026-09-15", doi: "10.5281/zenodo.111" }, where), /  doi = \{10\.5281\/zenodo\.111\},/);
 });
 
-test("the Zenodo metadata never names a DOI or a license of its own, and links the version it follows and its sources", () => {
+await test("the Zenodo metadata never names a DOI or a license of its own, and links the version it follows and its sources", () => {
   const meta = zenodoMetadata(record, citeFacts(record), where);
   assert.equal(meta.version, "2");
   assert.equal(meta.publication_date, "2026-10-01");
@@ -129,22 +129,22 @@ references:
 /** @param {string} raw */
 const errorsOf = (raw) => validateProcedure(parseProcedure({ file: "mini", raw }), { slug: "mini" }).errors.join("\n");
 
-test("a well-formed history is valid", () => {
+await test("a well-formed history is valid", () => {
   assert.equal(errorsOf(PROTOCOL), "");
 });
 
-test("a version sits in a URL, so it is letters, digits, dots, hyphens and underscores", () => {
+await test("a version sits in a URL, so it is letters, digits, dots, hyphens and underscores", () => {
   assert.match(errorsOf(PROTOCOL.replace('version: "2"\nhistory', 'version: "2/3"\nhistory')), /version is "2\/3"; it sits in a URL/);
   assert.match(errorsOf(PROTOCOL.replace('  - version: "1"\n', '  - version: "1 beta"\n')), /needs a version of letters, digits, dots, hyphens and underscores/);
   assert.equal(errorsOf(PROTOCOL.replace(/version: "2"\nhistory/, 'version: "2"\nhistory').replace('  - version: "1"\n', '  - version: "1.0-rc_1"\n')), "");
 });
 
-test("the first history entry must be the version the page is at", () => {
+await test("the first history entry must be the version the page is at", () => {
   assert.match(errorsOf(PROTOCOL.replace('version: "2"\nhistory', 'version: "3"\nhistory')), /the newest entry is the current version/);
   assert.match(errorsOf(PROTOCOL.replace('version: "2"\nhistory', 'version: "MISSING: none yet"\nhistory')), /history needs a version/);
 });
 
-test("history rejects a repeated version, an older entry first, a bad date, a bad DOI, an unknown field and no summary", () => {
+await test("history rejects a repeated version, an older entry first, a bad date, a bad DOI, an unknown field and no summary", () => {
   assert.match(errorsOf(PROTOCOL.replace('  - version: "1"\n', '  - version: "2"\n')), /the version is listed twice/);
   assert.match(errorsOf(PROTOCOL.replace("date: 2026-09-01", "date: 2026-11-01")), /later than the entry above it/);
   assert.match(errorsOf(PROTOCOL.replace("date: 2026-09-01", "date: 09/01/2026")), /write the date as YYYY-MM-DD/);

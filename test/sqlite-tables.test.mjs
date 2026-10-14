@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { classifySqliteTables } from "../scripts/lib/sqlite-tables.mjs";
 
-test("FTS5's own shadow tables are shadow; a real table sharing the prefix is real", () => {
+await test("FTS5's own shadow tables are shadow; a real table sharing the prefix is real", () => {
   const db = new DatabaseSync(":memory:");
   db.exec(
     "CREATE VIRTUAL TABLE search_prose USING fts5(body);" +

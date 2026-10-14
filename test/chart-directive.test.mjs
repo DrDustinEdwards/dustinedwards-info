@@ -19,7 +19,7 @@ function render(attrs, csv, caption = []) {
 
 for (const type of CHART_TYPES) {
   for (const y of ["a", "a,b"]) {
-    test(`${type} with y=${y} renders through Enarratio with its name and data table`, () => {
+    await test(`${type} with y=${y} renders through Enarratio with its name and data table`, () => {
       const html = render(
         { type, x: "run", y, labels: y === "a" ? undefined : "Alpha,Beta", alt: "What it shows." },
         CSV,
@@ -37,7 +37,7 @@ for (const type of CHART_TYPES) {
   }
 }
 
-test("the author's caption sits above the data table, once", () => {
+await test("the author's caption sits above the data table, once", () => {
   const html = render(
     { type: "bar", x: "run", y: "a", alt: "Alt." },
     CSV,
@@ -47,12 +47,12 @@ test("the author's caption sits above the data table, once", () => {
   assert.ok(html.indexOf("Measured twice.") < html.indexOf("<details"));
 });
 
-test("a title renders above the chart", () => {
+await test("a title renders above the chart", () => {
   const html = render({ type: "line", x: "run", y: "a", title: "Runs", alt: "Alt." }, CSV);
   assert.match(html, /<p class="enarratio-title">Runs<\/p>/);
 });
 
-test("validation still refuses bad attributes and data", () => {
+await test("validation still refuses bad attributes and data", () => {
   const ok = { type: "bar", x: "run", y: "a", alt: "Alt." };
   assert.throws(() => buildChartModel({ ...ok, alt: "" }, CSV), /requires an alt/);
   assert.throws(() => buildChartModel({ ...ok, type: "pie" }, CSV), /not one of/);

@@ -40,13 +40,13 @@ const DUMP =
   `INSERT INTO "publications" ("slug","title","markdown","record","source_blob_sha") ` +
   `VALUES('small','Short',${literal("tiny")},'{"a":1}','def456');\n`;
 
-test("the raw dump has a statement over D1's cap, and the split one has none", () => {
+await test("the raw dump has a statement over D1's cap, and the split one has none", () => {
   assert.ok(biggest(DUMP) > D1_STATEMENT_LIMIT, "the fixture must reproduce the failure: one row over 100 KB");
   const split = splitOversizeStatements(DUMP);
   assert.ok(biggest(split) < D1_STATEMENT_LIMIT, `largest statement is ${biggest(split)} bytes`);
 });
 
-test("a row over the cap restores to exactly the bytes it had, and its neighbours are untouched", () => {
+await test("a row over the cap restores to exactly the bytes it had, and its neighbours are untouched", () => {
   const db = load(splitOversizeStatements(DUMP));
   const rows = db.prepare("SELECT * FROM publications ORDER BY slug").all();
   assert.equal(rows.length, 2);
@@ -57,12 +57,12 @@ test("a row over the cap restores to exactly the bytes it had, and its neighbour
   assert.equal(rows[1].record, '{"a":1}');
 });
 
-test("a statement under the line passes through byte for byte", () => {
+await test("a statement under the line passes through byte for byte", () => {
   const small = `INSERT INTO "publications" ("slug","title","markdown","record","source_blob_sha") VALUES('s','t','m',NULL,'x');`;
   assert.equal(splitOversizeStatements(`${small}\nPRAGMA foreign_keys=ON;\n`), `${small}\nPRAGMA foreign_keys=ON;\n`);
 });
 
-test("newlines written as char(10) joins split between terms and join back", () => {
+await test("newlines written as char(10) joins split between terms and join back", () => {
   const parts = Array.from({ length: 6000 }, (_, i) => `line ${i} of the paper's text`);
   const expression = parts.map(literal).join("||char(10)||");
   const dump = `INSERT INTO "notes" ("id","body") VALUES(7,${expression});\n`;
@@ -72,7 +72,7 @@ test("newlines written as char(10) joins split between terms and join back", () 
   assert.ok(biggest(splitOversizeStatements(dump, { keyOf: () => ["id"] })) < D1_STATEMENT_LIMIT);
 });
 
-test("an INSERT that lists no columns takes them from the schema; no key addresses the new row by rowid", () => {
+await test("an INSERT that lists no columns takes them from the schema; no key addresses the new row by rowid", () => {
   const db = new DatabaseSync(":memory:");
   db.exec(SCHEMA);
   db.exec(`INSERT INTO notes (body) VALUES ('one'), ('two');`);
@@ -85,7 +85,7 @@ test("an INSERT that lists no columns takes them from the schema; no key address
   assert.equal(rows[0].body, "one");
 });
 
-test("an upsert over the cap lands on the row it conflicts with, and a half-written one reads as not current", () => {
+await test("an upsert over the cap lands on the row it conflicts with, and a half-written one reads as not current", () => {
   const upsert =
     `INSERT INTO publications (slug, title, markdown, record, source_blob_sha) VALUES ` +
     `('big', 'New title', ${literal(TEXT)}, NULL, 'newsha') ON CONFLICT(slug) DO UPDATE SET ` +
@@ -114,7 +114,7 @@ test("an upsert over the cap lands on the row it conflicts with, and a half-writ
   assert.equal(partial.source_blob_sha, "");
 });
 
-test("what cannot be cut stops the run and says so", () => {
+await test("what cannot be cut stops the run and says so", () => {
   assert.throws(
     () => splitOversizeStatements(`UPDATE notes SET body = ${literal(TEXT)};`),
     /not a plain INSERT/,
@@ -125,7 +125,7 @@ test("what cannot be cut stops the run and says so", () => {
   );
 });
 
-test("a semicolon or a quote inside text does not end a statement", () => {
+await test("a semicolon or a quote inside text does not end a statement", () => {
   assert.deepEqual(splitStatements(`INSERT INTO t VALUES('a;b''c');\n-- x; y\nSELECT 1;`), [
     `INSERT INTO t VALUES('a;b''c')`,
     `-- x; y\nSELECT 1`,
@@ -162,7 +162,7 @@ const CHECKED = {
 };
 
 for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
-  test(`${table}: a row over the cap in the real schema restores byte for byte`, () => {
+  await test(`${table}: a row over the cap in the real schema restores byte for byte`, () => {
     const schema = migrationSchema();
     const columns = schema.columnsOf(table);
     assert.ok(columns, `${table} is in the migrations`);
@@ -199,7 +199,7 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
 
 // wrangler d1 export writes a string holding a newline as replace('a\nb','\n',char(10)), CR as a second replace
 // around it. The first real drill (run 37221582504) died on exactly this in phage-isolation.
-test("a value the export wrote with replace(..., '\\n', char(10)) is cut, and means what the original meant", () => {
+await test("a value the export wrote with replace(..., '\\n', char(10)) is cut, and means what the original meant", () => {
   const prose = Array.from({ length: 4000 }, (_, i) => `Step ${i}: C:\\lab\\ 5 µL at 37 °C, it's "done"; \\ trailing\\`).join("\n");
   const body = prose.replace(/\n/g, "\\n");
   /** @param {string} value */

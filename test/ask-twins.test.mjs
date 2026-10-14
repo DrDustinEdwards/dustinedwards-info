@@ -42,7 +42,7 @@ function io(failures) {
   };
 }
 
-test("a transient failure is retried and the twin lands", async () => {
+await test("a transient failure is retried and the twin lands", async () => {
   const fake = io(1);
   const { keys, failed } = await uploadTwins(TWINS, fake);
   assert.equal(fake.thrown(), 1, "the plant must actually have thrown once");
@@ -53,7 +53,7 @@ test("a transient failure is retried and the twin lands", async () => {
   assert.equal(fake.slept.length, 1, "exactly one pause, before the one retry");
 });
 
-test("a failure that outlives its retries is reported, not swallowed", async () => {
+await test("a failure that outlives its retries is reported, not swallowed", async () => {
   const fake = io(Infinity);
   const { keys, failed } = await uploadTwins(TWINS, fake);
   assert.equal(fake.thrown(), TWIN_ATTEMPTS, "every attempt was made before giving up");
@@ -63,7 +63,7 @@ test("a failure that outlives its retries is reported, not swallowed", async () 
   assert.equal(fake.logged.length, 1);
 });
 
-test("the converge report refuses convergence on a failed key, even when the counts agree", async () => {
+await test("the converge report refuses convergence on a failed key, even when the counts agree", async () => {
   const { failed } = await uploadTwins(TWINS, io(Infinity));
   // The counts agreeing is the dangerous case: the old copy is still listed, so nothing else would notice.
   const report = askSyncReport({ uploaded: 156, removed: 0, cacheDropped: 0, expected: 157, present: 157, failed });
@@ -73,14 +73,14 @@ test("the converge report refuses convergence on a failed key, even when the cou
   assert.match(askSyncSummary(report), /10-1128-mra-01077-21/);
 });
 
-test("with nothing failed, the report converges exactly as before", () => {
+await test("with nothing failed, the report converges exactly as before", () => {
   const report = askSyncReport({ uploaded: 157, removed: 0, cacheDropped: 0, expected: 157, present: 157, failed: [] });
   assert.equal(report.converged, true);
   const legacy = askSyncReport({ uploaded: 157, removed: 0, cacheDropped: 0, expected: 157, present: 157 });
   assert.equal(legacy.converged, true, "a caller that passes no failed list still converges on agreeing counts");
 });
 
-test("a twin that cannot be fetched is retried, then reported", async () => {
+await test("a twin that cannot be fetched is retried, then reported", async () => {
   let fetches = 0;
   const { failed } = await uploadTwins([TWINS[0]], {
     fetchText: async () => {
@@ -95,7 +95,7 @@ test("a twin that cannot be fetched is retried, then reported", async () => {
   assert.equal(failed.length, 1);
 });
 
-test("withRetry tries exactly as many times as asked and rethrows the last error", async () => {
+await test("withRetry tries exactly as many times as asked and rethrows the last error", async () => {
   let calls = 0;
   await assert.rejects(
     withRetry(
@@ -110,7 +110,7 @@ test("withRetry tries exactly as many times as asked and rethrows the last error
   assert.equal(calls, 3);
 });
 
-test("withRetry returns the value when a later attempt succeeds", async () => {
+await test("withRetry returns the value when a later attempt succeeds", async () => {
   let calls = 0;
   const value = await withRetry(
     async () => {

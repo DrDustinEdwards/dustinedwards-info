@@ -53,12 +53,12 @@ export function useInspectorDialog(
     if (!el) return;
     const close = () => navigate(closeHref, { preventScrollReset: true });
     // Escape leaves by the URL, as the Close link does: a natively closed dialog would leave ?key= behind.
-    const onCancel = (event: Event) => {
+    const onCancel = async (event: Event) => {
       event.preventDefault();
-      close();
+      await close();
     };
     // A click outside the panel's box landed on the backdrop, which stands in for the scrim link.
-    const onClick = (event: MouseEvent) => {
+    const onClick = async (event: MouseEvent) => {
       if (event.target !== el) return;
       const r = el.getBoundingClientRect();
       const inside =
@@ -66,7 +66,7 @@ export function useInspectorDialog(
         event.clientX <= r.right &&
         event.clientY >= r.top &&
         event.clientY <= r.bottom;
-      if (!inside) close();
+      if (!inside) await close();
     };
     el.addEventListener("cancel", onCancel);
     el.addEventListener("click", onClick);

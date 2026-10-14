@@ -5,7 +5,7 @@ import { SITE, personJsonLd, personNode } from "../app/lib/seo.ts";
 
 const ORIGIN = "https://example.test";
 
-test("home identity is professor and virologist, under one name", () => {
+await test("home identity is professor and virologist, under one name", () => {
   assert.equal(SITE.name, "Dustin Edwards");
   assert.equal(SITE.role, "Professor and Virologist");
   assert.equal(SITE.eyebrow, "Professor and Virologist");

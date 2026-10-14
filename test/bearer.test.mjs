@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 
 import { constantTimeEqual, tokenLabel } from "../app/lib/bearer.server.ts";
 
-test("equal strings compare equal", async () => {
+await test("equal strings compare equal", async () => {
   assert.equal(await constantTimeEqual("", ""), true);
   assert.equal(await constantTimeEqual("s3cret", "s3cret"), true);
   assert.equal(
@@ -16,12 +16,12 @@ test("equal strings compare equal", async () => {
   );
 });
 
-test("different strings of the same length compare unequal", async () => {
+await test("different strings of the same length compare unequal", async () => {
   assert.equal(await constantTimeEqual("s3cret", "s3crev"), false);
   assert.equal(await constantTimeEqual("abc", "cba"), false);
 });
 
-test("a PREFIX is refused, which is the length refusal and the hash shape at once", async () => {
+await test("a PREFIX is refused, which is the length refusal and the hash shape at once", async () => {
   assert.equal(
     await constantTimeEqual("abc", "abcdef"),
     false,
@@ -39,12 +39,12 @@ test("a PREFIX is refused, which is the length refusal and the hash shape at onc
   );
 });
 
-test("both operands are hashed, so neither length reaches the loop bound", async () => {
+await test("both operands are hashed, so neither length reaches the loop bound", async () => {
   assert.equal(await constantTimeEqual("x", "x".repeat(100_000)), false);
   assert.equal(await constantTimeEqual("x".repeat(100_000), "x"), false);
 });
 
-test("tokenLabel is stable, fixed width, and moves when the token does", () => {
+await test("tokenLabel is stable, fixed width, and moves when the token does", () => {
   const label = tokenLabel("operator-token-value");
   assert.equal(label, tokenLabel("operator-token-value"), "not stable across calls");
   assert.match(label, /^[0-9a-f]{8}$/, "not eight lowercase hex characters");
@@ -56,6 +56,6 @@ test("tokenLabel is stable, fixed width, and moves when the token does", () => {
   assert.notEqual(label, "operator-token-value", "the label is the token");
 });
 
-test("tokenLabel labels the empty string without throwing", () => {
+await test("tokenLabel labels the empty string without throwing", () => {
   assert.match(tokenLabel(""), /^[0-9a-f]{8}$/);
 });

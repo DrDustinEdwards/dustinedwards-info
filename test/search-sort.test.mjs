@@ -16,7 +16,7 @@ const HITS = [
   { uid: "d", publishAt: 2000 },
 ];
 
-test("relevance is the default for absent, unknown and misspelled", () => {
+await test("relevance is the default for absent, unknown and misspelled", () => {
   assert.equal(parseSort(null), "relevance");
   assert.equal(parseSort(undefined), "relevance");
   assert.equal(parseSort(""), "relevance");
@@ -25,11 +25,11 @@ test("relevance is the default for absent, unknown and misspelled", () => {
   assert.equal(parseSort("relevance"), "relevance");
 });
 
-test("only the exact string date selects date", () => {
+await test("only the exact string date selects date", () => {
   assert.equal(parseSort("date"), "date");
 });
 
-test("relevance returns the fused list untouched, and the SAME array", () => {
+await test("relevance returns the fused list untouched, and the SAME array", () => {
   const out = applySort(HITS, "relevance");
   assert.deepEqual(
     out.map((h) => h.uid),
@@ -40,19 +40,19 @@ test("relevance returns the fused list untouched, and the SAME array", () => {
   assert.equal(out, HITS);
 });
 
-test("date orders newest first", () => {
+await test("date orders newest first", () => {
   assert.deepEqual(
     applySort(HITS, "date").map((h) => h.uid),
     ["b", "d", "a", "c"],
   );
 });
 
-test("an undated row sorts LAST, not first", () => {
+await test("an undated row sorts LAST, not first", () => {
   const out = applySort(HITS, "date");
   assert.equal(out.at(-1).uid, "c", "a null publishAt must not read as epoch zero");
 });
 
-test("date does not mutate its input", () => {
+await test("date does not mutate its input", () => {
   const before = HITS.map((h) => h.uid);
   applySort(HITS, "date");
   assert.deepEqual(
@@ -66,7 +66,7 @@ test("date does not mutate its input", () => {
  * A pre-epoch date separates `?? 0` from `?? -Infinity`: 0 is below every timestamp in the corpus,
  * so without one the two sorts return identical lists.
  */
-test("a pre-epoch date still outranks an undated row", () => {
+await test("a pre-epoch date still outranks an undated row", () => {
   const withOld = [...HITS, { uid: "e", publishAt: -86400 }];
   const out = applySort(withOld, "date");
   assert.equal(out.at(-1).uid, "c", "undated is last");

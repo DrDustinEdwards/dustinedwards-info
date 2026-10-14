@@ -32,7 +32,7 @@ const built = await buildRegistry();
 const items = built.items.filter((item) => item.kind === "equipment");
 const byId = new Map(items.map((item) => [item.id, item]));
 
-test("the registry holds the equipment the protocols list, each a name and a maker nobody has recorded yet", () => {
+await test("the registry holds the equipment the protocols list, each a name and a maker nobody has recorded yet", () => {
   assert.equal(KINDS.equipment, EQUIPMENT);
   assert.deepEqual([...byId.keys()].sort(), [
     "heat-block",
@@ -58,7 +58,7 @@ test("the registry holds the equipment the protocols list, each a name and a mak
   assert.equal(equipmentRow(byId.get("qubit-3-0")).name, "Qubit 3.0");
 });
 
-test("the kind refuses what is wrong, with the field named", async () => {
+await test("the kind refuses what is wrong, with the field named", async () => {
   const kinds = { equipment: EQUIPMENT };
   const host = { paper: async () => false, recipe: async () => false };
   const compile = (lines) => compileRegistryItem({ slug: "equipment/x", raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
@@ -69,14 +69,14 @@ test("the kind refuses what is wrong, with the field named", async () => {
   assert.ok(bad.errors.join("\n").includes("manufacturer") && bad.errors.join("\n").includes("rotor"));
 });
 
-test("an item has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
+await test("an item has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
   assert.equal(hasItemPage("equipment"), true);
   assert.deepEqual(registrySearchInput(byId.get("water-bath")), { uid: "registry:equipment/water-bath", url: "/research/lab/equipment/water-bath", title: "Water bath", body: "Water bath equipment" });
   assert.ok(inventoryRows(items, []).every((row) => row.path.startsWith(`${kindPath("equipment")}/`)));
   assert.equal(kindPath("equipment"), "/research/lab/equipment");
 });
 
-test("no record stores what is computed: the protocols that use an item, or the setting a protocol gives it", async () => {
+await test("no record stores what is computed: the protocols that use an item, or the setting a protocol gives it", async () => {
   const names = (await readdir(new URL("content/registry/equipment/", root))).filter((n) => n.endsWith(".md"));
   assert.equal(names.length, 11);
   for (const name of names) {
@@ -85,7 +85,7 @@ test("no record stores what is computed: the protocols that use an item, or the 
   }
 });
 
-test("the table lists each item's protocols, read from the protocols that name it, and every gap with its reason", () => {
+await test("the table lists each item's protocols, read from the protocols that name it, and every gap with its reason", () => {
   const protocols = [
     { path: "/research/protocols/a", title: "A", equipment: [{ name: "55 °C water bath", item: { id: "water-bath" } }, { name: "gel", item: null }] },
     { path: "/research/protocols/b", title: "B", equipment: [{ name: "plain", item: null }] },
@@ -107,7 +107,7 @@ test("the table lists each item's protocols, read from the protocols that name i
   }
 });
 
-test("a protocol's Equipment table is drawn from the registry beside the protocol's own words", async () => {
+await test("a protocol's Equipment table is drawn from the registry beside the protocol's own words", async () => {
   const { compileDirectory } = await import("../scripts/lib/procedures.mjs");
   const compiled = await compileDirectory("content/procedures");
   const extraction = compiled.find((c) => c.slug === "phage-dna-extraction")?.compiled;
@@ -124,7 +124,7 @@ test("a protocol's Equipment table is drawn from the registry beside the protoco
   assert.ok(coi.record.equipment.every((e) => e.item === null), "an item no record holds (a gel) stays the protocol's own");
 });
 
-test("the compile refuses what a protocol may not say about equipment", async () => {
+await test("the compile refuses what a protocol may not say about equipment", async () => {
   const { compileProcedure } = await import("../app/kb/procedures/compile.mjs");
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
