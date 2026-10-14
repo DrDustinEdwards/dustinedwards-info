@@ -15,9 +15,6 @@
       "Bash(npx:*)",
       "Bash(wrangler:*)",
       "Bash(npx wrangler:*)"
-    ],
-    "deny": [
-      "Bash(gh pr merge:*)"
     ]
   },
   "deniedMcpServers": [
