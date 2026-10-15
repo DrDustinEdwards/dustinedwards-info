@@ -3,7 +3,6 @@ path: /accessibility
 title: "Accessibility"
 seo_title: "Accessibility | {{identity.name}}"
 description: "What this site's build and browser checks test about accessibility, and how to report a problem they missed."
-draft: true
 schema_type: WebPage
 ---
 
@@ -30,7 +29,7 @@ The public pages are rendered complete on the server, and their scripts only add
 A browser check runs these against the site:
 
 - Each page tested starts with a skip link, and the place it points to exists.
-- The header menus open with Enter or Space, close with Escape, and hand focus back to the button that opened them. While a menu is open, the rest of the page is inert.
+- The header menus open with Enter or Space, close with Escape, and hand focus back to the button that opened them.
 - An enlarged image opens in a real modal dialog that takes focus, closes with Escape, and returns focus to the link that opened it.
 - A footnote preview stays open while the pointer moves onto it, closes with Escape without moving focus, and does not vanish on scroll (success criterion 1.4.13).
 - The footer's links are in the same order on every page tested, so help is found in the same place (success criterion 3.2.6).

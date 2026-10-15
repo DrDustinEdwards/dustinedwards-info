@@ -79,8 +79,9 @@ names the reason.
 
 `/accessibility` is a listed page like `/privacy` (it is not a legal page: no `banner`, no `last_updated`). Every
 claim on it names the gate or file it rests on, and the page claims no conformance level no gate tests. It shipped
-with `draft: true` (job_fea2f94832b3) until Dustin approves its text. While it is a draft it answers 404 to a reader
-and is left out of sitemap.xml, the site map page, check:links' served set and verify-live's page list.
+with `draft: true` (job_fea2f94832b3) and was published on Dustin's approval on 2026-10-15. While a page is a
+draft it answers 404 to a reader and is left out of sitemap.xml, the site map page, check:links' served set and
+verify-live's page list.
 
 Publishing it, in either order:
 
