@@ -123,8 +123,8 @@ function syncPreview() {
 
 /*
  * The preview D1 outlives every push, so after a change to the renderer its rows still hold the old renderer's
- * hashes and the first sync reports RENDER DRIFT (and exits 1, after converging every row). That is ruling 30's
- * ordering artifact, not a defect, and ship tells them apart the same way: a second sync reads zero unless the
+ * hashes and the first sync reports RENDER DRIFT (and exits 1, after converging every row). That is the first-sync
+ * ordering artifact (a render from the previously deployed Worker), not a defect, and ship tells them apart the same way: a second sync reads zero unless the
  * converge write did not take. Only drift that SURVIVES the converge refuses the build.
  */
 console.log(`\nbuild:preview: content sync to ${PREVIEW_D1}`);
@@ -138,7 +138,7 @@ if (first.code !== 0) {
   if (confirm.code !== 0 || after !== 0) {
     refuse(
       `render drift SURVIVED a converge write (second sync: exit ${confirm.code ?? "signal"}, render-drift=${after ?? "unread"}). ` +
-        "This is not ruling 30's ordering artifact, which clears on the second run.",
+        "This is not the first-sync ordering artifact (a render from the previously deployed Worker), which clears on the second run.",
     );
   }
   console.log("build:preview: confirmed benign: the second sync reads render-drift=0.");

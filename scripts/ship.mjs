@@ -664,15 +664,15 @@ if (sync.code !== 0) {
       }
       console.log(
         `  confirmed benign: the second sync reads render-drift=0, so D1 carried a ` +
-          `render from the previously deployed Worker (ruling 30) and the converge ` +
+          `render from the previously deployed Worker (the first-sync ordering artifact) and the converge ` +
           `write took. Not a pipeline defect.`,
       );
     } else {
       renderDriftMiss =
         `render drift on ${named} SURVIVED a converge write: the first sync wrote ` +
         `the build's render to every row and a second sync still reads ` +
-        `render-drift=${confirmDrift}. This is not the ordering artifact of ruling ` +
-        `30, which clears on the second run. Either the write is not taking or ` +
+        `render-drift=${confirmDrift}. This is not the first-sync ordering artifact ` +
+        `(a render from the previously deployed Worker), which clears on the second run. Either the write is not taking or ` +
         `something is rewriting render_hash behind the sync.`;
       console.log(`  MISSED: ${renderDriftMiss}`);
     }
@@ -774,7 +774,7 @@ let deferredMiss = "";
 }
 
 /*
- * Ruling 151: the browser test runs against every deploy, not only on its weekly schedule. Started
+ * The browser test runs against every deploy, not only on its weekly schedule. Started
  * last, so it tests the synced content. A failure to start it is a miss: the deploy stands.
  */
 announce("Start the browser test against this deploy");

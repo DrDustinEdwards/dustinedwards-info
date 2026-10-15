@@ -29,7 +29,8 @@ export function missReport(misses, sha) {
       `  assets until its sync succeeds; both operations are idempotent: re-run\n` +
       `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n` +
       `  Render drift here has ALREADY SURVIVED a converge write and a second\n` +
-      `  sync, so it is not the benign ordering artifact of ruling 30, which\n` +
+      `  sync, so it is not the benign first-sync ordering artifact (a render\n` +
+      `  from the previously deployed Worker), which\n` +
       `  clears on the second run and is reported as confirmed benign above.\n` +
       `  Either the sync's write is not taking or something else is writing\n` +
       `  render_hash. Read the two hashes the sync named, and start at what\n` +
