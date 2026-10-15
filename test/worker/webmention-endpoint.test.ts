@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { FAILURE_REASONS, inspectSource } from "~/lib/webmention/verify.server";
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
+import type { WebmentionVerifyMessage } from "~/lib/webmention/queue";
+import { handleWebmentionVerify } from "../../workers/webmention-verify";
 
 import { freezeAtWindowStart, routeContext, untilRefused } from "./route-helpers";
 import { seedPost } from "./seed";
@@ -36,10 +38,10 @@ type StubPage =
   | { networkError: true }
   | { redirect: string };
 
-/* A URL with no recorded page throws rather than reaching the network. `gate` holds serving
- * so a case can observe the row BEFORE verification overwrites it. */
-function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
-  vi.stubGlobal("fetch", async (input: RequestInfo | URL): Promise<Response> => {
+/* A URL with no recorded page throws rather than reaching the network. A mock, so a case can
+ * count the fetches. */
+function stubSources(pages: Record<string, StubPage>) {
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const page = pages[url];
     if (!page) {
@@ -48,7 +50,6 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
           `network. Record the page's shape here if the fetch is legitimate.`,
       );
     }
-    if (gate) await gate;
     if ("networkError" in page) throw new TypeError("network failure");
     if ("redirect" in page) {
       return new Response(null, { status: 302, headers: { location: page.redirect } });
@@ -57,13 +58,44 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
       status: page.status ?? 200,
       headers: { "content-type": page.contentType ?? "text/html; charset=utf-8" },
     });
-  });
+  }));
 }
 
 const pageLinkingTo = (href: string, extra = "") =>
   `<!doctype html><html><body>${extra}<p>I read <a href="${href}">this post</a> today and it was useful.</p></body></html>`;
 
-beforeEach(resetMentions);
+/* What the route sent to WEBMENTION_VERIFY. miniflare's own queue would deliver to the test entry,
+ * which has no consumer, so the producer is recorded here and `deliver` hands each message to the
+ * real consumer the way Queues would, reporting how each was settled. */
+let sent: WebmentionVerifyMessage[] = [];
+
+function mentionContext(ctx: ExecutionContext, overrides: object = {}) {
+  const queue = {
+    send: async (body: WebmentionVerifyMessage) => {
+      sent.push(body);
+    },
+  };
+  return routeContext(ctx, { WEBMENTION_VERIFY: queue, ...overrides });
+}
+
+async function deliver(messages: WebmentionVerifyMessage[] = sent.splice(0)) {
+  const settled: string[] = [];
+  const batch = {
+    queue: "dustinedwards-webmention-verify",
+    messages: messages.map((body) => ({
+      body,
+      ack: () => settled.push("ack"),
+      retry: () => settled.push("retry"),
+    })),
+  } as unknown as Parameters<typeof handleWebmentionVerify>[0];
+  await handleWebmentionVerify(batch, env as unknown as Parameters<typeof handleWebmentionVerify>[1]);
+  return settled;
+}
+
+beforeEach(async () => {
+  sent = [];
+  await resetMentions();
+});
 
 afterEach(() => {
   /* Restored here, not per case: a case that fails mid-assertion never reaches its own
@@ -76,7 +108,7 @@ describe("/webmention refuses before it reads", () => {
     const ctx = createExecutionContext();
     const response = await webmentionAction({
       request: wm("", { method: "GET", ip: "203.0.113.10" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(405);
@@ -102,7 +134,7 @@ describe("/webmention refuses before it reads", () => {
         ip: "203.0.113.11",
         headers: { "content-length": String(5 * 1024) },
       }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(413);
@@ -114,7 +146,7 @@ describe("/webmention refuses before it reads", () => {
     const huge = form(`https://elsewhere.example/${"a".repeat(6000)}`, TARGET);
     const response = await webmentionAction({
       request: wm(huge, { ip: "203.0.113.12", headers: { "content-length": "10" } }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(413);
@@ -125,7 +157,7 @@ describe("/webmention refuses before it reads", () => {
     for (const body of ["", "source=https://elsewhere.example/a", `target=${encodeURIComponent(TARGET)}`]) {
       const response = await webmentionAction({
         request: wm(body, { ip: "203.0.113.13" }),
-        context: routeContext(ctx),
+        context: mentionContext(ctx),
       } as never);
       expect(response.status).toBe(400);
     }
@@ -138,7 +170,7 @@ describe("/webmention refuses before it reads", () => {
         ip: "203.0.113.14",
         contentType: "application/json",
       }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(400);
@@ -148,7 +180,7 @@ describe("/webmention refuses before it reads", () => {
     /* An unprotected public write path does not serve unmetered; it does not serve. */
     const response = await webmentionAction({
       request: wm(form("https://elsewhere.example/a", TARGET), { ip: "203.0.113.15" }),
-      context: routeContext(createExecutionContext(), { ASK_BUDGET: undefined }),
+      context: mentionContext(createExecutionContext(), { ASK_BUDGET: undefined }),
     } as never);
 
     expect(response.status).toBe(503);
@@ -162,7 +194,7 @@ describe("/webmention bound 1: the per-IP rate limit", () => {
     freezeAtWindowStart();
 
     const ctx = createExecutionContext();
-    const context = routeContext(ctx);
+    const context = mentionContext(ctx);
     const { refusal, results } = await untilRefused(
       () =>
         webmentionAction({
@@ -190,7 +222,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
         form("https://elsewhere.example/a", "https://elsewhere.example/blog/a-mentioned-post"),
         { ip: "203.0.113.30" },
       ),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(400);
@@ -202,7 +234,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
     for (const target of [`${SITE_ORIGIN}/colophon`, `${SITE_ORIGIN}/writing`, `${SITE_ORIGIN}/`]) {
       const response = await webmentionAction({
         request: wm(form("https://elsewhere.example/a", target), { ip: "203.0.113.31" }),
-        context: routeContext(ctx),
+        context: mentionContext(ctx),
       } as never);
       expect(response.status).toBe(400);
     }
@@ -219,14 +251,14 @@ describe("/webmention bound 2: the target must be a published post here", () => 
         form("https://elsewhere.example/a", `${SITE_ORIGIN}/writing/an-unpublished-draft`),
         { ip: "203.0.113.32" },
       ),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     const unknown = await webmentionAction({
       request: wm(
         form("https://elsewhere.example/a", `${SITE_ORIGIN}/writing/no-such-post-anywhere`),
         { ip: "203.0.113.32" },
       ),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(draft.status).toBe(400);
@@ -253,7 +285,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
     for (const source of sources) {
       const response = await webmentionAction({
         request: wm(form(source, TARGET), { ip: "203.0.113.33" }),
-        context: routeContext(ctx),
+        context: mentionContext(ctx),
       } as never);
       expect(response.status, `source ${source} was not refused`).toBe(400);
     }
@@ -280,7 +312,7 @@ describe("/webmention bound 4: the global cap on open rows", () => {
       request: wm(form("https://elsewhere.example/over-the-cap", TARGET), {
         ip: "203.0.113.40",
       }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(503);
@@ -292,34 +324,90 @@ describe("/webmention bound 4: the global cap on open rows", () => {
 });
 
 describe("/webmention accepts and verifies", () => {
-  it("answers 202 and leaves the row UNVERIFIED until verification runs", async () => {
-    /* Verification runs in `ctx.waitUntil`; the gate holds the stub so the row is observed
-     * before the verdict write, instead of racing the assertion. */
-    let release = () => {};
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const source = "https://elsewhere.example/gated";
-    stubSources({ [source]: { body: pageLinkingTo(TARGET) } }, gate);
+  it("answers 202, ENQUEUES the row and verifies nothing inline", async () => {
+    /* The stub counts fetches, so a verification run in `waitUntil` would show as a call here. */
+    const source = "https://elsewhere.example/queued";
+    stubSources({ [source]: { body: pageLinkingTo(TARGET) } });
+    const fetches = vi.mocked(fetch);
 
     const ctx = createExecutionContext();
     const response = await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.50" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
+    await waitOnExecutionContext(ctx);
 
     expect(response.status).toBe(202);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(fetches).not.toHaveBeenCalled();
 
     const held = await mentionRow(source);
     expect(held?.status).toBe("unverified");
     expect(held?.target_slug).toBe(TARGET_SLUG);
+    expect(sent).toEqual([{ id: held?.id, source, target: TARGET }]);
 
-    release();
+    expect(await deliver()).toEqual(["ack"]);
+    expect((await mentionRow(source))?.status).toBe("pending");
+  });
+
+  it("answers 503 and writes nothing when the queue binding is absent, as on a preview", async () => {
+    const source = "https://elsewhere.example/no-queue";
+    const response = await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.48" }),
+      context: mentionContext(createExecutionContext(), { WEBMENTION_VERIFY: undefined }),
+    } as never);
+
+    expect(response.status).toBe(503);
+    expect(await mentionRow(source)).toBeNull();
+  });
+
+  it("answers 503 when the send fails, so the sender retries", async () => {
+    const source = "https://elsewhere.example/send-fails";
+    const failing = {
+      send: async () => {
+        throw new Error("queue unavailable");
+      },
+    };
+    const response = await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.49" }),
+      context: mentionContext(createExecutionContext(), { WEBMENTION_VERIFY: failing }),
+    } as never);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("60");
+  });
+
+  it("treats a REDELIVERED message as a no-op: no second fetch, no second verdict", async () => {
+    const source = "https://elsewhere.example/redelivered";
+    stubSources({ [source]: { body: pageLinkingTo(TARGET) } });
+    const fetches = vi.mocked(fetch);
+
+    const ctx = createExecutionContext();
+    await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.47" }),
+      context: mentionContext(ctx),
+    } as never);
     await waitOnExecutionContext(ctx);
+    const [message] = sent;
+    expect(message).toBeDefined();
 
+    expect(await deliver()).toEqual(["ack"]);
     const verified = await mentionRow(source);
     expect(verified?.status).toBe("pending");
+    const callsAfterFirst = fetches.mock.calls.length;
+
+    /* Moderated in between: the redelivery must not re-open or overwrite the decision. */
+    await env.DB.prepare(`UPDATE webmentions SET status = 'approved' WHERE id = ?1`)
+      .bind(verified?.id)
+      .run();
+    expect(await deliver([message!])).toEqual(["ack"]);
+    expect(fetches.mock.calls.length).toBe(callsAfterFirst);
+    expect((await mentionRow(source))?.status).toBe("approved");
+  });
+
+  it("ACKS AND DROPS a message of the wrong shape rather than retrying it forever", async () => {
+    const settled = await deliver([{ id: "1", source: "", target: TARGET } as never]);
+    expect(settled).toEqual(["ack"]);
   });
 
   it("moves the row to PENDING when the source really links to the target", async () => {
@@ -329,9 +417,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.51" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     const row = await mentionRow(source);
     expect(row?.status).toBe("pending");
@@ -348,9 +437,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.52" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     expect((await mentionRow(source))?.status).toBe("pending");
   });
@@ -364,9 +454,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.53" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     const row = await mentionRow(source);
     expect(row?.status).toBe("failed");
@@ -382,9 +473,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.54" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     const row = await mentionRow(source);
     expect(row?.status).toBe("failed");
@@ -400,9 +492,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.55" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.notHtml);
   });
@@ -414,9 +507,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.56" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.fetchError);
   });
@@ -429,9 +523,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.58" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     expect((await mentionRow(source))?.status).toBe("pending");
   });
@@ -445,9 +540,10 @@ describe("/webmention accepts and verifies", () => {
       const ctx = createExecutionContext();
       await webmentionAction({
         request: wm(form(source, TARGET), { ip: `203.0.113.${70 + index}` }),
-        context: routeContext(ctx),
+        context: mentionContext(ctx),
       } as never);
       await waitOnExecutionContext(ctx);
+      await deliver();
 
       expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.redirectRefused);
     }
@@ -474,9 +570,10 @@ describe("/webmention accepts and verifies", () => {
     const ctx = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.57" }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
     await waitOnExecutionContext(ctx);
+    await deliver();
 
     const row = await mentionRow(source);
     expect(row?.status).toBe("pending");
@@ -493,9 +590,10 @@ describe("/webmention bound 3: one row per source and target", () => {
     const first = createExecutionContext();
     await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.60" }),
-      context: routeContext(first),
+      context: mentionContext(first),
     } as never);
     await waitOnExecutionContext(first);
+    await deliver();
     expect((await mentionRow(source))?.status).toBe("pending");
 
     /* The source has stopped linking here, so the row must be re-decided, not left stale. */
@@ -503,9 +601,10 @@ describe("/webmention bound 3: one row per source and target", () => {
     const second = createExecutionContext();
     const response = await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.60" }),
-      context: routeContext(second),
+      context: mentionContext(second),
     } as never);
     await waitOnExecutionContext(second);
+    await deliver();
 
     expect(response.status).toBe(202);
     const count = await env.DB.prepare(
@@ -541,7 +640,7 @@ describe("/webmention on a body stream that breaks", () => {
         },
         body: broken,
       }),
-      context: routeContext(ctx),
+      context: mentionContext(ctx),
     } as never);
 
     expect(response.status).toBe(400);

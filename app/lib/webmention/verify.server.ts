@@ -10,8 +10,8 @@ import { errorMessage } from "~/lib/error-message.mjs";
 type ParsedDocument = ReturnType<typeof parseHTML>["document"];
 
 // The row is written `unverified` and moves to `pending` only if an anchor on the source resolves to the
-// target. Runs in `waitUntil`, not a queue: a run cut short leaves the row `unverified`, visible and still
-// counted by the cap. Nothing from the source is stored as markup.
+// target. Runs in the queue consumer, workers/webmention-verify.ts, which retries a run whose verdict did
+// not land. Nothing from the source is stored as markup.
 
 const MAX_SOURCE_BYTES = 1024 * 1024;
 
@@ -172,7 +172,7 @@ export async function inspectSource(
   };
 }
 
-// NEVER THROWS: a rejection inside `waitUntil` is an unread log line and a row stuck `unverified`.
+// NEVER THROWS: every source failure is a recorded verdict, so the consumer retries only a failed write.
 export async function verifyWebmention(
   env: Env,
   id: number,

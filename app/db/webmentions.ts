@@ -70,6 +70,19 @@ export async function receiveWebmention(
   return id;
 }
 
+/** The row the queue consumer re-reads before it fetches anything, or null once it is gone. */
+export async function webmentionToVerify(
+  env: Env,
+  id: number,
+): Promise<{ sourceUrl: string; status: string } | null> {
+  const rows = await getDb(env)
+    .select({ sourceUrl: webmentions.sourceUrl, status: webmentions.status })
+    .from(webmentions)
+    .where(eq(webmentions.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export type WebmentionVerdict =
   | {
       status: "pending";

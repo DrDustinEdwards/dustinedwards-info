@@ -27,6 +27,8 @@ import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
 import { SECURITY_HEADERS } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
+import { handleWebmentionVerify } from "./webmention-verify";
+import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
 
 export { AskBudget } from "./ask-budget";
@@ -197,7 +199,8 @@ export default {
   },
 
   async queue(batch, env) {
-    await handleMediaEvents(batch, env);
+    if (batch.queue === WEBMENTION_VERIFY_QUEUE) await handleWebmentionVerify(batch, env);
+    else await handleMediaEvents(batch, env);
   },
 
 } satisfies ExportedHandler<Env>;

@@ -48,6 +48,14 @@
     "queue_consumer:dustinedwards-media-events": {
       "what": "R2 event notifications from both buckets, consumed to derive the media index rows.",
       "whyLoadBearing": "The write path is a notification into a queue, never a dual write. The Worker writes only to R2 and the consumer re-derives the row from the object as it is now, never branching on what the message claimed, which is what makes replay and out-of-order delivery converge."
+    },
+    "queue_producer:WEBMENTION_VERIFY": {
+      "what": "The webmention endpoint's producer: one message per accepted mention, carrying the row id, source and target.",
+      "whyLoadBearing": "The endpoint answers 202 only after the send lands, and 503 if it fails, so the sender retries rather than a row waiting on a verification nobody will run. Absent on a Worker Preview, which cannot consume a queue, so the endpoint refuses there."
+    },
+    "queue_consumer:dustinedwards-webmention-verify": {
+      "what": "Webmention verification: the row id the endpoint sends after it writes the unverified row, consumed to fetch the source and record the verdict.",
+      "whyLoadBearing": "A verification cut short in waitUntil was lost; here it is retried and then kept in the dead-letter queue. The consumer re-reads the row and fetches nothing unless it is still unverified, so a redelivery is a no-op."
     }
   },
   "notAdopted": [
