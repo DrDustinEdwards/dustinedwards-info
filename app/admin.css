@@ -32,6 +32,8 @@
 @import "capsomer/tabs.css";
 @import "capsomer/tooltip.css";
 @import "capsomer/theme-switch.css";
+/* The header across the top of every admin page (admin-shell.md: load it with site-header.css). */
+@import "capsomer/site-header.css";
 @import "capsomer/admin-shell.css";
 @import "capsomer/confirm-dialog.css";
 @import "capsomer/stat-tile.css";
