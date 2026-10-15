@@ -321,6 +321,16 @@ jobs:
           fi
           echo "The token reaches every surface this deploy calls."
 
+      # A NEW QUEUE NO LONGER NEEDS A HAND-RUN `wrangler queues create`. wrangler refuses a producer
+      # or consumer whose queue does not exist, so before this step a PR adding one (the webmention
+      # verify queue, job_a58c8e1be3fc) blocked on a manual create before its merge could deploy.
+      # Create-only and idempotent: an existing queue is left alone, nothing is ever deleted.
+      - name: Create any queue the config names that does not exist yet
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/ensure-queues.mjs wrangler.jsonc
+
       # THE LOCAL D1 HAS TO EXIST, because ship's gate tier includes
       # `check:backup`, which verifies the per-table export path against the
       # LOCAL database and fails with "sqlite_master returned no tables" on a

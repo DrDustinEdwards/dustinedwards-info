@@ -368,6 +368,22 @@ as it is now and never branches on what the message claimed, so replay and
 out-of-order delivery converge. That is why a dead letter after 3 attempts is a
 signal to read rather than data to reconcile.
 
+## 3b. Webmention verification queue
+
+**Without this the Worker does not deploy**, because the `WEBMENTION_VERIFY`
+producer names a queue that must exist. `/webmention` writes the `unverified` row,
+answers 202 and sends the row id here; the consumer fetches the source and records
+the verdict, 3 attempts and then the DLQ. Nothing else feeds it.
+
+```sh
+npx wrangler queues create dustinedwards-webmention-verify
+npx wrangler queues create dustinedwards-webmention-verify-dlq
+```
+
+Consumer settings live in `wrangler.jsonc`, from the example file. A dead letter
+is a row left `unverified`, visible in /admin/mentions; the sender re-sending the
+webmention resets the row and queues it again.
+
 ---
 
 ## 4. AI Search instance

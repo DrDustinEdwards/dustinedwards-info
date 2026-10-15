@@ -1,14 +1,10 @@
-import {
-  countOpenWebmentions,
-  receiveWebmention,
-  recordWebmentionVerdict,
-  webmentionTarget,
-} from "~/db";
+import { countOpenWebmentions, receiveWebmention, webmentionTarget } from "~/db";
 import { clientIp } from "~/lib/client-ip";
-import { getEnv, getExecutionContext } from "~/lib/context";
+import { getEnv } from "~/lib/context";
 import { readCapped } from "~/lib/read-capped.mjs";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
+import type { WebmentionVerifyMessage } from "~/lib/webmention/queue";
 import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
 
 import type { Route } from "./+types/webmention";
@@ -68,7 +64,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   const env = getEnv(context);
-  if (!env.ASK_BUDGET) {
+  /* Absent on a Worker Preview, which cannot consume a queue: refused before anything is written. */
+  if (!env.ASK_BUDGET || !env.WEBMENTION_VERIFY) {
     return answer("Webmentions unavailable", 503);
   }
 
@@ -135,33 +132,18 @@ export async function action({ request, context }: Route.ActionArgs) {
   const id = await receiveWebmention(env, { sourceUrl: source, targetSlug: slug });
 
   /*
-   * 202 first, verification in `waitUntil`. Imported here, not at the top: linkedom has no place in
-   * the chunk every cold isolate evaluates.
+   * 202 first, verification on the queue: retried there and dead-lettered rather than lost with the
+   * isolate. A failed send answers 503 so the sender retries; its re-send resets the same row.
    */
-  getExecutionContext(context).waitUntil(
-    import("~/lib/webmention/verify.server")
-      .then(({ verifyWebmention }) => verifyWebmention(env, id, source, target))
-      /* `verifyWebmention` never throws, so this is the chunk failing to load: the row is failed, not left counting toward the cap. */
-      .catch(async (error: unknown) => {
-        console.error(
-          JSON.stringify({
-            alert: "webmention-verify-load-failed",
-            id,
-            detail: errorMessage(error),
-          }),
-        );
-        await recordWebmentionVerdict(env, id, { status: "failed", failureReason: "fetch-error" });
-      })
-      .catch((error: unknown) => {
-        console.error(
-          JSON.stringify({
-            alert: "webmention-verdict-write-failed",
-            id,
-            detail: errorMessage(error),
-          }),
-        );
-      }),
-  );
+  try {
+    const message: WebmentionVerifyMessage = { id, source, target };
+    await env.WEBMENTION_VERIFY.send(message);
+  } catch (error) {
+    console.error(
+      JSON.stringify({ alert: "webmention-enqueue-failed", id, detail: errorMessage(error) }),
+    );
+    return answer("Webmentions unavailable", 503, { "retry-after": "60" });
+  }
 
   return answer("Accepted. It will be verified and reviewed before it appears.", 202);
 }

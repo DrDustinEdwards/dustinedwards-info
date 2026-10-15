@@ -283,7 +283,18 @@
 	//
 	// Queue names carry no account-scoped id, so these lines are complete as
 	// written rather than placeholders.
+	//
+	// Webmention verification (job_a58c8e1be3fc). The route writes the `unverified` row, answers 202 and
+	// sends the row id here; queue() fetches the source and records the verdict. A Queue rather than
+	// `waitUntil`, because a run cut short in `waitUntil` is lost and this one is retried, then kept in
+	// its dead-letter queue. The consumer skips a row already past `unverified`, so a redelivery is a no-op.
 	"queues": {
+		"producers": [
+			{
+				"binding": "WEBMENTION_VERIFY",
+				"queue": "dustinedwards-webmention-verify"
+			}
+		],
 		"consumers": [
 			{
 				"queue": "dustinedwards-media-events",
@@ -291,6 +302,13 @@
 				"max_batch_timeout": 5,
 				"max_retries": 3,
 				"dead_letter_queue": "dustinedwards-media-events-dlq"
+			},
+			{
+				"queue": "dustinedwards-webmention-verify",
+				"max_batch_size": 10,
+				"max_batch_timeout": 5,
+				"max_retries": 3,
+				"dead_letter_queue": "dustinedwards-webmention-verify-dlq"
 			}
 		]
 	},
@@ -370,8 +388,14 @@
 	// production data.
 	//
 	// Deliberately absent: AI_SEARCH (Ask renders off and /search is pure D1), the
-	// queue consumer (it would compete with production for the production queue),
+	// queue consumers (a Preview cannot consume a Queue, and a Queue has one
+	// consumer: https://developers.cloudflare.com/workers/previews/resources/#queue-consumers),
 	// every secret (so admin and sign-in do not work), and the crons.
+	//
+	// WEBMENTION_VERIFY is absent too, so /webmention on a preview answers 503 and
+	// writes nothing. A producer would have nothing to verify its messages until a
+	// Preview can consume, and pointing it at production's queue would put a
+	// preview's rows in production's consumer. The Worker tests run the consumer.
 	//
 	// The two ids are placeholders that scripts/build-preview.mjs fills by looking
 	// the resources up BY NAME, so no id is pasted anywhere. The R2 buckets are
