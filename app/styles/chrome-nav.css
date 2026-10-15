@@ -1,135 +1,16 @@
 /*
- * The nav is a popover (site-header.tsx). The UA sheet gives every [popover] a fixed, centered, bordered
- * box even while closed, and hides it until opened; author rules beat the UA sheet whatever their
- * specificity, so the inline layout below simply restates those properties.
- */
-.site-header-nav {
-  position: static;
-  inset: auto;
-  display: flex;
-  align-items: center;
-  inline-size: auto;
-  block-size: auto;
-  margin: 0;
-  margin-inline-start: auto;
-  padding: 0;
-  overflow: visible;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
-}
-
-.site-nav-list {
-  display: flex;
-  align-items: center;
-  column-gap: 1.375rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.site-nav-item {
-  display: flex;
-  align-items: center;
-}
-
-/*
- * A section's button: the label and a small chevron, ink at rest and purple while its panel is open or the
- * pointer is on it. The chevron is purple at rest like search and theme, so the label and the mark read
- * as one control that is not a link.
- */
-.site-nav-button {
-  display: inline-flex;
-  align-items: center;
-  column-gap: 0.25rem;
-  min-block-size: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font: inherit;
-  font-variation-settings: inherit;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .site-nav-button {
-    transition: color 120ms ease;
-  }
-}
-
-.site-nav-button:hover,
-.site-nav-item:has(> .site-nav-panel:popover-open) > .site-nav-button,
-.site-nav-item[data-expanded] > .site-nav-button {
-  color: var(--brand);
-}
-
-.site-nav-button:active {
-  color: var(--brand-pressed);
-}
-
-/* The current section: the label bold and underlined in ink, as the state sheet drew the word. */
-.site-nav-button[data-section] .site-nav-button-label {
-  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
-  text-decoration: underline;
-  text-decoration-thickness: var(--line-w-thick);
-  text-underline-offset: 0.35em;
-}
-
-.site-nav-chevron {
-  flex: none;
-  color: var(--brand);
-}
-
-.site-nav-button:hover .site-nav-chevron {
-  color: var(--brand-hover);
-}
-
-/* The chevron turns with the panel. */
-.site-nav-item:has(> .site-nav-panel:popover-open) .site-nav-chevron,
-.site-nav-item[data-expanded] .site-nav-chevron {
-  transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .site-nav-chevron {
-    transition: transform 160ms ease;
-  }
-}
-
-/*
- * An open panel is a card hung from its own button: the popover step, one strong edge all round, a small
- * radius, and the soft popover shadow in light only. In the top layer when open, so nothing clips it and
- * it sits above the pinned bar with no z-index. Its top edge sits one rule up, on the header's own rule,
- * so the card meets the header with no gap for the pointer to fall through and no doubled line.
- *
- * ONE width for all five, about 640px, so moving among them never resizes the card. Never wider than the
- * viewport less both insets, so at 200% zoom the card still fits and scrolls inside.
- *
- * Where anchor positioning is missing, header.ts writes --nav-card-x inline from the button's box; with
- * neither, the card sits at the right inset, under the buttons.
+ * The site's own contents in Capsomer's site header (site-header.tsx): the structured panel each section
+ * button opens. Capsomer places the panel (--cap-popover-x and --cap-popover-y, under the header, lined up
+ * with its button and held inside the window) and gives it light dismiss and the keys; the card it draws is
+ * the site's: one width for all five, about 640px, the popover step, one strong edge, a small radius and the
+ * soft popover shadow in light only. These rules are unlayered and Capsomer's are layered, so these win.
  */
 .site-nav-panel {
   --nav-card-w: 40rem;
-  --nav-card-fit: min(var(--nav-card-w), 100% - 2 * var(--site-inset));
-  --nav-card-x: calc(100% - var(--nav-card-fit) - var(--site-inset));
-  position: fixed;
-  inset: auto;
-  top: calc(var(--header-h) - var(--line-w));
-  left: var(--nav-card-x);
   box-sizing: border-box;
-  inline-size: var(--nav-card-fit);
-  block-size: auto;
-  max-block-size: calc(100dvh - var(--header-h) - var(--site-inset));
-  margin: 0;
+  inline-size: min(var(--nav-card-w), 100vw - 2 * var(--site-inset));
+  max-inline-size: none;
   padding: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
   border: var(--line-w) solid var(--border-strong);
   border-radius: 0.25rem;
   background: var(--surface-popover);
@@ -138,6 +19,14 @@
   font-family: var(--font-sans);
   font-size: var(--t-nav-size);
   font-variation-settings: var(--t-nav-vars);
+  line-height: normal;
+}
+
+/* Opened with no script (popovertarget), nothing has placed it: under the header at the right inset. */
+.site-nav-panel:not([data-placed-by]) {
+  top: var(--header-h);
+  right: var(--site-inset);
+  left: auto;
 }
 
 .site-nav-panel:popover-open {
@@ -154,86 +43,6 @@
 
 [data-theme="dark"] .site-nav-panel {
   box-shadow: none;
-}
-
-/*
- * The card lines up with its own button: its left edge on the button's left edge, and where that would run
- * past the right inset (the buttons at the right of the bar), its right edge on the button's right edge
- * instead, so About's card sits under About. Either way it is held inside the inset at both sides.
- * anchor-scope gives every item its own --site-nav-item.
- *
- * The right-aligned x is the left-aligned x moved back by the card's width less the button's, and
- * sign() turns "would overflow" into that one step (1 past the limit, 0 at or before it). A declaration that
- * uses var() is only checked when it is applied, so a browser without sign() would drop it to `auto`; the
- * @supports test therefore names sign() too, and such a browser takes header.ts's path (--nav-card-x).
- */
-@supports (anchor-name: --a) and (anchor-scope: --a) {
-  .site-header {
-    anchor-name: --site-header;
-  }
-
-  .site-nav-item {
-    anchor-name: --site-nav-item;
-    anchor-scope: --site-nav-item;
-  }
-
-  .site-nav-panel {
-    top: calc(anchor(--site-header bottom) - var(--line-w));
-  }
-}
-
-@supports (anchor-name: --a) and (anchor-scope: --a) and (left: calc(sign(1px) * 1px)) {
-  .site-nav-panel {
-    --nav-card-limit: calc(100% - var(--nav-card-fit) - var(--site-inset));
-    left: clamp(
-      var(--site-inset),
-      anchor(--site-nav-item left) -
-        max(0, sign(anchor(--site-nav-item left) - var(--nav-card-limit))) *
-        (var(--nav-card-fit) - anchor(--site-nav-item right) + anchor(--site-nav-item left)),
-      var(--nav-card-limit)
-    );
-  }
-}
-
-/*
- * The veil: the page below the header, dimmed while a card is open. A real element, so a click on
- * it lands here and closes the menu (the popover's light dismiss, and header.ts) instead of reaching
- * what is under it. Absolute inside the sticky header, so it starts at the header's foot at any
- * header height. --text mixed thin: a dark veil on paper, a light one on the dark page.
- */
-.site-nav-veil {
-  display: none;
-  position: absolute;
-  inset: 100% 0 auto;
-  block-size: 100dvh;
-  background: color-mix(in srgb, var(--text) 14%, transparent);
-}
-
-.site-header:has(.site-nav-panel:popover-open) .site-nav-veil {
-  display: block;
-}
-
-.site-header:has(.site-nav-panel:popover-open) {
-  border-block-end-color: var(--border-strong);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .site-nav-veil {
-    opacity: 0;
-    transition:
-      opacity var(--motion-state) var(--ease-state),
-      display var(--motion-state) allow-discrete;
-  }
-
-  .site-header:has(.site-nav-panel:popover-open) .site-nav-veil {
-    opacity: 1;
-  }
-
-  @starting-style {
-    .site-header:has(.site-nav-panel:popover-open) .site-nav-veil {
-      opacity: 0;
-    }
-  }
 }
 
 /*
@@ -551,48 +360,8 @@ a.site-nav-row-title:hover {
   block-size: 1rem;
 }
 
-/* Both spellings for the marker went with the <details> this replaced; a button has none. */
-.site-header-menu-button {
-  display: flex;
-  align-items: center;
-  min-block-size: 1.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
-}
-
-.site-header-menu-button:hover,
-.site-header:has(.site-header-nav:popover-open) .site-header-menu-button {
-  color: var(--brand);
-}
-
-.theme-option {
-  display: grid;
-  place-items: center;
-  min-inline-size: 1.5rem;
-  min-block-size: 1.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--brand);
-  cursor: pointer;
-}
-
-.theme-option:hover {
-  color: var(--brand-hover);
-  background: transparent;
-}
-
-/* Two buttons ship and one is displayed. html[data-theme] must outrank the media query, and does:
- * (0,3,1) against (0,2,0). */
+/* Two theme buttons ship and one is displayed (theme-toggle.tsx). html[data-theme] must outrank the media
+ * query, and does: (0,3,1) against (0,2,0). */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -608,298 +377,18 @@ a.site-nav-row-title:hover {
   }
 
   .theme-option[data-when="dark"] {
-    display: grid;
+    display: inline-grid;
   }
 }
 
 html[data-theme="light"] .theme-option[data-when="light"],
 html[data-theme="dark"] .theme-option[data-when="dark"] {
-  display: grid;
+  display: inline-grid;
 }
 
 html[data-theme="light"] .theme-option[data-when="dark"],
 html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
-}
-
-@media (min-width: 50rem) {
-  .site-header-menu-button {
-    display: none;
-  }
-}
-
-/*
- * MEASURED: below this the labels, buttons, wordmark and controls stop fitting one line (796px wanted on
- * 2026-10-14, once the Lab sign-in link left the bar for the footer's Workspace group; with it the bar
- * wanted 867px and the breakpoint was 55rem, and before it 778px overflowed the old 44rem breakpoint
- * between 704 and 800). Re-measure by running, never by arithmetic, when a destination
- * or a label changes. Below it the same nav is the Menu's popover, hanging from the header, with each
- * section a group that expands in place (header.ts) and rows 44px tall.
- */
-@media (max-width: 49.99rem) {
-  .site-header {
-    column-gap: 0.75rem;
-  }
-
-  .site-header-tools {
-    gap: 0.75rem;
-    margin-inline-start: auto;
-  }
-
-  .site-header-brand {
-    gap: 0.5rem;
-    font-size: 1.0625rem;
-  }
-
-  .site-header-nav {
-    display: none;
-  }
-
-  /*
-   * The open Menu is a sheet, not a card: full bleed, opaque, square, from the header's foot to the
-   * bottom of the screen, scrolling inside. The header above it, Menu button included, stays put.
-   */
-  .site-header-nav:popover-open {
-    position: fixed;
-    inset: var(--header-h) 0 0;
-    display: block;
-    box-sizing: border-box;
-    inline-size: auto;
-    block-size: auto;
-    max-block-size: none;
-    padding: 0.25rem var(--site-inset) 1.25rem;
-    overflow: auto;
-    overscroll-behavior: contain;
-    border: 0;
-    border-radius: 0;
-    background: var(--surface-popover);
-    color: var(--text);
-  }
-
-  @supports (anchor-name: --a) and (anchor-scope: --a) {
-    .site-header-nav:popover-open,
-    .site-nav-panel:popover-open {
-      top: anchor(--site-header bottom);
-    }
-  }
-
-  .site-header:has(.site-header-nav:popover-open) {
-    border-block-end-color: var(--border-strong);
-  }
-
-  /* The sheet covers the page already, so the veil would only sit under it. */
-  .site-header:has(.site-nav-panel:popover-open) .site-nav-veil {
-    display: none;
-  }
-
-  .site-nav-list {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .site-nav-item {
-    flex-wrap: wrap;
-    border-block-end: var(--line-w) solid var(--dust);
-  }
-
-  .site-nav-item:last-child {
-    border-block-end: 0;
-  }
-
-  /* The whole row is the button: the label at the left, the chevron at the right. */
-  .site-nav-button {
-    flex: 1;
-    justify-content: space-between;
-    min-block-size: 2.75rem;
-    font-size: 1.0625rem;
-  }
-
-  .site-nav-chevron {
-    inline-size: 1rem;
-    block-size: 1rem;
-  }
-
-  /* In the flow of the Menu, not the top layer: header.ts opens a group with data-expanded. */
-  .site-nav-panel {
-    position: static;
-    flex-basis: 100%;
-    inline-size: auto;
-    max-block-size: none;
-    padding: 0.25rem 0 1.25rem;
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .site-nav-item[data-expanded] > .site-nav-panel {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* With no script the button opens the panel as a popover, over the Menu it came from: a sheet too. */
-  .site-nav-panel:popover-open {
-    position: fixed;
-    inset: var(--header-h) 0 0;
-    padding-inline: var(--site-inset);
-    overflow: auto;
-    background: var(--surface-popover);
-  }
-
-  /* The group's button already names the section, so the band is left out of the drawer. */
-  .site-nav-band {
-    display: none;
-  }
-
-  .site-nav-tiles,
-  .site-nav-rows,
-  .site-nav-foot {
-    padding-inline: 0;
-    border-block: 0;
-  }
-
-  .site-nav-tiles {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
-    padding-block: 0.25rem 0.75rem;
-  }
-
-  .site-nav-tile,
-  .site-nav-tile:visited {
-    min-block-size: 2.75rem;
-    align-items: center;
-  }
-
-  .site-nav-body {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .site-nav-row {
-    padding-block: 0.25rem;
-  }
-
-  .site-nav-row-title,
-  .site-nav-row-title:visited {
-    display: flex;
-    align-items: center;
-    min-block-size: 2.75rem;
-  }
-
-  /* The icon sits at the middle of the 44px title line, whether the title is a link or plain. */
-  .site-nav-row .site-nav-icon {
-    margin-block-start: 0.8125rem;
-  }
-
-  .site-nav-row-title + .site-nav-desc {
-    margin-block: -0.5rem 0.25rem;
-  }
-
-  /*
-   * A row's links sit right under its title, the way a note does. Each link is a 44px target with its text
-   * centered, so the list is pulled up by what that centering adds: the link text then lands where a note's
-   * would. Only a plain title (no link of its own) gets this, so no tap target is covered.
-   */
-  .site-nav-row-title[data-plain] + .site-nav-inline {
-    margin-block-start: -1.25rem;
-  }
-
-  .site-nav-link,
-  .site-nav-link:visited {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: 2.75rem;
-  }
-
-  .site-nav-spot,
-  .site-nav-spot:visited {
-    align-self: stretch;
-    margin: 0.5rem 0;
-  }
-
-  .site-nav-foot {
-    grid-template-columns: minmax(0, 1fr);
-    padding-block: 0.25rem 0;
-  }
-
-  .site-nav-foot-link,
-  .site-nav-foot-link:visited {
-    min-block-size: 2.75rem;
-  }
-
-  /*
-   * The CV's second link sits right under its tile's label. Both targets keep 24px or more (WCAG 2.5.8) but
-   * give up the 44px of the other rows, because 44px each would hold the two lines 44px apart.
-   */
-  .site-nav-tile-item:has(> .site-nav-tile-also) > .site-nav-tile {
-    min-block-size: 0;
-    align-items: start;
-    padding-block-end: 0.125rem;
-  }
-
-  .site-nav-tile-also,
-  .site-nav-tile-also:visited {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: 1.75rem;
-    margin-block-end: 0.375rem;
-  }
-}
-
-/*
- * The narrowest phones (320 to 360): the bar now carries the wordmark, Search, the theme control, Lab
- * sign-in and the Menu button, which no longer fit on one line at the usual gaps. Tighter gaps and a
- * smaller mark and wordmark keep them on it with no horizontal scroll.
- */
-@media (max-width: 23.5rem) {
-  .site-header {
-    column-gap: 0.5rem;
-  }
-
-  .site-header-tools {
-    gap: 0.5rem;
-  }
-
-  .site-header-brand {
-    gap: 0.375rem;
-    font-size: 1rem;
-  }
-
-  .site-header-mark {
-    height: 1.75rem;
-  }
-}
-
-/* The module never writes the attribute under reduced motion; this is doubly conditioned on purpose.
-   The phone menu unrolls down from under the header rule. It is a popover, so display and overlay
-   stay discrete until the clip finishes; without motion it opens and closes at once. */
-@media (max-width: 49.99rem) and (prefers-reduced-motion: no-preference) {
-  .site-header-nav {
-    clip-path: inset(0 0 100% 0);
-    transition:
-      clip-path var(--motion-state) var(--ease-state),
-      overlay var(--motion-state) allow-discrete,
-      display var(--motion-state) allow-discrete;
-  }
-
-  .site-header-nav:popover-open {
-    clip-path: inset(0);
-  }
-
-  @starting-style {
-    .site-header-nav:popover-open {
-      clip-path: inset(0 0 100% 0);
-    }
-  }
-
-  .site-header {
-    transition: transform 350ms ease;
-  }
-
-  html[data-header-hidden] .site-header {
-    transform: translateY(-100%);
-  }
 }
 
 /* A sticky header would repeat on every printed sheet, so it is static here. */

@@ -5,9 +5,10 @@ import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav";
 /*
  * The structured panel (app/lib/nav.ts): one shape for all five sections, top to bottom a header band, a
  * row of three tiles, a band with grouped rows on the left and one spotlight on the right, and three quick
- * links. It is a native popover, so its button opens it with no script, it sits in the top layer above the
- * pinned bar, and Escape and an outside click close it. app/enhance/header.ts adds hover, pinning and focus
- * return, and on phones expands it in place inside the Menu drawer instead.
+ * links. It is the site's own contents of a Capsomer site-header panel (site-header.md, "the site's own
+ * panel"): a manual popover its button opens with no script (popovertarget), in the top layer above the
+ * sticky header. app/enhance/header.ts hands it to Capsomer's behaviour, which adds hover, light dismiss,
+ * Escape, arrow keys and focus return. On a phone the section links are in the header's sheet instead.
  *
  * Everything in it is a plain list of links: no menu roles, which would promise arrow-key menus it does
  * not have (W3C disclosure navigation). The lists are named with aria-label, not headings: the panel is
@@ -144,7 +145,7 @@ const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
   ),
 };
 
-function Icon({ name }: { name: NavIcon }) {
+export function Icon({ name }: { name: NavIcon }) {
   return (
     <svg
       className="site-nav-icon"
@@ -248,10 +249,27 @@ function MapDrawing() {
   );
 }
 
-export function SiteNavPanel({ id, menu, pathname }: { id: string; menu: Menu; pathname: string }) {
+export function SiteNavPanel({
+  id,
+  label,
+  menu,
+  pathname,
+}: {
+  id: string;
+  label: string;
+  menu: Menu;
+  pathname: string;
+}) {
   const { spotlight } = menu;
   return (
-    <div className="site-nav-panel" id={id} popover="auto" data-nav-panel="">
+    <div
+      className="cap-site-header-panel site-nav-panel"
+      id={id}
+      popover="manual"
+      role="group"
+      aria-label={label}
+      data-nav-panel=""
+    >
       <div className="site-nav-band">
         <Icon name={menu.icon} />
         <p className="site-nav-band-title">{menu.heading}</p>

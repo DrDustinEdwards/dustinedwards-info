@@ -125,8 +125,8 @@ const SINGLETONS = [
   { name: "site-header", component: "app/components/site-header.tsx", sheets: ["app/styles/public-chrome.css", "app/styles/chrome-nav.css"] },
   // The footer's own sheet, not the chrome one, which carries the header's tokens.
   { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/shell.css"] },
-  { name: "theme-toggle", component: "app/components/theme-toggle.tsx", sheets: ["app/styles/public-chrome.css"] },
-  { name: "search-trigger", component: "app/components/search-trigger.tsx", sheets: ["app/styles/search-trigger.css", "app/styles/palette-dialog.css"] },
+  { name: "theme-toggle", component: "app/components/theme-toggle.tsx", sheets: ["app/styles/chrome-nav.css"] },
+  { name: "search-trigger", component: "app/components/search-trigger.tsx", sheets: ["app/styles/public-chrome.css", "app/styles/palette-dialog.css"] },
 ];
 
 /** Hand-written: the code carries a ruling's effect, not its authority. */
@@ -140,11 +140,11 @@ different thing from not being allowed to know what it is, and a redesign that
 did not know produced a header with invented tokens, a wordmark that turned
 visited-colored, and a search control that did not work.
 
-**The header is a default, not a law.** It is paper and sticky, with one dust rule
-under it. On a narrow screen its destinations move into a labelled Menu; on a wide
-one they sit inline. The width at which that happens is a measured value from the
-stylesheet, a property of the current link labels, so a longer word moves it and
-it is re-measured rather than reasoned from.
+**The header is Capsomer's site header** (capsomer/components/site-header): 56px,
+sticky, full width, in the site's paper and ink with one dust rule under it. The
+logo, the five section buttons and their panels, Search, the theme button and Sign
+in fill its slots. Under 768px it is one row and a Menu button opens a sheet with
+every section's links.
 
 Everything under "from the source" below is extracted from the files named. The
 source is the owner: where this file and the component disagree, the component

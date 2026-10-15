@@ -807,9 +807,9 @@ body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
   --site-inset: 1.5rem;
-  /* --header-h is the header's RENDERED height, read by scroll-padding-top and the sticky post rail.
-     Re-measure it when the header's padding or contents change. */
-  --header-h: 4.625rem;
+  /* --header-h is the header's height, read by scroll-padding-top and the sticky post rail. Capsomer's
+     site header is 56px at every width (site-header.md) and reads the same property for its own height. */
+  --header-h: 3.5rem;
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);

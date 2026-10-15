@@ -1,17 +1,17 @@
-/* Sticky and opaque, with no blur, shadow or animation: a transparent or animated sticky bar is the
- * failure mode. */
+/*
+ * The site's slots in Capsomer's site header (capsomer/components/site-header, site-header.tsx). Capsomer fixes
+ * the frame: 56px, sticky, full width, the order, the spacing, the controls. The site gives its band (the
+ * paper and ink), its accent for the current section's underline, its UI face, and the stacking that keeps
+ * the bar above the page's other sticky parts (--z-pinned-bar, never --z-dropdown, which sits BELOW it).
+ */
 .site-header {
-  position: sticky;
-  top: 0;
-  /* --z-pinned-bar, never --z-dropdown, which sits BELOW the bar. */
+  --header-bg: var(--paper);
+  --header-fg: var(--text);
+  --header-fg-muted: var(--text-secondary);
+  --header-line: var(--dust);
+  --header-accent: var(--brand);
+  --font-ui: var(--font-sans);
   z-index: var(--z-pinned-bar);
-  display: flex;
-  align-items: center;
-  column-gap: 1.625rem;
-  /* The admin topbar reads this same declaration, so the mark sits at the same x on both planes. */
-  padding: 1.375rem var(--site-inset) 1.125rem;
-  background: var(--paper);
-  border-block-end: var(--line-w) solid var(--dust);
 }
 
 /* On html, the scrolling element, so a focused element or anchor target never lands under the bar
@@ -20,18 +20,14 @@ html {
   scroll-padding-top: calc(var(--header-h) + 1rem);
 }
 
-/* (0,1,0) against a:visited (0,1,1): without these the wordmark turns claret. */
+/*
+ * The public plane's link rules (app.css: a, a:visited, a:hover) are unlayered and Capsomer's header rules are
+ * layered, so every link the header draws restates its colour and drops the running-text underline here.
+ */
 .site-header-brand,
 .site-header-brand:visited {
-  display: inline-flex;
-  align-items: center;
-  /* Never wraps: at 320 and 768 it broke to two lines and made the header's height depend on the
-     viewport. */
-  white-space: nowrap;
-  gap: 0.625rem;
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 1.1875rem;
+  color: var(--header-fg);
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -45,14 +41,97 @@ html {
 /* No fill rule for the mark: any rule here would beat the logo's own fills. Re-ink it through
  * .site-logo-brand. */
 
-.site-header-mark {
-  display: block;
-  height: 2.0625rem;
-  width: auto;
+.site-header a.cap-site-header-icon,
+.site-header a.cap-site-header-icon:visited {
+  color: var(--header-fg-muted);
+  text-decoration: none;
 }
 
-.site-header-tools {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.site-header a.cap-site-header-icon:hover {
+  color: var(--header-fg);
+}
+
+.site-header .cap-site-header-signin,
+.site-header .cap-site-header-signin:visited {
+  color: var(--header-fg);
+  text-decoration: none;
+}
+
+.cap-site-header-sheet-list a,
+.cap-site-header-sheet-list a:visited {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.cap-site-header-sheet-list a[aria-current="page"] {
+  color: var(--ground);
+}
+
+.cap-site-header-sheet-icon .site-nav-icon {
+  color: var(--brand);
+}
+
+/* The phone's sheet in the site's own surface, the popover step the section panels use. */
+.site-header .cap-site-header-sheet {
+  background: var(--surface-popover);
+  color: var(--text);
+}
+
+/* The header's icon rule sets position: relative, which would pull the sheet's Close button out of its corner. */
+.site-header .cap-site-header-sheet > .cap-dialog-close {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline-end: 0.5rem;
+}
+
+/*
+ * MEASURED, 2026-10-15: from 768px (Capsomer's phone breakpoint) to 900px the logo, the five sections and the
+ * tools want about 830px, so Sign in shows its icon alone (its words stay for a screen reader, as on a phone)
+ * and the sections sit closer. Re-measure when a section's label changes.
+ */
+@media (min-width: 768px) and (max-width: 899.98px) {
+  .site-header .cap-site-header-sections > ul {
+    gap: 14px;
+  }
+
+  .site-header .cap-site-header-signin {
+    inline-size: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .site-header .cap-site-header-signin > svg {
+    display: block;
+  }
+
+  .site-header .cap-site-header-signin-text {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/*
+ * Under 768px the sections are hidden, but Capsomer's rule for links on the right (the sections, then the tools
+ * 12px after them) still matches, so the tools would stop 12px after the logo instead of at the right edge.
+ */
+@media (max-width: 767.98px) {
+  .site-header .cap-site-header-tools {
+    margin-inline-start: auto;
+  }
+}
+
+/* The narrowest phones (320 to 376): the wordmark and four controls fit one row with the controls touching. */
+@media (max-width: 23.5rem) {
+  .site-header .cap-site-header-tools {
+    gap: 0;
+  }
+
+  .site-header-brand {
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+  }
 }

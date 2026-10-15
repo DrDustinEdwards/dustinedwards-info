@@ -15,6 +15,14 @@ import type { Route } from "./+types/legacy-public";
  */
 import "~/app.css";
 
+// Capsomer's site header (site-header.tsx) and what it is built on, on every public page: its tokens, the
+// shared popover (the panels' placing and the tips) and dialog (the phone's sheet). Layered, so the site's
+// unlayered sheets below win wherever they touch the same thing.
+import "capsomer/tokens.css";
+import "capsomer/popover.css";
+import "capsomer/dialog.css";
+import "capsomer/site-header.css";
+
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.
 import "~/styles/public-chrome.css";
@@ -22,7 +30,6 @@ import "~/styles/page-shell.css";
 import "~/styles/chrome-nav.css";
 import "~/styles/skip-link.css";
 import "~/styles/motion-print.css";
-import "~/styles/search-trigger.css";
 // Last: shell.css must win where it and page-shell.css touch the same thing.
 import "~/styles/shell.css";
 
