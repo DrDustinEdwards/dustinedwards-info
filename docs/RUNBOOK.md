@@ -88,35 +88,19 @@ deploy.
 
 **Rolling back does not change the repo.** The code that broke it is still on
 `main` and the next `npm run ship` will put it back. So once the site is stable,
-revert it for real:
+revert it for real, by pull request:
 
 ```powershell
 git log --oneline -5
+git switch -c revert-<SHA>
 git revert <SHA>
-git push
+git push origin revert-<SHA>
+gh pr create --fill
 ```
 
-Then ship normally when you are awake. Do not ship at 2am.
-
----
-
-## 2b. Switch the domain back to the WordPress host
-
-`dustinedwards.info` and `www.dustinedwards.info` are Custom Domains on this Worker, so there is no A or CNAME
-for either name in the zone. The legacy WordPress host (`50.116.84.36`) is still running and was not touched.
-The registrar is Cloudflare, so the zone is the only DNS there is. The email records (MX, SPF, DKIM, DMARC)
-never change in either direction.
-
-1. Remove BOTH Custom Domains: dashboard, Workers & Pages, `dustinedwards`, Domains. **Also delete the `routes`
-   block in `wrangler.jsonc.example`**, or the next deploy puts them back (`wrangler deploy` overrides routes
-   added in the dashboard with the ones in the config, and the reverse holds).
-2. Re-add two records, both **DNS only** (gray cloud): `A` `@` `50.116.84.36`, and `CNAME` `www` to
-   `dustinedwards.info`. A saved zone export holds both.
-3. Wait about a minute (the old A record's TTL was 30 seconds), then `curl -sI https://dustinedwards.info/` and
-   look for `Server: Apache`.
-4. Undo the origin change: set `BETTER_AUTH_URL` back to the workers.dev address (`wrangler secret put`),
-   restore `SITE_ORIGIN` in `app/lib/seo.ts` and the contact URL in `content/llms.txt`, and drop
-   `includeSubDomains` from HSTS (a browser that saw it keeps it for a year). Then deploy.
+Its merge redeploys through the deploy workflow once CI is green. To hold that
+deploy until morning, run `gh variable set AUTO_DEPLOY --body off` first, and
+`gh variable delete AUTO_DEPLOY` to turn it back on.
 
 ---
 
@@ -351,18 +335,19 @@ Where each one lives, and what breaks if you rotate it and stop there:
 | Secret | Also lives in | Rotate it alone and... |
 | --- | --- | --- |
 | `GITHUB_TOKEN` | GitHub fine-grained token | The editor and `sync_posts` stop committing. Reads still work, so it looks fine until you save a post. |
-| `OPERATOR_TOKEN` | **three holders, see below** | Silent partial failure. Read the box. |
+| `OPERATOR_TOKEN` | **four holders, see below** | Silent partial failure. Read the box. |
 | `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
 | `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` the watchdog calls fails with a 502 naming each DOI, and the watchdog invocation is recorded as failed. The loudest symptom is the secrets audit. |
 
 Where a new value comes from is RECOVERY.md section 7, which has a column for
 exactly that.
 
-### `OPERATOR_TOKEN` has THREE holders. Rotate all three or none.
+### `OPERATOR_TOKEN` has FOUR holders (CLAUDE.md, Bindings). Rotate all four or none.
 
 1. The site Worker: `npx wrangler secret put OPERATOR_TOKEN`
 2. The watchdog Worker: `npx wrangler secret put OPERATOR_TOKEN --config wrangler.watchdog.jsonc`
-3. The GitHub repository secret: `gh secret set OPERATOR_TOKEN`
+3. The admin MCP Worker, from `mcp/`: `npx wrangler secret put OPERATOR_TOKEN -c wrangler.jsonc`
+4. The GitHub repository secret: `gh secret set OPERATOR_TOKEN`
 
 And your local file, wherever `$env:OPERATOR_TOKEN_FILE` points, or `npm run
 ship` refuses.

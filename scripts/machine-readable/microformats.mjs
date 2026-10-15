@@ -549,7 +549,7 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
     assert(
       `${label}: links to no ${host}`,
       !html.includes(host),
-      `the rendered page carries a ${host} URL. Ruling 50: no Mastodon, no Bluesky, ever.`,
+      `the rendered page carries a ${host} URL. Ruling 134: no Mastodon, no Bluesky, ever.`,
     );
   }
 }

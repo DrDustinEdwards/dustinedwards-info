@@ -40,10 +40,8 @@ shared helpers in `lib/`. The schema test compares the live database only with
 and that the write paths keep the search indexes consistent, is checked through
 behavior in `worker/visibility.test.ts` and `worker/publish.test.ts`.
 
-**PLANTS remain the discipline for NEW assertions.** Before trusting any new
-check, break the thing it watches and confirm it goes red, and confirm the
-assertion you EXPECTED is the one that fired. Exit 1 is not evidence: on
-2026-08-07 a plant was shell-mangled twice, tripped a different assertion both
+**PLANTS remain the discipline for NEW assertions** (portfolio rule 3.1). Exit 1
+is not evidence: on 2026-08-07 a plant was shell-mangled twice, tripped a different assertion both
 times, and looked exactly like success. Plants are an act, not an artifact.
 
 **A plant gets promoted into this directory when it concerns BEHAVIOUR.** That

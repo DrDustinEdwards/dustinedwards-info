@@ -1,7 +1,7 @@
 name: no-bloat
 
-# Knip and jscpd against the baseline in .no-bloat.json. Warn-only: it never turns a pull request red (baseline.md in Capsid,
-# dustinedwards/baseline.md, Part 2a). The workflow is devkit's, pinned to the v0.5.0 commit. The route weight stays in
+# Knip and jscpd against the baseline in .no-bloat.json. Warn-only: it never turns a pull request red, because a finding
+# nobody has acted on is information, not a rule. The workflow is devkit's, pinned to the v0.5.0 commit. The route weight stays in
 # hygiene.yml, beside this one.
 
 on:

@@ -46,7 +46,7 @@ never overwrites. The copy carries **placeholder resource ids**, so it is enough
 to typecheck and deliberately not enough to deploy. You will replace two of those
 ids below.
 
-**Real resource ids never go in git.** `wrangler.jsonc` is gitignored; the tracked
+**Real resource ids never go in git** (portfolio rule 6.1). `wrangler.jsonc` is gitignored; the tracked
 `wrangler.jsonc.example` differs from it in exactly two values, and the example
 never carries a real id.
 
@@ -62,7 +62,7 @@ The order matters. Each step below names what breaks if it is done early.
    populated until D1 has content, so create it here and fill it at step 8.
 3. **`wrangler types`.** Regenerates `worker-configuration.d.ts` from the config.
    *If skipped:* the typecheck fails against bindings it does not know about, and
-   `npm run deploy` runs a build that has never been type-checked.
+   the deploy would ship a build that was never type-checked.
 4. **D1 migrations.** *If run before step 1:* there is no database to apply to.
    *If skipped:* the first request that touches a table 500s.
 5. **Secrets.** *If set after deploy:* the Worker serves, but the editor and the
@@ -185,19 +185,8 @@ is location `ENAM`, `dustinedwards-og` is location `WNAM`, both storage class
 
 ### Backup posture: the media bucket is mirrored
 
-**SUPERSEDED 2026-09-01.** The previous posture was ACCEPTANCE rather than a
-backup, on the measurement that `MEDIA` held zero objects and every other byte
-in R2 was a regenerable OG card, and it was explicitly dated and conditional:
-*"It holds exactly while `MEDIA` is empty. The first upload through the admin
-media drawer makes the unrecoverable set non-zero, and nothing in this repo
-announces that. Whoever lands the first upload owns re-deciding this section."*
-Something did announce it, the `media-unbacked` health check, and it fired on
-the first object ever put there. The full previous text and its four checked
-alternatives (R2 versioning, lifecycle rules, bucket lock, per-class second
-copies) are in git history for this file; the ruling was made on 2026-09-01.
-
-**The decision now is a MIRROR, plus a local pull.** What follows is the current
-posture.
+**Decided 2026-09-01: a mirror, plus a local pull.** The earlier acceptance
+posture and the alternatives weighed are in git history for this file.
 
 #### What actually threatens these bytes, in the ruled order
 
@@ -270,13 +259,6 @@ The OG cards are regenerable in the strong sense, not the hopeful one: the
 object key is a hash of the template version, slug, title and description, all
 of which are tracked in `content/`, so a rebuild writes the SAME twelve keys
 rather than twelve new ones beside the old.
-
-Read independently rather than inherited, because a finding repeated is not a
-finding re-measured: `listAllObjects` against the live binding; `check:media
---remote`, which reports the same 0 and 12 through its own pipeline; the D1
-`media` table, whose 70 rows are 12 `storage='r2-derived'` and 58
-`storage='static'` **and not one `storage='r2'`**, which is the value an uploaded
-original would carry; and `git ls-files public`, which returns 60 of 60.
 
 **The audit's section 14 says "`RECOVERY.md` does not mention R2 at all". That
 was false when it was written.** This file has carried section 3, section 3a on
@@ -396,8 +378,8 @@ Binding `AI_SEARCH`, `instance_name` `dustinedwards`. Flags confirmed against
 `wrangler ai-search create --help` on wrangler 4.107.0.
 
 `--type builtin` is load-bearing and not a default worth changing. The crawler
-type would index a **domain onboarded to this account**, and until DNS cutover the
-apex still resolves to the legacy WordPress site. Built-in storage also indexes on
+type would index the live domain instead (a **domain onboarded to this
+account**), not the repository's content. Built-in storage also indexes on
 upload rather than on a schedule, and keeps one item per section record, which is
 what lets a citation deep-link to a heading anchor.
 
@@ -557,20 +539,13 @@ token the admin refuses everyone, except the read-only smoke bearer. See docs/RU
 
 ## 8. Deploy
 
-```sh
-npm run typecheck     # wrangler types && react-router typegen && tsc -b
-npm run deploy        # build, then wrangler deploy
-```
-
-**Never bare `wrangler deploy`.** It ships whatever `build/` already held.
-`npm run deploy` builds first, and since 2026-08-20 it also REFUSES A DIRTY
-TREE, because a deploy built from uncommitted files is a deploy nobody can
-reproduce.
-
-**Deploying is manual.** CI exists as of 2026-08-20 and runs the gates on every
-push to `main`, but it has no Cloudflare credentials and deploys nothing.
-Pushing `main` still ships nothing on its own. That sentence used to read "there
-is no CI", which stopped being true while its conclusion stayed true.
+`npm run typecheck`, then `npm run ship`, run by Dustin once CI is green for that
+exact sha (CLAUDE.md hard rule 16). After a merge to main,
+`.github/workflows/deploy.yml` runs the same ship. Only `npm run ship` deploys;
+never run `npm run deploy` by hand (ship runs it) or bare `wrangler deploy`:
+they skip ship's refusals, and `.claude/hooks/no-direct-deploy.sh` refuses both
+in a session. On a rebuilt account where ship cannot pass yet (no CI run, no
+token file), stop: how the first deploy goes is Dustin's decision.
 
 ---
 
@@ -654,10 +629,6 @@ and each reaches Dustin's inbox by email:
   every deploy and weekly as a backstop. A failed run emails the account that
   started it.
 
-The hourly GitHub `health.yml` poll these replaced was retired on 2026-09-24:
-it duplicated the watchdog's poll and the uptime monitors' outside view, and
-GitHub runs schedules late or not at all under load.
-
 The checks and their order are owned by `runHealthChecks` in
 `app/lib/health/checks.server.ts`; this paragraph points at it rather than
 restating a list that has already gone stale here once. It said "three checks"
@@ -689,28 +660,17 @@ Read this before treating a quiet inbox as good news.
 - **Between polls it sees nothing.** Worst case fifteen minutes for the
   watchdog, the monitor interval for UptimeRobot.
 
-### The webhook design that came before it, now REMOVED
+### Removed alerting secrets
 
-The 2026-08-22 design was an hourly Worker cron posting breaches to
-`ALERT_WEBHOOK_URL` with a heartbeat to `ALERT_HEARTBEAT_URL`. **It was deleted
-on 2026-08-23**, not merely marked superseded: the cron trigger, the `scheduled`
-handler, `workers/health.ts`, both secret declarations and both entries in
-`REQUIRED_SECRETS` are gone.
-
-It had to go rather than sit dormant. Its destinations would have to be
-third-party services, which the ruling that chose GitHub Actions excluded, so
-neither URL could ever be set. Left in place it cost one Worker invocation an
-hour, logged `health-alert-undeliverable` to nobody on every failing check, and
-presented a second alerting mechanism to anyone reading the code, which is the
-two-copies-one-wrong shape this repo keeps paying for.
-
-**Neither secret was ever set on the deployed Worker**, so there is nothing to
-revoke. If `wrangler secret list` ever shows them, the removal commands are:
+`ALERT_WEBHOOK_URL` and `ALERT_HEARTBEAT_URL` were never set and are not in
+`REQUIRED_SECRETS`. If `wrangler secret list` ever shows either, delete it:
 
 ```sh
 npx wrangler secret delete ALERT_WEBHOOK_URL
 npx wrangler secret delete ALERT_HEARTBEAT_URL
 ```
+
+The 2026-08-22 webhook design and its removal on 2026-08-23 are in git history.
 
 ---
 

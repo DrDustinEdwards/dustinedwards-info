@@ -42,8 +42,8 @@ gaps, so what is waiting for Dustin is found, not hunted. A bare `MISSING` fails
 `registry` (`drizzle/0028_registry.sql`), one row per item, primary key `(kind, id)`. The shared columns are what every
 kind has: `kind`, `id`, `name` and `status` (`published` or `draft`, read from the file's `draft` flag). Everything a
 kind states beyond that is `record`, the kind's own fields as JSON, validated by the kind. The name and the status are
-columns only, so nothing is stored twice. `source_path` and `source_blob_sha` are the drift marker (hard rule 18: the
-repository is the source, the row is derived, and a failed row write never reverts the file).
+columns only, so nothing is stored twice. `source_path` and `source_blob_sha` are the drift marker (D1 is derived, hard
+rule 18).
 
 Phages keep their own table and page. A page that lists every item (the master inventory) reads the registry and the
 phages table side by side; it never copies a phage.
@@ -73,7 +73,7 @@ plus `.md`.
 protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/kb/registry/tm.mjs`) is the
 SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
 it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
-ambiguity code. It is labelled an estimate for comparing primers (protocols.md, 2026-10-04), every primer page links NEB's Tm
+ambiguity code. It is labelled an estimate for comparing primers (decisions.md, Protocols), every primer page links NEB's Tm
 Calculator for the polymerase-specific annealing temperature, and no page presents the computed Tm as an annealing temperature.
 
 ### Protocols read their primers from the registry
@@ -119,7 +119,7 @@ record is its name, organism, designation, collection and collection number.
 `app/kb/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
 stating only what the lab's own pages state: `organism`, `strain` (the lab's designation where there is one apart from the
 collection's number, `mc²155`), `collection` and `collection_number` (`ATCC 700084`, `NRRL B-24224`), `guide_url` (the
-SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, his word of 2026-10-05, decisions.md) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
+SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, decisions.md, Protocols) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
 cannot say a different strain than the fields do. A kind's page is `/research/lab/strains`, an item is
 `/research/lab/strains/<id>`, each with a markdown twin, a search record and a tab on the library.
 

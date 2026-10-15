@@ -444,7 +444,7 @@ if (existsSync(SHIP)) {
 
   /* BOTH HALVES: deferring without the late assertion drops the check, and the reverse deadlocks. */
   const deferredAt = readinessSource.indexOf("DEFERRED_CHECKS = {");
-  eq("ruling 56: the deferred checks are named in one place", deferredAt !== -1, true);
+  eq("the deferred checks are named in one place", deferredAt !== -1, true);
   /* ALL TWELVE, ENUMERATED: a regex for content-drift alone passes once the others are gone. */
   for (const name of [
     "content-drift",
@@ -462,36 +462,36 @@ if (existsSync(SHIP)) {
     "media-index-drift",
   ]) {
     eq(
-      `ruling 56: ${name} is deferred`,
+      `${name} is deferred`,
       new RegExp(`"${name}":\\s*"the [A-Za-z0-9 ]+"`).test(readinessSource),
       true,
     );
   }
   eq(
-    "ruling 56: every deferred check names the step that repairs it",
+    "every deferred check names the step that repairs it",
     !/"[a-z-]+":\s*"",?\s*$/m.test(readinessSource),
     true,
   );
   eq(
-    "ruling 48: the readiness step passes them to the verdict",
+    "the readiness step passes them to the verdict",
     /readinessVerdict\([^)]*Object\.keys\(DEFERRED_CHECKS\)\)/.test(shipSource),
     true,
   );
   eq(
-    "ruling 48: the module subtracts deferred names rather than reading ok",
+    "the module subtracts deferred names rather than reading ok",
     /gatingFailed/.test(readinessSource),
     true,
   );
   /* AND ASSERTED AFTER THE SYNC, or a check that merely exists is the deadlock again. */
   const contentDriftAt = shipSource.indexOf("deferredMisses(verdict.checks, DEFERRED_CHECKS");
-  eq("ruling 56: the late assertion was located", contentDriftAt !== -1, true);
+  eq("the late assertion was located", contentDriftAt !== -1, true);
   eq(
-    "ruling 56: THE DEFERRED CHECKS ARE ASSERTED AFTER THE D1 SYNC",
+    "THE DEFERRED CHECKS ARE ASSERTED AFTER THE D1 SYNC",
     contentDriftAt !== -1 && syncAt !== -1 && contentDriftAt > syncAt,
     true,
   );
   eq(
-    "ruling 48: a still-drifted corpus reaches the exit code",
+    "a still-drifted corpus reaches the exit code",
     /\bdeferredMiss\b/.test(missTable),
     true,
   );

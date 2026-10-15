@@ -58,8 +58,8 @@ read back, then a cache purge by the tag `llms` (the route carries it as its `Ca
 
 - A byte-identical file is never committed. If the row already holds it the save stops; if not it rewrites the
   row from the file without a commit.
-- Hard rule 18: the repository file is the source and D1 is derived. A failed row write never reverts the
-  commit; the error says the commit landed and the repair is `sync_llms`.
+- D1 is derived (hard rule 18). When the row write fails, the error says the commit landed and the repair is
+  `sync_llms`.
 - The edge holds `/llms.txt` for the route's `max-age=3600`, so the purge is what makes an edit visible at once.
   A browser that already holds it keeps it until its own hour is up.
 

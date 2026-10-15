@@ -133,7 +133,7 @@ export async function readPage(env: PageEnv, path: string) {
 
 /**
  * An operator may edit, unpublish and republish a page, never publish one for the first time: the same
- * rule as posts (ruling 37), read from the prior FILE, the only authority.
+ * rule as posts (the first-publish rule, `WRITE_CAPABILITIES` in `publish-policy.mjs`), read from the prior FILE, the only authority.
  */
 function decidePage(actor: Actor, incomingDraft: boolean, prior: string | null) {
   const may = WRITE_CAPABILITIES[actor.kind];

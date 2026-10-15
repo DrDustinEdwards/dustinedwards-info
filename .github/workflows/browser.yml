@@ -38,7 +38,7 @@
 # is about THAT COMMIT. This needs a deployed site to look at, which a commit
 # does not have, and a credential a fork's pull request must never hold.
 #
-# AFTER ship, not inside it (ruling 151, 2026-09-24): ship's last step starts
+# AFTER ship, not inside it (2026-09-24): ship's last step starts
 # this workflow against the deploy it just made, so every deploy is tested in a
 # browser without making ship wait four minutes for it.
 #
@@ -59,7 +59,7 @@ name: Browser
 
 on:
   schedule:
-    # Weekly, Monday 06:17 UTC (ruling 151). The failure this catches arrives
+    # Weekly, Monday 06:17 UTC. The failure this catches arrives
     # WITH a deploy, and ship starts this workflow after every deploy; the weekly
     # run is the backstop for what arrives without one: an expired credential, a
     # drifted secret, a platform change.

@@ -6,7 +6,7 @@
 //   node scripts/mutation-score.mjs [--shard I/N] [--limit N] every module, or the I-th of N slices of them (CI: .github/workflows/mutation.yml)
 //
 // Stryker's built-in command runner, one `node --test` command per mutant over the files that import the module. It says
-// whether each mutant was killed, not which test killed it, so it is a score and not a kill matrix (baseline.md, option a).
+// whether each mutant was killed, not which test killed it, so it is a score and not a kill matrix.
 // Stryker is run through npx, pinned below, and is not a dependency of the site. Measured, not gated: this never fails on a
 // low score, and it exits non-zero only when Stryker itself could not run.
 

@@ -145,7 +145,7 @@ D1, and the content-drift health check repairs any gap within one poll.
 If you bump `enarratio`, run `npm run build:chart-css` and compare a chart's
 SVG from `build:content` against the one the Worker stores after a save:
 Node-versus-workerd byte parity is a property of its pinned Plot and linkedom,
-and since ruling 150 no gate proves it.
+and no gate proves it.
 
 # Diagrams
 

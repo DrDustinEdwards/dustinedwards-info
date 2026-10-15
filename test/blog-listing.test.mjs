@@ -107,7 +107,7 @@ await test("the featured post is never also one of the others", () => {
 
 await test("with nothing featured the first of the others leads and the section still shows three", () => {
   const { featured, recent } = startHere([], others);
-  assert.equal(featured.slug, "n1", "ruling 57: the newest leads");
+  assert.equal(featured.slug, "n1", "the newest leads");
   assert.deepEqual(
     recent.map((p) => p.slug),
     ["n2", "n3"],

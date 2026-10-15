@@ -14,12 +14,11 @@
 # both of those are a human remembering. A runner checks out a sha into an empty
 # machine and there is no working tree to diverge: the class cannot occur.
 #
-# **A MERGE TO MAIN DEPLOYS (ruling 148, Dustin 2026-09-23, reversing option
-# C's "deploy stays a decision" for the development phase).** The decision moved
-# to the merge: a session merges only a PR whose CI is green on its exact head
-# and which is not labelled "visual" (scripts/merge-pr.mjs); a change a visitor
-# sees waits for Dustin's yes. After CI concludes success on main, this workflow
-# ships that exact sha. It is still one pipeline, `npm run ship`, with every
+# **A MERGE TO MAIN DEPLOYS (Dustin 2026-09-23, reversing option C's "deploy
+# stays a decision" for the development phase).** The decision moved to the
+# merge. Who merges is CLAUDE.md hard rule 16; a change a visitor sees waits for
+# Dustin's yes. After CI concludes success on main, this workflow ships that
+# exact sha. It is still one pipeline, `npm run ship`, with every
 # refusal ship already carries. Not `on: push`: `workflow_run` after CI, so
 # nothing deploys a commit whose CI failed.
 #
@@ -101,7 +100,7 @@ on:
         description: "Branch, tag or sha to deploy. CI must be green for it."
         required: false
         default: main
-  # Ruling 148: after CI finishes on main. The `decide` job below turns this into a deploy only when CI
+  # CLAUDE.md hard rule 16: after CI finishes on main. The `decide` job below turns this into a deploy only when CI
   # succeeded on a push to main, AUTO_DEPLOY is not "off", and the commit is still main's tip.
   workflow_run:
     workflows: [CI]
@@ -110,7 +109,7 @@ on:
 
 # `actions: write` is not decoration. Ship reads the Actions API to learn whether
 # CI concluded success for this exact sha, and refuses if it cannot; and its last
-# step starts browser.yml against the deploy (ruling 151), which is a dispatch.
+# step starts browser.yml against the deploy, which is a dispatch.
 # Without read the deploy fails closed; without write it stands and reports the
 # browser test as a miss.
 permissions:

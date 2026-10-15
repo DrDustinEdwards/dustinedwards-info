@@ -33,7 +33,7 @@ export function sentenceCount(text) {
   return (text.replace(/`[^`]*`/g, "x").match(/[^.!?]*[A-Za-z0-9][^.!?]*[.!?]+(?=[*_]*(?:\s+[*_]*[A-Z0-9]|\s*$))/g) ?? []).length;
 }
 
-/** protocols.md: "units are a closed list". A unit outside it fails until it is added here on purpose. */
+/** decisions.md, Protocols: "units are a closed list". A unit outside it fails until it is added here on purpose. */
 export const PROTOCOL_UNITS = [
   "µl", "µL", "ml", "mL", "l", "L", "M", "mM", "µM", "nM", "mg/ml", "µg/ml", "ng/µl", "%", "U", "g", "mg", "µg", "ng",
   "volume", "volumes", "tube", "tubes", "reaction", "reactions", "plate", "plates", "x",
@@ -43,10 +43,10 @@ export const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes",
 /** A recorded gap: the marker and the reason, never the marker alone. */
 const GAP = /^MISSING:\s*(\S.*)$/s;
 
-/** The levels a protocol's `biosafety_level` may name (protocols.md, amended 2026-10-04); each is Dustin's to set. */
+/** The levels a protocol's `biosafety_level` may name (decisions.md, Protocols); each is Dustin's to set. */
 export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
 
-/** Words protocols.md keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
+/** Words decisions.md, Protocols, keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
 /** A primer's id in the lab registry (app/kb/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
@@ -541,12 +541,12 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
       errors.push('biosafety lists the agent only: { organism, strain, atcc }, or "not applicable"');
     } else {
       for (const k of Object.keys(d.biosafety)) {
-        if (!["organism", "strain", "atcc"].includes(k)) errors.push(`biosafety.${k}: protocols.md lists the agent only (organism, strain, ATCC number)`);
+        if (!["organism", "strain", "atcc"].includes(k)) errors.push(`biosafety.${k}: the agent only (organism, strain, ATCC number) (decisions.md, Protocols)`);
       }
     }
   }
   if (BIOSAFETY_BANNED.test(JSON.stringify(d.biosafety ?? ""))) {
-    errors.push("biosafety names a biosafety level, an IBC or the NIH Guidelines; protocols.md lists the agent only");
+    errors.push("biosafety names a biosafety level, an IBC or the NIH Guidelines; it lists the agent only (decisions.md, Protocols)");
   }
   if (d.scale && !isGap(d.scale)) {
     if (typeof d.scale !== "object" || !(Number(d.scale.count) > 0) || !nonEmptyString(d.scale.unit)) {

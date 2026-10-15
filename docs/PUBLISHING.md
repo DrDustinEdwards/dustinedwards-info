@@ -45,7 +45,7 @@ Published posts live at `/writing/<slug>`; the route modules keep their `blog.*`
 
 ## The first-publish policy
 
-Capabilities per actor are one table, `WRITE_CAPABILITIES` in `publish-policy.mjs`: the admin may do everything; an operator may write but not first-publish or delete (403 `first-publish-requires-admin`, `delete-requires-admin`); Carrel may write and first-publish but not delete; the smoke credential is read only. Ruling 37: a first publication is Dustin's, in the admin or through Carrel.
+Capabilities per actor are one table, `WRITE_CAPABILITIES` in `publish-policy.mjs`: the admin may do everything; an operator may write but not first-publish or delete (403 `first-publish-requires-admin`, `delete-requires-admin`); Carrel may write and first-publish but not delete; the smoke credential is read only. The first-publish rule: a first publication is Dustin's, in the admin or through Carrel.
 
 The durable fact is `first_published` in frontmatter, not a D1 column, because D1 is rebuilt from the repo and a column would be silently dropped, failing open. The value is read only from the committed file and always overwritten on the way out; otherwise a caller could publish any draft by asserting it in its payload. `check:policy` has paired forgery tests. A backfill must be a direct commit, never a save.
 

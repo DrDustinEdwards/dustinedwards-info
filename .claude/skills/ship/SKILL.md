@@ -7,24 +7,22 @@ description: How to get work from a clean gate run onto the deployed site on dus
 
 The deploy CONTRACT is hard rule 16 in `CLAUDE.md`, and it is not restated
 here: what ship refuses and why lives there. This is the PROCEDURE around it.
-Every change lands by pull request (portfolio rule 5.4); nothing is pushed to main.
+Every change lands by pull request (portfolio rule 4.3); nothing is pushed to main.
 
 ## The order
 
 1. On a branch: `npm run check:changed`, the gates covering what the branch touched,
    then `npm run lint` (a separate CI step no gate tier runs). Reach for a local
-   `check:all` only when the change touches a network gate's subject (ruling 129).
-2. Scoped commits, one concern each, named paths only. Push the branch.
+   `check:all` only when the change touches a network gate's subject.
+2. Scoped commits (portfolio rule 4.2). Push the branch.
 3. Open the PR. Its body names the Capsid job it does (`Job: job_<12 hex>`), and that
    job's `complete` (or `block`) names the PR. If no job was posted, post one in the
-   `dustinedwards` namespace first. Without both, Capsid's merge tick never reads the
-   PR: it never auto-merges, and it never reaches Dustin's Portal for a one-tap
-   Approve. If it changes anything a visitor would see (copy, layout, a page, a
+   `dustinedwards` namespace first. That is how Capsid's merge tick and Dustin's
+   Portal see the PR. If it changes anything a visitor would see (copy, layout, a page, a
    color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and stop:
    it waits for Dustin's yes on the Worker Preview link or on shots. Say so in the PR.
-4. Otherwise, stop there: a session never merges. Capsid's signed auto-merge
-   policy merges the PR once CI is green on its exact head and the policy's checks
-   pass, or the seat merges it (capsid/decisions.md, 2026-10-04).
+4. Otherwise, merge it once CI is green on its exact head (hard rule 16, portfolio
+   rule 4.3). Capsid's signed auto-merge or the seat may merge it first.
 5. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
    runs `npm run ship` on that exact sha. Watch that run (`gh run list --workflow
    deploy.yml`) and write the report below from its log. If Dustin has set the

@@ -25,7 +25,7 @@ which is what repeats across people and sessions.
 - **A written record is a dated claim, not a current property.** A clause from
   history put a stale fact back into the file sessions read first; two gate
   notes went false after being written, one in the commit that wrote it; a
-  "32x regression" ran against a stale baseline. `CLAUDE.md` rule 15 `3fb98fb`
+  "32x regression" ran against a stale baseline. `3fb98fb`
 - **A stop is a claim until an independent check confirms it.** The Stop hook
   reported a clean stop for days while `tsc -b` was red, because it read the
   wrong stream. `4fe03d7`
@@ -46,7 +46,7 @@ which is what repeats across people and sessions.
   file; a floor 54 under its own count, so 54 assertions could stop running and
   still pass; and a breach that set `process.exitCode = 1` one line above an
   unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
-  old number. `VERIFICATION.md` (retired 2026-10-13; in git history) `scripts/check-floors.mjs`
+  old number. `VERIFICATION.md` (retired 2026-10-13; in git history) `scripts/check-floors.mjs` (removed; in git history)
 - **A rule whose instrument the instrument-checker cannot reach is not gated.**
   A scope floor over a GROWING set is an executed-count floor in disguise:
   `MINIMUM_FILES` drifted eleven files unseen, printing no floor line for
@@ -75,7 +75,7 @@ which is what repeats across people and sessions.
   One `artifact_load` mark reported while two reads happened; a headless render
   read a non-empty root as clean while the text was invisible; a probe anchor
   measured 10px and gave a threshold 10px wrong.
-  `scripts/check-invariants.mjs` `app/components/site-header.tsx`
+  `scripts/check-invariants.mjs` (no longer in the tree) `app/components/site-header.tsx`
 - **Two gates can cancel: one demands a name be written down, the other reads
   the writing as use.** Neither is wrong alone, neither can fail. `af69b45`
 - **A whole-document match is satisfied by a neighbor.** A 900-character window
@@ -85,7 +85,7 @@ which is what repeats across people and sessions.
   opposite of what it tests. `ff0d738`
 - **One helper name with two argument orders can never fail.** The string lands
   in the condition slot, is truthy, and the check count still goes up.
-  `scripts/check-invariants.mjs` section 17
+  `scripts/check-invariants.mjs` (no longer in the tree) section 17
 - **A hardening change can silently be a change to a value another subsystem
   reads.** Wrapping the Ask question in delimiters also rewrote the retrieval
   query, since AI Search searches the last user message; every question then
@@ -101,4 +101,4 @@ which is what repeats across people and sessions.
 - **A backslash escape in prose can reach disk as a control byte and still
   render close enough to survive review.** Three: backslash-f left
   `ont-display` in app.css, backslash-b broke a gate needle, backslash-a
-  ate a separator in a libuv path. `scripts/check-invariants.mjs` section 29
+  ate a separator in a libuv path. `scripts/check-invariants.mjs` (no longer in the tree) section 29
