@@ -151,12 +151,12 @@ function overlay() {
     ]],
     ["02", "Teaching", "/teaching", [
       ["Phage Discovery Program", "/teaching/phage-discovery", ""],
-      ["Virus Isolation", "/teaching/virus-isolation", "Fall"],
-      ["Phage Bioinformatics", "/teaching/phage-bioinformatics", "Spring"],
+      ["Virus Isolation", "/teaching/virus-isolation", "Semester 1"],
+      ["Phage Bioinformatics", "/teaching/phage-bioinformatics", "Semester 2"],
       ["Central Dogma Tutorials", "/teaching/central-dogma", ""],
       ["Study Skills Guide", "/teaching/study-skills", ""],
     ]],
-    ["03", "Software", "/software", softwareGroups.flatMap((g) => g.items.map((i) => [i.name, i.path ?? i.url, g.group.slice(0, -1)]))],
+    ["03", "Software", "/software", softwareGroups.flatMap((g) => g.items.map((i) => [i.name, i.path ?? i.url, ({ Products: "Product", Sites: "Site", Infrastructure: "Infra" })[g.group]]))],
     ["04", "Writing", "/writing", [["All articles", "/writing", N.posts], ["Carrel, the series", "/writing#series", 3], ...recent.map((p) => [cap(p.title.replace(/^Carrel, part \d: /, "")), `/writing/${p.slug}`, fmtDate(p.date).replace(/ \d+,/, "")])]],
     ["05", "About", "/about", [["About", "/about", ""], ["CV", "/cv", CV.profile.edition], ["Colophon", "/colophon", ""], ["Privacy", "/privacy", ""]]],
   ];
