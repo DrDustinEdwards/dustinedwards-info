@@ -35,6 +35,15 @@ const CHECK_COPY = {
     passing: "Every dictionary entry on the site matches the one in the repository.",
     repair: null,
   },
+  "registry-drift": {
+    name: "Lab registry on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} lab registry items are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some lab registry items are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every lab registry item on the site matches the one in the repository.",
+    repair: null,
+  },
   "pages-drift": {
     name: "Pages on the site",
     failing: (counts) =>
@@ -128,6 +137,9 @@ const CHECK_COPY = {
   },
 };
 
+/** The check names this file words, so a test can hold it to every check the health run makes. */
+export const WORDED_CHECKS = Object.keys(CHECK_COPY);
+
 /**
  * @param {{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }} check
  * @returns {{ name: string, finding: string, repair: { action: string, intent: string, label: string } | null }}
@@ -135,7 +147,9 @@ const CHECK_COPY = {
 export function humanCheck(check) {
   const copy = CHECK_COPY[check.name];
   if (!copy) {
-    return { name: check.name, finding: check.detail, repair: null };
+    // A check with no words yet still reads as words: "registry-drift" becomes "Registry drift".
+    const words = check.name.replace(/-/g, " ");
+    return { name: words.charAt(0).toUpperCase() + words.slice(1), finding: check.detail, repair: null };
   }
   if (check.ok) {
     return { name: copy.name, finding: copy.passing, repair: null };

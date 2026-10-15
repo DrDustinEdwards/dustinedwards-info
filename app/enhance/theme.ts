@@ -107,14 +107,15 @@ function openPalette() {
  * The hint is set only from script, so a reader whose script did not run is never told about a key
  * that would do nothing. Platform detection is best-effort: the handler accepts meta or ctrl either way.
  */
-function shortcutChord(): string {
+function isMac(): boolean {
   const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
   const platform = nav.userAgentData?.platform ?? navigator.platform ?? navigator.userAgent;
-  return /mac/i.test(platform) ? "Command-K" : "Control-K";
+  return /mac/i.test(platform);
 }
 
 function enhanceSearchTrigger() {
-  const chord = shortcutChord();
+  const mac = isMac();
+  const chord = mac ? "Command-K" : "Control-K";
 
   // Text before unhide, so the stale server placeholder is never the announced description.
   for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
@@ -123,7 +124,14 @@ function enhanceSearchTrigger() {
   }
 
   for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
-    trigger.title = `Search (${chord})`;
+    /* The header tip names the keys as key caps (Capsomer's tooltip), only now that they do something. */
+    const tip = trigger.querySelector(".cap-site-header-tip");
+    if (tip && !tip.querySelector(".cap-keys")) {
+      const keys = document.createElement("span");
+      keys.className = "cap-keys";
+      for (const key of [mac ? "\u2318" : "Ctrl", "K"]) keys.appendChild(document.createElement("kbd")).textContent = key;
+      tip.appendChild(keys);
+    }
     trigger.dataset.shortcutHint = "shown";
     trigger.addEventListener("click", (event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

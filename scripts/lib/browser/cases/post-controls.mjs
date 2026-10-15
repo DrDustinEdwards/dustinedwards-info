@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, bundleFetches, clickOrFail, menuUnrolled, ok, pollUntil, report, skip } from "../harness.mjs";
+import { BASE, bundleFetches, clickOrFail, ok, pollUntil, report, skip } from "../harness.mjs";
 
 /**
  * A post page's controls: the theme toggle with and without script, the scriptless header menu, the
@@ -232,12 +232,12 @@ export async function run({ page, browser }, { codePost, probedPost }) {
 
         const menu = await noScript.evaluate(() => {
           const button = document.querySelector("[data-header-menu]");
-          const nav = document.getElementById(button?.getAttribute("popovertarget") ?? "");
-          if (!button || !nav) return null;
+          const sheet = document.getElementById(button?.getAttribute("commandfor") ?? "");
+          if (!button || !(sheet instanceof HTMLDialogElement)) return null;
           return {
             displayed: getComputedStyle(button).display !== "none",
-            open: nav.matches(":popover-open"),
-            links: nav.querySelectorAll("a").length,
+            open: sheet.open,
+            links: sheet.querySelectorAll("a").length,
           };
         });
 
@@ -250,28 +250,28 @@ export async function run({ page, browser }, { codePost, probedPost }) {
 
         const opened = await clickOrFail(
           noScript,
-          ".site-header-menu-button",
+          "[data-header-menu]",
           "the scriptless header menu button is present to click",
         );
-        // Open and done unrolling, or the link click below lands outside it and dismisses it.
-        const isOpen = await menuUnrolled(noScript);
+        const isOpen = await pollUntil(
+          () => noScript.evaluate(() => Boolean(document.querySelector("dialog.cap-site-header-sheet")?.hasAttribute("open"))),
+          Boolean,
+          { everyMs: 50, sleepFirst: false },
+        );
         ok(
-          "the header menu OPENS with no script, because the nav is the button's popover",
+          "the header menu OPENS with no script, because the button is the sheet's invoker (commandfor)",
           opened && isOpen,
           "clicking the button did not open it. A menu that needs script to open is not rule " +
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        /* The destinations are section buttons now: choosing one opens its panel as a popover over the Menu
-           (no script), and the panel's links are what a reader follows. */
-        await clickOrFail(noScript, "[data-site-nav] [data-nav-button]", "the scriptless Menu offers a section button to open");
-        await noScript.waitForSelector("[data-site-nav] .site-nav-panel:popover-open .site-nav-foot-link", { visible: true, timeout: 5000 }).catch(() => null);
-        const link = await noScript.$("[data-site-nav] .site-nav-panel:popover-open .site-nav-foot-link");
+        /* The sheet lists every section's links: one is what a reader follows. */
+        const link = await noScript.$("dialog.cap-site-header-sheet[open] .cap-site-header-sheet-list a[href^='/writing']");
         const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
-          "the open header panel offers a link to follow",
+          "the open header sheet offers a link to follow",
           link !== null && Boolean(target),
-          "no link inside the open section panel, so there is nothing for the reader to follow",
+          "no link inside the open sheet, so there is nothing for the reader to follow",
         );
         if (link && target) {
           await Promise.all([
@@ -300,14 +300,12 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       return {
         unhidden: !hint.hidden,
         associated: Boolean(described) && described === hint.id && hint.id !== "",
-        /*
-         * The title must name the live key. `-K` rather than the whole chord, because the modifier is
-         * Command on a Mac and Control elsewhere.
-         */
-        titled: /-K\b/.test(trigger.getAttribute("title") ?? ""),
+        /* The header tip names the live keys as key caps, ending in K; Command or Control comes first. */
+        titled: (trigger.querySelector(".cap-site-header-tip .cap-keys")?.textContent ?? "").trim().endsWith("K"),
         text: (hint.textContent ?? "").trim(),
         textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
-        painted: Boolean(trigger.querySelector("kbd")),
+        /* Only the tip, shown on hover and focus, may carry key caps: none painted on the control at rest. */
+        painted: [...trigger.querySelectorAll("kbd")].some((kbd) => !kbd.closest(".cap-site-header-tip")),
       };
     });
     ok(
@@ -323,7 +321,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         ? "the [data-search-hint] or [data-search-trigger] element is missing, so the " +
             "header lost the hint or the control"
         : `unhidden ${hintShown.unhidden}, aria-describedby resolves ${hintShown.associated}, ` +
-            `title names the chord ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
+            `the tip names the keys ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
             `that text names the chord ${hintShown.textNamesKey}, a <kbd> is painted inside ` +
             `the control ${hintShown.painted}. The theme bundle did not run, the badge came ` +
             `back, or a surface still advertises a shortcut that was retired.`,

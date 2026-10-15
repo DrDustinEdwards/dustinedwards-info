@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { Form, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, type AdminEntry } from "capsomer/react/admin-shell";
-import { ThemeSwitch } from "capsomer/react/theme-switch";
+import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
@@ -211,7 +210,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
   const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
   const nav: AdminEntry[] = [
-    { id: "overview", label: "Overview", href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
+    { id: "overview", label: FIRST_PAGE, href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
     {
       id: "posts",
       label: "Posts",
@@ -253,7 +252,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     },
     { id: "tools", label: "Tools", href: "/admin/tools", group: "Site", icon: ICONS.tools, current: at("/admin/tools") },
   ];
-  const theme = rootData?.theme;
+  /* The tab title is "<page> · dustinedwards.info": the menu entry the reader is in names the page. */
+  const page = nav.find((entry) => entry.current)?.label;
 
   /* The shell names `[` in the collapse control's tip and leaves binding it to the app. It presses that
      control, so the choice is remembered by the shell's own preference. Never while someone types. */
@@ -272,23 +272,22 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     <>
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
-        title="Site admin"
-        apps={[{ id: "site", label: "Site admin", href: "/admin", mono: "D", current: true }]}
+        app="info"
+        page={page}
         nav={nav}
         tabs={nav.slice(0, 5)}
         renderLink={RouterLink}
+        viewSite="/"
         account={{
           name: SITE.name,
           initials: INITIALS,
           role: "Admin",
           email: loaderData.email,
-          appLinks: [{ label: "View site", href: "/" }],
           // Access owns the session: the logout route sends the browser to Access's own endpoint, which a
           // fetch cannot follow into a navigation, so a real form post (reloadDocument) does it.
           onSignOut: () => (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
         }}
         status={<span className="cap-muted">Signed in as {loaderData.email}</span>}
-        actions={<ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />}
         prefKey="admin-rail"
       >
         <MessageProvider>

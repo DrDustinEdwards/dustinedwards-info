@@ -120,3 +120,27 @@ await test("the spotlight and the tiles show the newest paper and the newest art
   assert.match(research, /Journal of Microbiology &amp; Biology Education, 2026/);
   assert.match(panelHtml("writing"), /Newest/);
 });
+
+await test("the header is Capsomer's site header: its frame, Search, the theme, the avatar's empty slot, no Sign in", () => {
+  assert.match(html, /<header class="cap-site-header site-header" data-cap="site-header" data-links="right"/);
+  const tools = html.slice(html.indexOf('class="cap-site-header-tools'), html.indexOf("<dialog"));
+  const order = ["data-search-trigger", "data-theme-toggle", 'site-header-account-slot" aria-hidden="true"', "cap-site-header-menu"].map((part) => tools.indexOf(part));
+  assert.ok(order.every((at) => at >= 0), `a control is missing from the tools (${order})`);
+  assert.deepEqual([...order].sort((a, b) => a - b), order, "the tools are out of order");
+  // Sign in is the footer's Admin link, never the header's (Dustin, 2026-10-15).
+  assert.doesNotMatch(html.slice(0, html.indexOf("</header>")), /Sign in|href="\/admin"/);
+  // Each section button is Capsomer's disclosure trigger, and its panel a manual popover named by the section.
+  assert.equal((html.match(/data-cap-part="panel-trigger"/g) ?? []).length, 5);
+  assert.equal((html.match(/class="cap-site-header-panel site-nav-panel"[^>]*popover="manual"[^>]*role="group"/g) ?? []).length, 5);
+});
+
+await test("the phone's sheet carries every link the panels carry, and its Menu button opens it with no script", () => {
+  const navEnd = html.indexOf("</nav>", html.indexOf('id="site-nav"'));
+  const panels = new Set(hrefsIn(html.slice(html.indexOf('id="site-nav"'), navEnd)));
+  const sheet = html.slice(html.indexOf('id="site-sheet"'), html.indexOf("</dialog>"));
+  const inSheet = new Set(hrefsIn(sheet));
+  const missing = [...panels].filter((href) => !inSheet.has(href));
+  assert.deepEqual(missing, [], `the sheet lacks ${missing.join(", ")}`);
+  assert.ok(!inSheet.has("/admin"), "the sheet still carries Sign in; it is the footer's Admin link");
+  assert.match(html, /aria-controls="site-sheet"[^>]*command="show-modal"[^>]*commandfor="site-sheet"/);
+});

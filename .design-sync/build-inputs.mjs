@@ -75,7 +75,6 @@ const SHEETS = [
   "app/styles/chrome-nav.css",
   "app/styles/skip-link.css",
   "app/styles/motion-print.css",
-  "app/styles/search-trigger.css",
   // root.tsx line 52, LAST of the root sheets and deliberately so: its own
   // comment says it "still needs to win where it and page-shell.css touch the
   // same thing". It defines `.tracks`, the redesign grid (ruling 99), and was
