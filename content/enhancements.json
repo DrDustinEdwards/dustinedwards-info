@@ -90,16 +90,16 @@
     {
       "id": "header-nav",
       "module": "app/enhance/header.ts",
-      "enhancement": "Adds what the popover does not give the phone Menu: choosing a link or tabbing out closes it, and the button carries aria-expanded. On narrow widths it also makes the header partially persistent, hiding it on scroll down and returning it after a few pixels of scroll up, by writing one attribute the stylesheet reads.",
-      "fallback": "The nav is a popover and the button labeled Menu is its invoker, so the browser opens it, closes it on Escape or an outside click and returns focus to the button with no script at all, and every destination inside is an ordinary link. The header simply STAYS STATIC: with no script the hide attribute is never written, nothing moves, and no destination is unreachable. The footer carries the full link list as well.",
+      "enhancement": "Runs Capsomer's site-header behaviour on the phone Menu: the button carries aria-expanded, the sheet opens as a modal dialog with focus on its title, and closing it returns focus to the button. It also hands the theme choice to Capsomer's applyTheme so the admin follows the same theme.",
+      "fallback": "The sheet is a dialog and the button labeled Menu opens it with an invoker command (command show-modal), so a current browser opens it, closes it on Escape and on its Close button, and returns focus with no script at all. Every destination inside is an ordinary link. The header is sticky in CSS, so nothing about its position depends on script. The footer carries the full link list as well.",
       "fallbackKind": "selector",
-      "fallbackAt": ".site-header-menu-button",
+      "fallbackAt": ".cap-site-header-menu",
       "why": null
     },
     {
       "id": "header-mega-menus",
       "module": "app/enhance/header.ts",
-      "enhancement": "The five section panels (Research, Teaching, Software, Writing, About) open the instant the pointer reaches their button and stay open while the pointer crosses to them, closing about 300ms after the pointer leaves both the bar and the panel. A click pins one open or closes it, Escape closes it and returns focus to the button, and each button carries aria-expanded. A touch screen opens by click only. On a phone the button expands its section in place inside the Menu instead.",
+      "enhancement": "Capsomer's site-header behaviour places each of the five section panels (Research, Teaching, Software, Writing, About) under the header, opens it on hover and on click, closes it when the pointer leaves, on Escape or on an outside click, returns focus to the button, and keeps aria-expanded on each button true to the panel. On a phone the sections live in the Menu sheet instead.",
       "fallback": "Each panel is a popover its section button opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. Each panel links to its section's hub page, which lists the same pages: the first quick link, or for About its About tile.",
       "fallbackKind": "selector",
       "fallbackAt": ".site-nav-panel",

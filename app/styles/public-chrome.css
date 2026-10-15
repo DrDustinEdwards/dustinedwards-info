@@ -64,7 +64,7 @@ html {
 }
 
 .cap-site-header-sheet-list a[aria-current="page"] {
-  color: var(--ground);
+  color: var(--paper);
 }
 
 .cap-site-header-sheet-icon .site-nav-icon {
