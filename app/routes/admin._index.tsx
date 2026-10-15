@@ -48,6 +48,22 @@ export async function loader({ context }: Route.LoaderArgs) {
   });
 }
 
+type Check = Route.ComponentProps["loaderData"]["checks"][number];
+
+/** The passing checks, each named in words with what it found, folded away: nothing in it needs a person. */
+function PassingChecks({ checks }: { checks: Check[] }) {
+  return (
+    <Disclosure summary={`The ${checks.length} passing check${checks.length === 1 ? "" : "s"}`}>
+      <RowList label="Passing checks" gap="xs">
+        {checks.map((check) => {
+          const copy = humanCheck(check);
+          return <Row key={check.name} size="sm" title={copy.name} detail={copy.finding} />;
+        })}
+      </RowList>
+    </Disclosure>
+  );
+}
+
 export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   const { checks, stores } = loaderData;
 
@@ -55,7 +71,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   const worst = failing[0];
   const worstCopy = worst ? humanCheck(worst) : null;
 
-  const ordered = [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
+  const passing = checks.filter((check) => check.ok);
   const lag = stores.d1Posts === stores.artifactPosts;
 
   return (
@@ -80,43 +96,53 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         </Banner>
       ) : null}
 
-      <Panel title="Checks" count={checks.length} flush>
-        <div className="cap-table-wrap" role="region" aria-label="Checks" tabIndex={0}>
-          <table className="cap-table">
-            <thead>
-              <tr>
-                <th scope="col">Check</th>
-                <th scope="col">What it found</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordered.map((check) => {
-                const copy = humanCheck(check);
-                return (
-                  <tr key={check.name}>
-                    <th scope="row">
-                      {copy.name}
-                      {/* Word, shape and colour: three channels, so it still reads under forced-colors. */}
-                      <Status tone={check.ok ? "ok" : "crit"}>{check.ok ? "passing" : "failing"}</Status>
-                    </th>
-                    <td>{copy.finding}</td>
-                    <td>
-                      {copy.repair ? (
-                        <Form method="post" action={copy.repair.action}>
-                          <input type="hidden" name="intent" value={copy.repair.intent} />
-                          <Button type="submit" size="sm" aria-label={`${copy.repair.label}: ${copy.name}`}>
-                            {copy.repair.label}
-                          </Button>
-                        </Form>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {/* Failures first and loud; the passing checks are a count in the heading and a list one click away
+          (Dustin's review, 2026-10-11: a green pill on every row hid the one red one). A repair sits with the
+          finding it repairs, so there is no column that is empty whenever nothing fails. */}
+      <Panel
+        title={failing.length > 0 ? `Checks: ${failing.length} failing, ${passing.length} passing` : `Checks: all ${checks.length} passing`}
+        flush={failing.length > 0}
+        footer={failing.length > 0 && passing.length > 0 ? <PassingChecks checks={passing} /> : undefined}
+      >
+        {failing.length > 0 ? (
+          <div className="cap-table-wrap" role="region" aria-label="Failing checks" tabIndex={0}>
+            <table className="cap-table">
+              <thead>
+                <tr>
+                  <th scope="col">Check</th>
+                  <th scope="col">What it found</th>
+                </tr>
+              </thead>
+              <tbody>
+                {failing.map((check) => {
+                  const copy = humanCheck(check);
+                  return (
+                    <tr key={check.name}>
+                      <th scope="row">
+                        {copy.name}
+                        {/* Word, shape and colour: three channels, so it still reads under forced-colors. */}
+                        <Status tone="crit">failing</Status>
+                      </th>
+                      <td>
+                        {copy.finding}
+                        {copy.repair ? (
+                          <Form method="post" action={copy.repair.action}>
+                            <input type="hidden" name="intent" value={copy.repair.intent} />
+                            <Button type="submit" size="sm" aria-label={`${copy.repair.label}: ${copy.name}`}>
+                              {copy.repair.label}
+                            </Button>
+                          </Form>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <PassingChecks checks={passing} />
+        )}
       </Panel>
 
       <StatTiles label="Content">
