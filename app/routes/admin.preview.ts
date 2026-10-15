@@ -36,7 +36,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       return Response.json({ error: error.message });
     }
     // Anything else is this endpoint failing, not the author's markdown: logged, and a 500.
-    console.error("admin preview render failed", error);
+    console.error(JSON.stringify({ alert: "admin-preview-render-failed", detail: errorMessage(error) }));
     const message = errorMessage(error);
     return Response.json({ error: `The preview failed: ${message}` }, { status: 500 });
   }

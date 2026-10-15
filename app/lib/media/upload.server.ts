@@ -43,7 +43,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   try {
     dimensions = await measureDimensions(env, file.bytes);
   } catch (error) {
-    console.error("upload refused: the image could not be measured", error);
+    console.error(JSON.stringify({ alert: "upload-unmeasurable", detail: errorMessage(error) }));
     return {
       ok: false,
       code: "images-unavailable",
@@ -88,7 +88,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
     });
   } catch (error) {
     recorded = false;
-    console.error("media record write failed after upload", error);
+    console.error(JSON.stringify({ alert: "media-record-write-failed", detail: errorMessage(error) }));
   }
 
   return {

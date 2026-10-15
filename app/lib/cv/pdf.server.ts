@@ -36,6 +36,7 @@ const FONT_URLS: Record<(typeof PDF_FONTS)[number]["file"], string> = {
 /** A render that finds a newer CV after it started tries again, this many times at most. */
 const MAX_ATTEMPTS = 3;
 
+// Isolate-wide: the font rules come from the deployed assets, the same for every request.
 let fontCssCache: Promise<string> | undefined;
 
 /** The `@font-face` rules, read through the ASSETS binding from the hashed font files the site already serves. */

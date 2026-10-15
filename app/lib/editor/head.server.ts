@@ -13,7 +13,7 @@ export async function readHead(
   try {
     return { headSha: await currentHead(env), headError: null };
   } catch (error) {
-    console.error("editor head read failed", error);
+    console.error(JSON.stringify({ alert: "editor-head-read-failed", detail: errorMessage(error) }));
     return { headSha: "", headError: errorMessage(error) };
   }
 }

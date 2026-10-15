@@ -2,6 +2,7 @@ import { readCapped } from "~/lib/read-capped.mjs";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 import type { Route } from "./+types/api.csp-report";
 
@@ -63,9 +64,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     capped = await readCapped(request, MAX_BODY_BYTES);
   } catch (error) {
     // Logged and still 204, the rule above: a 500 here would make the browser send the report again.
-    console.error(
-      `[csp-report] body unreadable: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(JSON.stringify({ alert: "csp-report-body-unreadable", detail: errorMessage(error) }));
     return new Response(null, {
       status: 204,
       headers: { "cache-control": "private, no-store" },
@@ -81,7 +80,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   // JSON-encoded so a body with newlines cannot forge log lines. Unparsed: both the report-uri and
   // report-to shapes land here.
-  console.log(`[csp-report] ${JSON.stringify(body)}`);
+  console.log(JSON.stringify({ event: "csp-report", report: body }));
 
   return new Response(null, {
     status: 204,

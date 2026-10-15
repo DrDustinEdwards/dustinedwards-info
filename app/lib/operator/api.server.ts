@@ -418,7 +418,7 @@ function translate(error: unknown): ToolResult {
   }
 
   // Not a recognized failure: logged with its stack, since the caller receives only the message.
-  console.error("operator tool failed with an unrecognized error", error);
+  console.error(JSON.stringify({ alert: "operator-tool-unrecognized-error", detail: errorMessage(error) }));
   return {
     ok: false,
     status: 500,

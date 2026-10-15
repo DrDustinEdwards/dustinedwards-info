@@ -1,5 +1,6 @@
 // Never import pipeline.mjs statically from app or worker code: it drags shiki, katex, Plot and
 // linkedom into every cold isolate (4.4 MB chunk, measured), and nothing checks for it.
+// Isolate-wide: the loaded modules are the same for every request.
 let pipeline: Promise<typeof import("./pipeline.mjs")> | undefined;
 
 export function loadPipeline(): Promise<typeof import("./pipeline.mjs")> {

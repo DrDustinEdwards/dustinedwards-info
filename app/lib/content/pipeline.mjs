@@ -181,6 +181,7 @@ export { findWideDashes } from "./wide-dash.mjs";
 
 export { readingTimeMinutes };
 
+// Isolate-wide: one highlighter, the same for every request.
 /** @type {any} */
 let highlighterPromise = null;
 

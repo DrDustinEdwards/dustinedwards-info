@@ -25,7 +25,7 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
   for (const message of batch.messages) {
     const key = objectKeyOf(message.body);
     if (!key) {
-      console.error("media event with no object key", JSON.stringify(message.body));
+      console.error(JSON.stringify({ alert: "media-event-no-object-key", body: message.body }));
       message.ack();
       continue;
     }
@@ -35,10 +35,7 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
       message.ack();
     } catch (error) {
       // Never ack a transient failure, or the row silently never appears.
-      console.error(
-        `media event failed for ${key}`,
-        errorMessage(error),
-      );
+      console.error(JSON.stringify({ alert: "media-event-failed", key, detail: errorMessage(error) }));
       message.retry();
     }
   }
@@ -51,8 +48,12 @@ async function indexOne(env: Env, key: string) {
   if (!object) {
     // Logged, because a genuine delete and a key looked up in the wrong bucket both land here.
     console.log(
-      `media event: no object for ${JSON.stringify(key)} in ` +
-        `${storageOf(key) === "r2-derived" ? "OG" : "MEDIA"}; deleting any row`,
+      JSON.stringify({
+        event: "media-event-no-object",
+        key,
+        bucket: storageOf(key) === "r2-derived" ? "OG" : "MEDIA",
+        action: "deleting any row",
+      }),
     );
     await deleteMediaRecord(env, key);
     return;
@@ -105,11 +106,8 @@ async function indexOne(env: Env, key: string) {
     try {
       await mirrorObject(env, key);
     } catch (error) {
-      console.log(
-        `media event: mirror failed for ${JSON.stringify(key)}: ` +
-          `${errorMessage(error)}. ` +
-          `The row stands; media-backup-drift will report it and backup_media repairs it.`,
-      );
+      // The row stands; media-backup-drift will report it and backup_media repairs it.
+      console.log(JSON.stringify({ event: "media-mirror-failed", key, detail: errorMessage(error) }));
     }
   }
 

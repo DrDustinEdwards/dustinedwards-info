@@ -2,6 +2,7 @@ import { getEnv } from "~/lib/context";
 import { bucketFor, cropSafe } from "~/lib/media/classify.mjs";
 import { WEBP_QUALITY } from "~/lib/media/encoding.mjs";
 import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 import type { Route } from "./+types/media.$";
 
 /**
@@ -101,7 +102,9 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
     response = result.response();
   } catch (error) {
     // Falling back to the original is safe here, for one tile, and must not become a general strategy.
-    console.error(`media thumbnail transform failed for ${key} at w=${width}`, error);
+    console.error(
+      JSON.stringify({ alert: "media-thumbnail-transform-failed", key, width, detail: errorMessage(error) }),
+    );
     const original = await bucketFor(env, key).get(key);
     if (!original) return new Response("Not found", { status: 404 });
     const headers = new Headers();

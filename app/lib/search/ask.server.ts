@@ -18,6 +18,7 @@ import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 import {
   answerLeaksPrompt,
   askMessages,
@@ -262,7 +263,7 @@ export async function syncAskPost(
     try {
       await withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 });
     } catch (error) {
-      console.error("ask upload failed twice", key, error);
+      console.error(JSON.stringify({ alert: "ask-upload-failed-twice", key, detail: errorMessage(error) }));
       failed.push(key);
     }
     live.add(key);
@@ -314,7 +315,7 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
       try {
         return await askIndexStatus(env, timings);
       } catch (error) {
-        console.error("ask index status failed", error);
+        console.error(JSON.stringify({ alert: "ask-index-status-failed", detail: errorMessage(error) }));
         return null;
       }
     })();
@@ -337,7 +338,7 @@ export async function askDriftCount(
   if (cached !== null) return cached;
 
   const listing = askIndexStatus(env, timings).catch((error) => {
-    console.error("ask drift count failed", error);
+    console.error(JSON.stringify({ alert: "ask-drift-count-failed", detail: errorMessage(error) }));
     return null;
   });
 
@@ -354,7 +355,9 @@ export async function askDriftCount(
         .then((late) =>
           late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
         )
-        .catch((error) => console.error("ask drift cache write failed after the budget", error)),
+        .catch((error) =>
+          console.error(JSON.stringify({ alert: "ask-drift-cache-write-failed", detail: errorMessage(error) })),
+        ),
     );
     return null;
   }

@@ -26,6 +26,7 @@ import { ASK_ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { publiclyVisibleSlugs } from "~/db";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
+import { errorMessage } from "~/lib/error-message.mjs";
 import type { Route } from "./+types/search.ask";
 
 /** Long enough for a real question, short enough that the model is not a toy. */
@@ -157,7 +158,7 @@ export async function action({ request, context }: Route.ActionArgs) {
          */
         if (answer.chunks.length === 0) return;
         if (answerLeaksPrompt(answer.answer)) {
-          console.error("ask: refused to cache an answer that echoed the prompt");
+          console.error(JSON.stringify({ alert: "ask-cache-refused-echo" }));
           return;
         }
         await writeCachedAnswer(env, key, answer);
@@ -167,7 +168,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return new Response(toReader, { headers: streamHeaders("miss") });
   } catch (error) {
     // The client treats any non-200 as "Ask is unavailable"; a 500 here would land on a page with real results.
-    console.error("ask stream failed", error);
+    console.error(JSON.stringify({ alert: "ask-stream-failed", detail: errorMessage(error) }));
     return new Response("Ask is unavailable.", { status: 502 });
   }
 }

@@ -21,6 +21,7 @@ export type AccessIdentity =
   | { kind: "absent" }
   | { kind: "refused"; reason: string };
 
+// Isolate-wide: a team's public signing keys, the same for every request.
 const remoteKeys = new Map<string, JWTVerifyGetKey>();
 
 /**

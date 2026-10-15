@@ -33,7 +33,7 @@ export async function loadEditorOptions(env: Env, timings: Timings | undefined) 
   const problems: string[] = [];
   const tags = await timed(timings, "d1_tags", () =>
     listBlogTags(env).catch((error: unknown) => {
-      console.error("editor tags read failed", error);
+      console.error(JSON.stringify({ alert: "editor-tags-read-failed", detail: errorMessage(error) }));
       problems.push(`Existing tags could not be read, so none are suggested: ${errorMessage(error)}`);
       return [];
     }),
