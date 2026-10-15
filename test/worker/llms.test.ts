@@ -203,8 +203,11 @@ describe("a save is held to what CI holds", () => {
 
   it("judges pages by their D1 rows: a draft's line may land before its publish, and is required after", async () => {
     const LINE = "- [Accessibility](https://dustinedwards.info/accessibility): what the site's checks test";
-    const withLine = llmsFile.replace(/^.*\/terms\).*\n/m, (line) => `${line}${LINE}\n`);
-    expect(withLine).not.toBe(llmsFile);
+    // The file in the repository lists the page since it was published; the case starts from it without the line.
+    const without = llmsFile.replace(/^- \[Accessibility\].*\n/m, "");
+    expect(without).not.toBe(llmsFile);
+    const withLine = without.replace(/^.*\/terms\).*\n/m, (line) => `${line}${LINE}\n`);
+    expect(withLine).not.toBe(without);
     const status = (s: string) => testEnv.DB.prepare("UPDATE pages SET status = ?1 WHERE path = '/accessibility'").bind(s).run();
     try {
       await status("draft");
@@ -215,13 +218,13 @@ describe("a save is held to what CI holds", () => {
       await setRow(llmsFile);
       await status("published");
       // Published through Carrel: the line saves at once, with no deploy in between, and leaving it out is refused.
-      const missing = await put(EDITED, undefined, "chg-a11y-missing");
+      const missing = await put(EDITED.replace(/^- \[Accessibility\].*\n/m, ""), undefined, "chg-a11y-missing");
       expect(missing.status).toBe(422);
       expect(((await missing.json()) as { message: string }).message).toMatch(/absent from content\/llms\.txt: \/accessibility/);
       const saved = await put(withLine, undefined, "chg-a11y-published");
       expect(saved.status, await saved.clone().text()).toBe(200);
     } finally {
-      await status("draft");
+      await status("published");
     }
   });
 
