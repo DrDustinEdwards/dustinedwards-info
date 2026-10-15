@@ -331,7 +331,7 @@ export async function run({ browser }) {
       focusOnMenu: document.activeElement === document.querySelector("[data-header-menu]"),
     }));
     ok(
-      "on a phone the header is one 56px row, the Menu opens the sheet with focus on its heading and every section's links, and Escape gives focus back",
+      "on a phone the header is one 56px row, the Menu opens the sheet with focus on its heading and every section's links but no Sign in (it lives in the footer), and Escape gives focus back",
       row.sections === "none" &&
         row.menu !== "none" &&
         row.height === 56 &&
@@ -339,7 +339,7 @@ export async function run({ browser }) {
         sheet.expanded === "true" &&
         sheet.focusOnTitle &&
         sheet.links >= 40 &&
-        sheet.signIn &&
+        !sheet.signIn &&
         !shut.open &&
         shut.expanded === "false" &&
         shut.focusOnMenu,
