@@ -29,7 +29,7 @@
 /content/generated/cv.json
 
 # The colophon's stack data. Same class as posts.json, and it became one on
-# 2026-09-08 (ruling 39a): it is derived entirely from tracked sources
+# 2026-09-08: it is derived entirely from tracked sources
 # (package.json, wrangler.jsonc.example, drizzle/, .nvmrc, stack-notes.json),
 # so committing it made every change to any of those a two-file change that
 # only a machine running build:stack could complete. Renovate cannot run
@@ -175,37 +175,5 @@ wrangler.watchdog.jsonc
 # Project MCP config: carries a driver bearer token
 .mcp.json
 
-# THE DESIGN-SYNC WORKING SET, for the /design-sync skill that exports this
-# site's tokens and its four presentational components to claude.ai/design.
-#
-# What IS committed is the sync's INPUTS, under .design-sync/: config.json, the
-# generator, the bundle entry, the authored previews, the conventions header and
-# NOTES.md. Everything below is either a staged copy of the skill's own scripts,
-# regenerated build output, or machine-local verification state, and a committed
-# copy of any of them would be a second owner of something already owned
-# elsewhere.
-/.ds-sync/
-/ds-bundle/
-/.design-sync/.cache/
-/.design-sync/learnings/
-/.design-sync/node_modules
-# Derived by .design-sync/build-inputs.mjs from app/**/*.css and
-# tsconfig.cloudflare.json, which stay the only owners of their content.
-/.design-sync/ds-styles.css
-/.design-sync/tsconfig.paths.json
-# Assembled by build-inputs.mjs from readme.md, committed beside it, plus the
-# preview cards' digest, which is what makes a changed card re-upload.
-/.design-sync/readme-header.md
-# Derived by scripts/build-guidelines.mjs from the comment blocks in the sheets
-# SHEETS names. The sheets stay the only owners of that prose; a committed copy would be a
-# second owner that drifts the moment a comment is edited, which is why ruling
-# 109 says GENERATED rather than written. build-inputs.mjs also copies
-# canvas-constraints.md and conventions.md in; those stay committed beside it.
-/.design-sync/guidelines/
-# Live page shots of the DEPLOYED site, uploaded to the Claude Design project
-# as reference images. STAYS LOCAL: these are observations of a deployment at a
-# moment, not artifacts of this repository, and a committed copy would be a
-# dated claim nothing here can re-derive.
-/ds-shots/
 scratchpad/
 reports/

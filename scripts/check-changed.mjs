@@ -1,6 +1,6 @@
 // Unmapped paths fall back to the whole offline tier: skipping a path it did not recognize would
 // report a clean run over checks that never executed.
-// Tests: only those whose imports reach a changed file (ruling 151). Types, the full suites and the
+// Tests: only those whose imports reach a changed file. Types, the full suites and the
 // browser test run in CI.
 
 import { spawnSync } from "node:child_process";
@@ -173,7 +173,7 @@ export const MAP = [
     /* No gate or test reads these (the last hook test went with stop-typecheck.sh), so a change here
        runs nothing rather than falling through to the whole tier. */
     what: "a document, skill or hook, which no gate reads",
-    test: /^(\.claude\/.+|[A-Za-z-]+\.md|docs\/.+\.md|\.design-sync\/.+)$/,
+    test: /^(\.claude\/.+|[A-Za-z-]+\.md|docs\/.+\.md)$/,
     gates: [],
   },
 ];
