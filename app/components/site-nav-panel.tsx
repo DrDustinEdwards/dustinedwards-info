@@ -15,7 +15,7 @@ import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav";
  * in every page's markup ahead of its h1, and headings there would open every page's outline with them.
  */
 
-// The design's line icons: a 24 grid drawn at 20px, 1.5 stroke, round caps and joins, in currentColor.
+// The design's line icons (most from the structured panels mock): a 24 grid drawn at 18px, 1.7 stroke, round caps and joins, in currentColor.
 const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
   retroviruses: (
     <>
@@ -38,47 +38,40 @@ const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
       <path d="M12 6.5v13" />
     </>
   ),
-  recipes: (
-    <>
-      <path d="M3.5 20.5l5-5" />
-      <path d="M8.5 15.5c-1.2-3.8 1.4-9.3 5.2-11 3.3-1.1 6.2 1.8 5.1 5.1-1.7 3.8-7.2 6.4-10.3 5.9" />
-      <path d="M8.5 15.5c1.3-3 4-6.5 7-8.6" />
-      <path d="M8.5 15.5c3-1.3 6.5-4 8.6-7" />
-    </>
-  ),
+  recipes: <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.5-7 10-7 10z" />,
   research: (
     <>
-      <path d="M9 3h6M10 3v6.2l-5 8.9A2 2 0 0 0 6.8 21h10.4a2 2 0 0 0 1.8-2.9l-5-8.9V3" />
-      <path d="M7.6 15h8.8" />
+      <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3" />
+      <path d="M7 15h10" />
     </>
   ),
   teaching: (
     <>
-      <path d="M2.5 9.5 12 5l9.5 4.5L12 14z" />
-      <path d="M6.5 11.8V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.2M21.5 9.5V15" />
+      <path d="M2 9l10-5 10 5-10 5z" />
+      <path d="M6 11v5c3 2 9 2 12 0v-5" />
     </>
   ),
-  software: <path d="M8.5 7l-5 5 5 5M15.5 7l5 5-5 5M13.5 5l-3 14" />,
-  writing: (
-    <>
-      <path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z" />
-      <path d="M14.5 6.5l3 3" />
-    </>
-  ),
+  software: <path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14" />,
+  writing: <path d="M4 20l4-1 11-11-3-3L5 16z" />,
   about: (
     <>
-      <circle cx="12" cy="8" r="3.5" />
-      <path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" />
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </>
   ),
   publications: (
     <>
-      <path d="M7 3h7l4 4v14H7z" />
-      <path d="M14 3v4h4M9.5 12h6M9.5 15.5h6" />
+      <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" />
+      <path d="M4 19V5" />
     </>
   ),
-  collections: <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />,
-  methods: <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />,
+  collections: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+  methods: (
+    <>
+      <path d="M6 3h12M8 3v14a4 4 0 0 0 8 0V3" />
+      <path d="M8 11h8" />
+    </>
+  ),
   help: (
     <>
       <circle cx="12" cy="12" r="8.5" />
@@ -86,56 +79,68 @@ const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
     </>
   ),
   chat: <path d="M4 5h16v11H9l-5 4z" />,
-  tools: (
+  tools: <path d="M14 6a4 4 0 0 0 5 5l-8 8a2 2 0 0 1-3-3z" />,
+  series: (
     <>
-      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
-      <circle cx="16" cy="7" r="2" />
-      <circle cx="8" cy="17" r="2" />
+      <path d="M12 3l9 5-9 5-9-5z" />
+      <path d="M3 13l9 5 9-5" />
     </>
   ),
-  series: <path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" />,
   tag: (
     <>
-      <path d="M3.5 12.5v-8h8l9 9-8 8z" />
-      <circle cx="8" cy="9" r="1" />
+      <path d="M3 3h8l10 10-8 8L3 11z" />
+      <circle cx="7.5" cy="7.5" r="1.5" />
     </>
   ),
-  colophon: <path d="M5 5h14M12 5v14M9 19h6" />,
-  arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
-  rss: (
+  colophon: (
     <>
-      <path d="M5 5a14 14 0 0 1 14 14M5 11a8 8 0 0 1 8 8" />
-      <circle cx="6" cy="18" r="1" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v6M12 7.5v.5" />
     </>
   ),
+  arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  rss: <path d="M5 19a1 1 0 1 0 0-.1M5 11a8 8 0 0 1 8 8M5 4a15 15 0 0 1 15 15" />,
   search: (
     <>
       <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
+      <path d="M20 20l-4-4" />
     </>
   ),
-  mail: <path d="M3.5 6h17v12h-17zM3.5 7l8.5 6.5L20.5 7" />,
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </>
+  ),
   external: <path d="M14 4h6v6M20 4l-9 9M18 14v5H5V6h5" />,
   users: (
     <>
-      <circle cx="9" cy="8" r="3" />
-      <path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5" />
-      <circle cx="17" cy="9" r="2.5" />
-      <path d="M16.5 14.5c2.4 0 4 1.3 4.5 4" />
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </>
   ),
   map: (
     <>
-      <circle cx="6" cy="6" r="2.2" />
-      <circle cx="18" cy="8" r="2.2" />
-      <circle cx="9" cy="18" r="2.2" />
-      <path d="M8 6.5l8 1M7 8l1.5 8M16.5 10l-6 6.5" />
+      <path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2z" />
+      <path d="M9 4v14M15 6v14" />
     </>
   ),
   explorer: (
     <>
       <circle cx="12" cy="12" r="8.5" />
       <path d="M15 9l-1.9 4.1L9 15l1.9-4.1z" />
+    </>
+  ),
+  doc: (
+    <>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M14 3v5h5M9 13h7M9 17h7" />
+    </>
+  ),
+  file: (
+    <>
+      <path d="M6 3h9l4 4v14H6z" />
+      <path d="M12 11v6M9 14l3 3 3-3" />
     </>
   ),
   card: (
@@ -149,12 +154,12 @@ export function Icon({ name }: { name: NavIcon }) {
   return (
     <svg
       className="site-nav-icon"
-      width="20"
-      height="20"
+      width="18"
+      height="18"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -226,25 +231,26 @@ function Row({ row, pathname }: { row: MenuRow; pathname: string }) {
   );
 }
 
-/** The system map, small: five nodes joined by lines, drawn in the panel's own colors. Decorative. */
+/** The system map, small, as the mock draws it: a hub and its systems, in the panel's own colors. Decorative. */
 function MapDrawing() {
   return (
-    <svg
-      className="site-nav-map"
-      viewBox="0 0 120 56"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M22 14l30 10M52 24l34-12M52 24l-14 24M52 24l50 18M86 12l16 30" />
-      <circle cx="22" cy="14" r="5" />
-      <circle cx="52" cy="24" r="7" className="site-nav-map-hub" />
-      <circle cx="86" cy="12" r="5" />
-      <circle cx="38" cy="48" r="5" />
-      <circle cx="102" cy="42" r="5" />
+    <svg className="site-nav-map" width="120" height="84" viewBox="0 0 120 84" aria-hidden="true" focusable="false">
+      <circle cx="60" cy="42" r="34" className="site-nav-map-ring" strokeDasharray="3 3" />
+      <g className="site-nav-map-lines" strokeWidth="1.2">
+        <line x1="60" y1="42" x2="34" y2="26" />
+        <line x1="60" y1="42" x2="86" y2="26" />
+        <line x1="60" y1="42" x2="38" y2="62" />
+        <line x1="60" y1="42" x2="84" y2="62" />
+        <line x1="86" y1="26" x2="110" y2="10" />
+      </g>
+      <rect x="49" y="35" width="22" height="14" rx="4" className="site-nav-map-hub" />
+      <g className="site-nav-map-nodes">
+        <rect x="25" y="20" width="18" height="12" rx="3" />
+        <rect x="77" y="20" width="18" height="12" rx="3" />
+        <rect x="29" y="56" width="18" height="12" rx="6" />
+        <rect x="75" y="56" width="18" height="12" rx="6" />
+        <rect x="102" y="4" width="16" height="12" rx="3" />
+      </g>
     </svg>
   );
 }
@@ -271,7 +277,9 @@ export function SiteNavPanel({
       data-nav-panel=""
     >
       <div className="site-nav-band">
-        <Icon name={menu.icon} />
+        <span className="site-nav-badge" aria-hidden="true">
+          {menu.badge ? <b>{menu.badge}</b> : <Icon name={menu.icon} />}
+        </span>
         <p className="site-nav-band-title">{menu.heading}</p>
         <p className="site-nav-band-line">{menu.blurb}</p>
       </div>
@@ -294,6 +302,11 @@ export function SiteNavPanel({
           <Link to={spotlight.to} className="site-nav-spot" aria-current={current(spotlight.to, pathname)}>
             <span className="site-nav-spot-eyebrow">{spotlight.eyebrow}</span>
             {spotlight.kind === "map" ? <MapDrawing /> : null}
+            {spotlight.icon ? (
+              <span className="site-nav-badge" aria-hidden="true">
+                <Icon name={spotlight.icon} />
+              </span>
+            ) : null}
             <span className="site-nav-spot-title">{spotlight.title}</span>
             {spotlight.body ? <span className="site-nav-spot-body">{spotlight.body}</span> : null}
           </Link>

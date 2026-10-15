@@ -49,7 +49,9 @@ export type NavIcon =
   | "users"
   | "map"
   | "explorer"
-  | "card";
+  | "card"
+  | "doc"
+  | "file";
 
 export type MenuLink = {
   to: string;
@@ -70,6 +72,8 @@ export type MenuRow = { icon: NavIcon; title: string; to?: string; note?: string
 export type Spotlight = {
   kind: "text" | "map";
   eyebrow: string;
+  /** An icon in a round well above the title (Join the lab). */
+  icon?: NavIcon;
   title: string;
   body?: string;
   to: string;
@@ -79,6 +83,8 @@ export type Menu = {
   /** Names the panel and its button: `site-nav-research`. */
   id: string;
   icon: NavIcon;
+  /** Initials in the band's well in place of the icon (About, which is the person). */
+  badge?: string;
   /** The band's first line. */
   heading: string;
   /** The band's one-line description. */
@@ -143,7 +149,7 @@ function researchMenu(): Menu {
     id: "research",
     icon: "research",
     heading: "Research",
-    blurb: "Areas, phages, protocols and publications",
+    blurb: "Retroviruses, bacteriophages and science education",
     tiles: RESEARCH_AREAS,
     rows: [
       { icon: "publications", title: "Publications", to: "/research/publications", note: "Every paper, with BibTeX and RIS" },
@@ -193,7 +199,7 @@ function teachingMenu(): Menu {
     id: "teaching",
     icon: "teaching",
     heading: "Teaching",
-    blurb: "Courses, tutorials and study help",
+    blurb: "Courses, study help and joining the lab",
     tiles: [
       courseTile("/teaching/phage-discovery", "Phage Discovery Program", "bacteriophages"),
       courseTile("/teaching/virus-isolation", "Virus Isolation", "research"),
@@ -201,18 +207,19 @@ function teachingMenu(): Menu {
     ],
     rows: [
       {
-        icon: "help",
+        icon: "publications",
         title: "Study help",
         links: [
           { to: "/teaching/central-dogma", label: "Tutorials" },
           { to: "/teaching/study-skills", label: "Study skills" },
         ],
       },
-      { icon: "chat", title: "Questions about a course", links: [{ to: "/contact", label: "Contact" }] },
+      { icon: "mail", title: "Questions about a course", links: [{ to: "/contact", label: "Contact" }] },
     ],
     spotlight: {
       kind: "text",
       eyebrow: "Prospective students",
+      icon: "users",
       title: "Join the lab",
       body: "Undergraduate research beyond the courses",
       to: "/teaching#join-the-lab",
@@ -230,7 +237,7 @@ function softwareMenu(): Menu {
     id: "software",
     icon: "software",
     heading: "Software",
-    blurb: "Products, open tools and how-tos",
+    blurb: "Products, the open tools behind them, and how it fits together",
     tiles: SOFTWARE_PRODUCTS,
     rows: [
       {
@@ -243,7 +250,7 @@ function softwareMenu(): Menu {
           { to: "/software/enarratio", label: "Enarratio" },
         ],
       },
-      { icon: "methods", title: "Software how-tos", to: "/software/how-tos", note: "Step-by-step guides" },
+      { icon: "doc", title: "Software how-tos", to: "/software/how-tos", note: "Step-by-step guides" },
     ],
     spotlight: {
       kind: "map",
@@ -255,7 +262,7 @@ function softwareMenu(): Menu {
     footer: [
       { to: "/software", label: "All software", icon: "arrow" },
       { to: "/systems", label: "System map", icon: "map" },
-      { to: `${EXPLORER_ORIGIN}/`, label: "Capsid explorer", icon: "explorer" },
+      { to: `${EXPLORER_ORIGIN}/`, label: "Capsid explorer", icon: "search" },
     ],
   };
 }
@@ -269,7 +276,7 @@ function writingMenu(now: number): Menu {
     id: "writing",
     icon: "writing",
     heading: "Writing",
-    blurb: "Articles on building software and sites",
+    blurb: "Articles, series and tags",
     tiles: posts.slice(0, 3).map((post) => ({
       to: `/writing/${post.slug}`,
       label: post.title,
@@ -298,10 +305,20 @@ function writingMenu(now: number): Menu {
   };
 }
 
+/** "Dustin Edwards" to "DE": the first letter of each word. */
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+}
+
 function aboutMenu(): Menu {
   return {
     id: "about",
     icon: "about",
+    badge: initials(IDENTITY.name),
     // The band states the person and the whole identity line, university system included.
     heading: IDENTITY.name,
     blurb: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`,
@@ -322,9 +339,9 @@ function aboutMenu(): Menu {
       to: "/research",
     },
     footer: [
-      { to: OWNER_SCHOLAR, label: "Google Scholar", icon: "external" },
-      { to: OWNER_PUBMED, label: "PubMed", icon: "external" },
-      { to: OWNER_ORCID, label: "ORCID", icon: "external" },
+      { to: OWNER_SCHOLAR, label: "Google Scholar", icon: "publications" },
+      { to: OWNER_PUBMED, label: "PubMed", icon: "file" },
+      { to: OWNER_ORCID, label: "ORCID", icon: "about" },
     ],
   };
 }

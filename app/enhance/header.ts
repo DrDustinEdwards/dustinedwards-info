@@ -30,6 +30,24 @@ if (header) {
   enhance();
   for (const [element, ids] of described) element.setAttribute("aria-describedby", ids);
 
+  /*
+   * Capsomer sends focus to a panel's button whenever the panel closes with nothing focused, which is also how
+   * a panel opened by hover closes when the pointer leaves. That left a focus ring on a button the mouse never
+   * pressed. Focus that was nowhere before the close goes back to nowhere; focus inside the panel still returns
+   * to its button. Capsomer's own toggle listener runs first, so this one undoes only that case.
+   */
+  for (const panel of header.querySelectorAll<HTMLElement>("[data-nav-panel]")) {
+    let unfocused = false;
+    panel.addEventListener("beforetoggle", (event) => {
+      if ((event as ToggleEvent).newState === "closed") unfocused = !document.activeElement || document.activeElement === document.body;
+    });
+    panel.addEventListener("toggle", (event) => {
+      if ((event as ToggleEvent).newState !== "closed" || !unfocused) return;
+      const button = header.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
+      if (button && document.activeElement === button) button.blur();
+    });
+  }
+
   // The sheet is the behaviour's now; the invoker commands were its no-script path.
   for (const element of header.querySelectorAll("[commandfor]")) {
     element.removeAttribute("command");
