@@ -51,10 +51,11 @@ html {
   color: var(--header-fg);
 }
 
-.site-header .cap-site-header-signin,
-.site-header .cap-site-header-signin:visited {
-  color: var(--header-fg);
-  text-decoration: none;
+/* The avatar's 36px target, held empty, so the theme button sits where it does in the admin header. */
+.site-header .site-header-account-slot {
+  inline-size: 36px;
+  block-size: 36px;
+  flex: none;
 }
 
 .cap-site-header-sheet-list a,
@@ -86,31 +87,11 @@ html {
 
 /*
  * MEASURED, 2026-10-15: from 768px (Capsomer's phone breakpoint) to 900px the logo, the five sections and the
- * tools want about 830px, so Sign in shows its icon alone (its words stay for a screen reader, as on a phone)
- * and the sections sit closer. Re-measure when a section's label changes.
+ * tools want about 830px, so the sections sit closer. Re-measure when a section's label changes.
  */
 @media (min-width: 768px) and (max-width: 899.98px) {
   .site-header .cap-site-header-sections > ul {
     gap: 14px;
-  }
-
-  .site-header .cap-site-header-signin {
-    inline-size: 36px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .site-header .cap-site-header-signin > svg {
-    display: block;
-  }
-
-  .site-header .cap-site-header-signin-text {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 }
 

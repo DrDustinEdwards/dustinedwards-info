@@ -13,8 +13,6 @@ const NAV_ID = "site-nav";
 const SHEET_ID = "site-sheet";
 const SHEET_TITLE_ID = "site-sheet-title";
 
-/** Admin sign-in is Cloudflare Access in front of /admin, so Sign in is a plain link there. */
-const SIGN_IN_HREF = "/admin";
 
 /*
  * Invoker commands (`commandfor`, `command`): the menu button opens the sheet and its Close button closes it
@@ -104,7 +102,7 @@ function SheetRow({ link, pathname }: { link: SheetLink; pathname: string }) {
 /**
  * Capsomer's site header (capsomer/components/site-header/site-header.md), written by hand because the public
  * plane does not hydrate: 56px, sticky, full width; the site's logo, its five sections on the right after the
- * divider, then Search, the theme and Sign in, always last. Under 768px it is one row, and a Menu button opens
+ * divider, then Search and the theme, with the avatar's slot held empty after it so the theme sits where the admin's does. Under 768px it is one row, and a Menu button opens
  * the sheet with every section's links. Every link is in this markup with no script; app/enhance/header.ts
  * wires Capsomer's behaviour (the panels, the tips, the sheet) on top. No `prefetch="intent"`: it needs React
  * handlers and this plane does not hydrate, so hover prefetch comes from `SiteSpeculation`.
@@ -131,17 +129,9 @@ export function SiteHeader() {
           <SearchTrigger />
         </div>
         <ThemeToggle />
-        <div className="cap-site-header-account">
-          <Link to={SIGN_IN_HREF} className="cap-site-header-signin" reloadDocument>
-            {glyph(
-              <>
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-              </>,
-            )}
-            <span className="cap-site-header-signin-text">Sign in</span>
-          </Link>
-        </div>
+        {/* The avatar's slot, held empty: the admin header has the avatar here, so the theme button sits at the
+            same place on every page. Sign in is the footer's Admin link (Dustin, 2026-10-15). */}
+        <div className="cap-site-header-account site-header-account-slot" aria-hidden="true" />
         <button
           type="button"
           className="cap-site-header-icon cap-site-header-menu"
@@ -182,16 +172,6 @@ export function SiteHeader() {
             ))}
           </nav>
         </div>
-        <nav className="cap-site-header-sheet-account" aria-label="Account">
-          <ul className="cap-site-header-sheet-list">
-            <li>
-              <Link to={SIGN_IN_HREF} reloadDocument>
-                <span className="cap-site-header-sheet-icon" aria-hidden="true" />
-                <span className="cap-site-header-sheet-name">Sign in</span>
-              </Link>
-            </li>
-          </ul>
-        </nav>
         <button
           type="button"
           className="cap-site-header-icon cap-dialog-close"
