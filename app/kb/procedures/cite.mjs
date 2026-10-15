@@ -2,8 +2,8 @@
 // entry and the metadata Zenodo takes for a deposit. All of it is derived from the record (its path, its version,
 // its history and its title), never typed, so a version bumped in the file changes every place that cites it.
 //
-// A procedure with no version cannot be cited: protocols.md mints a DOI only for a version that is being cited, so
-// there is nothing to cite until one has been assigned. The DOI of a version is written once, on that version's
+// A procedure with no version cannot be cited: a DOI is minted only for a version being cited (decisions.md,
+// Protocols), so there is nothing to cite until one has been assigned. The DOI of a version is written once, on that version's
 // entry in `history`, after Zenodo has minted it; this module never invents one.
 //
 // A cited version is a frozen copy (drizzle/0027_procedure_versions.sql), so a citation and a printed sheet's QR

@@ -81,7 +81,7 @@ export async function readProcedure(env: ProcedureEnv, slug: string) {
 
 /**
  * An operator may edit, unpublish and republish a procedure, never publish one for the first time:
- * the same rule as posts (ruling 37), read from the prior FILE, the only authority.
+ * the same rule as posts (the first-publish rule, `WRITE_CAPABILITIES` in `publish-policy.mjs`), read from the prior FILE, the only authority.
  */
 function decideProcedure(actor: Actor, incomingDraft: boolean, prior: string | null) {
   decideFileWrite({

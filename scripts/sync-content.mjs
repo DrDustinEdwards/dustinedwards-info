@@ -864,7 +864,8 @@ async function main() {
       `sync:content: RENDER DRIFT on ${renderDrift.length} slug(s): ` +
         `${renderDrift.join(", ")}. The Worker and the Node build rendered the same ` +
         `source bytes differently; D1 has been converged to the build. Whether that ` +
-        `is a defect or the benign ordering artifact of ruling 30 is decided by a ` +
+        `is a defect or the benign first-sync ordering artifact (a render from the ` +
+        `previously deployed Worker) is decided by a ` +
         `SECOND run of this sync, which ship performs: drift that clears was a row ` +
         `written by the previously deployed Worker, and drift that survives the ` +
         `converge is the defect.`,

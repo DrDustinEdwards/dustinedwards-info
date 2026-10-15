@@ -104,7 +104,7 @@ export function primerTmRounded(sequence) {
   return tm === null ? null : Math.round(tm * 10) / 10;
 }
 
-/** NEB’s Tm calculator, which gives the annealing temperature for a particular polymerase (protocols.md, 2026-10-04). */
+/** NEB’s Tm calculator, which gives the annealing temperature for a particular polymerase (decisions.md, Protocols). */
 export const NEB_TM_CALCULATOR = Object.freeze({ url: "https://tmcalculator.neb.com/", name: "NEB Tm Calculator" });
 
 /**

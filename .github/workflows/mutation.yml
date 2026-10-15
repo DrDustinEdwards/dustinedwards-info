@@ -2,7 +2,7 @@
 #
 # Stryker's command runner (scripts/mutation-score.mjs) changes a module one way at a time and runs the node:test files
 # that import it; a change no test notices is a gap. It reports killed over killable per module, not which test killed
-# what (baseline.md in Capsid, dustinedwards/baseline.md: option a). The modules are sliced across a matrix so no job
+# what: a score to read, not a per-test record. The modules are sliced across a matrix so no job
 # runs long; each slice writes a table to the run's summary and uploads its JSON. A low score is a number to read, so
 # nothing here fails on one; a job fails only when Stryker itself could not run.
 

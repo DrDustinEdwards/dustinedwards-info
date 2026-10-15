@@ -75,7 +75,7 @@ function checkEvidence({ ok, routes, publishedTitles }, id, item, seenRefs) {
     ok(
       `${id} evidence repo passes the URL protocol allowlist: ${ref}`,
       isAllowedUrl(ref),
-      `not an allowed protocol (rule 6)`,
+      `not an allowed protocol`,
     );
     return;
   }
@@ -161,7 +161,7 @@ export function checkProjects(ctx) {
       ok(
         `${id} ${field} passes the URL protocol allowlist`,
         isAllowedUrl(String(value)),
-        `${value} is not an allowed protocol (rule 6)`,
+        `${value} is not an allowed protocol`,
       );
     }
 
@@ -205,7 +205,7 @@ export function checkProjects(ctx) {
         `${id} metric carries no asOf date, because a derived value cannot rot`,
         metric.asOf === undefined,
         `a date beside a value this build recomputed records when a human last ` +
-          `looked, which is the tense-bound claim rule 17 was extended to cover`,
+          `looked, which is a tense-bound claim`,
       );
       if (Object.hasOwn(METRIC_DERIVATIONS, metric.derived)) {
         const derivedValue = metricValue(metric, METRIC_INPUTS);

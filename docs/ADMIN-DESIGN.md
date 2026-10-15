@@ -1,8 +1,7 @@
-# Admin design
+# Admin behaviour
 
-> **Superseded in look (2026-10-03).** The admin plane is built on Capsomer, the shared design system: its shell,
-> tokens, fonts and components, with the page frame in `app/admin.css`. What follows about behaviour, access and
-> what a write means still holds; what it says about the old admin's own styles does not (its mockups were removed 2026-10-13).
+> **Look: Capsomer.** These rules are behaviour, access and what a write means. The shell, tokens, fonts and
+> components are Capsomer's, with the page frame in `app/admin.css`.
 
 The rules the admin plane's pages follow. A specification, not a record of what
 is built: where the repo disagrees with it, the repo changes. Nothing here adds a
@@ -27,26 +26,6 @@ and whether anything is wrong.
 the sentence says the same thing in fewer words. With nothing wrong there is no
 notice and the sentence still appears, because a status line that shows up only
 in trouble teaches the reader to stop looking at it.
-
-## Content widths, and 375
-
-One column. Text and controls sit in a measure of `72ch` capped at `64rem`; a
-table may use the full main column and nothing else may. The body inset is
-`--site-inset`, declared once on `body` and never restated here.
-
-**At 375 the rail becomes the drawer the shell already has**, never
-`display: none`: `.admin-menu-button` opens it, `--z-drawer` puts it over the
-page, `--z-drawer-scrim` and `--scrim` dim what is behind, and Escape and the
-backdrop close it and hand focus back. That mechanism is used, not redesigned.
-
-Nothing else is hidden at 375. A control that does not fit moves into the row's
-actions menu; it does not disappear.
-
-## Radius
-
-`0.25rem` on controls: buttons, inputs, pills, menu items. `0.5rem` on
-containers: panels, notices, dialogs, the table frame. Only those two, and no
-`0.375rem` anywhere.
 
 ## One filter row
 
@@ -166,28 +145,3 @@ whoever wants to know why the number is what it is.
 **Every sentence on an admin page is for the person deciding.** Reasons for a
 design belong in a source comment. A caveat that changes what the reader would do
 belongs in the `<details>`. A sentence that changes neither belongs nowhere.
-
-## Spacing
-
-A 4px scale: 4, 8, 12, 16, 24, 32, 48. In rem: `0.25`, `0.5`, `0.75`, `1`,
-`1.5`, `2`, `3`. Nothing else.
-
-## Tokens, themes, and the two widths
-
-Tokens only. No hardcoded hex, and no inline style except a runtime numeric value
-no token could name.
-
-**Every token a page uses is declared in both theme blocks.** One declared in
-light and forgotten in dark keeps its light value under a dark theme, and no
-contrast check would see it. Popover elevation and pinned bars take
-`--border-strong`, never `--border`.
-
-Under `prefers-contrast: more`, muted text promotes and default borders promote
-to strong. Under `forced-colors: active` the palette yields: every fill carries a
-transparent outline so controls keep their shape, no meaning rides on background
-alone, and focus is an outline rather than a shadow. A notice's left edge is a
-border, not a background, so the variant survives there.
-
-Every page is designed at 1280 and at 375 in both themes, and all four are the
-design rather than one design and three adaptations. Targets are 24px minimum.
-Focus is always visible and never obscured by a pinned bar.

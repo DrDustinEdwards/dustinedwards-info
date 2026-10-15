@@ -1,6 +1,0 @@
-{
-  "job": "job_eb5564111e61",
-  "measured": "2026-10-10",
-  "tests": [],
-  "note": "dustinedwards-mcp has no unit tests and no test runner, so Stryker was not run and there is nothing to key. See baseline.md."
-}

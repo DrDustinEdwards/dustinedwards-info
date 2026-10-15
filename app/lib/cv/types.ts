@@ -3,7 +3,7 @@
  * app/lib/cv/entries.mjs resolves it into the entries every surface renders. Types only. The checks that hold
  * a file to them are in app/lib/cv/validate.mjs.
  *
- * PRIVACY (PROTECTED in Capsid core.md): no student is named anywhere in the CV files. Mentoring is a count by
+ * PRIVACY (Capsid dustinedwards/decisions.md, PROTECTED): no student is named anywhere in the CV files. Mentoring is a count by
  * cohort, year, level and program; students appear only inside the published author lists of papers. No phone,
  * room, email or home location, and no private community groups.
  *

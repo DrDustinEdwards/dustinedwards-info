@@ -11,15 +11,16 @@ Dustin Edwards Admin: the admin MCP server for dustinedwards.info, a wrapper ove
 the site's operator API. Its own Cloudflare Worker, `dustinedwards-mcp`, at
 https://admin-mcp.dustinedwards.info/mcp. It moved here from the
 DrDustinEdwards/dustinedwards-mcp repo by `git subtree add` (history kept) on
-2026-10-10, under ruling 9 as amended: an app's MCP lives in the app's repo. It
-keeps the Worker name, so its secrets, KV namespaces and Durable Object stayed
+2026-10-10, under capsid/rulings/mcp-2026-10-10.md rule 9, as amended: an app's
+MCP lives in the app's repo. It keeps the Worker name, so its secrets, KV namespaces and Durable Object stayed
 where they were. Own package.json and lockfile, because its SDK and OAuth
 versions are not the site's. Node is the site's `.nvmrc`.
 
-Nine tools, `dei_` prefixed, each a whole job: check the site, repair drift,
-review and decide mentions, upload and back up media, read a registry, refresh
-citations, keep a procedure. NO POST TOOLS: Carrel owns all writing on every site
-(rule 11), so nothing here writes a post, a page, the CV or a publication.
+The tools are listed in `src/tools.ts`, `dei_` prefixed, each a whole job: check
+the site, repair drift, review and decide mentions, upload and back up media, read
+a registry, refresh citations, keep a procedure. NO POST TOOLS: Carrel owns all
+writing on every site (capsid/rulings/mcp-2026-10-10.md rule 11), so nothing here
+writes a post, a page, the CV or a publication.
 
 ## How it lands and deploys
 
@@ -28,9 +29,6 @@ By pull request, like everything in this repo, with the `mcp/` CI job. Only
 without green CI for the exact sha, runs this folder's gates, deploys, and
 proves `/health` and the `server/discover` call on the live address.
 `.claude/hooks/no-direct-deploy.sh` refuses a bare `wrangler deploy` here.
-
-The pre-move server (`mcp/emergency/`, kept to put the old address back if the cutover failed) was removed
-once the cutover was settled, 2026-10-10. The old DrDustinEdwards/dustinedwards-mcp repo has since been deleted; the history before the move is in `git log -- mcp/`.
 
 ## The law, and it is not negotiable
 
@@ -54,7 +52,8 @@ Concretely, things that must never appear in this folder:
 - A tool the operator API does not offer.
 
 `npm run check:wrapper` asserts this mechanically and must fail in both
-directions. Plant a violation and watch it fail before trusting it. It reads the
+directions. Plant a violation and watch it fail before trusting it (portfolio
+rule 3.1). It reads the
 operator API's tool list from `app/lib/operator/descriptors.ts`, so a tool the
 API does not offer fails here.
 
@@ -96,20 +95,7 @@ Do not change the targeted era from a release note, an announcement, or a
 changelog. Re-run `scripts/probe-report.mjs` against a real client and change it
 from the capture. The probe exists for this and stays in the repo.
 
-Measured 2026-07-29: Claude Code 2.1.203 is LEGACY (opens `initialize` at
-`2025-11-25`, no `Mcp-Method`/`Mcp-Name`, opens a GET SSE stream).
-
-Measured 2026-07-30: claude.ai (`clientInfo.name` = `Anthropic`) is ALSO LEGACY,
-same `2025-11-25`, no `Mcp-Method`/`Mcp-Name`, no `_meta` protocolVersion.
-
-Measured 2026-09-07: Grok Build 1.0.13 (rmcp) is LEGACY and never got that far:
-it opens `GET /mcp` declaring `mcp-protocol-version: 2024-11-05`, and its auth
-middleware quit before any POST because the AS metadata carried no
-`registration_endpoint`. Its discovery walk lives in the Worker logs, not the
-probe, because the probe stopped serving OAuth discovery routes on 2026-07-30.
-
-Three independent clients, different infrastructure, all legacy. The shim is
-load-bearing right now.
+Current captures: `mcp/README.md`, Era targeting.
 
 ## Client leg is settled, and the two traps in it
 
@@ -125,9 +111,7 @@ measured client CANNOT complete the flow.
   (2026-09-07, rmcp) CANNOT do CIMD and requires RFC 7591 dynamic registration;
   without a `registration_endpoint` it stops at "OAuth authorization required"
   and never opens a browser, so `clientRegistrationEndpoint: "/register"` exists
-  for it. The earlier ruling here ("do not build a registration endpoint") was
-  measurement-true on 2026-07-30 and is superseded by the Grok capture.
-  Registration mints an identity only: a grant still goes through the GitHub
+  for it. Registration mints an identity only: a grant still goes through the GitHub
   consent flow and `isAdminUser`, so DCR widens who may ask, never who is let in.
   Both paths are pinned by `check:wrapper` and by the conformance gate's
   authorization section, in both directions.
@@ -151,15 +135,12 @@ than as a transport error.
 - `npm run build` (`wrangler deploy --dry-run`). NOT the same check as typecheck.
 - `npm test` unit tests against a fake site
 - `npm run check:wrapper` gate over the no-policy law
-- `npm run check:wrapper:plant` proves that gate actually fails, 23 violations
+- `npm run check:wrapper:plant` proves that gate actually fails (the cases are in
+  `scripts/plant-violations.sh`)
 - `npm run check:conformance` official MCP suite, per era, plus the
   authorization server against the real deploy entry. A BASELINE, not a sweep.
 - `node scripts/probe-report.mjs` read the client measurement
 - `node scripts/probe-report.mjs --reset` clear captures before a real measurement
-
-The probe no longer has phases. It served OAuth discovery routes only while those
-were unclaimed; they now belong to the real authorization server, and the walk
-they existed to capture has been measured and recorded in the README.
 
 Check a gate's exit code DIRECTLY, never through a pipe. `tail` masks it and has
 already reported exit 0 on a failing run elsewhere in this portfolio.
@@ -173,19 +154,9 @@ endpoint back.
 
 ## Dependencies and `npm audit`
 
-Triaged 2026-10-10 (12 findings, 1 critical, 8 high, 3 moderate). The Worker bundle holds
-only zod, `@modelcontextprotocol/server` and its core, `@cfworker/json-schema`, the
-`agents/mcp/server` subpath, workers-oauth-provider and content-type. None of the
-vulnerable packages is in it (check `dist/index.js.map` sources after `npm run build`), so
-none was reachable in production; all were dev or install-time only.
-
-- wrangler 4.129.0 to 4.149.0 clears miniflare, sharp and undici (the local dev runtime).
-- hono, fast-uri, ip-address, proxy-addr and qs came in through the conformance suite's and
-  `agents`' copy of `@modelcontextprotocol/sdk` (an express server the Worker never loads);
-  `npm audit fix` moved them inside their ranges.
-- `agents` pins that SDK and `@modelcontextprotocol/client` exactly, and npm's own "fix" is a
-  downgrade of `agents`, so `overrides` raise the two to the patched versions. Drop the
-  overrides when `agents` pins patched ones.
+`agents` pins `@modelcontextprotocol/sdk` and `@modelcontextprotocol/client` exactly, so
+`overrides` raise them to patched versions; drop the overrides when `agents` pins patched
+ones.
 
 Install scripts: core-js-pure (a funding banner), esbuild and workerd (both only link the
 platform binary a bundled optional package already carries) are denied in `allowScripts`.
@@ -196,11 +167,6 @@ script off, so none is approved. Add one to `allowScripts` only when a gate show
 
 Absent from `llms.txt`, the sitemap and every public affordance. An authenticated
 operator surface is not a public affordance.
-
-## House style
-
-No em dashes. Secrets are wrangler secrets and are never read, printed, or
-committed.
 
 ## Gate discipline learned in this repo's first session
 
@@ -213,8 +179,8 @@ committed.
   first was contaminated. It also destroyed uncommitted work. `plant-violations.sh`
   snapshots and restores the exact files it edits and re-checks the baseline
   between plants.
-- **Commit before running anything that reverts.** The mainline ruling already says
-  never leave work uncommitted; this is why.
+- **Commit before running anything that reverts.** A revert touches what it was
+  told to, and uncommitted work is not in that list.
 - **Two strippers, and picking the wrong one silently disables an assertion.**
   `withoutComments` keeps string literals and is for content; `codeOnly` removes
   them and is for code. Four planted violations walked through a gate that used the
@@ -223,8 +189,9 @@ committed.
   Windows the conformance suite aborts on a libuv `UV_HANDLE_CLOSING` assertion
   AFTER printing results, so a passing scenario exits non-zero. Judge the parsed
   count and surface the crash.
-- **Use a heredoc for commit messages.** Backticks inside `git commit -m "..."` are
-  command-substituted by bash and silently delete words from the message.
+- **Write a commit message through a file.** Backticks inside `git commit -m "..."`
+  are command-substituted by bash and silently delete words, so write the message
+  with an editor tool and commit with `git commit -F <file>`.
 - **Post-deploy readings are unstable.** A `POST` returned Cloudflare **error 1104**
   while `/health` was already 200. Same trap core.md records as 404s, different
   code. Poll until stable.

@@ -139,8 +139,8 @@ a save that would make the search records fail is refused before anything is com
 
 - A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the row
   from the file without a commit.
-- Hard rule 18: the repository file is the source and D1 is derived. A failed D1 write never reverts the commit;
-  the error says the commit landed and the repair is the content sync (`sync_cv` or `npm run sync:content`).
+- D1 is derived (hard rule 18). When a D1 write fails, the error says the commit landed and the repair is the
+  content sync (`sync_cv` or `npm run sync:content`).
 - A paper the CV cites cannot be unpublished, or have its DOI changed, from the publication save: that save refuses,
   naming the CV, because the CV would cite a paper no record answers for. A save of a cited paper refreshes the CV's
   search records and purges the `cv` tag, so the CV follows a corrected paper with no deploy.

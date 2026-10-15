@@ -29,7 +29,7 @@
 # shape in FAILURES.md. `npm run ship` is untouched: it invokes wrangler as a
 # child process, which no PreToolUse hook sees or should see.
 #
-# ## SCOPED TO THIS REPO, 2026-09-05, ruling 20
+# ## SCOPED TO THIS REPO, 2026-09-05
 #
 # The deploy arms fire only when the command runs INSIDE the site repo. Hard
 # rule 16 is a statement about this Worker, not about every repository a session
@@ -206,7 +206,7 @@ def effective_dir(command, cwd):
         # `~` AND `~/...` ARE EXPANDED. `cd ~/dev/dustinedwards-mcp && npm run
         # deploy` used to return None, which the caller reads as INSIDE this
         # repo, so the documented deploy of the admin MCP was refused for a rule
-        # that has nothing to say about it. That is the defect ruling 20 fixed,
+        # that has nothing to say about it. That is the defect the repo scoping fixed,
         # wearing a different spelling of the same path.
         #
         # NO APOSTROPHE APPEARS IN ANY COMMENT BELOW, and that is not style.
@@ -243,7 +243,7 @@ def effective_dir(command, cwd):
         return None
 
 
-# WHERE THIS COMMAND RUNS, and whether that is this repo. Ruling 20, 2026-09-05.
+# WHERE THIS COMMAND RUNS, and whether that is this repo. Scoped 2026-09-05.
 #
 # Hard rule 16 is a statement about THE SITE: `npm run ship` is the only
 # reproducible way to deploy this Worker. It is not a statement about every

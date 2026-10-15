@@ -1,13 +1,13 @@
 # CLAUDE.md - dustinedwards.info
 
-Dustin Edwards's personal site and Cloudflare showcase, https://dustinedwards.info: React Router 8 on Workers, Drizzle on D1, R2, Access for the admin. Content goes via Carrel.
+Dustin Edwards's personal site and Cloudflare showcase, https://dustinedwards.info: React Router 8 on Workers, Drizzle on D1, R2, Access for the admin. Content is written through Carrel (capsid/rulings/mcp-2026-10-10.md, rule 11).
 
-The portfolio rules are in Capsid: `capsid/conventions.md`. Read it with this file. Conventions wins on disagreement. Procedure is `.claude/skills/`. The design system is Capsomer (Paper and Plate is being redone on it, capsid/decisions.md 2026-10-01), home page hero kept (ruling 152, `dustinedwards/decisions.md`). History is `dustinedwards/build-history.md`.
+The portfolio rules are `capsid/conventions.md`; read it with this file, and it wins on disagreement. The rulings in force for this site are Capsid `dustinedwards/decisions.md`; current state is `dustinedwards/core.md`; design is ruling 152. Procedure is `.claude/skills/`. History is `dustinedwards/build-history.md`.
 
 ## Principles
 
-- Every fact (names, numbers, dates, sequences, sizes, temperatures, citations, DOIs, people, places, IDs, links) is stored once as structured data; every page showing it renders from that. Computable values are computed, not typed. Prose stays prose.
-- A check that has never caught a real mistake is removed, not defended.
+- Every fact (names, numbers, dates, sequences, sizes, temperatures, citations, DOIs, people, places, IDs, links) is stored once as structured data; every page showing it renders from that. Computable values are computed, not typed. Prose stays prose. Content that changes over time is a file in the repo with a derived D1 row, editable without a build or deploy; design lives in code.
+- A check that has never caught a real mistake, and guards no harm that cannot be undone, is removed, not defended.
 
 ## Hard rules
 
@@ -15,15 +15,15 @@ Numbers stay because code cites them.
 
 ### Machines and people.
 
-AI-first: everything machines use (content, data, structure, citations, dates, feeds, .md twins, llms.txt, JSON-LD, microformats) is served without script, with the same facts people get. For people, the site uses whatever makes it best, script included.
+Everything machines use (content, data, structure, citations, dates, feeds, .md twins, llms.txt, JSON-LD, microformats) is served without script, with the same facts people get; an interactive figure's facts and numbers are in the server HTML, the .md twin, or both. A filter's state lives in the URL. For people, the site uses whatever makes it best, script included: each scripted piece loads only where it is used, slows no other page, and follows the W3C ARIA Authoring Practices, with built-in elements such as dialog and popover where they exist. Speed is judged by Core Web Vitals, never by byte counts. Nothing in the human interface exists only for machines.
 
 ### 15. `.claude/settings.json` changes only on Dustin's explicit instruction.
 
 Portfolio rule 6.3.
 
-### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI.
+### 16. Only the ship script deploys.
 
-Every change lands by pull request (portfolio rule 4.3). A merge to main deploys via `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. A session merges once CI is green on the exact head and Dustin said yes in chat, as do Capsid's signed auto-merge and the seat. A change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. A ship window owns the tree throughout. See the `ship` skill.
+Who merges is portfolio rule 4.3; a `visual` PR waits for Dustin's yes. A merge to main deploys, whoever merged it: `.github/workflows/deploy.yml` runs `npm run ship` on that sha once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, converges Ask last, fails closed at every step, and has no override flag. Never run `npm run deploy` or a bare `wrangler deploy` yourself; ship runs the first as its own step. A ship window owns the tree throughout. Procedure: the `ship` skill.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
@@ -31,11 +31,9 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## How a session works
 
-**Every session works on a branch and lands by pull request** (capsid/decisions.md, 2026-10-04). The PR gets a Worker Preview and full CI before main. This folder is the site session's checkout (ruling 60); others use a worktree under `C:\Users\email\dev\worktrees\`. Small changes (copy, colour, spacing, quick fixes) may go to the site session without a Capsid job (ruling 148), still by PR, merged automatically. Renovate self-merges per `renovate.json`; a red one is a report.
+On a branch, landing by pull request (rule 16). This folder is the site session's checkout; any other session uses its own worktree (local ones under `C:\Users\email\dev\worktrees\`). Read this file, `core.md` and the job body, and any ruling the job cites by number; `FAILURES.md` is worth a minute. Run `npm run check:changed`, push, and let CI run the full suite. Screenshots only for visible changes. Renovate merges its own updates per `renovate.json`; a red one is a report.
 
 **Two files here are Capsid's:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. Capsid's `sync-scorer` copier (`npm run sync:scorer` in capsid) keeps them identical across the roster repos; change them in capsid and they arrive by the copier.
-
-**Reading is by citation (ruling 129).** Read `core.md`, this file, the job body and the rulings it cites by number; `FAILURES.md` is worth a minute. **Checks scale with the change (ruling 129):** run `npm run check:changed`, push, let CI run the full suite. Screenshots only for visible changes.
 
 ## Commands
 
@@ -43,12 +41,8 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## Bindings
 
-Read via `getEnv(context)` from `app/lib/context.ts`; never import bindings globally.
-
-    DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET
-
-`ASK_BUDGET` is the whole site's rate limiter. `wrangler.jsonc.example` says what each is (`wrangler.jsonc` is gitignored; a new binding goes in both in one commit). `workers/watchdog.ts` is a second Worker, deployed by a `ship` step. `OPERATOR_TOKEN` has four holders (site Worker, watchdog, admin MCP Worker in `mcp/`, the `gh` repository secret): rotate all four or none.
+Read via `getEnv(context)` from `app/lib/context.ts`; never import bindings globally. `wrangler.jsonc.example` declares every binding and says what each is (`wrangler.jsonc` is gitignored; a new binding goes in both in one commit). `ASK_BUDGET` is the whole site's rate limiter. `workers/watchdog.ts` is a second Worker, deployed by a `ship` step. `OPERATOR_TOKEN` has four holders (site Worker, watchdog, admin MCP Worker in `mcp/`, the `gh` repository secret): rotate all four or none.
 
 ## Where everything else lives
 
-Here (a gate can reach it): `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `README.md`, `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` (current state), `decisions.md` (every ruling in force), `build-history.md`. A session records a reversal or a binding in Capsid, and nothing else.
+Here (a gate can reach it): `FAILURES.md`, `RECOVERY.md`, `docs/RUNBOOK.md`, `README.md`, `.claude/skills/<n>/SKILL.md`. In Capsid, namespace `dustinedwards`: `core.md` (current state), `decisions.md` (every ruling in force), `build-history.md`.

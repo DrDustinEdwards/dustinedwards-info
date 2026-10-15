@@ -46,8 +46,6 @@
     "build:template-refs": "node scripts/build-template-refs.mjs",
     "build:stack": "node scripts/build-stack.mjs",
     "build:preview": "node scripts/build-preview.mjs",
-    "design:inputs": "node .design-sync/build-inputs.mjs",
-    "design:resync": "node scripts/ds-resync.mjs",
     "check:backup": "node scripts/check-backup.mjs",
     "check:browser": "node scripts/check-browser.mjs",
     "check:systems-map": "node scripts/check-systems-map.mjs",

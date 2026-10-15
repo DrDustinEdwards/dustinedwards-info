@@ -9,9 +9,6 @@
     "workers/*.ts",
     "scripts/*.mjs",
     "scripts/machine-readable/*.mjs",
-    ".design-sync/*.mjs",
-    ".design-sync/*.tsx",
-    ".design-sync/previews/*.tsx",
     "test/**/*.test.mjs",
     "test/worker/**/*.test.ts",
     "packages/*/index.mjs",
@@ -22,7 +19,6 @@
     "workers/**/*.{ts,mjs}",
     "scripts/**/*.mjs",
     "test/**/*.{ts,mjs}",
-    ".design-sync/**/*.{ts,tsx,mjs}",
     "packages/**/*.mjs"
   ],
   "ignore": ["scratchpad/**"],

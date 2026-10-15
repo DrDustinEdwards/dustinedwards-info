@@ -1,6 +1,6 @@
 /**
  * The footer's private-tools marks: line drawings on a 24-unit grid, one stroke weight, drawn in
- * currentColor so the link's ink-to-purple hover (ruling 122) reaches them. Decorative: the link
+ * currentColor so the link's ink-to-purple hover reaches them. Decorative: the link
  * text carries the name, so each is aria-hidden.
  *
  * Identity marks (Dustin, 2026-09-28): the lamp for Carrel, a gear for Admin, the capsid for Portal; a

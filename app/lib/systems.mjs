@@ -32,7 +32,7 @@ const OpenSystem = z.strictObject({
   repos: z.array(z.url().max(512)).optional(),
 });
 
-/** Ruling 3: a private system is a public name and a domain, placed on the map. */
+/** capsid/rulings/system-explorer-2026-10-10.md section 3: a private system is a public name and a domain, placed on the map. */
 export const PRIVATE_SYSTEM_KEYS = ["id", "name", "short", "domain", "family", "ring", "private"];
 const PrivateSystem = z.strictObject({
   id: Id,

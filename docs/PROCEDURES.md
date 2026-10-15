@@ -139,7 +139,7 @@ change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `poly
 pages. `organism` reads from the lab registry's strains, so a strain added there is an organism with no edit here.
 
 - **protocol** adds `biosafety` (`organism`, `strain`, `atcc`, or `not applicable`; the agent only, per
-  protocols.md), `biosafety_level` (`BSL-1` or `BSL-2`: Dustin sets it, no agent fills or infers it, and it is
+  decisions.md, Protocols), `biosafety_level` (`BSL-1` or `BSL-2`: Dustin sets it, no agent fills or infers it, and it is
   written `MISSING: <why>` until he does; required, so a forgotten one fails. It shows among the facts at the top of
   the page and the sheet, in the twin and in the structured data only once set; the operator API's `list_procedures`
   shows `MISSING` so he can find the ones left, and `get_procedure` lists it among the gaps), `host_strain` (a list of `{ strain: <id> }`, each the id of a strain in the lab registry, docs/REGISTRY.md: the organism, designation and collection number are stored there once and the protocol types none; the page links each strain), `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),
@@ -192,8 +192,7 @@ version's DOI once it has one, and until then at the version's frozen copy.
 ### Frozen copies
 
 Every published version keeps a rendered copy at `<page>/v/<version>` (and its twin at `<page>/v/<version>.md`), so the
-QR code on a printed sheet and a citation open the words they were made from (protocols.md; the 2026-10-04 ruling in
-dustinedwards/decisions.md). The newest version also answers at its `/v/` address and at the plain page. The page of an
+QR code on a printed sheet and a citation open the words they were made from (decisions.md, Protocols). The newest version also answers at its `/v/` address and at the plain page. The page of an
 older version says which version is current and links to it, and every `/v/` page puts its canonical on the plain
 page, so the copies never compete with it in search.
 
@@ -222,7 +221,7 @@ to, the version it is. A sheet for a procedure with no published version points 
 `npm run zenodo:metadata -- <slug>` prints the Zenodo deposit metadata for the current version (title, version, date,
 creator and affiliation from the CV, keywords from the method words, the frozen copy and the source DOIs as related
 identifiers) for `.zenodo.json` or the upload form. It leaves out the license, which is Dustin's to choose, and a DOI is
-minted only for a version being cited (protocols.md), never for the collection.
+minted only for a version being cited (decisions.md, Protocols), never for the collection.
 
 ## Calculators in steps
 

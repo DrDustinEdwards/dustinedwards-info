@@ -128,8 +128,8 @@ disagree, and fails if any page types a count of phages.
 
 - A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
   rows from the file without a commit.
-- Hard rule 18: the repository file is the source and D1 is derived. A failed derived write never reverts the
-  commit; the error says the commit landed and the repair is the content sync, or `sync_phages`.
+- D1 is derived (hard rule 18). When a derived write fails, the error says the commit landed and the repair is
+  the content sync, or `sync_phages`.
 - A phage has no draft state: it is public when saved, so Carrel's unpublish is refused and says so. A phage is
   removed by deleting its file in a commit; the next sync removes its row and redraws the table.
 - A save cannot add a column or a host: those are the page's structure, and code.

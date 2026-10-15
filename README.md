@@ -63,8 +63,7 @@ is cleaned up by the next one. A fresh worktree needs its local D1 first:
 
 `wrangler.jsonc` is **gitignored** and `wrangler.jsonc.example` is tracked. That
 is a portfolio-wide rule rather than this repo's choice: real resource ids stay
-out of git. The two files must declare the same binding surface, so **adding a
-binding means editing both files in the same commit.**
+out of git. The two files declare the same binding surface (CLAUDE.md, Bindings).
 
 ## The content pipeline
 
@@ -139,7 +138,7 @@ is picked up automatically and an untiered one refuses to run. Every gate runs
 even after one fails, because stopping at the first red hides the rest.
 
 A check earns its place by catching real mistakes, or by guarding against harm
-that can't be undone (ruling 150). The guards are secrets, migrations, backup,
+that can't be undone (CLAUDE.md principle 2). The guards are secrets, migrations, backup,
 restore, destructive, policy, headers and urls. The rules that are stated twice and
 cannot merge (drafts never public, the schema matching the database, the write
 paths) are ordinary tests under `test/`.
@@ -160,26 +159,18 @@ cache is empty, and that blind spot hid a real bug for four sessions.
 
 ## Secrets
 
-Seven, all set with `wrangler secret put`, never in a file:
-
-| Secret | Used for |
-| --- | --- |
-| `GITHUB_TOKEN` | the editor's commits (fine-grained, Contents read/write) |
-| `OPERATOR_TOKEN` | the agent publish API, minimum 32 characters |
-| `SMOKE_TOKEN` | the read-only credential `check:browser` renders the admin plane with, minimum 32 characters, optional |
-
-Neither wrangler file has ever held one. Local development uses a gitignored
-`.dev.vars`. Without `GITHUB_TOKEN` the editor still renders and previews and
+The list is `REQUIRED_SECRETS` in `app/lib/secrets.mjs`. Each is set with
+`wrangler secret put`, never in a file; RECOVERY.md section 7 says what each is
+for and where a new one comes from. Neither wrangler file has ever held one.
+Local development uses a gitignored `.dev.vars`. Without `GITHUB_TOKEN` the editor still renders and previews and
 reports that saving is unavailable rather than half-working.
 
 ## Deploying
 
-```bash
-npm run deploy      # builds, then wrangler deploy
-```
-
-Auto-deploy is not wired, and bare `wrangler deploy` is **not** the deploy path:
-it would ship whatever `build/` already held.
+Only `npm run ship` deploys (CLAUDE.md hard rule 16). After a merge to main,
+`.github/workflows/deploy.yml` runs it once CI passes, unless `AUTO_DEPLOY` is
+`off`. Never run `npm run deploy` by hand (ship runs it as its own step) or bare
+`wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
 
 Migrations are separate and hand-written in `drizzle/`. Add a new numbered file;
 never edit an applied one. drizzle-kit is deliberately not a dependency.
@@ -202,7 +193,7 @@ app/
   db/              Drizzle schema and every query
 workers/           the Worker entry, the queue consumer, the Durable Object
 content/posts/     the source of truth
-content/generated/ committed, gated artifacts
+content/generated/ build products (most gitignored; assets.json and template-refs.json are committed)
 drizzle/           hand-written migrations
 scripts/           build steps and the gate family
 public/            static assets, indexed in place

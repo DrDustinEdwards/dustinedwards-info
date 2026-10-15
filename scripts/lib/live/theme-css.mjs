@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { check, get, htmlTag, root, SLUG } from "./client.mjs";
 
-/* Read, not restated: generated from app.css, so ruling 128's collapse cannot leave a stale hex here. */
+/* Read, not restated: generated from app.css, so a token collapse cannot leave a stale hex here. */
 const tokens = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8")).tokens;
 /** @param {string} name @param {"light" | "dark"} mode */
 const token = (name, mode) => {

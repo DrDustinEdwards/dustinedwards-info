@@ -133,9 +133,8 @@ cache purge by tag (`content-pages`).
 
 - A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
   row from the file without a commit.
-- Hard rule 18: the repository file is the source and D1 is derived. A failed D1 write never reverts the
-  commit; the error says the commit landed and the repair is the content sync, which converges the row from
-  the repository at the next ship.
+- D1 is derived (hard rule 18). When a D1 write fails, the error says the commit landed and the repair is the
+  content sync, which converges the row from the repository at the next ship.
 - The sync reads the same files with the same compile, so it never overwrites a save: a save is a commit on
   `main`, and the sync builds from `main`.
 
