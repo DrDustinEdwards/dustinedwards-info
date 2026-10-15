@@ -45,7 +45,7 @@ export async function handleEditorAction(
     try {
       headSha = await currentHead(env);
     } catch (error) {
-      console.error("editor could not re-read the head after a failure", error);
+      console.error(JSON.stringify({ alert: "editor-head-reread-failed", detail: errorMessage(error) }));
       note =
         ` (The repository head could not be re-read: ` +
         `${errorMessage(error)}. A retry may report a conflict.)`;
@@ -111,7 +111,7 @@ export async function handleEditorAction(
       return fail(error.message, { conflict: error.conflict });
     }
     // Not a recognized failure: logged with its stack, since the editor shows only the message.
-    console.error("editor action failed with an unrecognized error", error);
+    console.error(JSON.stringify({ alert: "editor-action-unrecognized-error", detail: errorMessage(error) }));
     return fail(errorMessage(error));
   }
 }

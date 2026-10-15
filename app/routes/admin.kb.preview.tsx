@@ -46,7 +46,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     );
     return Response.json({ html, styles: STYLES });
   } catch (error) {
-    console.error("kb preview failed", error);
+    console.error(JSON.stringify({ alert: "kb-preview-failed", detail: errorMessage(error) }));
     return Response.json({ error: `The preview failed: ${errorMessage(error)}` }, { status: 500 });
   }
 }

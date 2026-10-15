@@ -93,7 +93,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     body = await readCapped(request, MAX_BODY_BYTES);
   } catch (error) {
     // The sender's body broke mid-read: its request is malformed, not this site down, so 400, logged.
-    console.error(`[webmention] body unreadable: ${errorMessage(error)}`);
+    console.error(JSON.stringify({ alert: "webmention-body-unreadable", detail: errorMessage(error) }));
     return answer(BAD_FORM, 400);
   }
   if (body === null) {
@@ -127,10 +127,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   /* A count, not a reservation: two concurrent requests can both pass at the boundary, one row past the cap. */
   const open = await countOpenWebmentions(env);
   if (open >= OPEN_QUEUE_CAP) {
-    console.log(
-      `[webmention] refused at the open-queue cap: ${open} of ${OPEN_QUEUE_CAP} ` +
-        `unverified or pending. Moderate /admin/mentions to reopen the endpoint.`,
-    );
+    // Moderating /admin/mentions reopens the endpoint.
+    console.log(JSON.stringify({ event: "webmention-open-cap-refused", open, cap: OPEN_QUEUE_CAP }));
     return answer("Webmention queue is full, please retry later", 503);
   }
 

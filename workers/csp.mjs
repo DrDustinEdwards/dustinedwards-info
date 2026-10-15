@@ -86,6 +86,7 @@ export const MEDIA_CSP = buildPolicy([
 // its versioned path prefix. The policy below asks the package for it by name.
 export const APPROVED_SCRIPTS = CLOUDFLARE_WEB_ANALYTICS.script;
 
+// Isolate-wide: the hash of a constant script, the same for every request.
 /** @type {Promise<string> | undefined} */
 let loaderHash;
 

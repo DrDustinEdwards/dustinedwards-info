@@ -15,6 +15,7 @@ export type ReferenceResolver = (
 ) => Promise<Map<string, MediaCitation[]>>;
 
 import { postsResolver } from "./resolvers/posts.server";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // A plain array, not a runtime `register()`, so there is no import-order problem.
 const RESOLVERS: Array<{ name: string; resolve: ReferenceResolver }> = [
@@ -41,7 +42,9 @@ export async function resolveCitations(
       try {
         return { name: resolver.name, map: await resolver.resolve(env, keys) };
       } catch (error) {
-        console.error(`media resolver ${resolver.name} failed`, error);
+        console.error(
+          JSON.stringify({ alert: "media-resolver-failed", resolver: resolver.name, detail: errorMessage(error) }),
+        );
         failed.push(resolver.name);
         return null;
       }

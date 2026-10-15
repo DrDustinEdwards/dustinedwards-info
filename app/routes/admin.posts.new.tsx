@@ -29,7 +29,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
     const { tagOptions, linkTargets, problems: loadProblems } = await loadEditorOptions(env, timings);
     const failed = (what: string, sentence: string) => (error: unknown) => {
-      console.error(`editor ${what} read failed`, error);
+      console.error(JSON.stringify({ alert: "editor-read-failed", what, detail: errorMessage(error) }));
       loadProblems.push(`${sentence}: ${errorMessage(error)}`);
       return [];
     };

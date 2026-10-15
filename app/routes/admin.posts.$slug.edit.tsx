@@ -49,7 +49,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     read.then(
       (value) => ({ value, error: null as string | null }),
       (error: unknown) => {
-        console.error(`editor ${what} read failed`, error);
+        console.error(JSON.stringify({ alert: "editor-read-failed", what, detail: errorMessage(error) }));
         return { value: [] as T[], error: errorMessage(error) };
       },
     );
@@ -113,7 +113,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   /* After a failed action the page keeps the head it was loaded with; a failed re-read is logged, not shown as a missing token. */
   const headAfterProblem = () =>
     currentHead(env).catch((error: unknown) => {
-      console.error("editor head re-read failed", error);
+      console.error(JSON.stringify({ alert: "editor-head-reread-failed", detail: errorMessage(error) }));
       return String(form.get("headSha") ?? "");
     });
 

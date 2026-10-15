@@ -439,7 +439,7 @@ export async function savePost(
   try {
     await clearDivergence(env, options.slug);
   } catch (error) {
-    console.error("failed to clear a divergence record after a successful save", error);
+    console.error(JSON.stringify({ alert: "divergence-clear-failed", detail: errorMessage(error) }));
   }
 
   const neighbours = await refreshNeighboursAfterSave(env, record.slug);
@@ -452,7 +452,7 @@ export async function savePost(
       previewLinksRevoked = await revokeAllPreviewLinks(env, options.slug);
     } catch (error) {
       // null already means "not attempted", so a failure needs its own value.
-      console.error("preview link revocation failed after publish", error);
+      console.error(JSON.stringify({ alert: "preview-link-revocation-failed", detail: errorMessage(error) }));
       previewLinksRevoked = -1;
     }
   }
@@ -501,7 +501,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
     }
     return { ok: true as const, ...result };
   } catch (error) {
-    console.error("ask index sync failed after save", error);
+    console.error(JSON.stringify({ alert: "ask-sync-failed-after-save", detail: errorMessage(error) }));
     return { ok: false as const, message: errorMessage(error) };
   }
 }
@@ -542,7 +542,7 @@ async function removeAskForPost(env: PublishEnv, slug: string) {
   try {
     return { ok: true as const, removed: await removeAskPost(env, slug) };
   } catch (error) {
-    console.error("ask index removal failed after delete", error);
+    console.error(JSON.stringify({ alert: "ask-removal-failed-after-delete", detail: errorMessage(error) }));
     return {
       ok: false as const,
       message:

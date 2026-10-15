@@ -179,7 +179,7 @@ async function syncAsk(env: PublicationEnv, compiled: Compiled) {
     const result = await syncAskPaper(env, compiled.record.slug, compiled.draft ? null : compiled.twin);
     return { ok: true as const, ...result };
   } catch (error) {
-    console.error("ask index sync failed after a publication save", error);
+    console.error(JSON.stringify({ alert: "ask-sync-failed-after-publication-save", detail: errorMessage(error) }));
     return {
       ok: false as const,
       message:

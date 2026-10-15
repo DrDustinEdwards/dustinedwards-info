@@ -3,6 +3,7 @@ import { ServerRouter } from "react-router";
 import { renderToReadableStream } from "react-dom/server";
 
 import { getNonce } from "~/lib/context";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export default async function handleRequest(
   request: Request,
@@ -27,7 +28,7 @@ export default async function handleRequest(
         responseStatusCode = 500;
         // Errors before the shell renders reject and are logged in handleDocumentRequest.
         if (shellRendered) {
-          console.error(error);
+          console.error(JSON.stringify({ alert: "render-failed-after-shell", detail: errorMessage(error) }));
         }
       },
     },

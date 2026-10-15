@@ -34,7 +34,7 @@ async function purgeTags(tags: string[], why: string): Promise<PurgeOutcome> {
   // Miniflare has no Workers Cache, so the API may be absent; a TypeError here would fail a save.
   const purge = (cache as typeof cache & { purge?: (o: unknown) => Promise<PurgeResult> })?.purge;
   if (typeof purge !== "function") {
-    console.log(`[cache-purge] skipped (${why}): no purge API on this runtime, tags ${tags.join(",")}`);
+    console.log(JSON.stringify({ event: "cache-purge-skipped", why, reason: "no purge API on this runtime", tags }));
     return null;
   }
 
