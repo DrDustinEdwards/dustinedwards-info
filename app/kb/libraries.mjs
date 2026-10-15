@@ -75,6 +75,7 @@ export function baseItems(base, records) {
 /** The noun a base's entries are counted with: ["recipe", "recipes"]. @param {KnowledgeBase} base @returns {[string, string]} */
 export const nounOf = (base) => [base.singular.toLowerCase(), base.name.toLowerCase()];
 
+// Isolate-wide: a base's catalog is built from its definition, the same for every request.
 /** @type {Map<string, import("capsomer/behaviour/catalog").CatalogDefinition<BaseItem>>} */
 const catalogs = new Map();
 

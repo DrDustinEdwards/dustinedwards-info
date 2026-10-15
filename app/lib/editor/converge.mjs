@@ -1,3 +1,5 @@
+import { errorMessage } from "../error-message.mjs";
+
 /**
  * A name string, not a class: the thrower is .mjs and the catcher is .ts, and instanceof across
  * two build graphs breaks when a bundler duplicates the module.
@@ -64,7 +66,7 @@ export async function convergeWithRetry({
     });
   } catch (recordError) {
     // Logged, never rethrown: the divergence error must still reach the operator.
-    console.error("failed to record a D1 divergence", recordError);
+    console.error(JSON.stringify({ alert: "divergence-record-failed", detail: errorMessage(recordError) }));
   }
 
   const error = new Error(message);

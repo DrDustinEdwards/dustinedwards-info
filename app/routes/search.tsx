@@ -36,6 +36,7 @@ import "~/styles/blog-search.css";
 import "~/styles/search-page.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 const PAGE_SIZE = 10;
 
@@ -126,7 +127,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (asked && result.total === 0 && !result.parsed.isEmpty) {
     getExecutionContext(context).waitUntil(
       recordZeroResult(env, params.q).catch((error: unknown) => {
-        console.error("zero-result record failed", error);
+        console.error(JSON.stringify({ alert: "zero-result-record-failed", detail: errorMessage(error) }));
       }),
     );
   }

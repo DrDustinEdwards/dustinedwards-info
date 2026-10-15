@@ -76,7 +76,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
           (budget) => ({ budget, budgetError: null }),
           (error: unknown) => {
-            console.error("ask budget read failed", error);
+            console.error(JSON.stringify({ alert: "ask-budget-read-failed", detail: errorMessage(error) }));
             return {
               budget: null,
               budgetError: errorMessage(error),
