@@ -67,6 +67,7 @@
     "check:headers": "node scripts/check-headers.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:restore": "node scripts/restore-drill.mjs",
+    "drill:backup": "node scripts/drill-backup.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:tests": "node scripts/check-tests.mjs",
     "check:worker": "node scripts/check-worker.mjs",
