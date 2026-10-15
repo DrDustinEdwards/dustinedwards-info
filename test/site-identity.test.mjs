@@ -9,12 +9,8 @@ await test("home identity is professor and virologist, under one name", () => {
   assert.equal(SITE.name, "Dustin Edwards");
   assert.equal(SITE.role, "Professor and Virologist");
   assert.equal(SITE.eyebrow, "Professor and Virologist");
-  assert.match(SITE.description, /^Professor and Virologist, /);
-  assert.match(SITE.description, /Department of Biological Sciences/);
-  assert.match(SITE.description, /Tarleton State University/);
-  assert.match(SITE.description, /retroviruses/);
-  assert.match(SITE.description, /bacteriophages/);
-  assert.match(SITE.description, /Cloudflare/);
+  // Dustin, 2026-10-15: the search and social description is the name and the role, nothing else.
+  assert.equal(SITE.description, "Dr. Dustin Edwards, Professor and Virologist");
   assert.doesNotMatch(`${SITE.role} ${SITE.eyebrow} ${SITE.description} ${SITE.tagline}`, /full-stack|department head/i);
 
   for (const person of [personJsonLd(ORIGIN), personNode(ORIGIN)]) {

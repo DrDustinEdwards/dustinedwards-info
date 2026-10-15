@@ -18,13 +18,12 @@ const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
 // The person, the role, the headship, the department and the university are the CV's: derived from
 // content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
-// so a CV change reaches the site settings, the titles, the About text and the structured data. What stays typed
-// here is the one sentence about the work, which is prose and not a CV fact.
+// so a CV change reaches the site settings, the titles, the About text and the structured data.
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
 // (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
-// The description names the department in full. It is a few characters over the 155 SERP estimate;
-// the role and the university come first so a clip keeps them.
-const WORK = "Research in retroviruses and bacteriophages; builds software on Cloudflare.";
+// The description is the name and the role only (Dustin, 2026-10-15: "It should be just 'Dr. Dustin Edwards,
+// Professor and Virologist'"). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
+const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree) ? "Dr. " : "";
 export const SITE = {
   name: IDENTITY.name,
   role: IDENTITY.role,
@@ -35,7 +34,7 @@ export const SITE = {
   department: IDENTITY.department,
   eyebrow: IDENTITY.role,
   tagline: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`,
-  description: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}. ${WORK}`,
+  description: `${HONORIFIC}${IDENTITY.name}, ${IDENTITY.role}`,
 } as const;
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
