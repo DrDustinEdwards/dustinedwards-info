@@ -1,0 +1,19 @@
+{
+  "name": "dustinedwards-free-redesign-prototype",
+  "private": true,
+  "type": "module",
+  "description": "EXPERIMENT. A rule-free redesign prototype of dustinedwards.info, built from the repository's own content/. Never merged, never deployed.",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node serve.mjs",
+    "start": "node build.mjs && node serve.mjs",
+    "shots": "node shots.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter-tight": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@fontsource-variable/newsreader": "5.3.0",
+    "marked": "16.4.1",
+    "yaml": "2.8.1"
+  }
+}
