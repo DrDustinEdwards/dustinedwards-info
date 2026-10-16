@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "as_of": "2026-10-12",
+  "as_of": "2026-10-16",
   "systems": [
     {
       "id": "capsid",
@@ -129,12 +129,15 @@
     },
     {
       "id": "dustinedwards-mcp",
-      "name": "dustinedwards-mcp",
+      "name": "Dustin Edwards Admin",
       "short": "Site MCP",
-      "domain": "",
       "family": "plumbing",
       "ring": "used",
-      "private": true
+      "private": false,
+      "description": "Runs dustinedwards.info from a chat: site health, mentions, media, registries, citations and lab procedures. Writing is Carrel's.",
+      "repos": [
+        "https://github.com/DrDustinEdwards/dustinedwards-info"
+      ]
     },
     {
       "id": "skills",
@@ -373,10 +376,10 @@
       "kind": "publishes-to"
     },
     {
-      "id": "dustinedwards-mcp--publishes-to--dustinedwards-info",
+      "id": "dustinedwards-mcp--writes--dustinedwards-info",
       "from": "dustinedwards-mcp",
       "to": "dustinedwards-info",
-      "kind": "publishes-to"
+      "kind": "writes"
     },
     {
       "id": "capsid--coordinates--capsomer",
@@ -438,7 +441,7 @@
         {
           "relationship": "capsid-worker--serves--capsid-agents",
           "toward": "capsid-worker",
-          "text": "Claimed: an agent claims it. The Worker verifies the body's signature first, then gives the claim a lease.",
+          "text": "Claimed: an agent claims it. The Worker verifies the body's signature first and records who holds the job.",
           "lights": [
             "capsid-db"
           ]
@@ -446,7 +449,7 @@
         {
           "relationship": "capsid-worker--serves--capsid-agents",
           "toward": "capsid-worker",
-          "text": "Worked: the agent works on one branch of one repo and sends heartbeats that keep its lease alive.",
+          "text": "Worked: the agent works on one branch of one repo.",
           "lights": [
             "capsid-db"
           ]
@@ -467,7 +470,7 @@
         {
           "relationship": "capsid-tick--writes--capsid-github",
           "toward": "capsid-github",
-          "text": "Merged: the five-minute tick merges a pull request whose CI is green on its exact head under the signed auto-merge policy, or the seat merges it."
+          "text": "Merged: the five-minute tick merges a pull request whose CI is green on its exact head under the signed auto-merge policy, or the session that opened it merges it on green."
         },
         {
           "relationship": "capsid-github--deploys--capsid-worker",
@@ -488,12 +491,63 @@
           ]
         }
       ]
+    },
+    {
+      "id": "nightly-backup",
+      "name": "The nightly backup",
+      "description": "Once a day the Worker copies the whole store to R2, keeps a graduated set of copies, trims old history only once a copy holds it, and the watcher checks that the copy kept off the account is fresh.",
+      "steps": [
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Dumped: at 09:00 UTC a daily cron in the Worker dumps every table to R2 with d1-dump, one JSON file each plus the schema.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Marked complete: a completion marker is written last, and only when the dumped tables match the ones the migrations create. A run without it is never counted as a backup.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Mirrored: every document body is written beside the dump as plain markdown, one file per document.",
+          "lights": [
+            "capsid-db"
+          ]
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-media",
+          "toward": "capsid-media",
+          "text": "Pruned: the newest complete run of each of the last 14 days, 8 weeks and 6 months is kept, and every other run is deleted whole. The newest complete run is never deleted."
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-db",
+          "toward": "capsid-db",
+          "text": "Trimmed: document versions older than 90 days and audit rows older than 180 are pruned, after the dump, so every pruned row is in a kept copy."
+        },
+        {
+          "relationship": "capsid-worker--writes--capsid-kv",
+          "toward": "capsid-kv",
+          "text": "Stamped: the run records its success, and /health warns once that stamp is more than 26 hours old."
+        },
+        {
+          "relationship": "capsid-tick--reads--capsid-github",
+          "toward": "capsid-tick",
+          "text": "Watched: every half hour the watcher reads the newest copy kept off the Cloudflare account and files a finding once it is more than 36 hours old."
+        }
+      ]
     }
   ],
   "counts": {
     "systems": 17,
-    "public": 11,
-    "private": 6,
+    "public": 12,
+    "private": 5,
     "containers": 8,
     "relationships": 27
   }
