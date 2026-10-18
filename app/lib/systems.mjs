@@ -358,7 +358,7 @@ export function systemsMarkdown(model, origin) {
   const lines = [
     "# Systems",
     "",
-    `The family of systems Dustin Edwards runs, drawn as a capsid: Capsid in the middle, the shared parts around it, what people use on the outside. From Capsid's public model of ${model.as_of}.`,
+    `The systems Dustin Edwards runs. Public model of ${model.as_of}.`,
     "",
   ];
   for (const ring of RINGS) {
@@ -367,7 +367,7 @@ export function systemsMarkdown(model, origin) {
     lines.push(`## ${RING_HEADINGS[ring]}`, "");
     for (const s of inRing) lines.push(systemSectionMarkdown(model, s.id, origin) ?? "");
   }
-  lines.push(`Deeper, in the Capsid explorer: ${EXPLORER_ORIGIN}/`, "");
+  lines.push(`Capsid explorer: ${EXPLORER_ORIGIN}/`, "");
   return lines.join("\n");
 }
 
@@ -395,7 +395,7 @@ export function systemSectionMarkdown(model, id, origin) {
   if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
   const links = connectionsOf(model, id);
   lines.push("", "#### Connections", "");
-  if (links.length === 0) lines.push("None drawn.");
+  if (links.length === 0) lines.push("No connections.");
   for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemHref(c.other)})`);
   lines.push("");
   return lines.join("\n");
