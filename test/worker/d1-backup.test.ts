@@ -21,6 +21,7 @@ describe("the nightly D1 dump", () => {
     const result = await backupD1(backupEnv());
     expect(result.tables).toBeGreaterThanOrEqual(REQUIRED_TABLES.length);
     expect(result.kept).toBeGreaterThanOrEqual(1);
+    expect(result.locked).toBe(0);
 
     const latest = await latestDump(testEnv.BACKUPS);
     expect(latest?.run_id).toBe(result.run_id);
