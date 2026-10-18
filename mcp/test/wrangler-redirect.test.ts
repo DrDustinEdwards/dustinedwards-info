@@ -24,9 +24,11 @@ before(() => {
   mkdirSync(folder);
   for (const name of ["package.json", "tsconfig.json"]) cpSync(join(mcp, name), join(folder, name));
   cpSync(join(mcp, "wrangler.jsonc.example"), join(folder, "wrangler.jsonc"));
-  symlinkSync(join(mcp, "src"), join(folder, "src"));
-  symlinkSync(join(mcp, "node_modules"), join(folder, "node_modules"));
-  symlinkSync(join(mcp, "..", "app"), join(root, "app"));
+  // Junctions, which Windows creates without Developer Mode or an elevated shell; elsewhere the
+  // type is ignored and these are ordinary symlinks.
+  symlinkSync(join(mcp, "src"), join(folder, "src"), "junction");
+  symlinkSync(join(mcp, "node_modules"), join(folder, "node_modules"), "junction");
+  symlinkSync(join(mcp, "..", "app"), join(root, "app"), "junction");
   /* The site build's redirect, one folder above the config, as on Dustin's machine. */
   mkdirSync(join(root, "build", "server"), { recursive: true });
   writeFileSync(join(root, "build", "server", "wrangler.json"), JSON.stringify({ name: "site", main: "index.js" }));
