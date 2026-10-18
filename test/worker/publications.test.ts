@@ -14,7 +14,12 @@ import Publications, { headers as indexHeaders, loader as indexLoader } from "~/
 import Paper, { headers as paperHeaders, loader as paperLoader } from "~/routes/publications.$slug";
 import { loader as twinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
-import { isCitationRefreshWindow, refreshCitationsWeekly } from "../../workers/watchdog";
+import {
+  checkPublicationsDaily,
+  isCitationRefreshWindow,
+  isPublicationCheckWindow,
+  refreshCitationsWeekly,
+} from "../../workers/watchdog";
 
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
@@ -298,6 +303,7 @@ describe("the operator reads publications and has no tool to write one", () => {
       "sync_publications",
       "list_publications",
       "get_publication",
+      "check_publications",
     ]);
   });
 });
@@ -419,6 +425,114 @@ describe("the watchdog's weekly citation refresh", () => {
     );
     expect(failed).toContain("10.1/x (openalex-status)");
     expect(await refreshCitationsWeekly(site(200, {}), "", sunday)).toContain("OPERATOR_TOKEN");
+  });
+});
+
+describe("the publications are checked against ORCID and Crossref", () => {
+  const KNOWN = "10.1128/MRA.00888-24";
+  const NEW = "10.1128/mra.00999-26";
+  const NAMED = "10.1101/2026.05.01.123456";
+  const orcidBody = {
+    group: [
+      {
+        "external-ids": { "external-id": [{ "external-id-type": "doi", "external-id-value": KNOWN }] },
+        "work-summary": [{ title: { title: { value: "Known" } }, "publication-date": { year: { value: "2024" } } }],
+      },
+      {
+        "external-ids": { "external-id": [{ "external-id-type": "doi", "external-id-value": NEW }] },
+        "work-summary": [{ title: { title: { value: "Cryo-EM of a phage" } }, "publication-date": { year: { value: "2026" } } }],
+      },
+    ],
+  };
+  const crossrefBody = (items: unknown[]) => ({ message: { items } });
+  function sources(opts: { orcid?: number } = {}) {
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      seen.push(url);
+      if (url.startsWith("https://pub.orcid.org/v3.0/0000-0001-6409-8041/works")) {
+        return opts.orcid ? new Response("no", { status: opts.orcid }) : Response.json(orcidBody);
+      }
+      if (url.startsWith("https://api.crossref.org/works")) {
+        const q = new URL(url).searchParams;
+        if (q.get("filter")?.startsWith("orcid:")) {
+          return Response.json(crossrefBody([{ DOI: NEW, title: ["Cryo-EM of a phage"], issued: { "date-parts": [[2026]] } }]));
+        }
+        return Response.json(
+          crossrefBody([
+            { DOI: NAMED, title: ["A preprint"], author: [{ given: "Dustin C.", family: "Edwards" }] },
+            { DOI: "10.1/someone-else", title: ["Other"], author: [{ given: "Dana", family: "Edwards" }] },
+            { DOI: NEW, title: ["Cryo-EM of a phage"], author: [{ given: "Dustin", family: "Edwards" }] },
+          ]),
+        );
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    return seen;
+  }
+  const operator = { kind: "operator", id: "test" } as const;
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("names the DOIs the site lacks, once each with every source, and the papers ORCID lacks", async () => {
+    sources();
+    const result = await runTool(testEnv as never, operator, "check_publications", {});
+    expect(result.ok).toBe(true);
+    const data = (result as { data: Record<string, unknown> }).data as {
+      notOnSite: Array<{ doi: string; sources: string[]; year: number | null }>;
+      nameMatches: Array<{ doi: string }>;
+      notOnOrcid: Array<{ doi: string }>;
+      failures: unknown[];
+    };
+    expect(data.notOnSite).toEqual([expect.objectContaining({ doi: NEW, year: 2026, sources: ["orcid", "crossref"] })]);
+    // Only the owner's name, and nothing already on a list or on the site.
+    expect(data.nameMatches.map((w) => w.doi)).toEqual([NAMED]);
+    expect(data.notOnOrcid.map((p) => p.doi.toLowerCase())).not.toContain(KNOWN.toLowerCase());
+    expect(data.notOnOrcid.length).toBeGreaterThan(0);
+    expect(data.failures).toEqual([]);
+  });
+
+  it("is a 502 naming the source that failed, carrying what the others found", async () => {
+    sources({ orcid: 503 });
+    const result = await runTool(testEnv as never, operator, "check_publications", {});
+    expect(result).toMatchObject({
+      ok: false,
+      status: 502,
+      detail: { failures: [{ source: "orcid", detail: "HTTP 503" }], notOnOrcid: [], notOnSite: [{ doi: NEW, sources: ["crossref"] }] },
+    });
+  });
+
+  it("is mailed by the watchdog once a day, each DOI once", async () => {
+    const six = Date.UTC(2026, 9, 5, 6, 0);
+    expect(isPublicationCheckWindow(six)).toBe(true);
+    expect(isPublicationCheckWindow(six + 15 * 60_000)).toBe(false);
+    expect(isPublicationCheckWindow(six - 60 * 60_000)).toBe(false);
+
+    const kv = new Map<string, string>();
+    const mails: Array<{ subject: string; text: string }> = [];
+    const env = (payload: unknown, status = 200) =>
+      ({
+        SITE: { fetch: async () => new Response(JSON.stringify(payload), { status }) },
+        EMAIL: { send: async (m: { subject: string; text: string }) => void mails.push(m) },
+        ALERT_EMAIL: "a@example.test",
+        APP_KV: {
+          get: async (k: string) => (kv.has(k) ? JSON.parse(kv.get(k) as string) : null),
+          put: async (k: string, v: string) => void kv.set(k, v),
+        },
+      }) as never;
+    const found = { data: { notOnSite: [{ doi: NEW, title: "Cryo-EM of a phage", year: 2026 }], nameMatches: [] } };
+
+    expect(await checkPublicationsDaily(env(found), "tok", six + 24 * 60 * 60_000 + 60 * 60_000)).toBeNull();
+    expect(mails).toHaveLength(0);
+    expect(await checkPublicationsDaily(env(found), "tok", six)).toBeNull();
+    expect(mails).toHaveLength(1);
+    expect(mails[0]?.text).toContain(`https://doi.org/${NEW}`);
+    expect(await checkPublicationsDaily(env(found), "tok", six + 24 * 60 * 60_000)).toBeNull();
+    expect(mails).toHaveLength(1);
+
+    expect(await checkPublicationsDaily(env({ error: "Not every source could be read" }, 502), "tok", six)).toContain(
+      "502: Not every source could be read",
+    );
+    expect(await checkPublicationsDaily(env(found), "", six)).toContain("OPERATOR_TOKEN");
   });
 });
 

@@ -35,6 +35,7 @@ const TOOLS = [
   "list_publications",
   "get_publication",
   "refresh_citations",
+  "check_publications",
   "list_pages",
   "get_page",
   "get_llms",
@@ -302,6 +303,16 @@ export const TOOL_DESCRIPTORS: Readonly<
       "refreshed (how many counts were replaced) and failures (doi, stage, detail for each count that could " +
       "not be read). A DOI that fails keeps the count it had. A partial failure is a 502 with the same " +
       "detail, so the caller sees it. The watchdog calls this weekly.",
+  },
+  check_publications: {
+    args: {},
+    returns:
+      "Reads ORCID and Crossref and compares them with every publication row: notOnSite (DOIs the ORCID " +
+      "record or a Crossref deposit naming the ORCID lists that no file carries, with title, year and " +
+      "sources), nameMatches (Crossref works of the last 400 days under the owner's name and on no list, to " +
+      "confirm by hand), notOnOrcid (published papers missing from the ORCID record), manuscripts (files " +
+      "with no DOI yet) and failures. Writes nothing. A source that could not be read is a 502 whose detail " +
+      "is the same report from the sources that answered. The watchdog calls this daily.",
   },
   list_pages: {
     args: {},

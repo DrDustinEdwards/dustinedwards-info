@@ -6,7 +6,7 @@
  * WHY IT EXISTS. The real /mcp sits behind the OAuth 2.1 resource server, and the
  * official conformance suite has no way to complete a consent flow. Pointing the
  * suite at the probe instead would prove nothing, because the probe is not the
- * server. So this entry mounts the REAL protocol layer and the REAL nine tools,
+ * server. So this entry mounts the REAL protocol layer and the REAL ten tools,
  * with only the client-leg auth and the rate limiter removed (a synthetic
  * administrator caller stands in for the grant), and the SITE binding replaced
  * by a fetch to a local stub. What gets certified is the code that ships.

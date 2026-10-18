@@ -39,7 +39,7 @@ beforeEach(() => {
 afterEach(() => api.restore());
 
 describe("the tool surface", () => {
-  test("is exactly the nine dei_ tools, each named once", () => {
+  test("is exactly the ten dei_ tools, each named once", () => {
     assert.deepEqual(
       TOOLS.map((t) => t.name),
       [
@@ -51,6 +51,7 @@ describe("the tool surface", () => {
         "dei_backup_media",
         "dei_read_registry",
         "dei_refresh_citations",
+        "dei_check_publications",
         "dei_manage_procedure",
       ],
     );
@@ -71,6 +72,7 @@ describe("the tool surface", () => {
       dei_backup_media: [false, false, true, false],
       dei_read_registry: [true, false, true, false],
       dei_refresh_citations: [false, false, true, true],
+      dei_check_publications: [true, false, true, true],
       dei_manage_procedure: [false, false, false, false],
     };
     for (const t of TOOLS) {
@@ -102,6 +104,7 @@ const MAPPINGS: Array<{ name: string; args: Record<string, unknown>; tool: strin
   { name: "dei_backup_media", args: {}, tool: "backup_media", sent: {} },
   { name: "dei_refresh_citations", args: {}, tool: "refresh_citations", sent: {} },
   { name: "dei_refresh_citations", args: { dois: ["10.1/x"] }, tool: "refresh_citations", sent: { dois: ["10.1/x"] } },
+  { name: "dei_check_publications", args: {}, tool: "check_publications", sent: {} },
   { name: "dei_read_registry", args: { registry: "pages" }, tool: "list_pages", sent: {} },
   { name: "dei_read_registry", args: { registry: "pages", record_key: "/research/phages" }, tool: "get_page", sent: { path: "/research/phages" } },
   { name: "dei_read_registry", args: { registry: "llms" }, tool: "get_llms", sent: {} },

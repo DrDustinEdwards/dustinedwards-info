@@ -398,12 +398,13 @@ const EXPECTED_TOOLS = [
   "dei_backup_media",
   "dei_read_registry",
   "dei_refresh_citations",
+  "dei_check_publications",
   "dei_manage_procedure",
 ];
 const declared = [...toolsText.matchAll(/^\s{4}name:\s*"([a-z_]+)",$/gm)].map((m) => m[1]);
 
 check(
-  "The declared tools are exactly the nine dei_ tools",
+  "The declared tools are exactly the ten dei_ tools",
   JSON.stringify(declared) === JSON.stringify(EXPECTED_TOOLS),
   `Expected [${EXPECTED_TOOLS.join(", ")}] but found [${declared.join(", ")}].`,
 );
