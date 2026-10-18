@@ -269,7 +269,7 @@ check(
 
 // GITHUB_TOKEN is the app's repository WRITE credential. If the wrapper held it,
 // it could commit directly and bypass every gate, which is precisely the second
-// write path the law forbids. The wrapper's GitHub credentials are login-only.
+// write path the law forbids. The wrapper holds no GitHub credential at all.
 const FORBIDDEN_NAMES = [
   "GITHUB_TOKEN",
   "BETTER_AUTH_SECRET",
@@ -349,10 +349,10 @@ for (const f of files) {
 // D. Outbound reach. Every network destination is deliberate.
 // ---------------------------------------------------------------------------
 
-// github.com and api.github.com are the LOGIN path only (identity, no scopes
-// requested, no repository access). The operator API is reached through the
+// The Access sign-in host is built from the ACCESS_TEAM_DOMAIN var, so no
+// login host appears as a literal. The operator API is reached through the
 // OPERATOR_API_URL var rather than a literal, so a hardcoded app URL fails here.
-const ALLOWED_HOSTS = ["github.com", "api.github.com", "rate-limit.invalid", "tool-call-log.invalid"];
+const ALLOWED_HOSTS = ["rate-limit.invalid", "tool-call-log.invalid"];
 const URL_RE = /https?:\/\/([a-z0-9.-]+)/gi;
 for (const f of files) {
   for (const m of readFileSync(join(SRC, f.name), "utf8").matchAll(URL_RE)) {

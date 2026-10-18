@@ -32,7 +32,7 @@ import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client
 import { appendAudit, loggedArgs, loggedResult, type AuditEnv } from "./audit-log";
 import { authorizeCall, callerName, SCOPE_READ, SCOPE_WRITE, type Caller, type Scope } from "./auth";
 
-export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_GITHUB_LOGIN?: string };
+export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
 
 /**
  * A procedure slug. Input validation that fails an impossible call before the

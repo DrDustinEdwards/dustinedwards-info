@@ -15,7 +15,7 @@
  * carries the result; if that write fails the call has already happened and
  * cannot be undone, so the failure goes to the Worker log instead.
  *
- * WHAT A ROW CARRIES. The caller's audit name (a GitHub login or an agent
+ * WHAT A ROW CARRIES. The caller's audit name (a signed-in email or an agent
  * principal, never a credential), the tool, the arguments, and the result. A
  * long string argument (an image as base64, a whole procedure file) is stored
  * as its length and a SHA-256 prefix: enough to prove which bytes were sent,

@@ -9,11 +9,10 @@
  * Free of MCP and OAuth imports so the grant logic is testable on its own.
  */
 
-/** The GitHub identity carried on an OAuth grant, set at consent time. */
+/** The Cloudflare Access identity carried on an OAuth grant, set at sign-in. */
 export interface Props extends Record<string, unknown> {
-  id: number;
-  login: string;
-  name: string | null;
+  /** The verified email from the Access ID token. */
+  email: string;
   /**
    * The scopes the administrator granted on the consent page. A grant minted
    * before scopes existed has none, and is read-only until it is renewed.
@@ -45,9 +44,9 @@ export type Caller =
   | { kind: "admin"; props: Props; scopes: readonly string[] }
   | { kind: "agent"; principal: string; scopes: readonly string[] };
 
-/** The audit name of a caller: the GitHub login, or the agent principal. */
+/** The audit name of a caller: the signed-in email, or the agent principal. */
 export function callerName(caller: Caller): string {
-  return caller.kind === "admin" ? `github:${caller.props.login}` : `agent:${caller.principal}`;
+  return caller.kind === "admin" ? `access:${caller.props.email}` : `agent:${caller.principal}`;
 }
 
 /** Scopes an agent holds: read, plus write when AGENT_WRITE names it. */
@@ -72,7 +71,7 @@ export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): s
  * Returns null when the call may proceed, or the refusal to show the caller.
  */
 export function authorizeCall(
-  env: { ADMIN_GITHUB_LOGIN?: string },
+  env: { ADMIN_EMAIL?: string },
   caller: Caller | undefined,
   scope: Scope,
 ): string | null {
@@ -101,22 +100,18 @@ export function authorizeCall(
 /**
  * Is this grant the single administrator's?
  *
- * `ADMIN_GITHUB_LOGIN` accepts either a login or an immutable numeric GitHub user
- * id. The numeric form is the safer configuration, because a login can be
- * renamed and then claimed by somebody else, while an id cannot. Both are
- * supported so the setting is easy to write correctly.
+ * `ADMIN_EMAIL` is the one email let in, compared without case. The email is
+ * the one Cloudflare Access verified at sign-in, as in Capsid and Carrel. A
+ * grant minted under the old GitHub sign-in carries no email, so it is refused
+ * and the connector is reconnected once.
  *
  * Fails CLOSED: an unset or blank value admits nobody. A single-admin server
  * whose admin is unconfigured must refuse everyone rather than admit anyone.
  */
-export function isAdminUser(
-  env: { ADMIN_GITHUB_LOGIN?: string },
-  user: { id: number | string; login: string },
-): boolean {
-  const admin = (env.ADMIN_GITHUB_LOGIN ?? "").trim();
-  if (!admin) return false;
-  if (/^\d+$/.test(admin)) return String(user.id) === admin;
-  return user.login.toLowerCase() === admin.toLowerCase();
+export function isAdminUser(env: { ADMIN_EMAIL?: string }, user: { email?: unknown }): boolean {
+  const admin = (env.ADMIN_EMAIL ?? "").trim().toLowerCase();
+  if (!admin || typeof user.email !== "string") return false;
+  return user.email.trim().toLowerCase() === admin;
 }
 
 /**
