@@ -14,7 +14,6 @@ import {
   loadSystemModel,
   mapData,
   repoOf,
-  summaryOf,
 } from "~/lib/systems.mjs";
 
 import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
@@ -68,13 +67,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!chosen) {
     return pageMeta({
       title: `${TITLE}: the family as a capsid`,
-      description: `The ${MODEL.systems.length} systems Dustin Edwards runs, drawn as a capsid: Capsid in the middle, the shared parts around it, what people use on the outside.`,
+      description: `The ${MODEL.systems.length} systems Dustin Edwards runs, on one map.`,
       path: SYSTEMS_PATH,
     });
   }
   return pageMeta({
     title: `${chosen.name}, in the family of systems`,
-    description: chosen.private ? `${chosen.name}. ${summaryOf(chosen)}` : (chosen.description ?? `${chosen.name}, one of Dustin Edwards's systems.`),
+    description: (chosen.private ? undefined : chosen.description) ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
     path: SYSTEMS_PATH,
   });
 }
@@ -85,7 +84,7 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}>
       <Breadcrumb trail={trail} />
-      <SystemsIntro />
+      <h1 className="page-title">{TITLE}</h1>
       {/* The map is a string from Capsomer and app/lib/system-wiring.mjs, every text in it escaped there. A chosen system is drawn zoomed in; data-chosen tells the script which. */}
       <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? zoomedMap(chosen) : MAP }} />
       {/* Every system's facts, all shown with no script; with script, only the chosen one's (systems.css). */}
@@ -95,20 +94,10 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
         ))}
       </div>
       <p className="systems-source">
-        From Capsid&apos;s public model of {MODEL.as_of}. Also as <a href={`${SYSTEMS_PATH}.md`}>markdown</a>.
+        Public model, {MODEL.as_of}. <a href={`${SYSTEMS_PATH}.md`}>Markdown</a>
       </p>
       <Enhance module="system-map" />
     </PageShell>
-  );
-}
-
-// The drawing is the page: the words around it say only what it cannot (Dustin, 2026-10-18).
-function SystemsIntro() {
-  return (
-    <>
-      <h1 className="page-title">{TITLE}</h1>
-      <p className="systems-lead">The {MODEL.systems.length} systems I run, as one drawing.</p>
-    </>
   );
 }
 

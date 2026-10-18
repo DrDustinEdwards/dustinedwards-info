@@ -125,10 +125,9 @@ function start(root: HTMLElement) {
     const outside = names(".cap-system-map-box[data-external]");
     const systems = names(".systems-rim");
     const name = listed(id, "name") || id;
-    const label = `${name}: ${parts.length ? `${parts.join(", ")} inside.` : "no parts drawn."}${outside.length ? ` Outside it: ${outside.join(", ")}.` : ""}${systems.length ? ` Connects to ${systems.join(", ")}.` : ""}`;
-    const counts = parts.length ? `${parts.length} ${parts.length === 1 ? "part" : "parts"} inside${outside.length ? `, ${outside.length} outside` : ""}` : layer.querySelector(".systems-inside-text") ? "" : "No parts drawn";
-    const linked = systems.length ? `Tap ${systems.length === 1 ? "the system" : "a system"} on the rim to go there` : "";
-    return { name, label, text: [counts, linked].filter(Boolean).join(". ") };
+    const series = (items: string[]) => (items.length < 2 ? items.join("") : items.length === 2 ? `${items[0]} and ${items[1]}` : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`);
+    const label = `${name}: ${parts.length ? `${series(parts)} inside.` : "no parts."}${outside.length ? ` Outside: ${series(outside)}.` : ""}${systems.length ? ` Connects to ${series(systems)}.` : ""}`;
+    return { name, label };
   };
 
   /** Capsomer's detail line for the core, in the site's words: the system's name and what its circle holds. */
@@ -177,9 +176,8 @@ function start(root: HTMLElement) {
     }
     root.dataset.zoom = id;
     backButton.hidden = false;
-    const { name, label, text } = describe(id, layer);
-    const said = listed(id, "text").replace(/\.$/, "");
-    about = `${[said, text].filter(Boolean).join(". ")}${said || text ? "." : ""}`;
+    const { name, label } = describe(id, layer);
+    about = "";
     if (id === coreId && coreIsCapsomers) {
       map.enter();
       relabel();

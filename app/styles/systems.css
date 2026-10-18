@@ -114,9 +114,9 @@
   background: none;
 }
 
-/* The strip holds the chosen system's name only; its sentence is said once, under the drawing, and the words
-   Capsomer and the script write here stay for a screen reader (the strip is aria-live). One line high, so choosing
-   never moves the drawing. Capsomer's height is !important in its layer, so this is too, in the same layer. */
+/* The strip holds the chosen system's name only. The sentence is under the drawing, and the part names are the
+   circle's own label. One line high, so choosing never moves the drawing. Capsomer's height is !important in its
+   layer, so this is too, in the same layer. */
 @layer cap.components {
   .systems-map .cap-system-map-detail {
     block-size: 2rem !important;

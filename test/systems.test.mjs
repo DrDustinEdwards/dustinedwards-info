@@ -176,7 +176,7 @@ await test("every system's section of the twin links to the same system in the C
   }
   assert.equal(explorerUrl("hidden"), "https://capsid.dustinedwards.info/s/hidden/");
   assert.equal(explorerLabel("hidden"), "capsid.dustinedwards.info/s/hidden");
-  assert.match(systemsMarkdown(model, "https://example.com"), /^Deeper, in the Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m);
+  assert.match(systemsMarkdown(model, "https://example.com"), /^Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m);
 });
 
 await test("the lines between a system's parts are facts on its page and in its twin", () => {
