@@ -327,6 +327,18 @@ await test("the daily refresh writes only a checked model that says something ne
     assert.notEqual(run.code, 0, "a model the site refuses was accepted");
     assert.equal(read(file, "utf8"), before, "a refused model was written");
 
+    // A Worker's cron expressions are one schedule, and a Worker drawn as its schedule counts as
+    // the Worker: a second Worker that only runs a cron passes as one cron container.
+    served = fixture();
+    served.systems[0].description = "Runs it all, on a schedule.";
+    served.containers.push({ id: "core-tick", system: "core", name: "Tick", kind: "cron", technology: "Cron Trigger" });
+    served.counts = { ...served.counts, containers: served.containers.length };
+    wrangler = { ...wrangler, triggers: { crons: ["*/5 * * * *", "0 9 * * *"] } };
+    run = await refresh();
+    assert.equal(run.code, 0, run.stderr);
+    writeFileSync(file, before);
+    wrangler = { name: "core", d1_databases: [] };
+
     // A part core's Wrangler config declares that the model does not list fails the run, named.
     served = fixture();
     served.systems[0].description = "Runs it all, and a bucket.";
