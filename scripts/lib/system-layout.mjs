@@ -710,15 +710,17 @@ function bendWires(nodes, wires, r, label) {
  */
 export function layoutScene(scene, minWidth) {
   // At each size the search runs from up to SEEDS fixed seeds while a fault is left, and the drawing kept is the
-  // one with the fewest faults once its wires are curved (a wire under a box counting ten crossings). A circle too
-  // full for its boxes to sit apart is drawn larger, a tenth at a time; so is one with a wire under a box, while
-  // it still fits the drawing's width, since a larger drawing reads smaller on a phone.
+  // one with the fewest faults once its wires are curved (a wire under a box counting ten crossings), the smallest
+  // of those tied. A circle with any fault left is drawn larger, a twentieth at a time up to half again: room lets
+  // a wire bow round the others, which is the only way past two parts that share three boxes (Carrel's Worker and
+  // its fifteen-minute check each wire to the site, Google and Email; straight, one pair must cross). A circle
+  // with no fault stops at the first size, so only a circle that needs the room pays for it in width.
   /** @type {{ l: Layout, score: number } | null} */
   let best = null;
   let width = 0;
   const scoreOf = (/** @type {Layout} */ l) =>
     (l.cost >= OVERLAP ? 1e6 : 0) + faultsOf(l).reduce((n, f) => n + (f.includes(" crosses ") ? 1 : 10), 0);
-  for (let grown = 1; grown <= 1.5; grown *= 1.1) {
+  for (let grown = 1; grown <= 1.5; grown *= 1.05) {
     for (let seed = 0; seed < SEEDS; seed++) {
       const l = layoutAt(scene, minWidth, grown, seed);
       width ||= l.width;
@@ -727,8 +729,6 @@ export function layoutScene(scene, minWidth) {
       if (!best || score < best.score) best = { l, score };
       if (score === 0) return l;
     }
-    const b = /** @type {{ l: Layout, score: number }} */ (best);
-    if (b.score < 10 || 2 * (b.l.r * 1.1 + MARGIN) > width) break;
   }
   return /** @type {{ l: Layout, score: number }} */ (best).l;
 }
