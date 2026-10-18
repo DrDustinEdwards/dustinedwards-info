@@ -13,7 +13,7 @@ except where a note says what changed.
 
 ## Tools
 
-Nine, each a whole job. Every step of each is an authenticated request to
+Ten, each a whole job. Every step of each is an authenticated request to
 `POST /api/operator` over the `SITE` service binding; the API owns every rule.
 Read tools need `dei.read`; the others need `dei.write`, ticked on the consent page.
 
@@ -27,6 +27,7 @@ Read tools need `dei.read`; the others need `dei.write`, ticked on the consent p
 | `dei_backup_media` | copy every media object without a twin into the backup bucket | write, no, yes, no |
 | `dei_read_registry` | list or read pages, llms, cv, dictionary, roster, phages, registry, publications | read, no, yes, no |
 | `dei_refresh_citations` | fresh OpenAlex citation counts, all or by DOI | write, no, yes, yes |
+| `dei_check_publications` | DOIs on ORCID or Crossref the site lacks, and papers ORCID lacks | read, no, yes, yes |
 | `dei_manage_procedure` | list, get or save a lab procedure; first publication is admin-only | write, no, no, no |
 
 No post tools: Carrel owns all writing on every site (rule 11). Lists page at 25
@@ -423,7 +424,7 @@ use when.
 
 `@modelcontextprotocol/conformance` is genuinely runnable (`server` / `client` /
 `authorization` subcommands, `--spec-version` filtering). It runs against
-`test/conformance-entry.ts`, which mounts the **real** handler and the real nine
+`test/conformance-entry.ts`, which mounts the **real** handler and the real ten
 tools with only the client leg and the limiter removed, and the SITE binding
 replaced by a fetch to a local stub. So what is certified is the code that ships, not a stand-in.
 

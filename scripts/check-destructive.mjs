@@ -217,6 +217,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "replaces rows of a DERIVED table (the citation counts, read from OpenAlex) and has no delete branch: a " +
         "DOI that fails keeps its count. Idempotent, and the failures come back in the response",
     ],
+    ["check_publications", "a read of ORCID, Crossref and the publication rows; writes nothing"],
     ["list_pages", "a read"],
     ["get_page", "a read"],
     ["get_llms", "a read"],

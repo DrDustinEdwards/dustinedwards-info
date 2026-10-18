@@ -281,6 +281,81 @@ export async function backupD1Daily(
   return null;
 }
 
+/**
+ * The one firing a day that checks the publications list against ORCID and Crossref: 06:00 to 06:14 UTC,
+ * its own quarter hour. Exported only so the worker test can drive it.
+ */
+export function isPublicationCheckWindow(scheduledTime: number): boolean {
+  const at = new Date(scheduledTime);
+  return at.getUTCHours() === 6 && at.getUTCMinutes() < 15;
+}
+
+// The DOIs already mailed about, so a paper waiting to be added through Carrel is mailed once, not daily.
+const PUBLICATIONS_MAILED_KEY = "watchdog:publications-mailed";
+
+type FoundWork = { doi: string; title: string; year: number | null };
+
+/**
+ * Calls the operator API's check_publications and mails each DOI it finds that no file carries, once.
+ * Returns the problem, or null when nothing was wrong or it was not this firing's turn; the caller throws
+ * it, so the invocation is recorded as failed and the cause is named. Exported only so the worker test
+ * can drive it.
+ */
+export async function checkPublicationsDaily(
+  env: WatchdogEnv,
+  token: string,
+  scheduledTime: number,
+): Promise<string | null> {
+  if (!isPublicationCheckWindow(scheduledTime)) return null;
+  if (!token) return "the daily publication check did not run: OPERATOR_TOKEN is not set on this Worker";
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await env.SITE.fetch(`${SITE_ORIGIN}/api/operator`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "watchdog" },
+      body: JSON.stringify({ tool: "check_publications", args: {} }),
+    });
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    return `the daily publication check did not complete: ${errorMessage(error)}`;
+  }
+  if (!response.ok) {
+    const body = payload as { error?: string } | null;
+    return `the daily publication check answered ${response.status}: ${body?.error ?? "(no error was given)"}`;
+  }
+  const data = (payload as { data?: { notOnSite?: FoundWork[]; nameMatches?: FoundWork[] } } | null)?.data;
+  let mailed: Set<string>;
+  try {
+    mailed = new Set(((await env.APP_KV.get(PUBLICATIONS_MAILED_KEY, "json")) as string[] | null) ?? []);
+  } catch (error) {
+    // Unreadable is not empty: mailing every DOI again daily would bury the one that is new.
+    return `the daily publication check could not read which DOIs it already mailed: ${errorMessage(error)}`;
+  }
+  const fresh = (works: FoundWork[] = []) => works.filter((w) => !mailed.has(w.doi.toLowerCase()));
+  const tied = fresh(data?.notOnSite);
+  const byName = fresh(data?.nameMatches);
+  console.log(JSON.stringify({ watchdog: "publications-checked", new: tied.length + byName.length }));
+  if (tied.length + byName.length === 0) return null;
+
+  const line = (w: FoundWork) => `${w.title || "(no title)"}${w.year ? ` (${w.year})` : ""}: https://doi.org/${w.doi}`;
+  const sent = await alert(env, "New publication found for dustinedwards.info", [
+    ...(tied.length > 0 ? ["ORCID or Crossref lists these under your ORCID, and the site does not:", ...tied.map(line)] : []),
+    ...(tied.length > 0 && byName.length > 0 ? [""] : []),
+    ...(byName.length > 0 ? ["Crossref lists these under your name, without your ORCID. Check they are yours:", ...byName.map(line)] : []),
+    "",
+    "Add a paper through Carrel. Each DOI is mailed once.",
+  ]);
+  if (!sent) return "the daily publication check found new DOIs and the mail did not send; it will try again tomorrow";
+  for (const w of [...tied, ...byName]) mailed.add(w.doi.toLowerCase());
+  try {
+    await env.APP_KV.put(PUBLICATIONS_MAILED_KEY, JSON.stringify([...mailed]));
+  } catch (error) {
+    return `the daily publication check mailed its DOIs and could not record them, so tomorrow mails them again: ${errorMessage(error)}`;
+  }
+  return null;
+}
+
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
   try {
     await env.EMAIL.send({
@@ -582,7 +657,8 @@ export default {
       const refreshProblem = await refreshCitationsWeekly(env, token, controller.scheduledTime);
       const purgeProblem = await purgeZeroResultsDaily(env, token, controller.scheduledTime);
       const backupProblem = await backupD1Daily(env, token, controller.scheduledTime);
-      const scheduledProblems = [refreshProblem, purgeProblem, backupProblem].filter((p): p is string => p !== null);
+      const publicationProblem = await checkPublicationsDaily(env, token, controller.scheduledTime);
+      const scheduledProblems = [refreshProblem, purgeProblem, backupProblem, publicationProblem].filter((p): p is string => p !== null);
       if (scheduledProblems.length > 0) throw new Error(scheduledProblems.join(" "));
     } catch (error) {
       const message = errorMessage(error);

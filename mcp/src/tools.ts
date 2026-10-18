@@ -1,11 +1,12 @@
 /**
- * The nine tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * The ten tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6.
  *
  * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Eleven one-call tools became nine
  * that each finish a job: check the site, repair drift and read the repair
  * back, review and decide mentions, put media in the bucket and back it up,
- * read any registry, refresh citations, and keep a procedure. The orchestration
+ * read any registry, refresh citations, and keep a procedure. A tenth checks
+ * the publications against ORCID and Crossref. The orchestration
  * lives here, in code, and every step of it is still one authenticated request
  * to the operator API, which owns every rule.
  *
@@ -550,6 +551,27 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
     handler: (env, args) => run(env, "refresh_citations", args.dois ? { dois: args.dois } : {}),
+  },
+
+  {
+    name: "dei_check_publications",
+    scope: SCOPE_READ,
+    config: {
+      title: "Check publications against ORCID and Crossref",
+      description:
+        "Compares the site's publications with the ORCID record and with Crossref, to catch a new DOI. " +
+        "Returns notOnSite (DOIs listed under the ORCID by ORCID or by a Crossref deposit that no " +
+        "publication file carries), nameMatches (Crossref works of the last 400 days under Dustin's name " +
+        "without the ORCID, which may be someone else's: confirm before acting), notOnOrcid (published " +
+        "papers missing from the ORCID record), manuscripts (files with no DOI yet) and failures. Writes " +
+        "nothing: a found paper is added through Carrel. A source that could not be read comes back as an " +
+        "error carrying the report from the sources that did. The watchdog runs this daily and mails each " +
+        "new DOI once.",
+      inputSchema: z.object({}),
+      // Open world: it reads ORCID and Crossref.
+      annotations: { ...READ_ONLY, openWorldHint: true },
+    },
+    handler: (env) => run(env, "check_publications", {}),
   },
 
   {

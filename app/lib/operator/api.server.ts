@@ -45,6 +45,7 @@ import { listProceduresForOperator } from "~/db/procedures";
 import { purgeZeroResults } from "~/lib/search/zero-result.server";
 import { listPublicationIdentities, listPublishedPublications } from "~/db/publications";
 import { refreshCitations } from "~/lib/citations.server";
+import { checkPublicationSources } from "~/lib/publications/sources.server";
 import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/kb/procedures/save.server";
@@ -279,6 +280,16 @@ export async function runTool(
 
       case "refresh_citations":
         return await refreshCitationsTool(env, args);
+
+      case "check_publications": {
+        const report = await checkPublicationSources(env);
+        if (report.failures.length > 0) {
+          const names = report.failures.map((f) => `${f.source} (${f.detail})`).join(", ");
+          return { ok: false, status: 502, error: `Not every source could be read: ${names}.`, detail: report };
+        }
+        return { ok: true, data: report };
+      }
+
       case "list_pages": {
         const pageRows = await listPageRows(env);
         return { ok: true, data: { headSha: await currentHead(env), count: pageRows.length, pages: pageRows } };
