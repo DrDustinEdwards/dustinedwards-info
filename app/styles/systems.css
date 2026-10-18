@@ -103,7 +103,7 @@
 }
 
 /*
- * The detail line as plain words under the caption, not a box (Dustin, 2026-10-18). Capsomer keeps its height fixed,
+ * The detail line as plain words above the drawing, not a box (Dustin, 2026-10-18). Capsomer keeps its height fixed,
  * so choosing never moves the drawing. The way back is a button beside Capsid and Plain map
  * (app/enhance/system-map.ts), so Capsomer's own in the detail line is not shown.
  */
@@ -114,16 +114,22 @@
   background: none;
 }
 
-/* Its height fits the longest system's words (measured 2026-10-18: 76px wide, 148px on a phone) rather than
-   Capsomer's box. Capsomer's height is !important in its layer, so this is too, in the same layer. */
+/* The strip holds the chosen system's name only; its sentence is said once, under the drawing, and the words
+   Capsomer and the script write here stay for a screen reader (the strip is aria-live). One line high, so choosing
+   never moves the drawing. Capsomer's height is !important in its layer, so this is too, in the same layer. */
 @layer cap.components {
   .systems-map .cap-system-map-detail {
-    block-size: 5rem !important;
-
-    @media (max-width: 40rem) {
-      block-size: 9.5rem !important;
-    }
+    block-size: 2rem !important;
   }
+}
+
+.systems-map .cap-system-map-detail-text {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .systems-map .cap-system-map-detail [data-cap-part="leave"],

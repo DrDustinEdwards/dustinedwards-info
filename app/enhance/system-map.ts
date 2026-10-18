@@ -283,16 +283,6 @@ function start(root: HTMLElement) {
     { capture: true },
   );
 
-  // A connection in the facts zooms into that system in place; a modified click still opens the address.
-  facts?.addEventListener("click", (e) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const id = (e.target as Element).closest<HTMLAnchorElement>("a[data-choose]")?.dataset.choose;
-    if (!onMap(id)) return;
-    e.preventDefault();
-    rove(id);
-    map.select(id);
-  });
-
   const asked = fromServer ?? new URL(location.href).searchParams.get(PARAM);
   if (onMap(asked)) {
     rove(asked);

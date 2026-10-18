@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-import { EXPLORER_ORIGIN, explorerUrl, loadSystemModel, systemHref } from "../../../../app/lib/systems.mjs";
+import { explorerUrl, loadSystemModel, systemHref } from "../../../../app/lib/systems.mjs";
 import { BASE, FETCH_TIMEOUT_MS, ok, report, root } from "../harness.mjs";
 
 const require = createRequire(import.meta.url);
@@ -376,12 +376,12 @@ async function scriptBudget(/** @type {import("puppeteer").Page} */ page) {
   ok(`/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`, bytes > 0 && bytes < SCRIPT_BUDGET_GZIP, `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`);
 }
 
-/** Section 4, deep links both ways: /systems links to the explorer, and to every system's place in it, as served. */
+/** Section 4, deep links both ways: /systems links to every system's place in the explorer, as served. */
 async function explorerLinks() {
   const res = await fetch(`${BASE}/systems`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   const html = res.ok ? await res.text() : "";
-  const missing = [`${EXPLORER_ORIGIN}/`, ...MODEL.systems.map((s) => explorerUrl(s.id))].filter((href) => !html.includes(`href="${href}"`));
-  ok("/systems links to the Capsid explorer and to every system in it", res.ok && missing.length === 0, res.ok ? (missing.length ? `no link to ${missing.join(", ")}` : `${MODEL.systems.length + 1} links`) : `answered ${res.status}`);
+  const missing = MODEL.systems.map((s) => explorerUrl(s.id)).filter((href) => !html.includes(`href="${href}"`));
+  ok("/systems links to every system in the Capsid explorer", res.ok && missing.length === 0, res.ok ? (missing.length ? `no link to ${missing.join(", ")}` : `${MODEL.systems.length} links`) : `answered ${res.status}`);
 }
 
 /** The facts each system's section shows, as the reader sees them: which sections are displayed. */
@@ -389,8 +389,8 @@ const shownFacts = () => [...document.querySelectorAll("[data-systems-facts] .sy
 
 /**
  * One page: zooming into a system shows its facts in place and writes ?system=<id> into the address with no
- * navigation (a value set on window survives, and history does not grow); a connection in the facts
- * zooms into that system in place; Escape returns to the map and clears the address.
+ * navigation (a value set on window survives, and history does not grow); Escape returns to the map and clears
+ * the address.
  */
 async function choosingInPlace(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
@@ -406,17 +406,6 @@ async function choosingInPlace(/** @type {import("puppeteer").Page} */ page) {
     "/systems: choosing a system shows only its facts, in place, and keeps it in the address as ?system=<id> with no navigation",
     before.shown === 0 && after.url === systemHref(other) && after.stayed && after.length === before.length && shown.length === 1 && shown[0] === other,
     `facts shown at rest ${before.shown}; address ${after.url}; same document ${after.stayed}; history ${before.length} to ${after.length}; facts shown ${shown.join(", ") || "none"}`,
-  );
-
-  const link = await page.$eval(`[data-systems-facts] .systems-facts[data-system="${other}"] a[data-choose]`, (a) => /** @type {HTMLElement} */ (a).dataset.choose ?? "");
-  await page.click(`[data-systems-facts] .systems-facts[data-system="${other}"] a[data-choose="${link}"]`);
-  const followed = await page.evaluate(() => ({ url: location.pathname + location.search, stayed: /** @type {Window & { __stay?: boolean }} */ (window).__stay === true }));
-  const pressed = await page.$eval(tileSelector(link), (el) => el.getAttribute("aria-pressed"));
-  const shownNow = await page.evaluate(shownFacts);
-  ok(
-    "/systems: a connection in a system's facts chooses that system in place",
-    followed.stayed && followed.url === systemHref(link) && pressed === "true" && shownNow.length === 1 && shownNow[0] === link,
-    `chose ${link}: address ${followed.url}, same document ${followed.stayed}, pressed ${pressed}, facts shown ${shownNow.join(", ") || "none"}`,
   );
 
   await page.keyboard.press("Escape");
@@ -453,7 +442,7 @@ async function chosenFromTheAddress(/** @type {import("puppeteer").Page} */ page
   ok("/systems?system=<unknown> chooses nothing and drops the value from the address", unknown.pressed === 0 && unknown.url === "/systems", `pressed ${unknown.pressed}, address ${unknown.url}`);
 }
 
-/** With script off the page carries every system's facts and connections, and the server draws a chosen system's lines. */
+/** With script off the page carries every system's facts, and the server draws a chosen system's lines. */
 async function everyFactWithoutScript(/** @type {import("puppeteer").Page} */ page) {
   const id = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
   await page.setJavaScriptEnabled(false);
