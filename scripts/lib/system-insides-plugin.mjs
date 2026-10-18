@@ -4,10 +4,12 @@
  * done here the Worker serves strings and spends nothing on it, and the model's daily refresh redraws it on the
  * build that ships it.
  *
- * The page carries none of them at rest: all of them in the HTML put the page past its LCP budget on a slow phone
- * (2026-10-18, Lighthouse's mobile profile, 2575ms against 2450ms without). So the layers are also one JSON asset,
- * named by the hash of its bytes like the enhancement bundles, which the map's script fetches once it runs; the
- * route inlines only a layer a ?system= address asks for, so a shared link opens zoomed in with no script.
+ * The page at rest carries none of them: all of them in the HTML put the page past its LCP budget on a slow phone
+ * (2026-10-18, Lighthouse's mobile profile, 2575ms against 2450ms without), and so did the core's alone, its bytes
+ * costing the first paint a round trip. So the layers are also one JSON asset, named by the hash of its bytes like
+ * the enhancement bundles, which the map's script fetches once the page has loaded (a fetch begun before the first
+ * paint lands on its path too); the route inlines the layer a ?system= address asks for, so a shared link opens
+ * zoomed in with no script.
  *
  * Both environments import the module (the route module is in the client build too), so the drawing is memoised on
  * the model's bytes and made once per build.

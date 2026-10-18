@@ -1,17 +1,18 @@
 import { controller } from "capsomer/behaviour/system-map";
 
 /*
- * The family of systems at /systems (Capsomer's system map), one page. The server rendered the whole map, every
- * system's inside (scripts/lib/system-layout.mjs), the list of the same data and every system's facts, so with script
- * off the drawing is one named picture and everything else is open. This makes the drawing the control: one tab
+ * The family of systems at /systems (Capsomer's system map), one page. The server rendered the whole map, a chosen
+ * system's inside (scripts/lib/system-layout.mjs; the rest are fetched below), the list of the same data and every
+ * system's facts, so with script off the drawing is one named picture and everything else is open. This makes the drawing the control: one tab
  * stop with the arrow keys between neighbours, and ONE tap on any system zooms into its circle (Dustin,
  * 2026-10-18: "it's not intuitive to click twice"): its parts inside, the systems it connects to round the rim,
  * each wire from the part that uses it. A system on the rim is a tap to zoom there. "Back to all systems", Escape
  * or a tap outside the circle returns to the map.
  *
  * Capsomer draws an inside for the core alone and its controller enters only the core, so the site does the rest
- * here. For the core it still calls Capsomer's own enter, which plays the core's flows; for every other system it
- * shows that system's layer and writes the detail line itself. Zooming also shows that system's facts below the map
+ * here: it shows the system's layer and writes the detail line itself. Capsomer's controller takes the first inside
+ * layer on the page as the core's; where that is the core's (a ?system= address naming the core), the site calls
+ * Capsomer's own enter for it, which plays the core's flows. Zooming also shows that system's facts below the map
  * (data-chosen, which systems.css reads) and keeps it in the address as ?system=<id> with history.replaceState: no
  * navigation, no new page, and a shared link opens zoomed in, which the server draws.
  */
@@ -21,10 +22,10 @@ const BACK = "Back to all systems";
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
- * Every system's circle, fetched from the asset the server names (scripts/lib/system-insides-plugin.mjs): the page
- * carries none at rest, for its load time, and a ?system= page only its own. They go into the stage beside any the
- * server sent, the core's first, since Capsomer's controller takes the first inside layer as the core's. A failed
- * fetch leaves the map as Capsomer's, with no circles but the one the server sent.
+ * Every system's circle but one the server sent, fetched from the asset it names
+ * (scripts/lib/system-insides-plugin.mjs) and added to the stage. The page carries none at rest and a ?system=
+ * page's own, for its load time. A failed fetch adds nothing: those systems
+ * are then chosen as Capsomer chooses them, with their lines and their facts.
  */
 async function addInsides(root: HTMLElement) {
   const stage = root.querySelector<HTMLElement>("[data-cap-part='stage']");
@@ -37,30 +38,23 @@ async function addInsides(root: HTMLElement) {
   } catch {
     return;
   }
-  const core = root.querySelector<SVGGElement>(".cap-system-map-tile[data-core]")?.dataset.id;
   const have = new Set([...stage.querySelectorAll<SVGSVGElement>("[data-layer='inside'][data-system]")].map((l) => l.dataset.system));
-  const parse = (svg: string) => {
-    const t = document.createElement("template");
-    t.innerHTML = svg;
-    return t.content.firstElementChild;
-  };
   for (const [id, svg] of Object.entries(all)) {
     if (have.has(id)) continue;
-    const layer = parse(svg);
-    if (!layer) continue;
-    const first = stage.querySelector("[data-layer='inside']");
-    if (id === core && first) stage.insertBefore(layer, first);
-    else stage.appendChild(layer);
+    const t = document.createElement("template");
+    t.innerHTML = svg;
+    const layer = t.content.firstElementChild;
+    if (layer) stage.appendChild(layer);
   }
+  root.setAttribute("data-insides-ready", "");
 }
 
 for (const root of document.querySelectorAll<HTMLElement>("[data-cap='system-map']")) {
-  if (root.hasAttribute("data-cap-ready") || root.hasAttribute("data-systems-wiring")) continue;
-  root.setAttribute("data-systems-wiring", "");
-  void addInsides(root).finally(() => start(root));
+  if (root.hasAttribute("data-cap-ready")) continue;
+  start(root);
 }
 
-/** The map, made the control, once its circles are in. */
+/** The map, made the control. */
 function start(root: HTMLElement) {
   root.setAttribute("data-cap-ready", "");
   // The server may have drawn a system zoomed in (?system=); it is zoomed again below, with no movement, since
@@ -71,7 +65,18 @@ function start(root: HTMLElement) {
   const stage = root.querySelector<HTMLElement>("[data-cap-part='stage']");
   const detail = root.querySelector<HTMLElement>("[data-cap-part='detail']");
   const tiles = [...root.querySelectorAll<SVGGElement>(".cap-system-map-tile[data-id]")];
-  const layers = new Map([...root.querySelectorAll<SVGSVGElement>("[data-layer='inside'][data-system]")].map((l) => [l.dataset.system ?? "", l]));
+  const layers = new Map<string, SVGSVGElement>();
+  const findLayers = () => {
+    for (const l of root.querySelectorAll<SVGSVGElement>("[data-layer='inside'][data-system]")) layers.set(l.dataset.system ?? "", l);
+  };
+  findLayers();
+  // The other circles come once the page has loaded and gone quiet, off its first paint's path; a tap before then
+  // waits for them.
+  let loading: Promise<void> | null = null;
+  const load = () => (loading ??= addInsides(root).then(findLayers));
+  const later = () => ("requestIdleCallback" in window ? requestIdleCallback(() => void load(), { timeout: 2000 }) : setTimeout(() => void load(), 200));
+  if (document.readyState === "complete") later();
+  else addEventListener("load", later, { once: true });
   const coreId = tiles.find((t) => t.hasAttribute("data-core"))?.dataset.id;
   // Capsomer's controller takes the first inside layer as the core's: the server puts the core's first.
   const coreIsCapsomers = !!coreId && root.querySelector<SVGSVGElement>("[data-layer='inside']")?.dataset.system === coreId;
@@ -81,6 +86,8 @@ function start(root: HTMLElement) {
   const listed = (id: string, part: string) => root.querySelector(`.cap-system-map-list li[data-id="${CSS.escape(id)}"] .cap-system-map-item-${part}`)?.textContent ?? "";
 
   let zoomed: string | null = null;
+  /** The system last asked for, which a tap before the circles are in zooms into once they are. */
+  let waiting: string | null = null;
   // Capsomer's leave chooses the core again, which would zoom back into it: that choice is the controller's, not the reader's.
   let quiet = false;
 
@@ -133,6 +140,14 @@ function start(root: HTMLElement) {
 
   const zoom = (id: string, focus: boolean) => {
     const layer = layers.get(id);
+    waiting = id;
+    if (!layer && !root.hasAttribute("data-insides-ready")) {
+      // Zoomed once its circle is in, unless the reader has chosen something else, or gone back, by then.
+      void load().then(() => {
+        if (waiting === id && layers.has(id)) zoom(id, focus);
+      });
+      return;
+    }
     if (!layer || zoomed === id) return;
     if (capsomerEntered()) {
       // Capsomer's leave chooses the core; the system asked for is chosen again.
@@ -184,6 +199,7 @@ function start(root: HTMLElement) {
   };
 
   const back = () => {
+    waiting = null;
     const was = zoomed;
     if (!was) return;
     if (capsomerEntered()) leaveCapsomer();

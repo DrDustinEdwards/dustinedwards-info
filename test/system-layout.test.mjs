@@ -76,7 +76,7 @@ await test("the drawing places every box apart and no wire under a box, on a sma
   for (const n of l.nodes.filter((n) => n.role !== "part")) assert.ok(Math.abs(n.y) - n.h / 2 >= 0 && Math.hypot(n.x, n.y) > l.r, `${n.id} is outside the circle`);
 });
 
-await test("the route sends no circle at rest and names the asset holding them all; a chosen system opens zoomed in", () => {
+await test("the route sends the circles it is given and names the asset holding them all; a chosen system opens zoomed in", () => {
   const model = fixture();
   const layers = insideLayers(model, summaryOf, mapData(model));
   const capsomer = systemMapHtml(mapData(model), { id: "family", label: "Family" });

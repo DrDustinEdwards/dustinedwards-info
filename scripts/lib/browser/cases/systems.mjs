@@ -136,6 +136,8 @@ const zoomState = () => {
  */
 async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
+  // The circles other than the core's are fetched once the page has loaded.
+  await page.waitForSelector("#family[data-insides-ready]", { timeout: 10_000 });
   const layers = (await page.$$eval("#family [data-layer='inside'][data-system]", (els) => els.map((e) => /** @type {HTMLElement} */ (e).dataset.system ?? ""))).sort();
   ok("/systems: every system has a circle of its own to zoom into", JSON.stringify(layers) === JSON.stringify(IDS), `${layers.length} circles for ${IDS.length} systems`);
 

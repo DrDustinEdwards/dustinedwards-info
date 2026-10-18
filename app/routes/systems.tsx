@@ -55,13 +55,16 @@ const TITLE = "Systems";
 const CAPTION = "A capsid is the protein shell of a virus, built from repeated parts called capsomers. This family is built the same way: Capsid in the middle, the shared parts around it, what people use on the outside.";
 // Capsomer's map, with an inside for every system rather than the core alone, so one tap on any system zooms into
 // its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides). The
-// page at rest carries none of them, and the map's script fetches them all from INSIDES_URL; a chosen system's is
-// inlined, so a shared ?system= link opens zoomed in before any script and with none.
+// page at rest carries none, for its first paint on a slow phone, and the map's script fetches them all from
+// INSIDES_URL once the page has loaded; a chosen system's is inlined, so a shared ?system= link opens zoomed in
+// before any script and with none.
 const CORE_ID = MODEL.systems.find((s) => s.ring === "core")?.id;
 const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 });
-const MAP = wireMapHtml(CAPSOMER_MAP, {}, CORE_ID, INSIDES_URL);
+/** The map with the given system's circle in it, or none. */
+const mapWith = (id?: string) => wireMapHtml(CAPSOMER_MAP, id && INSIDE_LAYERS[id] ? { [id]: INSIDE_LAYERS[id] } : {}, CORE_ID, INSIDES_URL);
+const MAP = mapWith();
 /** The map zoomed into one system, its circle inlined. */
-const zoomedMap = (id: string) => zoomInMapHtml(chooseInMapHtml(wireMapHtml(CAPSOMER_MAP, { [id]: INSIDE_LAYERS[id] ?? "" }, CORE_ID, INSIDES_URL), id), id);
+const zoomedMap = (id: string) => zoomInMapHtml(chooseInMapHtml(mapWith(id), id), id);
 
 export function loader({ request }: Route.LoaderArgs) {
   return { chosen: chosenSystem(MODEL, new URL(request.url).searchParams.get(SYSTEM_PARAM)) };
