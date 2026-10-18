@@ -73,7 +73,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   }
   return pageMeta({
     title: `${chosen.name}, in the family of systems`,
-    description: chosen.description ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
+    description: (chosen.private ? undefined : chosen.description) ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
     path: SYSTEMS_PATH,
   });
 }
