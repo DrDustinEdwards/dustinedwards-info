@@ -51,6 +51,15 @@ describe("the site map and sitemap.xml", () => {
     await draft(async () => expect(await xmlPaths()).not.toContain("/accessibility"));
   });
 
+  it("sitemap.xml lists the CV's PDF, and every lastmod is a real day no later than today", async () => {
+    const res = (await sitemapLoader(args("/sitemap.xml"))) as Response;
+    const xml = await res.text();
+    expect(xml).toContain(`<loc>${SITE_ORIGIN}/dustin-edwards-cv.pdf</loc>`);
+    const today = new Date().toISOString().slice(0, 10);
+    const days = [...xml.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1] ?? "");
+    expect(days.filter((day) => !/^\d{4}-\d{2}-\d{2}$/.test(day) || day > today)).toEqual([]);
+  });
+
   it("every link on the page is an address sitemap.xml lists, and a draft is on neither", async () => {
     const links = async () => (await pageData()).data.sections.flatMap((s) => s.lines.filter((l) => !l.plain).map((l) => l.to));
     const xml = new Set(await xmlPaths());

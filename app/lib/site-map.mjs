@@ -14,7 +14,8 @@
  *   line (Publications (36)). Without it, the count is a line of its own in `to`'s section, as plain text
  *   (Tags (34)): the kind has no index of its own, and a second link to `to` under another name would make
  *   two links with different text go to one place.
- * @typedef {{ path: string, lastmod: Date | null, title: string, tally?: Tally }} SiteUrl
+ * @typedef {{ path: string, lastmod: Date | null, title: string, tally?: Tally, images?: string[] }} SiteUrl
+ *   `images`: the site paths of the images the page shows, for sitemap.xml's image entries.
  * @typedef {{ to: string, label: string, count?: number, plain?: boolean }} SiteMapLine
  *   `plain`: shown as text, not a link; `to` then only places it in its section.
  * @typedef {{ id: string, heading: string, to: string | null, lines: SiteMapLine[] }} SiteMapSection

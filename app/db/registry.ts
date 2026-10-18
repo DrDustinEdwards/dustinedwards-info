@@ -23,6 +23,15 @@ export async function listRegistry(env: Env, options: { kind?: string; published
   return sortRegistry(rows.map(itemFromRow));
 }
 
+/** For the sitemap's dates (app/lib/site-urls.server.ts): every published item's source file, by `kind/id`. */
+export async function listPublishedRegistrySources(env: Env) {
+  const rows = await getDb(env)
+    .select({ kind: registry.kind, id: registry.id, sourcePath: registry.sourcePath })
+    .from(registry)
+    .where(eq(registry.status, "published"));
+  return new Map(rows.map((row) => [`${row.kind}/${row.id}`, row.sourcePath]));
+}
+
 /** One item by its address, or null. */
 export async function getRegistryItem(env: Env, kind: string, id: string): Promise<RegistryItem | null> {
   const row = await getDb(env)

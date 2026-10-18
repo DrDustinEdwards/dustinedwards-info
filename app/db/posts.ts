@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   lt,
+  max,
   ne,
   or,
   sql,
@@ -332,7 +333,7 @@ export async function listSeriesParts(env: Env, series: string) {
 
 export async function listBlogSeries(env: Env) {
   return getDb(env)
-    .select({ name: posts.series, total: count(posts.id) })
+    .select({ name: posts.series, total: count(posts.id), lastmod: max(posts.updatedAt) })
     .from(posts)
     .where(and(isBlogPost(), isNotNull(posts.series)))
     .groupBy(posts.series)
@@ -384,13 +385,21 @@ export async function listSeriesPosts(
 
 export async function listBlogTags(env: Env) {
   return getDb(env)
-    .select({ slug: tags.slug, name: tags.name, total: count(posts.id) })
+    .select({ slug: tags.slug, name: tags.name, total: count(posts.id), lastmod: max(posts.updatedAt) })
     .from(tags)
     .innerJoin(postTags, eq(postTags.tagId, tags.id))
     .innerJoin(posts, eq(posts.id, postTags.postId))
     .where(isBlogPost())
     .groupBy(tags.slug, tags.name)
     .orderBy(asc(tags.slug));
+}
+
+/** For the sitemap's image entries: each public post that renders an image, with its HTML. */
+export async function listPostsWithImages(env: Env) {
+  return getDb(env)
+    .select({ slug: posts.slug, html: posts.html })
+    .from(posts)
+    .where(and(isBlogPost(), sql`${posts.html} LIKE '%<img%'`));
 }
 
 export async function getBlogPost(env: Env, slug: string) {

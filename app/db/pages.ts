@@ -63,6 +63,15 @@ export async function listPublishedPageTitles(env: Env) {
   return new Map(rows.map((row) => [row.path, row.title]));
 }
 
+/** For the sitemap's dates (app/lib/site-urls.server.ts): every published page's source file, by path. */
+export async function listPublishedPageSources(env: Env) {
+  const rows = await getDb(env)
+    .select({ path: pages.path, sourcePath: pages.sourcePath })
+    .from(pages)
+    .where(eq(pages.status, PUBLISHED_STATUS));
+  return new Map(rows.map((row) => [row.path, row.sourcePath]));
+}
+
 /** For the save-time link check: every published page's rendered HTML, by path. */
 export async function listPublishedPageHtml(env: Env) {
   const rows = await getDb(env)
