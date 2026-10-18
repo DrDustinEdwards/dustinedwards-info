@@ -338,7 +338,7 @@ describe("the wrapper adds no policy of its own", () => {
 describe("every call proves the caller owns what it names", () => {
   const stranger: Caller = {
     kind: "admin",
-    props: { id: 2, login: "someone-else", name: null, scopes: ["dei.read", "dei.write"] },
+    props: { email: "someone-else@example.com", scopes: ["dei.read", "dei.write"] },
     scopes: ["dei.read", "dei.write"],
   };
 
@@ -348,7 +348,7 @@ describe("every call proves the caller owns what it names", () => {
       assert.equal(out.isError, true);
       assert.match(out.content[0].text, /does not belong to the administrator/);
       assert.equal(api.calls.length + api.healthCalls.length, 0);
-      assert.deepEqual(AUDIT.rows.map((r) => [r.phase, r.caller]), [["refused", "github:someone-else"]]);
+      assert.deepEqual(AUDIT.rows.map((r) => [r.phase, r.caller]), [["refused", "access:someone-else@example.com"]]);
     });
   }
 
@@ -358,13 +358,19 @@ describe("every call proves the caller owns what it names", () => {
     assert.equal(api.calls.length, 0);
   });
 
-  test("the administrator matched by numeric id also passes", async () => {
-    const out = await invokeTool({ ...ENV, ADMIN_GITHUB_LOGIN: "1" }, READER, tool("dei_check_site"), {});
+  test("the administrator matched without case also passes", async () => {
+    const out = await invokeTool({ ...ENV, ADMIN_EMAIL: "Admin@Example.com" }, READER, tool("dei_check_site"), {});
     assert.equal(out.isError, undefined);
   });
 
-  test("ADMIN is the configured login", () => {
-    assert.equal(ENV.ADMIN_GITHUB_LOGIN, ADMIN);
+  test("a grant from the old GitHub sign-in, with no email, is refused", async () => {
+    const old = { kind: "admin", props: { id: 1, login: "admin", name: null }, scopes: ["dei.read"] } as unknown as Caller;
+    const out = await invokeTool(ENV, old, tool("dei_check_site"), {});
+    assert.match(out.content[0].text, /does not belong to the administrator/);
+  });
+
+  test("ADMIN is the configured email", () => {
+    assert.equal(ENV.ADMIN_EMAIL, ADMIN);
   });
 });
 
@@ -409,7 +415,7 @@ describe("the append-only tool-call log", () => {
       AUDIT.rows.map((r) => r.phase),
       ["started", "finished"],
     );
-    assert.equal(AUDIT.rows[0].caller, `github:${ADMIN}`);
+    assert.equal(AUDIT.rows[0].caller, `access:${ADMIN}`);
     assert.equal(AUDIT.rows[0].tool, "dei_backup_media");
     assert.equal(AUDIT.rows[0].callId, AUDIT.rows[1].callId);
     assert.deepEqual(AUDIT.rows[1].result, { isError: false, text: JSON.stringify({ done: true }, null, 2) });

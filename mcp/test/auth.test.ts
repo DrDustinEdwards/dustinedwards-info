@@ -4,19 +4,19 @@ import assert from "node:assert/strict";
 
 import { agentScopes, authorizeCall, callerName, isAdminUser } from "../src/auth.ts";
 
-const env = { ADMIN_GITHUB_LOGIN: "DrDustinEdwards" };
-const props = { id: 1, login: "drdustinedwards", name: null };
+const env = { ADMIN_EMAIL: "Admin@Example.com" };
+const props = { email: "admin@example.com" };
 
 describe("isAdminUser", () => {
-  test("matches the login case-insensitively, or the numeric id exactly", () => {
+  test("matches the email without case, and nothing else", () => {
     assert.equal(isAdminUser(env, props), true);
-    assert.equal(isAdminUser({ ADMIN_GITHUB_LOGIN: "1" }, props), true);
-    assert.equal(isAdminUser({ ADMIN_GITHUB_LOGIN: "2" }, props), false);
+    assert.equal(isAdminUser({ ADMIN_EMAIL: "other@example.com" }, props), false);
+    assert.equal(isAdminUser(env, {}), false);
   });
 
   test("an unset administrator admits nobody", () => {
     assert.equal(isAdminUser({}, props), false);
-    assert.equal(isAdminUser({ ADMIN_GITHUB_LOGIN: "  " }, props), false);
+    assert.equal(isAdminUser({ ADMIN_EMAIL: "  " }, props), false);
   });
 });
 
@@ -49,7 +49,7 @@ describe("authorizeCall", () => {
   });
 
   test("the audit name never carries a credential", () => {
-    assert.equal(callerName({ kind: "admin", props, scopes: [] }), "github:drdustinedwards");
+    assert.equal(callerName({ kind: "admin", props, scopes: [] }), "access:admin@example.com");
     assert.equal(callerName({ kind: "agent", principal: "grok", scopes: [] }), "agent:grok");
   });
 });

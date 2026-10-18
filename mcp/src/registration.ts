@@ -11,7 +11,7 @@
  * which is the closed state.
  *
  * Registration still grants nothing. A registered client can only send the
- * administrator to the consent page, and from there to GitHub and isAdminUser.
+ * administrator to the consent page, and from there to Access and isAdminUser.
  *
  * Pure, so the whole rule is unit tested without the OAuth library.
  */

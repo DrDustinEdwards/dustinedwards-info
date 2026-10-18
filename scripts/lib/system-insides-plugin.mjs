@@ -12,7 +12,10 @@
  * zoomed in with no script.
  *
  * Both environments import the module (the route module is in the client build too), so the drawing is memoised on
- * the model's bytes and made once per build.
+ * the model's bytes and made once per build. Only the server's copy carries the layers: the client never draws one
+ * from the module (its script fetches the asset), and the server's map, a ?system= one with its layer inlined, is
+ * kept as it is on hydration, since React does not compare dangerouslySetInnerHTML there. With every layer in the
+ * route's script, the full model's put /systems past its LCP budget again (2026-10-18, 2576ms).
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -39,10 +42,13 @@ export function systemInsides() {
   return memo;
 }
 
-/** The module's source: every layer by id, for the server, and the asset's URL under Vite's base. @param {string} base */
-export function systemInsidesSource(base) {
+/**
+ * The module's source: every layer by id for the server, none for the client, and the asset's URL under Vite's base.
+ * @param {string} base @param {boolean} [client]
+ */
+export function systemInsidesSource(base, client = false) {
   const { json, fileName } = systemInsides();
-  return `export const INSIDE_LAYERS = ${json};\nexport const INSIDES_URL = ${JSON.stringify(`${base}${fileName}`)};\n`;
+  return `export const INSIDE_LAYERS = ${client ? "{}" : json};\nexport const INSIDES_URL = ${JSON.stringify(`${base}${fileName}`)};\n`;
 }
 
 /** @returns {import("vite").Plugin} */
@@ -59,7 +65,7 @@ export function systemInsidesPlugin() {
     load(id) {
       if (id !== RESOLVED_ID) return null;
       this.addWatchFile(MODEL_FILE);
-      return systemInsidesSource(base);
+      return systemInsidesSource(base, this.environment?.config.consumer === "client");
     },
     generateBundle() {
       // The server build needs the URL only, which is the same in both because it is the bytes' hash.

@@ -1,27 +1,23 @@
 /**
- * The consent step: upstream GitHub login.
+ * The consent step: upstream sign-in through Cloudflare Access.
  *
  * `@cloudflare/workers-oauth-provider` makes this Worker an OAuth 2.1
  * authorization server for MCP clients. It does not know WHO the human is, so
- * this handler answers that by sending them to GitHub and checking the returning
- * account against the single configured administrator.
+ * this handler answers that by sending them to Cloudflare Access for SaaS
+ * (access-login.ts) and checking the returning email against the single
+ * configured administrator (ADMIN_EMAIL).
  *
- * GitHub rather than Google, per the capsid MCP precedent: it keeps the wrapper's
- * identity fully independent of dustinedwards.info's own Better Auth setup, so a
- * change to the site's Google project at DNS cutover cannot affect operator
- * access here.
- *
- * A GitHub OAuth App, not a GitHub App. Only login is needed; no repository
- * access happens in this Worker at all, because the only thing it may touch is
- * the operator API.
+ * Access, the same door Capsid, Carrel and Foxing Admin use, so one login covers
+ * every server. It keeps the wrapper's identity independent of
+ * dustinedwards.info's own Better Auth setup, so a change to the site's Google
+ * project cannot affect operator access here.
  */
 
+import { accessSaas, authorizationUrl, finishSignIn, newSignIn, type AccessEnv } from "./access-login";
 import { isAdminUser, SCOPE_READ, SCOPE_WRITE, type Props } from "./auth";
 
-export interface GitHubEnv {
-  GITHUB_CLIENT_ID?: string;
-  GITHUB_CLIENT_SECRET?: string;
-  ADMIN_GITHUB_LOGIN?: string;
+export interface LoginEnv extends AccessEnv {
+  ADMIN_EMAIL?: string;
   OAUTH_PROVIDER: {
     parseAuthRequest(request: Request): Promise<AuthRequest>;
     completeAuthorization(options: {
@@ -76,6 +72,10 @@ function html(body: string, status = 200, headers: HeadersInit = {}): Response {
   });
 }
 
+const NOT_CONFIGURED =
+  "This wrapper is not configured for login: ACCESS_TEAM_DOMAIN, ACCESS_SAAS_CLIENT_ID or " +
+  "ACCESS_SAAS_CLIENT_SECRET is unset. Not configured means not open.";
+
 const escape = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
@@ -86,14 +86,8 @@ const escape = (s: string) =>
  * client id is shown verbatim: with CIMD it is a URL, and a human approving
  * access to a publishing surface should see exactly which client is asking.
  */
-async function handleAuthorizeGet(request: Request, env: GitHubEnv): Promise<Response> {
-  if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
-    return text(
-      "This wrapper is not configured for login: GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is unset. " +
-        "Not configured means not open.",
-      503,
-    );
-  }
+async function handleAuthorizeGet(request: Request, env: LoginEnv): Promise<Response> {
+  if (!accessSaas(env)) return text(NOT_CONFIGURED, 503);
 
   const oauthReq = await env.OAUTH_PROVIDER.parseAuthRequest(request);
   const client = await env.OAUTH_PROVIDER.lookupClient(oauthReq.clientId).catch(() => null);
@@ -131,13 +125,13 @@ It cannot write posts; Carrel owns writing.</p>
 deciding mentions, uploading and backing up media, refreshing citations, saving a
 procedure) need the box below. It will <strong>not</strong> be able to publish a
 procedure for the first time; that stays with you.</p>
-<p>You will be sent to GitHub to sign in. Only the configured administrator account
-is accepted.</p>
+<p>You will be sent to Cloudflare Access to sign in. Only the configured
+administrator is accepted.</p>
 <form method="post">
   <input type="hidden" name="consent" value="${consentToken}">
   <p><label><input type="checkbox" name="allow_write" value="1"${wantsWrite ? " checked" : ""}>
   Allow changes (dei.write)</label></p>
-  <button type="submit">Continue to GitHub</button>
+  <button type="submit">Continue to sign in</button>
 </form>
 </body></html>`, 200, {
     "Set-Cookie": `${CONSENT_COOKIE}=${consentToken}; HttpOnly; Secure; SameSite=Strict; Path=/authorize; Max-Age=600`,
@@ -145,12 +139,15 @@ is accepted.</p>
 }
 
 /**
- * Consent submitted. Stash the OAuth request in a cookie and bounce to GitHub.
+ * Consent submitted. Stash the OAuth request, the PKCE verifier and the OIDC
+ * nonce in a cookie and bounce to Access.
  *
  * The cookie is scoped to /callback, HttpOnly, Secure and SameSite=Lax: it exists
  * only to survive the round trip and nothing else should ever read it.
  */
-async function handleAuthorizePost(request: Request, env: GitHubEnv): Promise<Response> {
+async function handleAuthorizePost(request: Request, env: LoginEnv): Promise<Response> {
+  const saas = accessSaas(env);
+  if (!saas) return text(NOT_CONFIGURED, 503);
   const oauthReq = await env.OAUTH_PROVIDER.parseAuthRequest(request);
   const url = new URL(request.url);
 
@@ -163,17 +160,11 @@ async function handleAuthorizePost(request: Request, env: GitHubEnv): Promise<Re
   const scopes = form?.get("allow_write") === "1" ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
 
   const state = crypto.randomUUID();
-  const payload = btoa(JSON.stringify({ state, req: oauthReq, scopes }));
+  const signIn = newSignIn();
+  const payload = btoa(JSON.stringify({ state, req: oauthReq, scopes, ...signIn }));
+  const location = await authorizationUrl(saas, { redirectUri: `${url.origin}/callback`, state, ...signIn });
 
-  const github = new URL("https://github.com/login/oauth/authorize");
-  github.searchParams.set("client_id", env.GITHUB_CLIENT_ID ?? "");
-  github.searchParams.set("redirect_uri", `${url.origin}/callback`);
-  // No scopes. Identity is all this needs, and a token that can do more than it
-  // needs is a liability with no upside.
-  github.searchParams.set("scope", "");
-  github.searchParams.set("state", state);
-
-  const headers = new Headers({ Location: github.toString() });
+  const headers = new Headers({ Location: location });
   headers.append(
     "Set-Cookie",
     `${STATE_COOKIE}=${payload}; HttpOnly; Secure; SameSite=Lax; Path=/callback; Max-Age=600`,
@@ -181,8 +172,10 @@ async function handleAuthorizePost(request: Request, env: GitHubEnv): Promise<Re
   return new Response(null, { status: 302, headers });
 }
 
-/** Back from GitHub. Verify state, resolve the user, gate on the admin check. */
-async function handleCallback(request: Request, env: GitHubEnv): Promise<Response> {
+/** Back from Access. Verify state and the ID token, gate on the admin check. */
+async function handleCallback(request: Request, env: LoginEnv): Promise<Response> {
+  const saas = accessSaas(env);
+  if (!saas) return text(NOT_CONFIGURED, 503);
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
@@ -191,58 +184,41 @@ async function handleCallback(request: Request, env: GitHubEnv): Promise<Respons
   const stateCookie = cookie(request, STATE_COOKIE);
   if (!stateCookie) return text("The login session expired. Start the authorization again.", 400);
 
-  let stashed: { state: string; req: AuthRequest; scopes?: string[] };
+  let stashed: { state: string; req: AuthRequest; scopes?: string[]; verifier?: string; nonce?: string };
   try {
     stashed = JSON.parse(atob(stateCookie));
   } catch {
     return text("The login session was unreadable. Start the authorization again.", 400);
   }
-  // CSRF: the state GitHub returned must match the one we minted.
+  // CSRF: the state Access returned must match the one we minted.
   if (stashed.state !== returnedState) {
     return text("State mismatch on the callback. The authorization was not completed.", 400);
   }
 
-  const tokenResp = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({
-      client_id: env.GITHUB_CLIENT_ID,
-      client_secret: env.GITHUB_CLIENT_SECRET,
-      code,
-      redirect_uri: `${url.origin}/callback`,
-    }),
-  });
-  const token = (await tokenResp.json()) as { access_token?: string; error_description?: string };
-  if (!token.access_token) {
-    return text(`GitHub declined the token exchange: ${token.error_description ?? "no access token"}`, 502);
+  if (!stashed.verifier || !stashed.nonce) {
+    return text("The login session was unreadable. Start the authorization again.", 400);
   }
 
-  const userResp = await fetch("https://api.github.com/user", {
-    headers: {
-      authorization: `Bearer ${token.access_token}`,
-      accept: "application/vnd.github+json",
-      "user-agent": "dustinedwards-mcp",
-    },
+  const signedIn = await finishSignIn(saas, {
+    code,
+    redirectUri: `${url.origin}/callback`,
+    verifier: stashed.verifier,
+    nonce: stashed.nonce,
   });
-  if (!userResp.ok) return text(`GitHub would not identify the account (${userResp.status}).`, 502);
-  const user = (await userResp.json()) as { id: number; login: string; name: string | null };
+  if (!signedIn.ok) return text(`Cloudflare Access did not confirm the sign-in (${signedIn.reason}).`, 502);
 
-  if (!isAdminUser(env, user)) {
-    return text(
-      `Access denied. This is a single-operator server and the GitHub account "${user.login}" is not its ` +
-        `administrator.`,
-      403,
-    );
+  if (!isAdminUser(env, signedIn)) {
+    return text("Access denied. This is a single-operator server and this account is not its administrator.", 403);
   }
 
   const granted = (stashed.scopes ?? []).includes(SCOPE_WRITE) ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
   const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
     request: stashed.req,
-    userId: String(user.id),
-    metadata: { login: user.login },
+    userId: signedIn.email.toLowerCase(),
+    metadata: { email: signedIn.email },
     // The grant is what the administrator ticked, never what the client asked.
     scope: granted,
-    props: { id: user.id, login: user.login, name: user.name ?? null, scopes: granted },
+    props: { email: signedIn.email, scopes: granted },
   });
 
   const headers = new Headers({ Location: redirectTo });
@@ -258,7 +234,7 @@ async function handleCallback(request: Request, env: GitHubEnv): Promise<Respons
  * flow and /health.
  */
 export const defaultHandler = {
-  async fetch(request: Request, env: GitHubEnv): Promise<Response> {
+  async fetch(request: Request, env: LoginEnv): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === "/health") return text("ok");
     if (pathname === "/authorize" && request.method === "GET") return handleAuthorizeGet(request, env);

@@ -18,7 +18,7 @@
  *   /mcp                   OAuthProvider validates a client-leg access token,
  *                          then apiHandler re-checks the admin grant, rate
  *                          limits, and hands off to the era router
- *   /authorize /callback   the consent flow, github-handler.ts
+ *   /authorize /callback   the consent flow and Access sign-in, login-handler.ts
  *   /register              rate limited per address, then the OAuth library,
  *                          which refuses any redirect URI not allowlisted
  *   /token                 served by the OAuth library
@@ -30,7 +30,7 @@
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import { agentPrincipal, agentScopes, isAdminUser, SCOPE_READ, SCOPES, type Props } from "./auth";
-import { defaultHandler, type GitHubEnv } from "./github-handler";
+import { defaultHandler, type LoginEnv } from "./login-handler";
 import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
 import { checkRateLimit, type RateLimitEnv } from "./rate-limit";
@@ -41,7 +41,7 @@ import type { AuditEnv } from "./audit-log";
 export { OperatorRateLimit } from "./rate-limit";
 export { ToolCallLog } from "./audit-log";
 
-export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<AuditEnv>, ProbeEnv, GitHubEnv {
+export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<AuditEnv>, ProbeEnv, LoginEnv {
   OAUTH_KV: KVNamespace;
   /** The one public origin, https://admin-mcp.dustinedwards.info. Tokens are bound to its /mcp. */
   PUBLIC_ORIGIN?: string;
@@ -83,10 +83,10 @@ const apiHandler = {
       );
     }
 
-    // Both doors have locks. Keyed by the operator's stable GitHub id rather than
+    // Both doors have locks. Keyed by the operator's verified email rather than
     // by IP, because the identity is known here and it is the thing worth
     // limiting. Fails closed if the binding is missing.
-    const limit = await checkRateLimit(env, `operator:${props.id}`);
+    const limit = await checkRateLimit(env, `operator:${props.email.toLowerCase()}`);
     if (!limit.allowed) {
       return new Response(
         "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
@@ -148,7 +148,7 @@ async function agentHandler(
 
   /*
    * KEYED BY THE PRINCIPAL, not by IP and not shared with the operator. The
-   * OAuth path limits `operator:<github id>`; an agent gets its own bucket, so
+   * OAuth path limits `operator:<email>`; an agent gets its own bucket, so
    * one agent exhausting its allowance cannot rate limit Dustin out of his own
    * server, and vice versa. Fails closed when the binding is missing, exactly
    * as the other door does.
@@ -211,8 +211,8 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
     // 2026-10-09. registrationRefusal allows only redirect URIs listed exactly in
     // DCR_REDIRECT_URIS (none listed refuses every registration), the route is
     // rate limited per address before the provider sees it, and a registration
-    // grants nothing: a grant still comes only from the consent page, the GitHub
-    // login and isAdminUser. Remove when Grok and Gemini support CIMD, at the
+    // grants nothing: a grant still comes only from the consent page, the Access
+    // sign-in and isAdminUser. Remove when Grok and Gemini support CIMD, at the
     // latest when the specification removes DCR.
     clientIdMetadataDocumentEnabled: true,
     clientRegistrationEndpoint: "/register",

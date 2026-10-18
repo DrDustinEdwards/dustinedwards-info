@@ -32,5 +32,6 @@ export async function backupD1(env: BackupEnv) {
     rows: dump.tables.reduce((sum, t) => sum + t.rows, 0),
     kept: pruned.kept,
     pruned: pruned.pruned,
+    locked: pruned.locked,
   };
 }

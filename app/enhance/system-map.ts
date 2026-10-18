@@ -118,8 +118,8 @@ function start(root: HTMLElement) {
     const systems = names(".systems-rim");
     const name = listed(id, "name") || id;
     const label = `${name}: ${parts.length ? `${parts.join(", ")} inside.` : "no parts drawn."}${outside.length ? ` Outside it: ${outside.join(", ")}.` : ""}${systems.length ? ` Connects to ${systems.join(", ")}.` : ""}`;
-    const counts = parts.length ? `${parts.length} ${parts.length === 1 ? "part" : "parts"} inside${outside.length ? `, ${outside.length} outside it` : ""}` : layer.querySelector(".systems-inside-text") ? "" : "No parts drawn";
-    const linked = systems.length ? `${systems.length === 1 ? "Connects to 1 system" : `Connects to ${systems.length} systems`}: tap one on the rim to go there` : "";
+    const counts = parts.length ? `${parts.length} ${parts.length === 1 ? "part" : "parts"} inside${outside.length ? `, ${outside.length} outside` : ""}` : layer.querySelector(".systems-inside-text") ? "" : "No parts drawn";
+    const linked = systems.length ? `Tap ${systems.length === 1 ? "the system" : "a system"} on the rim to go there` : "";
     return { name, label, text: [counts, linked].filter(Boolean).join(". ") };
   };
 

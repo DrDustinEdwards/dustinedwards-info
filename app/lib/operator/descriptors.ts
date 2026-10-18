@@ -417,7 +417,7 @@ export const TOOL_DESCRIPTORS: Readonly<
       "the backup policy (the required non-derived tables are present, nothing credential-bearing is in it, " +
       "it is not empty), writes the completion marker only if the check passes, then prunes runs outside " +
       "the retention policy (14 daily, 8 weekly, 6 monthly). Returns run_id, exported_at, tables, rows, " +
-      "kept and pruned. A failed check answers an error and leaves the run without its marker. The watchdog " +
+      "kept, pruned and locked (stale runs an R2 bucket lock kept). A failed check answers an error and leaves the run without its marker. The watchdog " +
       "calls this nightly.",
   },
   upload_media: {
