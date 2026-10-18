@@ -22,6 +22,12 @@
   .systems-facts:not([data-chosen]) {
     display: none;
   }
+
+  /* With script the Plain map button opens Capsomer's list as columns, so the list's own toggle under the map
+     would be a second way to the same thing (Dustin, 2026-10-18). With no script the list stays, open. */
+  .systems-map .cap-system-map:not([data-view="plain"]) .cap-system-map-list {
+    display: none;
+  }
 }
 
 .systems-facts + .systems-facts {
