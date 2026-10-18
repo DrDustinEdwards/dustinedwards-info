@@ -6,11 +6,15 @@ import type { Route } from "./+types/sitemap";
 
 /**
  * Every public URL, from the one list the site map page (/site-map) also reads (app/lib/site-urls.server.ts),
- * so the two cannot drift. What is listed, and why some entries carry no `lastmod`, is said there.
+ * so the two cannot drift. What is listed, and where each `lastmod` comes from, is said there. The files it
+ * lists that are not pages (the CV's PDF) come from there too.
  */
 export async function loader({ context }: Route.LoaderArgs) {
-  const { urls, nextPublishAt } = await gatherSiteUrls(getEnv(context));
-  const body = sitemapDocument(urls.map((url) => ({ loc: SITE_ORIGIN + url.path, lastmod: url.lastmod })));
+  const { urls, files, nextPublishAt } = await gatherSiteUrls(getEnv(context));
+  const body = sitemapDocument([
+    ...urls.map((url) => ({ loc: SITE_ORIGIN + url.path, lastmod: url.lastmod, images: url.images?.map((src) => SITE_ORIGIN + src) })),
+    ...files.map((file) => ({ loc: SITE_ORIGIN + file.path, lastmod: file.lastmod })),
+  ]);
 
   return new Response(body, {
     headers: {

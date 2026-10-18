@@ -19,6 +19,15 @@ export async function listPublishedPublications(env: Env): Promise<Publication[]
   return sortPublications(rows.map((row) => JSON.parse(row.record) as Publication));
 }
 
+/** For the sitemap's dates (app/lib/site-urls.server.ts): every published paper's source file, by slug. */
+export async function listPublishedPublicationSources(env: Env) {
+  const rows = await getDb(env)
+    .select({ slug: publications.slug, sourcePath: publications.sourcePath })
+    .from(publications)
+    .where(eq(publications.status, PUBLISHED_STATUS));
+  return new Map(rows.map((row) => [row.slug, row.sourcePath]));
+}
+
 /** The paper a `/research/publications/<slug>` URL names, or null. A draft is not public: it answers as absent. */
 export async function getPublishedPublication(env: Env, slug: string): Promise<Publication | null> {
   const row = (

@@ -43,7 +43,14 @@ export async function getPublishedProcedureMarkdown(env: Env, path: string) {
 /** For the sitemap and llms-full: the published pages, by path. */
 export async function listPublishedProcedures(env: Env) {
   return getDb(env)
-    .select({ path: procedures.path, title: procedures.title, description: procedures.description, updated: procedures.updated, markdown: procedures.markdown })
+    .select({
+      path: procedures.path,
+      title: procedures.title,
+      description: procedures.description,
+      updated: procedures.updated,
+      markdown: procedures.markdown,
+      sourcePath: procedures.sourcePath,
+    })
     .from(procedures)
     .where(eq(procedures.status, PUBLISHED_STATUS))
     .orderBy(asc(procedures.path));

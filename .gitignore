@@ -48,6 +48,9 @@
 
 # Which prose pages are published, for the footer (scripts/lib/published-pages.mjs), for the same reason.
 /app/lib/published-pages.generated.mjs
+
+# Each source file's last commit day, for the sitemap's lastmod (scripts/lib/source-dates.mjs), for the same reason.
+/app/lib/source-dates.generated.mjs
 /app/kb/registry/references.generated.mjs
 
 # The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records
