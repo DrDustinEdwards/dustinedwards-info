@@ -12,13 +12,35 @@
   margin-block: 2rem 1.5rem;
 }
 
+/*
+ * Every system's facts follow the map. With no script they are all shown, one after another; with script, only the
+ * chosen system's (data-chosen, set by the server from ?system= and by app/enhance/system-map.ts on each choice),
+ * so choosing shows its facts in place. Decided by scripting rather than a class the script adds, so a page served
+ * with a system chosen paints that system alone from the first frame.
+ */
+@media (scripting: enabled) {
+  .systems-facts:not([data-chosen]) {
+    display: none;
+  }
+}
+
+.systems-facts + .systems-facts {
+  margin-block-start: 2.5rem;
+}
+
 .systems-facts h2 {
+  margin-block: 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.systems-facts h3 {
   margin-block: 1.5rem 0.5rem;
   font-size: 1.25rem;
   font-weight: 600;
 }
 
-.systems-facts h3 {
+.systems-facts h4 {
   margin-block: 1rem 0.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -50,20 +72,11 @@
   overflow-wrap: anywhere;
 }
 
+.systems-all {
+  margin-block-end: 2rem;
+}
+
 .systems-source {
   color: var(--text-secondary);
   font-size: 0.9em;
-}
-
-/*
- * Capsomer's screen-reader-only text, which its base sheet defines and the public pages do not load: the map's
- * list names each "Its page" link by its system with it.
- */
-.cap-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }

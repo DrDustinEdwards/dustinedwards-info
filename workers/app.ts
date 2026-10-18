@@ -242,6 +242,13 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
       dest.search = url.search;
       return redirectTo(request, dest.toString());
     }
+    // A target with a query of its own (/systems?system=<id>) keeps it, and the request's other
+    // parameters ride along after it.
+    if (target.includes("?")) {
+      const dest = new URL(target, url);
+      for (const [key, value] of url.searchParams) if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
+      return redirectTo(request, dest.toString());
+    }
     // Only a retired section lands on "/", and its old query string (the demos' inputs) means
     // nothing there, so it is dropped rather than carried onto the home page's address.
     const search = target === "/" ? "" : url.search;

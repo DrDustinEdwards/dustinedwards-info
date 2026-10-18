@@ -21,6 +21,8 @@ on:
       # Brackets are a glob class in a path filter, so the file's own are escaped.
       - 'app/routes/systems\[.md\].ts'
       - app/routes.ts
+      # The old /systems/<id> addresses move to ?system=<id> there, and the case follows them.
+      - app/lib/path-moves.mjs
       - app/enhance/system-map.ts
       - app/styles/systems.css
       - scripts/check-systems-map.mjs

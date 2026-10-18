@@ -181,8 +181,45 @@ export function loadSystemModel(raw) {
   return result.model;
 }
 
-/** @param {string} id */
-export const systemPath = (id) => `${SYSTEMS_PATH}/${id}`;
+/**
+ * The query parameter that names the chosen system on /systems. There is one page: a system is a
+ * state of it, kept in the address so a shared link opens with that system chosen. The old
+ * /systems/<id> pages answer a 301 here (app/lib/path-moves.mjs).
+ */
+export const SYSTEM_PARAM = "system";
+
+/** The address of /systems with one system chosen. @param {string} id */
+export const systemHref = (id) => `${SYSTEMS_PATH}?${SYSTEM_PARAM}=${encodeURIComponent(id)}`;
+
+/**
+ * The system a query value names, or null when it names none: an unknown value is the page with
+ * nothing chosen, never an error.
+ * @param {SystemModel} model
+ * @param {string | null | undefined} value
+ */
+export const chosenSystem = (model, value) => (value && model.systems.some((s) => s.id === value) ? value : null);
+
+/**
+ * Capsomer's map with one system already chosen, as its controller leaves it: the root marked
+ * selected, the system pressed, its lines on and the systems at their far ends linked. So the
+ * server draws that system's wiring before any script runs, and with no script at all. Attributes
+ * only: the drawing is Capsomer's and is not changed.
+ * @param {string} html what systemMapHtml returned
+ * @param {string} id a system on the map
+ */
+export function chooseInMapHtml(html, id) {
+  /** @type {Set<string>} */
+  const linked = new Set();
+  let out = html.replace(/<path class="cap-system-map-edge" data-from="([^"]*)" data-to="([^"]*)"/g, (whole, from, to) => {
+    if (from !== id && to !== id) return whole;
+    linked.add(from === id ? to : from);
+    return `${whole} data-on`;
+  });
+  out = out.replace(/<g class="cap-system-map-tile" data-id="([^"]*)"/g, (whole, tile) =>
+    tile === id ? `${whole} aria-pressed="true"` : linked.has(tile) ? `${whole} data-linked` : whole,
+  );
+  return out.replace(/<figure class="cap-system-map" data-cap="system-map"/, (whole) => `${whole} data-selected`);
+}
 
 /**
  * The Capsid explorer, built from the same public model, so every system here has a page
@@ -201,7 +238,8 @@ const FAMILY_WORD = { system: "system", writing: "writing", product: "product", 
 const tagOf = (s) => (s.ring === "core" ? undefined : s.ring === "shared" ? "shared" : FAMILY_WORD[s.family]);
 
 /**
- * What Capsomer's map draws: every system with its page as its link, every line (the map
+ * What Capsomer's map draws: every system, with no link of its own, since choosing one shows its
+ * facts on the same page (app/enhance/system-map.ts), every line (the map
  * draws those between systems, the inside view those between the core's containers), and
  * the containers.
  * @param {SystemModel} model
@@ -218,7 +256,6 @@ export function mapData(model) {
       // A private system has none: parseSystemModel refuses it.
       description: s.private ? undefined : s.description,
       domain: s.domain || undefined,
-      href: systemPath(s.id),
     })),
     relationships: model.relationships.map(({ from, to, kind }) => ({ from, to, kind })),
     // The box under each part names its kind (worker, database): Capsomer's boxes are sized for a word, and the
@@ -312,7 +349,8 @@ export const summaryOf = (s) => (s.private ? (s.domain ? "Private: its name and 
 export const repoOf = (s) => (s.private ? undefined : s.repos?.[0]);
 
 /**
- * The markdown twin of /systems: the same systems, grouped by ring, with their connections.
+ * The markdown twin of /systems: every system, grouped by ring, each with the facts the page shows
+ * when it is chosen, so an agent reads what a person does (CLAUDE.md, machines and people).
  * @param {SystemModel} model
  * @param {string} origin
  */
@@ -327,40 +365,39 @@ export function systemsMarkdown(model, origin) {
     const inRing = model.systems.filter((s) => s.ring === ring);
     if (inRing.length === 0) continue;
     lines.push(`## ${RING_HEADINGS[ring]}`, "");
-    for (const s of inRing) lines.push(`- [${s.name}](${origin}${systemPath(s.id)}.md)${s.private ? " (private)" : ""}${s.private || !s.description ? "" : `: ${s.description}`}`);
-    lines.push("");
+    for (const s of inRing) lines.push(systemSectionMarkdown(model, s.id, origin) ?? "");
   }
   lines.push(`Deeper, in the Capsid explorer: ${EXPLORER_ORIGIN}/`, "");
   return lines.join("\n");
 }
 
 /**
- * The markdown twin of /systems/<id>.
+ * One system's section of /systems.md: what the page shows when that system is chosen.
  * @param {SystemModel} model
  * @param {string} id
  * @param {string} origin
  */
-export function systemMarkdown(model, id, origin) {
+export function systemSectionMarkdown(model, id, origin) {
   const s = model.systems.find((x) => x.id === id);
   if (!s) return null;
-  const lines = [`# ${s.name}`, ""];
+  const lines = [`### ${s.name}${s.private ? " (private)" : ""}`, ""];
   lines.push(summaryOf(s), "");
-  lines.push(`- Ring: ${RING_HEADINGS[s.ring]}`);
+  lines.push(`- On the map: ${origin}${systemHref(s.id)}`);
   if (s.domain) lines.push(`- Address: https://${s.domain}`);
   const repo = repoOf(s);
   if (repo) lines.push(`- Source: ${repo}`);
   lines.push(`- In the Capsid explorer: ${explorerUrl(s.id)}`);
   const parts = partsOf(model, id);
   const outside = outsideOf(model, id);
-  if (parts.length) lines.push("", "## Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
-  if (outside.length) lines.push("", "## Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
+  if (parts.length) lines.push("", "#### Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
+  if (outside.length) lines.push("", "#### Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
   const wires = wiresOf(model, id);
   if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
   const links = connectionsOf(model, id);
-  lines.push("", "## Connections", "");
+  lines.push("", "#### Connections", "");
   if (links.length === 0) lines.push("None drawn.");
-  for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemPath(c.other)}.md)`);
-  lines.push("", `All systems: ${origin}${SYSTEMS_PATH}.md`, "");
+  for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemHref(c.other)})`);
+  lines.push("");
   return lines.join("\n");
 }
 

@@ -243,8 +243,8 @@
     {
       "id": "system-map",
       "module": "app/enhance/system-map.ts",
-      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbours, choosing a system draws its lines along the seams and fills its detail, choosing Capsid again goes inside it to its parts, and a Plain map view shows the list as columns. On /systems/<id> that system starts chosen.",
-      "fallback": "The page is complete as served: the drawing is one named picture, the list of every system grouped by ring is open beneath it with each system's page linked, and /systems/<id> renders that system's facts and connections on the server.",
+      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbours, choosing a system draws its lines along the seams and fills its detail, choosing Capsid again goes inside it to its parts, and a Plain map view shows the list as columns. Choosing a system also shows its facts below the map, in place, and keeps it in the address as ?system=<id>, so a shared link opens with that system chosen.",
+      "fallback": "The page is complete as served: the drawing is one named picture, the list of every system grouped by ring is open beneath it, every system's facts and connections follow the map, and /systems?system=<id> draws that system's lines on the server.",
       "fallbackKind": "selector",
       "fallbackAt": ".systems-map",
       "why": null
