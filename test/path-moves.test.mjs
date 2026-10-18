@@ -91,3 +91,13 @@ await test("a path that only starts with the same letters is not a moved section
   // A post whose slug happens to be named like a feed file is still a post and still moves.
   assert.equal(movedPathTarget("/blog/tags/atom.xml"), "/writing/tags/atom.xml");
 });
+
+await test("each old system page moves to /systems with that system chosen, and its twin to /systems.md", () => {
+  assert.equal(movedPathTarget("/systems/capsid"), "/systems?system=capsid");
+  assert.equal(movedPathTarget("/systems/dustinedwards-info"), "/systems?system=dustinedwards-info");
+  assert.equal(movedPathTarget("/systems/capsid.md"), "/systems.md");
+  // One page, so the page and its twin themselves do not move.
+  for (const path of ["/systems", "/systems.md", "/systems/", "/systems/Capsid", "/systems/capsid/parts", "/systemsx/capsid"]) {
+    assert.equal(movedPathTarget(path), null, path);
+  }
+});

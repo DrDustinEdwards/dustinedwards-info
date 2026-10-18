@@ -14,9 +14,7 @@ import { paperPath } from "~/lib/publications/paths.mjs";
 import { POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { SiteUrl, Tally } from "~/lib/site-map.mjs";
-import { loadSystemModel, systemPath } from "~/lib/systems.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
-import systemModel from "../../data/system-model.json";
 
 /**
  * The public pages with a route of their own, each with the title the site map shows. Kept in step with
@@ -116,9 +114,6 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; nextP
       title: p.title,
       tally: procedureTally(p.path),
     })),
-    // Each system's page (app/lib/systems.mjs), from the committed model; /systems itself is a static page. Titled
-    // with the map's name, because several systems share a name with a Software page (Capsid, Carrel).
-    ...loadSystemModel(systemModel).systems.map((s) => ({ path: systemPath(s.id), lastmod: none, title: `System map: ${s.name}` })),
     // The registry's inventory, each kind that has an item, and each item. No `lastmod`: a row's sync time is not the
     // date a fact changed.
     { path: LAB_PATH, lastmod: none, title: "Lab registry" },

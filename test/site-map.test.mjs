@@ -76,7 +76,7 @@ await test("the sections are the header's five, in its order, then Site", () => 
 
 await test("a path goes to the section that owns its root, and anything else to Site", () => {
   assert.equal(sectionOf("/research/tools/titer"), "research");
-  assert.equal(sectionOf("/systems/capsid"), "software");
+  assert.equal(sectionOf("/systems"), "software");
   assert.equal(sectionOf("/software/how-tos"), "software");
   assert.equal(sectionOf("/recipes"), "about");
   assert.equal(sectionOf("/cv"), "about");

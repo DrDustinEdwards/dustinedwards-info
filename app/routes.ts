@@ -53,12 +53,10 @@ export default [
     // more specific research/publications routes above still win; a path with no page answers 404.
     // The phage page: its prose and sections from the page row, its table as the catalog over the phage rows.
     route("research/phages", "routes/phages.tsx"),
-    // The family of systems (app/lib/systems.mjs): the map, one system chosen, and their twins, which come
-    // first so `.md` is not read as part of a system's id.
+    // The family of systems (app/lib/systems.mjs): one page, a chosen system kept in its query
+    // (?system=<id>), and its twin. The old /systems/<id> pages 301 to that query (app/lib/path-moves.mjs).
     route("systems.md", "routes/systems[.md].ts", { id: "systems-md" }),
-    route("systems/:system.md", "routes/systems[.md].ts", { id: "system-md" }),
     route("systems", "routes/systems.tsx"),
-    route("systems/:system", "routes/systems.tsx", { id: "system" }),
     // The lab registry (docs/REGISTRY.md): the master inventory, a kind's own page and one item, each with its twin.
     // The twins come first so `.md` is not read as part of a kind or an id; the item's id is the kind's optional segment.
     route("research/lab", "routes/lab.tsx"),

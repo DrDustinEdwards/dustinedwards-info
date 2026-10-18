@@ -5,7 +5,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { PRIVATE_SYSTEM_KEYS, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { systemMapHtml } from "capsomer/behaviour/system-map";
+
+import { PRIVATE_SYSTEM_KEYS, chooseInMapHtml, chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -89,11 +91,12 @@ await test("lines name things that exist, ids are unique and the counts agree", 
   }
 });
 
-await test("the map draws every system once, each linking to its page, with no private description", () => {
+await test("the map draws every system once, linking to no page of its own, with no private description", () => {
   const model = loadSystemModel(fixture());
   const data = mapData(model);
   assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
-  assert.deepEqual(data.systems.map((s) => s.href), ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"]);
+  // One page: choosing a system shows it in place, so no system links away.
+  assert.deepEqual(data.systems.map((s) => s.href), [undefined, undefined, undefined, undefined]);
   assert.deepEqual(data.systems.map((s) => s.tag), [undefined, "shared", "product", "product"]);
   const hidden = data.systems.find((s) => s.id === "hidden");
   assert.equal(hidden.private, true);
@@ -111,34 +114,65 @@ await test("a system's connections read from its own end", () => {
   assert.deepEqual(read("core"), ["Installs Kit", "Coordinates Hidden"]);
 });
 
-await test("the twins hold every system, and a private one only as its name", () => {
+await test("a chosen system lives in the query, and a value naming no system chooses nothing", () => {
+  const model = loadSystemModel(fixture());
+  assert.equal(systemHref("kit"), "/systems?system=kit");
+  assert.equal(chosenSystem(model, "kit"), "kit");
+  for (const value of [null, undefined, "", "nowhere", "Kit", "kit "]) assert.equal(chosenSystem(model, value), null, String(value));
+});
+
+await test("the server draws a chosen system's wiring as the controller would, and changes nothing else", () => {
+  const model = loadSystemModel(fixture());
+  const html = systemMapHtml(mapData(model), { id: "family" });
+  const chosen = chooseInMapHtml(html, "kit");
+  assert.match(chosen, /<figure class="cap-system-map" data-cap="system-map" data-selected /);
+  assert.match(chosen, /class="cap-system-map-tile" data-id="kit" aria-pressed="true"/);
+  // Kit's lines run to Core and App: both are linked and both lines are on; Hidden is not.
+  assert.match(chosen, /class="cap-system-map-tile" data-id="core" data-linked/);
+  assert.match(chosen, /class="cap-system-map-tile" data-id="app" data-linked/);
+  assert.doesNotMatch(chosen, /data-id="hidden" data-linked/);
+  const on = [...chosen.matchAll(/<path class="cap-system-map-edge" data-from="([^"]+)" data-to="([^"]+)" [^>]*data-on/g)].map((m) => `${m[1]}-${m[2]}`);
+  assert.deepEqual(on.sort(), ["app-kit", "core-kit"]);
+  // Only attributes are added: take them away and the drawing is Capsomer's, byte for byte.
+  const stripped = chosen
+    .replace(/ data-selected /, " ")
+    .replace(/(data-id="kit") aria-pressed="true"/, "$1")
+    .replace(/(class="cap-system-map-tile" data-id="[^"]+") data-linked/g, "$1")
+    .replace(/(class="cap-system-map-edge" [^>]*?) data-on/g, "$1");
+  assert.equal(stripped, html);
+});
+
+await test("the twin holds every system's facts, and a private one only as its name", () => {
   const model = loadSystemModel(fixture());
   const all = systemsMarkdown(model, "https://example.com");
-  for (const s of model.systems) assert.ok(all.includes(`[${s.name}](https://example.com/systems/${s.id}.md)`), `${s.id} missing from /systems.md`);
-  assert.match(all, /\[Hidden\]\(https:\/\/example\.com\/systems\/hidden\.md\) \(private\)\n/);
-  const one = systemMarkdown(model, "hidden", "https://example.com");
-  assert.match(one, /^# Hidden\n\nPrivate: its name and address only\.\n/);
+  for (const s of model.systems) assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
+  assert.match(all, /^### Hidden \(private\)\n\nPrivate: its name and address only\.\n/m);
+  // No system twin of its own any more: every link goes to the page with that system chosen.
+  assert.doesNotMatch(all, /\/systems\/[a-z]/);
+  assert.match(all, /^- On the map: https:\/\/example\.com\/systems\?system=kit$/m);
+  const one = systemSectionMarkdown(model, "hidden", "https://example.com");
+  assert.match(one, /^### Hidden \(private\)\n\nPrivate: its name and address only\.\n/);
   assert.match(one, /- Address: https:\/\/hidden\.example\.org/);
   assert.doesNotMatch(one, /Source:/);
-  assert.equal(systemMarkdown(model, "nowhere", "https://example.com"), null);
-  const core = systemMarkdown(model, "core", "https://example.com");
+  assert.equal(systemSectionMarkdown(model, "nowhere", "https://example.com"), null);
+  const core = systemSectionMarkdown(model, "core", "https://example.com");
   assert.match(core, /- Source: https:\/\/github\.com\/example\/core/);
-  assert.match(core, /## Inside\n\n- Worker \(Cloudflare Worker\)\n/);
+  assert.match(core, /#### Inside\n\n- Worker \(Cloudflare Worker\)\n/);
   // A name that also appears in the verb is linked as the name, not inside the verb.
   const named = fixture();
   named.systems[1].name = "Installs";
-  assert.match(systemMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\/kit\.md\)$/m);
+  assert.match(systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\?system=kit\)$/m);
   // A private system with no address says so.
   const bare = fixture();
   bare.systems[3].domain = "";
-  assert.match(systemMarkdown(loadSystemModel(bare), "hidden", "https://example.com"), /^# Hidden\n\nPrivate: its name only\.\n/);
-  assert.doesNotMatch(systemMarkdown(model, "kit", "https://example.com"), /## Inside/);
+  assert.match(systemSectionMarkdown(loadSystemModel(bare), "hidden", "https://example.com"), /^### Hidden \(private\)\n\nPrivate: its name only\.\n/);
+  assert.doesNotMatch(systemSectionMarkdown(model, "kit", "https://example.com"), /#### Inside/);
 });
 
-await test("every system's twin links to the same system in the Capsid explorer, and the family twin to the explorer", () => {
+await test("every system's section of the twin links to the same system in the Capsid explorer, and the twin to the explorer", () => {
   const model = loadSystemModel(fixture());
   for (const s of model.systems) {
-    assert.match(systemMarkdown(model, s.id, "https://example.com") ?? "", new RegExp(`^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`, "m"));
+    assert.match(systemSectionMarkdown(model, s.id, "https://example.com") ?? "", new RegExp(`^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`, "m"));
   }
   assert.equal(explorerUrl("hidden"), "https://capsid.dustinedwards.info/s/hidden/");
   assert.equal(explorerLabel("hidden"), "capsid.dustinedwards.info/s/hidden");
@@ -154,7 +188,7 @@ await test("the lines between a system's parts are facts on its page and in its 
   const model = loadSystemModel(raw);
   assert.deepEqual(wiresOf(model, "core"), ["Worker writes to Store"]);
   assert.deepEqual(wiresOf(model, "kit"), []);
-  assert.match(systemMarkdown(model, "core", "https://example.com"), /How they connect:\n\n- Worker writes to Store\n/);
+  assert.match(systemSectionMarkdown(model, "core", "https://example.com"), /How they connect:\n\n- Worker writes to Store\n/);
 });
 
 // Capsid's flows (design section 4). Fixture flows ride the fixture's edges.
@@ -210,7 +244,7 @@ await test("an external container is outside the system: not a part, but its lin
   assert.deepEqual(partsOf(model, "core").map((c) => c.id), ["core-worker"]);
   assert.deepEqual(outsideOf(model, "core").map((c) => c.id), ["core-agents"]);
   assert.deepEqual(wiresOf(model, "core"), ["Worker serves Agents"]);
-  assert.match(systemMarkdown(model, "core", "https://example.com") ?? "", /## Inside\n\n- Worker \(Cloudflare Worker\)\n\n## Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/);
+  assert.match(systemSectionMarkdown(model, "core", "https://example.com") ?? "", /#### Inside\n\n- Worker \(Cloudflare Worker\)\n\n#### Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/);
   // A system whose only containers are outside it still lists them and their lines.
   const bare = withFlows();
   bare.containers = bare.containers.filter((c) => c.kind === "external");
@@ -219,9 +253,9 @@ await test("an external container is outside the system: not a part, but its lin
   bare.relationships.push({ id: "core-agents--reads--core-github", from: "core-agents", to: "core-github", kind: "reads" });
   bare.flows = [];
   bare.counts.relationships = bare.relationships.length;
-  const twin = systemMarkdown(loadSystemModel(bare), "core", "https://example.com") ?? "";
-  assert.match(twin, /## Outside it\n\n- Agents \(Sample sessions\)\n- GitHub \(Sample host\)\n/);
-  assert.doesNotMatch(twin, /## Inside|How they connect|Agents reads GitHub/);
+  const twin = systemSectionMarkdown(loadSystemModel(bare), "core", "https://example.com") ?? "";
+  assert.match(twin, /#### Outside it\n\n- Agents \(Sample sessions\)\n- GitHub \(Sample host\)\n/);
+  assert.doesNotMatch(twin, /#### Inside|How they connect|Agents reads GitHub/);
 });
 
 await test("a model that differs only in its date is the same model", () => {

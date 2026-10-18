@@ -3,7 +3,9 @@
 
 // /systems, the family of systems (app/routes/systems.tsx): the award checklist of
 // capsid/research/design-system-explorer.md, section 6, measured in a real Chromium over the
-// committed model. Each check names its number, and each was seen red once before it was trusted.
+// committed model, and the page being one page: one tap on any system zooms into its circle in
+// place, kept in ?system=<id>, and the old /systems/<id> addresses moved there. Each check names
+// what it holds.
 //
 // What a browser cannot prove is said where it is skipped: a real phone's frame rate (the release
 // PR's remote DevTools run) and a screen reader (VoiceOver and NVDA by hand).
@@ -12,7 +14,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-import { EXPLORER_ORIGIN, explorerUrl, loadSystemModel } from "../../../../app/lib/systems.mjs";
+import { EXPLORER_ORIGIN, explorerUrl, loadSystemModel, systemHref } from "../../../../app/lib/systems.mjs";
 import { BASE, FETCH_TIMEOUT_MS, ok, report, root } from "../harness.mjs";
 
 const require = createRequire(import.meta.url);
@@ -22,7 +24,7 @@ const CORE = MODEL.systems.find((s) => s.ring === "core")?.id ?? "";
 
 /** The map's own script, gzipped, under the design's budget. */
 const SCRIPT_BUDGET_GZIP = 25 * 1024;
-/** Section 6: CLS under 0.05 while choosing, going inside and stepping out. */
+/** Section 6: CLS under 0.05 while zooming in and out. */
 const CLS_BUDGET = 0.05;
 /**
  * Section 6: the INP proxy under 4x CPU throttling, over interactions only (entries with an
@@ -61,7 +63,7 @@ export async function run({ browser }) {
   await page.setBypassCSP(true);
   try {
     // Each part on its own: one that throws is a failed check, and the parts after it still run.
-    for (const part of [everyNodeByKeyboard, listMatchesModel, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget, explorerLinks]) {
+    for (const part of [everyNodeByKeyboard, listMatchesModel, oneTapZooms, choosingInPlace, chosenFromTheAddress, everyFactWithoutScript, oldAddressesMove, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget, explorerLinks]) {
       try {
         await part(page);
       } catch (error) {
@@ -105,11 +107,79 @@ async function everyNodeByKeyboard(/** @type {import("puppeteer").Page} */ page)
 
   await focusTile(page, CORE);
   await page.keyboard.press("Enter");
-  await page.keyboard.press("Enter");
   const entered = await page.$eval("#family", (el) => el.hasAttribute("data-entered"));
   await page.keyboard.press("Escape");
+  // Focus returns in the next frame.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const left = await page.$eval("#family", (el) => !el.hasAttribute("data-entered"));
-  ok("/systems: Enter twice on the core goes inside, Escape steps out to it", entered && left && (await page.evaluate(focusedId)) === CORE, `entered ${entered}, left ${left}`);
+  ok("/systems: Enter once on the core zooms into it, Escape returns to the map and to it", entered && left && (await page.evaluate(focusedId)) === CORE, `entered ${entered}, left ${left}`);
+}
+
+/** Zooming in scrolls the circle into view, smoothly: a click aimed before it ends lands where the circle was. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 800));
+
+/** What the map shows: the system zoomed into, if any, and the layers shown. */
+const zoomState = () => {
+  const root = /** @type {HTMLElement} */ (document.querySelector("#family"));
+  return {
+    entered: root.hasAttribute("data-entered"),
+    zoom: root.dataset.zoom ?? null,
+    shown: [...root.querySelectorAll("[data-layer='inside'][data-shown]")].map((l) => /** @type {HTMLElement} */ (l).dataset.system),
+    url: location.pathname + location.search,
+  };
+};
+
+/**
+ * Dustin, 2026-10-18: "it's not intuitive to click twice". One tap on any system zooms into its circle, with
+ * its parts inside and the systems it connects to round the rim; a system on the rim is a tap to zoom there;
+ * "Back to all systems" and a tap outside the circle return to the map. A private system's circle draws no part.
+ */
+async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
+  await open(page, "light");
+  // The circles other than the core's are fetched once the page has loaded.
+  await page.waitForSelector("#family[data-insides-ready]", { timeout: 10_000 });
+  const layers = (await page.$$eval("#family [data-layer='inside'][data-system]", (els) => els.map((e) => /** @type {HTMLElement} */ (e).dataset.system ?? ""))).sort();
+  ok("/systems: every system has a circle of its own to zoom into", JSON.stringify(layers) === JSON.stringify(IDS), `${layers.length} circles for ${IDS.length} systems`);
+
+  const other = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
+  await page.click(tileSelector(other));
+  await settle();
+  const zoomed = await page.evaluate(zoomState);
+  const back = await page.$eval("#family [data-cap-part='detail']", (el) => [...el.querySelectorAll("button")].map((b) => b.textContent).join("|"));
+  ok(
+    "/systems: one tap on a system zooms into its circle, with the way back",
+    zoomed.entered && zoomed.zoom === other && zoomed.shown.length === 1 && zoomed.shown[0] === other && zoomed.url === systemHref(other) && back.includes("Back to all systems"),
+    `entered ${zoomed.entered}, zoom ${zoomed.zoom}, shown ${zoomed.shown.join(", ") || "none"}, address ${zoomed.url}, buttons ${back || "none"}`,
+  );
+
+  const goto = await page.$eval(`#family [data-layer='inside'][data-system="${other}"]`, (l) => /** @type {HTMLElement | null} */ (l.querySelector(".systems-rim[data-goto]"))?.dataset.goto ?? "");
+  if (goto) {
+    await page.click(`#family [data-layer='inside'][data-system="${other}"] .systems-rim[data-goto="${goto}"]`);
+    await settle();
+    const there = await page.evaluate(zoomState);
+    ok("/systems: a system on the rim is one tap to zoom into it", there.zoom === goto && there.shown.length === 1 && there.shown[0] === goto && there.url === systemHref(goto), `zoom ${there.zoom}, shown ${there.shown.join(", ") || "none"}, address ${there.url}`);
+  } else ok(`/systems: ${other}'s circle has a system on its rim to go to`, false, "no .systems-rim[data-goto]");
+
+  await page.click("#family [data-cap-part='detail'] [data-systems-back], #family [data-cap-part='detail'] [data-cap-part='leave']");
+  const rest = await page.evaluate(zoomState);
+  ok("/systems: Back to all systems returns to the map", !rest.entered && rest.zoom === null && rest.shown.length === 0 && rest.url === "/systems", `entered ${rest.entered}, zoom ${rest.zoom}, address ${rest.url}`);
+
+  await page.click(tileSelector(other));
+  await settle();
+  // The stage's top-left corner is outside every circle.
+  const corner = await page.$eval("#family [data-cap-part='stage']", (el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + 4, y: r.top + 4 };
+  });
+  await page.mouse.click(corner.x, corner.y);
+  const outside = await page.evaluate(zoomState);
+  ok("/systems: a tap outside the circle returns to the map", !outside.entered && outside.zoom === null, `entered ${outside.entered}, zoom ${outside.zoom}`);
+
+  const hidden = MODEL.systems.find((s) => s.private)?.id;
+  if (hidden) {
+    const boxes = await page.$eval(`#family [data-layer='inside'][data-system="${hidden}"]`, (l) => l.querySelectorAll(".cap-system-map-box").length);
+    ok("/systems: a private system's circle shows its name and links only, no part", boxes === 0, `${boxes} parts drawn in ${hidden}'s circle`);
+  }
 }
 
 /** Section 6, screen-reader list: the list of the same data holds the model's systems, both ways, with script and without. */
@@ -130,10 +200,9 @@ async function listMatchesModel(/** @type {import("puppeteer").Page} */ page) {
   }
 }
 
-/** Section 6, reduced motion: going inside runs no animation and ends inside. The control first proves the read can see one. */
+/** Section 6, reduced motion: zooming in runs no animation and ends inside. The control first proves the read can see one. */
 async function reducedMotion(/** @type {import("puppeteer").Page} */ page) {
   const enterAndCount = async () => {
-    await page.click(tileSelector(CORE));
     await page.click(tileSelector(CORE));
     const animations = await page.evaluate(() => document.getAnimations().length);
     const entered = await page.$eval("#family", (el) => el.hasAttribute("data-entered"));
@@ -141,20 +210,20 @@ async function reducedMotion(/** @type {import("puppeteer").Page} */ page) {
   };
   await open(page, "light");
   const control = await enterAndCount();
-  ok("/systems: going inside animates (the control for the reduced-motion read)", control.animations > 0 && control.entered, `${control.animations} animations`);
+  ok("/systems: zooming in animates (the control for the reduced-motion read)", control.animations > 0 && control.entered, `${control.animations} animations`);
 
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   try {
     await open(page, "light");
     const reduced = await enterAndCount();
-    ok("/systems under reduced motion: going inside runs no animation and ends inside", reduced.animations === 0 && reduced.entered, `${reduced.animations} animations, entered ${reduced.entered}`);
+    ok("/systems under reduced motion: zooming in runs no animation and ends inside", reduced.animations === 0 && reduced.entered, `${reduced.animations} animations, entered ${reduced.entered}`);
   } finally {
     await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "no-preference" }]);
   }
 }
 
 /**
- * Section 6, CLS: the page does not move while a system is chosen, the core entered and left. Two
+ * Section 6, CLS: the page does not move while systems are zoomed into and out of, the core among them. Two
  * reads. The layout-shift score, against the budget. And the map's own geometry, the stage and the
  * detail line by their place in the document, which must not move by a pixel: the score is divided
  * by the viewport and Chrome's scroll anchoring hides a move above the fold, so a map that jumped
@@ -165,7 +234,7 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
   await page.evaluate(() => {
     const w = /** @type {Window & { __shift?: number }} */ (window);
     w.__shift = 0;
-    // Every shift counts, input-driven ones included: choosing must not move the page at all.
+    // Every shift counts, input-driven ones included: zooming must not move the page at all.
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) w.__shift = (w.__shift ?? 0) + /** @type {PerformanceEntry & { value: number }} */ (entry).value;
     }).observe({ type: "layout-shift" });
@@ -180,18 +249,19 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
   const before = await place();
   let moved = 0;
   const others = MODEL.systems.filter((s) => s.ring !== "core").slice(0, 3);
-  for (const step of [...others.map((s) => () => page.click(tileSelector(s.id))), () => page.click(tileSelector(CORE)), () => page.click(tileSelector(CORE)), () => page.keyboard.press("Escape")]) {
+  const escape = () => page.keyboard.press("Escape");
+  for (const step of [...others, { id: CORE }].flatMap((s) => [() => page.click(tileSelector(s.id)), escape])) {
     await step();
     await new Promise((resolve) => setTimeout(resolve, 250));
     const now = await place();
     moved = Math.max(moved, ...now.map((y, i) => Math.abs(y - (before[i] ?? NaN))));
   }
   const shift = await page.evaluate(() => /** @type {Window & { __shift?: number }} */ (window).__shift ?? -1);
-  ok(`/systems: choosing, going inside and stepping out shift the page under ${CLS_BUDGET}`, shift >= 0 && shift < CLS_BUDGET, `layout shift ${shift.toFixed(4)}`);
-  ok("/systems: choosing, going inside and stepping out leave the map and its detail line where they are", moved === 0, `moved up to ${moved}px (stage and detail tops ${before.join(", ")})`);
+  ok(`/systems: zooming in and out shifts the page under ${CLS_BUDGET}`, shift >= 0 && shift < CLS_BUDGET, `layout shift ${shift.toFixed(4)}`);
+  ok("/systems: zooming in and out leaves the map and its detail line where they are", moved === 0, `moved up to ${moved}px (stage and detail tops ${before.join(", ")})`);
 }
 
-/** Section 6, INP proxy: under 4x CPU throttling, the slowest response to choosing any system, entering and leaving. */
+/** Section 6, INP proxy: under 4x CPU throttling, the slowest response to zooming into any system and back out. */
 async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
   await page.evaluate(() => {
@@ -206,10 +276,15 @@ async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   });
   await page.emulateCPUThrottling(4);
   try {
-    for (const s of MODEL.systems) await page.click(tileSelector(s.id));
-    await page.click(tileSelector(CORE));
-    await page.click(tileSelector(CORE));
-    await page.keyboard.press("Escape");
+    // Each zoom is an animation of its own, so the next input waits for it, as a reader's does: an input
+    // landing mid-animation measures the animation's frames as its own delay.
+    const pause = () => new Promise((resolve) => setTimeout(resolve, 400));
+    for (const s of MODEL.systems) {
+      await page.click(tileSelector(s.id));
+      await pause();
+      await page.keyboard.press("Escape");
+      await pause();
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
   } finally {
     await page.emulateCPUThrottling(null);
@@ -220,7 +295,7 @@ async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   // Event Timing reports nothing under 16ms, and under 4x throttling every click paints for longer,
   // so an empty list is an observer that saw nothing, not a fast page.
   ok(
-    `/systems under 4x CPU throttling: every choice, entering and leaving is handled under ${INPUT_BUDGET_MS}ms`,
+    `/systems under 4x CPU throttling: every zoom in and out is handled under ${INPUT_BUDGET_MS}ms`,
     events.length > 0 && worstWork < INPUT_BUDGET_MS,
     `slowest input delay plus handling ${Math.round(worstWork)}ms over ${events.length} interaction entries (Event Timing, a lab proxy for INP)`,
   );
@@ -231,10 +306,9 @@ async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   );
 }
 
-/** Section 6, frame rate: the gaps between frames while going inside under 4x throttling. Warn only. */
+/** Section 6, frame rate: the gaps between frames while zooming into the core under 4x throttling. Warn only. */
 async function framesWhileEntering(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
-  await page.click(tileSelector(CORE));
   await page.emulateCPUThrottling(4);
   try {
     const gaps = await page.evaluate(
@@ -258,7 +332,7 @@ async function framesWhileEntering(/** @type {import("puppeteer").Page} */ page)
     const sorted = /** @type {number[]} */ (gaps).slice(1).sort((a, b) => a - b);
     const p95 = sorted[Math.floor(sorted.length * 0.95)] ?? Infinity;
     report(
-      `/systems going inside under 4x throttling: frame gap p95 ${p95.toFixed(1)}ms over ${sorted.length} frames (warn over ${FRAME_P95_MS}ms; ` +
+      `/systems zooming in under 4x throttling: frame gap p95 ${p95.toFixed(1)}ms over ${sorted.length} frames (warn over ${FRAME_P95_MS}ms; ` +
         `runners vary, so a real mid-range phone over remote DevTools is the release's check)` +
         (p95 > FRAME_P95_MS ? "  WARN" : ""),
     );
@@ -267,7 +341,7 @@ async function framesWhileEntering(/** @type {import("puppeteer").Page} */ page)
   }
 }
 
-/** Section 6, colour and both themes: axe finds nothing at rest, chosen and inside, in each theme. */
+/** Section 6, colour and both themes: axe finds nothing at rest, zoomed into the core or into another system, in each theme. */
 async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
   /** @returns {Promise<string[]>} each violation, as its rule and its first node */
@@ -279,15 +353,16 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
       return result.violations.map((/** @type {{ id: string, nodes: Array<{ target: string[] }> }} */ v) => `${v.id} at ${v.nodes[0]?.target.join(" ")}`);
     });
   };
+  const other = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
   for (const theme of /** @type {const} */ (["light", "dark"])) {
-    await open(page, theme, `/systems/${CORE}`);
-    const chosen = await scan();
-    await page.click(tileSelector(CORE));
+    await open(page, theme, systemHref(CORE));
+    const core = await scan();
+    await open(page, theme, systemHref(other));
     const inside = await scan();
     await open(page, theme);
     const rest = await scan();
-    const all = [...rest.map((v) => `at rest: ${v}`), ...chosen.map((v) => `chosen: ${v}`), ...inside.map((v) => `inside: ${v}`)];
-    ok(`/systems in the ${theme} theme: axe finds nothing at rest, with a system chosen, or inside`, all.length === 0, all.join("; "));
+    const all = [...rest.map((v) => `at rest: ${v}`), ...core.map((v) => `in ${CORE}: ${v}`), ...inside.map((v) => `in ${other}: ${v}`)];
+    ok(`/systems in the ${theme} theme: axe finds nothing at rest, zoomed into the core, or into another system`, all.length === 0, all.join("; "));
   }
 }
 
@@ -300,16 +375,127 @@ async function scriptBudget(/** @type {import("puppeteer").Page} */ page) {
   ok(`/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`, bytes > 0 && bytes < SCRIPT_BUDGET_GZIP, `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`);
 }
 
-/** Section 4, deep links both ways: /systems links to the explorer, and every system's page to the same system there, as served. */
+/** Section 4, deep links both ways: /systems links to the explorer, and to every system's place in it, as served. */
 async function explorerLinks() {
-  const pages = [["/systems", `${EXPLORER_ORIGIN}/`], ...MODEL.systems.map((s) => [`/systems/${s.id}`, explorerUrl(s.id)])];
-  const missing = await Promise.all(
-    pages.map(async ([path, href]) => {
-      const res = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-      if (!res.ok) return `${path} answered ${res.status}`;
-      return (await res.text()).includes(`href="${href}"`) ? null : `${path} has no link to ${href}`;
-    }),
+  const res = await fetch(`${BASE}/systems`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  const html = res.ok ? await res.text() : "";
+  const missing = [`${EXPLORER_ORIGIN}/`, ...MODEL.systems.map((s) => explorerUrl(s.id))].filter((href) => !html.includes(`href="${href}"`));
+  ok("/systems links to the Capsid explorer and to every system in it", res.ok && missing.length === 0, res.ok ? (missing.length ? `no link to ${missing.join(", ")}` : `${MODEL.systems.length + 1} links`) : `answered ${res.status}`);
+}
+
+/** The facts each system's section shows, as the reader sees them: which sections are displayed. */
+const shownFacts = () => [...document.querySelectorAll("[data-systems-facts] .systems-facts[data-system]")].filter((el) => getComputedStyle(el).display !== "none").map((el) => /** @type {HTMLElement} */ (el).dataset.system);
+
+/**
+ * One page: zooming into a system shows its facts in place and writes ?system=<id> into the address with no
+ * navigation (a value set on window survives, and history does not grow); a connection in the facts
+ * zooms into that system in place; Escape returns to the map and clears the address.
+ */
+async function choosingInPlace(/** @type {import("puppeteer").Page} */ page) {
+  await open(page, "light");
+  const other = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
+  await page.evaluate(() => {
+    /** @type {Window & { __stay?: boolean }} */ (window).__stay = true;
+  });
+  const before = await page.evaluate(() => ({ length: history.length, shown: [...document.querySelectorAll("[data-systems-facts] .systems-facts")].filter((el) => getComputedStyle(el).display !== "none").length }));
+  await page.click(tileSelector(other));
+  const after = await page.evaluate(() => ({ url: location.pathname + location.search, stayed: /** @type {Window & { __stay?: boolean }} */ (window).__stay === true, length: history.length }));
+  const shown = await page.evaluate(shownFacts);
+  ok(
+    "/systems: choosing a system shows only its facts, in place, and keeps it in the address as ?system=<id> with no navigation",
+    before.shown === 0 && after.url === systemHref(other) && after.stayed && after.length === before.length && shown.length === 1 && shown[0] === other,
+    `facts shown at rest ${before.shown}; address ${after.url}; same document ${after.stayed}; history ${before.length} to ${after.length}; facts shown ${shown.join(", ") || "none"}`,
   );
-  const wrong = missing.filter(Boolean);
-  ok("/systems and every /systems/<id> link to the same place in the Capsid explorer", wrong.length === 0, wrong.length ? wrong.join("; ") : `${pages.length} pages`);
+
+  const link = await page.$eval(`[data-systems-facts] .systems-facts[data-system="${other}"] a[data-choose]`, (a) => /** @type {HTMLElement} */ (a).dataset.choose ?? "");
+  await page.click(`[data-systems-facts] .systems-facts[data-system="${other}"] a[data-choose="${link}"]`);
+  const followed = await page.evaluate(() => ({ url: location.pathname + location.search, stayed: /** @type {Window & { __stay?: boolean }} */ (window).__stay === true }));
+  const pressed = await page.$eval(tileSelector(link), (el) => el.getAttribute("aria-pressed"));
+  const shownNow = await page.evaluate(shownFacts);
+  ok(
+    "/systems: a connection in a system's facts chooses that system in place",
+    followed.stayed && followed.url === systemHref(link) && pressed === "true" && shownNow.length === 1 && shownNow[0] === link,
+    `chose ${link}: address ${followed.url}, same document ${followed.stayed}, pressed ${pressed}, facts shown ${shownNow.join(", ") || "none"}`,
+  );
+
+  await page.keyboard.press("Escape");
+  const cleared = await page.evaluate(() => ({ url: location.pathname + location.search }));
+  const shownAfter = await page.evaluate(shownFacts);
+  ok("/systems: Escape clears the choice, its facts and ?system from the address", cleared.url === "/systems" && shownAfter.length === 0, `address ${cleared.url}, facts shown ${shownAfter.join(", ") || "none"}`);
+}
+
+/** A shared link: /systems?system=<id> opens with that system chosen, its lines drawn and its facts shown; a value naming no system chooses nothing and is dropped. */
+async function chosenFromTheAddress(/** @type {import("puppeteer").Page} */ page) {
+  const id = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
+  await open(page, "light", systemHref(id));
+  const state = await page.$eval(
+    "#family",
+    (root, chosen) => ({
+      pressed: root.querySelector(`.cap-system-map-tile[data-id="${chosen}"]`)?.getAttribute("aria-pressed"),
+      on: root.querySelectorAll(".cap-system-map-edge[data-on]").length,
+      detail: root.querySelector("[data-cap-part='detail'] .cap-system-map-detail-name")?.textContent ?? "",
+      zoom: /** @type {HTMLElement} */ (root).dataset.zoom ?? null,
+      shown: [...root.querySelectorAll("[data-layer='inside'][data-shown]")].map((l) => /** @type {HTMLElement} */ (l).dataset.system),
+    }),
+    id,
+  );
+  const shown = await page.evaluate(shownFacts);
+  const name = MODEL.systems.find((s) => s.id === id)?.name ?? id;
+  ok(
+    "/systems?system=<id> opens zoomed into that system: pressed, its lines drawn, its circle, its detail and its facts shown",
+    state.pressed === "true" && state.on > 0 && state.detail === name && state.zoom === id && state.shown.length === 1 && state.shown[0] === id && shown.length === 1 && shown[0] === id,
+    `pressed ${state.pressed}, ${state.on} lines on, zoom ${state.zoom}, circle shown ${state.shown.join(", ") || "none"}, detail "${state.detail}", facts shown ${shown.join(", ") || "none"}`,
+  );
+
+  await open(page, "light", "/systems?system=no-such-system");
+  const unknown = await page.evaluate(() => ({ url: location.pathname + location.search, pressed: document.querySelectorAll("#family .cap-system-map-tile[aria-pressed='true']").length }));
+  ok("/systems?system=<unknown> chooses nothing and drops the value from the address", unknown.pressed === 0 && unknown.url === "/systems", `pressed ${unknown.pressed}, address ${unknown.url}`);
+}
+
+/** With script off the page carries every system's facts and connections, and the server draws a chosen system's lines. */
+async function everyFactWithoutScript(/** @type {import("puppeteer").Page} */ page) {
+  const id = MODEL.systems.find((s) => s.ring !== "core" && !s.private)?.id ?? CORE;
+  await page.setJavaScriptEnabled(false);
+  try {
+    await page.goto(`${BASE}/systems`, { waitUntil: "networkidle0" });
+    const shown = (await page.evaluate(shownFacts)).sort();
+    ok("/systems with no script: every system's facts are on the page and shown", JSON.stringify(shown) === JSON.stringify(IDS), `shown ${shown.length} of ${IDS.length}`);
+    await page.goto(`${BASE}${systemHref(id)}`, { waitUntil: "networkidle0" });
+    const drawn = await page.$eval(
+      "#family",
+      (root, chosen) => ({
+        selected: root.hasAttribute("data-selected"),
+        pressed: root.querySelector(`.cap-system-map-tile[data-id="${chosen}"]`)?.getAttribute("aria-pressed"),
+        on: root.querySelectorAll(".cap-system-map-edge[data-on]").length,
+        circle: !!root.querySelector(`[data-layer='inside'][data-system="${chosen}"][data-shown]`) && root.hasAttribute("data-entered"),
+      }),
+      id,
+    );
+    const all = (await page.evaluate(shownFacts)).length;
+    ok(
+      "/systems?system=<id> with no script: the server draws that system's lines and its circle, and every system's facts are still shown",
+      drawn.selected && drawn.pressed === "true" && drawn.on > 0 && drawn.circle && all === IDS.length,
+      `selected ${drawn.selected}, pressed ${drawn.pressed}, ${drawn.on} lines on, circle ${drawn.circle}, ${all} facts shown`,
+    );
+  } finally {
+    await page.setJavaScriptEnabled(true);
+  }
+}
+
+/** The old per-system addresses answer one 301 each: the page to /systems?system=<id>, the twin to /systems.md. */
+async function oldAddressesMove() {
+  const wrong = (
+    await Promise.all(
+      MODEL.systems.flatMap((s) => [
+        [`/systems/${s.id}`, systemHref(s.id)],
+        [`/systems/${s.id}.md`, "/systems.md"],
+      ]).map(async ([from, to]) => {
+        const res = await fetch(`${BASE}${from}`, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        const location = res.headers.get("location") ?? "";
+        const at = location ? new URL(location, BASE) : null;
+        return res.status === 301 && at && at.pathname + at.search === to ? null : `${from} answered ${res.status} to ${location || "nowhere"}`;
+      }),
+    )
+  ).filter(Boolean);
+  ok("every old /systems/<id> and /systems/<id>.md answers a 301 to /systems?system=<id> and /systems.md", wrong.length === 0, wrong.length ? wrong.join("; ") : `${MODEL.systems.length * 2} addresses`);
 }

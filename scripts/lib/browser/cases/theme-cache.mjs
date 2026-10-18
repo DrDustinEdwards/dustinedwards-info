@@ -28,7 +28,7 @@ export async function run({ page, browser }) {
     { path: "/contact", module: "contact.tsx" },
     /* The site map for people: drawn from D1 at request time, the same bytes for every reader. */
     { path: "/site-map", module: "site-map.tsx" },
-    { path: "/systems/capsid", module: "systems.tsx" },
+    { path: "/systems?system=capsid", module: "systems.tsx" },
     /* The most-carried tag, so one post being retagged cannot remove the case. */
     { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     { path: "/about", module: "about.tsx" },

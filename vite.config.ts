@@ -3,6 +3,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
+import { systemInsidesPlugin } from "./scripts/lib/system-insides-plugin.mjs";
 
 /**
  * A value that is DIFFERENT FOR EVERY BUILD, and its only job is to namespace
@@ -57,6 +58,8 @@ export default defineConfig({
     reactRouter(),
     // The enhancement bundles, built beside the app and emitted into its client assets.
     enhancePlugin(),
+    // Every system's inside on /systems, drawn at build time (scripts/lib/system-layout.mjs).
+    systemInsidesPlugin(),
   ],
   resolve: {
     tsconfigPaths: true,

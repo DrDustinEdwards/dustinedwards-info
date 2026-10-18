@@ -4,6 +4,9 @@
  * so each keeps answering with a 301 to the same page at its new address. /playground was removed
  * on 2026-09-28, so it and everything under it answers one 301 to /. Abscissa was renamed Enarratio
  * on 2026-09-29, so /software/abscissa and its markdown twin answer a 301 to /software/enarratio.
+ * The family of systems became one page on 2026-10-18: each /systems/<id> answers a 301 to
+ * /systems?system=<id>, the same page with that system chosen, and each /systems/<id>.md to /systems.md,
+ * which holds every system.
  * Runs in the gateway, before the renamed-post and PDF maps, so an old post slug or an old PDF name
  * still resolves in one hop.
  *
@@ -24,6 +27,9 @@ const EXACT_MOVES = new Map([
   ["/phage-discovery", "/teaching/phage-discovery#roster"],
   ["/phage-discovery/", "/teaching/phage-discovery#roster"],
 ]);
+
+/** A system's old page or twin (app/lib/systems.mjs ids): the id, and the `.md` if it is the twin. */
+const OLD_SYSTEM_PAGE = /^\/systems\/([a-z0-9][a-z0-9-]{0,63})(\.md)?$/;
 
 /**
  * Sections removed outright, with no page of their own to move to: the section and everything under
@@ -48,7 +54,8 @@ function isLegacyFeed(rest) {
 }
 
 /**
- * Returns a path, not a URL, so the redirect cannot be talked into naming another host.
+ * Returns a path, not a URL, so the redirect cannot be talked into naming another host. The path may
+ * carry a query of its own (a chosen system); the gateway keeps the request's other parameters with it.
  *
  * @param {string} pathname the request's pathname, already decoded by URL
  * @returns {string | null} the new path, or null when this path did not move
@@ -56,6 +63,8 @@ function isLegacyFeed(rest) {
 export function movedPathTarget(pathname) {
   if (typeof pathname !== "string") return null;
   if (EXACT_MOVES.has(pathname)) return EXACT_MOVES.get(pathname) ?? null;
+  const system = OLD_SYSTEM_PAGE.exec(pathname);
+  if (system) return system[2] ? "/systems.md" : `/systems?system=${system[1]}`;
   for (const from of RETIRED_TO_HOME) {
     const next = pathname.charAt(from.length);
     if (pathname === from || (pathname.startsWith(from) && (next === "/" || next === "."))) return "/";

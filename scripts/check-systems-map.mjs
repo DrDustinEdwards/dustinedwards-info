@@ -37,7 +37,7 @@ const BUDGETS = [
 ];
 const RUNS = 3;
 /** Fails closed below this: the case's checks plus one per budget. Measured by running the gate. */
-const MINIMUM_CHECKS = 18;
+const MINIMUM_CHECKS = 32;
 
 console.log("\ncheck:systems-map\n");
 await preflight();
