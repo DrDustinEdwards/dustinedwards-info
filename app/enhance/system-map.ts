@@ -71,7 +71,7 @@ function start(root: HTMLElement) {
   backButton.dataset.systemsBack = "";
   backButton.textContent = BACK;
   backButton.hidden = true;
-  root.querySelector("[data-cap-part='views']")?.append(backButton);
+  root.querySelector<HTMLElement>("[data-cap-part='views']")?.appendChild(backButton);
   const tiles = [...root.querySelectorAll<SVGGElement>(".cap-system-map-tile[data-id]")];
   const layers = new Map<string, SVGSVGElement>();
   const findLayers = () => {
