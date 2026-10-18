@@ -97,6 +97,29 @@
 }
 
 /*
+ * Capsomer fixes the detail line's height and scrolls what overflows, so a system with a long description and its
+ * parts counted pushed the way back out of sight. The way back sits beside the name, which leaves the text the rest
+ * of the box.
+ */
+.systems-map .cap-system-map-detail {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.systems-map .cap-system-map-detail > * {
+  grid-column: 1 / -1;
+}
+
+.systems-map .cap-system-map-detail > .cap-system-map-detail-name {
+  grid-column: 1;
+  align-self: center;
+}
+
+.systems-map .cap-system-map-detail > .cap-system-map-detail-actions {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/*
  * Capsomer's markup has the detail line and the view buttons hidden until its script shows them. Above the drawing,
  * showing the detail line would push the drawing down on load, so the route sends both shown
  * (app/lib/system-wiring.mjs) and they are hidden here only where no script runs, where neither would do anything.
