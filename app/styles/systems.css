@@ -103,26 +103,32 @@
 }
 
 /*
- * Capsomer fixes the detail line's height and scrolls what overflows, so a system with a long description and its
- * parts counted pushed the way back out of sight. The way back sits beside the name, which leaves the text the rest
- * of the box.
+ * The detail line as plain words under the caption, not a box (Dustin, 2026-10-18). Capsomer keeps its height fixed,
+ * so choosing never moves the drawing. The way back is a button beside Capsid and Plain map
+ * (app/enhance/system-map.ts), so Capsomer's own in the detail line is not shown.
  */
 .systems-map .cap-system-map-detail {
-  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
 
-.systems-map .cap-system-map-detail > * {
-  grid-column: 1 / -1;
+/* Its height fits the longest system's words (measured 2026-10-18: 76px wide, 148px on a phone) rather than
+   Capsomer's box. Capsomer's height is !important in its layer, so this is too, in the same layer. */
+@layer cap.components {
+  .systems-map .cap-system-map-detail {
+    block-size: 5rem !important;
+
+    @media (max-width: 40rem) {
+      block-size: 9.5rem !important;
+    }
+  }
 }
 
-.systems-map .cap-system-map-detail > .cap-system-map-detail-name {
-  grid-column: 1;
-  align-self: center;
-}
-
-.systems-map .cap-system-map-detail > .cap-system-map-detail-actions {
-  grid-column: 2;
-  grid-row: 1;
+.systems-map .cap-system-map-detail [data-cap-part="leave"],
+.systems-map .cap-system-map[data-view="plain"] [data-systems-back] {
+  display: none;
 }
 
 /*

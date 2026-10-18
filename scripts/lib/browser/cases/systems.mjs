@@ -132,7 +132,7 @@ const zoomState = () => {
 /**
  * Dustin, 2026-10-18: "it's not intuitive to click twice". One tap on any system zooms into its circle, with
  * its parts inside and the systems it connects to round the rim; a system on the rim is a tap to zoom there;
- * "Back to all systems" and a tap outside the circle return to the map. A private system's circle draws no part.
+ * "Back to all systems", beside the views, and a tap outside the circle return to the map. A private system's circle draws no part.
  */
 async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
@@ -145,7 +145,8 @@ async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   await page.click(tileSelector(other));
   await settle();
   const zoomed = await page.evaluate(zoomState);
-  const back = await page.$eval("#family [data-cap-part='detail']", (el) => [...el.querySelectorAll("button")].map((b) => b.textContent).join("|"));
+  // The way back is a button with the views, beside Capsid and Plain map, shown while a system is zoomed into.
+  const back = await page.$eval("#family [data-cap-part='views']", (el) => [...el.querySelectorAll("button:not([hidden])")].map((b) => b.textContent).join("|"));
   ok(
     "/systems: one tap on a system zooms into its circle, with the way back",
     zoomed.entered && zoomed.zoom === other && zoomed.shown.length === 1 && zoomed.shown[0] === other && zoomed.url === systemHref(other) && back.includes("Back to all systems"),
@@ -160,7 +161,7 @@ async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
     ok("/systems: a system on the rim is one tap to zoom into it", there.zoom === goto && there.shown.length === 1 && there.shown[0] === goto && there.url === systemHref(goto), `zoom ${there.zoom}, shown ${there.shown.join(", ") || "none"}, address ${there.url}`);
   } else ok(`/systems: ${other}'s circle has a system on its rim to go to`, false, "no .systems-rim[data-goto]");
 
-  await page.click("#family [data-cap-part='detail'] [data-systems-back], #family [data-cap-part='detail'] [data-cap-part='leave']");
+  await page.click("#family [data-cap-part='views'] [data-systems-back]");
   const rest = await page.evaluate(zoomState);
   ok("/systems: Back to all systems returns to the map", !rest.entered && rest.zoom === null && rest.shown.length === 0 && rest.url === "/systems", `entered ${rest.entered}, zoom ${rest.zoom}, address ${rest.url}`);
 
