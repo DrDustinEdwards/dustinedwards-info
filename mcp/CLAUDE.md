@@ -109,8 +109,8 @@ measured client CANNOT complete the flow.
   (2026-09-07, rmcp) CANNOT do CIMD and requires RFC 7591 dynamic registration;
   without a `registration_endpoint` it stops at "OAuth authorization required"
   and never opens a browser, so `clientRegistrationEndpoint: "/register"` exists
-  for it. Registration mints an identity only: a grant still goes through the GitHub
-  consent flow and `isAdminUser`, so DCR widens who may ask, never who is let in.
+  for it. Registration mints an identity only: a grant still goes through the consent
+  page, the Access sign-in and `isAdminUser`, so DCR widens who may ask, never who is let in.
   Both paths are pinned by `check:wrapper` and by the conformance gate's
   authorization section, in both directions.
 - **PRM must answer the PATH-SCOPED route.** claude.ai requests

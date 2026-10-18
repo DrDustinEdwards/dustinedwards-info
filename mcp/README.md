@@ -63,10 +63,11 @@ runs typecheck, check:wrapper, the tests and the build, deploys, and then proves
    create the domain, add it in the dashboard: Workers & Pages,
    dustinedwards-mcp, Settings, Domains & Routes, Add, Custom Domain,
    `admin-mcp.dustinedwards.info`, then run ship:mcp again.
-2. GitHub OAuth App (github.com/settings/developers, the app whose client id is
-   this Worker's `GITHUB_CLIENT_ID`): set the Authorization callback URL to
-   `https://admin-mcp.dustinedwards.info/callback` and save. A GitHub OAuth App
-   has one callback, so do this right after step 1.
+2. Sign-in is Cloudflare Access for SaaS (OIDC), the same login as Capsid,
+   Carrel and Foxing Admin. The Access app's redirect URL is
+   `https://admin-mcp.dustinedwards.info/callback`; its client id and secret are
+   the `ACCESS_SAAS_CLIENT_ID` and `ACCESS_SAAS_CLIENT_SECRET` secrets, and
+   `ACCESS_TEAM_DOMAIN` and `ADMIN_EMAIL` are vars.
 3. claude.ai, Settings, Connectors: remove the old Dustin Edwards Admin
    connector (its tokens were bound to the workers.dev resource and are refused
    now), add a custom connector with URL
@@ -85,7 +86,7 @@ Run from a real MCP client through the real OAuth flow, against production.
 
 | Step | Result |
 |---|---|
-| OAuth 2.1 flow | CIMD client resolved by name, PKCE S256, GitHub admin gate, token issued |
+| OAuth 2.1 flow | CIMD client resolved by name, PKCE S256, Access admin gate, token issued |
 | Legacy `initialize` (2025-11-25) | 200 |
 | Modern `server/discover` (2026-07-28) | 200, `supportedVersions: ["2026-07-28"]` |
 | `tools/list` | 5 tools, annotations correct (`delete_post` destructive, reads read-only) |
@@ -238,7 +239,7 @@ so it cannot build an authorization URL, and it stops at "OAuth authorization
 required" without ever opening a browser. So the server now carries **both
 identity paths**: `clientIdMetadataDocumentEnabled: true` for claude.ai, and
 `clientRegistrationEndpoint: "/register"` for Grok. Registration only mints a
-client identity; a grant is still issued solely through the GitHub consent flow,
+client identity; a grant is still issued solely through the consent and Access sign-in flow,
 and `isAdminUser` still admits exactly the configured administrator, so DCR
 widens who may ask, never who is let in.
 

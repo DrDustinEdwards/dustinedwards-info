@@ -22,14 +22,14 @@
 	// ONE PUBLIC ADDRESS. admin-mcp.dustinedwards.info is a Custom Domain on the
 	// dustinedwards.info zone, created by the deploy itself, and workers.dev is
 	// off, so there is one origin, one OAuth resource (PUBLIC_ORIGIN + /mcp) and
-	// one GitHub callback. mcp.dustinedwards.info is Capsid's.
+	// one sign-in callback. mcp.dustinedwards.info is Capsid's.
 	"workers_dev": false,
 	"routes": [{ "pattern": "admin-mcp.dustinedwards.info", "custom_domain": true }],
 
-	// Non-secret. The GitHub OAuth App client id is public by design, and
-	// ADMIN_GITHUB_LOGIN is a username or numeric id, not a credential. Prefer the
-	// NUMERIC GitHub user id: a login can be renamed and then claimed by someone
-	// else, an id cannot.
+	// Non-secret. ACCESS_TEAM_DOMAIN is the Cloudflare Access team,
+	// https://<team>.cloudflareaccess.com, the same team Capsid, Carrel and
+	// Foxing Admin sign in through. ADMIN_EMAIL is the one email let in, as
+	// Access verifies it at sign-in.
 	//
 	// SITE_ORIGIN is the URL the site Worker is addressed by over the SITE
 	// binding; check:wrapper asserts it equals SITE_ORIGIN in app/lib/seo.ts.
@@ -46,7 +46,8 @@
 	"vars": {
 		"SITE_ORIGIN": "https://dustinedwards.info",
 		"PUBLIC_ORIGIN": "https://admin-mcp.dustinedwards.info",
-		"ADMIN_GITHUB_LOGIN": "DrDustinEdwards",
+		"ACCESS_TEAM_DOMAIN": "https://YOUR_TEAM.cloudflareaccess.com",
+		"ADMIN_EMAIL": "admin@example.com",
 		"DCR_REDIRECT_URIS": "https://vertexaisearch.cloud.google.com/oauth-redirect",
 		"AGENT_WRITE": "grok"
 	},
@@ -108,8 +109,9 @@
 	//   OPERATOR_TOKEN        the API leg. Same value as the dustinedwards
 	//                         Worker's OPERATOR_TOKEN. Identifies WHAT this
 	//                         Worker may do.
-	//   GITHUB_CLIENT_ID      GitHub OAuth App, for the consent step.
-	//   GITHUB_CLIENT_SECRET  ditto.
+	//   ACCESS_SAAS_CLIENT_ID      the Access for SaaS (OIDC) app used for
+	//                              sign-in, redirect URL PUBLIC_ORIGIN + /callback.
+	//   ACCESS_SAAS_CLIENT_SECRET  ditto.
 	//
 	// The client leg (who is operating) and the API leg (what the wrapper may do)
 	// are never the same value. A client-leg identity failure must read

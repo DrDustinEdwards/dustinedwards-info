@@ -12,7 +12,7 @@ export const TOKEN = "op-token-0123456789abcdef0123456789abcdef";
 export const ORIGIN = "https://site.test";
 export const API_URL = `${ORIGIN}/api/operator`;
 export const HEALTH_URL = `${ORIGIN}/api/health`;
-export const ADMIN = "DrDustinEdwards";
+export const ADMIN = "admin@example.com";
 
 /** A SITE binding whose fetch is whatever globalThis.fetch is at call time. */
 export const SITE = { fetch: (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init) } as unknown as Fetcher;
@@ -54,7 +54,7 @@ export function freshEnv() {
     SITE,
     SITE_ORIGIN: ORIGIN,
     OPERATOR_TOKEN: TOKEN,
-    ADMIN_GITHUB_LOGIN: ADMIN,
+    ADMIN_EMAIL: ADMIN,
     TOOL_CALL_LOG: AUDIT.namespace,
   };
 }
@@ -62,14 +62,14 @@ export function freshEnv() {
 /** The administrator, holding read and write. */
 export const WRITER: Caller = {
   kind: "admin",
-  props: { id: 1, login: ADMIN, name: null, scopes: ["dei.read", "dei.write"] },
+  props: { email: ADMIN, scopes: ["dei.read", "dei.write"] },
   scopes: ["dei.read", "dei.write"],
 };
 
 /** The administrator, holding read only. */
 export const READER: Caller = {
   kind: "admin",
-  props: { id: 1, login: ADMIN, name: null, scopes: ["dei.read"] },
+  props: { email: ADMIN, scopes: ["dei.read"] },
   scopes: ["dei.read"],
 };
 

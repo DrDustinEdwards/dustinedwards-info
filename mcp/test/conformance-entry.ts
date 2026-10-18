@@ -31,10 +31,10 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const stub = env.STUB_URL ?? "";
     const site = { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(new Request(stub, new Request(input, init))) };
-    const login = env.ADMIN_GITHUB_LOGIN ?? "";
+    const email = env.ADMIN_EMAIL ?? "";
     return handleMcp(request, { ...env, SITE: site as unknown as Fetcher }, ctx, {
       kind: "admin",
-      props: { id: 0, login, name: null },
+      props: { email },
       scopes: ["dei.read", "dei.write"],
     });
   },
