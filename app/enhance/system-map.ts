@@ -64,6 +64,14 @@ function start(root: HTMLElement) {
   const map = controller(root, root.dataset.openLabel ?? "Open");
   const stage = root.querySelector<HTMLElement>("[data-cap-part='stage']");
   const detail = root.querySelector<HTMLElement>("[data-cap-part='detail']");
+  // The way back sits with the views, beside Capsid and Plain map, shown while a system is zoomed into.
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.className = "cap-btn";
+  backButton.dataset.systemsBack = "";
+  backButton.textContent = BACK;
+  backButton.hidden = true;
+  root.querySelector("[data-cap-part='views']")?.append(backButton);
   const tiles = [...root.querySelectorAll<SVGGElement>(".cap-system-map-tile[data-id]")];
   const layers = new Map<string, SVGSVGElement>();
   const findLayers = () => {
@@ -123,11 +131,9 @@ function start(root: HTMLElement) {
     return { name, label, text: [counts, linked].filter(Boolean).join(". ") };
   };
 
-  /** Capsomer's detail line for the core, in the site's words: the system's name, and the way back. */
+  /** Capsomer's detail line for the core, in the site's words: the system's name and what its circle holds. */
   const relabel = () => {
     if (!zoomed || root.dataset.flow) return;
-    const back = detail?.querySelector<HTMLButtonElement>("[data-cap-part='leave']");
-    if (back && back.textContent !== BACK) back.textContent = BACK;
     const strong = detail?.querySelector(".cap-system-map-detail-name");
     const name = listed(zoomed, "name");
     if (strong && name && strong.textContent !== name) strong.textContent = name;
@@ -170,6 +176,7 @@ function start(root: HTMLElement) {
       }
     }
     root.dataset.zoom = id;
+    backButton.hidden = false;
     const { name, label, text } = describe(id, layer);
     const said = listed(id, "text").replace(/\.$/, "");
     about = `${[said, text].filter(Boolean).join(". ")}${said || text ? "." : ""}`;
@@ -178,7 +185,7 @@ function start(root: HTMLElement) {
       relabel();
     } else {
       root.setAttribute("data-entered", "");
-      if (detail) detail.innerHTML = `<strong class="cap-system-map-detail-name">${esc(name)}</strong><span class="cap-system-map-detail-text">${esc(about)}</span><span class="cap-system-map-detail-actions"><button type="button" class="cap-btn" data-systems-back>${BACK}</button></span>`;
+      if (detail) detail.innerHTML = `<strong class="cap-system-map-detail-name">${esc(name)}</strong><span class="cap-system-map-detail-text">${esc(about)}</span>`;
     }
     layer.removeAttribute("aria-hidden");
     layer.setAttribute("role", "img");
@@ -188,7 +195,7 @@ function start(root: HTMLElement) {
       // In the next frame, as is the scroll: focus lays the page out, and the tap's own handler stays short.
       requestAnimationFrame(() => {
         if (zoomed !== id) return;
-        detail?.querySelector<HTMLElement>("[data-systems-back], [data-cap-part='leave']")?.focus({ preventScroll: true });
+        backButton.focus({ preventScroll: true });
         // The circle in view, with the detail line above it where they fit together.
         const top = detail?.getBoundingClientRect().top ?? 0;
         const bottom = stage?.getBoundingClientRect().bottom ?? 0;
@@ -204,6 +211,7 @@ function start(root: HTMLElement) {
     if (!was) return;
     if (capsomerEntered()) leaveCapsomer();
     zoomed = null;
+    backButton.hidden = true;
     root.removeAttribute("data-entered");
     delete root.dataset.zoom;
     for (const l of layers.values()) {
