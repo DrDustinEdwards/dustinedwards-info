@@ -24,6 +24,9 @@ import {
   wiresOf,
 } from "~/lib/systems.mjs";
 
+import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
+import { INSIDE_LAYERS } from "virtual:system-insides";
+
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/systems";
 
@@ -40,7 +43,7 @@ import "~/styles/systems.css";
  * which the server renders chosen too. The data is the committed copy of Capsid's public model
  * (data/system-model.json), checked when the module loads, so a bad file fails the build and never
  * reaches a reader. The whole map, the list of the same data and every system's facts are in the
- * HTML; the script (app/enhance/system-map.ts) adds choosing, the lines and going inside, and
+ * HTML; the script (app/enhance/system-map.ts) makes one tap zoom into a system's circle, and
  * shows one system's facts at a time.
  */
 export function headers() {
@@ -50,7 +53,13 @@ export function headers() {
 const MODEL = loadSystemModel(rawModel);
 const TITLE = "Systems";
 const CAPTION = "A capsid is the protein shell of a virus, built from repeated parts called capsomers. This family is built the same way: Capsid in the middle, the shared parts around it, what people use on the outside.";
-const MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 });
+// Capsomer's map, with an inside for every system rather than the core alone, so one tap on any system zooms into
+// its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides).
+const MAP = wireMapHtml(
+  systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 }),
+  INSIDE_LAYERS,
+  MODEL.systems.find((s) => s.ring === "core")?.id,
+);
 
 export function loader({ request }: Route.LoaderArgs) {
   return { chosen: chosenSystem(MODEL, new URL(request.url).searchParams.get(SYSTEM_PARAM)) };
@@ -80,8 +89,8 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
     <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}>
       <Breadcrumb trail={trail} />
       <SystemsIntro />
-      {/* The map is a string from Capsomer, every text in it escaped there. data-chosen tells the script which system to choose. */}
-      <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? chooseInMapHtml(MAP, chosen) : MAP }} />
+      {/* The map is a string from Capsomer and app/lib/system-wiring.mjs, every text in it escaped there. A chosen system is drawn zoomed in; data-chosen tells the script which. */}
+      <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? zoomInMapHtml(chooseInMapHtml(MAP, chosen), chosen) : MAP }} />
       {/* Every system's facts, all shown with no script; with script, only the chosen one's (systems.css). */}
       <div className="systems-all" data-systems-facts="">
         {MODEL.systems.map((s) => (
@@ -102,8 +111,8 @@ function SystemsIntro() {
     <>
       <h1 className="page-title">{TITLE}</h1>
       <p className="systems-lead">
-        The {MODEL.systems.length} systems I run, as one drawing. Choose one to see what it connects to and its facts below the map; choose Capsid again to go inside it. {privates} are private, so
-        they show only a name and, where they have one, an address. The <a href={`${EXPLORER_ORIGIN}/`}>Capsid explorer</a> goes deeper, with what
+        The {MODEL.systems.length} systems I run, as one drawing. Tap one to zoom into it: its parts inside the circle, the systems it connects to around the rim, and each
+        wire from the part that uses it, with its facts below the map. {privates} are private, so they show only a name and, where they have one, an address. The <a href={`${EXPLORER_ORIGIN}/`}>Capsid explorer</a> goes deeper, with what
         Capsid is made of and its daily numbers.
       </p>
     </>
