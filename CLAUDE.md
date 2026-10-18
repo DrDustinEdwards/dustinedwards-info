@@ -31,7 +31,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## How a session works
 
-On a branch, landing by pull request (rule 16). This folder is the site session's checkout; any other session uses its own worktree (local ones under `C:\Users\email\dev\worktrees\`). Read this file, `core.md` and the job body, and any ruling the job cites by number; `FAILURES.md` is worth a minute. Run `npm run check:changed`, push, and let CI run the full suite. Screenshots only for visible changes. Renovate merges its own updates per `renovate.json`; a red one is a report.
+On a branch, landing by pull request (rule 16). This folder is the site session's checkout; any other session uses its own worktree (local ones under `C:\Users\email\dev\worktrees\`). Read this file, `core.md`, Dustin's own words (quoted in the job or the thread) and the job body, and any ruling the job cites by number; `FAILURES.md` is worth a minute. Run `npm run check:changed`, push, and let CI run the full suite. A visible change is opened at phone and desktop size and checked against Dustin's words before it goes to him. Renovate merges its own updates per `renovate.json`; a red one is a report.
 
 **Two files here are Capsid's:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. Capsid's `sync-scorer` copier (`npm run sync:scorer` in capsid) keeps them identical across the roster repos; change them in capsid and they arrive by the copier.
 
