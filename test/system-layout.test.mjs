@@ -76,20 +76,28 @@ await test("the drawing places every box apart and no wire under a box, on a sma
   for (const n of l.nodes.filter((n) => n.role !== "part")) assert.ok(Math.abs(n.y) - n.h / 2 >= 0 && Math.hypot(n.x, n.y) > l.r, `${n.id} is outside the circle`);
 });
 
-await test("the route puts every circle into Capsomer's map, the core's first, and a chosen system opens zoomed in", () => {
+await test("the route sends no circle at rest and names the asset holding them all; a chosen system opens zoomed in", () => {
   const model = fixture();
   const layers = insideLayers(model, summaryOf, mapData(model));
-  const html = wireMapHtml(systemMapHtml(mapData(model), { id: "family", label: "Family" }), layers, "core");
-  const order = [...html.matchAll(/data-layer="inside" data-system="([^"]+)"/g)].map((m) => m[1]);
+  const capsomer = systemMapHtml(mapData(model), { id: "family", label: "Family" });
+  const url = "/assets/system-insides-abc.json";
+  const rest = wireMapHtml(capsomer, {}, "core", url);
+  assert.doesNotMatch(rest, /data-layer="inside"/, "Capsomer's own inside layer is replaced by the ones given: none");
+  assert.match(rest, /<figure class="cap-system-map" data-cap="system-map" data-insides="\/assets\/system-insides-abc.json"/);
+  // The detail line and the views are sent shown (systems.css hides them where no script runs).
+  assert.doesNotMatch(rest, /data-cap-part="(?:detail|views)"[^>]* hidden>/);
+
+  const all = wireMapHtml(capsomer, layers, "core", url);
+  const order = [...all.matchAll(/data-layer="inside" data-system="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(order[0], "core", "Capsomer's controller takes the first inside layer as the core's");
   assert.deepEqual([...order].sort(), ["app", "core", "hidden", "kit"]);
-  assert.equal(html.match(/data-layer="inside"/g)?.length, 4, "Capsomer's own inside layer is replaced, not kept beside them");
 
-  const zoomed = zoomInMapHtml(html, "app");
-  assert.match(zoomed, /<figure class="cap-system-map" data-cap="system-map" data-entered data-zoom="app"/);
-  assert.equal(zoomed.match(/data-shown/g)?.length, 1);
+  const one = wireMapHtml(capsomer, { app: layers.app ?? "" }, "core", url);
+  const zoomed = zoomInMapHtml(one, "app");
+  assert.match(zoomed, /<figure class="cap-system-map" data-cap="system-map" data-entered data-zoom="app" data-insides=/);
+  assert.equal(zoomed.match(/data-layer="inside"/g)?.length, 1);
   assert.match(zoomed, /data-layer="inside" data-system="app" data-shown/);
-  assert.equal(zoomed.replace(' data-entered data-zoom="app"', "").replace(" data-shown", ""), html, "zooming in adds attributes only");
+  assert.equal(zoomed.replace(' data-entered data-zoom="app"', "").replace(" data-shown", ""), one, "zooming in adds attributes only");
 });
 
 await test("the committed model's circles have no two boxes touching", () => {

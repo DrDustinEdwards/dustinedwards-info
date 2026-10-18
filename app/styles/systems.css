@@ -96,6 +96,18 @@
   order: -1;
 }
 
+/*
+ * Capsomer's markup has the detail line and the view buttons hidden until its script shows them. Above the drawing,
+ * showing the detail line would push the drawing down on load, so the route sends both shown
+ * (app/lib/system-wiring.mjs) and they are hidden here only where no script runs, where neither would do anything.
+ */
+@media (scripting: none) {
+  .systems-map .cap-system-map-detail,
+  .systems-map .cap-system-map-views {
+    display: none;
+  }
+}
+
 .systems-map .cap-system-map[data-entered] [data-layer="inside"]:not([data-shown]) {
   opacity: 0;
   visibility: hidden;

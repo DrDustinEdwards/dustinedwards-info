@@ -248,7 +248,7 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
   let moved = 0;
   const others = MODEL.systems.filter((s) => s.ring !== "core").slice(0, 3);
   const escape = () => page.keyboard.press("Escape");
-  for (const step of [...[...others, { id: CORE }].flatMap((s) => [() => page.click(tileSelector(s.id)), escape])]) {
+  for (const step of [...others, { id: CORE }].flatMap((s) => [() => page.click(tileSelector(s.id)), escape])) {
     await step();
     await new Promise((resolve) => setTimeout(resolve, 250));
     const now = await place();

@@ -25,7 +25,7 @@ import {
 } from "~/lib/systems.mjs";
 
 import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
-import { INSIDE_LAYERS } from "virtual:system-insides";
+import { INSIDE_LAYERS, INSIDES_URL } from "virtual:system-insides";
 
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/systems";
@@ -54,12 +54,14 @@ const MODEL = loadSystemModel(rawModel);
 const TITLE = "Systems";
 const CAPTION = "A capsid is the protein shell of a virus, built from repeated parts called capsomers. This family is built the same way: Capsid in the middle, the shared parts around it, what people use on the outside.";
 // Capsomer's map, with an inside for every system rather than the core alone, so one tap on any system zooms into
-// its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides).
-const MAP = wireMapHtml(
-  systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 }),
-  INSIDE_LAYERS,
-  MODEL.systems.find((s) => s.ring === "core")?.id,
-);
+// its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides). The
+// page at rest carries none of them, and the map's script fetches them all from INSIDES_URL; a chosen system's is
+// inlined, so a shared ?system= link opens zoomed in before any script and with none.
+const CORE_ID = MODEL.systems.find((s) => s.ring === "core")?.id;
+const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 });
+const MAP = wireMapHtml(CAPSOMER_MAP, {}, CORE_ID, INSIDES_URL);
+/** The map zoomed into one system, its circle inlined. */
+const zoomedMap = (id: string) => zoomInMapHtml(chooseInMapHtml(wireMapHtml(CAPSOMER_MAP, { [id]: INSIDE_LAYERS[id] ?? "" }, CORE_ID, INSIDES_URL), id), id);
 
 export function loader({ request }: Route.LoaderArgs) {
   return { chosen: chosenSystem(MODEL, new URL(request.url).searchParams.get(SYSTEM_PARAM)) };
@@ -90,7 +92,7 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
       <Breadcrumb trail={trail} />
       <SystemsIntro />
       {/* The map is a string from Capsomer and app/lib/system-wiring.mjs, every text in it escaped there. A chosen system is drawn zoomed in; data-chosen tells the script which. */}
-      <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? zoomInMapHtml(chooseInMapHtml(MAP, chosen), chosen) : MAP }} />
+      <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? zoomedMap(chosen) : MAP }} />
       {/* Every system's facts, all shown with no script; with script, only the chosen one's (systems.css). */}
       <div className="systems-all" data-systems-facts="">
         {MODEL.systems.map((s) => (

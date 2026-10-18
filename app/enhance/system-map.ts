@@ -20,8 +20,48 @@ const BACK = "Back to all systems";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/**
+ * Every system's circle, fetched from the asset the server names (scripts/lib/system-insides-plugin.mjs): the page
+ * carries none at rest, for its load time, and a ?system= page only its own. They go into the stage beside any the
+ * server sent, the core's first, since Capsomer's controller takes the first inside layer as the core's. A failed
+ * fetch leaves the map as Capsomer's, with no circles but the one the server sent.
+ */
+async function addInsides(root: HTMLElement) {
+  const stage = root.querySelector<HTMLElement>("[data-cap-part='stage']");
+  const url = root.dataset.insides;
+  if (!stage || !url) return;
+  let all: Record<string, string> = {};
+  try {
+    const res = await fetch(url);
+    if (res.ok) all = (await res.json()) as Record<string, string>;
+  } catch {
+    return;
+  }
+  const core = root.querySelector<SVGGElement>(".cap-system-map-tile[data-core]")?.dataset.id;
+  const have = new Set([...stage.querySelectorAll<SVGSVGElement>("[data-layer='inside'][data-system]")].map((l) => l.dataset.system));
+  const parse = (svg: string) => {
+    const t = document.createElement("template");
+    t.innerHTML = svg;
+    return t.content.firstElementChild;
+  };
+  for (const [id, svg] of Object.entries(all)) {
+    if (have.has(id)) continue;
+    const layer = parse(svg);
+    if (!layer) continue;
+    const first = stage.querySelector("[data-layer='inside']");
+    if (id === core && first) stage.insertBefore(layer, first);
+    else stage.appendChild(layer);
+  }
+}
+
 for (const root of document.querySelectorAll<HTMLElement>("[data-cap='system-map']")) {
-  if (root.hasAttribute("data-cap-ready")) continue;
+  if (root.hasAttribute("data-cap-ready") || root.hasAttribute("data-systems-wiring")) continue;
+  root.setAttribute("data-systems-wiring", "");
+  void addInsides(root).finally(() => start(root));
+}
+
+/** The map, made the control, once its circles are in. */
+function start(root: HTMLElement) {
   root.setAttribute("data-cap-ready", "");
   // The server may have drawn a system zoomed in (?system=); it is zoomed again below, with no movement, since
   // the attributes it sets are the ones already there.

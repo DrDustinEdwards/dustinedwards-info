@@ -6,4 +6,6 @@
  */
 declare module "virtual:system-insides" {
   export const INSIDE_LAYERS: Readonly<Record<string, string>>;
+  /** The same layers as one JSON asset, which the map's script fetches. */
+  export const INSIDES_URL: string;
 }
