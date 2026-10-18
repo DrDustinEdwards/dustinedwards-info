@@ -100,9 +100,13 @@ await test("the route sends the circles it is given and names the asset holding 
   assert.equal(zoomed.replace(' data-entered data-zoom="app"', "").replace(" data-shown", ""), one, "zooming in adds attributes only");
 });
 
-await test("the committed model's circles have no two boxes touching", () => {
+await test("the committed model's circles have no two boxes touching and no wire under a box", () => {
   const model = loadSystemModel(JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")));
   const shell = layoutMap(mapData(model).systems).viewBox;
-  const touching = model.systems.flatMap((s) => faultsOf(layoutScene(sceneOf(model, s.id), shell[2])).filter((f) => f.includes(" touches ")).map((f) => `${s.id}: ${f}`));
-  assert.deepEqual(touching, []);
+  const bad = model.systems.flatMap((s) =>
+    faultsOf(layoutScene(sceneOf(model, s.id), shell[2]))
+      .filter((f) => f.includes(" touches ") || f.includes(" runs under "))
+      .map((f) => `${s.id}: ${f}`),
+  );
+  assert.deepEqual(bad, []);
 });
