@@ -7,14 +7,14 @@ description: How to get work from a clean gate run onto the deployed site on dus
 
 The deploy CONTRACT is hard rule 16 in `CLAUDE.md`, and it is not restated
 here: what ship refuses and why lives there. This is the PROCEDURE around it.
-Every change lands by pull request (portfolio rule 4.3); nothing is pushed to main.
+Every change lands by pull request (portfolio rule 9); nothing is pushed to main.
 
 ## The order
 
 1. On a branch: `npm run check:changed`, the gates covering what the branch touched,
    then `npm run lint` (a separate CI step no gate tier runs). Reach for a local
    `check:all` only when the change touches a network gate's subject.
-2. Scoped commits (portfolio rule 4.2). Push the branch.
+2. Scoped commits. Push the branch.
 3. Open the PR. Its body names the Capsid job it does (`Job: job_<12 hex>`), and that
    job's `complete` (or `block`) names the PR. If no job was posted, post one in the
    `dustinedwards` namespace first. That is how Capsid's merge tick and Dustin's

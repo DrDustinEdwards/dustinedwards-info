@@ -58,7 +58,7 @@ await test("the page's statement names the method, its citation, and the stored 
   assert.ok(text.includes(TM_CONDITIONS.citation));
   assert.ok(text.includes(`${TM_CONDITIONS.sodiumMM} mM`));
   assert.ok(text.includes(`${TM_CONDITIONS.primerNM / 1000} `));
-  assert.match(text, /is an estimate for comparing primers/, "labelled an estimate, for comparing primers (decisions.md, Protocols)");
+  assert.match(text, /is an estimate for comparing primers/, "labelled an estimate, for comparing primers (CLAUDE.md)");
   assert.ok(!/annealing/i.test(text), "the Tm statement never mentions an annealing temperature as the Tm");
   const wide = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
   assert.ok(!wide.test(text), "no wide dash");

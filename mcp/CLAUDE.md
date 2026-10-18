@@ -1,8 +1,7 @@
 # CLAUDE.md - mcp/ (Dustin Edwards Admin)
 
 The site's CLAUDE.md and `capsid/conventions.md` govern this folder too; this
-file holds only what is true of the MCP server. The servers ruling is Capsid
-`capsid/rulings/mcp-2026-10-10.md`, and the design is
+file holds only what is true of the MCP server. The design is
 `capsid/research/design-mcp-servers.md` section 6.
 
 ## What this is
@@ -11,15 +10,14 @@ Dustin Edwards Admin: the admin MCP server for dustinedwards.info, a wrapper ove
 the site's operator API. Its own Cloudflare Worker, `dustinedwards-mcp`, at
 https://admin-mcp.dustinedwards.info/mcp. It moved here from the
 DrDustinEdwards/dustinedwards-mcp repo by `git subtree add` (history kept) on
-2026-10-10, under capsid/rulings/mcp-2026-10-10.md rule 9, as amended: an app's
-MCP lives in the app's repo. It keeps the Worker name, so its secrets, KV namespaces and Durable Object stayed
+2026-10-10: an app's MCP lives in the app's repo. It keeps the Worker name, so its secrets, KV namespaces and Durable Object stayed
 where they were. Own package.json and lockfile, because its SDK and OAuth
 versions are not the site's. Node is the site's `.nvmrc`.
 
 The tools are listed in `src/tools.ts`, `dei_` prefixed, each a whole job: check
 the site, repair drift, review and decide mentions, upload and back up media, read
 a registry, refresh citations, keep a procedure. NO POST TOOLS: Carrel owns all
-writing on every site (capsid/rulings/mcp-2026-10-10.md rule 11), so nothing here
+writing on every site, so nothing here
 writes a post, a page, the CV or a publication.
 
 ## How it lands and deploys
