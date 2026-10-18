@@ -274,7 +274,13 @@ await test("the daily refresh writes only a checked model that says something ne
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   let served = fixture();
-  const server = createServer((_req, res) => {
+  // Core's repo, example/core, as the raw host serves it; every other path there is a 404.
+  let wrangler = { name: "core", d1_databases: [] };
+  const server = createServer((req, res) => {
+    if (req.url?.startsWith("/raw/")) {
+      res.statusCode = req.url === "/raw/example/core/HEAD/wrangler.jsonc" ? 200 : 404;
+      return res.end(`// A comment, as in the real ones.\n${JSON.stringify(wrangler)}`);
+    }
     res.setHeader("content-type", "application/json");
     res.end(JSON.stringify(served));
   });
@@ -287,7 +293,7 @@ await test("the daily refresh writes only a checked model that says something ne
   const script = new URL("../scripts/refresh-system-model.mjs", import.meta.url).pathname;
   const refresh = (/** @type {Record<string, string>} */ extra = {}) =>
     new Promise((resolve) =>
-      execFile(process.execPath, [script, url], { env: { ...process.env, SYSTEM_MODEL_FILE: file, GITHUB_OUTPUT: "", OPEN_MODEL: "", ...extra } }, (error, stdout, stderr) =>
+      execFile(process.execPath, [script, url], { env: { ...process.env, SYSTEM_MODEL_FILE: file, GITHUB_OUTPUT: "", OPEN_MODEL: "", SYSTEM_REPOS_RAW: `${url}raw`, ...extra } }, (error, stdout, stderr) =>
         resolve({ code: error ? (error.code ?? 1) : 0, stdout, stderr }),
       ),
     );
@@ -320,6 +326,15 @@ await test("the daily refresh writes only a checked model that says something ne
     run = await refresh();
     assert.notEqual(run.code, 0, "a model the site refuses was accepted");
     assert.equal(read(file, "utf8"), before, "a refused model was written");
+
+    // A part core's Wrangler config declares that the model does not list fails the run, named.
+    served = fixture();
+    served.systems[0].description = "Runs it all, and a bucket.";
+    wrangler = { ...wrangler, r2_buckets: [{ binding: "MEDIA", bucket_name: "core-media" }] };
+    run = await refresh();
+    assert.notEqual(run.code, 0, "a part the model leaves out was accepted");
+    assert.match(run.stderr, /core: 1 bucket in Wrangler \(core-media\), 0 in the model/);
+    assert.equal(read(file, "utf8"), before, "a model missing a part was written");
   } finally {
     server.close();
   }
