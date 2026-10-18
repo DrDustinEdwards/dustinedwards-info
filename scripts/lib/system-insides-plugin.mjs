@@ -36,7 +36,8 @@ export function systemInsides() {
   const bytes = readFileSync(MODEL_FILE, "utf8");
   if (memo?.bytes === bytes) return memo;
   const model = loadSystemModel(JSON.parse(bytes));
-  const json = JSON.stringify(insideLayers(model, summaryOf, mapData(model)));
+  // A private system's circle is its name alone: what it is not showing needs no sentence (Dustin, 2026-10-18).
+  const json = JSON.stringify(insideLayers(model, (s) => (s.private ? "" : summaryOf(s)), mapData(model)));
   const hash = createHash("sha256").update(json).digest("base64url").slice(0, 10);
   memo = { bytes, json, fileName: `assets/system-insides-${hash}.json` };
   return memo;

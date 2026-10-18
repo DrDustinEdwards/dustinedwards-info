@@ -6,21 +6,15 @@ import { PageShell } from "~/components/page-shell";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 import {
-  EXPLORER_ORIGIN,
   SYSTEMS_PATH,
   SYSTEM_PARAM,
   chooseInMapHtml,
   chosenSystem,
-  connectionsOf,
-  explorerLabel,
   explorerUrl,
   loadSystemModel,
   mapData,
-  outsideOf,
-  partsOf,
   repoOf,
   summaryOf,
-  systemHref,
 } from "~/lib/systems.mjs";
 
 import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
@@ -51,14 +45,13 @@ export function headers() {
 
 const MODEL = loadSystemModel(rawModel);
 const TITLE = "Systems";
-const CAPTION = "A capsid is the protein shell of a virus, built from repeated parts called capsomers. This family is built the same way: Capsid in the middle, the shared parts around it, what people use on the outside.";
 // Capsomer's map, with an inside for every system rather than the core alone, so one tap on any system zooms into
 // its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides). The
 // page at rest carries none, for its first paint on a slow phone, and the map's script fetches them all from
 // INSIDES_URL once the page has loaded; a chosen system's is inlined, so a shared ?system= link opens zoomed in
 // before any script and with none.
 const CORE_ID = MODEL.systems.find((s) => s.ring === "core")?.id;
-const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", caption: CAPTION, headingLevel: 2 });
+const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", headingLevel: 2 });
 /** The map with the given system's circle in it, or none. */
 const mapWith = (id?: string) => wireMapHtml(CAPSOMER_MAP, id && INSIDE_LAYERS[id] ? { [id]: INSIDE_LAYERS[id] } : {}, CORE_ID, INSIDES_URL);
 const MAP = mapWith();
@@ -109,87 +102,39 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
   );
 }
 
+// The drawing is the page: the words around it say only what it cannot (Dustin, 2026-10-18).
 function SystemsIntro() {
-  const privates = MODEL.systems.filter((s) => s.private).length;
   return (
     <>
       <h1 className="page-title">{TITLE}</h1>
-      <p className="systems-lead">
-        The {MODEL.systems.length} systems I run, as one drawing. Tap one to zoom into it: its parts inside the circle, the systems it connects to around the rim, and each
-        wire from the part that uses it, with its facts below the map. {privates} are private, so they show only a name and, where they have one, an address. The <a href={`${EXPLORER_ORIGIN}/`}>Capsid explorer</a> goes deeper, with what
-        Capsid is made of and its daily numbers.
-      </p>
+      <p className="systems-lead">The {MODEL.systems.length} systems I run, as one drawing.</p>
     </>
   );
 }
 
-// A system's parts by name only, and its wires in the drawing: their descriptions and the wires as words are in
-// /systems.md. Every system's facts are in the page for a reader without script, and with them all it outgrew the
-// first round trips that bring the intro on a slow phone (check:systems-map's LCP).
+// Under the drawing, once: the system's name, its sentence, and the links the drawing cannot carry. Its parts and
+// lines are the drawing; as words they are in /systems.md. A private system is its name, its address when it has
+// one, and its place in the explorer.
 function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
   const s = MODEL.systems.find((x) => x.id === id)!;
-  const links = connectionsOf(MODEL, id);
-  const parts = partsOf(MODEL, id);
-  const outside = outsideOf(MODEL, id);
   const repo = repoOf(s);
+  const links = [
+    s.domain ? { href: `https://${s.domain}`, text: s.domain } : null,
+    repo ? { href: repo, text: repo.replace(/^https:\/\//, "") } : null,
+    { href: explorerUrl(s.id), text: "explorer" },
+  ].filter((l) => l !== null);
   return (
     <section className="systems-facts" id={`system-${s.id}`} data-system={s.id} data-chosen={chosen ? "" : undefined} aria-labelledby={`system-${s.id}-name`}>
       <h2 id={`system-${s.id}-name`}>{s.name}</h2>
-      <p className="systems-lead">{summaryOf(s)}</p>
-      <dl>
-        {s.domain ? (
-          <>
-            <dt>Address</dt>
-            <dd>
-              <a href={`https://${s.domain}`}>{s.domain}</a>
-            </dd>
-          </>
-        ) : null}
-        {repo ? (
-          <>
-            <dt>Source</dt>
-            <dd>
-              <a href={repo}>{repo.replace(/^https:\/\//, "")}</a>
-            </dd>
-          </>
-        ) : null}
-        <dt>Explorer</dt>
-        <dd>
-          <a href={explorerUrl(s.id)}>{explorerLabel(s.id)}</a>
-        </dd>
-      </dl>
-      {parts.length ? <ContainerList title="Inside" containers={parts} /> : null}
-      {outside.length ? <ContainerList title="Outside it" containers={outside} /> : null}
-      <h3>Connections</h3>
-      {links.length === 0 ? (
-        <p>None drawn.</p>
-      ) : (
-        <ul>
-          {links.map((c, i) => (
-            <li key={`${c.other}-${i}`}>
-              {/* With script, choosing in place (app/enhance/system-map.ts); without, the page with that system chosen. */}
-              {`${c.verb} `}
-              <a href={systemHref(c.other)} data-choose={c.other}>{c.name}</a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function ContainerList({ title, containers }: { title: string; containers: ReturnType<typeof partsOf> }) {
-  return (
-    <>
-      <h3>{title}</h3>
-      <ul>
-        {containers.map((c) => (
-          <li key={c.id}>
-            <strong>{c.name}</strong>
-            {` (${c.technology})`}
-          </li>
+      {s.private || !s.description ? null : <p className="systems-lead">{s.description}</p>}
+      <p className="systems-links">
+        {links.map((l, i) => (
+          <span key={l.href}>
+            {i ? " · " : null}
+            <a href={l.href}>{l.text}</a>
+          </span>
         ))}
-      </ul>
-    </>
+      </p>
+    </section>
   );
 }
