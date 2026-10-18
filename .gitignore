@@ -177,3 +177,6 @@ wrangler.watchdog.jsonc
 
 scratchpad/
 reports/
+
+# The code map's coverage run (.github/workflows/code-map.yml).
+coverage/

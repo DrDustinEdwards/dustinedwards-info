@@ -11,7 +11,7 @@
 // low score, and it exits non-zero only when Stryker itself could not run.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 
@@ -84,6 +84,9 @@ function mutate(module, testFiles) {
   writeFileSync(configFile, JSON.stringify(config));
   const run = spawnSync("npx", ["--yes", STRYKER, "run", configFile], { cwd: root, stdio: "inherit", shell: true });
   if (run.status !== 0) throw new Error(`Stryker failed on ${module} (exit ${run.status}); this is the tool failing, not a low score`);
+  // Stryker's own report, kept for devkit's code map (mutation.yml's code-map job), which places each mutant in its function.
+  mkdirSync(join(outDir, "stryker"), { recursive: true });
+  copyFileSync(reportFile, join(outDir, "stryker", `${module.replaceAll("/", "__")}.json`));
   return score(JSON.parse(readFileSync(reportFile, "utf8")), module);
 }
 
