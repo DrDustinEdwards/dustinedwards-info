@@ -1,0 +1,34 @@
+name: code-map
+
+# The site's code map for the Capsid system explorer (capsid/research/design-system-explorer.md, section 5, slice 10):
+# after each push to main, devkit's code-map workflow maps app/ and workers/ with the node:test suite's coverage and
+# publishes code-map.json to the orphan code-map branch, which Capsid's public build reads. Never a gate on a pull request.
+#
+# Mutation scores come from the weekly mutation run (mutation.yml), whose last job publishes the map with its Stryker
+# reports. Every map after it carries those numbers forward while a function is unchanged and marks the rest stale.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  code-map:
+    # A called workflow holds no more than this job grants: the write lets it push to the code-map branch.
+    permissions:
+      contents: write
+    # Shared with mutation.yml's map job, so a push's map never lands over the weekly one mid-run.
+    concurrency:
+      group: code-map
+      cancel-in-progress: false
+    uses: DrDustinEdwards/devkit/.github/workflows/code-map.yml@81275c4edb8b29c81229c2e052fe75b417c758b4 # devkit #31
+    with:
+      # tsconfig.json only references its two projects; the cloudflare one lists app/ and workers/.
+      tsconfig: tsconfig.cloudflare.json
+      include: app/ workers/
+      # colophon-facts reads content/generated/stack.json, which is derived, not committed.
+      coverage-command: npm run build:stack && mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=dot --test-reporter-destination=stdout "test/**/*.test.mjs"
+      coverage-file: coverage/lcov.info

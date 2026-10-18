@@ -43,4 +43,29 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mutation-summary-${{ matrix.shard }}
-          path: reports/mutation/summary-*.json
+          # Stryker's own reports too, for the code map below.
+          path: |
+            reports/mutation/summary-*.json
+            reports/mutation/stryker/*.json
+
+  # The Capsid explorer's code map with this run's scores (capsid/research/design-system-explorer.md, slice 10). devkit's
+  # code-map reads every slice's Stryker reports from this run's artifacts and keeps them on the code-map branch, so the
+  # map code-map.yml publishes after each push carries these numbers forward until next week's run.
+  code-map:
+    name: Publish the code map
+    needs: score
+    if: ${{ !cancelled() }}
+    permissions:
+      contents: write
+    # Shared with code-map.yml, so a push's map never lands over this one mid-run.
+    concurrency:
+      group: code-map
+      cancel-in-progress: false
+    uses: DrDustinEdwards/devkit/.github/workflows/code-map.yml@81275c4edb8b29c81229c2e052fe75b417c758b4 # devkit #31
+    with:
+      tsconfig: tsconfig.cloudflare.json
+      include: app/ workers/
+      coverage-command: npm run build:stack && mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info --test-reporter=dot --test-reporter-destination=stdout "test/**/*.test.mjs"
+      coverage-file: coverage/lcov.info
+      mutation-artifacts: mutation-summary-*
+      mutation-file: mutation-artifacts/mutation-summary-*/stryker/*.json
