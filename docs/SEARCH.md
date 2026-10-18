@@ -58,4 +58,4 @@ Every save uploads that post's section records and drops cached answers; the syn
 
 ## Privacy
 
-No IP, session or fingerprint. Zero-result queries are stored (`zero_result_queries`, 90 days) only after a filter refuses anything shaped like an address, a phone number or a name (ruling 4).
+No IP, session or fingerprint. Zero-result queries are stored (`zero_result_queries`, 90 days) only after a filter refuses anything shaped like an address, a phone number or a name (CLAUDE.md).

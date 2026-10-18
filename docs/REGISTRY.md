@@ -73,7 +73,7 @@ plus `.md`.
 protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/kb/registry/tm.mjs`) is the
 SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
 it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
-ambiguity code. It is labelled an estimate for comparing primers (decisions.md, Protocols), every primer page links NEB's Tm
+ambiguity code. It is labelled an estimate for comparing primers (CLAUDE.md), every primer page links NEB's Tm
 Calculator for the polymerase-specific annealing temperature, and no page presents the computed Tm as an annealing temperature.
 
 ### Protocols read their primers from the registry
@@ -119,7 +119,7 @@ record is its name, organism, designation, collection and collection number.
 `app/kb/registry/strain.mjs`, two records in `content/registry/strain/`: the bacterial hosts of the lab's phage work, each
 stating only what the lab's own pages state: `organism`, `strain` (the lab's designation where there is one apart from the
 collection's number, `mc²155`), `collection` and `collection_number` (`ATCC 700084`, `NRRL B-24224`), `guide_url` (the
-SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, decisions.md, Protocols) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
+SEA-PHAGES Guide's page for the host) and `biosafety_level`, which is Dustin's to set (BSL-1 for both, CLAUDE.md) and is `MISSING` until he does. The record's `name` is its organism and designation and a set rule holds it to them, so a name
 cannot say a different strain than the fields do. A kind's page is `/research/lab/strains`, an item is
 `/research/lab/strains/<id>`, each with a markdown twin, a search record and a tab on the library.
 

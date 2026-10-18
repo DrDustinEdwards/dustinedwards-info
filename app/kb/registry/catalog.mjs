@@ -747,7 +747,7 @@ export function primersMarkdown(primers, origin) {
 
 /**
  * The Tm sentence, the sentence that says it is not an annealing temperature, and the calculator that gives one, in one
- * place for the page and the twin (decisions.md, Protocols: no page presents a computed Tm as the annealing temperature).
+ * place for the page and the twin (CLAUDE.md: no page presents a computed Tm as the annealing temperature).
  */
 export function tmNote() {
   return { statement: tmStatement(), annealing: annealingSentence(), calculator: NEB_TM_CALCULATOR, conditions: TM_CONDITIONS };

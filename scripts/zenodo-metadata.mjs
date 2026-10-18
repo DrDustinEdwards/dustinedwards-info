@@ -1,7 +1,7 @@
 // Prints the Zenodo deposit metadata for one procedure's current version, for `.zenodo.json` or the upload
 // form: `npm run zenodo:metadata -- phage-dna-extraction`. It reads the same compile the save tool runs and
 // refuses a procedure with no assigned version, because a DOI is minted only for a version being cited
-// (decisions.md, Protocols). The DOI Zenodo mints goes on that version's `history` entry in the file, not here.
+// (CLAUDE.md). The DOI Zenodo mints goes on that version's `history` entry in the file, not here.
 
 import { readFileSync } from "node:fs";
 
