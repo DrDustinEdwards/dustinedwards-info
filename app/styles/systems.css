@@ -22,6 +22,12 @@
   .systems-facts:not([data-chosen]) {
     display: none;
   }
+
+  /* With script the Plain map button opens Capsomer's list as columns, so the list's own toggle under the map
+     would be a second way to the same thing (Dustin, 2026-10-18). With no script the list stays, open. */
+  .systems-map .cap-system-map:not([data-view="plain"]) .cap-system-map-list {
+    display: none;
+  }
 }
 
 .systems-facts + .systems-facts {
@@ -94,6 +100,29 @@
 /* The detail line, with the way back, sits above the drawing: it never moves when the drawing changes height. */
 .systems-map .cap-system-map-detail {
   order: -1;
+}
+
+/*
+ * Capsomer fixes the detail line's height and scrolls what overflows, so a system with a long description and its
+ * parts counted pushed the way back out of sight. The way back sits beside the name, which leaves the text the rest
+ * of the box.
+ */
+.systems-map .cap-system-map-detail {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.systems-map .cap-system-map-detail > * {
+  grid-column: 1 / -1;
+}
+
+.systems-map .cap-system-map-detail > .cap-system-map-detail-name {
+  grid-column: 1;
+  align-self: center;
+}
+
+.systems-map .cap-system-map-detail > .cap-system-map-detail-actions {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 /*

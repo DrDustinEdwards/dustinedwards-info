@@ -21,7 +21,6 @@ import {
   repoOf,
   summaryOf,
   systemHref,
-  wiresOf,
 } from "~/lib/systems.mjs";
 
 import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
@@ -124,12 +123,14 @@ function SystemsIntro() {
   );
 }
 
+// A system's parts by name only, and its wires in the drawing: their descriptions and the wires as words are in
+// /systems.md. Every system's facts are in the page for a reader without script, and with them all it outgrew the
+// first round trips that bring the intro on a slow phone (check:systems-map's LCP).
 function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
   const s = MODEL.systems.find((x) => x.id === id)!;
   const links = connectionsOf(MODEL, id);
   const parts = partsOf(MODEL, id);
   const outside = outsideOf(MODEL, id);
-  const wires = wiresOf(MODEL, id);
   const repo = repoOf(s);
   return (
     <section className="systems-facts" id={`system-${s.id}`} data-system={s.id} data-chosen={chosen ? "" : undefined} aria-labelledby={`system-${s.id}-name`}>
@@ -159,16 +160,6 @@ function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
       </dl>
       {parts.length ? <ContainerList title="Inside" containers={parts} /> : null}
       {outside.length ? <ContainerList title="Outside it" containers={outside} /> : null}
-      {wires.length ? (
-        <>
-          <h4>How they connect</h4>
-          <ul>
-            {wires.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        </>
-      ) : null}
       <h3>Connections</h3>
       {links.length === 0 ? (
         <p>None drawn.</p>
@@ -177,7 +168,8 @@ function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
           {links.map((c, i) => (
             <li key={`${c.other}-${i}`}>
               {/* With script, choosing in place (app/enhance/system-map.ts); without, the page with that system chosen. */}
-              {c.verb} <a href={systemHref(c.other)} data-choose={c.other}>{c.name}</a>
+              {`${c.verb} `}
+              <a href={systemHref(c.other)} data-choose={c.other}>{c.name}</a>
             </li>
           ))}
         </ul>
@@ -193,7 +185,8 @@ function ContainerList({ title, containers }: { title: string; containers: Retur
       <ul>
         {containers.map((c) => (
           <li key={c.id}>
-            <strong>{c.name}</strong> ({c.technology}){c.description ? `: ${c.description}` : null}
+            <strong>{c.name}</strong>
+            {` (${c.technology})`}
           </li>
         ))}
       </ul>
