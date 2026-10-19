@@ -37,8 +37,6 @@ Work in your own worktree (local ones under `C:\Users\email\dev\worktrees\`); th
 
 ## Commands
 
-**Two files here are Capsid's:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. Capsid's `sync-scorer` copier (`npm run sync:scorer` in capsid) keeps them identical across the roster repos; change them in capsid and they arrive by the copier.
-
 **`package.json` owns the script list.** `check:changed` maps the diff to the gates that cover it, else the offline tier. `check` is the offline tier and `ship`'s; `check:all` adds gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `verify-live` is no gate: it needs a deploy and bills its Ask probes. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; `SCHEMA_LIVE=1` makes the schema test compare the live database. `check-all.mjs` refuses an untiered gate. The admin MCP (`mcp/`) has its own gates and CI job and deploys only by `npm run ship:mcp`; read `mcp/CLAUDE.md` first.
 
 ## Bindings
