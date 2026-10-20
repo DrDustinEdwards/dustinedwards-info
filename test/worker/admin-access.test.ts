@@ -1,7 +1,7 @@
 import { stubAccess } from "@dustinedwards/devkit/access";
-import { createLocalJWKSet } from "jose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { labIdentity } from "~/lab/access.server";
 import { accessIdentity } from "~/lib/access.server";
 import { adminActorContext } from "~/lib/admin-actor.server";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -22,9 +22,10 @@ async function signer() {
     claims: { aud: [AUD] },
     install: false,
   });
-  const jwks = { keys: [stub.jwk] };
+  // The team's key set as site-runtime/access's KeySource reads it, with no network.
+  const keys = () => async (kid: string) => (kid === stub.jwk.kid ? stub.jwk : undefined);
   const mint = (claims: Record<string, unknown> = {}) => stub.token({ email: undefined, ...claims });
-  return { jwks, mint, fetch: stub.fetch };
+  return { keys, mint, fetch: stub.fetch };
 }
 
 const request = (token?: string, url = `${SITE_ORIGIN}/admin`) =>
@@ -34,37 +35,85 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("accessIdentity", () => {
   it("names the person a verified token carries, lowercased", async () => {
-    const { jwks, mint } = await signer();
+    const { keys, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ email: "Dustin@Example.com" })), () => createLocalJWKSet(jwks))).toEqual({
+    expect(await accessIdentity(env, request(await mint({ email: "Dustin@Example.com" })), keys)).toEqual({
       kind: "human",
       email: "dustin@example.com",
     });
   });
 
   it("reads a service token as a service, never as a person", async () => {
-    const { jwks, mint } = await signer();
+    const { keys, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ common_name: "ci.access" })), () => createLocalJWKSet(jwks))).toEqual({
+    expect(await accessIdentity(env, request(await mint({ common_name: "ci.access" })), keys)).toEqual({
       kind: "service",
       id: "ci.access",
     });
   });
 
   it("refuses a token for another application, and a header with no token is simply absent", async () => {
-    const { jwks, mint } = await signer();
+    const { keys, mint } = await signer();
     const env = { ...VARS } as unknown as Env;
-    expect(await accessIdentity(env, request(await mint({ email: "a@b.c", aud: ["other"] })), () => createLocalJWKSet(jwks))).toEqual({
+    expect(await accessIdentity(env, request(await mint({ email: "a@b.c", aud: ["other"] })), keys)).toEqual({
       kind: "refused",
       reason: "audience",
     });
-    expect(await accessIdentity(env, request(), () => createLocalJWKSet(jwks))).toEqual({ kind: "absent" });
+    expect(await accessIdentity(env, request(), keys)).toEqual({ kind: "absent" });
   });
 
   it("treats a Worker with no Access configuration as having no identity, whatever header arrives", async () => {
-    const { jwks, mint } = await signer();
+    const { keys, mint } = await signer();
     const token = await mint({ email: "a@b.c" });
-    expect(await accessIdentity({} as Env, request(token), () => createLocalJWKSet(jwks))).toEqual({ kind: "absent" });
+    expect(await accessIdentity({} as Env, request(token), keys)).toEqual({ kind: "absent" });
+  });
+});
+
+describe("the site's reading of an Access verdict", () => {
+  it("refuses a verified token that names neither a person nor a service token", async () => {
+    const { keys, mint } = await signer();
+    expect(await accessIdentity({ ...VARS } as unknown as Env, request(await mint()), keys)).toEqual({ kind: "refused", reason: "no-identity" });
+  });
+
+  it("passes the shared verifier's reason through for a token it refuses", async () => {
+    const { keys, mint } = await signer();
+    const env = { ...VARS } as unknown as Env;
+    expect(await accessIdentity(env, request(await mint({ email: "a@b.c", exp: 1 })), keys)).toEqual({ kind: "refused", reason: "expired" });
+    expect(await accessIdentity(env, request("not-a-token"), keys)).toEqual({ kind: "refused", reason: "malformed" });
+  });
+
+  it("reads the CF_Authorization cookie for /admin's identity, and never for /lab's", async () => {
+    const { keys, mint } = await signer();
+    const env = { ...VARS, ACCESS_LAB_AUD: AUD } as unknown as Env;
+    const withCookie = new Request(`${SITE_ORIGIN}/admin`, { headers: { cookie: `CF_Authorization=${await mint({ email: "a@b.c" })}` } });
+    expect(await accessIdentity(env, withCookie, keys)).toEqual({ kind: "human", email: "a@b.c" });
+    expect(await labIdentity(env, withCookie, keys)).toEqual({ kind: "absent" });
+  });
+
+  it("checks /lab against its own audience, so an /admin token is refused there", async () => {
+    const { keys, mint } = await signer();
+    const env = { ...VARS, ACCESS_LAB_AUD: "lab-tag" } as unknown as Env;
+    const adminToken = await mint({ email: "a@b.c" });
+    expect(await labIdentity(env, request(adminToken), keys)).toEqual({ kind: "refused", reason: "audience" });
+    expect(await labIdentity(env, request(await mint({ email: "a@b.c", aud: ["lab-tag"] })), keys)).toEqual({ kind: "human", email: "a@b.c" });
+  });
+
+  it("throws when the team's keys cannot be fetched, and never reads that as a refusal", async () => {
+    const { mint } = await signer();
+    const down = () => async () => {
+      throw new Error("the Access keys answered 503");
+    };
+    await expect(accessIdentity({ ...VARS } as unknown as Env, request(await mint({ email: "a@b.c" })), down)).rejects.toThrow("503");
+  });
+
+  it("does not touch the keys when no token arrives", async () => {
+    let asked = false;
+    const keys = () => {
+      asked = true;
+      return async () => undefined;
+    };
+    expect(await accessIdentity({ ...VARS } as unknown as Env, request(), keys)).toEqual({ kind: "absent" });
+    expect(asked).toBe(false);
   });
 });
 

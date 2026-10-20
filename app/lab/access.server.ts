@@ -1,6 +1,4 @@
-import type { JWTVerifyGetKey } from "jose";
-
-import { accessKeys, verifyAccessRequest, type AccessIdentity } from "~/lib/access.server";
+import { verifyAccessRequest, type AccessIdentity, type TeamKeys } from "~/lib/access.server";
 
 /**
  * Who the lab's own Cloudflare Access application says is asking (capsid docs/design/design-identity-roles.md, "How a
@@ -12,10 +10,6 @@ import { accessKeys, verifyAccessRequest, type AccessIdentity } from "~/lib/acce
  * Only the header is read, never the `CF_Authorization` cookie: two Access applications on one host each set that
  * cookie, and the header is the one Access adds for the application in front of this path.
  */
-export function labIdentity(
-  env: Env,
-  request: Request,
-  keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
-): Promise<AccessIdentity> {
+export function labIdentity(env: Env, request: Request, keys?: TeamKeys): Promise<AccessIdentity> {
   return verifyAccessRequest(env, request, { audience: env.ACCESS_LAB_AUD, cookie: false }, keys);
 }

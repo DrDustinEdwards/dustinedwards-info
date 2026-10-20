@@ -43,7 +43,7 @@ describe("operator authentication", () => {
 
   it("REFUSES a wrong token of plausible length, through the constant-time compare", async () => {
     /* Same length as the real one: a wrong token inside the length bound reaches
-     * `constantTimeEqual`, while a very long one is refused earlier and proves nothing. */
+     * `safeEqual`, while a very long one is refused earlier and proves nothing. */
     const wrong = "x".repeat(testEnv.OPERATOR_TOKEN.length);
     expect(wrong).not.toBe(testEnv.OPERATOR_TOKEN);
     const result = await authenticateOperator(operatorEnv(), bearer(wrong));

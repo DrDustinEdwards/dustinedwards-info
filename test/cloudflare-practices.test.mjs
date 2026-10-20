@@ -9,10 +9,15 @@ import { stripComments } from "../scripts/lib/strip-comments.mjs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-await test("the bearer compare uses timingSafeEqual and carries no hand-written loop", () => {
-  const code = stripComments(read("app/lib/bearer.server.ts"));
-  assert.match(code, /timingSafeEqual\(/, "the compare must go through the runtime's timingSafeEqual");
-  assert.doesNotMatch(code, /diff\s*\|=/, "a hand-written XOR loop came back");
+await test("the bearer compares are site-runtime's safeEqual, and no hand-written compare came back", () => {
+  // safeEqual (site-runtime/compare) hashes both sides and compares with crypto.subtle.timingSafeEqual in workerd.
+  for (const path of ["app/lib/operator/auth.server.ts", "app/lib/smoke.server.ts"]) {
+    const code = stripComments(read(path));
+    assert.match(code, /from "@dustinedwards\/site-runtime\/compare"/, `${path} must import the shared compare`);
+    assert.match(code, /await safeEqual\(presented, configured\)/, `${path} must compare the token with safeEqual`);
+  }
+  const bearer = stripComments(read("app/lib/bearer.server.ts"));
+  assert.doesNotMatch(bearer, /timingSafeEqual|diff\s*\|=|crypto\.subtle/, "a local copy of the compare came back");
 });
 
 await test("observability states head_sampling_rate rather than inheriting the default", () => {

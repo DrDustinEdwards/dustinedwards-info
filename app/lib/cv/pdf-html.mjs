@@ -4,6 +4,8 @@
 // different documents. Nothing here needs a browser, a filesystem or a Worker binding: the markdown pipeline and
 // the fonts come in as arguments, because the Worker reads them one way and the script another.
 
+import { escapeHtml } from "@dustinedwards/site-runtime/html";
+
 import { toHex } from "../bytes.mjs";
 import { OWNER_ORCID, SITE_ORIGIN } from "../seo.ts";
 import { cvMarkdownBody, cvMarkdownDocument } from "./markdown.mjs";
@@ -29,11 +31,6 @@ function base64(bytes) {
   let binary = "";
   for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
   return btoa(binary);
-}
-
-/** @param {string} text */
-export function escapeHtml(text) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /** @param {string} family @param {Uint8Array} bytes @param {string} style */

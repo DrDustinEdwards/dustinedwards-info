@@ -1,6 +1,5 @@
-import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
-
-import { verifyAccessToken } from "~/lib/access-verify.mjs";
+import { accessKeys, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
+import type { KeySource } from "@dustinedwards/site-runtime/access-login";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -9,7 +8,11 @@ import { verifyAccessToken } from "~/lib/access-verify.mjs";
  * Policies): anyone it admits holds a token for this application, so adding or removing an
  * administrator is a policy edit and no code or deploy.
  *
- * - `human`: a person Access admitted; `email` is who, and is what edits are attributed to.
+ * The token check itself (signature by a published key, RS256 pinned, issuer, audience, dates, the
+ * cached key set) is the family's one copy, `@dustinedwards/site-runtime/access`. What is here is the
+ * site's own reading of a verdict:
+ *
+ * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
  * - `service`: an Access service token (no person). Never an administrator; it only gets a request
  *   past Access, and the bearer credentials below still decide what it may do.
  * - `absent`: no token, or this Worker has no Access configuration.
@@ -21,36 +24,14 @@ export type AccessIdentity =
   | { kind: "absent" }
   | { kind: "refused"; reason: string };
 
-// Isolate-wide: a team's public signing keys, the same for every request.
-const remoteKeys = new Map<string, JWTVerifyGetKey>();
-
-/**
- * The team's signing keys, fetched and cached by jose, one set per team domain (carrel's, the portfolio's standard). jose refetches
- * when a token names a key it does not hold, at most once per its cooldown, so a forged `kid` cannot make this Worker hammer the
- * certs endpoint; an endpoint that is down throws, and the admin layout shows the error.
- */
-export function accessKeys(teamDomain: string): JWTVerifyGetKey {
-  let keys = remoteKeys.get(teamDomain);
-  if (!keys) {
-    keys = createRemoteJWKSet(new URL(`https://${teamDomain}/cdn-cgi/access/certs`));
-    remoteKeys.set(teamDomain, keys);
-  }
-  return keys;
-}
+/** The team's signing keys for a team domain; the shared, isolate-cached set unless a test passes its own. */
+export type TeamKeys = (teamDomain: string) => KeySource;
 
 /** Local development only: `vite dev` on localhost has no Access in front of it. */
 function localDevelopment(request: Request): boolean {
   if (!import.meta.env.DEV) return false;
   const { hostname } = new URL(request.url);
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-}
-
-function cookieValue(request: Request, name: string): string | null {
-  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
-    const eq = part.indexOf("=");
-    if (eq !== -1 && part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
-  }
-  return null;
 }
 
 /**
@@ -64,11 +45,7 @@ export async function isAdminViewer(env: Env, request: Request): Promise<boolean
 
 export const LOCAL_DEV_EMAIL = "dev@localhost";
 
-export async function accessIdentity(
-  env: Env,
-  request: Request,
-  keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
-): Promise<AccessIdentity> {
+export async function accessIdentity(env: Env, request: Request, keys: TeamKeys = accessKeys): Promise<AccessIdentity> {
   // The header is added only on paths the Access application covers (/admin). The same token also
   // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
@@ -76,26 +53,26 @@ export async function accessIdentity(
 }
 
 /**
- * One Access application's verdict on a request: its token, from the header (or, with `cookie`, the `CF_Authorization`
- * cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their own application's
- * tag, so a token for one is refused at the other.
+ * One Access application's verdict on a request, as this site reads it: its token, from the header (or, with `cookie`,
+ * the `CF_Authorization` cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their
+ * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws.
  */
 export async function verifyAccessRequest(
   env: Env,
   request: Request,
   { audience, cookie }: { audience: string; cookie: boolean },
-  keys: (teamDomain: string) => JWTVerifyGetKey = accessKeys,
+  keys: TeamKeys = accessKeys,
 ): Promise<AccessIdentity> {
   if (localDevelopment(request)) return { kind: "human", email: LOCAL_DEV_EMAIL };
 
   const teamDomain = env.ACCESS_TEAM_DOMAIN;
   if (!teamDomain || !audience) return { kind: "absent" };
 
-  const token = request.headers.get("cf-access-jwt-assertion") ?? (cookie ? cookieValue(request, "CF_Authorization") : null);
-  if (!token) return { kind: "absent" };
-
-  const verdict = await verifyAccessToken(token, keys(teamDomain), { issuer: `https://${teamDomain}`, audience });
-  if (!verdict.ok) return { kind: "refused", reason: verdict.reason };
+  // The key source is made on first use, so a request with no token never touches the team domain's keys.
+  let source: KeySource | undefined;
+  const lazyKeys: KeySource = (kid, fresh) => (source ??= keys(teamDomain))(kid, fresh);
+  const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
+  if (!verdict.ok) return verdict.reason === "not-configured" || verdict.reason === "no-token" ? { kind: "absent" } : { kind: "refused", reason: verdict.reason };
 
   const { email, common_name: commonName } = verdict.claims;
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };

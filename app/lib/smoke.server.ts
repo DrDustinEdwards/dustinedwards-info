@@ -3,7 +3,9 @@
  * middleware refuses non-GET methods. Handle it like the operator token: never in a log or error body.
  */
 
-import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
+import { safeEqual } from "@dustinedwards/site-runtime/compare";
+
+import { tokenLabel } from "~/lib/bearer.server";
 import { limitHit } from "~/lib/rate-limit.mjs";
 
 /**
@@ -44,7 +46,7 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
     };
   }
 
-  if (!(await constantTimeEqual(presented, configured))) {
+  if (!(await safeEqual(presented, configured))) {
     return { kind: "refused", status: 401, error: "Invalid smoke bearer token." };
   }
 
