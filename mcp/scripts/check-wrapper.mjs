@@ -668,7 +668,7 @@ check(
 // every grant and token to it (RFC 8707) and refuses a token issued for any other.
 check(
   "access tokens are bound to PUBLIC_ORIGIN + /mcp",
-  /resourceMetadata: \{ resource: `\$\{origin\}\$\{MCP_ROUTE\}`/.test(withoutComments(indexText)),
+  /resourceMetadata: \{\s*resource: `\$\{origin\}\$\{MCP_ROUTE\}`/.test(withoutComments(indexText)),
   "Rule 12.2: reject any token not issued for this server.",
 );
 

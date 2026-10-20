@@ -72,7 +72,9 @@ API does not offer fails here.
 - **Risky actions (12.6).** Mention delete stays in the admin screen.
 - **Tightened DCR (13).** `/register` is rate limited per address and refuses any
   redirect URI not listed exactly in `DCR_REDIRECT_URIS`. The consent POST is
-  bound to the consent page by a SameSite=Strict token.
+  bound to the consent page, and the callback to the browser that started the
+  sign-in, by the OAuth provider's own handles (beginConsent, beginUpstream):
+  each is held server-side and works once.
 
 ## Security headers: one file
 

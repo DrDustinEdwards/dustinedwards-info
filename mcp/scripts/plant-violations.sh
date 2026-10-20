@@ -225,7 +225,7 @@ expect_fail "20. redirect URI matched by prefix"
 # 21. Tokens no longer bound to this server's resource (rule 12.2).
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('resourceMetadata: { resource: \`\${origin}\${MCP_ROUTE}\`,','resourceMetadata: {',1)
+s=s.replace('resource: \`\${origin}\${MCP_ROUTE}\`,\n      authorization_servers','authorization_servers',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "21. audience binding removed"
 

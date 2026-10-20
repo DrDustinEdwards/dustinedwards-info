@@ -204,7 +204,12 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
      * one. Nothing is passed through: the API leg uses OPERATOR_TOKEN, never the
      * client's token.
      */
-    ...(origin ? { resourceMetadata: { resource: `${origin}${MCP_ROUTE}`, scopes_supported: [SCOPE_READ] } } : {}),
+    resourceMetadata: {
+      resource: `${origin}${MCP_ROUTE}`,
+      authorization_servers: [origin],
+      scopes_supported: [SCOPE_READ],
+      resource_name: "Dustin Edwards Admin",
+    },
     scopesSupported: [...SCOPES],
     // BOTH client identity paths. Rule 13.
     //
