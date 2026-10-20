@@ -1,8 +1,8 @@
 // A dictionary entry's write path, run for the Carrel adapter (app/lib/carrel/dictionary-handler.server.ts):
 // compile the file the way CI does (compile.mjs), refuse it with the validator's own messages if it fails,
 // commit it unless it is unchanged (commitUnlessUnchanged), then write the derived stores, so the page changes
-// on the next request with no build or deploy. The commit is never reverted when a derived write fails (hard
-// rule 18): the error says the commit landed and how to repair it.
+// on the next request with no build or deploy. The commit is never reverted when a derived write fails: the
+// error says the commit landed and how to repair it.
 //
 // A page's lead is drawn from this entry at request time, but its markdown twin and its search record carry
 // the entry too, and those live in the page's own row. So a write refreshes that page row FIRST, through the

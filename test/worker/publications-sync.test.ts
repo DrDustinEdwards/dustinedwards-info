@@ -13,7 +13,7 @@ import classroom from "../../content/publications/10-3389-feduc-2023-1279921.md?
 import { stubGitHub, type GitHubStub } from "./github-stub";
 
 /* sync_publications and the publications-drift check: D1 converges to content/publications through the
- * compile and write doors a publication save uses (hard rule 18: the repository is the source). The
+ * compile and write doors a publication save uses (the repository is the source). The
  * citation counts come from OpenAlex, so the sync seeds a missing row and never touches one that exists. */
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];

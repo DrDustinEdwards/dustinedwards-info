@@ -1,7 +1,7 @@
 // The facts the header's panels show that come from the repository's content: the newest paper, the posts
 // (for the Writing panel, its tags and its series), which libraries have an entry, and the lab's town. Read from the markdown sources
 // (content/posts, content/publications, content/cv), never from a database, because the header is on every page
-// and this plane does not hydrate (CLAUDE.md rule 18: the repository is the source). build-nav-data writes the
+// and this plane does not hydrate (the repository is the source). build-nav-data writes the
 // result to app/lib/nav-data.generated.mjs, which app/lib/nav.ts imports. build:content and the install step
 // both call it, the same way they call the identity build.
 //

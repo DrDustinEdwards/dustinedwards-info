@@ -3,8 +3,8 @@
 // save tool and no admin editor. A save compiles the file the way CI does (compile.mjs), judges its internal
 // links (links.mjs), refuses it with every message if it fails, commits it to the repository (unless it is
 // byte-identical, commitUnlessUnchanged), then writes its D1 row and search records, so the page changes on
-// the next request with no build or deploy. The commit is never reverted when the D1 write fails (hard rule
-// 18); the error says the commit landed and how to repair the row. A save cannot create a path: a page's
+// the next request with no build or deploy. The commit is never reverted when the D1 write fails;
+// the error says the commit landed and how to repair the row. A save cannot create a path: a page's
 // address is structure and lives in CONTENT_PAGE_PATHS, in code.
 
 import matter from "gray-matter";

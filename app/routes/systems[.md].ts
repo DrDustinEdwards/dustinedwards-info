@@ -8,7 +8,7 @@ const MODEL = loadSystemModel(rawModel);
 
 /**
  * The markdown twin of /systems, drawn from the same model as the page and holding every system's
- * facts, so an agent reads what a person does (CLAUDE.md, machines and people).
+ * facts, so an agent reads what a person does.
  */
 export function loader() {
   return new Response(systemsMarkdown(MODEL, SITE_ORIGIN), {

@@ -19,7 +19,7 @@ import { testEnv } from "./test-env";
 /* An llms.txt edit goes live with no build and no deploy: Carrel saves the document through site-api's
  * adapter (the one write path), the save judges it with the rules CI runs, commits it, writes the settings
  * row /llms.txt is served from, purges its cache tag, and the NEXT request carries the edit (docs/LLMS.md).
- * The repository is the source and D1 is derived (hard rule 18). */
+ * The repository is the source and D1 is derived. */
 
 /* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));

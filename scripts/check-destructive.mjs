@@ -199,7 +199,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     [
       "sync_ask",
       "converges a DERIVED index to the corpus through its own derivation, which " +
-        "hard rule 18 calls repair rather than destruction. Idempotent, and it " +
+        "is repair rather than destruction. Idempotent, and it " +
         "reports a read-back reconciliation rather than its own counters",
     ],
     ["list_procedures", "a read"],

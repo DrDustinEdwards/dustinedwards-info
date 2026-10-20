@@ -4,7 +4,7 @@
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row and purges the pages that embed the roster, so the roster
 // changes on the next request with no build or deploy. The commit is never reverted when the D1 write
-// fails (hard rule 18): the error says the commit landed and how to repair the row.
+// fails: the error says the commit landed and how to repair the row.
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";

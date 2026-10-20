@@ -349,7 +349,7 @@ export const repoOf = (s) => (s.private ? undefined : s.repos?.[0]);
 
 /**
  * The markdown twin of /systems: every system, grouped by ring, each with the facts the page shows
- * when it is chosen, so an agent reads what a person does (CLAUDE.md, machines and people).
+ * when it is chosen, so an agent reads what a person does.
  * @param {SystemModel} model
  * @param {string} origin
  */

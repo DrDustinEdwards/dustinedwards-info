@@ -2,7 +2,7 @@
 // and the save (app/lib/llms/save.server.ts), so a file CI passes is the file a save accepts
 // (docs/LLMS.md). Pure: the caller supplies what the file is judged against.
 
-/** The repository file, which is the source (hard rule 18). */
+/** The repository file, which is the source. */
 export const LLMS_PATH = "content/llms.txt";
 
 /** The `settings` row /llms.txt is served from: derived from the file, never edited by hand. */

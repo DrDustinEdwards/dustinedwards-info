@@ -1,5 +1,5 @@
-// `npm run ship:mcp`: the admin MCP Worker in mcp/ (Dustin Edwards Admin), deployed the way rule 16 deploys
-// anything. Ship's own preflight, clean-tree and CI read run first; this is what follows them. Ruling
+// `npm run ship:mcp`: the admin MCP Worker in mcp/ (Dustin Edwards Admin), deployed the way `npm run ship` deploys
+// the site. Ship's own preflight, clean-tree and CI read run first; this is what follows them. Ruling
 // mcp-2026-10-10: the MCP lives in this repo and deploys as its own Worker, `dustinedwards-mcp`.
 
 import { existsSync, readFileSync } from "node:fs";

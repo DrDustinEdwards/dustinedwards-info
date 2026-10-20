@@ -4,7 +4,7 @@
 // files D1 holds and to the publications, compiles the page its search records come from, refuses it with every
 // message if any of that fails, commits it to the repository (unless it is byte-identical, commitUnlessUnchanged),
 // then writes its D1 row and the CV's search records, so the page, its twin and its charts change on the next
-// request with no build or deploy. The commit is never reverted when the D1 write fails (hard rule 18); the error
+// request with no build or deploy. The commit is never reverted when the D1 write fails; the error
 // says the commit landed and how to repair the row. A save cannot create a file: the set of files is structure
 // and lives in CV_FILES.
 
@@ -135,7 +135,7 @@ function decide(actor: Actor) {
  * What the save says of the PDF it starts. "scheduled": handed to `background` (ctx.waitUntil), so the save's
  * answer does not wait for Browser Run and a failure is an alert plus the cv-pdf-drift check, never this answer.
  * Without a `background` the render is awaited here and the outcome (or the failure) is in the result. Either way
- * the commit and the D1 row stand (hard rule 18).
+ * the commit and the D1 row stand.
  */
 export type CvPdfReport = "scheduled" | "not-needed" | { rendered: CvPdfOutcome } | { failed: string };
 
