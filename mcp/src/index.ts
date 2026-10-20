@@ -25,6 +25,9 @@
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
  *   /health                liveness
+ *   /csp-report            the CSP violation sink, csp-report.ts
+ *
+ * Every response, whichever route made it, leaves through withSecurityHeaders.
  */
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
@@ -35,6 +38,8 @@ import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
 import { checkRateLimit, type RateLimitEnv } from "./rate-limit";
 import { registrationRefusal } from "./registration";
+import { CSP_REPORT_PATH, withSecurityHeaders } from "./security-headers";
+import { handleCspReport } from "./csp-report";
 import type { ApiEnv } from "./api-client";
 import type { AuditEnv } from "./audit-log";
 
@@ -227,62 +232,83 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
   return built;
 }
 
+/**
+ * Every request is routed here and every answer leaves through withSecurityHeaders
+ * (security-headers.ts), the one place this Worker's security headers are set. A throw
+ * becomes a logged 500 that carries them too, rather than Cloudflare's bare error page.
+ */
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+
+  // Outside the provider: browsers send violation reports without credentials.
+  if (url.pathname === CSP_REPORT_PATH) return handleCspReport(request, env);
+
+  // The measurement instrument sits OUTSIDE the OAuth provider deliberately.
+  // It exists to observe unauthenticated client behaviour, so putting it behind
+  // authentication would defeat it. It exposes one no-op tool and has no route
+  // to the operator API.
+  if (url.pathname.startsWith("/probe")) {
+    return handleProbe(request, env, url.origin);
+  }
+
+  /*
+   * THE AGENT KEY PATH. Ruling 37.
+   *
+   * BEFORE the provider, because the provider owns `/mcp` and answers 401 to
+   * anything carrying a token it did not mint. An agent key is not one of
+   * those, so it is recognised here or not at all.
+   *
+   * IT IS TRIED, NEVER REQUIRED. `agentPrincipal` returns null for a missing
+   * header, a malformed one, a key matching nothing, and for a Worker with no
+   * `AGENT_KEY_*` secret configured at all. Every one of those falls through
+   * to the provider, which answers exactly as it did before. So this Worker's
+   * behaviour with no agent secret set is unchanged, and that is the state it
+   * deploys in.
+   *
+   * SCOPED TO `/mcp`. The consent flow, the token endpoint, `/register` and
+   * the metadata documents stay the provider's business: an agent key is an
+   * alternative to HOLDING a grant, not to the protocol around one.
+   */
+  if (url.pathname === MCP_ROUTE) {
+    const principal = await agentPrincipal(
+      env as unknown as Record<string, unknown>,
+      request.headers.get("authorization"),
+    );
+    if (principal) return agentHandler(request, env, ctx, principal);
+  }
+
+  if (url.pathname === "/register") {
+    const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+    const limit = await checkRateLimit(env, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
+    if (!limit.allowed) {
+      return new Response(
+        `Rate limited. This server allows ${REGISTRATIONS_PER_MINUTE} client registrations per minute per address.`,
+        {
+          status: 429,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "retry-after": String(limit.retryAfter),
+          },
+        },
+      );
+    }
+  }
+
+  return oauthProvider(env).fetch(request, env, ctx);
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-
-    // The measurement instrument sits OUTSIDE the OAuth provider deliberately.
-    // It exists to observe unauthenticated client behaviour, so putting it behind
-    // authentication would defeat it. It exposes one no-op tool and has no route
-    // to the operator API.
-    if (url.pathname.startsWith("/probe")) {
-      return handleProbe(request, env, url.origin);
-    }
-
-    /*
-     * THE AGENT KEY PATH. Ruling 37.
-     *
-     * BEFORE the provider, because the provider owns `/mcp` and answers 401 to
-     * anything carrying a token it did not mint. An agent key is not one of
-     * those, so it is recognised here or not at all.
-     *
-     * IT IS TRIED, NEVER REQUIRED. `agentPrincipal` returns null for a missing
-     * header, a malformed one, a key matching nothing, and for a Worker with no
-     * `AGENT_KEY_*` secret configured at all. Every one of those falls through
-     * to the provider, which answers exactly as it did before. So this Worker's
-     * behaviour with no agent secret set is unchanged, and that is the state it
-     * deploys in.
-     *
-     * SCOPED TO `/mcp`. The consent flow, the token endpoint, `/register` and
-     * the metadata documents stay the provider's business: an agent key is an
-     * alternative to HOLDING a grant, not to the protocol around one.
-     */
-    if (url.pathname === MCP_ROUTE) {
-      const principal = await agentPrincipal(
-        env as unknown as Record<string, unknown>,
-        request.headers.get("authorization"),
+    let response: Response;
+    try {
+      response = await route(request, env, ctx);
+    } catch (error) {
+      console.error(
+        JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
       );
-      if (principal) return agentHandler(request, env, ctx, principal);
+      response = noStore("Internal error. The request was not completed.", 500);
     }
-
-    if (url.pathname === "/register") {
-      const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-      const limit = await checkRateLimit(env, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
-      if (!limit.allowed) {
-        return new Response(
-          `Rate limited. This server allows ${REGISTRATIONS_PER_MINUTE} client registrations per minute per address.`,
-          {
-            status: 429,
-            headers: {
-              "content-type": "text/plain; charset=utf-8",
-              "cache-control": "no-store",
-              "retry-after": String(limit.retryAfter),
-            },
-          },
-        );
-      }
-    }
-
-    return oauthProvider(env).fetch(request, env, ctx);
+    return withSecurityHeaders(response);
   },
 } satisfies ExportedHandler<Env>;
