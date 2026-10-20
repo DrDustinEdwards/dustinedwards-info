@@ -16,13 +16,13 @@ import * as layout from "./lib/browser/cases/layout.mjs";
 import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
 import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
-import * as movedPaths from "./lib/browser/cases/moved-paths.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
 import * as runMode from "./lib/browser/cases/run-mode.mjs";
 import * as offline from "./lib/browser/cases/offline.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
 import * as scriptSet from "./lib/browser/cases/script-set.mjs";
 import * as stepCalculators from "./lib/browser/cases/step-calculators.mjs";
+import * as sitemapFeeds from "./lib/browser/cases/sitemap-feeds.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
@@ -121,7 +121,7 @@ try {
   await navigation.run(ctx);
   await headerMenus.run(ctx);
   await speculation.run(ctx);
-  await movedPaths.run(ctx);
+  await sitemapFeeds.run(ctx);
   await layout.run(ctx);
   await math.run(ctx, mathPreviewSeeded);
   const { publicConsoleErrors, enhanceStems, codePost, probedPost } = await enhancements.run(ctx);
@@ -168,7 +168,12 @@ if (subjectReachable) {
    * URL (3); live, the enhancement running, a type filter and its counts, a year's bar and the fading
    * it keeps, and the written URL loading the same view with script off (6).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 236 : 211;
+  /*
+   * Less 5 on both on 2026-10-20, when the new site's own redirects went (Dustin: only the old site
+   * redirects to the new one): the four old-address checks of the case now named sitemap-feeds, and the
+   * systems case's one 301 check for the old /systems/<id> pages.
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 231 : 206;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

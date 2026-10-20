@@ -1,11 +1,8 @@
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
-
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
-import { postRedirectStatus, postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { createTally } from "./lib/tally.mjs";
 
@@ -208,177 +205,10 @@ for (const [label, property] of SCHEMA_FIELDS) {
   );
 }
 
-// A redirect to a 404 is invisible because the gateway resolves the map without the database, and a
-// slug that is also a source can never be served, the redirect running before the router.
-
-const REDIRECTS_PATH = join(root, "content", "redirects.json");
-
-if (!existsSync(REDIRECTS_PATH)) {
-  console.log("  FAIL  content/redirects.json is missing");
-  console.log("        It is this section's whole subject. Restore it from git.\n");
-  process.exit(1);
-}
-
-/** @type {{ posts: Record<string, string> }} */
-const redirects = JSON.parse(readFileSync(REDIRECTS_PATH, "utf8"));
-const redirectSources = Object.keys(redirects.posts ?? {});
-
-// A second file, because checking the map's coherence cannot catch deleting an entry from it.
-const RETIRED_PATH = join(root, "scripts", "fixtures", "retired-slugs.json");
-if (!existsSync(RETIRED_PATH)) {
-  console.log("  FAIL  fixture is missing: scripts/fixtures/retired-slugs.json");
-  console.log("        Without it, deleting a redirect would pass. Restore it from git.\n");
-  process.exit(1);
-}
-/** @type {{ posts: string[] }} */
-const retired = JSON.parse(readFileSync(RETIRED_PATH, "utf8"));
-const retiredSlugs = Array.isArray(retired.posts) ? retired.posts : [];
-
-assert(
-  "redirects: the retired-slug fixture is non-empty",
-  retiredSlugs.length > 0,
-  "it parsed to 0 entries, so the both-directions reconciliation below examines nothing",
-);
-
-for (const slug of retiredSlugs) {
-  assert(
-    `redirects: retired slug ${slug} still has a redirect`,
-    Object.hasOwn(redirects.posts ?? {}, slug),
-    `/writing/${slug} was published and content/redirects.json no longer names it, so that URL ` +
-      `now 404s. Entries are append-only: if the post really is gone for good, that is a ` +
-      `decision for Dustin, not a deletion from a map.`,
-  );
-}
-for (const from of redirectSources) {
-  assert(
-    `redirects: redirect source ${from} is recorded as retired`,
-    retiredSlugs.includes(from),
-    `content/redirects.json redirects /writing/${from} and scripts/fixtures/retired-slugs.json ` +
-      `does not list it. Add it there in the same commit, or the next reader cannot tell a ` +
-      `real retired URL from a typo.`,
-  );
-}
-
-/** Counted and reported, never skipped: skipping turns a live redirect target into a missing one. */
-const postFiles = readdirSync(join(root, "content", "posts")).filter((f) => f.endsWith(".md"));
-/** @type {Map<string, { published: boolean, file: string }>} */
-const corpus = new Map();
-let unparseable = 0;
-const today = new Date().toISOString().slice(0, 10);
-for (const file of postFiles) {
-  const parsed = matter(readFileSync(join(root, "content", "posts", file), "utf8"));
-  const result = frontmatterSchema.safeParse(parsed.data);
-  if (!result.success) {
-    unparseable += 1;
-    continue;
-  }
-  const fm = result.data;
-  // A redirect whose target is a draft is a 404 for every reader, so the file existing is not enough.
-  const scheduled = fm.publish_at ? fm.publish_at.slice(0, 10) > today : false;
-  corpus.set(fm.slug, { published: fm.draft !== true && fm.date <= today && !scheduled, file });
-}
-
-assert(
-  "redirects: every post file's frontmatter parsed",
-  unparseable === 0,
-  `${unparseable} of ${postFiles.length} post file(s) did not parse, so the known-slug set is short ` +
-    `and a live redirect target could read as missing`,
-);
-assert(
-  "redirects: the corpus scope is non-empty",
-  corpus.size > 0,
-  "0 posts read from content/posts; every assertion below would sweep an empty set",
-);
-assert(
-  "redirects: the map scope is non-empty",
-  redirectSources.length > 0,
-  "content/redirects.json parsed to 0 entries, so the assertions below examine nothing",
-);
-
-for (const [from, to] of Object.entries(redirects.posts ?? {})) {
-  const target = corpus.get(to);
-  assert(
-    `redirects: /writing/${from} points at a post that exists`,
-    target !== undefined,
-    `the map sends it to /writing/${to}, and no file in content/posts declares that slug. ` +
-      `That is a 301 into a 404.`,
-  );
-  assert(
-    `redirects: /writing/${to} is published, so the 301 lands on a 200`,
-    target !== undefined && target.published,
-    target === undefined
-      ? "the target does not exist at all, which the assertion above reports"
-      : `${target.file} is a draft or is dated in the future, so a reader following this ` +
-        `redirect gets a 404. The visibility rule.`,
-  );
-  assert(
-    `redirects: ${from} is not also a live post slug`,
-    !corpus.has(from),
-    `the post file ${corpus.get(from)?.file ?? "?"} declares slug "${from}", which this map ` +
-      `redirects away. The gateway runs before the router, so that post would be UNREACHABLE: ` +
-      `every request for it 301s to /writing/${to}.`,
-  );
-  assert(
-    `redirects: ${from} and ${to} are different slugs`,
-    from !== to,
-    "a redirect to itself is a loop at the gateway",
-  );
-}
-
-for (const from of redirectSources) {
-  assert(
-    `redirects: the predicate resolves /writing/${from}`,
-    postRedirectTarget(`/writing/${from}`, redirects.posts) === `/writing/${redirects.posts[from]}`,
-    `got ${JSON.stringify(postRedirectTarget(`/writing/${from}`, redirects.posts))}`,
-  );
-  assert(
-    `redirects: the predicate resolves the markdown twin /writing/${from}.md`,
-    postRedirectTarget(`/writing/${from}.md`, redirects.posts) === `/writing/${redirects.posts[from]}.md`,
-    `got ${JSON.stringify(postRedirectTarget(`/writing/${from}.md`, redirects.posts))}`,
-  );
-}
-
-/*
- * PERMANENT NEGATIVES: a sibling route under the same prefix, and a lookup shape that would
- * answer from the prototype. Removing one is removing the check.
- */
-for (const path of [
-  "/writing",
-  "/writing/",
-  "/writing/tags/cloudflare",
-  "/writing/series/ten-years",
-  "/writing/constructor",
-  "/writing/toString",
-  "/writing/__proto__",
-  "/writing/hasOwnProperty.md",
-  "/",
-  "/projects",
-]) {
-  assert(
-    `redirects: PERMANENT NEGATIVE, the predicate declines ${path}`,
-    postRedirectTarget(path, redirects.posts) === null,
-    `it claimed ${JSON.stringify(postRedirectTarget(path, redirects.posts))}`,
-  );
-}
-
-assert(
-  "redirects: no live post slug is claimed by the predicate",
-  [...corpus.keys()].every((slug) => postRedirectTarget(`/writing/${slug}`, redirects.posts) === null),
-  `${[...corpus.keys()]
-    .filter((slug) => postRedirectTarget(`/writing/${slug}`, redirects.posts) !== null)
-    .join(", ")} would be redirected away from its own URL`,
-);
-
-assert(
-  "redirects: 301 for GET and HEAD, 308 otherwise",
-  postRedirectStatus("GET") === 301 &&
-    postRedirectStatus("HEAD") === 301 &&
-    postRedirectStatus("POST") === 308,
-  `GET ${postRedirectStatus("GET")}, HEAD ${postRedirectStatus("HEAD")}, POST ${postRedirectStatus("POST")}`,
-);
-
 // Asserted by position: asserting a stage exists passes on an arrangement that runs it too late.
 // Positions are of the CALLS on the syntax tree, so a mention in a string or comment cannot move them.
+// The gateway's redirects (the WordPress map, the paper slash form) are decided without the database,
+// so none of them may run after the cache loopback, where a stored response could outlive the fix.
 {
   const workerPath = join(root, "workers", "app.ts");
   const workerTree = parseSource(workerPath, readFileSync(workerPath, "utf8"));
@@ -390,29 +220,31 @@ assert(
   /** @param {string} name */
   const callTo = (name) => (/** @type {ts.Node} */ n) =>
     ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
-  const callAt = firstAt(callTo("postRedirectTarget"));
   const loopbackAt = firstAt(
     (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
   );
   const httpsAt = firstAt(callTo("httpsRedirectTarget"));
-  assert(
-    "redirects: the gateway calls postRedirectTarget",
-    callAt !== -1,
-    "it is not called anywhere in workers/app.ts, so the map is decoration",
-  );
   assert("redirects: the cache loopback was located", loopbackAt !== -1, "ctx.exports.Renderer not found");
   assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "httpsRedirectTarget is not called");
-  assert(
-    "redirects: THE REDIRECT IS DECIDED BEFORE THE CACHE LOOPBACK",
-    callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
-    "a redirect resolved after the loopback is one the cache can outlive, and it would have " +
-      "cost a render and a database read to discover",
-  );
-  assert(
-    "redirects: the HTTPS redirect still runs first",
-    httpsAt !== -1 && callAt !== -1 && httpsAt < callAt,
-    "a plaintext request must reach HTTPS before anything else decides anything",
-  );
+  for (const name of ["wordpressDisposition", "paperSlashTarget"]) {
+    const callAt = firstAt(callTo(name));
+    assert(
+      `redirects: the gateway calls ${name}`,
+      callAt !== -1,
+      `it is not called anywhere in workers/app.ts, so that redirect is decoration`,
+    );
+    assert(
+      `redirects: ${name} IS DECIDED BEFORE THE CACHE LOOPBACK`,
+      callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
+      "a redirect resolved after the loopback is one the cache can outlive, and it would have " +
+        "cost a render and a database read to discover",
+    );
+    assert(
+      `redirects: the HTTPS redirect still runs before ${name}`,
+      httpsAt !== -1 && callAt !== -1 && httpsAt < callAt,
+      "a plaintext request must reach HTTPS before anything else decides anything",
+    );
+  }
 }
 
 assert(
@@ -447,9 +279,9 @@ console.log(
     `${fixture.obfuscationCases.length} obfuscation(s)`,
 );
 
-// Measured by running it, with slack smaller than one redirect entry, so deleting a redirect cannot
-// hide inside the tolerance.
-const MINIMUM_CHECKS = 188;
+// Measured by running it, with slack smaller than one fixture case, so deleting a case cannot hide
+// inside the tolerance.
+const MINIMUM_CHECKS = 109;
 tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

@@ -5,9 +5,8 @@
  * code, pattern rules first, then explicit rows.
  *
  * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these.
- * `/phage-discovery` differs by host: this map runs first on the apex and sends the old WordPress page to
- * the program page, as cutover.md's row says; elsewhere path-moves.mjs sends the new site's own old
- * roster address to the roster anchor.
+ * These are the only moves the gateway answers: the new site's own old addresses do not redirect (Dustin,
+ * 2026-10-20: "the only redirects should be from the old site to the new site").
  *
  * Paths match with and without the trailing slash. The query is ignored: a 301 never carries it, since
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.

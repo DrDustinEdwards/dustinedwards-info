@@ -10,7 +10,7 @@
  *   app        every href/to/url in the route components, menus, footer and data (read off the syntax
  *              tree), every `${SITE_ORIGIN}/path`, and every https://dustinedwards.info/ URL in a string
  *   machines   content/llms.txt, the sitemap's static pages, every page twin and every paper twin
- *   redirects  the targets of the WordPress map and the PDF map, since a 301 into a 404 is a broken link
+ *   redirects  the targets of the WordPress map, since a 301 into a 404 is a broken link
  *
  * WHAT A LINK MAY BE
  *   a page the site serves                                   ok
@@ -30,12 +30,10 @@ import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath, p
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
-import { movedPathTarget } from "../app/lib/path-moves.mjs";
-import { paperSlashTarget, pdfRedirectTarget } from "../app/lib/publications/pdf-redirect.mjs";
+import { paperSlashTarget } from "../app/lib/publications/pdf-redirect.mjs";
 import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { seriesPath } from "../app/lib/series-path.mjs";
-import { postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
 import { renderContentPages, renderOwnRoutePages } from "./build-content.mjs";
@@ -78,8 +76,6 @@ for (const [path, file] of routes) {
   served.add(path);
   moduleOf.set(path, file);
 }
-
-const redirects = JSON.parse(readFileSync(join(root, "content", "redirects.json"), "utf8"));
 
 /** Every file under public/ is served at its own path by the asset handler. */
 const PUBLIC = join(root, "public");
@@ -289,7 +285,7 @@ function anchorOn(path, anchor) {
 
 /* ---------------------------------------------------------------------------------------------------
  * Resolution, in the gateway's order (workers/app.ts): the WordPress map (links are read on the apex
- * host), then the moved sections, renamed posts, moved PDFs and the paper slash form, then the router.
+ * host), then the paper slash form, then the router.
  * ------------------------------------------------------------------------------------------------ */
 
 /**
@@ -299,13 +295,8 @@ function anchorOn(path, anchor) {
 function gatewayRedirect(path) {
   const wordpress = wordpressDisposition(path);
   if (wordpress) return wordpress;
-  const moved = movedPathTarget(path);
-  const next = moved ?? path;
-  const renamed = postRedirectTarget(next, redirects.posts);
-  const movedPdf = renamed === null ? pdfRedirectTarget(next, redirects.pdfs) : null;
-  const slashed = renamed === null && movedPdf === null ? paperSlashTarget(next) : null;
-  const target = renamed ?? movedPdf ?? slashed ?? moved;
-  return target === null ? null : { status: 301, location: target };
+  const slashed = paperSlashTarget(path);
+  return slashed === null ? null : { status: 301, location: slashed };
 }
 
 /** @typedef {{ kind: "ok" | "missing" | "gone" | "draft" | "media", path: string, hops: string[] }} Resolution */
@@ -539,14 +530,11 @@ for (const { slug, markdown: body } of publicationRows) {
   }
 }
 
-// The redirect maps' targets: a 301 into a 404 is a broken link the gateway publishes.
+// The redirect map's targets: a 301 into a 404 is a broken link the gateway publishes.
 for (const [from, to] of Object.entries(EXPLICIT_ROWS)) {
   add("redirect targets", { where: `app/lib/wordpress-redirects.mjs ${from}`, href: to, page: null, isPublic: true });
 }
 add("redirect targets", { where: "app/lib/wordpress-redirects.mjs PROFILE_TARGET", href: PROFILE_TARGET, page: null, isPublic: true });
-for (const [from, to] of Object.entries(redirects.pdfs ?? {})) {
-  add("redirect targets", { where: `content/redirects.json pdfs ${from}`, href: String(to), page: null, isPublic: true });
-}
 
 /* ---------------------------------------------------------------------------------------------------
  * Judge each link.

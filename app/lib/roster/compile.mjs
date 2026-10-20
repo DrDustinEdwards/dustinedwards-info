@@ -20,7 +20,7 @@ export function rosterPath(/** @type {string} */ slug) {
 
 /**
  * Where the roster is drawn: the one page that carries it, and the heading id the old WordPress profile
- * paths and /phage-discovery land on (app/lib/path-moves.mjs, app/lib/wordpress-redirects.mjs). The route
+ * paths land on (app/lib/wordpress-redirects.mjs). The route
  * places the roster by this constant, and test/roster.test.mjs holds it to the registered page paths, the
  * redirect target and the component's own heading id, so the three cannot drift apart.
  */

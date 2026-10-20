@@ -6,7 +6,6 @@ import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import { CONTENT_PAGE_PATHS } from "../app/lib/content-pages.mjs";
-import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import {
   ROSTER_ANCHOR,
   ROSTER_PAGE_PATH,
@@ -149,7 +148,6 @@ await test("the committed roster compiles, in the shape the data file had, and e
 await test("the roster's place: one registered page, the anchor the redirects land on, and the heading that carries it", () => {
   assert.ok(CONTENT_PAGE_PATHS.includes(ROSTER_PAGE_PATH), `${ROSTER_PAGE_PATH} is a registered page`);
   assert.equal(PROFILE_TARGET, `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
-  assert.equal(movedPathTarget("/phage-discovery"), `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
   const component = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
   assert.ok(component.includes(`<h2 id="${ROSTER_ANCHOR}">`), "the component's heading carries the anchor");
   const route = readFileSync(new URL("../app/routes/content-page.tsx", import.meta.url), "utf8");

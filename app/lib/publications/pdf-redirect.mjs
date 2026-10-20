@@ -1,30 +1,7 @@
-// Old flat PDF URLs redirect into /research/publications/<slug>/, because a published URL is a promise. A map,
-// not a rule: the old names are curated ids with no function to the DOI slug. The map is an argument,
-// not an import, because vite and node --test disagree about JSON import attributes.
+// A paper's canonical URL is the slash form, because Google Scholar honors `citation_pdf_url` only when the
+// PDF sits in the abstract page's own subdirectory. Not a move: the slashless form was never the page.
 
 const PUBLICATIONS_PREFIX = "/research/publications/";
-
-/**
- * Returns a path the caller resolves against the request's own origin, so it cannot name another host.
- *
- * @param {string} pathname the request's pathname, already decoded by URL
- * @param {Record<string, string>} map old path to new path, both site-absolute
- * @returns {string | null}
- */
-export function pdfRedirectTarget(pathname, map) {
-  if (typeof pathname !== "string") return null;
-  if (!map || typeof map !== "object") return null;
-  // Scoped to the prefix so the map cannot answer for paths outside this directory.
-  if (!pathname.startsWith(PUBLICATIONS_PREFIX)) return null;
-
-  // Own property only: a path spelled like constructor would hit an inherited key.
-  if (!Object.hasOwn(map, pathname)) return null;
-
-  const target = map[pathname];
-  if (typeof target !== "string" || target.length === 0) return null;
-  if (!target.startsWith(PUBLICATIONS_PREFIX)) return null;
-  return target;
-}
 
 // The HTTPS redirect's own rule, so the redirect helpers never disagree.
 export { httpsRedirectStatus as pdfRedirectStatus } from "../https-redirect.mjs";

@@ -105,9 +105,8 @@ consistency, the PDF in the repository and its hash, the Full text, PMC forms, t
 shape, the accession reconciliation, the licence rule, and for every record the Highwire tag set, the BibTeX
 and RIS exports, the twin, the search record and the Ask key.
 
-CI adds what needs the repository or the whole corpus: the redirect map (the 31 papers once published at a
-flat PDF path keep their redirects; a newer paper owes the map nothing), the cited-by snapshot, `llms.txt`,
-and the build's artifacts.
+CI adds what needs the repository or the whole corpus: the cited-by snapshot, `llms.txt`, and the build's
+artifacts.
 
 ## The write path
 

@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "../app/lib/content-pages.mjs";
-import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { ROSTER_ANCHOR, ROSTER_PAGE_PATH } from "../app/lib/roster/compile.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 import {
@@ -60,9 +59,8 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
     }
     if (d.status === 410) continue;
     const target = targetPath(d.location);
-    // One hop: the target is not itself redirected by either map.
+    // One hop: the target is not itself redirected.
     if (wordpressDisposition(target) !== null) problems.push(`${raw}: ${target} redirects again`);
-    if (movedPathTarget(target) !== null) problems.push(`${raw}: ${target} is an old new-site path`);
     if (!ANSWERED_NOW.has(target) && !PENDING_TARGETS.includes(target)) {
       problems.push(`${raw}: ${target} is neither a page nor listed as pending`);
     }
@@ -80,7 +78,6 @@ await test("the profile paths the fixture counts all 301 to the roster in one ho
   }
   const to = targetPath(PROFILE_TARGET);
   assert.equal(wordpressDisposition(to), null, "the roster page is not redirected again");
-  assert.equal(movedPathTarget(to), null, "the roster page is not an old new-site path");
   // The bare /user/ was the membership directory, not a profile, and is gone with the membership pages.
   assert.deepEqual(wordpressDisposition("/user/"), { status: 410 });
 });
@@ -90,13 +87,6 @@ await test("every explicit row's target is a page or pending, and never chains",
     const to = targetPath(location);
     assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${location}`);
     assert.equal(wordpressDisposition(to), null, `${to} redirects again`);
-  }
-});
-
-await test("every explicit row lands in one hop: no target is a moved or retired new-site path", () => {
-  for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
-    const to = targetPath(location);
-    assert.equal(movedPathTarget(to), null, `${from} -> ${to} is redirected again by path-moves`);
   }
 });
 
@@ -199,8 +189,8 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
   // the two lab-protocol scans that still earn clicks or impressions
   ["/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols"],
   ["/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf", "/research/protocols/phage-dna-extraction"],
-  // New-site renames: /blog/{slug} -> /writing/{slug}, /publications -> /research/publications
-  ["/blog/a-post", "/writing/a-post"],
+  // /publications -> /research/publications. The doc's other new-site rename, /blog/{slug} ->
+  // /writing/{slug}, went on 2026-10-20: only the old site redirects to the new one (Dustin).
   ["/publications", "/research/publications"],
 ]);
 
@@ -257,14 +247,14 @@ const CUTOVER_EXPLICIT_ROWS = /** @type {Array<[string, string | null]>} */ ([
 ]);
 
 /**
- * What a reader on the apex host gets for `path`, in the gateway's order (workers/app.ts): the WordPress
- * map first, then the new site's own moved sections. "410", a 301 target, or null when the site answers it.
+ * What a reader on the apex host gets for `path` from the WordPress map (workers/app.ts): "410", a 301
+ * target, or null when the site answers it.
  * @param {string} path
  */
 function apexAnswer(path) {
   const d = wordpressDisposition(path);
-  if (d) return d.status === 410 ? GONE : d.location;
-  return movedPathTarget(path);
+  if (!d) return null;
+  return d.status === 410 ? GONE : d.location;
 }
 
 /** The site's static routes, read off app/routes.ts, plus the markdown pages its splat routes serve. */
