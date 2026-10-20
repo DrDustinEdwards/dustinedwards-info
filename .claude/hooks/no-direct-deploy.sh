@@ -2,7 +2,7 @@
 # PreToolUse hook on Bash: production writes go through `npm run ship` and
 # nothing else. Blocks wrangler deploy, wrangler versions upload, npm run
 # deploy, and any wrangler d1 execute that is neither a SELECT nor a data write
-# made under portfolio rule 8 (readable SQL, fresh backup).
+# made with readable SQL after a fresh backup.
 #
 # ## Why a hook and not a permission rule
 #
@@ -80,7 +80,7 @@
 # not on the command line, so the check cannot see them, and an unverifiable
 # write is not a read.
 #
-# ## Writes, under portfolio rule 8, until the domain move
+# ## Data writes, after a fresh backup, until the domain move
 #
 # A data write (INSERT, UPDATE, DELETE) is allowed when the SQL is on the
 # command line, so the session can report exactly what it ran, AND a per-table
@@ -367,7 +367,7 @@ for m in re.finditer(SEGMENT, cmd):
                 continue
             if re.match(r"(?i)^select\b", s):
                 continue
-            # Portfolio rule 8: data writes only. Anything else, schema included, is refused.
+            # Data writes only. Anything else, schema included, is refused.
             if not re.match(r"(?i)^(insert|update|delete|replace)\b", s):
                 sys.exit(8)
             writes = True
@@ -397,7 +397,7 @@ case "$rc" in
   6) block "Blocked: wrangler deploy. $rule16" ;;
   7) block "Blocked: wrangler versions upload. It puts a version on the account outside the ship contract. $rule16" ;;
   8) block "Blocked: wrangler d1 execute carrying a statement that is neither a SELECT nor a data write (INSERT, UPDATE, DELETE, REPLACE). Schema changes go through migrations." ;;
-  10) block "Blocked: wrangler d1 execute carrying a data write with no per-table backup under six hours old. Portfolio rule 8 lets a driver write to D1 only after confirming the latest backup: run npm run check:backup -- --remote first, then report exactly what the write changed." ;;
+  10) block "Blocked: wrangler d1 execute carrying a data write with no per-table backup under six hours old. A driver writes to D1 only after confirming the latest backup: run npm run check:backup -- --remote first, then report exactly what the write changed." ;;
   9) block "Blocked: wrangler d1 execute whose SQL this check cannot read (a --file, or no --command). An unverifiable statement is not a read. Pass the SQL inline as --command \"SELECT ...\" if it is a read." ;;
   4) block "no-direct-deploy hook: the payload on stdin was not valid JSON, so the deploy check could not run. Failing closed: BLOCKED (checker exit 4)." ;;
   *) block "no-direct-deploy hook: the deploy check exited with unexpected code $rc. Failing closed rather than passing silently, so this command is BLOCKED. Interpreter used: $PY." ;;
