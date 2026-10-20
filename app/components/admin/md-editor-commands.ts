@@ -40,3 +40,11 @@ export const SCAFFOLDS = {
 } as const;
 
 export type ScaffoldName = keyof typeof SCAFFOLDS;
+
+/** The figure the editor inserts for a dropped or pasted image. The URL's quote, space, parentheses and angle brackets
+ *  are percent-encoded, which keeps it the same address and cannot end the attribute; the alt's quotes become
+ *  entities. Carrel writes the same markup (carrel app/lib/site-markdown.ts). */
+export function figureMarkdown(url: string, alt: string): string {
+  const src = url.replace(/["\s()<>]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+  return `:::figure{src="${src}" alt="${alt.trim().replace(/"/g, "&quot;")}"}\n:::`;
+}
