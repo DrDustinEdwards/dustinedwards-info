@@ -470,6 +470,3 @@ function close() {
  * here would fire too and find the dialog already open.
  */
 document.addEventListener("palette:open", () => openPalette());
-
-// A module, so every binding above stays out of the global namespace.
-export {};
