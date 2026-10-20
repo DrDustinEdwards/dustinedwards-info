@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 
+import { standardProblems } from "@dustinedwards/d1-dump";
+
 import {
   CREDENTIAL_COLUMN,
   EXCLUDED_TABLES,
@@ -25,6 +27,12 @@ function realSchema() {
 
 const schema = realSchema();
 const tableNames = schema.map((t) => t.name);
+// What runCheckedBackup refuses: d1-dump's standard checks with this site's lists, then the site's policy.
+const allProblems = (dump, policy) => [
+  ...standardProblems(dump, { exclude: [...EXCLUDED_TABLES], required: [...REQUIRED_TABLES] }),
+  ...dumpProblems(dump, policy),
+];
+
 const healthy = {
   tables: REQUIRED_TABLES.map((name) => ({ name, rows: 1 })).concat([{ name: "posts", rows: 12 }]),
   excluded: [],
@@ -32,7 +40,7 @@ const healthy = {
 };
 
 await test("the real schema passes the policy", () => {
-  assert.deepEqual(dumpProblems(healthy), []);
+  assert.deepEqual(allProblems(healthy), []);
 });
 
 await test("every required table exists in the migrated schema, so the list cannot name a dropped table", () => {
@@ -50,10 +58,10 @@ await test("no table in the migrated schema holds a credential column, which is 
 });
 
 await test("PLANTED: an empty dump is refused", () => {
-  const problems = dumpProblems({ tables: [], excluded: [], schema });
-  assert.ok(problems.some((p) => /holds no rows/.test(p)), problems.join("\n"));
-  const zeroRows = dumpProblems({ ...healthy, tables: healthy.tables.map((t) => ({ ...t, rows: 0 })) });
-  assert.ok(zeroRows.some((p) => /holds no rows/.test(p)), "tables with no rows are an empty dump");
+  const problems = allProblems({ tables: [], excluded: [], schema });
+  assert.ok(problems.some((p) => /0 tables and 0 rows/.test(p)), problems.join("\n"));
+  const zeroRows = allProblems({ ...healthy, tables: healthy.tables.map((t) => ({ ...t, rows: 0 })) });
+  assert.ok(zeroRows.some((p) => p.endsWith(" and 0 rows")), "tables with no rows are an empty dump");
 });
 
 await test("PLANTED: a credential table left in is refused, by table and column", () => {
@@ -73,8 +81,8 @@ await test("PLANTED: a credential table left in is refused, by table and column"
 
 await test("PLANTED: a missing required table is refused by name", () => {
   const without = { ...healthy, tables: healthy.tables.filter((t) => t.name !== "kb_lots") };
-  const problems = dumpProblems(without);
-  assert.deepEqual(problems, ["required table kb_lots is missing from the dump"]);
+  const problems = allProblems(without);
+  assert.deepEqual(problems, ["kb_lots is missing from the dump"]);
 });
 
 await test("a table excluded without being listed is refused, and a listed one is allowed to be absent", () => {
