@@ -132,6 +132,44 @@ describe("security headers", () => {
     const get = await handleCspReport(new Request(`${ORIGIN}${CSP_REPORT_PATH}`), {});
     assert.equal(get.status, 405);
   });
+
+  test("the sink is the shared receiver: asks the limiter, logs trimmed lines only", async () => {
+    const asked: string[] = [];
+    const limiter = (allowed: boolean) => ({
+      OPERATOR_RATE_LIMIT: {
+        idFromName: (name: string) => (asked.push(name), name),
+        get: () => ({ fetch: async () => Response.json({ allowed, retryAfter: 0 }) }),
+      } as never,
+    });
+    const report = () =>
+      new Request(`${ORIGIN}${CSP_REPORT_PATH}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/csp-report", "cf-connecting-ip": "192.0.2.1" },
+        body: JSON.stringify({
+          "csp-report": {
+            "document-uri": `${ORIGIN}/authorize?client_id=secret`,
+            "blocked-uri": "https://cdn.example.com/x.js?token=abc",
+            "effective-directive": "script-src-elem",
+          },
+        }),
+      });
+    const lines: string[] = [];
+    const original = console.log;
+    console.log = (line: string) => void lines.push(line);
+    try {
+      assert.equal((await handleCspReport(report(), limiter(true))).status, 204);
+      assert.equal((await handleCspReport(report(), limiter(false))).status, 204);
+    } finally {
+      console.log = original;
+    }
+    assert.deepEqual(asked, ["csp:192.0.2.1", "csp:192.0.2.1"]);
+    assert.equal(lines.length, 1, "a limited report is dropped, not logged");
+    const line = JSON.parse(lines[0] ?? "{}");
+    assert.equal(line.event, "csp-violation");
+    assert.equal(line.page, `${ORIGIN}/authorize`);
+    assert.equal(line.blocked, "https://cdn.example.com/x.js");
+    assert.doesNotMatch(lines[0] ?? "", /secret|token|192\.0\.2\.1/);
+  });
 });
 
 describe("one place sets the headers", () => {
