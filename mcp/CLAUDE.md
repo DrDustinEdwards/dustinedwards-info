@@ -74,6 +74,18 @@ API does not offer fails here.
   redirect URI not listed exactly in `DCR_REDIRECT_URIS`. The consent POST is
   bound to the consent page by a SameSite=Strict token.
 
+## Security headers: one file
+
+`src/security-headers.ts` is the only place a security header is set. It builds the
+portfolio set from `@dustinedwards/site-runtime` (OSHP values; the one deviation, no
+COOP so the OAuth window keeps its opener, is listed there with its reason) and the CSP:
+`default-src 'none'` on everything but the consent page, whose style is trusted by hash and
+which has NO `form-action` (it would break the consent POST's redirect chain). The entry
+returns every response, errors included, through `withSecurityHeaders`. Violations go to
+this Worker's own `/csp-report` (`src/csp-report.ts`: logs, stores nothing). Graded by the
+package's `checkSecurityHeaders` in `test/security-headers.test.ts` and, on the real entry,
+in `check:conformance`.
+
 ## Two legs, two credentials
 
 - CLIENT LEG (agent to wrapper): identifies WHO is operating.

@@ -417,6 +417,35 @@ if (!(await waitForAuthDev())) {
     failures += 1;
     log(`  FAIL       POST /register accepted or mis-refused a non-allowlisted redirect URI (status ${refused.status})`);
   }
+
+  // SECURITY HEADERS ON THE REAL ENTRY. Unit tests grade the handlers through
+  // withSecurityHeaders; only here does a response leave src/index.ts itself, so
+  // only here can a route that skips the wrapper be seen. Graded by the shared
+  // package's own check against the set this Worker declares.
+  await import("../test/resolve-ts.mjs");
+  const { securityHeaders } = await import("../src/security-headers.ts");
+  const { checkSecurityHeaders, failures: failed } = await import("@dustinedwards/site-runtime/check");
+  const graded = [
+    ["GET /health", "/health", {}],
+    ["GET a 404", "/nowhere", {}],
+    ["GET /authorize", "/authorize?response_type=code&client_id=x", { redirect: "manual" }],
+    ["GET /callback", "/callback", {}],
+    ["POST /mcp without a token", "/mcp", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }],
+    ["GET the AS metadata", "/.well-known/oauth-authorization-server", {}],
+    ["GET the PRM, path-scoped", "/.well-known/oauth-protected-resource/mcp", {}],
+    ["POST /csp-report", "/csp-report", { method: "POST", body: "{}" }],
+  ];
+  for (const [label, path, init] of graded) {
+    const res = await fetch(`http://localhost:${AUTH_PORT}${path}`, init);
+    await res.arrayBuffer();
+    const bad = failed(checkSecurityHeaders(res.headers, { standard: securityHeaders }));
+    if (bad.length === 0) {
+      log(`  PASS       security headers on ${label} (status ${res.status})`);
+    } else {
+      failures += 1;
+      log(`  FAIL       security headers on ${label} (status ${res.status}): ${bad.map((b) => b.name).join("; ")}`);
+    }
+  }
 }
 
 log("");

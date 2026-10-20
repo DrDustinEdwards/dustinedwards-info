@@ -80,6 +80,21 @@ const escape = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /**
+ * The consent page's one inline <style>, exported so security-headers.ts trusts it by hash. The
+ * page renders this exact string between the tags, so the page and its policy cannot drift.
+ */
+export const CONSENT_STYLE = `
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; padding: 0 1.25rem; }
+  h1 { font-size: 1.35rem; line-height: 1.3; }
+  dl { margin: 1.5rem 0; }
+  dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+  dd { margin: .15rem 0 1rem; word-break: break-all; font-family: ui-monospace, monospace; font-size: .9rem; }
+  ul { padding-left: 1.2rem; }
+  button { font: inherit; padding: .6rem 1.2rem; border-radius: .4rem; cursor: pointer; }
+`;
+
+/**
  * The consent screen.
  *
  * A real form with a real submit button, because consent has to be an act. The
@@ -102,16 +117,7 @@ async function handleAuthorizeGet(request: Request, env: LoginEnv): Promise<Resp
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Authorize Dustin Edwards Admin</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font: 16px/1.6 system-ui, sans-serif; max-width: 34rem; margin: 4rem auto; padding: 0 1.25rem; }
-  h1 { font-size: 1.35rem; line-height: 1.3; }
-  dl { margin: 1.5rem 0; }
-  dt { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
-  dd { margin: .15rem 0 1rem; word-break: break-all; font-family: ui-monospace, monospace; font-size: .9rem; }
-  ul { padding-left: 1.2rem; }
-  button { font: inherit; padding: .6rem 1.2rem; border-radius: .4rem; cursor: pointer; }
-</style>
+<style>${CONSENT_STYLE}</style>
 </head><body>
 <h1>Authorize Dustin Edwards Admin</h1>
 <p>A client is asking to use the operator tools that run dustinedwards.info: site
