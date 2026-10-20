@@ -61,7 +61,7 @@ await test("PLANTED: an empty dump is refused", () => {
   const problems = allProblems({ tables: [], excluded: [], schema });
   assert.ok(problems.some((p) => /0 tables and 0 rows/.test(p)), problems.join("\n"));
   const zeroRows = allProblems({ ...healthy, tables: healthy.tables.map((t) => ({ ...t, rows: 0 })) });
-  assert.ok(zeroRows.some((p) => / and 0 rows$/.test(p)), "tables with no rows are an empty dump");
+  assert.ok(zeroRows.some((p) => p.endsWith(" and 0 rows")), "tables with no rows are an empty dump");
 });
 
 await test("PLANTED: a credential table left in is refused, by table and column", () => {
