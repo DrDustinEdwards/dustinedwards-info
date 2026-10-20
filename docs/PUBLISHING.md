@@ -41,7 +41,7 @@ All three call the same `savePost`. Gates (zod frontmatter, the wide-dash check)
 
 **The admin editor** (`/admin/posts`, history, `/admin/media`) re-serializes frontmatter in its own key order, so a save with no edits still commits. The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, not the UI, because only the policy reads the prior file. Version history restores by putting an old file back through `savePost`: a new commit, gates run again, never a force push.
 
-Published posts live at `/writing/<slug>`; the route modules keep their `blog.*` names and old `/blog` addresses 301.
+Published posts live at `/writing/<slug>`; the route modules keep their `blog.*` names. The old `/blog` feed addresses still answer with the feed; no other `/blog` address redirects (Dustin, 2026-10-20).
 
 ## The first-publish policy
 

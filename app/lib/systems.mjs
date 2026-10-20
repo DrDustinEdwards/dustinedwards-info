@@ -183,8 +183,7 @@ export function loadSystemModel(raw) {
 
 /**
  * The query parameter that names the chosen system on /systems. There is one page: a system is a
- * state of it, kept in the address so a shared link opens with that system chosen. The old
- * /systems/<id> pages answer a 301 here (app/lib/path-moves.mjs).
+ * state of it, kept in the address so a shared link opens with that system chosen.
  */
 export const SYSTEM_PARAM = "system";
 

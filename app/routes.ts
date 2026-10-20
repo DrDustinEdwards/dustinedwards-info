@@ -11,8 +11,7 @@ export default [
   layout("routes/legacy-public.tsx", [
     index("routes/home.tsx"),
     // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
-    // blog.* names; only the addresses moved. Every other /blog address 301s in the gateway
-    // (app/lib/path-moves.mjs).
+    // blog.* names; only the addresses moved.
     route("writing", "routes/blog._index.tsx"),
     // Ordered before the :slug routes so the feed is not read as a post slug.
     route("writing/rss.xml", "routes/blog.rss[.xml].ts"),
@@ -54,7 +53,7 @@ export default [
     // The phage page: its prose and sections from the page row, its table as the catalog over the phage rows.
     route("research/phages", "routes/phages.tsx"),
     // The family of systems (app/lib/systems.mjs): one page, a chosen system kept in its query
-    // (?system=<id>), and its twin. The old /systems/<id> pages 301 to that query (app/lib/path-moves.mjs).
+    // (?system=<id>), and its twin.
     route("systems.md", "routes/systems[.md].ts", { id: "systems-md" }),
     route("systems", "routes/systems.tsx"),
     // The lab registry (docs/REGISTRY.md): the master inventory, a kind's own page and one item, each with its twin.
@@ -97,7 +96,7 @@ export default [
     route("research/*", "routes/content-page.tsx"),
     route("teaching/*", "routes/teaching.tsx"),
     // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
-    // route's, which check:headers reads per file. /projects 301s here (app/lib/path-moves.mjs).
+    // route's, which check:headers reads per file.
     route("software/*", "routes/software.tsx"),
     route("about", "routes/about.tsx"),
     // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.

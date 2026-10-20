@@ -6,15 +6,8 @@ import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/c
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
-import { movedPathTarget } from "~/lib/path-moves.mjs";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
-import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
-import {
-  paperSlashTarget,
-  pdfRedirectTarget,
-} from "~/lib/publications/pdf-redirect.mjs";
-// Imported here, not in the predicate's .mjs, because Node ESM refuses a bare JSON import.
-import redirects from "../content/redirects.json";
+import { paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
 import { themeFromRequest } from "~/lib/theme";
 import { serverTiming, timingsContext, type Timings } from "~/lib/timing";
 import {
@@ -222,38 +215,9 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
     return redirectTo(request, new URL(wordpress.location, url).toString());
   }
 
-  // A moved section (/blog, /publications) or a retired one (/playground, to /) first, and the rules
-  // below read the moved path, so an old post slug or an old PDF name under an old section still
-  // resolves in one hop.
-  const moved = movedPathTarget(url.pathname);
-  const path = moved ?? url.pathname;
-
-  const renamed = postRedirectTarget(path, redirects.posts);
-  // The PDF map runs before the slash redirect because its keys end in `.pdf`.
-  const movedPdf = renamed === null ? pdfRedirectTarget(path, redirects.pdfs) : null;
   // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
-  const slashed = renamed === null && movedPdf === null ? paperSlashTarget(path) : null;
-
-  const target = renamed ?? movedPdf ?? slashed ?? moved;
-  if (target !== null) {
-    // A hash in the target is the path, not something to glue the query onto.
-    if (target.includes("#")) {
-      const dest = new URL(target, url);
-      dest.search = url.search;
-      return redirectTo(request, dest.toString());
-    }
-    // A target with a query of its own (/systems?system=<id>) keeps it, and the request's other
-    // parameters ride along after it.
-    if (target.includes("?")) {
-      const dest = new URL(target, url);
-      for (const [key, value] of url.searchParams) if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
-      return redirectTo(request, dest.toString());
-    }
-    // Only a retired section lands on "/", and its old query string (the demos' inputs) means
-    // nothing there, so it is dropped rather than carried onto the home page's address.
-    const search = target === "/" ? "" : url.search;
-    return redirectTo(request, new URL(`${target}${search}`, url).toString());
-  }
+  const slashed = paperSlashTarget(url.pathname);
+  if (slashed !== null) return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
 
   // A removed WordPress address renders the Gone page in its place: the address bar keeps the old URL
   // and the status is 410. Every redirect above was decided first; none of them names a removed path.

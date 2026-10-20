@@ -9,7 +9,6 @@
 // address passes here and is left to check:links.
 
 import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../content-pages.mjs";
-import { movedPathTarget } from "../path-moves.mjs";
 import { wordpressDisposition } from "../wordpress-redirects.mjs";
 
 /**
@@ -56,14 +55,9 @@ const NOT_LISTED = /^\/(?:research\/publications|writing\/(?:tags|series|rss\.xm
  */
 function resolve(path, book, hops = 0) {
   if (hops > 5) return { kind: "missing", path };
-  const redirect = wordpressDisposition(path) ?? (() => {
-    const moved = movedPathTarget(path);
-    return moved === null ? null : { status: 301, location: moved };
-  })();
-  if (redirect && "status" in redirect && redirect.status === 410) return { kind: "gone", path };
-  if (redirect && "location" in redirect && redirect.location) {
-    return resolve(String(redirect.location).split("#")[0] ?? "", book, hops + 1);
-  }
+  const redirect = wordpressDisposition(path);
+  if (redirect?.status === 410) return { kind: "gone", path };
+  if (redirect?.status === 301) return resolve(redirect.location.split("#")[0] ?? "", book, hops + 1);
   if (!OWNED.test(path) || NOT_LISTED.test(path)) return { kind: "unlisted", path };
   if (PAGE_SET.has(path) || PAGE_TWINS.has(path)) return { kind: "ok", path };
   const procedure = path.replace(/(?:\.md|\/sheet)$/, "");

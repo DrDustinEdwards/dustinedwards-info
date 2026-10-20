@@ -63,7 +63,7 @@ export async function run({ browser }) {
   await page.setBypassCSP(true);
   try {
     // Each part on its own: one that throws is a failed check, and the parts after it still run.
-    for (const part of [everyNodeByKeyboard, listMatchesModel, oneTapZooms, choosingInPlace, chosenFromTheAddress, everyFactWithoutScript, oldAddressesMove, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget, explorerLinks]) {
+    for (const part of [everyNodeByKeyboard, listMatchesModel, oneTapZooms, choosingInPlace, chosenFromTheAddress, everyFactWithoutScript, reducedMotion, noLayoutShift, inputResponse, framesWhileEntering, axeBothThemes, scriptBudget, explorerLinks]) {
       try {
         await part(page);
       } catch (error) {
@@ -472,20 +472,3 @@ async function everyFactWithoutScript(/** @type {import("puppeteer").Page} */ pa
   }
 }
 
-/** The old per-system addresses answer one 301 each: the page to /systems?system=<id>, the twin to /systems.md. */
-async function oldAddressesMove() {
-  const wrong = (
-    await Promise.all(
-      MODEL.systems.flatMap((s) => [
-        [`/systems/${s.id}`, systemHref(s.id)],
-        [`/systems/${s.id}.md`, "/systems.md"],
-      ]).map(async ([from, to]) => {
-        const res = await fetch(`${BASE}${from}`, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-        const location = res.headers.get("location") ?? "";
-        const at = location ? new URL(location, BASE) : null;
-        return res.status === 301 && at && at.pathname + at.search === to ? null : `${from} answered ${res.status} to ${location || "nowhere"}`;
-      }),
-    )
-  ).filter(Boolean);
-  ok("every old /systems/<id> and /systems/<id>.md answers a 301 to /systems?system=<id> and /systems.md", wrong.length === 0, wrong.length ? wrong.join("; ") : `${MODEL.systems.length * 2} addresses`);
-}
