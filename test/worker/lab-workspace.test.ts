@@ -35,7 +35,7 @@ const TERMS = ["2026-12-18", "2027-05-14"];
 const testEnv = { ...env, ...VARS } as unknown as Env;
 
 /**
- * One signing key for the whole file: jose caches the team's key set by its domain, so a second key would read as a
+ * One signing key for the whole file: site-runtime/access caches the team's key set by its domain, so a second key would read as a
  * bad signature. Each token names its own audience, as the two Access applications' tokens do.
  */
 const stub = await stubAccess({

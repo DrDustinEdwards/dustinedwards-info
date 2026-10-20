@@ -1,3 +1,5 @@
+import { escapeHtml } from "@dustinedwards/site-runtime/html";
+
 // ARIA combobox: focus never leaves the input, and arrows move `aria-activedescendant`. Moving DOM
 // focus to each row would break typing.
 
@@ -60,14 +62,6 @@ function pushRecent(query: string) {
   } catch {
     // Ignored, as above.
   }
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 function build() {

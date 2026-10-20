@@ -143,7 +143,7 @@ const { eq } = tally;
     );
     const body = auth.slice(auth.indexOf("export async function authenticateOperator"));
     const lengthGate = body.indexOf("presented.length > configured.length");
-    const hash = body.indexOf("constantTimeEqual(");
+    const hash = body.indexOf("safeEqual(");
     eq("operator: an over-long bearer is refused on length", lengthGate !== -1, true);
     eq("operator: the token is still compared in constant time", hash !== -1, true);
     eq(

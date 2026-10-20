@@ -1,6 +1,8 @@
 // The token is the whole boundary: compared in constant time, and never echoed, logged or put in an error.
 
-import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
+import { safeEqual } from "@dustinedwards/site-runtime/compare";
+
+import { tokenLabel } from "~/lib/bearer.server";
 import { limitHit } from "~/lib/rate-limit.mjs";
 
 const OPERATOR_RATE_LIMIT = 30;
@@ -36,14 +38,15 @@ export async function authenticateOperator(
   const header = request.headers.get("authorization") ?? "";
   const presented = /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] ?? "";
 
-  // Refused on length BEFORE the hash: `constantTimeEqual` hashes both operands, which an anonymous caller
+  // Refused on length BEFORE the hash: `safeEqual` hashes both operands, which an anonymous caller
   // could otherwise request in any size. Twice the length, not equal, so it is not a length oracle.
   if (presented.length > configured.length * 2) {
     return { ok: false, status: 401, error: "Invalid or missing bearer token." };
   }
 
-  // Still compared when absent, so a missing header and a wrong token take the same path and time.
-  const valid = await constantTimeEqual(presented, configured);
+  // Still compared when absent, so a missing header and a wrong token take the same path and time
+  // (an empty side is refused by `safeEqual` after both hashes, never before them).
+  const valid = await safeEqual(presented, configured);
   if (!valid) {
     return { ok: false, status: 401, error: "Invalid or missing bearer token." };
   }
