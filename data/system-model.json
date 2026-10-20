@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "as_of": "2026-10-18",
+  "as_of": "2026-10-20",
   "systems": [
     {
       "id": "capsid",
@@ -250,14 +250,6 @@
       "kind": "kv",
       "technology": "Workers KV",
       "description": "The OAuth provider's grants and tokens, kept apart from the app KV."
-    },
-    {
-      "id": "capsid-holdout",
-      "system": "capsid",
-      "name": "Holdout bucket",
-      "kind": "bucket",
-      "technology": "R2",
-      "description": "The hidden holdout suite the improve scorer alone reads."
     },
     {
       "id": "capsid-agents",
@@ -692,14 +684,6 @@
       "description": "Publishes a repository's code-map.json to its code-map branch for the Capsid explorer."
     },
     {
-      "id": "devkit-improve-score",
-      "system": "devkit",
-      "name": "improve-score workflow",
-      "kind": "package",
-      "technology": "Reusable GitHub Actions workflow",
-      "description": "The shared score job that measures improve attempts."
-    },
-    {
       "id": "devkit-no-bloat-workflow",
       "system": "devkit",
       "name": "no-bloat workflow",
@@ -796,12 +780,6 @@
       "from": "capsid-worker",
       "to": "capsid-oauth-kv",
       "kind": "writes"
-    },
-    {
-      "id": "capsid-worker--reads--capsid-holdout",
-      "from": "capsid-worker",
-      "to": "capsid-holdout",
-      "kind": "reads"
     },
     {
       "id": "capsid-worker--serves--capsid-portal",
@@ -1519,7 +1497,7 @@
     "systems": 17,
     "public": 12,
     "private": 5,
-    "containers": 72,
-    "relationships": 95
+    "containers": 70,
+    "relationships": 94
   }
 }
