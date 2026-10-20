@@ -71,31 +71,22 @@ export function columnNames(sql) {
 }
 
 /**
- * Every problem that stops a dump being marked complete, each naming the table. An empty list is
- * the only pass; the caller refuses the marker otherwise and throws, so the run stays incomplete.
+ * This site's own problems that stop a dump being marked complete, each naming the table. d1-dump's
+ * runCheckedBackup runs its standard checks first (not empty, every REQUIRED_TABLES table present,
+ * nothing excluded in the dump), then these. An empty list from both is the only pass.
  *
  * @param {{
  *   tables: Array<{ name: string, rows: number }>,
  *   excluded: string[],
  *   schema: Array<{ type: string, name: string, sql: string }>,
  * }} dump what dumpDatabase returned, and the CREATE statements of the database it read
- * @param {{ required?: readonly string[], allowedExcluded?: readonly string[] }} [policy]
+ * @param {{ allowedExcluded?: readonly string[] }} [policy]
  * @returns {string[]}
  */
 export function dumpProblems(dump, policy = {}) {
-  const required = policy.required ?? REQUIRED_TABLES;
   const allowedExcluded = policy.allowedExcluded ?? EXCLUDED_TABLES;
   const problems = [];
-
-  const held = new Map(dump.tables.map((t) => [t.name, t.rows]));
-  const total = [...held.values()].reduce((sum, rows) => sum + rows, 0);
-  if (held.size === 0 || total === 0) {
-    problems.push(`the dump holds no rows (${held.size} table(s), ${total} row(s)), which is what a wrong or emptied database looks like`);
-  }
-
-  for (const name of required) {
-    if (!held.has(name)) problems.push(`required table ${name} is missing from the dump`);
-  }
+  const held = new Set(dump.tables.map((t) => t.name));
 
   for (const name of dump.excluded) {
     if (!allowedExcluded.includes(name)) problems.push(`table ${name} was excluded but is not on the excluded list, so its rows would be lost silently`);

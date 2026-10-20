@@ -5,26 +5,21 @@
 // BACKUPS is a separate bucket from MEDIA_BACKUP on purpose: check:destructive allows pruneDumps on
 // this binding and no delete at all on the media mirror.
 
-import { dumpDatabase, pruneDumps, readPlan, writeCompleteMarker } from "@dustinedwards/d1-dump";
-import { EXCLUDED_TABLES, dumpProblems } from "~/lib/backup/policy.mjs";
+import { readPlan, runCheckedBackup } from "@dustinedwards/d1-dump";
+import { EXCLUDED_TABLES, REQUIRED_TABLES, dumpProblems } from "~/lib/backup/policy.mjs";
 
 type BackupEnv = Pick<Env, "DB" | "BACKUPS">;
 
 export async function backupD1(env: BackupEnv) {
-  // markComplete false: a run that fails the policy keeps its objects as evidence and is never the
-  // newest dump latestDump returns, so a bad run cannot become the restore point.
-  const dump = await dumpDatabase(env.DB, env.BACKUPS, {
-    markComplete: false,
+  // d1-dump's runCheckedBackup: dump without the marker, run its standard checks and this site's
+  // policy, then write the marker and prune. A run that fails keeps its objects as evidence and is
+  // never the newest dump latestDump returns, so a bad run cannot become the restore point; with no
+  // new complete run, nothing is pruned.
+  const { dump, pruned } = await runCheckedBackup(env.DB, env.BACKUPS, {
     exclude: [...EXCLUDED_TABLES],
+    required: [...REQUIRED_TABLES],
+    check: async (d) => dumpProblems({ tables: d.tables, excluded: d.excluded, schema: (await readPlan(env.DB)).schema }),
   });
-  const plan = await readPlan(env.DB);
-  const problems = dumpProblems({ tables: dump.tables, excluded: dump.excluded, schema: plan.schema });
-  if (problems.length > 0) {
-    throw new Error(`the D1 dump ${dump.run_id} was left incomplete: ${problems.join("; ")}`);
-  }
-  await writeCompleteMarker(env.BACKUPS, dump);
-  // After the marker and never before: with no complete run pruneDumps deletes nothing.
-  const pruned = await pruneDumps(env.BACKUPS);
   return {
     run_id: dump.run_id,
     exported_at: dump.exported_at,
