@@ -48,7 +48,7 @@ await test("the registry holds the two host strains the lab's pages name, each s
   assert.match(foliorum?.guideUrl ?? "", /helpdocsonline\.com\/4-1-mfoliorum$/);
 });
 
-await test("the biosafety level is Dustin's word (CLAUDE.md): both strains are BSL-1, and a strain has no gap", () => {
+await test("the biosafety level is Dustin's word: both strains are BSL-1, and a strain has no gap", () => {
   assert.deepEqual(built.gaps.filter((gap) => gap.slug.startsWith("strain/")), []);
   for (const row of strainRows(strains, [])) assert.equal(row.biosafetyLevel, "BSL-1");
 });

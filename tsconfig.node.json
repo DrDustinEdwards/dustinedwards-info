@@ -283,7 +283,7 @@
     // firing DOES about it. Two callers reach this one module and that is why
     // it is here: the watchdog Worker (tsconfig.cloudflare.json) and test/. A second copy
     // of REPAIRABLE would be two answers to "may this fire an unattended write
-    // against production", which is the one table where rule 17 is expensive.
+    // against production", which is the one table where a second copy is expensive.
     "app/lib/health/repair.mjs",
     // The Ask settle loop, which repair.mjs imports and ship's two Ask steps call: one cadence and
     // one window for the watchdog and the deploy.

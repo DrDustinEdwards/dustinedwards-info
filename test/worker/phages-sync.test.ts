@@ -16,7 +16,7 @@ import { stubGitHub, type GitHubStub } from "./github-stub";
 import { seedPages } from "./seed";
 
 /* sync_phages and the phage-drift check: D1 converges to content/phages through the compile and write doors a
- * phage save uses (hard rule 18: the repository is the source), and the page the table is drawn into is re-derived
+ * phage save uses (the repository is the source), and the page the table is drawn into is re-derived
  * once, from the final set, before any row moves. Each case starts from an empty phages table and a repository
  * ahead of it. */
 

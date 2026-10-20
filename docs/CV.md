@@ -139,7 +139,7 @@ a save that would make the search records fail is refused before anything is com
 
 - A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the row
   from the file without a commit.
-- D1 is derived (hard rule 18). When a D1 write fails, the error says the commit landed and the repair is the
+- D1 is derived. When a D1 write fails, the error says the commit landed and the repair is the
   content sync (`sync_cv` or `npm run sync:content`).
 - A paper the CV cites cannot be unpublished, or have its DOI changed, from the publication save: that save refuses,
   naming the CV, because the CV would cite a paper no record answers for. A save of a cited paper refreshes the CV's
@@ -165,7 +165,7 @@ A static file at `/cv.md` would win over the route, so `build:content` deletes a
 
 ## The PDF
 
-The PDF follows every CV save on its own. It is DERIVED (hard rule 18): the CV rows in D1 are the source, and the
+The PDF follows every CV save on its own. It is DERIVED: the CV rows in D1 are the source, and the
 PDF is a function of them.
 
 - **Render.** After a save has committed and written D1, the Worker renders ONCE in the background (`ctx.waitUntil`,

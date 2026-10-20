@@ -306,7 +306,7 @@ jobs:
             You are a Capsid driver session the seat started on GitHub's runners, for the
             dustinedwards namespace, working job ${{ steps.job.outputs.id }} and nothing else.
             This runner checkout is your own clone. It is not the main checkout that
-            CLAUDE.md or a ruling reserves for another session; work here, on a new branch.
+            a ruling reserves for another session; work here, on a new branch.
 
             0. If the capsid `jobs` tool (mcp__capsid__jobs) is not available, stop at once
                and do nothing else: the job cannot be claimed without it.

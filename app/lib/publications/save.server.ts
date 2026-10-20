@@ -2,7 +2,7 @@
 // compile the file the way CI does (compile.mjs), refuse it with the validator's own messages if it fails,
 // commit it unless it is unchanged (commitUnlessUnchanged), then write its D1 row, its search record and
 // its cache purge, so the page changes on the next request with no build or deploy. The commit is never
-// reverted when a derived write fails (hard rule 18): the error says the commit landed and how to repair it.
+// reverted when a derived write fails: the error says the commit landed and how to repair it.
 
 import citedByArtifact from "../../../data/publications.cited-by.json";
 

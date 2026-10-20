@@ -11,7 +11,7 @@ import { stubGitHub, type GitHubStub } from "./github-stub";
 import { seedPublications } from "./seed";
 
 /* sync_cv and the cv-drift check: D1 converges to content/cv through the compile and write doors a CV save
- * uses (hard rule 18: the repository is the source). Each case starts from an empty cv table and a repository
+ * uses (the repository is the source). Each case starts from an empty cv table and a repository
  * ahead of it. */
 
 const FILES = import.meta.glob("../../content/cv/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;

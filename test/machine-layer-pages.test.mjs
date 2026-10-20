@@ -6,7 +6,7 @@
  * The index is D1's search_docs, which sync:content rebuilds outright from every record the content
  * artifact carries (buildSearchSql), and build:content puts these records in that artifact through
  * contentPageSearchInputs. So the records are asserted here, where they are derived, and never by a row
- * written into the database (hard rule 18). */
+ * written into the database. */
 
 import test from "node:test";
 import assert from "node:assert/strict";

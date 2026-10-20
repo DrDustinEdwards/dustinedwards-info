@@ -15,10 +15,10 @@
 #
 # ## What it protects
 #
-# Hard rule 16 is the deploy contract: CI green for the exact HEAD sha, the
-# operator token checked before the build, the indexes converged after. A bare
-# `wrangler deploy` satisfies none of it and looks like it worked. The
-# `dustin-workflow` skill was found telling every Cloudflare session to deploy
+# The deploy contract is `npm run ship` (scripts/ship.mjs): CI green for the
+# exact HEAD sha, the operator token checked before the build, the indexes
+# converged after. A bare `wrangler deploy` satisfies none of it and looks like
+# it worked. The `dustin-workflow` skill was found telling every Cloudflare session to deploy
 # with `npx wrangler deploy` (fixed 2026-09-04); this is the enforcement half of
 # that correction, because a skill can be re-edited and a hook refuses.
 #
@@ -31,10 +31,10 @@
 #
 # ## SCOPED TO THIS REPO, 2026-09-05
 #
-# The deploy arms fire only when the command runs INSIDE the site repo. Hard
-# rule 16 is a statement about this Worker, not about every repository a session
-# happens to touch, and this hook fires on every Bash call in a session started
-# here. So `cd ../dustinedwards-mcp && npm run deploy` was refused for a rule
+# The deploy arms fire only when the command runs INSIDE the site repo. The
+# deploy contract is a statement about this Worker, not about every repository
+# a session happens to touch, and this hook fires on every Bash call in a
+# session started here. So `cd ../dustinedwards-mcp && npm run deploy` was refused for a rule
 # with nothing to say about it: the admin MCP has no ship pipeline and deploys
 # exactly that way by its own README. That block cost a deploy and was recorded
 # as owed before it was recognised as a scope bug.
@@ -73,7 +73,7 @@
 #
 # `wrangler tail`, `whoami`, `d1 info`, `r2 object get`, `secret list`,
 # `d1 migrations apply` and everything else pass. Migrations are applied through
-# wrangler directly by design (CLAUDE.md, Commands), so `d1 migrations` is not
+# wrangler directly by design, so `d1 migrations` is not
 # `d1 execute` and is not touched.
 #
 # `d1 execute` always allows a SELECT. A `--file` is refused: its contents are
@@ -245,7 +245,7 @@ def effective_dir(command, cwd):
 
 # WHERE THIS COMMAND RUNS, and whether that is this repo. Scoped 2026-09-05.
 #
-# Hard rule 16 is a statement about THE SITE: `npm run ship` is the only
+# The deploy contract is a statement about THE SITE: `npm run ship` is the only
 # reproducible way to deploy this Worker. It is not a statement about every
 # repository a session happens to touch, and this hook fires on every Bash call
 # in a session started here, so `cd ../dustinedwards-mcp && npm run deploy` was
@@ -389,7 +389,7 @@ sys.exit(0)
 '
 rc=$?
 
-rule16="Hard rule 16 is the deploy contract: CI green for the exact HEAD sha, the operator token checked before the build, both indexes converged after. Use: npm run ship"
+rule16="The deploy contract is npm run ship: CI green for the exact HEAD sha, the operator token checked before the build, both indexes converged after. Use: npm run ship"
 
 case "$rc" in
   0) exit 0 ;;

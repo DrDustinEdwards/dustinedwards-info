@@ -1,7 +1,7 @@
 // Which prose pages are published, read from their files in content/pages (docs/PAGES.md), and written to
 // app/lib/published-pages.generated.mjs for the footer. The footer is on every page and this plane does not
 // hydrate, so, like the header's panels (scripts/lib/nav-data.mjs), it reads a fact about the repository's
-// content from a build product rather than from the database on every request (CLAUDE.md rule 18: the
+// content from a build product rather than from the database on every request (the
 // repository is the source). A page published through Carrel is a commit to main, and that commit's deploy
 // writes this file again. build:content and the install step both call it, so a clone that has not built yet
 // still has the module the footer imports.

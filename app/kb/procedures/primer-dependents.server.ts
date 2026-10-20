@@ -2,7 +2,7 @@
 // change to one must reach them. A registry save and sync_registry call this after the primer's own row is written: each protocol that names
 // a changed primer is recompiled from its file, which reads the primer again, and its row and search records are
 // rewritten through the one write door a procedure save uses. Nothing here reads D1's primer row: the repository is the
-// source (hard rule 18), so a primer edited through git and a primer saved through Carrel converge the same way.
+// source, so a primer edited through git and a primer saved through Carrel converge the same way.
 //
 // A protocol that no longer compiles with the new primer (the primer was deleted, or made a draft) stops the refresh and
 // the error names it, so the registry never reports success over a protocol it left reading the old sequence.

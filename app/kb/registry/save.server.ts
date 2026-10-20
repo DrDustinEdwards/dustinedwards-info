@@ -2,7 +2,7 @@
 // the read the operator's get_registry tool answers. A save compiles the file the way CI does (compile.mjs), refuses
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row, so the registry changes on the next request with no build or
-// deploy. The commit is never reverted when a derived write fails (hard rule 18): the error says the commit landed
+// deploy. The commit is never reverted when a derived write fails: the error says the commit landed
 // and how to repair it (sync_registry).
 //
 // Nothing else is derived from a registry row yet, so a write is one statement: the item's own row, whose blob sha

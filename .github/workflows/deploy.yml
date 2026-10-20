@@ -16,10 +16,9 @@
 #
 # **A MERGE TO MAIN DEPLOYS (Dustin 2026-09-23, reversing option C's "deploy
 # stays a decision" for the development phase).** The decision moved to the
-# merge. Who merges is CLAUDE.md hard rule 16; a change a visitor sees waits for
-# Dustin's yes. After CI concludes success on main, this workflow ships that
-# exact sha. It is still one pipeline, `npm run ship`, with every
-# refusal ship already carries. Not `on: push`: `workflow_run` after CI, so
+# merge. A change a visitor sees waits for Dustin's yes. After CI concludes
+# success on main, this workflow ships that exact sha. It is still one
+# pipeline, `npm run ship`, with every refusal ship already carries. Not `on: push`: `workflow_run` after CI, so
 # nothing deploys a commit whose CI failed.
 #
 # **THE SWITCH.** `gh variable set AUTO_DEPLOY --body off` stops automatic runs;
@@ -100,7 +99,7 @@ on:
         description: "Branch, tag or sha to deploy. CI must be green for it."
         required: false
         default: main
-  # CLAUDE.md hard rule 16: after CI finishes on main. The `decide` job below turns this into a deploy only when CI
+  # After CI finishes on main. The `decide` job below turns this into a deploy only when CI
   # succeeded on a push to main, AUTO_DEPLOY is not "off", and the commit is still main's tip.
   workflow_run:
     workflows: [CI]

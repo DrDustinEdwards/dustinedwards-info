@@ -16,7 +16,7 @@ import { routeContext } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
-/* The CV's PDF follows each CV save (hard rule 18: the CV rows are the source, the PDF is derived). A save through
+/* The CV's PDF follows each CV save (the CV rows are the source, the PDF is derived). A save through
  * site-api's adapter commits, writes D1, and then renders ONCE in the background through Browser Run (mocked here:
  * the binding has no local emulation) into one R2 object stamped with the fingerprint of the data. A failed render
  * never undoes the save; the cv-pdf-drift check goes red and sync_cv_pdf repairs it. */
@@ -153,7 +153,7 @@ describe("a render that fails never undoes the save", () => {
     const w = world(broken.binding);
 
     const response = await w.save(FIRST, 1111, "chg-fail");
-    // The save is a success: the PDF is derived (hard rule 18).
+    // The save is a success: the PDF is derived.
     expect(response.status, await response.clone().text()).toBe(200);
     const settled = await w.settle();
     expect(settled[0]?.status).toBe("rejected");

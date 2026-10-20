@@ -4,7 +4,7 @@
 // file with the rules CI runs (validate.mjs), refuses it with every message if it fails, commits it to the
 // repository (unless it is byte-identical, commitUnlessUnchanged), then writes the row and purges /llms.txt,
 // so the change is live on the next request with no build or deploy. The commit is never reverted when the D1
-// write fails (hard rule 18); the error says the commit landed and how to repair the row. A document has no
+// write fails; the error says the commit landed and how to repair the row. A document has no
 // draft state: it is always the published file, and a save edits it live.
 
 import { listPublishedPageTitles } from "~/db/pages";

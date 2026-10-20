@@ -184,7 +184,7 @@ function verifyFrozenVersions(target, rows) {
 }
 
 /**
- * The procedures table converged to the repository's files (hard rule 18): every row whose file is gone
+ * The procedures table converged to the repository's files: every row whose file is gone
  * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and
  * never an unscoped delete. Published, versioned rows are also frozen (freezeSql).
  *
@@ -212,7 +212,7 @@ function buildProceduresSql(rows) {
 }
 
 /**
- * The publications table converged to the repository's files (hard rule 18): every row whose file is gone
+ * The publications table converged to the repository's files: every row whose file is gone
  * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and never
  * an unscoped delete. The citation counts are upserted from the committed snapshot and only ever forward:
  * a row a refresh has read since is never overwritten by the older snapshot, and none is ever deleted.
@@ -290,7 +290,7 @@ function verifyPublications(target, rows) {
 }
 
 /**
- * The pages table converged to the repository's files (hard rule 18), on the procedures' terms: every row
+ * The pages table converged to the repository's files, on the procedures' terms: every row
  * whose file is gone is deleted, every other row is written from the build's compile, which is the compile
  * the page save runs. Scoped to file-sourced rows, and never an unscoped delete.
  *
@@ -322,7 +322,7 @@ function buildPagesSql(rows) {
 }
 
 /**
- * The cv table converged to the repository's files (hard rule 18), on the pages' terms: every row whose file is
+ * The cv table converged to the repository's files, on the pages' terms: every row whose file is
  * gone is deleted, every other row is written from the build's compile, which is the compile the CV save runs.
  * Scoped to file-sourced rows, and never an unscoped delete.
  *
@@ -345,7 +345,7 @@ function buildCvSql(rows) {
 }
 
 /**
- * The dictionary_entries table converged to the repository's files (hard rule 18), on the pages' terms: every
+ * The dictionary_entries table converged to the repository's files, on the pages' terms: every
  * row whose file is gone is deleted, every other row is written from the build's compile, which is the compile
  * the dictionary save runs. Scoped to file-sourced rows, and never an unscoped delete.
  *
@@ -369,7 +369,7 @@ function buildDictionarySql(rows) {
 }
 
 /**
- * The roster table converged to the repository's files (hard rule 18), on the pages' terms: every row whose
+ * The roster table converged to the repository's files, on the pages' terms: every row whose
  * file is gone is deleted, every other row is written from the build's compile, which is the compile the roster
  * save runs. Scoped to the file-sourced rows, and never an unscoped delete.
  *
@@ -392,7 +392,7 @@ function buildRosterSql(rows) {
 }
 
 /**
- * The phages table converged to the repository's files (hard rule 18), on the pages' terms: every row whose file
+ * The phages table converged to the repository's files, on the pages' terms: every row whose file
  * is gone is deleted, every other row is written from the build's compile, which is the compile the phage save
  * runs. Scoped to the file-sourced rows, and never an unscoped delete.
  *
@@ -415,7 +415,7 @@ function buildPhagesSql(rows) {
 }
 
 /**
- * The registry table converged to the repository's files (hard rule 18), on the phages' terms: every row whose file is
+ * The registry table converged to the repository's files, on the phages' terms: every row whose file is
  * gone is deleted, every other row is written from the build's compile, which is the compile the registry save runs.
  * Scoped to the file-sourced rows, and never an unscoped delete. Unlike the phages, an empty set is valid (the registry
  * has no records until a kind brings its own), and it deletes only the rows a file under content/registry/ once made.

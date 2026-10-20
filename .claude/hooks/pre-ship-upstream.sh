@@ -6,7 +6,7 @@
 #
 # 2026-09-03: a seat-side merge landed on the remote, the session's local main
 # did not have it, and `npm run ship` deployed local HEAD. Ship's own contract
-# (hard rule 16) checks that CI concluded green for the exact HEAD sha, and that
+# (scripts/ship.mjs) checks that CI concluded green for the exact HEAD sha, and that
 # check PASSED, because the sha it named was a real commit with a real green
 # run. It was simply not the tip. Nothing in the contract asks whether the tip
 # is the tip, so the wrong commit shipped with every gate green.

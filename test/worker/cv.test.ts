@@ -23,7 +23,7 @@ import { testEnv } from "./test-env";
 /* A CV edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one write
  * path), the save validates it with the code CI runs, commits it, writes the D1 row and the CV's search records,
  * and the NEXT request for the page, its markdown twin and its charts carries the edit (docs/CV.md). The
- * repository is the source and D1 is derived (hard rule 18). */
+ * repository is the source and D1 is derived. */
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;

@@ -1,7 +1,7 @@
 // The CV's PDF: rendered in the Worker by Browser Run after each CV save, kept as ONE object in the OG bucket,
 // and served at /dustin-edwards-cv.pdf by app/routes/cv-pdf.ts (docs/CV.md, "The PDF").
 //
-// THE OBJECT IS DERIVED (hard rule 18). The CV rows are the source and the PDF is a function of them, stamped with
+// THE OBJECT IS DERIVED. The CV rows are the source and the PDF is a function of them, stamped with
 // the fingerprint of the data it was drawn from (cvFingerprint, in custom metadata and on the PDF's last line). A
 // failed render never reverts a save: the save has already committed and written D1, and the stale or missing
 // object shows as the `cv-pdf-drift` health check, which the watchdog repairs through `sync_cv_pdf`.

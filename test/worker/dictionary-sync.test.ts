@@ -15,7 +15,7 @@ import { stubGitHub, type GitHubStub } from "./github-stub";
 import { seedPages } from "./seed";
 
 /* sync_dictionary and the dictionary-drift check: D1 converges to content/dictionary through the compile and
- * write doors a dictionary save uses (hard rule 18: the repository is the source), and each entry written
+ * write doors a dictionary save uses (the repository is the source), and each entry written
  * re-derives the page it opens. Each case starts from an empty dictionary table and a repository ahead of it. */
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];

@@ -107,7 +107,7 @@ deploy until morning, run `gh variable set AUTO_DEPLOY --body off` first, and
 ## 3. Rebuild D1 from git
 
 Use this when the CONTENT is wrong: a post missing, a stale render, search
-returning nothing. D1 is a derived store (hard rule 18); the repository is the
+returning nothing. D1 is a derived store; the repository is the
 source, so rebuilding is safe and repeatable rather than a last resort.
 
 **First, just ask it to converge.** The health check does this by itself every
@@ -342,7 +342,7 @@ Where each one lives, and what breaks if you rotate it and stop there:
 Where a new value comes from is RECOVERY.md section 7, which has a column for
 exactly that.
 
-### `OPERATOR_TOKEN` has FOUR holders (CLAUDE.md, Bindings). Rotate all four or none.
+### `OPERATOR_TOKEN` has FOUR holders. Rotate all four or none.
 
 1. The site Worker: `npx wrangler secret put OPERATOR_TOKEN`
 2. The watchdog Worker: `npx wrangler secret put OPERATOR_TOKEN --config wrangler.watchdog.jsonc`

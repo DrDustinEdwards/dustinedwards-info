@@ -17,7 +17,7 @@ consequence of it.
   2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
   checkout, which is the closest thing here to a second opinion.
 - **Content and links arrive as HTML from the server.** Machines get every fact
-  without script (CLAUDE.md, "Machines and people"). For people, script is
+  without script. For people, script is
   welcome wherever it makes the site better: interaction, animation, motion.
   Speed is judged by real-user measures (Core Web Vitals), not byte counts, and
   how far to hydrate public pages is still to be decided. Today, since
@@ -63,7 +63,7 @@ is cleaned up by the next one. A fresh worktree needs its local D1 first:
 
 `wrangler.jsonc` is **gitignored** and `wrangler.jsonc.example` is tracked. That
 is a portfolio-wide rule rather than this repo's choice: real resource ids stay
-out of git. The two files declare the same binding surface (CLAUDE.md, Bindings).
+out of git. The two files declare the same binding surface.
 
 ## The content pipeline
 
@@ -138,7 +138,7 @@ is picked up automatically and an untiered one refuses to run. Every gate runs
 even after one fails, because stopping at the first red hides the rest.
 
 A check earns its place by catching real mistakes, or by guarding against harm
-that can't be undone (CLAUDE.md principle 2). The guards are secrets, migrations, backup,
+that can't be undone. The guards are secrets, migrations, backup,
 restore, destructive, policy, headers and urls. The rules that are stated twice and
 cannot merge (drafts never public, the schema matching the database, the write
 paths) are ordinary tests under `test/`.
@@ -167,7 +167,7 @@ reports that saving is unavailable rather than half-working.
 
 ## Deploying
 
-Only `npm run ship` deploys (CLAUDE.md hard rule 16). After a merge to main,
+Only `npm run ship` deploys. After a merge to main,
 `.github/workflows/deploy.yml` runs it once CI passes, unless `AUTO_DEPLOY` is
 `off`. Never run `npm run deploy` by hand (ship runs it as its own step) or bare
 `wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
