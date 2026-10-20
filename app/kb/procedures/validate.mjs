@@ -33,7 +33,7 @@ export function sentenceCount(text) {
   return (text.replace(/`[^`]*`/g, "x").match(/[^.!?]*[A-Za-z0-9][^.!?]*[.!?]+(?=[*_]*(?:\s+[*_]*[A-Z0-9]|\s*$))/g) ?? []).length;
 }
 
-/** CLAUDE.md: "units are a closed list". A unit outside it fails until it is added here on purpose. */
+/** Units are a closed list. A unit outside it fails until it is added here on purpose. */
 export const PROTOCOL_UNITS = [
   "µl", "µL", "ml", "mL", "l", "L", "M", "mM", "µM", "nM", "mg/ml", "µg/ml", "ng/µl", "%", "U", "g", "mg", "µg", "ng",
   "volume", "volumes", "tube", "tubes", "reaction", "reactions", "plate", "plates", "x",

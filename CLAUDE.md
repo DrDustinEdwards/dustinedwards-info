@@ -14,18 +14,10 @@ Headings 16 and 18 keep their numbers because code cites them.
 
 - `OPERATOR_TOKEN` is rotated in all four of its holders (site Worker, watchdog, admin MCP Worker, the `gh` repository secret) or in none.
 - The site stores no visitor data (no IP address, cookie, identifier or third-party tracker, and a logged search keeps only its query and date), traces stay off so preview addresses never reach a third party, and anything new it records is named on the privacy page.
-- No student face, name or identifiable coursework, and no private location, appears anywhere.
 - Everything is free to people, search crawlers are never charged or blocked, only the technical essays under /writing may ever be charged to AI crawlers, and site data carries the /terms license.
 - `biosafety_level` is Dustin's alone (no agent fills, infers or defaults it), and `biosafety` names the agent only.
-- A protocol cites the SEA-PHAGES Guide or says how its variant differs, and every amount, time, temperature and sequence is tied to a span in its source, with primers from tested code and any computed Tm labelled an estimate.
-- Nothing is called validated or marked as run in the lab without a date and a named deviation, and no MCP tool runs or optimizes a protocol.
 - Every fact is stored once as structured data and rendered from there, computable values are computed, no fact is invented, and content that changes lives as a repo file editable without a deploy.
 - Old URLs redirect, canonical URLs stay stable, and no link is broken.
-- The design is Capsomer with the home page hero kept, Paper elements come back only by Dustin's decision, and a design rule is a default that a better design may override.
-- /systems is one interactive page mapping the whole family, where choosing a system shows its wiring in place, and a private repo shows there only as a name and domain, or not at all without a public product.
-- The site links only Dustin's X account and the Germomics podcast.
-- Every public downloadable file name starts with `dustin-edwards-`, and a renamed file redirects from its old URL.
-- Titles carry the slug's voice, descriptions carry the search terms, and a retitle is Dustin's to approve.
 
 ## How a session works
 

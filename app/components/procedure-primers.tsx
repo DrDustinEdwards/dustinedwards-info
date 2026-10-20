@@ -9,7 +9,7 @@ import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
  * its own under /research/lab/primers, with the reverse complement and the facts computed from the sequence. The bench
  * sheet prints the same table without the estimate and its note, since it is for working from.
  *
- * The Tm is an estimate for comparing primers, never an annealing temperature (CLAUDE.md), and the note
+ * The Tm is an estimate for comparing primers, never an annealing temperature, and the note
  * says where an annealing temperature for a polymerase comes from.
  */
 export function ProcedurePrimers({ record, brief = false }: { record: ProcedureRecord; brief?: boolean }) {
