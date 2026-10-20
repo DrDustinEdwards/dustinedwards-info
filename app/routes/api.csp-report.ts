@@ -1,96 +1,38 @@
-import { readCapped } from "~/lib/read-capped.mjs";
+import { receiveCspReport } from "@dustinedwards/site-runtime/csp-report";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
 
 import type { Route } from "./+types/api.csp-report";
 
 /**
- * A public, unauthenticated POST sink: browsers send reports without credentials. It logs and
- * never writes D1, which would hand the internet a storage-exhaustion primitive. The limit is
- * loose because a page tripping ten rules sends ten. Always 204: an error status makes browsers retry.
+ * The CSP violation sink the policy names: the family's one receiver (site-runtime's csp-report).
+ * A public, unauthenticated POST, since browsers send reports without credentials. It answers every
+ * POST 204 (an error status makes browsers retry), reads at most 16 KB, logs at most 10 violations as
+ * trimmed JSON lines (origin and path only; no address, user agent or cookie) and never writes D1,
+ * which would hand the internet a storage-exhaustion primitive. Anything but POST and OPTIONS is 405.
+ * The security set is applied by workers/app.ts, as on every response.
  */
 
-/** Bytes. A real report is a few hundred. */
-const MAX_BODY_BYTES = 8 * 1024;
-
-
+/** Loose, because a page tripping ten rules sends ten. */
 const RATE_LIMIT = 60;
 const RATE_PERIOD_SECONDS = 60;
 
-export async function action({ request, context }: Route.ActionArgs) {
-  if (request.method !== "POST") {
-    return new Response("Method Not Allowed", {
-      status: 405,
-      headers: { allow: "POST", "cache-control": "private, no-store" },
-    });
-  }
-
-  /* Content-Length is a client hint: used to refuse early, never to permit. */
-  const declared = Number(request.headers.get("content-length") ?? "");
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
-    return new Response("Payload Too Large", {
-      status: 413,
-      headers: { "cache-control": "private, no-store" },
-    });
-  }
-
+function receive(request: Request, context: Route.ActionArgs["context"]) {
   const env = getEnv(context);
-  if (!env.ASK_BUDGET) {
-    return new Response("Reporting unavailable", {
-      status: 503,
-      headers: { "cache-control": "private, no-store" },
-    });
-  }
-
-  // Keyed on the edge-set client IP, not the body, which the client controls.
-  const ip = clientIp(request);
-  const verdict = await limitHit(env, `csp:${ip}`, RATE_LIMIT, RATE_PERIOD_SECONDS);
-  if (verdict.status !== "ok") {
-    const unavailable = verdict.status === "unavailable";
-    return new Response(unavailable ? "Reporting unavailable" : "Too Many Requests", {
-      status: unavailable ? 503 : 429,
-      headers: {
-        "retry-after": String(verdict.retryAfterSeconds),
-        "cache-control": "private, no-store",
-      },
-    });
-  }
-
-  /* `request.text()` materializes the whole body before a slice, so `readCapped` stops the stream at the cap. */
-  let capped: string | null;
-  try {
-    capped = await readCapped(request, MAX_BODY_BYTES);
-  } catch (error) {
-    // Logged and still 204, the rule above: a 500 here would make the browser send the report again.
-    console.error(JSON.stringify({ alert: "csp-report-body-unreadable", detail: errorMessage(error) }));
-    return new Response(null, {
-      status: 204,
-      headers: { "cache-control": "private, no-store" },
-    });
-  }
-  if (capped === null) {
-    return new Response("Payload Too Large", {
-      status: 413,
-      headers: { "cache-control": "private, no-store" },
-    });
-  }
-  const body = capped;
-
-  // JSON-encoded so a body with newlines cannot forge log lines. Unparsed: both the report-uri and
-  // report-to shapes land here.
-  console.log(JSON.stringify({ event: "csp-report", report: body }));
-
-  return new Response(null, {
-    status: 204,
-    headers: { "cache-control": "private, no-store" },
+  return receiveCspReport(request, {
+    // Keyed on the edge-set client IP, not the body, which the client controls. A missing or
+    // unavailable counter drops the report (still 204): this site's limiter refuses when it cannot count.
+    allow: async (r) =>
+      Boolean(env.ASK_BUDGET) &&
+      (await limitHit(env, `csp:${clientIp(r)}`, RATE_LIMIT, RATE_PERIOD_SECONDS)).status === "ok",
   });
 }
 
-export function loader() {
-  return new Response("CSP violation report sink. POST only.", {
-    status: 200,
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
-  });
+export function action({ request, context }: Route.ActionArgs) {
+  return receive(request, context);
+}
+
+export function loader({ request, context }: Route.LoaderArgs) {
+  return receive(request, context);
 }
