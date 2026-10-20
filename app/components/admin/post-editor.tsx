@@ -19,7 +19,7 @@ import {
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
 import { EditorBar } from "./editor-bar";
-import { SCAFFOLDS } from "./md-editor-commands";
+import { figureMarkdown, SCAFFOLDS } from "./md-editor-commands";
 import { PostMetadata } from "./post-metadata";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
@@ -402,9 +402,7 @@ export function PostEditor({
                 note: target.state === "published" ? undefined : `not live yet (${target.state})`,
               }))}
               onUpload={uploadImage}
-              imageMarkdown={({ url, alt }) =>
-                `:::figure{src="${url}" alt="${alt.trim().replace(/"/g, "&quot;")}"}\n:::`
-              }
+              imageMarkdown={({ url, alt }) => figureMarkdown(url, alt)}
               help="Markdown. Ctrl or Cmd + K links to a post. A lone / on a line opens the block menu. An image needs alt text."
             />
           </div>
