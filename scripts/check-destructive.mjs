@@ -475,7 +475,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
           skipDir: (name) => name === "node_modules" || name === "dist",
         })
       : [];
-  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth"]);
+  // runCheckedBackup (d1-dump 0.5.0) is dumpDatabase, writeCompleteMarker and pruneDumps in that order, and prunes
+  // only after the marker, so it deletes nothing pruneDumps would not.
+  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth", "runCheckedBackup"]);
   /** @param {string} text */
   const dumpUses = (text) => bindingUses(parseSource("c.ts", text), "BACKUPS");
 
