@@ -314,6 +314,6 @@ export default {
       );
       response = noStore("Internal error. The request was not completed.", 500);
     }
-    return withSecurityHeaders(response);
+    return withSecurityHeaders(response, new URL(request.url).origin);
   },
 } satisfies ExportedHandler<Env>;

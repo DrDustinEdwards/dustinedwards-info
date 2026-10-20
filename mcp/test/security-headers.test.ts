@@ -97,7 +97,7 @@ const RESPONSES: Array<[string, () => Promise<Response>]> = [
 describe("security headers", () => {
   for (const [label, make] of RESPONSES) {
     test(`${label} carries the set and an enforced policy`, async () => {
-      assertGraded(label, await withSecurityHeaders(await make()));
+      assertGraded(label, await withSecurityHeaders(await make(), ORIGIN));
     });
   }
 
@@ -107,7 +107,7 @@ describe("security headers", () => {
   });
 
   test("the consent page's policy trusts exactly the style it renders, and has no form-action", async () => {
-    const response = await withSecurityHeaders(await login("/authorize?client_id=x"));
+    const response = await withSecurityHeaders(await login("/authorize?client_id=x"), ORIGIN);
     const html = await response.text();
     const rendered = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1];
     assert.equal(rendered, CONSENT_STYLE);
@@ -122,15 +122,17 @@ describe("security headers", () => {
   });
 
   test("non-HTML gets the strict policy, and the OAuth window keeps its opener (no COOP)", async () => {
-    const response = await withSecurityHeaders(await login("/health"));
+    const response = await withSecurityHeaders(await login("/health"), ORIGIN);
     assert.equal(response.headers.get("Content-Security-Policy"), NON_HTML_CSP);
     assert.equal(response.headers.get("Cross-Origin-Opener-Policy"), null);
     assert.equal(await response.text(), "ok");
     assert.equal(response.headers.get("cache-control"), "no-store");
+    // Absolute: a browser ignores a relative Reporting-Endpoints entry.
+    assert.equal(response.headers.get("Reporting-Endpoints"), `csp-endpoint="${ORIGIN}/csp-report"`);
   });
 
   test("the MCP response still parses after the rebuild", async () => {
-    const response = await withSecurityHeaders(await initialize());
+    const response = await withSecurityHeaders(await initialize(), ORIGIN);
     assert.equal(response.status, 200);
     const text = await response.text();
     const data = text.split("\n").find((line) => line.startsWith("data: "));
@@ -139,7 +141,7 @@ describe("security headers", () => {
   });
 
   test("a redirect keeps its status and Location", async () => {
-    const response = await withSecurityHeaders(Response.redirect("https://client.example.com/cb", 302));
+    const response = await withSecurityHeaders(Response.redirect("https://client.example.com/cb", 302), ORIGIN);
     assert.equal(response.status, 302);
     assert.equal(response.headers.get("Location"), "https://client.example.com/cb");
   });
@@ -197,7 +199,7 @@ describe("one place sets the headers", () => {
   test("the entry's fetch returns only through withSecurityHeaders, and routes the sink", () => {
     const entry = index.slice(index.indexOf("export default {"));
     const returns = [...entry.matchAll(/\breturn\s+([^;]+);/g)].map((m) => m[1]);
-    assert.deepEqual(returns, ["withSecurityHeaders(response)"]);
+    assert.deepEqual(returns, ["withSecurityHeaders(response, new URL(request.url).origin)"]);
     assert.match(index, /url\.pathname === CSP_REPORT_PATH\) return handleCspReport\(/);
   });
 
