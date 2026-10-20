@@ -11,7 +11,7 @@ name: system-model
 # refuse fails this run and reaches no pull request.
 #
 # When it changed, the run commits to one branch, system-model/refresh, opens a pull request
-# labelled `visual` (a visitor sees the change, so it waits for Dustin's yes; CLAUDE.md, rule 16)
+# labelled `visual` (a visitor sees the change, so it waits for Dustin's yes)
 # or updates the one already open, and dispatches CI and the map's browser checks on that branch.
 # The dispatch is needed because GitHub starts no workflow from GITHUB_TOKEN's own events
 # (Dustin turned on "Allow GitHub Actions to create and approve pull requests", 2026-10-11, and

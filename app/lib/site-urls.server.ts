@@ -99,10 +99,9 @@ const kindTitle = (kind: string) => {
 };
 
 /**
- * Every public URL, the one list sitemap.xml and the site map page are both drawn from (CLAUDE.md, every
- * fact stored once). Drafts, unpublished rows and empty libraries are left out here, so neither can list
- * one. Also returns the next scheduled publish, which both use for the edge cache's lifetime, and the
- * files only sitemap.xml lists.
+ * Every public URL, the one list sitemap.xml and the site map page are both drawn from. Drafts,
+ * unpublished rows and empty libraries are left out here, so neither can list one. Also returns the next
+ * scheduled publish, which both use for the edge cache's lifetime, and the files only sitemap.xml lists.
  *
  * `lastmod` is the day the page's content last changed, never a sync or deploy time, which would mark every
  * page changed together and teach crawlers to ignore the field. A post or procedure uses the `updated` date

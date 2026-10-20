@@ -16,7 +16,7 @@ import { testEnv } from "./test-env";
 /* A roster edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, writes the D1 row, purges the two pages
  * that embed the roster, and the NEXT request for /teaching/phage-discovery and the home page carries it
- * (job_06a07623695b, docs/ROSTER.md). The repository is the source and D1 is derived (hard rule 18). Every name
+ * (job_06a07623695b, docs/ROSTER.md). The repository is the source and D1 is derived. Every name
  * here is a placeholder. */
 
 /* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */

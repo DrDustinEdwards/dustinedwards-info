@@ -20,7 +20,7 @@ import { testEnv } from "./test-env";
 /* A page edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, writes the D1 row, and the NEXT
  * request for the page and its markdown twin carries the edit (job_dc67fd83c24b, docs/PAGES.md). The
- * repository is the source and D1 is derived (hard rule 18). */
+ * repository is the source and D1 is derived. */
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;

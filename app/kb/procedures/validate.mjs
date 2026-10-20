@@ -43,10 +43,10 @@ export const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes",
 /** A recorded gap: the marker and the reason, never the marker alone. */
 const GAP = /^MISSING:\s*(\S.*)$/s;
 
-/** The levels a protocol's `biosafety_level` may name (CLAUDE.md); each is Dustin's to set. */
+/** The levels a protocol's `biosafety_level` may name; each is Dustin's to set. */
 export const BIOSAFETY_LEVELS = ["BSL-1", "BSL-2"];
 
-/** Words CLAUDE.md, keeps off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
+/** Words kept off a protocol's `biosafety` note: the agent only. The separate `biosafety_level` field holds the level. */
 const BIOSAFETY_BANNED = /\b(BSL|biosafety level|IBC|NIH)\b/i;
 
 /** A primer's id in the lab registry (app/kb/registry/compile.mjs ID_PATTERN): a protocol names primers by it and stores no sequence. */
@@ -541,12 +541,12 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
       errors.push('biosafety lists the agent only: { organism, strain, atcc }, or "not applicable"');
     } else {
       for (const k of Object.keys(d.biosafety)) {
-        if (!["organism", "strain", "atcc"].includes(k)) errors.push(`biosafety.${k}: the agent only (organism, strain, ATCC number) (CLAUDE.md)`);
+        if (!["organism", "strain", "atcc"].includes(k)) errors.push(`biosafety.${k}: the agent only (organism, strain, ATCC number)`);
       }
     }
   }
   if (BIOSAFETY_BANNED.test(JSON.stringify(d.biosafety ?? ""))) {
-    errors.push("biosafety names a biosafety level, an IBC or the NIH Guidelines; it lists the agent only (CLAUDE.md)");
+    errors.push("biosafety names a biosafety level, an IBC or the NIH Guidelines; it lists the agent only");
   }
   if (d.scale && !isGap(d.scale)) {
     if (typeof d.scale !== "object" || !(Number(d.scale.count) > 0) || !nonEmptyString(d.scale.unit)) {

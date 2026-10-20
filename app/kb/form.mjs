@@ -1,5 +1,5 @@
 // The Knowledge Base's form editor, the part that needs no runtime (docs/KNOWLEDGE-BASE.md): a file read into a form's
-// model, and a form's model written back into the file. The file stays the source (hard rule 18), so what the form
+// model, and a form's model written back into the file. The file stays the source, so what the form
 // writes goes through the same save and the same checks as the raw editor. What the form did not touch is written back
 // byte for byte: a front-matter field whose value is unchanged keeps the text it was written in, and a step keeps its
 // lines, so a save from the form changes only what was changed. formToFile(fileToForm(raw)) === raw for every file.

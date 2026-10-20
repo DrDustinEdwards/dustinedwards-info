@@ -19,7 +19,7 @@ import { testEnv } from "./test-env";
 /* An entry edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, re-derives the page the entry opens and
  * writes the entry's row, and the NEXT request for the page and its markdown twin carries the edit (job_06a07623695b,
- * docs/DICTIONARY.md). The repository is the source and D1 is derived (hard rule 18). */
+ * docs/DICTIONARY.md). The repository is the source and D1 is derived. */
 
 // The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
@@ -235,7 +235,7 @@ describe("a draft entry is not shown", () => {
   });
 });
 
-describe("a derived write that fails never reverts the commit (hard rule 18)", () => {
+describe("a derived write that fails never reverts the commit", () => {
   it("leaves the commit in place, names the repair, and the drift is repaired from the file", { timeout: 240_000 }, async () => {
     // The page the entry opens no longer compiles, so the derived write fails after the commit.
     gh.files.set(PAGE_FILE, capsidPage.replace(/^title: .*$/m, "title: "));

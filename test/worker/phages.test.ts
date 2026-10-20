@@ -23,7 +23,7 @@ import { testEnv } from "./test-env";
 /* A phage-table edit goes live with no build and no deploy: Carrel saves it through site-api's adapter (the one
  * write path), the save validates it with the code CI runs, commits it, re-derives the page the table is drawn
  * into and writes the phage's row, and the NEXT request for /research/phages and its markdown twin carries the edit
- * (job_005b85bf32fc, docs/PHAGES.md). The repository is the source and D1 is derived (hard rule 18). */
+ * (job_005b85bf32fc, docs/PHAGES.md). The repository is the source and D1 is derived. */
 
 // The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
@@ -254,7 +254,7 @@ describe("a save is held to what CI holds", () => {
   });
 });
 
-describe("a derived write that fails never reverts the commit (hard rule 18)", () => {
+describe("a derived write that fails never reverts the commit", () => {
   it("leaves the commit in place, names the repair, and the drift is repaired from the file", { timeout: 240_000 }, async () => {
     // The page the table is drawn into no longer compiles, so the derived write fails after the commit.
     gh.files.set(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));

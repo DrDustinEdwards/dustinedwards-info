@@ -282,7 +282,7 @@ export const TOOLS: ToolDefinition[] = [
         "It REPAIRS NOTHING when any failing check is not a known drift class, because a compound failure " +
         "may share a root cause; it says which check stopped it. A healthy site is a no-op. Every repair " +
         "derives its store from the repository or the bucket again, so it converges toward the source " +
-        "and never edits one (the site's rule 18). The Ask index can list short for about a minute after " +
+        "and never edits one. The Ask index can list short for about a minute after " +
         "a full upload, so an ask-index-drift still failing straight after sync_ask is worth one more " +
         "dei_check_site before calling it a miss.",
       inputSchema: z.object({}),

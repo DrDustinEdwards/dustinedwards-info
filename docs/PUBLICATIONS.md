@@ -6,7 +6,7 @@ source with its history. `npm run sync:content` and the Carrel adapter's save wr
 build or deploy. Only a change to the components or to this format goes through a build.
 
 There is no editor for publications in the site's admin and no `save_publication` operator tool. A paper is
-written through Carrel and `@dustinedwards/site-api`, as a post is (D1 is derived, hard rule 18). The operator API reads: `list_publications`, `get_publication`. It also has `refresh_citations`.
+written through Carrel and `@dustinedwards/site-api`, as a post is (D1 is derived). The operator API reads: `list_publications`, `get_publication`. It also has `refresh_citations`.
 
 ## The file
 

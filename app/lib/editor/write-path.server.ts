@@ -13,7 +13,7 @@ type Committed = Awaited<ReturnType<typeof commitFiles>>;
 export type WriteDecision =
   /** Identical file and D1 already holds its row: nothing to do. */
   | { action: "noop"; commitSha: string }
-  /** Identical file, but D1's row is missing or stale: no commit, the caller repairs the row (hard rule 18). */
+  /** Identical file, but D1's row is missing or stale: no commit, the caller repairs the row. */
   | { action: "repair"; commitSha: string; blobShas: Record<string, string | null> }
   /** A changed file: committed. */
   | { action: "commit"; commitSha: string; blobShas: Record<string, string | null> };

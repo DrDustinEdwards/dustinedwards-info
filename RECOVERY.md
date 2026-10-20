@@ -540,7 +540,7 @@ token the admin refuses everyone, except the read-only smoke bearer. See docs/RU
 ## 8. Deploy
 
 `npm run typecheck`, then `npm run ship`, run by Dustin once CI is green for that
-exact sha (CLAUDE.md hard rule 16). After a merge to main,
+exact sha. After a merge to main,
 `.github/workflows/deploy.yml` runs the same ship. Only `npm run ship` deploys;
 never run `npm run deploy` by hand (ship runs it) or bare `wrangler deploy`:
 they skip ship's refusals, and `.claude/hooks/no-direct-deploy.sh` refuses both

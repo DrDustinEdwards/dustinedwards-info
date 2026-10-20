@@ -63,7 +63,7 @@ has, comes after it.
 
 Two kinds of fact, two homes:
 
-- **Reference facts stay files**, with D1 their served copy (hard rule 18): every entry, and every item's public
+- **Reference facts stay files**, with D1 their served copy: every entry, and every item's public
   facts (name, specs, supplier, catalog number, RRID, which protocols use it). They are cited, frozen into versions,
   printed on sheets and reviewed by pull request, and they change rarely.
 - **Inventory state and runs start in D1**, with an audit table: lots (lot number, expiry, amount, location, received,

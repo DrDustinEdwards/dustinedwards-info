@@ -11,7 +11,7 @@ import { stubGitHub, type GitHubStub } from "./github-stub";
 import { SYNTHETIC_COHORTS, cohortFile } from "./seed";
 
 /* sync_roster and the roster-drift check: D1 converges to content/roster through the compile and write doors a
- * roster save uses (hard rule 18: the repository is the source). Each case starts from an empty roster table and
+ * roster save uses (the repository is the source). Each case starts from an empty roster table and
  * a repository ahead of it. Every name is a placeholder. */
 
 /* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */

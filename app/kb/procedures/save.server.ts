@@ -2,7 +2,7 @@
 // edited file. A save compiles the file the way CI does (compile.mjs), refuses it with the validator's
 // own messages if it fails, commits it to the repository, then writes its D1 row and search records, so
 // the page changes on the next request with no build or deploy. The commit is never reverted when the
-// D1 write fails (hard rule 18); the error says the commit landed and how to repair the row.
+// D1 write fails; the error says the commit landed and how to repair the row.
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";

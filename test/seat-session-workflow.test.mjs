@@ -43,7 +43,7 @@ await test("secrets come from the seat environment, the transcript stays out of 
   assert.match(CODE, /^ {4}environment: seat$/m);
   assert.match(CODE, /show_full_output: false/);
   const refused = list("disallowedTools");
-  // Hard rule 16: only `npm run ship` deploys, and a session never does.
+  // Only `npm run ship` deploys (.claude/hooks/no-direct-deploy.sh), and a session never does.
   for (const entry of ["Bash(npm run deploy:*)", "Bash(npm run ship:*)", "Bash(npx wrangler:*)", "Bash(wrangler:*)", "Bash(gh:*)", "Bash(curl:*)"]) {
     assert.ok(refused.includes(entry), `${entry} is not refused`);
   }
@@ -294,12 +294,12 @@ await test("the prompt stops the session at once when the Capsid jobs tool is mi
   assert.match(actionStep(), /action "claim", namespace "dustinedwards"/);
 });
 
-// The first block-mode canary here (actions run 36308451713) never committed. CLAUDE.md sends
+// The first block-mode canary here (actions run 36308451713) never committed. CLAUDE.md then sent
 // every actor but the site session to a worktree, and the project hooks run outside the
 // sandbox, one of them running lint on every push.
 
 await test("the prompt tells the session its runner checkout is its own clone", () => {
-  assert.match(actionStep(), /This runner checkout is your own clone\. It is not the main checkout that\n {12}CLAUDE\.md or a ruling reserves for another session; work here, on a new branch\./);
+  assert.match(actionStep(), /This runner checkout is your own clone\. It is not the main checkout that\n {12}a ruling reserves for another session; work here, on a new branch\./);
 });
 
 await test("every hook is off through flag settings, which outrank the repo's own settings", () => {

@@ -4,7 +4,7 @@
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row and re-derives the page that is drawn from the rows, so the
 // table changes on the next request with no build or deploy. The commit is never reverted when a derived write
-// fails (hard rule 18): the error says the commit landed and how to repair it.
+// fails: the error says the commit landed and how to repair it.
 //
 // /research/phages is compiled from these rows (its table, its sections, its twin, its search records), and
 // those live in the page's own row. So a write refreshes that page row FIRST, through the page compile door,

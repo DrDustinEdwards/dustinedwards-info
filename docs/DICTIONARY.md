@@ -78,7 +78,7 @@ the committed bytes then the derived writes through `convergeWithRetry` then a c
 
 - A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
   rows from the file without a commit.
-- D1 is derived (hard rule 18). When a derived write fails, the error says the commit landed and the repair is
+- D1 is derived. When a derived write fails, the error says the commit landed and the repair is
   the content sync, or `sync_dictionary`, which converges the rows from the repository.
 - The sync reads the same files with the same compile, so it never overwrites a save: a save is a commit on
   `main`, and the sync builds from `main`.

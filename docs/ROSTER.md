@@ -73,7 +73,7 @@ An empty `roster` table is a fault and never an empty roster: both readers throw
 render a program page with no roster on it. The first release therefore needs the migration and the content sync
 before the new Worker serves those two pages.
 
-## Repository first, D1 derived (hard rule 18)
+## Repository first, D1 derived
 
 A save validates, commits (`commitUnlessUnchanged`), checks the committed bytes against the bytes compiled, then
 writes the D1 row and purges. A failed D1 write never reverts the commit: the error names the commit and the

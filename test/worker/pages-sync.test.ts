@@ -13,7 +13,7 @@ import foxhound from "../../content/pages/software-foxhound.md?raw";
 import { stubGitHub, type GitHubStub } from "./github-stub";
 
 /* sync_pages and the pages-drift check: D1 converges to content/pages through the compile and write doors
- * a page save uses (hard rule 18: the repository is the source). Each case starts from an empty pages table
+ * a page save uses (the repository is the source). Each case starts from an empty pages table
  * and a repository ahead of it. */
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];

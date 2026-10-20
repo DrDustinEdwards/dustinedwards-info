@@ -2,7 +2,7 @@
 // the rules that decide whether a dump may be marked complete must be provable by `node --test`.
 
 /**
- * The D1 tables that are NOT derived from the repository or the bucket (hard rule 18), so the dump
+ * The D1 tables that are NOT derived from the repository or the bucket, so the dump
  * is the only copy of their rows. Read off drizzle/*.sql on 2026-10-11; the reason names the source
  * of each. Every other table converges toward the repository or a bucket and is repaired through
  * its derivation, so its absence from a dump would cost a rebuild, not data.
