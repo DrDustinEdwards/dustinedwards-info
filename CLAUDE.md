@@ -6,9 +6,7 @@ The portfolio rules are Capsid `capsid/conventions.md`; read it with this file, 
 
 ## Rules
 
-Headings 15, 16 and 18 keep their numbers because code cites them.
-
-### 15. `.claude/settings.json` changes only on Dustin's explicit instruction (portfolio rule 2).
+Headings 16 and 18 keep their numbers because code cites them.
 
 ### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI on main, and nobody runs `npm run deploy` or a bare `wrangler deploy`.
 
@@ -28,16 +26,14 @@ Headings 15, 16 and 18 keep their numbers because code cites them.
 - The site links only Dustin's X account and the Germomics podcast.
 - Every public downloadable file name starts with `dustin-edwards-`, and a renamed file redirects from its old URL.
 - Titles carry the slug's voice, descriptions carry the search terms, and a retitle is Dustin's to approve.
-- Python is used only in a small separate Worker where a well-tested science library does the work.
-- An interactive figure's facts are in the server HTML or the .md twin, a filter's state lives in the URL, and nothing in the human interface exists only for machines.
 
 ## How a session works
 
-Work in your own worktree (local ones under `C:\Users\email\dev\worktrees\`); this folder is the site session's checkout. Read this file, `core.md` and Dustin's own words before the job body. Run `npm run check:changed`, push, and let CI run the full suite. A visible change is opened at phone and desktop size and checked against Dustin's words before it goes to him. Renovate merges its own updates per `renovate.json`.
+Work in your own worktree (local ones under `C:\Users\email\dev\worktrees\`); this folder is the site session's checkout. A visible change is opened at phone and desktop size and checked against Dustin's words before it goes to him.
 
 ## Commands
 
-**`package.json` owns the script list.** `check:changed` maps the diff to the gates that cover it, else the offline tier. `check` is the offline tier and `ship`'s; `check:all` adds gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `verify-live` is no gate: it needs a deploy and bills its Ask probes. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; `SCHEMA_LIVE=1` makes the schema test compare the live database. `check-all.mjs` refuses an untiered gate. The admin MCP (`mcp/`) has its own gates and CI job and deploys only by `npm run ship:mcp`; read `mcp/CLAUDE.md` first.
+**`package.json` owns the script list.** `check:changed` maps the diff to the gates that cover it, else the offline tier. `check` is the offline tier and `ship`'s; `check:all` adds gates needing a deployed database or bucket; `check:ci` is what a clean checkout runs. `verify-live` is no gate: it needs a deploy and bills its Ask probes. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; `SCHEMA_LIVE=1` makes the schema test compare the live database. `check-all.mjs` refuses an untiered gate.
 
 ## Bindings
 
