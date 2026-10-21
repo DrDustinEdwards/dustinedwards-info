@@ -25,29 +25,17 @@
 // nothing FAILs (warnings print and do not block), exit 1 on any FAIL, exit 2 when any page
 // could not be measured. An unmeasured page is never reported as a pass.
 //
-// The origin is the first positional argument, else WEB_VITALS_ORIGIN, else SITE_ORIGIN read
-// from app/lib/seo.ts (the one place the repo states it). Pages are measured one at a time and
+// The origin is the first positional argument, else WEB_VITALS_ORIGIN, else SITE_ORIGIN
+// (app/lib/site-origin.mjs, the one place the repo states it). Pages are measured one at a time and
 // the browser is closed at the end, to keep memory modest on a small host.
-
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";
 
+import { SITE_ORIGIN } from "../app/lib/site-origin.mjs";
 import { METRICS, exitCode, firstArticlePath, gradeRuns } from "./lib/web-vitals.mjs";
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-
 const FIXED_PAGES = ["/", "/research/retroviruses", "/research/protocols/phage-isolation"];
-
-function siteOriginFromRepo() {
-  const src = readFileSync(path.join(ROOT, "app/lib/seo.ts"), "utf8");
-  const m = /SITE_ORIGIN\s*=\s*["'`]([^"'`]+)/.exec(src);
-  if (!m) throw new Error("SITE_ORIGIN not found in app/lib/seo.ts");
-  return m[1];
-}
 
 /** @param {string[]} argv */
 function parseArgs(argv) {
@@ -68,7 +56,7 @@ function parseArgs(argv) {
     }
   }
   if (!Number.isInteger(runs) || runs < 1) throw new Error("--runs takes a whole number, 1 or more");
-  origin ??= process.env.WEB_VITALS_ORIGIN || siteOriginFromRepo();
+  origin ??= process.env.WEB_VITALS_ORIGIN || SITE_ORIGIN;
   return { origin: new URL(origin).origin, runs };
 }
 

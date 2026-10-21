@@ -315,12 +315,12 @@ export const OWNER_PUBMED =
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
 // Confirmed by Dustin, 2026-09-28 (#200); each ties to Tarleton.
-export const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
-export const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
-export const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
-export const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
-export const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
-export const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
+const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
+const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
+const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
+const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
+const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
+const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
 
 // The headshot (Dustin, 2026-09-28), uploaded to MEDIA from Tarleton's file so nothing here links to
 // another server. The square crop leads: search engines prefer it for a Person.
@@ -329,7 +329,7 @@ export const OWNER_PHOTO = {
   width: 1365,
   height: 2048,
 } as const;
-export const OWNER_PHOTO_SQUARE = {
+const OWNER_PHOTO_SQUARE = {
   key: "dustin-edwards-headshot-square-090e58f805bc9e9f-1365x1365.jpg",
   width: 1365,
   height: 1365,

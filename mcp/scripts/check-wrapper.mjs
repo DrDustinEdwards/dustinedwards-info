@@ -232,14 +232,14 @@ check(
 );
 
 // SITE_ORIGIN is a checked copy of the site's own constant, never a second
-// source: read from app/lib/seo.ts here, compared, and a drift fails.
+// source: read from app/lib/site-origin.mjs here, compared, and a drift fails.
 {
-  const seo = readFileSync(join(SITE_ROOT, "app/lib/seo.ts"), "utf8");
-  const siteOrigin = (seo.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1];
+  const source = readFileSync(join(SITE_ROOT, "app/lib/site-origin.mjs"), "utf8");
+  const siteOrigin = (source.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1];
   check(
-    "SITE_ORIGIN equals SITE_ORIGIN in app/lib/seo.ts",
+    "SITE_ORIGIN equals SITE_ORIGIN in app/lib/site-origin.mjs",
     Boolean(siteOrigin) && config.vars?.SITE_ORIGIN === siteOrigin,
-    `wrangler config says ${config.vars?.SITE_ORIGIN}, app/lib/seo.ts says ${siteOrigin}.`,
+    `wrangler config says ${config.vars?.SITE_ORIGIN}, app/lib/site-origin.mjs says ${siteOrigin}.`,
   );
 }
 
