@@ -9,7 +9,7 @@ import {
 import { FrontmatterError, fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
 import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
-import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "./publish-transition.mjs";
+import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "capsomer/publish-transition";
 import { errorMessage } from "~/lib/error-message.mjs";
 
 type EditorActionResult =

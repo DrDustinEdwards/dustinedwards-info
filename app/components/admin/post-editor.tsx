@@ -17,7 +17,7 @@ import {
   PUBLISH_CONFIRMED_INTENT,
   saveInPlaceIntent,
   type PostState,
-} from "~/lib/editor/publish-transition.mjs";
+} from "capsomer/publish-transition";
 import { EditorBar } from "./editor-bar";
 import { figureMarkdown, SCAFFOLDS } from "./md-editor-commands";
 import { PostMetadata } from "./post-metadata";

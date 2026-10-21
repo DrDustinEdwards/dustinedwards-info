@@ -2,7 +2,7 @@ import { Segmented } from "capsomer/react/segmented";
 import { Status } from "capsomer/react/status";
 
 import type { EditorFeedback } from "~/lib/editor/feedback";
-import type { PostState } from "~/lib/editor/publish-transition.mjs";
+import type { PostState } from "capsomer/publish-transition";
 import { PublishActions } from "./publish-actions";
 import type { Layout } from "./use-live-preview";
 

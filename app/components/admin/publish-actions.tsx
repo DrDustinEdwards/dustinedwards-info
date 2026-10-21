@@ -5,7 +5,7 @@ import {
   PUBLISH_CONFIRMED_INTENT,
   transitionsFor,
   type PostState,
-} from "~/lib/editor/publish-transition.mjs";
+} from "capsomer/publish-transition";
 import { anHourFromNowLocal, toIso, toLocalInput } from "~/lib/editor/datetime-local";
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "capsomer/react/dialog";
 

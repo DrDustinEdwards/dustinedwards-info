@@ -2,7 +2,7 @@ import { listAllPostsForAdmin, listBlogTags } from "~/db";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { timed, type Timings } from "~/lib/timing";
 
-import { stateOf } from "./publish-transition.mjs";
+import { stateOf } from "capsomer/publish-transition";
 
 /**
  * Every post is offered, with its state: hiding unpublished ones makes an author paste a path from
