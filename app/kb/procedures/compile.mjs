@@ -10,7 +10,7 @@ import { procedureSearchInput, renderProcedure } from "./render.mjs";
 import { validateProcedure } from "./validate.mjs";
 
 /** The file name a slug is written in; the same rule as a post's. */
-export const PROCEDURE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const PROCEDURE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * @param {{

@@ -57,7 +57,7 @@ export type SaveResult =
 const slugOf = (target: Extract<KbTarget, { type: "item" }>) => `${target.kind}/${target.id}`;
 
 /** The repository path a target names, or null when it names nothing the Knowledge Base holds. */
-export function targetFile(target: KbTarget): string | null {
+function targetFile(target: KbTarget): string | null {
   if (target.type === "entry") return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.slug) ? procedurePath(target.slug) : null;
   return KINDS[target.kind] && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.id) ? registryPath(slugOf(target)) : null;
 }

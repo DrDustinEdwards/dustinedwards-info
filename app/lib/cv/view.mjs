@@ -142,7 +142,7 @@ export function formatDollars(amount) {
 }
 
 /** @returns {CvState} */
-export function defaultState() {
+function defaultState() {
   return { types: [], areas: [], from: null, to: null, role: null, q: "", sort: "type" };
 }
 
@@ -230,7 +230,7 @@ export function isFiltered(state) {
  * @param {Facts} f
  * @returns {[number, number] | null}
  */
-export function spanOf(f) {
+function spanOf(f) {
   if (f.year === null) return null;
   const end = f.endYear === "present" ? Number.POSITIVE_INFINITY : (f.endYear ?? f.year);
   return [f.year, end];
@@ -413,7 +413,7 @@ export function timelineEmptyText(data) {
  * @param {number[]} years
  * @returns {[number, number] | null}
  */
-export function selectedRange(state, years) {
+function selectedRange(state, years) {
   if (state.from === null && state.to === null) return null;
   const first = years[0] ?? 0;
   const last = years[years.length - 1] ?? 0;

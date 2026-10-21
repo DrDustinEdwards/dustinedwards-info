@@ -13,20 +13,20 @@ import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./tax
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import { BASES } from "../bases.mjs";
 
-export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
+const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
 
 /** Where each profile's pages live (its knowledge base's root, app/kb/bases.mjs); the file's name is the last segment. */
-export const PROFILE_ROOTS = /** @type {Record<(typeof PROFILES)[number], string>} */ (
+const PROFILE_ROOTS = /** @type {Record<(typeof PROFILES)[number], string>} */ (
   Object.fromEntries(BASES.map((base) => [base.profile, base.entryRoot]))
 );
 
-export const NOT_APPLICABLE = "not applicable";
+const NOT_APPLICABLE = "not applicable";
 
 /** A software how-to's form, per Diátaxis (docs/KNOWLEDGE-BASE.md, S1): a lesson that teaches, or a recipe for a task. */
 export const HOWTO_TYPES = /** @type {const} */ ({ tutorial: "Tutorial", "how-to": "How-to" });
 
 /** The sentences a how-to's WHY may run to before its reasoning belongs on an explanation page it links (S1). */
-export const HOWTO_WHY_SENTENCES = 3;
+const HOWTO_WHY_SENTENCES = 3;
 
 /** The sentences in some markdown: each run of words ended by ., ! or ? before a capital or the end, so "e.g. this" is one. @param {string} text */
 export function sentenceCount(text) {
@@ -34,11 +34,11 @@ export function sentenceCount(text) {
 }
 
 /** Units are a closed list. A unit outside it fails until it is added here on purpose. */
-export const PROTOCOL_UNITS = [
+const PROTOCOL_UNITS = [
   "µl", "µL", "ml", "mL", "l", "L", "M", "mM", "µM", "nM", "mg/ml", "µg/ml", "ng/µl", "%", "U", "g", "mg", "µg", "ng",
   "volume", "volumes", "tube", "tubes", "reaction", "reactions", "plate", "plates", "x",
 ];
-export const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes", "min", "hour", "hours", "h", "day", "days"];
+const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes", "min", "hour", "hours", "h", "day", "days"];
 
 /** A recorded gap: the marker and the reason, never the marker alone. */
 const GAP = /^MISSING:\s*(\S.*)$/s;

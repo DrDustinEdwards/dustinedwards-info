@@ -18,6 +18,8 @@
 	"compatibility_flags": ["global_fetch_strictly_public"],
 
 	"observability": { "enabled": true },
+	"minify": true,
+	"upload_source_maps": true,
 
 	// ONE PUBLIC ADDRESS. admin-mcp.dustinedwards.info is a Custom Domain on the
 	// dustinedwards.info zone, created by the deploy itself, and workers.dev is

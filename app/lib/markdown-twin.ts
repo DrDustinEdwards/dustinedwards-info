@@ -6,7 +6,7 @@ export function linkToMarkdown(slug: string) {
 }
 
 /** `path` includes the `.md`. Absolute, so it matches the blog twin and `canonicalLink`. */
-export function alternateMarkdownLink(path: string) {
+function alternateMarkdownLink(path: string) {
   return `<${SITE_ORIGIN}${path}>; rel="alternate"; type="text/markdown"`;
 }
 

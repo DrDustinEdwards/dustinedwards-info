@@ -44,7 +44,7 @@ export interface ApiEnv {
  * a documented payload shape rather than shared code, validated at the edge
  * like the outside caller this Worker is.
  */
-export type ApiResponse =
+type ApiResponse =
   | { ok: true; data: unknown }
   | { ok: false; error: string; detail?: unknown };
 

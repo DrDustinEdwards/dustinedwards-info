@@ -100,7 +100,7 @@ function slugify(value) {
  * @param {number | null} year
  * @param {number | "present" | undefined} endYear
  */
-export function formatWhen(year, endYear) {
+function formatWhen(year, endYear) {
   if (year === null) return "";
   if (endYear === undefined || endYear === year) return String(year);
   return `${year}-${endYear}`;

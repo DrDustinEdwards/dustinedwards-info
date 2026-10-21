@@ -9,6 +9,8 @@
  * Free of MCP and OAuth imports so the grant logic is testable on its own.
  */
 
+import { safeEqual } from "@dustinedwards/site-runtime/compare";
+
 /** The Cloudflare Access identity carried on an OAuth grant, set at sign-in. */
 export interface Props extends Record<string, unknown> {
   /** The verified email from the Access ID token. */
@@ -115,32 +117,6 @@ export function isAdminUser(env: { ADMIN_EMAIL?: string }, user: { email?: unkno
 }
 
 /**
- * Constant-time comparison of two secrets, with both sides hashed to a fixed 32
- * bytes FIRST.
- *
- * Hashing before comparing is the part that matters and it is easy to get wrong.
- * Comparing the raw strings leaks their LENGTH through the loop bound even when
- * the comparison itself is constant time, so an attacker learns how long the
- * secret is. Hashing both operands to a fixed width removes that channel: every
- * comparison is over exactly 32 bytes regardless of the inputs.
- *
- * This mirrors what the app's own operator endpoint does, by the same reasoning.
- */
-export async function secretsMatch(presented: string, expected: string): Promise<boolean> {
-  if (!expected) return false;
-  const encoder = new TextEncoder();
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(presented)),
-    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
-  ]);
-  const x = new Uint8Array(a);
-  const y = new Uint8Array(b);
-  let diff = 0;
-  for (let i = 0; i < x.length; i += 1) diff |= x[i]! ^ y[i]!;
-  return diff === 0;
-}
-
-/**
  * The prefix that makes a secret an agent key. Ruling 37.
  *
  * ONE SECRET PER AGENT, and the agent's NAME is the part after this prefix.
@@ -153,7 +129,7 @@ export async function secretsMatch(presented: string, expected: string): Promise
  * way that matters: rotating one agent would rewrite every agent's key, and one
  * malformed edit would take all of them out at once.
  */
-export const AGENT_KEY_PREFIX = "AGENT_KEY_";
+const AGENT_KEY_PREFIX = "AGENT_KEY_";
 
 /**
  * Which agent, if any, presented this Authorization header.
@@ -182,7 +158,7 @@ export const AGENT_KEY_PREFIX = "AGENT_KEY_";
  * No configured keys admits nobody. A blank or whitespace-only key is skipped
  * rather than matched, so a secret set to the empty string cannot become a
  * master key. A malformed header returns null. Every candidate goes through
- * `secretsMatch`, which hashes both sides to a fixed 32 bytes first.
+ * the shared `safeEqual`, which hashes both sides to a fixed 32 bytes first.
  *
  * EVERY KEY IS COMPARED, with no early exit on a match, so the time taken does
  * not depend on which key matched or how far down the list it sat.
@@ -206,7 +182,7 @@ export async function agentPrincipal(
     if (!name.startsWith(AGENT_KEY_PREFIX)) continue;
     if (typeof value !== "string" || !value.trim()) continue;
     // No early exit: see the constant-time note above.
-    if (await secretsMatch(presented, value)) {
+    if (await safeEqual(presented, value)) {
       found = name.slice(AGENT_KEY_PREFIX.length).toLowerCase();
     }
   }

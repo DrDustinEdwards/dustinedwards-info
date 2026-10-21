@@ -14,7 +14,7 @@ import { barChart, sparkline } from "enarratio";
 
 import { TIMELINE_ID } from "./view.mjs";
 
-export type TimelineSeries = { key: string; label: string; token: string; values: number[] };
+type TimelineSeries = { key: string; label: string; token: string; values: number[] };
 
 export type TimelineInput = {
   years: number[];

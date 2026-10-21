@@ -20,7 +20,7 @@ export function channels(hex) {
 }
 
 /** @param {string} hex */
-export function luminance(hex) {
+function luminance(hex) {
   // Destructured before the transform: `.map` over a tuple loses its length for the type checker.
   const [r, g, b] = channels(hex);
   /** @param {number} c */
@@ -63,19 +63,4 @@ export function apca(textHex, bgHex) {
     out = sapc > -0.1 ? 0 : sapc + 0.027;
   }
   return out * 100;
-}
-
-/**
- * @param {string} input
- * @returns {string | null}
- */
-export function normalizeHex(input) {
-  try {
-    const [r, g, b] = channels(input);
-    return `#${[r, g, b]
-      .map((c) => Math.round(c * 255).toString(16).padStart(2, "0"))
-      .join("")}`;
-  } catch {
-    return null;
-  }
 }

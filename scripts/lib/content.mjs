@@ -41,6 +41,7 @@ function assetPlaceholders() {
  *
  * @param {string} file
  * @returns {(src: string) => Promise<{ width: number, height: number, placeholder?: string }>}
+ * @public read by test/write-path-invariants.test.mjs
  */
 export function makeResolveImage(file) {
   return async (/** @type {string} */ src) => {

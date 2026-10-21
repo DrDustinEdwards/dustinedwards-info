@@ -253,7 +253,7 @@ export function overviewMarkdown(overview, origin) {
  * @param {string} key the facet's parameter (method, organism, course)
  * @param {readonly string[]} values
  */
-export function facetHref(key, values) {
+function facetHref(key, values) {
   return `${LIBRARY_PATH}?${values.map((v) => `${key}=${encodeURIComponent(v)}`).join("&")}`;
 }
 
@@ -351,7 +351,7 @@ export function libraryTabs(items, chosen, registry = []) {
 }
 
 /** How many calculator pages there are: the distinct pages the registry's tools sit on. */
-export function calculatorCount() {
+function calculatorCount() {
   return new Set(Object.values(TOOLS).map((tool) => tool.path)).size;
 }
 

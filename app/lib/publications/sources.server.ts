@@ -18,8 +18,8 @@ const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 const ORCID_ID = OWNER_ORCID.replace(/^https?:\/\/orcid\.org\//, "");
 const NAME_WINDOW_DAYS = 400;
 
-export type SourceWork = { doi: string; title: string; year: number | null; sources: Array<"orcid" | "crossref"> };
-export type SourceFailure = { source: "orcid" | "crossref" | "crossref-name"; detail: string };
+type SourceWork = { doi: string; title: string; year: number | null; sources: Array<"orcid" | "crossref"> };
+type SourceFailure = { source: "orcid" | "crossref" | "crossref-name"; detail: string };
 
 export type PublicationCheck = {
   orcid: string;

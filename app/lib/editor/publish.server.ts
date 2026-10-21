@@ -254,7 +254,7 @@ export async function renderAndWrite(
  *
  * Returns the slugs it rewrote. Throws on a failed read or write: the caller reports it.
  */
-export async function refreshNeighbours(env: PublishEnv, savedSlug: string) {
+async function refreshNeighbours(env: PublishEnv, savedSlug: string) {
   const { withRelated, withBacklinks } = await loadPipeline();
   const [related, links, stored] = await Promise.all([
     listPostCorpusForRelated(env),

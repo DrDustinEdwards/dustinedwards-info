@@ -60,7 +60,7 @@ function fontCss(env: Env): Promise<string> {
 }
 
 /** The PDF bytes for a resolved CV, through Browser Run. Throws, naming what failed. */
-export async function renderCvPdf(env: Env, CV: Awaited<ReturnType<typeof readCv>>): Promise<Uint8Array> {
+async function renderCvPdf(env: Env, CV: Awaited<ReturnType<typeof readCv>>): Promise<Uint8Array> {
   if (!env.BROWSER) {
     throw new Error("The BROWSER binding is not configured on this Worker, so the CV PDF cannot be rendered (wrangler.jsonc.example).");
   }

@@ -164,7 +164,7 @@ export const SITE_OPERATION = Object.freeze([
  */
 export const CARREL_PAGE_PATH = "/software/carrel";
 export const CARREL_NAME = "Carrel";
-export const CARREL_SENTENCE =
+const CARREL_SENTENCE =
   "Carrel is my private writing hub, behind a login, where articles are " +
   "written before they are published here. A finished article reaches this " +
   "site through a small keyed API.";
@@ -181,7 +181,7 @@ export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
  */
 export const CAPSOMER_NAME = "Capsomer";
 export const CAPSOMER_URL = "https://capsomer.dustinedwards.info";
-export const CAPSOMER_SENTENCE = "Capsomer is the shared design system this site will adopt.";
+const CAPSOMER_SENTENCE = "Capsomer is the shared design system this site will adopt.";
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);

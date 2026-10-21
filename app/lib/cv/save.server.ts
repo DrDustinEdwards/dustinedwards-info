@@ -37,7 +37,7 @@ export class CvInvalid extends ContentInvalid {
 }
 
 /** The file a slug names. A slug outside CV_FILES is refused before any read or write: a save cannot create a file. */
-export function registeredCvFile(slug: string) {
+function registeredCvFile(slug: string) {
   const clean = slug.trim();
   const file = cvFileFor(clean);
   if (!file) {

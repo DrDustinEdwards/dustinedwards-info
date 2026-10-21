@@ -17,9 +17,9 @@ import { primerTmRounded } from "./tm.mjs";
 
 /** An upper-case IUPAC nucleotide sequence, as the protocols write one. */
 const SEQUENCE = /^[ACGTRYSWKMBDHVN]+$/;
-export const PRIMER_MIN_LENGTH = 10;
-export const PRIMER_MAX_LENGTH = 80;
-export const DIRECTIONS = /** @type {const} */ (["forward", "reverse", "probe"]);
+const PRIMER_MIN_LENGTH = 10;
+const PRIMER_MAX_LENGTH = 80;
+const DIRECTIONS = /** @type {const} */ (["forward", "reverse", "probe"]);
 /** A product as a paper states it: a size in base pairs, "about" when the paper says so. */
 const PRODUCT = /^(?:about )?[1-9][0-9]{1,4} bp$/;
 const DOI = /^10\.[0-9]{4,9}\/[^\s]+$/;

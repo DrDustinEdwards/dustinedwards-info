@@ -32,7 +32,7 @@ type PhageEnv = Env & { GITHUB_TOKEN?: string };
 export const PHAGE_SLUG = /^[a-z][a-z0-9]*$/;
 
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
-export class PhageInvalid extends ContentInvalid {
+class PhageInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
     super(`The phage "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
     this.name = "PhageInvalid";
@@ -117,7 +117,7 @@ export async function writePhageRow(env: PhageEnv, compiled: Compiled) {
  * Every derived store a phage feeds: the page's row first, then its own (see the header). Shared by the save,
  * so a repair that re-runs it writes what a save writes.
  */
-export async function writeRow(env: PhageEnv, compiled: Compiled) {
+async function writeRow(env: PhageEnv, compiled: Compiled) {
   const slug = phageSlug(compiled.phage.name);
   await refreshPage(env, [...(await otherPhages(env, slug)), compiled.phage]);
   await writePhageRow(env, compiled);

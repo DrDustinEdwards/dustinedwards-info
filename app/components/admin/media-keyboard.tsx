@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { bands, nextTile } from "~/lib/media/tile-nav.mjs";
 
 /** The tile's tab stop in the grid: the thumbnail link, which carries the file's name. */
-export function tileLink(key: string) {
+function tileLink(key: string) {
   return document.querySelector<HTMLElement>(
     `.cap-media-grid [data-tile="${CSS.escape(key)}"] a.cap-media-open`,
   );

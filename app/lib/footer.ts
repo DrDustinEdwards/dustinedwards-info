@@ -72,8 +72,7 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
 export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid" | "flask"; name: string; hover?: string };
 
 /**
- * The logins, the Workspace group, in Dustin's order (2026-10-11): Admin, Portal, Carrel, then Lab, which
- * moved here from the header bar (Dustin, 2026-10-14: too prominent for a handful of members). Every reader
+ * The logins, the Workspace group, in Dustin's order: Admin, Portal, Carrel, then Lab. Every reader
  * sees all four; each one's own sign-in is what keeps it private. The accessible names say what each one is
  * for, begin with the visible word so speech input still works, and end with SIGN_IN_NOTE so a link read
  * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's admin, behind Cloudflare Access.
@@ -82,8 +81,7 @@ export const TOOLS_HEADING = "Workspace";
 export const SIGN_IN_NOTE = "(requires sign-in)";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   { to: "/admin", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
-  // Capsid's admin page, behind Cloudflare Access. It has its own address (portal.dustinedwards.info) since
-  // 2026-10-01; the old capsid.dustin-edwards.workers.dev/portal/ answers 404.
+  // Capsid's admin page, behind Cloudflare Access.
   {
     to: "https://portal.dustinedwards.info",
     label: "Portal",
@@ -93,9 +91,9 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
     icon: "capsid",
     external: true,
   },
-  // Behind Cloudflare Access since 2026-09-26.
+  // Behind Cloudflare Access.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: `Carrel, writing ${SIGN_IN_NOTE}`, icon: "lamp", external: true },
-  // The lab members' workspace (app/routes/workspace.tsx), behind Access. Its sign-in link was on the header bar until 2026-10-14.
+  // The lab members' workspace (app/routes/workspace.tsx), behind Access.
   { to: "/lab", label: "Lab", name: `Lab, the members' workspace ${SIGN_IN_NOTE}`, icon: "flask" },
 ];
 

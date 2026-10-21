@@ -18,7 +18,7 @@ import { storedStrain } from "./strain.mjs";
 
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
 
-export function githubHost(env: RegistryEnv) {
+function githubHost(env: RegistryEnv) {
   return {
     paper: async (slug: string) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null,
     // A recipe is a procedure file whose front matter says profile: recipe.

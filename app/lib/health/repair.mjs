@@ -4,7 +4,7 @@
 import { awaitAskConvergence } from "./ask-converge.mjs";
 
 /** Only idempotent repairs through the operator API, since this runs unattended. Map order is repair order. */
-export const REPAIRABLE = /** @type {const} */ ({
+const REPAIRABLE = /** @type {const} */ ({
   // Content first: sync_ask reads search_docs, which sync_posts, sync_procedures, sync_dictionary,
   // sync_pages and sync_publications rewrite, so the reverse uploads a stale corpus.
   "content-drift": "sync_posts",

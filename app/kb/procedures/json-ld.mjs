@@ -73,7 +73,7 @@ function text(html) {
  *
  * @param {string | null} value
  */
-export function isoDuration(value) {
+function isoDuration(value) {
   const m = /^(\d+(?:\.\d+)?) (minutes?|hours?)$/.exec(String(value ?? ""));
   if (!m) return null;
   const minutes = Math.round(Number(m[1]) * (m[2]?.startsWith("hour") ? 60 : 1));

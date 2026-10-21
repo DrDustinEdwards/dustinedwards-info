@@ -18,7 +18,7 @@ const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
  * read, a failed refresh still answers (episodes empty, `fetchedAt` null, `lastError` set), so a
  * reader can tell "the read failed" from "not read yet", which is the only thing null means.
  */
-export type CachedFeed = {
+type CachedFeed = {
   episodes: PodcastEpisode[];
   fetchedAt: string | null;
   checkedAt: string;
@@ -88,7 +88,7 @@ const isStale = (cached: CachedFeed) =>
 
 // A public render never blocks on the podcast host: a stale or cold cache answers with what it has
 // and the refresh runs in `waitUntil`.
-export async function readPodcastFeed(
+async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
 ): Promise<CachedFeed | null> {
   const env = getEnv(context);

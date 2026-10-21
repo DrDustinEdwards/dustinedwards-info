@@ -7,7 +7,6 @@ import { fromHtml } from "hast-util-from-html";
 
 import { CHART_TYPES } from "./chart-types.mjs";
 
-export { CHART_TYPES };
 
 const DEFAULT_WIDTH = 700;
 const DEFAULT_HEIGHT = 360;

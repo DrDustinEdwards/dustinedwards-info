@@ -87,7 +87,7 @@ const esc = (/** @type {string} */ s) => s.replace(/&/g, "&amp;").replace(/</g, 
  * each class of letter gets its share of an em, a little over the UI face's, so a box is never too narrow.
  * @param {string} s @param {number} size
  */
-export function textWidth(s, size) {
+function textWidth(s, size) {
   let em = 0;
   for (const ch of s) {
     if (/[iljtfr.,:;'|!\s]/.test(ch)) em += 0.33;
@@ -105,7 +105,7 @@ export function textWidth(s, size) {
  * the longer line is shortest.
  * @param {string} name
  */
-export function wrapName(name) {
+function wrapName(name) {
   if (textWidth(name, NAME_SIZE) <= MAX_LINE) return [name];
   let best = [name];
   let widest = Number.POSITIVE_INFINITY;
@@ -211,7 +211,7 @@ const grow = (r, g) => ({ x: r.x - g, y: r.y - g, w: r.w + 2 * g, h: r.h + 2 * g
  * Whether segment p-q passes through the rectangle's inside (a touch is not a hit).
  * @param {number} px @param {number} py @param {number} qx @param {number} qy @param {{ x: number, y: number, w: number, h: number }} r
  */
-export function segmentHitsRect(px, py, qx, qy, r) {
+function segmentHitsRect(px, py, qx, qy, r) {
   let t0 = 0;
   let t1 = 1;
   const dx = qx - px;
@@ -253,7 +253,7 @@ function hitsBox(s, n, g) {
  * Whether segments a-b and c-d cross at a point inside both.
  * @param {number[]} s @param {number[]} t each [ax, ay, bx, by]
  */
-export function segmentsCross(s, t) {
+function segmentsCross(s, t) {
   if (Math.max(s[0], s[2]) < Math.min(t[0], t[2]) || Math.max(t[0], t[2]) < Math.min(s[0], s[2]) || Math.max(s[1], s[3]) < Math.min(t[1], t[3]) || Math.max(t[1], t[3]) < Math.min(s[1], s[3])) return false;
   const rx = s[2] - s[0];
   const ry = s[3] - s[1];
@@ -983,7 +983,7 @@ function wrapText(text, r) {
  * @param {Layout} l
  * @param {{ id: string, summary: string, token?: boolean, viewBox: number[] }} o
  */
-export function insideLayerSvg(l, o) {
+function insideLayerSvg(l, o) {
   const [vx, vy, vw, vh] = o.viewBox;
   const wires = l.wires
     .map((w) => {

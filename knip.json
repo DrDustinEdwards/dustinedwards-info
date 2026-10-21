@@ -1,8 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "app/routes.ts",
-    "app/root.tsx",
     "app/entry.*.tsx",
     "app/routes/**/*.tsx",
     "app/enhance/*.ts",
@@ -11,26 +9,23 @@
     "scripts/machine-readable/*.mjs",
     "test/**/*.test.mjs",
     "test/worker/**/*.test.ts",
-    "packages/*/index.mjs",
-    "packages/*/bin/*.mjs"
+    "scripts/lib/site-clone-loader*.mjs",
+    "scripts/lib/site-fixture-runners/*.mjs"
   ],
   "project": [
     "app/**/*.{ts,tsx,mjs}",
     "workers/**/*.{ts,mjs}",
     "scripts/**/*.mjs",
-    "test/**/*.{ts,mjs}",
-    "packages/**/*.mjs"
+    "test/**/*.{ts,mjs}"
   ],
-  "ignore": ["scratchpad/**"],
+  "ignore": [
+    "mcp/**"
+  ],
   "ignoreDependencies": [
     "cloudflare",
-    "cloudflare:test",
-    "cloudflare:workers",
-    "virtual:enhance",
-    "virtual:header-render",
-    "virtual:react-router/server-build",
     "mermaid"
   ],
-  "ignoreBinaries": ["netstat"],
-  "ignoreUnresolved": ["\\+types/"]
+  "ignoreBinaries": [
+    "netstat"
+  ]
 }

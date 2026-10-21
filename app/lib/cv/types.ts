@@ -56,10 +56,10 @@ type Dated = { year: number | null; endYear?: number | "present" };
 type Tagged = { areas: CvArea[]; role: CvRole | null; links?: CvLink[] };
 
 /** A paper the site has a record for: everything but the DOI comes from its file in content/publications/. */
-export type CvPaperRef = { type: "publication"; doi: string };
+type CvPaperRef = { type: "publication"; doi: string };
 
 /** A paper with no site record, cited as the CV cites it. */
-export type CvPaperInline = Dated &
+type CvPaperInline = Dated &
   Tagged & {
     type: "publication";
     title: string;
@@ -70,7 +70,7 @@ export type CvPaperInline = Dated &
     pages?: string;
   };
 
-export type CvAppointment = Dated &
+type CvAppointment = Dated &
   Tagged & {
     type: "appointment";
     section: "Positions" | "Administrative and leadership";
@@ -86,10 +86,10 @@ export type CvAppointment = Dated &
     headline?: boolean;
   };
 
-export type CvEducation = Dated &
+type CvEducation = Dated &
   Tagged & { type: "education"; title: string; org: string; detail?: string };
 
-export type CvGrant = Dated &
+type CvGrant = Dated &
   Tagged & {
     type: "grant";
     /** US dollars, as the CV states them. */
@@ -100,9 +100,9 @@ export type CvGrant = Dated &
     note?: string;
   };
 
-export type CvAward = Dated & Tagged & { type: "award"; title: string; org?: string; place?: string };
+type CvAward = Dated & Tagged & { type: "award"; title: string; org?: string; place?: string };
 
-export type CvTalk = Dated &
+type CvTalk = Dated &
   Tagged & {
     type: "talk";
     title: string;
@@ -111,10 +111,10 @@ export type CvTalk = Dated &
     venue: string;
   };
 
-export type CvCourse = Dated &
+type CvCourse = Dated &
   Tagged & { type: "course"; code: string; title: string; org: string; term: string };
 
-export type CvMentoring = Dated &
+type CvMentoring = Dated &
   Tagged & {
     type: "mentoring";
     section: string;
@@ -129,7 +129,7 @@ export type CvMentoring = Dated &
     cohort: boolean;
   };
 
-export type CvService = Dated &
+type CvService = Dated &
   Tagged & {
     type: "service";
     section:
@@ -145,7 +145,7 @@ export type CvService = Dated &
     place?: string;
   };
 
-export type CvDevelopment = Dated & Tagged & { type: "development"; title: string; org?: string; place?: string };
+type CvDevelopment = Dated & Tagged & { type: "development"; title: string; org?: string; place?: string };
 
 export type CvSourceEntry =
   | CvPaperRef
@@ -170,9 +170,6 @@ export type CvPerson = {
   department: string;
   org: string;
 };
-
-/** The person as every surface renders them: the profile's facts and the title the appointments give them. */
-export type CvPersonView = CvPerson & { title: string };
 
 /** The CV's own totals for presentations; only invited talks where Dustin leads are entries. */
 export type CvPresentations = { international: number; national: number; from: number; to: number };

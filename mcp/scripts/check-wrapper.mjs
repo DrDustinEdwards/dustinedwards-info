@@ -751,10 +751,10 @@ check(
 );
 
 check(
-  "the agent comparison goes through secretsMatch, never a string compare",
-  /await secretsMatch\(presented, value\)/.test(authCode),
+  "the agent comparison goes through safeEqual, never a string compare",
+  /await safeEqual\(presented, value\)/.test(authCode),
   "A raw compare leaks the secret's length through the loop bound. " +
-    "secretsMatch hashes both sides to a fixed 32 bytes first.",
+    "safeEqual (site-runtime/compare) hashes both sides to a fixed 32 bytes first.",
 );
 
 /*

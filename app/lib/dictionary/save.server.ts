@@ -28,7 +28,7 @@ import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
 type DictionaryEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
-export class DictionaryInvalid extends ContentInvalid {
+class DictionaryInvalid extends ContentInvalid {
   constructor(key: string, errors: string[]) {
     super(`The dictionary entry "${key}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
     this.name = "DictionaryInvalid";

@@ -31,7 +31,7 @@ export function resolveLineage(forkedFrom, profile, parent) {
 export const lineageText = (lineage) => `${lineage.title}${lineage.version ? `, version ${lineage.version}` : ""}`;
 
 /** The twin's fact line for a lineage, as the page's fact reads. @param {Lineage} lineage @param {string} origin */
-export const lineageMarkdown = (lineage, origin) => `- Based on: ${lineage.href ? `[${lineageText(lineage)}](${origin}${lineage.href})` : lineageText(lineage)}`;
+const lineageMarkdown = (lineage, origin) => `- Based on: ${lineage.href ? `[${lineageText(lineage)}](${origin}${lineage.href})` : lineageText(lineage)}`;
 
 /**
  * The fact the stored twin carries for a variant: the parent's file name and version, all the compile knows. The twin's

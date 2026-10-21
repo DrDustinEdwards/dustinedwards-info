@@ -26,6 +26,8 @@
 	// a second way in to a Worker holding the operator token. A watchdog has no
 	// business being reachable.
 	"workers_dev": false,
+	"minify": true,
+	"upload_source_maps": true,
 	// Same posture as the site config, and for the same privacy reason: an
 	// invocation log is enriched with the request context. This Worker has no
 	// requests, so the setting costs nothing here and states the account-wide

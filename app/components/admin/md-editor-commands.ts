@@ -39,8 +39,6 @@ export const SCAFFOLDS = {
   },
 } as const;
 
-export type ScaffoldName = keyof typeof SCAFFOLDS;
-
 /** The figure the editor inserts for a dropped or pasted image. The URL's quote, space, parentheses and angle brackets
  *  are percent-encoded, which keeps it the same address and cannot end the attribute; the alt's quotes become
  *  entities. Carrel writes the same markup (carrel app/lib/site-markdown.ts). */

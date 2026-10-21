@@ -22,7 +22,7 @@ function renderNode(node: ViewNode | string, key: number): ReactNode {
  * is a calculator inside a procedure step: its form still submits to the tool's own page, which answers
  * with script off, and app/enhance/tools.ts leaves the address bar alone.
  */
-export function ToolBody({
+function ToolBody({
   id,
   instance = id,
   values,

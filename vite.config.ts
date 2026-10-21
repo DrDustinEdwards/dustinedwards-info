@@ -64,6 +64,10 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // The Worker bundle. Wrangler's `minify` does not apply under the Vite plugin; this is its replacement.
+  environments: {
+    ssr: { build: { minify: true } },
+  },
   build: {
     /*
      * **A WEBFONT IS NEVER INLINED, and this is a CSP refusal rather than a

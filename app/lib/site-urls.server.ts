@@ -24,6 +24,7 @@ import { tagPath } from "~/lib/tag-path.mjs";
  * test/site-map.test.mjs with a reason. check:links resolves each one. In the order the sitemap lists
  * them; a page with a row of its own (About) is listed only while its row is published. `sources` are the
  * files the page's own words live in, which date it (an index is also as new as the newest thing it lists).
+ * @public read by test/site-map.test.mjs and check:links
  */
 export const STATIC_PAGES = [
   { path: "/", title: "Home", sources: ["app/routes/home.tsx"] },

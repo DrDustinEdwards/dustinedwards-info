@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 import { parseReference } from "../../app/kb/registry/reference.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const REFERENCES_DIR = path.join(ROOT, "data", "references");
-export const REFERENCES_PATH = path.join(ROOT, "app", "kb", "registry", "references.generated.mjs");
+const REFERENCES_DIR = path.join(ROOT, "data", "references");
+const REFERENCES_PATH = path.join(ROOT, "app", "kb", "registry", "references.generated.mjs");
 
 /** The file a reference id is kept in: the id with its colon spelled as an underscore, so it is a legal name everywhere. @param {string} id */
 export function referenceFile(id) {

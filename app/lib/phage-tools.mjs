@@ -38,7 +38,7 @@ const FAQ = "/teaching/virus-isolation/faq";
 const PROTOCOL = "/research/protocols/phage-isolation";
 
 /** @type {Record<string, Source>} */
-export const SOURCES = {
+const SOURCES = {
   fullPlate: { href: `${PROTOCOL}#full-plate-titer`, label: "Phage Isolation and Purification Protocol: full plate titer" },
   spot: { href: `${PROTOCOL}#spot-titer`, label: "Phage Isolation and Purification Protocol: spot titer" },
   tenfold: { href: FAQ, label: "Lab Calculations and Common Questions: 10-fold serial dilution" },
@@ -125,7 +125,7 @@ export function formatScientific(value) {
 }
 
 /** `10^-6`, and `undiluted` for 10^0. @param {number} n */
-export function formatDilution(n) {
+function formatDilution(n) {
   return n === 0 ? "undiluted" : `10^-${n}`;
 }
 
