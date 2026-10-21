@@ -1,6 +1,6 @@
 # CLAUDE.md - mcp/ (Dustin Edwards Admin)
 
-The site's CLAUDE.md and `capsid/conventions.md` govern this folder too; this
+The site's CLAUDE.md governs this folder too; this
 file holds only what is true of the MCP server. The design is
 `capsid/research/design-mcp-servers.md` section 6.
 
