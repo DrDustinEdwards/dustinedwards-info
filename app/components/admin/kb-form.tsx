@@ -6,11 +6,11 @@ import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "~/components/admin/page-head";
-import type { KbEditorActionData } from "~/components/admin/kb-file-editor";
+import { KbCheckSave, type KbEditorActionData } from "~/components/admin/kb-file-editor";
 import type { KbFile } from "~/kb/editor.server";
 import type { FormBody, FormModel } from "~/kb/form.mjs";
 import type { Choice, FormField, KbForm } from "~/kb/form.server";
-import { type EquipmentEntry, FieldInput, type Material, type Values, plural } from "~/components/admin/kb-form-fields";
+import { type EquipmentEntry, FieldInput, type Material, type Values } from "~/components/admin/kb-form-fields";
 import { BodyEditor, type Inserts, goTo } from "~/components/admin/kb-form-steps";
 
 /*
@@ -347,29 +347,7 @@ export function KbFormEditor({
         {body ? <BodyEditor body={body} flags={form.flags} inserts={inserts} onChange={setBody} onInsert={onInsert} /> : null}
 
         <div className="kb-savebar">
-          <div className="app-actions">
-            <Button type="submit" name="intent" value="check" pending={busy === "check"}>
-              Check
-            </Button>
-            <Button type="submit" name="intent" value="save" variant="primary" pending={busy === "save"}>
-              Save
-            </Button>
-          </div>
-          <div role="status">{checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}</div>
-          {actionData?.intent === "save" && actionData.conflict ? (
-            <Alert tone="crit" title="Not saved">
-              {actionData.conflict}
-            </Alert>
-          ) : null}
-          {errors.length > 0 ? (
-            <Alert tone="crit" title={`${plural(errors.length, "check fails", "checks fail")}`}>
-              <ul>
-                {errors.map((e) => (
-                  <li key={e}>{e}</li>
-                ))}
-              </ul>
-            </Alert>
-          ) : null}
+          <KbCheckSave busy={busy} actionData={actionData} errors={errors} />
         </div>
       </Form>
       {isEntry ? (

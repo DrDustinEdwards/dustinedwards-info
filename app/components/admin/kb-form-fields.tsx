@@ -17,10 +17,6 @@ const shown = (value: unknown) => (value === undefined || value === null || isGa
 export const UNITS = ["µl", "ml", "l", "mg", "g", "µg", "ng", "mM", "M", "%", "U", "tubes", "plates"];
 export const DURATIONS = ["seconds", "minutes", "hours", "days"];
 
-export function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 /** An input's id from a field key, so a Needs info link lands on its input. */
 const fieldId = fieldAnchor;
 
