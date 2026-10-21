@@ -19,10 +19,6 @@ The cheaper instrument wins ties, because `check:tests` runs in seconds and
 
 ## Three instruments, three jobs
 
-This repo already had two ways of knowing something is true, and they were
-being asked to do a third job they are bad at. Naming the split is the point of
-this directory.
-
 **TESTS verify SHIPPED MODULES.** They import the module the Worker imports and
 assert what it does with a given input. `frontmatterSchema` refuses
 `javascript:` in `cover.src`; `statusLabel()` throws on an unknown status rather
@@ -40,30 +36,20 @@ shared helpers in `lib/`. The schema test compares the live database only with
 and that the write paths keep the search indexes consistent, is checked through
 behavior in `worker/visibility.test.ts` and `worker/publish.test.ts`.
 
-**PLANTS remain the discipline for NEW assertions**. Exit 1
-is not evidence: on 2026-08-07 a plant was shell-mangled twice, tripped a different assertion both
-times, and looked exactly like success. Plants are an act, not an artifact.
+**PLANTS remain the discipline for NEW assertions**. Exit 1 is not evidence: a
+mangled plant can trip a different assertion and look exactly like success.
+Plants are an act, not an artifact.
 
 **A plant gets promoted into this directory when it concerns BEHAVIOUR.** That
 is the rule for what lives here. A plant that proves a gate's own parsing works
 stays a plant, because turning it into a test would mean testing the gate rather
 than the site.
 
-## What is here, and which defect each replays
+## The replay rule
 
-Every case in these files was a real defect or a real plant, not an invented
-example. The replay rule: a new gate must be tested by replaying the defect it was
-written for, because plants get written to match the implementation rather than
-the bug.
-
-- **`frontmatter-urls.test.mjs`** the ten-case cover / further_reading table.
-  Replays the 2026-08-07 finding that `cover.src` refused `javascript:` only as
-  a SIDE EFFECT of a site-absolute path regex, so the mechanism was wrong while
-  every behavioral case passed. The three accepted cover paths are the half
-  that would have caught a fix that broke legitimate input.
-- **`status-label.test.mjs`** `statusLabel()` throws and does not substitute.
-  Replays the colophon defect where `STATUS_LABEL[s] ?? s` rendered the raw enum
-  on the page and in the index at once, looking like working output in both.
+Every case here was a real defect or a real plant, not an invented example. A
+new gate is tested by replaying the defect it was written for, because plants
+get written to match the implementation rather than the bug.
 
 ## What does NOT belong here
 
@@ -75,6 +61,4 @@ Anything needing the network, a deployed database, a bucket, or a browser.
 Those are `check:all --remote` and `verify-live`, and they are separate because
 they cannot run on a plane and because `verify-live` bills money per Ask probe.
 `test/worker/` is offline too, and structurally so: its setup installs a `fetch`
-that THROWS on any outbound call before every case. It found its first violation
-of that rule on its first run, when `/api/health`'s content-drift check reached
-`api.github.com` for real.
+that THROWS on any outbound call before every case.
