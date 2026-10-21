@@ -13,16 +13,12 @@
     ]
   },
   "baseline": {
-    "measured_at": "946202f",
+    "measured_at": "f022ffb",
     "knip": {
-      "Unused files": 7,
-      "Unlisted dependencies": 2,
-      "Unused exports": 65,
-      "Unused exported types": 7,
       "Duplicate exports": 1
     },
     "jscpd": {
-      "clones": 28,
+      "clones": 30,
       "percentage": 0.35
     }
   }
