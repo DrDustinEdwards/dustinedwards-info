@@ -36,21 +36,17 @@ which is what repeats across people and sessions.
   result is read, and must produce the NAMED failure.** Exit 1 only proves
   something failed. A 30 KB constant planted in source was folded to 3e4 by the
   minifier: the gated chunk grew 17 bytes and the plant never applied.
-  `VERIFICATION.md` (retired 2026-10-13; in git history) (the since-retired page-payload gate)
+ 
 - **A search with an empty scope or an empty needle returns a plausible
   number.** A scan that examined no files reports what a clean sweep reports;
   an empty needle matched every line and two files reported "436 CRLF lines"
-  and "521 CRLF lines", which are their line counts. `VERIFICATION.md` (retired 2026-10-13; in git history)
+  and "521 CRLF lines", which are their line counts.
 - **A limit positioned where it cannot bite is not a limit, and it drifts there
   quietly.** Three forms: a 10,000-character ceiling over an 8,479-character
   file; a floor 54 under its own count, so 54 assertions could stop running and
   still pass; and a breach that set `process.exitCode = 1` one line above an
   unconditional reassignment. Re-measure by RUNNING, never by arithmetic on the
-  old number. `VERIFICATION.md` (retired 2026-10-13; in git history) `scripts/check-floors.mjs` (removed; in git history)
-- **A rule whose instrument the instrument-checker cannot reach is not gated.**
-  A scope floor over a GROWING set is an executed-count floor in disguise:
-  `MINIMUM_FILES` drifted eleven files unseen, printing no floor line for
-  `check:floors` to read. `34e62f1`
+  old number.
 - **A replay aimed at wall-clock time measures the instrument's own latency
   first.** A loop aimed 300 ms before a minute boundary started 39 s later, at
   a random phase; 0 of 3 reproduced a failure that was real. `1748513`
@@ -67,7 +63,6 @@ which is what repeats across people and sessions.
   the real config never runs and the gates grade placeholders; the empty local D1
   then turns the home page into a 500 that a menu check passed straight through.
   Copy both real configs over after `npm ci`, and seed D1 with `--local` only.
-  2026-09-27, on the #211 preview.
 - **An instrument only sees what it was threaded through. Prefer structure.** A
   timing instrument threaded through one call site proved nothing about the
   other. `5940242`
@@ -75,7 +70,6 @@ which is what repeats across people and sessions.
   One `artifact_load` mark reported while two reads happened; a headless render
   read a non-empty root as clean while the text was invisible; a probe anchor
   measured 10px and gave a threshold 10px wrong.
-  `scripts/check-invariants.mjs` (no longer in the tree) `app/components/site-header.tsx`
 - **Two gates can cancel: one demands a name be written down, the other reads
   the writing as use.** Neither is wrong alone, neither can fail. `af69b45`
 - **A whole-document match is satisfied by a neighbor.** A 900-character window
@@ -85,7 +79,6 @@ which is what repeats across people and sessions.
   opposite of what it tests. `ff0d738`
 - **One helper name with two argument orders can never fail.** The string lands
   in the condition slot, is truthy, and the check count still goes up.
-  `scripts/check-invariants.mjs` (no longer in the tree) section 17
 - **A hardening change can silently be a change to a value another subsystem
   reads.** Wrapping the Ask question in delimiters also rewrote the retrieval
   query, since AI Search searches the last user message; every question then
@@ -101,4 +94,4 @@ which is what repeats across people and sessions.
 - **A backslash escape in prose can reach disk as a control byte and still
   render close enough to survive review.** Three: backslash-f left
   `ont-display` in app.css, backslash-b broke a gate needle, backslash-a
-  ate a separator in a libuv path. `scripts/check-invariants.mjs` (no longer in the tree) section 29
+  ate a separator in a libuv path.

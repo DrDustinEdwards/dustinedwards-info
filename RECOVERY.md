@@ -4,22 +4,15 @@ How to rebuild this site's Cloudflare resources from nothing, given only this
 repository and a fresh Cloudflare account.
 
 This document exists because there is no infrastructure-as-code here.
-**Terraform was considered and rejected** (ruled
-2026-08-02): it would mean restating `compatibility_date` and every binding in a
+**Terraform was considered and rejected**: it would mean restating `compatibility_date` and every binding in a
 second file, which recreates exactly the drift class the example config exists
 to avoid, and its real value (multi-person orgs, DNS, account access management)
 does not apply to a single-operator account. The gap Terraform would have covered
 is documentation. This is that documentation.
 
-Everything below was verified on 2026-08-02 unless a line says otherwise. The
-verification status of each part is recorded at the bottom.
-
-**A DATE HERE IS PART OF THE CLAIM.** Three things in this runbook went stale
-between 2026-08-02 and 2026-08-22 without anything noticing: the secret count,
-the migration count, and the entire description of what R2 holds. None of them
-is gated, because a runbook describes an account rather than the disk every gate
-verifies. So read the date beside a number before acting on the number, and
-re-measure rather than cite.
+The verification status of each part is recorded at the bottom. A runbook
+describes an account rather than the disk every gate verifies, so nothing here
+is gated: re-measure rather than cite.
 
 ---
 
@@ -97,39 +90,24 @@ npx wrangler d1 migrations apply dustinedwards --local
 npx wrangler d1 migrations apply dustinedwards --remote
 ```
 
-**The migrations reproduce the live schema exactly, and this was measured rather
-than assumed.** Re-derived 2026-08-04: every migration then present was applied
-to an empty SQLite database and the result compared against the live remote
-schema, object by object: **57 of 57 objects match**, 27 tables, 27 indexes and
-3 triggers, with no object on either side that the other lacks.
+**The migrations reproduce the live schema.** `check:migrations` hashes every
+file in `drizzle/` against the manifest in both directions, and
+`test/schema-invariants.test.mjs` binds schema to migrations to the live database
+(with `SCHEMA_LIVE=1`), so no count is written here.
 
 The live database carries three additional objects created by the D1 platform
 itself rather than by any migration: the tables `d1_migrations` and `_cf_KV`,
 and `sqlite_autoindex_d1_migrations_1`, the auto-index SQLite creates for the
-former's primary key. Excluding the two tables but not that index is what turns
-a clean match into a spurious one-object mismatch, which is worth knowing before
-anyone re-runs this and thinks they have found drift.
-
-**NO MIGRATION COUNT IS WRITTEN HERE ANY MORE, because this paragraph has now
-gone stale twice in three weeks.** First it claimed 37 objects across seven
-migrations (2026-08-02); three migrations landed and it was corrected to ten and
-57 (2026-08-04, finding B005); two more have landed since, `0011_media_trash_tags`
-and `0012_drop_posts_category`, so "ten" was wrong again by 2026-08-22. The count
-is `drizzle/*.sql`. `check:migrations` hashes every file against the manifest in
-both directions and `test/schema-invariants.test.mjs` binds schema to migrations
-to the live database (with `SCHEMA_LIVE=1`), so a number here is a copy that nothing reads and nothing can
-fail on. **The 57-object figure is kept as a dated record of one measurement, not
-as a live claim**: re-derive it rather than cite it.
+former's primary key. Excluding the two tables but not that index turns a clean
+match into a spurious one-object mismatch.
 
 `drizzle-kit` is deliberately not a dependency. Migrations are hand-written. Add a
 new numbered file; never edit an applied one.
 
-**One historical caveat, now fixed.** `0001_init.sql` seeds a `settings` row for
-`llms.txt` carrying the **retired virology copy**, 247 bytes. That was the only
-thing that ever wrote the row, so a rebuild used to produce a stale, wrong
-`llms.txt`. Since 2026-08-02 the source of truth is the tracked file
-`content/llms.txt` and `sync:content` writes the row from it, so the migration's
-seed is overwritten by step 9 below. `check:machine-readable` fails if the two ever disagree.
+`0001_init.sql` seeds a stale `settings` row for `llms.txt`. The source of truth
+is the tracked file `content/llms.txt`; `sync:content` writes the row from it, so
+the seed is overwritten by step 9 below, and `check:machine-readable` fails if the
+two ever disagree.
 
 ---
 
@@ -161,32 +139,29 @@ referenced by name.
 calls them.** `dustinedwards-media` is irreplaceable: it holds uploaded
 originals, and nothing can regenerate them. `dustinedwards-og` holds social
 cards, every one of which `build:og -- --remote` can rebuild from the artifact,
-so it is safe to empty and is deliberately not in the backup path. Creating only
-the first, which is what this runbook used to say, produces a Worker that fails
-to bind `OG` at deploy. Finding B005.
+so it is safe to empty and is deliberately not in the backup path. A missing
+bucket is a Worker that fails to bind at deploy.
 
-`dustinedwards-media-backup` is the MIRROR of the first, added 2026-09-01. It is
+`dustinedwards-media-backup` is the MIRROR of the first. It is
 written only by copy, and **no site code path ever deletes from it**;
 `check:destructive` sweeps `app/`, `workers/` and `scripts/` and fails on a
 delete against the `MEDIA_BACKUP` binding. Restoring it is never necessary to
 bring the site up: it is a source for a hand-copy back into `MEDIA`, not a thing
 the Worker reads.
 
-**Do not enable public access, and do not attach a custom domain.** Verified
-2026-08-02 against the live bucket: `r2.dev` public access is **disabled** and
-there are **no custom domains connected**. Every object is served through the
+**Do not enable public access, and do not attach a custom domain.** `r2.dev`
+public access is **disabled** and there are **no custom domains connected**
+(`r2 bucket dev-url get`, `r2 bucket domain list`). Every object is served through the
 Worker's `/media/*` route, which is what allows the thumbnail transforms and the
 immutable cache headers. Enabling public access would create a second, unmanaged
 read path to the same bytes.
 
-Live buckets for reference, read from the API 2026-08-22: `dustinedwards-media`
-is location `ENAM`, `dustinedwards-og` is location `WNAM`, both storage class
-`Standard`. This line named one location as though it covered both.
+Live buckets for reference: `dustinedwards-media` is location `ENAM`,
+`dustinedwards-og` is location `WNAM`, both storage class `Standard`.
 
 ### Backup posture: the media bucket is mirrored
 
-**Decided 2026-09-01: a mirror, plus a local pull.** The earlier acceptance
-posture and the alternatives weighed are in git history for this file.
+**A mirror, plus a local pull.** The alternatives weighed are in git history for this file.
 
 #### What actually threatens these bytes, in the ruled order
 
@@ -203,7 +178,7 @@ posture and the alternatives weighed are in git history for this file.
 #### How the mirror is kept
 
 - **On write.** R2 emits an object-create notification, the queue consumer
-  derives the D1 row, and since 2026-09-01 it derives the TWIN as well, from the
+  derives the D1 row and the TWIN as well, from the
   object as it is now. This keeps the never-a-dual-write rule: the Worker still
   writes only to `MEDIA`.
 - **On drift.** `media-backup-drift` in `/api/health` compares every `MEDIA`
@@ -235,80 +210,41 @@ would mean reading every object body on every health poll. If a multipart etag
 ever appears the comparison degrades to size and says so, so a weaker verdict is
 never mistaken for the strong one.
 
-#### The rest of R2, unchanged
-
-**MEASURED 2026-08-22 AND RE-MEASURED FROM SCRATCH 2026-08-23**, and still the
-answer for everything except the uploaded originals: there is nothing else in R2
-that a restore could not reproduce.
+#### The rest of R2
 
 Every class of thing this site stores, and where its second copy is:
 
-| Class | Where it lives | Count | Second copy |
-| --- | --- | --- | --- |
-| Uploaded originals | `dustinedwards-media` (`MEDIA`) | non-zero since 2026-09-01 | **mirrored**: a twin in `dustinedwards-media-backup`, plus the local pull from `check:backup --remote`. The count lives in `media-backup-drift`, not here |
-| Social cards | `dustinedwards-og` (`OG`), all under `og/` | 12 (505,712 bytes) | **regenerable**: `npm run build:og -- --remote` |
-| Static assets | `public/`, not R2 at all | 60 files | **git**: 60 of 60 tracked |
-| Roster photo WebPs | `public/phage-hunters/` | 9 | **git**: all nine tracked |
-| Roster photo JPG SOURCES | gitignored, would be `public/phage-hunters/*.jpg` | **0** | **nowhere, if any existed** |
+| Class | Where it lives | Second copy |
+| --- | --- | --- |
+| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **mirrored**: a twin in `dustinedwards-media-backup`, plus the local pull from `check:backup --remote`. The count lives in `media-backup-drift` |
+| Social cards | `dustinedwards-og` (`OG`), all under `og/` | **regenerable**: `npm run build:og -- --remote` |
+| Static assets | `public/`, not R2 at all | **git** |
+| Roster photo WebPs | `public/phage-hunters/` | **git** |
+| Roster photo JPG SOURCES | gitignored, would be `public/phage-hunters/*.jpg` | **nowhere, if any existed** |
 
-**No class currently has zero second copies.** The last row is the one to watch
-and it is empty today: `.gitignore` line 11 excludes those sources, so a JPG
-dropped there would exist on one machine and in no clone. None exists.
+The last row is the one to watch: `.gitignore` excludes those sources, so a JPG
+dropped there would exist on one machine and in no clone.
 
-The OG cards are regenerable in the strong sense, not the hopeful one: the
-object key is a hash of the template version, slug, title and description, all
-of which are tracked in `content/`, so a rebuild writes the SAME twelve keys
-rather than twelve new ones beside the old.
+The OG cards are regenerable in the strong sense: the object key is a hash of the
+template version, slug, title and description, all tracked in `content/`, so a
+rebuild writes the SAME keys rather than new ones beside the old.
 
-**The audit's section 14 says "`RECOVERY.md` does not mention R2 at all". That
-was false when it was written.** This file has carried section 3, section 3a on
-the bucket event notifications, and an R2 entry under "Permanently lost" since
-2026-08-02. What WAS true is that those paragraphs had gone stale: the
-"Permanently lost" entry claimed 15 objects in two groups including
-unrecoverable `posts/` uploads, and there is no `posts/` group. Stale is a real
-defect and absent is a different one; only the first applied.
-
-So the paragraph above is right about the RULE and was wrong about the FACT.
-`dustinedwards-media` is the irreplaceable bucket by design and holds nothing.
-Every byte in R2 today is an OG card, and the split this section describes is
-what makes that recoverable rather than lucky.
-
-**The decision is therefore ACCEPTANCE, not a backup**, and the basis is that
-copying 505,712 bytes of regenerable PNG into a second bucket would buy nothing
-a command does not already buy, while adding a bucket, a schedule and a second
-thing to go stale. The other candidates were checked rather than assumed:
-
-- **R2 object versioning does not exist.** Not "not enabled here": the R2 API
-  has no versioning endpoint at all (checked against the OpenAPI spec
-  2026-08-22, which carries lifecycle, lock, CORS, domains and sippy and nothing
-  else). Any plan resting on it is resting on a feature that is not there.
-- **Lifecycle and lock rules exist and both buckets carry neither.** Read live
-  2026-08-22: each bucket has only the default multipart-abort rule and an empty
-  lock rule set. A bucket lock is the mechanism if retention is ever wanted, and
-  it protects against DELETION, never against loss of the account.
-
-**THAT CONDITION EXPIRED ON 2026-09-01 AND THE MECHANISM WORKED.** The
-acceptance held exactly while `MEDIA` was empty, and the sentence that used to
-sit here said nothing in this repo would announce the first upload. That was
-wrong in the good direction: `media-unbacked` announced it, within one health
-poll, and refused to self-repair because a policy that has expired is not drift.
-The posture above replaced it the same day. What is worth carrying forward is
-not the acceptance but its SHAPE: it was dated, it named the condition it rested
-on, and it named who owned re-deciding it.
+**R2 has no object versioning** (the R2 API has no versioning endpoint at all),
+so no plan can rest on it. A bucket lock is the mechanism if retention is ever
+wanted, and it protects against DELETION, never against loss of the account.
 
 ### What restoring actually involves
 
 In the order it would be done, and none of it is a restore from a backup:
 
-1. **Static assets** (58 rows, `public/`): `git clone`. All 60 files under
-   `public/` are tracked, verified 2026-08-22 by `git ls-files public`.
-2. **OG cards** (12 objects): `npm run build:og -- --remote`, after step 9's
+1. **Static assets** (`public/`): `git clone`.
+2. **OG cards**: `npm run build:og -- --remote`, after step 9's
    content sync, because it renders from the artifact.
 3. **The `media` index rows**: rebuilt from R2 and `public/`, then compared by
    the health endpoint's `media-index-drift` check, which would report any of the
    above being incomplete.
-4. **Uploaded originals**: none exist. If that has changed since 2026-08-22, this
-   step is a real gap and this section is stale.
+4. **Uploaded originals**: a deliberate hand-copy from `dustinedwards-media-backup`
+   (or the local pull) back into `MEDIA`, then let `media-index-drift` confirm.
 
 ---
 
@@ -472,11 +408,8 @@ fresh account this may need enabling before the binding resolves at runtime.
 By name only. Never commit values; never paste one into chat.
 
 **THE LIST IS `REQUIRED_SECRETS` in `app/lib/secrets.mjs`, and no count is
-written here on purpose.** This section said "Seven" and set seven, and had been
-wrong since 2026-08-14, when `ANALYTICS_READ_TOKEN` was added: the live Worker
-carries eight, confirmed by `wrangler secret list` on 2026-08-22. The export
-already knew, because `check:secrets` reads it and a runbook prose count reads
-nothing. Set one `wrangler secret put` per name in that array:
+written here on purpose**: `check:secrets` reads the array, and a prose count
+reads nothing. Set one `wrangler secret put` per name in that array:
 
 ```sh
 npx wrangler secret put GITHUB_TOKEN
@@ -490,11 +423,8 @@ npx wrangler secret put SMOKE_TOKEN
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases of `check:browser` fail and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
-Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
-the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
-`wrangler.jsonc`**. `SMOKE_TOKEN` was added to the ratified list on 2026-08-24
-and is TYPED AND GUARDED BEFORE IT IS PROVISIONED, so until it is set the tools
-page reports it absent, which is the state that line exists to be able to show.
+**No secret has ever lived in `wrangler.jsonc`.** Until `SMOKE_TOKEN` is set the
+tools page reports it absent.
 
 **MINTING AND SETTING THE SMOKE TOKEN, in full.** It goes to three places and
 never onto a command line; every one of these reads stdin:
@@ -601,11 +531,9 @@ Then check by hand:
 
 ## 11. Alerting: the watchdog and the uptime monitors email Dustin
 
-**Added 2026-08-22, because there was none; rewritten 2026-09-24 for ruling
-151.** The Ask index lost nine records on 31 July and it was found on 21 August,
-by a badge on a page somebody happened to open. Nothing was broken about the
-detection; there was no path from the number to a person. Three paths exist now,
-and each reaches Dustin's inbox by email:
+Ruling 151. A failing check needs a path to a person, or it is found by a badge
+on a page somebody happened to open. Three paths exist, and each reaches
+Dustin's inbox by email:
 
 - **The watchdog Worker** (`workers/watchdog.ts`, every 15 minutes, inside
   Cloudflare). It reads `/api/health` through a service binding, runs the
@@ -631,9 +559,7 @@ and each reaches Dustin's inbox by email:
 
 The checks and their order are owned by `runHealthChecks` in
 `app/lib/health/checks.server.ts`; this paragraph points at it rather than
-restating a list that has already gone stale here once. It said "three checks"
-while the endpoint ran five, and named `media-unbacked`, which was replaced by
-`media-backup-drift` on 2026-09-01. What is stable enough to state: it covers
+restating a list. What is stable enough to state: it covers
 the Ask index, the media index, the media MIRROR (section 3), the corpus against
 git, and the FTS docsize equalities a ship asserts after a sync. Each is
 individually timed out, so one wedged binding cannot hang the response. The body carries check NAMES and BOOLEANS
@@ -670,8 +596,6 @@ npx wrangler secret delete ALERT_WEBHOOK_URL
 npx wrangler secret delete ALERT_HEARTBEAT_URL
 ```
 
-The 2026-08-22 webhook design and its removal on 2026-08-23 are in git history.
-
 ---
 
 ## What is NOT recoverable from this repo
@@ -698,24 +622,14 @@ in frontmatter and is recovered with the file.
 
 **The `llms.txt` settings row.** Source of truth is `content/llms.txt`, tracked
 and pinned to LF. `sync:content` writes the row from it and `check:machine-readable` fails if
-they disagree. Until 2026-08-02 this was a permanent loss, because the only
-writer was a migration seeding copy retired in July; that is what prompted this
-document's own gap analysis to be turned into a fix.
+they disagree.
 
 ### Permanently lost
 
-**R2 objects: NOTHING, as measured 2026-08-22.** This entry read "15 objects,
-848 kB, in two groups" and named `posts/` editor uploads as not regenerable. Both
-halves are now false. There are 12 objects, 505,712 bytes, all of them `og/`
-social cards, and there is no `posts/` group: `dustinedwards-media` is empty and
-the D1 index carries no `storage='r2'` row. The census and the four ways it was
-read are in section 3.
-
-The CLASS stays described here because it is the thing that will come back. An
-editor upload would be not regenerable, would exist only in the bucket, and would
-leave a post rendering a broken image while the markdown kept the URL. None exist
-yet. When one does, this entry becomes true again and section 3's acceptance
-stops holding.
+**R2 objects.** An uploaded original is lost only if `MEDIA`, its twin in
+`dustinedwards-media-backup` and the local pull all lose it (section 3). OG cards
+regenerate. An editor upload that is lost would leave a post rendering a broken
+image while the markdown kept the URL.
 
 **The `media` table rows** (alt text, captions, dimensions) go with the objects.
 Alt already written into post markdown survives, because that copy lives in the
@@ -740,44 +654,21 @@ back to one. The code is in git; the deployment ledger is not.
 
 ## Verification status
 
-Verified on 2026-08-02 against the live account or the installed toolchain
-(`compatibility_date` was bumped to 2026-08-02 the same day):
+Checked against the live account or the installed toolchain, not rehearsed:
 
 - Resource names and existence: D1 `dustinedwards`, KV `dustinedwards-app-kv`,
-  R2 `dustinedwards-media`, AI Search `dustinedwards`. Read from
-  `wrangler d1 list`, `kv namespace list`, `r2 bucket list`, `ai-search get`.
-- **Re-verified 2026-08-04 (finding B005):** R2 `dustinedwards-og` exists, the
-  queues `dustinedwards-media-events` and `dustinedwards-media-events-dlq` exist,
-  and both buckets carry one event notification rule each pointing at the first
-  queue. Read from `wrangler queues list` and
-  `wrangler r2 bucket notification list`. None of these were in this runbook.
-- R2 public access disabled and no custom domains: `r2 bucket dev-url get` and
-  `r2 bucket domain list`.
-- Command syntax for `d1 create`, `kv namespace create`, `r2 bucket create`,
-  `secret put`, `d1 migrations apply`, `deploy` and `types`: read from
-  `--help` on the installed wrangler 4.107.0.
-- `ai-search create` flags `--type builtin`, `--hybrid-search`, `--reranking`:
-  read from `wrangler ai-search create --help` on the same version.
-- Migrations reproduce the schema: **measured 2026-08-04** by applying every
-  migration then present to an empty database with `node:sqlite` and diffing
-  object by object against the live schema. **57 of 57 matched**, nothing extra
-  on either side. Two migrations have landed since, so this is a dated record
-  and not a current claim; section 1 says why no count is written down.
-- The secret names: `wrangler secret list`, **re-read 2026-08-22**. Eight, equal
-  to `REQUIRED_SECRETS` in `app/lib/secrets.mjs`. The previous entry said seven
-  and had been stale since `ANALYTICS_READ_TOKEN` landed on 2026-08-14.
-- **R2 contents, measured 2026-08-22**, four independent ways: `dustinedwards-media`
-  is EMPTY and `dustinedwards-og` holds 12 regenerable OG cards. Section 3 carries
-  the census, the reads behind it, and the acceptance that follows.
-- **R2 has no versioning to enable**, checked against the R2 API surface
-  2026-08-22; both buckets carry no lifecycle rule beyond the default
-  multipart-abort and no lock rules.
-- The `llms.txt` divergence, since FIXED: the live row was captured byte-exact
-  into `content/llms.txt` and is now written by `sync:content` and gated by
-  `check:machine-readable`.
+  R2 `dustinedwards-media`, `dustinedwards-og`, `dustinedwards-media-backup` and
+  `dustinedwards-backups`, AI Search `dustinedwards`, and the queues
+  `dustinedwards-media-events` and `dustinedwards-media-events-dlq` with each
+  bucket's event notification rule. Read from `wrangler d1 list`,
+  `kv namespace list`, `r2 bucket list`, `queues list`,
+  `r2 bucket notification list` and `ai-search get`.
+- Command syntax: read from `--help` on the installed wrangler.
+- Migrations reproduce the schema: the schema test compares them with the live
+  database under `SCHEMA_LIVE=1` (`check:all`).
+- The secret names: `check:secrets` holds `REQUIRED_SECRETS` against the code.
 - Durable Object wiring: the config block, `workers/ask-budget.ts` and the
   re-export in `workers/app.ts`.
-- Row counts: queried directly.
 
 **Not verified, and why:**
 
@@ -794,4 +685,4 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   for hosted-image operations; the transform path used here may differ. Untested
   on an account without it.
 - **`build:og` and `build:diagrams` as recovery steps** are listed from the
-  project's own documented flow; they were not run during this session.
+  project's own documented flow, not run as part of a rebuild.

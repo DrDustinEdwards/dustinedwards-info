@@ -13,15 +13,14 @@ consequence of it.
   converges to the repository (ship reports drift; a scheduled health check
   repairs it).
 - **The gates are the review.** There is no second reviewer, so a family of
-  `check:*` scripts is what stands between a change and production. Since
-  2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
-  checkout, which is the closest thing here to a second opinion.
+  `check:*` scripts is what stands between a change and production.
+  [CI](.github/workflows/ci.yml) runs most of them on a clean checkout.
 - **Content and links arrive as HTML from the server.** Machines get every fact
   without script. For people, script is
   welcome wherever it makes the site better: interaction, animation, motion.
   Speed is judged by real-user measures (Core Web Vitals), not byte counts, and
-  how far to hydrate public pages is still to be decided. Today, since
-  2026-08-26, public pages do not hydrate React: their JavaScript is a set of
+  how far to hydrate public pages is still to be decided. Today public pages
+  do not hydrate React: their JavaScript is a set of
   small self-contained enhancement bundles, inserted by one inline loader the
   CSP allows by its hash (`app/enhance/`, `app/lib/enhance-loader.mjs`). That is
   the current shape, not a law. `/login` is a real form with the browser client
@@ -96,9 +95,8 @@ There are **two writers** into D1, the build-plus-sync path and the admin
 editor, and both render through one shared pipeline (`pipeline.mjs`,
 `records.mjs`), which computes a `source_blob_sha` and `render_hash` into
 every row. `sync:content` compares those against a fresh build before every
-write and reports drift by class; same-source different-render is the
-Worker-versus-Node divergence the committed artifact's byte gate used to
-catch, now caught at ship time.
+write and reports drift by class; same-source different-render is a
+Worker-versus-Node divergence, caught at ship time.
 
 ### The editor is a second writer, not a second path
 
@@ -144,18 +142,16 @@ cannot merge (drafts never public, the schema matching the database, the write
 paths) are ordinary tests under `test/`.
 
 **Every gate declares an OBSERVATION BOUNDARY in its header: what it does not
-look at.** Read it before trusting a green run. Four separate defects have
-shipped past a green gate, each sitting in a blind spot nobody had written down,
-and those comments exist so the next one is caught by reading rather than in
-production.
+look at.** Read it before trusting a green run: defects have shipped past a
+green gate, each in a blind spot nobody had written down.
 
 Beyond the family: `npx tsc -b` for the typecheck (`tsc --noEmit` is a no-op
 here), and `node scripts/verify-live.mjs` after a deploy, which asserts against
 the running site. **Run verify-live twice after any caching change**, once cold
 and once warm. It normally runs seconds after a deploy, when the version-keyed
-cache is empty, and that blind spot hid a real bug for four sessions.
-`npx knip --no-exit-code` lists unused files, exports and dependencies from
-`knip.json`; it is a report, not a gate.
+cache is empty, which hides a warm-cache bug.
+`npx knip@6` lists unused files, exports and dependencies from `knip.json`; it is
+a report, not a gate.
 
 ## Secrets
 
@@ -163,7 +159,7 @@ The list is `REQUIRED_SECRETS` in `app/lib/secrets.mjs`. Each is set with
 `wrangler secret put`, never in a file; RECOVERY.md section 7 says what each is
 for and where a new one comes from. Neither wrangler file has ever held one.
 Local development uses a gitignored `.dev.vars`. Without `GITHUB_TOKEN` the editor still renders and previews and
-reports that saving is unavailable rather than half-working.
+reports that saving is unavailable.
 
 ## Deploying
 
@@ -179,8 +175,6 @@ never edit an applied one. drizzle-kit is deliberately not a dependency.
 wrangler d1 migrations apply dustinedwards --local
 wrangler d1 migrations apply dustinedwards --remote
 ```
-
-After deploying, run `node scripts/verify-live.mjs`.
 
 ## Repo layout
 
@@ -199,5 +193,4 @@ scripts/           build steps and the gate family
 public/            static assets, indexed in place
 ```
 
-`CLAUDE.md` carries the working rules for this repo in more detail than a README
-should. Read it before making changes.
+`CLAUDE.md` carries the working rules for this repo. Read it before making changes.
