@@ -1,0 +1,1 @@
+{ "raw_kib": 24, "gzip_kib": 9, "args": ["--config", "wrangler.watchdog.jsonc"] }

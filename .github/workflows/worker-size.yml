@@ -1,0 +1,40 @@
+name: worker-size
+
+# The bundle size budget of each Worker this repository deploys: the site, the watchdog and the admin MCP. A dry run's Total
+# Upload over the budget in its .worker-size*.json fails. The workflow is devkit's, pinned by full sha; no secret is needed.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-size-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  site:
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@27e0a1ca0747b5839bf7e0433c307ae671de8501 # v0.7.0
+    with:
+      # The app build, as ci.yml builds it; the dry run then follows the Vite plugin's redirect to build/server.
+      prepare: |
+        npx wrangler d1 migrations apply dustinedwards --local
+        npm run build:stack
+        npm run build:content
+        npm run build
+
+  watchdog:
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@27e0a1ca0747b5839bf7e0433c307ae671de8501 # v0.7.0
+    with:
+      config: .worker-size.watchdog.json
+
+  mcp:
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@27e0a1ca0747b5839bf7e0433c307ae671de8501 # v0.7.0
+    with:
+      # devkit's bin comes from the root install; mcp/ has its own lockfile and wrangler.
+      install: npm ci --ignore-scripts && npm ci --prefix mcp
+      prepare: cp -n mcp/wrangler.jsonc.example mcp/wrangler.jsonc
+      working-directory: mcp
