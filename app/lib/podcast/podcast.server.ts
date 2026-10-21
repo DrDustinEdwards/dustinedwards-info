@@ -3,6 +3,7 @@ import type { RouterContextProvider } from "react-router";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { PODCAST_FEED_URL, parsePodcastFeed, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 
 // The page never waits on the podcast host: loaders read KV only and refresh in `waitUntil` (this Worker
 // has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
@@ -11,7 +12,6 @@ import { errorMessage } from "~/lib/error-message.mjs";
 const CACHE_KEY = "podcast:germomics:v1";
 const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
-const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 /**
  * `lastError` says why the last refresh failed; absent after one that landed. With no episodes ever
@@ -50,7 +50,7 @@ async function readCache(kv: KVNamespace): Promise<CachedFeed | null> {
 async function fetchEpisodes(): Promise<{ episodes: PodcastEpisode[] } | { error: string }> {
   try {
     const res = await fetch(PODCAST_FEED_URL, {
-      headers: { "user-agent": USER_AGENT, accept: "application/rss+xml, application/xml" },
+      headers: { "user-agent": SITE_USER_AGENT, accept: "application/rss+xml, application/xml" },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) return { error: `the feed answered HTTP ${res.status}` };

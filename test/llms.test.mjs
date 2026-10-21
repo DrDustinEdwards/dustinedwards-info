@@ -14,13 +14,13 @@ import {
   overAdvertisedTwins,
 } from "../app/lib/llms/validate.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
+import { SITE_ORIGIN as origin } from "../app/lib/site-origin.mjs";
 
 /* The rules every llms.txt write runs (app/lib/llms/validate.mjs): check:machine-readable and the save.
  * Each case changes the real file by one thing, so a rule that stopped firing fails here instead of
  * letting an edit through. */
 
 const file = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
-const origin = (readFileSync(new URL("../app/lib/seo.ts", import.meta.url), "utf8").match(/SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
 // A draft page answers 404, so llms.txt must not list it (publishedContentPagePaths).
 const pagePaths = [...publishedContentPagePaths(readPublishedPages()), ...publishedProcedurePaths()];
 /** Built from its code point, so this file carries no literal wide dash. */

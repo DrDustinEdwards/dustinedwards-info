@@ -7,6 +7,8 @@
 // A timer's remaining time is computed from the moment it ends, not counted down, so a phone that sleeps or a page
 // that reloads mid-incubation still knows how long is left.
 
+import { SITE_ORIGIN } from "../../lib/site-origin.mjs";
+
 export const RUN_VERSION = 1;
 
 /** Seconds in each unit a timer mark can use (validate.mjs TIME_UNITS). */
@@ -190,7 +192,7 @@ const LAB_PROCESS_PROFILE = "https://bioschemas.org/profiles/LabProcess/0.1-DRAF
  * @param {Array<{ key?: string, number: number | string, section?: string, text: string }>} steps
  * @param {string} [origin] the site the run was made on
  */
-export function runRecord(run, steps, origin = "https://dustinedwards.info") {
+export function runRecord(run, steps, origin = SITE_ORIGIN) {
   // A run made on a frozen version's page carries its /v/ address; the protocol's identity is its plain page.
   const page = run.path.replace(/\/v\/[^/]+$/, "");
   return {

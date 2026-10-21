@@ -32,7 +32,7 @@ export interface ApiEnv {
    * The site's origin, used as the URL the bound Worker sees. A service binding
    * ignores the host for routing, but the site reads its own request URL, so it
    * is given the canonical one. check:wrapper asserts it equals SITE_ORIGIN in
-   * app/lib/seo.ts, so it is a checked copy and never a second source.
+   * app/lib/site-origin.mjs, so it is a checked copy and never a second source.
    */
   SITE_ORIGIN: string;
   /** The API leg bearer. Never the client-leg credential. */

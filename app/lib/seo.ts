@@ -6,10 +6,9 @@ import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
 import { paperPath } from "./publications/paths.mjs";
 
-/**
- * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
- */
-export const SITE_ORIGIN = "https://dustinedwards.info";
+import { SITE_ORIGIN } from "./site-origin.mjs";
+
+export { SITE_ORIGIN };
 
 /** The `license` of every Dataset: the site's terms page (app/lib/license.mjs). */
 export const LICENSE_URL = `${SITE_ORIGIN}${TERMS_PATH}`;
@@ -132,6 +131,12 @@ export function profilePageJsonLd(origin: string, page: { path: string; descript
  * Cloudflare (RFC 9111 4.2.4). Browser max-age stays 0 because purges cannot reach a browser.
  */
 export const SHARED_CACHE_CONTROL = "public, max-age=0";
+
+/** A response whose address changes when its bytes do (hashed media, uploads). */
+export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+/** The small text files crawlers read (robots.txt, security.txt, llms.txt). */
+export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
 /**
  * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that
@@ -310,12 +315,12 @@ export const OWNER_PUBMED =
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
 // Confirmed by Dustin, 2026-09-28 (#200); each ties to Tarleton.
-export const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
-export const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
-export const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
-export const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
-export const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
-export const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
+const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
+const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
+const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
+const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
+const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
+const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
 
 // The headshot (Dustin, 2026-09-28), uploaded to MEDIA from Tarleton's file so nothing here links to
 // another server. The square crop leads: search engines prefer it for a Person.
@@ -324,7 +329,7 @@ export const OWNER_PHOTO = {
   width: 1365,
   height: 2048,
 } as const;
-export const OWNER_PHOTO_SQUARE = {
+const OWNER_PHOTO_SQUARE = {
   key: "dustin-edwards-headshot-square-090e58f805bc9e9f-1365x1365.jpg",
   width: 1365,
   height: 1365,

@@ -4,6 +4,7 @@ import { OWNER_ORCID, SITE } from "~/lib/seo";
 
 import { canonicalAuthor } from "./authors.mjs";
 import { doiKey } from "./validate.mjs";
+import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 
 // Checks the publications list against ORCID and Crossref, so a DOI is caught the day one appears. It
 // reads both and writes nothing: a publication is written through Carrel, never from here.
@@ -14,7 +15,6 @@ import { doiKey } from "./validate.mjs";
 // matches to confirm: a name is not an identity (the reason citations.server.ts reads per DOI only).
 
 // A name, not an address, for the reason citations.server.ts gives.
-const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 const ORCID_ID = OWNER_ORCID.replace(/^https?:\/\/orcid\.org\//, "");
 const NAME_WINDOW_DAYS = 400;
 
@@ -42,7 +42,7 @@ type CrossrefItem = {
 };
 
 async function getJson(url: string, accept = "application/json"): Promise<unknown> {
-  const res = await fetch(url, { headers: { accept, "user-agent": USER_AGENT } });
+  const res = await fetch(url, { headers: { accept, "user-agent": SITE_USER_AGENT } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }

@@ -1,5 +1,5 @@
 import { getEnv } from "~/lib/context";
-import { SITE_ORIGIN } from "~/lib/seo";
+import { HOURLY_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import type { Route } from "./+types/robots";
 
@@ -44,7 +44,7 @@ export function loader({ context }: Route.LoaderArgs) {
   return new Response(body, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
-      "cache-control": "public, max-age=3600",
+      "cache-control": HOURLY_CACHE_CONTROL,
     },
   });
 }

@@ -4,6 +4,7 @@ import { WEBP_QUALITY } from "~/lib/media/encoding.mjs";
 import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 import type { Route } from "./+types/media.$";
+import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
 
 /**
  * `?w=` transforms the original on request and never writes back to the bucket. The Images binding,
@@ -52,7 +53,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", etag);
-  headers.set("cache-control", "public, max-age=31536000, immutable");
+  headers.set("cache-control", IMMUTABLE_CACHE_CONTROL);
   attachIfActive(headers);
 
   return new Response(object.body, { headers });
@@ -78,7 +79,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   if (!env.IMAGES) {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
-    headers.set("cache-control", "public, max-age=31536000, immutable");
+    headers.set("cache-control", IMMUTABLE_CACHE_CONTROL);
     headers.set("x-media-thumb", "unavailable-no-images-binding");
     // The fallback serves the original bytes, so an SVG reaches the reader here too.
     attachIfActive(headers);
@@ -118,7 +119,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   }
 
   const headers = new Headers(response.headers);
-  headers.set("cache-control", "public, max-age=31536000, immutable");
+  headers.set("cache-control", IMMUTABLE_CACHE_CONTROL);
   // No `Vary`: the body depends on no request header, and the key could not honor one.
   headers.set("x-media-thumb", `w=${width}`);
   const out = new Response(response.body, { headers });

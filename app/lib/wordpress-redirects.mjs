@@ -12,14 +12,14 @@
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.
  */
 
+import { SITE_ORIGIN } from "./site-origin.mjs";
+
 const APEX_HOSTS = new Set(["dustinedwards.info", "www.dustinedwards.info"]);
 
 /** @param {string} hostname */
 export function isApexHost(hostname) {
   return APEX_HOSTS.has(hostname.toLowerCase());
 }
-
-const APEX_ORIGIN = "https://dustinedwards.info";
 
 /**
  * Where a request to `www` goes: the apex, in ONE hop. The apex is the canonical host, so `www` serving the same
@@ -37,7 +37,7 @@ export function wwwRedirectTarget(hostname, pathname, search) {
   if (hostname.toLowerCase() !== "www.dustinedwards.info") return null;
   const disposition = wordpressDisposition(pathname);
   const target = disposition?.status === 301 ? disposition.location : `${pathname}${search}`;
-  return new URL(target, APEX_ORIGIN).toString();
+  return new URL(target, SITE_ORIGIN).toString();
 }
 
 /**
