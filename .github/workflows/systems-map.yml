@@ -30,6 +30,7 @@ on:
       - vite.config.ts
       - scripts/check-systems-map.mjs
       - scripts/lib/browser/cases/systems.mjs
+      - scripts/lib/browser/compressing-proxy.mjs
       - package.json
       - package-lock.json
       - .github/workflows/systems-map.yml
