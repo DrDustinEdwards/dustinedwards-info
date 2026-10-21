@@ -22,8 +22,44 @@ function documentCspNonce(): string {
   return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
 }
 
-function plural(count: number, one: string, many: string) {
+export function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`;
+}
+
+/**
+ * Check and Save, and what the last one said, for the file editor and the form editor alike. The answer sits beside the
+ * buttons that ask for it, so a Check's answer is in view. The status region is always in the DOM, so a result is
+ * announced; a refusal is an alert. `onFile` names the committed file when no Check has run yet.
+ */
+export function KbCheckSave({ busy, actionData, errors, onFile = false }: { busy: string; actionData?: KbEditorActionData; errors: string[]; onFile?: boolean }) {
+  const checked = actionData?.intent === "check" ? actionData : null;
+  return (
+    <>
+      <div className="app-actions">
+        <Button type="submit" name="intent" value="check" pending={busy === "check"}>
+          Check
+        </Button>
+        <Button type="submit" name="intent" value="save" variant="primary" pending={busy === "save"}>
+          Save
+        </Button>
+      </div>
+      <div role="status">{checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}</div>
+      {actionData?.intent === "save" && actionData.conflict ? (
+        <Alert tone="crit" title="Not saved">
+          {actionData.conflict}
+        </Alert>
+      ) : null}
+      {errors.length > 0 ? (
+        <Alert tone="crit" title={`${plural(errors.length, "check fails", "checks fail")}${onFile && !checked ? " on this file" : ""}`}>
+          <ul>
+            {errors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        </Alert>
+      ) : null}
+    </>
+  );
 }
 
 /**
@@ -102,31 +138,7 @@ export function KbFileEditor({
               : "The whole file: the item's fields between the --- lines, and nothing after them. Check runs every check a save runs and saves nothing."
           }
         />
-        <div className="app-actions">
-          <Button type="submit" name="intent" value="check" pending={busy === "check"}>
-            Check
-          </Button>
-          <Button type="submit" name="intent" value="save" variant="primary" pending={busy === "save"}>
-            Save
-          </Button>
-        </div>
-        {/* Beside the buttons that ask for it, so a Check's answer is in view. The status region is always in the DOM,
-            so a result is announced; a refusal is an alert. */}
-        <div role="status">{checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}</div>
-        {actionData?.intent === "save" && actionData.conflict ? (
-          <Alert tone="crit" title="Not saved">
-            {actionData.conflict}
-          </Alert>
-        ) : null}
-        {errors.length > 0 ? (
-          <Alert tone="crit" title={`${plural(errors.length, "check fails", "checks fail")}${checked ? "" : " on this file"}`}>
-            <ul>
-              {errors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          </Alert>
-        ) : null}
+        <KbCheckSave busy={busy} actionData={actionData} errors={errors} onFile />
       </Form>
 
       {gaps.length > 0 ? (
