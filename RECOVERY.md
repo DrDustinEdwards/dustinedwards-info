@@ -46,7 +46,7 @@ never overwrites. The copy carries **placeholder resource ids**, so it is enough
 to typecheck and deliberately not enough to deploy. You will replace two of those
 ids below.
 
-**Real resource ids never go in git** (portfolio rule 1). `wrangler.jsonc` is gitignored; the tracked
+**Real resource ids never go in git**. `wrangler.jsonc` is gitignored; the tracked
 `wrangler.jsonc.example` differs from it in exactly two values, and the example
 never carries a real id.
 
