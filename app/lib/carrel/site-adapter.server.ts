@@ -1,4 +1,4 @@
-// The dustinedwards.info side of Carrel's site API (carrel/design.md section 4): the package owns the
+// The dustinedwards.info side of Carrel's site API (the site-api package): the package owns the
 // route, the key, the rate limit and every body's shape; this adapter maps its content and preview
 // calls onto the site's own save, render and history code. Nothing here writes around savePost.
 // Media (v0.2.0) is its own module, over the site's media code.

@@ -2,10 +2,11 @@
 
 Dustin Edwards's personal site and Cloudflare showcase, https://dustinedwards.info: React Router 8 on Workers, Drizzle on D1, R2, Access for the admin. Content is written through Carrel.
 
-The portfolio rules are Capsid `capsid/conventions.md`; read it with this file, and it wins on disagreement. Current state is `dustinedwards/core.md`. Procedure is `.claude/skills/`. History is `dustinedwards/build-history.md`.
+Current state is `dustinedwards/core.md`. Procedure is `.claude/skills/`. History is `dustinedwards/build-history.md`.
 
 ## Rules
 
+- Tests: keep the minimal set (a few browser tests for flows that must never break, one integration test per real behaviour, unit tests only for tricky logic, shared code tested once where it lives), and remove any test that pins design, repeats coverage or has never caught a real mistake, unless it guards a harm that cannot be undone.
 - The site stores no visitor data (no IP address, cookie, identifier or third-party tracker, and a logged search keeps only its query and date), traces stay off so preview addresses never reach a third party, and anything new it records is named on the privacy page.
 
 ## Commands

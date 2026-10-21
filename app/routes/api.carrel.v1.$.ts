@@ -3,7 +3,7 @@ import { handleCarrelRequest } from "~/lib/carrel/site-api.server";
 import type { Route } from "./+types/api.carrel.v1.$";
 
 /**
- * Carrel's site API (carrel/design.md section 4). Its key reaches only this prefix; the operator API
+ * Carrel's site API (the site-api package). Its key reaches only this prefix; the operator API
  * is untouched.
  *
  * A resource route inside the Renderer, as the operator API is, so a save's cache purge reaches the
