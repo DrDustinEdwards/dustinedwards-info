@@ -30,10 +30,10 @@ import { parsePost } from "~/lib/editor/frontmatter";
 import {
   GitHubError,
   deletePost,
-  postColumnValues,
   renderRecord,
   savePost,
 } from "~/lib/editor/publish.server";
+import { postColumnValues, type PostRecord } from "~/lib/editor/post-rows.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 
@@ -73,7 +73,7 @@ function effectivePublishAt(raw: string): number {
  * through the schema's own column mappers, and the columns the sync does not write kept from the
  * stored row. A column neither supplies is an error, so a new column cannot quietly go missing here.
  */
-async function previewRow(env: CarrelEnv, record: any): Promise<PostRow> {
+async function previewRow(env: CarrelEnv, record: PostRecord): Promise<PostRow> {
   const stored = await env.DB.prepare(
     `SELECT id, excerpt, og_image, created_at, updated_at FROM posts WHERE slug = ?1`,
   )
@@ -110,7 +110,7 @@ async function previewRow(env: CarrelEnv, record: any): Promise<PostRow> {
 }
 
 /** What the blog loader reads for a preview: getBlogPost's shape, for a record not yet in D1. */
-export async function previewPost(env: CarrelEnv, record: any) {
+export async function previewPost(env: CarrelEnv, record: PostRecord) {
   return previewBlogPost(env, await previewRow(env, record), record.tags);
 }
 
@@ -293,7 +293,7 @@ export function carrelSiteAdapter(options: {
     async preview(previewSlug, input) {
       if (!renderDocument) throw new Error("the document handler is not on this request's context");
       const slug = previewSlug ?? UNSAVED_PREVIEW_SLUG;
-      let record: any;
+      let record: PostRecord;
       try {
         record = await renderRecord(env, slug, input.source);
       } catch (error) {

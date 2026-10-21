@@ -8,9 +8,9 @@ import {
   regenerateAllFromRepo,
   renderAndWrite,
   savePost,
-  syncPostToD1,
   validateAndRender,
 } from "~/lib/editor/publish.server";
+import { syncPostToD1 } from "~/lib/editor/post-rows.server";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { GitHubError } from "~/lib/editor/github.server";
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
@@ -161,10 +161,7 @@ describe("savePost", () => {
   it("records two citations whose parts collide under a space join as two rows", async () => {
     /* The pipeline's forms carry no spaces, so no rendered post produces this
      * pair; the writer is handed it directly to prove the dedup keeps both. */
-    const record = (await validateAndRender(publishEnv(), "collide", post("collide"))) as Record<
-      string,
-      unknown
-    >;
+    const record = await validateAndRender(publishEnv(), "collide", post("collide"));
     record.mediaRefs = [
       { key: "og/cover-1.png", form: "inline", detail: "line 3 alt" },
       { key: "og/cover-1.png", form: "inline line", detail: "3 alt" },

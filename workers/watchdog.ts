@@ -407,14 +407,19 @@ export async function readErrorRate(
     until: until.toISOString(),
   });
 
-  let payload: any;
+  /** The GraphQL answer as far as it is read; every level is optional-chained below. */
+  type InvocationsAnswer = {
+    errors?: Array<{ message?: string } | null>;
+    data?: { viewer?: { accounts?: Array<{ workersInvocationsAdaptive?: Parameters<typeof errorRateVerdict>[0] }> } };
+  } | null;
+  let payload: InvocationsAnswer = null;
   try {
     const response = await fetch("https://api.cloudflare.com/client/v4/graphql", {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    payload = await response.json().catch(() => null);
+    payload = (await response.json().catch(() => null)) as InvocationsAnswer;
     if (!response.ok) {
       return {
         ok: false,
@@ -439,7 +444,7 @@ export async function readErrorRate(
       configured: true,
       detail:
         "the invocations query returned GraphQL errors, so the error rate is unknown: " +
-        `${payload.errors.map((e: any) => e?.message).join("; ").slice(0, 200)}`,
+        `${payload.errors.map((e) => e?.message).join("; ").slice(0, 200)}`,
     };
   }
 
