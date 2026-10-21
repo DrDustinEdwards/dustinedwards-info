@@ -7,7 +7,8 @@
 // Two parts. The browser case (scripts/lib/browser/cases/systems.mjs): keyboard to every node,
 // the list against the model, reduced motion, layout shift, the INP proxy under 4x throttling,
 // frame gaps (warn only), axe in both themes and the script's gzip budget. Then Lighthouse on
-// /systems, mobile profile, median of three: CLS 0.05, TBT 150ms (the lab proxy for INP 100ms) and
+// /systems, mobile profile, median of three, through a brotli proxy because the preview serves
+// uncompressed and the deployed site does not (scripts/lib/browser/compressing-proxy.mjs): CLS 0.05, TBT 150ms (the lab proxy for INP 100ms) and
 // 3 MB in total, the design's numbers; LCP fails over the site's 2.5s and warns over the design's
 // 1.5s (BUDGETS says why). An unmeasured page is a failure, never a pass.
 //
@@ -17,7 +18,8 @@ import lighthouse from "lighthouse";
 import puppeteer from "puppeteer";
 
 import * as systems from "./lib/browser/cases/systems.mjs";
-import { BASE, ok, tally } from "./lib/browser/harness.mjs";
+import { startCompressingProxy } from "./lib/browser/compressing-proxy.mjs";
+import { BASE, DRIVES_PREVIEW, ok, PORT, tally } from "./lib/browser/harness.mjs";
 import { build, cleanupChildren, preflight, registry, serverDiagnosis, startServer, waitForServer } from "./lib/browser/preview-server.mjs";
 import { median } from "./lib/web-vitals.mjs";
 
@@ -46,6 +48,8 @@ startServer();
 
 /** @type {import("puppeteer").Browser | undefined} */
 let browser;
+/** @type {Awaited<ReturnType<typeof startCompressingProxy>> | undefined} */
+let proxy;
 try {
   if (!(await waitForServer())) throw new Error(`the preview server did not answer. ${serverDiagnosis()}`);
   // The case and Lighthouse each get a browser of their own. Measured 2026-10-11: after the case
@@ -62,10 +66,13 @@ try {
   registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   console.log(`\n  Lighthouse on /systems, mobile profile, median of ${RUNS}`);
   const port = Number(new URL(browser.wsEndpoint()).port);
+  // A deployed origin is compressed already; only the preview needs the proxy.
+  if (DRIVES_PREVIEW) proxy = await startCompressingProxy(BASE, PORT + 1);
+  const measured = proxy?.origin ?? BASE;
   /** @type {Record<string, number[]>} */
   const values = Object.fromEntries(BUDGETS.map((b) => [b.audit, []]));
   for (let i = 0; i < RUNS; i++) {
-    const lhr = (await lighthouse(`${BASE}/systems`, { port, logLevel: "error", output: "json", onlyCategories: ["performance"] }))?.lhr;
+    const lhr = (await lighthouse(`${measured}/systems`, { port, logLevel: "error", output: "json", onlyCategories: ["performance"] }))?.lhr;
     if (!lhr || lhr.runtimeError) throw new Error(`Lighthouse did not measure /systems: ${lhr?.runtimeError?.message ?? "no result"}`);
     if (lhr.configSettings.formFactor !== "mobile") throw new Error(`Lighthouse ran as ${lhr.configSettings.formFactor}, not mobile`);
     for (const b of BUDGETS) {
@@ -84,6 +91,7 @@ try {
 } catch (error) {
   ok("check:systems-map measured /systems", false, error instanceof Error ? error.message : String(error));
 } finally {
+  await proxy?.close();
   await cleanupChildren(browser);
 }
 
