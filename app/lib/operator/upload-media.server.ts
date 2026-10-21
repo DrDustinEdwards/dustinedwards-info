@@ -1,7 +1,7 @@
 import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
 import { storeUpload } from "~/lib/media/upload.server";
 import { errorMessage } from "~/lib/error-message.mjs";
-import { readCappedBytes } from "~/lib/read-capped.mjs";
+import { readCappedBytes } from "@dustinedwards/site-runtime/body";
 import { base64ToBytes } from "~/lib/bytes.mjs";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolResult } from "./descriptors";

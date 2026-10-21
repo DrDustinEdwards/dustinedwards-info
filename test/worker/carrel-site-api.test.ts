@@ -388,14 +388,12 @@ const mediaCount = async () =>
   (await testEnv.DB.prepare("SELECT count(*) AS n FROM media").first<{ n: number }>())?.n ?? 0;
 
 describe("media: meta declares what the site accepts", () => {
-  it("names v0.2.0, media, and the admin library's limits less SVG", async () => {
+  it("names media and the admin library's limits less SVG", async () => {
     const response = await get(`${PREFIX}/meta`);
     expect(response.status).toBe(200);
     const meta = (await response.json()) as {
-      packageVersion: string;
       capabilities: { media: boolean; mediaUpload: { maxBytes: number; types: string[] } };
     };
-    expect(meta.packageVersion).toBe("0.5.0");
     expect(meta.capabilities.media).toBe(true);
     expect(meta.capabilities.mediaUpload.maxBytes).toBe(MAX_BYTES);
     expect(meta.capabilities.mediaUpload.types).toEqual(

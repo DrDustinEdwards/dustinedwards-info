@@ -352,7 +352,7 @@ for (const f of files) {
 // The Access sign-in host is built from the ACCESS_TEAM_DOMAIN var, so no
 // login host appears as a literal. The operator API is reached through the
 // OPERATOR_API_URL var rather than a literal, so a hardcoded app URL fails here.
-const ALLOWED_HOSTS = ["rate-limit.invalid", "tool-call-log.invalid"];
+const ALLOWED_HOSTS = ["tool-call-log.invalid"];
 const URL_RE = /https?:\/\/([a-z0-9.-]+)/gi;
 for (const f of files) {
   for (const m of readFileSync(join(SRC, f.name), "utf8").matchAll(URL_RE)) {
