@@ -26,6 +26,8 @@ on:
       # Every system's inside, drawn at build time and put into the map by the route.
       - app/lib/system-wiring.mjs
       - scripts/lib/system-layout.mjs
+      - scripts/lib/system-layout-geometry.mjs
+      - scripts/lib/system-layout-search.mjs
       - scripts/lib/system-insides-plugin.mjs
       - vite.config.ts
       - scripts/check-systems-map.mjs
