@@ -44,7 +44,7 @@ import { LAB_CATALOG, canEditTerms, titleLabel } from "./titles.mjs";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-export type MembersResult = { ok: boolean; text: string };
+type MembersResult = { ok: boolean; text: string };
 
 export type MembersActionData = {
   result?: MembersResult;
@@ -86,7 +86,7 @@ function safeDefault(title: Title, terms: string[], nowMs: number, after: string
 const NO_TERMS = "Enter this year's semester end dates first: a Lab worker's or Lab manager's access ends on one of them.";
 
 /** The titles the actor may give, below their layer and within what they hold; the least first, so it is the default. */
-export function grantableTitles(actor: Actor): Title[] {
+function grantableTitles(actor: Actor): Title[] {
   return [...LAB_CATALOG.titles.values()]
     .filter((t) => t.layer > actor.layer && t.permissions.every((p) => actor.permissions.has(p)))
     .sort((a, b) => b.layer - a.layer);

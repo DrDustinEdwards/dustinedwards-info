@@ -72,7 +72,7 @@ interface SearchExplainRow {
   score: number;
 }
 
-export interface SearchExplain {
+interface SearchExplain {
   k: number;
   layers: string[];
   identityCount: number;
@@ -140,6 +140,7 @@ function toHit(row: RawRow, snippet: string, why: MatchReason[], score: number):
 /**
  * The SQL twin of publiclyVisible() in app/db/client.ts: they cannot be one function, so
  * test/visibility-invariants.test.mjs asserts they admit the same rows.
+ * @public read by that test
  */
 export function visibilityClause(alias = "d"): string {
   const q = alias ? `${alias}.` : "";

@@ -332,7 +332,7 @@ export function wiresOf(model, id) {
  * One container as the twin and the page write it: name, what it runs on, what it does.
  * @param {SystemModel["containers"][number]} c
  */
-export const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
+const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
 
 /**
  * What a system's page says in place of a description: a private system is its name, and its

@@ -81,7 +81,7 @@ function rowsOf(rows: unknown): Array<Record<string, unknown>> {
 }
 
 /** What a step note or a reagent row can name, each by its words: a row's step and problem, a calculator's title, a solution's name. */
-export function referencesOf(data: Record<string, unknown>): KbForm["references"] {
+function referencesOf(data: Record<string, unknown>): KbForm["references"] {
   return {
     troubleshooting: rowsOf(data.troubleshooting).map((row) => ({ value: String(row.id), label: `Step ${String(row.step ?? "?")}: ${String(row.problem ?? row.id)}` })),
     calculators: Object.entries(TOOLS).map(([value, tool]) => ({ value, label: tool.title })),
@@ -123,7 +123,7 @@ export function rawFromForm(original: string, posted: string): { raw: string } |
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** A slug from a title: lower-case words joined by hyphens. */
-export function slugFor(title: string): string {
+function slugFor(title: string): string {
   return title
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")

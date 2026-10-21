@@ -39,7 +39,6 @@ export function kindFromSegment(segment, kinds = KINDS) {
   return Object.keys(kinds).find((kind) => kinds[kind]?.plural === segment) ?? null;
 }
 
-export { stated };
 
 /**
  * The library's tabs for the registry: one for each kind that has a published item, linking to the kind's page, in the
@@ -340,7 +339,7 @@ export function hasItemPage(kind, kinds = KINDS) {
  *
  * @param {string} slug
  */
-export function recipePath(slug) {
+function recipePath(slug) {
   return `/recipes/${slug}`;
 }
 

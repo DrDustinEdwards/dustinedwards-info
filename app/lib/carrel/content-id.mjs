@@ -3,7 +3,7 @@
 // validator can share the length rule with the registry (content-kinds.server.ts).
 
 /** The contract's ContentId allows at most 200 characters (site-api contract.ts). */
-export const CONTENT_ID_MAX = 200;
+const CONTENT_ID_MAX = 200;
 
 /** The kind that keeps a bare slug for its id, so every id posts already had is unchanged. */
 export const DEFAULT_KIND = "post";

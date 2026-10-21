@@ -20,7 +20,7 @@ import { orderErrors, paperRefErrors, parseCvFile } from "./validate.mjs";
  * @param {Publication[]} publications
  * @returns {Map<string, Publication>}
  */
-export function publicationsByDoi(publications) {
+function publicationsByDoi(publications) {
   return new Map(publications.flatMap((p) => (p.doi ? [[p.doi.toLowerCase(), p]] : [])));
 }
 

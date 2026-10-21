@@ -24,7 +24,7 @@ import { PERMISSION } from "./titles.mjs";
 export type RunResult = { ok: boolean; text: string; runId?: number };
 
 /** How many lot rows the record form offers: enough for a protocol's reagents, and the form works with no script. */
-export const LOT_ROWS = 6;
+const LOT_ROWS = 6;
 const OUTCOMES = ["completed", "failed", "abandoned"] as const;
 const NOTE_MAX = 4000;
 
@@ -33,7 +33,7 @@ function refused(text: string): RunResult {
 }
 
 /** Whether `actor` may see `run`: their own, or every run with `read_all_runs`. */
-export function canSeeRun(actor: Actor, run: Pick<RunRow, "actor">): boolean {
+function canSeeRun(actor: Actor, run: Pick<RunRow, "actor">): boolean {
   return run.actor === actor.email || can(actor, PERMISSION.readAllRuns);
 }
 

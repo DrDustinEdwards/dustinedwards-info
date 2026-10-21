@@ -12,7 +12,7 @@
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.
  */
 
-export const APEX_HOSTS = new Set(["dustinedwards.info", "www.dustinedwards.info"]);
+const APEX_HOSTS = new Set(["dustinedwards.info", "www.dustinedwards.info"]);
 
 /** @param {string} hostname */
 export function isApexHost(hostname) {

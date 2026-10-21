@@ -4,8 +4,8 @@
 // phage rows when the page is drawn, so a corrected title reaches every protocol that cites the paper.
 
 /** A publication slug and a phage key, as the files that hold them spell them. */
-export const PAPER_SLUG = /^[0-9a-z][0-9a-z-]*$/;
-export const PHAGE_KEY = /^[a-z][a-z0-9]*$/;
+const PAPER_SLUG = /^[0-9a-z][0-9a-z-]*$/;
+const PHAGE_KEY = /^[a-z][a-z0-9]*$/;
 
 /**
  * The errors in a `proof_of_use` value, or none.

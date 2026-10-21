@@ -32,7 +32,7 @@ const MODEL_FILE = fileURLToPath(new URL("../../data/system-model.json", import.
 let memo = null;
 
 /** Every layer, as the asset's JSON, and the asset's file name, for the model as it is on disk. */
-export function systemInsides() {
+function systemInsides() {
   const bytes = readFileSync(MODEL_FILE, "utf8");
   if (memo?.bytes === bytes) return memo;
   const model = loadSystemModel(JSON.parse(bytes));
@@ -47,7 +47,7 @@ export function systemInsides() {
  * The module's source: every layer by id for the server, none for the client, and the asset's URL under Vite's base.
  * @param {string} base @param {boolean} [client]
  */
-export function systemInsidesSource(base, client = false) {
+function systemInsidesSource(base, client = false) {
   const { json, fileName } = systemInsides();
   return `export const INSIDE_LAYERS = ${client ? "{}" : json};\nexport const INSIDES_URL = ${JSON.stringify(`${base}${fileName}`)};\n`;
 }

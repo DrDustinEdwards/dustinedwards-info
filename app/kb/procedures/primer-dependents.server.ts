@@ -29,7 +29,7 @@ const NAMED_IN = {
 export type NamedKind = keyof typeof NAMED_IN;
 
 /** The slugs of the procedures whose stored record names one of these items (of these kinds), or any item of the kinds when `ids` is null. */
-export async function procedureSlugsNaming(env: ProcedureEnv, ids: string[] | null, kinds: NamedKind[] = ["primer"]): Promise<string[]> {
+async function procedureSlugsNaming(env: ProcedureEnv, ids: string[] | null, kinds: NamedKind[] = ["primer"]): Promise<string[]> {
   const wanted = ids === null ? null : new Set(ids);
   const slugs = new Set<string>();
   for (const kind of kinds) {

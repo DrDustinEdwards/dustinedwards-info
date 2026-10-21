@@ -5,7 +5,7 @@ import { stripComments, stripTsxComments } from "./strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export const ROUTES_DIR = join(root, "app", "routes");
+const ROUTES_DIR = join(root, "app", "routes");
 
 /**
  * Route module file names, sorted, whose source with comments stripped matches `pattern`. Stripped
@@ -16,7 +16,7 @@ export const ROUTES_DIR = join(root, "app", "routes");
  * @param {{ ts?: boolean }} [options] `ts` includes the `.ts` resource routes alongside the `.tsx` pages
  * @returns {string[]}
  */
-export function routesMatching(pattern, { ts = false } = {}) {
+function routesMatching(pattern, { ts = false } = {}) {
   return readdirSync(ROUTES_DIR)
     .filter((name) => name.endsWith(".tsx") || (ts && name.endsWith(".ts")))
     .filter((name) => {

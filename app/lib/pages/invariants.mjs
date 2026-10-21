@@ -198,7 +198,7 @@ function softwareNameErrors({ path, markdown }) {
 }
 
 /** The least HTML About may render: below it the page is a blank one that still looks like a successful build. */
-export const ABOUT_HTML_FLOOR = 200;
+const ABOUT_HTML_FLOOR = 200;
 
 /**
  * About (check:content used to render it twice and hold it to this floor, and check:links held its links):

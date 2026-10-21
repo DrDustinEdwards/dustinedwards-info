@@ -43,7 +43,7 @@ export async function isAdminViewer(env: Env, request: Request): Promise<boolean
   return (await accessIdentity(env, request)).kind === "human";
 }
 
-export const LOCAL_DEV_EMAIL = "dev@localhost";
+const LOCAL_DEV_EMAIL = "dev@localhost";
 
 export async function accessIdentity(env: Env, request: Request, keys: TeamKeys = accessKeys): Promise<AccessIdentity> {
   // The header is added only on paths the Access application covers (/admin). The same token also

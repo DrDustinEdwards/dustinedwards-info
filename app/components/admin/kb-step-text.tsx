@@ -20,7 +20,7 @@ type Chip = Exclude<Piece, { kind: "text" }>;
 const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /** The step as the editor's markup: its words as text, each mark a chip that carries the text it was read from. */
-export function chipHtml(text: string) {
+function chipHtml(text: string) {
   return stepPieces(text)
     .map((piece) => {
       if (piece.kind === "text") return escape(piece.raw);

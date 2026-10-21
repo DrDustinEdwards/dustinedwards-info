@@ -17,7 +17,7 @@ export const CSP_ENDPOINT_NAME = "csp-endpoint";
  * @param {string} pathname
  * @returns {boolean}
  */
-export function isAdminPath(pathname) {
+function isAdminPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
@@ -28,7 +28,7 @@ export function isAdminPath(pathname) {
  * @param {string} pathname
  * @returns {boolean}
  */
-export function isLabPath(pathname) {
+function isLabPath(pathname) {
   return pathname === "/lab" || pathname.startsWith("/lab/");
 }
 
@@ -50,7 +50,7 @@ export function isPrivatePath(pathname) {
  * @param {string} pathname
  * @returns {boolean}
  */
-export function isMediaPath(pathname) {
+function isMediaPath(pathname) {
   return pathname === "/media" || pathname.startsWith("/media/");
 }
 

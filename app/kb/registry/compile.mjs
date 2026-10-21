@@ -21,7 +21,7 @@ export const REGISTRY_DIR = "content/registry";
 export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}$/;
 /** A kind is a key of KINDS: the same shape, so it is a directory and a URL segment as written. */
 const KIND_PATTERN = /^[a-z][a-z-]{0,30}$/;
-export const NAME_MAX = 120;
+const NAME_MAX = 120;
 
 const GAP = /^MISSING:\s*(\S.*)$/s;
 

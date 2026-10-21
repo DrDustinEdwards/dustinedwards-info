@@ -48,14 +48,14 @@ export const HOSTS = Object.freeze({
 });
 
 /** The table's columns, in order: the header the page has always had. */
-export const TABLE_HEADER = "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
+const TABLE_HEADER = "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
 
 const STATE = "Texas";
 const FIELDS = ["name", "year", "host", "county", "phagesdb", "paper", "formerly", "note", "genome_bp", "genes"];
 const REQUIRED = ["name", "year", "host", "county", "phagesdb"];
 
 /** A phage's name: letters and digits, so its lower-case form is the file key, the heading id and the old address. */
-export const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
+const NAME_PATTERN = /^[A-Za-z][A-Za-z0-9]*$/;
 const SLUG_PATTERN = /^[a-z][a-z0-9]*$/;
 /** A PhagesDB record name, as the PhagesDB address spells it. */
 const PHAGESDB_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
@@ -252,7 +252,7 @@ export function phageTableMarkdown(/** @type {Phage[]} */ phages) {
 }
 
 /** The sections' text: one per phage, in the page's order, no trailing newline. */
-export function phageSectionsMarkdown(/** @type {Phage[]} */ phages) {
+function phageSectionsMarkdown(/** @type {Phage[]} */ phages) {
   return sortPhages(phages).map(phageSection).join("\n\n");
 }
 
@@ -272,7 +272,7 @@ function yearsText(years) {
  *
  * @param {Phage[]} phages
  */
-export function phageFacts(phages) {
+function phageFacts(phages) {
   const years = phages.map((p) => p.year);
   /** @type {Record<string, { count: number, firstYear: number, lastYear: number, years: string }>} */
   const host = {};

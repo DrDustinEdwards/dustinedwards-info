@@ -6,7 +6,7 @@
  * they are not formal taxa.
  */
 
-export const ORGANISMS: readonly string[] = [
+const ORGANISMS: readonly string[] = [
   "Meleagris gallopavo intermedia",
   "Meleagris gallopavo silvestris",
   "Tympanuchus cupido attwateri",

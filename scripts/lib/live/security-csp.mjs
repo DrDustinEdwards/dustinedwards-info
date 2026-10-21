@@ -14,7 +14,7 @@ import { check, get } from "./client.mjs";
  * @param {string} html
  * @returns {string[]} each script's text
  */
-export function inlineExecutableScripts(html) {
+function inlineExecutableScripts(html) {
   return [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
     .filter(([, attrs]) => {
       const type = /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "";

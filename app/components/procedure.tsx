@@ -65,7 +65,7 @@ function total(amount: string | null, per: string | null, record: ProcedureRecor
   return m[3] ? `${range} ${m[3]}` : range;
 }
 
-export function ProcedureFacts({ record, lineage = null }: { record: ProcedureRecord; lineage?: Lineage | null }) {
+function ProcedureFacts({ record, lineage = null }: { record: ProcedureRecord; lineage?: Lineage | null }) {
   const facts: Array<[string, React.ReactNode]> = [];
   const add = (label: string, value: string | number | null | undefined) => {
     if (value !== null && value !== undefined && value !== "") facts.push([label, String(value)]);
@@ -180,7 +180,7 @@ function ReagentSource({ reagent }: { reagent: NonNullable<ProcedureRecord["mate
  * where it comes from and its identifier, grouped as STAR Methods groups them. Drawn from the record, so it never disagrees
  * with the tables above it.
  */
-export function KeyResourcesTable({ groups }: { groups: KeyResourceGroup[] }) {
+function KeyResourcesTable({ groups }: { groups: KeyResourceGroup[] }) {
   return (
     <div className="table-scroll">
       <table className="procedure-materials procedure-key-resources">
@@ -220,7 +220,7 @@ export function KeyResourcesTable({ groups }: { groups: KeyResourceGroup[] }) {
   );
 }
 
-export function EquipmentTable({ record }: { record: ProcedureRecord }) {
+function EquipmentTable({ record }: { record: ProcedureRecord }) {
   const hasMaker = record.equipment.some((e) => e.item);
   const hasRotor = record.equipment.some((e) => e.item && (e.item.rotor || e.item.rotorGap));
   const hasNote = record.equipment.some((e) => e.noteHtml);
@@ -250,7 +250,7 @@ export function EquipmentTable({ record }: { record: ProcedureRecord }) {
   );
 }
 
-export function MaterialsTable({ record, count, factor, units = null }: { record: ProcedureRecord; count: number; factor: number; units?: UnitSystem | null }) {
+function MaterialsTable({ record, count, factor, units = null }: { record: ProcedureRecord; count: number; factor: number; units?: UnitSystem | null }) {
   // A recipe's ingredients say every step they are used in (R2), linked, computed from the steps' marks.
   const usedIn = record.profile === "recipe" ? ingredientSteps(record) : null;
   const showTotal = record.profile === "protocol" && record.scale !== null && record.materials.some((m) => m.per === record.scale?.unit);
@@ -361,7 +361,7 @@ function Flag({ kind, label, children }: { kind: string; label: string; children
   );
 }
 
-export function StepItem({
+function StepItem({
   step,
   factor,
   troubleshooting,
@@ -564,7 +564,7 @@ function Steps({ steps, factor, record, scope, units = null }: { steps: Step[]; 
   );
 }
 
-export function TroubleshootingTable({ record }: { record: ProcedureRecord }) {
+function TroubleshootingTable({ record }: { record: ProcedureRecord }) {
   return (
     <div className="table-scroll">
       <table className="procedure-trouble">

@@ -25,7 +25,7 @@ const CSP_ENDPOINT_NAME = "csp-endpoint";
 /**
  * Each entry is a header sent differently from the standard; a header not listed is OSHP's value.
  */
-export const MCP_HEADER_OVERRIDES: Readonly<Record<string, HeaderOverride>> = Object.freeze({
+const MCP_HEADER_OVERRIDES: Readonly<Record<string, HeaderOverride>> = Object.freeze({
   "Cross-Origin-Opener-Policy": {
     value: null,
     reason:

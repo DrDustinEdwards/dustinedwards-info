@@ -294,7 +294,7 @@ if (existsSync(SHIP)) {
 }
 
 // Ship step ORDER for the derived indexes and the readiness check, read off ship.mjs the way the
-// migration guard above is. Moved from check:policy.
+// migration guard above is.
 {
   const apiSource = stripComments(
     readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),

@@ -15,10 +15,10 @@ import { fileURLToPath } from "node:url";
 import { gzipSync, constants } from "node:zlib";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const ENHANCE_DIR = join(root, "app", "enhance");
+const ENHANCE_DIR = join(root, "app", "enhance");
 
 /** The id `app/` imports the URLs and sizes from. `app/virtual-enhance.d.ts` declares its shape. */
-export const ENHANCE_MODULE_ID = "virtual:enhance";
+const ENHANCE_MODULE_ID = "virtual:enhance";
 const RESOLVED_ID = `\0${ENHANCE_MODULE_ID}`;
 
 /**
@@ -26,7 +26,7 @@ const RESOLVED_ID = `\0${ENHANCE_MODULE_ID}`;
  */
 
 /** @returns {string[]} module names, without the `.ts` */
-export function enhanceModules() {
+function enhanceModules() {
   const names = readdirSync(ENHANCE_DIR)
     .filter((name) => name.endsWith(".ts"))
     .map((name) => name.replace(/\.ts$/, ""))
@@ -44,7 +44,7 @@ export function enhanceModules() {
  *
  * @param {string | Buffer} bytes
  */
-export function contentHash(bytes) {
+function contentHash(bytes) {
   return createHash("sha256").update(bytes).digest("base64url").slice(0, 8);
 }
 
@@ -95,7 +95,7 @@ function findModuleDependency(node) {
  * @param {string} code
  * @returns {Promise<string | null>}
  */
-export async function moduleDependencyOf(code) {
+async function moduleDependencyOf(code) {
   const { parseAst } = await import("vite");
   return findModuleDependency(parseAst(code));
 }
@@ -196,7 +196,7 @@ export function bundleEnhancements() {
 }
 
 /** Drops the memo, so the next reader rebuilds: dev calls it when a source changes. */
-export function forgetEnhancements() {
+function forgetEnhancements() {
   memo = null;
 }
 

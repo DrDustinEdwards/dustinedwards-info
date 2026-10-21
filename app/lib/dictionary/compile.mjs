@@ -9,7 +9,7 @@ import { CONTENT_PAGE_PATHS } from "../content-pages.mjs";
 import { SOFTWARE_LABEL, dictionaryEntryMarkdown, definedTermJsonLd } from "../dictionary-entries.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
 
-export const DICTIONARY_KIND = "dictionary";
+const DICTIONARY_KIND = "dictionary";
 
 /** Every key a file may carry. Anything else is a typo that would be silently ignored. */
 const FRONT_MATTER_FIELDS = new Set([
@@ -21,7 +21,7 @@ const KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const AUDIO_PATTERN = /^\/audio\/[a-z]+\.mp3$/;
 const LANGUAGE_PATTERN = /^[a-z]{2,3}$/;
 /** A pronunciation clip is a few seconds of speech, not a recording. */
-export const AUDIO_MAX_BYTES = 32 * 1024;
+const AUDIO_MAX_BYTES = 32 * 1024;
 
 /**
  * @typedef {object} DictionaryHost

@@ -34,7 +34,7 @@ import { KINDS } from "~/kb/registry/kinds.mjs";
  */
 
 /** One sentence under the inventory's title: how many of what, counted from the rows. */
-export function inventorySentence(rows: InventoryRow[]) {
+function inventorySentence(rows: InventoryRow[]) {
   if (rows.length === 0) return "Nothing is recorded yet.";
   const counts = new Map<string, number>();
   for (const row of rows) counts.set(row.kind, (counts.get(row.kind) ?? 0) + 1);

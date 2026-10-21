@@ -10,7 +10,7 @@
 export const RUN_VERSION = 1;
 
 /** Seconds in each unit a timer mark can use (validate.mjs TIME_UNITS). */
-export const UNIT_SECONDS = Object.freeze(
+const UNIT_SECONDS = Object.freeze(
   /** @type {Record<string, number>} */ ({
     second: 1, seconds: 1, sec: 1, s: 1,
     minute: 60, minutes: 60, min: 60,
@@ -174,7 +174,7 @@ export function stepBeside(keys, key, by) {
 const when = (/** @type {number | null} */ ms) => (ms === null ? "" : new Date(ms).toISOString());
 
 /** The Bioschemas profile a run's download follows (docs/KNOWLEDGE-BASE.md, P4). */
-export const LAB_PROCESS_PROFILE = "https://bioschemas.org/profiles/LabProcess/0.1-DRAFT";
+const LAB_PROCESS_PROFILE = "https://bioschemas.org/profiles/LabProcess/0.1-DRAFT";
 
 /**
  * The saved record as a plain object: what a download is, and what survives the browser. Only what the person

@@ -69,7 +69,7 @@ export type MenuLink = {
 export type MenuRow = { icon: NavIcon; title: string; to?: string; note?: string; links?: MenuLink[] };
 
 /** The one block of the right half. */
-export type Spotlight = {
+type Spotlight = {
   kind: "text" | "map";
   eyebrow: string;
   /** An icon in a round well above the title (Join the lab). */
@@ -141,8 +141,8 @@ function counted(names: string[]) {
 }
 
 /** How many tags the Writing panel lists, and how many series. */
-export const TAGS_SHOWN = 4;
-export const SERIES_SHOWN = 4;
+const TAGS_SHOWN = 4;
+const SERIES_SHOWN = 4;
 
 function researchMenu(): Menu {
   return {
@@ -364,12 +364,6 @@ export const ROUTED_PATHS: readonly string[] = [
   CV_PDF_PATH,
 ];
 
-/**
- * The libraries that are pages only once they hold an entry (app/routes/kb-library.tsx answers 404 to the public
- * for an empty one): Recipes and Software how-tos. Protocols is a listed page and never empty.
- */
-export const LIBRARY_PATHS: readonly string[] = BASES.filter((base) => base.profile !== "protocol").map((base) => base.library);
-
 /** The prefixes whose pages are data: a post, a tag, a series, the newest paper. */
 const POST_PREFIX = "/writing/";
 const TAG_PREFIX = "/writing/tags/";
@@ -383,7 +377,7 @@ const PAPER_PREFIX = "/research/publications/";
  * visible posts have, the newest paper, or another site is live. Anything else is a page not yet written,
  * and its link stays out of the panel until it is.
  */
-export function makeLive(now: number = Date.now()): (to: string) => boolean {
+function makeLive(now: number = Date.now()): (to: string) => boolean {
   const posts = visiblePosts(now);
   const postPaths = new Set(posts.map((post) => `${POST_PREFIX}${post.slug}`));
   const tags = new Set(posts.flatMap((post) => post.tags));

@@ -15,7 +15,7 @@ import { latestAuditId, listMembers, pendingAfter, recordSync, unsyncedRemovals 
  */
 
 export const ACCESS_SYNC_URL = "https://mcp.dustinedwards.info/ops/access-sync";
-export const ACCESS_SYNC_NAMESPACE = "dustinedwards";
+const ACCESS_SYNC_NAMESPACE = "dustinedwards";
 const TIMEOUT_MS = 15_000;
 
 /** What the page says while the site holds no key: the change is recorded and Access is untouched. */

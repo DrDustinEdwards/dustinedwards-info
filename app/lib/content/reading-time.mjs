@@ -17,7 +17,7 @@ export function countWords(markdownText) {
  * @param {number} words
  * @returns {number}
  */
-export function minutesForWords(words) {
+function minutesForWords(words) {
   return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
 }
 

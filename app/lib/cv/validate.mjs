@@ -14,21 +14,21 @@ const AREA_IDS = new Set(AREAS.map(([id]) => /** @type {string} */ (id)));
 const ROLE_IDS = new Set(ROLES.map(([id]) => /** @type {string} */ (id)));
 
 /** The owner, whom every paper the CV claims must list (as the CV's role for it is read from the author list). */
-export const OWNER = "Dustin Edwards";
+const OWNER = "Dustin Edwards";
 
 /** The edition stamp the CV prints: a season and a year, as "Fall 2026". */
-export const EDITION_PATTERN = /^(Spring|Summer|Fall|Winter) (\d{4})$/;
+const EDITION_PATTERN = /^(Spring|Summer|Fall|Winter) (\d{4})$/;
 
 /** Entries are dated between these years, so a typo such as 2205 is refused rather than charted. */
-export const YEAR_MIN = 1950;
-export const YEAR_MAX = 2100;
+const YEAR_MIN = 1950;
+const YEAR_MAX = 2100;
 
 const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const HTTPS = /^https:\/\/\S+$/;
 
 /** The sections an appointment or a service line sits under, in the order the CV prints them. */
-export const APPOINTMENT_SECTIONS = ["Positions", "Administrative and leadership"];
-export const SERVICE_SECTIONS = [
+const APPOINTMENT_SECTIONS = ["Positions", "Administrative and leadership"];
+const SERVICE_SECTIONS = [
   "Department",
   "College",
   "University",
@@ -368,7 +368,7 @@ export function paperRefErrors(entries, byDoi) {
  * an order the twin states for grants. Service and mentoring lines keep the CV's own order within a section (a
  * committee is listed with its chair first, a cohort by program), so the rule does not reach them.
  */
-export const NEWEST_FIRST_TYPES = [
+const NEWEST_FIRST_TYPES = [
   "appointment",
   "education",
   "publication",

@@ -13,10 +13,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const SOURCE_DATES_PATH = path.join(ROOT, "app", "lib", "source-dates.generated.mjs");
+const SOURCE_DATES_PATH = path.join(ROOT, "app", "lib", "source-dates.generated.mjs");
 
 /** The trees a public page is made from: the content, the data files, and the route modules of the coded pages. */
-export const SOURCE_TREES = ["content", "data", "app/routes"];
+const SOURCE_TREES = ["content", "data", "app/routes"];
 
 const git = (/** @type {string[]} */ args, cwd = ROOT) => execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 

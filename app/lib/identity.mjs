@@ -8,8 +8,8 @@
 // Pure and dependency-free, so the build, the CV compile and the tests share one definition.
 
 /** The CV's section of ranks and positions, and its section of headships and other leadership. */
-export const POSITIONS_SECTION = "Positions";
-export const ADMIN_SECTION = "Administrative and leadership";
+const POSITIONS_SECTION = "Positions";
+const ADMIN_SECTION = "Administrative and leadership";
 
 /**
  * "a", "a and b", "a, b, and c".

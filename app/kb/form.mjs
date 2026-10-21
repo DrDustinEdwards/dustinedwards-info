@@ -39,7 +39,7 @@ function plain(value) {
 }
 
 /** Equal as data, whatever order an object's keys came in. @param {unknown} a @param {unknown} b @returns {boolean} */
-export function sameValue(a, b) {
+function sameValue(a, b) {
   if (Array.isArray(a) || Array.isArray(b)) {
     return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => sameValue(x, b[i]));
   }
@@ -177,7 +177,7 @@ function readBlocks(lines) {
  * @param {string} body
  * @returns {FormBody}
  */
-export function readBody(body) {
+function readBody(body) {
   const lines = body.split("\n");
   /** @type {string[]} */
   const intro = [];
@@ -204,7 +204,7 @@ function writeStep(step, number) {
 }
 
 /** The body the form describes. A step list is numbered from where it started, in the order the form put it. @param {FormBody} body */
-export function writeBody(body) {
+function writeBody(body) {
   const parts = [body.intro];
   for (const section of body.sections) {
     const lines = [`## ${section.heading}`];

@@ -78,20 +78,3 @@ export function pageRecordParity({ ok, artifactRecords }, docUid, { kind, page, 
   }
   return records;
 }
-
-/**
- * A page reads its list from content/ and its anchors from the module the indexer uses, so neither
- * can be a second copy.
- *
- * @param {FeaturesContext["ok"]} ok
- * @param {string} source the route, comments stripped
- * @param {{ route: string, list: string, json: string, reads: RegExp, noun: string, anchorFn: string, anchorModule: RegExp }} page
- */
-export function pageReadsItsList(ok, source, { route, list, json, reads, noun, anchorFn, anchorModule }) {
-  ok(`the page imports the ${list} rather than restating it`, reads.test(source), `app/routes/${route} must read content/${json}`);
-  ok(
-    `the page derives ${noun} anchors from ${anchorFn}`,
-    source.includes(`${anchorFn}(`) && anchorModule.test(source),
-    "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
-  );
-}

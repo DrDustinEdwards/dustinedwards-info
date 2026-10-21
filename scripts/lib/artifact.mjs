@@ -49,7 +49,7 @@ export function serializeArtifact(posts, pages, papers) {
 }
 
 /** The content artifact on disk, as build:content writes it. */
-export const ARTIFACT_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "content", "generated", "posts.json");
+const ARTIFACT_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "content", "generated", "posts.json");
 
 /** @type {any} */
 let parsed;

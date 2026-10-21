@@ -29,7 +29,7 @@ export const SHOWCASE_TYPES = new Set([
   "teaching-resource",
 ]);
 
-export const PUBLICATIONS_BASE = "/research/publications";
+const PUBLICATIONS_BASE = "/research/publications";
 
 const TYPE_LABELS = /** @type {Record<string, string>} */ ({
   article: "Article",

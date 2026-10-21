@@ -17,14 +17,6 @@ const MARK = (
   </>
 );
 
-export function SiteLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 375 375" aria-hidden="true" focusable="false">
-      {MARK}
-    </svg>
-  );
-}
-
 // The viewBox and intrinsic size are copied from dustin-edwards-logo-header.svg.
 export function SiteLogoHeader({ className }: { className?: string }) {
   return (

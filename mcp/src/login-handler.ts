@@ -13,7 +13,7 @@
  * Foxing Admin use them: each is bound to this browser by a cookie the library
  * sets and works once, so another site cannot submit consent or replay a
  * callback. The PKCE verifier and nonce travel in the upstream state,
- * server-side; until 2026-10-20 they rode in an unsigned cookie.
+ * server-side.
  *
  * Access rather than dustinedwards.info's own Better Auth: this server's
  * identity stays independent of the site's Google project, so a change there

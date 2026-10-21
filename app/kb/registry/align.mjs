@@ -8,13 +8,13 @@
 // chromosome, so a reader can check a position against the record at NCBI.
 
 import { amplicons, findSites } from "../../lib/primers.mjs";
-import { accessionPosition, parseReference } from "./reference.mjs";
+import { accessionPosition } from "./reference.mjs";
 import { REFERENCES } from "./references.generated.mjs";
 
 /** The most mismatches a primer may have against a reference and still be placed. A primer is 16 to 30 bases. */
 export const MAX_MISMATCHES = 4;
 /** A product longer than this is not a PCR product here; the registry's references are short or the primers sit close. */
-export const MAX_PRODUCT = 5000;
+const MAX_PRODUCT = 5000;
 
 /**
  * @typedef {import("./reference.mjs").Reference} Reference
@@ -38,7 +38,7 @@ export const MAX_PRODUCT = 5000;
  */
 
 /** The reference an id names, or null. @param {string} id @param {Record<string, Reference>} [references] */
-export function referenceFor(id, references = /** @type {any} */ (REFERENCES)) {
+function referenceFor(id, references = /** @type {any} */ (REFERENCES)) {
   const found = references[id];
   return found ? parseReferenceShape(found) : null;
 }
@@ -114,7 +114,6 @@ export function pairProducts(forward, reverse, referenceId, references = /** @ty
   return found.length === 0 ? null : { reference: f.reference, products: found };
 }
 
-export { parseReference };
 
 /**
  * The products a protocol's primers make, computed, for the primer table of a page, sheet or twin: each set that holds one

@@ -43,7 +43,7 @@ export function listenLabel(term) {
 }
 
 /** @param {DictionaryEntry} entry */
-export function etymologyText(entry) {
+function etymologyText(entry) {
   return entry.etymology.map((part) => (typeof part === "string" ? part : part[1])).join("");
 }
 

@@ -15,7 +15,7 @@ export const KB_ADMIN_PATH = "/admin/kb";
 export const entryEditHref = (slug) => `${KB_ADMIN_PATH}/entry/${slug}`;
 
 /** Where a registry item's file is edited (step 3). @param {string} kind @param {string} id */
-export const itemEditHref = (kind, id) => `${KB_ADMIN_PATH}/item/${kind}/${id}`;
+const itemEditHref = (kind, id) => `${KB_ADMIN_PATH}/item/${kind}/${id}`;
 
 /** The tab that lists every gap, beside one tab per base. */
 export const NEEDS_INFO = "needs-info";
