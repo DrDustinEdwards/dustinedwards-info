@@ -1,7 +1,7 @@
 import { countOpenWebmentions, receiveWebmention, webmentionTarget } from "~/db";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
-import { readCapped } from "~/lib/read-capped.mjs";
+import { readCapped } from "@dustinedwards/site-runtime/body";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import type { WebmentionVerifyMessage } from "~/lib/webmention/queue";

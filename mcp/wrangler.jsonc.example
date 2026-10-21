@@ -76,11 +76,9 @@
 		}
 	],
 
-	// The wrapper's own rate limiter. A Durable Object with the SYNCHRONOUS SQLite
-	// API, because that is the only mechanism measured on this account to actually
-	// count: the GA ratelimit binding sheds load permissively, and a DO using
-	// async storage.get then storage.put is not atomic across the await. See
-	// src/rate-limit.ts for the numbers.
+	// The wrapper's own rate limiter, the shared site-runtime one: a Durable Object
+	// with the SYNCHRONOUS SQLite API, the only mechanism measured on this account
+	// to actually count.
 	"durable_objects": {
 		"bindings": [
 			{

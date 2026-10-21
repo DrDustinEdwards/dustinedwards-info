@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 
 import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
-import { readCapped } from "~/lib/read-capped.mjs";
+import { readCapped } from "@dustinedwards/site-runtime/body";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";

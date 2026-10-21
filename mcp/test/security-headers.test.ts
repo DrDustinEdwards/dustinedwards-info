@@ -158,7 +158,7 @@ describe("security headers", () => {
     const limiter = (allowed: boolean) => ({
       OPERATOR_RATE_LIMIT: {
         idFromName: (name: string) => (asked.push(name), name),
-        get: () => ({ fetch: async () => Response.json({ allowed, retryAfter: 0 }) }),
+        get: () => ({ hit: async () => ({ ok: allowed, used: 1, limit: 60, retryAfterSeconds: 0, window: 60 }) }),
       } as never,
     });
     const report = () =>
