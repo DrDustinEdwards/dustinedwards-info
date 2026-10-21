@@ -12,6 +12,7 @@ import { readPublishedPages } from "../lib/published-pages.mjs";
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY, llmsChecks } from "../../app/lib/llms/validate.mjs";
 import { publishedProcedurePaths } from "../lib/procedure-paths.mjs";
+import { SITE_ORIGIN as origin } from "../../app/lib/site-origin.mjs";
 
 // Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -39,13 +40,6 @@ const fileText = fileBytes.toString("utf8");
 
 // The rules a save also holds the file to (app/lib/llms/validate.mjs), judged against the same lists the
 // routes and the sitemap read: the pages, the procedures (pages too, drawn from D1) and, below, SITE_ORIGIN.
-const seoSource = readFileSync(fromRoot("app/lib/seo.ts"), "utf8");
-const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
-ok(
-  "SITE_ORIGIN was read out of seo.ts",
-  origin.startsWith("https://"),
-  `parsed ${JSON.stringify(origin)}; without it the comparison below is vacuous`,
-);
 for (const check of llmsChecks(fileText, {
   pagePaths: [...publishedContentPagePaths(readPublishedPages()), ...publishedProcedurePaths()],
   // A draft page may be listed ahead of its publish, and need not be.

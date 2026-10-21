@@ -4,6 +4,7 @@
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
 import { decodeEntities } from "./entities.mjs";
+import { SITE_ORIGIN } from "../site-origin.mjs";
 
 export { canonicalAuthor };
 
@@ -183,7 +184,7 @@ export function toCslJson(cslRecords) {
 function header(comment, count) {
   return [
     `${comment} ${count} works by Dustin Edwards.`,
-    `${comment} Generated from https://dustinedwards.info/research/publications`,
+    `${comment} Generated from ${SITE_ORIGIN}/research/publications`,
     `${comment} Bibliographic data from Crossref and DataCite. No generation date:`,
     `${comment} this file is a function of the corpus, so it changes only when the`,
     `${comment} corpus does.`,

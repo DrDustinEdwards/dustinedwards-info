@@ -5,6 +5,7 @@ import { getDb } from "~/db/client";
 import { publicationCitations } from "~/db/schema";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 
 // Per DOI only: the OpenAlex author endpoint has works by other people merged into it.
 //
@@ -17,7 +18,6 @@ import { errorMessage } from "~/lib/error-message.mjs";
 const STALE_AFTER_DAYS = 7;
 // A name, not an address: OpenAlex dropped the `mailto` pool, and a secrets gate reads this whole
 // file, comments included, so do not quote the address here either.
-const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 export type CitationEntry = {
   count: number;
@@ -61,7 +61,7 @@ async function fetchOne(
   };
 
   try {
-    const res = await fetch(url, { headers: { "user-agent": USER_AGENT } });
+    const res = await fetch(url, { headers: { "user-agent": SITE_USER_AGENT } });
     if (!res.ok) {
       // 401 and 403 are configuration (a revoked or wrong key), and name it so; a 404 is a DOI
       // OpenAlex does not hold.

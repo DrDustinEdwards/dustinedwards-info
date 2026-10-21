@@ -4,6 +4,7 @@ import { canonicalLink } from "~/lib/markdown-twin";
 import { LLMS_CACHE_TAG, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
 import llmsTxt from "../../content/llms.txt?raw";
 import type { Route } from "./+types/llms";
+import { HOURLY_CACHE_CONTROL } from "~/lib/seo";
 
 /**
  * The content file itself, inlined by Vite, so the fallback cannot drift from what the sync writes.
@@ -20,7 +21,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       "x-robots-tag": "noindex",
       // The site it describes: a crawler that lands here is pointed at the page people read.
       link: canonicalLink("/"),
-      "cache-control": "public, max-age=3600",
+      "cache-control": HOURLY_CACHE_CONTROL,
       // A save through Carrel purges this tag, so the edge serves the edit without waiting out the hour.
       "cache-tag": LLMS_CACHE_TAG,
     },

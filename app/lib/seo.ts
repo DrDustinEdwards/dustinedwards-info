@@ -6,10 +6,9 @@ import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
 import { paperPath } from "./publications/paths.mjs";
 
-/**
- * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
- */
-export const SITE_ORIGIN = "https://dustinedwards.info";
+import { SITE_ORIGIN } from "./site-origin.mjs";
+
+export { SITE_ORIGIN };
 
 /** The `license` of every Dataset: the site's terms page (app/lib/license.mjs). */
 export const LICENSE_URL = `${SITE_ORIGIN}${TERMS_PATH}`;
@@ -132,6 +131,12 @@ export function profilePageJsonLd(origin: string, page: { path: string; descript
  * Cloudflare (RFC 9111 4.2.4). Browser max-age stays 0 because purges cannot reach a browser.
  */
 export const SHARED_CACHE_CONTROL = "public, max-age=0";
+
+/** A response whose address changes when its bytes do (hashed media, uploads). */
+export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+/** The small text files crawlers read (robots.txt, security.txt, llms.txt). */
+export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
 /**
  * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that

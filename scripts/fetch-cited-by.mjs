@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { readDevVar } from "./lib/dev-vars.mjs";
 import { buildPublications } from "./lib/publications.mjs";
+import { SITE_USER_AGENT } from "../app/lib/site-origin.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(root, "data", "publications.cited-by.json");
@@ -13,7 +14,6 @@ const OUT_PATH = join(root, "data", "publications.cited-by.json");
 const MAX_CITING = 50;
 
 /** Not an email address, for the reason citations.server.ts gives. */
-const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -44,7 +44,7 @@ async function main() {
   const get = async (/** @type {URL} */ url) => {
     url.searchParams.set("api_key", apiKey);
     await sleep(120);
-    const res = await fetch(url, { headers: { "user-agent": USER_AGENT } });
+    const res = await fetch(url, { headers: { "user-agent": SITE_USER_AGENT } });
     return { status: res.status, body: res.ok ? await res.json() : null };
   };
 

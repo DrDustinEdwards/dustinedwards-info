@@ -3,6 +3,7 @@ import { classify, contentKey, roleOf } from "./classify.mjs";
 import { measureDimensions } from "./core.server";
 import { ALLOWED, validateUpload } from "./upload-contract.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
 
 // `type` is the caller's claim: checked against `ALLOWED`, never sniffed.
 type UploadInput = {
@@ -63,7 +64,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   await env.MEDIA.put(key, file.bytes, {
     httpMetadata: {
       contentType: file.type,
-      cacheControl: "public, max-age=31536000, immutable",
+      cacheControl: IMMUTABLE_CACHE_CONTROL,
     },
     // On the object, not only the row: R2 is the truth and D1 must be re-derivable from it.
     customMetadata: { originalName: file.name },
