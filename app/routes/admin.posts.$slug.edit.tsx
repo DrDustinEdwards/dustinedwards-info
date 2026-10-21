@@ -22,7 +22,7 @@ import { previewLinkAction } from "~/lib/editor/preview-link-action.server";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
-import { stateOf } from "~/lib/editor/publish-transition.mjs";
+import { stateOf } from "capsomer/publish-transition";
 import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
 import { readHead } from "~/lib/editor/head.server";
 import { postPath } from "~/lib/content/slug.mjs";
