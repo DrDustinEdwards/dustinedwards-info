@@ -8,7 +8,7 @@ description: How to get work from a clean gate run onto the deployed site on dus
 The deploy CONTRACT is `scripts/ship.mjs`, and it is not restated here: what
 ship refuses and why lives there, and `.claude/hooks/no-direct-deploy.sh`
 refuses every other way to deploy. This is the PROCEDURE around it.
-Every change lands by pull request (portfolio rule 9); nothing is pushed to main.
+Every change lands by pull request; nothing is pushed to main.
 
 ## The order
 
@@ -22,7 +22,7 @@ Every change lands by pull request (portfolio rule 9); nothing is pushed to main
    Portal see the PR. If it changes anything a visitor would see (copy, layout, a page, a
    color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and stop:
    it waits for Dustin's yes on the Worker Preview link or on shots. Say so in the PR.
-4. Otherwise, merge it once CI is green on its exact head (portfolio rule 4.3). Capsid's signed auto-merge or the seat may merge it first.
+4. Otherwise, merge it once CI is green on its exact head. Capsid's signed auto-merge or the seat may merge it first.
 5. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
    runs `npm run ship` on that exact sha. Watch that run (`gh run list --workflow
    deploy.yml`) and write the report below from its log. If Dustin has set the
