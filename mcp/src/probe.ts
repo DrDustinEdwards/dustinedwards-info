@@ -129,6 +129,9 @@ async function record(env: ProbeEnv, request: Request, body: unknown): Promise<v
   });
 }
 
+/** The largest request body a capture keeps whole (Grok audit 2026-10-21, DE-5). */
+const MAX_CAPTURED_BODY = 16_384;
+
 export async function handleProbe(request: Request, env: ProbeEnv, _origin: string): Promise<Response> {
   const path = new URL(request.url).pathname.replace(/^\/probe/, "") || "/";
 
@@ -138,10 +141,15 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
   let body: unknown = null;
   if (request.method === "POST") {
     const raw = await request.text();
-    try {
-      body = raw ? JSON.parse(raw) : null;
-    } catch {
-      body = { UNPARSEABLE: raw.slice(0, 500) };
+    if (raw.length > MAX_CAPTURED_BODY) {
+      // A real MCP request is a few hundred bytes; a body this large is stored as its size and a prefix.
+      body = { OVERSIZED: raw.length, start: raw.slice(0, 500) };
+    } else {
+      try {
+        body = raw ? JSON.parse(raw) : null;
+      } catch {
+        body = { UNPARSEABLE: raw.slice(0, 500) };
+      }
     }
   }
 

@@ -17,13 +17,13 @@
   "devDependencies": {
     "@modelcontextprotocol/conformance": "0.2.0-alpha.10",
     "typescript": "6.0.3",
-    "wrangler": "4.151.1"
+    "wrangler": "4.151.3"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.1.0",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.7.0",
-    "@modelcontextprotocol/server": "2.0.0",
-    "agents": "0.20.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "0.29.0",
     "zod": "4.4.3"
   },
   "overrides": {
