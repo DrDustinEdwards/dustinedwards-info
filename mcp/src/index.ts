@@ -253,6 +253,22 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
   // authentication would defeat it. It exposes one no-op tool and has no route
   // to the operator API.
   if (url.pathname.startsWith("/probe")) {
+    // Every capture is a KV write anyone can trigger, so it is metered per address like /register
+    // (Grok audit 2026-10-21, DE-5). Its health answer writes nothing and stays open.
+    if (url.pathname !== "/probe/health") {
+      const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+      const limit = await checkRateLimit(env, `probe:${ip}`);
+      if (!limit.allowed) {
+        return new Response("Rate limited.", {
+          status: 429,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "retry-after": String(limit.retryAfter),
+          },
+        });
+      }
+    }
     return handleProbe(request, env, url.origin);
   }
 

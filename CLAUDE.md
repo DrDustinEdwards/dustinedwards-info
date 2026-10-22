@@ -7,7 +7,7 @@ Current state is `dustinedwards/core.md`. Procedure is `.claude/skills/`. Histor
 ## Rules
 
 - Tests: keep the minimal set (a few browser tests for flows that must never break, one integration test per real behaviour, unit tests only for tricky logic, shared code tested once where it lives), and remove any test that pins design, repeats coverage or has never caught a real mistake, unless it guards a harm that cannot be undone.
-- The site stores no visitor data (no IP address, cookie, identifier or third-party tracker, and a logged search keeps only its query and date), traces stay off so preview addresses never reach a third party, and anything new it records is named on the privacy page.
+- The site stores no visitor data (no IP address, cookie, identifier or third-party tracker, and a logged search keeps only its query and date; Cloudflare Web Analytics, which the privacy page names, is the one outside script), traces stay off so preview addresses never reach a third party, and anything new it records is named on the privacy page.
 
 ## Commands
 

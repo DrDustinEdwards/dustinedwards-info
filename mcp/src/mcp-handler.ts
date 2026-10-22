@@ -39,7 +39,11 @@ const INSTRUCTIONS =
  */
 function buildServer(env: ToolEnv, caller: Caller | undefined) {
   return () => {
-    const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS });
+    const server = new McpServer(SERVER_INFO, {
+      instructions: INSTRUCTIONS,
+      // Bounds the elements a tool input may hold (GHSA-46jr-4wx8-v453; Grok audit 2026-10-21, DE-4).
+      maxToolInputElements: 10_000,
+    });
     for (const tool of TOOLS) {
       server.registerTool(tool.name, tool.config, (args: Record<string, unknown>) =>
         invokeTool(env, caller, tool, args ?? {}),

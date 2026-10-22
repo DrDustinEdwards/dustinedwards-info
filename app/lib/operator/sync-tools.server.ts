@@ -135,9 +135,19 @@ export async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
 }
 
 // Derives its work from the same comparison the health check uses, and every drifted slug goes through
-// the one render door.
+// the one render door. An empty listing is refused as convergeKind refuses it: content/posts answering
+// with no markdown is a fault, and honouring it would delete every post row (Grok audit 2026-10-21, DE-1).
 export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   const before = await readContentSides(env);
+  if (before.files.length === 0) {
+    return {
+      ok: false,
+      status: 422,
+      error:
+        "sync_posts refused: content/posts lists no post files, and converging to an empty set " +
+        "would delete every post row. Check the repository listing.",
+    };
+  }
   const drift = contentDriftCompare(before.files, before.rows);
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));

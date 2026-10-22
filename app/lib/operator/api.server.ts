@@ -569,11 +569,24 @@ async function getPublicationTool(env: OperatorEnv, args: Record<string, unknown
  * 502 whose detail names each DOI that kept its old count, and the counts that did refresh are stored.
  */
 async function refreshCitationsTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const published = (await listPublishedPublications(env)).flatMap((p) => (p.doi ? [p.doi] : []));
   let dois: string[];
   if (args.dois === undefined) {
-    dois = (await listPublishedPublications(env)).flatMap((p) => (p.doi ? [p.doi] : []));
+    dois = published;
   } else if (Array.isArray(args.dois) && args.dois.every((d) => typeof d === "string" && d.trim() !== "")) {
-    dois = args.dois as string[];
+    // Only a paper the site lists has a count to show, so any other DOI would store an orphan row and
+    // spend an outbound call (Grok audit 2026-10-21, DE-7).
+    const key = (doi: string) => doi.trim().toLowerCase();
+    const listed = new Set(published.map(key));
+    const unlisted = (args.dois as string[]).filter((d) => !listed.has(key(d)));
+    if (unlisted.length > 0) {
+      return {
+        ok: false,
+        status: 400,
+        error: `refresh_citations refreshes only published papers' DOIs; not published: ${unlisted.slice(0, 5).join(", ")}.`,
+      };
+    }
+    dois = [...new Set((args.dois as string[]).map(key))];
   } else {
     return { ok: false, status: 400, error: "refresh_citations takes dois as a list of DOI strings, or none." };
   }
