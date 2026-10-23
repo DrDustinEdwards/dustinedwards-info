@@ -72,7 +72,8 @@ await test("the map draws every system once, linking to no page of its own", () 
   assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
   // One page: choosing a system shows it in place, so no system links away.
   assert.deepEqual(data.systems.map((s) => s.href), [undefined, undefined, undefined, undefined]);
-  assert.deepEqual(data.systems.map((s) => s.tag), [undefined, "shared", "product", "product"]);
+  assert.deepEqual(data.systems.map((s) => s.tag), [undefined, "shared", "app", "app"]);
+  assert.deepEqual(data.systems.map((s) => s.group), [undefined, undefined, "Apps", "Apps"]);
   const hidden = data.systems.find((s) => s.id === "hidden");
   assert.equal(hidden.private, true);
   assert.equal(hidden.description, "Kept private.");
