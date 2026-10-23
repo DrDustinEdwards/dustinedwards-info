@@ -77,7 +77,7 @@
 #                           Worker's bindings: same bindings, same compat date
 #                           and flags, same durable object migrations,
 #                           placeholder ids. postinstall copies it into place on
-#                           a fresh clone (scripts/bootstrap-config.mjs).
+#                           a fresh clone (devkit-bootstrap).
 #   .dev.vars               ignored, always. Secrets are `wrangler secret`.
 #
 # The example never carries a real id. Adding a binding to wrangler.jsonc means

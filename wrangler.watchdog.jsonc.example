@@ -3,7 +3,7 @@
  *
  * Copy to wrangler.watchdog.jsonc and fill in the real alert address. The real
  * file is gitignored; secrets are set with `wrangler secret put`, never here.
- * `scripts/bootstrap-config.mjs` copies this into place on install, and
+ * `devkit-bootstrap` (the postinstall) copies this into place on install, and
  * Keep the two in step in both directions.
  *
  *   npx wrangler deploy -c wrangler.watchdog.jsonc

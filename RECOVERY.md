@@ -33,7 +33,7 @@ true is that THIS runbook said `npm install`, which does re-resolve, so the one
 documented path a new engineer follows was the one path where a fresh malicious
 patch inside an existing `^` range would be picked up. CI already used `npm ci`.
 
-`npm ci` runs `scripts/bootstrap-config.mjs`, which copies
+`npm ci` runs `devkit-bootstrap`, which copies
 `wrangler.jsonc.example` to `wrangler.jsonc` if and only if no config exists. It
 never overwrites. The copy carries **placeholder resource ids**, so it is enough
 to typecheck and deliberately not enough to deploy. You will replace two of those

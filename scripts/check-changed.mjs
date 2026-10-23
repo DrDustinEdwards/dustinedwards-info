@@ -148,9 +148,9 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
-    /* check-postinstall reads package.json's scripts and runs the types step against a stub. */
+    /* devkit-bootstrap --check reads package.json's scripts for a bare `wrangler types`. */
     what: "the install step",
-    test: /^(scripts\/(wrangler-types|bootstrap-config|check-postinstall)\.mjs|package\.json)$/,
+    test: /^package\.json$/,
     gates: ["check:postinstall"],
   },
   {
