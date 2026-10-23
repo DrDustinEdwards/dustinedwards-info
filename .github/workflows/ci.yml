@@ -8,7 +8,7 @@
 # WHAT THE CLEAN CHECKOUT ACTUALLY REVEALED, measured 2026-08-20 by extracting
 # HEAD, running `npm ci` in it and running the offline tier there: 22 passed,
 # 4 failed. `npm ci` needs no Cloudflare credentials, because `postinstall`
-# runs `bootstrap-config.mjs && wrangler types`, which writes a wrangler.jsonc
+# runs `devkit-bootstrap` (copy the example, then wrangler types), which writes a wrangler.jsonc
 # from the tracked example and generates worker-configuration.d.ts locally. So
 # CI reaches a typechecking state with no secrets at all, and this workflow
 # declares none.
