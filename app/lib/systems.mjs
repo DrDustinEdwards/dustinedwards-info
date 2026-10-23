@@ -213,9 +213,13 @@ export const explorerLabel = (id) => `${new URL(EXPLORER_ORIGIN).host}/s/${id}`;
 
 // The word under a capsomer's name. A private system shows "private" (Capsomer adds it).
 /** @type {Record<ModelSystem["family"], string>} */
-const FAMILY_WORD = { system: "system", writing: "writing", product: "product", plumbing: "plumbing", site: "site" };
+// The word under a system and the group it is drawn in, in a stranger's words (Dustin, 2026-10-23:
+// like goes with like, and the map should explain itself). An admin MCP sits in its app's group
+// and says so.
+const FAMILY_WORD = { system: "tool", writing: "writing", product: "app", plumbing: "tool", site: "site" };
+const FAMILY_GROUP = { system: "Tools", writing: "Writing", product: "Apps", plumbing: "Tools", site: "Websites" };
 /** @param {ModelSystem} s */
-const tagOf = (s) => (s.ring === "core" ? undefined : s.ring === "shared" ? "shared" : FAMILY_WORD[s.family]);
+const tagOf = (s) => (s.ring === "core" ? undefined : s.ring === "shared" ? "shared" : s.id.endsWith("-mcp") ? "admin" : FAMILY_WORD[s.family]);
 
 /**
  * What Capsomer's map draws: every system, with no link of its own, since choosing one shows its
@@ -233,6 +237,7 @@ export function mapData(model) {
       ring: s.ring,
       private: s.private,
       tag: tagOf(s),
+      group: s.ring === "used" ? FAMILY_GROUP[s.family] : undefined,
       description: s.description,
       domain: s.domain || undefined,
     })),
