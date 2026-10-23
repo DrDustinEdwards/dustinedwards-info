@@ -7,7 +7,8 @@ import { MarkdownEditor } from "capsomer/react/markdown-editor";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList } from "capsomer/react/row-list";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
+import { crumbLink } from "~/components/admin/shell-parts";
 import type { KbFile, KbGap } from "~/kb/editor.server";
 
 /** What the action hands back: a check's verdict, or a save that did not land, with the text the reader sent. */
@@ -88,6 +89,7 @@ export function KbFileEditor({
   return (
     <div className="app-page">
       <PageHead
+        renderLink={crumbLink}
         crumbs={[
           { label: "Knowledge Base", href: "/admin/kb" },
           { label: file.group, href: file.listHref },

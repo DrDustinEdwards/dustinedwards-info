@@ -5,7 +5,8 @@ import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
+import { crumbLink } from "~/components/admin/shell-parts";
 import { KbCheckSave, type KbEditorActionData } from "~/components/admin/kb-file-editor";
 import type { KbFile } from "~/kb/editor.server";
 import type { FormBody, FormModel } from "~/kb/form.mjs";
@@ -234,6 +235,7 @@ export function KbFormEditor({
   return (
     <div className="app-page">
       <PageHead
+        renderLink={crumbLink}
         crumbs={[
           { label: "Knowledge Base", href: "/admin/kb" },
           { label: file.group, href: file.listHref },

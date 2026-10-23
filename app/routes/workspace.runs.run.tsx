@@ -2,7 +2,8 @@ import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
+import { crumbLink } from "~/components/admin/shell-parts";
 import { LabTable, Result } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
 import { labActorContext } from "~/lab/actor.server";
@@ -42,7 +43,7 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
   const { run, lots, procedures, allLots, canCorrect, lotRows } = loaderData;
   return (
     <>
-      <PageHead crumbs={[{ label: "Runs", href: "/lab/runs" }, { label: `Run ${run.id}` }]} title={`Run ${run.id}: ${run.title}`} />
+      <PageHead renderLink={crumbLink} crumbs={[{ label: "Runs", href: "/lab/runs" }, { label: `Run ${run.id}` }]} title={`Run ${run.id}: ${run.title}`} />
       <Result result={actionData} />
       {run.replaced_by ? (
         <p>

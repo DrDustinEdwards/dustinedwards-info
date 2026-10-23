@@ -5,7 +5,7 @@ import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Empty } from "capsomer/react/empty";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { PostsConfirmDialogs } from "~/components/admin/posts-confirm-dialogs";
 import { PostsFilters } from "~/components/admin/posts-filters";
 import { PostsTable } from "~/components/admin/posts-table";

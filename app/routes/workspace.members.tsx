@@ -6,7 +6,7 @@ import { Field } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 import { PeopleRoles } from "capsomer/react/people-roles";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { labActorContext } from "~/lab/actor.server";
 import { membersAction, membersPage } from "~/lab/members.server";
 import { getEnv } from "~/lib/context";

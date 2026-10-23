@@ -2,7 +2,7 @@ import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { LabTable, Result } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
 import { labActorContext } from "~/lab/actor.server";

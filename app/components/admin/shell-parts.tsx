@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { LinkProps } from "capsomer/react/admin-shell";
+import type { BreadcrumbProps } from "capsomer/react/breadcrumb";
 
 /**
  * Capsomer's own one-liner (theme-switch.md), run before first paint so a remembered theme never
@@ -34,3 +35,10 @@ export function shellLink(prefix: string) {
     );
   };
 }
+
+/** A breadcrumb level as a router link, for Capsomer's PageHead. */
+export const crumbLink: BreadcrumbProps["renderLink"] = ({ href, className, children }) => (
+  <Link to={href} className={className}>
+    {children}
+  </Link>
+);

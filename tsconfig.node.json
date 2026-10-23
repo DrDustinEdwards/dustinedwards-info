@@ -84,17 +84,13 @@
     "app/lib/content/pipeline.mjs",
     // Split out of pipeline.mjs, which imports and re-exports them, so this
     // project reaches them through it.
-    "app/lib/content/content-error.mjs",
     "app/lib/content/corpus.mjs",
-    "app/lib/content/directives.mjs",
     "app/lib/content/url-policy.mjs",
     "app/lib/content/slug.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
-    "app/lib/content/chart.mjs",
-    "app/lib/content/chart-types.mjs",
     // The operator's words for the five health checks, in one module rather
     // than retyped where they render.
     "app/lib/admin/check-copy.mjs",
@@ -104,7 +100,6 @@
     // htmlHasMath on every post request, and check:content makes the two
     // derivations of that flag argue. Dependency-free by design, so listing it
     // costs this project nothing.
-    "app/lib/content/math.mjs",
     // The feed item shapes. check:content asserts over the REAL corpus that
     // `mathToTex` leaves no KaTeX markup in a feed body, which needs the module
     // the feeds themselves call rather than a second transform that agrees with
@@ -296,7 +291,6 @@
     "app/lib/https-redirect.mjs",
     "app/lib/error-message.mjs",
     "app/lib/bytes.mjs",
-    "app/lib/content/hast.mjs",
     // check:links resolves every internal link through the gateway's own redirect rules and the
     // site's own path builders, and reads the header menus as they render.
     "app/lib/wordpress-redirects.mjs",

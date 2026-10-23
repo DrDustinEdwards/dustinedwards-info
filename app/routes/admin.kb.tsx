@@ -6,7 +6,7 @@ import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
 import { Status } from "capsomer/react/status";
 import { TabsNav } from "capsomer/react/tabs";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { TabLink } from "~/components/admin/tab-link";
 import { listProceduresForAdmin } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";

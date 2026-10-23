@@ -13,7 +13,7 @@ import { timed, timedLoader } from "~/lib/timing";
 import { Banner } from "capsomer/react/banner";
 import { Panel } from "capsomer/react/panel";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { MediaConfirmDialogs } from "~/components/admin/media-confirm-dialogs";
 import { MediaDisplayBar } from "~/components/admin/media-display-bar";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";

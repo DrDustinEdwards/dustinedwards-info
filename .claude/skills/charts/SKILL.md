@@ -24,7 +24,7 @@ covered by `check:content`'s determinism pass exactly like prose, and it works
 with scripting off. You never write SVG and you never pick a colour.
 
 Directive:
-`app/lib/content/chart.mjs`, which validates the attributes, parses the CSV and
+Prelum's `editorialPack` (`render-chart.mjs`), which validates the attributes, parses the CSV and
 hands the rows to Enarratio's `barChart`, `lineChart`, `areaChart` or
 `scatterPlot` (`dot`). Gate: `npm run check:content`.
 
@@ -199,7 +199,7 @@ GitHub, and anywhere else reading the markdown instead of the page.
    `flowchart TB` over `LR`, keep message labels short, and drop a participant
    before you accept a wide drawing. `build:diagrams` prints each asset's size.
 4. **Unknown directives fail closed**, and `diagram` is a known one. If you add
-   another, it goes in `KNOWN_DIRECTIVES` in the same commit.
+   another, it is a Prelum pack, which lists its names.
 
 ## Worked example
 
