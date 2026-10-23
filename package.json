@@ -45,6 +45,7 @@
     "build:assets": "node scripts/build-assets.mjs",
     "build:template-refs": "node scripts/build-template-refs.mjs",
     "build:stack": "node scripts/build-stack.mjs",
+    "build:layouts": "node scripts/build-system-layouts.mjs",
     "build:preview": "node scripts/build-preview.mjs",
     "check:backup": "node scripts/check-backup.mjs",
     "check:browser": "node scripts/check-browser.mjs",

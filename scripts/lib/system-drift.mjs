@@ -12,11 +12,15 @@
 import { ts } from "./syntax.mjs";
 
 // Where a system's configs live in its repo, when not one at the root. The site's repo holds two
-// systems: the site with its watchdog Worker, and the admin MCP (mcp/).
+// systems: the site with its watchdog Worker, and the admin MCP (mcp/); so do Foxing's and Foxhound's.
 /** @type {Record<string, string[]>} */
 const CONFIGS = {
   "dustinedwards-info": ["wrangler.jsonc.example", "wrangler.watchdog.jsonc.example"],
   "dustinedwards-mcp": ["mcp/wrangler.jsonc.example"],
+  foxing: ["apps/web/wrangler.jsonc.example"],
+  "foxing-mcp": ["mcp/wrangler.jsonc.example"],
+  foxhound: ["wrangler.jsonc"],
+  "foxhound-mcp": ["mcp/wrangler.jsonc"],
 };
 // Otherwise the first of these the repo has. A gitignored wrangler.jsonc leaves its example.
 const ROOT_CONFIGS = ["wrangler.jsonc", "wrangler.jsonc.example", "wrangler.json"];

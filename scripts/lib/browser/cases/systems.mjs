@@ -132,7 +132,7 @@ const zoomState = () => {
 /**
  * Dustin, 2026-10-18: "it's not intuitive to click twice". One tap on any system zooms into its circle, with
  * its parts inside and the systems it connects to round the rim; a system on the rim is a tap to zoom there;
- * "Back to all systems", beside the views, and a tap outside the circle return to the map. A private system's circle draws no part.
+ * "Back to all systems", beside the views, and a tap outside the circle return to the map.
  */
 async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
@@ -176,10 +176,11 @@ async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   const outside = await page.evaluate(zoomState);
   ok("/systems: a tap outside the circle returns to the map", !outside.entered && outside.zoom === null, `entered ${outside.entered}, zoom ${outside.zoom}`);
 
-  const hidden = MODEL.systems.find((s) => s.private)?.id;
+  // A private system is wired like any other (Dustin, 2026-10-23): its circle draws its parts.
+  const hidden = MODEL.systems.find((s) => s.private && MODEL.containers.some((c) => c.system === s.id))?.id;
   if (hidden) {
     const boxes = await page.$eval(`#family [data-layer='inside'][data-system="${hidden}"]`, (l) => l.querySelectorAll(".cap-system-map-box").length);
-    ok("/systems: a private system's circle shows its name and links only, no part", boxes === 0, `${boxes} parts drawn in ${hidden}'s circle`);
+    ok("/systems: a private system's circle draws its parts", boxes > 0, `${boxes} parts drawn in ${hidden}'s circle`);
   }
 }
 

@@ -1,13 +1,12 @@
-// /systems (app/lib/systems.mjs): the site's check of Capsid's public model, the third line of
-// the design's privacy filter (capsid/research/design-system-explorer.md, section 2), and what
-// the page and its twins draw from it. Fixtures use invented systems.
+// /systems (app/lib/systems.mjs): the site's check of Capsid's public model, and what the page
+// and its twins draw from it. Fixtures use invented systems.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { systemMapHtml } from "capsomer/behaviour/system-map";
 
-import { PRIVATE_SYSTEM_KEYS, chooseInMapHtml, chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { chooseInMapHtml, chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -16,7 +15,7 @@ const fixture = () => ({
     { id: "core", name: "Core", short: "Core", family: "system", ring: "core", private: false, description: "Runs it all.", domain: "core.example.com", repos: ["https://github.com/example/core"] },
     { id: "kit", name: "Kit", short: "Kit", family: "plumbing", ring: "shared", private: false, description: "Shared parts." },
     { id: "app", name: "App", short: "App", family: "product", ring: "used", private: false, description: "What people use.", domain: "app.example.com" },
-    { id: "hidden", name: "Hidden", short: "Hidden", domain: "hidden.example.org", family: "product", ring: "used", private: true },
+    { id: "hidden", name: "Hidden", short: "Hidden", family: "product", ring: "used", private: true, description: "Kept private.", domain: "hidden.example.org" },
   ],
   containers: [{ id: "core-worker", system: "core", name: "Worker", kind: "worker", technology: "Cloudflare Worker" }],
   relationships: [
@@ -33,23 +32,12 @@ const refused = (raw) => {
   return result.problems.join("\n");
 };
 
-await test("the committed model passes, and its private systems carry only the allowed keys", () => {
+await test("the committed model passes, and a private system names no repo", () => {
   const model = loadSystemModel(JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")));
-  const privates = model.systems.filter((s) => s.private);
-  assert.ok(model.systems.length >= 10 && privates.length >= 1, `read ${model.systems.length} systems, ${privates.length} private`);
-  for (const s of privates) assert.deepEqual(Object.keys(s).sort(), [...PRIVATE_SYSTEM_KEYS].sort(), `${s.id} carries more than its name and address`);
-});
-
-await test("a private system carrying anything more is refused, whichever key it is", () => {
-  for (const extra of [{ description: "Its internals." }, { repos: ["https://github.com/example/hidden"] }, { secret: "x" }]) {
-    const raw = fixture();
-    Object.assign(raw.systems[3], extra);
-    assert.match(refused(raw), /systems\.3/);
-  }
-  // Marked private with no domain: neither shape fits.
-  const raw = fixture();
-  delete raw.systems[3].domain;
-  assert.match(refused(raw), /systems\.3/);
+  assert.ok(model.systems.length >= 10 && model.systems.some((s) => s.private), `read ${model.systems.length} systems`);
+  const linked = fixture();
+  linked.systems[3].repos = ["https://github.com/example/hidden"];
+  assert.match(refused(linked), /systems\.3/);
 });
 
 await test("an unknown key anywhere is refused", () => {
@@ -62,19 +50,6 @@ await test("an unknown key anywhere is refused", () => {
   const line = fixture();
   line.relationships[0].note = "x";
   refused(line);
-});
-
-await test("nothing reaches inside a private system", () => {
-  const inside = fixture();
-  inside.containers.push({ id: "hidden-db", system: "hidden", name: "DB", kind: "database", technology: "D1" });
-  inside.counts.containers = 2;
-  assert.match(refused(inside), /inside private system hidden/);
-  const titled = fixture();
-  titled.relationships[2].title = "What Core does to Hidden";
-  assert.match(refused(titled), /a title on a line to a private system/);
-  const wired = fixture();
-  wired.relationships.push({ id: "core-worker--reads--hidden", from: "core-worker", to: "hidden", kind: "reads" });
-  assert.match(refused(wired), /reaches inside a system to a private one/);
 });
 
 await test("lines name things that exist, ids are unique and the counts agree", () => {
@@ -91,7 +66,7 @@ await test("lines name things that exist, ids are unique and the counts agree", 
   }
 });
 
-await test("the map draws every system once, linking to no page of its own, with no private description", () => {
+await test("the map draws every system once, linking to no page of its own", () => {
   const model = loadSystemModel(fixture());
   const data = mapData(model);
   assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
@@ -100,7 +75,7 @@ await test("the map draws every system once, linking to no page of its own, with
   assert.deepEqual(data.systems.map((s) => s.tag), [undefined, "shared", "product", "product"]);
   const hidden = data.systems.find((s) => s.id === "hidden");
   assert.equal(hidden.private, true);
-  assert.equal(hidden.description, undefined);
+  assert.equal(hidden.description, "Kept private.");
   assert.equal(data.relationships.length, 3);
   // The box under a part names its kind; the longer technology is on the page and in the twin.
   assert.deepEqual(data.containers, [{ id: "core-worker", system: "core", name: "Worker", kind: "worker" }]);
@@ -142,16 +117,16 @@ await test("the server draws a chosen system's wiring as the controller would, a
   assert.equal(stripped, html);
 });
 
-await test("the twin holds every system's facts, and a private one only as its name", () => {
+await test("the twin holds every system's facts, a private one without its source", () => {
   const model = loadSystemModel(fixture());
   const all = systemsMarkdown(model, "https://example.com");
   for (const s of model.systems) assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
-  assert.match(all, /^### Hidden \(private\)\n\nPrivate: its name and address only\.\n/m);
+  assert.match(all, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/m);
   // No system twin of its own any more: every link goes to the page with that system chosen.
   assert.doesNotMatch(all, /\/systems\/[a-z]/);
   assert.match(all, /^- On the map: https:\/\/example\.com\/systems\?system=kit$/m);
   const one = systemSectionMarkdown(model, "hidden", "https://example.com");
-  assert.match(one, /^### Hidden \(private\)\n\nPrivate: its name and address only\.\n/);
+  assert.match(one, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/);
   assert.match(one, /- Address: https:\/\/hidden\.example\.org/);
   assert.doesNotMatch(one, /Source:/);
   assert.equal(systemSectionMarkdown(model, "nowhere", "https://example.com"), null);
@@ -162,10 +137,6 @@ await test("the twin holds every system's facts, and a private one only as its n
   const named = fixture();
   named.systems[1].name = "Installs";
   assert.match(systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\?system=kit\)$/m);
-  // A private system with no address says so.
-  const bare = fixture();
-  bare.systems[3].domain = "";
-  assert.match(systemSectionMarkdown(loadSystemModel(bare), "hidden", "https://example.com"), /^### Hidden \(private\)\n\nPrivate: its name only\.\n/);
   assert.doesNotMatch(systemSectionMarkdown(model, "kit", "https://example.com"), /#### Inside/);
 });
 
@@ -211,7 +182,7 @@ const withFlows = () => {
   return raw;
 };
 
-await test("a model with flows passes, and a flow off the model's edges or into a private system is refused", () => {
+await test("a model with flows passes, and a flow off the model's edges is refused", () => {
   assert.equal(loadSystemModel(withFlows()).flows?.length, 1);
   const bad = withFlows();
   bad.containers.push({ id: "app-worker", system: "app", name: "App worker", kind: "worker", technology: "Sample" });
@@ -222,7 +193,7 @@ await test("a model with flows passes, and a flow off the model's edges or into 
     steps: [
       { relationship: "core--reads--app", toward: "app", text: "No such edge." },
       { relationship: "core--installs--kit", toward: "app", text: "Wrong end." },
-      { relationship: "core--coordinates--hidden", toward: "hidden", text: "Private.", lights: ["kit"] },
+      { relationship: "core--coordinates--hidden", toward: "hidden", text: "Not a part.", lights: ["kit"] },
       { relationship: "core--installs--kit", toward: "kit", text: "Lit elsewhere.", lights: ["core-agents", "app-worker"] },
     ],
   });
@@ -230,7 +201,6 @@ await test("a model with flows passes, and a flow off the model's edges or into 
   assert.match(problems, /flows\.sample-life: the id is used twice/);
   assert.match(problems, /steps\.1: rides core--reads--app, which is not a relationship in the model/);
   assert.match(problems, /steps\.2: goes toward app, which is not an end of core--installs--kit/);
-  assert.match(problems, /steps\.3: runs to a private system/);
   assert.match(problems, /steps\.3: lights kit, which is not a container/);
   assert.match(problems, /steps\.4: lights app-worker, a part of app, which the step does not run in/);
   assert.doesNotMatch(problems, /steps\.4: lights core-agents/, "core-agents is a part of core, which the step runs in");
@@ -322,7 +292,7 @@ await test("the daily refresh writes only a checked model that says something ne
 
     const before = read(file, "utf8");
     served = fixture();
-    served.systems[3].description = "Leaked.";
+    served.systems[3].repos = ["https://github.com/example/hidden"];
     run = await refresh();
     assert.notEqual(run.code, 0, "a model the site refuses was accepted");
     assert.equal(read(file, "utf8"), before, "a refused model was written");

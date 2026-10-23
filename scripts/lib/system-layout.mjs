@@ -10,12 +10,15 @@
 //   - one straight wire for each pair a relationship joins, from the exact part that uses it. A line between
 //     two systems as wholes (Capsid coordinates Foxing) runs from the circle's edge, and is left out when a part
 //     of this system already wires to that system.
-// A private system is its name only: its circle holds its name and its summary, and its rim its links.
+// A private system is drawn like any other: its parts inside, its links around the rim.
 //
 // The places are searched for, from fixed starts, so the same model always draws the same way: each part over a
 // grid inside the circle, the rim's order around it, until no wire crosses another or runs under a box it does
 // not end at, and then the shortest wires. The drawing is the shell's width, so a unit is the same size as on the
 // map, and as tall as it needs.
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+
 import { layoutMap, playableFlows } from "capsomer/behaviour/system-map";
 import { ANNEAL_STEPS, BOX_PAD_X, CIRCLE, CROSSING, EXTERNAL, GRID, KIND_SIZE, LABEL_FOOT, LABEL_SIZE, LINE_H, LOOSE_KINDS, MARGIN, MIN_BOX_W, NAME_SIZE, OVERLAP, RIM_H, RIM_PAD_X, RIM_SIZE, SEEDS, STORE_KINDS, esc, f1, random, rectOf, segmentHitsRect, segmentsCross, textWidth, wrapName } from "./system-layout-geometry.mjs";
 import { bendWires, coster, firstOrder, firstPlaces, placeRim, radiusFor, slotsFor } from "./system-layout-search.mjs";
@@ -99,6 +102,22 @@ export function sceneOf(model, id) {
   const all = [...wires.values(), ...stubs.filter((s) => !wired.has(s.b))];
   // A system that some line reached only as a whole and lost it keeps its place: it is still connected.
   return { system, nodes, wires: all };
+}
+
+// The search's own code, so a saved circle is searched again once the code that drew it changes. Line ends are
+// made one so a Windows checkout keys the same.
+const SEARCH_CODE = ["system-layout.mjs", "system-layout-geometry.mjs", "system-layout-search.mjs"]
+  .map((f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8").replaceAll("\r\n", "\n"))
+  .join("\0");
+
+/**
+ * What one circle is drawn from, as a key: its name, boxes and wires, the width it is drawn at, and the search's
+ * code. A saved circle (data/system-layouts.json) with the same key is the circle the search would draw.
+ * @param {ReturnType<typeof sceneOf>} scene @param {number} minWidth
+ */
+export function layoutKey(scene, minWidth) {
+  const what = JSON.stringify({ name: scene.system.name, nodes: scene.nodes, wires: scene.wires, minWidth });
+  return createHash("sha256").update(what).update("\0").update(SEARCH_CODE).digest("base64url").slice(0, 16);
 }
 
 /**
@@ -451,20 +470,29 @@ export function faultsOf(l) {
  * Every system's inside layer, as markup, by id: laid out at the shell's width, each at least the shell's
  * height for that width, so zooming into a small system leaves the stage its size. The core's carries Capsomer's
  * token when it has flows to play. Run at build time (scripts/lib/system-insides-plugin.mjs): the search takes
- * seconds, and a Worker should not.
+ * minutes over the whole model, and a Worker should not.
+ *
+ * `saved` holds circles already searched for, by system id with their key: one whose key still matches is used
+ * as it is, and the rest are searched for and put in it, so the caller can keep them. A system the model no
+ * longer has is dropped from it.
  * @param {SystemModel} model
  * @param {(s: SystemModel["systems"][number]) => string} summaryOf what a circle with no parts says
  * @param {ReturnType<typeof import("../../app/lib/systems.mjs").mapData>} data what the map draws, for the flows it can play
+ * @param {Record<string, { key: string, layout: Layout }>} [saved]
  * @returns {Record<string, string>}
  */
-export function insideLayers(model, summaryOf, data) {
+export function insideLayers(model, summaryOf, data, saved = {}) {
   const shell = layoutMap(data.systems).viewBox;
   const core = data.systems.find((s) => s.ring === "core");
   const flows = playableFlows(data, core).length > 0;
   /** @type {Record<string, string>} */
   const out = {};
+  for (const id of Object.keys(saved)) if (!model.systems.some((s) => s.id === id)) delete saved[id];
   for (const s of model.systems) {
-    const l = layoutScene(sceneOf(model, s.id), shell[2]);
+    const scene = sceneOf(model, s.id);
+    const key = layoutKey(scene, shell[2]);
+    if (saved[s.id]?.key !== key) saved[s.id] = { key, layout: layoutScene(scene, shell[2]) };
+    const l = saved[s.id].layout;
     // Never shorter, for its width, than the shell, so the stage does not shrink when a small system is chosen.
     const minH = (l.width * shell[3]) / shell[2];
     const pad = Math.max(0, minH - (l.bottom - l.top)) / 2;
