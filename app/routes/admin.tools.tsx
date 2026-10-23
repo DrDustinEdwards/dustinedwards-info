@@ -5,7 +5,7 @@ import { Panel } from "capsomer/react/panel";
 import { Pill, Status } from "capsomer/react/status";
 import { Row, RowList } from "capsomer/react/row-list";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { topZeroResults } from "~/lib/search/zero-result.server";

@@ -6,7 +6,8 @@ import { MarkdownEditor } from "capsomer/react/markdown-editor";
 import { Panel } from "capsomer/react/panel";
 import { Status } from "capsomer/react/status";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
+import { crumbLink } from "~/components/admin/shell-parts";
 import { ACCEPT_ATTRIBUTE, uploadMedia } from "~/lib/media/upload-contract.mjs";
 
 import { clearAllBuffersFor, type DraftBuffer } from "~/lib/editor/draft-buffer";
@@ -225,6 +226,7 @@ export function PostEditor({
   return (
     <div className="app-page">
       <PageHead
+        renderLink={crumbLink}
         crumbs={[{ label: "Posts", href: "/admin/posts" }, { label: isNew ? "New post" : title || "Untitled" }]}
         title={isNew ? "New post" : `Edit ${title || "Untitled"}`}
         lead={<Status tone={TONE_OF_STATE[state]}>{state}</Status>}

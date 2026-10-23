@@ -1,7 +1,7 @@
 import { Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { labActorContext } from "~/lab/actor.server";
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
 import type { Route } from "./+types/workspace._index";

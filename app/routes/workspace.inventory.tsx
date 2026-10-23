@@ -4,7 +4,7 @@ import { Button } from "capsomer/react/button";
 import { Field } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
 import { LabTable, Result } from "~/components/lab/lab-ui";
 import { labActorContext } from "~/lab/actor.server";
 import { inventoryAction, inventoryPage } from "~/lab/inventory.server";

@@ -29,6 +29,7 @@
 @import "capsomer/row-list.css";
 @import "capsomer/disclosure.css";
 @import "capsomer/breadcrumb.css";
+@import "capsomer/page-head.css";
 @import "capsomer/tabs.css";
 @import "capsomer/tooltip.css";
 @import "capsomer/theme-switch.css";
@@ -43,8 +44,8 @@
 @import "capsomer/media.css";
 
 /* The page inside the shell: the shell's page frame (.cap-admin-page) owns the padding, the width and the
-   gap between a page's blocks; this is the page's own stack: a title, one line saying what the page is for,
-   the page's actions at the right, then panels. The error page sits outside the shell and frames itself. */
+   gap between a page's blocks; this is the page's own stack: Capsomer's page head, then panels. The error
+   page sits outside the shell and frames itself. */
 .app-page {
   display: grid;
   gap: var(--space-6);
@@ -54,32 +55,6 @@
 main.app-page {
   padding: var(--space-6) var(--space-6) var(--space-9);
   max-width: 1320px;
-}
-
-.app-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-5);
-
-  & > div:first-child {
-    display: grid;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-  & h1 {
-    margin: 0;
-    font-size: var(--fs-h2);
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    overflow-wrap: anywhere;
-  }
-  & p {
-    margin: 0;
-    max-width: 75ch;
-    color: var(--muted);
-  }
 }
 
 .app-actions {

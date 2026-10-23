@@ -8,7 +8,8 @@ import { Panel } from "capsomer/react/panel";
 import { Pill, Status } from "capsomer/react/status";
 import { Row, RowList } from "capsomer/react/row-list";
 
-import { PageHead } from "~/components/admin/page-head";
+import { PageHead } from "capsomer/react/page-head";
+import { crumbLink } from "~/components/admin/shell-parts";
 import { DiffBlock } from "~/components/admin/revision-list";
 import { getEnv } from "~/lib/context";
 import {
@@ -62,6 +63,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
   return (
     <div className="app-page">
       <PageHead
+        renderLink={crumbLink}
         crumbs={[
           { label: "Posts", href: "/admin/posts" },
           { label: slug, href: `/admin/posts/${slug}/edit` },
