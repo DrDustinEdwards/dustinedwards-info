@@ -10,7 +10,8 @@
  * selection as an `enarratio:select` event, which app/enhance/cv.ts turns into a year range.
  */
 
-import { barChart, sparkline } from "enarratio";
+import { sparkline } from "enarratio";
+import { barChart } from "enarratio/plot";
 
 import { TIMELINE_ID } from "./view.mjs";
 

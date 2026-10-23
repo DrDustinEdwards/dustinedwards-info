@@ -232,8 +232,12 @@ for (const [mode, block] of MODES) {
     declaredAnywhere.size > 0,
   );
 
+  /* Enarratio reads each size, spacing and timing with its own fallback: Capsomer's tokens set
+     some of them (capsomer/css/enarratio.css) and the rest take the fallback. */
+  const bare = new Set([...code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)\s*\)/g)].map((m) => m[1]));
+  const knob = (/** @type {string} */ n) => n.startsWith("--enarratio-") && !bare.has(n);
   const unresolved = [...used]
-    .filter((n) => !declaredAnywhere.has(n) && !DECLARED_ELSEWHERE.has(n))
+    .filter((n) => !declaredAnywhere.has(n) && !DECLARED_ELSEWHERE.has(n) && !knob(n))
     .sort();
 
   assert(
@@ -625,7 +629,9 @@ function opacityExempt(selectorGroup) {
          number (var(), calc()) is reported, not skipped, or it would escape classification. */
       for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([^;]+?)\s*(?:;|$)/g)) {
         declarations += 1;
-        const raw = decl[1].replace(/\s*!important$/, "");
+        const value0 = decl[1].replace(/\s*!important$/, "");
+        /* var(--enarratio-opacity-dimmed, 0.25): nothing declares the knob, so it is the fallback. */
+        const raw = /^var\(\s*--[A-Za-z0-9_-]+\s*,\s*([^()]+?)\s*\)$/.exec(value0)?.[1] ?? value0;
         const number = /^(\d*\.?\d+)(%?)$/.exec(raw);
         if (!number) {
           unparsed.push(`${name} ${selector}: opacity ${decl[1]}`);

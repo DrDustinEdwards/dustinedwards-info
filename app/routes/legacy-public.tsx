@@ -19,6 +19,7 @@ import "~/app.css";
 // shared popover (the panels' placing and the tips) and dialog (the phone's sheet). Layered, so the site's
 // unlayered sheets below win wherever they touch the same thing.
 import "capsomer/tokens.css";
+import "capsomer/site-dustinedwards.css";
 import "capsomer/popover.css";
 import "capsomer/dialog.css";
 import "capsomer/site-header.css";

@@ -112,7 +112,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     postData?.hasMath === true || previewData?.hasMath === true || editorWantsMath;
 
   return (
-    <html lang="en" data-theme={theme}>
+    <html lang="en" data-theme={theme} data-cap-site="dustinedwards">
       <head>
         <meta charSet="utf-8" />
         {/* Before any stylesheet: data-theme means nothing to the browser until the CSS is parsed. */}
