@@ -3,16 +3,21 @@
  *
  * The PRIMARY handler is `legacy: "reject"`: stateless-native 2026-07-28, the
  * design-center era, with no compatibility thinking inside it. Prior-era traffic
- * is detected and diverted by ONE call into src/legacy-era.ts, which carries its
- * own removal condition. Delete that file and its two lines here and this becomes
- * a modern-only server, with nothing left behind.
+ * is detected and diverted by site-runtime's routeMcpEra, given the SDK's
+ * isLegacyRequest at the ONE call site below.
+ *
+ * REMOVAL CONDITION: stop passing `isLegacyRequest` when
+ * `node scripts/probe-report.mjs` shows the target clients opening with
+ * `server/discover` instead of `initialize` (last measured: Claude Code 2.1.203
+ * on 2026-07-29 and claude.ai on 2026-07-30, both LEGACY). Delete it on the
+ * capture, never on a release note. Without it this is a modern-only server.
  */
 
-import { McpServer } from "@modelcontextprotocol/server";
+import { routeMcpEra } from "@dustinedwards/site-runtime/mcp-server";
+import { isLegacyRequest, McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 
 import { TOOLS, invokeTool, type ToolEnv } from "./tools";
-import { createLegacyEraHandler, isLegacyRequest } from "./legacy-era";
 import type { Caller } from "./auth";
 
 export const MCP_ROUTE = "/mcp";
@@ -54,11 +59,10 @@ function buildServer(env: ToolEnv, caller: Caller | undefined) {
 }
 
 /**
- * Routes one request to the era that can answer it.
- *
- * Both handlers are constructed per call. They are cheap, stateless objects over
- * the same factory, and building them here rather than at module scope keeps the
- * env closure correct without a mutable global.
+ * Routes one request to the era that can answer it. Everything isLegacyRequest
+ * calls false, malformed envelopes and header/body mismatches included, goes to
+ * the modern handler: the library documents that the modern path owns those
+ * error answers, so false traffic must never reach the legacy one.
  */
 export async function handleMcp(
   request: Request,
@@ -66,19 +70,10 @@ export async function handleMcp(
   ctx: ExecutionContext,
   caller: Caller | undefined,
 ): Promise<Response> {
-  const factory = buildServer(env, caller);
-
-  // --- the one legacy call site, deletable with src/legacy-era.ts -----------
-  // The predicate inspects the body, so the request is cloned for it. A Request
-  // body is a single-use stream and the handler downstream needs to read it too.
-  if (await isLegacyRequest(request.clone())) {
-    return createLegacyEraHandler(factory, MCP_ROUTE)(request, env, ctx);
-  }
-  // -------------------------------------------------------------------------
-
-  // Everything the predicate calls false goes here, including malformed
-  // envelopes and header/body mismatches: the library's documentation is
-  // explicit that the modern path owns those error answers, so false traffic
-  // must never be sent to the legacy handler.
-  return createMcpHandler(factory, { route: MCP_ROUTE, legacy: "reject" })(request, env, ctx);
+  return routeMcpEra(request, env, ctx, {
+    factory: buildServer(env, caller),
+    options: { route: MCP_ROUTE },
+    createMcpHandler,
+    isLegacyRequest,
+  });
 }

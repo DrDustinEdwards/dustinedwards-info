@@ -336,7 +336,7 @@ describe("the wrapper adds no policy of its own", () => {
 /**
  * RULE 12.1, PLANTED. Every tool names records whose owner is the site's one
  * administrator, so every call proves the caller is that administrator. Delete
- * the isAdminUser line from authorizeCall and these fail.
+ * the isAdminUser line from site-runtime's authorizeCall and these fail.
  */
 describe("every call proves the caller owns what it names", () => {
   const stranger: Caller = {

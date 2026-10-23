@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.." || exit 2
 SNAP="$(mktemp -d)"
 trap 'rm -rf "$SNAP"' EXIT
 
-FILES="src/tools.ts src/api-client.ts src/legacy-era.ts src/mcp-handler.ts src/index.ts src/auth.ts wrangler.jsonc wrangler.jsonc.example"
+FILES="src/tools.ts src/api-client.ts src/mcp-handler.ts src/index.ts src/auth.ts wrangler.jsonc wrangler.jsonc.example"
 
 snapshot() {
   for f in $FILES; do
@@ -106,13 +106,13 @@ expect_fail "4. code branches on firstPublished"
 # 5. Hardcoded API path. Would survive a config change and hit the wrong env.
 python3 -c "
 p='src/api-client.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('env.SITE.fetch(\`\${env.SITE_ORIGIN}/api/operator\`, {','env.SITE.fetch(\"https://dustinedwards.info/api/operator\", {',1)
+s=s.replace('callApi(env, LEG, \"/api/operator\"','callApi(env, LEG, \"https://dustinedwards.info/api/operator\"',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "5. operator API path hardcoded in source"
 
 # 6. A shim with no stated removal condition becomes permanent by default.
 python3 -c "
-p='src/legacy-era.ts'; s=open(p,encoding='utf-8').read()
+p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('REMOVAL CONDITION','(note removed)',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "6. removal condition deleted from the shim"
@@ -121,9 +121,9 @@ expect_fail "6. removal condition deleted from the shim"
 #    leave a modern-only server, which is the shim's whole justification.
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('MCP_ROUTE, legacy: \"reject\"','MCP_ROUTE, legacy: \"stateless\"',1)
+s=s.replace('  return routeMcpEra(request, env, ctx, {','  if (env) return createMcpHandler(buildServer(env, caller), { route: MCP_ROUTE, legacy: \"stateless\" })(request, env, ctx);\n  return routeMcpEra(request, env, ctx, {',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "7. primary handler switched to legacy: stateless"
+expect_fail "7. a handler built around the era router, in legacy: stateless"
 
 # 8. A non-allowlisted outbound host.
 python3 -c "
@@ -142,9 +142,9 @@ expect_fail "9. app gate re-implemented (publiclyVisible)"
 # 10. The shim gaining a second call site stops it being a seam.
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('  const factory = buildServer(env, caller);','  const factory = buildServer(env, caller);\n  if (false) { createLegacyEraHandler(factory, MCP_ROUTE); }',1)
+s=s.replace('  return routeMcpEra(request, env, ctx, {','  if (!env) await routeMcpEra(request, env, ctx, { factory: buildServer(env, caller), options: {}, createMcpHandler, isLegacyRequest });\n  return routeMcpEra(request, env, ctx, {',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "10. second call site for the legacy shim"
+expect_fail "10. second call site for the era router"
 
 # 11. Removing the policy statement from the tool descriptions. This is the
 #     asymmetric one: describing the policy is REQUIRED, enforcing it is banned.
@@ -204,9 +204,9 @@ expect_fail "17. tool registered around invokeTool"
 # 18. The per-call ownership check removed (rule 12.1).
 python3 -c "
 p='src/auth.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('caller.kind === \"admin\" && !isAdminUser(env, caller.props)','false',1)
+s=s.replace('return checkCall(env, caller, scope, { site: \"dustinedwards.info\", scopes: SCOPES });','return null;',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "18. isAdminUser dropped from authorizeCall"
+expect_fail "18. authorizeCall no longer runs the shared per-call check"
 
 # 19. Registration without the redirect allowlist (rule 13).
 python3 -c "

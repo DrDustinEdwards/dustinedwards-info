@@ -91,7 +91,8 @@ conflates them cannot correct itself.
 Measured with `scripts/probe-report.mjs`. Claude Code, claude.ai and Grok Build
 were all measured opening as **legacy-era** clients (`initialize`, no
 `Mcp-Method`/`Mcp-Name`). So `2026-07-28` is the design-center era, and
-prior-era support lives in exactly one seam, `src/legacy-era.ts`, carrying its
+prior-era support lives in exactly one seam: the call in `src/mcp-handler.ts`
+that hands site-runtime's `routeMcpEra` the SDK's `isLegacyRequest`, carrying its
 own removal condition: it goes when the probe shows the target clients opening
 with `server/discover`.
 

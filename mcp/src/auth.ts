@@ -10,7 +10,7 @@
  */
 
 import { safeEqual } from "@dustinedwards/site-runtime/compare";
-import { isAdminUser } from "@dustinedwards/site-runtime/mcp-login";
+import { authorizeCall as checkCall, mcpScopes } from "@dustinedwards/site-runtime/mcp-server";
 
 /** The Cloudflare Access identity carried on an OAuth grant, set at sign-in. */
 export interface Props extends Record<string, unknown> {
@@ -31,10 +31,10 @@ export interface Props extends Record<string, unknown> {
  * site run. There is no admin scope here because this Worker has no admin
  * rights to give: the operator API grants OPERATOR_TOKEN the operator kind.
  */
-export const SCOPE_READ = "dei.read";
-export const SCOPE_WRITE = "dei.write";
-export const SCOPES = [SCOPE_READ, SCOPE_WRITE] as const;
-export type Scope = (typeof SCOPES)[number];
+export const SCOPES = mcpScopes("dei");
+export const SCOPE_READ = SCOPES.read;
+export const SCOPE_WRITE = SCOPES.write;
+export type Scope = typeof SCOPE_READ | typeof SCOPE_WRITE;
 
 /**
  * Who is making one tool call, as the request boundary established it.
@@ -47,10 +47,7 @@ export type Caller =
   | { kind: "admin"; props: Props; scopes: readonly string[] }
   | { kind: "agent"; principal: string; scopes: readonly string[] };
 
-/** The audit name of a caller: the signed-in email, or the agent principal. */
-export function callerName(caller: Caller): string {
-  return caller.kind === "admin" ? `access:${caller.props.email}` : `agent:${caller.principal}`;
-}
+export { callerName } from "@dustinedwards/site-runtime/mcp-server";
 
 /** Scopes an agent holds: read, plus write when AGENT_WRITE names it. */
 export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): string[] {
@@ -73,31 +70,8 @@ export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): s
  *
  * Returns null when the call may proceed, or the refusal to show the caller.
  */
-export function authorizeCall(
-  env: { ADMIN_EMAIL?: string },
-  caller: Caller | undefined,
-  scope: Scope,
-): string | null {
-  if (!caller) {
-    return "Refused: no caller identity reached this tool call. Connect again through the OAuth flow.";
-  }
-  if (caller.kind === "admin" && !isAdminUser(env, caller.props)) {
-    return (
-      "Refused: this grant does not belong to the administrator of dustinedwards.info, " +
-      "so it owns none of the records this tool names."
-    );
-  }
-  if (caller.kind === "agent" && !/^[a-z0-9_]+$/.test(caller.principal)) {
-    return "Refused: the agent principal is malformed.";
-  }
-  if (!caller.scopes.includes(scope)) {
-    return scope === SCOPE_WRITE
-      ? "Refused: this connection holds read access only (dei.read), and this tool changes the site. " +
-          "Reconnect and tick \"Allow changes\" on the consent page, or for an agent key add its name to " +
-          "AGENT_WRITE."
-      : "Refused: this connection holds no read scope. Reconnect through the OAuth flow.";
-  }
-  return null;
+export function authorizeCall(env: { ADMIN_EMAIL?: string }, caller: Caller | undefined, scope: Scope): string | null {
+  return checkCall(env, caller, scope, { site: "dustinedwards.info", scopes: SCOPES });
 }
 
 /**

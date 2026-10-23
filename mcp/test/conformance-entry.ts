@@ -22,7 +22,7 @@ import type { ToolEnv } from "../src/tools";
 
 // wrangler.jsonc declares the Durable Object bindings, so any entry it runs has
 // to export the classes or the dev server refuses to start.
-export { OperatorRateLimit } from "../src/rate-limit";
+export { RateLimiter as OperatorRateLimit } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 export { ToolCallLog } from "@dustinedwards/site-runtime/audit-log";
 
 type Env = ToolEnv & { STUB_URL?: string };

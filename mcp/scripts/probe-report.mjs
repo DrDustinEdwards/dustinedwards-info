@@ -3,7 +3,7 @@
  * decide the wrapper's shape:
  *
  *   1. Which ERA does the client speak? `initialize` means legacy, so the
- *      compatibility shim in src/legacy-era.ts is load-bearing. `server/discover`
+ *      compatibility shim (the era seam in src/mcp-handler.ts) is load-bearing. `server/discover`
  *      means the shim's removal condition is met for that client.
  *   2. Does the client complete the spec's OAuth 2.1 resource server story?
  *      RFC 9728 protected resource metadata, then RFC 8414, then an authorize

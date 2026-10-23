@@ -1,7 +1,7 @@
 /**
  * The client measurement probe. THE INSTRUMENT, not a feature.
  *
- * Its one remaining job is to answer the removal condition in src/legacy-era.ts:
+ * Its one remaining job is to answer the removal condition in src/mcp-handler.ts:
  * do the target clients still open with `initialize`, or have they moved to
  * `server/discover`? The shim is deleted on a capture from this endpoint, never on
  * a release note.
@@ -176,7 +176,7 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
     }
 
     // 2026-07-28 opening, mandatory for modern servers. A capture here is the
-    // event that retires src/legacy-era.ts.
+    // event that retires the era seam in src/mcp-handler.ts.
     case "server/discover":
       return ok({
         resultType: "complete",

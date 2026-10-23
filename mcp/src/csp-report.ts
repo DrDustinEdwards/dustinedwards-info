@@ -10,7 +10,9 @@
  */
 
 import { receiveCspReport } from "@dustinedwards/site-runtime/csp-report";
-import { checkRateLimit, type RateLimitEnv } from "./rate-limit";
+import { checkRateLimit } from "@dustinedwards/site-runtime/mcp-server";
+
+import type { RateLimitEnv } from "./index";
 
 /** Loose, because a page tripping ten rules sends ten reports. */
 const REPORTS_PER_MINUTE = 60;
@@ -19,7 +21,7 @@ export function handleCspReport(request: Request, env: Partial<RateLimitEnv>): P
   return receiveCspReport(request, {
     allow: async (r) => {
       const ip = r.headers.get("cf-connecting-ip") ?? "unknown";
-      return (await checkRateLimit(env, `csp:${ip}`, REPORTS_PER_MINUTE)).allowed;
+      return (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${ip}`, REPORTS_PER_MINUTE)).allowed;
     },
   });
 }
