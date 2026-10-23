@@ -1,8 +1,8 @@
 # The route weight, run on every pull request and every push to main, and NEVER a gate.
 #
-# The gzip weight of every route (scripts/measure-route-weight.mjs) writes its numbers to the run's summary. Every step is
-# `continue-on-error`, so a finding or a crashed tool is reported and never turns a pull request red: a number that has
-# never been acted on is information, not a rule. Knip and jscpd are no-bloat.yml.
+# The gzip weight of every route (devkit-route-weight, set by .route-weight.json) writes its numbers to the run's
+# summary. Every step is `continue-on-error`, so a finding or a crashed tool is reported and never turns a pull request
+# red: a number that has never been acted on is information, not a rule. Knip and jscpd are no-bloat.yml.
 
 name: Hygiene
 
@@ -47,16 +47,4 @@ jobs:
 
       - name: Route weight
         continue-on-error: true
-        run: |
-          # A tool that could not run is a warning on the run, not a silent pass: continue-on-error alone hides it.
-          if npm run build && node scripts/measure-route-weight.mjs > weight.txt; then
-            {
-              echo '### Weight per route (gzip JS and CSS)'
-              echo '```'
-              cat weight.txt
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::warning::the route weight report could not run; see this step's log"
-            exit 1
-          fi
+        run: npm run build && npx devkit-route-weight
