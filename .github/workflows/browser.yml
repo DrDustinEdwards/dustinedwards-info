@@ -165,25 +165,22 @@ jobs:
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       # THE ORIGIN IS DERIVED FROM THE REPO,
-      # and that is why this job checks out the source. `app/lib/seo.ts` states
+      # and that is why this job checks out the source. `app/lib/site-origin.mjs` states
       # SITE_ORIGIN once; a URL typed into this file would be a second copy that
       # goes stale on precisely one day, the DNS cutover.
       - name: Read the origin from the repository
         id: origin
         run: |
           set -euo pipefail
-          ORIGIN=$(node -e "
-            const { readFileSync } = require('node:fs');
-            const src = readFileSync('app/lib/seo.ts', 'utf8');
-            const m = /SITE_ORIGIN\s*=\s*[\"'\`]([^\"'\`]+)/.exec(src);
-            if (!m) { console.error('SITE_ORIGIN not found in app/lib/seo.ts'); process.exit(1); }
-            process.stdout.write(m[1].replace(/\/+$/, ''));
+          ORIGIN=$(node --input-type=module -e "
+            const { SITE_ORIGIN } = await import('./app/lib/site-origin.mjs');
+            process.stdout.write(SITE_ORIGIN.replace(/\/+$/, ''));
           ")
           # Proven non-empty before anything is built on it: an empty origin
           # would make the gate drive http:///blog and report a confusing
           # network error instead of a configuration one.
           if [ -z "$ORIGIN" ]; then
-            echo "::error::The origin read from app/lib/seo.ts was empty."
+            echo "::error::The origin read from app/lib/site-origin.mjs was empty."
             exit 1
           fi
           echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
