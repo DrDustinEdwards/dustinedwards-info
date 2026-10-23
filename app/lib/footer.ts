@@ -39,7 +39,7 @@ export const BRAND_PROFILES: FooterLink[] = [
 export const SITE_HEADING = "Site";
 
 /** The Site group, in Dustin's order (2026-10-11). Accessibility is a prose page, shown once it is published. */
-export const SITE_LINKS_ALL: FooterLink[] = [
+const SITE_LINKS_ALL: FooterLink[] = [
   { to: "/contact", label: "Contact" },
   { to: "/site-map", label: "Site map" },
   { to: "/colophon", label: "Colophon" },
@@ -78,7 +78,7 @@ export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid" | "fla
  * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's admin, behind Cloudflare Access.
  */
 export const TOOLS_HEADING = "Workspace";
-export const SIGN_IN_NOTE = "(requires sign-in)";
+const SIGN_IN_NOTE = "(requires sign-in)";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   { to: "/admin", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
   // Capsid's admin page, behind Cloudflare Access.

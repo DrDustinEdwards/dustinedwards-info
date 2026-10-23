@@ -25,9 +25,9 @@
  * The sections, in the header's order (app/lib/nav.ts, NAV), then Site. `roots` are the address prefixes a
  * section owns; the first match wins, and a path no section owns is Site's. The System map sits under
  * Software, where the header's Software panel links it; the CV and the recipes sit under About, where the
- * About panel links them. test/site-map.test.mjs holds the five headings to the header's.
+ * About panel links them.
  */
-export const SITE_MAP_SECTIONS = /** @type {const} */ ([
+const SITE_MAP_SECTIONS = /** @type {const} */ ([
   { id: "research", heading: "Research", to: "/research", roots: ["/research"] },
   { id: "teaching", heading: "Teaching", to: "/teaching", roots: ["/teaching"] },
   { id: "software", heading: "Software", to: "/software", roots: ["/software", "/systems"] },

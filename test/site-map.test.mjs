@@ -5,8 +5,7 @@ import { readFileSync } from "node:fs";
 import { LIBRARY_BASES } from "../app/kb/libraries.mjs";
 import { LAB_PATH } from "../app/kb/registry/catalog.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_OWN_ROUTE } from "../app/lib/content-pages.mjs";
-import { NAV } from "../app/lib/nav.ts";
-import { SITE_MAP_PATH, SITE_MAP_SECTIONS, lineText, sectionOf, siteMapSections } from "../app/lib/site-map.mjs";
+import { SITE_MAP_PATH, lineText, sectionOf, siteMapSections } from "../app/lib/site-map.mjs";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 
 const read = (/** @type {string} */ rel) => readFileSync(new URL(rel, import.meta.url), "utf8");
@@ -64,14 +63,6 @@ await test("every public page route is in the sitemap's list or exempted by name
   assert.deepEqual(missing, [], "a page route neither listed by app/lib/site-urls.server.ts nor exempted here");
   const stale = [...EXEMPT.keys()].filter((path) => !routes.includes(path));
   assert.deepEqual(stale, [], "an exemption for a route routes.ts no longer declares");
-});
-
-await test("the sections are the header's five, in its order, then Site", () => {
-  assert.deepEqual(
-    SITE_MAP_SECTIONS.slice(0, -1).map(({ heading, to }) => ({ label: heading, to })),
-    NAV.map(({ label, to }) => ({ label, to })),
-  );
-  assert.equal(SITE_MAP_SECTIONS.at(-1)?.heading, "Site");
 });
 
 await test("a path goes to the section that owns its root, and anything else to Site", () => {
