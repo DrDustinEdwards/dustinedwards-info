@@ -8,9 +8,7 @@
     "scripts/*.mjs",
     "scripts/machine-readable/*.mjs",
     "test/**/*.test.mjs",
-    "test/worker/**/*.test.ts",
-    "scripts/lib/site-clone-loader*.mjs",
-    "scripts/lib/site-fixture-runners/*.mjs"
+    "test/worker/**/*.test.ts"
   ],
   "project": [
     "app/**/*.{ts,tsx,mjs}",
