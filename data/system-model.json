@@ -226,16 +226,6 @@
       ]
     },
     {
-      "id": "foxing-admin-legacy",
-      "name": "Old Foxing Admin",
-      "short": "Old F. MCP",
-      "family": "plumbing",
-      "ring": "used",
-      "private": true,
-      "description": "The first Foxing admin MCP, a Next.js app on Vercel that read Supabase, Sentry and Vercel logs. Replaced by Foxing Admin.",
-      "domain": "admin-mcp.foxing.app"
-    },
-    {
       "id": "foxhound",
       "name": "Foxhound",
       "short": "Foxhound",
@@ -262,26 +252,6 @@
       ]
     },
     {
-      "id": "recova",
-      "name": "Recova",
-      "short": "Recova",
-      "family": "product",
-      "ring": "used",
-      "private": true,
-      "description": "The first version of Foxhound: Next.js on Vercel with Supabase. Frozen to hotfixes, and retired once Foxhound matches it.",
-      "domain": "recovamrr.com"
-    },
-    {
-      "id": "recova-mcp",
-      "name": "Recova MCP",
-      "short": "Recova MCP",
-      "family": "plumbing",
-      "ring": "used",
-      "private": true,
-      "description": "Gives a merchant's AI agents their Recova recovery, intelligence and disputes data over MCP, with per-merchant API keys.",
-      "domain": "mcp.recovamrr.com"
-    },
-    {
       "id": "txasm",
       "name": "TXASM",
       "short": "TXASM",
@@ -305,19 +275,6 @@
       "domain": "julieedwards.info",
       "repos": [
         "https://github.com/DrDustinEdwards/julieedwards-info"
-      ]
-    },
-    {
-      "id": "bsw",
-      "name": "BioScience Writers",
-      "short": "BSW",
-      "family": "site",
-      "ring": "used",
-      "private": false,
-      "description": "The marketing site for BioScience Writers, a scientific editing and medical writing company. Not yet launched.",
-      "domain": "bsw.dustin-edwards.workers.dev",
-      "repos": [
-        "https://github.com/DrDustinEdwards/bsw"
       ]
     }
   ],
@@ -1091,30 +1048,6 @@
       "description": "A log of every tool call."
     },
     {
-      "id": "foxing-admin-legacy-app",
-      "system": "foxing-admin-legacy",
-      "name": "Next.js app",
-      "kind": "site",
-      "technology": "Next.js on Vercel",
-      "description": "One MCP endpoint behind a single operator key."
-    },
-    {
-      "id": "foxing-admin-legacy-supabase",
-      "system": "foxing-admin-legacy",
-      "name": "Supabase",
-      "kind": "external",
-      "technology": "Supabase Postgres",
-      "description": "The old Foxing database it queried."
-    },
-    {
-      "id": "foxing-admin-legacy-sentry",
-      "system": "foxing-admin-legacy",
-      "name": "Sentry and Vercel",
-      "kind": "external",
-      "technology": "Sentry and Vercel APIs",
-      "description": "Recent errors for web and phone, and runtime logs."
-    },
-    {
       "id": "foxhound-worker",
       "system": "foxhound",
       "name": "App Worker",
@@ -1243,78 +1176,6 @@
       "description": "Grants and tokens for the MCP door's OAuth provider."
     },
     {
-      "id": "recova-app",
-      "system": "recova",
-      "name": "Next.js app",
-      "kind": "site",
-      "technology": "Next.js on Vercel",
-      "description": "The marketing site, the merchant app and the admin."
-    },
-    {
-      "id": "recova-cron",
-      "system": "recova",
-      "name": "Vercel cron jobs",
-      "kind": "cron",
-      "technology": "Vercel Cron",
-      "description": "Recovery, win-back, disputes, metrics, digests, billing and social posting, hourly to monthly."
-    },
-    {
-      "id": "recova-supabase",
-      "system": "recova",
-      "name": "Supabase",
-      "kind": "database",
-      "technology": "Supabase Postgres",
-      "description": "Merchants, recoveries, disputes and billing."
-    },
-    {
-      "id": "recova-redis",
-      "system": "recova",
-      "name": "Upstash Redis",
-      "kind": "kv",
-      "technology": "Upstash Redis",
-      "description": "Rate limits and caches."
-    },
-    {
-      "id": "recova-r2",
-      "system": "recova",
-      "name": "Blog images and evidence",
-      "kind": "bucket",
-      "technology": "R2",
-      "description": "recova-blog-images and recova-dispute-evidence."
-    },
-    {
-      "id": "recova-stripe",
-      "system": "recova",
-      "name": "Stripe",
-      "kind": "external",
-      "technology": "Stripe Connect",
-      "description": "Merchants' payments, failures and disputes."
-    },
-    {
-      "id": "recova-resend",
-      "system": "recova",
-      "name": "Resend",
-      "kind": "external",
-      "technology": "Resend",
-      "description": "Recovery and account mail."
-    },
-    {
-      "id": "recova-mcp-app",
-      "system": "recova-mcp",
-      "name": "MCP server",
-      "kind": "site",
-      "technology": "Node on Vercel",
-      "description": "One Streamable HTTP endpoint, with SHA-256 hashed API keys scoped to one merchant or to the operator."
-    },
-    {
-      "id": "recova-mcp-agents",
-      "system": "recova-mcp",
-      "name": "AI agents",
-      "kind": "external",
-      "technology": "MCP clients",
-      "description": "Merchants' own AI agents."
-    },
-    {
       "id": "txasm-worker",
       "system": "txasm",
       "name": "Site Worker",
@@ -1401,14 +1262,6 @@
       "kind": "cron",
       "technology": "Workers cron trigger",
       "description": "Dumps the D1 database with d1-dump at 03:37 UTC."
-    },
-    {
-      "id": "bsw-worker",
-      "system": "bsw",
-      "name": "Site Worker",
-      "kind": "worker",
-      "technology": "React Router 8 on a Cloudflare Worker",
-      "description": "Server-renders the marketing site. No database or storage yet."
     },
     {
       "id": "capsid-backups-mirror",
@@ -2203,18 +2056,6 @@
       "kind": "reads"
     },
     {
-      "id": "foxing-admin-legacy-app--reads--foxing-admin-legacy-supabase",
-      "from": "foxing-admin-legacy-app",
-      "to": "foxing-admin-legacy-supabase",
-      "kind": "reads"
-    },
-    {
-      "id": "foxing-admin-legacy-app--reads--foxing-admin-legacy-sentry",
-      "from": "foxing-admin-legacy-app",
-      "to": "foxing-admin-legacy-sentry",
-      "kind": "reads"
-    },
-    {
       "id": "foxhound-worker--writes--foxhound-db",
       "from": "foxhound-worker",
       "to": "foxhound-db",
@@ -2335,54 +2176,6 @@
       "kind": "reads"
     },
     {
-      "id": "recova-app--writes--recova-supabase",
-      "from": "recova-app",
-      "to": "recova-supabase",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-app--writes--recova-redis",
-      "from": "recova-app",
-      "to": "recova-redis",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-app--writes--recova-r2",
-      "from": "recova-app",
-      "to": "recova-r2",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-app--reads--recova-stripe",
-      "from": "recova-app",
-      "to": "recova-stripe",
-      "kind": "reads"
-    },
-    {
-      "id": "recova-app--writes--recova-stripe",
-      "from": "recova-app",
-      "to": "recova-stripe",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-app--writes--recova-resend",
-      "from": "recova-app",
-      "to": "recova-resend",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-cron--writes--recova-app",
-      "from": "recova-cron",
-      "to": "recova-app",
-      "kind": "writes"
-    },
-    {
-      "id": "recova-mcp-app--serves--recova-mcp-agents",
-      "from": "recova-mcp-app",
-      "to": "recova-mcp-agents",
-      "kind": "serves"
-    },
-    {
       "id": "txasm-worker--writes--txasm-db",
       "from": "txasm-worker",
       "to": "txasm-db",
@@ -2485,12 +2278,6 @@
       "kind": "reads"
     },
     {
-      "id": "recova-mcp--reads--recova",
-      "from": "recova-mcp",
-      "to": "recova",
-      "kind": "reads"
-    },
-    {
       "id": "carrel--publishes-to--txasm",
       "from": "carrel",
       "to": "txasm",
@@ -2527,12 +2314,6 @@
       "kind": "coordinates"
     },
     {
-      "id": "capsid--coordinates--bsw",
-      "from": "capsid",
-      "to": "bsw",
-      "kind": "coordinates"
-    },
-    {
       "id": "capsid--coordinates--writing",
       "from": "capsid",
       "to": "writing",
@@ -2542,12 +2323,6 @@
       "id": "capsid--coordinates--capsid-bench",
       "from": "capsid",
       "to": "capsid-bench",
-      "kind": "coordinates"
-    },
-    {
-      "id": "capsid--coordinates--recova",
-      "from": "capsid",
-      "to": "recova",
       "kind": "coordinates"
     },
     {
@@ -2839,18 +2614,6 @@
       "kind": "installs"
     },
     {
-      "id": "bsw--installs--devkit",
-      "from": "bsw",
-      "to": "devkit",
-      "kind": "installs"
-    },
-    {
-      "id": "bsw--installs--site-runtime",
-      "from": "bsw",
-      "to": "site-runtime",
-      "kind": "installs"
-    },
-    {
       "id": "prelum--installs--devkit",
       "from": "prelum",
       "to": "devkit",
@@ -3077,10 +2840,10 @@
     }
   ],
   "counts": {
-    "systems": 27,
-    "public": 21,
-    "private": 6,
-    "containers": 144,
-    "relationships": 238
+    "systems": 23,
+    "public": 20,
+    "private": 3,
+    "containers": 131,
+    "relationships": 223
   }
 }
