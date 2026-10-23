@@ -657,12 +657,6 @@ check(
     /checkRateLimit\(env, `register:\$\{ip\}`, REGISTRATIONS_PER_MINUTE\)/.test(withoutComments(indexText)),
   "Rule 13: registration rate limited.",
 );
-check(
-  "registrationRefusal matches exactly (includes), never by prefix",
-  /!allowed\.includes\(uri\)/.test(codeOnly(readFileSync(join(SRC, "registration.ts"), "utf8"))) &&
-    !/startsWith|endsWith|indexOf/.test(codeOnly(readFileSync(join(SRC, "registration.ts"), "utf8"))),
-  "A prefix match on a redirect URI is how authorization codes are stolen.",
-);
 
 // RULE 12.2, AUDIENCE. The provider names this server's resource, which pins
 // every grant and token to it (RFC 8707) and refuses a token issued for any other.

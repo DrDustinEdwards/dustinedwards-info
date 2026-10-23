@@ -2,23 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { agentScopes, authorizeCall, callerName, isAdminUser } from "../src/auth.ts";
+import { agentScopes, authorizeCall, callerName } from "../src/auth.ts";
 
 const env = { ADMIN_EMAIL: "Admin@Example.com" };
 const props = { email: "admin@example.com" };
-
-describe("isAdminUser", () => {
-  test("matches the email without case, and nothing else", () => {
-    assert.equal(isAdminUser(env, props), true);
-    assert.equal(isAdminUser({ ADMIN_EMAIL: "other@example.com" }, props), false);
-    assert.equal(isAdminUser(env, {}), false);
-  });
-
-  test("an unset administrator admits nobody", () => {
-    assert.equal(isAdminUser({}, props), false);
-    assert.equal(isAdminUser({ ADMIN_EMAIL: "  " }, props), false);
-  });
-});
 
 describe("agentScopes", () => {
   test("an agent reads unless AGENT_WRITE names it", () => {

@@ -156,7 +156,7 @@ the only place that says WHICH agent acted.
 |---|---|
 | `npm run typecheck` | `wrangler types -c wrangler.jsonc && tsc -b` |
 | `npm run build` | a dry-run bundle; typecheck is not a build (a missing runtime dependency passes typecheck when `node_modules` still holds it) |
-| `npm test` | the tools, the request layer, ownership, scope, the log and registration against a fake site |
+| `npm test` | the tools, the request layer, ownership, scope and the log against a fake site |
 | `npm run check:wrapper` | the no-policy law and the security floor, mechanically |
 | `npm run check:wrapper:plant` | that `check:wrapper` actually fails, one planted violation at a time |
 | `npm run check:conformance` | the official suite against the real protocol layer, per era, plus the authorization server against the real deploy entry |
