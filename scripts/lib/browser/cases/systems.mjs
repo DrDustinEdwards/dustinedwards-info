@@ -132,7 +132,7 @@ const zoomState = () => {
 /**
  * Dustin, 2026-10-18: "it's not intuitive to click twice". One tap on any system zooms into its circle, with
  * its parts inside and the systems it connects to round the rim; a system on the rim is a tap to zoom there;
- * "Back to all systems", beside the views, and a tap outside the circle return to the map. A private system's circle draws no part.
+ * "Back to all systems", beside the views, and a tap outside the circle return to the map.
  */
 async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
