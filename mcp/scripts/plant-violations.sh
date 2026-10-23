@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.." || exit 2
 SNAP="$(mktemp -d)"
 trap 'rm -rf "$SNAP"' EXIT
 
-FILES="src/tools.ts src/api-client.ts src/legacy-era.ts src/mcp-handler.ts src/index.ts src/auth.ts src/registration.ts wrangler.jsonc wrangler.jsonc.example"
+FILES="src/tools.ts src/api-client.ts src/legacy-era.ts src/mcp-handler.ts src/index.ts src/auth.ts wrangler.jsonc wrangler.jsonc.example"
 
 snapshot() {
   for f in $FILES; do
@@ -215,36 +215,29 @@ s=s.replace('registrationRefusal(env.DCR_REDIRECT_URIS, clientMetadata)','null',
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "19. registration allowlist bypassed"
 
-# 20. A prefix match on a redirect URI.
-python3 -c "
-p='src/registration.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('!allowed.includes(uri)','!allowed.some((a) => uri.startsWith(a))',1)
-open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "20. redirect URI matched by prefix"
-
-# 21. Tokens no longer bound to this server's resource (rule 12.2).
+# 20. Tokens no longer bound to this server's resource (rule 12.2).
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('resource: \`\${origin}\${MCP_ROUTE}\`,\n      authorization_servers','authorization_servers',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "21. audience binding removed"
+expect_fail "20. audience binding removed"
 
-# 22. A post tool called again (rule 11, Carrel owns writing).
+# 21. A post tool called again (rule 11, Carrel owns writing).
 python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('handler: (env) => run(env, \"backup_media\", {}),','handler: (env) => run(env, \"save_post\", {}),',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "22. a post tool called"
+expect_fail "21. a post tool called"
 
-# 23. A second app module imported.
+# 22. A second app module imported.
 python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('import { z } from \"zod\";','import { z } from \"zod\";\nimport { SITE_ORIGIN } from \"../../app/lib/seo.ts\";',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "23. a second app module imported"
+expect_fail "22. a second app module imported"
 
 echo
-echo "planted 23: $pass caught, $missed missed, $contaminated contaminated"
+echo "planted 22: $pass caught, $missed missed, $contaminated contaminated"
 final=$(gate)
 echo "final baseline: exit $final"
 if [ "$missed" != "0" ] || [ "$contaminated" != "0" ] || [ "$final" != "0" ]; then

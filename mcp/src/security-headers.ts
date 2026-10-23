@@ -12,8 +12,7 @@
 
 import { applyHeaderSet, buildSecurityHeaders, type HeaderOverride } from "@dustinedwards/site-runtime/headers";
 import { buildPolicy, scriptHash } from "@dustinedwards/site-runtime/csp";
-
-import { CONSENT_STYLE } from "./login-handler";
+import { CONSENT_STYLE } from "@dustinedwards/site-runtime/mcp-login";
 
 /**
  * Where browsers send CSP violations: this Worker's own sink (csp-report.ts), so a blocked

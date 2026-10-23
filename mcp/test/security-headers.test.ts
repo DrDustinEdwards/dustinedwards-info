@@ -13,7 +13,8 @@ import { checkSecurityHeaders, failures, parsePolicy } from "@dustinedwards/site
 import { scriptHash } from "@dustinedwards/site-runtime/csp";
 
 import { AuthorizationError } from "@cloudflare/workers-oauth-provider";
-import { CONSENT_STYLE, defaultHandler, type LoginEnv } from "../src/login-handler.ts";
+import { CONSENT_STYLE } from "@dustinedwards/site-runtime/mcp-login";
+import { defaultHandler, type LoginEnv } from "../src/login-handler.ts";
 import { handleMcp } from "../src/mcp-handler.ts";
 import { handleProbe } from "../src/probe.ts";
 import { handleCspReport } from "../src/csp-report.ts";

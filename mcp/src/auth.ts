@@ -10,6 +10,7 @@
  */
 
 import { safeEqual } from "@dustinedwards/site-runtime/compare";
+import { isAdminUser } from "@dustinedwards/site-runtime/mcp-login";
 
 /** The Cloudflare Access identity carried on an OAuth grant, set at sign-in. */
 export interface Props extends Record<string, unknown> {
@@ -97,23 +98,6 @@ export function authorizeCall(
       : "Refused: this connection holds no read scope. Reconnect through the OAuth flow.";
   }
   return null;
-}
-
-/**
- * Is this grant the single administrator's?
- *
- * `ADMIN_EMAIL` is the one email let in, compared without case. The email is
- * the one Cloudflare Access verified at sign-in, as in Capsid and Carrel. A
- * grant minted under the old GitHub sign-in carries no email, so it is refused
- * and the connector is reconnected once.
- *
- * Fails CLOSED: an unset or blank value admits nobody. A single-admin server
- * whose admin is unconfigured must refuse everyone rather than admit anyone.
- */
-export function isAdminUser(env: { ADMIN_EMAIL?: string }, user: { email?: unknown }): boolean {
-  const admin = (env.ADMIN_EMAIL ?? "").trim().toLowerCase();
-  if (!admin || typeof user.email !== "string") return false;
-  return user.email.trim().toLowerCase() === admin;
 }
 
 /**

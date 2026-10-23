@@ -25,12 +25,12 @@
  * log before and after (12.4). A tool handler never runs without all three.
  */
 
+import { appendAudit, loggedArgs, loggedResult, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { z } from "zod";
 
 import { watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
 
 import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client";
-import { appendAudit, loggedArgs, loggedResult, type AuditEnv } from "./audit-log";
 import { authorizeCall, callerName, SCOPE_READ, SCOPE_WRITE, type Caller, type Scope } from "./auth";
 
 export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
