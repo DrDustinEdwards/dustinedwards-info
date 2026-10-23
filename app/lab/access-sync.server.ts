@@ -2,6 +2,8 @@ import { allowList } from "@dustinedwards/site-runtime/members";
 
 import { latestAuditId, listMembers, pendingAfter, recordSync, unsyncedRemovals } from "~/db/members";
 
+import { LAB_CATALOG } from "./titles.mjs";
+
 /**
  * Asks Capsid to make the lab's Cloudflare Access group (`lab-people`) hold exactly the people /lab/members says may
  * sign in (capsid docs/design/design-identity-roles.md, "The Cloudflare sync"; Dustin's ruling of 2026-10-09: Capsid
@@ -65,7 +67,7 @@ async function callCapsid(env: Env, nowMs: number, fetchImpl: FetchLike): Promis
   if (!key) return { ok: false, error: SYNC_NOT_SET_UP_REASON };
 
   const rows = await listMembers(env);
-  const body = { namespace: ACCESS_SYNC_NAMESPACE, members: allowList(rows, nowMs), removed: await unsyncedRemovals(env) };
+  const body = { namespace: ACCESS_SYNC_NAMESPACE, members: allowList(rows, nowMs, LAB_CATALOG), removed: await unsyncedRemovals(env) };
   let response: Response;
   try {
     response = await fetchImpl(ACCESS_SYNC_URL, {

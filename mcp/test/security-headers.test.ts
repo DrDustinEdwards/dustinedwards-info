@@ -29,7 +29,7 @@ const AUTH_REQUEST = { clientId: "https://client.example.com/meta", redirectUri:
 const unbound = () => new AuthorizationError("invalid_request", { description: "The handle is missing or expired." });
 
 const LOGIN_ENV = {
-  ACCESS_TEAM_DOMAIN: "https://team.example.com",
+  ACCESS_TEAM_DOMAIN: "https://sample.cloudflareaccess.com",
   ACCESS_SAAS_CLIENT_ID: "client-id",
   ACCESS_SAAS_CLIENT_SECRET: "client-secret",
   ADMIN_EMAIL: "admin@example.com",

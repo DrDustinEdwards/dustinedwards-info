@@ -61,7 +61,7 @@ await test("a response with the standard set and a strict enforced policy passes
  */
 const PLANTED = [
   ["no HSTS", { "Strict-Transport-Security": null }, /^Strict-Transport-Security is present$/],
-  ["a short HSTS", { "Strict-Transport-Security": "max-age=300" }, /^Strict-Transport-Security lasts/],
+  ["a short HSTS", { "Strict-Transport-Security": "max-age=300; includeSubDomains" }, /^Strict-Transport-Security lasts/],
   ["sniffing allowed", { "X-Content-Type-Options": null }, /^X-Content-Type-Options is present$/],
   ["a leaky Referrer-Policy", { "Referrer-Policy": "unsafe-url" }, /^Referrer-Policy is a strict policy$/],
   ["framing allowed", { "X-Frame-Options": "ALLOW-FROM https://x" }, /^X-Frame-Options refuses framing$/],
@@ -74,7 +74,7 @@ const PLANTED = [
   ["a wildcard script source", { "Content-Security-Policy": GOOD_POLICY.replace("'strict-dynamic'", "https:") }, /^scripts: no wildcard/],
   ["plugins allowed", { "Content-Security-Policy": GOOD_POLICY.replace("object-src 'none'", "object-src 'self'") }, /^object-src is 'none'$/],
   ["no base-uri", { "Content-Security-Policy": GOOD_POLICY.replace("base-uri 'none'; ", "") }, /^base-uri is/],
-  ["no frame-ancestors", { "Content-Security-Policy": GOOD_POLICY.replace("frame-ancestors 'none'; ", "") }, /^frame-ancestors is set$/],
+  ["no frame-ancestors", { "Content-Security-Policy": GOOD_POLICY.replace("frame-ancestors 'none'; ", "") }, /^frame-ancestors is 'none' or 'self'$/],
   ["no report sink", { "Content-Security-Policy": GOOD_POLICY.replace("; report-uri /csp", "") }, /^violations are reported/],
 ];
 
