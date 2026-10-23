@@ -5,6 +5,8 @@
 import { slug as githubSlug } from "github-slugger";
 import matter from "gray-matter";
 
+import { yamlPlain } from "../../lib/yaml-plain.mjs";
+
 import { readConditions, segmentText, tokenize } from "./marks.mjs";
 
 export const PROCEDURES_DIR = "content/procedures";
@@ -55,21 +57,6 @@ export const PLATFORMS = /** @type {const} */ ({ linux: "Linux", macos: "macOS",
  * @typedef {{ type: "prose", markdown: string } | { type: "steps", steps: Step[] }} Block
  * @typedef {{ title: string, id: string, custom: boolean, line: number, blocks: Block[] }} Section
  */
-
-/**
- * YAML dates arrive as Date objects; the record keeps the ISO day the file wrote.
- *
- * @param {unknown} value
- * @returns {unknown}
- */
-function plain(value) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (Array.isArray(value)) return value.map(plain);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v)]));
-  }
-  return value;
-}
 
 /**
  * The lines under a step, with its indentation removed, split into the step's own words, its flags,
@@ -259,7 +246,7 @@ export function parseProcedure({ file, raw }) {
       problems: [`the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`],
     };
   }
-  const data = /** @type {Record<string, any>} */ (plain(parsed.data));
+  const data = /** @type {Record<string, any>} */ (yamlPlain(parsed.data));
   const headerLines = raw.slice(0, raw.length - parsed.content.length).split("\n").length - 1;
   const lines = parsed.content.split(/\r?\n/);
 

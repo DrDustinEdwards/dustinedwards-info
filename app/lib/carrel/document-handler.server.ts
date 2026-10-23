@@ -10,7 +10,7 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { saveLlms } from "~/lib/llms/save.server";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 
@@ -23,7 +23,6 @@ const TITLE = "llms.txt";
 const PUBLIC_PATH = "/llms.txt";
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 export function documentHandler(env: DocumentEnv): ContentKindHandler {
   /** A write names the one document, or is refused with the reason. */
@@ -113,26 +112,12 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
       throw new RefusedError(`${TITLE} cannot be unpublished: it is the document agents read first, and it has no draft state.`);
     },
 
-    async revisions(slug) {
-      if (slug !== LLMS_SLUG || !(await readFile(env, LLMS_PATH))) return null;
-      const commits = await listCommitsForPath(env, LLMS_PATH, 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, slug === LLMS_SLUG ? LLMS_PATH : null);
     },
 
-    async revisionSource(slug, version) {
-      if (slug !== LLMS_SLUG || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, LLMS_PATH, version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, slug === LLMS_SLUG ? LLMS_PATH : null, version);
     },
   };
 }

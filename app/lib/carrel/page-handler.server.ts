@@ -13,14 +13,13 @@ import { listPageRows } from "~/db/pages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { PAGES_DIR, pagePathForSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { savePage } from "~/lib/pages/save.server";
 
 type PageEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 const isDraft = (raw: string) => matter(raw).data.draft === true;
 const statusOf = (raw: string): ContentStatus => (isDraft(raw) ? "draft" : "published");
@@ -139,28 +138,12 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
       return write(slug, input.changeId, withDraft(stored, true), input.expectedVersion);
     },
 
-    async revisions(slug) {
-      const found = registered(slug);
-      if (!found || !(await readFile(env, found.file))) return null;
-      const commits = await listCommitsForPath(env, found.file, 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, registered(slug)?.file ?? null);
     },
 
-    async revisionSource(slug, version) {
-      const found = registered(slug);
-      if (!found || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, found.file, version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, registered(slug)?.file ?? null, version);
     },
   };
 }

@@ -25,10 +25,9 @@ import { procedureHandler } from "~/lib/carrel/procedure-handler.server";
 import { phageHandler } from "~/lib/carrel/phage-handler.server";
 import { registryHandlers } from "~/lib/carrel/registry-handler.server";
 import { rosterHandler } from "~/lib/carrel/roster-handler.server";
-import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
-  GitHubError,
   deletePost,
   renderRecord,
   savePost,
@@ -47,7 +46,6 @@ type RenderDocument = (request: Request, context: RouterContextProvider) => Prom
  * A revision's version is a commit sha. A post's own version is different: the git blob sha of its file at
  * head, so only a change to that post moves it, and saving another post no longer makes this one look changed.
  */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** A preview of a post not yet in D1 needs an id no stored row has, for its neighbours' tie-break. */
 const PREVIEW_ROW_ID = Number.MAX_SAFE_INTEGER;
@@ -248,26 +246,12 @@ export function carrelSiteAdapter(options: {
       return write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
     },
 
-    async revisions(id) {
-      if (!(await readFile(env, postPath(id)))) return null;
-      const commits = await listCommitsForPath(env, postPath(id), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(id) {
+      return fileRevisions(env, postPath(id));
     },
 
-    async revisionSource(id, version) {
-      if (!COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, postPath(id), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(id, version) {
+      return fileRevisionSource(env, postPath(id), version);
     },
 
     // The post's own delete, the one the admin uses: the file's commit, the D1 rows, the cache purge and the

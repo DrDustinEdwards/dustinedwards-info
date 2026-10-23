@@ -41,7 +41,6 @@ const SMOKE_REQUESTED = Boolean(SMOKE_TOKEN || SMOKE_ERROR);
 export const CREDENTIAL = "smoke";
 export const CREDENTIAL_PRESENT = SMOKE_REQUESTED;
 export const CREDENTIAL_ERROR = SMOKE_ERROR;
-export const CREDENTIAL_SOURCE = SMOKE_SOURCE;
 
 /**
  * A pinned header is safe here: a bearer token has no refresh to fight.

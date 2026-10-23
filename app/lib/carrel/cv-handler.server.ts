@@ -15,12 +15,11 @@ import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { saveCvFile } from "~/lib/cv/save.server";
 import { TYPES } from "~/lib/cv/view.mjs";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 
 type CvEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The name a list shows for a file: the section's plural as the CV prints it. */
 function titleOf(slug: string) {
@@ -133,28 +132,12 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
       throw new RefusedError("The CV has no draft state, so it cannot be unpublished. Edit the file, or remove an entry.");
     },
 
-    async revisions(slug) {
-      const found = registered(slug);
-      if (!found || !(await readFile(env, found))) return null;
-      const commits = await listCommitsForPath(env, found, 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, registered(slug) ?? null);
     },
 
-    async revisionSource(slug, version) {
-      const found = registered(slug);
-      if (!found || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, found, version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, registered(slug) ?? null, version);
     },
   };
 }

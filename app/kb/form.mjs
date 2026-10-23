@@ -6,6 +6,8 @@
 
 import matter from "gray-matter";
 
+import { yamlPlain } from "../lib/yaml-plain.mjs";
+
 /** YAML through gray-matter, the reader every content file is parsed with, so the form reads a field as the compile does. */
 const yaml = {
   /** @param {string} text */
@@ -29,14 +31,6 @@ export const STEP_FLAGS = /** @type {const} */ (["CRITICAL", "PAUSE POINT", "WHY
 const FRONT = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
 const KEY = /^([A-Za-z_][\w-]*):(?:\s|$)/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Dates as the ISO day the file wrote, so a form and JSON carry the same value YAML read. @param {unknown} value @returns {unknown} */
-function plain(value) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (Array.isArray(value)) return value.map(plain);
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v)]));
-  return value;
-}
 
 /** Equal as data, whatever order an object's keys came in. @param {unknown} a @param {unknown} b @returns {boolean} */
 function sameValue(a, b) {
@@ -77,7 +71,7 @@ export function splitFile(raw) {
 /** One field's value, read from its own text. @param {string} text */
 function readField(text) {
   const parsed = yaml.load(text);
-  return parsed && typeof parsed === "object" ? plain(Object.values(parsed)[0]) : undefined;
+  return parsed && typeof parsed === "object" ? yamlPlain(Object.values(parsed)[0]) : undefined;
 }
 
 /** A plain one-line string YAML reads back as itself, unquoted. @param {string} value */

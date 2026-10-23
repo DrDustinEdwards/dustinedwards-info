@@ -174,18 +174,20 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
     removed += 1;
   }
 
-  // D1 reads its own writes in-request, so drift reported here is real.
-  const after = await readContentSides(env);
-  const residual = contentDriftCompare(after.files, after.rows);
-  const residualCount =
-    residual.changed.length + residual.unrowed.length + residual.unfiled.length;
+  return convergedResult(await readContentSides(env), { repaired, removed, unpurged });
+}
 
+/** A converge's answer, read after its writes: D1 reads its own writes in-request, so drift reported here is real. */
+function convergedResult(
+  after: { files: Array<{ slug: string; sha: string }>; rows: Array<{ slug: string; source_blob_sha: string | null }> },
+  counts: { repaired: number; removed: number; unpurged: number },
+): ToolResult {
+  const residual = contentDriftCompare(after.files, after.rows);
+  const residualCount = residual.changed.length + residual.unrowed.length + residual.unfiled.length;
   return {
     ok: true,
     data: {
-      repaired,
-      removed,
-      unpurged,
+      ...counts,
       expected: after.files.length,
       present: after.files.length - residual.changed.length - residual.unrowed.length,
       converged: residualCount === 0,
@@ -313,23 +315,7 @@ async function convergeKind<
     };
   }
 
-  // D1 reads its own writes in-request, so drift reported here is real.
-  const after = await spec.read();
-  const residual = contentDriftCompare(after.files, after.rows);
-  const residualCount =
-    residual.changed.length + residual.unrowed.length + residual.unfiled.length;
-
-  return {
-    ok: true,
-    data: {
-      repaired,
-      removed,
-      unpurged,
-      expected: after.files.length,
-      present: after.files.length - residual.changed.length - residual.unrowed.length,
-      converged: residualCount === 0,
-    },
-  };
+  return convergedResult(await spec.read(), { repaired, removed, unpurged });
 }
 
 /** Procedures: the compile and write doors save_procedure uses. */

@@ -6,7 +6,6 @@ import {
   CREDENTIAL,
   CREDENTIAL_ERROR,
   CREDENTIAL_PRESENT,
-  CREDENTIAL_SOURCE,
   SMOKE_SOURCE,
   applyCredential,
   credentialAuthenticates,
@@ -49,7 +48,7 @@ export async function run({ browser }) {
     );
   } else if (CREDENTIAL_ERROR) {
     ok(
-      `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} is usable`,
+      `the ${CREDENTIAL} credential supplied in ${SMOKE_SOURCE} is usable`,
       false,
       `${CREDENTIAL_ERROR}\n` +
         `        This is a FORMAT or CONFIGURATION problem, not a rejected credential. ` +
@@ -60,14 +59,14 @@ export async function run({ browser }) {
     ok(
       "the admin cases have an origin to drive",
       false,
-      `a ${CREDENTIAL} credential was supplied in ${CREDENTIAL_SOURCE} and no origin was. ` +
+      `a ${CREDENTIAL} credential was supplied in ${SMOKE_SOURCE} and no origin was. ` +
         `These cases CANNOT run against the preview server: SMOKE_TOKEN is a wrangler secret and ` +
         `this repo has no .dev.vars by design, so the preview would answer 503 not-configured.\n` +
         `        Set ADMIN_ORIGIN. The admin cases below did not run.`,
     );
   } else if (!(AUTH_RESULT = await credentialAuthenticates(ADMIN_ORIGIN)).ok) {
     ok(
-      `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
+      `the ${CREDENTIAL} credential supplied in ${SMOKE_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
       false,
       /* Status 0 is a request that never got an answer (DNS, TLS, timeout): no credential was
          judged, so neither repair below applies, and the cause is the error itself. */

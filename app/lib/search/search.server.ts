@@ -11,7 +11,7 @@ import {
 import { applySort, parseSort, type SearchSort } from "./sort.mjs";
 import { PUBLISHED_STATUS } from "./visibility.mjs";
 import { clampWords } from "~/lib/content/og-card-text.mjs";
-import { escapeXml } from "~/lib/rss-feed.mjs";
+import { escapeXml } from "@drdustinedwards/site-helpers";
 import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
 
 type ParsedQuery = ReturnType<typeof parseQuery>;

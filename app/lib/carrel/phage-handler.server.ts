@@ -11,14 +11,13 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import { listPhageRows } from "~/db/phages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { PHAGES_PAGE_PATH, phagePath } from "~/lib/phages/compile.mjs";
 import { PHAGE_SLUG, savePhage } from "~/lib/phages/save.server";
 
 type PhageEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 export function phageHandler(env: PhageEnv): ContentKindHandler {
   /** One write through savePhage as the Carrel actor, answered in the package's terms. */
@@ -106,26 +105,12 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
       );
     },
 
-    async revisions(slug) {
-      if (!owns(slug) || !(await readFile(env, phagePath(slug)))) return null;
-      const commits = await listCommitsForPath(env, phagePath(slug), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, owns(slug) ? phagePath(slug) : null);
     },
 
-    async revisionSource(slug, version) {
-      if (!owns(slug) || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, phagePath(slug), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, owns(slug) ? phagePath(slug) : null, version);
     },
   };
 }
