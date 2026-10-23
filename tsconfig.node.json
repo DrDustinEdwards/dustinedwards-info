@@ -100,11 +100,6 @@
     // htmlHasMath on every post request, and check:content makes the two
     // derivations of that flag argue. Dependency-free by design, so listing it
     // costs this project nothing.
-    // The feed item shapes. check:content asserts over the REAL corpus that
-    // `mathToTex` leaves no KaTeX markup in a feed body, which needs the module
-    // the feeds themselves call rather than a second transform that agrees with
-    // it today. `.mjs` and dependency-free for the reason its own header gives.
-    "app/lib/rss-feed.mjs",
     // How the social card's text is fitted and cut. `build:og` paints with it
     // and `ogImageKey` hashes through it, which is the whole reason it is a
     // module: the key must hash the string the template draws, not the field
@@ -320,6 +315,7 @@
     // The publication file: parsed, judged and compiled by one door that the gates, the build, the sync and the
     // Carrel adapter all call (docs/PUBLICATIONS.md). The content-id rule is shared with the adapter's registry.
     "app/lib/publications/parse.mjs",
+    "app/lib/yaml-plain.mjs",
     "app/lib/publications/validate.mjs",
     "app/lib/publications/record.mjs",
     "app/lib/publications/serialize.mjs",

@@ -9,9 +9,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
-import { NotFoundHelp } from "~/components/not-found-help";
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { ErrorPage } from "~/components/error-page";
 import { getNonce } from "~/lib/context";
 import { ENHANCE_LOADER } from "~/lib/enhance-loader.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
@@ -156,36 +154,5 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Something broke.";
-  let details = "The page failed to render.";
-  let stack: string | undefined;
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
-
-  if (isRouteErrorResponse(error)) {
-    message = notFound ? "404" : "Error";
-    details = notFound ? "This page is not here." : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
-  }
-
-  // SiteHeader is safe here: it reads no loader data, so nothing is missing on the error path.
-  return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
-        <div className="page-inner">
-          <h1>{message}</h1>
-          <p className="muted">{details}</p>
-          {notFound ? <NotFoundHelp /> : null}
-          {stack && (
-            <pre className="error-stack">
-              <code>{stack}</code>
-            </pre>
-          )}
-        </div>
-      </main>
-      <ShellFooter />
-    </>
-  );
+  return <ErrorPage error={error} />;
 }

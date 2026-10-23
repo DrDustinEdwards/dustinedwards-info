@@ -4,6 +4,8 @@
 
 import matter from "gray-matter";
 
+import { yamlPlain } from "../yaml-plain.mjs";
+
 export const PUBLICATIONS_DIR = "content/publications";
 
 /** The repository path of a publication's file. */
@@ -15,21 +17,6 @@ export function publicationPath(/** @type {string} */ slug) {
 export const FULL_TEXT_HEADING = "## Full text";
 
 const FULL_TEXT_LINE = /^## Full text[ \t]*$/m;
-
-/**
- * YAML dates arrive as Date objects; the record keeps the ISO day the file wrote.
- *
- * @param {unknown} value
- * @returns {unknown}
- */
-function plain(value) {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (Array.isArray(value)) return value.map(plain);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v)]));
-  }
-  return value;
-}
 
 /**
  * @typedef {{ data: Record<string, unknown>, fullText: string | null, problems: string[] }} ParsedPublication
@@ -49,7 +36,7 @@ export function parsePublication({ file, raw }) {
     // An options object, even an empty one: gray-matter caches by input when it is omitted, and a
     // cached parse is one object shared by every caller.
     const parsed = matter(raw, {});
-    data = /** @type {Record<string, unknown>} */ (plain(parsed.data));
+    data = /** @type {Record<string, unknown>} */ (yamlPlain(parsed.data));
     content = parsed.content;
   } catch (error) {
     problems.push(`${file}: the front matter does not parse: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);

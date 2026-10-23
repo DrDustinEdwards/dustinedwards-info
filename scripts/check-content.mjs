@@ -3,7 +3,7 @@ import { buildPhages } from "./lib/phages.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
 import { buildRoster } from "./lib/roster.mjs";
 import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
-import { mathToTex } from "../app/lib/rss-feed.mjs";
+import { mathToTex } from "@drdustinedwards/site-helpers";
 
 /** @param {string[]} names */
 function nameThem(names) {

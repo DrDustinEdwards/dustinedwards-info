@@ -14,12 +14,11 @@ import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { dictionaryPath, parseDictionaryEntry } from "~/lib/dictionary/parse.mjs";
 import { fileIsDraft, saveDictionaryEntry } from "~/lib/dictionary/save.server";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 
 type DictionaryEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The source with its draft flag set to `draft`, touching no line when it already says so. */
 const withDraft = (raw: string, draft: boolean) => (fileIsDraft(raw) === draft ? raw : withPublication(raw, { draft }));
@@ -114,26 +113,12 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
       return write(key, input.changeId, withDraft(source, true), input.expectedVersion);
     },
 
-    async revisions(key) {
-      if (!(await readFile(env, dictionaryPath(key)))) return null;
-      const commits = await listCommitsForPath(env, dictionaryPath(key), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(key) {
+      return fileRevisions(env, dictionaryPath(key));
     },
 
-    async revisionSource(key, version) {
-      if (!COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, dictionaryPath(key), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(key, version) {
+      return fileRevisionSource(env, dictionaryPath(key), version);
     },
   };
 }

@@ -11,14 +11,13 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import { listRosterRows } from "~/db/roster";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { ROSTER_PAGE_PATH, rosterPath } from "~/lib/roster/compile.mjs";
 import { COHORT_SLUG, saveRoster } from "~/lib/roster/save.server";
 
 type RosterEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The title Carrel shows: the cohort's year, which is all a cohort is named. */
 const titleOf = (slug: string) => `${slug} cohort`;
@@ -109,26 +108,12 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
       );
     },
 
-    async revisions(slug) {
-      if (!owns(slug) || !(await readFile(env, rosterPath(slug)))) return null;
-      const commits = await listCommitsForPath(env, rosterPath(slug), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, owns(slug) ? rosterPath(slug) : null);
     },
 
-    async revisionSource(slug, version) {
-      if (!owns(slug) || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, rosterPath(slug), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, owns(slug) ? rosterPath(slug) : null, version);
     },
   };
 }

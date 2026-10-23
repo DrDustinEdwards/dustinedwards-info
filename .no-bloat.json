@@ -13,13 +13,11 @@
     ]
   },
   "baseline": {
-    "measured_at": "f022ffb",
-    "knip": {
-      "Duplicate exports": 1
-    },
+    "measured_at": "93cf7abb",
+    "knip": {},
     "jscpd": {
-      "clones": 30,
-      "percentage": 0.35
+      "clones": 22,
+      "percentage": 0.24
     }
   }
 }

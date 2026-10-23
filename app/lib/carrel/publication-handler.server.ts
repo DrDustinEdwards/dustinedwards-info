@@ -9,8 +9,7 @@ import { listPublicationIdentities } from "~/db/publications";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
-import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { GitHubError } from "~/lib/editor/publish.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { parsePublication, publicationPath } from "~/lib/publications/parse.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { fileIsDraft, savePublication } from "~/lib/publications/save.server";
@@ -19,7 +18,6 @@ import type { Publication } from "~/lib/publications/types";
 type PublicationEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** The deposited date at its own precision, as the timestamp the contract wants (a partial date reads as its first day). */
 function timestampOf(date: string | null): string | null {
@@ -121,26 +119,12 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
       return write(slug, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
     },
 
-    async revisions(slug) {
-      if (!(await readFile(env, publicationPath(slug)))) return null;
-      const commits = await listCommitsForPath(env, publicationPath(slug), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(slug) {
+      return fileRevisions(env, publicationPath(slug));
     },
 
-    async revisionSource(slug, version) {
-      if (!COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, publicationPath(slug), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(slug, version) {
+      return fileRevisionSource(env, publicationPath(slug), version);
     },
   };
 }

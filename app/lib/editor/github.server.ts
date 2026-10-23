@@ -309,6 +309,32 @@ export async function listCommitsForPath(
   }));
 }
 
+const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
+
+/** Carrel's revision list for one file: null when the file (or the id's owner) is absent. */
+export async function fileRevisions(env: GhEnv, path: string | null) {
+  if (!path || !(await readFile(env, path))) return null;
+  const commits = await listCommitsForPath(env, path, 50);
+  return commits.map((c) => ({
+    version: c.sha,
+    at: new Date(c.date).toISOString(),
+    author: c.author.slice(0, 200),
+    message: c.message.slice(0, 2000),
+  }));
+}
+
+/** One file as it stood at a commit, for Carrel: null for an absent path, a malformed version or an unknown ref. */
+export async function fileRevisionSource(env: GhEnv, path: string | null, version: string) {
+  if (!path || !COMMIT_SHA.test(version)) return null;
+  try {
+    return (await readFile(env, path, version))?.content ?? null;
+  } catch (error) {
+    // An unknown ref is a missing version, not a failure of the site.
+    if (error instanceof GitHubError && error.status === 422) return null;
+    throw error;
+  }
+}
+
 export async function getCommitPatch(env: GhEnv, sha: string, path: string) {
   const commit = await gh<{
     files?: Array<{ filename: string; patch?: string; status: string }>;

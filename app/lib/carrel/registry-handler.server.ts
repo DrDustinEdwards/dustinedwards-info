@@ -17,7 +17,7 @@ import { listRegistryRows } from "~/db/registry";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
-import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
 import { ID_PATTERN, registryPath, registrySlug } from "~/kb/registry/compile.mjs";
 import { KINDS, type KindSpec } from "~/kb/registry/kinds.mjs";
 import { saveRegistryItem } from "~/kb/registry/save.server";
@@ -25,7 +25,6 @@ import { saveRegistryItem } from "~/kb/registry/save.server";
 type RegistryEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 const isDraft = (raw: string) => matter(raw, {}).data.draft === true;
 const statusOf = (raw: string): ContentStatus => (isDraft(raw) ? "draft" : "published");
@@ -139,26 +138,12 @@ function registryHandler(env: RegistryEnv, kind: string, kinds: Readonly<Record<
       return write(id, input.changeId, withDraft(stored, true), input.expectedVersion);
     },
 
-    async revisions(id) {
-      if (!owns(id) || !(await readFile(env, fileOf(id)))) return null;
-      const commits = await listCommitsForPath(env, fileOf(id), 50);
-      return commits.map((c) => ({
-        version: c.sha,
-        at: new Date(c.date).toISOString(),
-        author: c.author.slice(0, 200),
-        message: c.message.slice(0, 2000),
-      }));
+    revisions(id) {
+      return fileRevisions(env, owns(id) ? fileOf(id) : null);
     },
 
-    async revisionSource(id, version) {
-      if (!owns(id) || !COMMIT_SHA.test(version)) return null;
-      try {
-        return (await readFile(env, fileOf(id), version))?.content ?? null;
-      } catch (error) {
-        // An unknown ref is a missing version, not a failure of the site.
-        if (error instanceof GitHubError && error.status === 422) return null;
-        throw error;
-      }
+    revisionSource(id, version) {
+      return fileRevisionSource(env, owns(id) ? fileOf(id) : null, version);
     },
   };
 }
