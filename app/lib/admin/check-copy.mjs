@@ -137,9 +137,6 @@ const CHECK_COPY = {
   },
 };
 
-/** The check names this file words, so a test can hold it to every check the health run makes. */
-export const WORDED_CHECKS = Object.keys(CHECK_COPY);
-
 /**
  * @param {{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }} check
  * @returns {{ name: string, finding: string, repair: { action: string, intent: string, label: string } | null }}

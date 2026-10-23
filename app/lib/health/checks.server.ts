@@ -172,7 +172,7 @@ export async function readLlmsSides(env: Env & { GITHUB_TOKEN?: string }) {
   };
 }
 
-export interface HealthCheck {
+interface HealthCheck {
   name: string;
   ok: boolean;
   detail: string;
