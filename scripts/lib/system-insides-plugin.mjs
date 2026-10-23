@@ -16,9 +16,16 @@
  * from the module (its script fetches the asset), and the server's map, a ?system= one with its layer inlined, is
  * kept as it is on hydration, since React does not compare dangerouslySetInnerHTML there. With every layer in the
  * route's script, the full model's put /systems past its LCP budget again (2026-10-18, 2576ms).
+ *
+ * The search takes minutes over the whole model (2026-10-23: about 140 seconds, nearly all of it Carrel, Capsid
+ * and this site, whose circles are the hardest to draw), so each circle it finds is saved in
+ * data/system-layouts.json under a key of what drew it, and a build searches only the circles whose key moved
+ * (Dustin, 2026-10-23: "only need to rebuild it when something changes"). A build outside CI writes the file back
+ * when it searched; `npm run build:layouts` does it on its own, and the model's daily refresh commits it with the
+ * model. A test holds the committed file to the committed model, so CI never pays for the search unawares.
  */
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { insideLayers } from "./system-layout.mjs";
@@ -27,6 +34,29 @@ import { loadSystemModel, mapData, summaryOf } from "../../app/lib/systems.mjs";
 const MODULE_ID = "virtual:system-insides";
 const RESOLVED_ID = `\0${MODULE_ID}`;
 const MODEL_FILE = fileURLToPath(new URL("../../data/system-model.json", import.meta.url));
+const LAYOUTS_FILE = fileURLToPath(new URL("../../data/system-layouts.json", import.meta.url));
+
+/** The saved circles, by system id. */
+export function readSavedLayouts() {
+  return existsSync(LAYOUTS_FILE) ? JSON.parse(readFileSync(LAYOUTS_FILE, "utf8")) : {};
+}
+
+/**
+ * Every layer for the model on disk, searching only the circles the saved ones do not cover, and those saved back
+ * when `write` is set: one system a line, so a change shows as the circles it moved.
+ * @param {{ write: boolean }} o
+ */
+export function drawInsides({ write }) {
+  const model = loadSystemModel(JSON.parse(readFileSync(MODEL_FILE, "utf8")));
+  const saved = readSavedLayouts();
+  const before = JSON.stringify(saved);
+  const layers = insideLayers(model, summaryOf, mapData(model), saved);
+  if (JSON.stringify(saved) !== before) {
+    if (write) writeFileSync(LAYOUTS_FILE, `{\n${Object.entries(saved).map(([id, v]) => `${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(",\n")}\n}\n`);
+    else console.warn("data/system-layouts.json is out of date, so this build searched for circles: run `npm run build:layouts` and commit it.");
+  }
+  return layers;
+}
 
 /** @type {{ bytes: string, json: string, fileName: string } | null} */
 let memo = null;
@@ -35,8 +65,7 @@ let memo = null;
 function systemInsides() {
   const bytes = readFileSync(MODEL_FILE, "utf8");
   if (memo?.bytes === bytes) return memo;
-  const model = loadSystemModel(JSON.parse(bytes));
-  const json = JSON.stringify(insideLayers(model, summaryOf, mapData(model)));
+  const json = JSON.stringify(drawInsides({ write: !process.env.CI }));
   const hash = createHash("sha256").update(json).digest("base64url").slice(0, 10);
   memo = { bytes, json, fileName: `assets/system-insides-${hash}.json` };
   return memo;

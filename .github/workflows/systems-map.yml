@@ -16,6 +16,7 @@ on:
   pull_request:
     paths:
       - data/system-model.json
+      - data/system-layouts.json
       - app/lib/systems.mjs
       - app/routes/systems.tsx
       # Brackets are a glob class in a path filter, so the file's own are escaped.

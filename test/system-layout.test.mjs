@@ -9,7 +9,8 @@ import { layoutMap, systemMapHtml } from "capsomer/behaviour/system-map";
 
 import { wireMapHtml, zoomInMapHtml } from "../app/lib/system-wiring.mjs";
 import { loadSystemModel, mapData, summaryOf } from "../app/lib/systems.mjs";
-import { faultsOf, insideLayers, layoutScene, sceneOf } from "../scripts/lib/system-layout.mjs";
+import { readSavedLayouts } from "../scripts/lib/system-insides-plugin.mjs";
+import { faultsOf, insideLayers, layoutKey, layoutScene, sceneOf } from "../scripts/lib/system-layout.mjs";
 
 const fixture = () =>
   loadSystemModel({
@@ -100,13 +101,32 @@ await test("the route sends the circles it is given and names the asset holding 
   assert.equal(zoomed.replace(' data-entered data-zoom="app"', "").replace(" data-shown", ""), one, "zooming in adds attributes only");
 });
 
-await test("the committed model's circles have no two boxes touching and no wire under a box", () => {
+await test("the saved circles are the committed model's, with no two boxes touching and no wire under a box", () => {
+  // A saved circle whose key moved would make every build search for it: `npm run build:layouts` saves it again.
   const model = loadSystemModel(JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")));
+  const saved = readSavedLayouts();
   const shell = layoutMap(mapData(model).systems).viewBox;
+  const stale = model.systems.filter((s) => saved[s.id]?.key !== layoutKey(sceneOf(model, s.id), shell[2])).map((s) => s.id);
+  assert.deepEqual(stale, [], "data/system-layouts.json is out of date: run `npm run build:layouts` and commit it");
+  assert.deepEqual(Object.keys(saved).sort(), model.systems.map((s) => s.id).sort());
   const bad = model.systems.flatMap((s) =>
-    faultsOf(layoutScene(sceneOf(model, s.id), shell[2]))
+    faultsOf(saved[s.id].layout)
       .filter((f) => f.includes(" touches ") || f.includes(" runs under "))
       .map((f) => `${s.id}: ${f}`),
   );
   assert.deepEqual(bad, []);
+});
+
+await test("a saved circle whose key still matches is used as it is, and one for a system gone is dropped", () => {
+  const model = fixture();
+  const saved = {};
+  const first = insideLayers(model, summaryOf, mapData(model), saved);
+  assert.deepEqual(Object.keys(saved).sort(), ["app", "core", "hidden", "kit"]);
+  // A planted name inside the saved core shows it is read back, not searched for again.
+  saved.core.layout.name = "Planted";
+  saved.gone = { key: "x", layout: saved.kit.layout };
+  const again = insideLayers(model, summaryOf, mapData(model), saved);
+  assert.match(again.core ?? "", />Planted</);
+  assert.equal(again.app, first.app);
+  assert.ok(!("gone" in saved));
 });

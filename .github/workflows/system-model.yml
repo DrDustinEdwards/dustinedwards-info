@@ -81,6 +81,12 @@ jobs:
           gh pr close "${{ steps.open.outputs.number }}" --delete-branch \
             --comment "Capsid's public model says what main's copy says again, so this refresh no longer applies. Closed by .github/workflows/system-model.yml."
 
+      # The circles the new model moved are searched for once here and committed with it, so no
+      # build after has to (scripts/lib/system-insides-plugin.mjs).
+      - name: Save the circles it moved
+        if: steps.refresh.outputs.changed == 'true' && steps.refresh.outputs.same_as_open != 'true'
+        run: npm run build:layouts
+
       # Only when the model differs from main's and from the open pull request's: a new date alone
       # pushes nothing, so a branch Dustin is reviewing is not replaced under him.
       - name: Open or update the pull request
@@ -95,7 +101,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -C "$BRANCH"
-          git add data/system-model.json
+          git add data/system-model.json data/system-layouts.json
           git commit -m "$title"
           # The branch is this workflow's alone, so each change replaces it with one commit on main.
           git push --force origin "$BRANCH"
