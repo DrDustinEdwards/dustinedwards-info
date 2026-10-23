@@ -153,6 +153,19 @@
       ]
     },
     {
+      "id": "foxing",
+      "name": "Foxing",
+      "short": "Foxing",
+      "family": "product",
+      "ring": "used",
+      "private": false,
+      "description": "A reading app and web platform, Letterboxd for books: a web app, an Expo phone reader and a Discord Activity for reading clubs.",
+      "domain": "foxing.app",
+      "repos": [
+        "https://github.com/DrDustinEdwards/foxing"
+      ]
+    },
+    {
       "id": "foxhound-mcp",
       "name": "Foxhound Admin",
       "short": "Hound MCP",
@@ -176,19 +189,6 @@
       "domain": "foxhoundapp.com",
       "repos": [
         "https://github.com/DrDustinEdwards/foxhound"
-      ]
-    },
-    {
-      "id": "foxing",
-      "name": "Foxing",
-      "short": "Foxing",
-      "family": "product",
-      "ring": "used",
-      "private": false,
-      "description": "A reading app and web platform, Letterboxd for books: a web app, an Expo phone reader and a Discord Activity for reading clubs.",
-      "domain": "foxing.app",
-      "repos": [
-        "https://github.com/DrDustinEdwards/foxing"
       ]
     },
     {
