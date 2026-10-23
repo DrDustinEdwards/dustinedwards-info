@@ -101,19 +101,6 @@
       ]
     },
     {
-      "id": "dustinedwards-info",
-      "name": "dustinedwards.info",
-      "short": "Website",
-      "family": "site",
-      "ring": "used",
-      "private": false,
-      "description": "Dustin's personal site.",
-      "domain": "dustinedwards.info",
-      "repos": [
-        "https://github.com/DrDustinEdwards/dustinedwards-info"
-      ]
-    },
-    {
       "id": "germomics",
       "name": "Germomics",
       "short": "Germomics",
@@ -124,6 +111,19 @@
       "domain": "germomics.com",
       "repos": [
         "https://github.com/DrDustinEdwards/germomics"
+      ]
+    },
+    {
+      "id": "dustinedwards-info",
+      "name": "dustinedwards.info",
+      "short": "Dustin",
+      "family": "site",
+      "ring": "used",
+      "private": false,
+      "description": "Dustin's personal site.",
+      "domain": "dustinedwards.info",
+      "repos": [
+        "https://github.com/DrDustinEdwards/dustinedwards-info"
       ]
     },
     {
@@ -142,7 +142,7 @@
     {
       "id": "julieedwards-info",
       "name": "julieedwards.info",
-      "short": "Julie's site",
+      "short": "Julie",
       "family": "site",
       "ring": "used",
       "private": false,
