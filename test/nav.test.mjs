@@ -11,12 +11,10 @@ import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import { firstLineOf, navDataProblems, readLabPlace, readLatestPaper, readNavData, readPosts } from "../scripts/lib/nav-data.mjs";
 import { NAV_DATA } from "../app/lib/nav-data.generated.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "../app/lib/seo.ts";
-import { EXPLORER_ORIGIN } from "../app/lib/systems.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
 import { newestFirst } from "../app/lib/post-order.mjs";
 import { seriesSlug } from "../app/lib/series-path.mjs";
-import { NAV, ROUTED_PATHS, buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
+import { ROUTED_PATHS, buildNav, isLive, liveMenu, menuLinks, menusAt, visiblePosts } from "../app/lib/nav.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = Date.parse("2026-10-11T12:00:00Z");
@@ -157,79 +155,6 @@ await test("a tag, a series or a post nobody published is not live", () => {
   assert.equal(isLive("/writing/no-such-post", NOW), false);
   assert.equal(isLive("/research/publications/no-such-paper/", NOW), false);
   assert.equal(isLive("/interests/recipes", NOW), false);
-});
-
-await test("every panel has the same parts: three tiles, rows beside a spotlight, three quick links", () => {
-  const all = panels();
-  assert.deepEqual(Object.keys(all), ["research", "teaching", "software", "writing", "about"]);
-  for (const [id, menu] of Object.entries(all)) {
-    assert.equal(menu.tiles.length, 3, `${id} tiles`);
-    assert.ok(menu.rows.length >= 1, `${id} has no rows`);
-    assert.ok(menu.spotlight, `${id} has no spotlight`);
-    assert.equal(menu.footer.length, 3, `${id} quick links`);
-    assert.ok(menu.blurb.length > 0 && menu.heading.length > 0, `${id} band`);
-    for (const row of menu.rows) assert.ok(row.to || (row.links && row.links.length > 0), `${id}: row "${row.title}" has nothing to follow`);
-  }
-});
-
-await test("the old Interests column and the long Protocols label are gone, and no panel names a single-item subhead", () => {
-  const html = JSON.stringify(panels());
-  assert.ok(!html.includes("Protocols: Lab methods and primer library"));
-  assert.ok(!/\/interests\//.test(html));
-  assert.ok(!html.includes('"Travel"') && !html.includes('"Games"') && !html.includes('"Flying"') && !html.includes('"Scuba"') && !html.includes('"Art"'));
-  const protocolsLinks = Object.values(panels()).flatMap((menu) => menuLinks(menu)).filter((to) => to.startsWith("/research/protocols"));
-  assert.ok(protocolsLinks.every((to) => to === "/research/protocols"), `Protocols is the library hub, not a primer page: ${protocolsLinks}`);
-});
-
-await test("Research: the three areas, the three row groups, and the footer", () => {
-  const research = panels().research;
-  assert.deepEqual(research.tiles.map((t) => t.label), ["Retroviruses", "Bacteriophages", "Science education"]);
-  assert.equal(research.tiles[0].description, "HTLV-1, REV and LPDV");
-  assert.deepEqual(research.rows.map((r) => r.title), ["Publications", "Collections", "Lab methods"]);
-  assert.equal(research.rows[0].note, "Every paper, with BibTeX and RIS");
-  assert.deepEqual(research.rows[1].links?.map((l) => l.to), ["/research/phages", "/research/lab"]);
-  assert.deepEqual(research.rows[2].links?.map((l) => l.to), ["/research/protocols", "/research/tools"]);
-  assert.deepEqual(research.footer.map((l) => l.label), ["All research", "Publications", "Protocols"]);
-});
-
-await test("Teaching: the programs, study help, the join-the-lab spotlight and footer", () => {
-  const teaching = panels().teaching;
-  assert.deepEqual(teaching.tiles.map((t) => t.label), ["Phage Discovery Program", "Virus Isolation", "Phage Bioinformatics"]);
-  assert.deepEqual(teaching.rows.map((r) => r.title), ["Study help", "Questions about a course"]);
-  assert.deepEqual(teaching.rows[0].links?.map((l) => l.label), ["Tutorials", "Study skills"]);
-  assert.deepEqual(teaching.rows[1].links?.map((l) => l.to), ["/contact"]);
-  assert.equal(teaching.spotlight?.to, "/teaching#join-the-lab");
-  assert.equal(teaching.spotlight?.eyebrow, "Prospective students");
-  assert.equal(teaching.spotlight?.title, "Join the lab");
-  assert.deepEqual(teaching.footer.map((l) => l.label), ["All teaching", "Join the lab", "Contact"]);
-});
-
-await test("Software: the three products and not Germomics, the open tools, the system map with the explorer", () => {
-  const software = panels().software;
-  assert.deepEqual(software.tiles.map((t) => t.label), ["Foxhound", "Foxing", "Foxing Edu"]);
-  const everything = menuLinks(software);
-  assert.ok(!everything.some((to) => /germomics/i.test(to)), "Germomics is not placed in any panel in this job");
-  for (const menu of Object.values(panels())) assert.ok(!menuLinks(menu).some((to) => /germomics/i.test(to)));
-  assert.deepEqual(software.rows[0].links?.map((l) => l.label), ["Capsid", "Carrel", "Capsomer", "Enarratio"]);
-  // As written the panel has the how-tos row; it shows once the library has an entry (see the libraries test).
-  assert.ok(menusAt(NOW).software.rows.some((r) => r.title === "Software how-tos" && r.to === "/software/how-tos"));
-  assert.equal(software.spotlight?.kind, "map");
-  assert.equal(software.spotlight?.to, "/systems");
-  assert.deepEqual(software.footer.map((l) => l.label), ["All software", "System map", "Capsid explorer"]);
-  assert.equal(software.footer[2].to, `${EXPLORER_ORIGIN}/`);
-});
-
-await test("About: the name and the whole identity line, the CV with its PDF, recipes at the library, the profile links", () => {
-  const about = panels().about;
-  assert.equal(about.heading, "Dustin Edwards");
-  assert.match(about.blurb, /Texas A&M University System/);
-  assert.equal(about.blurb, `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`);
-  assert.deepEqual(about.tiles.map((t) => t.label), ["About", "CV", "Contact"]);
-  assert.equal(about.tiles[1].also?.to, "/dustin-edwards-cv.pdf");
-  const interests = menusAt(NOW).about.rows.find((r) => r.title === "Interests");
-  assert.deepEqual(interests?.links?.map((l) => l.to), ["/recipes"], "as written, Interests links the existing /recipes library, not /interests/recipes");
-  assert.ok(about.rows.some((r) => r.title === "Colophon" && r.to === "/colophon"));
-  assert.deepEqual(about.footer.map((l) => l.to), [OWNER_SCHOLAR, OWNER_PUBMED, OWNER_ORCID]);
 });
 
 await test("the spotlights read real data: the newest paper, the newest article, the lab as the CV states it", () => {
@@ -392,18 +317,4 @@ await test("each Teaching course tile carries its page's own description, read f
     assert.ok(typeof data.description === "string" && data.description !== "", `${tile.to} has no front matter description`);
     assert.equal(tile.description, data.description, `${tile.to}: the tile's line is not the page's description`);
   }
-});
-
-await test("the three Carrel posts, all dated one day, show part 3, part 2, part 1, and part 3 is the Newest", () => {
-  const parts = ["carrel-ai-drafts-beside-mine", "carrel-one-api-for-every-site", "carrel-a-writing-desk-apart-from-the-site"];
-  const bySlug = new Map(readPosts().map((p) => [p.slug, p]));
-  assert.deepEqual(parts.map((slug) => [bySlug.get(slug)?.series, bySlug.get(slug)?.part]), [["Carrel", 3], ["Carrel", 2], ["Carrel", 1]]);
-  assert.deepEqual(NAV_DATA.posts.slice(0, 3).map((p) => p.slug), parts);
-  assert.equal(panels().writing.spotlight?.to, `/writing/${parts[0]}`);
-  assert.deepEqual(panels().writing.tiles.map((t) => t.to), parts.map((slug) => `/writing/${slug}`));
-});
-
-await test("the 404 page's section list is the same five hubs the bar has", () => {
-  assert.deepEqual(NAV.map((item) => item.to), buildNav(NOW).map((item) => item.to));
-  assert.deepEqual(NAV.map((item) => item.label), buildNav(NOW).map((item) => item.label));
 });

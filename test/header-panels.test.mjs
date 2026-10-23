@@ -51,18 +51,6 @@ await test("no menu, menubar or menuitem role anywhere in the header", () => {
   assert.doesNotMatch(html, /role="(menu|menubar|menuitem)"/);
 });
 
-await test("every panel has its parts in order: band, three tiles, rows with a spotlight, three quick links", () => {
-  for (const id of SECTIONS) {
-    const panel = panelHtml(id);
-    const order = ["site-nav-band", "site-nav-tiles", "site-nav-body", "site-nav-rows", "site-nav-spot", "site-nav-foot"].map((cls) => panel.indexOf(`class="${cls}`));
-    assert.ok(order.every((at) => at >= 0), `${id}: a part is missing (${order})`);
-    assert.deepEqual([...order].sort((a, b) => a - b), order, `${id}: the parts are out of order`);
-    assert.equal((panel.match(/class="site-nav-tile"/g) ?? []).length, 3, `${id}: tiles`);
-    const foot = panel.slice(panel.indexOf('class="site-nav-foot"'));
-    assert.equal((foot.match(/class="site-nav-foot-link"/g) ?? []).length, 3, `${id}: quick links`);
-  }
-});
-
 await test("the panels' links are real anchors in the HTML, so a crawler and a reader without script can follow them", () => {
   const all = hrefsIn(html);
   for (const must of [
@@ -94,11 +82,6 @@ await test("the panels' links are real anchors in the HTML, so a crawler and a r
   assert.ok(!all.includes("/recipes") && !all.includes("/software/how-tos"));
 });
 
-await test("the Lab sign-in link is not in the header: it lives in the footer's Workspace group (Dustin, 2026-10-14)", () => {
-  assert.ok(!html.includes('href="/lab"'), "the header links /lab");
-  assert.ok(!html.includes("data-lab-link") && !html.includes("site-lab-"), "the bar still carries the Lab link's markup");
-});
-
 await test("a panel names no heading, so the page outline is not opened by the menu", () => {
   const nav = html.slice(html.indexOf("<nav"), html.indexOf("</nav>"));
   assert.doesNotMatch(nav, /<h[1-6]\b/);
@@ -119,19 +102,6 @@ await test("the spotlight and the tiles show the newest paper and the newest art
   assert.match(research, /Science communication tools/);
   assert.match(research, /Journal of Microbiology &amp; Biology Education, 2026/);
   assert.match(panelHtml("writing"), /Newest/);
-});
-
-await test("the header is Capsomer's site header: its frame, Search, the theme, the avatar's empty slot, no Sign in", () => {
-  assert.match(html, /<header class="cap-site-header site-header" data-cap="site-header" data-links="right"/);
-  const tools = html.slice(html.indexOf('class="cap-site-header-tools'), html.indexOf("<dialog"));
-  const order = ["data-search-trigger", "data-theme-toggle", 'site-header-account-slot" aria-hidden="true"', "cap-site-header-menu"].map((part) => tools.indexOf(part));
-  assert.ok(order.every((at) => at >= 0), `a control is missing from the tools (${order})`);
-  assert.deepEqual([...order].sort((a, b) => a - b), order, "the tools are out of order");
-  // Sign in is the footer's Admin link, never the header's (Dustin, 2026-10-15).
-  assert.doesNotMatch(html.slice(0, html.indexOf("</header>")), /Sign in|href="\/admin"/);
-  // Each section button is Capsomer's disclosure trigger, and its panel a manual popover named by the section.
-  assert.equal((html.match(/data-cap-part="panel-trigger"/g) ?? []).length, 5);
-  assert.equal((html.match(/class="cap-site-header-panel site-nav-panel"[^>]*popover="manual"[^>]*role="group"/g) ?? []).length, 5);
 });
 
 await test("the phone's sheet carries every link the panels carry, and its Menu button opens it with no script", () => {

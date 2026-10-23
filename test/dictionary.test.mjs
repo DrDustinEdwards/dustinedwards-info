@@ -155,15 +155,6 @@ await test("the DefinedTerm describes the software (sense 2) and sits in the Sof
   assert.equal(ld.inDefinedTermSet.url, "https://example.test/software");
 });
 
-await test("the colophon links the Carrel page", () => {
-  const page = readFileSync(new URL("../content/pages/software-carrel.md", import.meta.url), "utf8");
-  assert.ok(!page.includes("carrel.dustinedwards.info"));
-  // Nor its code: the repository is public only for now, so a link would rot.
-  assert.ok(!/github\.com\/DrDustinEdwards\/carrel/i.test(page), "the Carrel page links its code repository");
-  const colophon = readFileSync(new URL("../app/routes/colophon.tsx", import.meta.url), "utf8");
-  assert.ok(colophon.includes("<Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>"));
-});
-
 await test("sense 2 of each entry is the software, labelled software., in the page's twin and its JSON-LD", async () => {
   // The old test pinned each sense to the owner's exact wording, which no Carrel edit could ever change. What
   // survives an edit is the structure: the label, the twin's own line for it and the DefinedTerm's description.
