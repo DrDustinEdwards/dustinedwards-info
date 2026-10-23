@@ -144,13 +144,8 @@ export function setWasmLoader(loader) {
   highlight = null;
 }
 
-// Awaited here, before shiki sees it: shiki keeps its first wasm load for the isolate, a rejected one
-// included, so one failed load would otherwise fail every later render.
-async function getHighlight() {
-  if (!highlight) {
-    const wasm = await wasmLoader();
-    highlight ??= createHighlight({ wasm: () => wasm });
-  }
+function getHighlight() {
+  highlight ??= createHighlight({ wasm: () => wasmLoader() });
   return highlight;
 }
 
@@ -215,7 +210,7 @@ export async function renderBody({ file, body, resolveImage }) {
     file,
     body,
     resolveImage,
-    options: { ...SITE_OPTIONS, highlight: await getHighlight() },
+    options: { ...SITE_OPTIONS, highlight: getHighlight() },
   });
   return { html, toc, hasMath, diagrams, mediaRefs, blockedUrls };
 }

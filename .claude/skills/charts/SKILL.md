@@ -79,7 +79,7 @@ order they are written in, so the chart reads in the order the markdown does.
    chart, labels each line at its end; series also differ by shape or position,
    so hue is never the sole channel.
 3. **Colours come from Enarratio's theme, assigned automatically.** The theme is
-   `dustinedwardsTheme`, written to `app/styles/enarratio.css` by
+   the site's theme in `scripts/build-chart-css.mjs`, written to `app/styles/enarratio.css` by
    `npm run build:chart-css`. NEVER write a hex, and never ask for a specific
    colour. One stored SVG serves light and dark because the custom property
    resolves per theme in the browser. More than eight series fails the build.
