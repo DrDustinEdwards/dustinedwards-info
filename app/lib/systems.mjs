@@ -3,10 +3,10 @@
 // map. Ruling: capsid/rulings/system-explorer-2026-10-10.md; design:
 // capsid/research/design-system-explorer.md, sections 2 and 3 (slice 4).
 //
-// Capsid filters the model before it publishes it. The check here is the design's third
-// line: the file is refused unless every key is one the published shape allows, and a
-// private system is refused if it carries anything past its name, short name, domain,
-// family and ring. So a mistake upstream stops the build rather than reaching the page.
+// Every system is drawn whole, a private repo's included (Dustin, 2026-10-23: "do not exclude
+// private repos", "fully wired just like the public ones"); a private system carries no repo
+// link. The file is refused unless every key is one the published shape allows and a private
+// system names no repo, so a mistake upstream stops the build rather than reaching the page.
 import { z } from "zod";
 
 export const SYSTEMS_PATH = "/systems";
@@ -32,24 +32,12 @@ const OpenSystem = z.strictObject({
   repos: z.array(z.url().max(512)).optional(),
 });
 
-/** capsid/rulings/system-explorer-2026-10-10.md section 3: a private system is a public name and a domain, placed on the map. */
-export const PRIVATE_SYSTEM_KEYS = ["id", "name", "short", "domain", "family", "ring", "private"];
-const PrivateSystem = z.strictObject({
-  id: Id,
-  name: Text(40),
-  short: Text(12),
-  // Empty when the model calls a system public and GitHub does not: Capsid reduces it to
-  // private with no address (src/system-model.ts, toPublic), and the page shows none.
-  domain: z.string().max(253),
-  family: z.enum(FAMILIES),
-  ring: z.enum(RINGS),
-  private: z.literal(true),
-});
+// A private system is everything a public one is but its repo link (capsid src/system-model.ts).
+const PrivateSystem = OpenSystem.omit({ repos: true }).extend({ private: z.literal(true) });
 
 const PublicModel = z.strictObject({
   version: z.literal(1),
   as_of: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  // Private first: a node marked private is judged by the narrow shape, never the open one.
   systems: z.array(z.union([PrivateSystem, OpenSystem])),
   containers: z.array(
     z.strictObject({
@@ -106,8 +94,8 @@ const PublicModel = z.strictObject({
 
 /**
  * The model, or the reasons it is refused. Beyond the shape: ids are unique, every
- * relationship and container names something that exists, no container belongs to a private
- * system, and no relationship touching a private system carries a title or reaches inside it.
+ * relationship and container names something that exists, and every flow rides lines the
+ * model has.
  * @param {unknown} raw
  * @returns {{ ok: true, model: SystemModel } | { ok: false, problems: string[] }}
  */
@@ -121,17 +109,12 @@ export function parseSystemModel(raw) {
   if (systems.size !== model.systems.length) problems.push("systems: an id is used twice");
   if (containers.size !== model.containers.length) problems.push("containers: an id is used twice");
   for (const c of model.containers) {
-    const owner = systems.get(c.system);
-    if (!owner) problems.push(`containers.${c.id}: no system ${c.system}`);
-    else if (owner.private) problems.push(`containers.${c.id}: inside private system ${c.system}`);
+    if (!systems.has(c.system)) problems.push(`containers.${c.id}: no system ${c.system}`);
   }
   for (const r of model.relationships) {
     for (const end of [r.from, r.to]) {
       if (!systems.has(end) && !containers.has(end)) problems.push(`relationships.${r.id}: no element ${end}`);
     }
-    const touchesPrivate = [r.from, r.to].some((end) => systems.get(end)?.private);
-    if (touchesPrivate && r.title !== undefined) problems.push(`relationships.${r.id}: a title on a line to a private system`);
-    if (touchesPrivate && [r.from, r.to].some((end) => containers.has(end))) problems.push(`relationships.${r.id}: reaches inside a system to a private one`);
   }
   const edges = new Map(model.relationships.map((r) => [r.id, r]));
   const flowIds = new Set();
@@ -146,8 +129,6 @@ export function parseSystemModel(raw) {
         return;
       }
       if (step.toward !== edge.from && step.toward !== edge.to) problems.push(`${where}: goes toward ${step.toward}, which is not an end of ${edge.id}`);
-      // Capsid publishes a flow only when every step runs between public parts.
-      if ([edge.from, edge.to].some((end) => systems.get(end)?.private)) problems.push(`${where}: runs to a private system`);
       // A light is a part the step touches, in a system one of its ends belongs to (Capsid's rule).
       const within = new Set([edge.from, edge.to].map((end) => containers.get(end)?.system ?? end));
       for (const l of step.lights ?? []) {
@@ -252,8 +233,7 @@ export function mapData(model) {
       ring: s.ring,
       private: s.private,
       tag: tagOf(s),
-      // A private system has none: parseSystemModel refuses it.
-      description: s.private ? undefined : s.description,
+      description: s.description,
       domain: s.domain || undefined,
     })),
     relationships: model.relationships.map(({ from, to, kind }) => ({ from, to, kind })),
@@ -335,11 +315,10 @@ export function wiresOf(model, id) {
 const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
 
 /**
- * What a system's page says in place of a description: a private system is its name, and its
- * address when Capsid has one for it.
+ * What a system's page says about it: its sentence, and that its repo is private when it is.
  * @param {ModelSystem} s
  */
-export const summaryOf = (s) => (s.private ? (s.domain ? "Private: its name and address only." : "Private: its name only.") : (s.description ?? ""));
+export const summaryOf = (s) => [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
 
 /**
  * The repo link a public system shows: its first repo, unless it has none.

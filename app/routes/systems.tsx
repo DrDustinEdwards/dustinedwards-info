@@ -73,7 +73,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   }
   return pageMeta({
     title: `${chosen.name}, in the family of systems`,
-    description: (chosen.private ? undefined : chosen.description) ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
+    description: chosen.description ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
     path: SYSTEMS_PATH,
   });
 }
@@ -102,8 +102,7 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
 }
 
 // Under the drawing, once: the system's name, its sentence, and the links the drawing cannot carry. Its parts and
-// lines are the drawing; as words they are in /systems.md. A private system is its name, its address when it has
-// one, and its place in the explorer.
+// lines are the drawing; as words they are in /systems.md. A private system says so where its repo link would be.
 function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
   const s = MODEL.systems.find((x) => x.id === id)!;
   const repo = repoOf(s);
@@ -112,15 +111,16 @@ function SystemFacts({ id, chosen }: { id: string; chosen: boolean }) {
     repo ? { href: repo, text: repo.replace(/^https:\/\//, "") } : null,
     { href: explorerUrl(s.id), text: "explorer" },
   ].filter((l) => l !== null);
+  const parts = [...links.map((l) => <a href={l.href}>{l.text}</a>), ...(s.private ? ["private repo"] : [])];
   return (
     <section className="systems-facts" id={`system-${s.id}`} data-system={s.id} data-chosen={chosen ? "" : undefined} aria-labelledby={`system-${s.id}-name`}>
       <h2 id={`system-${s.id}-name`}>{s.name}</h2>
-      {s.private || !s.description ? null : <p className="systems-lead">{s.description}</p>}
+      {s.description ? <p className="systems-lead">{s.description}</p> : null}
       <p className="systems-links">
-        {links.map((l, i) => (
-          <span key={l.href}>
+        {parts.map((part, i) => (
+          <span key={i}>
             {i ? " · " : null}
-            <a href={l.href}>{l.text}</a>
+            {part}
           </span>
         ))}
       </p>

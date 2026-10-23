@@ -10,7 +10,7 @@
 //   - one straight wire for each pair a relationship joins, from the exact part that uses it. A line between
 //     two systems as wholes (Capsid coordinates Foxing) runs from the circle's edge, and is left out when a part
 //     of this system already wires to that system.
-// A private system is its name only: its circle holds its name and its summary, and its rim its links.
+// A private system is drawn like any other: its parts inside, its links around the rim.
 //
 // The places are searched for, from fixed starts, so the same model always draws the same way: each part over a
 // grid inside the circle, the rim's order around it, until no wire crosses another or runs under a box it does
