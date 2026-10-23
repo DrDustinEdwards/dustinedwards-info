@@ -191,7 +191,7 @@ for (const [label, property] of SCHEMA_FIELDS) {
 }
 
 {
-  /* The predicate lives in url-policy.mjs and pipeline.mjs imports it: one definition across the two. */
+  /* The predicate is Prelum's (render/url) and the site never defines its own: one definition across the family. */
   const URL_POLICY = join(root, "app", "lib", "content", "url-policy.mjs");
   const urlPolicyTree = parseSource(URL_POLICY, readFileSync(URL_POLICY, "utf8"));
   const definitionsIn = (/** @type {ts.SourceFile} */ tree) =>
@@ -199,8 +199,8 @@ for (const [label, property] of SCHEMA_FIELDS) {
   const inPolicy = definitionsIn(urlPolicyTree);
   const inPipeline = definitionsIn(pipelineTree);
   assert(
-    "isAllowedUrl is defined exactly once, in url-policy.mjs",
-    inPolicy === 1 && inPipeline === 0,
+    "isAllowedUrl is Prelum's, defined in neither url-policy.mjs nor pipeline.mjs",
+    inPolicy === 0 && inPipeline === 0,
     `found ${inPolicy} definition(s) in url-policy.mjs and ${inPipeline} in pipeline.mjs`,
   );
 }

@@ -12,7 +12,7 @@ Build order: `build:stack` (build:content reads its output), `build:content`, th
 
 ## One renderer
 
-The pipeline module is imported by both the build scripts and the Worker, and there is never a second renderer: if the two could disagree, a save would publish HTML the next build would not reproduce. The cost is Worker size, accepted: highlighting is `shiki/core` with an explicit grammar list (`LANGUAGES` is derived from `GRAMMARS`), because full `shiki` took the Worker to 14 MB.
+The pipeline module is imported by both the build scripts and the Worker, and there is never a second renderer: if the two could disagree, a save would publish HTML the next build would not reproduce. The pipeline itself is Prelum's (`@drdustinedwards/site-helpers/render`, with its `editorialPack` and `createHighlight`); `pipeline.mjs` adds the site's frontmatter, media rules and post record. The cost is Worker size, accepted: highlighting is `shiki/core` with an explicit grammar list, because full `shiki` took the Worker to 14 MB.
 
 Anything derived that both callers need lives in one module both import: `withRelated`, `withBacklinks`, `records.mjs`, `ask-keys.mjs`, `colophon-sections.mjs`. That also lets a plain Node check import exactly what the Worker runs.
 
@@ -63,7 +63,7 @@ React Router merges `links` across matched routes but a child's `meta` replaces 
 
 ## Directives
 
-`KNOWN_DIRECTIVES` in `app/lib/content/directives.mjs`. Anything else is a build error naming the post, line, name and known list, because an unhandled directive renders as a silent empty `<div>`. Adding a directive means adding it to that list in the same commit. `remarkNumericTextDirectives` turns inline "directives" starting with a digit (`12:30`, `localhost:8080`) back into text.
+Prelum's core (`figure`, `details`) and its `editorialPack` (`chart`, `diagram`, `pullquote`, `sidenote`, `swatch`). Anything else is a build error naming the post, line, name and known list, because an unhandled directive renders as a silent empty `<div>`. A new directive is a pack, and a pack lists its names. `remarkNumericTextDirectives` turns inline "directives" starting with a digit (`12:30`, `localhost:8080`) back into text.
 
 ## Frontmatter URL fields
 

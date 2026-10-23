@@ -1,5 +1,5 @@
 import type { getBlogPost, listSeriesParts } from "~/db";
-import { htmlHasMath } from "~/lib/content/math.mjs";
+import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
 import { countWords } from "~/lib/content/reading-time.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 

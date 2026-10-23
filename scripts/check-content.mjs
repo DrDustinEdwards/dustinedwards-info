@@ -2,7 +2,7 @@ import { buildArtifact } from "./build-content.mjs";
 import { buildPhages } from "./lib/phages.mjs";
 import { buildRegistry } from "./lib/registry.mjs";
 import { buildRoster } from "./lib/roster.mjs";
-import { htmlHasMath } from "../app/lib/content/math.mjs";
+import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
 
 /** @param {string[]} names */

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import katex from "katex";
 
 import { atomEntry } from "../app/lib/atom-feed.mjs";
-import { KATEX_OPTIONS } from "../app/lib/content/math.mjs";
+import { KATEX_OPTIONS } from "@drdustinedwards/site-helpers/render/math";
 import { mathToTex, rssItem } from "../app/lib/rss-feed.mjs";
 
 const ORIGIN = "https://example.test";
