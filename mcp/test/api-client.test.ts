@@ -45,45 +45,7 @@ describe("callOperator: the request it sends", () => {
   });
 });
 
-describe("callOperator: configuration", () => {
-  test("refuses without the SITE binding and makes no request", async () => {
-    await assert.rejects(callOperator({ SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: TOKEN }, "list_procedures", {}), (e: unknown) => {
-      assert.ok(e instanceof ApiLegError);
-      assert.equal(e.kind, "unconfigured");
-      assert.match(e.message, /SITE service binding is missing/);
-      return true;
-    });
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("refuses without SITE_ORIGIN and makes no request", async () => {
-    await assert.rejects(callOperator({ SITE, OPERATOR_TOKEN: TOKEN }, "list_procedures", {}), /SITE_ORIGIN is unset/);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("refuses without OPERATOR_TOKEN and makes no request", async () => {
-    await assert.rejects(callOperator({ SITE, SITE_ORIGIN: ORIGIN }, "list_procedures", {}), (e: unknown) => {
-      assert.ok(e instanceof ApiLegError);
-      assert.equal(e.kind, "unconfigured");
-      assert.match(e.message, /OPERATOR_TOKEN is unset or too short/);
-      return true;
-    });
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("refuses a token shorter than 32 characters and accepts exactly 32", async () => {
-    const short = { SITE, SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: "x".repeat(31) };
-    await assert.rejects(callOperator(short, "list_procedures", {}), { name: "ApiLegError" });
-    assert.equal(api.calls.length, 0);
-    await callOperator({ SITE, SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: "x".repeat(32) }, "list_procedures", {});
-    assert.equal(api.calls.length, 1);
-  });
-
-  test("the unconfigured error does not echo the token", async () => {
-    const short = { SITE, SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: "short-secret" };
-    await assert.rejects(callOperator(short, "list_procedures", {}), (e: Error) => !e.message.includes("short-secret"));
-  });
-});
+// Configuration, unreachable and not-JSON are site-runtime's callApi, tested there (test/mcp-server.test.mjs).
 
 describe("callOperator: what comes back", () => {
   test("returns the API's data unchanged on ok:true", async () => {
@@ -116,26 +78,6 @@ describe("callOperator: what comes back", () => {
     assert.equal(result.error, "The operator API refused with status 500.");
   });
 
-  test("an unreachable API is an ApiLegError of kind unreachable", async () => {
-    api.reply({ throws: new TypeError("fetch failed") });
-    await assert.rejects(callOperator(ENV, "list_procedures", {}), (e: unknown) => {
-      assert.ok(e instanceof ApiLegError);
-      assert.equal(e.kind, "unreachable");
-      assert.equal(e.message, "The operator API could not be reached: fetch failed");
-      return true;
-    });
-  });
-
-  test("a body that is not JSON is an ApiLegError of kind malformed", async () => {
-    api.reply({ status: 502, raw: "<html>bad gateway</html>" });
-    await assert.rejects(callOperator(ENV, "list_procedures", {}), (e: unknown) => {
-      assert.ok(e instanceof ApiLegError);
-      assert.equal(e.kind, "malformed");
-      assert.equal(e.message, "The operator API returned status 502 with a body that is not JSON.");
-      return true;
-    });
-  });
-
   test("an empty body or a body without a boolean ok is malformed", async () => {
     for (const raw of ["", "{}", '{"ok":"true"}', "[]", "null"]) {
       api.reply({ status: 200, raw });
@@ -159,7 +101,12 @@ describe("readHealth", () => {
 
   test("never throws: an unreachable site is status 0 with the cause", async () => {
     api.health({ throws: new TypeError("1042") });
-    assert.deepEqual(await readHealth(ENV), { status: 0, body: null, error: "1042" });
+    assert.deepEqual(await readHealth(ENV), { status: 0, body: null, error: "The site could not be reached: 1042" });
+  });
+
+  test("an answer that is not JSON keeps its status", async () => {
+    api.health({ status: 502, raw: "<html>bad gateway</html>" });
+    assert.deepEqual(await readHealth(ENV), { status: 502, body: null });
   });
 
   test("an unbound wrapper reads as unreachable, not as healthy", async () => {

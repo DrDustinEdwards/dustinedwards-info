@@ -25,6 +25,8 @@
  * operating. A failure of one must read differently from a refusal by the other.
  */
 
+import { ApiLegError, callApi } from "@dustinedwards/site-runtime/mcp-server";
+
 export interface ApiEnv {
   /** Service binding to the dustinedwards Worker. The only route to the app. */
   SITE: Fetcher;
@@ -61,44 +63,15 @@ export interface ApiCallResult {
   detail?: unknown;
 }
 
-export class ApiLegError extends Error {
-  readonly kind: "unconfigured" | "unreachable" | "malformed";
+export { ApiLegError };
 
-  constructor(message: string, kind: "unconfigured" | "unreachable" | "malformed") {
-    super(message);
-    this.kind = kind;
-    this.name = "ApiLegError";
-  }
-}
-
-const USER_AGENT = "dustinedwards-mcp/0.2 (operator MCP wrapper)";
-
-function assertBound(env: Partial<ApiEnv>): asserts env is Pick<ApiEnv, "SITE" | "SITE_ORIGIN"> & Partial<ApiEnv> {
-  if (!env.SITE || typeof env.SITE.fetch !== "function") {
-    throw new ApiLegError(
-      "The wrapper is not configured: the SITE service binding is missing. Not configured means not open.",
-      "unconfigured",
-    );
-  }
-  if (!env.SITE_ORIGIN) {
-    throw new ApiLegError(
-      "The wrapper is not configured: SITE_ORIGIN is unset. Not configured means not open.",
-      "unconfigured",
-    );
-  }
-}
-
-function assertConfigured(env: Partial<ApiEnv>): asserts env is ApiEnv {
-  assertBound(env);
-  // The app refuses its own endpoint below 32 characters, so a token that short
-  // could never work and is worth catching here rather than after a round trip.
-  if (!env.OPERATOR_TOKEN || env.OPERATOR_TOKEN.length < 32) {
-    throw new ApiLegError(
-      "The wrapper is not configured: OPERATOR_TOKEN is unset or too short. Not configured means not open.",
-      "unconfigured",
-    );
-  }
-}
+/** The leg, for site-runtime's transport: it checks the binding, SITE_ORIGIN and the token floor, then reads JSON. */
+const LEG = {
+  binding: "SITE",
+  token: "OPERATOR_TOKEN",
+  api: "The operator API",
+  userAgent: "dustinedwards-mcp/0.2 (operator MCP wrapper)",
+};
 
 /**
  * Calls one operator tool.
@@ -111,56 +84,17 @@ export async function callOperator(
   tool: string,
   args: Record<string, unknown>,
 ): Promise<ApiCallResult> {
-  assertConfigured(env);
-
-  let response: Response;
-  try {
-    response = await env.SITE.fetch(`${env.SITE_ORIGIN}/api/operator`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${env.OPERATOR_TOKEN}`,
-        // Identifies the caller in the app's logs without revealing anything.
-        "user-agent": USER_AGENT,
-      },
-      body: JSON.stringify({ tool, args }),
-    });
-  } catch (cause) {
-    throw new ApiLegError(
-      `The operator API could not be reached: ${cause instanceof Error ? cause.message : String(cause)}`,
-      "unreachable",
-    );
+  const { status, body } = await callApi(env, LEG, "/api/operator", { json: { tool, args } });
+  if (!body || typeof body !== "object" || typeof (body as { ok?: unknown }).ok !== "boolean") {
+    throw new ApiLegError(`The operator API returned status ${status} with an unrecognized payload shape.`, "malformed");
   }
-
-  const raw = await response.text();
-  let parsed: unknown;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    throw new ApiLegError(
-      `The operator API returned status ${response.status} with a body that is not JSON.`,
-      "malformed",
-    );
-  }
-
-  if (!parsed || typeof parsed !== "object" || typeof (parsed as { ok?: unknown }).ok !== "boolean") {
-    throw new ApiLegError(
-      `The operator API returned status ${response.status} with an unrecognized payload shape.`,
-      "malformed",
-    );
-  }
-
-  const body = parsed as ApiResponse;
-
-  if (body.ok) {
-    return { status: response.status, ok: true, data: (body as { data: unknown }).data };
-  }
-
+  const answer = body as ApiResponse;
+  if (answer.ok) return { status, ok: true, data: answer.data };
   return {
-    status: response.status,
+    status,
     ok: false,
-    error: typeof body.error === "string" ? body.error : `The operator API refused with status ${response.status}.`,
-    detail: body.detail,
+    error: typeof answer.error === "string" ? answer.error : `The operator API refused with status ${status}.`,
+    detail: answer.detail,
   };
 }
 
@@ -179,12 +113,14 @@ export interface HealthReading {
  */
 export async function readHealth(env: Partial<ApiEnv>): Promise<HealthReading> {
   try {
-    assertBound(env);
-    const response = await env.SITE.fetch(`${env.SITE_ORIGIN}/api/health`, {
-      headers: { "user-agent": USER_AGENT, "cache-control": "no-cache" },
+    const { status, body } = await callApi(env, { ...LEG, api: "The site" }, "/api/health", {
+      anonymous: true,
+      headers: { "cache-control": "no-cache" },
     });
-    return { status: response.status, body: await response.json().catch(() => null) };
+    return { status, body };
   } catch (cause) {
+    // An answer that came back but is not JSON is still a reading of that status.
+    if (cause instanceof ApiLegError && cause.status !== undefined) return { status: cause.status, body: null };
     return { status: 0, body: null, error: cause instanceof Error ? cause.message : String(cause) };
   }
 }

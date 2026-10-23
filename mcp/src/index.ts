@@ -34,17 +34,23 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { isAdminUser, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
+import { checkRateLimit, refuse } from "@dustinedwards/site-runtime/mcp-server";
+import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 
 import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
 import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
-import { checkRateLimit, type RateLimitEnv } from "./rate-limit";
 import { CSP_REPORT_PATH, withSecurityHeaders } from "./security-headers";
 import { handleCspReport } from "./csp-report";
 import type { ApiEnv } from "./api-client";
 
-export { OperatorRateLimit } from "./rate-limit";
+/** The door's limiter. The class keeps its name, so the existing binding and migration stay as they are. */
+export class OperatorRateLimit extends RateLimiter {}
+
+export interface RateLimitEnv {
+  OPERATOR_RATE_LIMIT: DurableObjectNamespace<OperatorRateLimit>;
+}
 export { ToolCallLog } from "@dustinedwards/site-runtime/audit-log";
 
 export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<AuditEnv>, ProbeEnv, LoginEnv {
@@ -56,19 +62,6 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
   /** Comma-separated agent principals that hold dei.write. */
   AGENT_WRITE?: string;
 }
-
-const noStore = (body: string, status: number) =>
-  new Response(body, {
-    status,
-    headers: {
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "no-store",
-      // Never indexed. An authenticated operator surface is not a public
-      // affordance, and it is absent from llms.txt and the sitemap for the same
-      // reason.
-      "x-robots-tag": "noindex, nofollow",
-    },
-  });
 
 /**
  * The authenticated MCP surface.
@@ -83,7 +76,7 @@ const apiHandler = {
     const props = (ctx as ExecutionContext & { props?: Props }).props;
 
     if (!props || !isAdminUser(env, props)) {
-      return noStore(
+      return refuse(
         "Forbidden. This is a single-operator server and this grant does not belong to its administrator.",
         403,
       );
@@ -92,19 +85,13 @@ const apiHandler = {
     // Both doors have locks. Keyed by the operator's verified email rather than
     // by IP, because the identity is known here and it is the thing worth
     // limiting. Fails closed if the binding is missing.
-    const limit = await checkRateLimit(env, `operator:${props.email.toLowerCase()}`);
+    const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `operator:${props.email.toLowerCase()}`);
     if (!limit.allowed) {
-      return new Response(
+      return refuse(
         "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
           "limit independently of this one.",
-        {
-          status: 429,
-          headers: {
-            "content-type": "text/plain; charset=utf-8",
-            "cache-control": "no-store",
-            "retry-after": String(limit.retryAfter),
-          },
-        },
+        429,
+        { "retry-after": String(limit.retryAfter) },
       );
     }
 
@@ -159,19 +146,13 @@ async function agentHandler(
    * server, and vice versa. Fails closed when the binding is missing, exactly
    * as the other door does.
    */
-  const limit = await checkRateLimit(env, `agent:${principal}`);
+  const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `agent:${principal}`);
   if (!limit.allowed) {
-    return new Response(
+    return refuse(
       "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
         "limit independently of this one.",
-      {
-        status: 429,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "no-store",
-          "retry-after": String(limit.retryAfter),
-        },
-      },
+      429,
+      { "retry-after": String(limit.retryAfter) },
     );
   }
 
@@ -211,7 +192,7 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
       scopes_supported: [SCOPE_READ],
       resource_name: "Dustin Edwards Admin",
     },
-    scopesSupported: [...SCOPES],
+    scopesSupported: SCOPES.all,
     // BOTH client identity paths. Rule 13.
     //
     // CIMD for Claude, Claude Code and ChatGPT. Measured 2026-07-30: claude.ai
@@ -258,16 +239,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     // (Grok audit 2026-10-21, DE-5). Its health answer writes nothing and stays open.
     if (url.pathname !== "/probe/health") {
       const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-      const limit = await checkRateLimit(env, `probe:${ip}`);
+      const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `probe:${ip}`);
       if (!limit.allowed) {
-        return new Response("Rate limited.", {
-          status: 429,
-          headers: {
-            "content-type": "text/plain; charset=utf-8",
-            "cache-control": "no-store",
-            "retry-after": String(limit.retryAfter),
-          },
-        });
+        return refuse("Rate limited.", 429, { "retry-after": String(limit.retryAfter) });
       }
     }
     return handleProbe(request, env, url.origin);
@@ -301,18 +275,12 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
 
   if (url.pathname === "/register") {
     const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-    const limit = await checkRateLimit(env, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
+    const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
     if (!limit.allowed) {
-      return new Response(
+      return refuse(
         `Rate limited. This server allows ${REGISTRATIONS_PER_MINUTE} client registrations per minute per address.`,
-        {
-          status: 429,
-          headers: {
-            "content-type": "text/plain; charset=utf-8",
-            "cache-control": "no-store",
-            "retry-after": String(limit.retryAfter),
-          },
-        },
+        429,
+        { "retry-after": String(limit.retryAfter) },
       );
     }
   }
@@ -329,7 +297,7 @@ export default {
       console.error(
         JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
       );
-      response = noStore("Internal error. The request was not completed.", 500);
+      response = refuse("Internal error. The request was not completed.", 500);
     }
     return withSecurityHeaders(response, new URL(request.url).origin);
   },

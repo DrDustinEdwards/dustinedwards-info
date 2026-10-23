@@ -372,9 +372,8 @@ for (const f of files) {
 check(
   "The operator API is addressed only as SITE_ORIGIN + /api/operator, over SITE, in api-client.ts",
   files.every((f) => f.name === "api-client.ts" || !withoutComments(f.text).includes("/api/operator")) &&
-    /env\.SITE\.fetch\(`\$\{env\.SITE_ORIGIN\}\/api\/operator`/.test(
-      withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? ""),
-    ),
+    /binding: "SITE"/.test(withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? "")) &&
+    /callApi\(env, LEG, "\/api\/operator"/.test(withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? "")),
   "A literal host would survive a config change and reach the wrong environment.",
 );
 
@@ -474,9 +473,9 @@ for (const name of EXPECTED_TOOLS) {
   );
   const authCodeOnly = codeOnly(readFileSync(join(SRC, "auth.ts"), "utf8"));
   check(
-    "authorizeCall re-runs the administrator check on every call",
-    /caller\.kind === "" && !isAdminUser\(env, caller\.props\)/.test(authCodeOnly),
-    "Rule 12.1: the per-call ownership proof. test/tools.test.ts plants its removal.",
+    "authorizeCall re-runs the administrator check on every call (site-runtime's authorizeCall)",
+    /return checkCall\(env, caller, scope, \{ site: "", scopes: SCOPES \}\)/.test(authCodeOnly),
+    "Rule 12.1: the per-call ownership proof. test/tools.test.ts plants a stranger and must see it refused.",
   );
 }
 
@@ -569,52 +568,30 @@ for (const f of files) {
 }
 
 // ---------------------------------------------------------------------------
-// G. The legacy shim stays isolated and keeps its removal condition.
+// G. The prior-era shim stays behind one seam and keeps its removal condition.
+// The shim is site-runtime's routeMcpEra; this Worker's part is the one call
+// that hands it the SDK's isLegacyRequest.
 // ---------------------------------------------------------------------------
 
-const legacyPath = join(SRC, "legacy-era.ts");
-let legacyText = "";
-try {
-  legacyText = readFileSync(legacyPath, "utf8");
-} catch {
-  legacyText = "";
-}
-
-if (legacyText) {
+{
+  const handlerText = readFileSync(join(SRC, "mcp-handler.ts"), "utf8");
   check(
-    "The legacy shim documents its removal condition",
-    /REMOVAL CONDITION/.test(legacyText) && /probe-report/.test(legacyText),
+    "The era seam documents its removal condition",
+    /REMOVAL CONDITION/.test(handlerText) && /probe-report/.test(handlerText),
     "A shim without a stated removal condition becomes permanent by default.",
   );
-  // Counting FILES was wrong: two calls inside one file kept the count at 1 and a
-  // planted second call site went undetected. Count the calls themselves.
-  const callSites = files
-    .filter((f) => f.name !== "legacy-era.ts")
-    .flatMap((f) =>
-      [...codeOnly(f.text).matchAll(/createLegacyEraHandler\s*\(/g)].map(() => f.name),
-    );
+  // Count the calls themselves, not the files: two calls in one file is two seams.
+  const eraCalls = files.flatMap((f) => [...codeOnly(f.text).matchAll(/routeMcpEra\s*\(/g)].map(() => f.name));
   check(
-    "The legacy shim has exactly one call site",
-    callSites.length === 1,
-    `Call sites: ${callSites.join(", ") || "(none)"}. More than one and it is no longer a seam.`,
+    "The era router has exactly one call site, in mcp-handler.ts",
+    JSON.stringify(eraCalls) === JSON.stringify(["mcp-handler.ts"]),
+    `Call sites: ${eraCalls.join(", ") || "(none)"}. More than one and it is no longer a seam.`,
   );
-  // These are STRING option values, so comments are stripped but literals are
-  // kept. Reading the raw file instead would let the module header's prose
-  // satisfy the assertion, which is exactly how a planted era switch survived.
-  const legacyCode = withoutComments(readFileSync(legacyPath, "utf8"));
-  const handlerCode = withoutComments(readFileSync(join(SRC, "mcp-handler.ts"), "utf8"));
-
+  // STRING option values: comments stripped, literals kept, so header prose cannot satisfy it.
   check(
-    'Only the shim serves prior-era traffic (legacy: "stateless" appears once, in the shim)',
-    (legacyCode.match(/legacy:\s*"stateless"/g) ?? []).length === 1 &&
-      files
-        .filter((f) => f.name !== "legacy-era.ts")
-        .every((f) => !/legacy:\s*"stateless"/.test(withoutComments(f.text))),
-    'The primary handler must be legacy: "reject" so deleting the shim leaves a modern-only server.',
-  );
-  check(
-    'The primary handler is modern-only (legacy: "reject")',
-    /legacy:\s*"reject"/.test(handlerCode) && !/legacy:\s*"stateless"/.test(handlerCode),
+    'No handler is built here, and none in compatibility mode (no createMcpHandler call, no legacy: "stateless")',
+    files.every((f) => !/legacy:\s*"stateless"/.test(withoutComments(f.text)) && !/createMcpHandler\s*\(/.test(codeOnly(f.text))),
+    'Only routeMcpEra builds the handlers, so dropping isLegacyRequest leaves a modern-only server.',
   );
 }
 
@@ -654,7 +631,7 @@ check(
 check(
   "registration is rate limited per address before the provider sees it",
   /url\.pathname === "\/register"/.test(withoutComments(indexText)) &&
-    /checkRateLimit\(env, `register:\$\{ip\}`, REGISTRATIONS_PER_MINUTE\)/.test(withoutComments(indexText)),
+    /checkRateLimit\(env\.OPERATOR_RATE_LIMIT, `register:\$\{ip\}`, REGISTRATIONS_PER_MINUTE\)/.test(withoutComments(indexText)),
   "Rule 13: registration rate limited.",
 );
 
@@ -712,7 +689,7 @@ check(
 
 check(
   "the agent path is rate limited under its own identity",
-  /checkRateLimit\(env, `agent:\$\{principal\}`\)/.test(indexStrings),
+  /checkRateLimit\(env\.OPERATOR_RATE_LIMIT, `agent:\$\{principal\}`\)/.test(indexStrings),
   "Sharing the operator's bucket would let one agent rate limit Dustin out of " +
     "his own server. Both doors have locks, and they are different locks.",
 );
@@ -768,7 +745,7 @@ check(
   !/authorization/i.test(
     indexStrings.slice(
       indexStrings.indexOf('audit: "agent-key-accepted"'),
-      indexStrings.indexOf("checkRateLimit(env, `agent:"),
+      indexStrings.indexOf("checkRateLimit(env.OPERATOR_RATE_LIMIT, `agent:"),
     ),
   ),
   "The Authorization header, the key, or any slice or length of it must never " +
