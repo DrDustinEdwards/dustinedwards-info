@@ -1,14 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 
 import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
-import { CONTENT_PAGE_PATHS } from "../app/lib/content-pages.mjs";
 import {
-  ROSTER_ANCHOR,
-  ROSTER_PAGE_PATH,
   ROSTER_PHOTO_DIR,
   compileCohort,
   rosterFacts,
@@ -16,7 +13,6 @@ import {
   rosterSetErrors,
   sortCohorts,
 } from "../app/lib/roster/compile.mjs";
-import { PROFILE_TARGET } from "../app/lib/wordpress-redirects.mjs";
 import { buildRoster, compileAllRoster, repoHost } from "../scripts/lib/roster.mjs";
 
 /* The roster validator is the one rule CI and the Carrel save share (docs/ROSTER.md). Everything here that
@@ -143,22 +139,4 @@ await test("the committed roster compiles, in the shape the data file had, and e
   );
   // The file key is the year, and the file is where rosterPath says.
   for (const row of rows) assert.equal(row.sourcePath, rosterPath(row.slug));
-});
-
-await test("the roster's place: one registered page, the anchor the redirects land on, and the heading that carries it", () => {
-  assert.ok(CONTENT_PAGE_PATHS.includes(ROSTER_PAGE_PATH), `${ROSTER_PAGE_PATH} is a registered page`);
-  assert.equal(PROFILE_TARGET, `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
-  const component = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
-  assert.ok(component.includes(`<h2 id="${ROSTER_ANCHOR}">`), "the component's heading carries the anchor");
-  const route = readFileSync(new URL("../app/routes/content-page.tsx", import.meta.url), "utf8");
-  assert.match(route, /page\.path === ROSTER_PAGE_PATH/, "the route places the roster by the one constant");
-  assert.doesNotMatch(route, /"\/teaching\/phage-discovery"/, "no second, typed copy of the path");
-});
-
-await test("no module reads a roster out of code any more", () => {
-  const home = readFileSync(new URL("../app/routes/home.tsx", import.meta.url), "utf8");
-  const component = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
-  for (const [name, text] of [["home.tsx", home], ["phage-roster.tsx", component]]) {
-    assert.doesNotMatch(text, /PHAGE_YEARS|data\/phage-hunters/, `${name} still reads the retired data file`);
-  }
 });

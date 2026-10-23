@@ -172,6 +172,7 @@ export async function readLlmsSides(env: Env & { GITHUB_TOKEN?: string }) {
   };
 }
 
+/** @public The admin Overview's loader returns these, so the route's inferred type names it. */
 export interface HealthCheck {
   name: string;
   ok: boolean;
