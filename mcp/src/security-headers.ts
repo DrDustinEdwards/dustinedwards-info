@@ -90,9 +90,6 @@ export async function withSecurityHeaders(response: Response, origin: string): P
   applyHeaderSet(headers, securityHeaders);
   const isHtml = (headers.get("content-type") ?? "").toLowerCase().includes("text/html");
   headers.set("Content-Security-Policy", isHtml ? await consentPageCsp() : NON_HTML_CSP);
-  // The shared builder refuses a plaintext origin, whose endpoint a browser would ignore anyway: none is sent then.
-  try {
-    headers.set("Reporting-Endpoints", reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, origin)));
-  } catch {}
+  headers.set("Reporting-Endpoints", reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, origin)));
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
