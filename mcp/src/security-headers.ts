@@ -11,7 +11,7 @@
  */
 
 import { applyHeaderSet, buildSecurityHeaders, type HeaderOverride } from "@dustinedwards/site-runtime/headers";
-import { buildPolicy, scriptHash } from "@dustinedwards/site-runtime/csp";
+import { buildPolicy, reportingEndpoints, scriptHash } from "@dustinedwards/site-runtime/csp";
 import { CONSENT_STYLE } from "@dustinedwards/site-runtime/mcp-login";
 
 /**
@@ -90,7 +90,9 @@ export async function withSecurityHeaders(response: Response, origin: string): P
   applyHeaderSet(headers, securityHeaders);
   const isHtml = (headers.get("content-type") ?? "").toLowerCase().includes("text/html");
   headers.set("Content-Security-Policy", isHtml ? await consentPageCsp() : NON_HTML_CSP);
-  // Absolute, because Reporting-Endpoints ignores a relative endpoint (as in Carrel and the site).
-  headers.set("Reporting-Endpoints", `${CSP_ENDPOINT_NAME}="${origin}${CSP_REPORT_PATH}"`);
+  // The shared builder refuses a plaintext origin, whose endpoint a browser would ignore anyway: none is sent then.
+  try {
+    headers.set("Reporting-Endpoints", reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, origin)));
+  } catch {}
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }

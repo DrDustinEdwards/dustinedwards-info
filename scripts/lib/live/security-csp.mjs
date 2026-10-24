@@ -3,9 +3,10 @@
 
 import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
 import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
-import { enhanceLoaderHash, speculationRulesHash } from "../../../workers/csp.mjs";
+import { CSP_ENDPOINT_NAME, CSP_REPORT_PATH, enhanceLoaderHash, speculationRulesHash } from "../../../workers/csp.mjs";
+import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
 import { declaredSecurityHeaders } from "../header-constants.mjs";
-import { check, get } from "./client.mjs";
+import { ORIGIN, check, get } from "./client.mjs";
 
 /**
  * The executable inline scripts in a document: no `src`, and not a data block (JSON-LD) or
@@ -86,7 +87,7 @@ export async function run() {
       );
       check(
         `csp (${label}) ${path}: Reporting-Endpoints names the sink`,
-        (res.headers.get("reporting-endpoints") ?? "").includes("/api/csp-report"),
+        res.headers.get("reporting-endpoints") === reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, ORIGIN)),
         `got ${JSON.stringify(res.headers.get("reporting-endpoints"))}`,
       );
       check(
