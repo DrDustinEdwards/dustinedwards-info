@@ -24,11 +24,7 @@ on:
       - app/routes.ts
       - app/enhance/system-map.ts
       - app/styles/systems.css
-      # Every system's inside, drawn at build time and put into the map by the route.
-      - app/lib/system-wiring.mjs
-      - scripts/lib/system-layout.mjs
-      - scripts/lib/system-layout-geometry.mjs
-      - scripts/lib/system-layout-search.mjs
+      # Every system's circle, drawn at build time by Capsomer and put into the map by the route.
       - scripts/lib/system-insides-plugin.mjs
       - vite.config.ts
       - scripts/check-systems-map.mjs

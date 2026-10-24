@@ -8,7 +8,6 @@ import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/li
 import {
   SYSTEMS_PATH,
   SYSTEM_PARAM,
-  chooseInMapHtml,
   chosenSystem,
   explorerUrl,
   loadSystemModel,
@@ -16,7 +15,6 @@ import {
   repoOf,
 } from "~/lib/systems.mjs";
 
-import { wireMapHtml, zoomInMapHtml } from "~/lib/system-wiring.mjs";
 import { INSIDE_LAYERS, INSIDES_URL } from "virtual:system-insides";
 
 import rawModel from "../../data/system-model.json";
@@ -44,23 +42,21 @@ export function headers() {
 
 const MODEL = loadSystemModel(rawModel);
 const TITLE = "Systems";
-// Capsomer's map, with an inside for every system rather than the core alone, so one tap on any system zooms into
-// its circle. The insides are drawn at build time (scripts/lib/system-layout.mjs, as virtual:system-insides). The
-// page at rest carries none, for its first paint on a slow phone, and the map's script fetches them all from
-// INSIDES_URL once the page has loaded; a chosen system's is inlined, so a shared ?system= link opens zoomed in
-// before any script and with none.
-const CORE_ID = MODEL.systems.find((s) => s.ring === "core")?.id;
-const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), {
-  id: "family",
-  label: "The family of systems",
-  ringNames: { shared: "Shared code" },
-  headingLevel: 2,
-});
-/** The map with the given system's circle in it, or none. */
-const mapWith = (id?: string) => wireMapHtml(CAPSOMER_MAP, id && INSIDE_LAYERS[id] ? { [id]: INSIDE_LAYERS[id] } : {}, CORE_ID, INSIDES_URL);
-const MAP = mapWith();
-/** The map zoomed into one system, its circle inlined. */
-const zoomedMap = (id: string) => zoomInMapHtml(chooseInMapHtml(mapWith(id), id), id);
+// Capsomer's map with circles, so one tap on any system zooms into its circle. The circles are drawn at build time
+// (scripts/lib/system-insides-plugin.mjs, as virtual:system-insides). The page at rest carries none, for its first
+// paint on a slow phone, and the map's script fetches them all from INSIDES_URL once the page has loaded; a chosen
+// system's is inlined and drawn zoomed into, so a shared ?system= link opens there before any script and with none.
+// The detail line sits above the drawing here (app/styles/systems.css), so it and the views are sent shown: a box
+// that appeared there once the script ran would push the drawing down. Where no script runs, systems.css hides them.
+const mapHtml = (chosen?: string) =>
+  systemMapHtml(mapData(MODEL), {
+    id: "family",
+    label: "The family of systems",
+    ringNames: { shared: "Shared code" },
+    headingLevel: 2,
+    circles: { src: INSIDES_URL, layers: chosen && INSIDE_LAYERS[chosen] ? { [chosen]: INSIDE_LAYERS[chosen] } : {}, chosen },
+  }).replace(/(data-cap-part="(?:views|detail)"[^>]*?) hidden>/g, "$1>");
+const MAP = mapHtml();
 
 export function loader({ request }: Route.LoaderArgs) {
   return { chosen: chosenSystem(MODEL, new URL(request.url).searchParams.get(SYSTEM_PARAM)) };
@@ -90,8 +86,8 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
     <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}>
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{TITLE}</h1>
-      {/* The map is a string from Capsomer and app/lib/system-wiring.mjs, every text in it escaped there. A chosen system is drawn zoomed in; data-chosen tells the script which. */}
-      <div className="systems-map" data-chosen={chosen ?? undefined} dangerouslySetInnerHTML={{ __html: chosen ? zoomedMap(chosen) : MAP }} />
+      {/* The map is a string from Capsomer, every text in it escaped there. A chosen system is drawn zoomed in. */}
+      <div className="systems-map" dangerouslySetInnerHTML={{ __html: chosen ? mapHtml(chosen) : MAP }} />
       {/* Every system's facts, all shown with no script; with script, only the chosen one's (systems.css). */}
       <div className="systems-all" data-systems-facts="">
         {MODEL.systems.map((s) => (

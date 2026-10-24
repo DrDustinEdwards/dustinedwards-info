@@ -1,6 +1,6 @@
 /**
  * Served by `systemInsidesPlugin()` in scripts/lib/system-insides-plugin.mjs: each system's inside layer on
- * /systems, by id, drawn at build time from data/system-model.json (scripts/lib/system-layout.mjs).
+ * /systems, by id, drawn at build time from data/system-model.json (Capsomer's circleLayers).
  *
  * Its own file, with no import or export, so the declaration is ambient.
  */

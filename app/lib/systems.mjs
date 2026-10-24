@@ -7,6 +7,7 @@
 // private repos", "fully wired just like the public ones"); a private system carries no repo
 // link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
+import { modelMapData } from "capsomer/behaviour/system-map";
 import { z } from "zod";
 
 export const SYSTEMS_PATH = "/systems";
@@ -180,28 +181,6 @@ export const systemHref = (id) => `${SYSTEMS_PATH}?${SYSTEM_PARAM}=${encodeURICo
 export const chosenSystem = (model, value) => (value && model.systems.some((s) => s.id === value) ? value : null);
 
 /**
- * Capsomer's map with one system already chosen, as its controller leaves it: the root marked
- * selected, the system pressed, its lines on and the systems at their far ends linked. So the
- * server draws that system's wiring before any script runs, and with no script at all. Attributes
- * only: the drawing is Capsomer's and is not changed.
- * @param {string} html what systemMapHtml returned
- * @param {string} id a system on the map
- */
-export function chooseInMapHtml(html, id) {
-  /** @type {Set<string>} */
-  const linked = new Set();
-  let out = html.replace(/<path class="cap-system-map-edge" data-from="([^"]*)" data-to="([^"]*)"/g, (whole, from, to) => {
-    if (from !== id && to !== id) return whole;
-    linked.add(from === id ? to : from);
-    return `${whole} data-on`;
-  });
-  out = out.replace(/<g class="cap-system-map-tile" data-id="([^"]*)"/g, (whole, tile) =>
-    tile === id ? `${whole} aria-pressed="true"` : linked.has(tile) ? `${whole} data-linked` : whole,
-  );
-  return out.replace(/<figure class="cap-system-map" data-cap="system-map"/, (whole) => `${whole} data-selected`);
-}
-
-/**
  * The Capsid explorer, built from the same public model, so every system here has a page
  * there under the same id, private ones included (design section 4, "Deep links both ways").
  */
@@ -211,42 +190,12 @@ export const explorerUrl = (id) => `${EXPLORER_ORIGIN}/s/${id}/`;
 /** How a page shows that address, as it shows the others: host and path. @param {string} id */
 export const explorerLabel = (id) => `${new URL(EXPLORER_ORIGIN).host}/s/${id}`;
 
-// The word under a capsomer's name. A private system shows "private" (Capsomer adds it).
-/** @type {Record<ModelSystem["family"], string>} */
-// The word under a system and the group it is drawn in, in a stranger's words (Dustin, 2026-10-23:
-// like goes with like, and the map should explain itself). An admin MCP sits in its app's group
-// and says so.
-const FAMILY_WORD = { system: "tool", writing: "writing", product: "app", plumbing: "tool", site: "site" };
-const FAMILY_GROUP = { system: "Tools", writing: "Writing", product: "Apps", plumbing: "Tools", site: "Websites" };
-/** @param {ModelSystem} s */
-const tagOf = (s) => (s.ring === "core" ? undefined : s.ring === "shared" ? "shared" : s.id.endsWith("-mcp") ? "admin" : FAMILY_WORD[s.family]);
-
 /**
- * What Capsomer's map draws: every system, with no link of its own, since choosing one shows its
- * facts on the same page (app/enhance/system-map.ts), every line (the map
- * draws those between systems, the inside view those between the core's containers), and
- * the containers.
+ * What Capsomer's map draws, the same as the explorer's (Capsomer's modelMapData): every system with no link of its
+ * own, since choosing one shows its facts on the same page (app/enhance/system-map.ts), every line and the parts.
  * @param {SystemModel} model
  */
-export function mapData(model) {
-  return {
-    systems: model.systems.map((s) => ({
-      id: s.id,
-      name: s.name,
-      short: s.short,
-      ring: s.ring,
-      private: s.private,
-      tag: tagOf(s),
-      group: s.ring === "used" ? FAMILY_GROUP[s.family] : undefined,
-      description: s.description,
-      domain: s.domain || undefined,
-    })),
-    relationships: model.relationships.map(({ from, to, kind }) => ({ from, to, kind })),
-    // The box under each part names its kind (worker, database): Capsomer's boxes are sized for a word, and the
-    // longer technology line is in the page's list of parts and the twin.
-    containers: model.containers.map(({ id, system, name, kind }) => ({ id, system, name, kind })),
-  };
-}
+export const mapData = (model) => modelMapData(model);
 
 // How a line reads from each end.
 /** @type {Record<SystemModel["relationships"][number]["kind"], [string, string]>} */
@@ -321,7 +270,7 @@ const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${
 
 /**
  * What a system's page says about it: its sentence, and that its repo is private when it is.
- * @param {ModelSystem} s
+ * @param {{ description?: string, private?: boolean }} s a system in the model or on the map
  */
 export const summaryOf = (s) => [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
 

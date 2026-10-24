@@ -214,14 +214,6 @@ export const OPACITY_EXEMPT = [
       "in the filter stay at full strength (app/styles/enarratio.css, app/styles/cv.css)",
   },
   {
-    /* Anchored at the end, per the vacuity rule. */
-    test: /\[data-entered\] \[data-layer="rim"\]$/,
-    why:
-      "the map's outer capsomers left behind a zoomed-in circle on /systems, faded so the circle's own rim reads " +
-      "over them. Shapes only: Capsomer hides their names while zoomed in and they take no input, so there is no " +
-      "text to price a ratio against (app/styles/systems.css)",
-  },
-  {
     test: /^\.search-why-sep$/,
     why: 'incidental punctuation, the "/" between why-terms, recorded as LEFT in this header',
   },
