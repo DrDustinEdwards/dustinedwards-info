@@ -4,9 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { systemMapHtml } from "capsomer/behaviour/system-map";
-
-import { chooseInMapHtml, chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -72,8 +70,6 @@ await test("the map draws every system once, linking to no page of its own", () 
   assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
   // One page: choosing a system shows it in place, so no system links away.
   assert.deepEqual(data.systems.map((s) => s.href), [undefined, undefined, undefined, undefined]);
-  assert.deepEqual(data.systems.map((s) => s.tag), [undefined, "shared", "app", "app"]);
-  assert.deepEqual(data.systems.map((s) => s.group), [undefined, undefined, "Apps", "Apps"]);
   const hidden = data.systems.find((s) => s.id === "hidden");
   assert.equal(hidden.private, true);
   assert.equal(hidden.description, "Kept private.");
@@ -95,27 +91,6 @@ await test("a chosen system lives in the query, and a value naming no system cho
   assert.equal(systemHref("kit"), "/systems?system=kit");
   assert.equal(chosenSystem(model, "kit"), "kit");
   for (const value of [null, undefined, "", "nowhere", "Kit", "kit "]) assert.equal(chosenSystem(model, value), null, String(value));
-});
-
-await test("the server draws a chosen system's wiring as the controller would, and changes nothing else", () => {
-  const model = loadSystemModel(fixture());
-  const html = systemMapHtml(mapData(model), { id: "family" });
-  const chosen = chooseInMapHtml(html, "kit");
-  assert.match(chosen, /<figure class="cap-system-map" data-cap="system-map" data-selected /);
-  assert.match(chosen, /class="cap-system-map-tile" data-id="kit" aria-pressed="true"/);
-  // Kit's lines run to Core and App: both are linked and both lines are on; Hidden is not.
-  assert.match(chosen, /class="cap-system-map-tile" data-id="core" data-linked/);
-  assert.match(chosen, /class="cap-system-map-tile" data-id="app" data-linked/);
-  assert.doesNotMatch(chosen, /data-id="hidden" data-linked/);
-  const on = [...chosen.matchAll(/<path class="cap-system-map-edge" data-from="([^"]+)" data-to="([^"]+)" [^>]*data-on/g)].map((m) => `${m[1]}-${m[2]}`);
-  assert.deepEqual(on.sort(), ["app-kit", "core-kit"]);
-  // Only attributes are added: take them away and the drawing is Capsomer's, byte for byte.
-  const stripped = chosen
-    .replace(/ data-selected /, " ")
-    .replace(/(data-id="kit") aria-pressed="true"/, "$1")
-    .replace(/(class="cap-system-map-tile" data-id="[^"]+") data-linked/g, "$1")
-    .replace(/(class="cap-system-map-edge" [^>]*?) data-on/g, "$1");
-  assert.equal(stripped, html);
 });
 
 await test("the twin holds every system's facts, a private one without its source", () => {

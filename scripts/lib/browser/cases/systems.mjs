@@ -153,15 +153,15 @@ async function oneTapZooms(/** @type {import("puppeteer").Page} */ page) {
     `entered ${zoomed.entered}, zoom ${zoomed.zoom}, shown ${zoomed.shown.join(", ") || "none"}, address ${zoomed.url}, buttons ${back || "none"}`,
   );
 
-  const goto = await page.$eval(`#family [data-layer='inside'][data-system="${other}"]`, (l) => /** @type {HTMLElement | null} */ (l.querySelector(".systems-rim[data-goto]"))?.dataset.goto ?? "");
+  const goto = await page.$eval(`#family [data-layer='inside'][data-system="${other}"]`, (l) => /** @type {HTMLElement | null} */ (l.querySelector(".cap-system-map-rim[data-goto]"))?.dataset.goto ?? "");
   if (goto) {
-    await page.click(`#family [data-layer='inside'][data-system="${other}"] .systems-rim[data-goto="${goto}"]`);
+    await page.click(`#family [data-layer='inside'][data-system="${other}"] .cap-system-map-rim[data-goto="${goto}"]`);
     await settle();
     const there = await page.evaluate(zoomState);
     ok("/systems: a system on the rim is one tap to zoom into it", there.zoom === goto && there.shown.length === 1 && there.shown[0] === goto && there.url === systemHref(goto), `zoom ${there.zoom}, shown ${there.shown.join(", ") || "none"}, address ${there.url}`);
-  } else ok(`/systems: ${other}'s circle has a system on its rim to go to`, false, "no .systems-rim[data-goto]");
+  } else ok(`/systems: ${other}'s circle has a system on its rim to go to`, false, "no .cap-system-map-rim[data-goto]");
 
-  await page.click("#family [data-cap-part='views'] [data-systems-back]");
+  await page.click("#family [data-cap-part='views'] [data-cap-part='out']");
   const rest = await page.evaluate(zoomState);
   ok("/systems: Back to all systems returns to the map", !rest.entered && rest.zoom === null && rest.shown.length === 0 && rest.url === "/systems", `entered ${rest.entered}, zoom ${rest.zoom}, address ${rest.url}`);
 

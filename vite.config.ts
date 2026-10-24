@@ -58,7 +58,7 @@ export default defineConfig({
     reactRouter(),
     // The enhancement bundles, built beside the app and emitted into its client assets.
     enhancePlugin(),
-    // Every system's inside on /systems, drawn at build time (scripts/lib/system-layout.mjs).
+    // Every system's circle on /systems, drawn at build time (Capsomer's circleLayers).
     systemInsidesPlugin(),
   ],
   resolve: {

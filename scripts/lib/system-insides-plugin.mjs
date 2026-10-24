@@ -1,6 +1,6 @@
 /**
- * `virtual:system-insides`: every system's inside layer on /systems (scripts/lib/system-layout.mjs), drawn once at
- * build time from data/system-model.json. The drawing is searched for, which takes seconds over the whole model;
+ * `virtual:system-insides`: every system's circle on /systems (Capsomer's circleLayers), drawn once at build time
+ * from data/system-model.json. The drawing is searched for, which takes seconds over the whole model;
  * done here the Worker serves strings and spends nothing on it, and the model's daily refresh redraws it on the
  * build that ships it.
  *
@@ -28,7 +28,8 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { insideLayers } from "./system-layout.mjs";
+import { circleLayers } from "capsomer/system-map-circles";
+
 import { loadSystemModel, mapData, summaryOf } from "../../app/lib/systems.mjs";
 
 const MODULE_ID = "virtual:system-insides";
@@ -50,7 +51,7 @@ export function drawInsides({ write }) {
   const model = loadSystemModel(JSON.parse(readFileSync(MODEL_FILE, "utf8")));
   const saved = readSavedLayouts();
   const before = JSON.stringify(saved);
-  const layers = insideLayers(model, summaryOf, mapData(model), saved);
+  const layers = circleLayers(mapData(model), { summary: summaryOf, saved });
   if (JSON.stringify(saved) !== before) {
     if (write) writeFileSync(LAYOUTS_FILE, `{\n${Object.entries(saved).map(([id, v]) => `${JSON.stringify(id)}: ${JSON.stringify(v)}`).join(",\n")}\n}\n`);
     else console.warn("data/system-layouts.json is out of date, so this build searched for circles: run `npm run build:layouts` and commit it.");

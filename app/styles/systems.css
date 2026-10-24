@@ -88,24 +88,20 @@
 }
 
 /*
- * Zooming into a system (scripts/lib/system-layout.mjs draws an inside for each; app/enhance/system-map.ts shows the
- * chosen one). Capsomer's stylesheet shows every inside layer once the map is entered, and it has one; this page
- * has one per system, so only the layer marked data-shown is seen. The shown one sits in the flow and sizes the
- * stage, so a system with many parts gets the height it needs, no taller than the screen.
+ * Zooming into a system is Capsomer's (its map with circles). The head, then the detail line above the drawing,
+ * which never moves when the drawing changes height.
  */
 .systems-map .cap-system-map-head {
   order: -2;
 }
 
-/* The detail line, with the way back, sits above the drawing: it never moves when the drawing changes height. */
 .systems-map .cap-system-map-detail {
   order: -1;
 }
 
 /*
  * The detail line as plain words above the drawing, not a box (Dustin, 2026-10-18). Capsomer keeps its height fixed,
- * so choosing never moves the drawing. The way back is a button beside Capsid and Plain map
- * (app/enhance/system-map.ts), so Capsomer's own in the detail line is not shown.
+ * so choosing never moves the drawing.
  */
 .systems-map .cap-system-map-detail {
   padding: 0;
@@ -132,15 +128,10 @@
   white-space: nowrap;
 }
 
-.systems-map .cap-system-map-detail [data-cap-part="leave"],
-.systems-map .cap-system-map[data-view="plain"] [data-systems-back] {
-  display: none;
-}
-
 /*
  * Capsomer's markup has the detail line and the view buttons hidden until its script shows them. Above the drawing,
- * showing the detail line would push the drawing down on load, so the route sends both shown
- * (app/lib/system-wiring.mjs) and they are hidden here only where no script runs, where neither would do anything.
+ * showing the detail line would push the drawing down on load, so the route sends both shown and they are hidden
+ * here only where no script runs, where neither would do anything.
  */
 @media (scripting: none) {
   .systems-map .cap-system-map-detail,
@@ -149,123 +140,11 @@
   }
 }
 
-.systems-map .cap-system-map[data-entered] [data-layer="inside"]:not([data-shown]) {
-  opacity: 0;
-  visibility: hidden;
-}
-
-.systems-map .cap-system-map:not([data-entered]) [data-layer="inside"] {
-  transform: scale(0.3);
-}
-
-/* A circle not shown is not drawn at all: sixteen hidden drawings restyled on every tap made each one slow. */
-.systems-map [data-layer="inside"]:not([data-shown]) {
-  display: none;
-}
-
-/*
- * It grows out of its capsomer on the way in and keeps drawing while it fades on the way out: display joins
- * Capsomer's own transition, taking its duration and easing from Capsomer's list, which is restated nowhere.
- */
-.systems-map .cap-system-map-layer[data-layer="inside"] {
-  transition-property: transform, opacity, visibility, display;
-  transition-behavior: allow-discrete;
-}
-
-.systems-map .cap-system-map[data-entered] [data-layer="inside"][data-shown] {
-  @starting-style {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-}
-
-.systems-map .cap-system-map[data-entered] [data-layer="inside"][data-shown] {
-  position: relative;
-  height: auto;
-  max-height: calc(100svh - 4rem);
-}
-
-/* The faded shell Capsomer keeps behind its inside view is fainter here, where the rim holds boxes of its own. */
-.systems-map .cap-system-map[data-entered] [data-layer="rim"] {
-  opacity: 0.07;
-}
-
-.systems-map .cap-system-map[data-entered] [data-layer="core"] {
-  position: absolute;
-  height: 100%;
-}
-
 /* On a phone the zoomed drawing takes the full width of the screen, past the page's gutters, to be read. */
 @media (max-width: 40rem) {
   .systems-map .cap-system-map[data-entered] .cap-system-map-stage {
     width: calc(100% + 2 * var(--gutter));
     max-width: none;
     margin-inline: calc(-1 * var(--gutter));
-  }
-}
-
-/* Another system on the rim: the map's capsomer, as a pill, and a tap that zooms there. */
-.systems-rim {
-  & rect {
-    fill: var(--surface);
-    stroke: var(--accent);
-    stroke-width: 1.4;
-  }
-  &[data-private] rect {
-    stroke-dasharray: 4 3;
-  }
-}
-
-.systems-map [data-layer="inside"][data-shown] .systems-rim {
-  cursor: pointer;
-  pointer-events: auto;
-
-  &:hover rect {
-    fill: var(--accent-soft);
-  }
-}
-
-.systems-rim-name {
-  fill: var(--accent-text);
-  font: 600 11px var(--ui);
-  text-anchor: middle;
-}
-
-/* A circle with no parts drawn: the system's name in the middle, and what it is. */
-.systems-inside-name {
-  fill: var(--accent-text);
-  font: 600 17px var(--font-prose);
-  text-anchor: middle;
-}
-
-.systems-inside-text {
-  fill: var(--muted);
-  font: 400 11px var(--ui);
-  text-anchor: middle;
-}
-
-/* A part's name, a little larger than Capsomer's, for a phone; a line that coordinates or watches is dashed, as on the map. */
-.systems-map [data-layer="inside"][data-system] .cap-system-map-box-name {
-  font-size: 11.5px;
-}
-
-.systems-map .cap-system-map-wire[data-loose] {
-  stroke-dasharray: 4 3;
-}
-
-.systems-map .cap-system-map-wire[data-whole] {
-  stroke: var(--accent);
-  stroke-opacity: 0.6;
-}
-
-@media (forced-colors: active) {
-  .systems-rim rect {
-    fill: Canvas !important;
-    stroke: CanvasText;
-  }
-  .systems-rim-name,
-  .systems-inside-name,
-  .systems-inside-text {
-    fill: CanvasText;
   }
 }
