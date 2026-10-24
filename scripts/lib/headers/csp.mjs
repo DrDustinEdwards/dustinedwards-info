@@ -422,9 +422,9 @@ export async function run(code) {
       "because report-to is Baseline 2026 and report-uri still carries older browsers.",
   );
   ok(
-    "Reporting-Endpoints is sent alongside report-to",
-    code.includes('"Reporting-Endpoints"'),
-    "report-to names an endpoint that Reporting-Endpoints has to define",
+    "Reporting-Endpoints is sent alongside report-to, built by the shared reportingEndpoints",
+    code.includes('"Reporting-Endpoints"') && code.includes("reportingEndpoints(CSP_ENDPOINT_NAME"),
+    "report-to names an endpoint that Reporting-Endpoints has to define, and the package is what writes it",
   );
 
   console.log(

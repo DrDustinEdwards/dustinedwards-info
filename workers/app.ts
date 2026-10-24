@@ -18,6 +18,7 @@ import {
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
+import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
 import { SECURITY_HEADERS } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { handleWebmentionVerify } from "./webmention-verify";
@@ -119,8 +120,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
       timings.push({ name: "worker_total", ms: performance.now() - handlerStart });
     }
 
-    // Absolute, because `Reporting-Endpoints` ignores a non-secure or relative endpoint.
-    const reportTo = `${CSP_ENDPOINT_NAME}="${url.origin}${CSP_REPORT_PATH}"`;
+    // Absolute https (the gateway has already redirected plaintext): `Reporting-Endpoints` ignores anything else.
+    const reportTo = reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, url.origin));
     // The same pathname React Router reads off this request, so the hashed rules are the rendered ones.
     const csp = await contentSecurityPolicy(url.pathname, adminNonce);
 
