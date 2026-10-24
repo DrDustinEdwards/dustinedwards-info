@@ -50,7 +50,12 @@ const TITLE = "Systems";
 // INSIDES_URL once the page has loaded; a chosen system's is inlined, so a shared ?system= link opens zoomed in
 // before any script and with none.
 const CORE_ID = MODEL.systems.find((s) => s.ring === "core")?.id;
-const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), { id: "family", label: "The family of systems", headingLevel: 2 });
+const CAPSOMER_MAP = systemMapHtml(mapData(MODEL), {
+  id: "family",
+  label: "The family of systems",
+  ringNames: { shared: "Shared code" },
+  headingLevel: 2,
+});
 /** The map with the given system's circle in it, or none. */
 const mapWith = (id?: string) => wireMapHtml(CAPSOMER_MAP, id && INSIDE_LAYERS[id] ? { [id]: INSIDE_LAYERS[id] } : {}, CORE_ID, INSIDES_URL);
 const MAP = mapWith();
