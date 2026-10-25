@@ -126,6 +126,8 @@ const PATTERNS = [
 
 /** Explicit rows, keyed by the old path without its trailing slash. */
 const ROWS = /** @type {Record<string, string>} */ ({
+  // Yoast's sitemap index, which Search Console still holds from the WordPress site.
+  "/sitemap_index.xml": "/sitemap.xml",
   "/knowledge-base/pcr-coi-lco1490-hco2198": "/research/protocols/coi-primers",
   // The old pages were a course and a program, so each goes to the course or program, not a protocol.
   "/virus-isolation": "/teaching/virus-isolation",

@@ -1,3 +1,6 @@
+import { headTags } from "@drdustinedwards/site-helpers/head";
+import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
+
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
 import { TERMS_PATH } from "./license.mjs";
@@ -73,35 +76,18 @@ export function pageMeta(page: {
   image?: string;
   ogType?: "website" | "article";
 }) {
-  const url = `${SITE_ORIGIN}${page.path}`;
-  const image = page.image ?? DEFAULT_OG_IMAGE;
-  return [
-    { title: page.title },
-    { name: "description", content: page.description },
-    { tagName: "link", rel: "canonical", href: url },
-    { property: "og:title", content: page.title },
-    { property: "og:description", content: page.description },
-    { property: "og:url", content: url },
-    { property: "og:type", content: page.ogType ?? "website" },
-    { property: "og:image", content: image },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:image", content: image },
-  ];
+  return headTags({
+    origin: SITE_ORIGIN,
+    path: page.path,
+    title: page.title,
+    description: page.description,
+    image: page.image ?? DEFAULT_OG_IMAGE,
+    siteName: SITE.name,
+    type: page.ogType,
+  });
 }
 
-/**
- * Google truncates by pixel width (about 600px title, 920px description), so these approximate it;
- * the description field's own 160-character counter would show text the result clips.
- */
-export const SERP_TITLE_LIMIT = 60;
-export const SERP_DESCRIPTION_LIMIT = 155;
-
-export function truncateForSerp(text: string, limit: number) {
-  if (text.length <= limit) return text;
-  const cut = text.slice(0, limit);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
-}
+export { SERP_DESCRIPTION_LIMIT, SERP_TITLE_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 
 /** The home page's Person: the same node as `personNode`, joined to it by the shared `@id`. */
 export function personJsonLd(origin: string) {
@@ -228,43 +214,16 @@ type ArticleSeo = {
   tags: string[];
 };
 
-// Derived once so the JSON-LD and Open Graph outputs cannot drift apart.
-function articleFacts(origin: string, post: ArticleSeo) {
-  return {
-    publishedTime: post.publishAt?.toISOString(),
-    modifiedTime: (post.updatedAt ?? post.publishAt)?.toISOString(),
-    authorName: SITE.name,
-    authorUrl: origin,
-    tags: post.tags,
-  };
-}
-
-// An absent date yields no property: an empty `article:published_time` claims there is no date.
-export function articleOpenGraph(origin: string, post: ArticleSeo) {
-  const facts = articleFacts(origin, post);
-  const tags: Array<{ property: string; content: string }> = [];
-  if (facts.publishedTime) {
-    tags.push({ property: "article:published_time", content: facts.publishedTime });
-  }
-  if (facts.modifiedTime) {
-    tags.push({ property: "article:modified_time", content: facts.modifiedTime });
-  }
-  tags.push({ property: "article:author", content: facts.authorName });
-  for (const tag of facts.tags) {
-    tags.push({ property: "article:tag", content: tag });
-  }
-  return tags;
+/** The facts Prelum's `headTags` and `article` both read, so the Open Graph tags and the JSON-LD cannot drift apart. */
+export function articleFacts(post: ArticleSeo) {
+  return { published: post.publishAt, modified: post.updatedAt ?? post.publishAt, author: SITE.name, tags: post.tags };
 }
 
 export function articleJsonLd(origin: string, post: ArticleSeo) {
-  const facts = articleFacts(origin, post);
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
+  return article({
+    url: `${origin}/writing/${post.slug}`,
     headline: post.title,
-    description: post.description ?? undefined,
-    datePublished: facts.publishedTime,
-    dateModified: facts.modifiedTime,
+    description: post.description,
     image: postSocial({
       slug: post.slug,
       title: post.title,
@@ -272,34 +231,18 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       coverImage: post.coverImage,
       ogImage: post.ogImage ?? null,
     }).image,
-    keywords: facts.tags.length > 0 ? facts.tags.join(", ") : undefined,
-    mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/writing/${post.slug}` },
-    author: { "@type": "Person", name: facts.authorName, url: facts.authorUrl },
+    ...articleFacts(post),
+    author: { "@type": "Person", name: SITE.name, url: origin },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
-  };
+  });
 }
 
 export function breadcrumbJsonLd(origin: string, trail: Array<[string, string]>) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: trail.map(([name, path], i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name,
-      item: `${origin}${path}`,
-    })),
-  };
+  return breadcrumbs(origin, trail.map(([name, path]) => ({ name, path })));
 }
 
 export function webSiteJsonLd(origin: string) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: SITE.name,
-    description: SITE.description,
-    url: origin,
-  };
+  return website({ origin, name: SITE.name, description: SITE.description });
 }
 
 export const PUBLICATIONS_URL = "/research/publications";

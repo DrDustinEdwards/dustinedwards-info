@@ -21,7 +21,7 @@ const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-u
 const targetPath = (location) => location.split("#")[0];
 
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
-const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/dustin-edwards-cv.pdf", "/research/publications"]);
+const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/dustin-edwards-cv.pdf", "/research/publications", "/sitemap.xml"]);
 
 await test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
@@ -208,6 +208,7 @@ const CUTOVER_EXPLICIT_ROWS = /** @type {Array<[string, string | null]>} */ ([
   ["/wolbachia-project-genetic-techniques/", "/research/protocols"],
   ["/knowledge-base/pcr-wolbachia-16s-rrna/", "/research/protocols"],
   ["/gentech-2018a/", "/research/protocols"],
+  ["/sitemap_index.xml", "/sitemap.xml"],
   ["/", null],
   ["/contact/", null],
   ["/login/", null],

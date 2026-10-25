@@ -1,50 +1,28 @@
+import { robotsDocument } from "@drdustinedwards/site-helpers/robots";
+
 import { getEnv } from "~/lib/context";
 import { HOURLY_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import type { Route } from "./+types/robots";
 
-const AI_AGENTS = [
-  "GPTBot",
-  "OAI-SearchBot",
-  "ChatGPT-User",
-  "ClaudeBot",
-  "PerplexityBot",
-  "Google-Extended",
-];
-
+/*
+ * Advisory only. The real controls: `X-Robots-Tag` and `no-store` on /preview, and POST-only on
+ * /search/ask, which is disallowed because every answer is billed. A Worker Preview is a PR's draft
+ * of the site, so every crawler is told `Disallow: /`; the gateway's X-Robots-Tag: noindex is the
+ * real control there.
+ */
 export function loader({ context }: Route.LoaderArgs) {
-  const origin = SITE_ORIGIN;
-
-  // A Worker Preview is a PR's draft of the site: nothing on it is for crawling. The gateway's
-  // X-Robots-Tag: noindex is the real control; this is the advisory half.
-  if (isWorkerPreview(getEnv(context))) {
-    return new Response("User-agent: *\nDisallow: /\n", {
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "cache-control": "no-store",
-      },
-    });
-  }
-
-  /*
-   * Advisory only. The real controls: `X-Robots-Tag` and `no-store` on /preview, and POST-only on
-   * /search/ask, which is disallowed because every answer is billed.
-   */
-  const block = (agent: string) =>
-    `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /lab\nDisallow: /preview\nDisallow: /search/ask\n`;
-
-  const body = [
-    ...AI_AGENTS.map(block),
-    block("*"),
-    `Sitemap: ${origin}/sitemap.xml`,
-    `# LLM guide: ${origin}/llms.txt`,
-    "",
-  ].join("\n");
-
+  const preview = isWorkerPreview(getEnv(context));
+  const body = robotsDocument({
+    origin: SITE_ORIGIN,
+    disallow: ["/admin", "/lab", "/preview", "/search/ask"],
+    notes: [`LLM guide: ${SITE_ORIGIN}/llms.txt`],
+    preview,
+  });
   return new Response(body, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
-      "cache-control": HOURLY_CACHE_CONTROL,
+      "cache-control": preview ? "no-store" : HOURLY_CACHE_CONTROL,
     },
   });
 }
