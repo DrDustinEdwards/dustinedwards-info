@@ -7,6 +7,8 @@ import { readFileSync } from "node:fs";
 
 import matter from "gray-matter";
 
+import { TDM_RESERVATION_HEADERS } from "@drdustinedwards/site-helpers/robots";
+
 import {
   LOGOUT_HEADERS,
   OWASP_SKIPPED,
@@ -29,7 +31,7 @@ const runSuite = (headers, logout) =>
   runOshpSuite(suite, { page: { status: 200, headers }, ...(logout ? { logout: { status: 200, headers: logout } } : {}) });
 
 await test("this site's set is the standard plus its deviations, each with a reason, and the suite names them", async () => {
-  assert.deepEqual(SECURITY_HEADERS, buildSecurityHeaders({ overrides: SITE_HEADER_OVERRIDES }));
+  assert.deepEqual(SECURITY_HEADERS, { ...buildSecurityHeaders({ overrides: SITE_HEADER_OVERRIDES }), ...TDM_RESERVATION_HEADERS });
   for (const [name, { reason }] of Object.entries(SITE_HEADER_OVERRIDES)) assert.ok(reason.length > 40, `${name} says why`);
   const headers = new Headers(SECURITY_HEADERS);
   headers.set("Content-Security-Policy", await contentSecurityPolicy("/", undefined));

@@ -124,6 +124,7 @@ export default [
     // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
     route("site-map", "routes/site-map.tsx"),
     route("robots.txt", "routes/robots.ts"),
+    route("ai.txt", "routes/ai-txt.ts"),
     route(".well-known/security.txt", "routes/security-txt.ts"),
     route("llms.txt", "routes/llms.ts"),
     route("llms-full.txt", "routes/llms-full[.txt].ts"),

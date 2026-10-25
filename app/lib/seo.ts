@@ -124,6 +124,9 @@ export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 /** The small text files crawlers read (robots.txt, security.txt, llms.txt). */
 export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
+/** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
+export const ROBOTS_DISALLOW = ["/admin", "/lab", "/preview", "/search/ask"];
+
 /**
  * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that
  * lists posts expires at the next scheduled publish_at. Never parse a lifetime back out of a string:
