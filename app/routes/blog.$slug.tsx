@@ -1,3 +1,4 @@
+import { headTags } from "@drdustinedwards/site-helpers/head";
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
@@ -36,7 +37,7 @@ import {
   SITE,
   SITE_ORIGIN,
   articleJsonLd,
-  articleOpenGraph,
+  articleFacts,
   breadcrumbJsonLd,
   postSocial,
 } from "~/lib/seo";
@@ -138,19 +139,18 @@ export function meta({ loaderData }: Route.MetaArgs) {
     postSocial(post);
 
   return [
-    { title: pageTitle },
-    { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: canonical },
-    { property: "og:title", content: socialTitle },
-    { property: "og:description", content: socialDescription },
-    { property: "og:type", content: "article" },
-    { property: "og:url", content: canonical },
-    { property: "og:image", content: image },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: socialTitle },
-    { name: "twitter:description", content: socialDescription },
-    { name: "twitter:image", content: image },
-    ...articleOpenGraph(SITE_ORIGIN, toArticleSeo(post)),
+    ...headTags({
+      origin: SITE_ORIGIN,
+      path: `/writing/${post.slug}`,
+      title: pageTitle,
+      description,
+      socialTitle,
+      socialDescription,
+      image,
+      siteName: SITE.name,
+      type: "article",
+      article: articleFacts(toArticleSeo(post)),
+    }),
     {
       tagName: "link",
       rel: "alternate",
