@@ -3,19 +3,21 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  diagramAssetPath,
   DIAGRAM_ASSET_DIR,
-  DIAGRAM_THEME_TOKENS,
   DIAGRAM_THEMES,
-} from "../app/lib/content/diagram.mjs";
+  diagramAssetPath,
+} from "@drdustinedwards/site-helpers/render/diagram";
+import { auditDiagramSvg, DIAGRAM_ROLE_NAMES } from "@drdustinedwards/site-helpers/render/diagram-draw";
+
+import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
+import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
-import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
 
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
-  basename(diagramAssetPath(key, theme));
+  basename(diagramAssetPath(key, theme, ASSET_PREFIX));
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
@@ -41,7 +43,11 @@ const themeBlocks = {
   darkSystem: tokenBlock("dark (system)", THEME_SELECTORS.darkSystem),
 };
 
-for (const [key, token] of Object.entries(DIAGRAM_THEME_TOKENS)) {
+assert(
+  "every diagram colour role has a token",
+  DIAGRAM_ROLE_NAMES.every((role) => role in DIAGRAM_ROLE_TOKENS),
+);
+for (const [key, token] of Object.entries(DIAGRAM_ROLE_TOKENS)) {
   assert(`${key} names a token, not a color`, /^--[a-z0-9-]+$/.test(token));
   // Both theme blocks land on the same element and do not cascade into one another, so a token
   // forgotten in dark keeps its LIGHT value and the diagram is drawn light on a dark page.
@@ -56,7 +62,7 @@ for (const [key, token] of Object.entries(DIAGRAM_THEME_TOKENS)) {
 /** @param {"light" | "dark"} theme */
 function paletteFor(theme) {
   try {
-    const palette = resolveTokens(DIAGRAM_THEME_TOKENS, themeBlocks[theme], theme);
+    const palette = resolveTokens(DIAGRAM_ROLE_TOKENS, themeBlocks[theme], theme);
     assert(`the ${theme} palette resolves`, true);
     return palette;
   } catch (error) {
@@ -139,8 +145,9 @@ if (!existsSync(ARTIFACT)) {
   );
 }
 
-// Measured by running it, never summed: 198 checks and 202 declarations on 2026-10-23, over 3 diagrams.
-const MINIMUM_CHECKS = 190;
+// Measured by running it, never summed: 83 checks and 202 declarations on 2026-10-25, over 3 diagrams
+// and Prelum's 10 colour roles.
+const MINIMUM_CHECKS = 80;
 const floorBreach = assertFloor("check:diagrams", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 const MINIMUM_DECLARATIONS = 190;

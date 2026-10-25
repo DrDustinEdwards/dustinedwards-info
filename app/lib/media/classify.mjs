@@ -64,6 +64,10 @@ const NOT_ASSETS = new Map([
     "/_redirects",
     "Cloudflare static-asset redirect rules. Same deploy-time contract as _headers.",
   ],
+  [
+    "/sw.js",
+    "The offline service worker (app/enhance/offline.ts). Code the browser registers, not media.",
+  ],
 ]);
 
 // A pattern is allowed here because it matches only the slug shape paths.mjs generates. The twins are
