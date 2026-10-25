@@ -18,7 +18,7 @@ import {
 } from "~/lib/content-pages.mjs";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";

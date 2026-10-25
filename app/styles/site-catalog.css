@@ -1,6 +1,6 @@
 /*
  * Capsomer's catalog on this site's palette, for every page that uses one (the protocol library, the publications
- * list). Capsomer's components read their own colour names (--muted, --surface, --accent), so this maps each onto the
+ * list). Capsomer's components read their own color names (--muted, --surface, --accent), so this maps each onto the
  * site's tokens in one place and the catalog follows the site's light and dark themes without a second palette to
  * keep. Unlayered, so it wins over Capsomer's layered defaults.
  */
@@ -31,7 +31,7 @@
 }
 
 /* The page's column is the prose measure, narrower than a table of facets and results wants. Wide enough, a wide
-   catalog breaks out of it and centres on the page; below that it keeps the column, and the catalog answers to its own
+   catalog breaks out of it and centers on the page; below that it keeps the column, and the catalog answers to its own
    width (its filter tray on a phone). */
 @media (min-width: 60rem) {
   .site-catalog-wide {

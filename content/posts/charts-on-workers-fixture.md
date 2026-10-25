@@ -17,9 +17,9 @@ numbers are not invented: every one was measured while building the guards on
 
 The first attempt at a per-IP burst limit used Cloudflare's GA `ratelimit`
 binding, with a limit of five. Twelve concurrent requests were fired at it, four
-times. A limiter honouring its own limit refuses seven of twelve every time.
+times. A limiter honoring its own limit refuses seven of twelve every time.
 
-:::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honouring the limit would refuse 7 every time."}
+:::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
 ```csv
 run,refused
 run 1,1

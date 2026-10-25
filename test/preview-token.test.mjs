@@ -5,7 +5,6 @@ import { registerHooks } from "node:module";
 import {
   TOKEN_BYTES,
   TOKEN_LENGTH,
-  base64url,
   expiresAt,
   isWellFormedToken,
   makeRecord,
@@ -68,12 +67,6 @@ await test("tokens do not repeat", () => {
   const seen = new Set();
   for (let i = 0; i < 200; i += 1) seen.add(mintToken());
   assert.equal(seen.size, 200);
-});
-
-await test("base64url uses the URL alphabet, not the standard one", () => {
-  // 0xFB 0xFF encodes to +/8= in standard base64. Both substitutions and the
-  // padding strip are visible in one vector.
-  assert.equal(base64url(new Uint8Array([0xfb, 0xff, 0xfe])), "-__-");
 });
 
 await test("the well-formed check is anchored and length-exact", () => {

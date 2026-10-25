@@ -6,7 +6,7 @@
 // protocols that use it are found by that sequence, and a phage in the inventory is read from the phages table, never
 // copied into the registry.
 
-import { defineCatalog } from "capsomer/behaviour/catalog";
+import { defineCatalog } from "capsomer/behavior/catalog";
 
 import { HOSTS } from "../../lib/phages/compile.mjs";
 import { reverseComplement } from "../../lib/primers.mjs";
@@ -134,7 +134,7 @@ export function productText(pair) {
 
 /** The primers catalog: the columns a primer is read by, which are its own and not a protocol's. */
 export const PRIMERS = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<PrimerListRow>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<PrimerListRow>} */ ({
     id: "primers",
     noun: ["primer", "primers"],
     basePath: kindPath("primer"),
@@ -244,7 +244,7 @@ export function strainRows(items, phages) {
 
 /** The strains catalog: the columns a strain is read by. */
 export const STRAINS = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<StrainRow>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<StrainRow>} */ ({
     id: "strains",
     noun: ["strain", "strains"],
     basePath: kindPath("strain"),
@@ -409,7 +409,7 @@ export function reagentSource(r) {
 
 /** The reagents catalog: the one table, with the columns a reagent is read by. */
 export const REAGENTS = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<ReagentRow>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<ReagentRow>} */ ({
     id: "reagents",
     noun: ["reagent", "reagents"],
     basePath: kindPath("reagent"),
@@ -522,7 +522,7 @@ export function equipmentRows(items, protocols) {
 
 /** The equipment catalog: the one table, with the columns an item is read by. */
 export const EQUIPMENT_CATALOG = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<EquipmentRow>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<EquipmentRow>} */ ({
     id: "equipment",
     noun: ["item", "items"],
     basePath: kindPath("equipment"),
@@ -662,7 +662,7 @@ function kindRank(kind) {
 
 /** The master inventory catalog: every item of every kind, filtered by kind. */
 export const INVENTORY = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<InventoryRow>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<InventoryRow>} */ ({
     id: "lab",
     noun: ["item", "items"],
     basePath: LAB_PATH,

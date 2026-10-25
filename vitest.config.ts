@@ -21,7 +21,7 @@ import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
  *
  * OBSERVATION BOUNDARY. These tests import the module the Worker imports and
  * run it inside workerd against miniflare-local D1, KV, R2, a Durable Object
- * and `caches.default`. So they see BEHAVIOUR: what a function does to a
+ * and `caches.default`. So they see BEHAVIOR: what a function does to a
  * database, what headers a response carries, which branch a refusal takes.
  *
  * They do NOT see:

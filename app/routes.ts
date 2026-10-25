@@ -1,6 +1,7 @@
 import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
+import { INDEXNOW_KEY } from "./lib/indexnow.mjs";
 import { BASES } from "./kb/bases.mjs";
 import { LIBRARY_BASES } from "./kb/libraries.mjs";
 import { LIBRARY_PATH } from "./kb/procedures/taxonomy.mjs";
@@ -126,6 +127,7 @@ export default [
     route("robots.txt", "routes/robots.ts"),
     route("ai.txt", "routes/ai-txt.ts"),
     route(".well-known/security.txt", "routes/security-txt.ts"),
+    route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),
     route("llms.txt", "routes/llms.ts"),
     route("llms-full.txt", "routes/llms-full[.txt].ts"),
     route("media/*", "routes/media.$.ts"),

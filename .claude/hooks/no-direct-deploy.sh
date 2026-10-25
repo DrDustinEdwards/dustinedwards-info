@@ -37,7 +37,7 @@
 # session started here. So `cd ../dustinedwards-mcp && npm run deploy` was refused for a rule
 # with nothing to say about it: the admin MCP has no ship pipeline and deploys
 # exactly that way by its own README. That block cost a deploy and was recorded
-# as owed before it was recognised as a scope bug.
+# as owed before it was recognized as a scope bug.
 #
 # SINCE 2026-10-10 THE ADMIN MCP IS INSIDE THIS REPO, in mcp/ (ruling
 # mcp-2026-10-10). A deploy from there runs inside the site root, so the arms
@@ -156,7 +156,7 @@ except Exception:
 cmd = str((d.get("tool_input") or {}).get("command") or "")
 
 
-def normalise(path):
+def normalize(path):
     """One spelling for two operating systems and three shells.
 
     Lowercased, forward slashes, and the MSYS drive form folded onto the
@@ -265,14 +265,14 @@ def effective_dir(command, cwd):
 #
 # THE FAILURE DIRECTION IS TOWARD BLOCKING. A `cd` this cannot resolve, a
 # missing cwd, or an unreadable site root all read as INSIDE, which is the
-# answer that refuses. The old behaviour is what a broken parse falls back to.
+# answer that refuses. The old behavior is what a broken parse falls back to.
 site_root = os.environ.get("SITE_ROOT") or ""
 where = effective_dir(cmd, str(d.get("cwd") or ""))
 if not site_root or where is None:
     outside_site = False
 else:
-    root = normalise(site_root)
-    here = normalise(where)
+    root = normalize(site_root)
+    here = normalize(where)
     outside_site = here != root and not here.startswith(root + "/")
 
 # `npm run ship` is the one door and is never blocked, even though it deploys.

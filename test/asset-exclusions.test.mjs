@@ -28,7 +28,7 @@ await test("the exclusion is a list, not an extensionless catch-all", () => {
   }
 });
 
-await test("an unrecognised extensionless file still stops the build", () => {
+await test("an unrecognized extensionless file still stops the build", () => {
   assert.throws(() => classify("/LICENSE"), /unclassified asset/);
   // The message has to name the file and say where to fix it, because the
   // person reading it is mid-build and has no other context.

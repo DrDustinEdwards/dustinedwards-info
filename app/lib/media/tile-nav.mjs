@@ -33,7 +33,7 @@ export function bands(boxes) {
 /**
  * The tile an arrow key moves to, or null to stay put. With nothing active, or an active id that is
  * no longer on the page, the first tile. Left and right wrap across rows in reading order; up and
- * down take the nearest tile by centre in the next row, and stop at the edges.
+ * down take the nearest tile by center in the next row, and stop at the edges.
  *
  * @param {Band[]} rows
  * @param {string} active

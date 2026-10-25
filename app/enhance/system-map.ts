@@ -1,4 +1,4 @@
-import { enhance } from "capsomer/behaviour/system-map";
+import { enhance } from "capsomer/behavior/system-map";
 
 /*
  * The family of systems at /systems (Capsomer's system map with circles), one page. The server rendered the whole

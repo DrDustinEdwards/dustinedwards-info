@@ -5,7 +5,7 @@ import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listingFacts } from "~/lib/blog-listing.mjs";
-import { jsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { SITE_ORIGIN, breadcrumbJsonLd } from "~/lib/seo";
 
 /** A taxonomy page's URL for page `n`: the bare path for the first page, `?page=n` after it. */
@@ -52,7 +52,7 @@ export function TaxonomyListing({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLd(
+            __html: jsonLdText(
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Writing", "/writing"],

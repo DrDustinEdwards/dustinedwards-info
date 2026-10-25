@@ -1,7 +1,7 @@
 // The media library's D1 index: listing, counts, trash, tags and the upserts that keep it in step with R2.
 import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { digestFromKey } from "../lib/media/classify.mjs";
-import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
+import { exactTagNeedle, parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
 import { media, mediaRefs, type MediaRef } from "./schema";
 import { getDb, notTrashed } from "./client";
@@ -257,14 +257,14 @@ export async function trashedMediaKeys(env: Env) {
   return rows.map((r) => r.key);
 }
 
-/** The only tag writer; `serialiseTags` owns the stored form. */
+/** The only tag writer; `serializeTags` owns the stored form. */
 export async function setMediaTags(env: Env, key: string, input: string[] | string) {
   await getDb(env)
     .update(media)
-    .set({ tags: serialiseTags(input), updatedAt: sql`(datetime('now'))` })
+    .set({ tags: serializeTags(input), updatedAt: sql`(datetime('now'))` })
     .where(eq(media.key, key))
     .run();
-  return parseTags(serialiseTags(input));
+  return parseTags(serializeTags(input));
 }
 
 /** Tag counts, in JS since tags share one delimited column. Trashed rows excluded. */

@@ -316,7 +316,7 @@
   }
 }
 
-/* Where a protocol sits in the phage workflow: the stage, then the neighbours and calculators as plain link rows. */
+/* Where a protocol sits in the phage workflow: the stage, then the neighbors and calculators as plain link rows. */
 .procedure-workflow {
   margin-block: 1rem;
   padding: 0.75rem 1rem;

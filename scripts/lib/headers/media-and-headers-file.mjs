@@ -168,7 +168,7 @@ export async function run() {
     // (docs/PAGES.md, docs/CV.md), so the only rule left here is the hashed assets'.
     ok("the paths declared here are the ones this site means to declare",
       paths.every((p) => p === "/assets/*"),
-      `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
+      `an unrecognized rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
 
     /*
      * The CV's twin is a Worker route too, so its canonical Link, its noindex and the tag a CV save purges are

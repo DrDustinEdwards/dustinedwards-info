@@ -28,7 +28,7 @@ function canonical(unit) {
   const u = unit.trim().toLowerCase().replace(/\.$/, "");
   const aliases = /** @type {Record<string, string>} */ ({
     gram: "g", grams: "g", kilogram: "kg", kilograms: "kg", ounce: "oz", ounces: "oz", pound: "lb", pounds: "lb", lbs: "lb",
-    millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml", litre: "l", litres: "l", liter: "l", liters: "l",
+    millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml", litre: "l", litres: "l", liter: "l", liters: "l", // codespell:ignore (British input accepted)
     teaspoon: "tsp", teaspoons: "tsp", tablespoon: "tbsp", tablespoons: "tbsp", cups: "cup", "fluid ounce": "fl oz", "fluid ounces": "fl oz",
   });
   return aliases[u] ?? u;

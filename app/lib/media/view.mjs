@@ -62,7 +62,7 @@ function oneOf(value, allowed, fallback) {
 
 
 /**
- * Total: an unrecognised value falls back to its default, so a hand-edited URL still shows a library.
+ * Total: an unrecognized value falls back to its default, so a hand-edited URL still shows a library.
  *
  * @param {{ get(name: string): string | null }} params
  * @returns {typeof DEFAULTS}
@@ -296,7 +296,7 @@ export function sortHref(state, key, options = {}) {
 
 /**
  * A document card's title: the filename read as words, the same reading the alt suggestion makes.
- * Not capitalised: title-casing a filename means guessing which words are proper nouns.
+ * Not capitalized: title-casing a filename means guessing which words are proper nouns.
  */
 export const docTitle = suggestedAlt;
 

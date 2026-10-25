@@ -1,7 +1,7 @@
 // The Git Data API commit shape stays because it carries the expectedHeadSha conflict guard, which
 // the Contents API write path has no seam for.
 
-import { base64ToBytes } from "../bytes.mjs";
+import { fromBase64 } from "@dustinedwards/site-runtime/encoding";
 import { contentsCapMessage } from "./contents-cap.mjs";
 
 const API = "https://api.github.com";
@@ -97,7 +97,7 @@ export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
     }
     const content =
       file.encoding === "base64"
-        ? new TextDecoder().decode(base64ToBytes(file.content))
+        ? new TextDecoder().decode(fromBase64(file.content))
         : file.content;
     return { content, sha: file.sha };
   } catch (error) {
@@ -164,7 +164,7 @@ export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
     if (capped) {
       throw new GitHubError(capped, 422);
     }
-    return base64ToBytes(file.content);
+    return fromBase64(file.content);
   } catch (error) {
     if (error instanceof GitHubError && error.status === 404) return null;
     throw error;

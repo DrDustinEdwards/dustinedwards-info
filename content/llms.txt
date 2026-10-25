@@ -114,7 +114,7 @@ against it by a build gate rather than maintained by hand.
 
 The look is a fixed direction rather than a theme that drifts per page. It
 is Swiss editorial on warm limestone paper: ink text, 1px hairlines as the only
-structure, and one accent colour used as ink for links and focus rather than as
+structure, and one accent color used as ink for links and focus rather than as
 a fill. Titles and prose are a serif, and dates, identifiers and counts are a
 monospace, so the machine-readable values on a page are the ones set in mono.
 The rule is ruled rows rather than cards, no filled public control, no capsule
@@ -151,7 +151,7 @@ DOI with every run of punctuation folded to a hyphen: 10.1128/mra.00888-24
 becomes /research/publications/10-1128-mra-00888-24/. The page carries the title, the
 full author list, the abstract in visible text, the venue, the DOI, PMC and
 preprint links where they exist, open-access status, and a citation count from
-OpenAlex labelled with the date it was read. Where the licence permits and the
+OpenAlex labeled with the date it was read. Where the license permits and the
 file is hosted here, the PDF sits beside the page at
 /research/publications/<doi-slug>/<doi-slug>.pdf.
 
@@ -219,7 +219,7 @@ if one fetch is better than one per paper.
 
 ### Research and teaching pages
 
-The research programme, the lab protocols and the courses are ordinary pages,
+The research program, the lab protocols and the courses are ordinary pages,
 written in markdown and rendered to HTML when the site is built. Each has a
 markdown twin at the same path plus .md, linked from the page head. Every one
 of them is listed in the sections above. The other pages are the home page,

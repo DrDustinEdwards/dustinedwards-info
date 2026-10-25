@@ -1,4 +1,4 @@
-// The one judgement of content/llms.txt, shared by check:machine-readable (scripts/machine-readable/llms.mjs)
+// The one judgment of content/llms.txt, shared by check:machine-readable (scripts/machine-readable/llms.mjs)
 // and the save (app/lib/llms/save.server.ts), so a file CI passes is the file a save accepts
 // (docs/LLMS.md). Pure: the caller supplies what the file is judged against.
 

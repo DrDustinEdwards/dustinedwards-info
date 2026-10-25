@@ -8,7 +8,7 @@
 // COORDINATES are 1-based and inclusive, the way GenBank numbers a record, so a site or product
 // reported here can be checked against the accession's own feature table without an off-by-one.
 //
-// IUPAC codes are honoured on both sides. A primer base and a template base MATCH when the sets of
+// IUPAC codes are honored on both sides. A primer base and a template base MATCH when the sets of
 // nucleotides they stand for share at least one member, so an `N` in either matches anything.
 
 /** @type {Record<string, string>} each IUPAC code and the nucleotides it stands for */
@@ -266,7 +266,7 @@ function keepBest(sites) {
  * @property {number} start 1-based template position of the 5′ end of the + strand primer
  * @property {number} end 1-based template position of the 5′ end of the - strand primer
  * @property {number} templateLength end - start + 1: the span on the reference
- * @property {number} length the product as synthesised. Each primer is copied into the product
+ * @property {number} length the product as synthesized. Each primer is copied into the product
  *   whole, so a primer with an extra base adds one and a primer missing a base removes one. With no
  *   indel it equals `templateLength`.
  * @property {number} forwardMismatches

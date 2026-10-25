@@ -21,7 +21,7 @@ Charts are CONTENT, not a widget. Enarratio (the shared charts package, also
 behind /cv) renders them to static SVG through the shared pipeline, so the SVG lands inline in the rendered HTML both
 writers produce (the local build product and the Worker's saves alike), it is
 covered by `check:content`'s determinism pass exactly like prose, and it works
-with scripting off. You never write SVG and you never pick a colour.
+with scripting off. You never write SVG and you never pick a color.
 
 Directive:
 Prelum's `editorialPack` (`render-chart.mjs`), which validates the attributes, parses the CSV and
@@ -72,16 +72,16 @@ order they are written in, so the chart reads in the order the markdown does.
 1. **`alt` is mandatory**, exactly as on `:::figure`. Write what the chart SHOWS,
    including the finding, because for a screen reader user it replaces the chart.
    "Bar chart of refusals" is a failure. "Four runs against a limit of five
-   refused 1, then 2, then 9, then 0, where a limiter honouring the limit refuses
+   refused 1, then 2, then 9, then 0, where a limiter honoring the limit refuses
    7 every time" is the standard.
-2. **Every series must be labelled, and labels must be unique**, on any chart
+2. **Every series must be labeled, and labels must be unique**, on any chart
    with more than one `y` column. Enarratio prints a legend and, on a line
    chart, labels each line at its end; series also differ by shape or position,
    so hue is never the sole channel.
-3. **Colours come from Enarratio's theme, assigned automatically.** The theme is
+3. **Colors come from Enarratio's theme, assigned automatically.** The theme is
    the site's theme in `scripts/build-chart-css.mjs`, written to `app/styles/enarratio.css` by
    `npm run build:chart-css`. NEVER write a hex, and never ask for a specific
-   colour. One stored SVG serves light and dark because the custom property
+   color. One stored SVG serves light and dark because the custom property
    resolves per theme in the browser. More than eight series fails the build.
 4. **Data must be real and recorded.** House voice standard: every quantitative
    claim is computed and reproducible. No illustrative or shaped numbers. If the
@@ -115,7 +115,7 @@ non-numeric x column.
 From `content/posts/charts-on-workers-fixture.md`, using the real rate limiter
 measurements taken while building the Ask guards:
 
-    :::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honouring the limit would refuse 7 every time."}
+    :::chart{type=bar x=run y=refused title="Requests refused by the GA ratelimit binding" alt="Bar chart of four runs against a limit of five, twelve concurrent requests each. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
     ```csv
     run,refused
     run 1,1
@@ -187,11 +187,11 @@ GitHub, and anywhere else reading the markdown instead of the page.
 1. **`alt` is mandatory**, as on `:::chart` and `:::figure`. For a diagram the
    alt IS the structure: name the boxes and the arrows. "Flowchart of the save
    path" is a failure. The worked example below is the standard.
-2. **You never choose a colour, and there is no colour vocabulary.** Every
-   colour comes from the palette tokens, mapped once in
+2. **You never choose a color, and there is no color vocabulary.** Every
+   color comes from the palette tokens, mapped once in
    `app/lib/content/diagram.mjs` and resolved from `app.css` at build time.
    A diagram says what it means with SHAPE and LABEL: a refusal is an edge
-   labelled `403`, not a red arrow. A colour mermaid derives rather than takes
+   labeled `403`, not a red arrow. A color mermaid derives rather than takes
    from the palette fails `build:diagrams` naming the rule that carried it.
 3. **Keep it narrow.** The prose column is 44rem. A drawing wider than about
    700px is scaled down and takes its type with it, so a default
@@ -226,7 +226,7 @@ finding, because for a reader who cannot see it, that prose is the diagram.
     npm run build:content     # the key changes with the source
     npm run build:diagrams    # renders anything whose key has no asset yet
     npm run check:content     # validity and render determinism
-    npm run check:diagrams    # the assets exist, and every colour is a token
+    npm run check:diagrams    # the assets exist, and every color is a token
 
 Commit the markdown and the assets TOGETHER (posts.json is a gitignored local
 build product and is never committed). `build:diagrams` is
@@ -241,4 +241,4 @@ clone, exactly like a retitled post has no social card. `check:diagrams` is what
 tells you, and it is red on purpose in that window.
 
 Do not hand-edit an SVG in `public/diagrams/`. `check:diagrams` audits every
-colour in every committed asset and exists to catch precisely that.
+color in every committed asset and exists to catch precisely that.

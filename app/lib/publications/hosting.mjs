@@ -6,7 +6,7 @@
 // refuses a self-hosted paper that is neither redistributable nor named here.
 
 /** @type {ReadonlyMap<string, string>} DOI as deposited, to the reason. */
-export const HOSTED_WITHOUT_LICENCE = new Map([
+export const HOSTED_WITHOUT_LICENSE = new Map([
   // Bronze is free to read on the publisher's site with no license, which they can reverse.
   ["10.1128/jvi.00356-08", "ASM, green OA, crossref:tdm-only"],
   ["10.1128/jvi.01788-13", "ASM, bronze OA, crossref:tdm-only"],
@@ -20,10 +20,10 @@ export const HOSTED_WITHOUT_LICENCE = new Map([
   ["10.7589/JWD-D-22-00023", "Journal of Wildlife Diseases, closed"],
 ]);
 
-/** @param {string | null | undefined} licence */
-export function permitsRedistribution(licence) {
+/** @param {string | null | undefined} license */
+export function permitsRedistribution(license) {
   return (
-    typeof licence === "string" &&
-    (licence.startsWith("cc-by") || licence === "cc0" || licence === "public-domain")
+    typeof license === "string" &&
+    (license.startsWith("cc-by") || license === "cc0" || license === "public-domain")
   );
 }

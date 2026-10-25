@@ -317,7 +317,7 @@ main.app-page {
   grid-column: 1 / -1;
 }
 
-/* A value nobody has yet: marked by its border and its words, never by colour alone. */
+/* A value nobody has yet: marked by its border and its words, never by color alone. */
 .kb-field-gap .cap-input {
   border-style: dashed;
 }
@@ -480,7 +480,7 @@ main.app-page {
 }
 
 /* A step's words with its marks as chips (kb-step-text.tsx), as protocols.io shows a step's components. Each kind has
-   its own tint and its own sign, so it is told apart without colour. */
+   its own tint and its own sign, so it is told apart without color. */
 .kb-chiptext-wrap {
   position: relative;
 }

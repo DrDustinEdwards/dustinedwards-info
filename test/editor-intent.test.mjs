@@ -39,6 +39,6 @@ await test("every real control's intent passes through unchanged", () => {
 });
 
 await test("an UNKNOWN intent is returned, not refused", () => {
-  // The action owns what an unrecognised intent does; this only answers whether one was named.
+  // The action owns what an unrecognized intent does; this only answers whether one was named.
   assert.equal(readIntent(formWith({ intent: "wibble" })), "wibble");
 });

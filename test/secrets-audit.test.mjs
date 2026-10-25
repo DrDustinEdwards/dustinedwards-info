@@ -1,4 +1,4 @@
-/* Behavioural, not a source scan: a regex over the source cannot see a leak arriving through a
+/* Behavioral, not a source scan: a regex over the source cannot see a leak arriving through a
  * spread, a rename or a debug field, so the returned value is inspected. */
 
 import test from "node:test";
@@ -76,16 +76,16 @@ await test("the result carries EXACTLY name and present, and nothing else", () =
 
 await test("NO VALUE, NO PARTIAL VALUE, NO LENGTH reaches the result", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, SENTINEL]));
-  const serialised = JSON.stringify(auditSecrets(env));
+  const serialized = JSON.stringify(auditSecrets(env));
 
-  assert.ok(!serialised.includes(SENTINEL), "the whole value was returned");
+  assert.ok(!serialized.includes(SENTINEL), "the whole value was returned");
 
   /* A masked or truncated value would not match the whole sentinel. Four characters catches a
    * "first 4 then dots" mask and is long enough not to collide with the field names. */
   for (let i = 0; i + 4 <= SENTINEL.length; i += 1) {
     const window = SENTINEL.slice(i, i + 4);
     assert.ok(
-      !serialised.includes(window),
+      !serialized.includes(window),
       `a ${window.length}-character run of the value ("${window}") reached the result`,
     );
   }
@@ -93,7 +93,7 @@ await test("NO VALUE, NO PARTIAL VALUE, NO LENGTH reaches the result", () => {
   /* A length has nowhere to travel once the key check forbids every field but name and
    * present; searching the payload for "56" would collide with anything. */
   assert.ok(
-    !serialised.includes(String(SENTINEL.length)),
+    !serialized.includes(String(SENTINEL.length)),
     "the value's length appears in the result",
   );
 });

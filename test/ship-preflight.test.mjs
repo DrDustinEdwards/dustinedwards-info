@@ -12,14 +12,14 @@ import {
   SHIP_LOCK_NEEDLE,
   busyProcesses,
   lockHolder,
-  normaliseCommand,
+  normalizeCommand,
   releaseLock,
   takeLock,
 } from "../scripts/lib/child-processes.mjs";
 
 /** @param {Array<[number, string]>} rows */
 const tableOf = (rows) =>
-  new Map(rows.map(([pid, command]) => [pid, { ppid: 1, command: normaliseCommand(command) }]));
+  new Map(rows.map(([pid, command]) => [pid, { ppid: 1, command: normalizeCommand(command) }]));
 
 await test("THE PLANT: an orphaned preview server is found, and named by pid", () => {
   const found = busyProcesses(
@@ -36,10 +36,10 @@ await test("THE PLANT: an orphaned preview server is found, and named by pid", (
 // The 2026-09-24 collision's real shape: npm, the cmd shell, the tee parent, the ship child.
 /** @param {number} base */
 const shipTree = (base) => [
-  [base, { ppid: 1, command: normaliseCommand("node.exe C:/nodejs/node_modules/npm/bin/npm-cli.js run ship") }],
-  [base + 1, { ppid: base, command: normaliseCommand("C:\\WINDOWS\\system32\\cmd.exe /d /s /c node scripts/ship.mjs") }],
-  [base + 2, { ppid: base + 1, command: normaliseCommand("node  scripts/ship.mjs") }],
-  [base + 3, { ppid: base + 2, command: normaliseCommand("C:\\nodejs\\node.exe C:\\repo\\scripts\\ship.mjs") }],
+  [base, { ppid: 1, command: normalizeCommand("node.exe C:/nodejs/node_modules/npm/bin/npm-cli.js run ship") }],
+  [base + 1, { ppid: base, command: normalizeCommand("C:\\WINDOWS\\system32\\cmd.exe /d /s /c node scripts/ship.mjs") }],
+  [base + 2, { ppid: base + 1, command: normalizeCommand("node  scripts/ship.mjs") }],
+  [base + 3, { ppid: base + 2, command: normalizeCommand("C:\\nodejs\\node.exe C:\\repo\\scripts\\ship.mjs") }],
 ];
 
 await test("THE PLANT: a second ship is found, and the running ship's own launchers are not", () => {
@@ -119,7 +119,7 @@ await test("an empty table finds nothing, so reporting it unread is the caller's
 await test("THE PLANT: a second taker is refused while the holder is alive", () => {
   const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
   const lock = join(dir, "ship.lock");
-  const table = new Map([[500, { ppid: 1, command: normaliseCommand("C:/nodejs/node.exe C:/repo/scripts/ship.mjs") }]]);
+  const table = new Map([[500, { ppid: 1, command: normalizeCommand("C:/nodejs/node.exe C:/repo/scripts/ship.mjs") }]]);
   try {
     assert.deepEqual(takeLock(lock, table, SHIP_LOCK_NEEDLE, 500), { ok: true, tookOver: null });
     assert.deepEqual(takeLock(lock, table, SHIP_LOCK_NEEDLE, 600), { ok: false, holder: 500 });

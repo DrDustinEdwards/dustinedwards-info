@@ -10,7 +10,7 @@ import { listPhages } from "~/db/phages";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath, contentPageTrail } from "~/lib/content-pages.mjs";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { phagesDbUrl } from "~/lib/phage-table.mjs";

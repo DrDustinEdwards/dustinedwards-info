@@ -36,7 +36,3 @@ await test("THREE resolved states are kept, because the cache key still carries 
   assert.equal(themeAttribute(dark), "dark");
   assert.equal(themeAttribute(light), "light");
 });
-
-await test("junk in the cookie is the default, never the page failing", () => {
-  assert.equal(themeAttribute(themeFromRequest(request("theme=%%%bogus"))), undefined);
-});

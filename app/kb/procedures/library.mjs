@@ -3,7 +3,7 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
-import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
 import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, NON_STRAIN_ORGANISMS, organismLabel, rememberOrganisms } from "./taxonomy.mjs";
@@ -73,7 +73,7 @@ export function libraryItems(records) {
  * entry is a protocol, because a facet of one value filters nothing; it returns with the first computational method.
  */
 export const LIBRARY = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<LibraryItem>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<LibraryItem>} */ ({
     id: "protocols",
     noun: ["protocol", "protocols"],
     basePath: LIBRARY_PATH,
@@ -428,7 +428,7 @@ export function citeMarkdown(citation, origin) {
 /**
  * Where a protocol sits in the phage workflow, drawn from the same stages the library's strip uses: its stage (the first
  * whose methods it carries out), the protocols of the nearest earlier and later stage that has any, and the calculators
- * of its stage. Nothing is typed per protocol: a protocol saved changes its neighbours' links. A protocol outside the
+ * of its stage. Nothing is typed per protocol: a protocol saved changes its neighbors' links. A protocol outside the
  * workflow (a PCR primer set) has none, and so does a stage with nothing before or after it.
  *
  * @param {LibraryItem[]} items every published library entry
@@ -454,7 +454,7 @@ export function workflowContext(items, path) {
 }
 
 /**
- * The same context as lines for the markdown twin, so an agent reads the neighbours a person sees.
+ * The same context as lines for the markdown twin, so an agent reads the neighbors a person sees.
  *
  * @param {ReturnType<typeof workflowContext>} context
  * @param {string} origin

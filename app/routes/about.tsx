@@ -4,7 +4,7 @@ import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
 

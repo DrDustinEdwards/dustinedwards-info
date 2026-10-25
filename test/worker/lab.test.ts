@@ -78,7 +78,7 @@ describe("the primers page", () => {
     expect(html).toContain("CATACTGAGCCAATGGTT");
     // Length 18 and the computed Tm (51.7 °C) for the REV 3' LTR forward primer, in its row.
     expect(html).toContain("51.7");
-    expect(html).toContain("SantaLucia (1998) unified nearest-neighbour model");
+    expect(html).toContain("SantaLucia (1998) unified nearest-neighbor model");
     expect(html).toContain("50 mM monovalent cation and 0.5 µM primer");
     // The direction and target facets are the primers' own.
     expect(html).toMatch(/name="direction"[^>]*value="forward"/);

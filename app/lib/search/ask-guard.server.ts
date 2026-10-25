@@ -1,7 +1,7 @@
 // Every generated answer bills Workers AI and the route is public. Nothing reaches the model until
 // rate, cache and daily budget have passed, and budget sits AFTER the cache so a hit costs nothing.
 
-import { toHex } from "~/lib/bytes.mjs";
+import { toHex } from "@dustinedwards/site-runtime/encoding";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
 

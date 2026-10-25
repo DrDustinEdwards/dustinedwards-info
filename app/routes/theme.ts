@@ -1,6 +1,6 @@
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { safeReturnTo } from "~/lib/return-to.mjs";
-import { isWritableTheme, serializeThemeCookie } from "~/lib/theme";
+import { isThemeChoice, themeCookie } from "capsomer/theme-server";
 
 import type { Route } from "./+types/theme";
 
@@ -22,7 +22,7 @@ export async function action({ request }: Route.ActionArgs) {
    * Only writable themes: substituting a default turns a malformed request into a silent theme
    * change. `no-store`: a cacheable refusal is a refusal served to somebody else.
    */
-  if (!isWritableTheme(choice)) {
+  if (!isThemeChoice(choice)) {
     return new Response("Theme must be light or dark.\n", {
       status: 400,
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
@@ -32,7 +32,7 @@ export async function action({ request }: Route.ActionArgs) {
   return new Response(null, {
     status: 303,
     headers: {
-      "Set-Cookie": serializeThemeCookie(choice),
+      "Set-Cookie": themeCookie(choice),
       Location: safeReturnTo(request),
     },
   });

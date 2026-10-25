@@ -36,7 +36,7 @@ async function walkPublic(dir = PUBLIC_DIR) {
     if (!entry.isFile()) continue;
     // Forward slashes: that is what the browser asks for and what `env.ASSETS.fetch()` matches on.
     const sitePath = `/${path.relative(PUBLIC_DIR, full).split(path.sep).join("/")}`;
-    // Named non-assets only: anything else unrecognised meets the classifier, which throws.
+    // Named non-assets only: anything else unrecognized meets the classifier, which throws.
     if (excludedFromAssets(sitePath)) continue;
     out.push(sitePath);
   }

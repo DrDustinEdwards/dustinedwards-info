@@ -16,7 +16,7 @@ import {
   ChildRegistry,
   descendantPids,
   killTree,
-  normaliseCommand,
+  normalizeCommand,
   readProcessTable,
 } from "./lib/child-processes.mjs";
 
@@ -89,7 +89,7 @@ const recordSurvivors = () => {
   for (const pid of descendantPids(server.pid, table)) {
     const live = table.get(pid);
     if (recorded.has(pid) || !live) continue;
-    if (!SERVER_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)))) continue;
+    if (!SERVER_NEEDLES.every((needle) => live.command.includes(normalizeCommand(needle)))) continue;
     registry.record(pid, "the vite preview server", SERVER_NEEDLES);
     recorded.add(pid);
   }

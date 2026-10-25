@@ -7,7 +7,7 @@ import { ProcedureView, VersionNotice } from "~/components/procedure";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { versionPath } from "~/kb/procedures/cite.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";

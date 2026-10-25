@@ -24,7 +24,7 @@ const NAME_SHAPE = /\b[A-Z][a-z]+\s+[A-Z][a-z]+/;
  * @param {string} raw
  * @returns {string | null} the value to store, or null when it must not be stored
  */
-export function normaliseZeroResultQuery(raw) {
+export function normalizeZeroResultQuery(raw) {
   if (typeof raw !== "string") return null;
 
   const trimmed = raw.trim();
@@ -36,8 +36,8 @@ export function normaliseZeroResultQuery(raw) {
   if (PHONE_SHAPE.test(trimmed)) return null;
   if (NAME_SHAPE.test(trimmed)) return null;
 
-  const normalised = trimmed.toLowerCase().replace(/\s+/g, " ");
-  if (!/[\p{L}\p{N}]/u.test(normalised)) return null;
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, " ");
+  if (!/[\p{L}\p{N}]/u.test(normalized)) return null;
 
-  return normalised;
+  return normalized;
 }

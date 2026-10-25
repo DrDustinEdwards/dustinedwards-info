@@ -1,5 +1,5 @@
 // The site's own blocks for the markdown editor's slash menu and toolbar. The editing commands themselves
-// are Capsomer's (capsomer/behaviour/markdown-editor).
+// are Capsomer's (capsomer/behavior/markdown-editor).
 
 // Alt is mandatory on :::chart and :::diagram and the build fails without it, so the cursor lands inside alt="".
 export const SCAFFOLDS = {

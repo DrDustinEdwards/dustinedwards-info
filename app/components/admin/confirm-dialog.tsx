@@ -3,7 +3,7 @@ import { Form, Link, useNavigate } from "react-router";
 
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 
-// Capsomer's dialog markup and look, on this component's own behaviour: Capsomer's ConfirmDialog is driven
+// Capsomer's dialog markup and look, on this component's own behavior: Capsomer's ConfirmDialog is driven
 // from script, and this one is opened by the server's answer, so the second step exists without script too.
 // `data-inline`, not `open`: putting `open` in the JSX makes React and showModal() fight over it.
 // The intent is a hidden field because a disabled submitter contributes no name and no value.

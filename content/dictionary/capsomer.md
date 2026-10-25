@@ -26,7 +26,7 @@ audio: /audio/capsomer.mp3
 Notes for editors. Nothing below the front matter is shown on the site.
 
 Sense 1 follows the dictionaries; sense 2 is the software, plain and factual, and carries the subject label
-"software." in italics, as a dictionary marks a specialised sense.
+"software." in italics, as a dictionary marks a specialized sense.
 
 Written 2026-10-04 from Capsid's dustinedwards/capsomer-name.md, which the seat checked the same day against
 Merriam-Webster's Medical Dictionary (sense 1, and the American respelling KAP-suh-mer; capsomere is the variant

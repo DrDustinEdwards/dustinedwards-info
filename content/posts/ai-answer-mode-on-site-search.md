@@ -42,9 +42,9 @@ The implementation of those gates produced the most transferable measurements in
 
 Configure a limit, then attack it with genuinely concurrent requests and count what gets through. Three implementations, same test shape, very different results.
 
-Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, refused one, then two, then nine, then zero across four runs. A limiter honouring its own limit refuses seven of twelve every time, so those runs let eleven requests through, then ten, then three, then all twelve. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter. The four runs are worth seeing side by side, because the variance is the finding:
+Cloudflare's built-in rate-limiting binding, configured to allow five requests per sixty seconds and attacked with twelve concurrent requests, refused one, then two, then nine, then zero across four runs. A limiter honoring its own limit refuses seven of twelve every time, so those runs let eleven requests through, then ten, then three, then all twelve. This is consistent with its documentation, which describes it as permissive and eventually consistent: it sheds sustained load. It does not count, and for a budget guard you need a counter. The four runs are worth seeing side by side, because the variance is the finding:
 
-:::chart{type="bar" x="run" y="refused" title="Requests refused by the built-in rate-limiting binding, limit 5" alt="Bar chart of four identical test runs against Cloudflare's rate-limiting binding configured to allow 5 requests per minute, attacked with 12 concurrent requests. The binding refused 1, then 2, then 9, then 0 requests. A limiter honouring the limit would refuse 7 every time."}
+:::chart{type="bar" x="run" y="refused" title="Requests refused by the built-in rate-limiting binding, limit 5" alt="Bar chart of four identical test runs against Cloudflare's rate-limiting binding configured to allow 5 requests per minute, attacked with 12 concurrent requests. The binding refused 1, then 2, then 9, then 0 requests. A limiter honoring the limit would refuse 7 every time."}
 ```csv
 run,refused
 run 1,1

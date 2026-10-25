@@ -46,7 +46,7 @@
 #
 # Everything the gate's own boundary note lists, unchanged and worth repeating
 # here because this is the surface that runs unattended: one engine (Chromium),
-# five widths, and NO JUDGEMENT ABOUT APPEARANCE. Every assertion is a number
+# five widths, and NO JUDGMENT ABOUT APPEARANCE. Every assertion is a number
 # from getBoundingClientRect or an attribute from the DOM, so a page that lays
 # out correctly and is unreadable passes. The gate prints its own
 # remaining-human list every run; that list is the honest scope of this alert.
@@ -74,7 +74,7 @@ permissions:
   contents: read
 
 # A late scheduled run must not stack on a manual dispatch. cancel-in-progress
-# is false on ci.yml's reasoning: cancelling a run loses the only record that a
+# is false on ci.yml's reasoning: canceling a run loses the only record that a
 # check was ever made.
 concurrency:
   group: browser
@@ -194,7 +194,7 @@ jobs:
       #
       # `printf %s`, not `echo`: echo would append a newline, and while the gate
       # trims, a credential file whose contents depend on a shell builtin's
-      # trailing-newline behaviour is a thing to state rather than to hope about.
+      # trailing-newline behavior is a thing to state rather than to hope about.
       #
       # REFUSES, NAMED, WHEN THE SECRET IS ABSENT. Without this the gate would
       # run with no credential, skip the entire admin block, print its own

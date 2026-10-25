@@ -50,7 +50,7 @@ await test("PLANT 2: a fabricated failure conclusion refuses and names it", () =
 });
 
 await test("canceled and timed_out are not failures and are not passes either", () => {
-  for (const conclusion of ["cancelled", "timed_out", "action_required", "skipped", "neutral"]) {
+  for (const conclusion of ["canceled", "timed_out", "action_required", "skipped", "neutral"]) {
     const v = ciVerdict({ workflow_runs: [{ ...green, conclusion }] }, SHA);
     assert.equal(v.ok, false, `${conclusion} must not deploy`);
     assert.equal(v.state, "failed");

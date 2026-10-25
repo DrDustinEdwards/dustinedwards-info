@@ -2,7 +2,7 @@
  * A document rule, not a URL list: it derives from the links on the page, so it cannot go stale.
  */
 
-import { jsonLd } from "./json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 
 const EXCLUDED_PREFIXES = ["/admin", "/lab", "/api", "/media"];
 
@@ -26,7 +26,7 @@ export const DOCUMENT_ACTION = "prefetch";
 /**
  * @param {object} args
  * @param {string} args.pathname the page the rules are being rendered on
- * @returns {string} the JSON payload for the speculationrules script, escaped by `jsonLd` so no
+ * @returns {string} the JSON payload for the speculationrules script, escaped by `jsonLdText` so no
  *   `</script` or `<!--` can appear whatever the pathname. The Worker hashes this same string.
  */
 export function buildSpeculationRules({ pathname }) {
@@ -47,7 +47,7 @@ export function buildSpeculationRules({ pathname }) {
     not(pathname),
   ];
 
-  return jsonLd({
+  return jsonLdText({
     [DOCUMENT_ACTION]: [{ where: { and: conditions }, eagerness: DOCUMENT_EAGERNESS }],
   });
 }

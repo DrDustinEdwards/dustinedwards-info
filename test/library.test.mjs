@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import {
   LIBRARY,
@@ -104,7 +104,7 @@ await test("search ranks by field weight: a title match comes before a descripti
   assert.deepEqual(hit.rows.map((r) => r.slug), ["b", "a"]);
 });
 
-await test("the downloads carry every fact with words for the ids, honour the filters, and quote what needs it", () => {
+await test("the downloads carry every fact with words for the ids, honor the filters, and quote what needs it", () => {
   const items = libraryItems(RECORDS);
   const rows = libraryRecords(items, "method=plating", "https://example.test");
   assert.equal(rows.length, 1);
@@ -240,7 +240,7 @@ await test("the downloads carry the view's filter state, so what is downloaded i
   });
 });
 
-await test("a protocol knows its neighbours in the phage workflow from the stages, not from anything typed on it", () => {
+await test("a protocol knows its neighbors in the phage workflow from the stages, not from anything typed on it", () => {
   const items = libraryItems([
     record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating", "culture"] }),
     record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),
@@ -259,7 +259,7 @@ await test("a protocol knows its neighbours in the phage workflow from the stage
   assert.equal(workflowContext(items, "/research/protocols/nope"), null);
 });
 
-await test("the twin lists the same stage, neighbours and calculators, and nothing for a protocol outside the workflow", () => {
+await test("the twin lists the same stage, neighbors and calculators, and nothing for a protocol outside the workflow", () => {
   const items = libraryItems([
     record({ slug: "iso", path: "/research/protocols/iso", title: "Isolation", methods: ["plating"] }),
     record({ slug: "ext", path: "/research/protocols/ext", title: "Extraction", methods: ["extraction"] }),

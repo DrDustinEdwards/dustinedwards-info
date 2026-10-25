@@ -7,7 +7,7 @@ import { MATHLESS_POST_PATH, MATH_PREVIEW_TOKEN } from "../seed.mjs";
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
 /** The computed text color of the prose and of its first expression. */
-function readMathColours() {
+function readMathColors() {
   const prose = document.querySelector(".prose");
   const katex = document.querySelector(".prose .katex");
   return {
@@ -65,7 +65,7 @@ export async function run({ page }, mathPreviewSeeded) {
     );
 
     const scan = await page.evaluate(overflowScan);
-    const colours = await page.evaluate(readMathColours);
+    const colors = await page.evaluate(readMathColors);
     const sheets = await page.evaluate(stylesheetHrefs);
     const rendered = await page.evaluate(() => {
       const displays = [...document.querySelectorAll(".prose .katex-display")];
@@ -88,8 +88,8 @@ export async function run({ page }, mathPreviewSeeded) {
       ...rendered,
       ...scan,
       sheets,
-      proseColour: colours.prose,
-      katexColour: colours.katex,
+      proseColor: colors.prose,
+      katexColor: colors.katex,
     };
 
     ok(
@@ -139,9 +139,9 @@ export async function run({ page }, mathPreviewSeeded) {
 
     /* KaTeX declares no color, so it must compute to the `.prose` color. */
     ok(
-      `${MATH_PATH}: maths takes the prose color rather than declaring one`,
-      math.katexColour !== null && math.katexColour === math.proseColour,
-      `.katex computes ${math.katexColour} and .prose computes ${math.proseColour}. A ` +
+      `${MATH_PATH}: math takes the prose color rather than declaring one`,
+      math.katexColor !== null && math.katexColor === math.proseColor,
+      `.katex computes ${math.katexColor} and .prose computes ${math.proseColor}. A ` +
         `declared color would survive a theme change and break both of them.`,
     );
 
@@ -162,13 +162,13 @@ export async function run({ page }, mathPreviewSeeded) {
         await emulation.send("Emulation.setEmulatedMedia", { features: mode.features });
       }
       await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
-      const colours = await page.evaluate(readMathColours);
+      const colors = await page.evaluate(readMathColors);
       ok(
-        `${MATH_PATH}: maths still takes the prose color under ${mode.label}`,
-        colours.katex !== null && colours.katex === colours.prose,
-        `.katex computes ${colours.katex} and .prose computes ${colours.prose} under ` +
+        `${MATH_PATH}: math still takes the prose color under ${mode.label}`,
+        colors.katex !== null && colors.katex === colors.prose,
+        `.katex computes ${colors.katex} and .prose computes ${colors.prose} under ` +
           `${mode.label}. The two must move together, because that is what makes ` +
-          `check:contrast's thresholds cover the maths without restating one.`,
+          `check:contrast's thresholds cover the math without restating one.`,
       );
     }
     await emulation.send("Emulation.setEmulatedMedia", { features: [] });
@@ -181,7 +181,7 @@ export async function run({ page }, mathPreviewSeeded) {
       expressions: await page.evaluate(() => document.querySelectorAll(".katex").length),
     };
     ok(
-      `${MATHLESS_POST_PATH}: a post with no maths links no math stylesheet`,
+      `${MATHLESS_POST_PATH}: a post with no math links no math stylesheet`,
       !mathless.sheets.some((href) => href.includes("katex")) && mathless.expressions === 0,
       `stylesheets: ${mathless.sheets.join(", ")}, .katex elements: ` +
         `${mathless.expressions}. Twelve of the thirteen posts have no expression in ` +

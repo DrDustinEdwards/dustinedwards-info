@@ -20,7 +20,7 @@ const isWindows = process.platform === "win32";
  * @param {string | null | undefined} command
  * @returns {string}
  */
-export function normaliseCommand(command) {
+export function normalizeCommand(command) {
   return String(command ?? "").replace(/\\/g, "/").toLowerCase();
 }
 
@@ -56,7 +56,7 @@ export function readProcessTable() {
       if (!row || typeof row.ProcessId !== "number") continue;
       table.set(row.ProcessId, {
         ppid: typeof row.ParentProcessId === "number" ? row.ParentProcessId : 0,
-        command: normaliseCommand(`${row.CommandLine ?? ""} ${row.ExecutablePath ?? ""}`),
+        command: normalizeCommand(`${row.CommandLine ?? ""} ${row.ExecutablePath ?? ""}`),
       });
     }
     return table;
@@ -70,7 +70,7 @@ export function readProcessTable() {
   for (const line of listed.stdout.split("\n")) {
     const match = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(line);
     if (!match) continue;
-    table.set(Number(match[1]), { ppid: Number(match[2]), command: normaliseCommand(match[3]) });
+    table.set(Number(match[1]), { ppid: Number(match[2]), command: normalizeCommand(match[3]) });
   }
   return table;
 }
@@ -92,7 +92,7 @@ export function descendantPids(rootPid, table, childNeedle) {
   /** @type {number[]} */
   const found = [];
   let frontier = [rootPid];
-  const needle = isWindows && childNeedle !== undefined ? normaliseCommand(childNeedle) : null;
+  const needle = isWindows && childNeedle !== undefined ? normalizeCommand(childNeedle) : null;
   // Bounded: a reused pid can manufacture a parentage cycle.
   for (let depth = 0; depth < table.size && frontier.length > 0; depth += 1) {
     /** @type {number[]} */
@@ -309,7 +309,7 @@ export class ChildRegistry {
         result.stale += 1;
         continue;
       }
-      const matches = entry.needles.every((needle) => live.command.includes(normaliseCommand(needle)));
+      const matches = entry.needles.every((needle) => live.command.includes(normalizeCommand(needle)));
       if (!matches) {
         result.reused += 1;
         result.notes.push(
@@ -352,7 +352,7 @@ export function busyProcesses(table, needles, self = 0) {
   for (const [pid, entry] of table) {
     if (excused.has(pid)) continue;
     for (const { needle, what } of needles) {
-      if (entry.command.includes(normaliseCommand(needle))) {
+      if (entry.command.includes(normalizeCommand(needle))) {
         found.push({ pid, what });
         break;
       }
@@ -409,7 +409,7 @@ export function lockHolder(lockPath, table, needle) {
   const pid = Number(text.trim());
   if (!Number.isInteger(pid) || pid <= 0) return null;
   const live = table.get(pid);
-  return live && live.command.includes(normaliseCommand(needle)) ? pid : null;
+  return live && live.command.includes(normalizeCommand(needle)) ? pid : null;
 }
 
 /**

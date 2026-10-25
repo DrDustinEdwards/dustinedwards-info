@@ -22,7 +22,7 @@ audio: /audio/enarratio.mp3
 Notes for editors. Nothing below the front matter is shown on the site.
 
 Sense 1 follows the dictionaries; sense 2 is the software, plain and factual, and carries the subject label
-"software." in italics, as a dictionary marks a specialised sense.
+"software." in italics, as a dictionary marks a specialized sense.
 
 Enarratio (2026-09-29) is Latin and in no English dictionary read, so it was verified against Lewis and Short
 (Perseus: https://www.perseus.tufts.edu/hopper/text?doc=Perseus:text:1999.04.0059:entry=enarratio and :entry=enarro)

@@ -39,7 +39,7 @@ const inside = (item: NavItem, pathname: string) => pathname === item.to || path
 /**
  * A section and the panel that hangs from it: Capsomer's disclosure button (site-header.md, "Markup"), not a
  * link and not a menuitem, because everything the panel shows is a link. `popoverTarget` opens the panel with
- * no script; with script, Capsomer's behaviour takes the click (it cancels the native toggle) and writes
+ * no script; with script, Capsomer's behavior takes the click (it cancels the native toggle) and writes
  * `aria-expanded`. Inside the section the button carries the current page's underline (`data-current`).
  */
 function NavEntry({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -104,7 +104,7 @@ function SheetRow({ link, pathname }: { link: SheetLink; pathname: string }) {
  * plane does not hydrate: 56px, sticky, full width; the site's logo, its five sections on the right after the
  * divider, then Search and the theme, with the avatar's slot held empty after it so the theme sits where the admin's does. Under 768px it is one row, and a Menu button opens
  * the sheet with every section's links. Every link is in this markup with no script; app/enhance/header.ts
- * wires Capsomer's behaviour (the panels, the tips, the sheet) on top. No `prefetch="intent"`: it needs React
+ * wires Capsomer's behavior (the panels, the tips, the sheet) on top. No `prefetch="intent"`: it needs React
  * handlers and this plane does not hydrate, so hover prefetch comes from `SiteSpeculation`.
  */
 export function SiteHeader() {

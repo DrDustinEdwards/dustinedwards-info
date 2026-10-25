@@ -8,7 +8,7 @@ import { SiteHeader } from "~/components/site-header";
 import { listPublishedPublications } from "~/db/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { PUBLICATIONS, legacyAddress, publicationListing, venue } from "~/lib/publications/listing.mjs";
@@ -278,10 +278,10 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           />
         </div>
 
-        {/* `jsonLd`, not `JSON.stringify`: only `</script` ends a script element, and these strings come from third-party registries. */}
+        {/* `jsonLdText`, not `JSON.stringify`: only `</script` ends a script element, and these strings come from third-party registries. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd(publicationsJsonLd(origin, items)) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdText(publicationsJsonLd(origin, items)) }}
         />
         <Enhance module="catalog" />
       </main>

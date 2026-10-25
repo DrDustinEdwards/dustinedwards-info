@@ -109,7 +109,7 @@ const MISSING: Missing[] = [
     page: /^\/software\/capsid$/,
     reason: "the Capsid page names its repository but not its language",
   },
-  { type: "SoftwareSourceCode", property: "license", page: /^\/software\/capsid$/, reason: "no licence is recorded for Capsid" },
+  { type: "SoftwareSourceCode", property: "license", page: /^\/software\/capsid$/, reason: "no license is recorded for Capsid" },
   {
     type: "SoftwareSourceCode",
     property: "description",

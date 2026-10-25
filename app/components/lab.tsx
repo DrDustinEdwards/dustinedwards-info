@@ -1,5 +1,5 @@
 import { Catalog } from "capsomer/react/catalog";
-import type { CatalogResult } from "capsomer/behaviour/catalog";
+import type { CatalogResult } from "capsomer/behavior/catalog";
 
 import {
   INVENTORY,

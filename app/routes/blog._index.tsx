@@ -7,7 +7,7 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
 import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
-import { jsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
@@ -156,7 +156,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLd(
+            __html: jsonLdText(
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Writing", "/writing"],

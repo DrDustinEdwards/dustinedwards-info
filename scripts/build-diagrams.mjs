@@ -18,12 +18,12 @@ const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 async function main() {
   const diagrams = diagramsFrom(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
 
-  // Prelum draws what is missing, in Mermaid's own renderer, and refuses a drawing that paints a colour outside these.
+  // Prelum draws what is missing, in Mermaid's own renderer, and refuses a drawing that paints a color outside these.
   const { written, current, stale } = await drawDiagrams({
     diagrams: diagrams.map((d) => ({ ...d, label: d.posts.join(", ") })),
     dir: DIAGRAM_DIR,
     assetPrefix: ASSET_PREFIX,
-    colours: {
+    colors: {
       light: resolveTokens(DIAGRAM_ROLE_TOKENS, tokenBlock("light", THEME_SELECTORS.light), "light"),
       dark: resolveTokens(DIAGRAM_ROLE_TOKENS, tokenBlock("dark", THEME_SELECTORS.dark), "dark"),
     },

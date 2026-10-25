@@ -80,7 +80,7 @@ const failed = typeof report?.numFailedTests === "number" ? report.numFailedTest
 console.log(`  vitest reported: cases ${total}, failed ${failed}, exit ${run?.status}`);
 
 /**
- * The failing cases by name, from the report: the human output's FAIL lines carry colour codes and
+ * The failing cases by name, from the report: the human output's FAIL lines carry color codes and
  * glyphs that differ by environment, and filtering them printed a count on CI with no case to read.
  *
  * @param {string | undefined} text

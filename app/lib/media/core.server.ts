@@ -3,7 +3,7 @@ import { listMediaPage } from "~/db";
 import { isContentKey } from "./classify.mjs";
 import { WEBP_QUALITY } from "./encoding.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
-import { bytesToBase64 } from "~/lib/bytes.mjs";
+import { toBase64 } from "@dustinedwards/site-runtime/encoding";
 
 // Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
 
@@ -127,7 +127,7 @@ export async function placeholderFor(
       .transform({ width: PLACEHOLDER_WIDTH })
       .output({ format: "image/webp", quality: WEBP_QUALITY });
     const buffer = await result.response().arrayBuffer();
-    return `data:image/webp;base64,${bytesToBase64(new Uint8Array(buffer))}`;
+    return `data:image/webp;base64,${toBase64(new Uint8Array(buffer))}`;
   } catch {
     return null;
   }

@@ -1,9 +1,9 @@
-import { systemMapHtml } from "capsomer/behaviour/system-map";
+import { systemMapHtml } from "capsomer/behavior/system-map";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 import {
   SYSTEMS_PATH,

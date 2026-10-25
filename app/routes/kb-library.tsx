@@ -1,5 +1,5 @@
 import { Catalog } from "capsomer/react/catalog";
-import { parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -9,7 +9,7 @@ import { PageShell } from "~/components/page-shell";
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { countOf } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";

@@ -74,7 +74,7 @@ async function countRows(table: string, where = "", ...binds: unknown[]) {
 describe("savePost", () => {
   it("lands the markdown at the post's path and changes no other file", async () => {
     const seed = {
-      [postPath("neighbour")]: post("neighbour"),
+      [postPath("neighbor")]: post("neighbor"),
       "README.md": "# A file a save must not touch\n",
     };
     gh.restore();
@@ -284,8 +284,8 @@ describe("savePost refreshes the other posts' derived lists", () => {
   const save = (slug: string, raw: string, target: Parameters<typeof savePost>[0] = publishEnv()) =>
     savePost(target, { slug, raw, isNew: !gh.files.has(postPath(slug)), actor: admin });
   /* D1 persists across the cases of a file, so earlier posts' lists may also move: assert on the slug that must. */
-  const updatedBy = (result: { neighbours: unknown }) =>
-    (result.neighbours as { updated: string[] }).updated;
+  const updatedBy = (result: { neighbors: unknown }) =>
+    (result.neighbors as { updated: string[] }).updated;
   const lists = async (slug: string) => {
     const row = await env.DB.prepare(
       "SELECT related, backlinks, updated_at, source_blob_sha, render_hash FROM posts WHERE slug = ?1",
@@ -316,13 +316,13 @@ describe("savePost refreshes the other posts' derived lists", () => {
     });
     const result = await save("link-source", linker);
 
-    expect(result.neighbours).toMatchObject({ ok: true });
+    expect(result.neighbors).toMatchObject({ ok: true });
     expect(updatedBy(result)).toContain("link-target");
     expect(updatedBy(result)).not.toContain("link-source");
     const after = await lists("link-target");
     expect(after.backlinks.map((b) => b.slug)).toEqual(["link-source"]);
     expect(after.related.map((r) => r.slug)).toEqual(["link-source"]);
-    /* Only the two derived columns moved: the neighbour's source, render and revision are its own. */
+    /* Only the two derived columns moved: the neighbor's source, render and revision are its own. */
     expect(after.row?.source_blob_sha).toBe(before.row?.source_blob_sha);
     expect(after.row?.render_hash).toBe(before.row?.render_hash);
     expect(after.row?.updated_at).toBe(before.row?.updated_at);
@@ -343,7 +343,7 @@ describe("savePost refreshes the other posts' derived lists", () => {
       live("dropped-source", { body: "See [it](/writing/kept-target).\n", draft: true }),
     );
 
-    expect(result.neighbours).toMatchObject({ ok: true });
+    expect(result.neighbors).toMatchObject({ ok: true });
     expect(updatedBy(result)).toContain("kept-target");
     const after = await lists("kept-target");
     expect(after.backlinks).toEqual([]);
@@ -358,19 +358,19 @@ describe("savePost refreshes the other posts' derived lists", () => {
     const result = await save("quiet-two", `${raw}
 A changed line.
 `);
-    expect(result.neighbours).toMatchObject({ ok: true, updated: [], purged: null });
+    expect(result.neighbors).toMatchObject({ ok: true, updated: [], purged: null });
   });
 
-  it("REPORTS a failed neighbour write, and the commit and the saved row stand", async () => {
+  it("REPORTS a failed neighbor write, and the commit and the saved row stand", async () => {
     await save("report-target", live("report-target"));
-    /* The save's own batch is the first; the neighbour batch is the second. */
+    /* The save's own batch is the first; the neighbor batch is the second. */
     let batches = 0;
     const flaky = new Proxy(env.DB, {
       get(target, property, receiver) {
         if (property !== "batch") return Reflect.get(target, property, receiver);
         return async (statements: D1PreparedStatement[]) => {
           batches += 1;
-          if (batches === 2) throw new Error("planted neighbour batch failure");
+          if (batches === 2) throw new Error("planted neighbor batch failure");
           return target.batch(statements);
         };
       },
@@ -381,15 +381,15 @@ A changed line.
       DB: flaky,
     } as unknown as Parameters<typeof savePost>[0]);
 
-    expect(result.neighbours).toMatchObject({ ok: false });
-    expect((result.neighbours as { message: string }).message).toContain("planted neighbour batch failure");
+    expect(result.neighbors).toMatchObject({ ok: false });
+    expect((result.neighbors as { message: string }).message).toContain("planted neighbor batch failure");
     expect(gh.files.get(postPath("report-source"))).toContain("See [it](/writing/report-target).");
     expect(await countRows("posts", "WHERE slug = ?1", "report-source")).toBe(1);
     expect((await lists("report-target")).backlinks).toEqual([]);
 
     /* Self-healing: the next save of any post re-derives every stale list. */
     const next = await save("report-source", `${raw}\nOne more line.\n`);
-    expect(next.neighbours).toMatchObject({ ok: true });
+    expect(next.neighbors).toMatchObject({ ok: true });
     expect(updatedBy(next)).toContain("report-target");
   });
 });

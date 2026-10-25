@@ -155,7 +155,7 @@ await test("the DefinedTerm describes the software (sense 2) and sits in the Sof
   assert.equal(ld.inDefinedTermSet.url, "https://example.test/software");
 });
 
-await test("sense 2 of each entry is the software, labelled software., in the page's twin and its JSON-LD", async () => {
+await test("sense 2 of each entry is the software, labeled software., in the page's twin and its JSON-LD", async () => {
   // The old test pinned each sense to the owner's exact wording, which no Carrel edit could ever change. What
   // survives an edit is the structure: the label, the twin's own line for it and the DefinedTerm's description.
   for (const entry of await entries()) {

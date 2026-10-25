@@ -90,7 +90,7 @@
     {
       "id": "header-nav",
       "module": "app/enhance/header.ts",
-      "enhancement": "Runs Capsomer's site-header behaviour on the phone Menu: the button carries aria-expanded, the sheet opens as a modal dialog with focus on its title, and closing it returns focus to the button. It also hands the theme choice to Capsomer's applyTheme so the admin follows the same theme.",
+      "enhancement": "Runs Capsomer's site-header behavior on the phone Menu: the button carries aria-expanded, the sheet opens as a modal dialog with focus on its title, and closing it returns focus to the button. It also hands the theme choice to Capsomer's applyTheme so the admin follows the same theme.",
       "fallback": "The sheet is a dialog and the button labeled Menu opens it with an invoker command (command show-modal), so a current browser opens it, closes it on Escape and on its Close button, and returns focus with no script at all. Every destination inside is an ordinary link. The header is sticky in CSS, so nothing about its position depends on script. The footer carries the full link list as well.",
       "fallbackKind": "selector",
       "fallbackAt": ".cap-site-header-menu",
@@ -99,7 +99,7 @@
     {
       "id": "header-mega-menus",
       "module": "app/enhance/header.ts",
-      "enhancement": "Capsomer's site-header behaviour places each of the five section panels (Research, Teaching, Software, Writing, About) under the header, opens it on hover and on click, closes it when the pointer leaves, on Escape or on an outside click, returns focus to the button, and keeps aria-expanded on each button true to the panel. On a phone the sections live in the Menu sheet instead.",
+      "enhancement": "Capsomer's site-header behavior places each of the five section panels (Research, Teaching, Software, Writing, About) under the header, opens it on hover and on click, closes it when the pointer leaves, on Escape or on an outside click, returns focus to the button, and keeps aria-expanded on each button true to the panel. On a phone the sections live in the Menu sheet instead.",
       "fallback": "Each panel is a popover its section button opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. Each panel links to its section's hub page, which lists the same pages: the first quick link, or for About its About tile.",
       "fallbackKind": "selector",
       "fallbackAt": ".site-nav-panel",
@@ -243,7 +243,7 @@
     {
       "id": "system-map",
       "module": "app/enhance/system-map.ts",
-      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbours, one tap on any system zooms into its circle, with its parts inside, the systems it connects to round the rim (a tap on one zooms there) and each wire from the part that uses it, and Back to all systems, Escape or a tap outside the circle returns to the map; a Plain map view shows the list as columns. Zooming in also shows that system's facts below the map, in place, and keeps it in the address as ?system=<id>, so a shared link opens zoomed in.",
+      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbors, one tap on any system zooms into its circle, with its parts inside, the systems it connects to round the rim (a tap on one zooms there) and each wire from the part that uses it, and Back to all systems, Escape or a tap outside the circle returns to the map; a Plain map view shows the list as columns. Zooming in also shows that system's facts below the map, in place, and keeps it in the address as ?system=<id>, so a shared link opens zoomed in.",
       "fallback": "The page is complete as served: the drawing is one named picture, the list of every system grouped by ring is open beneath it, every system's facts and connections follow the map, and /systems?system=<id> draws that system's lines and its circle on the server.",
       "fallbackKind": "selector",
       "fallbackAt": ".systems-map",

@@ -2,7 +2,7 @@
 // method and the conditions are stated on every page that shows a Tm, from the constants below, so a reader knows what
 // the number means and a change of condition changes every page at once.
 //
-// METHOD. The unified nearest-neighbour model of SantaLucia (1998), Proc. Natl. Acad. Sci. USA 95:1460-1465, doi
+// METHOD. The unified nearest-neighbor model of SantaLucia (1998), Proc. Natl. Acad. Sci. USA 95:1460-1465, doi
 // 10.1073/pnas.95.4.1460: the duplex's enthalpy and entropy are the sums of its dinucleotide steps plus an initiation
 // term for each end, the entropy is corrected for the monovalent salt, and
 //
@@ -27,7 +27,7 @@ export const TM_CONDITIONS = Object.freeze({
   sodiumMM: 50,
   /** Primer, nM. */
   primerNM: 500,
-  method: "SantaLucia (1998) unified nearest-neighbour model",
+  method: "SantaLucia (1998) unified nearest-neighbor model",
   citation: "SantaLucia J Jr (1998), Proc Natl Acad Sci USA 95:1460-1465",
   doi: "10.1073/pnas.95.4.1460",
 });

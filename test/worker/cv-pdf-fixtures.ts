@@ -26,7 +26,7 @@ export function fakeBrowser(respond: (call: number, options: RenderCall) => Prom
   return { calls, binding: { quickAction } as unknown as Env["BROWSER"] };
 }
 
-/** A browser that always answers with a PDF labelled by its call number. */
+/** A browser that always answers with a PDF labeled by its call number. */
 export const workingBrowser = () => fakeBrowser((call) => new Response(fakePdf(`render ${call}`), { headers: { "content-type": "application/pdf" } }));
 
 /** The fonts: any asset URL answers with a few bytes. */

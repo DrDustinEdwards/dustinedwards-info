@@ -7,7 +7,7 @@ import type { Menu, MenuLink, MenuRow, NavIcon } from "~/lib/nav";
  * row of three tiles, a band with grouped rows on the left and one spotlight on the right, and three quick
  * links. It is the site's own contents of a Capsomer site-header panel (site-header.md, "the site's own
  * panel"): a manual popover its button opens with no script (popovertarget), in the top layer above the
- * sticky header. app/enhance/header.ts hands it to Capsomer's behaviour, which adds hover, light dismiss,
+ * sticky header. app/enhance/header.ts hands it to Capsomer's behavior, which adds hover, light dismiss,
  * Escape, arrow keys and focus return. On a phone the section links are in the header's sheet instead.
  *
  * Everything in it is a plain list of links: no menu roles, which would promise arrow-key menus it does

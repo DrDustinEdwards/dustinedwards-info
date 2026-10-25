@@ -1,5 +1,5 @@
-import { enhance } from "capsomer/behaviour/site-header";
-import { applyTheme } from "capsomer/behaviour/theme-switch";
+import { enhance } from "capsomer/behavior/site-header";
+import { applyTheme } from "capsomer/behavior/theme-switch";
 
 import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 
@@ -11,7 +11,7 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
 });
 
 /*
- * Capsomer's site header behaviour (capsomer/behaviour/site-header) on the markup site-header.tsx writes by
+ * Capsomer's site header behavior (capsomer/behavior/site-header) on the markup site-header.tsx writes by
  * hand: each section's panel (hover opens at once, a click or a key holds it, Escape and a press outside close
  * it, arrow keys move through it, focus goes back to its button), each icon control's tip, and the phone's
  * Menu button and sheet. With no script none of this runs and nothing is lost: the panels open by
@@ -48,7 +48,7 @@ if (header) {
     });
   }
 
-  // The sheet is the behaviour's now; the invoker commands were its no-script path.
+  // The sheet is the behavior's now; the invoker commands were its no-script path.
   for (const element of header.querySelectorAll("[commandfor]")) {
     element.removeAttribute("command");
     element.removeAttribute("commandfor");

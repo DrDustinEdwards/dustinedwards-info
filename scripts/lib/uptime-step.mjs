@@ -1,5 +1,5 @@
 // How ship reads uptime-ensure. A ship on a GitHub runner, which holds no UptimeRobot key by
-// design, is the one outcome that is a skip rather than a miss. It is recognised only by the exit
+// design, is the one outcome that is a skip rather than a miss. It is recognized only by the exit
 // code AND the line uptime-ensure prints for it, never by a failure that merely looks like one. A
 // missing key on any other machine is a lost credential, and stays a miss.
 

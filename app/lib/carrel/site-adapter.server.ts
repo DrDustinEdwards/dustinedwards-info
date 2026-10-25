@@ -47,7 +47,7 @@ type RenderDocument = (request: Request, context: RouterContextProvider) => Prom
  * head, so only a change to that post moves it, and saving another post no longer makes this one look changed.
  */
 
-/** A preview of a post not yet in D1 needs an id no stored row has, for its neighbours' tie-break. */
+/** A preview of a post not yet in D1 needs an id no stored row has, for its neighbors' tie-break. */
 const PREVIEW_ROW_ID = Number.MAX_SAFE_INTEGER;
 
 /** The slug a preview renders at when Carrel sends no id: a new post that has none yet. */

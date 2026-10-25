@@ -38,7 +38,7 @@ import { shipMcp } from "./lib/ship-mcp.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/* The child is recognised by its parent's pid, not by SHIP_TRANSCRIPT, which a shell could have exported. */
+/* The child is recognized by its parent's pid, not by SHIP_TRANSCRIPT, which a shell could have exported. */
 if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
   process.exit(await teeSelfToLog(fileURLToPath(import.meta.url)));
 }

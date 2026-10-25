@@ -22,7 +22,7 @@ html {
 
 /*
  * The public plane's link rules (app.css: a, a:visited, a:hover) are unlayered and Capsomer's header rules are
- * layered, so every link the header draws restates its colour and drops the running-text underline here.
+ * layered, so every link the header draws restates its color and drops the running-text underline here.
  */
 .site-header-brand,
 .site-header-brand:visited {

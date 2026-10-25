@@ -117,7 +117,7 @@ permissions:
 
 # QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
 # leave the account serving whichever one happened to finish last, which is not
-# necessarily the one dispatched last. cancel-in-progress is FALSE: cancelling a
+# necessarily the one dispatched last. cancel-in-progress is FALSE: canceling a
 # deploy mid-flight is how a half-applied state happens, and ship's own steps
 # (deploy, then D1 sync, then two index convergences) are exactly the sequence
 # that must not be interrupted.
@@ -289,7 +289,7 @@ jobs:
       #   queues            the config declares a consumer, and wrangler
       #                     registers it at deploy (updateQueueConsumers).
       # AI Search is deliberately ABSENT: the token has no autorag permission and
-      # does not need one. An `ai_search` binding is serialised as script
+      # does not need one. An `ai_search` binding is serialized as script
       # metadata and resolved by no API call, read out of wrangler 4.107.0.
       # Asking for a permission the deploy never uses is a wider credential in
       # GitHub for nothing.

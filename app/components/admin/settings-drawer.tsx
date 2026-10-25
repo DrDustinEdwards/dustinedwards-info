@@ -321,7 +321,7 @@ function CoverField({
 }) {
   const [picking, setPicking] = useState(false);
   const chooseRef = useRef<HTMLButtonElement>(null);
-  // Picking or cancelling unmounts the picker and the focused control with it, so focus goes back
+  // Picking or canceling unmounts the picker and the focused control with it, so focus goes back
   // to the button that opened it.
   const closePicker = () => {
     setPicking(false);

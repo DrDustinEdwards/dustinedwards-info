@@ -1,6 +1,6 @@
 /*
  * The lab registry's pages (app/routes/lab.tsx, lab.kind.tsx): their layout only, on the site's tokens, so they follow the
- * light and dark themes with the rest of the site. The catalog's own colours are mapped in site-catalog.css.
+ * light and dark themes with the rest of the site. The catalog's own colors are mapped in site-catalog.css.
  */
 .registry-lede {
   max-inline-size: 46rem;
@@ -68,7 +68,7 @@
 }
 
 /* The literature and the reference on a primer's page: a section of the page's own, and a fact that could not be found is
-   said so, in the page's secondary colour, with its reason. A sequence that differs from the one a paper prints is never quiet. */
+   said so, in the page's secondary color, with its reason. A sequence that differs from the one a paper prints is never quiet. */
 .registry-facts + h2,
 .registry-note + h2 {
   margin-block: 2rem 0.5rem;

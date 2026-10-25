@@ -6,12 +6,17 @@
  * the PDF fingerprint are reproducible.
  */
 
+import { slugify } from "@drdustinedwards/site-helpers/slug";
+
 import { deriveIdentity } from "../identity.mjs";
 import { IDENTITY } from "../identity.generated.mjs";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { decodeEntities } from "../publications/entities.mjs";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
 import { areaLabel, foldText, formatDollars, roleLabel, typeLabel } from "./view.mjs";
+
+/** A CV entry's id part: Prelum's slug, capped at 48. @param {string} value */
+const entrySlug = (value) => slugify(value, { max: 48 });
 
 export { formatDollars };
 
@@ -83,18 +88,6 @@ const TOPIC_AREA = {
 };
 
 const OWNER = "Dustin Edwards";
-
-/** @param {string} value */
-function slugify(value) {
-  return value
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48)
-    .replace(/-+$/g, "");
-}
 
 /**
  * @param {number | null} year
@@ -217,7 +210,7 @@ function resolveOne(source, byDoi) {
   switch (source.type) {
     case "publication": {
       const venue = venueOf(source.journal, source.volume, source.issue, source.pages);
-      const key = `${slugify(source.authors[0]?.split(" ").pop() ?? "cv")}-${source.year}-${slugify(source.title).split("-").slice(0, 3).join("-")}`;
+      const key = `${entrySlug(source.authors[0]?.split(" ").pop() ?? "cv")}-${source.year}-${entrySlug(source.title).split("-").slice(0, 3).join("-")}`;
       const bibtex = [
         `@article{${key},`,
         `  title = {${source.title}},`,
@@ -354,7 +347,7 @@ function resolveAll(sources, publications) {
   const seen = new Map();
   return sources.map((source) => {
     const entry = resolveOne(source, byDoi);
-    const stem = `${entry.type}-${entry.year ?? "undated"}-${slugify(entry.title)}`;
+    const stem = `${entry.type}-${entry.year ?? "undated"}-${entrySlug(entry.title)}`;
     const n = (seen.get(stem) ?? 0) + 1;
     seen.set(stem, n);
     const id = n === 1 ? stem : `${stem}-${n}`;

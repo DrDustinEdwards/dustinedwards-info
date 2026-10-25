@@ -22,7 +22,7 @@ The cheaper instrument wins ties, because `check:tests` runs in seconds and
 **TESTS verify SHIPPED MODULES.** They import the module the Worker imports and
 assert what it does with a given input. `frontmatterSchema` refuses
 `javascript:` in `cover.src`; `statusLabel()` throws on an unknown status rather
-than returning it. These are claims about BEHAVIOUR, they are cheap, and they
+than returning it. These are claims about BEHAVIOR, they are cheap, and they
 are the right home for anything that can be expressed as input in, output out.
 
 **GATES verify the REPO'S SHAPE.** `check:content` validates every post;
@@ -40,7 +40,7 @@ behavior in `worker/visibility.test.ts` and `worker/publish.test.ts`.
 mangled plant can trip a different assertion and look exactly like success.
 Plants are an act, not an artifact.
 
-**A plant gets promoted into this directory when it concerns BEHAVIOUR.** That
+**A plant gets promoted into this directory when it concerns BEHAVIOR.** That
 is the rule for what lives here. A plant that proves a gate's own parsing works
 stays a plant, because turning it into a test would mean testing the gate rather
 than the site.

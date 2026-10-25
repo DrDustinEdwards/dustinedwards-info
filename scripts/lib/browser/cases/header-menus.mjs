@@ -5,7 +5,7 @@ import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok, pollUntil } from "../harnes
 
 /*
  * The header (app/components/site-header.tsx) is Capsomer's site header written by hand, wired by
- * app/enhance/header.ts with Capsomer's behaviour: 56px, sticky, full width; a disclosure button per section,
+ * app/enhance/header.ts with Capsomer's behavior: 56px, sticky, full width; a disclosure button per section,
  * never role=menu. A click toggles aria-expanded; Enter opens with focus on the panel's first link, Down
  * moves through it and Escape hands focus back; a mouse opens a panel at once and leaving closes it. The
  * panel starts under the header, one width, inside the viewport. On a phone the header is one row and the
@@ -25,7 +25,7 @@ const BUTTON = 'button[aria-controls="site-nav-research"]';
  *
  * @param {import("puppeteer").Page} page @param {string} id
  */
-const stateOf = async (page, id = "research") => {
+const menuState = async (page, id = "research") => {
   await sleep(50);
   return page.evaluate((id) => {
     const p = document.getElementById(`site-nav-${id}`);
@@ -201,9 +201,9 @@ export async function run({ browser }) {
     );
 
     await page.click(BUTTON);
-    const clicked = await stateOf(page);
+    const clicked = await menuState(page);
     await page.click(BUTTON);
-    const reclicked = await stateOf(page);
+    const reclicked = await menuState(page);
     ok(
       "a click on the button opens the panel with aria-expanded true, and a second click closes it with aria-expanded false",
       clicked.open && clicked.expanded === "true" && !reclicked.open && reclicked.expanded === "false",
@@ -213,7 +213,7 @@ export async function run({ browser }) {
     await page.mouse.move(640, 880);
     await page.focus(BUTTON);
     await page.keyboard.press("Enter");
-    const entered = await stateOf(page);
+    const entered = await menuState(page);
     await page.keyboard.press("ArrowDown");
     const stepped = await page.evaluate((panel) => {
       const p = document.querySelector(panel);
@@ -221,7 +221,7 @@ export async function run({ browser }) {
       return items.indexOf(/** @type {Element} */ (document.activeElement));
     }, PANEL);
     await page.keyboard.press("Escape");
-    const escaped = await stateOf(page);
+    const escaped = await menuState(page);
     ok(
       "Enter opens the panel with focus on its first link, Down moves to the next, and Escape closes it back to the button",
       entered.open && entered.expanded === "true" && entered.focusInPanel && stepped === 1 && !escaped.open && escaped.expanded === "false" && escaped.focusOnButton,
@@ -260,10 +260,10 @@ export async function run({ browser }) {
     if (at) {
       await page.mouse.move(640, 880);
       await page.mouse.move(at.x, at.y, { steps: 4 });
-      const hovered = await stateOf(page);
+      const hovered = await menuState(page);
       await page.mouse.move(at.x, 880, { steps: 4 });
       await sleep(400);
-      const left = await stateOf(page);
+      const left = await menuState(page);
       ok(
         "hover opens the panel at once, and leaving the button and the panel closes it",
         hovered.open && hovered.expanded === "true" && !left.open,
@@ -382,7 +382,7 @@ export async function run({ browser }) {
     await noScript.setViewport({ width: 1280, height: 900 });
     await noScript.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     await noScript.click(BUTTON);
-    const opened = await stateOf(noScript);
+    const opened = await menuState(noScript);
     ok(
       "with no script the section button still opens its panel",
       opened.open,

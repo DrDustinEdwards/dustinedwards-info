@@ -40,7 +40,7 @@ function documentCspNonce(): string {
   return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
 }
 
-/** The site's own blocks for the editor's slash menu and toolbar; the editor's behaviour is Capsomer's. */
+/** The site's own blocks for the editor's slash menu and toolbar; the editor's behavior is Capsomer's. */
 const SCAFFOLD_LIST = Object.entries(SCAFFOLDS).map(([id, scaffold]) => ({
   id,
   label: scaffold.label,

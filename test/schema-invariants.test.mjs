@@ -152,9 +152,9 @@ await test("schema: columns agree across schema.ts, the migrations and the datab
       "no CREATE VIRTUAL TABLE found; the fts5 exclusion is not being exercised",
     );
 
-    const modelled = [...fromSchema.keys()].sort();
+    const modeled = [...fromSchema.keys()].sort();
     const unmodelled = migrationTables.filter((t) => !fromSchema.has(t));
-    const phantom = modelled.filter((t) => !fromMigrations.has(t));
+    const phantom = modeled.filter((t) => !fromMigrations.has(t));
 
     ok(
       "every table drizzle models is actually created by a migration",
@@ -167,13 +167,13 @@ await test("schema: columns agree across schema.ts, the migrations and the datab
       fromMigrations,
       "schema.ts",
       "migrations",
-      modelled,
+      modeled,
       ok,
     );
     ok(
       "every modeled table was actually compared",
-      compared === modelled.length - phantom.length,
-      `${compared} of ${modelled.length - phantom.length}`,
+      compared === modeled.length - phantom.length,
+      `${compared} of ${modeled.length - phantom.length}`,
     );
 
     t.diagnostic(

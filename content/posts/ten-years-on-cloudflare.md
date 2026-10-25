@@ -92,7 +92,7 @@ The constraint every D1 user should know: the platform's export command fails ou
 
 ### KV
 
-A key-value store that reads fast anywhere in the world and accepts that a write takes a moment to be seen everywhere. Right for configuration and caches, wrong for counters. This site keeps the watchdog's alert state in it, draft preview tokens, and the Ask answer cache, keyed by a hash of the normalised question. The cache sits in front of the daily spending ceiling rather than behind it, so a repeated question reaches no model and costs nothing.
+A key-value store that reads fast anywhere in the world and accepts that a write takes a moment to be seen everywhere. Right for configuration and caches, wrong for counters. This site keeps the watchdog's alert state in it, draft preview tokens, and the Ask answer cache, keyed by a hash of the normalized question. The cache sits in front of the daily spending ceiling rather than behind it, so a repeated question reaches no model and costs nothing.
 
 ### R2
 
@@ -178,7 +178,7 @@ Video hosting, live audio and video, streaming ingestion, data catalogs, and git
 
 ### Secrets Store, Zaraz, Workers for Platforms
 
-Secrets Store centralises secrets across Workers; this site's five secrets live in `wrangler secret` and a gate asserts every one is set and none is in git. Zaraz loads third-party tags at the edge; the only one here is the Web Analytics beacon, which Cloudflare adds itself. Workers for Platforms runs other people's Workers inside yours; I have one customer.
+Secrets Store centralizes secrets across Workers; this site's five secrets live in `wrangler secret` and a gate asserts every one is set and none is in git. Zaraz loads third-party tags at the edge; the only one here is the Web Analytics beacon, which Cloudflare adds itself. Workers for Platforms runs other people's Workers inside yours; I have one customer.
 
 ### Turnstile and Cache Reserve, not yet
 

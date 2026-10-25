@@ -1,7 +1,7 @@
 /*
  * The site's own contents in Capsomer's site header (site-header.tsx): the structured panel each section
  * button opens, drawn to Dustin's "Option C: structured panels" mock (Site menu options.html, 2026-10-15):
- * its sizes, its rules and its colours mapped onto the site's tokens so dark follows. Capsomer places the
+ * its sizes, its rules and its colors mapped onto the site's tokens so dark follows. Capsomer places the
  * panel (--cap-popover-x and --cap-popover-y, under the header, lined up with its button and held inside the
  * window) and gives it light dismiss and the keys. These rules are unlayered and Capsomer's are layered, so
  * these win.
@@ -57,7 +57,7 @@
   box-shadow: none;
 }
 
-/* The section buttons: a soft wash on hover, the band's chip colour while their panel is open. */
+/* The section buttons: a soft wash on hover, the band's chip color while their panel is open. */
 .site-header-nav [data-nav-button] {
   border-radius: 0.5rem;
 }
@@ -207,7 +207,7 @@
   line-height: 1.4;
 }
 
-/* A tile's line stops at three, so a long page description does not make its tile taller than its neighbours by much. */
+/* A tile's line stops at three, so a long page description does not make its tile taller than its neighbors by much. */
 .site-nav-tile .site-nav-desc {
   font-size: 0.75rem;
   display: -webkit-box;
@@ -382,7 +382,7 @@ a.site-nav-row-title:hover {
   stroke: var(--brand);
 }
 
-/* Three quick links, the last row: ruled cells, the icon over a small capitalised label. */
+/* Three quick links, the last row: ruled cells, the icon over a small capitalized label. */
 .site-nav-foot {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -6,7 +6,7 @@
 
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 
-import { toHex } from "../bytes.mjs";
+import { toHex } from "@dustinedwards/site-runtime/encoding";
 import { OWNER_ORCID, SITE_ORIGIN } from "../seo.ts";
 import { cvMarkdownBody, cvMarkdownDocument } from "./markdown.mjs";
 

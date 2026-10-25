@@ -8,7 +8,7 @@ import { listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
 import { libraryItems, workflowContext } from "~/kb/procedures/library.mjs";
@@ -41,7 +41,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!row) throw data(null, { status: 404 });
   if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { count, factor, units } = readScale(row.record, url);
-  // Where a protocol sits in the phage workflow: its neighbours are the other published protocols, so they are read here.
+  // Where a protocol sits in the phage workflow: its neighbors are the other published protocols, so they are read here.
   const workflow =
     row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
   // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.

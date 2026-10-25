@@ -10,7 +10,7 @@ writing_status: finished
 assumed_audience: "People rendering charts on the server who have hit a DOM dependency, and anyone weighing a library against workerd's limits."
 key_takeaways:
   - "Observable Plot renders inside a Worker with linkedom as the DOM: 930 KiB raw, 226 KiB gzipped, and byte-identical SVG in Node and workerd."
-  - "The three configurations that failed define the boundary as precisely as the one that works, and two of the failures generalise well beyond charts."
+  - "The three configurations that failed define the boundary as precisely as the one that works, and two of the failures generalize well beyond charts."
   - "Accessibility is enforced by the build rather than promised in the prose."
 ---
 

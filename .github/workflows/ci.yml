@@ -28,11 +28,11 @@ on:
   workflow_dispatch:
 
 # A second push to main should not race the first, and ON MAIN
-# `cancel-in-progress` stays false: the runs are the review, and cancelling one
+# `cancel-in-progress` stays false: the runs are the review, and canceling one
 # loses the only record that a commit was ever checked.
 #
 # On every OTHER ref it is true. A pull request branch that is pushed again, or
-# rebased by Renovate, has its superseded run cancelled, because the run that is
+# rebased by Renovate, has its superseded run canceled, because the run that is
 # anybody's review there is the one against the head that merges. Measured
 # 2026-09-15: Renovate branches re-ran this workflow 20 to 37 times each and
 # cost 602 Actions minutes in the September cycle, while this repository was
@@ -121,9 +121,9 @@ jobs:
       # LINT, and it is deliberately NOT a `check:` script.
       #
       # `check-all.mjs` derives the gate list from package.json and refuses to
-      # run a gate nobody has tiered, so naming this `check:lint` would enrol it
+      # run a gate nobody has tiered, so naming this `check:lint` would enroll it
       # in the offline tier and in ship. That is a bigger claim than it earns:
-      # oxlint reads style and dead code, it proves nothing about behaviour, and
+      # oxlint reads style and dead code, it proves nothing about behavior, and
       # a deploy should not be blocked by a preference. CI is where a preference
       # belongs, because CI is the review the author is not.
       #

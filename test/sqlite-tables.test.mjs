@@ -18,7 +18,7 @@ await test("FTS5's own shadow tables are shadow; a real table sharing the prefix
 
   const classified = classifySqliteTables(rows);
   assert.deepEqual(classified.virtual, ["search_prose"]);
-  // Whatever SQLite names them, every table it created for the index is recognised as shadow.
+  // Whatever SQLite names them, every table it created for the index is recognized as shadow.
   const created = rows.map((r) => r.name).filter((n) => n.startsWith("search_prose_") && n !== "search_prose_notes");
   assert.ok(created.length >= 4, `FTS5 created ${created.length} shadow table(s)`);
   assert.deepEqual(classified.shadow, [...created].sort());

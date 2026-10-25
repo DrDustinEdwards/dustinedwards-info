@@ -46,7 +46,7 @@ await test("the raw dump has a statement over D1's cap, and the split one has no
   assert.ok(biggest(split) < D1_STATEMENT_LIMIT, `largest statement is ${biggest(split)} bytes`);
 });
 
-await test("a row over the cap restores to exactly the bytes it had, and its neighbours are untouched", () => {
+await test("a row over the cap restores to exactly the bytes it had, and its neighbors are untouched", () => {
   const db = load(splitOversizeStatements(DUMP));
   const rows = db.prepare("SELECT * FROM publications ORDER BY slug").all();
   assert.equal(rows.length, 2);
