@@ -10,8 +10,8 @@ export const COLOPHON_URL = "/colophon";
 export const COLOPHON_TITLE = "How this site is built";
 
 export const COLOPHON_DESCRIPTION =
-  "How dustinedwards.info is built: its bindings, migrations and checks, listed " +
-  "from the repository's configuration, and the tools left out and why.";
+  "How this site is built on Cloudflare, read from its own code: every service it uses, " +
+  "how it is tested, and the tools I left out and why.";
 
 /**
  * The site's versions. WordPress is named for version 2 because the WordPress export's earliest item is
