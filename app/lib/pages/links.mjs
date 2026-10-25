@@ -1,6 +1,6 @@
 // The internal links of a page, judged at save time. check:links is CI's full gate over every link the
 // site publishes, built from the repository's sources; a save through the operator API is live before CI
-// runs, so the part of that judgement a Worker can make from D1 and code is made here, with the same
+// runs, so the part of that judgment a Worker can make from D1 and code is made here, with the same
 // gateway functions the router uses (docs/PAGES.md).
 //
 // It refuses only what it can PROVE broken: a link into a namespace this module can list completely

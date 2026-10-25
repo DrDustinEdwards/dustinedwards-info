@@ -84,5 +84,5 @@ await test("a calculator must exist in the registry, be named once, and belong t
 await test("a value is filled in only from the step's own words, into a field the calculator has", () => {
   assert.equal(errorsOf(withFlag("webbed-plate volume=10 plates=6")), "");
   assert.match(errorsOf(withFlag("webbed-plate volume=25")), /does not state 25; a value is filled in only from the step's own words/);
-  assert.match(errorsOf(withFlag("webbed-plate colour=10")), /CALC webbed-plate has no field "colour" \(titer, pfu, volume, plates\)/);
+  assert.match(errorsOf(withFlag("webbed-plate color=10")), /CALC webbed-plate has no field "color" \(titer, pfu, volume, plates\)/);
 });

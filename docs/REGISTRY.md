@@ -70,9 +70,9 @@ plus `.md`.
 
 **Computed, never stored:** length, GC content, reverse complement, Tm, GenBank positions, a pair's product size, and the
 protocols that use a primer (read from the protocols, which name their primers by id). Tm (`app/kb/registry/tm.mjs`) is the
-SantaLucia (1998) nearest-neighbour model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
+SantaLucia (1998) nearest-neighbor model at 50 mM monovalent cation and 0.5 uM primer, stated on every page that shows one;
 it is held to Biopython's `Tm_NN` to a thousandth of a degree (`test/registry-tm.test.mjs`) and is null for a sequence with an
-ambiguity code. It is labelled an estimate for comparing primers, every primer page links NEB's Tm
+ambiguity code. It is labeled an estimate for comparing primers, every primer page links NEB's Tm
 Calculator for the polymerase-specific annealing temperature, and no page presents the computed Tm as an annealing temperature.
 
 ### Protocols read their primers from the registry
@@ -210,7 +210,7 @@ changed item (`test/registry-equipment.test.mjs`, `test/worker/lab.test.ts`, `te
 ### Syncing an empty registry
 
 `sync_registry` and `sync:content` treat no files and no rows as converged. They still refuse no files while rows
-exist, because that listing is far likelier a fault than a repository with none, and honouring it would delete every
+exist, because that listing is far likelier a fault than a repository with none, and honoring it would delete every
 row. `sync:content` deletes only rows a file under `content/registry/` once made, never an unscoped delete.
 
 ## Deploying the table

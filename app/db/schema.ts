@@ -137,7 +137,7 @@ export const media = sqliteTable(
 
     /**
      * Delimiter-wrapped, `,alpha,beta,` or "", so an exact LIKE match on `art` does not hit `chart`.
-     * Only `serialiseTags()` writes it; it strips the delimiter and both LIKE wildcards.
+     * Only `serializeTags()` writes it; it strips the delimiter and both LIKE wildcards.
      */
     tags: text("tags").notNull().default(""),
 

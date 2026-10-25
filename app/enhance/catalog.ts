@@ -1,4 +1,4 @@
-import { enhance } from "capsomer/behaviour/catalog";
+import { enhance } from "capsomer/behavior/catalog";
 
 /*
  * The protocol library's search, facets and sort (Capsomer's catalog). The server rendered the whole form with

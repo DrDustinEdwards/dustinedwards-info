@@ -27,7 +27,7 @@ Ink box: x from 79.7 (ring) to 309.3 (base), y from 16.91 (cap corner) to 341.7 
 
 Paint order: ring, bowl, base, arc, tube, amber, pale, cap.
 
-## Colour
+## Color
 
 The five purple paths take the `--brand` token, #4F2D7F light and #B7A5E0 dark (7.9:1 on the dark paper; the light purple is about 1.7:1 there). The warm paths are constant: rust #CE7F44, amber #E0A428, pale #E2BC6B.
 
@@ -45,7 +45,7 @@ On the site the mark is `app/components/site-logo.tsx`, path data generated verb
 - **`dustin-edwards-favicon.svg`**: a #4F2D7F full-bleed tile, mark #EDE8F5, same `square()` helper and padding as the ICO, no media query. A `prefers-color-scheme` query resolves against the OS scheme while the tab strip is painted by the browser theme, and nothing bridges the two.
 - **`favicon.ico`**: purple tile, mark #EDE8F5, 16/32/48, PNG encoded. The lavender mark halved small-size contrast (4.70 versus 10.43).
 - **Large tiles** (`dustin-edwards-apple-touch-icon` 180, `dustin-edwards-android-chrome` 192/512, `dustin-edwards-maskable-icon` 512): purple tile, lavender #B7A5E0 mark. Maskable padding 0.19.
-- **`site.webmanifest`** background and theme colour: #4F2D7F.
+- **`site.webmanifest`** background and theme color: #4F2D7F.
 - **`dustin-edwards-og-image.png`**, the default social card: purple tile, lavender mark. Per-post cards are `build:og`'s (`docs/PUBLISHING.md`).
 - No check covers the mark or icons. A regenerated asset is verified by looking at it and by the served bytes; browsers cache favicons past a hard refresh, so the tab is not evidence.
 

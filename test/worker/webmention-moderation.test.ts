@@ -284,7 +284,7 @@ describe("the moderation queue", () => {
     expect(busy.data.status).toBe("pending");
   });
 
-  it("HONOURS an explicit ?status=, and treats an unrecognised one as absent", async () => {
+  it("HONORS an explicit ?status=, and treats an unrecognized one as absent", async () => {
     await seedMention("https://elsewhere.example/waiting", "pending", 1);
 
     expect((await runLoader("?status=all")).data.status).toBe("all");
@@ -339,7 +339,7 @@ describe("the moderation queue", () => {
     }
   });
 
-  /* The sweep button is labelled with this count, so the loader owes it on every request. */
+  /* The sweep button is labeled with this count, so the loader owes it on every request. */
   it("CARRIES THE EXPIRING COUNT, so the sweep control can name what it removes", async () => {
     const empty = await runLoader();
     expect(empty.data.expiring).toEqual({ failed: 0, rejected: 0 });

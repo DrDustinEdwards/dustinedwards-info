@@ -39,7 +39,7 @@ its profile's components is nothing, and profiles are code, so a table would onl
 read it (DECIDE 2).
 
 **One folder.** Knowledge Base code lives in `app/kb/`: the procedures in `app/kb/procedures/`, the lab registry in
-`app/kb/registry/` (both moved there from `app/lib/` in step 1, with no behaviour change) and the list of bases in
+`app/kb/registry/` (both moved there from `app/lib/` in step 1, with no behavior change) and the list of bases in
 `app/kb/bases.mjs`. New routes go in `app/routes/kb.*`. The whole thing could later be lifted out; nothing is built for
 that (DECIDE 6).
 
@@ -125,7 +125,7 @@ knowledge base; the build order below interleaves them. Claims were checked agai
 
 | # | Finding | Verdict | Why |
 | --- | --- | --- | --- |
-| S1 | Tutorial or how-to, labelled per Diátaxis; explanation in linked pages | **Build** | A required `type: tutorial \| how-to` field, shown as a label and a library facet; `explanation:` links to pages. The check refuses a `WHY:` flag longer than a few sentences in a how-to and says to link instead. |
+| S1 | Tutorial or how-to, labeled per Diátaxis; explanation in linked pages | **Build** | A required `type: tutorial \| how-to` field, shown as a label and a library facet; `explanation:` links to pages. The check refuses a `WHY:` flag longer than a few sentences in a how-to and says to link instead. |
 | S2 | Objectives and a time estimate at the top | **Build** | `questions`, `objectives` and `time` (which every profile already has) shown first, key points at the end, as a Carpentries episode orders them; required for a tutorial. |
 | S3 | Verify steps | **Keep** | `EXPECT:` and the expected output block are this; rename nothing. |
 | S4 | Platform tabs where commands differ | **Build** | A fenced block may carry `platform=windows\|macos\|linux`; the page shows tabs (links with no script, the reader's choice remembered with script), the twin and the sheet list all. |
@@ -157,9 +157,9 @@ editor is live, so there is never a week with no editor. The operator API's proc
 
 ## The build, in order
 
-Each step is one pull request, labelled `visual` where a reader sees it, and names job_898286365026.
+Each step is one pull request, labeled `visual` where a reader sees it, and names job_898286365026.
 
-1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behaviour change. (Done.)
+1. **Move** `app/lib/procedures/` and `app/lib/registry/` into `app/kb/`, add `bases.mjs`. No behavior change. (Done.)
 2. **Admin Knowledge Base**: the rail entry, a panel per base, list and search, Needs info. Read-only. (Done:
    `/admin/kb`, `app/routes/admin.kb.tsx` over `app/kb/admin.mjs`; the Inventory tab waits with step 4.)
 3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go. (Editor

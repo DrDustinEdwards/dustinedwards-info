@@ -117,7 +117,7 @@ export function needsInfo(entries, items) {
       null,
     ).map((gap) => ({
       what: item.name,
-      kindLabel: capitalise(KINDS[item.kind]?.singular ?? item.kind),
+      kindLabel: capitalize(KINDS[item.kind]?.singular ?? item.kind),
       href: itemHref(item),
       editHref: `${itemEditHref(item.kind, item.id)}#${gap.anchor}`,
       field: gap.field,
@@ -129,6 +129,6 @@ export function needsInfo(entries, items) {
 }
 
 /** @param {string} word */
-function capitalise(word) {
+function capitalize(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }

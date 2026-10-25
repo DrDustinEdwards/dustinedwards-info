@@ -343,7 +343,7 @@ async function framesWhileEntering(/** @type {import("puppeteer").Page} */ page)
   }
 }
 
-/** Section 6, colour and both themes: axe finds nothing at rest, zoomed into the core or into another system, in each theme. */
+/** Section 6, color and both themes: axe finds nothing at rest, zoomed into the core or into another system, in each theme. */
 async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
   /** @returns {Promise<string[]>} each violation, as its rule and its first node */

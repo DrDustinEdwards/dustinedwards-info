@@ -2,7 +2,7 @@
 // `safeEqual` from `@dustinedwards/site-runtime/compare`. Kept `.server` because the secrets
 // boundary is a path rule.
 
-import { fnv1a32 } from "./bytes.mjs";
+import { fnv1a32 } from "./fingerprint.mjs";
 
 /**
  * A label for commit messages and rate-limit keys. 32-bit FNV-1a is not the token and cannot be

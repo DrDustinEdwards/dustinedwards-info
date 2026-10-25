@@ -11,7 +11,7 @@ import { byteSize } from "~/lib/media/byte-size.mjs";
 // The input becomes an APG combobox over a listbox, the pattern the editor's link palette uses.
 
 const LIST_ID = "media-palette-list";
-// By position, not key: two keys can sanitise to the same id, and activedescendant would then point at the wrong row.
+// By position, not key: two keys can sanitize to the same id, and activedescendant would then point at the wrong row.
 const optionId = (index: number) => `media-palette-opt-${index}`;
 
 type PaletteKey =

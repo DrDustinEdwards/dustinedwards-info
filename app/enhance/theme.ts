@@ -2,7 +2,7 @@
 // that re-applied it could only agree, or race.
 
 import { ENHANCE_URL_PREFIX } from "~/lib/enhance-url.mjs";
-import { serializeThemeCookie, isWritableTheme, type WritableTheme } from "~/lib/theme";
+import { isThemeChoice, themeCookie, type ThemeChoice } from "capsomer/theme-server";
 
 function enhanceThemeToggle() {
   document.addEventListener("submit", (event) => {
@@ -14,7 +14,7 @@ function enhanceThemeToggle() {
     if (!(submitter instanceof HTMLButtonElement)) return;
 
     const choice = submitter.value;
-    if (!isWritableTheme(choice)) return;
+    if (!isThemeChoice(choice)) return;
 
     event.preventDefault();
     apply(choice, form);
@@ -151,12 +151,12 @@ function enhanceSearchTrigger() {
   });
 }
 
-function apply(choice: WritableTheme, form: HTMLFormElement) {
+function apply(choice: ThemeChoice, form: HTMLFormElement) {
   const root = document.documentElement;
 
   root.setAttribute("data-theme", choice);
 
-  document.cookie = serializeThemeCookie(choice);
+  document.cookie = themeCookie(choice);
 
   /*
    * Activating a button hides it via the cascade, and `display: none` drops focus to `<body>`, so move

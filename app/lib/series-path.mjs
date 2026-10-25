@@ -1,5 +1,5 @@
 /**
- * A series is FREE TEXT, unlike a tag, so it is normalised here and nowhere else; the archive
+ * A series is FREE TEXT, unlike a tag, so it is normalized here and nowhere else; the archive
  * builds and resolves its URL through this one function so the two cannot drift.
  */
 

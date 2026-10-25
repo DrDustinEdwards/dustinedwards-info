@@ -1,4 +1,4 @@
-import { toHex } from "../bytes.mjs";
+import { toHex } from "@dustinedwards/site-runtime/encoding";
 
 const TYPES = new Map([
   ["png", { kind: "image", mime: "image/png" }],
@@ -13,7 +13,7 @@ const TYPES = new Map([
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
   // The pronunciation clips under /audio/ (content/dictionary/*.md), generated once, never per visit.
   ["mp3", { kind: "other", mime: "audio/mpeg" }],
-  // The SIL OFL requires the font licence to be served with the fonts.
+  // The SIL OFL requires the font license to be served with the fonts.
   ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],
   // No woff2: fonts live in app/fonts/, so a webfont dropped into public/ should stop the build.
 ]);

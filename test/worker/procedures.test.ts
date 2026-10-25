@@ -87,7 +87,7 @@ describe("save_procedure", () => {
     expect(await twin.text()).toContain("Incubate at 60 °C for 45 minutes.");
   });
 
-  it("places a protocol in the phage workflow from its neighbours, on the page and in the twin, with nothing stored on it", { timeout: 180_000 }, async () => {
+  it("places a protocol in the phage workflow from its neighbors, on the page and in the twin, with nothing stored on it", { timeout: 180_000 }, async () => {
     gh.restore();
     gh = stubGitHub({ [procedurePath(SLUG)]: zncl2, [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
     for (const [slug, raw] of [[SLUG, zncl2], ["phage-isolation", isolation]] as const) {

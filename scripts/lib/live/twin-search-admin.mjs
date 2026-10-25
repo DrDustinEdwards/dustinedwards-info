@@ -54,11 +54,11 @@ export async function run() {
     }
 
     const llms = await get("/llms.txt");
-    const llmsLink = llms.res.headers.get("link") ?? "";
+    const llmsLinkHeader = llms.res.headers.get("link") ?? "";
     check(
       "llms.txt: Link names the home page as canonical",
-      llmsLink.startsWith("<https://") && llmsLink.endsWith(`/>; rel="canonical"`),
-      `got ${llmsLink || "(none)"}`,
+      llmsLinkHeader.startsWith("<https://") && llmsLinkHeader.endsWith(`/>; rel="canonical"`),
+      `got ${llmsLinkHeader || "(none)"}`,
     );
   }
 

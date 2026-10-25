@@ -15,7 +15,7 @@ export function Result({ result }: { result?: { ok: boolean; text: string } | nu
   );
 }
 
-/** A table that scrolls on a phone in a labelled, focusable region (DEFAULTS.md). */
+/** A table that scrolls on a phone in a labeled, focusable region (DEFAULTS.md). */
 export function LabTable({ label, head, children }: { label: string; head: string[]; children: ReactNode }) {
   return (
     <div className="cap-table-wrap" role="region" aria-label={label} tabIndex={0}>

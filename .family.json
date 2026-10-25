@@ -1,0 +1,22 @@
+{
+  "apps": {
+    ".": "site",
+    "mcp": "worker"
+  },
+  "waive": {
+    "llms": "llms.txt is written by hand in content/llms.txt and edited through Carrel, not built from a page list",
+    "health": "/api/health runs five checks (D1, R2, AI Search, the backup, the limiter) and records a snapshot for the drift repair; healthResponse is the one-database case"
+  },
+  "copies": {
+    "workers/security-headers.mjs": "the site's ratified overrides to buildSecurityHeaders, which it calls; the header names are keys, not a second builder",
+    "scripts/lib/headers/static-set-and-cache.mjs": "the gate's hand-transcribed ratified set, compared against what the Worker sends"
+  },
+  "spelling": {
+    "skip": [
+      "content/publications/**",
+      "data/publications.cited-by.json",
+      "drizzle/**",
+      "public/fonts/*.txt"
+    ]
+  }
+}

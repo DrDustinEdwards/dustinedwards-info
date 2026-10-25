@@ -54,7 +54,7 @@
  *
  * Read captures with `node scripts/probe-report.mjs`, which goes through the
  * Cloudflare API. There is no HTTP control plane on purpose: a log describing a
- * client's behaviour should not be internet reachable, and this way there is no
+ * client's behavior should not be internet reachable, and this way there is no
  * probe credential to exist or leak.
  */
 
@@ -165,7 +165,7 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
 
   switch (rpc) {
     // Legacy opening. Echo the client's own version so it proceeds and reveals
-    // the rest of its behaviour rather than stopping at a negotiation failure.
+    // the rest of its behavior rather than stopping at a negotiation failure.
     case "initialize": {
       const asked = (body as { params?: { protocolVersion?: string } })?.params?.protocolVersion;
       return ok({

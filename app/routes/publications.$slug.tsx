@@ -5,7 +5,7 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getCitationCounts } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
@@ -291,7 +291,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLd([
+            __html: jsonLdText([
               ...paperJsonLd(paper, {
                 origin: SITE_ORIGIN,
                 pageUrl,

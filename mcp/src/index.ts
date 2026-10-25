@@ -67,7 +67,7 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
  * The authenticated MCP surface.
  *
  * The OAuth library has already validated the access token by the time this runs.
- * The admin check runs AGAIN here as defence in depth: a grant is long lived, and
+ * The admin check runs AGAIN here as defense in depth: a grant is long lived, and
  * this is the boundary a request actually crosses, so re-checking costs one
  * comparison and removes a class of bug where a grant outlives its authority.
  */
@@ -231,7 +231,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
   if (url.pathname === CSP_REPORT_PATH) return handleCspReport(request, env);
 
   // The measurement instrument sits OUTSIDE the OAuth provider deliberately.
-  // It exists to observe unauthenticated client behaviour, so putting it behind
+  // It exists to observe unauthenticated client behavior, so putting it behind
   // authentication would defeat it. It exposes one no-op tool and has no route
   // to the operator API.
   if (url.pathname.startsWith("/probe")) {
@@ -252,13 +252,13 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
    *
    * BEFORE the provider, because the provider owns `/mcp` and answers 401 to
    * anything carrying a token it did not mint. An agent key is not one of
-   * those, so it is recognised here or not at all.
+   * those, so it is recognized here or not at all.
    *
    * IT IS TRIED, NEVER REQUIRED. `agentPrincipal` returns null for a missing
    * header, a malformed one, a key matching nothing, and for a Worker with no
    * `AGENT_KEY_*` secret configured at all. Every one of those falls through
    * to the provider, which answers exactly as it did before. So this Worker's
-   * behaviour with no agent secret set is unchanged, and that is the state it
+   * behavior with no agent secret set is unchanged, and that is the state it
    * deploys in.
    *
    * SCOPED TO `/mcp`. The consent flow, the token endpoint, `/register` and

@@ -188,7 +188,7 @@ The probe has **no HTTP control plane, deliberately**: its capture log should no
 be reachable from the internet. Read it through the Cloudflare API:
 
 ```sh
-node scripts/probe-report.mjs               # the analysed report
+node scripts/probe-report.mjs               # the analyzed report
 node scripts/probe-report.mjs --phase auth  # force the OAuth discovery walk
 node scripts/probe-report.mjs --reset       # clear captures before a real measurement
 ```

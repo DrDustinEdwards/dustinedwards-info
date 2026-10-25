@@ -3,7 +3,7 @@
 // protocol library is in procedures/library.mjs. The page, its facets, its downloads and its markdown twin all read the
 // declaration, and every fact is drawn from the records, never typed. Pure: the routes pass in the records from D1.
 
-import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { BASES } from "./bases.mjs";
 import { stepCount } from "./procedures/library.mjs";
@@ -76,7 +76,7 @@ export function baseItems(base, records) {
 export const nounOf = (base) => [base.singular.toLowerCase(), base.name.toLowerCase()];
 
 // Isolate-wide: a base's catalog is built from its definition, the same for every request.
-/** @type {Map<string, import("capsomer/behaviour/catalog").CatalogDefinition<BaseItem>>} */
+/** @type {Map<string, import("capsomer/behavior/catalog").CatalogDefinition<BaseItem>>} */
 const catalogs = new Map();
 
 /**
@@ -113,7 +113,7 @@ export function baseCatalog(base) {
           updated,
         ];
   const catalog = defineCatalog(
-    /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<BaseItem>} */ ({
+    /** @type {import("capsomer/behavior/catalog").CatalogDefinition<BaseItem>} */ ({
       id: base.id,
       noun: nounOf(base),
       basePath: base.library,

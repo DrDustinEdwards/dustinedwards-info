@@ -97,7 +97,7 @@ await test("LIST is the default, because most of this library is not images", ()
   assert.equal(readView(params({})).view, "list");
 });
 
-await test("readView is total: unrecognised values fall back rather than throwing", () => {
+await test("readView is total: unrecognized values fall back rather than throwing", () => {
   const s = readView(
     params({
       view: "carousel",
@@ -185,7 +185,7 @@ await test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches
 await test("flat is one group with no heading, so the component renders no header", () => {
   const rows = [{ key: "a.png", uploaded: null }];
   assert.deepEqual(groupRows(rows, "flat"), [{ label: "", note: "", rows }]);
-  // An unrecognised value falls back to flat, or a hand-edited URL would render an empty page.
+  // An unrecognized value falls back to flat, or a hand-edited URL would render an empty page.
   assert.deepEqual(groupRows(rows, "galaxy"), [{ label: "", note: "", rows }]);
 });
 

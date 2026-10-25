@@ -131,7 +131,7 @@ for (const probe of fixture.frontmatterCases) {
   }
 }
 
-// Behaviour can pass while a field blocks a protocol only by accident, so the source must call the
+// Behavior can pass while a field blocks a protocol only by accident, so the source must call the
 // shared predicate. Read off the syntax tree: the old regexes ended a block at its first `})`, so a
 // nested object cut the scan short, and prose could not be told from code without a stripper.
 

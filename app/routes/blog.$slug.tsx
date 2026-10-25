@@ -22,7 +22,7 @@ import {
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
-import { jsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
@@ -213,7 +213,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLd([
+            __html: jsonLdText([
               articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],

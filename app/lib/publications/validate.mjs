@@ -8,7 +8,7 @@
 
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
-import { HOSTED_WITHOUT_LICENCE, permitsRedistribution } from "./hosting.mjs";
+import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
 import { doiSlug, paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
@@ -245,17 +245,17 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     if (!submitted && !data.externalUrl && !isString(doi)) bad("externalUrl", "an external published paper links out through a DOI or an externalUrl");
   }
 
-  // ---- rights: hosting a paper whose licence does not permit it is Dustin's call, per DOI
+  // ---- rights: hosting a paper whose license does not permit it is Dustin's call, per DOI
   if (access === "self-hosted") {
-    const licence = isString(data.license) ? data.license : null;
-    if (!permitsRedistribution(licence) && !(isString(doi) && HOSTED_WITHOUT_LICENCE.has(doi))) {
+    const license = isString(data.license) ? data.license : null;
+    if (!permitsRedistribution(license) && !(isString(doi) && HOSTED_WITHOUT_LICENSE.has(doi))) {
       bad(
         "license",
-        `${licence ?? "none"} does not permit redistribution, and ${isString(doi) ? doi : "this paper"} is not one Dustin has chosen to host without one. ` +
+        `${license ?? "none"} does not permit redistribution, and ${isString(doi) ? doi : "this paper"} is not one Dustin has chosen to host without one. ` +
           `Hosting a paper whose license does not permit it is Dustin's call, recorded per DOI in app/lib/publications/hosting.mjs, so a new one is a new decision and not a precedent`,
       );
     }
-    if (!permitsRedistribution(licence) && !data.licenseSource && licence === null) {
+    if (!permitsRedistribution(license) && !data.licenseSource && license === null) {
       bad("licenseSource", "a hosted paper with no license records what the registries said (crossref:tdm-only, none-deposited, ...), so a closed paper is not mistaken for an unchecked one");
     }
   }

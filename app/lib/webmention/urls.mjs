@@ -63,7 +63,7 @@ const SOURCE_REFUSALS = {
 };
 
 /**
- * The verifier fetches the source, so these refusals bound SSRF. NOT a complete defence: public DNS can
+ * The verifier fetches the source, so these refusals bound SSRF. NOT a complete defense: public DNS can
  * resolve to a private address. The runtime bounds the rest: a Worker's `fetch` has no private network
  * or metadata endpoint, and the verifier reads at most 1 MB and stores no markup.
  *

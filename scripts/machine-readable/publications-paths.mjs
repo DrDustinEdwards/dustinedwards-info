@@ -1,9 +1,9 @@
-import { HOSTED_WITHOUT_LICENCE, permitsRedistribution } from "../../app/lib/publications/hosting.mjs";
+import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "../../app/lib/publications/hosting.mjs";
 import { paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import { TOPICS } from "../../app/lib/publications/topics.mjs";
 import { closePart, hosted, openPart, records, refusalsFor } from "./publications-context.mjs";
 
-/* Topics, page slugs, where each PDF lives and the hosting licences. */
+/* Topics, page slugs, where each PDF lives and the hosting licenses. */
 const { tally, ok } = openPart("paths");
 
 /** @param {string[]} messages */
@@ -74,12 +74,12 @@ ok(
   );
 
   /* Stale exemptions are how an allowlist stops meaning anything. */
-  const stale = [...HOSTED_WITHOUT_LICENCE.keys()].filter((doi) => !unlicensed.some((r) => r.doi === doi));
+  const stale = [...HOSTED_WITHOUT_LICENSE.keys()].filter((doi) => !unlicensed.some((r) => r.doi === doi));
   ok(
     "every DOI in the allowlist is still a PDF hosted without a license",
     stale.length === 0,
     stale.length
-      ? `${stale.map((doi) => `${doi} (recorded as ${HOSTED_WITHOUT_LICENCE.get(doi)})`).join(", ")}. Either the ` +
+      ? `${stale.map((doi) => `${doi} (recorded as ${HOSTED_WITHOUT_LICENSE.get(doi)})`).join(", ")}. Either the ` +
           "file is gone or a registry now records terms; check which, then remove the entry."
       : "",
   );

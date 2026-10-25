@@ -193,7 +193,7 @@ for (const b of withFile) {
         `${rel} wght range matches the declaration exactly`,
         axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
         `css declares ${lo} ${hi}, the file's wght is ${axes.wght.min} to ${axes.wght.max}. A narrower file means ` +
-          `weights the stylesheet asks for are synthesised rather than drawn.`,
+          `weights the stylesheet asks for are synthesized rather than drawn.`,
       );
     }
   } else if (/^\d+$/.test(weight)) {

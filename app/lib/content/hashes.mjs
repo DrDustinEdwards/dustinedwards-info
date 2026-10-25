@@ -1,7 +1,7 @@
 // Every writer and comparer of posts.source_blob_sha and posts.render_hash uses this module;
 // a second implementation is drift. The git header counts UTF-8 BYTES, not string.length.
 
-import { toHex } from "../bytes.mjs";
+import { toHex } from "@dustinedwards/site-runtime/encoding";
 
 const encoder = new TextEncoder();
 

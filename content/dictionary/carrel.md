@@ -20,7 +20,7 @@ audio: /audio/carrel.mp3
 Notes for editors. Nothing below the front matter is shown on the site.
 
 Sense 1 follows the dictionaries; sense 2 is the software, plain and factual, and carries the subject label
-"software." in italics, as a dictionary marks a specialised sense.
+"software." in italics, as a dictionary marks a specialized sense.
 
 Verified 2026-09-28 against Merriam-Webster and Wiktionary. The pronunciation is American, matching
 Merriam-Webster's first form. The clip at /audio/carrel.mp3 was generated once with Workers AI (Deepgram Aura 2,

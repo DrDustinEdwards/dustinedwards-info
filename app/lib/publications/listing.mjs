@@ -8,7 +8,7 @@
  * address is a view of the base page.
  */
 
-import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { decodeEntities } from "./entities.mjs";
 import { TOPICS, TOPIC_IDS } from "./topics.mjs";
@@ -45,7 +45,7 @@ export function venue(p) {
 
 /** The papers' catalog. Newest first by default, under a heading for each year; any search or other sort is flat. */
 export const PUBLICATIONS = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<Publication>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<Publication>} */ ({
     id: "papers",
     noun: ["paper", "papers"],
     basePath: PUBLICATIONS_BASE,

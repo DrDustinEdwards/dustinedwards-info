@@ -31,7 +31,7 @@ describe("the listing order for posts that share an instant", () => {
   });
 
   it("MAKES THE PARTS' PREVIOUS AND NEXT FOLLOW THAT ORDER", async () => {
-    // A year of its own, so the other cases' rows are not this one's neighbours.
+    // A year of its own, so the other cases' rows are not this one's neighbors.
     const at = DAY - 365 * 86_400;
     await seedPost("nb-before", { publishAt: at - 86_400 });
     await seedPost("nb-a-part1", { publishAt: at, series: "Nb", part: 1 });

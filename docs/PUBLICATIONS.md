@@ -76,7 +76,7 @@ writer of the format.
 | `access` | `self-hosted` (the PDF is in the repository) or `external`. |
 | `pdfPath` | Must equal the derived path: the PDF sits in its own page's directory, which Scholar needs. The save checks that the file exists in the repository. |
 | `pdfSha256` | The hash of the PDF the Full text was read from. CI checks it against the file. |
-| `license`, `licenseSource` | A hosted paper needs a redistribution licence, or its DOI named in `app/lib/publications/hosting.mjs` (Dustin's call, per DOI). |
+| `license`, `licenseSource` | A hosted paper needs a redistribution license, or its DOI named in `app/lib/publications/hosting.mjs` (Dustin's call, per DOI). |
 | `summary` | One sentence, under 200 characters, no em or en dash. Optional; absent is a state. |
 | `accessions` | Read from the paper's own data-availability statement and reconciled against the Full text in both directions. |
 | `updateNotice` | A retraction, correction or expression of concern: `{ type, doi, date }`. |
@@ -102,7 +102,7 @@ save. A file CI passes is a file the save accepts. Every message starts with the
 `authors[2]: is empty`. It holds: DOI shape and case-folded uniqueness, the slug rule and its length with the
 `publication.` prefix (200 characters at most), unique ids, the vocabulary, access and `pdfPath`
 consistency, the PDF in the repository and its hash, the Full text, PMC forms, the summary rules, the notice
-shape, the accession reconciliation, the licence rule, and for every record the Highwire tag set, the BibTeX
+shape, the accession reconciliation, the license rule, and for every record the Highwire tag set, the BibTeX
 and RIS exports, the twin, the search record and the Ask key.
 
 CI adds what needs the repository or the whole corpus: the cited-by snapshot, `llms.txt`, and the build's

@@ -271,7 +271,7 @@ protocol saved is listed at the next request with no deploy, and no second list 
   JSON links carry the filter state of the view shown, the citation is built from the site's identity and the library's
   address (the date of access is the reader's to add), and the twin ends with the same section. The page's own markdown
   holds none of it, so no address or name is typed twice.
-- **Capsomer's colours are the site's**: `app/styles/library.css` maps each of its colour names onto a site token, so the
+- **Capsomer's colors are the site's**: `app/styles/library.css` maps each of its color names onto a site token, so the
   library follows the light and dark themes with no second palette. The site's reset is imported into Capsomer's
   lowest layer (`cap.reset`, in `app.css`), because an unlayered reset would beat every layered component rule.
 
@@ -291,9 +291,9 @@ resource does not have reads "N/A". A group with nothing in it is left out; a re
 A protocol's page says where it sits in the phage workflow (`workflowContext`, `ProtocolWorkflow`): its stage (the first
 `PHAGE_PIPELINE` stage whose methods it carries out), the protocols of the nearest earlier and later stage that has any
 ("Before this", "After this"), and the calculators of its stage. None of it is stored on the protocol: it is read from the
-other published protocols and the stages, so a protocol saved changes its neighbours' links with no edit to them. A
+other published protocols and the stages, so a protocol saved changes its neighbors' links with no edit to them. A
 protocol outside the workflow (a primer set) shows nothing. The markdown twin ends with the same lines
-(`workflowMarkdown`), added when the twin is served because the neighbours are other rows. A protocol's primers are
+(`workflowMarkdown`), added when the twin is served because the neighbors are other rows. A protocol's primers are
 linked to their registry pages from its Primers section; reagents and strains will be as their kinds land.
 
 ## Run mode
@@ -306,7 +306,7 @@ for a person working it at the bench, on a phone:
   timer's length is the longer end of a range, so it never rings early; it is stored as the moment it ends, so a
   sleeping phone or a reload still knows what is left. When one finishes it vibrates, beeps, announces itself in an
   alert region and changes the tab title.
-- **Critical steps** keep their flag in view and their edge in the danger colour until done; **pause points** stay
+- **Critical steps** keep their flag in view and their edge in the danger color until done; **pause points** stay
   marked. The current step is `aria-current="step"`; "Go to step N" in the bar jumps to it.
 - **Scale** (a tube count, or servings, and a recipe's units) changes in place: the page is fetched at the new scale
   and the materials table, the mise-en-place, each step's words and each step's ingredients are swapped in, so the server stays the one place amounts are computed. The run's
@@ -326,7 +326,7 @@ for a person working it at the bench, on a phone:
 
 The pure half (what a run is, how timers count, the record and its Markdown, and parsing a stored run, which accepts
 only the shape this module writes) is `app/kb/procedures/run.mjs`, tested in `test/run.test.mjs`; the browser
-behaviour is the run-mode case of `check:browser`.
+behavior is the run-mode case of `check:browser`.
 
 ## Keep on this device
 

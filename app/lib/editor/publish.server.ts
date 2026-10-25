@@ -175,7 +175,7 @@ function computeForSaved<C extends { slug: string; status: string; publishAt: Da
   return entry;
 }
 
-/** Only this post's list is computed here: relatedness is corpus-wide, and the other rows follow in refreshNeighbours. */
+/** Only this post's list is computed here: relatedness is corpus-wide, and the other rows follow in refreshNeighbors. */
 async function relatedFor(env: PublishEnv, record: PostRecord) {
   const { withRelated } = await loadPipeline();
   return computeForSaved(
@@ -251,7 +251,7 @@ export async function renderAndWrite(
  *
  * Returns the slugs it rewrote. Throws on a failed read or write: the caller reports it.
  */
-async function refreshNeighbours(env: PublishEnv, savedSlug: string) {
+async function refreshNeighbors(env: PublishEnv, savedSlug: string) {
   const { withRelated, withBacklinks } = await loadPipeline();
   const [related, links, stored] = await Promise.all([
     listPostCorpusForRelated(env),
@@ -299,20 +299,20 @@ async function refreshNeighbours(env: PublishEnv, savedSlug: string) {
 }
 
 /**
- * The save's neighbour refresh, reported rather than raised: the commit and the saved row have landed, and
+ * The save's neighbor refresh, reported rather than raised: the commit and the saved row have landed, and
  * undoing either would destroy the source to repair derived lists. A failure is returned for the caller
  * to show and logged as an alert; the next save of any post re-derives and rewrites every stale list,
  * as does the ship's sync.
  */
-async function refreshNeighboursAfterSave(env: PublishEnv, slug: string) {
+async function refreshNeighborsAfterSave(env: PublishEnv, slug: string) {
   try {
-    const updated = await refreshNeighbours(env, slug);
+    const updated = await refreshNeighbors(env, slug);
     // The save's own purge ran before these rows changed, so a page re-stored in between would keep the old lists.
-    const purged = updated.length > 0 ? await purgePosts(`refreshNeighbours ${slug}`) : null;
+    const purged = updated.length > 0 ? await purgePosts(`refreshNeighbors ${slug}`) : null;
     return { ok: true as const, updated, purged };
   } catch (error) {
     console.error(
-      JSON.stringify({ alert: "neighbour-refresh-failed", slug, detail: errorMessage(error) }),
+      JSON.stringify({ alert: "neighbor-refresh-failed", slug, detail: errorMessage(error) }),
     );
     return {
       ok: false as const,
@@ -402,7 +402,7 @@ export async function savePost(
       commitSha: written.commitSha,
       record: gated,
       askSync: null,
-      neighbours: null,
+      neighbors: null,
       purged: null as PurgeOutcome,
       d1Retried: false,
       previewLinksRevoked: null as number | null,
@@ -439,7 +439,7 @@ export async function savePost(
     console.error(JSON.stringify({ alert: "divergence-clear-failed", detail: errorMessage(error) }));
   }
 
-  const neighbours = await refreshNeighboursAfterSave(env, record.slug);
+  const neighbors = await refreshNeighborsAfterSave(env, record.slug);
 
   // Revoked AFTER the D1 sync: the read path checks status = 'draft', so revoking first opens a window.
   // A surviving token is inert, so a failure does not throw.
@@ -462,7 +462,7 @@ export async function savePost(
     record,
     askSync,
     /** Other posts' related and backlinks lists rewritten by this save, or why they could not be. */
-    neighbours,
+    neighbors,
     /** False when the cache purge failed or was never reached, null when the runtime cannot purge. */
     purged,
     d1Retried: converged.retried,

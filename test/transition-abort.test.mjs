@@ -5,7 +5,7 @@ import { isAbandonedTransition } from "../app/lib/transition-abort.mjs";
 
 /* The one rejection the header lets go (app/lib/transition-abort.mjs): the browser abandoning a view transition. */
 
-await test("the abandoned-transition error is recognised", () => {
+await test("the abandoned-transition error is recognized", () => {
   const error = new DOMException("Transition was aborted because of invalid state", "InvalidStateError");
   assert.equal(isAbandonedTransition(error), true);
 });

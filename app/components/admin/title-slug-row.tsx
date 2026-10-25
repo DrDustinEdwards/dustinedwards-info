@@ -11,7 +11,7 @@ const TITLE_LIMIT = 70;
 
 // Strips rather than transliterates: a wrong guess at a non-ASCII character lands in a permanent URL.
 // The series rule, with apostrophes dropped rather than split on ("don't" is "dont") and a length cap.
-function slugify(title: string) {
+function titleSlug(title: string) {
   return seriesSlug(title.replace(/['’]/g, ""))
     .slice(0, 80)
     .replace(/-+$/, "");
@@ -54,7 +54,7 @@ export function TitleSlugRow({
           value={title}
           onChange={(event) => {
             setTitle(event.target.value);
-            if (isNew && !slugPinned) setSlug(slugify(event.target.value));
+            if (isNew && !slugPinned) setSlug(titleSlug(event.target.value));
           }}
           placeholder="Untitled"
           required

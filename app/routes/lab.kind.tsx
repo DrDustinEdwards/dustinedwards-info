@@ -1,4 +1,4 @@
-import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -10,7 +10,7 @@ import { getRegistryItem, listRegistry } from "~/db/registry";
 import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRow, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentLabel, reagentRow, reagentRows, reagentSource, strainRow, strainRows } from "~/kb/registry/catalog.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/kb/registry/catalog.mjs";

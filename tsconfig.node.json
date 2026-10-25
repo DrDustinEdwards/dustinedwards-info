@@ -192,7 +192,7 @@
     // which the Node lib provides.
     "app/lib/theme.ts",
     "app/lib/search/query.mjs",
-    // The color maths. check:contrast computes with it, on the same principle as
+    // The color math. check:contrast computes with it, on the same principle as
     // query.mjs: there is one rule for a ratio, not one per reader.
     "app/lib/contrast.mjs",
     // What an asset IS. The Worker imports it and build:assets imports it, on
@@ -285,7 +285,7 @@
     // pipeline) and the hast builders (chart, diagram). Each is dependency-free.
     "app/lib/https-redirect.mjs",
     "app/lib/error-message.mjs",
-    "app/lib/bytes.mjs",
+    "app/lib/fingerprint.mjs",
     // check:links resolves every internal link through the gateway's own redirect rules and the
     // site's own path builders, and reads the header menus as they render.
     "app/lib/wordpress-redirects.mjs",

@@ -26,6 +26,6 @@ Not as far as the evidence shows. Despite the popularity of learning styles, a r
 
 ## Literature cited
 
-- Coffield, F., Moseley, D., Hall, E., and Ecclestone, K. (2004). Learning styles and pedagogy in post-16 learning: a systematic and critical review. London: Learning and Skills Research Centre.
+- Coffield, F., Moseley, D., Hall, E., and Ecclestone, K. (2004). Learning styles and pedagogy in post-16 learning: a systematic and critical review. London: Learning and Skills Research Center.
 - Fleming, N. and Mills, C. (1992). [Not Another Inventory, Rather a Catalyst for Reflection](https://onlinelibrary.wiley.com/doi/abs/10.1002/j.2334-4822.1992.tb00213.x). To Improve the Academy, 11(1), 137-155.
 - Pashler, H., McDaniel, M., Rohrer, D., and Bjork, R. (2008). [Learning styles: Concepts and evidence](https://journals.sagepub.com/doi/full/10.1111/j.1539-6053.2009.01038.x). Psychological Science in the Public Interest, 9(3), 105-119.

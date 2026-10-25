@@ -8,7 +8,7 @@ import {
   ChildRegistry,
   descendantPids,
   killTree,
-  normaliseCommand,
+  normalizeCommand,
   portListeners,
   readProcessTable,
 } from "../child-processes.mjs";
@@ -47,7 +47,7 @@ export async function preflight() {
       for (const pid of holders) {
         const live = table.get(pid);
         const matches =
-          live && VITE_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)));
+          live && VITE_NEEDLES.every((needle) => live.command.includes(normalizeCommand(needle)));
         if (!matches) {
           strangers.push({ pid, command: live?.command ?? "(no command line could be read)" });
           continue;
@@ -324,7 +324,7 @@ function recordServerSurvivors() {
     const live = table.get(pid);
     if (!live) continue;
     // The same matcher the port preflight uses, so one needle set has one meaning.
-    if (!VITE_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)))) continue;
+    if (!VITE_NEEDLES.every((needle) => live.command.includes(normalizeCommand(needle)))) continue;
     registry.record(pid, "the vite preview server", VITE_NEEDLES);
     recorded.add(pid);
   }

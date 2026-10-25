@@ -26,7 +26,7 @@ const fileIsDraft = (raw: string) => parseProcedure({ file: "", raw }).data.draf
 const withDraft = (raw: string, draft: boolean) => (fileIsDraft(raw) === draft ? raw : withPublication(raw, { draft }));
 
 /** A date the file wrote, as the ISO instant a summary carries; null when the file wrote none. */
-function isoDay(value: unknown): string | null {
+function isoInstant(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const at = Date.parse(value);
   return Number.isNaN(at) ? null : new Date(at).toISOString();
@@ -72,7 +72,7 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
           path: row.draft ? null : row.path,
           publishAt: null,
           publishedAt: null,
-          updatedAt: isoDay(row.updated),
+          updatedAt: isoInstant(row.updated),
         };
       });
       return summaries
@@ -93,7 +93,7 @@ export function procedureHandler(env: ProcedureEnv): ContentKindHandler {
         path: draft || typeof data.path !== "string" ? null : data.path,
         publishAt: null,
         publishedAt: null,
-        updatedAt: isoDay(data.updated),
+        updatedAt: isoInstant(data.updated),
         format: "markdown",
         source: file.content,
         version: file.sha,

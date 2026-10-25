@@ -4,7 +4,7 @@
  * revocation is a delete and there is nothing in it to read, edit or forge.
  */
 
-import { bytesToBase64 } from "./bytes.mjs";
+import { base64url } from "@dustinedwards/site-runtime/encoding";
 
 export const TOKEN_BYTES = 32;
 
@@ -30,16 +30,6 @@ export function mintToken() {
   const bytes = new Uint8Array(TOKEN_BYTES);
   crypto.getRandomValues(bytes);
   return base64url(bytes);
-}
-
-/**
- * Without Buffer: it does not exist in the Worker runtime unless nodejs_compat is on.
- *
- * @param {Uint8Array} bytes
- * @returns {string}
- */
-export function base64url(bytes) {
-  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /**

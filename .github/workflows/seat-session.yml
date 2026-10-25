@@ -249,7 +249,7 @@ jobs:
           # Actions logs on a public repo are public.
           show_full_output: false
           # User scope, where strictAllowlist and the sandbox credential keys are
-          # honoured. The Read and Edit denies bind the file tools, which run outside any
+          # honored. The Read and Edit denies bind the file tools, which run outside any
           # sandbox. The sandbox binds Bash and every process it starts: required
           # (failIfUnavailable), with no unsandboxed retry, network to github.com only
           # for git push, and no writes to the repo's git config or hooks. The sandbox

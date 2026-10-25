@@ -143,7 +143,7 @@ function card(post) {
           color: INK,
           lineHeight: 1.12,
           letterSpacing: "-0.01em",
-          // Satori honours `wordBreak` but ignores `overflowWrap`.
+          // Satori honors `wordBreak` but ignores `overflowWrap`.
           wordBreak: "break-word",
         },
       },

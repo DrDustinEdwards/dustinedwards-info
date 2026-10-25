@@ -131,7 +131,7 @@ export function PostsTable({
                       <Link to={`/admin/posts/${post.slug}/edit`} className="cap-table-open">
                         {post.title}
                       </Link>
-                      {/* A word first; shape and colour separate the three again under forced-colors. */}
+                      {/* A word first; shape and color separate the three again under forced-colors. */}
                       <Status tone={STATE_TONE[post.state]}>{post.state}</Status>
                       {post.featured ? <Pill variant="outline">Featured</Pill> : null}
                       <span className="cap-table-aside">/{post.slug}</span>

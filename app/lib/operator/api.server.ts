@@ -529,7 +529,7 @@ async function savePostTool(
       // The AI index cannot fail a save, so its outcome is reported rather than raised.
       askSync: result.askSync,
       // Other posts' related and backlinks lists this save rewrote, or why it could not: reported, never raised.
-      neighbours: result.neighbours,
+      neighbors: result.neighbors,
       purged: result.purged,
     },
   };

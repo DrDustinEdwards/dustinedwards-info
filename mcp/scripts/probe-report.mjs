@@ -11,7 +11,7 @@
  *
  * Reads through `wrangler kv`, NOT through an HTTP endpoint on the Worker. The
  * probe deliberately has no control plane: a capture log that describes a
- * client's authentication behaviour should not be reachable from the internet,
+ * client's authentication behavior should not be reachable from the internet,
  * and this way there is no probe credential to leak in the first place.
  *
  *   node scripts/probe-report.mjs
@@ -58,7 +58,7 @@ const keys = JSON.parse(wrangler("kv", "key", "list", "--prefix", "capture:"))
   .sort();
 
 // Clearing matters before a real measurement: synthetic curl checks land in the
-// same log and would be read as client behaviour.
+// same log and would be read as client behavior.
 if (process.argv.includes("--reset")) {
   for (const k of keys) wrangler("kv", "key", "delete", k);
   try {

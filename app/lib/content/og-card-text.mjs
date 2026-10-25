@@ -2,7 +2,7 @@
 // route names a page's card through it without importing the markdown renderer. Characters stand in
 // for width, so every number here was measured off rendered cards.
 
-import { fnv1a32 } from "../bytes.mjs";
+import { fnv1a32 } from "../fingerprint.mjs";
 import { longDateUTC } from "../long-date.mjs";
 import { ASSET_PREFIX } from "../media/classify.mjs";
 

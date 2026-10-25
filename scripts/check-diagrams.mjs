@@ -44,7 +44,7 @@ const themeBlocks = {
 };
 
 assert(
-  "every diagram colour role has a token",
+  "every diagram color role has a token",
   DIAGRAM_ROLE_NAMES.every((role) => role in DIAGRAM_ROLE_TOKENS),
 );
 for (const [key, token] of Object.entries(DIAGRAM_ROLE_TOKENS)) {
@@ -146,7 +146,7 @@ if (!existsSync(ARTIFACT)) {
 }
 
 // Measured by running it, never summed: 83 checks and 202 declarations on 2026-10-25, over 3 diagrams
-// and Prelum's 10 colour roles.
+// and Prelum's 10 color roles.
 const MINIMUM_CHECKS = 80;
 const floorBreach = assertFloor("check:diagrams", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);

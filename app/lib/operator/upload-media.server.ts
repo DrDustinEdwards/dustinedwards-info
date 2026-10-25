@@ -2,7 +2,7 @@ import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contra
 import { storeUpload } from "~/lib/media/upload.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "@dustinedwards/site-runtime/body";
-import { base64ToBytes } from "~/lib/bytes.mjs";
+import { fromBase64 } from "@dustinedwards/site-runtime/encoding";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolResult } from "./descriptors";
 
@@ -20,7 +20,7 @@ function readDataUri(value: string): { type: string; payload: string } | null {
 function decodeBase64(payload: string): Uint8Array | null {
   // Null rather than a throw: the caller answers the agent that sent it with a 400 that says why.
   try {
-    return base64ToBytes(payload);
+    return fromBase64(payload);
   } catch {
     return null;
   }

@@ -7,7 +7,7 @@ import { NEB_TM_CALCULATOR, TM_CONDITIONS, TM_MIN_LENGTH, annealingSentence, pri
  * K, Tris, Mg or dNTPs, dnac1=500 nM, dnac2=0 and saltcorr=5 (the 1998 entropy correction), run on 2026-10-04, with selfcomp=True for the two
  * self-complementary sequences (Biopython does not detect them). These
  * are its outputs for the lab's twelve primers and three edge cases: two self-complementary sequences (the symmetry
- * term) and a homopolymer. A change to a nearest-neighbour value, an end term or the salt
+ * term) and a homopolymer. A change to a nearest-neighbor value, an end term or the salt
  * correction moves one of them. */
 const REFERENCE = {
   CATACTGAGCCAATGGTT: 51.7294,
@@ -27,7 +27,7 @@ const REFERENCE = {
   AAAAAAAAAAAAAAAAAAAA: 40.8506,
 };
 
-await test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbour to a thousandth of a degree", () => {
+await test("the Tm agrees with Biopython's SantaLucia 1998 nearest-neighbor to a thousandth of a degree", () => {
   for (const [sequence, expected] of Object.entries(REFERENCE)) {
     const tm = primerTm(sequence);
     assert.notEqual(tm, null, sequence);
@@ -58,7 +58,7 @@ await test("the page's statement names the method, its citation, and the stored 
   assert.ok(text.includes(TM_CONDITIONS.citation));
   assert.ok(text.includes(`${TM_CONDITIONS.sodiumMM} mM`));
   assert.ok(text.includes(`${TM_CONDITIONS.primerNM / 1000} `));
-  assert.match(text, /is an estimate for comparing primers/, "labelled an estimate, for comparing primers");
+  assert.match(text, /is an estimate for comparing primers/, "labeled an estimate, for comparing primers");
   assert.ok(!/annealing/i.test(text), "the Tm statement never mentions an annealing temperature as the Tm");
   const wide = new RegExp(`[${String.fromCharCode(0x2013)}${String.fromCharCode(0x2014)}]`);
   assert.ok(!wide.test(text), "no wide dash");

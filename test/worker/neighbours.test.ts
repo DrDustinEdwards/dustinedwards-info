@@ -5,14 +5,14 @@ import { getBlogPost } from "~/db";
 
 import { seedPost } from "./seed";
 
-/* Two posts can share a publish_at (a date-only schedule lands both at midnight). The neighbours
+/* Two posts can share a publish_at (a date-only schedule lands both at midnight). The neighbors
  * follow the listing's order, publish_at then id, so neither skips the other. */
 
 const AT = Math.floor(Date.UTC(2025, 5, 1) / 1000);
 
 const seed = (slug: string, publishAt: number) => seedPost(slug, { publishAt });
 
-describe("getBlogPost neighbours", () => {
+describe("getBlogPost neighbors", () => {
   it("LINKS TWO POSTS THAT SHARE A PUBLISH_AT to each other, in the listing's order", async () => {
     await seed("tie-before", AT - 86_400);
     await seed("tie-first", AT);

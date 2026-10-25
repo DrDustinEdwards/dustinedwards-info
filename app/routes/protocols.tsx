@@ -1,6 +1,6 @@
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
-import { parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -14,7 +14,7 @@ import { listRegistry } from "~/db/registry";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";

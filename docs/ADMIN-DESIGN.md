@@ -1,6 +1,6 @@
-# Admin behaviour
+# Admin behavior
 
-> **Look: Capsomer.** These rules are behaviour, access and what a write means. The shell, tokens, fonts and
+> **Look: Capsomer.** These rules are behavior, access and what a write means. The shell, tokens, fonts and
 > components are Capsomer's, with the page frame in `app/admin.css`.
 
 The rules the admin plane's pages follow. A specification, not a record of what

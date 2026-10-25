@@ -25,7 +25,7 @@ import {
   summaryText,
   yearOptions,
 } from "~/lib/cv/view.mjs";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   SITE_ORIGIN,

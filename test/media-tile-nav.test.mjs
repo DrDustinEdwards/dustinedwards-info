@@ -20,7 +20,7 @@ function grid(count, cols) {
 
 const ids = (rows) => rows.map((b) => b.items.map((i) => i.id));
 
-await test("bands groups tiles into rows by top and orders each row by centre", () => {
+await test("bands groups tiles into rows by top and orders each row by center", () => {
   assert.deepEqual(ids(bands(grid(5, 2))), [["t0", "t1"], ["t2", "t3"], ["t4"]]);
 });
 
@@ -68,7 +68,7 @@ await test("nextTile wraps left and right across rows in reading order, and stop
   assert.equal(nextTile(rows, "t5", "right"), null);
 });
 
-await test("nextTile moves up and down to the nearest centre, and stops at the top and bottom", () => {
+await test("nextTile moves up and down to the nearest center, and stops at the top and bottom", () => {
   const rows = bands(grid(5, 3));
   assert.equal(nextTile(rows, "t1", "down"), "t4");
   assert.equal(nextTile(rows, "t4", "up"), "t1");

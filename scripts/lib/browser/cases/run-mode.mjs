@@ -68,7 +68,7 @@ export async function run({ page }) {
     }
     const root = document.documentElement;
     const was = root.getAttribute("data-theme");
-    // A colour transition would be read mid-way after the theme flips.
+    // A color transition would be read mid-way after the theme flips.
     // A constructed sheet, because the page's CSP refuses an injected <style>.
     const still = new CSSStyleSheet();
     still.replaceSync("*, *::before, *::after { transition: none !important; }");

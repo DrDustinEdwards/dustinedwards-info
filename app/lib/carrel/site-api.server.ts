@@ -2,12 +2,15 @@
 // Here rather than in the route because the key is a secret, and secrets are read only in .server
 // modules (check:secrets).
 
+import { submitIndexNow } from "@drdustinedwards/site-helpers/indexnow";
 import { createSiteApi, type RateLimiter } from "@dustinedwards/site-api";
 import { data, type RouterContextProvider } from "react-router";
 
 import { carrelSiteAdapter } from "~/lib/carrel/site-adapter.server";
 import { documentHandlerContext, getEnv, getExecutionContext } from "~/lib/context";
+import { INDEXNOW_KEY } from "~/lib/indexnow.mjs";
 import { limitHit } from "~/lib/rate-limit.mjs";
+import { SITE_ORIGIN } from "~/lib/seo";
 
 const CARREL_RATE_LIMIT = 120;
 const CARREL_RATE_PERIOD_SECONDS = 60;
@@ -42,7 +45,10 @@ export async function handleCarrelRequest(
     }),
     key: env.CARREL_SITE_KEY,
     limiter: carrelLimiter(env),
+    // A published change tells IndexNow at once; a request from a preview origin sends nothing.
+    onPageChange: (paths, from) =>
+      submitIndexNow({ origin: SITE_ORIGIN, key: INDEXNOW_KEY, urls: paths.map((path) => `${SITE_ORIGIN}${path}`), from: from.url }),
   });
   if (!api.matches(request)) throw data("Not found", { status: 404 });
-  return api.handle(request);
+  return api.handle(request, getExecutionContext(context));
 }

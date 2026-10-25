@@ -12,7 +12,7 @@ export const MAX_TAGS = 12;
  * @param {unknown} raw
  * @returns {string}
  */
-export function normaliseTag(raw) {
+export function normalizeTag(raw) {
   if (typeof raw !== "string") return "";
   return raw
     .toLowerCase()
@@ -34,7 +34,7 @@ export function normaliseTag(raw) {
  * @param {unknown} input
  * @returns {string[]}
  */
-export function normaliseTags(input) {
+export function normalizeTags(input) {
   const parts = Array.isArray(input)
     ? input
     : typeof input === "string"
@@ -42,7 +42,7 @@ export function normaliseTags(input) {
       : [];
   const seen = new Set();
   for (const part of parts) {
-    const tag = normaliseTag(part);
+    const tag = normalizeTag(part);
     if (tag) seen.add(tag);
   }
   return [...seen].sort().slice(0, MAX_TAGS);
@@ -52,8 +52,8 @@ export function normaliseTags(input) {
  * @param {unknown} input
  * @returns {string}
  */
-export function serialiseTags(input) {
-  const tags = normaliseTags(input);
+export function serializeTags(input) {
+  const tags = normalizeTags(input);
   if (tags.length === 0) return "";
   return `${TAG_DELIMITER}${tags.join(TAG_DELIMITER)}${TAG_DELIMITER}`;
 }
@@ -64,7 +64,7 @@ export function serialiseTags(input) {
  */
 export function parseTags(stored) {
   if (typeof stored !== "string" || stored === "") return [];
-  return normaliseTags(stored);
+  return normalizeTags(stored);
 }
 
 /**
@@ -74,7 +74,7 @@ export function parseTags(stored) {
  * @returns {string | null}
  */
 export function exactTagNeedle(raw) {
-  const tag = normaliseTag(raw);
+  const tag = normalizeTag(raw);
   if (!tag) return null;
   return `%${TAG_DELIMITER}${tag}${TAG_DELIMITER}%`;
 }

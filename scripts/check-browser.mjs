@@ -204,9 +204,9 @@ if (subjectReachable) {
       "      - hover states, including the heading permalinks. Puppeteer rejects hover\n" +
       "        emulation, so this is owed as a real-device eyeball.\n" +
       "      - drag and drop onto the library, and the paste-to-upload path. Both need a real\n" +
-      "        DataTransfer that the automation API does not synthesise faithfully.\n" +
+      "        DataTransfer that the automation API does not synthesize faithfully.\n" +
       "      - the clipboard buttons. The headless permission prompt is not the real one.\n" +
-      "    BY JUDGEMENT:\n" +
+      "    BY JUDGMENT:\n" +
       "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
       "        attribute; a page that lays out correctly and is unreadable passes.\n",
   );

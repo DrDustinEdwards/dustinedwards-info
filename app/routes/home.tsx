@@ -5,7 +5,7 @@ import { ShellFooter } from "~/components/shell-footer";
 import { HomeIntro } from "~/components/home-intro";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
@@ -194,7 +194,7 @@ function Row({
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const jsonLd = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
+  const structuredData = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
   const { posts, featured, recent, papers, paperCount, discovery, podcast } = loaderData;
 
   return (
@@ -334,7 +334,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
         <HomePodcast episode={podcast} />
 
-        {jsonLd.map((data, i) => (
+        {structuredData.map((data, i) => (
           <script
             key={i}
             type="application/ld+json"

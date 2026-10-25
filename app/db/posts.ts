@@ -414,27 +414,27 @@ export async function getBlogPost(env: Env, slug: string) {
   if (!post) return null;
 
   const tagMap = await tagsForPosts(db, [post.id]);
-  return withNeighbours(db, post, tagMap.get(post.id) ?? []);
+  return withNeighbors(db, post, tagMap.get(post.id) ?? []);
 }
 
 export type PostRow = typeof posts.$inferSelect;
 
 /**
  * The Carrel preview's twin of getBlogPost, for a row built in memory rather than read from D1: the
- * same tags shape and the same neighbours, so the page renders exactly as it would once published.
+ * same tags shape and the same neighbors, so the page renders exactly as it would once published.
  */
 export async function previewBlogPost(env: Env, post: PostRow, tagSlugs: string[]) {
-  return withNeighbours(getDb(env), post, [...tagSlugs].sort());
+  return withNeighbors(getDb(env), post, [...tagSlugs].sort());
 }
 
-async function withNeighbours(db: DB, post: PostRow, tagSlugs: string[]) {
+async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
   // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing is
   // (newestFirstOrder), so posts sharing a publish_at are neighbors rather than skipped, and the parts of a
   // series follow one another. The slug is excluded so a previewed post, whose row may differ from the stored
-  // one, is not its own neighbour.
+  // one, is not its own neighbor.
   const at = post.publishAt ?? new Date();
   // This post's place in the order within its instant: its group key (the newest id of its series that day,
-  // else its own id), worked out in the same statement as the neighbours so there is one round trip.
+  // else its own id), worked out in the same statement as the neighbors so there is one round trip.
   const ownGroup = post.series
     ? sql`COALESCE((SELECT MAX(g.id) FROM posts g WHERE g.kind = 'post' AND g.status = ${PUBLISHED_STATUS} AND g.publish_at = ${Math.floor(at.getTime() / 1000)} AND g.series = ${post.series}), ${post.id})`
     : sql`${post.id}`;
@@ -558,7 +558,7 @@ export async function listPostLinkCorpus(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
 }
 
-/** The stored `related` and `backlinks` JSON of every file-sourced post, for the save's neighbour refresh to diff against. */
+/** The stored `related` and `backlinks` JSON of every file-sourced post, for the save's neighbor refresh to diff against. */
 export async function listPostDerivedLists(env: Env) {
   return getDb(env)
     .select({ slug: posts.slug, related: posts.related, backlinks: posts.backlinks })

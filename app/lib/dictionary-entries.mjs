@@ -6,12 +6,12 @@
  *
  * Each name is a real English word most readers rarely meet, so the page first says what the word means, then
  * what the software is. Sense 1 follows the dictionaries; sense 2 is the software, plain and factual, and
- * carries the subject label "software." in italics, as a dictionary marks a specialised sense.
+ * carries the subject label "software." in italics, as a dictionary marks a specialized sense.
  */
 
 /**
  * An etymology is text with foreign words marked, so the page can set them in italics with their
- * language and the twin can emphasise them: a string is plain text, a pair is [lang, word].
+ * language and the twin can emphasize them: a string is plain text, a pair is [lang, word].
  *
  * @typedef {string | [string, string]} EtymologyPart
  * @typedef {{

@@ -67,4 +67,4 @@ Prelum's core (`figure`, `details`) and its `editorialPack` (`chart`, `diagram`,
 
 ## Frontmatter URL fields
 
-`rehypeUrlProtocols` walks the rendered tree and cannot see frontmatter, so two fields carry their own guard: `further_reading[].url` (URL check plus `.refine(isAllowedUrl)`) and `cover.src` (a site-absolute regex, which also catches protocol-relative `//host`, composed with `.refine(isAllowedUrl)`). The regex alone once blocked `javascript:` only as a side effect; relaxing the path rule would have reopened it with no test failing. `check:urls` therefore asserts the refinement against the parsed source, not only by behaviour.
+`rehypeUrlProtocols` walks the rendered tree and cannot see frontmatter, so two fields carry their own guard: `further_reading[].url` (URL check plus `.refine(isAllowedUrl)`) and `cover.src` (a site-absolute regex, which also catches protocol-relative `//host`, composed with `.refine(isAllowedUrl)`). The regex alone once blocked `javascript:` only as a side effect; relaxing the path rule would have reopened it with no test failing. `check:urls` therefore asserts the refinement against the parsed source, not only by behavior.

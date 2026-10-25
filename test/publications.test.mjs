@@ -139,7 +139,7 @@ await test("a hosted paper: the PDF's hash, its derived path, its text and its a
   assert.ok(noFile.errors.some((e) => e.startsWith("pdfPath:") && e.includes("is not in the repository")), noFile.errors.join("\n"));
 });
 
-await test("hosting a paper with no redistribution licence is Dustin's call, per DOI", async () => {
+await test("hosting a paper with no redistribution license is Dustin's call, per DOI", async () => {
   const out = await compile(GODFATHER, withField(godfather(), { license: null, licenseSource: "none-deposited" }));
   assert.equal(out.ok, false);
   assert.ok(out.errors.some((e) => e.startsWith("license:") && e.includes("Dustin's call")), out.errors.join("\n"));

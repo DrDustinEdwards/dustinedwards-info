@@ -7,7 +7,7 @@
 // private repos", "fully wired just like the public ones"); a private system carries no repo
 // link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
-import { modelMapData } from "capsomer/behaviour/system-map";
+import { modelMapData } from "capsomer/behavior/system-map";
 import { z } from "zod";
 
 export const SYSTEMS_PATH = "/systems";

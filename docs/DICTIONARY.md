@@ -32,7 +32,7 @@ etymology:                      # text, and [language, word] pairs for foreign w
 senses:                         # exactly two: what the word means, then the software
   - "The protein shell of a virus particle."
   - "A system that stores the instructions and decisions of AI agents."
-senseLabels: [null, software]   # sense 2 is the software, labelled "software." in italics
+senseLabels: [null, software]   # sense 2 is the software, labeled "software." in italics
 audio: /audio/capsid.mp3        # a clip that exists in public/audio/
 draft: true                     # optional. true: the page shows no entry, twin and record carry none
 ---

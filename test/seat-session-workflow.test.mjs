@@ -91,7 +91,7 @@ await test("no allowed Bash pattern is an unbounded interpreter", () => {
 });
 
 // The settings input is JSON in a YAML block scalar; the Action writes it to user scope, where
-// the sandbox credential keys are honoured.
+// the sandbox credential keys are honored.
 function settings() {
   const m = /^ {10}settings: \|\n((?: {12}.*\n)+)/m.exec(CODE);
   assert.ok(m, "no settings block parsed");

@@ -3,7 +3,7 @@ import { desc, sql } from "drizzle-orm";
 import { getDb } from "~/db";
 import { zeroResultQueries } from "~/db/schema";
 import {
-  normaliseZeroResultQuery,
+  normalizeZeroResultQuery,
   ZERO_RESULT_RETENTION_SECONDS,
 } from "./zero-result.mjs";
 
@@ -11,7 +11,7 @@ import {
 
 /** Upsert on the query, so table size tracks distinct misses rather than traffic. */
 export async function recordZeroResult(env: Env, raw: string): Promise<void> {
-  const query = normaliseZeroResultQuery(raw);
+  const query = normalizeZeroResultQuery(raw);
   if (query === null) return;
 
   const db = getDb(env);

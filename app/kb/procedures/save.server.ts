@@ -108,7 +108,7 @@ function frozenEditMessage(record: { version: string | null; path: string }) {
  * The one write door for a procedure's row and search records: a save and the sync both end here. A published
  * procedure with a version is also frozen, in the same batch: the copy is written once and the database refuses to
  * change it. `compile` has already refused a file that would change a frozen version, so the check after the batch
- * is the last line of defence: it fails loudly if the sealed copy is not made from this file.
+ * is the last line of defense: it fails loudly if the sealed copy is not made from this file.
  */
 export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
   const db = env.DB;

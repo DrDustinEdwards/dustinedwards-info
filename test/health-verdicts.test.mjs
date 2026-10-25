@@ -260,7 +260,7 @@ await test("A PASSING check stays exactly as narrow as it was", () => {
 await test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
   // detail carries an R2 OBJECT KEY on media-backup-drift and the shadow table
   // names on fts-equality. That is what the names-and-booleans rule is for.
-  const serialised = JSON.stringify(
+  const serialized = JSON.stringify(
     publicHealthBody({
       checks: [
         { name: "media-backup-drift", ok: false, detail: "og/secret-key.png has no twin" },
@@ -268,9 +268,9 @@ await test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
       ],
     }),
   );
-  assert.doesNotMatch(serialised, /secret-key/, "an R2 key must not reach the wire");
-  assert.doesNotMatch(serialised, /docsize/, "shadow table names must not either");
-  assert.doesNotMatch(serialised, /detail/, "the field itself must be absent");
+  assert.doesNotMatch(serialized, /secret-key/, "an R2 key must not reach the wire");
+  assert.doesNotMatch(serialized, /docsize/, "shadow table names must not either");
+  assert.doesNotMatch(serialized, /detail/, "the field itself must be absent");
 });
 
 await test("a failing check with NO counts is still just name and ok", () => {

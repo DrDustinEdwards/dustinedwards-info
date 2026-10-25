@@ -16,7 +16,7 @@ import { storageOf } from "./classify.mjs";
 import { deleteMediaObject, isManagedKey } from "./core.server";
 import { rebuildMediaIndex } from "./rebuild.server";
 import { resolveCitations, type MediaCitation } from "./resolvers.server";
-import { normaliseTags, parseTags } from "./tags.mjs";
+import { normalizeTags, parseTags } from "./tags.mjs";
 
 /*
  * One handler per intent of the media library's action. The route keeps the dispatch and, for the
@@ -35,7 +35,7 @@ export async function bulkTagMedia(
   const keys = form.getAll("key").map(String).filter(Boolean);
   if (keys.length === 0) return { message: "Nothing selected.", refused: true };
 
-  const wanted = normaliseTags(String(form.get("tag") ?? ""))[0];
+  const wanted = normalizeTags(String(form.get("tag") ?? ""))[0];
   if (!wanted) return { message: "Enter a tag first.", refused: true };
   const adding = intent === "bulk-add-tag";
 

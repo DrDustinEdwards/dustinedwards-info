@@ -3,7 +3,7 @@
 // this, so a field is described here and nowhere else. Pure: the route passes in the rows it read from D1. The page's
 // markdown table (the twin, the search records, the invariants) is still written from the same rows by compile.mjs.
 
-import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { foldText } from "../cv/view.mjs";
 import { HOSTS, PHAGES_PAGE_PATH, phageSlug } from "./compile.mjs";
@@ -20,7 +20,7 @@ export function hostLabel(key) {
 const byYearThenName = (a, b) => a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true });
 
 export const PHAGES = defineCatalog(
-  /** @type {import("capsomer/behaviour/catalog").CatalogDefinition<Phage>} */ ({
+  /** @type {import("capsomer/behavior/catalog").CatalogDefinition<Phage>} */ ({
     id: "phages",
     noun: ["phage", "phages"],
     basePath: PHAGES_PAGE_PATH,

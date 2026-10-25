@@ -1,4 +1,4 @@
-import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
+import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -8,7 +8,7 @@ import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { listRegistry } from "~/db/registry";
 import { getEnv } from "~/lib/context";
-import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { INVENTORY, LAB_PATH, inventoryRows, kindLabel } from "~/kb/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";

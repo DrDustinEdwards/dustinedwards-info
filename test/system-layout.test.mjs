@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { layoutMap } from "capsomer/behaviour/system-map";
+import { layoutMap } from "capsomer/behavior/system-map";
 import { faultsOf, layoutKey, sceneOf } from "capsomer/system-map-circles";
 
 import { loadSystemModel, mapData } from "../app/lib/systems.mjs";

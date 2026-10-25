@@ -25,7 +25,7 @@ A document has no draft state, so it is always published:
 
 ## What a save is held to
 
-`app/lib/llms/validate.mjs` is the one judgement. `check:machine-readable` (`scripts/machine-readable/llms.mjs`)
+`app/lib/llms/validate.mjs` is the one judgment. `check:machine-readable` (`scripts/machine-readable/llms.mjs`)
 and the save both call `llmsChecks`, so a file CI passes is the file a save accepts:
 
 - not empty, longer than 200 bytes (the retired seed was 247), at most 64 KiB, LF only, ends with a newline,

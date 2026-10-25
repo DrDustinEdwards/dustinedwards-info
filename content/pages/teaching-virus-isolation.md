@@ -28,7 +28,7 @@ The course begins with the lab safety section of the [SEA-PHAGES Phage Discovery
 
 Before the first class session, students complete Texas A&M University System [TrainTraq](https://traintraq.tamus.edu/) course 2111743, Lab Safety.
 
-An additional on-site safety training covers lab-specific hazards, the location of safety equipment and evacuation routes, and students sign an acknowledgement that they have completed all safety training by the first class session. Lab safety is a component of the final course grade, and negligence can result in a student being dropped from the course.
+An additional on-site safety training covers lab-specific hazards, the location of safety equipment and evacuation routes, and students sign an acknowledgment that they have completed all safety training by the first class session. Lab safety is a component of the final course grade, and negligence can result in a student being dropped from the course.
 
 ## Host bacteria
 

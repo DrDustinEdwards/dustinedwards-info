@@ -27,7 +27,7 @@ permissions:
 
 # A run must never stack on a running one. Two drills at once would each see
 # the other's scratch database, and while the sweep in the drill only removes
-# databases older than two hours, serialising them removes the question.
+# databases older than two hours, serializing them removes the question.
 concurrency:
   group: restore-drill
   cancel-in-progress: false

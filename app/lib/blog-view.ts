@@ -6,13 +6,13 @@ import { errorMessage } from "~/lib/error-message.mjs";
 // The public post and the draft preview both render this one projection, so the preview cannot
 // quietly lose a section the public page has.
 
-type Neighbour = { slug: string; title: string } | null;
+type Neighbor = { slug: string; title: string } | null;
 
 // Neighbors widened to nullable: `getBlogPost`'s inferred type wrongly says a post always has one.
 type LoadedPost = Omit<
   NonNullable<Awaited<ReturnType<typeof getBlogPost>>>,
   "previous" | "next"
-> & { previous: Neighbour; next: Neighbour };
+> & { previous: Neighbor; next: Neighbor };
 
 type SeriesParts = Awaited<ReturnType<typeof listSeriesParts>>;
 

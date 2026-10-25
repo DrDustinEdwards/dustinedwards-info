@@ -120,7 +120,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
                     <tr key={check.name}>
                       <th scope="row">
                         {copy.name}
-                        {/* Word, shape and colour: three channels, so it still reads under forced-colors. */}
+                        {/* Word, shape and color: three channels, so it still reads under forced-colors. */}
                         <Status tone="crit">failing</Status>
                       </th>
                       <td>
