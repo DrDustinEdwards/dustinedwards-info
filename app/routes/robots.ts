@@ -1,7 +1,7 @@
 import { robotsDocument } from "@drdustinedwards/site-helpers/robots";
 
 import { getEnv } from "~/lib/context";
-import { HOURLY_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import { HOURLY_CACHE_CONTROL, ROBOTS_DISALLOW, SITE_ORIGIN } from "~/lib/seo";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import type { Route } from "./+types/robots";
 
@@ -15,8 +15,8 @@ export function loader({ context }: Route.LoaderArgs) {
   const preview = isWorkerPreview(getEnv(context));
   const body = robotsDocument({
     origin: SITE_ORIGIN,
-    disallow: ["/admin", "/lab", "/preview", "/search/ask"],
-    notes: [`LLM guide: ${SITE_ORIGIN}/llms.txt`],
+    disallow: ROBOTS_DISALLOW,
+    notes: [`AI usage policy: ${SITE_ORIGIN}/ai.txt`, `LLM guide: ${SITE_ORIGIN}/llms.txt`],
     preview,
   });
   return new Response(body, {
