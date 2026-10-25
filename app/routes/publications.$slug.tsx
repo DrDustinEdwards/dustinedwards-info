@@ -31,8 +31,11 @@ import {
   personId,
   personNode,
   publicHtmlHeaders,
+  searchTitle,
+  SERP_DESCRIPTION_LIMIT,
   SITE,
   SITE_ORIGIN,
+  truncateForSerp,
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";
 
@@ -81,14 +84,15 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const abstractUrl = `${SITE_ORIGIN}${pagePath}`;
   const pdfUrl = pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null;
 
-  const description = paper.abstract
-    ? truncateAtWord(decodeEntities(paper.abstract), 155)
+  const summary = paper.abstract
+    ? decodeEntities(paper.abstract).replace(/\s+/g, " ").trim()
     : `${title}. ${decodeEntities(paper.journal ?? "")} ${paper.year}`.trim();
 
   return [
     ...pageMeta({
-      title: `${title} | ${SITE.name}`,
-      description,
+      title: searchTitle(title),
+      socialTitle: `${title} | ${SITE.name}`,
+      description: truncateForSerp(summary, SERP_DESCRIPTION_LIMIT),
       path: pagePath,
       ogType: "article",
     }),
@@ -102,14 +106,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
       href: `${SITE_ORIGIN}${paperMarkdownPath(slug)}`,
     },
   ];
-}
-
-function truncateAtWord(text: string, limit: number) {
-  const flat = text.replace(/\s+/g, " ").trim();
-  if (flat.length <= limit) return flat;
-  const cut = flat.slice(0, limit);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > limit * 0.6 ? cut.slice(0, space) : cut).trimEnd()}...`;
 }
 
 function Authors({ authors }: { authors: string[] }) {

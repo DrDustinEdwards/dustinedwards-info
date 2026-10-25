@@ -1,4 +1,4 @@
-import { headTags } from "@drdustinedwards/site-helpers/head";
+import { SERP_TITLE_LIMIT, headTags, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
@@ -75,11 +75,14 @@ export function pageMeta(page: {
   path: string;
   image?: string;
   ogType?: "website" | "article";
+  /** `og:title` and `twitter:title`, where they keep more than the search title (a paper's whole title). */
+  socialTitle?: string;
 }) {
   return headTags({
     origin: SITE_ORIGIN,
     path: page.path,
     title: page.title,
+    socialTitle: page.socialTitle,
     description: page.description,
     image: page.image ?? DEFAULT_OG_IMAGE,
     siteName: SITE.name,
@@ -88,6 +91,16 @@ export function pageMeta(page: {
 }
 
 export { SERP_DESCRIPTION_LIMIT, SERP_TITLE_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
+
+/**
+ * The `<title>` a search result shows: the title with its suffix where both fit, else the suffix dropped and the title cut
+ * at a word by Prelum's `truncateForSerp`. Only this title is shortened: the page's heading, `og:title` and the citation and
+ * JSON-LD metadata keep the whole title, which for a paper is a fact.
+ */
+export function searchTitle(title: string, suffix: string = ` | ${SITE.name}`): string {
+  const full = `${title}${suffix}`;
+  return full.length <= SERP_TITLE_LIMIT ? full : truncateForSerp(title, SERP_TITLE_LIMIT);
+}
 
 /** The home page's Person: the same node as `personNode`, joined to it by the shared `@id`. */
 export function personJsonLd(origin: string) {
