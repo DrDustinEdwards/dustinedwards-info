@@ -20,6 +20,7 @@ import {
   SITE_ORIGIN,
   webSiteJsonLd,
   pageMeta,
+  searchTitle,
 } from "~/lib/seo";
 import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { Enhance } from "~/components/enhance";
@@ -41,7 +42,12 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta() {
-  return pageMeta({ title: `${SITE.name}, ${SITE.role} at ${SITE.affiliation}`, description: SITE.description, path: "/" });
+  return pageMeta({
+    title: searchTitle(`${SITE.name}, ${SITE.role}`, ` at ${SITE.affiliation}`),
+    socialTitle: `${SITE.name}, ${SITE.role} at ${SITE.affiliation}`,
+    description: SITE.description,
+    path: "/",
+  });
 }
 
 /** How many papers the Publications section shows. */
