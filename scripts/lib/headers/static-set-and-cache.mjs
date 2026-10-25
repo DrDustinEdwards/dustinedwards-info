@@ -25,6 +25,8 @@ const RATIFIED = {
   // The two OSHP recommends and this site had not sent: the shared standard supplies them.
   "X-DNS-Prefetch-Control": "off",
   "X-Permitted-Cross-Domain-Policies": "none",
+  // TDMRep's training-rights reservation, the family bot policy Dustin set on 2026-10-25 (Prelum 0.8.0).
+  "tdm-reservation": "1",
 };
 
 /**

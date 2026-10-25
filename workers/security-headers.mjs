@@ -3,6 +3,7 @@
 // verify-live import the set instead of parsing source for it, and so the list of deviations is the one place to read what
 // this site does differently from the standard and why.
 
+import { TDM_RESERVATION_HEADERS } from "@drdustinedwards/site-helpers/robots";
 import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
 
 /**
@@ -39,5 +40,11 @@ export const SITE_HEADER_OVERRIDES = Object.freeze({
   },
 });
 
-/** The set this site sends: the standard and the deviations above. */
-export const SECURITY_HEADERS = Object.freeze(buildSecurityHeaders({ overrides: SITE_HEADER_OVERRIDES }));
+/** The set this site sends: the standard, the deviations above, and Prelum's TDMRep header reserving training rights as /ai.txt says.
+ *
+ * @type {Readonly<Record<string, string>>}
+ */
+export const SECURITY_HEADERS = Object.freeze({
+  ...buildSecurityHeaders({ overrides: SITE_HEADER_OVERRIDES }),
+  ...TDM_RESERVATION_HEADERS,
+});
