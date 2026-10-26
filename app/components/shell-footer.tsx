@@ -13,7 +13,7 @@ import { PUBLISHED_PAGES } from "~/lib/published-pages.generated.mjs";
 export function ShellFooter() {
   return (
     <footer className="site-shell-footer">
-      <div className="tracks" dangerouslySetInnerHTML={{ __html: familyFooterHtml({ origin: "", published: PUBLISHED_PAGES }) }} />
+      <div className="tracks" dangerouslySetInnerHTML={{ __html: familyFooterHtml({ site: "dustinedwards", origin: "", published: PUBLISHED_PAGES }) }} />
     </footer>
   );
 }
