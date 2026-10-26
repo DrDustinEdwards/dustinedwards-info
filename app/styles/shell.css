@@ -97,27 +97,28 @@
   color: var(--brand);
 }
 
-.footer-grid,
+/* The name on the left and the three link columns to its right, their tops aligned. */
+.footer-letterhead {
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+}
+
 .footer-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--s-5);
 }
 
-.footer-grid {
-  padding-block-start: var(--s-4);
-  border-block-start: var(--line-w) solid var(--text);
-}
-
 @media (min-width: 48rem) {
-  .footer-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  .footer-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     column-gap: var(--gutter);
   }
+}
 
-  .footer-columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--gutter);
+@media (max-width: 46rem) {
+  .footer-letterhead {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -3,7 +3,7 @@
    quieter voice. Set between two rules so it reads as an entry lifted from a dictionary page. */
 
 .term-entry {
-  max-width: var(--measure);
+  /* The column's full width, so its rules line up with the parts' rules under it. */
   margin: 0.5rem 0 2rem;
   padding: 1rem 0 1.125rem;
   border-top: var(--line-w-thick) solid var(--text-heading);

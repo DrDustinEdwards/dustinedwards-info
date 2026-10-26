@@ -92,7 +92,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const sections = contentsOf(page.html);
   return (
     <PageShell
-      rail={sections.length >= CONTENTS_MIN ? <PageContents sections={sections} /> : undefined}
+      rail={sections.length >= CONTENTS_MIN ? <PageContents sections={sections} /> : null}
       trail={
         <>
           {contentPageJsonLd(page, trail, entry).map((block, i) => (

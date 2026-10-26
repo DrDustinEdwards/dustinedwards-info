@@ -3,6 +3,7 @@ import { Link, useLocation, useMatches } from "react-router";
 
 import { Enhance } from "~/components/enhance";
 import { SearchTrigger } from "~/components/search-trigger";
+import { SiteLogoHeader } from "~/components/site-logo";
 import { Icon, SiteNavPanel } from "~/components/site-nav-panel";
 import { SiteSpeculation } from "~/components/site-speculation";
 import { HeaderTip } from "~/components/header-tip";
@@ -141,6 +142,8 @@ export function SiteHeader() {
     <>
     <header className="cap-site-header site-header" data-cap="site-header" data-links="right" data-site-header="">
       <Link to="/" className="cap-site-header-logo site-header-brand">
+        {/* Decorative: the wordmark beside it is the link's name, so naming the mark would read twice. */}
+        <SiteLogoHeader className="site-header-mark" />
         {SITE.name}
       </Link>
       <nav className="cap-site-header-sections site-header-nav" id={NAV_ID} aria-label="Site" data-site-nav="">

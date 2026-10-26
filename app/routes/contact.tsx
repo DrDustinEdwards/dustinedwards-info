@@ -22,7 +22,7 @@ export function meta() {
 
 export default function Contact() {
   return (
-    <PageShell>
+    <PageShell rail={null}>
       <header className="page-head">
         <h1>Contact</h1>
       </header>
