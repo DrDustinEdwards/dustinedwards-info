@@ -17,7 +17,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
@@ -25,12 +25,12 @@ import { SITE_ORIGIN } from "~/lib/seo";
 
 import { LLMS_PATH, LLMS_SETTING_KEY, llmsChecks, llmsErrors } from "./validate.mjs";
 
-type LlmsEnv = Env & { GITHUB_TOKEN?: string };
+type LlmsEnv = Env;
 
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 class LlmsInvalid extends ContentInvalid {
   constructor(errors: string[]) {
-    super(`${LLMS_PATH} was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`${LLMS_PATH} was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "LlmsInvalid";
   }
 }
@@ -135,7 +135,7 @@ export async function saveLlms(
   const { commitSha, blobShas } = written;
   if (written.action === "commit" && blobShas[LLMS_PATH] && blobShas[LLMS_PATH] !== compiled.sourceBlobSha) {
     throw new Error(
-      `${LLMS_PATH} WAS committed as ${commitSha}, but the committed bytes (${blobShas[LLMS_PATH]}) are not ` +
+      `${LLMS_PATH} WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[LLMS_PATH]}) are not ` +
         `the bytes judged (${compiled.sourceBlobSha}), so the row was not updated. Run sync_llms to rebuild it ` +
         "from the repository.",
     );

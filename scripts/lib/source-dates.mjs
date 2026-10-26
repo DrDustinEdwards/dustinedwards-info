@@ -1,8 +1,9 @@
 // The day each tracked source file last changed, read from git and written to app/lib/source-dates.generated.mjs for
 // the sitemap's `lastmod` (app/lib/site-urls.server.ts). A page's date is its own file's last commit, so one commit
 // marks changed only the files it touched, never every page at once. The Worker has no git, so this is a build
-// product like the published pages (scripts/lib/published-pages.mjs): a save through Carrel is a commit to main, and
-// that commit's deploy writes this file again. build:content and the install step both call it.
+// product like the published pages (scripts/lib/published-pages.mjs). A content file's source is D1, so where a pull
+// wrote it (scripts/pull-sources.mjs) its date is the day D1 last changed it, and the next deploy writes this again.
+// build:content and the install step both call it.
 //
 // A shallow clone (CI's checkout) holds one commit, which would date every file to it: that is no fact about the
 // files, so a shallow clone writes no dates and the sitemap leaves `lastmod` out, as it did before.
@@ -11,6 +12,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { readPullManifest } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SOURCE_DATES_PATH = path.join(ROOT, "app", "lib", "source-dates.generated.mjs");
@@ -43,6 +46,10 @@ export function readSourceDates(cwd = ROOT) {
     const [seconds, ...files] = block.split("\n").filter(Boolean);
     const day = new Date(Number(seconds) * 1000).toISOString().slice(0, 10);
     for (const file of files) if (tracked.has(file) && !(file in dates)) dates[file] = day;
+  }
+  for (const [file, entry] of Object.entries(readPullManifest(cwd) ?? {})) {
+    if (entry.day) dates[file] = entry.day;
+    else delete dates[file];
   }
   return Object.fromEntries(Object.entries(dates).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }

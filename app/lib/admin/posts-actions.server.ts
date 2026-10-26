@@ -5,7 +5,7 @@ import { applyBulkTag } from "~/lib/admin/bulk-tag";
 import { postPath } from "~/lib/content/slug.mjs";
 import { copySlugCandidates } from "~/lib/editor/duplicate.mjs";
 import { parsePost, parseTagInput, serializePost } from "~/lib/editor/frontmatter";
-import { readFile } from "~/lib/editor/github.server";
+import { readFile } from "~/lib/source/store.server";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import { deletePost, regenerateAllFromRepo, savePost } from "~/lib/editor/publish.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -33,7 +33,7 @@ export async function regeneratePosts(env: Env): Promise<Message> {
     const { synced, removed, unpurged } = await regenerateAllFromRepo(env);
     return {
       message:
-        `Re-rendered ${synced} posts from the repository` +
+        `Re-rendered ${synced} posts from their source` +
         (removed > 0 ? ` and removed ${removed} no longer in it` : "") +
         "." +
         unpurgedNote(unpurged),

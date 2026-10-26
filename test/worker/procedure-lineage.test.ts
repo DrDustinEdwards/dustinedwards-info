@@ -14,7 +14,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* A variant's lineage (docs/KNOWLEDGE-BASE.md, P3): a procedure copied with Duplicate names its parent and the version it
@@ -36,13 +36,13 @@ const variant = (draft: boolean) =>
     .replace(/^draft: .*\n/m, "")
     .replace(/^path: /m, `draft: ${draft}\npath: `);
 
-let gh: GitHubStub;
-beforeEach(() => {
+let gh: SourceStub;
+beforeEach(async () => {
   // The variant is already in the repository, published, so a save is an edit: an operator never makes a first publication.
-  gh = stubGitHub({ [procedurePath("phage-isolation")]: isolation, [procedurePath(CHILD)]: variant(false), ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  gh = await stubSources({ [procedurePath("phage-isolation")]: isolation, [procedurePath(CHILD)]: variant(false), ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 const save = (slug: string, raw: string) => runTool(operatorEnv(), operator, "save_procedure", { slug, raw });

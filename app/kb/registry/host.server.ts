@@ -4,7 +4,7 @@
 // A module of its own so the procedure save can read primers without importing the registry save, which imports it.
 
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { readFile } from "~/lib/editor/github.server";
+import { readFile } from "~/lib/source/store.server";
 import { procedurePath } from "~/kb/procedures/parse.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import type { StoredEquipment, StoredPrimer, StoredReagent, StoredStrain } from "~/kb/procedures/render.mjs";
@@ -16,9 +16,9 @@ import { storedEquipment } from "./equipment.mjs";
 import { storedReagent } from "./reagent.mjs";
 import { storedStrain } from "./strain.mjs";
 
-type RegistryEnv = Env & { GITHUB_TOKEN?: string };
+type RegistryEnv = Env;
 
-function githubHost(env: RegistryEnv) {
+function sourceHost(env: RegistryEnv) {
   return {
     paper: async (slug: string) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null,
     // A recipe is a procedure file whose front matter says profile: recipe.
@@ -29,7 +29,7 @@ function githubHost(env: RegistryEnv) {
 /** The one compile door for a registry file: the save, get_registry, sync_registry and the primer reads go through it. */
 export async function compile(env: RegistryEnv, slug: string, raw: string, kinds: Readonly<Record<string, KindSpec>> = KINDS) {
   const { findWideDashes } = await loadPipeline();
-  return compileRegistryItem({ slug, raw, host: githubHost(env), pipeline: { findWideDashes }, kinds });
+  return compileRegistryItem({ slug, raw, host: sourceHost(env), pipeline: { findWideDashes }, kinds });
 }
 
 /**

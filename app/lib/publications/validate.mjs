@@ -219,7 +219,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
     if (derived && hasPdfPath && data.pdfPath === derived) {
       const file = await host.pdf(derived);
       if (!file) {
-        bad("pdfPath", `${derived} is not in the repository at public${derived}. Commit the PDF first; adding one is a git push, never an upload through this tool`);
+        bad("pdfPath", `${derived} is not in the repository at public${derived}. Add the PDF in a pull request first; adding one is a code change, never an upload through this tool`);
       } else {
         if (file.size === 0) bad("pdfPath", `${derived} is a zero-byte file`);
         if (!isString(data.pdfSha256) || !SHA256.test(data.pdfSha256)) {

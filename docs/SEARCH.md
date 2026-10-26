@@ -46,7 +46,7 @@ Counters are a Durable Object on the synchronous SQLite API (`ASK_BUDGET`, now t
 
 ### Sync and the draft rule
 
-Every save uploads that post's section records and drops cached answers; the sync cannot fail the save. Ship converges Ask last and the watchdog repairs drift, so direct commits do not leave Ask stale. AI Search cannot filter by status at query time, so drafts are excluded at upload: `publishableForAsk()` must agree with `publiclyVisible()`, and a draft actively removes anything it already has. `items.list()` is paged (max 50); `listAllAskItems()` is the only listing path. Test with a phrase unique to a draft.
+Every save uploads that post's section records and drops cached answers; the sync cannot fail the save. Ship converges Ask last and the watchdog repairs drift, so a row written outside a save does not leave Ask stale. AI Search cannot filter by status at query time, so drafts are excluded at upload: `publishableForAsk()` must agree with `publiclyVisible()`, and a draft actively removes anything it already has. `items.list()` is paged (max 50); `listAllAskItems()` is the only listing path. Test with a phrase unique to a draft.
 
 ## Machine endpoints
 

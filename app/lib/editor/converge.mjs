@@ -13,13 +13,13 @@ export const DIVERGENCE_ERROR_NAME = "D1DivergenceError";
 function divergenceMessage({ slug, commitSha, attempts, cause }) {
   const reason = cause instanceof Error ? cause.message : String(cause ?? "unknown");
   return (
-    `The post "${slug}" WAS committed as ${commitSha}, and the database index ` +
+    `The post "${slug}" WAS saved as revision ${commitSha}, and the database index ` +
     `could not be updated after ${attempts} attempt(s): ${reason}. ` +
-    `Your writing is safe in git and is not lost. The site will serve the ` +
+    `Your writing is stored and is not lost. The site will serve the ` +
     `previous version of this post until the index catches up. ` +
-    `Do NOT save again; the commit already landed and a second save changes nothing. ` +
-    `Repair: run the content sync (npm run sync:content -- --remote), or press ` +
-    `Sync Ask corpus on /admin/posts, either of which rebuilds this row from the repo.`
+    `Do NOT save again; the save already landed and a second save changes nothing. ` +
+    `Repair: run sync_posts, or press Sync Ask corpus on /admin/posts, either of ` +
+    `which rebuilds this row from the stored source.`
   );
 }
 

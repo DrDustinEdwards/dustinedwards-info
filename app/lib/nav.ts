@@ -461,7 +461,7 @@ const SECTIONS = [
 /**
  * The header's five items with their live panels, as of `now`. The posts, the newest paper and the lab's town
  * are a snapshot taken at build (nav-data.generated.mjs), so a post published, withdrawn or deleted in the
- * editor shows here after the next deploy (the editor's commit to main starts one), and an edge-cached page
+ * editor shows here after the next deploy (a merge, or the six-hourly rebuild from D1), and an edge-cached page
  * keeps the header it was rendered with for up to a day. A post scheduled for later is in the snapshot and
  * left out until `now` passes its time, so it appears on the first uncached render after that, not on the dot.
  */

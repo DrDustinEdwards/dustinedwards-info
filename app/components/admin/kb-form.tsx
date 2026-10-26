@@ -271,7 +271,7 @@ export function KbFormEditor({
       {created ? <Banner tone="ok">A new draft, copied from the protocol named under Copied from. Nothing about it is public until you publish it.</Banner> : null}
       {saved ? (
         <Banner tone="ok">
-          {saved.unchanged ? "Nothing to commit: the file was already this. Its page was brought up to date." : `Saved as commit ${saved.commit}. The page shows it on the next visit.`}
+          {saved.unchanged ? "Nothing to save: the file was already this. Its page was brought up to date." : `Saved as revision ${saved.commit}. The page shows it on the next visit.`}
         </Banner>
       ) : null}
 

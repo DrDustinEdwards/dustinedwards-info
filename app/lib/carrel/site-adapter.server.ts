@@ -25,7 +25,7 @@ import { procedureHandler } from "~/lib/carrel/procedure-handler.server";
 import { phageHandler } from "~/lib/carrel/phage-handler.server";
 import { registryHandlers } from "~/lib/carrel/registry-handler.server";
 import { rosterHandler } from "~/lib/carrel/roster-handler.server";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
   deletePost,
@@ -38,7 +38,7 @@ import { SITE, SITE_ORIGIN } from "~/lib/seo";
 
 export { withPublication };
 
-type CarrelEnv = Env & { GITHUB_TOKEN?: string };
+type CarrelEnv = Env;
 
 type RenderDocument = (request: Request, context: RouterContextProvider) => Promise<Response>;
 
@@ -254,9 +254,9 @@ export function carrelSiteAdapter(options: {
       return fileRevisionSource(env, postPath(id), version);
     },
 
-    // The post's own delete, the one the admin uses: the file's commit, the D1 rows, the cache purge and the
-    // Ask index as one unit. The version is checked here for a clean answer and again inside the commit, at
-    // the head it is built on. A check that cannot run (GitHub unreadable) throws, so nothing is deleted.
+    // The post's own delete, the one the admin uses: the source, the D1 rows, the cache purge and the Ask index
+    // as one unit. The version is checked here for a clean answer and again inside the write, so a check that
+    // cannot run throws and nothing is deleted.
     async delete(id, input) {
       const file = await readFile(env, postPath(id));
       if (!file) throw new NotFoundError(`No post "${id}" exists.`);

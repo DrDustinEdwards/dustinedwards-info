@@ -21,7 +21,7 @@ import {
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
 import { timed, type Timings } from "~/lib/timing";
-import { GitHubError, listDirectory, listPostFiles } from "~/lib/editor/github.server";
+import { SourceError, listDirectory, listPostFiles } from "~/lib/source/store.server";
 import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import { PROCEDURES_DIR } from "~/kb/procedures/parse.mjs";
@@ -44,7 +44,7 @@ import { backupStatus } from "~/lib/media/backup.server";
  * shas, and D1's rows with the sha each was rendered from. The health check and sync_posts both
  * read them here, so they cannot compare different things.
  */
-export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readContentSides(env: Env) {
   const files = (await listPostFiles(env)).map((e) => ({ slug: e.slug, sha: e.sha, path: e.path }));
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
@@ -58,7 +58,7 @@ export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
  * version with no sealed frozen copy reads as having no sha, so it is drift and the sync that repairs it
  * freezes the copy (drizzle/0027_procedure_versions.sql).
  */
-export async function readProcedureSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readProcedureSides(env: Env) {
   const files = await listMarkdownFiles(env, PROCEDURES_DIR);
   const rows = await env.DB.prepare(
     `SELECT p.slug, p.path,
@@ -71,14 +71,14 @@ export async function readProcedureSides(env: Env & { GITHUB_TOKEN?: string }) {
 }
 
 /** The markdown files of a directory, each with its blob sha, the slug being the file name without .md. */
-async function listMarkdownFiles(env: Env & { GITHUB_TOKEN?: string }, dir: string) {
+async function listMarkdownFiles(env: Env, dir: string) {
   return (await listDirectory(env, dir))
     .filter((e) => e.type === "file" && e.name.endsWith(".md"))
     .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
 }
 
 /** The same two sides for dictionary entries: `content/dictionary/*.md` and the dictionary_entries table's rows. */
-export async function readDictionarySides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readDictionarySides(env: Env) {
   const files = await listMarkdownFiles(env, DICTIONARY_DIR);
   // `key` answers as `slug`, the name every kind's drift comparison and convergence loop reads a row by.
   const rows = await env.DB.prepare(
@@ -88,7 +88,7 @@ export async function readDictionarySides(env: Env & { GITHUB_TOKEN?: string }) 
 }
 
 /** The same two sides for pages: `content/pages/*.md` and the pages table's rows. */
-export async function readPageSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readPageSides(env: Env) {
   const files = await listMarkdownFiles(env, PAGES_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, path, source_blob_sha FROM pages",
@@ -97,7 +97,7 @@ export async function readPageSides(env: Env & { GITHUB_TOKEN?: string }) {
 }
 
 /** The same two sides for the CV: `content/cv/*.md` and the cv table's rows. */
-export async function readCvSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readCvSides(env: Env) {
   const files = await listMarkdownFiles(env, CV_DIR);
   const rows = await env.DB.prepare("SELECT slug, source_blob_sha FROM cv").all<{
     slug: string;
@@ -107,7 +107,7 @@ export async function readCvSides(env: Env & { GITHUB_TOKEN?: string }) {
 }
 
 /** The same two sides for the roster: `content/roster/*.md` and the roster table's rows. */
-export async function readRosterSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readRosterSides(env: Env) {
   const files = await listMarkdownFiles(env, ROSTER_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM roster",
@@ -116,7 +116,7 @@ export async function readRosterSides(env: Env & { GITHUB_TOKEN?: string }) {
 }
 
 /** The same two sides for the phages: `content/phages/*.md` and the phages table's rows. */
-export async function readPhageSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readPhageSides(env: Env) {
   const files = await listMarkdownFiles(env, PHAGES_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM phages",
@@ -129,7 +129,7 @@ export async function readPhageSides(env: Env & { GITHUB_TOKEN?: string }) {
  * each read by its address `<kind>/<id>`. A kind's directory that does not exist yet is an empty kind, not a fault: a
  * kind is defined before its first file is written.
  */
-export async function readRegistrySides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readRegistrySides(env: Env) {
   const files: Array<{ slug: string; sha: string; path: string }> = [];
   for (const kind of Object.keys(KINDS)) {
     try {
@@ -137,7 +137,7 @@ export async function readRegistrySides(env: Env & { GITHUB_TOKEN?: string }) {
         files.push({ ...file, slug: `${kind}/${file.slug}` });
       }
     } catch (error) {
-      if (!(error instanceof GitHubError && error.status === 404)) throw error;
+      if (!(error instanceof SourceError && error.status === 404)) throw error;
     }
   }
   const rows = await env.DB.prepare(
@@ -147,7 +147,7 @@ export async function readRegistrySides(env: Env & { GITHUB_TOKEN?: string }) {
 }
 
 /** The same two sides for publications: `content/publications/*.md` and the publications table's rows. */
-export async function readPublicationSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readPublicationSides(env: Env) {
   const files = await listMarkdownFiles(env, PUBLICATIONS_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, doi_key, source_blob_sha FROM publications",
@@ -160,7 +160,7 @@ export async function readPublicationSides(env: Env & { GITHUB_TOKEN?: string })
  * from, given the blob sha of the bytes it holds (the row has no column for one). The slug is a name for the
  * pair, so the shared comparison applies.
  */
-export async function readLlmsSides(env: Env & { GITHUB_TOKEN?: string }) {
+export async function readLlmsSides(env: Env) {
   const dir = LLMS_PATH.slice(0, LLMS_PATH.lastIndexOf("/"));
   const file = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.path === LLMS_PATH);
   const row = await env.DB.prepare("SELECT value FROM settings WHERE key = ?1")

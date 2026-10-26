@@ -16,7 +16,7 @@ import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, GitHubError, listDirectory, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -25,32 +25,19 @@ import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/page
 import { compileDictionaryEntry, type DictionaryHost } from "./compile.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
 
-type DictionaryEnv = Env & { GITHUB_TOKEN?: string };
+type DictionaryEnv = Env;
 
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class DictionaryInvalid extends ContentInvalid {
   constructor(key: string, errors: string[]) {
-    super(`The dictionary entry "${key}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The dictionary entry "${key}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "DictionaryInvalid";
   }
 }
 
-/** The repository's clips, asked of GitHub: existence and size, never the bytes, which are binary. */
-function githubHost(env: DictionaryEnv): DictionaryHost {
-  return {
-    async audio(sitePath) {
-      const at = sitePath.lastIndexOf("/");
-      const dir = `public${sitePath.slice(0, at)}`;
-      const name = sitePath.slice(at + 1);
-      try {
-        const entry = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.name === name);
-        return entry ? { size: entry.size } : null;
-      } catch (error) {
-        if (error instanceof GitHubError && error.status === 404) return null;
-        throw error;
-      }
-    },
-  };
+/** The clips this deploy serves: existence and size, never the bytes, which are binary. */
+function assetsHost(env: DictionaryEnv): DictionaryHost {
+  return { audio: (sitePath) => publicFileEntry(env, sitePath) };
 }
 
 /** Every other entry's key and path, from D1: CI re-checks the whole set on the commit this makes. */
@@ -61,7 +48,7 @@ async function otherEntries(env: DictionaryEnv, key: string) {
 /** The one compile door: the save, sync_dictionary and the reads all go through it. */
 export async function compile(env: DictionaryEnv, key: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
-  return compileDictionaryEntry({ key, raw, pipeline: { findWideDashes }, host: githubHost(env), others: await otherEntries(env, key) });
+  return compileDictionaryEntry({ key, raw, pipeline: { findWideDashes }, host: assetsHost(env), others: await otherEntries(env, key) });
 }
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
@@ -202,9 +189,9 @@ export async function saveDictionaryEntry(
   const blobSha = written.blobShas[path];
   if (blobSha && blobSha !== compiled.sourceBlobSha) {
     throw new Error(
-      `The dictionary entry "${key}" WAS committed as ${commitSha}, but the committed bytes (${blobSha}) are not ` +
+      `The dictionary entry "${key}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

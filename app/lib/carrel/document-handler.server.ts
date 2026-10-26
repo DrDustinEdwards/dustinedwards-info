@@ -10,11 +10,11 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { saveLlms } from "~/lib/llms/save.server";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 
-type DocumentEnv = Env & { GITHUB_TOKEN?: string };
+type DocumentEnv = Env;
 
 /** The one slug of the kind. `document.llms` is the id Carrel sees. */
 const LLMS_SLUG = "llms";

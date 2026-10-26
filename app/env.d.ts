@@ -4,8 +4,6 @@
  */
 declare global {
   interface Env {
-    /** Fine-grained PAT, Contents read/write. Used only by the admin editor. */
-    GITHUB_TOKEN: string;
     /** Optional by contract: `POST /api/operator` returns 503 when it is absent or too short. */
     OPERATOR_TOKEN?: string;
     /**

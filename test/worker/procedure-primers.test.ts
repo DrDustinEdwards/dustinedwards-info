@@ -13,7 +13,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 import coi from "../../content/procedures/coi-primers.md?raw";
 
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, source, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
 /* A protocol reads its primer tables from the lab registry (docs/REGISTRY.md): the file names the primers by id and holds no
@@ -38,16 +38,16 @@ const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
 const operator = { kind: "operator", id: "test" } as const;
 const carrel = { kind: "carrel", changeId: "chg-primer" } as const;
 
-let gh: GitHubStub;
+let gh: SourceStub;
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM procedures").run();
   await env.DB.prepare("DELETE FROM registry").run();
   // The REV primers name the Stewart paper, which is a publication of this site, so the repository holds its file.
-  gh = stubGitHub({ [procedurePath(SLUG)]: coi, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles, "content/publications/10-7589-2018-08-187.md": "x" });
+  gh = await stubSources({ [procedurePath(SLUG)]: coi, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles, "content/publications/10-7589-2018-08-187.md": "x" });
   purge.mockClear();
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 const save = async () => {
@@ -106,7 +106,7 @@ describe("a protocol that names its primers by id", () => {
   });
 
   it("is refused, naming the primer, when the registry does not hold it", { timeout: 120_000 }, async () => {
-    gh.files.delete("content/registry/primer/hco2198.md");
+    await removeSource("content/registry/primer/hco2198.md");
     const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: coi });
     expect(saved.ok).toBe(false);
     expect(JSON.stringify(saved)).toMatch(/primers\[hco2198\] names no primer in the lab registry/);
@@ -136,7 +136,7 @@ describe("a change to a primer reaches the protocols that print it", () => {
 
   it("sync_registry recompiles every protocol that names a primer, so an edit made through git reaches it", { timeout: 120_000 }, async () => {
     await save();
-    gh.files.set(LCO, (registryFiles[LCO] ?? "").replace("GGTCAACAAATCATAAAGATATTGG", "GGTCAACAAATCATAAAGATATTGC"));
+    await putSource(LCO, (registryFiles[LCO] ?? "").replace("GGTCAACAAATCATAAAGATATTGG", "GGTCAACAAATCATAAAGATATTGC"));
     const synced = await runTool(operatorEnv(), operator, "sync_registry", {});
     expect(synced.ok, JSON.stringify(synced)).toBe(true);
     if (synced.ok) expect(synced.data).toMatchObject({ protocolsRefreshed: 1 });
@@ -148,7 +148,7 @@ describe("a published version keeps the sequence it was published with", () => {
   it("freezes the primers into the copy, and a later change to the primer moves the live protocol and not the frozen version", { timeout: 120_000 }, async () => {
     const versioned = coi.replace(/^version: .*$/m, 'version: "1"\nhistory:\n  - version: "1"\n    date: 2026-09-01\n    summary: First version.');
     expect(versioned).not.toBe(coi);
-    gh.files.set(procedurePath(SLUG), versioned);
+    await putSource(procedurePath(SLUG), versioned);
     const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: versioned });
     expect(saved.ok, JSON.stringify(saved)).toBe(true);
     const frozen = async () =>
@@ -174,7 +174,7 @@ describe("a change to a reagent reaches the protocols whose materials name it", 
         materials: Array<{ display: string; reagent: { name: string } | null }>;
       }).materials[0];
     expect((await display())?.display).toBe("GoTaq® Flexi DNA polymerase");
-    const raw = gh.files.get(GOTAQ) ?? "";
+    const raw = (await source(GOTAQ)) ?? "";
     expect(raw).toContain("GoTaq® Flexi DNA polymerase");
     await saveRegistryItem(gitEnv(), { slug: "reagent/gotaq-flexi-dna-polymerase", raw: raw.replace('name: "GoTaq® Flexi DNA polymerase"', 'name: "GoTaq® Flexi DNA polymerase (renamed)"'), isNew: false, actor: carrel });
     const after = await display();
@@ -186,7 +186,7 @@ describe("a change to a reagent reaches the protocols whose materials name it", 
 describe("a change to an equipment item reaches the protocols whose list names it", () => {
   it("a registry save rewrites the protocol's row, so the table shows the new manufacturer", { timeout: 120_000 }, async () => {
     const extraction = (await import("../../content/procedures/phage-dna-extraction.md?raw")).default as string;
-    gh.files.set(procedurePath("phage-dna-extraction"), extraction);
+    await putSource(procedurePath("phage-dna-extraction"), extraction);
     const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: "phage-dna-extraction", raw: extraction });
     expect(saved.ok, JSON.stringify(saved)).toBe(true);
     const maker = async () =>
@@ -194,7 +194,7 @@ describe("a change to an equipment item reaches the protocols whose list names i
         equipment: Array<{ name: string; item: { manufacturer: string | null } | null }>;
       }).equipment.find((e) => e.name === "heat block")?.item?.manufacturer;
     expect(await maker()).toBeNull();
-    const raw = gh.files.get("content/registry/equipment/heat-block.md") ?? "";
+    const raw = (await source("content/registry/equipment/heat-block.md")) ?? "";
     expect(raw).toContain("manufacturer:");
     await saveRegistryItem(gitEnv(), { slug: "equipment/heat-block", raw: raw.replace(/^manufacturer: .*$/m, 'manufacturer: "Test Maker"'), isNew: false, actor: carrel });
     expect(await maker()).toBe("Test Maker");

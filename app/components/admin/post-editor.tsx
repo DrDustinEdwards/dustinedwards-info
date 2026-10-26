@@ -305,9 +305,7 @@ export function PostEditor({
 
         {!headSha ? (
           <Alert tone="crit" title="Saving unavailable">
-            {headError
-              ? `The repository could not be read, so a save cannot commit: ${headError}`
-              : "GITHUB_TOKEN is not configured on this Worker, so a save cannot commit."}{" "}
+            {`The content store could not be read, so a save cannot land: ${headError ?? "no reason was given"}`}{" "}
             Preview still works.
           </Alert>
         ) : null}

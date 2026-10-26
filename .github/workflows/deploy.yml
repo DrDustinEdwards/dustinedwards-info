@@ -105,6 +105,11 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # The content's source is D1 (scripts/lib/content-source.mjs), so a Carrel save starts no CI run. The header's
+  # facts, the footer's pages, the sitemap dates and a new post's card are build products, so main's tip is shipped
+  # again every six hours to rebuild them from D1. Skipped like an automatic run when AUTO_DEPLOY is off.
+  schedule:
+    - cron: "23 */6 * * *"
 
 # `actions: write` is not decoration. Ship reads the Actions API to learn whether
 # CI concluded success for this exact sha, and refuses if it cannot; and its last
@@ -156,6 +161,12 @@ jobs:
           if [ "$EVENT" = "workflow_dispatch" ]; then
             echo "Dispatched for ${DISPATCH_REF}."
             { echo "deploy=true"; echo "ref=${DISPATCH_REF}"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$EVENT" = "schedule" ]; then
+            [ "$AUTO_DEPLOY" != "off" ] || { echo "Not deploying: AUTO_DEPLOY is off."; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
+            echo "Scheduled rebuild of main's tip from D1's content."
+            { echo "deploy=true"; echo "ref=main"; } >> "$GITHUB_OUTPUT"
             exit 0
           fi
           skip() { echo "Not deploying: $1"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }

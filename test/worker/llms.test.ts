@@ -1,3 +1,4 @@
+import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
@@ -11,7 +12,7 @@ import { SITE_ORIGIN } from "~/lib/seo";
 import llmsFile from "../../content/llms.txt?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { routeContext } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -30,7 +31,6 @@ vi.mock("cloudflare:workers", async (importOriginal) => ({
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const ID = "document.llms";
 const ADDED = "This sentence was added through Carrel and is live without a deploy.";
 const EDITED = llmsFile.replace("also builds software on Cloudflare.", `also builds software on Cloudflare. ${ADDED}`);
@@ -52,7 +52,7 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
 const put = async (source: string, expectedVersion: string | null | undefined = undefined, changeId = "chg-llms") =>
   send("PUT", `${PREFIX}/content/${ID}/draft`, {
     source,
-    expectedVersion: expectedVersion === undefined ? await versionOf(gh, LLMS_PATH) : expectedVersion,
+    expectedVersion: expectedVersion === undefined ? await versionOf(LLMS_PATH) : expectedVersion,
     changeId,
   });
 
@@ -70,13 +70,13 @@ const setRow = (value: string) =>
   testEnv.DB.prepare("INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .bind(LLMS_SETTING_KEY, value)
     .run();
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;
 const driftCheck = async () => (await runHealthChecks(testEnv as never)).checks.find((c) => c.name === "llms-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_llms", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   // What the rules hold the file to: the pages and procedures the site has, and the papers it serves.
@@ -89,11 +89,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   await setRow(llmsFile);
   purge.mockClear();
-  gh = stubGitHub({ [LLMS_PATH]: llmsFile });
+  gh = await stubSources({ [LLMS_PATH]: llmsFile });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("what /llms.txt serves is unchanged", () => {
@@ -123,8 +123,8 @@ describe("an edit through the adapter is live at the next request", () => {
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-llms" });
 
     // The repository is the source, and it holds the edit.
-    expect(gh.files.get(LLMS_PATH)).toBe(EDITED);
-    const message = (commits()[0]?.body as { message?: string } | undefined)?.message;
+    expect((await source(LLMS_PATH))).toBe(EDITED);
+    const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
     expect(message).toContain("[carrel:chg-llms]");
 
     // The next request for /llms.txt carries it, and the row is exactly the file.
@@ -141,10 +141,10 @@ describe("an edit through the adapter is live at the next request", () => {
     const list = (await (await get(`${PREFIX}/content?limit=50`)).json()) as { items: Array<{ id: string; kind: string }> };
     expect(list.items.filter((i) => i.kind === "document")).toEqual([expect.objectContaining({ id: ID, status: "published" })]);
 
-    const before = commits().length;
+    const before = (await commits()).length;
     const response = await put(llmsFile);
     expect(response.status).toBe(200);
-    expect(commits().length).toBe(before);
+    expect((await commits()).length).toBe(before);
     expect(purge).not.toHaveBeenCalled();
   });
 
@@ -152,20 +152,20 @@ describe("an edit through the adapter is live at the next request", () => {
     await setRow("an older llms.txt");
     const response = await put(llmsFile);
     expect(response.status).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(await row()).toBe(llmsFile);
   });
 
   it("publish with a source is the same save, and a document cannot be unpublished or created", async () => {
-    const published = await send("POST", `${PREFIX}/content/${ID}/publish`, { source: EDITED, expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-pub" });
+    const published = await send("POST", `${PREFIX}/content/${ID}/publish`, { source: EDITED, expectedVersion: await versionOf(LLMS_PATH), changeId: "chg-pub" });
     expect(published.status, await published.clone().text()).toBe(200);
     expect(await served().then((r) => r.text())).toBe(EDITED);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(LLMS_PATH), changeId: "chg-down" });
     expect(down.status).toBe(422);
     expect(((await down.json()) as { message: string }).message).toMatch(/cannot be unpublished/);
 
-    const other = await send("PUT", `${PREFIX}/content/document.other/draft`, { source: llmsFile, expectedVersion: await versionOf(gh, LLMS_PATH), changeId: "chg-new" });
+    const other = await send("PUT", `${PREFIX}/content/document.other/draft`, { source: llmsFile, expectedVersion: await versionOf(LLMS_PATH), changeId: "chg-new" });
     expect(other.status).toBe(422);
     expect(((await other.json()) as { message: string }).message).toMatch(/names no document/);
   });
@@ -179,8 +179,8 @@ describe("a save is held to what CI holds", () => {
     const message = ((await response.json()) as { message: string }).message;
     expect(message).toMatch(/no wide dash/);
     expect(message).toMatch(/URL patterns and headers an agent acts on/);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(LLMS_PATH)).toBe(llmsFile);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(LLMS_PATH))).toBe(llmsFile);
     expect(await row()).toBe(llmsFile);
   });
 
@@ -198,7 +198,7 @@ describe("a save is held to what CI holds", () => {
     const stray = await put(withLineAfter("software/capsid\\)", "- [Not a page](https://dustinedwards.info/software/not-a-page): x"));
     expect(stray.status).toBe(422);
     expect(((await stray.json()) as { message: string }).message).toMatch(/listed but not a page: \/software\/not-a-page/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("judges pages by their D1 rows: a draft's line may land before its publish, and is required after", async () => {
@@ -213,8 +213,8 @@ describe("a save is held to what CI holds", () => {
       await status("draft");
       // A draft: listing it is allowed, and so is leaving it out.
       expect((await put(withLine, undefined, "chg-a11y-draft")).status).toBe(200);
-      gh.restore();
-      gh = stubGitHub({ [LLMS_PATH]: llmsFile });
+      await gh.restore();
+      gh = await stubSources({ [LLMS_PATH]: llmsFile });
       await setRow(llmsFile);
       await status("published");
       // Published through Carrel: the line saves at once, with no deploy in between, and leaving it out is refused.
@@ -231,8 +231,8 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
     const response = await put(EDITED, "b".repeat(40));
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, LLMS_PATH) });
-    expect(commits()).toHaveLength(0);
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(LLMS_PATH) });
+    expect((await commits())).toHaveLength(0);
   });
 });
 
@@ -240,7 +240,7 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
   it("get_llms reads the file, its rule failures and whether the row serves it", async () => {
     const same = await runTool(operatorEnv(), operator, "get_llms", {});
     expect(same.ok, JSON.stringify(same)).toBe(true);
-    if (same.ok) expect(same.data).toMatchObject({ path: LLMS_PATH, raw: llmsFile, errors: [], servedFromRepository: true, headSha: HEAD });
+    if (same.ok) expect(same.data).toMatchObject({ path: LLMS_PATH, raw: llmsFile, errors: [], servedFromRepository: true, headSha: (await getHead(testEnv)).commitSha });
 
     await setRow("an older llms.txt");
     const stale = await runTool(operatorEnv(), operator, "get_llms", {});
@@ -251,7 +251,7 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
     expect((await driftCheck())?.ok).toBe(true);
 
     // An edit committed outside the save, which the row has not seen.
-    gh.files.set(LLMS_PATH, EDITED);
+    await putSource(LLMS_PATH, EDITED);
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -280,8 +280,8 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
   });
 
   it("REFUSES a repository with no llms.txt instead of deleting the row", async () => {
-    gh.files.delete(LLMS_PATH);
-    gh.files.set("content/README.txt", "not the document");
+    await removeSource(LLMS_PATH);
+    await putSource("content/README.txt", "not the document");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -293,7 +293,7 @@ describe("get_llms, sync_llms and the llms-drift check", () => {
 
   it("makes no row from a file the rules fail, naming it", async () => {
     await setRow("an older llms.txt");
-    gh.files.set(LLMS_PATH, llmsFile.replace("Research in retroviruses", `Research ${WIDE_DASH} in retroviruses`));
+    await putSource(LLMS_PATH, llmsFile.replace("Research in retroviruses", `Research ${WIDE_DASH} in retroviruses`));
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -310,7 +310,6 @@ versionCases({
   id: ID,
   file: LLMS_PATH,
   edit: () => EDITED,
-  gh: () => gh,
   get,
   send,
   timeout: 120000,

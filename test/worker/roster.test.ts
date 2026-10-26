@@ -8,7 +8,7 @@ import ContentPage, { headers as contentPageHeaders, loader as pageLoader } from
 import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext, textsOf } from "./route-helpers";
 import { SYNTHETIC_COHORTS, cohortFile, seedPages, seedRoster } from "./seed";
 import { testEnv } from "./test-env";
@@ -61,10 +61,10 @@ async function homeFacts() {
   const result = await homeLoader({ request: new Request(`${ORIGIN}/`), params: {}, context: routeContext() } as never);
   return (result as unknown as { data: { discovery: { researchers: number; cohorts: number; since: number } } }).data.discovery;
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
 
-let gh: GitHubStub;
+let gh: SourceStub;
 let currentFile: string;
 
 beforeAll(async () => {
@@ -74,7 +74,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetRoster();
-  gh = stubGitHub({
+  gh = await stubSources({
     [FILE]: currentFile,
     [rosterPath(String(EARLIER.year))]: await cohortFile(EARLIER),
     [PHOTO_FILE]: "x",
@@ -82,8 +82,8 @@ beforeEach(async () => {
   purge.mockClear();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 /** An empty table, then the synthetic cohorts: each case starts from a roster in step with its files. */
@@ -101,15 +101,15 @@ describe("an edit through the adapter is live at the next request", () => {
     const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] });
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-roster",
     });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-roster" });
 
     // The repository is the source, and it holds the edit.
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect((commits()[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-roster]");
+    expect((await source(FILE))).toBe(edited);
+    expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-roster]");
 
     // The very next request carries it: the page's roster and the home page's count.
     const after = await programPage();
@@ -132,7 +132,7 @@ describe("an edit through the adapter is live at the next request", () => {
       changeId: "chg-new-cohort",
     });
     expect(created.status, await created.clone().text()).toBe(200);
-    expect(gh.files.has(rosterPath(String(year)))).toBe(true);
+    expect(((await source(rosterPath(String(year)))) !== undefined)).toBe(true);
 
     expect(await homeFacts()).toEqual({ ...before, researchers: before.researchers + 1, cohorts: before.cohorts + 1 });
     const { data } = await programPage();
@@ -142,11 +142,11 @@ describe("an edit through the adapter is live at the next request", () => {
   it("an unchanged save commits nothing and purges nothing", { timeout: 180_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: currentFile,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(purge).not.toHaveBeenCalled();
   });
 });
@@ -155,7 +155,7 @@ describe("a save purges every page that embeds the roster", () => {
   it("sends the content pages' tag and the home page's, and the pages carry exactly those tags", { timeout: 180_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -175,25 +175,25 @@ describe("a save purges every page that embeds the roster", () => {
 describe("a save is held to what CI holds", () => {
   it("REFUSES a field the roster never had, with the message, and commits nothing", async () => {
     const bad = (await cohortFile(CURRENT)).replace("year: 2031", "year: 2031\nemail: someone@example.com");
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/email is not a roster field/);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(currentFile);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(currentFile);
   });
 
   it("REFUSES a photograph the repository does not hold", async () => {
     const source = await cohortFile({ ...CURRENT, photo: { ...CURRENT.photo, src: "/phage-hunters/not-there.webp" } });
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: await versionOf(gh, FILE), changeId: "chg-photo" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: await versionOf(FILE), changeId: "chg-photo" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/is not in the repository/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES an id that is not a year, so no other path can be read or written through it", async () => {
     const response = await send("PUT", `${PREFIX}/content/roster.notes/draft`, { source: currentFile, expectedVersion: null, changeId: "chg-slug" });
     expect(response.status).toBe(422);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect((await get(`${PREFIX}/content/roster.notes`)).status).toBe(404);
   });
 
@@ -204,15 +204,15 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
-    expect(commits()).toHaveLength(0);
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
+    expect((await commits())).toHaveLength(0);
   });
 
   it("has no draft state: a cohort cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/no draft state/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect((await programPage()).names.length).toBeGreaterThan(0);
   });
 });
@@ -222,9 +222,9 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
     expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: currentFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-repair" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: currentFile, expectedVersion: await versionOf(FILE), changeId: "chg-repair" });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length);
   });
 });
@@ -275,7 +275,6 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

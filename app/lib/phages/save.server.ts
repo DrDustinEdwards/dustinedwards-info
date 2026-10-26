@@ -17,7 +17,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePhages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -26,7 +26,7 @@ import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/page
 
 import { PHAGES_PAGE_PATH, PHAGE_FACT_PAGES, compilePhage, phagePath, phageSetErrors, phageSlug, sortPhages, type Phage, type PhageHost } from "./compile.mjs";
 
-type PhageEnv = Env & { GITHUB_TOKEN?: string };
+type PhageEnv = Env;
 
 /** A phage's file key is its name in lower case, which is also what keeps an id from naming any other path. */
 export const PHAGE_SLUG = /^[a-z][a-z0-9]*$/;
@@ -34,24 +34,24 @@ export const PHAGE_SLUG = /^[a-z][a-z0-9]*$/;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class PhageInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The phage "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The phage "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "PhageInvalid";
   }
 }
 
 /**
- * The papers the site holds, asked of the repository, which is what CI asks too: a genome announcement is a paper
- * this site has a file, and so a page, for. Asking the repository rather than D1 keeps a phage save and a
- * sync_phages independent of whether the publications have been synced yet.
+ * The papers the site holds, asked of the content's source: a genome announcement is a paper this site has a file,
+ * and so a page, for. Asking the source rather than the publications' rows keeps a phage save and a sync_phages
+ * independent of whether the publications have been synced yet.
  */
-function githubHost(env: PhageEnv): PhageHost {
+function sourceHost(env: PhageEnv): PhageHost {
   return { paper: async (slug) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null };
 }
 
 /** The one compile door: the save, get_phage and sync_phages all read a file through it. */
 export async function compile(env: PhageEnv, slug: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
-  return compilePhage({ slug, raw, host: githubHost(env), pipeline: { findWideDashes } });
+  return compilePhage({ slug, raw, host: sourceHost(env), pipeline: { findWideDashes } });
 }
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
@@ -64,7 +64,7 @@ function registered(slug: string) {
   return { slug, file: phagePath(slug) };
 }
 
-/** The phage the committed file holds, judged by the same validator, for get_phage. */
+/** The phage the stored file holds, judged by the same validator, for get_phage. */
 export async function readPhage(env: PhageEnv, slug: string) {
   const { file } = registered(slug);
   const existing = await readFile(env, file);
@@ -190,9 +190,9 @@ export async function savePhage(
   const blobSha = written.blobShas[file];
   if (blobSha && blobSha !== compiled.sourceBlobSha) {
     throw new Error(
-      `The phage "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobSha}) are not ` +
+      `The phage "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

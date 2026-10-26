@@ -7,7 +7,7 @@ import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPublications } from "./seed";
 
 /* sync_cv and the cv-drift check: D1 converges to content/cv through the compile and write doors a CV save
@@ -39,7 +39,7 @@ const searchRows = async (needle?: string) =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "cv-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_cv", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPublications();
@@ -48,11 +48,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM cv").run();
   await env.DB.prepare("DELETE FROM search_docs WHERE doc_uid = ?1").bind(contentPageSearchUid("/cv")).run();
-  gh = stubGitHub(repository());
+  gh = await stubSources(repository());
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_cv and the cv-drift check", () => {
@@ -82,7 +82,7 @@ describe("sync_cv and the cv-drift check", () => {
       "entries:\n",
       `entries:\n  - year: 2026\n    amount: 99\n    title: ${ADDED}\n    areas: []\n    role: recipient\n`,
     );
-    gh.files.set(cvSourcePath("grants"), edited);
+    await putSource(cvSourcePath("grants"), edited);
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -97,8 +97,8 @@ describe("sync_cv and the cv-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no CV file: a fault, not a repository with none.
-    for (const { slug } of CV_FILES) gh.files.delete(cvSourcePath(slug));
-    gh.files.set("content/cv/README.txt", "not a CV file");
+    for (const { slug } of CV_FILES) await removeSource(cvSourcePath(slug));
+    await putSource("content/cv/README.txt", "not a CV file");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -110,7 +110,7 @@ describe("sync_cv and the cv-drift check", () => {
   });
 
   it("makes no row for a file the registry does not name, naming it, and converges the rest", { timeout: 300_000 }, async () => {
-    gh.files.set("content/cv/not-a-cv-file.md", rawOf("grants"));
+    await putSource("content/cv/not-a-cv-file.md", rawOf("grants"));
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {

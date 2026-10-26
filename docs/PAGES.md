@@ -86,7 +86,7 @@ verify-live's page list.
 Publishing it, in either order:
 
 - **Publish the page** through Carrel. The route and the sitemaps read the D1 row, so they change at once.
-- **Save its line in `content/llms.txt`** (through Carrel or a commit). A draft page may be listed and need not
+- **Save its line in `content/llms.txt`** (through Carrel). A draft page may be listed and need not
   be, so the line can land before the publish. Once the page is published the line is required: CI judges the
   page files, and the llms.txt save judges the D1 rows, so the line can be saved straight after a Carrel publish
   with no deploy in between.
@@ -95,8 +95,8 @@ Publishing it, in either order:
 
 The footer's Accessibility link does not read D1. It follows `app/lib/published-pages.generated.mjs`, a build
 product of the page files (`scripts/lib/published-pages.mjs`), so the footer is the same bytes for every reader.
-The link therefore appears (or, after an unpublish, disappears) with the deploy that the publishing commit starts,
-not at the moment of the save.
+The link therefore appears (or, after an unpublish, disappears) with the next deploy (a merge, or the six-hourly
+rebuild from D1), not at the moment of the save.
 
 ## What a save cannot do
 
@@ -128,15 +128,15 @@ to `check:links`, the full gate. `test/pages.test.mjs` shows each rule firing.
 ## The save
 
 `app/lib/pages/save.server.ts`, mirroring the procedures' save: validate (the code above) then policy then
-`commitUnlessUnchanged` then verify the committed bytes then the D1 write through `convergeWithRetry` then a
+`commitUnlessUnchanged` then verify the stored bytes then the D1 write through `convergeWithRetry` then a
 cache purge by tag (`content-pages`).
 
-- A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
-  row from the file without a commit.
-- D1 is derived. When a D1 write fails, the error says the commit landed and the repair is the
-  content sync, which converges the row from the repository at the next ship.
-- The sync reads the same files with the same compile, so it never overwrites a save: a save is a commit on
-  `main`, and the sync builds from `main`.
+- A byte-identical file is never written. If D1 already holds its row the save stops; if not it repairs the
+  row from the source without a write.
+- D1 is derived. When a D1 write fails, the error says the source write landed and the repair is the
+  content sync, which converges the row from the stored source at the next ship.
+- The sync reads the same files with the same compile, so it never overwrites a save: ship pulls D1's files
+  before it builds, so the sync builds from what the save stored.
 
 ## Where it goes
 

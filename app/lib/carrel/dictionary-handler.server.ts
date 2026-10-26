@@ -14,9 +14,9 @@ import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { dictionaryPath, parseDictionaryEntry } from "~/lib/dictionary/parse.mjs";
 import { fileIsDraft, saveDictionaryEntry } from "~/lib/dictionary/save.server";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 
-type DictionaryEnv = Env & { GITHUB_TOKEN?: string };
+type DictionaryEnv = Env;
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 

@@ -9,7 +9,7 @@ import {
   deletePost,
   savePost,
   EditorError,
-  GitHubError,
+  SourceError,
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
@@ -17,7 +17,7 @@ import { UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
-import { readFile } from "~/lib/editor/github.server";
+import { readFile } from "~/lib/source/store.server";
 
 import { backupD1 } from "~/lib/backup/d1-backup.server";
 import type { OperatorEnv } from "./auth.server";
@@ -419,7 +419,7 @@ function translate(error: unknown): ToolResult {
     };
   }
 
-  if (error instanceof GitHubError) {
+  if (error instanceof SourceError) {
     return {
       ok: false,
       status: error.conflict ? 409 : 502,
@@ -648,7 +648,7 @@ async function getPageTool(env: OperatorEnv, args: Record<string, unknown>): Pro
 
 async function getLlmsTool(env: OperatorEnv): Promise<ToolResult> {
   const llms = await readLlms(env);
-  if (!llms) return { ok: false, status: 404, error: "No content/llms.txt exists in the repository." };
+  if (!llms) return { ok: false, status: 404, error: "No content/llms.txt exists in the content's source." };
   return { ok: true, data: { ...llms, headSha: await currentHead(env) } };
 }
 

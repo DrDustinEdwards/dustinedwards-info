@@ -10,7 +10,7 @@ import { pageSourcePath } from "~/lib/pages/compile.mjs";
 import capsid from "../../content/pages/software-capsid.md?raw";
 import foxhound from "../../content/pages/software-foxhound.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 
 /* sync_pages and the pages-drift check: D1 converges to content/pages through the compile and write doors
  * a page save uses (the repository is the source). Each case starts from an empty pages table
@@ -35,15 +35,15 @@ const searchRows = async (path: string) =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "pages-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_pages", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM pages").run();
-  gh = stubGitHub({ [pageSourcePath(FOXHOUND)]: foxhound, [pageSourcePath(CAPSID)]: capsid });
+  gh = await stubSources({ [pageSourcePath(FOXHOUND)]: foxhound, [pageSourcePath(CAPSID)]: capsid });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_pages and the pages-drift check", () => {
@@ -68,8 +68,8 @@ describe("sync_pages and the pages-drift check", () => {
 
     // An edit committed outside the save tool, and a deletion.
     const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
-    gh.files.set(pageSourcePath(FOXHOUND), edited);
-    gh.files.delete(pageSourcePath(CAPSID));
+    await putSource(pageSourcePath(FOXHOUND), edited);
+    await removeSource(pageSourcePath(CAPSID));
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -88,9 +88,9 @@ describe("sync_pages and the pages-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no page: a fault, not a repository with none.
-    gh.files.delete(pageSourcePath(FOXHOUND));
-    gh.files.delete(pageSourcePath(CAPSID));
-    gh.files.set("content/pages/README.txt", "not a page");
+    await removeSource(pageSourcePath(FOXHOUND));
+    await removeSource(pageSourcePath(CAPSID));
+    await putSource("content/pages/README.txt", "not a page");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -102,7 +102,7 @@ describe("sync_pages and the pages-drift check", () => {
   });
 
   it("makes no row for a file whose path is not registered, naming it, and converges the rest", { timeout: 240_000 }, async () => {
-    gh.files.set("content/pages/not-a-registered-page.md", foxhound);
+    await putSource("content/pages/not-a-registered-page.md", foxhound);
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {

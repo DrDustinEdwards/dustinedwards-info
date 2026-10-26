@@ -91,7 +91,7 @@ Pages state these by token, never by typing them: `{{identity.role}}`, `{{identi
 `{{identity.departmentSubject}}`, `{{identity.affiliation}}`, `{{identity.name}}`, `{{identity.degree}}`,
 `{{identity.discipline}}`, `{{identity.disciplineLower}}`, `{{identity.rank}}`, `{{identity.jobTitle}}`,
 `{{identity.cvTitle}}` and `{{identity.department}}`. `test/identity.test.mjs` fails if a page types the role or
-the headship. A CV change reaches the site with the next deploy, which every green commit to `main` is. A CV with
+the headship. A CV change reaches the identity with the next deploy, which a merge to `main` starts and which runs every six hours. A CV with
 no current position, or two, is refused where it is saved.
 
 ## Privacy
@@ -129,17 +129,17 @@ accepts. The rules that were tests reading `app/data/cv.ts` are these:
 
 `test/cv-validate.test.mjs` shows each rule firing. A save runs every rule over D1's other files with its own in
 place, so a change that breaks the whole is refused even when its own file is sound. It also compiles the page, so
-a save that would make the search records fail is refused before anything is committed.
+a save that would make the search records fail is refused before anything is saved.
 
 ## The save
 
 `app/lib/cv/save.server.ts`, mirroring the pages' save: validate (the code above) then policy then
-`commitUnlessUnchanged` then verify the committed bytes then the D1 row and the CV's search records through
+`commitUnlessUnchanged` then verify the stored bytes then the D1 row and the CV's search records through
 `convergeWithRetry` then a cache purge by tag (`cv`).
 
-- A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the row
-  from the file without a commit.
-- D1 is derived. When a D1 write fails, the error says the commit landed and the repair is the
+- A byte-identical file is never written. If D1 already holds its row the save stops; if not it repairs the row
+  from the source without a write.
+- D1 is derived. When a D1 write fails, the error says the source write landed and the repair is the
   content sync (`sync_cv` or `npm run sync:content`).
 - A paper the CV cites cannot be unpublished, or have its DOI changed, from the publication save: that save refuses,
   naming the CV, because the CV would cite a paper no record answers for. A save of a cited paper refreshes the CV's
@@ -168,7 +168,7 @@ A static file at `/cv.md` would win over the route, so `build:content` deletes a
 The PDF follows every CV save on its own. It is DERIVED: the CV rows in D1 are the source, and the
 PDF is a function of them.
 
-- **Render.** After a save has committed and written D1, the Worker renders ONCE in the background (`ctx.waitUntil`,
+- **Render.** After a save has written the source and the rows, the Worker renders ONCE in the background (`ctx.waitUntil`,
   so the save's answer does not wait for it) through Browser Run, `env.BROWSER.quickAction("pdf", ...)`
   (`app/lib/cv/pdf.server.ts`). The HTML is `renderCvHtml` in `app/lib/cv/pdf-html.mjs`, the same function
   `scripts/build-cv-pdf.mjs` calls, so there is one copy of the print document. The pipeline runs in the Worker; the
@@ -187,7 +187,7 @@ PDF is a function of them.
 - **A later save is never overwritten by an earlier render.** `ensureCvPdf` reads D1's CV, renders, reads D1's CV
   again and discards the render if its fingerprint moved, then puts with `onlyIf` the object is still the one it
   read. A render that loses either compare starts over, up to three times.
-- **A failed render never undoes the save.** The commit and the D1 row stand. The failure is logged as
+- **A failed render never undoes the save.** The source and the D1 row stand. The failure is logged as
   `{"alert":"cv-pdf-render-failed"}` and rethrown into the `waitUntil` task, the stored object is left as it was, and
   the `cv-pdf-drift` health check (the stored fingerprint against D1's CV) goes red. The watchdog repairs it through
   the operator's `sync_cv_pdf`, which renders only when the stored object is not current, then reads back.

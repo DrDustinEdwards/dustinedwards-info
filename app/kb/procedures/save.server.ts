@@ -8,7 +8,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
@@ -22,11 +22,11 @@ import { compileProcedure } from "./compile.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchUid } from "./render.mjs";
 
-type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
+type ProcedureEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class ProcedureInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "ProcedureInvalid";
   }
 }
@@ -250,9 +250,9 @@ export async function saveProcedure(
   const { commitSha, blobShas } = written;
   if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
     throw new Error(
-      `The procedure "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobShas[path]}) are not ` +
+      `The procedure "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[path]}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

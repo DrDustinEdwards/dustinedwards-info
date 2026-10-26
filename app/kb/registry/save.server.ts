@@ -14,7 +14,7 @@ import { listRegistry } from "~/db/registry";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRegistry, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
@@ -31,13 +31,13 @@ import { compile } from "./host.server";
 import { KINDS, type KindSpec } from "./kinds.mjs";
 import { registrySearchInput, registrySearchUid } from "./search-inputs.mjs";
 
-type RegistryEnv = Env & { GITHUB_TOKEN?: string };
+type RegistryEnv = Env;
 type Kinds = Readonly<Record<string, KindSpec>>;
 
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 export class RegistryInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The registry item "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The registry item "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "RegistryInvalid";
   }
 }
@@ -59,7 +59,7 @@ function registered(slug: string, kinds: Kinds) {
   return { ...address, slug, file: registryPath(slug) };
 }
 
-/** The item the committed file holds, judged by the same validator, for get_registry. */
+/** The item the stored file holds, judged by the same validator, for get_registry. */
 export async function readRegistryItem(env: RegistryEnv, slug: string, kinds: Kinds = KINDS) {
   const { file } = registered(slug, kinds);
   const existing = await readFile(env, file);
@@ -211,9 +211,9 @@ export async function saveRegistryItem(
   const blobSha = written.blobShas[file];
   if (blobSha && blobSha !== compiled.sourceBlobSha) {
     throw new Error(
-      `The registry item "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobSha}) are not ` +
+      `The registry item "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run sync_registry to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

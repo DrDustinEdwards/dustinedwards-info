@@ -7,7 +7,7 @@ import { action as previewAction } from "~/routes/admin.kb.preview";
 
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { equipmentRepoFiles, reagentRepoFiles, seedProcedures, seedRegistry, strainRepoFiles } from "./seed";
 import { testEnv } from "./test-env";
@@ -37,24 +37,24 @@ const context = () => {
 const entryUrl = (search = "") => `https://example.com/admin/kb/entry/${SLUG}${search}`;
 const post = (url: string, fields: Record<string, string>) =>
   new Request(url, { method: "POST", body: new URLSearchParams(fields) });
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 /** The payload of a data() answer, or the Response a redirect is. */
 const payload = (result: unknown) => (result instanceof Response ? result : (result as { data: Record<string, unknown> }).data);
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedProcedures();
   await seedRegistry();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   purge.mockClear();
-  gh = stubGitHub({ [FILE]: protocol, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  gh = await stubSources({ [FILE]: protocol, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("the Knowledge Base editor", () => {
@@ -63,7 +63,7 @@ describe("the Knowledge Base editor", () => {
       file: { raw: string; sha: string; title: string; listHref: string; publicHref: string; gaps: unknown[]; errors: string[] };
     };
     expect(file.raw).toBe(protocol);
-    expect(file.sha).toBe(await versionOf(gh, FILE));
+    expect(file.sha).toBe(await versionOf(FILE));
     expect(file.title).toBe("Phage DNA Extraction Protocol");
     expect(file.listHref).toBe("/admin/kb?tab=protocols");
     expect(file.publicHref).toBe(`/research/protocols/${SLUG}`);
@@ -97,18 +97,18 @@ describe("the Knowledge Base editor", () => {
     };
     expect(bad.ok).toBe(false);
     expect(bad.errors.length).toBeGreaterThan(0);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("Save commits the edit through the procedure save and redirects back to the file view with the commit", { timeout: 120_000 }, async () => {
     const edited = protocol.replace(OLD_STEP, NEW_STEP);
     const result = payload(
-      await entryAction({ request: post(entryUrl(), { intent: "save", raw: edited, sha: await versionOf(gh, FILE) }), params: { slug: SLUG }, context: context() } as never),
+      await entryAction({ request: post(entryUrl(), { intent: "save", raw: edited, sha: await versionOf(FILE) }), params: { slug: SLUG }, context: context() } as never),
     );
     expect(result).toBeInstanceOf(Response);
-    expect((result as Response).headers.get("location")).toMatch(new RegExp(`^/admin/kb/entry/${SLUG}\\?saved=\\w{7}&view=file$`));
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect(commits()).toHaveLength(1);
+    expect((result as Response).headers.get("location")).toMatch(new RegExp(`^/admin/kb/entry/${SLUG}\\?saved=\\w+&view=file$`));
+    expect((await source(FILE))).toBe(edited);
+    expect((await commits())).toHaveLength(1);
     const row = await testEnv.DB.prepare("SELECT markdown FROM procedures WHERE slug = ?1").bind(SLUG).first<{ markdown: string }>();
     expect(row?.markdown).toContain("60 °C");
   });
@@ -120,19 +120,19 @@ describe("the Knowledge Base editor", () => {
     ) as { conflict?: string; raw: string };
     expect(result.conflict).toMatch(/changed since it was opened/);
     expect(result.raw).toBe(edited);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES a save the validator fails, with its messages, and commits nothing", async () => {
     const result = payload(
       await entryAction({
-        request: post(entryUrl(), { intent: "save", raw: protocol.replace(/^title: .*$/m, "title: "), sha: await versionOf(gh, FILE) }),
+        request: post(entryUrl(), { intent: "save", raw: protocol.replace(/^title: .*$/m, "title: "), sha: await versionOf(FILE) }),
         params: { slug: SLUG },
         context: context(),
       } as never),
     ) as { refused?: string[] };
     expect(result.refused?.length).toBeGreaterThan(0);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("edits a registry item through the registry save", { timeout: 120_000 }, async () => {
@@ -147,7 +147,7 @@ describe("the Knowledge Base editor", () => {
     expect(edited).not.toBe(file.raw);
     const result = payload(await itemAction({ request: post(url, { intent: "save", raw: edited, sha: file.sha }), params, context: context() } as never));
     expect(result).toBeInstanceOf(Response);
-    expect(gh.files.get(ITEM_FILE)).toBe(edited);
+    expect((await source(ITEM_FILE))).toBe(edited);
   });
 });
 
@@ -199,8 +199,8 @@ describe("the Knowledge Base form", () => {
     expect(drawn.styles).toHaveLength(5);
     const refused = await preview({ ...form.model, data: { ...form.model.data, status: "sometimes" } });
     expect(refused.errors?.some((e) => e.startsWith('status is "sometimes"'))).toBe(true);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(protocol);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(protocol);
   });
 
   it("opens as the form, with the file behind Advanced", async () => {
@@ -222,7 +222,7 @@ describe("the Knowledge Base form", () => {
       } as never),
     );
     expect(result).toBeInstanceOf(Response);
-    const saved = gh.files.get(FILE) ?? "";
+    const saved = (await source(FILE)) ?? "";
     const changed = saved.split("\n").filter((line, i) => line !== protocol.split("\n")[i]);
     expect(changed).toEqual(["status: in-use"]);
   });
@@ -240,7 +240,7 @@ describe("the Knowledge Base form", () => {
     expect(result.ok).toBe(false);
     expect(result.errors[0]).toMatch(/^based_on is not valid YAML/);
     expect(result.model).toBe(JSON.stringify(model));
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("Duplicate makes a new draft with its own title and address, recording where it came from", { timeout: 120_000 }, async () => {
@@ -253,14 +253,14 @@ describe("the Knowledge Base form", () => {
     );
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).headers.get("location")).toBe("/admin/kb/entry/phage-dna-extraction-half-volume?created=1");
-    const copy = gh.files.get("content/procedures/phage-dna-extraction-half-volume.md") ?? "";
+    const copy = (await source("content/procedures/phage-dna-extraction-half-volume.md")) ?? "";
     expect(copy).toMatch(/^title: "?Phage DNA extraction, half volume"?$/m);
     expect(copy).toMatch(/^path: \/research\/protocols\/phage-dna-extraction-half-volume$/m);
     expect(copy).toMatch(/^draft: true$/m);
     expect(copy).toMatch(/^forked_from:\n {2}slug: phage-dna-extraction$/m);
     expect(copy).not.toMatch(/^start_here:/m);
     // The original is untouched.
-    expect(gh.files.get(FILE)).toBe(protocol);
+    expect((await source(FILE))).toBe(protocol);
   });
 
   it("Duplicate refuses a file name that is taken or malformed, and makes nothing", async () => {
@@ -268,6 +268,6 @@ describe("the Knowledge Base form", () => {
       await entryAction({ request: post(entryUrl(), { intent: "duplicate", title: "Copy", slug: "Not A Slug" }), params: { slug: SLUG }, context: context() } as never),
     ) as { refused: string[] };
     expect(result.refused[0]).toMatch(/is not a file name/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });

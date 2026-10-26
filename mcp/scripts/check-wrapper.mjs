@@ -267,9 +267,9 @@ check(
 // B. Credentials and vars the wrapper must never hold.
 // ---------------------------------------------------------------------------
 
-// GITHUB_TOKEN is the app's repository WRITE credential. If the wrapper held it,
-// it could commit directly and bypass every gate, which is precisely the second
-// write path the law forbids. The wrapper holds no GitHub credential at all.
+// GITHUB_TOKEN would be a repository WRITE credential. The site no longer holds one
+// (its content source is D1), and the wrapper must never hold one either: it could
+// commit directly and bypass every gate, the second write path the law forbids.
 const FORBIDDEN_NAMES = [
   "GITHUB_TOKEN",
   "BETTER_AUTH_SECRET",

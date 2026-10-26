@@ -12,88 +12,88 @@ const CHECK_COPY = {
     name: "Posts on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} posts are older on the site than in the repository. Syncing re-renders them.`
-        : "Some posts are older on the site than in the repository. Syncing re-renders them.",
-    passing: "Every post on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} posts are older on the site than in its source. Syncing re-renders them.`
+        : "Some posts are older on the site than in its source. Syncing re-renders them.",
+    passing: "Every post on the site matches its source.",
     repair: { action: "/admin/posts", intent: "regenerate", label: "Re-render every post" },
   },
   "procedures-drift": {
     name: "Procedures on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} procedures are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some procedures are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every procedure on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} procedures are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some procedures are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every procedure on the site matches its source.",
     repair: null,
   },
   "dictionary-drift": {
     name: "Dictionary entries on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} dictionary entries are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some dictionary entries are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every dictionary entry on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} dictionary entries are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some dictionary entries are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every dictionary entry on the site matches its source.",
     repair: null,
   },
   "registry-drift": {
     name: "Lab registry on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} lab registry items are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some lab registry items are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every lab registry item on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} lab registry items are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some lab registry items are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every lab registry item on the site matches its source.",
     repair: null,
   },
   "pages-drift": {
     name: "Pages on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} pages are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some pages are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every page on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} pages are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some pages are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every page on the site matches its source.",
     repair: null,
   },
   "publications-drift": {
     name: "Publications on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} publications are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some publications are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every publication on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} publications are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some publications are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every publication on the site matches its source.",
     repair: null,
   },
   "roster-drift": {
     name: "Roster on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} cohorts are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some cohorts are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every cohort on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} cohorts are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some cohorts are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every cohort on the site matches its source.",
     repair: null,
   },
   "phage-drift": {
     name: "Phage table on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} phages are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some phages are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "Every phage on the site matches the one in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} phages are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some phages are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "Every phage on the site matches its source.",
     repair: null,
   },
   "llms-drift": {
     name: "The llms.txt file on the site",
     failing: () =>
-      "The llms.txt the site serves is older than the one in the repository. The site's watcher rewrites it on its next check.",
-    passing: "The llms.txt the site serves matches the one in the repository.",
+      "The llms.txt the site serves is older than its source. The site's watcher rewrites it on its next check.",
+    passing: "The llms.txt the site serves matches its source.",
     repair: null,
   },
   "cv-drift": {
     name: "The CV on the site",
     failing: (counts) =>
       counts
-        ? `${counts.expected - counts.present} of the ${counts.expected} CV files are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
-        : "Some CV files are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
-    passing: "The CV on the site matches the CV in the repository.",
+        ? `${counts.expected - counts.present} of the ${counts.expected} CV files are older on the site than in its source. The site's watcher re-compiles them on its next check.`
+        : "Some CV files are older on the site than in its source. The site's watcher re-compiles them on its next check.",
+    passing: "The CV on the site matches its source.",
     repair: null,
   },
   "cv-pdf-drift": {
@@ -164,7 +164,7 @@ export function statusSentence(checks) {
   // Guard the value, not the length, so the compiler knows `worst` is defined.
   const worst = failing[0];
   if (!worst) {
-    return "Everything agrees: the site, the repository, the library and search are all in step.";
+    return "Everything agrees: the site, the source, the library and search are all in step.";
   }
   const first = humanCheck(worst);
   if (failing.length === 1) {

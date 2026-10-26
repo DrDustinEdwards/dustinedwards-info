@@ -8,7 +8,7 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 
 import aboutFile from "../../content/pages/about.md?raw";
 
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -41,20 +41,20 @@ async function sitemapPaths() {
   const res = (await sitemapLoader({ request: new Request(`${ORIGIN}/sitemap.xml`), context: routeContext(), params: {} } as never)) as Response;
   return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/");
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPages(["/about"]);
 });
 
-beforeEach(() => {
-  gh = stubGitHub({ [FILE]: aboutFile });
+beforeEach(async () => {
+  gh = await stubSources({ [FILE]: aboutFile });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("an About edit through the adapter is live at the next request", () => {
@@ -65,13 +65,13 @@ describe("an About edit through the adapter is live at the next request", () => 
     expect(before).toContain('class="about-photo"');
 
     const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-about" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(FILE), changeId: "chg-about" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-about" });
 
     // The repository is the source, and it holds the edit.
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect((commits()[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-about]");
+    expect((await source(FILE))).toBe(edited);
+    expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-about]");
 
     // The next request carries it, inside the same layout and the same ProfilePage.
     const after = await aboutHtml();
@@ -88,32 +88,32 @@ describe("an About edit through the adapter is live at the next request", () => 
   });
 
   it("an unchanged save commits nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });
 
 describe("a save is held to what CI holds", () => {
   it("REFUSES an About with no prose (the render floor check:content held), commits nothing and keeps the page", async () => {
     const blank = `${aboutFile.split("\n---\n")[0]}\n---\n\nToo short.\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: blank, expectedVersion: await versionOf(gh, FILE), changeId: "chg-blank" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: blank, expectedVersion: await versionOf(FILE), changeId: "chg-blank" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/floor 200/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(await aboutHtml()).toContain("Department Head of Biological Sciences");
   });
 
   it("REFUSES a missing seo_title and a link the URL allowlist refuses", async () => {
     const noSeo = aboutFile.replace(/^seo_title: .*$/m, "");
-    const first = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: noSeo, expectedVersion: await versionOf(gh, FILE), changeId: "chg-seo" });
+    const first = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: noSeo, expectedVersion: await versionOf(FILE), changeId: "chg-seo" });
     expect(first.status).toBe(422);
     expect(((await first.json()) as { message: string }).message).toMatch(/seo_title is required/);
 
     const bad = `${aboutFile.trimEnd()}\n\n[x](javascript:alert(1))\n`;
-    const second = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-link" });
+    const second = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(FILE), changeId: "chg-link" });
     expect(second.status).toBe(422);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });
 
@@ -124,14 +124,14 @@ describe("About has a route of its own", () => {
     expect(paths.indexOf("/about")).toBe(1);
 
     const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-search" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(FILE), changeId: "chg-search" });
     expect(response.status, await response.clone().text()).toBe(200);
     const hits = await testEnv.DB.prepare("SELECT count(*) AS n FROM search_docs WHERE url LIKE '/about%'").first<{ n: number }>();
     expect(hits?.n).toBe(0);
   });
 
   it("unpublish takes the page and its sitemap entry down, and publish restores them", { timeout: 180_000 }, async () => {
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
@@ -151,9 +151,9 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
     await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(gh, FILE), changeId: "chg-repair" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: aboutFile, expectedVersion: await versionOf(FILE), changeId: "chg-repair" });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(await aboutHtml()).toContain("Department Head of Biological Sciences");
   });
 });

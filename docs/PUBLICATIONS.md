@@ -112,13 +112,13 @@ artifacts.
 
 `savePublication` (`app/lib/publications/save.server.ts`), the structure of `savePost` and `saveProcedure`:
 
-1. validate with the module above (a refusal is a 422 with every message, and nothing is committed);
+1. validate with the module above (a refusal is a 422 with every message, and nothing is saved);
 2. policy: Carrel's key may publish for the first time (Carrel design decision 2); a record saved with
    `saveDraft` that is new starts as a draft, and one that is live stays live;
-3. `commitUnlessUnchanged` (`app/lib/editor/write-path.server.ts`): a byte-identical save commits nothing;
-4. the committed blob is checked against the compiled bytes;
+3. `commitUnlessUnchanged` (`app/lib/editor/write-path.server.ts`): a byte-identical save saves nothing;
+4. the stored blob is checked against the compiled bytes;
 5. the D1 row, the paper's search record and the FTS rebuild are written in one batch, through
-   `convergeWithRetry`, and a failed write never reverts the commit (the error says how to repair it);
+   `convergeWithRetry`, and a failed write never reverts the source write (the error says how to repair it);
 6. the cache purge by tag (`publications`, and `posts` for the home and search pages), and the paper's twin in or
    out of the Ask index.
 

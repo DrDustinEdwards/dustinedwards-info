@@ -11,7 +11,7 @@ import carrelEntry from "../../content/dictionary/carrel.md?raw";
 import capsidPage from "../../content/pages/software-capsid.md?raw";
 import carrelPage from "../../content/pages/software-carrel.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPages } from "./seed";
 
 /* sync_dictionary and the dictionary-drift check: D1 converges to content/dictionary through the compile and
@@ -38,12 +38,12 @@ const searchRows = async (path: string) =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "dictionary-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_dictionary", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM dictionary_entries").run();
   await seedPages();
-  gh = stubGitHub({
+  gh = await stubSources({
     "content/dictionary/capsid.md": capsidEntry,
     "content/dictionary/carrel.md": carrelEntry,
     "content/pages/software-capsid.md": capsidPage,
@@ -53,8 +53,8 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_dictionary and the dictionary-drift check", () => {
@@ -80,8 +80,8 @@ describe("sync_dictionary and the dictionary-drift check", () => {
 
     // An edit committed outside the save tool, and a deletion.
     const edited = carrelEntry.replace(SENSE, ADDED);
-    gh.files.set("content/dictionary/carrel.md", edited);
-    gh.files.delete("content/dictionary/capsid.md");
+    await putSource("content/dictionary/carrel.md", edited);
+    await removeSource("content/dictionary/capsid.md");
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -104,9 +104,9 @@ describe("sync_dictionary and the dictionary-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no entry: a fault, not a repository with none.
-    gh.files.delete("content/dictionary/capsid.md");
-    gh.files.delete("content/dictionary/carrel.md");
-    gh.files.set("content/dictionary/README.txt", "not an entry");
+    await removeSource("content/dictionary/capsid.md");
+    await removeSource("content/dictionary/carrel.md");
+    await putSource("content/dictionary/README.txt", "not an entry");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -118,8 +118,8 @@ describe("sync_dictionary and the dictionary-drift check", () => {
   });
 
   it("makes no row for a file whose path is not a registered Software page or whose clip is missing, naming it, and converges the rest", { timeout: 240_000 }, async () => {
-    gh.files.set("content/dictionary/stray.md", capsidEntry.replace("path: /software/capsid", "path: /software/nothing"));
-    gh.files.delete("public/audio/carrel.mp3");
+    await putSource("content/dictionary/stray.md", capsidEntry.replace("path: /software/capsid", "path: /software/nothing"));
+    gh.assets.delete("public/audio/carrel.mp3");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {

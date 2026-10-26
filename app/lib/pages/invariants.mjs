@@ -1,5 +1,5 @@
 // What a page must keep true because code, a redirect or a calculator depends on it. Each rule used to be a
-// test that read content/pages/*.md in CI; a save through the operator API commits to the repository and
+// test that read content/pages/*.md in CI; a save writes the stored source and
 // the page is live before CI runs, so the rules live here, where compilePage runs them for the build, the
 // sync, CI's tests and the page save alike (docs/PAGES.md). A message names the page and says what to restore.
 

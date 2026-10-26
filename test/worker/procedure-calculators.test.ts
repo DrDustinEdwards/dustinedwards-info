@@ -12,7 +12,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* Calculators folded under the steps that name them (docs/PROCEDURES.md): what a reader, a machine and the printed
@@ -23,12 +23,12 @@ const operator = { kind: "operator", id: "test" } as const;
 const SLUG = "phage-isolation";
 const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
-let gh: GitHubStub;
-beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+let gh: SourceStub;
+beforeEach(async () => {
+  gh = await stubSources({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 async function record(raw: string) {

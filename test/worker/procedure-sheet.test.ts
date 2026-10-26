@@ -11,7 +11,7 @@ import VersionSheetRoute, { loader as versionSheetLoader } from "~/routes/proced
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* The printed bench sheet (docs/PROCEDURES.md): its head carries the version id and date, and its QR code opens the
@@ -35,12 +35,12 @@ const V2 = isolation
   )
   .replace("Pour 5 to 10 replicate plates", "Pour 6 to 10 replicate plates");
 
-let gh: GitHubStub;
-beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+let gh: SourceStub;
+beforeEach(async () => {
+  gh = await stubSources({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 const save = async (raw: string) => expect((await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw })).ok).toBe(true);

@@ -131,7 +131,7 @@ Checks are named in words the operator uses and the finding is plain English, no
 the verdict function's output. Failing ones sort first. A kebab appears only on a
 row that has a repair; an empty menu on every row is the Maintenance defect.
 
-**Stores are two figures**: what the repository holds and what the site is
+**Stores are two figures**: what the stored source holds and what the site is
 serving. Those two can disagree, and the disagreement is why the panel exists.
 The search index and the bindings go under a `<details>`; nobody opens this page
 to read them. One primary action, Sync, and only when there is a repair.

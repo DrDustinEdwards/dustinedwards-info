@@ -52,7 +52,7 @@ The set is judged too: it cannot be empty, and cohorts list newest first.
 ## Photographs
 
 The photographs stay where they were, static assets in `public/phage-hunters/`, referenced by path. A save
-checks that the path exists in the repository (through the GitHub directory listing, like a paper's PDF) and
+checks that the deploy serves the path (through the assets binding, like a paper's PDF) and
 never uploads or moves anything. Each cohort file names its photograph, so the media library reads
 `content/roster` as a source of references (`SOURCE_DIRECTORIES`, `app/lib/media/template-refs.mjs`) and
 `content/generated/template-refs.json` records them.
@@ -73,12 +73,12 @@ An empty `roster` table is a fault and never an empty roster: both readers throw
 render a program page with no roster on it. The first release therefore needs the migration and the content sync
 before the new Worker serves those two pages.
 
-## Repository first, D1 derived
+## Source first, rows derived
 
-A save validates, commits (`commitUnlessUnchanged`), checks the committed bytes against the bytes compiled, then
-writes the D1 row and purges. A failed D1 write never reverts the commit: the error names the commit and the
-repair. The `roster-drift` health check compares each file's blob sha with its row, the watchdog repairs through
-`sync_roster`, and `sync_roster` refuses an empty file set rather than delete every row. A cohort is removed by
-deleting its file in a commit; the next sync removes its row.
+A save validates, writes the source (`commitUnlessUnchanged`), checks the stored bytes against the bytes compiled,
+then writes the D1 row and purges. A failed row write never reverts the source write: the error names the revision
+and the repair. The `roster-drift` health check compares each file's blob sha with its row, the watchdog repairs through
+`sync_roster`, and `sync_roster` refuses an empty file set rather than delete every row. A cohort is removed with
+`node scripts/remove-source.mjs content/roster/<slug>.md --remote`; the next sync removes its row.
 
 A cohort has no draft state: it is public when saved, so Carrel's unpublish is refused and says so.

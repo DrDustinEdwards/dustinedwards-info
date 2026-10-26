@@ -732,3 +732,39 @@ export const memberTerms = sqliteTable(
   },
   (t) => [check("member_terms_date_check", sql`${t.endDate} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`)],
 );
+
+// The content's source (drizzle/0032_source_files.sql, app/lib/source/store.server.ts): one row per file, keyed by its
+// repository path, `sha` its git blob sha, which is the version Carrel holds. Every version a file has had is a
+// source_revisions row, `content` NULL for a delete. source_guard holds no row outside a write: a guard that fails
+// its CHECK rolls the save's batch back.
+export const sourceFiles = sqliteTable("source_files", {
+  path: text("path").primaryKey(),
+  content: text("content").notNull(),
+  sha: text("sha").notNull(),
+  revision: integer("revision").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const sourceRevisions = sqliteTable(
+  "source_revisions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    path: text("path").notNull(),
+    content: text("content"),
+    sha: text("sha"),
+    message: text("message").notNull(),
+    author: text("author").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [index("source_revisions_path").on(t.path, t.id)],
+);
+
+export const sourceGuard = sqliteTable(
+  "source_guard",
+  { ok: integer("ok").notNull() },
+  (t) => [check("source_guard_ok", sql`${t.ok} = 1`)],
+);

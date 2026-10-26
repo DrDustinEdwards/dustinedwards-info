@@ -11,7 +11,7 @@ import { action } from "~/routes/api.carrel.v1.$";
 import { loader as pdfLoader } from "~/routes/cv-pdf";
 
 import { collectingContext, fakeAssets, fakeBrowser, fakePdf, workingBrowser } from "./cv-pdf-fixtures";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { routeContext } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -40,7 +40,7 @@ const withGrant = (title: string, amount: number) =>
     `entries:\n  - year: 2026\n    amount: ${amount}\n    title: ${title}\n    funder: Example Foundation\n    areas: []\n    role: recipient\n`,
   );
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 const headersFor = () => ({
   authorization: `Bearer ${testEnv.CARREL_SITE_KEY}`,
@@ -57,7 +57,7 @@ function world(browser: Env["BROWSER"]) {
       request: new Request(`${PREFIX}/content/cv.grants/draft`, {
         method: "PUT",
         headers: headersFor(),
-        body: JSON.stringify({ source, expectedVersion: await versionOf(gh, "content/cv/grants.md"), changeId }),
+        body: JSON.stringify({ source, expectedVersion: await versionOf("content/cv/grants.md"), changeId }),
       }),
       context: routeContext(background.ctx, { BROWSER: browser, ASSETS: fakeAssets }),
       params: {},
@@ -70,7 +70,7 @@ function world(browser: Env["BROWSER"]) {
 
 const stored = () => env.OG.head(CV_PDF_KEY);
 const fingerprintOfD1 = async () => cvFingerprint(await readCv(env as never));
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const check = async (w: { env: Env }) => (await runHealthChecks(w.env)).checks.find((c) => c.name === "cv-pdf-drift");
 const grantsRow = () => env.DB.prepare("SELECT record FROM cv WHERE slug = 'grants'").first<{ record: string }>();
 const operator = { kind: "operator", id: "test" } as never;
@@ -82,11 +82,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   await seedCv();
   await env.OG.delete(CV_PDF_KEY);
-  gh = stubGitHub(repository());
+  gh = await stubSources(repository());
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
   vi.restoreAllMocks();
 });
 
@@ -141,7 +141,7 @@ describe("a CV save through the adapter renders the PDF once", () => {
     const response = await w.put(rawOf("grants"), "chg-same");
     expect(response.status).toBe(200);
     await w.settle();
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(browser.calls).toHaveLength(0);
   });
 });
@@ -158,8 +158,8 @@ describe("a render that fails never undoes the save", () => {
     const settled = await w.settle();
     expect(settled[0]?.status).toBe("rejected");
 
-    expect(commits()).toHaveLength(1);
-    expect(gh.files.get(cvSourcePath("grants"))).toBe(withGrant(FIRST, 1111));
+    expect((await commits())).toHaveLength(1);
+    expect((await source(cvSourcePath("grants")))).toBe(withGrant(FIRST, 1111));
     expect((await grantsRow())?.record).toContain(FIRST);
     expect(await stored()).toBeNull();
     expect(errors.mock.calls.some(([line]) => String(line).includes('"alert":"cv-pdf-render-failed"') && String(line).includes("503"))).toBe(true);

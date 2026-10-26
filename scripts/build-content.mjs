@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { serializeArtifact } from "./lib/artifact.mjs";
+import { readPullManifest } from "./lib/content-source.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import {
   CONTENT_PAGES_FROM_DATA,
@@ -277,6 +278,9 @@ export async function buildArtifact() {
  * @returns {string | null}
  */
 export function lastCommitDate(file) {
+  // A file pulled from D1 changed when D1 last wrote it: git's date is the seed's.
+  const pulled = readPullManifest()?.[file];
+  if (pulled) return pulled.day;
   // A file with no history is git exiting 0 with no output, the null answer. A throw is git missing
   // or not a repository, which used to write a null revision date over every real one in D1.
   let out;
