@@ -107,11 +107,11 @@ export function ShellFooter() {
                   return (
                     <li key={tool.to}>
                       {tool.external ? (
-                        <a href={tool.to} className="footer-private-link" aria-label={tool.name} title={tool.hover}>
+                        <a href={tool.to} rel="nofollow" className="footer-private-link" aria-label={tool.name} title={tool.hover}>
                           {content}
                         </a>
                       ) : (
-                        <Link to={tool.to} className="footer-private-link" aria-label={tool.name} title={tool.hover}>
+                        <Link to={tool.to} rel="nofollow" className="footer-private-link" aria-label={tool.name} title={tool.hover}>
                           {content}
                         </Link>
                       )}

@@ -140,25 +140,25 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const usedIn = (uses: Used) => (uses.length > 0 ? `, used in ${plural(uses.length, "protocol")}` : "");
   if (page.kind === "reagent") {
     const { reagent } = page;
-    const source = reagent.preparedInLab ? "Prepared in the lab" : [reagentSource(reagent), reagent.catalogNumber].filter(Boolean).join(", ") || "Reagent";
-    return [...pageMeta({ title: `${reagentLabel(reagent)}: reagent`, description: `${source}${usedIn(reagent.uses)}.`, path: reagent.path }), ...noindex];
+    const source = reagent.preparedInLab ? "prepared in the lab" : [reagentSource(reagent), reagent.catalogNumber].filter(Boolean).join(", ") || "a reagent";
+    return [...pageMeta({ title: `${reagentLabel(reagent)}: reagent`, description: `${reagentLabel(reagent)}: ${source}${usedIn(reagent.uses)}.`, path: reagent.path }), ...noindex];
   }
   if (page.kind === "equipment") {
     const { equipment } = page;
-    const maker = equipment.manufacturer ? `Made by ${equipment.manufacturer}` : "Lab equipment";
-    return [...pageMeta({ title: `${equipment.name}: equipment`, description: `${maker}${usedIn(equipment.uses)}.`, path: equipment.path }), ...noindex];
+    const maker = equipment.manufacturer ? `made by ${equipment.manufacturer}` : "lab equipment";
+    return [...pageMeta({ title: `${equipment.name}: equipment`, description: `${equipment.name}: ${maker}${usedIn(equipment.uses)}.`, path: equipment.path }), ...noindex];
   }
   if (page.kind === "strain") {
     const { strain } = page;
     const facts = [strain.collection && strain.collectionNumber ? `${strain.collection} ${strain.collectionNumber}` : null, `${plural(strain.phages.length, "phage")} isolated on it`]
       .filter(Boolean)
       .join(", ");
-    return [...pageMeta({ title: `${strain.name}: strain`, description: `${strain.organism ?? "Bacterial"} host strain, ${facts}.`, path: strain.path }), ...noindex];
+    return [...pageMeta({ title: `${strain.name}: strain`, description: `${strain.name}: ${strain.organism ?? "bacterial"} host strain, ${facts}.`, path: strain.path }), ...noindex];
   }
   const { primer } = page;
-  const facts = [primer.direction ? `${primer.direction} primer` : "Primer", primer.target ? `for ${primer.target}` : null].filter(Boolean).join(" ");
+  const facts = [primer.direction ? `${primer.direction} primer` : "primer", primer.target ? `for ${primer.target}` : null].filter(Boolean).join(" ");
   const sizes = [primer.length ? `${primer.length} nt` : null, primer.tm !== null ? `Tm ${primer.tm} °C` : null].filter(Boolean).join(", ");
-  return [...pageMeta({ title: `${primer.name}: primer`, description: `${facts}${sizes ? `, ${sizes}` : ""}.`, path: primer.path }), ...noindex];
+  return [...pageMeta({ title: `${primer.name}: primer`, description: `${primer.name}: ${facts}${sizes ? `, ${sizes}` : ""}.`, path: primer.path }), ...noindex];
 }
 
 export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
