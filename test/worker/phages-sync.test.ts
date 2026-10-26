@@ -91,7 +91,7 @@ describe("sync_phages and the phage-drift check", () => {
 
   it("re-compiles a phage edited through git, redraws the page's twin and search record, and removes a row whose file is gone", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
-    expect(await twin()).toContain("| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc²155 | Hood County |");
+    expect(await twin()).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Hood County |");
 
     // An edit committed outside the save tool, a new file, and a deletion.
     const edited = (files["content/phages/acorn15.md"] ?? "").replace("county: Hood County", "county: Parker County");
@@ -113,9 +113,9 @@ describe("sync_phages and the phage-drift check", () => {
 
     // The page is drawn from the final set: the edit, the new phage and the deleted one's absence.
     const after = await twin();
-    expect(after).toContain("| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc²155 | Parker County |");
-    expect(after).toContain("| [Zeta](#zeta) | 2026 |");
-    expect(after).not.toContain("[Allene](#allene)");
+    expect(after).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Parker County |");
+    expect(after).toContain("| Zeta | 2026 |");
+    expect(after).not.toContain("| Allene |");
     expect((await searchRows()).some((r) => r.body.includes("Zeta"))).toBe(true);
   });
 

@@ -96,9 +96,8 @@ await test("the calculator pages must still state what the calculator prints", a
   );
 });
 
-await test("the phage page must say where its table and sections are drawn", async () => {
+await test("the phage page must say where its table is drawn", async () => {
   assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:table -->", "")), /exactly once.*it has 0/);
-  assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:sections -->", "")), /exactly once.*it has 0/);
 });
 
 await test("the named software pages keep their name sections and their two exclusions", async () => {

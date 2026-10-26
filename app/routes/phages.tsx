@@ -14,7 +14,7 @@ import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { phagesDbUrl } from "~/lib/phage-table.mjs";
-import { HOSTS, PHAGES_PAGE_PATH, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
+import { HOSTS, PHAGES_PAGE_PATH, formerlyText, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
 import { PHAGES, phageListing } from "~/lib/phages/catalog.mjs";
 import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -34,9 +34,8 @@ import "~/styles/site-catalog.css";
 import "~/styles/phages.css";
 
 /**
- * /research/phages (docs/PHAGES.md): the page's own prose and its phage-by-phage sections, as the page row holds them,
- * with the table between them drawn as Capsomer's catalog over the phage rows: search, facets with counts, sort and
- * the count, working with no script. The page row still holds the markdown table, so the markdown twin, the search
+ * /research/phages (docs/PHAGES.md): the page's own prose, as the page row holds it, with its table drawn as
+ * Capsomer's catalog over the phage rows: search, facets with counts, sort and the count, working with no script. The page row still holds the markdown table, so the markdown twin, the search
  * records and the page's invariants are the same as ever; only the HTML table is swapped for the catalog.
  */
 export function headers() {
@@ -119,7 +118,13 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
           definition={PHAGES}
           result={result}
           labelledBy="phages-title"
-          title={(p) => <a href={`#${phageSlug(p.name)}`}>{p.name}</a>}
+          title={(p) => (
+            // The row is the phage's anchor: /research/phages#acorn15 and the old /discovery-of-acorn15 land on it.
+            <>
+              <span id={phageSlug(p.name)}>{`${p.name}${formerlyText(p)}`}</span>
+              {p.note ? <span className="phage-note">{p.note}</span> : null}
+            </>
+          )}
           cells={cells}
           emptyText={{ noMatch: "No phages match this search." }}
         />

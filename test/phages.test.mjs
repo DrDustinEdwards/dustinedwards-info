@@ -8,12 +8,10 @@ import {
   HOSTS,
   PHAGES_PAGE_PATH,
   PHAGE_FACT_PAGES,
-  SECTIONS_MARKER,
   TABLE_MARKER,
   compilePhage,
   expandPhagePage,
   expandPhageTokens,
-  phageSection,
   phageSetErrors,
   phageTableMarkdown,
   phageTableRow,
@@ -71,27 +69,18 @@ await test("the files are in the page's order: year, then name, with the slug th
   assert.deepEqual(names.slice(0, 4), ["Besitos", "CutiePie", "DaddyP", "DJDoc"], "case-folded: DaddyP before DJDoc");
 });
 
-await test("a row and a section say what the page has always said", () => {
+await test("a row carries every fact the phage has, a former name and a note included, as the table is the only list", () => {
   const by = (/** @type {string} */ name) => phages.find((p) => p.name === name);
   assert.equal(
     phageTableRow(/** @type {any} */ (by("Ryadel"))),
-    "| [Ryadel](#ryadel) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Ryadel/) | [Paper](/research/publications/10-1128-mra-01594-18/) |",
+    "| Ryadel | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Ryadel/) | [Paper](/research/publications/10-1128-mra-01594-18/) A manuscript on its cryo-EM structure is submitted. |",
   );
-  assert.equal(
-    phageSection(/** @type {any} */ (by("Ryadel"))),
-    "### Ryadel\n\nHost: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.\n\n" +
-      "[Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/). A manuscript on its cryo-EM structure is submitted.",
-  );
-  // A county PhagesDB does not give is an empty cell, and a section drops the place.
-  // Every shipped phage has a county now, so the empty case is Fambo's record with the county removed.
+  assert.match(phageTableRow(/** @type {any} */ (by("Strudel"))), /^\| Strudel \(formerly Jentrie\) \| 2017 \|/);
+  // A county PhagesDB does not give is an empty cell. Every shipped phage has a county now, so the empty case is
+  // Fambo's record with the county removed.
   const noCounty = /** @type {any} */ ({ ...by("Fambo"), county: null });
-  assert.equal(phageTableRow(noCounty), "| [Fambo](#fambo) | 2022 | *M. foliorum* |  | [PhagesDB](https://phagesdb.org/phages/Fambo/) |  |");
-  assert.equal(phageSection(noCounty).split("\n")[2], "Host: *Microbacterium foliorum*. Found in 2022.");
-  assert.equal(phageSection(/** @type {any} */ (by("Lucinda"))).split("\n")[2], "Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Texas.");
-  // Softsoap is spelled as PhagesDB spells it: the link text and the address are the record's own.
-  assert.match(phageSection(/** @type {any} */ (by("Softsoap"))), /\[Softsoap on PhagesDB\]\(https:\/\/phagesdb\.org\/phages\/Softsoap\/\)/);
-  assert.match(phageSection(/** @type {any} */ (by("Strudel"))), /Found in 2017, Tarrant County, Texas\. Formerly named Jentrie\./);
-  assert.ok(phageTableMarkdown(phages).startsWith("| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|\n| [Acorn15](#acorn15)"));
+  assert.equal(phageTableRow(noCounty), "| Fambo | 2022 | *M. foliorum* |  | [PhagesDB](https://phagesdb.org/phages/Fambo/) |  |");
+  assert.ok(phageTableMarkdown(phages).startsWith("| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|\n| Acorn15 |"));
 });
 
 await test("front matter: only the table's fields, each in its shape", async () => {
@@ -155,24 +144,23 @@ await test("the repository host: a paper is a file under content/publications", 
   assert.equal(await repoHost.paper("no-such-paper"), false);
 });
 
-// The page: the table and sections are drawn where the markers say, before anything reads the body.
+// The page: the table is drawn where the marker says, before anything reads the body.
 
 const pageRaw = readFileSync(new URL("../content/pages/research-phages.md", import.meta.url), "utf8");
 const compilePhagePage = (/** @type {string} */ raw, /** @type {typeof phages | undefined} */ rowsFor = phages) =>
   compilePage({ slug: "research-phages", raw, pipeline: { renderBody, findWideDashes }, phages: rowsFor });
 
-await test("the page file carries each marker once, and the compiled page is drawn from the rows", async () => {
+await test("the page file carries the marker once, and the compiled page is drawn from the rows", async () => {
   assert.equal(pageRaw.split(TABLE_MARKER).length - 1, 1);
-  assert.equal(pageRaw.split(SECTIONS_MARKER).length - 1, 1);
-  assert.doesNotMatch(pageRaw, /^\| \[/m, "no phage row is typed in the page's own file");
-  assert.doesNotMatch(pageRaw, /^### /m, "no phage section is typed in the page's own file");
+  assert.doesNotMatch(pageRaw, /^\| /m, "no phage row is typed in the page's own file");
   const result = await compilePhagePage(pageRaw);
   assert.equal(result.ok, true, result.ok ? "" : result.errors.join("; "));
   if (!result.ok) return;
-  // The twin and the HTML carry the table, the sections and their headings, and no marker.
+  // The twin and the HTML carry the table and no marker.
   assert.ok(result.markdown.includes(phageTableMarkdown(phages)));
-  assert.doesNotMatch(result.markdown, /phages:(table|sections)/);
-  assert.equal([...result.page.html.matchAll(/<h3 id="[^"]+">/g)].length, phages.length);
+  assert.doesNotMatch(result.markdown, /phages:table/);
+  // Each row is the phage's anchor, which /research/phages#acorn15 and the old /discovery-of-acorn15 land on.
+  assert.deepEqual([...result.page.html.matchAll(/<td id="([^"]+)">/g)].map((m) => m[1]), sortPhages(phages).map((p) => p.name.toLowerCase()));
   assert.equal(result.page.dataset?.rows, phages.length);
 });
 
@@ -182,10 +170,8 @@ await test("a phage added to the rows is drawn into the page, its twin and its d
   const after = await compilePhagePage(pageRaw, [...phages, added]);
   assert.equal(before.ok && after.ok, true);
   if (!before.ok || !after.ok) return;
-  assert.ok(after.markdown.includes("| [Zeta](#zeta) | 2026 | *M. foliorum* | Erath County |  |  |"));
-  assert.ok(after.markdown.endsWith("### Zeta\n\nHost: *Microbacterium foliorum*. Found in 2026, Erath County, Texas.\n"));
+  assert.ok(after.markdown.includes("| Zeta | 2026 | *M. foliorum* | Erath County |  |  |"));
   assert.equal(after.page.dataset?.rows, phages.length + 1);
-  assert.match(after.page.html, /<h3 id="zeta">Zeta/);
   assert.match(String(after.page.dataset?.temporalCoverage), /2026/);
   assert.doesNotMatch(String(before.page.dataset?.temporalCoverage), /2026/);
   // Everything the rows do not feed is as it was.
@@ -193,13 +179,13 @@ await test("a phage added to the rows is drawn into the page, its twin and its d
   assert.equal(after.page.description, before.page.description);
 });
 
-await test("the markers: each exactly once and alone on its line, only on the phage page, and rows must exist", async () => {
+await test("the marker: exactly once and alone on its line, only on the phage page, and rows must exist", async () => {
   assert.equal(expandPhagePage("/research/other", "text", undefined).ok, true);
   assert.match(JSON.stringify(expandPhagePage("/research/other", `a\n${TABLE_MARKER}\n`, undefined)), /belongs on \/research\/phages only/);
-  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `x\n${SECTIONS_MARKER}\n`, phages)), /exactly once.*it has 0/);
-  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `${TABLE_MARKER}\n${TABLE_MARKER}\n${SECTIONS_MARKER}`, phages)), /exactly once.*it has 2/);
-  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `see ${TABLE_MARKER} inline\n${SECTIONS_MARKER}`, phages)), /alone on its line/);
-  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `${TABLE_MARKER}\n${SECTIONS_MARKER}`, [])), /phages table is empty/);
+  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, "x\n", phages)), /exactly once.*it has 0/);
+  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `${TABLE_MARKER}\n${TABLE_MARKER}`, phages)), /exactly once.*it has 2/);
+  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, `see ${TABLE_MARKER} inline`, phages)), /alone on its line/);
+  assert.match(JSON.stringify(expandPhagePage(PHAGES_PAGE_PATH, TABLE_MARKER, [])), /phages table is empty/);
   const stray = await compilePage({
     slug: "research-publications",
     raw: `---\npath: /research/publications\ntitle: "x"\nseo_title: "x"\ndescription: "x"\n---\n\n${TABLE_MARKER}\n`,
@@ -208,7 +194,7 @@ await test("the markers: each exactly once and alone on its line, only on the ph
   assert.equal(stray.ok, false);
 });
 
-await test("the page's own text cannot undo the table: a hand-written PhagesDB link, a second table and a repeated heading fail", async () => {
+await test("the page's own text cannot undo the table: a hand-written PhagesDB link and a second table fail", async () => {
   const withProse = (/** @type {string} */ extra) => pageRaw.replace("## All phages", `${extra}\n\n## All phages`);
   const link = await compilePhagePage(withProse("See [a record](https://phagesdb.org/phages/Nothing/)."));
   assert.equal(link.ok, false);
@@ -216,9 +202,6 @@ await test("the page's own text cannot undo the table: a hand-written PhagesDB l
   const table = await compilePhagePage(withProse("| a | b |\n|---|---|\n| [Acorn15](#acorn15) | 1 |"));
   assert.equal(table.ok, false);
   assert.match(table.ok ? "" : table.errors.join(" "), /first table on the page/);
-  const heading = await compilePhagePage(pageRaw.replace(SECTIONS_MARKER, `### Acorn15\n\n${SECTIONS_MARKER}`));
-  assert.equal(heading.ok, false);
-  assert.match(heading.ok ? "" : heading.errors.join(" "), /Acorn15 has 2 ### sections/);
 });
 
 await test("the table has a PhagesDB link for exactly the phages with a verified record, and no other", async () => {
@@ -226,10 +209,7 @@ await test("the table has a PhagesDB link for exactly the phages with a verified
   assert.equal(result.ok, true);
   if (!result.ok) return;
   const withRecord = phages.filter((p) => p.phagesdb !== null).length;
-  assert.equal([...result.page.html.matchAll(/href="https:\/\/phagesdb\.org[^"]*"/g)].length, withRecord * 2, "one link in the table, one in the section");
-  for (const p of phages.filter((p) => p.phagesdb === null)) {
-    assert.doesNotMatch(result.markdown.split(`\n### ${p.name}\n`)[1]?.split("\n### ")[0] ?? "", /phagesdb\.org/);
-  }
+  assert.equal([...result.page.html.matchAll(/href="https:\/\/phagesdb\.org[^"]*"/g)].length, withRecord);
 });
 
 await test("the page states the count and the span its rows give, by token, so an added phage updates it", async () => {

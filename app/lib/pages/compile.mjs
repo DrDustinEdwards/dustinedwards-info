@@ -18,7 +18,7 @@ import {
   markdownTableFacts,
 } from "../content-pages.mjs";
 import { IDENTITY } from "../identity.generated.mjs";
-import { expandPhagePage, expandPhageTokens } from "../phages/compile.mjs";
+import { expandPhagePage, expandPhageTokens, withPhageRowIds } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
 import { protectedPageReason } from "./protected.mjs";
 
@@ -252,9 +252,9 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   if (fm.draft !== undefined && typeof fm.draft !== "boolean") {
     errors.push(`draft is ${JSON.stringify(fm.draft)}; it is true or false`);
   }
-  // The phage page's table and sections are drawn from the phage rows where the file's markers say
-  // (docs/PHAGES.md), before anything reads the body, so its HTML, twin, dataset facts and search record all come
-  // from one text. Every other page passes through unchanged.
+  // The phage page's table is drawn from the phage rows where the file's marker says (docs/PHAGES.md), before
+  // anything reads the body, so its HTML, twin, dataset facts and search record all come from one text. Every
+  // other page passes through unchanged.
   const drawn = expandPhagePage(page.path, parsed.content, phages);
   if (!drawn.ok) errors.push(...drawn.errors);
   const drawnBody = drawn.ok ? expandPageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
@@ -289,7 +289,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   }
 
   /** @type {CompiledPage} */
-  const compiled = { ...page, html: rendered.html, markdown: body, toc: rendered.toc, ...schema, ...legal };
+  const compiled = { ...page, html: withPhageRowIds(page.path, rendered.html, phages), markdown: body, toc: rendered.toc, ...schema, ...legal };
   errors.push(...pageInvariantErrors(compiled, { phages }));
   if (errors.length > 0) return { ok: false, errors };
 
