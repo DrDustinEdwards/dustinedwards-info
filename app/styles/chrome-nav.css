@@ -9,11 +9,12 @@
 .site-nav-panel {
   --nav-card-w: 40rem;
   --nav-rule: var(--line-w) solid var(--dust);
-  /* The page's own ground; dark keeps the popover step. */
-  --nav-card-bg: var(--paper);
-  --nav-band-bg: color-mix(in oklab, var(--brand) 7%, var(--nav-card-bg));
+  /* A tint of the purple, so the card stands apart from the near-white page (Dustin, 2026-10-26); dark
+     keeps the popover step. */
+  --nav-card-bg: color-mix(in oklab, var(--brand) 6%, var(--paper));
+  --nav-band-bg: color-mix(in oklab, var(--brand) 8%, var(--nav-card-bg));
   --nav-well-bg: color-mix(in oklab, var(--brand) 16%, var(--nav-card-bg));
-  --nav-hover-bg: color-mix(in oklab, var(--brand) 6%, var(--nav-card-bg));
+  --nav-hover-bg: color-mix(in oklab, var(--brand) 7%, var(--nav-card-bg));
   --nav-spot-bg: color-mix(in oklab, var(--text) 2%, var(--nav-card-bg));
   box-sizing: border-box;
   inline-size: min(var(--nav-card-w), 100vw - 2 * var(--site-inset));
@@ -21,11 +22,11 @@
   margin-block-start: 0.25rem;
   padding: 0;
   overflow: hidden;
-  /* A ruled box, the manual's square corners and no shadow. */
-  border: var(--line-w) solid var(--text);
-  border-radius: 0;
+  /* The rounded card with its lift, kept from before the manual theme (Dustin, 2026-10-26). */
+  border: var(--nav-rule);
+  border-radius: 1rem;
   background: var(--nav-card-bg);
-  box-shadow: none;
+  box-shadow: 0 18px 40px rgb(20 10 40 / 0.14);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
@@ -58,9 +59,16 @@
   box-shadow: none;
 }
 
-/* The section buttons: a soft wash on hover, the band's chip color while their panel is open. */
-.site-header-nav [data-nav-button] {
-  border-radius: 0;
+/* The section buttons: a soft wash on hover, the band's chip color while their panel is open. The wash is
+   rounded and as deep at the sides as above and below the 20px line in the 36px row (Dustin, 2026-10-26);
+   the list's gap gives back what the padding takes, so the buttons keep their 20px apart. */
+.site-header-nav > ul {
+  gap: 4px;
+}
+
+.site-header-nav .cap-site-header-link {
+  padding-inline: 8px;
+  border-radius: 0.5rem;
 }
 
 .site-header-nav [data-nav-button]:hover {
@@ -245,7 +253,7 @@
   column-gap: 0.75rem;
   align-items: start;
   padding: 0.625rem 0.75rem;
-  border-radius: 0;
+  border-radius: 0.625rem;
 }
 
 .site-nav-row:hover {
