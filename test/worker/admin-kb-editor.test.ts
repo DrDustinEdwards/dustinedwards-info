@@ -194,7 +194,7 @@ describe("the Knowledge Base form", () => {
       ).json()) as { html?: string; styles?: string[]; errors?: string[] };
     const drawn = await preview({ ...form.model, data: { ...form.model.data, title: "Phage DNA extraction, previewed" } });
     expect(drawn.errors).toBeUndefined();
-    expect(drawn.html).toContain('<h1 class="page-title">Phage DNA extraction, previewed</h1>');
+    expect(drawn.html).toContain('<h1 class="page-title cap-layout-grid">Phage DNA extraction, previewed</h1>');
     expect(drawn.html).toContain('class="prose procedure"');
     expect(drawn.styles).toHaveLength(5);
     const refused = await preview({ ...form.model, data: { ...form.model.data, status: "sometimes" } });

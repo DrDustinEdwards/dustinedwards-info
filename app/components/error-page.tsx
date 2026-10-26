@@ -25,7 +25,7 @@ export function ErrorPage({ error }: { error: unknown }) {
       <SiteHeader />
       <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
-          <h1 className="page-title">{message}</h1>
+          <h1 className="page-title cap-layout-grid">{message}</h1>
           <p className="muted">{details}</p>
           {notFound ? <NotFoundHelp /> : null}
           {stack && (

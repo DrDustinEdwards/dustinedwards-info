@@ -196,7 +196,7 @@ const present = (node: Node, property: string) =>
 
 /** The visible trail: each step's name, and its link, which the current step has none of. */
 function visibleTrail(html: string): Array<{ name: string; href: string | null }> {
-  const nav = html.match(/<nav class="page-breadcrumb" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/)?.[1];
+  const nav = html.match(/<nav class="cap-direction page-breadcrumb" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/)?.[1];
   if (!nav) return [];
   return [...nav.matchAll(/<li>(?:<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>|<span aria-current="page">([\s\S]*?)<\/span>)/g)].map(
     (m) => ({ name: decode(m[2] ?? m[3] ?? ""), href: m[1] ?? null }),

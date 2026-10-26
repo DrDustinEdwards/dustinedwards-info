@@ -64,3 +64,33 @@ export function sectionOf(pathname: string): Section {
  * Without one the right side carries the site's name.
  */
 export type RunningHeadHandle = { folio?: (data: unknown) => string | null | undefined };
+
+/* The word under a patch's number, for each part whose pages wear one. */
+const PATCH_UNITS: Record<string, string> = {
+  "1.1": "Area",
+  "4.2": "Course",
+  "4.3": "Tutorial",
+  "6.1": "Product",
+  "6.2": "Site",
+  "6.3": "System",
+};
+
+/**
+ * A mission patch for a page that is one of its part's members (capsomer/manual.css .cap-patch), as each
+ * Apollo crew wore its mission's number: the page's name round the top, the part's name round the foot, its
+ * number within the part on the disc. Null for every other page.
+ */
+export function patchOf(pathname: string): { id: string; name: string; foot: string; count: number; unit: string } | null {
+  const section = SECTIONS.find((s) => s.prefix === pathname);
+  const unit = section ? PATCH_UNITS[section.no] : undefined;
+  if (!section || !unit) return null;
+  const members = SECTIONS.filter((s) => s.no === section.no && s.trail.length === section.trail.length);
+  const slug = pathname.slice(pathname.lastIndexOf("/") + 1);
+  return {
+    id: slug,
+    name: slug.replaceAll("-", " "),
+    foot: section.trail[section.trail.length - 1] ?? "",
+    count: members.indexOf(section) + 1,
+    unit,
+  };
+}

@@ -74,7 +74,7 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title">{record.title}</h1>
+      <h1 className="page-title cap-layout-grid">{record.title}</h1>
       <VersionNotice record={record} current={current} />
       <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} lineage={lineage} />
       <Enhance module="run" />

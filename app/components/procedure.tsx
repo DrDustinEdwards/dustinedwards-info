@@ -400,7 +400,7 @@ export function ProcedureSheet({
   return (
     <article className="procedure-sheet prose">
       <header className="procedure-sheet-head">
-        <h1>{record.title}</h1>
+        <h1 className="cap-layout-grid">{record.title}</h1>
         <p>
           {stamp}. {address}
         </p>

@@ -348,8 +348,8 @@ for (const req of variationRequests) {
 // The faces build-og.mjs reads to draw the social cards, because satori cannot read woff2. Whether the
 // cards share the site's typeface, and which typeface that is, is a design default and is not asserted.
 const OG_FACES = [
-  { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
-  { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
+  { file: join(root, "assets", "fonts", "SchibstedGrotesk-Regular.woff"), weight: 400 },
+  { file: join(root, "assets", "fonts", "SchibstedGrotesk-Bold.woff"), weight: 700 },
   { file: join(root, "assets", "fonts", "SourceSerif4-Display-Bold.ttf"), weight: 700 },
 ];
 

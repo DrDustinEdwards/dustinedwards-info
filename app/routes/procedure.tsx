@@ -79,7 +79,7 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title">{record.title}</h1>
+      <h1 className="page-title cap-layout-grid">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
       <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} lineage={lineage} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}

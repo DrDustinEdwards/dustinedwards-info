@@ -51,7 +51,9 @@ if (stepItems.length === 0) throw new Error("run: this procedure has no steps to
 // A step is addressed by its section and its number: numbering restarts in a section that starts its own list, so the
 // number alone is not unique ("step 1" is in two places in a procedure with a second method).
 const sectionOf = (li: HTMLElement) => li.closest("section[aria-labelledby]")?.getAttribute("aria-labelledby") ?? "";
-const keyOf = (li: HTMLElement) => `${sectionOf(li)}.${li.dataset.step}`;
+// The step's own id where it has one: a section with two lists of steps numbers both from 1, and section and
+// number alone gave their steps one key, so a Done ticked both and one step at a time showed both.
+const keyOf = (li: HTMLElement) => li.id || `${sectionOf(li)}.${li.dataset.step}`;
 const stepKeys = stepItems.map(keyOf);
 // Where each timer's alert says the step is: its printed number.
 const timerStep = new Map<string, string>();
@@ -148,6 +150,19 @@ function say(message: string) {
   window.setTimeout(() => (live.textContent = message), 30);
 }
 
+/**
+ * The run's roll blocks (capsomer/manual.css .cap-roll), one a step, as the blocks painted round a Saturn V:
+ * filled for a step done, lit for the step being worked, faint ahead. Drawn: the progress line says it in words.
+ */
+function roll(lit: HTMLElement | undefined) {
+  const blocks = el("ol", { class: "cap-roll run-roll", "aria-hidden": "true" });
+  for (const li of stepItems) {
+    const state = run?.steps[keyOf(li)]?.done ? "done" : li === lit ? "now" : "ahead";
+    add(blocks, el("li", { "data-state": state }));
+  }
+  return blocks;
+}
+
 function renderBar() {
   if (!run) return;
   const { done, total } = runProgress(run, stepKeys);
@@ -165,6 +180,7 @@ function renderBar() {
     if (!after) next.setAttribute("disabled", "");
     bar.replaceChildren(
       el("p", { class: "run-progress" }, `Step ${shown?.dataset.step ?? ""}, ${stepKeys.indexOf(shownKey ?? "") + 1} of ${total}; ${done} done`),
+      roll(shown),
       prev,
       next,
       toggle,
@@ -174,6 +190,7 @@ function renderBar() {
   } else {
     bar.replaceChildren(
       el("p", { class: "run-progress" }, `${done} of ${total} steps done`),
+      roll(current),
       current ? button(`Go to step ${current.dataset.step}`, "run-next", () => focusStep(current)) : el("span", { class: "run-all" }, "Every step is done."),
       toggle,
       button("Finish run", "run-finish", finish),
@@ -190,11 +207,23 @@ function renderBar() {
   }
 }
 
-/** Shows the page as one step at a time, or every step, as the toggle says. */
+/**
+ * Shows the page as one step at a time, or every step, as the toggle says. The step shown alone is an Apollo cue
+ * card (capsomer/manual.css .cap-cue): a dark strip names the procedure and the card over the step.
+ */
 function applyView() {
   if (oneAtATime && run) root!.dataset.view = "step";
   else delete root!.dataset.view;
-  for (const li of stepItems) li.classList.toggle("run-step-shown", oneAtATime && keyOf(li) === shownKey);
+  for (const li of stepItems) {
+    const shown = oneAtATime && keyOf(li) === shownKey;
+    li.classList.toggle("run-step-shown", shown);
+    li.classList.toggle("cap-cue", shown);
+    li.querySelector(":scope > .cap-cue-strip")?.remove();
+    if (shown) {
+      const strip = el("p", { class: "cap-cue-strip", "aria-hidden": "true" }, el("span", {}, procedure.title), el("span", {}, `Step ${li.dataset.step}, card ${stepKeys.indexOf(keyOf(li)) + 1} of ${stepKeys.length}`));
+      li.insertBefore(strip, li.firstChild);
+    }
+  }
 }
 
 function setView(on: boolean) {

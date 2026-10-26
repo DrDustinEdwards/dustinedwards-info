@@ -61,7 +61,7 @@ export default function About({ loaderData }: Route.ComponentProps) {
       }
     >
       <header className="page-head">
-        <h1>{title}</h1>
+        <h1 className="cap-layout-grid">{title}</h1>
       </header>
       {draft ? <p>Draft: only you can see this page.</p> : null}
 

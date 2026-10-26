@@ -24,7 +24,7 @@ export default function Gone() {
   return (
     <PageShell>
       <header className="page-head">
-        <h1>This page was removed</h1>
+        <h1 className="cap-layout-grid">This page was removed</h1>
         <p className="muted">
           It belonged to the old version of this site and is not coming back. The research, the
           protocols and the phages all have new homes.

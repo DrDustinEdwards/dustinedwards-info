@@ -142,3 +142,23 @@
   line-height: var(--t-h1-leading);
   text-wrap: balance;
 }
+
+/* A member page's mission patch (running-head.ts patchOf) at the right of its title, on the title's grid. */
+.page-patched {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-5);
+  margin-block-end: var(--s-5);
+
+  > .page-title {
+    margin: 0;
+  }
+}
+
+@media (max-width: 40rem) {
+  .page-patched .cap-patch {
+    inline-size: 72px;
+    block-size: 72px;
+  }
+}

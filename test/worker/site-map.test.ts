@@ -87,7 +87,7 @@ describe("the site map and sitemap.xml", () => {
   it("renders every section as a heading and every line as a link, and carries the sitemap's cache tags", async () => {
     const { data } = await pageData();
     const html = renderRoute("/site-map", SiteMap, { loaderData: data });
-    expect(html).toContain("<h1 class=\"page-title\">Site map</h1>");
+    expect(html).toContain("<h1 class=\"page-title cap-layout-grid\">Site map</h1>");
     for (const section of data.sections) expect(html).toContain(`id="site-map-${section.id}"`);
     expect(html).toMatch(/<a [^>]*href="\/research\/publications"[^>]*>Publications \(\d+\)<\/a>/);
     // No two links with different text go to one address (WCAG 2.4.4): Tags is text, not a second /writing link.

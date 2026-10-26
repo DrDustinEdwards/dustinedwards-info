@@ -63,7 +63,7 @@ export function TaxonomyListing({
         />
 
         <header className="list-head">
-          <h1 className="list-label">{heading}</h1>
+          <h1 className="list-label cap-layout-grid">{heading}</h1>
           <p className="list-dek">
             {dek} <Link to="/writing">All posts</Link>
           </p>

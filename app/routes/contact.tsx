@@ -24,7 +24,7 @@ export default function Contact() {
   return (
     <PageShell rail={null}>
       <header className="page-head">
-        <h1>Contact</h1>
+        <h1 className="cap-layout-grid">Contact</h1>
       </header>
 
       <div className="prose">

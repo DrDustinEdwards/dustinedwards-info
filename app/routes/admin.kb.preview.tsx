@@ -39,7 +39,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     const html = renderToStaticMarkup(
       <main className="page">
         <div className="page-inner">
-          <h1 className="page-title">{record.title}</h1>
+          <h1 className="page-title cap-layout-grid">{record.title}</h1>
           <ProcedureView record={record} count={count} factor={1} sheetPath={null} />
         </div>
       </main>,

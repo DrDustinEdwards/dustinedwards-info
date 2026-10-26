@@ -125,7 +125,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title" id="library-title">
+      <h1 className="page-title cap-layout-grid" id="library-title">
         {page.title}
       </h1>
       {draft ? <p>Draft: only you can see this page.</p> : null}

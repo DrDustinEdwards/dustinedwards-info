@@ -3,7 +3,6 @@
 // The target is never defaulted: `-- --remote` or `-- --local` on every run that touches R2.
 
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -18,9 +17,9 @@ import {
   titleFontSize,
 } from "../app/lib/content/og-card-text.mjs";
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
+import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
-import { stripComments } from "./lib/strip-comments.mjs";
 import { ARTIFACT_PATH, renderContentPages } from "./build-content.mjs";
 import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
 import { markElement } from "./lib/mark.mjs";
@@ -46,43 +45,84 @@ const {
   ground: GROUND,
   ink: INK,
   muted: MUTED,
-  rule: RULE,
 } = resolveTokens(
   {
     ground: "--paper",
     ink: "--text-heading",
     muted: "--text-secondary",
-    rule: "--dust",
   },
   PAPER_BLOCK,
   "build:og",
 );
 
-/**
- * Parsed as text, because TypeScript refuses the cross-project specifier.
- *
- * @returns {string}
+/* SITE.name in app/lib/seo.ts is this same field. */
+const SITE_NAME = IDENTITY.name;
+
+/*
+ * The poster's own colors: Capsomer's purple ramp (light 3, 8, 10 and 12) under its amber sun, as
+ * Capsid's card sets its teal (explorer/og-card.mjs). Fixed, not read from the theme: the scene is a
+ * picture, and every word on the card sits on the paper or the ink band, whose pairs are measured.
  */
-function siteName() {
-  // Stripped first: prose quoting this declaration would satisfy the indexOf below.
-  const source = stripComments(readFileSync(path.join("app", "lib", "seo.ts"), "utf8"));
-  const at = source.indexOf("export const SITE = {");
-  if (at === -1) {
-    throw new Error("build:og: app/lib/seo.ts no longer declares `export const SITE = {`");
-  }
-  const close = source.indexOf("};", at);
-  if (close === -1) throw new Error("build:og: app/lib/seo.ts: unterminated SITE block");
-  const name = source.slice(at, close).match(/\bname:\s*"([^"]+)"/);
-  if (!name) {
-    throw new Error("build:og: SITE.name is not a plain string literal in app/lib/seo.ts");
-  }
-  return name[1];
+const SKY = "#f4efff";
+const HILL = "#b29ae3";
+const PLAIN = "#7d50c1";
+const NIGHT = "#1d162c";
+const SUN = "#f0b429";
+
+/**
+ * A phage come down on the plain like a lander: the head a hexagon, the tail, three legs. In the night
+ * ink, as the poster's craft.
+ * @param {number} x the foot of the tail @param {number} y @param {number} r the head's radius
+ */
+function phage(x, y, r) {
+  const head = [0, 1, 2, 3, 4, 5]
+    .map((i) => {
+      const a = (Math.PI / 3) * i;
+      return `${(x + r * Math.cos(a)).toFixed(1)},${(y - 2.6 * r + r * Math.sin(a)).toFixed(1)}`;
+    })
+    .join(" ");
+  const top = y - 1.6 * r;
+  return [
+    { type: "polygon", props: { points: head, fill: NIGHT } },
+    { type: "rect", props: { x: x - r * 0.18, y: top, width: r * 0.36, height: 1.2 * r, fill: NIGHT } },
+    ...[-1, 0, 1].map((d) => ({
+      type: "path",
+      props: { d: `M${x} ${y - 0.4 * r} L${x + d * 1.1 * r} ${y + 0.25 * r}`, stroke: NIGHT, strokeWidth: r * 0.14 },
+    })),
+  ];
 }
 
-const SITE_NAME = siteName();
+/**
+ * The scene: a travel poster in the manner of JPL's Visions of the Future (2016), after the 1930s
+ * national-park posters. Flat layered shapes, the sun over the hills, three phages on the plain. It is
+ * drawn 300px tall and set at the foot of the space the words leave, on more of its sky, so a long
+ * title crops the sky, never the plain.
+ */
+function scene() {
+  return {
+    type: "svg",
+    props: {
+      width: WIDTH,
+      height: 300,
+      viewBox: `0 0 ${WIDTH} 300`,
+      style: { position: "absolute", left: 0, bottom: 0 },
+      children: [
+        { type: "rect", props: { width: WIDTH, height: 300, fill: SKY } },
+        { type: "circle", props: { cx: 930, cy: 150, r: 110, fill: SUN } },
+        { type: "path", props: { d: "M0 200 L180 160 L360 186 L560 140 L760 180 L960 148 L1200 182 L1200 300 L0 300Z", fill: HILL } },
+        { type: "path", props: { d: "M0 250 L240 226 L470 246 L700 220 L940 240 L1200 226 L1200 300 L0 300Z", fill: PLAIN } },
+        ...phage(260, 262, 20),
+        ...phage(640, 254, 26),
+        ...phage(1010, 262, 18),
+      ],
+    },
+  };
+}
 
 /**
- * The title block grows upward into the gap, so a long title eats air rather than the meta line.
+ * The poster over the title block: the scene with the mark on its sky, then the title, the description
+ * and the meta line on the paper, as before. The title block keeps the side padding og-card-text.mjs's
+ * ladder was measured against, and grows upward into the scene.
  *
  * @param {{
  *   title: string,
@@ -110,11 +150,7 @@ function card(post) {
   // on an immutable object.
   const date = longDateUTC(post.publishAt);
 
-  /*
-   * THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against, and
-   * the vertical is the smallest margin at which the mark still reads as placed rather than cropped.
-   */
-  const PAD_Y = 64;
+  /* THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against. */
   const PAD_X = 72;
 
   return el(
@@ -125,63 +161,75 @@ function card(post) {
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        padding: `${PAD_Y}px ${PAD_X}px`,
         background: GROUND,
-        fontFamily: "Inter",
+        fontFamily: "Schibsted Grotesk",
       },
     },
-    el("div", { style: { display: "flex" } }, markElement()),
-    el("div", { style: { display: "flex", flex: 1 } }),
     el(
       "div",
-      {
-        style: {
-          display: "flex",
-          fontFamily: "Source Serif 4",
-          fontSize: titleFontSize(title),
-          fontWeight: 700,
-          color: INK,
-          lineHeight: 1.12,
-          letterSpacing: "-0.01em",
-          // Satori honors `wordBreak` but ignores `overflowWrap`.
-          wordBreak: "break-word",
-        },
-      },
-      title,
+      { style: { display: "flex", position: "relative", flex: 1, minHeight: 120, overflow: "hidden", padding: `40px ${PAD_X}px`, background: SKY } },
+      scene(),
+      el("div", { style: { display: "flex", position: "relative" } }, markElement()),
     ),
-    // Two lines of muted type is texture; a third would be prose asking to be read at a size it cannot be.
-    description
-      ? el(
-          "div",
-          {
-            style: {
-              display: "flex",
-              marginTop: 22,
-              fontSize: 26,
-              color: MUTED,
-              lineHeight: 1.4,
-              // Same reason as the title's, and the same measurement. A URL in
-              // a description is the realistic form of an unbreakable word.
-              wordBreak: "break-word",
-            },
+    el(
+      "div",
+      { style: { display: "flex", flexDirection: "column", padding: `36px ${PAD_X}px 0` } },
+      el(
+        "div",
+        {
+          style: {
+            display: "flex",
+            fontFamily: "Source Serif 4",
+            fontSize: titleFontSize(title),
+            fontWeight: 700,
+            color: INK,
+            lineHeight: 1.12,
+            letterSpacing: "-0.01em",
+            // Satori honors `wordBreak` but ignores `overflowWrap`.
+            wordBreak: "break-word",
           },
-          description,
-        )
-      : null,
-    // A dust hairline, the site's rule, across the measure: lines are dust, never type.
-    el("div", { style: { display: "flex", height: 2, marginTop: 40, background: RULE } }),
+        },
+        title,
+      ),
+      // Two lines of muted type is texture; a third would be prose asking to be read at a size it cannot be.
+      description
+        ? el(
+            "div",
+            {
+              style: {
+                display: "flex",
+                marginTop: 18,
+                fontSize: 26,
+                color: MUTED,
+                lineHeight: 1.4,
+                // Same reason as the title's. A URL in a description is the realistic form of an
+                // unbreakable word.
+                wordBreak: "break-word",
+              },
+            },
+            description,
+          )
+        : null,
+    ),
+    // The foot as the livery's band: the site and the date in light type on the night ink.
     el(
       "div",
       {
         style: {
           display: "flex",
-          marginTop: 22,
-          fontSize: 24,
-          fontWeight: 400,
-          color: MUTED,
+          justifyContent: "space-between",
+          marginTop: 28,
+          padding: `16px ${PAD_X}px`,
+          background: NIGHT,
+          borderTop: `8px solid ${PLAIN}`,
+          color: SKY,
+          fontSize: 22,
+          fontWeight: 700,
+          letterSpacing: "0.16em",
         },
       },
-      [SITE_NAME, date].filter(Boolean).join("  ·  "),
+      el("div", { style: { display: "flex" } }, SITE_NAME.toUpperCase()),
+      el("div", { style: { display: "flex", fontWeight: 400, letterSpacing: "0.04em" } }, date ?? ""),
     ),
   );
 }
@@ -412,16 +460,17 @@ async function main() {
   /** @type {any[]} */
   const fonts = [
     {
-      name: "Inter",
+      // The site's interface face. satori reads woff but not woff2, so these are the latin woff files.
+      name: "Schibsted Grotesk",
       weight: 400,
       style: "normal",
-      data: await readFile(path.join("assets", "fonts", "Inter-Regular.ttf")),
+      data: await readFile(path.join("assets", "fonts", "SchibstedGrotesk-Regular.woff")),
     },
     {
-      name: "Inter",
+      name: "Schibsted Grotesk",
       weight: 700,
       style: "normal",
-      data: await readFile(path.join("assets", "fonts", "Inter-Bold.ttf")),
+      data: await readFile(path.join("assets", "fonts", "SchibstedGrotesk-Bold.woff")),
     },
     {
       // A static instance of the served variable file (wght 700, opsz 60): satori reads neither
