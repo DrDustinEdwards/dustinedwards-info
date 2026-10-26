@@ -29,7 +29,7 @@ import "~/admin.css";
 import "~/lab.css";
 
 export function meta() {
-  return [{ title: "Lab" }, { name: "robots", content: "noindex" }];
+  return [{ title: "Lab bench" }, { name: "robots", content: "noindex" }];
 }
 
 export const handle = { hydrate: true };
@@ -130,8 +130,8 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
     <>
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
-        title="Lab"
-        apps={[{ id: "lab", label: "Lab", href: "/lab", mono: "L", current: true }]}
+        title="Lab bench"
+        apps={[{ id: "lab", label: "Lab bench", href: "/lab", mono: "L", current: true }]}
         nav={nav}
         tabs={nav}
         renderLink={RouterLink}

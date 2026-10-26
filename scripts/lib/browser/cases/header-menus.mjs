@@ -196,7 +196,7 @@ export async function run({ browser }) {
     });
     ok(
       "Lab sign-in is off the bar at 1280 and sits in the footer's Workspace group, visible, with the lock, going to /lab",
-      lab !== null && !lab.onBar && lab.shown && lab.text === "Lab" && lab.locked,
+      lab !== null && !lab.onBar && lab.shown && lab.text === "Lab bench" && lab.locked,
       JSON.stringify(lab),
     );
 
