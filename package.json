@@ -124,7 +124,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.64.0",
+    "@cloudflare/vite-plugin": "1.65.0",
     "@cloudflare/vitest-plugin": "1.4.7",
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.13.3",
     "@mermaid-js/mermaid-cli": "11.16.0",
