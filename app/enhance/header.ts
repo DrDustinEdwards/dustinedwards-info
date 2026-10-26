@@ -1,5 +1,4 @@
 import { enhance } from "capsomer/behavior/site-header";
-import { applyTheme } from "capsomer/behavior/theme-switch";
 
 import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 
@@ -54,16 +53,3 @@ if (header) {
     element.removeAttribute("commandfor");
   }
 }
-
-/*
- * The public theme is a cookie the server reads (app/lib/theme.ts, enhance/theme.ts). Capsomer's theme switch
- * remembers the same choice in this browser for the admin plane, whose shell reads it before first paint, so
- * a choice made on the public site is the admin's too.
- */
-document.addEventListener("submit", (event) => {
-  const form = event.target;
-  const submitter = (event as SubmitEvent).submitter;
-  if (!(form instanceof HTMLFormElement) || !form.matches("[data-theme-toggle]")) return;
-  if (!(submitter instanceof HTMLButtonElement)) return;
-  if (submitter.value === "light" || submitter.value === "dark") applyTheme(submitter.value);
-});

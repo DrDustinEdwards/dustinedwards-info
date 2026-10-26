@@ -2,26 +2,11 @@
 // that re-applied it could only agree, or race.
 
 import { ENHANCE_URL_PREFIX } from "~/lib/enhance-url.mjs";
-import { isThemeChoice, themeCookie, type ThemeChoice } from "capsomer/theme-server";
+import { enhance as enhanceThemeForm } from "capsomer/behavior/theme-switch";
 
-function enhanceThemeToggle() {
-  document.addEventListener("submit", (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    if (!form.matches("[data-theme-toggle]")) return;
-
-    const submitter = (event as SubmitEvent).submitter;
-    if (!(submitter instanceof HTMLButtonElement)) return;
-
-    const choice = submitter.value;
-    if (!isThemeChoice(choice)) return;
-
-    event.preventDefault();
-    apply(choice, form);
-  });
-}
-
-enhanceThemeToggle();
+// Capsomer's theme form (site-header.tsx): a press switches at once, writes the cookie the server reads, and
+// remembers the choice for the admin plane.
+enhanceThemeForm();
 enhanceSearchTrigger();
 
 /**
@@ -149,25 +134,4 @@ function enhanceSearchTrigger() {
     }
     // Deliberately no bare-slash shortcut: it collides with find-in-page.
   });
-}
-
-function apply(choice: ThemeChoice, form: HTMLFormElement) {
-  const root = document.documentElement;
-
-  root.setAttribute("data-theme", choice);
-
-  document.cookie = themeCookie(choice);
-
-  /*
-   * Activating a button hides it via the cascade, and `display: none` drops focus to `<body>`, so move
-   * focus to its twin, only when the hidden one held it. `preventScroll` because Chrome scrolls a
-   * focused sticky-header descendant toward its un-stuck position.
-   */
-  const active = document.activeElement;
-  if (active instanceof HTMLElement && form.contains(active) && active.offsetParent === null) {
-    const shown = [...form.querySelectorAll<HTMLElement>("button[value]")].find(
-      (button) => button.offsetParent !== null,
-    );
-    shown?.focus({ preventScroll: true });
-  }
 }

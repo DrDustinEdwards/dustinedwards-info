@@ -16,4 +16,5 @@ export function confirmationSatisfied(typed, count) {
   return String(typed ?? "").trim() === String(count);
 }
 
-export const CONFIRM_FIELD = "confirm-count";
+// The name Capsomer's confirm page gives its typed field.
+export const CONFIRM_FIELD = "confirm";

@@ -1,4 +1,4 @@
-import { SERP_TITLE_LIMIT, headTags, truncateForSerp } from "@drdustinedwards/site-helpers/head";
+import { SERP_TITLE_LIMIT, headTags, searchTitle as prelumSearchTitle, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
@@ -94,13 +94,12 @@ export function pageMeta(page: {
 export { SERP_DESCRIPTION_LIMIT, SERP_TITLE_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 
 /**
- * The `<title>` a search result shows: the title with its suffix where both fit, else the suffix dropped and the title cut
- * at a word by Prelum's `truncateForSerp`. Only this title is shortened: the page's heading, `og:title` and the citation and
- * JSON-LD metadata keep the whole title, which for a paper is a fact.
+ * The `<title>` a search result shows (Prelum's `searchTitle`), with this site's name as the default suffix. Only this
+ * title is shortened: the page's heading, `og:title` and the citation and JSON-LD metadata keep the whole title, which for
+ * a paper is a fact.
  */
 export function searchTitle(title: string, suffix: string = ` | ${SITE.name}`): string {
-  const full = `${title}${suffix}`;
-  return full.length <= SERP_TITLE_LIMIT ? full : truncateForSerp(title, SERP_TITLE_LIMIT);
+  return prelumSearchTitle(title, suffix);
 }
 
 /** The home page's Person: the same node as `personNode`, joined to it by the shared `@id`. */

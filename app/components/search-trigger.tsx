@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { ENHANCE_URLS } from "~/components/enhance";
-import { HeaderTip } from "~/components/theme-toggle";
+import { HeaderTip } from "~/components/header-tip";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
 import askCss from "~/styles/ask.css?url";
 

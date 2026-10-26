@@ -1,3 +1,4 @@
+import { ThemeForm } from "capsomer/react/theme-switch";
 import { Link, useLocation } from "react-router";
 
 import { Enhance } from "~/components/enhance";
@@ -5,7 +6,7 @@ import { SearchTrigger } from "~/components/search-trigger";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { Icon, SiteNavPanel } from "~/components/site-nav-panel";
 import { SiteSpeculation } from "~/components/site-speculation";
-import { HeaderTip, ThemeToggle } from "~/components/theme-toggle";
+import { HeaderTip } from "~/components/header-tip";
 import { buildNav, type Menu, type NavIcon, type NavItem } from "~/lib/nav";
 import { SITE } from "~/lib/seo";
 
@@ -128,7 +129,11 @@ export function SiteHeader() {
         <div className="cap-site-header-extras">
           <SearchTrigger />
         </div>
-        <ThemeToggle />
+        {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
+            and with script the theme module switches at once. The admin plane's shell reads the same choice
+            from localStorage ("cap-theme"). */}
+        <ThemeForm action="/theme" prefKey="cap-theme" className="cap-site-header-icon cap-site-header-theme" />
+        <Enhance module="theme" />
         {/* The avatar's slot, held empty: the admin header has the avatar here, so the theme button sits at the
             same place on every page. Sign in is the footer's Admin link (Dustin, 2026-10-15). */}
         <div className="cap-site-header-account site-header-account-slot" aria-hidden="true" />
