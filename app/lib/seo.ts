@@ -299,7 +299,7 @@ function photoObject(origin: string, photo: { key: string; width: number; height
   return { "@type": "ImageObject", url, contentUrl: url, width: photo.width, height: photo.height };
 }
 
-export const GERMOMICS_URL = "https://germomics.com/";
+const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
 // The footer's `rel="me"` profiles, in order. `check:machine-readable` reads this list.
