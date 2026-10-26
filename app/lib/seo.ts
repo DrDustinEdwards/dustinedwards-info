@@ -56,7 +56,7 @@ export function postSocial(post: PostSocialFields) {
   const socialImage = post.coverImage ?? post.ogImage ?? null;
   return {
     canonical,
-    pageTitle: `${post.title} | ${SITE.name}`,
+    pageTitle: searchTitle(post.title),
     description,
     socialTitle: post.ogTitle ?? post.title,
     socialDescription: post.ogDescription ?? description,
@@ -81,8 +81,9 @@ export function pageMeta(page: {
   return headTags({
     origin: SITE_ORIGIN,
     path: page.path,
-    title: page.title,
-    socialTitle: page.socialTitle,
+    title: truncateForSerp(page.title, SERP_TITLE_LIMIT),
+    // A title cut for search keeps its whole wording on the card.
+    socialTitle: page.socialTitle ?? page.title,
     description: page.description,
     image: page.image ?? DEFAULT_OG_IMAGE,
     siteName: SITE.name,
