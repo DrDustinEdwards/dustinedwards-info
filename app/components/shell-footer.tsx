@@ -12,7 +12,6 @@ import {
   SOCIAL_LINKS,
   TOOLS_HEADING,
 } from "~/lib/footer";
-import { sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 
 const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
@@ -21,9 +20,6 @@ const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
   capsid: CapsidIcon,
   flask: FlaskIcon,
 };
-
-/** Where the department is: Tarleton's main campus. */
-const ADDRESS_PLACE = "Stephenville, Texas";
 
 /** X's own logo path, unaltered, in the footer's ink. */
 function XMark() {
@@ -54,29 +50,18 @@ function FooterAnchor({ link }: { link: FooterLink }) {
  * copyright and nothing else (Dustin, 2026-10-11).
  */
 export function ShellFooter() {
-  const { pathname } = useLocation();
-  // The folio is the section's whole number, as the manual numbers a page by its part.
-  const folio = pathname === "/" ? "1" : sectionOf(pathname).no.split(".")[0];
   return (
     <footer className="site-shell-footer">
       <div className="tracks">
-        {/* The letterhead (capsomer/manual.css): the name as the logotype, the address beside it, the folio. */}
-        <div className="cap-letterhead">
+        {/* The letterhead (capsomer/manual.css): the name as the logotype, the three link columns to its right
+            (Dustin, 2026-10-26: no address). */}
+        <div className="cap-letterhead footer-letterhead">
           <Link to="/" className="cap-letterhead-logo">
             {SITE.name.split(" ").map((word) => (
               <span key={word}>{word}</span>
             ))}
           </Link>
-          <p className="cap-letterhead-address">
-            <b>{SITE.department}</b>
-            <br />
-            {SITE.affiliation}
-            <br />
-            {ADDRESS_PLACE}
-          </p>
-          <span className="cap-letterhead-folio">{folio}</span>
-        </div>
-        <div className="footer-grid">
+          <div className="footer-columns">
           {/* Social marks, then the profile links and the feed. */}
           <div className="footer-identity">
             <ul className="footer-social" aria-label="Social media">
@@ -106,8 +91,7 @@ export function ShellFooter() {
             </ul>
           </div>
 
-          {/* Beside the brand block: Workspace, then Site (Dustin, 2026-10-11). */}
-          <div className="footer-columns">
+          {/* Then Workspace, then Site (Dustin, 2026-10-11). */}
             <nav className="footer-col" aria-labelledby="footer-workspace">
               <h2 className="footer-heading" id="footer-workspace">
                 {TOOLS_HEADING}
@@ -155,7 +139,7 @@ export function ShellFooter() {
         {/* The end year is computed at render: an edge-cached page can show last year's for a few days after
             January 1, which Dustin accepted (2026-09-27) over a year that is edited by hand. */}
         <p className="site-shell-footer-note">
-          &copy; 2006&ndash;{new Date().getFullYear()} {SITE.name}
+          &copy; 2006&ndash;{new Date().getFullYear()}
         </p>
       </div>
     </footer>

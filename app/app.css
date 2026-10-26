@@ -957,6 +957,10 @@ a:active {
   outline-offset: -4px;
 }
 
+.site-logo-brand {
+  fill: var(--brand);
+}
+
 /* The tokens stay in this file because scripts/lib/tokens.mjs and check:contrast parse this path. */
 /* The public sheets are JavaScript imports in root.tsx, after this file's rules: CSS drops an @import
    that follows any rule. */
