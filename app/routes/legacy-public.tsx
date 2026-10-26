@@ -21,6 +21,7 @@ import "capsomer/site-dustinedwards.css";
 import "capsomer/popover.css";
 import "capsomer/dialog.css";
 import "capsomer/site-header.css";
+import "capsomer/theme-switch.css";
 
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.

@@ -84,14 +84,6 @@ main.app-page {
   margin-inline-start: var(--space-3);
 }
 
-/* The server's confirmation step (components/admin/confirm-dialog.tsx), shown in the page until script
-   opens it as a modal, so a reader without script still gets the second step. */
-.cap-dialog[data-inline] {
-  display: flex;
-  position: static;
-  margin: 0 0 var(--space-5);
-}
-
 /* A unified patch (components/admin/revision-list.tsx DiffBlock): Capsomer has a compare of two texts
    by sentence and word, and no display for a git patch, so this piece stays as it was. */
 .history-diff {

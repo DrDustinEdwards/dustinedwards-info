@@ -154,7 +154,7 @@ describe("the moderation queue", () => {
     expect(await statusOf(source)).toBe("rejected");
 
     /* "1 " and "01" both read as one to a human, so the predicate is a strict string compare. */
-    const near = await runAction({ intent: "delete", id: String(id), "confirm-count": "01" });
+    const near = await runAction({ intent: "delete", id: String(id), confirm: "01" });
     expect(near.data.confirmDelete).toBe(id);
     expect(await statusOf(source)).toBe("rejected");
   });
@@ -163,7 +163,7 @@ describe("the moderation queue", () => {
     const source = "https://elsewhere.example/delete-me";
     const id = await seedMention(source, "rejected", 1);
 
-    const done = await runAction({ intent: "delete", id: String(id), "confirm-count": "1" });
+    const done = await runAction({ intent: "delete", id: String(id), confirm: "1" });
     expect(await mentionRow(source)).toBeNull();
     expect(done.data.message).toContain("deleted");
   });
@@ -190,7 +190,7 @@ describe("the moderation queue", () => {
     await seedMention("https://elsewhere.example/ancient-pending", "pending", 400);
     await seedMention("https://elsewhere.example/ancient-unverified", "unverified", 400);
 
-    const done = await runAction({ intent: "sweep", "confirm-count": "1" });
+    const done = await runAction({ intent: "sweep", confirm: "1" });
     expect(done.data.message).toContain("Removed 1 failed and 1 rejected");
 
     expect(await mentionRow("https://elsewhere.example/failed-old")).toBeNull();
@@ -202,7 +202,7 @@ describe("the moderation queue", () => {
 
     /* An APPROVED row is the published record and is not swept at any age. */
     await seedMention("https://elsewhere.example/ancient-approved", "approved", 400);
-    await runAction({ intent: "sweep", "confirm-count": "1" });
+    await runAction({ intent: "sweep", confirm: "1" });
     expect(await statusOf("https://elsewhere.example/ancient-approved")).toBe("approved");
   });
 
@@ -231,10 +231,10 @@ describe("the moderation queue", () => {
     expect(rejected.data.ok).toBe(true);
     expect(await statusOf(source)).toBe("rejected");
 
-    const swept = await runAction({ intent: "sweep", "confirm-count": "1" });
+    const swept = await runAction({ intent: "sweep", confirm: "1" });
     expect(swept.data.ok).toBe(true);
 
-    const deleted = await runAction({ intent: "delete", id: String(id), "confirm-count": "1" });
+    const deleted = await runAction({ intent: "delete", id: String(id), confirm: "1" });
     expect(deleted.data.ok).toBe(true);
     expect(await mentionRow(source)).toBeNull();
 
@@ -243,7 +243,7 @@ describe("the moderation queue", () => {
     expect(badIntent.data.ok).toBe(false);
     expect(badIntent.data.message).toBeTruthy();
 
-    const badId = await runAction({ intent: "delete", id: "0", "confirm-count": "1" });
+    const badId = await runAction({ intent: "delete", id: "0", confirm: "1" });
     expect(badId.data.ok).toBe(false);
     expect(badId.data.message).toBeTruthy();
   });
@@ -262,10 +262,11 @@ describe("the moderation queue", () => {
         step.data,
       );
 
-      /* The status region is always rendered, so "no outcome" is an empty one, and no alert. */
+      /* The status and alert regions are always rendered, so "no outcome" is an empty one of each. */
       const said = (await textsOf(page, "[role=status]")).filter((text) => text.trim() !== "");
       expect(said, body.intent).toEqual([]);
-      expect(await textsOf(page, "[role=alert]"), body.intent).toEqual([]);
+      const alerted = (await textsOf(page, "[role=alert]")).filter((text) => text.trim() !== "");
+      expect(alerted, body.intent).toEqual([]);
       expect(await textsOf(page, `input[name="${CONFIRM_FIELD}"]`), body.intent).toHaveLength(1);
     }
     expect(await statusOf(source)).toBe("rejected");

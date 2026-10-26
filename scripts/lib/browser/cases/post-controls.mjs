@@ -28,7 +28,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
     /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
     const control = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll(".theme-toggle button")];
+      const buttons = [...document.querySelectorAll(".cap-theme-form button")];
       const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);
       const hidden = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent === null);
       return {
@@ -79,7 +79,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     /* Clicked by what is visible; by value could pick the hidden button. */
     const themeClicked = await clickOrFail(
       page,
-      '.theme-toggle button[value="dark"]',
+      '.cap-theme-form button[value="dark"]',
       "the theme control is present to click",
     );
     /* Top level, so no return; dependent cases are skipped by name. */
@@ -96,7 +96,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     let flipReadError = "";
     try {
       flipped = await page.evaluate(() => {
-        const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+        const shown = [...document.querySelectorAll(".cap-theme-form button")].filter(
           (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
         );
         return {
@@ -151,7 +151,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         await scriptless.goto(`${BASE}${postForShape}${hash}`, { waitUntil: "networkidle0" });
 
         const before = await scriptless.evaluate(() => {
-          const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
+          const shown = [...document.querySelectorAll(".cap-theme-form button")].filter(
             (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
           );
           return {
@@ -176,12 +176,12 @@ export async function run({ page, browser }, { codePost, probedPost }) {
            throws after 30 s and ends the whole run, which is what clickOrFail exists to prevent. */
         const toggle =
           before.value === "light" || before.value === "dark"
-            ? await scriptless.$(`.theme-toggle button[value="${before.value}"]`)
+            ? await scriptless.$(`.cap-theme-form button[value="${before.value}"]`)
             : null;
         ok(
           "the scriptless theme control is present to click",
           toggle !== null,
-          `no visible .theme-toggle button with a light or dark value ` +
+          `no visible .cap-theme-form button with a light or dark value ` +
             `(read ${JSON.stringify(before.value)})`,
         );
         if (toggle) {

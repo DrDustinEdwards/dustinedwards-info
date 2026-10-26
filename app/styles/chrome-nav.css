@@ -421,37 +421,6 @@ a.site-nav-row-title:hover {
   color: var(--brand);
 }
 
-/* Two theme buttons ship and one is displayed (theme-toggle.tsx). html[data-theme] must outrank the media
- * query, and does: (0,3,1) against (0,2,0). */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-}
-
-.theme-option[data-when="dark"] {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .theme-option[data-when="light"] {
-    display: none;
-  }
-
-  .theme-option[data-when="dark"] {
-    display: inline-grid;
-  }
-}
-
-html[data-theme="light"] .theme-option[data-when="light"],
-html[data-theme="dark"] .theme-option[data-when="dark"] {
-  display: inline-grid;
-}
-
-html[data-theme="light"] .theme-option[data-when="dark"],
-html[data-theme="dark"] .theme-option[data-when="light"] {
-  display: none;
-}
-
 /* A sticky header would repeat on every printed sheet, so it is static here. */
 @media print {
   .site-header {
