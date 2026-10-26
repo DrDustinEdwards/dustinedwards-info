@@ -25,6 +25,10 @@
     gap: var(--s-8);
   }
 
+  .page-column {
+    grid-column: 2;
+  }
+
   .page-rail {
     grid-column: 1;
     grid-row: 1;

@@ -155,7 +155,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
   const healthAge = "ageSeconds" in health ? String(health.ageSeconds) : undefined;
 
   return (
-    <PageShell>
+    <PageShell rail={null}>
       <h1 className="page-title">{COLOPHON_TITLE}</h1>
 
       {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}

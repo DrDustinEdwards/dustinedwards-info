@@ -50,6 +50,7 @@ export default function About({ loaderData }: Route.ComponentProps) {
   const { title, description, html, draft } = loaderData;
   return (
     <PageShell
+      rail={null}
       trail={
         <script
           type="application/ld+json"

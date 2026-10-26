@@ -1,5 +1,5 @@
 /** Below this, a contents list is furniture rather than a map. */
-export const CONTENTS_MIN = 3;
+export const CONTENTS_MIN = 2;
 
 export type ContentsEntry = { id: string; text: string };
 
