@@ -7,20 +7,52 @@
   line-height: 1.7;
 }
 
+.prose {
+  counter-reset: part;
+}
+
 .prose h2,
 .prose h3,
 .prose h4 {
   margin: 2.25rem 0 0.75rem;
+  font-family: var(--font-sans);
   line-height: 1.25;
   scroll-margin-top: 2rem;
 }
 
+/* A part of the page, as the manual heads its parts (capsomer/manual.css .cap-part): its number and title
+   over a hairline in the ink. The number is drawn, so a heading's anchor and text stay its own. */
 .prose h2 {
-  font-size: 1.5rem;
+  display: flex;
+  gap: 0.875rem;
+  margin-block-start: 3.5rem;
+  padding-block-start: 0.625rem;
+  border-block-start: var(--line-w) solid var(--text);
+  font-size: var(--t-h2-size);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: var(--t-h2-leading);
+  counter-increment: part;
+}
+
+/* The footnotes' heading is for screen readers and counts as no part. */
+.prose h2.sr-only {
+  counter-increment: none;
+}
+
+.prose h2::before {
+  content: counter(part) / "";
+  flex: none;
+  min-inline-size: 2ch;
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.7;
 }
 
 .prose h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
+  font-weight: 700;
 }
 
 .prose p,
@@ -70,7 +102,7 @@
 .prose img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.375rem;
+  border-radius: 0;
 }
 
 /* The opaque image covers the placeholder, so no transition or cleanup; width and height make the box
@@ -183,20 +215,35 @@
   margin: 0;
 }
 
-.prose th,
-.prose td {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  text-align: left;
+/* The manual's tables: a heavy rule over the head, mono labels, hairlines between rows, no verticals. */
+.prose table {
+  border-block-start: var(--line-w-thick) solid var(--text);
+  font-family: var(--font-sans);
 }
 
-.prose th {
-  background: var(--paper);
+.prose th,
+.prose td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-block-end: var(--line-w) solid var(--dust);
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose thead th {
+  border-block-end-color: var(--text);
+  color: var(--text-secondary);
+  font: 500 0.6875rem / 1.5 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prose tbody th {
+  font-weight: 600;
 }
 
 .prose :not(pre) > code {
   padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
+  border-radius: 0;
   background: var(--paper);
   font-size: 0.9em;
   /* anywhere, not break-word: only anywhere lowers min-content, so a token cannot widen the page. */
@@ -212,7 +259,7 @@
 .prose .swatch-chip {
   width: 0.85em;
   height: 0.85em;
-  border-radius: 0.15em;
+  border-radius: 0;
   /* The border is load-bearing: a chip near the page color would otherwise be an invisible square. */
   border: 1px solid var(--border);
   /* Read with a default here, --swatch never becomes a token, so check:contrast has nothing new to
@@ -232,7 +279,7 @@
   margin: 1.5rem 0;
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0;
   /* Also set here, so a fence in an unlisted language still lands on a surface. */
   background: var(--paper);
   color: var(--text);

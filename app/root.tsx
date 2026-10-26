@@ -18,7 +18,7 @@ import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 
-import interCoreUrl from "./fonts/inter-latin-core-normal.woff2?url";
+import uiCoreUrl from "./fonts/schibsted-grotesk-latin-core-normal.woff2?url";
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
 import katexCssUrl from "./styles/katex.generated.css?url";
 
@@ -74,7 +74,7 @@ export const links: Route.LinksFunction = () => [
   // page draws; the rest of the latin range loads only where a page needs it (app.css).
   {
     rel: "preload",
-    href: interCoreUrl,
+    href: uiCoreUrl,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",
@@ -118,8 +118,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         {/* Literal hexes: browser chrome does not resolve a custom property. check:contrast
             asserts they match the palette. */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe6" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1c1916" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fdfdfe" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0c12" />
         <Meta />
         {/* <Links> takes a nonce from the framework context and has no opt-out. */}
         <Links />

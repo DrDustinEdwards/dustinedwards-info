@@ -8,8 +8,8 @@ import { GERMOMICS_X_URL } from "~/lib/seo";
 // reader without script gets the native audio controls and never a button that does nothing.
 export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
   return (
-    <section className="home-section home-scicomm" aria-labelledby="germomics-heading">
-      <h2 id="germomics-heading" className="home-section-heading">
+    <section className="cap-part home-section home-scicomm" aria-labelledby="germomics-heading">
+      <h2 id="germomics-heading" className="cap-part-title">
         Germomics
       </h2>
       {episode ? (

@@ -63,10 +63,11 @@
   margin-block-start: var(--s-5);
 }
 
+/* The letterhead (capsomer/manual.css .cap-letterhead) draws the footer's heavy rule; the link groups sit
+   under it in ruled columns, the manual's form boxes without the boxes. */
 .site-shell-footer {
   margin-block-start: var(--s-8);
-  border-block-start: var(--line-w) solid var(--dust);
-  padding-block: var(--s-7);
+  padding-block-end: var(--s-6);
   background: var(--paper);
 }
 
@@ -80,50 +81,44 @@
   grid-column: wide;
 }
 
-.footer-grid,
-.footer-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--s-6) var(--s-5);
+.site-shell-footer .tracks > * + * {
+  margin-block-start: 0;
 }
 
-/*
- * Dustin, 2026-10-11: the brand block (logo, social and profile links) on the left, and the two groups,
- * Workspace and Site, side by side beside it. The brand column is only as wide as its content, so the
- * two read as one footer rather than a block and a distant grid. Below 48rem everything stacks: the
- * brand block, then Workspace, then Site.
- */
-@media (min-width: 48rem) {
-  .footer-grid {
-    grid-template-columns: max-content minmax(0, 1fr);
-    column-gap: var(--s-7);
-  }
-
-  .footer-columns {
-    grid-template-columns: repeat(2, minmax(0, max-content));
-    column-gap: var(--s-8);
-  }
-}
-
-.footer-home {
-  display: inline-flex;
+.cap-letterhead-logo,
+.cap-letterhead-logo:visited {
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s-2);
   color: var(--text);
   text-decoration: none;
 }
 
-.footer-logo {
-  inline-size: auto;
-  block-size: 3rem;
+.cap-letterhead-logo:hover {
+  color: var(--brand);
 }
 
-.footer-name {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.footer-grid,
+.footer-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-5);
+}
+
+.footer-grid {
+  padding-block-start: var(--s-4);
+  border-block-start: var(--line-w) solid var(--text);
+}
+
+@media (min-width: 48rem) {
+  .footer-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    column-gap: var(--gutter);
+  }
+
+  .footer-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--gutter);
+  }
 }
 
 /*
@@ -133,7 +128,7 @@
 .footer-social {
   display: flex;
   gap: var(--s-3);
-  margin: var(--s-4) 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -162,7 +157,7 @@
   translate: -50% var(--s-1);
   padding: 2px var(--s-2);
   border: var(--line-w) solid var(--dust);
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
@@ -193,11 +188,13 @@
   margin-block-start: var(--s-3);
 }
 
+/* The trail as a mono label, the manual's small caps over the page's head. */
 .page-breadcrumb {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--s-4);
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .page-breadcrumb ol {
@@ -208,12 +205,14 @@
   list-style: none;
 }
 
-.page-breadcrumb a {
-  color: var(--brand);
+.page-breadcrumb a,
+.page-breadcrumb a:visited {
+  color: var(--text-secondary);
   text-decoration: none;
 }
 
 .page-breadcrumb a:hover {
+  color: var(--brand);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -235,10 +234,9 @@
 .footer-heading {
   margin: 0 0 var(--s-2);
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.5;
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .footer-links {
@@ -251,7 +249,7 @@
   display: inline-flex;
   align-items: center;
   min-block-size: var(--control-min-dense);
-  color: var(--brand);
+  color: var(--text);
   font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 400;
@@ -260,13 +258,14 @@
 }
 
 .footer-links a:hover {
+  color: var(--brand);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: var(--line-w);
 }
 
 .footer-links a:visited {
-  color: var(--visited);
+  color: var(--text);
 }
 
 .footer-pair {
@@ -311,9 +310,7 @@
 .site-shell-footer-note {
   margin-block-start: var(--s-6);
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  font-weight: 400;
-  font-optical-sizing: none;
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }

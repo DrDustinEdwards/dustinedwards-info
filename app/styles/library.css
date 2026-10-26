@@ -23,93 +23,165 @@
   white-space: nowrap;
 }
 
-/* The overview above the catalog: counts, the phage workflow and a tile for each method. Site tokens throughout,
-   so it follows the light and dark themes with the rest of the library. */
-.library-overview {
-  margin-block: 2rem;
+/* The overview above the catalog, in the manual theme (library-overview.tsx). */
+.library-part {
   font-family: var(--font-sans);
 }
-.library-overview-title {
-  font-size: 1.25rem;
-  font-weight: 650;
-  color: var(--text-heading);
-}
-.library-counts {
-  margin-block: 0.25rem 1rem;
-  color: var(--text-secondary);
-}
-.library-subtitle {
-  margin-block: 1.25rem 0.5rem;
-  font-size: 0.8125rem;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-.library-pipeline,
-.library-tiles {
+
+/* The workflow as a line of stations: a filled disc of the family's color where the lab has a protocol, a ring
+   where it has none yet, the rule running through them. */
+.library-pipeline {
   display: grid;
-  gap: 0.75rem;
-  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--s-5) var(--s-4);
+  margin: var(--s-5) 0 0;
   padding: 0;
   list-style: none;
 }
-.library-pipeline {
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  counter-reset: stage;
-}
-.library-tiles {
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-}
-.library-stage,
-.library-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-block-size: 3.5rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  color: var(--text);
-  text-decoration: none;
-}
+
 .library-stage {
   position: relative;
-  counter-increment: stage;
-}
-.library-stage::before {
-  content: counter(stage);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.library-stage > a {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  color: inherit;
+  min-inline-size: 0;
+}
+
+.library-stage::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0.75rem;
+  inset-inline: 0 calc(-1 * var(--s-4));
+  border-block-start: 3px solid var(--text);
+}
+
+.library-stage:last-child::before {
+  inset-inline-end: auto;
+  inline-size: 1.5rem;
+}
+
+.library-stage-dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin-block-end: var(--s-3);
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--paper);
+  font: 700 0.6875rem / 1 var(--font-mono);
+}
+
+.library-stage:not([data-empty]) .library-stage-dot {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.library-stage-name,
+.library-stage-name:visited {
+  color: var(--text);
+  font-weight: 700;
   text-decoration: none;
 }
-.library-stage[data-empty] {
-  border-style: dashed;
+
+a.library-stage-name:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
+.library-stage-n {
   color: var(--text-secondary);
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.library-stage-name,
-.library-tile-name {
-  font-weight: 600;
-}
-.library-stage-n,
-.library-tile-n {
+
+.library-stage-tools {
+  display: grid;
+  gap: 0.25rem;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  list-style: none;
   font-size: 0.875rem;
-  color: var(--text-secondary);
 }
-.library-stage:has(> a:hover),
-.library-tile:hover {
-  border-color: var(--brand);
-  background: var(--tint-brand);
+
+/* The ways in: the start-here protocols on a dark panel, then each browse group as an index, in ruled cells. */
+.library-browse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  margin-block-start: var(--s-5);
+  border-block-start: var(--line-w) solid var(--text);
+  border-inline-start: var(--line-w) solid var(--text);
 }
-.library-stage > a:focus-visible,
-.library-tile:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+
+.library-browse-grid > * {
+  min-inline-size: 0;
+  padding: var(--s-4);
+  border-inline-end: var(--line-w) solid var(--text);
+  border-block-end: var(--line-w) solid var(--text);
+}
+
+.library-start {
+  display: grid;
+  align-content: start;
+  gap: var(--s-6);
+  margin: 0;
+  list-style: none;
+  background: var(--text);
+  color: var(--paper);
+}
+
+.library-start > li {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.library-start-mark {
+  font: 700 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+  text-transform: uppercase;
+}
+
+.library-start-title,
+.library-start-title:visited {
+  color: var(--paper);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.library-start-title:hover {
+  text-decoration: underline;
+}
+
+.library-start-why {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.library-subtitle {
+  margin: 0 0 var(--s-2);
+  color: var(--text);
+  font: 700 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.library-browse .cap-leader-index-link {
+  min-block-size: 0;
+  padding-block: var(--s-2);
+  font-size: 0.9375rem;
+}
+
+/* A course carries a second link to the page that describes it. */
+.library-tile-about {
+  display: inline-block;
+  margin-block: 0 var(--s-2);
+  font-size: 0.8125rem;
 }
 
 /* The tabs sit above the catalog's form: room beneath them, and no scrollbar chrome on a list that fits. */
@@ -118,68 +190,20 @@
   scrollbar-width: none;
 }
 
-/* The calculators under a workflow stage: plain links in a short list, below the stage's own link. */
-.library-stage-tools {
-  display: grid;
-  gap: 0.25rem;
-  margin: 0.5rem 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.875rem;
-}
-.library-stage-tools a {
-  color: var(--brand);
-}
-
-/* A course tile carries a second link to the page that describes the course. */
-.library-tiles > li {
-  display: grid;
-  gap: 0.25rem;
-  align-content: start;
-}
-.library-tile-about {
-  font-size: 0.8125rem;
-  color: var(--brand);
-}
-
-/* Start here: the protocols that say where to begin, in their stated order, each with its own one-line description. */
-.library-start {
-  display: grid;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: start;
-}
-.library-start > li {
-  display: grid;
-  gap: 0.125rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  counter-increment: start;
-}
-.library-start > li::before {
-  content: counter(start);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.library-start-title {
-  font-weight: 600;
-  color: var(--brand);
-}
-.library-start-why {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-/* Download and cite: the citation is set apart as text to copy. */
+/* Download and cite: the citation is set apart as text to copy, in a ruled box under a mono label. */
 .library-cite {
-  margin-block: 2rem;
   font-family: var(--font-sans);
 }
 .library-cite-text {
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  background: var(--tint-brand);
+  border: 1px solid var(--text);
   user-select: all;
+}
+
+.library-cite p {
+  margin: 0 0 var(--s-3);
+}
+
+.library-cite .library-subtitle {
+  margin-block-start: var(--s-5);
 }

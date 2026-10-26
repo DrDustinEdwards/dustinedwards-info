@@ -24,7 +24,7 @@
     "build:references": "node scripts/build-references.mjs",
     "build:content": "node scripts/build-identity.mjs && node scripts/build-references.mjs && node scripts/build-nav-data.mjs && node scripts/build-published-pages.mjs && node scripts/build-source-dates.mjs && node scripts/build-content.mjs",
     "build:tokens": "node scripts/build-tokens.mjs",
-    "build:inter-advances": "node scripts/build-inter-advances.mjs",
+    "build:ui-advances": "node scripts/build-ui-advances.mjs",
     "check": "node scripts/check-all.mjs",
     "check:all": "node scripts/check-all.mjs --all",
     "check:ci": "node scripts/check-all.mjs --ci",

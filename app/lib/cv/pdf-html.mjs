@@ -42,7 +42,7 @@ export function fontFaceRule(family, bytes, style) {
 export const PDF_FONTS = /** @type {const} */ ([
   { file: "source-serif-4-latin-normal.woff2", family: "Source Serif 4", style: "normal" },
   { file: "source-serif-4-latin-italic.woff2", family: "Source Serif 4", style: "italic" },
-  { file: "inter-latin-normal.woff2", family: "Inter", style: "normal" },
+  { file: "schibsted-grotesk-latin-normal.woff2", family: "Schibsted Grotesk", style: "normal" },
 ]);
 
 const PRINT_CSS = `
@@ -52,10 +52,10 @@ body { margin: 0; color: #1f1a17; font-family: "Source Serif 4", Georgia, serif;
 a { color: inherit; text-decoration: none; }
 .letterhead { border-bottom: 1.5pt solid #4f2d7f; padding-bottom: 10pt; margin-bottom: 4pt; }
 .letterhead h1 { margin: 0; color: #4f2d7f; font-size: 24pt; font-weight: 650; letter-spacing: -0.01em; line-height: 1.1; }
-.letterhead p { margin: 4pt 0 0; font-family: "Inter", Arial, sans-serif; font-size: 9pt; color: #4a423b; line-height: 1.45; }
+.letterhead p { margin: 4pt 0 0; font-family: "Schibsted Grotesk", Arial, sans-serif; font-size: 9pt; color: #4a423b; line-height: 1.45; }
 .letterhead .edition { text-transform: uppercase; letter-spacing: 0.08em; font-size: 7.5pt; font-weight: 600; color: #6a6159; margin: 0 0 6pt; }
 h2 { margin: 16pt 0 6pt; padding-bottom: 3pt; border-bottom: 0.6pt solid #b9ada0; color: #4f2d7f; font-size: 13pt; font-weight: 650; break-after: avoid; }
-h3 { margin: 10pt 0 4pt; font-family: "Inter", Arial, sans-serif; font-size: 8pt; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: #4a423b; break-after: avoid; }
+h3 { margin: 10pt 0 4pt; font-family: "Schibsted Grotesk", Arial, sans-serif; font-size: 8pt; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: #4a423b; break-after: avoid; }
 h4 { margin: 10pt 0 2pt; font-size: 10.5pt; font-weight: 650; break-after: avoid; }
 .heading-anchor { display: none; }
 p { margin: 3pt 0; }
@@ -64,11 +64,11 @@ li { margin: 0 0 3.5pt; break-inside: avoid; }
 ul li::marker { color: #8a7d6e; }
 ul:has(> li > strong:first-child) { padding-left: 0; }
 ul > li:has(> strong:first-child) { list-style: none; padding-left: 6.4em; text-indent: -6.4em; }
-ul > li > strong:first-child { display: inline-block; width: 6.4em; text-indent: 0; font-family: "Inter", Arial, sans-serif; font-size: 8.5pt; font-weight: 600; color: #4a423b; }
-ol li::marker { color: #6a6159; font-family: "Inter", Arial, sans-serif; font-size: 8.5pt; }
+ul > li > strong:first-child { display: inline-block; width: 6.4em; text-indent: 0; font-family: "Schibsted Grotesk", Arial, sans-serif; font-size: 8.5pt; font-weight: 600; color: #4a423b; }
+ol li::marker { color: #6a6159; font-family: "Schibsted Grotesk", Arial, sans-serif; font-size: 8.5pt; }
 strong { font-weight: 650; }
 em { font-style: italic; }
-.fingerprint { margin-top: 18pt; font-family: "Inter", Arial, sans-serif; font-size: 7.5pt; color: #6a6159; }
+.fingerprint { margin-top: 18pt; font-family: "Schibsted Grotesk", Arial, sans-serif; font-size: 7.5pt; color: #6a6159; }
 `;
 
 /**

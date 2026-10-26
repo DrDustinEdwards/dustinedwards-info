@@ -20,7 +20,7 @@
   margin: 0 0 var(--s-6);
   max-width: 44ch;
   color: var(--text-secondary);
-  font-family: var(--font-serif);
+  font-family: var(--font-prose);
   font-size: 1.3125rem;
   line-height: 1.5;
 }
@@ -52,33 +52,39 @@
   display: grid;
   gap: 0;
   margin-block-start: var(--s-6);
-  border-block-start: var(--line-w) solid var(--dust);
 }
 
-.post-nav-target {
+/* Previous and next are signs: an ink panel under a band of the family's color. */
+.post-nav-target,
+.post-nav-target:visited {
   display: block;
-  padding-block: 0.75rem;
-  border-block-end: var(--line-w) solid var(--dust);
-  color: var(--brand);
+  padding: 0.625rem 1rem 0.75rem;
+  border-block-start: 0.25rem solid var(--brand);
+  background: var(--text);
+  color: var(--paper);
   text-decoration: none;
 }
 
-.post-nav-target:visited {
-  color: var(--visited);
+.post-nav-target + .post-nav-target {
+  margin-block-start: var(--s-2);
+}
+
+.post-nav-target:hover {
+  background: var(--brand);
 }
 
 .post-nav-label {
   display: block;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .post-nav-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.0625rem;
-  line-height: 1.4;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .post-series {
@@ -213,15 +219,8 @@
 }
 
 .post-body .prose h2 {
-  margin: 2.875rem 0 0.875rem;
-  max-width: 24ch;
+  margin: 3.5rem 0 0.875rem;
   color: var(--text);
-  font-family: var(--t-h2-family);
-  font-size: var(--t-h2-size);
-  font-weight: var(--t-h2-weight);
-  font-variation-settings: var(--t-h2-vars);
-  letter-spacing: -0.012em;
-  line-height: var(--t-h2-leading);
 }
 
 .post-body .prose h3 {
@@ -229,16 +228,9 @@
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: normal;
   line-height: 1.4;
-}
-
-@media (max-width: 47.99rem) {
-  .post-body .prose h2 {
-    max-width: none;
-    font-size: 1.5rem;
-  }
 }
 
 /* Restated because .prose a would otherwise outrank the base hover. */

@@ -16,22 +16,22 @@ import { isMain } from "./lib/is-main.mjs";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const CHART_CSS_PATH = path.join(ROOT, "app", "styles", "enarratio.css");
 
-// The site's chart theme, which Enarratio published as `dustinedwardsTheme` until 0.2.0: warm paper,
-// Inter for chart text, the chart ladder (cadet, purple, claret, sage, gold, rust) for the first six
+// The site's chart theme, which Enarratio published as `dustinedwardsTheme` until 0.2.0: near-white paper,
+// the site's sans (Schibsted Grotesk) for chart text, the chart ladder (cadet, purple, claret, sage, gold, rust) for the first six
 // series, and the figure ramps for the rest.
 /** @type {import("enarratio").Theme} */
 const theme = {
   name: "dustinedwards.info",
-  fonts: { body: '"Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif' },
+  fonts: { body: '"Schibsted Grotesk Web", "Schibsted Grotesk Fallback", ui-sans-serif, system-ui, sans-serif' },
   gridlines: "y",
   light: {
-    background: "#f4efe6", text: "#241f1b", mutedText: "#5b5349", grid: "#c9c0b4", focus: "#4f2d7f",
+    background: "#fdfdfe", text: "#1c1727", mutedText: "#686471", grid: "#dfdce5", focus: "#4f2d7f",
     series: ["#142b42", "#4f2d7f", "#9b3268", "#55684a", "#9a7a0e", "#8a4a1b", "#7d7263", "#6b4a9b"],
     sequential: ["#e3dcf0", "#9279b9", "#6b4a9b", "#4f2d7f", "#3a1f5e"],
     status: { good: "#375445", warning: "#8a4f1e", bad: "#8e1024", unknown: "#a89d8d" },
   },
   dark: {
-    background: "#1c1916", text: "#e9e1d6", mutedText: "#b2a898", grid: "#6f675c", focus: "#b7a5e0",
+    background: "#0e0c12", text: "#efedf3", mutedText: "#96949e", grid: "#343238", focus: "#b7a5e0",
     series: ["#5887b5", "#c0b0e6", "#c9699e", "#93b29b", "#efd99c", "#ce7f44", "#ab9f8f", "#a48fd0"],
     sequential: ["#5a4479", "#7f66a8", "#a48fd0", "#c0aee6", "#e0d7f2"],
     status: { good: "#79baa8", warning: "#cf9f5e", bad: "#f0a9b4", unknown: "#6f675c" },

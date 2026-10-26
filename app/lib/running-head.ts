@@ -1,0 +1,49 @@
+/*
+ * The running head over every public page but the home page (capsomer/manual.css, .cap-running-head): the
+ * section's number and trail on the left, as the NASA Graphics Standards Manual heads its pages, and a folio on
+ * the right. The numbers are the home page's parts (1 Research to 7 About), with 0 for the site's own pages.
+ * The longest matching prefix wins.
+ */
+type Section = { prefix: string; no: string; trail: string[] };
+
+const SECTIONS: Section[] = [
+  { prefix: "/research", no: "1", trail: ["Research"] },
+  { prefix: "/research/publications", no: "2", trail: ["Research", "Publications"] },
+  { prefix: "/research/protocols", no: "3.1", trail: ["Research", "Lab", "Protocols"] },
+  { prefix: "/research/lab", no: "3.2", trail: ["Research", "Lab", "Registry"] },
+  { prefix: "/research/phages", no: "3.3", trail: ["Research", "Lab", "Phages"] },
+  { prefix: "/research/tools", no: "3.4", trail: ["Research", "Lab", "Calculators"] },
+  { prefix: "/teaching", no: "4", trail: ["Teaching"] },
+  { prefix: "/writing", no: "5", trail: ["Writing"] },
+  { prefix: "/software", no: "6", trail: ["Software"] },
+  { prefix: "/systems", no: "6.4", trail: ["Software", "Systems"] },
+  { prefix: "/about", no: "7", trail: ["About"] },
+  { prefix: "/contact", no: "7.1", trail: ["About", "Contact"] },
+  { prefix: "/cv", no: "7.2", trail: ["About", "Curriculum vitae"] },
+  { prefix: "/recipes", no: "7.3", trail: ["About", "Recipes"] },
+  { prefix: "/search", no: "0", trail: ["Site", "Search"] },
+  { prefix: "/site-map", no: "0", trail: ["Site", "Site map"] },
+  { prefix: "/colophon", no: "0", trail: ["Site", "Colophon"] },
+  { prefix: "/privacy", no: "0", trail: ["Site", "Privacy"] },
+  { prefix: "/terms", no: "0", trail: ["Site", "Terms"] },
+  { prefix: "/accessibility", no: "0", trail: ["Site", "Accessibility"] },
+];
+
+const SITE_SECTION: Section = { prefix: "/", no: "0", trail: ["Site"] };
+
+const under = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+/** The section a path sits in, for the running head and the letterhead's folio. */
+export function sectionOf(pathname: string): Section {
+  let best = SITE_SECTION;
+  for (const section of SECTIONS) {
+    if (under(pathname, section.prefix) && section.prefix.length > best.prefix.length) best = section;
+  }
+  return best;
+}
+
+/**
+ * A route's folio for the running head's right side, from its loader data: `export const handle = { folio }`.
+ * Without one the right side carries the site's name.
+ */
+export type RunningHeadHandle = { folio?: (data: unknown) => string | null | undefined };

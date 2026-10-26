@@ -2,124 +2,133 @@
   grid-column: wide;
 }
 
+/* The cover: the department and the place over a heavy rule, the name large, the role, then the
+   organization over a hairline (the manual theme's technical-report cover). */
 .home-intro {
-  margin-block-start: var(--s-7);
+  display: flex;
+  flex-direction: column;
+  margin-block-start: var(--s-6);
 }
 
-/* The leading is 0.92 because the name breaks over two lines at every width. */
+.cover-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
+  margin: 0 0 var(--s-6);
+  padding-block-end: 0.625rem;
+  border-block-end: 4px solid var(--text);
+  font: 500 0.75rem / 1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The leading is 0.88 because the name breaks over two lines at every width. */
 .intro-name {
-  margin: 0 0 1.375rem;
+  margin: 0 0 var(--s-5);
   /* NOT a <br>: the h-card's p-name is this element's text, and check:machine-readable would read
    * "DustinEdwards". */
   max-inline-size: min-content;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 4.75rem;
-  font-weight: 800;
-  /* 32, not 48: Inter's opsz axis stops at 32. */
-  font-variation-settings: "opsz" 32, "wght" 800;
-  letter-spacing: -0.052em;
-  line-height: 0.92;
+  font-size: clamp(3.25rem, 1.6rem + 6.8vw, 7rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.88;
 }
 
 .intro-affil {
   margin: 0;
   color: var(--text);
-  font-family: var(--font-serif);
-  font-size: 1.1875rem;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.intro-affil b {
+  font-weight: 700;
+}
+
+.cover-foot {
+  margin: var(--s-6) 0 0;
+  padding-block-start: 0.625rem;
+  border-block-start: var(--line-w) solid var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
   line-height: 1.4;
 }
 
-.intro-affil > span {
-  display: block;
-}
-
 /* The organization, one line per name: the university, then its system. */
-.intro-affil .org-line {
+.cover-foot .org-line {
   display: block;
 }
 
-.intro-affil > .intro-affil-system {
-  margin-block-start: 0.125rem;
-  color: var(--text-secondary);
-  font-size: 0.9375rem;
+.home-section {
+  margin-block-start: var(--s-9);
 }
 
-.home-areas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.25rem;
-  margin: 0.75rem 0 0;
-  padding: 0;
-  list-style: none;
+.home-section > :is(.home-rows, .home-refs, .cap-checklist, .podcast) {
+  margin-block-start: var(--s-5);
 }
 
-.home-section-heading {
-  margin: 0 0 0.75rem;
-  color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
+/* Rows: a mono label in the margin, the title, a line under it. */
 .home-rows {
   margin: 0;
   padding: 0;
-  border-block-start: var(--line-w) solid var(--dust);
+  border-block-start: var(--line-w) solid var(--text);
   list-style: none;
 }
 
 .home-row {
   display: grid;
-  grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
+  grid-template-columns: 9rem minmax(0, 1fr);
+  column-gap: var(--s-4);
   align-items: baseline;
   border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 1rem;
+  padding-block: 0.875rem;
 }
 
 .home-row-date {
-  grid-column: 1;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
-  text-align: right;
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .home-row-body {
-  grid-column: 3;
   min-width: 0;
 }
 
 .home-row-title {
   display: block;
   font-family: var(--font-serif);
-  font-size: 1.25rem;
-  line-height: 1.35;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
-.home-row-title a {
+.home-row-title a,
+.home-row-title a:visited,
+.home-refs a,
+.home-refs a:visited {
   color: var(--text);
   text-decoration: none;
 }
 
-.home-row-title a:hover {
+.home-row-title a:hover,
+.home-refs a:hover {
   color: var(--brand);
-}
-
-.home-row-title a:visited {
-  color: var(--visited);
+  text-decoration: underline;
 }
 
 .home-row-summary {
   display: block;
   margin-block-start: 0.25rem;
-  max-width: 58ch;
+  max-width: 62ch;
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.55;
+  font-size: 0.9375rem;
+  line-height: 1.45;
 }
 
 /* A post's description is written for search results; two lines is the taste of it. */
@@ -131,81 +140,97 @@
   line-clamp: 2;
 }
 
-.home-more {
-  margin: 1.125rem 0 0;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
+/* A report's references: number, year, title in the serif, journal in the mono. */
+.home-refs {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--text);
+  list-style: none;
+  counter-reset: ref;
 }
 
-.home-more a {
+.home-refs > li {
+  display: grid;
+  grid-template-columns: 2.5rem 3.5rem minmax(0, 1fr);
+  column-gap: var(--s-3);
+  padding-block: 0.875rem;
+  border-block-end: var(--line-w) solid var(--dust);
+  counter-increment: ref;
+}
+
+.home-refs > li::before {
+  content: counter(ref) ".";
+  font: 400 0.9375rem / 1.7 var(--font-sans);
+}
+
+.home-refs-year {
+  font: 700 0.75rem / 2.1 var(--font-mono);
+}
+
+.home-refs a {
+  font: 600 1.0625rem / 1.35 var(--font-serif);
+}
+
+.home-refs-journal {
+  display: block;
+  margin-block-start: 0.25rem;
+  color: var(--text-secondary);
+  font: 500 0.6875rem / 1.5 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The checklist's step names restate their ink over the public link rules. */
+.home-section .cap-checklist-line > a,
+.home-section .cap-checklist-line > a:visited {
+  color: var(--text);
   text-decoration: none;
 }
 
+.home-section .cap-checklist-line > a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+
+.home-more {
+  margin: var(--s-4) 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.home-more a::after {
+  content: " \2192" / "";
+}
+
 @media (max-width: 47.99rem) {
-  .intro-name {
-    font-size: 2.75rem;
-    font-variation-settings: "opsz" 32, "wght" 800;
-    margin-block-end: 1rem;
-  }
-
-  .intro-line {
-    max-width: none;
-    font-size: 1.1875rem;
-    margin-block-end: 1.5rem;
-  }
-
   .home-row {
-    display: block;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.125rem;
   }
 
-  .home-row-date {
-    display: block;
-    margin-block-end: 0.3125rem;
-    text-align: left;
+  .home-refs > li {
+    grid-template-columns: 2rem minmax(0, 1fr);
   }
 
-  .home-row-title {
-    font-size: 1.125rem;
-  }
-}
-
-/* --fig-ink is a local alias, not a token: oxide holds its measured pair with a different step per
- * theme (400 light, 300 dark). */
-:root,
-[data-theme="light"] {
-  --plate-ink: var(--fig-oxide-400);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --plate-ink: var(--fig-oxide-300);
+  .home-refs-year,
+  .home-refs-body {
+    grid-column: 2;
   }
 }
 
-[data-theme="dark"] {
-  --plate-ink: var(--fig-oxide-300);
+/* The plate is drawn in the page's ink, as the manual's diagrams are; purple stays for the way on. */
+:root {
+  --plate-ink: var(--text);
 }
 
 .home-plate,
-.home-figure,
 .plate-key {
   --fig-ink: var(--plate-ink);
   --fig-cell: var(--chart-cadet);
 }
 
-.home-plate,
-.home-figure {
-  margin: 0 0 var(--s-7);
-}
-
-.fig {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
-}
-
-/* Each viewBox is sized so its user unit is one CSS pixel at its drawn width: labels are 14px at 1280
- * and 12px at 375. */
+/* Each viewBox is sized so its user unit is about one CSS pixel at its drawn width. */
 .plate {
   display: block;
   block-size: auto;
@@ -213,7 +238,6 @@
 
 .plate--wide {
   inline-size: 100%;
-  max-inline-size: 610px;
 }
 
 .plate--narrow {
@@ -227,38 +251,32 @@
 
   .plate--narrow {
     display: block;
-    inline-size: calc(100% + 2 * var(--gutter));
-    margin-inline: calc(-1 * var(--gutter));
+    inline-size: 100%;
   }
 }
 
 .plate-label,
-.fig-label,
 .plate-scale {
   font-family: var(--font-mono);
 }
 
-.plate-label,
-.fig-label {
+.plate-label {
   fill: var(--fig-ink);
   font-size: 10.5px;
 }
 
+/* 12px, not 14: Martian Mono runs wide, and the right-hand labels have 88 user units. */
 .plate--wide .plate-label,
 .plate--wide .plate-scale {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .plate--narrow .plate-label,
 .plate--narrow .plate-scale {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .plate-scale {
-  fill: var(--text-secondary);
-}
-
-.fig-label {
   fill: var(--text-secondary);
 }
 
@@ -267,38 +285,12 @@
   stroke-width: 1;
 }
 
-.home-plate-caption,
-.home-figure-caption {
-  margin-block-start: 0.75rem;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.55;
-  max-inline-size: 58ch;
-}
-
-.home-figure-num {
-  margin-inline-end: 0.5rem;
-  color: var(--fig-ink);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-}
-
-.home-plate-num {
-  display: block;
-  margin-block-end: 4px;
-  color: var(--fig-ink);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
+/* The key as the manual's ruled boxes: the boxes share their rules, the numeral small above the name. */
 .plate-key {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  border-block-start: var(--line-w) solid var(--dust);
-  padding-block: 22px 4px;
+  border-block-start: var(--line-w) solid var(--text);
+  border-inline-start: var(--line-w) solid var(--text);
 }
 
 @media (min-width: 44rem) {
@@ -318,16 +310,32 @@
 }
 
 .tracks > .home-hero + .plate-key {
-  margin-block-start: 0;
+  margin-block-start: var(--s-7);
 }
 
 .plate-key-entry {
+  display: flex;
+  flex-direction: column;
   margin: 0;
+  padding: var(--s-2) var(--s-3) var(--s-4);
+  border-inline-end: var(--line-w) solid var(--text);
+  border-block-end: var(--line-w) solid var(--text);
+}
+
+.plate-key-entry > figcaption {
+  display: contents;
+}
+
+/* The numeral first, then the drawing, then the name and the note. */
+.plate-key-num {
+  order: -1;
 }
 
 .plate-key-art {
   display: block;
-  margin-block-end: 12px;
+  inline-size: 40px;
+  block-size: 40px;
+  margin-block: var(--s-2);
 }
 
 .plate-key-num,
@@ -337,19 +345,18 @@
 }
 
 .plate-key-num {
-  margin-block-end: 4px;
-  color: var(--fig-ink);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.5;
+  color: var(--text-secondary);
+  font: 500 0.6875rem / 1.5 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .plate-key-name {
-  margin-block: 2px 5px;
+  margin-block: 2px 4px;
   color: var(--text);
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1.3;
 }
 
@@ -381,80 +388,35 @@
   font-weight: 700;
 }
 
-
-.home-section {
-  margin-block-end: 2.75rem;
-}
-
-.home-research-line {
-  margin: 0 0 1rem;
-  color: var(--text);
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
-  line-height: 1.35;
-}
-
-.home-section-lede {
-  margin: 0 0 1.25rem;
-  max-inline-size: 62ch;
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.6;
-}
-
-/* 80rem: below it the right half is too narrow for the plate's 610px box and its labels would drop
- * under 14px. */
+/* 64rem: below it the right half is too narrow for the plate's labels to stay 14px. */
 .home-hero {
   display: grid;
   gap: var(--s-7);
-  margin-block-end: var(--s-7);
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 64rem) {
   .home-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 76px;
-    align-items: start;
-    margin-block-end: 0;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: var(--gutter);
+    align-items: end;
   }
+}
 
-  .home-hero > .home-intro {
-    margin-block: var(--s-5) 0;
-  }
-
-  .home-hero .home-plate {
-    position: relative;
-    align-self: center;
-    margin-block: var(--s-3);
-  }
-
-  .home-hero .plate--wide {
-    inline-size: calc(100% + 90px);
-    max-inline-size: none;
-    margin-inline-start: -90px;
-  }
-
-  .home-hero .home-plate-caption {
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-start: -90px;
-    margin: 0;
-    line-height: 1.2;
-    white-space: nowrap;
-  }
+.home-hero .cap-plate-box {
+  padding-block-start: var(--s-6);
 }
 
 
 .podcast {
-  border-block-start: var(--line-w) solid var(--dust);
+  border-block-start: var(--line-w) solid var(--text);
   padding-block-start: 1rem;
 }
 
 .podcast-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: 1.25rem;
-  font-weight: 400;
+  font-size: 1.1875rem;
+  font-weight: 600;
   line-height: 1.35;
 }
 
@@ -540,21 +502,22 @@
   margin-block-start: 0.875rem;
 }
 
+/* The manual's sign panels: a dark panel of light type. */
 .podcast-btn {
   min-block-size: 2.75rem;
   min-inline-size: 5.5rem;
-  border: var(--line-w) solid var(--dust);
+  border: 0;
   border-radius: 0;
-  background: transparent;
+  background: var(--text);
   padding: 0 1rem;
-  color: var(--brand);
+  color: var(--paper);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   cursor: pointer;
 }
 
 .podcast-btn:hover {
-  border-color: var(--brand);
+  text-decoration: underline;
 }
 
 .podcast-links {

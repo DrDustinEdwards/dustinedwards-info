@@ -1,25 +1,28 @@
+/* The post's particulars as the manual's form: ruled boxes sharing their rules, a mono label over each fact. */
 .post-blocks {
   margin: 0 0 var(--s-6);
-  border-block-start: var(--line-w) solid var(--dust);
+  border-block-start: var(--line-w) solid var(--text);
+  border-inline-start: var(--line-w) solid var(--text);
 }
 
 .post-block {
-  border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 0.75rem;
+  padding: 0.5rem 0.75rem 0.625rem;
+  border-inline-end: var(--line-w) solid var(--text);
+  border-block-end: var(--line-w) solid var(--text);
 }
 
 .post-block dt {
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.6;
+  color: var(--text);
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .post-block dd {
   margin: 0;
-  font-family: var(--font-serif);
-  font-size: 1rem;
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
 }
 
 .post-block dd ul {
@@ -29,12 +32,4 @@
 
 .post-block dd li {
   margin-block-end: 0.25rem;
-}
-
-@media (min-width: 48rem) {
-  .post-block {
-    display: grid;
-    grid-template-columns: 9.375rem 1fr;
-    column-gap: 1.5rem;
-  }
 }

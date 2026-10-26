@@ -145,23 +145,32 @@ const LAB_RESOURCES = [
   },
 ];
 
-/** One section of the home page: a heading, a short list, and the link to the rest. */
+/**
+ * One numbered part of the home page, as the manual sets its parts (capsomer/manual.css .cap-part): number and
+ * title on the left over a rule, a line beside it, a short list, and the link to the rest.
+ */
 function Section({
   id,
+  no,
   title,
+  lead,
   more,
   children,
 }: {
   id: string;
+  no: string;
   title: string;
+  lead?: ReactNode;
   more: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="home-section" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`} className="home-section-heading">
+    <section className="cap-part home-section" aria-labelledby={`${id}-heading`}>
+      <h2 id={`${id}-heading`} className="cap-part-title">
+        <span className="cap-part-no">{no}</span>
         {title}
       </h2>
+      {lead ? <p className="cap-part-lead">{lead}</p> : null}
       {children}
       <p className="home-more">{more}</p>
     </section>
@@ -205,11 +214,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="home-hero u-wide">
           <HomeIntro />
 
-          <figure className="home-plate">
-            <PlateI />
-            <figcaption className="home-plate-caption">
-              <span className="home-plate-num">Plate I</span>
-              <span className="home-plate-cap">Plaque morphology, drawn.</span>
+          {/* A boxed plate, as NASA numbered its photographic plates; the caption under the box. */}
+          <figure className="cap-plate home-plate">
+            <div className="cap-plate-box">
+              <span className="cap-plate-no" aria-hidden="true">
+                Plate I
+              </span>
+              <PlateI />
+            </div>
+            <figcaption className="cap-plate-caption">
+              <span>
+                <b>Plate I.</b> Plaque morphology, drawn.
+              </span>
             </figcaption>
           </figure>
         </div>
@@ -217,8 +233,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <PlateKeyRow />
         <Enhance module="plate" />
 
-        <Section id="research" title="Research" more={<Link to="/research">All research</Link>}>
-          <p className="home-research-line">I study viral genomics.</p>
+        <Section
+          id="research"
+          no="1"
+          title="Research"
+          lead="I study viral genomics."
+          more={<Link to="/research">All research</Link>}
+        >
           <ul className="home-rows">
             {RESEARCH_AREAS.map((area) => (
               <Row
@@ -235,57 +256,72 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
         <Section
           id="publications"
+          no="2"
           title="Publications"
+          lead={`${paperCount} papers on retroviruses, bacteriophages and science education.`}
           more={<Link to="/research/publications">All {paperCount} papers</Link>}
         >
-          <ol className="home-rows">
+          {/* A report's numbered references: number, year, title, the journal in the mono. */}
+          <ol className="home-refs">
             {papers.map((paper) => (
-              <Row
-                key={paper.id}
-                rail={paper.year}
-                to={paper.href}
-                title={paper.title}
-                summary={paper.journal}
-              />
+              <li key={paper.id}>
+                <span className="home-refs-year">{paper.year}</span>
+                <span className="home-refs-body">
+                  <Link to={paper.href}>{paper.title}</Link>
+                  {paper.journal ? <span className="home-refs-journal">{paper.journal}</span> : null}
+                </span>
+              </li>
             ))}
           </ol>
         </Section>
 
         <Section
           id="lab"
+          no="3"
           title="Lab resources"
+          lead="The lab's protocols and calculators."
           more={<Link to="/research/protocols">All protocols</Link>}
         >
-          <ul className="home-rows">
-            {LAB_RESOURCES.map((item) => (
-              <Row
-                key={item.to}
-                rail={item.rail}
-                to={item.to}
-                title={item.label}
-                summary={item.description}
-              />
-            ))}
-          </ul>
+          {/* The procedures as an Apollo checklist card (capsomer/manual.css .cap-checklist). */}
+          <div className="cap-checklist">
+            <p className="cap-checklist-strip" aria-hidden="true">
+              <span>Lab · Procedures</span>
+              <span>{LAB_RESOURCES.length} cards</span>
+            </p>
+            <ol className="cap-checklist-items">
+              {LAB_RESOURCES.map((item) => (
+                <li key={item.to} className="cap-checklist-item">
+                  <div className="cap-checklist-line">
+                    <Link to={item.to}>{item.label}</Link>
+                    <span className="cap-checklist-dots" aria-hidden="true" />
+                    <span className="cap-checklist-kind">{item.rail}</span>
+                  </div>
+                  <p className="cap-checklist-note">{item.description}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </Section>
 
-        <Section id="teaching" title="Teaching" more={<Link to="/teaching">All teaching</Link>}>
+        <Section
+          id="teaching"
+          no="4"
+          title="Teaching"
+          lead={`${discovery.researchers} student researchers in ${discovery.cohorts} cohorts since ${discovery.since}.`}
+          more={<Link to="/teaching">All teaching</Link>}
+        >
           <ul className="home-rows">
             <Row
               rail="SEA-PHAGES"
               to="/teaching/phage-discovery"
               title="Phage Discovery Program"
-              summary={
-                `The two-semester undergraduate research program in HHMI SEA-PHAGES: ` +
-                `${discovery.researchers} student researchers in ${discovery.cohorts} cohorts ` +
-                `since ${discovery.since}.`
-              }
+              summary="The two-semester undergraduate research program in HHMI SEA-PHAGES."
             />
           </ul>
         </Section>
 
         {featured ? (
-          <Section id="writing" title="Writing" more={<Link to="/writing">All {posts} posts</Link>}>
+          <Section id="writing" no="5" title="Writing" more={<Link to="/writing">All {posts} posts</Link>}>
             {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
@@ -318,7 +354,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </Section>
         ) : null}
 
-        <Section id="software" title="Software" more={<Link to="/software">All software</Link>}>
+        <Section
+          id="software"
+          no="6"
+          title="Software"
+          lead="Products and the tools behind them."
+          more={<Link to="/software">All software</Link>}
+        >
           <ul className="home-rows">
             {SOFTWARE_PRODUCTS.map((product) => (
               <Row

@@ -27,9 +27,9 @@
 .paper-marks {
   margin: 0 0 0.125rem;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .paper-kind,
@@ -70,7 +70,7 @@
 }
 
 .paper-row-title a:visited {
-  color: var(--visited);
+  color: var(--text);
 }
 
 .pub-authors {
@@ -97,10 +97,9 @@
 
 .paper-venue {
   color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 0.9375rem;
-  font-style: italic;
-  line-height: 1.5;
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .paper-row-links {

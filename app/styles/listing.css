@@ -4,30 +4,46 @@
   grid-column: wide;
 }
 
+/* The list's head as a hub page's: the title large on the left, the line and the facts beside it. */
 .list-head {
-  margin-block-start: var(--s-7);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--gutter);
+  margin-block-start: var(--s-6);
+}
+
+@media (min-width: 64rem) {
+  .list-head {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+  }
+
+  .list-head > :not(.list-label) {
+    grid-column: 2;
+  }
+
+  .list-head > .list-label {
+    grid-row: 1 / span 4;
+  }
 }
 
 .list-label {
-  margin: 0 0 0.875rem;
+  margin: 0 0 var(--s-5);
   color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 3rem;
-  font-weight: 800;
-  /* 32, not 48: Inter's opsz axis stops at 32. */
-  font-variation-settings: "opsz" 32, "wght" 800;
-  letter-spacing: -0.032em;
-  line-height: 1;
+  font-family: var(--t-h1-family);
+  font-size: var(--t-h1-size);
+  font-weight: var(--t-h1-weight);
+  letter-spacing: var(--t-h1-tracking);
+  line-height: var(--t-h1-leading);
 }
 
 .list-dek {
-  margin: 0 0 1.75rem;
-  /* 54ch: /research/publications' sentence is four lines at 46 and three at 54. */
+  margin: 0 0 var(--s-5);
   max-width: 54ch;
-  color: var(--text-secondary);
-  font-family: var(--font-serif);
-  font-size: 1.1875rem;
-  line-height: 1.5;
+  color: var(--text);
+  font-family: var(--font-prose);
+  font-size: 1.25rem;
+  line-height: 1.45;
 }
 
 /* No bottom margin: .tracks > * + * already sets the gap, and a second one stacked into a 68px hole. */
@@ -37,19 +53,17 @@
 
 .list-search {
   display: flex;
-  align-items: flex-end;
-  gap: var(--s-4);
+  align-items: stretch;
+  max-width: 32rem;
 }
 
 .list-search input[type="search"] {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 28rem;
-  border: 0;
-  border-block-end: var(--line-w) solid var(--dust);
+  border: var(--line-w) solid var(--text);
   border-radius: 0;
-  padding: 0.5rem 0;
-  background: transparent;
+  padding: 0.5rem 0.75rem;
+  background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
@@ -57,17 +71,16 @@
   appearance: none;
 }
 
-.list-search input[type="search"]:focus-visible {
-  border-block-end-color: var(--text);
-}
+
 
 .list-search button {
-  min-block-size: var(--control-min-dense);
-  border: 0;
+  min-block-size: 2.75rem;
+  border: var(--line-w) solid var(--text);
   border-radius: 0;
-  padding: 0.5rem 0;
-  background: transparent;
-  color: var(--brand);
+  padding: 0.5rem 1.125rem;
+  background: var(--text);
+  color: var(--paper);
+  font-weight: 500;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   cursor: pointer;
@@ -86,9 +99,9 @@
   flex: 0 0 auto;
   min-inline-size: 3.25rem;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .list-filter a {
@@ -108,7 +121,7 @@
   font-weight: 600;
 }
 
-/* Inter's width, set per link by FilterLink, so the row wraps the same before and after the font swap;
+/* The UI face's width, set per link by FilterLink, so the row wraps the same before and after the font swap;
    the fallback's text may run a pixel short or long inside it. */
 .filter-name {
   --name-w: auto;
@@ -135,11 +148,17 @@
   font-size: 0.9375rem;
 }
 
-.pager a {
+/* Newer and older are signs: an ink panel under a band of the family's color. */
+.pager a,
+.pager a:visited {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--control-min-dense);
-  color: var(--brand);
+  min-block-size: 2.75rem;
+  padding-inline: 1.125rem;
+  border-block-start: 0.25rem solid var(--brand);
+  background: var(--text);
+  color: var(--paper);
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -164,10 +183,17 @@
 }
 
 
-.list-filter a:hover,
-.pager a:hover,
-.list-feeds a:hover,
+.pager a:hover {
+  background: var(--brand);
+}
+
 .list-search button:hover {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+
+.list-filter a:hover,
+.list-feeds a:hover {
   color: var(--brand-hover);
 }
 

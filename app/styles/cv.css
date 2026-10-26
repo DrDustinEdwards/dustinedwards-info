@@ -18,18 +18,19 @@
 }
 
 .cv-eyebrow {
-  margin: 0 0 var(--s-2);
-  color: var(--text-secondary);
-  font-size: var(--t-label-size);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  margin: 0 0 var(--s-3);
+  padding-block-end: var(--s-2);
+  border-block-end: 4px solid var(--text);
+  color: var(--text);
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .cv-name {
   margin: 0;
-  color: var(--brand);
-  font-family: var(--font-serif);
+  color: var(--text);
+  font-family: var(--t-h1-family);
   font-size: var(--t-h1-size);
   font-weight: var(--t-h1-weight);
   line-height: var(--t-h1-leading);
@@ -39,7 +40,7 @@
 .cv-lede {
   margin: var(--s-3) 0 0;
   max-width: 44rem;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.1875rem;
   line-height: 1.5;
 }
@@ -86,19 +87,23 @@
 .cv-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-4);
   margin: 0 0 var(--s-5);
+  border-block-start: var(--line-w) solid var(--text);
+  border-inline-start: var(--line-w) solid var(--text);
 }
 
+/* The counts as the manual's form: ruled boxes sharing their rules. */
 .cv-stat {
   min-width: 0;
+  padding: var(--s-2) var(--s-3) var(--s-3);
+  border-inline-end: var(--line-w) solid var(--text);
+  border-block-end: var(--line-w) solid var(--text);
 }
 
 .cv-stat dt {
-  color: var(--text-secondary);
-  font-size: var(--t-label-size);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--text);
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -112,9 +117,9 @@
 
 .cv-stat-value {
   color: var(--text-heading);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
-  font-weight: 620;
+  font-weight: 700;
   font-variant-numeric: tabular-nums lining-nums;
   line-height: 1;
 }
@@ -207,7 +212,7 @@
   min-height: var(--control-min);
   padding: 0.5rem 0.75rem;
   border: var(--line-w) solid var(--line-strong);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: var(--paper);
   color: var(--text);
   font: inherit;
@@ -267,7 +272,7 @@
   min-height: 2.25rem;
   padding: 0.25rem 0.75rem;
   border: var(--line-w) solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--text);
   font-size: 0.875rem;
   line-height: 1.2;
@@ -325,7 +330,7 @@
   min-height: var(--control-min);
   padding: 0.5rem 1.25rem;
   border: var(--line-w) solid var(--brand);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: transparent;
   color: var(--brand);
   font: inherit;
@@ -372,11 +377,11 @@
   align-items: baseline;
   gap: var(--s-3);
   margin: 0;
-  padding-block-end: var(--s-2);
-  border-block-end: var(--line-w) solid var(--border);
-  font-family: var(--font-serif);
+  padding-block: var(--s-3) var(--s-2);
+  border-block-start: var(--line-w-thick) solid var(--text);
+  font-family: var(--font-sans);
   font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
-  font-weight: 620;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -398,10 +403,11 @@
 
 .cv-part-title {
   margin: var(--s-5) 0 0;
-  color: var(--text-secondary);
-  font-size: var(--t-label-size);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  padding-block-end: var(--s-1);
+  border-block-end: var(--line-w) solid var(--text);
+  color: var(--text);
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -422,12 +428,12 @@
 
 .cv-when {
   padding-block-start: 0.2rem;
-  color: var(--text-secondary);
+  color: var(--text);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.5;
-  text-align: right;
+  line-height: 1.6;
 }
 
 .cv-body {
@@ -441,7 +447,7 @@
 .cv-title {
   max-width: 62ch;
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.4;
@@ -554,7 +560,7 @@
 .cv-cite {
   padding: var(--s-2) var(--s-3);
   border: var(--line-w) solid var(--dust);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   font-family: var(--font-serif);
   user-select: all;
 }
@@ -571,7 +577,7 @@
   min-height: var(--control-min-dense);
   padding: 0.25rem 0.625rem;
   border: var(--line-w) solid var(--line-strong);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   background: transparent;
   color: var(--text);
   font: inherit;

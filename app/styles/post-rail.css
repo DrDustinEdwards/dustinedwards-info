@@ -7,7 +7,10 @@
 }
 
 @media (min-width: 48rem) {
+  /* The manual's side column: wide enough for the contents to read as an index. */
   .post-tracks {
+    --rail-w: 12rem;
+    --rail-gap-w: 3rem;
     --rail: var(--rail-w);
     --rail-gap: var(--rail-gap-w);
   }
@@ -16,13 +19,13 @@
     grid-row: 1;
   }
 
-  .post-tracks > .post-rail,
   .post-tracks > .post-body {
     grid-row: 2;
   }
 
-  .post-rail {
-    text-align: right;
+  /* The rail starts level with the title, as the manual's side column does. */
+  .post-tracks > .post-rail {
+    grid-row: 1 / span 2;
   }
 }
 
@@ -67,10 +70,7 @@
 }
 
 .post-toc {
-  margin-block-start: var(--s-5);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.6;
+  margin-block-start: var(--s-6);
   text-align: left;
 }
 
@@ -80,38 +80,6 @@
     position: sticky;
     top: calc(var(--header-h) + 1.25rem);
   }
-}
-
-.post-toc > p {
-  margin: 0 0 0.5rem;
-  color: var(--text-secondary);
-}
-
-.post-toc ol {
-  margin: 0;
-  padding: 0;
-  border-block-start: var(--line-w) solid var(--dust);
-  list-style: none;
-}
-
-.post-toc li {
-  border-block-end: var(--line-w) solid var(--dust);
-}
-
-.post-toc a {
-  display: block;
-  padding-block: 0.4375rem;
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.post-toc a:hover {
-  color: var(--brand);
-}
-
-/* app/enhance/blog.ts sets aria-current on scroll; with no script every entry reads muted. */
-.post-toc a[aria-current="location"] {
-  color: var(--text);
 }
 
 /* Floated into the rail from the prose, so a note lines up with its paragraph without measuring a
