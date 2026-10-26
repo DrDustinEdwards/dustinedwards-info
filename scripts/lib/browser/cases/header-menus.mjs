@@ -64,7 +64,7 @@ export async function run({ browser }) {
   {
     const header = html.slice(html.indexOf("data-site-header"), html.indexOf("</header>"));
     const footer = html.slice(html.indexOf('class="site-shell-footer"'));
-    const workspace = footer.slice(footer.indexOf('id="footer-workspace"'), footer.indexOf("</nav>"));
+    const workspace = footer.slice(footer.indexOf('id="cap-family-footer-workspace"'), footer.indexOf("</nav>"));
     ok(
       "the Lab sign-in link is in the served footer's Workspace group, and not in the header",
       !header.includes('href="/lab"') && /<a [^>]*href="\/lab"[^>]*>/.test(workspace),
@@ -183,14 +183,14 @@ export async function run({ browser }) {
     );
 
     const lab = await page.evaluate(() => {
-      const link = document.querySelector('[aria-labelledby="footer-workspace"] a[href="/lab"]');
+      const link = document.querySelector('[aria-labelledby="cap-family-footer-workspace"] a[href="/lab"]');
       const box = link?.getBoundingClientRect();
       return link && box
         ? {
             onBar: Boolean(document.querySelector('[data-site-header] a[href="/lab"]')),
             shown: box.width > 0 && box.right <= document.documentElement.clientWidth,
             text: (link.textContent ?? "").trim(),
-            locked: Boolean(link.querySelector(".footer-private-lock")),
+            locked: Boolean(link.querySelector(".cap-family-footer-lock")),
           }
         : null;
     });

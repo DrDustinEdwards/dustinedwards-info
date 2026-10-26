@@ -24,6 +24,7 @@ import "capsomer/site-header.css";
 import "capsomer/theme-switch.css";
 // The manual theme, public pages only: running head, parts, form boxes, index, checklist, plate, signs, letterhead.
 import "capsomer/manual.css";
+import "capsomer/family-footer.css";
 
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.

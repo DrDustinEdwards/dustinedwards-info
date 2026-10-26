@@ -847,8 +847,9 @@ h6 {
 }
 
 /* A link in running text is underlined because brand and visited purples fail CVD simulation on hue
-   alone. Element-level selectors, so any component rule that sets a color outranks them. */
-a {
+   alone. Element-level selectors, so any component rule that sets a color outranks them; the :where() keeps
+   them so while the family footer (capsomer/family-footer.css) keeps its own links. */
+a:not(:where(.cap-family-footer a)) {
   color: var(--brand);
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -856,16 +857,16 @@ a {
   text-underline-offset: 0.25em;
 }
 
-a:visited {
+a:visited:not(:where(.cap-family-footer a)) {
   color: var(--visited);
 }
 
-a:hover {
+a:hover:not(:where(.cap-family-footer a)) {
   color: var(--brand-hover);
   text-decoration-color: var(--brand);
 }
 
-a:active {
+a:active:not(:where(.cap-family-footer a)) {
   color: var(--brand-pressed);
 }
 
