@@ -2,11 +2,11 @@
 // and the kinds Carrel writes through the site API) calls this, so "an unchanged save does nothing"
 // is one rule and not one copy per kind.
 
-import { commitFiles, getHead } from "./github.server";
+import { commitFiles, getHead } from "~/lib/source/store.server";
 
 /** What a save answers when its file is byte-identical to the committed one. */
 export const UNCHANGED_NOTE =
-  "The file is identical to the committed one, so nothing was committed or rewritten. commitSha is the current head.";
+  "The file is identical to the stored one, so nothing was written. commitSha is the current head.";
 
 type Committed = Awaited<ReturnType<typeof commitFiles>>;
 

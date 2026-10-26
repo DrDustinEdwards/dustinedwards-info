@@ -1,5 +1,5 @@
-// Nothing reaches D1 that is not already committed. The gates run here because a commit made
-// through the GitHub API never passes the local hooks.
+// No rendered row is written from a source that is not already stored. The gates run here because a save is
+// the only door into the source: no hook or CI run sees it first.
 
 import { imageSize } from "image-size";
 
@@ -9,16 +9,16 @@ import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.serve
 import { postPath } from "~/lib/content/slug.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
-import { ASSET_MANIFEST_PATH } from "~/lib/media/manifest.mjs";
 import {
   commitFiles,
   getHead,
   listPostFiles,
   readFile,
   readBinaryFile,
-  GitHubError,
+  assetPlaceholders,
+  SourceError,
   blobGuard,
-} from "./github.server";
+} from "~/lib/source/store.server";
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
@@ -28,7 +28,7 @@ import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { deletePostFromD1, syncPostToD1, type PostRecord, type PublishEnv } from "./post-rows.server";
 
-export { GitHubError, PolicyError };
+export { SourceError, PolicyError };
 export type { Actor };
 
 export class EditorError extends Error {
@@ -51,35 +51,11 @@ export class FirstPublishConfirmationRequired extends Error {
   }
 }
 
-type AssetManifest = { placeholders?: Record<string, { sha: string; lqip: string }> };
-
 /**
- * Must agree with scripts/lib/content.mjs, which builds from a clone: /media/* from the key, public/*
- * and its placeholder from the repo at the pinned ref, never this Worker's manifest from the last deploy.
+ * Must agree with scripts/lib/content.mjs, which builds from the checkout: /media/* from the key, public/* and its
+ * placeholder from the files this deploy serves and the manifest it was built with.
  */
 export function makeResolveImage(env: PublishEnv) {
-  let manifest: Promise<AssetManifest> | null = null;
-  const placeholders = async () => {
-    // A missing or unparseable manifest refuses the save, as the build from a clone does: rendering
-    // without placeholders would commit HTML that disagrees with the next build.
-    manifest ??= readFile(env, ASSET_MANIFEST_PATH).then((file) => {
-      if (!file) {
-        throw new EditorError(
-          `${ASSET_MANIFEST_PATH} is not in the repository, so no placeholder can be read.`,
-        );
-      }
-      try {
-        return JSON.parse(file.content) as AssetManifest;
-      } catch (error) {
-        throw new EditorError(
-          `${ASSET_MANIFEST_PATH} did not parse: ` +
-            `${errorMessage(error)}`,
-        );
-      }
-    });
-    return (await manifest).placeholders ?? {};
-  };
-
   return async (src: string) => {
     if (!src.startsWith("/")) {
       throw new EditorError(`Image src "${src}" must be a site-absolute path.`);
@@ -100,7 +76,7 @@ export function makeResolveImage(env: PublishEnv) {
     const bytes = await readBinaryFile(env, `public${src}`);
     if (!bytes) {
       throw new EditorError(
-        `Image "${src}" is not in the repository at public${src}.`,
+        `Image "${src}" is not a static file of this deploy (public${src}).`,
       );
     }
 
@@ -108,7 +84,7 @@ export function makeResolveImage(env: PublishEnv) {
     if (!size.width || !size.height) {
       throw new EditorError(`Image "${src}" has no readable dimensions.`);
     }
-    const placeholder = (await placeholders())[src]?.lqip;
+    const placeholder = assetPlaceholders()[src]?.lqip;
     return { width: size.width, height: size.height, ...(placeholder ? { placeholder } : {}) };
   };
 }
@@ -211,7 +187,7 @@ export async function renderRecord(env: PublishEnv, slug: string, raw: string) {
 }
 
 /**
- * The only writer of a rendered row. blobSha proves the rendered bytes are the committed bytes, so a
+ * The only writer of a rendered row. blobSha proves the rendered bytes are the stored bytes, so a
  * truncated fetch fails here by name.
  */
 export async function renderAndWrite(
@@ -224,8 +200,8 @@ export async function renderAndWrite(
 
   if (blobSha && record.sourceBlobSha !== blobSha) {
     throw new EditorError(
-      `the markdown rendered for "${slug}" is not the markdown the repository holds: ` +
-        `the rendered bytes hash to ${record.sourceBlobSha}, the repository file is ` +
+      `the markdown rendered for "${slug}" is not the markdown the store holds: ` +
+        `the rendered bytes hash to ${record.sourceBlobSha}, the stored file is ` +
         `${blobSha}. The read was truncated or the file changed mid-flight; re-read ` +
         `the file and retry.`,
     );

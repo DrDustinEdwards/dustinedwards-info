@@ -44,7 +44,7 @@ export function RevisionList({
       const response = await fetch(
         `/admin/posts/${slug}/revisions?sha=${encodeURIComponent(sha)}`,
       );
-      if (!response.ok) throw new Error(`Could not read that commit (${response.status}).`);
+      if (!response.ok) throw new Error(`Could not read that revision (${response.status}).`);
       const body = (await response.json()) as { patch: string | null };
       setPatches((prev) => ({ ...prev, [sha]: body.patch }));
       setStatus(body.patch ? `Diff for ${short} loaded.` : `No diff recorded for ${short}.`);

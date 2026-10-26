@@ -4,7 +4,11 @@ Moved from Capsid (`dustinedwards/publish-pipeline.md`) on 2026-10-13 and trimme
 
 ## The model
 
-Markdown in `content/posts/` is the source of truth. `app/lib/content/pipeline.mjs` renders it, `renderAndWrite` writes the rendered row, and D1 owns every read. Git holds markdown only: `content/generated/posts.json` is a gitignored build output.
+The content's source is D1, as on the other sites: `source_files` holds every file a save writes (posts, pages, the CV, dictionary, phages, procedures, publications, registry, roster and `llms.txt`), keyed by its repository path, and `source_revisions` holds every version each has had (`drizzle/0032_source_files.sql`, `app/lib/source/store.server.ts`). Carrel's history is the record of who changed what. An item's version is the git blob sha of its file, as it was when the repository was the source, so a draft opened before the move still saves. `app/lib/content/pipeline.mjs` renders the source, `renderAndWrite` writes the rendered row, and D1 owns every read.
+
+The files under those paths in the repository are the seed and CI's test corpus, not the source. `scripts/seed-sources.mjs` (run by `sync:content`) copies a file into D1, with its git history, only when D1 has never held its path, so a new page arrives with the code that registers it and an edit is made through Carrel. Static files under `public/` stay in the repository and ship with the deploy; the Worker reads them through the assets binding.
+
+A deploy builds from D1: ship seeds, then `scripts/pull-sources.mjs --remote` writes D1's files over the checkout (and removes any file a save deleted), and puts the checkout back when it exits. The clean-tree checks accept exactly the files the pull wrote. Because a save starts no CI run, `deploy.yml` also ships main's tip every six hours, which rebuilds the header facts, the footer's pages, the sitemap dates and new posts' social cards from D1.
 
 Build order: `build:stack` (build:content reads its output), `build:content`, then `build:og` and `build:diagrams` (both read the build output), then `sync:content`.
 
@@ -18,7 +22,7 @@ Anything derived that both callers need lives in one module both import: `withRe
 
 `renderAndWrite` is the only writer of a rendered row. Rows carry the source blob sha and a render hash. `check:content` renders the corpus twice and byte-compares the runs, because a nondeterministic render would make every writer disagree with every other.
 
-Git dates stay out of the render; `sync-content.mjs` applies them at sync time. Explicit `updated` frontmatter overrides the derived date.
+Dates stay out of the render; `sync-content.mjs` applies them at sync time, from the day D1 last changed the file (the pull records it) or, for a file not pulled, its last commit. Explicit `updated` frontmatter overrides the derived date.
 
 ## The checks
 
@@ -26,20 +30,20 @@ What covers this pipeline: `check:content` (render determinism), `check:policy` 
 
 ## The writers
 
-All three call the same `savePost`. Gates (zod frontmatter, the wide-dash check) run server side inside it, because API commits bypass local hooks.
+All three call the same `savePost`. Gates (zod frontmatter, the wide-dash check) run server side inside it, because a save is the only door into the source.
 
-    caller -> gates -> GitHub commit -> renderAndWrite -> D1 -> cache purge -> Ask index
+    caller -> gates -> source write -> renderAndWrite -> D1 rows -> cache purge -> Ask index
 
-- One save is one commit through the Git Data API, carrying the markdown file only.
-- D1 is written only after the commit lands; GitHub unreachable fails the save whole. There is no compensating revert: undoing the commit would destroy the source to repair a derived index.
+- One save is one D1 batch writing the file and its revision, carrying the markdown file only.
+- The rows are written only after the source write lands. There is no compensating revert: undoing the source write would destroy the source to repair a derived index.
 - Pages showing the post are purged by Cache-Tag. Ask is written last and cannot fail the save.
-- Conflict detection compares the head of `main` recorded at load; the ref update is never forced.
+- A save names the version it loaded: the file's blob sha (Carrel), or the store's head revision (the admin editor). A file changed since is refused, and the same check runs inside the batch, so a write that lands in between still cannot be overwritten.
 
-**Carrel** (`/api/carrel/v1`, `app/routes/api.carrel.v1.$.ts`) is where posts are written. Its own key reaches only that prefix, it is limited to 120 per 60 s, and each commit carries a change id joining it to Carrel's authorship record. It is a resource route inside the site Worker, so a save's cache purge reaches the cache the public pages live in.
+**Carrel** (`/api/carrel/v1`, `app/routes/api.carrel.v1.$.ts`) is where posts are written. Its own key reaches only that prefix, it is limited to 120 per 60 s, and each revision carries a change id joining it to Carrel's authorship record. It is a resource route inside the site Worker, so a save's cache purge reaches the cache the public pages live in.
 
-**The operator API** (`POST /api/operator`, bearer `OPERATOR_TOKEN`) serves the admin MCP in `mcp/`, ship and the watchdog. `GET /api/operator` returns the descriptors from `app/lib/operator/descriptors.ts`, which is the tool list; do not copy it here. The token is compared in constant time after both sides are hashed to 32 bytes; absent or under 32 characters, the endpoint returns 503. Limited 30 per 60 s through the site's Durable Object limiter on an `op:<id>` instance, keyed after authentication. Commits carry `[operator:<id>]`. `savePost(env, options)` took a plain env rather than a Request, so exposing it needed no refactor: check whether a seam exists before budgeting to cut one.
+**The operator API** (`POST /api/operator`, bearer `OPERATOR_TOKEN`) serves the admin MCP in `mcp/`, ship and the watchdog. `GET /api/operator` returns the descriptors from `app/lib/operator/descriptors.ts`, which is the tool list; do not copy it here. The token is compared in constant time after both sides are hashed to 32 bytes; absent or under 32 characters, the endpoint returns 503. Limited 30 per 60 s through the site's Durable Object limiter on an `op:<id>` instance, keyed after authentication. Revisions carry `[operator:<id>]`. `savePost(env, options)` took a plain env rather than a Request, so exposing it needed no refactor: check whether a seam exists before budgeting to cut one.
 
-**The admin editor** (`/admin/posts`, history, `/admin/media`) re-serializes frontmatter in its own key order, so a save with no edits still commits. The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, not the UI, because only the policy reads the prior file. Version history restores by putting an old file back through `savePost`: a new commit, gates run again, never a force push.
+**The admin editor** (`/admin/posts`, history, `/admin/media`) re-serializes frontmatter in its own key order, so a save with no edits still writes a revision. The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, not the UI, because only the policy reads the prior file. Version history restores by putting an old file back through `savePost`: a new revision, gates run again, nothing rewritten.
 
 Published posts live at `/writing/<slug>`; the route modules keep their `blog.*` names. The old `/blog` feed addresses still answer with the feed; no other `/blog` address redirects (Dustin, 2026-10-20).
 
@@ -47,11 +51,11 @@ Published posts live at `/writing/<slug>`; the route modules keep their `blog.*`
 
 Capabilities per actor are one table, `WRITE_CAPABILITIES` in `publish-policy.mjs`: the admin may do everything; an operator may write but not first-publish or delete (403 `first-publish-requires-admin`, `delete-requires-admin`); Carrel may write and first-publish but not delete; the smoke credential is read only. The first-publish rule: a first publication is Dustin's, in the admin or through Carrel.
 
-The durable fact is `first_published` in frontmatter, not a D1 column, because D1 is rebuilt from the repo and a column would be silently dropped, failing open. The value is read only from the committed file and always overwritten on the way out; otherwise a caller could publish any draft by asserting it in its payload. `check:policy` has paired forgery tests. A backfill must be a direct commit, never a save.
+The durable fact is `first_published` in frontmatter, not a rows column, because the rows are rebuilt from the source and a column would be silently dropped, failing open. The value is read only from the stored file and always overwritten on the way out; otherwise a caller could publish any draft by asserting it in its payload. `check:policy` has paired forgery tests.
 
-## Ask on the direct-commit path
+## Ask outside a save
 
-`syncAskPost` runs only on saves, and `sync:content --remote` writes D1 and the classic index only. A direct commit is covered by convergence: ship converges Ask last, the watchdog runs `sync_ask` on schedule, and `sync_ask` is on the operator API for a manual repair.
+`syncAskPost` runs only on saves, and `sync:content --remote` writes D1 and the classic index only. A row written any other way is covered by convergence: ship converges Ask last, the watchdog runs `sync_ask` on schedule, and `sync_ask` is on the operator API for a manual repair.
 
 ## Social cards
 

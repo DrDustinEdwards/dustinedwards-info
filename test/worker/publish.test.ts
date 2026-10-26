@@ -12,7 +12,7 @@ import {
 } from "~/lib/editor/publish.server";
 import { syncPostToD1 } from "~/lib/editor/post-rows.server";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
-import { GitHubError } from "~/lib/editor/github.server";
+import { SourceError } from "~/lib/source/store.server";
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
@@ -20,32 +20,38 @@ import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 
 import { post } from "./fixtures";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { removeSource, source, stubSources, writes, type SourceStub } from "./source-stub";
 
 /* Ask and R2 are absent on purpose: `syncAskForPost` returns null with no `AI_SEARCH`
  * binding, and the save must succeed anyway. */
 
 const publishEnv = () => env as unknown as Parameters<typeof savePost>[0];
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
-beforeEach(() => {
-  gh = stubGitHub();
+beforeEach(async () => {
+  gh = await stubSources();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 /* Only `batch` fails: it is the one statement `syncPostToD1` depends on, and failing
  * anything wider would break the corpus read that runs before it. */
-function flakyD1(failures: number) {
+/** Fails `failures` D1 batches after letting `through` pass: the source write is a save's first batch. */
+function flakyD1(failures: number, through = 1) {
+  let passing = through;
   let remaining = failures;
   const db = env.DB;
   const proxy = new Proxy(db, {
     get(target, property, receiver) {
       if (property !== "batch") return Reflect.get(target, property, receiver);
       return async (statements: D1PreparedStatement[]) => {
+        if (passing > 0) {
+          passing -= 1;
+          return target.batch(statements);
+        }
         if (remaining > 0) {
           remaining -= 1;
           throw new Error("planted D1 batch failure");
@@ -77,8 +83,8 @@ describe("savePost", () => {
       [postPath("neighbor")]: post("neighbor"),
       "README.md": "# A file a save must not touch\n",
     };
-    gh.restore();
-    gh = stubGitHub(seed);
+    await gh.restore();
+    gh = await stubSources(seed);
 
     const raw = post("one-file");
     await savePost(publishEnv(), {
@@ -88,7 +94,7 @@ describe("savePost", () => {
       actor: { kind: "admin" },
     });
 
-    expect(Object.fromEntries(gh.files)).toEqual({ ...seed, [postPath("one-file")]: raw });
+    expect(await writes()).toEqual([expect.objectContaining({ path: postPath("one-file"), content: raw })]);
   });
 
   it("writes a posts row carrying BOTH provenance hashes", async () => {
@@ -107,7 +113,7 @@ describe("savePost", () => {
 
     expect(row?.slug).toBe("provenance");
     expect(row?.status).toBe("draft");
-    expect(row?.source_blob_sha).toBe(await gitBlobSha(gh.files.get(postPath("provenance")) ?? ""));
+    expect(row?.source_blob_sha).toBe(await gitBlobSha((await source(postPath("provenance"))) ?? ""));
     expect(row?.render_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(result.record.slug).toBe("provenance");
   });
@@ -180,11 +186,11 @@ describe("savePost", () => {
         expectedHeadSha: "0000000000000000000000000000000000000000",
         actor: { kind: "admin" },
       }),
-    ).rejects.toBeInstanceOf(GitHubError);
+    ).rejects.toBeInstanceOf(SourceError);
 
-    /* The guard runs before any blob, so a refused save writes nothing anywhere. */
-    expect(gh.calls.some((c) => c.path.endsWith("/git/blobs"))).toBe(false);
-    expect(gh.files.has(postPath("stale"))).toBe(false);
+    /* The guard runs before the write, so a refused save writes nothing anywhere. */
+    expect(await writes()).toHaveLength(0);
+    expect(((await source(postPath("stale"))) !== undefined)).toBe(false);
     expect(await countRows("posts", "WHERE slug = ?1", "stale")).toBe(0);
   });
 
@@ -199,7 +205,7 @@ describe("savePost", () => {
     );
 
     expect(policy).toBe("first-publish-requires-admin");
-    expect(gh.files.has(postPath("never-public"))).toBe(false);
+    expect((await source(postPath("never-public"))) !== undefined).toBe(false);
   });
 
   it("RETRIES a failed D1 write once and reports that it retried", async () => {
@@ -214,7 +220,7 @@ describe("savePost", () => {
     });
 
     expect(result.d1Retried).toBe(true);
-    expect(gh.files.get(postPath("retried"))).toBe(raw);
+    expect((await source(postPath("retried")))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "retried")).toBe(1);
   });
 
@@ -231,7 +237,7 @@ describe("savePost", () => {
     expect((error as Error).message).toContain("diverged");
     expect((error as Error).message).toContain("Do NOT save again");
 
-    expect(gh.files.get(postPath("diverged"))).toBe(raw);
+    expect((await source(postPath("diverged")))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "diverged")).toBe(0);
 
     /* The record goes to KV, never D1: D1 is the store that just failed. */
@@ -240,14 +246,11 @@ describe("savePost", () => {
     expect(JSON.parse(stored ?? "{}")).toMatchObject({ slug: "diverged" });
   });
 
-  it("writes nothing to the database when the commit fails", async () => {
-    /* The ref update is the commit's last step, so every other part of the
-     * commit has already been sent when it fails. */
-    gh.failNext("/git/refs/heads/main", 5);
+  it("writes nothing to the database when the source write fails", async () => {
     const postsBefore = await countRows("posts");
 
     await expect(
-      savePost(publishEnv(), {
+      savePost(flakyD1(1, 0), {
         slug: "never-committed",
         raw: post("never-committed", {
           body: "Body.\n\n![alt](/media/dustin-edwards-feed1234feed1234-400x300.png)\n",
@@ -255,9 +258,9 @@ describe("savePost", () => {
         isNew: true,
         actor: { kind: "admin" },
       }),
-    ).rejects.toBeInstanceOf(GitHubError);
+    ).rejects.toThrow("planted D1 batch failure");
 
-    expect(gh.files.has(postPath("never-committed"))).toBe(false);
+    expect(((await source(postPath("never-committed"))) !== undefined)).toBe(false);
     expect(await countRows("posts")).toBe(postsBefore);
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:never-committed")).toBe(0);
     expect(await countRows("media_refs", "WHERE source_id = ?1", "never-committed")).toBe(0);
@@ -273,16 +276,16 @@ describe("savePost", () => {
     );
 
     expect(result).toMatchObject({ ok: false, status: 500, detail: { committed: true } });
-    expect(gh.files.get(postPath("committed-anyway"))).toBe(raw);
+    expect((await source(postPath("committed-anyway")))).toBe(raw);
   });
 });
 
-describe("savePost refreshes the other posts' derived lists", () => {
+describe("savePost refreshes the other posts' derived lists", async () => {
   const admin = { kind: "admin" } as const;
   const live = (slug: string, overrides: Parameters<typeof post>[1] = {}) =>
     post(slug, { draft: false, date: "2026-01-02", ...overrides });
-  const save = (slug: string, raw: string, target: Parameters<typeof savePost>[0] = publishEnv()) =>
-    savePost(target, { slug, raw, isNew: !gh.files.has(postPath(slug)), actor: admin });
+  const save = async (slug: string, raw: string, target: Parameters<typeof savePost>[0] = publishEnv()) =>
+    savePost(target, { slug, raw, isNew: !((await source(postPath(slug))) !== undefined), actor: admin });
   /* D1 persists across the cases of a file, so earlier posts' lists may also move: assert on the slug that must. */
   const updatedBy = (result: { neighbors: unknown }) =>
     (result.neighbors as { updated: string[] }).updated;
@@ -363,14 +366,14 @@ A changed line.
 
   it("REPORTS a failed neighbor write, and the commit and the saved row stand", async () => {
     await save("report-target", live("report-target"));
-    /* The save's own batch is the first; the neighbor batch is the second. */
+    /* The source write is the first batch, the save's own row the second, the neighbor batch the third. */
     let batches = 0;
     const flaky = new Proxy(env.DB, {
       get(target, property, receiver) {
         if (property !== "batch") return Reflect.get(target, property, receiver);
         return async (statements: D1PreparedStatement[]) => {
           batches += 1;
-          if (batches === 2) throw new Error("planted neighbor batch failure");
+          if (batches === 3) throw new Error("planted neighbor batch failure");
           return target.batch(statements);
         };
       },
@@ -383,7 +386,7 @@ A changed line.
 
     expect(result.neighbors).toMatchObject({ ok: false });
     expect((result.neighbors as { message: string }).message).toContain("planted neighbor batch failure");
-    expect(gh.files.get(postPath("report-source"))).toContain("See [it](/writing/report-target).");
+    expect((await source(postPath("report-source")))).toContain("See [it](/writing/report-target).");
     expect(await countRows("posts", "WHERE slug = ?1", "report-source")).toBe(1);
     expect((await lists("report-target")).backlinks).toEqual([]);
 
@@ -480,17 +483,12 @@ describe("deletePost", () => {
     expect(await countRows("posts", "WHERE slug = ?1", "doomed")).toBe(1);
     expect(await countRows("media_refs", "WHERE source_id = ?1", "doomed")).toBeGreaterThan(0);
 
-    const before = gh.calls.length;
+    const before = (await writes()).length;
     await deletePost(publishEnv(), { slug: "doomed", actor: { kind: "admin" } });
 
-    const tree = gh.calls
-      .slice(before)
-      .find((c) => c.path.endsWith("/git/trees"))?.body as { tree: Array<{ path: string; sha: string | null }> };
-    /* A DELETION IS `sha: null` ON THE PATH, one entry, no blob created. */
-    expect(tree.tree).toEqual([
-      { path: postPath("doomed"), mode: "100644", type: "blob", sha: null },
-    ]);
-    expect(gh.files.has(postPath("doomed"))).toBe(false);
+    /* A DELETION IS ONE REVISION WITH NO CONTENT, on the post's path alone. */
+    expect((await writes()).slice(before)).toEqual([expect.objectContaining({ path: postPath("doomed"), content: null })]);
+    expect(((await source(postPath("doomed"))) !== undefined)).toBe(false);
 
     expect(await countRows("posts", "WHERE slug = ?1", "doomed")).toBe(0);
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:doomed")).toBe(0);
@@ -507,7 +505,7 @@ describe("deletePost", () => {
       actor: { kind: "admin" },
     });
 
-    const before = gh.calls.length;
+    const before = (await writes()).length;
     const policy = await refusedPolicy(
       deletePost(publishEnv(), {
         slug: "operator-cannot-delete",
@@ -518,7 +516,7 @@ describe("deletePost", () => {
     expect(policy).toBe("delete-requires-admin");
     /* The policy check comes first so a refused caller cannot learn which slugs exist
      * from the difference between two error messages. */
-    expect(gh.calls.slice(before)).toHaveLength(0);
+    expect((await writes()).slice(before)).toHaveLength(0);
     expect(await countRows("posts", "WHERE slug = ?1", "operator-cannot-delete")).toBe(1);
   });
 
@@ -558,7 +556,7 @@ describe("regenerateAllFromRepo", () => {
         actor: { kind: "admin" },
       });
     }
-    gh.files.delete(postPath("regen-orphan"));
+    await removeSource(postPath("regen-orphan"));
 
     const result = await regenerateAllFromRepo(publishEnv());
 

@@ -24,7 +24,7 @@ import {
   contentPageSearchUid,
 } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
@@ -36,12 +36,12 @@ import { compilePage, pagePathForSlug, pageSlug, pageSourcePath } from "./compil
 import { idsIn, pageLinkErrors, type AddressBook } from "./links.mjs";
 import { protectedPageReason } from "./protected.mjs";
 
-type PageEnv = Env & { GITHUB_TOKEN?: string };
+type PageEnv = Env;
 
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class PageInvalid extends ContentInvalid {
   constructor(path: string, errors: string[]) {
-    super(`The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "PageInvalid";
   }
 }
@@ -251,9 +251,9 @@ export async function savePage(
   const { commitSha, blobShas } = written;
   if (blobShas[file] && blobShas[file] !== compiled.sourceBlobSha) {
     throw new Error(
-      `The page "${path}" WAS committed as ${commitSha}, but the committed bytes (${blobShas[file]}) are not ` +
+      `The page "${path}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[file]}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

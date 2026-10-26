@@ -16,7 +16,7 @@ import { compile as compileProcedure, saveProcedure } from "./procedures/save.se
 import { KINDS } from "./registry/kinds.mjs";
 
 
-type FormEnv = Env & { GITHUB_TOKEN?: string };
+type FormEnv = Env;
 
 export type Choice = { value: string; label: string };
 

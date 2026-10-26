@@ -15,9 +15,9 @@ import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { saveCvFile } from "~/lib/cv/save.server";
 import { TYPES } from "~/lib/cv/view.mjs";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 
-type CvEnv = Env & { GITHUB_TOKEN?: string };
+type CvEnv = Env;
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 

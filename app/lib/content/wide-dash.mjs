@@ -5,7 +5,7 @@
 const WIDE_DASH = /[\u2010-\u2015\u2212]/g;
 
 /**
- * Server-side half of the no-em-dash rule: a commit through the GitHub API never meets the local hook.
+ * Server-side half of the no-em-dash rule: a save to the stored source never meets the local hook.
  *
  * @param {string} text
  * @returns {Array<{ line: number, column: number, char: string, excerpt: string }>}

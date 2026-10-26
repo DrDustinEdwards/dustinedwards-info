@@ -6,7 +6,7 @@
 import matter from "gray-matter";
 
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { GitHubError, readFile } from "~/lib/editor/github.server";
+import { SourceError, readFile } from "~/lib/source/store.server";
 import { PolicyError, type Actor } from "~/lib/editor/publish-policy.mjs";
 
 import { NEEDS_INFO, tabHref } from "./admin.mjs";
@@ -19,7 +19,7 @@ import { registryPath } from "./registry/compile.mjs";
 import { KINDS } from "./registry/kinds.mjs";
 import { checkRegistryItem, saveRegistryItem } from "./registry/save.server";
 
-type EditorEnv = Env & { GITHUB_TOKEN?: string };
+type EditorEnv = Env;
 
 /** What is being edited: an entry by its slug, or a registry item by its kind and id. */
 export type KbTarget = { type: "entry"; slug: string } | { type: "item"; kind: string; id: string };
@@ -128,7 +128,7 @@ export async function saveFile(env: EditorEnv, target: KbTarget, raw: string, ex
   } catch (error) {
     if (error instanceof ContentInvalid) return { outcome: "refused", errors: error.errors };
     if (error instanceof PolicyError) return { outcome: "refused", errors: [error.message] };
-    if (error instanceof GitHubError && error.conflict) return { outcome: "conflict", message: error.message };
+    if (error instanceof SourceError && error.conflict) return { outcome: "conflict", message: error.message };
     throw error;
   }
 }

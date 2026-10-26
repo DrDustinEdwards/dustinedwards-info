@@ -8,12 +8,12 @@
 // the error names it, so the registry never reports success over a protocol it left reading the old sequence.
 
 import { purgeProcedures } from "~/lib/cache-purge.server";
-import { readFile } from "~/lib/editor/github.server";
+import { readFile } from "~/lib/source/store.server";
 
 import { procedurePath } from "./parse.mjs";
 import { compile, writeRow } from "./save.server";
 
-type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
+type ProcedureEnv = Env;
 
 /** The record field each kind's items are named in. */
 const NAMED_IN = {

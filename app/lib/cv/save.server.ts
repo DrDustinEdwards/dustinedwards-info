@@ -20,18 +20,18 @@ import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
 
-type CvEnv = Env & { GITHUB_TOKEN?: string };
+type CvEnv = Env;
 
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class CvInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The CV file "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The CV file "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "CvInvalid";
   }
 }
@@ -190,9 +190,9 @@ export async function saveCvFile(
   const { commitSha, blobShas } = written;
   if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
     throw new Error(
-      `The CV file "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobShas[path]}) are not ` +
+      `The CV file "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[path]}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

@@ -10,7 +10,7 @@ import { paperSearchUid } from "~/lib/publications/search-inputs.mjs";
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 import classroom from "../../content/publications/10-3389-feduc-2023-1279921.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 
 /* sync_publications and the publications-drift check: D1 converges to content/publications through the
  * compile and write doors a publication save uses (the repository is the source). The
@@ -42,12 +42,12 @@ const searchRows = async (slug: string) =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "publications-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_publications", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM publications").run();
   await env.DB.prepare("DELETE FROM publication_citations").run();
-  gh = stubGitHub({
+  gh = await stubSources({
     [publicationPath(SMALL)]: godfather,
     [publicationPath(BIG)]: classroom,
     [pdf(SMALL)]: "%PDF-1.4 fixture",
@@ -55,8 +55,8 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_publications and the publications-drift check", () => {
@@ -89,7 +89,7 @@ describe("sync_publications and the publications-drift check", () => {
 
     const edited = godfather.replace(/^summary: .*$/m, 'summary: "A sentence committed through git, not through the save."');
     expect(edited).not.toBe(godfather);
-    gh.files.set(publicationPath(SMALL), edited);
+    await putSource(publicationPath(SMALL), edited);
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -105,7 +105,7 @@ describe("sync_publications and the publications-drift check", () => {
 
   it("removes the row, search record and citation row of a file that is gone, and only that one", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
-    gh.files.delete(publicationPath(SMALL));
+    await removeSource(publicationPath(SMALL));
     const drifted = await driftCheck();
     expect(drifted?.detail).toContain("1 row(s) with no file");
 
@@ -123,9 +123,9 @@ describe("sync_publications and the publications-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no publication: a fault, not a repository with none.
-    gh.files.delete(publicationPath(SMALL));
-    gh.files.delete(publicationPath(BIG));
-    gh.files.set("content/publications/README.txt", "not a publication");
+    await removeSource(publicationPath(SMALL));
+    await removeSource(publicationPath(BIG));
+    await putSource("content/publications/README.txt", "not a publication");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -137,7 +137,7 @@ describe("sync_publications and the publications-drift check", () => {
   });
 
   it("converges the rest and then FAILS NAMING a file the validator refuses", { timeout: 300_000 }, async () => {
-    gh.files.set(publicationPath(SMALL), godfather.replace(/^type: .*$/m, 'type: "not-a-type"'));
+    await putSource(publicationPath(SMALL), godfather.replace(/^type: .*$/m, 'type: "not-a-type"'));
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {

@@ -10,13 +10,13 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 
 import { compileCohort, rosterPath, type Cohort, type RosterHost } from "./compile.mjs";
 
-type RosterEnv = Env & { GITHUB_TOKEN?: string };
+type RosterEnv = Env;
 
 /** A cohort's file key is its four-digit year, which is also what keeps an id from naming any other path. */
 export const COHORT_SLUG = /^\d{4}$/;
@@ -24,20 +24,20 @@ export const COHORT_SLUG = /^\d{4}$/;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class RosterInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The ${slug} cohort was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The ${slug} cohort was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "RosterInvalid";
   }
 }
 
-/** The repository's photographs, asked of GitHub: they are static assets, so existence is all there is to read. */
-function githubHost(env: RosterEnv): RosterHost {
+/** The photographs this deploy serves: they are static assets, so existence is all there is to read. */
+function sourceHost(env: RosterEnv): RosterHost {
   return { photo: async (src) => (await publicFileEntry(env, src)) !== null };
 }
 
 /** The one compile door: the save, get_roster and sync_roster all read a file through it. */
 export async function compile(env: RosterEnv, slug: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
-  return compileCohort({ slug, raw, host: githubHost(env), pipeline: { findWideDashes } });
+  return compileCohort({ slug, raw, host: sourceHost(env), pipeline: { findWideDashes } });
 }
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
@@ -50,7 +50,7 @@ function registered(slug: string) {
   return { slug, file: rosterPath(slug) };
 }
 
-/** The cohort the committed file holds, judged by the same validator, for get_roster. */
+/** The cohort the stored file holds, judged by the same validator, for get_roster. */
 export async function readRoster(env: RosterEnv, slug: string) {
   const { file } = registered(slug);
   const existing = await readFile(env, file);
@@ -136,9 +136,9 @@ export async function saveRoster(
   const blobSha = written.blobShas[file];
   if (blobSha && blobSha !== compiled.sourceBlobSha) {
     throw new Error(
-      `The ${slug} cohort WAS committed as ${commitSha}, but the committed bytes (${blobSha}) are not ` +
+      `The ${slug} cohort WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

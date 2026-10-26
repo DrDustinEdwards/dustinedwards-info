@@ -5,7 +5,6 @@ import { env, type D1Migration } from "cloudflare:test";
 export const testEnv = env as typeof env & {
   OPERATOR_TOKEN: string;
   CARREL_SITE_KEY: string;
-  GITHUB_TOKEN: string;
   /** `drizzle/`, read on the node side because the worker has no filesystem. */
   TEST_D1_MIGRATIONS: D1Migration[];
 };

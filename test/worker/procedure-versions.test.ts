@@ -15,7 +15,7 @@ import { loader as versionTwinLoader } from "~/routes/procedure.version[.md]";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, stubSources, writes, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /* Frozen versions (drizzle/0027_procedure_versions.sql, docs/PROCEDURES.md): a published, versioned procedure keeps a
@@ -43,16 +43,16 @@ const V2 = isolation
   )
   .replace(OLD, NEW);
 
-let gh: GitHubStub;
-beforeEach(() => {
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+let gh: SourceStub;
+beforeEach(async () => {
+  gh = await stubSources({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 const save = (raw: string) => runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw });
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits")).length;
+const commits = async () => (await writes()).length;
 const versionPage = (version: string) =>
   versionLoader({ request: new Request(`${PAGE}/v/${version}`), context: routeContext(), params: {} } as never);
 const text = (record: { sections: Array<{ blocks: Array<{ type: string; steps?: Array<{ text: string }>; html?: string }> }> }) =>
@@ -83,7 +83,7 @@ describe("frozen procedure versions", () => {
 
   it("refuses an edit to a published version before it commits, and a new version leaves the old words alone", { timeout: 240_000 }, async () => {
     expect((await save(V1)).ok).toBe(true);
-    const before = commits();
+    const before = (await commits());
     const frozenBefore = await getFrozenVersion(env as never, PATH, "1");
 
     // The same version with different words is refused with the fix, and nothing is committed.
@@ -93,7 +93,7 @@ describe("frozen procedure versions", () => {
       expect(edited.status).toBe(422);
       expect((edited.detail as { errors: string[] }).errors.join(" ")).toMatch(/Version 1 is already published and frozen at .*\/v\/1.*new version/);
     }
-    expect(commits()).toBe(before);
+    expect((await commits())).toBe(before);
 
     // A new version is accepted, and the old copy is byte for byte what it was.
     expect((await save(V2)).ok).toBe(true);
@@ -129,7 +129,7 @@ describe("frozen procedure versions", () => {
     expect(missingTwin.status).toBe(404);
 
     // The file changes behind the save tool's back (a git edit), and the sync is asked to converge it.
-    gh.files.set(procedurePath(SLUG), V2.replace(NEW, "Plan about 8 webbed plates to cover 10 ml"));
+    await putSource(procedurePath(SLUG), V2.replace(NEW, "Plan about 8 webbed plates to cover 10 ml"));
     const synced = await runTool(operatorEnv(), operator, "sync_procedures", {});
     expect(synced.ok).toBe(false);
     if (!synced.ok) expect(synced.error).toMatch(/already published and frozen/);

@@ -59,7 +59,7 @@ The order matters. Each step below names what breaks if it is done early.
 4. **D1 migrations.** *If run before step 1:* there is no database to apply to.
    *If skipped:* the first request that touches a table 500s.
 5. **Secrets.** *If set after deploy:* the Worker serves, but the editor and the
-   operator API fail until `GITHUB_TOKEN` and `OPERATOR_TOKEN` exist. Admin
+   operator API fail until `OPERATOR_TOKEN` exists. Admin
    sign-in is not a secret: it is the Access application (section 7).
 6. **Deploy.** The Durable Object migration runs as part of this. *If the DO
    migration block is missing from the config:* the deploy is rejected, because a
@@ -412,14 +412,12 @@ written here on purpose**: `check:secrets` reads the array, and a prose count
 reads nothing. Set one `wrangler secret put` per name in that array:
 
 ```sh
-npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put SMOKE_TOKEN
 ```
 
 | Secret | What it is for | Where a new one comes from |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
 | `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases of `check:browser` fail and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
@@ -447,8 +445,7 @@ though the CLI otherwise looks authenticated.
 **There is no `.dev.vars` in this repo.** A local `npm run dev` therefore has zero
 secrets. `vite dev` on localhost is admitted to `/admin` as `dev@localhost`
 without Access (a development build on a localhost host only), so admin work
-needs no secret. The editor still needs a `GITHUB_TOKEN` in a `.dev.vars` you
-create yourself. `.dev.vars` stays gitignored, always.
+needs no secret. Saving writes the local D1 source, so the editor needs none either. `.dev.vars` stays gitignored, always.
 
 ### Admin sign-in (Cloudflare Access)
 

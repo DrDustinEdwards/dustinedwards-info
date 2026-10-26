@@ -7,7 +7,7 @@ import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 import { rosterPath } from "~/lib/roster/compile.mjs";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { SYNTHETIC_COHORTS, cohortFile } from "./seed";
 
 /* sync_roster and the roster-drift check: D1 converges to content/roster through the compile and write doors a
@@ -35,7 +35,7 @@ const rowFor = (slug: string) =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "roster-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_roster", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 let current: string;
 let earlier: string;
 
@@ -43,12 +43,12 @@ beforeEach(async () => {
   await env.DB.prepare("DELETE FROM roster").run();
   current = await cohortFile(CURRENT);
   earlier = await cohortFile(EARLIER);
-  gh = stubGitHub({ [rosterPath(CURRENT_SLUG)]: current, [rosterPath(EARLIER_SLUG)]: earlier, [PHOTO_FILE]: "x" });
+  gh = await stubSources({ [rosterPath(CURRENT_SLUG)]: current, [rosterPath(EARLIER_SLUG)]: earlier, [PHOTO_FILE]: "x" });
   purge.mockClear();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_roster and the roster-drift check", () => {
@@ -78,8 +78,8 @@ describe("sync_roster and the roster-drift check", () => {
 
     // An edit committed outside the save, and a deletion.
     const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, "Example Person Eight"] });
-    gh.files.set(rosterPath(CURRENT_SLUG), edited);
-    gh.files.delete(rosterPath(EARLIER_SLUG));
+    await putSource(rosterPath(CURRENT_SLUG), edited);
+    await removeSource(rosterPath(EARLIER_SLUG));
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -97,9 +97,9 @@ describe("sync_roster and the roster-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no cohort: a fault, not a repository with none.
-    gh.files.delete(rosterPath(CURRENT_SLUG));
-    gh.files.delete(rosterPath(EARLIER_SLUG));
-    gh.files.set("content/roster/README.txt", "not a cohort");
+    await removeSource(rosterPath(CURRENT_SLUG));
+    await removeSource(rosterPath(EARLIER_SLUG));
+    await putSource("content/roster/README.txt", "not a cohort");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -111,8 +111,8 @@ describe("sync_roster and the roster-drift check", () => {
   });
 
   it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 240_000 }, async () => {
-    gh.files.set("content/roster/notes.md", current);
-    gh.files.set(rosterPath("2029"), (await cohortFile(CURRENT)).replace("year: 2031", "year: 2029\nemail: someone@example.com"));
+    await putSource("content/roster/notes.md", current);
+    await putSource(rosterPath("2029"), (await cohortFile(CURRENT)).replace("year: 2031", "year: 2029\nemail: someone@example.com"));
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {

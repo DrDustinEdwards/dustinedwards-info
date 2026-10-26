@@ -118,8 +118,8 @@ export function KbFileEditor({
       {saved ? (
         <Banner tone="ok">
           {saved.unchanged
-            ? "Nothing to commit: the file was already this. Its page was brought up to date."
-            : `Saved as commit ${saved.commit}. The page shows it on the next visit.`}
+            ? "Nothing to save: the file was already this. Its page was brought up to date."
+            : `Saved as revision ${saved.commit}. The page shows it on the next visit.`}
         </Banner>
       ) : null}
 

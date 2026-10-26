@@ -11,7 +11,7 @@ import { loader as pageLoader } from "~/routes/procedure";
 
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 import { routeContext } from "./route-helpers";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
 /* A protocol names its host strains by id (docs/REGISTRY.md): the file types no designation or collection number, the compile
@@ -36,15 +36,15 @@ const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
 const operator = { kind: "operator", id: "test" } as const;
 const carrel = { kind: "carrel", changeId: "chg-strain" } as const;
 
-let gh: GitHubStub;
+let gh: SourceStub;
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM procedures").run();
   await env.DB.prepare("DELETE FROM registry").run();
-  gh = stubGitHub({ [procedurePath(SLUG)]: isolation, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  gh = await stubSources({ [procedurePath(SLUG)]: isolation, ...registryFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
   purge.mockClear();
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 const save = async () => {
@@ -77,7 +77,7 @@ describe("a protocol that names its host strains by id", () => {
   });
 
   it("is refused, naming the strain, when the registry does not hold it", { timeout: 120_000 }, async () => {
-    gh.files.delete("content/registry/strain/foliorum.md");
+    await removeSource("content/registry/strain/foliorum.md");
     const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: isolation });
     expect(saved.ok).toBe(false);
     expect(JSON.stringify(saved)).toMatch(/host_strain\[foliorum\] names no strain in the lab registry/);
@@ -107,7 +107,7 @@ describe("a change to a strain reaches the protocols that name it", () => {
 
   it("sync_registry recompiles every protocol that names a strain, so an edit made through git reaches it", { timeout: 120_000 }, async () => {
     await save();
-    gh.files.set(FOLIORUM, (registryFiles[FOLIORUM] ?? "").replace('collection_number: "B-24224"', 'collection_number: "B-24226"').replace("NRRL B-24224", "NRRL B-24226"));
+    await putSource(FOLIORUM, (registryFiles[FOLIORUM] ?? "").replace('collection_number: "B-24224"', 'collection_number: "B-24226"').replace("NRRL B-24224", "NRRL B-24226"));
     const synced = await runTool(operatorEnv(), operator, "sync_registry", {});
     expect(synced.ok, JSON.stringify(synced)).toBe(true);
     if (synced.ok) expect(synced.data).toMatchObject({ protocolsRefreshed: 1 });
@@ -120,7 +120,7 @@ describe("a protocol that names a strain only as an organism", () => {
 
   it("carries the registry's words for it, and a strain save rewrites the protocol that names it", { timeout: 120_000 }, async () => {
     expect(organismOnly).not.toBe(isolation);
-    gh.files.set(procedurePath(SLUG), organismOnly);
+    await putSource(procedurePath(SLUG), organismOnly);
     const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw: organismOnly });
     expect(saved.ok, JSON.stringify(saved)).toBe(true);
     const names = async () =>

@@ -203,7 +203,7 @@ page, so the copies never compete with it in search.
   frozen record by the shared components, so the words are frozen and the page chrome is not. This table is the one
   store here that is not derived from the file.
 - **A published version's words cannot change.** A file that changes the words of a version that already has a copy
-  does not compile: `save_procedure` refuses it before anything is committed, `get_procedure` shows the error, and
+  does not compile: `save_procedure` refuses it before anything is saved, `get_procedure` shows the error, and
   `sync_procedures` and `sync:content` name the file. The fix is a new `version` with a `history` entry that says what
   changed. A draft, and a procedure with no version, are never frozen.
 - **Drift covers it.** A published, versioned row with no sealed copy reads as drifted, and the sync that repairs

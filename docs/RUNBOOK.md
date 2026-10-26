@@ -334,7 +334,6 @@ Where each one lives, and what breaks if you rotate it and stop there:
 
 | Secret | Also lives in | Rotate it alone and... |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | GitHub fine-grained token | The editor and `sync_posts` stop committing. Reads still work, so it looks fine until you save a post. |
 | `OPERATOR_TOKEN` | **four holders, see below** | Silent partial failure. Read the box. |
 | `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
 | `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` the watchdog calls fails with a 502 naming each DOI, and the watchdog invocation is recorded as failed. The loudest symptom is the secrets audit. |

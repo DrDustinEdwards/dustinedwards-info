@@ -43,8 +43,8 @@ Notes for editors: where each sense was verified. Nothing here is shown on the s
 
 The pronunciation clips are static assets, `public/audio/<name>.mp3`, tracked in the repository and served by the
 Worker's `ASSETS` binding at `/audio/<name>.mp3`; they are not in R2. Their addresses are unchanged. An entry
-names its clip by path and a referenced clip must exist: CI reads `public/`, a save asks GitHub's directory
-listing. Uploading a new clip is a code change (a file under `public/audio/`), and the entry that names it can
+names its clip by path and a referenced clip must exist: CI reads `public/`, a save asks the deploy's
+assets binding. Uploading a new clip is a code change (a file under `public/audio/`), and the entry that names it can
 then be saved. A clip is under 32 KB and, in CI, starts with an MPEG audio frame.
 
 ## What a save cannot do
@@ -74,14 +74,14 @@ one exact wording, which no Carrel edit could ever change. What stays is the str
 
 `app/lib/dictionary/save.server.ts`: validate (the code above) then policy (`decideFileWrite`, so an operator
 may edit, unpublish and republish an entry but not publish a new one) then `commitUnlessUnchanged` then verify
-the committed bytes then the derived writes through `convergeWithRetry` then a cache purge by tag.
+the stored bytes then the derived writes through `convergeWithRetry` then a cache purge by tag.
 
-- A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
-  rows from the file without a commit.
-- D1 is derived. When a derived write fails, the error says the commit landed and the repair is
-  the content sync, or `sync_dictionary`, which converges the rows from the repository.
-- The sync reads the same files with the same compile, so it never overwrites a save: a save is a commit on
-  `main`, and the sync builds from `main`.
+- A byte-identical file is never written. If D1 already holds its row the save stops; if not it repairs the
+  rows from the source without a write.
+- D1 is derived. When a derived write fails, the error says the source write landed and the repair is
+  the content sync, or `sync_dictionary`, which converges the rows from the stored source.
+- The sync reads the same files with the same compile, so it never overwrites a save: ship pulls D1's files
+  before it builds, so the sync builds from what the save stored.
 
 ## What a write changes
 

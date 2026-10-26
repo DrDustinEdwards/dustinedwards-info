@@ -8,7 +8,7 @@ import {
   getCommitPatch,
   listCommitsForPath,
   readFile,
-} from "~/lib/editor/github.server";
+} from "~/lib/source/store.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.posts.$slug.revisions";
 
@@ -27,7 +27,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       return Response.json({ commits });
     }
 
-    // A sha reaches the GitHub API, so anything that is not hex is refused rather than forwarded.
+    // A revision id or blob sha reaches a D1 query, so anything that is not hex is refused.
     if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
       throw data({ error: "Not a commit id." }, { status: 400 });
     }

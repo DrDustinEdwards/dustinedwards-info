@@ -14,7 +14,7 @@ import { loader as csvLoader } from "~/routes/protocols[.csv]";
 import privacy from "../../content/pages/privacy.md?raw";
 import terms from "../../content/pages/terms.md?raw";
 
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
@@ -38,20 +38,20 @@ const argsFor = (request: Request) => ({ request, context: routeContext(), param
 const send = (method: "PUT" | "POST", url: string, body: unknown) =>
   action(argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })));
 const pageData = (path: string) => pageLoader(argsFor(new Request(`${ORIGIN}${path}`)));
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const termsRow = () => testEnv.DB.prepare("SELECT status FROM pages WHERE path = ?1").bind(TERMS_PATH).first<{ status: string }>();
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPages();
   await seedProcedures();
 });
-beforeEach(() => {
-  gh = stubGitHub({ [TERMS_FILE]: terms, [PRIVACY_FILE]: privacy });
+beforeEach(async () => {
+  gh = await stubSources({ [TERMS_FILE]: terms, [PRIVACY_FILE]: privacy });
 });
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("/privacy is a registered page", () => {
@@ -79,7 +79,7 @@ describe("the layout draws the banner and the date", () => {
     const source = terms.replace(/^---\n/, "---\nbanner: Draft\nlast_updated: 2026-10-06\n");
     const saved = await send("PUT", `${PREFIX}/content/${TERMS_ID}/draft`, {
       source,
-      expectedVersion: await versionOf(gh, TERMS_FILE),
+      expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-legal-fields",
     });
     expect(saved.status, await saved.clone().text()).toBe(200);
@@ -94,15 +94,15 @@ describe("the layout draws the banner and the date", () => {
 
 describe("/terms can never be unpublished or deleted", () => {
   it("REFUSES an unpublish through site-api, names the reason, and changes nothing", async () => {
-    const before = gh.files.get(TERMS_FILE);
+    const before = (await source(TERMS_FILE));
     const response = await send("POST", `${PREFIX}/content/${TERMS_ID}/unpublish`, {
-      expectedVersion: await versionOf(gh, TERMS_FILE),
+      expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-unpublish-terms",
     });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/license on every data set/);
-    expect(gh.files.get(TERMS_FILE)).toBe(before);
-    expect(commits()).toHaveLength(0);
+    expect((await source(TERMS_FILE))).toBe(before);
+    expect((await commits())).toHaveLength(0);
     expect((await pageData(TERMS_PATH)).draft).toBe(false);
     expect((await termsRow())?.status).toBe("published");
   });
@@ -110,11 +110,11 @@ describe("/terms can never be unpublished or deleted", () => {
   it("keeps it published when a save's source says draft: true: a save keeps the stored status", async () => {
     const response = await send("PUT", `${PREFIX}/content/${TERMS_ID}/draft`, {
       source: terms.replace(/^---\n/, "---\ndraft: true\n"),
-      expectedVersion: await versionOf(gh, TERMS_FILE),
+      expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-draft-terms",
     });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(gh.files.get(TERMS_FILE)).not.toMatch(/^draft: true$/m);
+    expect((await source(TERMS_FILE))).not.toMatch(/^draft: true$/m);
     expect((await termsRow())?.status).toBe("published");
   });
 

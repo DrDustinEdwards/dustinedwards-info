@@ -1,7 +1,7 @@
 # The lab registry
 
 The reference catalog of the lab's primers, strains, reagents and equipment (job_915d43f44cee). It is built the way
-phages and procedures are: a record is a file in the repository, the file is the source, and D1 holds a derived copy
+phages and procedures are: a record is a file in D1's content source (docs/PUBLISHING.md), and D1 holds a derived row
 that a save and `npm run sync:content` write. A record is edited with no build and no deploy. This document is the
 framework and the kinds built on it. The framework shipped with no kind and no record; each kind arrives with its own
 records, pages and catalog tab in its own change. Defined so far: **primer**, **strain**, **reagent**, **equipment**.
@@ -197,7 +197,7 @@ changed item (`test/registry-equipment.test.mjs`, `test/worker/lab.test.ts`, `te
 | Piece | File |
 | --- | --- |
 | The one compile door (parse, validate, hash) | `app/kb/registry/compile.mjs`, with the kinds in `kinds.mjs` |
-| The save: validate, policy, commit, row, purge | `app/kb/registry/save.server.ts` (`saveRegistryItem`) |
+| The save: validate, policy, source write, row, purge | `app/kb/registry/save.server.ts` (`saveRegistryItem`) |
 | Reads | `app/db/registry.ts` |
 | Carrel: one handler per kind, id `<kind>.<id>` | `app/lib/carrel/registry-handler.server.ts` |
 | Operator: `sync_registry`, `list_registry`, `get_registry` | `app/lib/operator/` |

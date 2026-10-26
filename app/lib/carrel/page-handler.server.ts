@@ -13,11 +13,11 @@ import { listPageRows } from "~/db/pages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { PAGES_DIR, pagePathForSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { savePage } from "~/lib/pages/save.server";
 
-type PageEnv = Env & { GITHUB_TOKEN?: string };
+type PageEnv = Env;
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 

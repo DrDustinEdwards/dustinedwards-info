@@ -53,9 +53,9 @@ every `MISSING` gap across entries and registry items, with its field and reason
 `get_registry` gap lists on one screen. It is a tab of its own, not a part of Protocols, because its gaps span every
 base and the registry. The Protocols panel's **Inventory** tab (items and lots) waits with step 4.
 
-The editor writes through the save that exists (`save_procedure`'s validator and commit path, `saveRegistryItem`), so
+The editor writes through the save that exists (`save_procedure`'s validator and write path, `saveRegistryItem`), so
 the admin adds no write path and no second validator. It starts as the whole file in Capsomer's markdown editor, with
-Check (every check a save runs, nothing committed) and Save; a row of a base's list and a row of Needs info open their
+Check (every check a save runs, nothing saved) and Save; a row of a base's list and a row of Needs info open their
 file in it. A structured form for the front matter the profile declares, with the live preview the post editor already
 has, comes after it.
 
@@ -164,7 +164,7 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
    `/admin/kb`, `app/routes/admin.kb.tsx` over `app/kb/admin.mjs`; the Inventory tab waits with step 4.)
 3. **Admin editor** for entries and registry items through the existing saves; then Carrel's handlers go. (Editor
    done: `/admin/kb/entry/<slug>` and `/admin/kb/item/<kind>/<id>`, `app/kb/editor.server.ts`, the whole file in
-   Capsomer's markdown editor with Check, which runs every check a save runs and commits nothing, and Save, refused
+   Capsomer's markdown editor with Check, which runs every check a save runs and saves nothing, and Save, refused
    when the file moved since it was opened. The structured form for each profile's fields comes after it, and
    Carrel's two handlers go in their own pull request once this editor is live.)
 3b. **Form editor** (Dustin, 2026-10-09, before step 8): the admin editor becomes a form, as protocols.io and Benchling

@@ -158,8 +158,8 @@ a report, not a gate.
 The list is `REQUIRED_SECRETS` in `app/lib/secrets.mjs`. Each is set with
 `wrangler secret put`, never in a file; RECOVERY.md section 7 says what each is
 for and where a new one comes from. Neither wrangler file has ever held one.
-Local development uses a gitignored `.dev.vars`. Without `GITHUB_TOKEN` the editor still renders and previews and
-reports that saving is unavailable.
+Local development uses a gitignored `.dev.vars`. The content source is D1 (`source_files`), so saving needs no
+secret.
 
 ## Deploying
 

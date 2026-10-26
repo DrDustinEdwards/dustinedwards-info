@@ -5,7 +5,7 @@ import { mediaRefKey } from "~/lib/media-ref-key.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { statusForDraft } from "~/lib/search/visibility.mjs";
 
-export type PublishEnv = Env & { GITHUB_TOKEN?: string };
+export type PublishEnv = Env;
 
 type RenderedPost = Awaited<ReturnType<typeof import("~/lib/content/pipeline.mjs").renderPost>>;
 

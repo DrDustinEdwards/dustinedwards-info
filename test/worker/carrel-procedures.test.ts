@@ -5,7 +5,7 @@ import { action, loader } from "~/routes/api.carrel.v1.$";
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { routeContext } from "./route-helpers";
 import { equipmentRepoFiles, reagentRepoFiles, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
@@ -39,21 +39,21 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedProcedures();
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   purge.mockClear();
-  gh = stubGitHub({ [FILE]: protocol, ...reagentRepoFiles, ...equipmentRepoFiles });
+  gh = await stubSources({ [FILE]: protocol, ...reagentRepoFiles, ...equipmentRepoFiles });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("procedures through Carrel", () => {
@@ -73,19 +73,19 @@ describe("procedures through Carrel", () => {
   it("reads one procedure as its file, at the repository head", async () => {
     const response = await get(`${PREFIX}/content/${ID}`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, kind: "procedure", status: "published", format: "markdown", source: protocol, version: await versionOf(gh, FILE) });
+    expect(await response.json()).toMatchObject({ id: ID, kind: "procedure", status: "published", format: "markdown", source: protocol, version: await versionOf(FILE) });
     expect((await get(`${PREFIX}/content/procedure.nothing`)).status).toBe(404);
   });
 
   it("saves an edit as the Carrel actor through the one procedure save, and keeps it published", { timeout: 120_000 }, async () => {
     const edited = protocol.replace(OLD_STEP, NEW_STEP);
     expect(edited).not.toBe(protocol);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-proc" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(FILE), changeId: "chg-proc" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-proc" });
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect(commits()).toHaveLength(1);
-    expect((commits()[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-proc]");
+    expect((await source(FILE))).toBe(edited);
+    expect((await commits())).toHaveLength(1);
+    expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-proc]");
 
     const row = await testEnv.DB.prepare("SELECT status, markdown FROM procedures WHERE slug = ?1").bind(SLUG).first<{ status: string; markdown: string }>();
     expect(row?.status).toBe("published");
@@ -97,41 +97,42 @@ describe("procedures through Carrel", () => {
     const response = await send("PUT", `${PREFIX}/content/procedure.carrel-new/draft`, { source: fresh, expectedVersion: null, changeId: "chg-new" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: "procedure.carrel-new", status: "draft" });
-    expect(gh.files.get("content/procedures/carrel-new.md")).toMatch(/^draft: true$/m);
+    expect((await source("content/procedures/carrel-new.md"))).toMatch(/^draft: true$/m);
   });
 
   it("unpublishes, then publishes, writing the status into the file", { timeout: 180_000 }, async () => {
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
-    expect(gh.files.get(FILE)).toMatch(/^draft: true$/m);
+    expect((await source(FILE))).toMatch(/^draft: true$/m);
 
     const up = await send("POST", `${PREFIX}/content/${ID}/publish`, { expectedVersion: downBody.version, changeId: "chg-up" });
     expect(up.status, await up.clone().text()).toBe(200);
     expect(await up.json()).toMatchObject({ status: "published" });
-    expect(gh.files.get(FILE)).toMatch(/^draft: false$/m);
-    expect(commits()).toHaveLength(2);
+    expect((await source(FILE))).toMatch(/^draft: false$/m);
+    expect((await commits())).toHaveLength(2);
   });
 
   it("lists the file's revisions, newest first, and answers a missing procedure with none", async () => {
-    gh.history.push({ sha: "b".repeat(40), message: "Update procedure: Phage DNA extraction", author: "Dustin", date: "2026-09-30T12:00:00Z" });
+    await putSource(FILE, `${protocol}\n`, "Update procedure: Phage DNA extraction");
     const response = await get(`${PREFIX}/content/${ID}/revisions`);
     expect(response.status).toBe(200);
     const body = (await response.json()) as { items: Array<{ version: string; author: string; message: string; at: string }> };
-    expect(body.items[0]).toMatchObject({ version: "b".repeat(40), author: "Dustin", message: "Update procedure: Phage DNA extraction", at: "2026-09-30T12:00:00.000Z" });
+    expect(body.items).toHaveLength(2);
+    expect(body.items[0]).toMatchObject({ version: await versionOf(FILE), author: "admin", message: "Update procedure: Phage DNA extraction" });
     expect((await get(`${PREFIX}/content/procedure.nothing/revisions`)).status).toBe(404);
   });
 
   it("REFUSES a file the validator fails, with its messages, and commits nothing", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: protocol.replace(/^title: .*$/m, "title: "),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
     });
     expect(response.status).toBe(422);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(protocol);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(protocol);
   });
 
   it("REFUSES a stale expectedVersion, names the current one, and commits nothing", async () => {
@@ -141,16 +142,16 @@ describe("procedures through Carrel", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(protocol);
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(protocol);
   });
 
   it("refuses to schedule or preview a procedure, in the registry's plain words", async () => {
-    const scheduled = await send("POST", `${PREFIX}/content/${ID}/schedule`, { publishAt: "2999-01-01T00:00:00.000Z", expectedVersion: await versionOf(gh, FILE), changeId: "chg-sched" });
+    const scheduled = await send("POST", `${PREFIX}/content/${ID}/schedule`, { publishAt: "2999-01-01T00:00:00.000Z", expectedVersion: await versionOf(FILE), changeId: "chg-sched" });
     expect(scheduled.status).toBe(422);
     expect(await scheduled.text()).toMatch(/cannot be scheduled/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });
 
@@ -159,7 +160,6 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => protocol.replace(OLD_STEP, NEW_STEP),
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

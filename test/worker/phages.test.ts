@@ -1,3 +1,4 @@
+import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isToolName, runTool } from "~/lib/operator/api.server";
@@ -15,7 +16,7 @@ import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?r
 import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedPages, seedPhages } from "./seed";
 import { testEnv } from "./test-env";
@@ -34,7 +35,6 @@ vi.mock("cloudflare:workers", async (importOriginal) => ({
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const PATH = "/research/phages";
 const SLUG = "acorn15";
 const ID = `phage.${SLUG}`;
@@ -70,13 +70,13 @@ async function html() {
 async function twin() {
   return twinLoader({ request: new Request(`${ORIGIN}${PATH}.md`), context: routeContext(), params: {} } as never);
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const searchBodies = async () =>
   (await testEnv.DB.prepare("SELECT body FROM search_docs WHERE url LIKE ?1").bind(`${PATH}%`).all<{ body: string }>()).results.map((r) => r.body);
 const rowFor = (slug: string) =>
   testEnv.DB.prepare("SELECT slug, source_blob_sha FROM phages WHERE slug = ?1").bind(slug).first<{ slug: string; source_blob_sha: string }>();
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPages([PATH]);
@@ -89,7 +89,7 @@ beforeEach(async () => {
   await testEnv.DB.prepare("DELETE FROM phages").run();
   await seedPages([PATH]);
   await seedPhages();
-  gh = stubGitHub({
+  gh = await stubSources({
     [FILE]: acornPhage,
     "content/phages/arlo.md": arloPhage,
     [PAPER_FILE]: "x",
@@ -100,8 +100,8 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("a phage edit through the adapter is live at the next request", () => {
@@ -118,15 +118,15 @@ describe("a phage edit through the adapter is live at the next request", () => {
 
     const edited = acornPhage.replace("county: Hood County", "county: Parker County");
     expect(edited).not.toBe(acornPhage);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-phage" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(FILE), changeId: "chg-phage" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-phage" });
 
     // The repository is the source, and it holds the edit; the page file was never touched.
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect(gh.files.get(PAGE_FILE)).toBe(phagesPage);
-    expect(commits()).toHaveLength(1);
-    expect((commits()[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-phage]");
+    expect((await source(FILE))).toBe(edited);
+    expect((await source(PAGE_FILE))).toBe(phagesPage);
+    expect((await commits())).toHaveLength(1);
+    expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-phage]");
 
     // The next request for the page carries the edit, in the table and in the Acorn15 section.
     const page = await html();
@@ -155,7 +155,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
   it("a new phage is drawn into the table, the sections, the twin and the dataset facts", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/phage.zeta/draft`, { source: NEW_PHAGE, expectedVersion: null, changeId: "chg-new" });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(gh.files.get("content/phages/zeta.md")).toBe(NEW_PHAGE);
+    expect((await source("content/phages/zeta.md"))).toBe(NEW_PHAGE);
 
     const page = await html();
     expect(page).toContain('<a href="#zeta">Zeta</a>');
@@ -169,7 +169,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
   it("a phage that names a genome paper the repository holds saves, and its paper link is in the table and the twin", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/phage.arlo/draft`, {
       source: arloPhage.replace("county: Erath County", "county: Parker County"),
-      expectedVersion: await versionOf(gh, "content/phages/arlo.md"),
+      expectedVersion: await versionOf("content/phages/arlo.md"),
       changeId: "chg-arlo",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -178,9 +178,9 @@ describe("a phage edit through the adapter is live at the next request", () => {
   });
 
   it("an unchanged save commits nothing and says so", { timeout: 240_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: acornPhage, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: acornPhage, expectedVersion: await versionOf(FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect(purge).not.toHaveBeenCalled();
   });
 });
@@ -189,7 +189,7 @@ describe("a phage change purges the pages tag, because the page embeds the table
   it("purges content-pages, the tag the page's HTML and its twin carry, and only that", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace("county: Hood County", "county: Parker County"),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -208,20 +208,20 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
     const bad = acornPhage.replace("year: 2017", "year: soon").replace("---\n", "---\nsample: soil\n").concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
     expect(body.message).toMatch(/sample is not a phage field/);
     expect(body.message).toMatch(/year is "soon"/);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(acornPhage);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(acornPhage);
   });
 
   it("REFUSES a genome paper this site does not hold, a record that is not the phage's own, and a stale version", async () => {
     const paper = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: acornPhage.replace(/\n---\n$/, "\npaper: not-a-paper-here\n---\n"),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-paper",
     });
     expect(paper.status).toBe(422);
@@ -242,36 +242,36 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(stale.status).toBe(409);
-    expect(await stale.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
-    expect(commits()).toHaveLength(0);
+    expect(await stale.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
+    expect((await commits())).toHaveLength(0);
   });
 
   it("has no draft state: a phage cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(JSON.stringify(await response.json())).toMatch(/delete its file from content\/phages/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });
 
 describe("a derived write that fails never reverts the commit", () => {
   it("leaves the commit in place, names the repair, and the drift is repaired from the file", { timeout: 240_000 }, async () => {
     // The page the table is drawn into no longer compiles, so the derived write fails after the commit.
-    gh.files.set(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
+    await putSource(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
     const edited = acornPhage.replace("county: Hood County", "county: Parker County");
     await expect(
-      savePhage(testEnv as never, { slug: SLUG, raw: edited, expectedHeadSha: HEAD, isNew: false, actor: { kind: "carrel", changeId: "chg-fail" } }),
-    ).rejects.toThrow(/WAS committed as .* and the database index could not be updated/);
+      savePhage(testEnv as never, { slug: SLUG, raw: edited, expectedHeadSha: (await getHead(testEnv)).commitSha, isNew: false, actor: { kind: "carrel", changeId: "chg-fail" } }),
+    ).rejects.toThrow(/WAS saved as revision .* and the database index could not be updated/);
 
     // The source holds the edit; D1 still holds the old row and the old page: nothing claims the new one.
-    expect(gh.files.get(FILE)).toBe(edited);
+    expect((await source(FILE))).toBe(edited);
     expect(await (await twin()).text()).toContain(ROW);
 
     // The repair is a re-run from the repository once the page compiles again: an unchanged save rewrites the rows.
-    gh.files.set(PAGE_FILE, phagesPage);
-    const repaired = await savePhage(testEnv as never, { slug: SLUG, raw: edited, expectedHeadSha: HEAD, isNew: false, actor: { kind: "carrel", changeId: "chg-repair" } });
+    await putSource(PAGE_FILE, phagesPage);
+    const repaired = await savePhage(testEnv as never, { slug: SLUG, raw: edited, expectedHeadSha: (await getHead(testEnv)).commitSha, isNew: false, actor: { kind: "carrel", changeId: "chg-repair" } });
     expect(repaired.unchanged).toBe(true);
-    expect(commits()).toHaveLength(1);
+    expect((await commits())).toHaveLength(1);
     expect(await (await twin()).text()).toContain(EDITED_ROW);
   });
 });
@@ -302,7 +302,6 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => acornPhage.replace("county: Hood County", "county: Parker County"),
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

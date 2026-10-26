@@ -9,13 +9,13 @@ import { listPublicationIdentities } from "~/db/publications";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
-import { fileRevisions, fileRevisionSource, readFile } from "~/lib/editor/github.server";
+import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { parsePublication, publicationPath } from "~/lib/publications/parse.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { fileIsDraft, savePublication } from "~/lib/publications/save.server";
 import type { Publication } from "~/lib/publications/types";
 
-type PublicationEnv = Env & { GITHUB_TOKEN?: string };
+type PublicationEnv = Env;
 
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 

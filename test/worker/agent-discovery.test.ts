@@ -31,7 +31,7 @@ import isolation from "../../content/procedures/phage-isolation.md?raw";
 import { post } from "./fixtures";
 import { seedDictionary, seedPages, seedPublications } from "./seed";
 import { routeContext, throughMiddleware } from "./route-helpers";
-import { stubGitHub } from "./github-stub";
+import { stubSources } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles, strainRepoFiles } from "./seed";
 
 /*
@@ -110,7 +110,7 @@ beforeAll(async () => {
   );
   /* The protocol is a procedure (docs/PROCEDURES.md): its row arrives through save_procedure, the
    * same compile and write sync:content and the operator API use, from the repository's file. */
-  const gh = stubGitHub({ [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  const gh = await stubSources({ [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
   try {
     const saved = await runTool(
       env as unknown as Parameters<typeof runTool>[0],
@@ -120,7 +120,7 @@ beforeAll(async () => {
     );
     expect(saved.ok, JSON.stringify(saved)).toBe(true);
   } finally {
-    gh.restore();
+    await gh.restore();
   }
 }, 240_000);
 

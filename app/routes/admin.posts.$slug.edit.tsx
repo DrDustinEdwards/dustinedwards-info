@@ -23,11 +23,11 @@ import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "capsomer/publish-transition";
-import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
+import { currentHead, deletePost, EditorError, SourceError } from "~/lib/editor/publish.server";
 import { readHead } from "~/lib/editor/head.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import { DELETE_LEFT_PARAM } from "~/lib/editor/delete-left.mjs";
-import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
+import { listCommitsForPath, readFile } from "~/lib/source/store.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -168,7 +168,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       return redirect(`/admin/posts?${left}`);
     } catch (error) {
       const message =
-        error instanceof EditorError || error instanceof GitHubError
+        error instanceof EditorError || error instanceof SourceError
           ? error.message
           : String(error);
       return {
@@ -176,7 +176,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         fields: undefined,
         problem: {
           message,
-          conflict: error instanceof GitHubError && error.conflict,
+          conflict: error instanceof SourceError && error.conflict,
           field: undefined,
           line: undefined,
         },

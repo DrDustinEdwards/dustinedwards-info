@@ -127,6 +127,10 @@ wrangler.watchdog.jsonc
 # out of the repo by hand. Added 2026-08-28, when it did.
 /.scratch/
 
+# What the last content pull wrote from D1 (scripts/pull-sources.mjs). Ignored for the /.ship-logs/ reason below:
+# ship refuses on any dirty tree, untracked files included.
+/.content-pull.json
+
 # Ship's own transcript, one timestamped file per run, written unconditionally
 # by scripts/ship.mjs.
 #

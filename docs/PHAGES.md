@@ -123,15 +123,16 @@ disagree, and fails if any page types a count of phages.
 ## The save
 
 `app/lib/phages/save.server.ts`: validate (the code above) then the set (`phageSetErrors`) then policy
-(`decideFileWrite`) then `commitUnlessUnchanged` then verify the committed bytes then the derived writes through
+(`decideFileWrite`) then `commitUnlessUnchanged` then verify the stored bytes then the derived writes through
 `convergeWithRetry` then a cache purge by tag.
 
-- A byte-identical file is never committed. If D1 already holds its row the save stops; if not it repairs the
-  rows from the file without a commit.
-- D1 is derived. When a derived write fails, the error says the commit landed and the repair is
+- A byte-identical file is never written. If D1 already holds its row the save stops; if not it repairs the
+  rows from the source without a write.
+- D1 is derived. When a derived write fails, the error says the source write landed and the repair is
   the content sync, or `sync_phages`.
 - A phage has no draft state: it is public when saved, so Carrel's unpublish is refused and says so. A phage is
-  removed by deleting its file in a commit; the next sync removes its row and redraws the table.
+  removed with `node scripts/remove-source.mjs content/phages/<slug>.md --remote`; the next sync removes its row
+  and redraws the table.
 - A save cannot add a column or a host: those are the page's structure, and code.
 
 ## What a write changes

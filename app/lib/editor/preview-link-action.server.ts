@@ -1,6 +1,6 @@
 import { postPath } from "~/lib/content/slug.mjs";
 import { parsePost } from "~/lib/editor/frontmatter";
-import { readFile } from "~/lib/editor/github.server";
+import { readFile } from "~/lib/source/store.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { createPreviewLink, revokePreviewLink } from "~/lib/preview-links.server";
 import { previewUrl } from "~/lib/preview-token.mjs";

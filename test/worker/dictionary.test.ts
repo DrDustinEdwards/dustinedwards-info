@@ -1,3 +1,4 @@
+import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isToolName, runTool } from "~/lib/operator/api.server";
@@ -11,7 +12,7 @@ import capsidPage from "../../content/pages/software-capsid.md?raw";
 import dictionaryArtifact from "../../content/generated/dictionary.json";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedDictionary, seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -30,7 +31,6 @@ vi.mock("cloudflare:workers", async (importOriginal) => ({
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 const PATH = "/software/capsid";
 const KEY = "capsid";
 const ID = `dictionary.${KEY}`;
@@ -63,11 +63,11 @@ async function html(path = PATH) {
 async function twin(path = PATH) {
   return twinLoader({ request: new Request(`${ORIGIN}${path}.md`), context: routeContext(), params: {} } as never);
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const searchBodies = async (path = PATH) =>
   (await testEnv.DB.prepare("SELECT body FROM search_docs WHERE url LIKE ?1").bind(`${path}%`).all<{ body: string }>()).results.map((r) => r.body);
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPages();
@@ -78,7 +78,7 @@ beforeEach(async () => {
   purge.mockClear();
   // Each case starts from the table the sync writes, so one case's edit never leaks into the next.
   await seedDictionary();
-  gh = stubGitHub({
+  gh = await stubSources({
     [FILE]: capsidEntry,
     [PAGE_FILE]: capsidPage,
     // The clips are static assets; the save only asks the repository whether the file is there.
@@ -86,8 +86,8 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("an entry edit through the adapter is live at the next request", () => {
@@ -98,15 +98,15 @@ describe("an entry edit through the adapter is live at the next request", () => 
 
     const edited = capsidEntry.replace(SENSE, ADDED);
     expect(edited).not.toBe(capsidEntry);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-dict" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(FILE), changeId: "chg-dict" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-dict" });
 
     // The repository is the source, and it holds the edit; the page file was never touched.
-    expect(gh.files.get(FILE)).toBe(edited);
-    expect(gh.files.get(PAGE_FILE)).toBe(capsidPage);
-    expect(commits()).toHaveLength(1);
-    const message = (commits()[0]?.body as { message?: string } | undefined)?.message;
+    expect((await source(FILE))).toBe(edited);
+    expect((await source(PAGE_FILE))).toBe(capsidPage);
+    expect((await commits())).toHaveLength(1);
+    const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
     expect(message).toContain("[carrel:chg-dict]");
 
     // The page's lead, and the DefinedTerm in its structured data, are the next request's.
@@ -134,20 +134,20 @@ describe("an entry edit through the adapter is live at the next request", () => 
   });
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 });
 
 describe("an entry change purges the pages tag, because a page embeds its entry", () => {
   it("purges content-pages, the tag the page's HTML and its twin carry, and nothing is purged for an unchanged save", { timeout: 180_000 }, async () => {
-    await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(gh, FILE), changeId: "chg-none" });
+    await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(FILE), changeId: "chg-none" });
     expect(purge).not.toHaveBeenCalled();
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -163,37 +163,37 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
     const bad = capsidEntry.replace(/^term: .*$/m, "term: ").concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
     expect(body.message).toMatch(/term: is required text/);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(capsidEntry);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(capsidEntry);
   });
 
   it("REFUSES a clip that is not in the repository", async () => {
-    gh.files.delete("public/audio/capsid.mp3");
-    gh.files.set("public/audio/other.mp3", "clip");
+    gh.assets.delete("public/audio/capsid.mp3");
+    gh.assets.set("public/audio/other.mp3", "clip");
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-clip",
     });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/not in the repository/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES a path no registered Software page names", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace("path: /software/capsid", "path: /research/phages"),
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-path",
     });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/not a registered Software page/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
@@ -203,8 +203,8 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
-    expect(commits()).toHaveLength(0);
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
+    expect((await commits())).toHaveLength(0);
   });
 });
 
@@ -212,11 +212,11 @@ describe("a draft entry is not shown", () => {
   it("unpublish takes the lead off the page, its JSON-LD, its twin and its search record, and publish restores them", { timeout: 240_000 }, async () => {
     expect((await pageData()).entry).not.toBeNull();
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
-    expect(gh.files.get(FILE)).toMatch(/^draft: true$/m);
+    expect((await source(FILE))).toMatch(/^draft: true$/m);
 
     // The page itself stays up: only its dictionary lead goes.
     expect((await pageData()).entry).toBeNull();
@@ -238,21 +238,21 @@ describe("a draft entry is not shown", () => {
 describe("a derived write that fails never reverts the commit", () => {
   it("leaves the commit in place, names the repair, and the drift is repaired from the file", { timeout: 240_000 }, async () => {
     // The page the entry opens no longer compiles, so the derived write fails after the commit.
-    gh.files.set(PAGE_FILE, capsidPage.replace(/^title: .*$/m, "title: "));
+    await putSource(PAGE_FILE, capsidPage.replace(/^title: .*$/m, "title: "));
     const edited = capsidEntry.replace(SENSE, ADDED);
     await expect(
-      saveDictionaryEntry(testEnv as never, { key: KEY, raw: edited, expectedHeadSha: HEAD, isNew: false, actor: { kind: "carrel", changeId: "chg-fail" } }),
-    ).rejects.toThrow(/WAS committed as .* and the database index could not be updated/);
+      saveDictionaryEntry(testEnv as never, { key: KEY, raw: edited, expectedHeadSha: (await getHead(testEnv)).commitSha, isNew: false, actor: { kind: "carrel", changeId: "chg-fail" } }),
+    ).rejects.toThrow(/WAS saved as revision .* and the database index could not be updated/);
 
     // The source holds the edit; D1 still holds the old entry; the page is not left claiming the new one.
-    expect(gh.files.get(FILE)).toBe(edited);
+    expect((await source(FILE))).toBe(edited);
     expect((await pageData()).entry?.senses[1]).toBe(SENSE);
 
     // The repair is a re-run from the repository once the page compiles again: an unchanged save rewrites the row.
-    gh.files.set(PAGE_FILE, capsidPage);
-    const repaired = await saveDictionaryEntry(testEnv as never, { key: KEY, raw: edited, expectedHeadSha: HEAD, isNew: false, actor: { kind: "carrel", changeId: "chg-repair" } });
+    await putSource(PAGE_FILE, capsidPage);
+    const repaired = await saveDictionaryEntry(testEnv as never, { key: KEY, raw: edited, expectedHeadSha: (await getHead(testEnv)).commitSha, isNew: false, actor: { kind: "carrel", changeId: "chg-repair" } });
     expect(repaired.unchanged).toBe(true);
-    expect(commits()).toHaveLength(1);
+    expect((await commits())).toHaveLength(1);
     expect((await pageData()).entry?.senses[1]).toBe(ADDED);
   });
 });
@@ -281,7 +281,6 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => capsidEntry.replace(SENSE, ADDED),
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

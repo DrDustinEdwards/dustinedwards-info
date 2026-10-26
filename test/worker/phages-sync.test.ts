@@ -12,7 +12,7 @@ import researchPage from "../../content/pages/research.md?raw";
 import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?raw";
 import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, stubSources, type SourceStub } from "./source-stub";
 import { seedPages } from "./seed";
 
 /* sync_phages and the phage-drift check: D1 converges to content/phages through the compile and write doors a
@@ -51,12 +51,12 @@ const searchRows = async () =>
 const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "phage-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_phages", {});
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM phages").run();
   await seedPages([PATH]);
-  gh = stubGitHub({
+  gh = await stubSources({
     ...files,
     ...PAPERS,
     [PAGE_FILE]: phagesPage,
@@ -67,8 +67,8 @@ beforeEach(async () => {
   purge.mockClear();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("sync_phages and the phage-drift check", () => {
@@ -95,9 +95,9 @@ describe("sync_phages and the phage-drift check", () => {
 
     // An edit committed outside the save tool, a new file, and a deletion.
     const edited = (files["content/phages/acorn15.md"] ?? "").replace("county: Hood County", "county: Parker County");
-    gh.files.set("content/phages/acorn15.md", edited);
-    gh.files.set("content/phages/zeta.md", "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n");
-    gh.files.delete("content/phages/allene.md");
+    await putSource("content/phages/acorn15.md", edited);
+    await putSource("content/phages/zeta.md", "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n");
+    await removeSource("content/phages/allene.md");
     const drifted = await driftCheck();
     expect(drifted?.ok).toBe(false);
     expect(drifted?.detail).toContain("1 sha-changed");
@@ -122,8 +122,8 @@ describe("sync_phages and the phage-drift check", () => {
   it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
     // The directory lists, but holds no phage: a fault, not a repository with none.
-    for (const path of Object.keys(files)) gh.files.delete(path);
-    gh.files.set("content/phages/README.txt", "not a phage");
+    for (const path of Object.keys(files)) await removeSource(path);
+    await putSource("content/phages/README.txt", "not a phage");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -134,7 +134,7 @@ describe("sync_phages and the phage-drift check", () => {
   });
 
   it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 300_000 }, async () => {
-    gh.files.set("content/phages/stray.md", "---\nname: Stray\nyear: 2026\nhost: ecoli\ncounty: null\nphagesdb: null\nsample: soil\n---\n");
+    await putSource("content/phages/stray.md", "---\nname: Stray\nyear: 2026\nhost: ecoli\ncounty: null\nphagesdb: null\nsample: soil\n---\n");
     const result = await sync();
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -147,14 +147,14 @@ describe("sync_phages and the phage-drift check", () => {
   });
 
   it("stops before any row moves when the page cannot be drawn, so the next run retries it", { timeout: 300_000 }, async () => {
-    gh.files.set(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
+    await putSource(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
     const refused = await sync();
     expect(refused.ok).toBe(false);
     expect(JSON.stringify(refused)).toMatch(/does not compile with these phages/);
     expect(await count()).toBe(0);
     expect((await driftCheck())?.ok).toBe(false);
 
-    gh.files.set(PAGE_FILE, phagesPage);
+    await putSource(PAGE_FILE, phagesPage);
     const retried = await sync();
     expect(retried.ok, JSON.stringify(retried)).toBe(true);
     expect(await count()).toBe(75);

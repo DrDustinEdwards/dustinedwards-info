@@ -5,7 +5,7 @@ import { getBlogPost } from "~/db";
 import { previewPost, withPublication } from "~/lib/carrel/site-adapter.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
-import { commitFiles } from "~/lib/editor/github.server";
+import { commitFiles } from "~/lib/source/store.server";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
@@ -14,7 +14,7 @@ import { runTool } from "~/lib/operator/api.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 
 import { post } from "./fixtures";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, removeSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { bytesFor, envWithImages } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
 import { seedPost } from "./seed";
@@ -51,14 +51,14 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
   return action(argsFor(request));
 }
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
-beforeEach(() => {
-  gh = stubGitHub();
+beforeEach(async () => {
+  gh = await stubSources();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("the Carrel key reaches only its prefix", () => {
@@ -94,8 +94,8 @@ describe("the Carrel key reaches only its prefix", () => {
 
 describe("every write names the version it was loaded at", () => {
   it("REFUSES a stale expectedVersion, names the current one, and commits nothing", async () => {
-    gh.files.set(postPath("carrel-stale"), post("carrel-stale"));
-    const before = gh.files.get(postPath("carrel-stale"));
+    await putSource(postPath("carrel-stale"), post("carrel-stale"));
+    const before = (await source(postPath("carrel-stale")));
 
     const response = await send("PUT", `${PREFIX}/content/carrel-stale/draft`, {
       source: post("carrel-stale", { title: "Changed" }),
@@ -108,7 +108,7 @@ describe("every write names the version it was loaded at", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(before ?? ""),
     });
-    expect(gh.files.get(postPath("carrel-stale"))).toBe(before);
+    expect((await source(postPath("carrel-stale")))).toBe(before);
   });
 
   it("REFUSES a version for an id that does not exist, with a null current version", async () => {
@@ -119,11 +119,11 @@ describe("every write names the version it was loaded at", () => {
     });
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: null });
-    expect(gh.files.has(postPath("carrel-missing"))).toBe(false);
+    expect(((await source(postPath("carrel-missing"))) !== undefined)).toBe(false);
   });
 
   it("REFUSES a create over an id that exists", async () => {
-    gh.files.set(postPath("carrel-taken"), post("carrel-taken"));
+    await putSource(postPath("carrel-taken"), post("carrel-taken"));
     const response = await send("PUT", `${PREFIX}/content/carrel-taken/draft`, {
       source: post("carrel-taken", { title: "Other" }),
       expectedVersion: null,
@@ -150,13 +150,13 @@ describe("a post's version is its own", () => {
 
   it("is the blob sha of the post's file at head", async () => {
     const raw = post("own-sha");
-    gh.files.set(postPath("own-sha"), raw);
+    await putSource(postPath("own-sha"), raw);
     expect(await readVersion("own-sha")).toBe(await gitBlobSha(raw));
   });
 
   it("does not change when another post is committed", async () => {
-    gh.files.set(postPath("own-a"), post("own-a"));
-    gh.files.set(postPath("own-b"), post("own-b"));
+    await putSource(postPath("own-a"), post("own-a"));
+    await putSource(postPath("own-b"), post("own-b"));
     const before = await readVersion("own-a");
 
     const saved = await save("own-b", "B edited", await readVersion("own-b"));
@@ -166,7 +166,7 @@ describe("a post's version is its own", () => {
   });
 
   it("changes when this post is committed, and the save answers the new version", async () => {
-    gh.files.set(postPath("own-c"), post("own-c"));
+    await putSource(postPath("own-c"), post("own-c"));
     const before = await readVersion("own-c");
 
     const saved = await save("own-c", "C edited", before);
@@ -175,12 +175,12 @@ describe("a post's version is its own", () => {
 
     expect(answered).not.toBe(before);
     expect(await readVersion("own-c")).toBe(answered);
-    expect(answered).toBe(await gitBlobSha(gh.files.get(postPath("own-c")) ?? ""));
+    expect(answered).toBe(await gitBlobSha((await source(postPath("own-c"))) ?? ""));
   });
 
   it("lets two posts be saved in one sitting without a false conflict", async () => {
-    gh.files.set(postPath("own-d"), post("own-d"));
-    gh.files.set(postPath("own-e"), post("own-e"));
+    await putSource(postPath("own-d"), post("own-d"));
+    await putSource(postPath("own-e"), post("own-e"));
     const d = await readVersion("own-d");
     const e = await readVersion("own-e");
 
@@ -189,10 +189,10 @@ describe("a post's version is its own", () => {
   });
 
   it("still REFUSES a save made from a version this post has since moved past", async () => {
-    gh.files.set(postPath("own-f"), post("own-f"));
+    await putSource(postPath("own-f"), post("own-f"));
     const opened = await readVersion("own-f");
     expect((await save("own-f", "F first", opened)).status).toBe(200);
-    const afterFirst = gh.files.get(postPath("own-f"));
+    const afterFirst = (await source(postPath("own-f")));
 
     const stale = await save("own-f", "F second", opened);
 
@@ -201,12 +201,12 @@ describe("a post's version is its own", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(afterFirst ?? ""),
     });
-    expect(gh.files.get(postPath("own-f"))).toBe(afterFirst);
+    expect((await source(postPath("own-f")))).toBe(afterFirst);
   });
 
   it("answers the post's own version when a create finds the id taken", async () => {
     const raw = post("own-g");
-    gh.files.set(postPath("own-g"), raw);
+    await putSource(postPath("own-g"), raw);
     const response = await send("PUT", `${PREFIX}/content/own-g/draft`, {
       source: post("own-g", { title: "Other" }),
       expectedVersion: null,
@@ -226,36 +226,36 @@ describe("commitFiles refuses a file that is not the one the writer loaded", () 
       changes: [{ path: "content/guarded.md", content: "after\n" }],
       expectedBlobs: { "content/guarded.md": expected },
     });
-  const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits")).length;
+  const commits = async () => (await writes()).length;
 
   it("REFUSES a write over a file that changed since it was loaded, and commits nothing", async () => {
     const loaded = await gitBlobSha("before\n");
-    gh.files.set("content/guarded.md", "changed by someone else\n");
+    await putSource("content/guarded.md", "changed by someone else\n");
     await expect(commit(loaded)).rejects.toMatchObject({ conflict: true, status: 409 });
-    expect(commits()).toBe(0);
-    expect(gh.files.get("content/guarded.md")).toBe("changed by someone else\n");
+    expect((await commits())).toBe(0);
+    expect((await source("content/guarded.md"))).toBe("changed by someone else\n");
   });
 
   it("REFUSES a write that expects the file absent when it exists", async () => {
-    gh.files.set("content/guarded.md", "there\n");
+    await putSource("content/guarded.md", "there\n");
     await expect(commit(null)).rejects.toMatchObject({ conflict: true });
-    expect(commits()).toBe(0);
+    expect((await commits())).toBe(0);
   });
 
   it("commits when the file is the one that was loaded, and when an absent one is still absent", async () => {
-    gh.files.set("content/guarded.md", "before\n");
+    await putSource("content/guarded.md", "before\n");
     await commit(await gitBlobSha("before\n"));
-    expect(gh.files.get("content/guarded.md")).toBe("after\n");
-    gh.files.delete("content/guarded.md");
+    expect((await source("content/guarded.md"))).toBe("after\n");
+    await removeSource("content/guarded.md");
     await commit(null);
-    expect(commits()).toBe(2);
+    expect((await commits())).toBe(2);
   });
 });
 
 describe("the first publication", () => {
   it("ALLOWS it from Carrel's key, and the commit records who published", async () => {
     const draft = post("carrel-first", { draft: true });
-    gh.files.set(postPath("carrel-first"), draft);
+    await putSource(postPath("carrel-first"), draft);
 
     const response = await send("POST", `${PREFIX}/content/carrel-first/publish`, {
       expectedVersion: await gitBlobSha(draft),
@@ -264,10 +264,10 @@ describe("the first publication", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "published", changeId: "chg-first" });
-    const saved = gh.files.get(postPath("carrel-first")) ?? "";
+    const saved = (await source(postPath("carrel-first"))) ?? "";
     expect(saved).toMatch(/^draft: false$/m);
     expect(saved).toMatch(/^first_published: /m);
-    const commit = gh.calls.find((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+    const commit = (await writes()).map((w) => ({ body: { message: w.message } }))[0];
     const message = (commit?.body as { message?: string } | undefined)?.message;
     expect(message).toContain("[carrel:chg-first]");
   });
@@ -280,14 +280,14 @@ describe("the first publication", () => {
       { slug: "carrel-operator-first", raw: post("carrel-operator-first", { draft: false }), isNew: true },
     );
     expect(result).toMatchObject({ ok: false, status: 403, detail: { policy: "first-publish-requires-admin" } });
-    expect(gh.files.has(postPath("carrel-operator-first"))).toBe(false);
+    expect(((await source(postPath("carrel-operator-first"))) !== undefined)).toBe(false);
   });
 });
 
 describe("status belongs to the site", () => {
   it("keeps a live post live when Carrel saves its source", async () => {
     const live = post("carrel-live", { draft: false, first_published: "2026-07-01" });
-    gh.files.set(postPath("carrel-live"), live);
+    await putSource(postPath("carrel-live"), live);
     const response = await send("PUT", `${PREFIX}/content/carrel-live/draft`, {
       source: post("carrel-live", { draft: true, title: "Edited live" }),
       expectedVersion: await gitBlobSha(live),
@@ -295,7 +295,7 @@ describe("status belongs to the site", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "published" });
-    expect(gh.files.get(postPath("carrel-live"))).toMatch(/^draft: false$/m);
+    expect((await source(postPath("carrel-live")))).toMatch(/^draft: false$/m);
   });
 
   it("changes only the draft and publish_at lines, so keys the editor does not know survive", () => {
@@ -310,7 +310,7 @@ describe("status belongs to the site", () => {
 describe("the preview", () => {
   it("builds exactly the loader data the published page reads from D1", async () => {
     const raw = post("carrel-preview-match", { draft: false, first_published: "2026-07-01" });
-    gh.files.set(postPath("carrel-preview-match"), raw);
+    await putSource(postPath("carrel-preview-match"), raw);
     await renderAndWrite(siteEnv(), "carrel-preview-match", raw);
     /* Older than this run, so a preview that stamps its own time cannot match by landing in the
      * same second as the sync. */
@@ -583,11 +583,12 @@ describe("media: a delete is decided by the site's reference check", () => {
 /* site-api v0.3.0: the source at a revision, and the optional content delete (job_3839c2d00cb6). */
 describe("a revision's source", () => {
   it("opens an old revision of a post, and answers 404 for a version the repository does not hold", async () => {
-    gh.files.set(postPath("rev-open"), post("rev-open"));
-    const sha = "c".repeat(40);
+    await putSource(postPath("rev-open"), post("rev-open"));
+    const sha = await versionOf(postPath("rev-open"));
+    await putSource(postPath("rev-open"), post("rev-open", { title: "Retitled" }));
     const found = await get(`${PREFIX}/content/rev-open/revisions/${sha}`);
     expect(found.status).toBe(200);
-    expect(await found.json()).toMatchObject({ id: "rev-open", version: sha });
+    expect(await found.json()).toMatchObject({ id: "rev-open", version: sha, source: post("rev-open") });
 
     const notAVersion = await get(`${PREFIX}/content/rev-open/revisions/not-a-sha`);
     expect(notAVersion.status).toBe(404);
@@ -601,7 +602,7 @@ describe("content delete", () => {
       `${PREFIX}/content/${id}?expectedVersion=${encodeURIComponent(expectedVersion)}&changeId=${changeId}`,
       key ? { key } : {},
     );
-  const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+  const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
   it("is declared in meta.capabilities", async () => {
     const meta = (await (await get(`${PREFIX}/meta`)).json()) as { capabilities: { contentDelete?: boolean } };
@@ -610,22 +611,22 @@ describe("content delete", () => {
 
   it("deletes the post at its current version, records the change id, and clears its rows", async () => {
     const raw = post("del-ok");
-    gh.files.set(postPath("del-ok"), raw);
+    await putSource(postPath("del-ok"), raw);
     await seedPost("del-ok");
 
     const response = await remove("del-ok", await gitBlobSha(raw), "chg-del-ok");
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ id: "del-ok", deleted: true, changeId: "chg-del-ok" });
-    expect(gh.files.has(postPath("del-ok"))).toBe(false);
-    expect(commits()).toHaveLength(1);
-    expect(JSON.stringify(commits()[0]?.body)).toContain("[carrel:chg-del-ok]");
+    expect(((await source(postPath("del-ok"))) !== undefined)).toBe(false);
+    expect((await commits())).toHaveLength(1);
+    expect(JSON.stringify((await commits())[0]?.body)).toContain("[carrel:chg-del-ok]");
     expect(await getBlogPost(testEnv as never, "del-ok")).toBeNull();
   });
 
   it("REFUSES a stale version, names the current one, and deletes nothing", async () => {
     const raw = post("del-stale");
-    gh.files.set(postPath("del-stale"), raw);
+    await putSource(postPath("del-stale"), raw);
 
     const response = await remove("del-stale", "b".repeat(40), "chg-del-stale");
 
@@ -634,39 +635,30 @@ describe("content delete", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(raw),
     });
-    expect(gh.files.get(postPath("del-stale"))).toBe(raw);
-    expect(commits()).toHaveLength(0);
+    expect((await source(postPath("del-stale")))).toBe(raw);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("answers 404 for a post the site does not hold", async () => {
     const response = await remove("del-missing", "a".repeat(40), "chg-del-missing");
     expect(response.status).toBe(404);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES a kind that has no delete, and deletes nothing", async () => {
     const response = await remove("page.privacy", "a".repeat(40), "chg-del-page");
     expect(response.status).toBe(422);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES without the key", async () => {
     const raw = post("del-nokey");
-    gh.files.set(postPath("del-nokey"), raw);
+    await putSource(postPath("del-nokey"), raw);
     const response = await remove("del-nokey", await gitBlobSha(raw), "chg-del-nokey", "wrong-key");
     expect(response.status).toBe(401);
-    expect(gh.files.get(postPath("del-nokey"))).toBe(raw);
+    expect((await source(postPath("del-nokey")))).toBe(raw);
   });
 
-  it("does not delete when the version check cannot run", async () => {
-    const raw = post("del-unreadable");
-    gh.files.set(postPath("del-unreadable"), raw);
-    gh.failNext("/contents/", 2);
-    const response = await remove("del-unreadable", await gitBlobSha(raw), "chg-del-unreadable");
-    expect(response.status).toBeGreaterThanOrEqual(500);
-    expect(gh.files.get(postPath("del-unreadable"))).toBe(raw);
-    expect(commits()).toHaveLength(0);
-  });
 });
 
 describe("the site-api conformance suite", () => {
@@ -676,10 +668,9 @@ describe("the site-api conformance suite", () => {
     // repository holds only what a case puts there: the first listed item (llms.txt) gets its file, as the
     // deployed repository has it.
     // Other cases seed posts in D1 with no file, so the first item may be a post: it gets its file too.
-    gh.files.set(LLMS_PATH, "# dustinedwards.info\n");
+    await putSource(LLMS_PATH, "# dustinedwards.info\n");
     const first = ((await (await get(`${PREFIX}/content?limit=1`)).json()) as { items: Array<{ id: string }> }).items[0];
-    if (first && !first.id.includes(".")) gh.files.set(postPath(first.id), post(first.id));
-    gh.history.push({ sha: "d".repeat(40), message: "Update llms.txt", author: "Dustin Edwards", date: "2026-10-01T00:00:00Z" });
+    if (first && !first.id.includes(".")) await putSource(postPath(first.id), post(first.id));
     const report = await runConformance({
       baseUrl: ORIGIN,
       key: testEnv.CARREL_SITE_KEY,

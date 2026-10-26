@@ -12,7 +12,7 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 import foxhound from "../../content/pages/software-foxhound.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { routeContext } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -60,20 +60,20 @@ async function sitemapPaths() {
   } as never)) as Response;
   return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/");
 }
-const commits = () => gh.calls.filter((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPages();
 });
 
-beforeEach(() => {
-  gh = stubGitHub({ [FILE]: foxhound });
+beforeEach(async () => {
+  gh = await stubSources({ [FILE]: foxhound });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 describe("an edit through the adapter is live at the next request", () => {
@@ -85,15 +85,15 @@ describe("an edit through the adapter is live at the next request", () => {
     const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-page",
     });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-page" });
 
     // The repository is the source, and it holds the edit.
-    expect(gh.files.get(FILE)).toBe(edited);
-    const message = (commits()[0]?.body as { message?: string } | undefined)?.message;
+    expect((await source(FILE))).toBe(edited);
+    const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
     expect(message).toContain("[carrel:chg-page]");
 
     // The page and its twin carry it.
@@ -116,14 +116,14 @@ describe("an edit through the adapter is live at the next request", () => {
   });
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
-    const before = commits().length;
+    const before = (await commits()).length;
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: foxhound,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
-    expect(commits().length).toBe(before);
+    expect((await commits()).length).toBe(before);
   });
 });
 
@@ -133,14 +133,14 @@ describe("a save is held to what CI holds", () => {
     const bad = foxhound.replace(/^title: .*$/m, "title: ").concat(`\nA sentence ${wide} with a dash.\n`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
     });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
-    expect(commits()).toHaveLength(0);
-    expect(gh.files.get(FILE)).toBe(foxhound);
+    expect((await commits())).toHaveLength(0);
+    expect((await source(FILE))).toBe(foxhound);
   });
 
   it("REFUSES a page no registered path names, and says a save cannot create one", async () => {
@@ -151,7 +151,7 @@ describe("a save is held to what CI holds", () => {
     });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/cannot create a page/);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
@@ -161,8 +161,8 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
-    expect(commits()).toHaveLength(0);
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
+    expect((await commits())).toHaveLength(0);
   });
 });
 
@@ -170,11 +170,11 @@ describe("a draft is not public", () => {
   it("unpublish takes the page, its twin and its sitemap entry down, and publish restores them", { timeout: 180_000 }, async () => {
     expect(await sitemapPaths()).toContain(PATH);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
-    expect(gh.files.get(FILE)).toMatch(/^draft: true$/m);
+    expect((await source(FILE))).toMatch(/^draft: true$/m);
 
     await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
     expect((await twin()).status).toBe(404);
@@ -211,11 +211,11 @@ describe("a lost row is repaired from the file, never the reverse", () => {
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: foxhound,
-      expectedVersion: await versionOf(gh, FILE),
+      expectedVersion: await versionOf(FILE),
       changeId: "chg-repair",
     });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(commits()).toHaveLength(0);
+    expect((await commits())).toHaveLength(0);
     expect((await pageData()).page.path).toBe(PATH);
   });
 });
@@ -250,7 +250,6 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => `${foxhound.trimEnd()}\n\n${ADDED}\n`,
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

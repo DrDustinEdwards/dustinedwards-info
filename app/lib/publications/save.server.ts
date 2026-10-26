@@ -13,7 +13,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { combinePurges, purgeCv, purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -26,18 +26,18 @@ import { parsePublication, publicationPath } from "./parse.mjs";
 import { paperSearchUid } from "./search-inputs.mjs";
 import type { OtherPublication, PublicationHost } from "./validate.mjs";
 
-type PublicationEnv = Env & { GITHUB_TOKEN?: string };
+type PublicationEnv = Env;
 
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class PublicationInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The publication "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
+    super(`The publication "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
     this.name = "PublicationInvalid";
   }
 }
 
-/** The repository's PDFs, asked of GitHub: existence and size, never the bytes. */
-function githubHost(env: PublicationEnv): PublicationHost {
+/** The PDFs this deploy serves: existence and size, never the bytes. */
+function sourceHost(env: PublicationEnv): PublicationHost {
   return { pdf: (sitePath) => publicFileEntry(env, sitePath) };
 }
 
@@ -56,7 +56,7 @@ async function compile(env: PublicationEnv, slug: string, raw: string) {
   return compilePublication({
     slug,
     raw,
-    host: githubHost(env),
+    host: sourceHost(env),
     others: await otherPublications(env, slug),
     citedByArtifact,
   });
@@ -184,7 +184,7 @@ async function syncAsk(env: PublicationEnv, compiled: Compiled) {
       ok: false as const,
       message:
         `The publication saved, but its Ask record did not update: ${errorMessage(error)}. ` +
-        `The next ship's Ask sync converges it from the repository.`,
+        `The next ship's Ask sync converges it from the source.`,
     };
   }
 }
@@ -287,9 +287,9 @@ export async function savePublication(
   const blobSha = written.blobShas[path];
   if (blobSha && blobSha !== compiled.sourceBlobSha) {
     throw new Error(
-      `The publication "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobSha}) are not ` +
+      `The publication "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
         `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the repository.`,
+        `rebuild the row from the stored source.`,
     );
   }
 

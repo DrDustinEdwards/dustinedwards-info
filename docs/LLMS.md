@@ -20,7 +20,7 @@ A document has no draft state, so it is always published:
 | saveDraft, publish | the same save: a save to a live document edits it live. `publish` may carry a `source` |
 | unpublish | refused: it is the file agents read first |
 | a save with no version, or an id other than `llms` | a version conflict, or refused: a save does not create a document |
-| revisions | the file's git history (`listCommitsForPath`), as the other kinds read it |
+| revisions | the file's stored revisions (`listCommitsForPath`), as the other kinds read them |
 | preview | none: the kind has no preview, and the response is plain text |
 
 ## What a save is held to
@@ -53,22 +53,22 @@ list is by hand, and a missing line is not a rule (only an extra one is).
 ## The save
 
 `app/lib/llms/save.server.ts`: judge, then policy (`decideFileWrite`, so a read-only credential is refused),
-then `commitUnlessUnchanged`, then verify the committed bytes, then the row write through `convergeWithRetry`,
+then `commitUnlessUnchanged`, then verify the stored bytes, then the row write through `convergeWithRetry`,
 read back, then a cache purge by the tag `llms` (the route carries it as its `Cache-Tag`).
 
-- A byte-identical file is never committed. If the row already holds it the save stops; if not it rewrites the
-  row from the file without a commit.
-- D1 is derived. When the row write fails, the error says the commit landed and the repair is
+- A byte-identical file is never written. If the row already holds it the save stops; if not it rewrites the
+  row from the source without a write.
+- D1 is derived. When the row write fails, the error says the source write landed and the repair is
   `sync_llms`.
 - The edge holds `/llms.txt` for the route's `max-age=3600`, so the purge is what makes an edit visible at once.
   A browser that already holds it keeps it until its own hour is up.
 
 ## Drift
 
-`llms-drift` (`/api/health`) compares the file's git blob sha, read from the repository directory listing,
+`llms-drift` (`/api/health`) compares the file's git blob sha, read from the stored source,
 with the blob sha of the bytes in the settings row. A missing row counts as drift, because `/llms.txt` would
 then serve the bundled copy. The watchdog repairs it through `sync_llms`, the same loop the other kinds use
-(`convergeKind`): re-judge the file, write the row, read it back, purge. It refuses a repository with no
+(`convergeKind`): re-judge the file, write the row, read it back, purge. It refuses a source with no
 `llms.txt` rather than deleting the row, and it answers 422 naming the rules a file fails without touching the
 row. The ship defers the check until the D1 sync, as it does the others.
 

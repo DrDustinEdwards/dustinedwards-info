@@ -41,7 +41,6 @@ export async function loader({ context }: Route.LoaderArgs) {
         d1PubliclyVisible: stores.d1PubliclyVisible,
         searchIndexDocs: stores.searchIndexDocs,
         askConfigured: stores.askConfigured,
-        githubConfigured: stores.githubConfigured,
         divergences: stores.divergences,
       },
     });
@@ -168,11 +167,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
           <dd>{stores.searchIndexDocs} entries.</dd>
           <dt>Connections</dt>
           <dd>
-            {stores.askConfigured && stores.githubConfigured
-              ? "Search and the repository are both configured."
-              : `Search ${stores.askConfigured ? "is" : "is NOT"} configured, the repository ${
-                  stores.githubConfigured ? "is" : "is NOT"
-                }.`}
+            {stores.askConfigured ? "Search is configured." : "Search is NOT configured."}
           </dd>
         </dl>
         <p>

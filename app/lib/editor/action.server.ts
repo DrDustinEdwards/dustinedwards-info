@@ -1,7 +1,7 @@
 import {
   EditorError,
   FirstPublishConfirmationRequired,
-  GitHubError,
+  SourceError,
   currentHead,
   savePost,
   validateAndRender,
@@ -26,7 +26,7 @@ type EditorActionResult =
     };
 
 export async function handleEditorAction(
-  env: Env & { GITHUB_TOKEN?: string },
+  env: Env,
   request: Request,
   actor: Actor,
 ): Promise<EditorActionResult> {
@@ -47,7 +47,7 @@ export async function handleEditorAction(
     } catch (error) {
       console.error(JSON.stringify({ alert: "editor-head-reread-failed", detail: errorMessage(error) }));
       note =
-        ` (The repository head could not be re-read: ` +
+        ` (The content's head could not be re-read: ` +
         `${errorMessage(error)}. A retry may report a conflict.)`;
     }
     return { kind: "problem" as const, fields, problem: { message: message + note, ...extra }, headSha };
@@ -107,7 +107,7 @@ export async function handleEditorAction(
     if (error instanceof FrontmatterError) {
       return fail(error.message, { field: error.field });
     }
-    if (error instanceof GitHubError) {
+    if (error instanceof SourceError) {
       return fail(error.message, { conflict: error.conflict });
     }
     // Not a recognized failure: logged with its stack, since the editor shows only the message.

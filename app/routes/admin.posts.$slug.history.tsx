@@ -16,7 +16,7 @@ import {
   getCommitPatch,
   listCommitsForPath,
   readFile,
-} from "~/lib/editor/github.server";
+} from "~/lib/source/store.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.posts.$slug.history";
 

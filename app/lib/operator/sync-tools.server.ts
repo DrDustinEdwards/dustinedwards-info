@@ -8,7 +8,7 @@ import { posts as postsTable } from "~/db/schema";
 import { listDivergences } from "~/lib/editor/divergence.server";
 import { EditorError, currentHead, renderAndWrite } from "~/lib/editor/publish.server";
 import { deletePostFromD1 } from "~/lib/editor/post-rows.server";
-import { listPostFiles, readFile } from "~/lib/editor/github.server";
+import { listPostFiles, readFile } from "~/lib/source/store.server";
 import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { copyMissingTwins } from "~/lib/media/backup.server";
@@ -145,7 +145,7 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
       status: 422,
       error:
         "sync_posts refused: content/posts lists no post files, and converging to an empty set " +
-        "would delete every post row. Check the repository listing.",
+        "would delete every post row. Check the source listing.",
     };
   }
   const drift = contentDriftCompare(before.files, before.rows);
@@ -254,7 +254,7 @@ async function convergeKind<
       status: 422,
       error:
         `${spec.tool} refused: ${spec.dir} lists no ${spec.noun} files, and converging to an empty set ` +
-        `would delete every ${spec.noun} row. Check the repository listing.`,
+        `would delete every ${spec.noun} row. Check the source listing.`,
     };
   }
   const drift = contentDriftCompare(before.files, before.rows);
@@ -436,7 +436,7 @@ export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
     compile: (_slug, raw) => compileLlms(env, raw),
     write: (compiled) => writeLlmsRow(env, compiled.raw),
     remove: async () => {
-      throw new Error("sync_llms never removes the llms.txt row: a repository without the file is refused first.");
+      throw new Error("sync_llms never removes the llms.txt row: a source without the file is refused first.");
     },
     purge: purgeLlms,
   });
@@ -548,7 +548,7 @@ export async function syncStatus(env: OperatorEnv) {
   // Counted through Drizzle: interpolating the predicate into a template string stringifies the object and
   // D1 answers `no such column`. `publiclyVisible()` is reused so the visibility rule has one owner.
   const db = getDb(env);
-  // The stores are separate and each read is independent (GitHub twice, D1 three times, KV once), so they run
+  // The stores are separate and each read is independent (the source twice, the rows three times, KV once), so they run
   // together: the status takes as long as the slowest read, not the sum of all of them.
   const [repoFiles, totalRow, visibleRow, indexed, headSha, divergences] = await Promise.all([
     listPostFiles(env),
@@ -574,7 +574,6 @@ export async function syncStatus(env: OperatorEnv) {
     // The docsize shadow table: `COUNT(*)` on the index reads through to the content table and never drifts.
     searchIndexDocs: counted(indexed, "search index"),
     askConfigured: askAvailable(env),
-    githubConfigured: Boolean(env.GITHUB_TOKEN),
     // Read from KV: a record of a D1 failure kept in D1 is missing exactly when it matters. `known: false`
     // is not the same answer as an empty list.
     divergences,

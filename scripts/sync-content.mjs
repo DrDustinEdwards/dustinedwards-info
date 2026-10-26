@@ -1,6 +1,7 @@
 // This script runs no gate: run `npm run check:content` first. It writes production D1, and the
 // bulk path deletes the search index and replaces the media citations wholesale.
 
+import { spawnSync } from "node:child_process";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 
 import { retryRead } from "./lib/retry.mjs";
@@ -668,6 +669,10 @@ function verify(target, posts, records) {
 
 async function main() {
   const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
+
+  // The content's source first: a path D1 has never held is copied in from the repository (scripts/seed-sources.mjs).
+  const seeded = spawnSync(process.execPath, [path.join("scripts", "seed-sources.mjs"), PREVIEW ? "--preview" : target], { stdio: "inherit" });
+  if (seeded.status !== 0) throw new Error("the source seed failed; nothing else was written.");
 
   const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
   // Every delete below converges D1 to this artifact, so an empty one would empty production.

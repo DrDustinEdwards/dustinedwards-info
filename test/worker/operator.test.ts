@@ -8,7 +8,7 @@ import { postPath } from "~/lib/content/pipeline.mjs";
 import { post } from "./fixtures";
 import { WINDOW_START, freezeAtWindowStart, untilRefused } from "./route-helpers";
 import { testEnv } from "./test-env";
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { putSource, source, stubSources, type SourceStub } from "./source-stub";
 
 /* The token fixture is long enough to clear the 32-character minimum, so these cases exercise
  * authentication rather than the not-configured branch. */
@@ -21,14 +21,14 @@ const bearer = (token: string) =>
     headers: { authorization: `Bearer ${token}` },
   });
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
-beforeEach(() => {
-  gh = stubGitHub();
+beforeEach(async () => {
+  gh = await stubSources();
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
   /* Restored here, not per case: a case that fails mid-assertion never reaches its own cleanup,
    * and a frozen clock would leak into the next case. */
   vi.useRealTimers();
@@ -146,7 +146,7 @@ describe("operator tools", () => {
        * than string-match the prose, so the prose may change and this may not. */
       expect(result.detail).toMatchObject({ policy: "first-publish-requires-admin" });
     }
-    expect(gh.files.has(postPath("operator-first-publish"))).toBe(false);
+    expect(((await source(postPath("operator-first-publish"))) !== undefined)).toBe(false);
   });
 
   it("ALLOWS an operator to save a draft, and to republish one already published", async () => {
@@ -159,7 +159,7 @@ describe("operator tools", () => {
 
     /* Seeded with `first_published` in the repository, the only authority `decide()` consults,
      * so this is the real transition rather than a flag the caller asserted. */
-    gh.files.set(
+    await putSource(
       postPath("was-public"),
       post("was-public", { draft: true, first_published: "2026-07-01" }),
     );
@@ -172,7 +172,7 @@ describe("operator tools", () => {
   });
 
   it("REFUSES an operator delete, and the refusal names the reversible alternative", async () => {
-    gh.files.set(postPath("keep-me"), post("keep-me"));
+    await putSource(postPath("keep-me"), post("keep-me"));
     const result = await runTool(operatorEnv(), operator, "delete_post", { slug: "keep-me" });
 
     expect(result.ok).toBe(false);
@@ -181,7 +181,7 @@ describe("operator tools", () => {
       expect(result.detail).toMatchObject({ policy: "delete-requires-admin" });
       expect(result.error).toContain("draft: true");
     }
-    expect(gh.files.has(postPath("keep-me"))).toBe(true);
+    expect(((await source(postPath("keep-me"))) !== undefined)).toBe(true);
   });
 
   it("REFUSES a read-only smoke actor for every save, before any transition is computed", async () => {
@@ -193,6 +193,6 @@ describe("operator tools", () => {
     );
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.detail).toMatchObject({ policy: "smoke-is-read-only" });
-    expect(gh.files.has(postPath("smoke-cannot-write"))).toBe(false);
+    expect(((await source(postPath("smoke-cannot-write"))) !== undefined)).toBe(false);
   });
 });

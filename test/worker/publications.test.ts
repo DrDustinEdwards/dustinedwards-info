@@ -24,7 +24,7 @@ import {
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
+import { source as storedSource, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCitations, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -85,23 +85,23 @@ function manuscript(overrides: Record<string, unknown> = {}) {
   );
 }
 
-let gh: GitHubStub;
+let gh: SourceStub;
 
 beforeAll(async () => {
   await seedPublications();
   await seedCitations();
 }, 240_000);
 
-beforeEach(() => {
+beforeEach(async () => {
   // The hosted paper's PDF is in the repository, so the save's existence check finds it.
-  gh = stubGitHub({
+  gh = await stubSources({
     [publicationPath(SLUG)]: godfather,
     [`public/research/publications/${SLUG}/dustin-edwards-${SLUG}.pdf`]: "%PDF-1.4 fixture",
   });
 });
 
-afterEach(() => {
-  gh.restore();
+afterEach(async () => {
+  await gh.restore();
 });
 
 async function pageData(slug: string) {
@@ -138,14 +138,14 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
+      expectedVersion: await versionOf(publicationPath(SLUG)),
       changeId: "chg-live-edit",
     });
     expect(response.status).toBe(200);
     // Saved through saveDraft, a live paper stays live, and the answer carries the contract's id.
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-live-edit" });
-    expect(gh.files.get(publicationPath(SLUG))).toBe(edited);
-    const commit = gh.calls.find((c) => c.method === "POST" && c.path.endsWith("/git/commits"));
+    expect((await storedSource(publicationPath(SLUG)))).toBe(edited);
+    const commit = (await writes()).map((w) => ({ body: { message: w.message } }))[0];
     expect((commit?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-live-edit]");
 
     const after = (await pageData(SLUG)) as { paper: { summary: string } };
@@ -160,13 +160,12 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
   it("does nothing for a save that is byte-identical to the committed file", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: godfather,
-      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
+      expectedVersion: await versionOf(publicationPath(SLUG)),
       changeId: "chg-unchanged",
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, version: await versionOf(gh, publicationPath(SLUG)) });
-    expect(gh.calls.some((c) => c.method === "POST" && c.path.endsWith("/git/commits"))).toBe(false);
-    expect(gh.calls.some((c) => c.method === "POST" && c.path.endsWith("/git/blobs"))).toBe(false);
+    expect(await response.json()).toMatchObject({ id: ID, version: await versionOf(publicationPath(SLUG)) });
+    expect((await writes()).length > 0).toBe(false);
   });
 });
 
@@ -180,7 +179,7 @@ describe("a new record", () => {
     });
     expect(created.status).toBe(200);
     expect(await created.json()).toMatchObject({ id: "publication.cryo-em-example-manuscript", status: "draft" });
-    expect(gh.files.get(publicationPath("cryo-em-example-manuscript"))).toBe(source);
+    expect((await storedSource(publicationPath("cryo-em-example-manuscript")))).toBe(source);
 
     // A draft is not public: its page and twin answer as absent.
     await expect(pageData("cryo-em-example-manuscript")).rejects.toMatchObject({ status: 404 });
@@ -251,20 +250,20 @@ describe("a file the validator refuses", () => {
     expect(response.status).toBe(422);
     const text = JSON.stringify(await response.json());
     for (const field of ["title:", "authors[1]:", "topics[0]:", "summary:"]) expect(text).toContain(field);
-    expect(gh.files.has(publicationPath("cryo-em-example-manuscript"))).toBe(false);
-    expect(gh.calls.some((c) => c.method === "POST" && c.path.endsWith("/git/commits"))).toBe(false);
+    expect(((await storedSource(publicationPath("cryo-em-example-manuscript"))) !== undefined)).toBe(false);
+    expect((await writes()).length > 0).toBe(false);
   });
 
   it("REFUSES a hosted paper whose PDF is not in the repository", async () => {
-    gh.files.delete(`public/research/publications/${SLUG}/dustin-edwards-${SLUG}.pdf`);
+    gh.assets.delete(`public/research/publications/${SLUG}/dustin-edwards-${SLUG}.pdf`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: godfather.replace(/^summary: .*$/m, 'summary: "A different sentence."'),
-      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
+      expectedVersion: await versionOf(publicationPath(SLUG)),
       changeId: "chg-no-pdf",
     });
     expect(response.status).toBe(422);
     expect(JSON.stringify(await response.json())).toContain("is not in the repository");
-    expect(gh.files.get(publicationPath(SLUG))).toBe(godfather);
+    expect((await storedSource(publicationPath(SLUG)))).toBe(godfather);
   });
 
   it("REFUSES a slug that would not fit a Carrel content id", async () => {
@@ -275,7 +274,7 @@ describe("a file the validator refuses", () => {
       changeId: "chg-long",
     });
     expect(response.status).toBeGreaterThanOrEqual(400);
-    expect(gh.files.has(publicationPath(slug))).toBe(false);
+    expect(((await storedSource(publicationPath(slug))) !== undefined)).toBe(false);
   });
 });
 
@@ -541,7 +540,6 @@ versionCases({
   id: ID,
   file: publicationPath(SLUG),
   edit: () => godfather.replace(/^summary: .*$/m, 'summary: "A sentence an edit through Carrel put on the paper."'),
-  gh: () => gh,
   get,
   send,
   timeout: 240000,

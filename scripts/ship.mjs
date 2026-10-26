@@ -408,6 +408,19 @@ if (migrations.state === "unreadable") {
 }
 console.log(`  ${migrations.reason}.`);
 
+announce("The content's source, from D1");
+/*
+ * D1 is the source (scripts/lib/content-source.mjs): a path it has never held is seeded from the repository, then
+ * its files are written over the checkout, so every build product below is made from what the site holds. The
+ * checkout goes back to git's copy when ship exits.
+ */
+for (const step of [["scripts/seed-sources.mjs", "--remote"], ["scripts/pull-sources.mjs", "--remote"]]) {
+  if (run("node", step).code !== 0) refuse(`${step[0]} failed`, "Nothing was built or deployed.");
+}
+process.on("exit", () => {
+  spawnSync(process.execPath, ["scripts/pull-sources.mjs", "--restore"], { cwd: root, stdio: "inherit" });
+});
+
 announce("Build");
 /* Gitignored and imported statically by routes, so it is built before the app build. */
 if (run("npm", ["run", "build:stack"]).code !== 0) {
