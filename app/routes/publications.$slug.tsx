@@ -145,7 +145,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           <Breadcrumb trail={trail} />
 
           {/* The H1 is the title: Scholar reads the first heading as the paper title. */}
-          <h1 className="paper-title">{italicizeOrganisms(decodeEntities(paper.title))}</h1>
+          <h1 className="paper-title cap-layout-grid">{italicizeOrganisms(decodeEntities(paper.title))}</h1>
 
           <Authors authors={paper.authors} />
         </header>

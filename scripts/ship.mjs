@@ -732,6 +732,24 @@ announce("Bring the CV PDF into step");
 
 const cvPdfMiss = await convergeCvPdf({ origin: ORIGIN, token: OPERATOR_TOKEN });
 
+/*
+ * After the D1 sync, which wrote every post's og_image key: build:og draws the cards those keys name and
+ * prunes the old ones, its coupling check passing now that D1 points at the new keys. Before the media
+ * index, which lists the bucket's objects. A miss leaves the deploy standing: a missing card falls
+ * back to no image.
+ */
+
+announce("Draw the share cards");
+
+let cardsMiss = "";
+{
+  const cards = run("npm", ["run", "build:og", "--", "--remote"], { capture: true });
+  if (cards.code !== 0) {
+    cardsMiss = "build:og failed, so new or retitled pages have no share card. Run `npm run build:og -- --remote`.";
+    console.log(`  MISSED: ${cardsMiss}`);
+  }
+}
+
 /* After the deploy, since the rebuild reads the serving build. No poll: D1 reads its own writes. */
 
 announce("Bring the media index into step");
@@ -819,6 +837,7 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
 const misses = [
   { key: "ask", title: "THE ASK INDEX", text: askMiss },
   { key: "cv-pdf", title: "THE CV PDF", text: cvPdfMiss },
+  { key: "cards", title: "THE SHARE CARDS", text: cardsMiss },
   { key: "media", title: "THE MEDIA INDEX", text: mediaMiss },
   { key: "render", title: "THE RENDER", text: renderDriftMiss },
   { key: "watchdog", title: "THE WATCHDOG", text: watchdogMiss },

@@ -39,7 +39,7 @@ export function meta() {
 export default function SiteMap({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell>
-      <h1 className="page-title">Site map</h1>
+      <h1 className="page-title cap-layout-grid">Site map</h1>
       <div className="site-map">
         {loaderData.sections.map((section) => (
           <section key={section.id} className="site-map-section" aria-labelledby={`site-map-${section.id}`}>

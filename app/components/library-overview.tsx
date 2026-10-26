@@ -52,7 +52,7 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         <p className="cap-part-lead">{overviewSentence(overview)}</p>
         <div className="library-browse-grid">
           {overview.start.length > 0 ? (
-            <ol className="library-start" aria-label="Start here">
+            <ol className="library-start" aria-label="Start here" data-livery="">
               {overview.start.map((p) => (
                 <li key={p.slug}>
                   <span className="library-start-mark">Start here</span>

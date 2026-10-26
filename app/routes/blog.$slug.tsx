@@ -225,7 +225,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         />
 
         <header className="post-head">
-          <h1 className="p-name">{post.title}</h1>
+          <h1 className="p-name cap-layout-grid">{post.title}</h1>
           {/* The meta tag's string: `postSocial` falls back to the site description, so the raw column would differ from the head. */}
           <p className="post-dek">{dek}</p>
           <EvidenceRow facts={evidence} />

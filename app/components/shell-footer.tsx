@@ -53,6 +53,8 @@ export function ShellFooter() {
   return (
     <footer className="site-shell-footer">
       <div className="tracks">
+        {/* The livery: the purple band and its pin stripe, as NASA painted its vehicles (capsomer/manual.css). */}
+        <div className="cap-livery footer-livery" aria-hidden="true" />
         {/* The letterhead (capsomer/manual.css): the name as the logotype, the three link columns to its right
             (Dustin, 2026-10-26: no address). */}
         <div className="cap-letterhead footer-letterhead">

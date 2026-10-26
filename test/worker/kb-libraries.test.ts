@@ -88,7 +88,7 @@ describe("the Recipes library", () => {
   it("lists every published recipe with its facts, filters by them, and is in the sitemap", async () => {
     const loaderData = await libraryLoader({ request: request("/recipes"), params: {}, context: routeContext() } as never);
     const html = renderRoute("/recipes", KbLibrary, { loaderData });
-    expect(html).toContain('<h1 class="page-title" id="library-title">Recipes</h1>');
+    expect(html).toContain('<h1 class="page-title cap-layout-grid" id="library-title">Recipes</h1>');
     expect(html).toContain('href="/recipes/tomato-soup"');
     expect(html).toContain("Prep 10 min, cook 30 min");
     expect(html).toContain("1 recipe from the");

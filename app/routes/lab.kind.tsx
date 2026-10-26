@@ -179,7 +179,7 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
     return (
       <PageShell trail={crumbs}>
         <Breadcrumb trail={trail} />
-        <h1 className="page-title" id="registry-title">
+        <h1 className="page-title cap-layout-grid" id="registry-title">
           {item?.name}
         </h1>
         {draft ? <p>Draft: only you can see this page.</p> : null}
@@ -198,7 +198,7 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell trail={crumbs}>
       <Breadcrumb trail={trail} />
-      <h1 className="page-title" id="registry-title">
+      <h1 className="page-title cap-layout-grid" id="registry-title">
         {kindTitle(page.kind)}
       </h1>
       {page.kind === "strain" ? (

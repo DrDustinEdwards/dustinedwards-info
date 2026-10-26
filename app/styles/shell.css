@@ -85,6 +85,11 @@
   margin-block-start: 0;
 }
 
+/* The footer's own margin spaces the band from the page; the letterhead's rule sits under its stripe. */
+.footer-livery {
+  margin-block: 0 var(--s-5);
+}
+
 .cap-letterhead-logo,
 .cap-letterhead-logo:visited {
   display: flex;
@@ -189,33 +194,20 @@
   margin-block-start: var(--s-3);
 }
 
-/* The trail as a mono label, the manual's small caps over the page's head. */
+/* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
+   link colors and underlines are unlayered and would beat the strip's, so its links say them again here. */
 .page-breadcrumb {
   margin: 0 0 var(--s-4);
-  color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.page-breadcrumb ol {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .page-breadcrumb a,
 .page-breadcrumb a:visited {
-  color: var(--text-secondary);
+  color: var(--ground);
   text-decoration: none;
 }
 
 .page-breadcrumb a:hover {
-  color: var(--brand);
   text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .protocol-neighbors {

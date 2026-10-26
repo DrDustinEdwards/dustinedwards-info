@@ -156,7 +156,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
   return (
     <PageShell rail={null}>
-      <h1 className="page-title">{COLOPHON_TITLE}</h1>
+      <h1 className="page-title cap-layout-grid">{COLOPHON_TITLE}</h1>
 
       {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
       <div className="colophon-evidence">

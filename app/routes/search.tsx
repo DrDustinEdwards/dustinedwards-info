@@ -377,7 +377,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       <main className="search-page" id="main" tabIndex={-1}>
-        <h1 className="page-title">Search</h1>
+        <h1 className="page-title cap-layout-grid">Search</h1>
 
         <SearchForm defaultValue={params.q}>
           {params.type ? <input type="hidden" name="type" value={params.type} /> : null}

@@ -109,7 +109,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title" id="phages-title">
+      <h1 className="page-title cap-layout-grid" id="phages-title">
         {page.title}
       </h1>
       {draft ? <p>Draft: only you can see this page.</p> : null}

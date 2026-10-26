@@ -304,7 +304,7 @@ function Entry({ entry, hidden, order }: { entry: CvEntry; hidden: boolean; orde
       data-amount={entry.amount ?? undefined}
       hidden={hidden}
     >
-      <span className="cv-when">{entry.when}</span>
+      <span className="cv-when cap-timeline-mark">{entry.when}</span>
       <div className="cv-body">
         <EntryBody entry={entry} />
       </div>
@@ -352,7 +352,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           <p className="cv-eyebrow">
             {CV_PAGE.title} · {CV.edition}
           </p>
-          <h1 className="cv-name">
+          <h1 className="cv-name cap-layout-grid">
             {CV.person.name}, {CV.person.degree}
           </h1>
           <p className="cv-lede">
@@ -547,7 +547,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                     hidden={!part.ids.some((id) => shown.has(id))}
                   >
                     {part.heading ? <h3 className="cv-part-title">{part.heading}</h3> : null}
-                    <ol className="cv-list">
+                    <ol className="cv-list cap-timeline">
                       {part.ids.map((id) => {
                         const entry = BY_ID.get(id);
                         if (!entry) throw new Error(`cv: grouping named an unknown entry ${id}`);

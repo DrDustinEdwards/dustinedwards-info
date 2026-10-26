@@ -85,7 +85,7 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}>
       <Breadcrumb trail={trail} />
-      <h1 className="page-title">{TITLE}</h1>
+      <h1 className="page-title cap-layout-grid">{TITLE}</h1>
       {/* The map is a string from Capsomer, every text in it escaped there. A chosen system is drawn zoomed in. */}
       <div className="systems-map" dangerouslySetInnerHTML={{ __html: chosen ? mapHtml(chosen) : MAP }} />
       {/* Every system's facts, all shown with no script; with script, only the chosen one's (systems.css). */}

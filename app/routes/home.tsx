@@ -233,6 +233,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <PlateKeyRow />
         <Enhance module="plate" />
 
+        {/* The work in figures, as the manual sets type on stepped grays (capsomer/manual.css form boxes, tones). */}
+        <dl className="cap-form-boxes home-readings" data-variant="tones">
+          <div className="cap-form-boxes-box">
+            <dt>Papers</dt>
+            <dd>{paperCount}</dd>
+          </div>
+          <div className="cap-form-boxes-box">
+            <dt>Student researchers</dt>
+            <dd>{discovery.researchers}</dd>
+          </div>
+          <div className="cap-form-boxes-box">
+            <dt>Cohorts</dt>
+            <dd>{discovery.cohorts}</dd>
+          </div>
+          <div className="cap-form-boxes-box">
+            <dt>Posts</dt>
+            <dd>{posts}</dd>
+          </div>
+        </dl>
+
         <Section
           id="research"
           no="1"

@@ -73,7 +73,7 @@ export default function LabRoute({ loaderData }: Route.ComponentProps) {
       trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title" id="registry-title">
+      <h1 className="page-title cap-layout-grid" id="registry-title">
         {TITLE}
       </h1>
       <LabInventory rows={rows} result={result} />

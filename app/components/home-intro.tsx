@@ -31,7 +31,7 @@ export function HomeIntro() {
         <span>{SITE.department}</span>
         <span>{PLACE}</span>
       </p>
-      <h1 className="intro-name p-name" id="intro-h">
+      <h1 className="intro-name p-name cap-layout-grid" id="intro-h">
         {SITE.name}
       </h1>
       <p className="intro-affil">

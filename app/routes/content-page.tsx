@@ -1,3 +1,4 @@
+import { patchSvg } from "capsomer/behavior/manual";
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -12,6 +13,7 @@ import { listRoster } from "~/db/roster";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
+import { patchOf } from "~/lib/running-head";
 import {
   contentPageCardPath,
   contentPageMarkdownPath,
@@ -90,6 +92,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const { page, trail, entry, roster, draft, search } = loaderData;
   const sections = contentsOf(page.html);
+  const patch = patchOf(page.path);
   return (
     <PageShell
       rail={sections.length >= CONTENTS_MIN ? <PageContents sections={sections} /> : null}
@@ -106,7 +109,15 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title">{page.title}</h1>
+      {patch ? (
+        <div className="page-patched">
+          <h1 className="page-title cap-layout-grid">{page.title}</h1>
+          {/* Decorative: the trail and the running head say the same in words. */}
+          <span dangerouslySetInnerHTML={{ __html: patchSvg(patch) }} />
+        </div>
+      ) : (
+        <h1 className="page-title cap-layout-grid">{page.title}</h1>
+      )}
       {draft ? <p>Draft: only you can see this page.</p> : null}
       {page.banner || page.lastUpdated ? (
         <div className="legal-status">

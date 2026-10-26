@@ -157,7 +157,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
       }
     >
       <Breadcrumb trail={trail} />
-      <h1 className="page-title" id="library-title">
+      <h1 className="page-title cap-layout-grid" id="library-title">
         {base.name}
       </h1>
       {empty ? (

@@ -111,7 +111,7 @@ function regroup(sort: CvState["sort"]) {
         h3.textContent = part.heading;
         wrap.appendChild(h3);
       }
-      const list = el("ol", "cv-list");
+      const list = el("ol", "cv-list cap-timeline");
       for (const id of part.ids) {
         const li = items.get(id);
         if (!li) throw new Error(`cv: grouping named an entry the page does not have: ${id}`);
