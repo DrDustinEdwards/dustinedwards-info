@@ -2,3 +2,16 @@
 .phage-catalog {
   margin-block: 1.5rem 2rem;
 }
+
+/* A row is a phage's anchor (/research/phages#acorn15): land it below the sticky header. */
+.phage-catalog [id] {
+  scroll-margin-top: calc(var(--header-h) + 1rem);
+}
+
+/* A note ("A manuscript on Rira is submitted.") wraps under the name instead of widening the table. */
+.phage-note {
+  display: block;
+  white-space: normal;
+  color: var(--muted);
+  font-size: var(--t-small-size);
+}

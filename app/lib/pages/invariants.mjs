@@ -3,7 +3,7 @@
 // the page is live before CI runs, so the rules live here, where compilePage runs them for the build, the
 // sync, CI's tests and the page save alike (docs/PAGES.md). A message names the page and says what to restore.
 
-import { PHAGES_PAGE_PATH, TABLE_MARKER, sortPhages } from "../phages/compile.mjs";
+import { PHAGES_PAGE_PATH, TABLE_MARKER, formerlyText, sortPhages } from "../phages/compile.mjs";
 import { phagesDbUrl } from "../phage-table.mjs";
 import { TOOLS, runTool, toolValues } from "../phage-tools.mjs";
 
@@ -116,20 +116,20 @@ function servedRows(/** @type {string} */ html) {
 }
 
 /**
- * The phage table and its sections, as drawn from the phage rows (docs/PHAGES.md): the table lists every phage in
- * the page's order with all six columns, a PhagesDB link for exactly the phages with a verified record, at that
- * record, and a heading per phage, which the old /discovery-of-{name} addresses redirect to. The generated text
- * satisfies most of this by construction; what these catch is the page's own prose getting in the way: a second
- * table ahead of the generated one, a heading that repeats a phage's, or a PhagesDB link written by hand.
+ * The phage table, as drawn from the phage rows (docs/PHAGES.md): the table lists every phage in the page's order
+ * with all six columns, and a PhagesDB link for exactly the phages with a verified record, at that record. The
+ * generated text satisfies most of this by construction; what these catch is the page's own prose getting in the
+ * way: a second table ahead of the generated one, or a PhagesDB link written by hand.
  *
  * @param {InvariantPage} page
  * @param {import("../phages/compile.mjs").Phage[] | undefined} phages
  */
-function phageTableErrors({ path, markdown, html }, phages) {
+function phageTableErrors({ path, html }, phages) {
   if (path !== PHAGES_PAGE_PATH || !phages) return [];
   /** @type {string[]} */
   const errors = [];
-  const names = sortPhages(phages).map((p) => p.name);
+  const byLabel = new Map(sortPhages(phages).map((p) => [`${p.name}${formerlyText(p)}`, p]));
+  const names = [...byLabel.keys()];
   const rows = servedRows(html);
   const listed = rows.map((cells) => text(cells[0] ?? ""));
   if (listed.join("\n") !== names.join("\n")) {
@@ -147,7 +147,7 @@ function phageTableErrors({ path, markdown, html }, phages) {
   for (const cells of rows) {
     const name = text(cells[0] ?? "");
     if (cells.length !== 6) errors.push(`${name} has ${cells.length} columns; the table has six`);
-    const record = phages.find((p) => p.name === name)?.phagesdb ?? null;
+    const record = byLabel.get(name)?.phagesdb ?? null;
     const links = hrefsOf(cells[4] ?? "");
     const want = record ? [phagesDbUrl(record)] : [];
     if (links.join(" ") !== want.join(" ")) {
@@ -157,15 +157,6 @@ function phageTableErrors({ path, markdown, html }, phages) {
   const verified = new Set(phages.flatMap((p) => (p.phagesdb ? [phagesDbUrl(p.phagesdb)] : [])));
   for (const href of [...html.matchAll(/href="(https:\/\/phagesdb\.org[^"]*)"/g)].map((m) => m[1] ?? "")) {
     if (!verified.has(href)) errors.push(`${href} is a PhagesDB link outside the verified records`);
-  }
-  for (const { name, phagesdb: record } of phages) {
-    const parts = markdown.split(`\n### ${name}\n`);
-    const section = parts[1]?.split("\n### ")[0] ?? "";
-    if (parts.length > 2) errors.push(`${name} has ${parts.length - 1} ### sections; the page's own text repeats the heading the drawn section has`);
-    else if (!section) errors.push(`${name} has no ### section; the old /discovery-of-${name.toLowerCase()} address redirects to its heading`);
-    else if (section.includes("phagesdb.org") !== (record !== null)) {
-      errors.push(`the ${name} section ${record !== null ? "must link" : "must not link"} PhagesDB, as the table does`);
-    }
   }
   return errors;
 }

@@ -6,7 +6,7 @@
 // table changes on the next request with no build or deploy. The commit is never reverted when a derived write
 // fails: the error says the commit landed and how to repair it.
 //
-// /research/phages is compiled from these rows (its table, its sections, its twin, its search records), and
+// /research/phages is compiled from these rows (its table, its twin, its search records), and
 // those live in the page's own row. So a write refreshes that page row FIRST, through the page compile door,
 // and the phage's own row LAST: the phage row's blob sha is what the drift check reads as "current", so a
 // failure between the two leaves the phage reading stale and the repair re-runs both. The purge is the pages
