@@ -25,7 +25,7 @@
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.24.0",
     "@modelcontextprotocol/server": "2.3.1",
     "agents": "0.29.0",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "overrides": {
     "@modelcontextprotocol/sdk": "1.32.1",
