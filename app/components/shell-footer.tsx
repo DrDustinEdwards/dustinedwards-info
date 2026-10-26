@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router";
+import { Link } from "react-router";
 
 import { GermomicsMark } from "~/components/germomics-mark";
 import { CapsidIcon, FlaskIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-tool-icons";
