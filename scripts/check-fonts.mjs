@@ -151,7 +151,12 @@ function fontFor(file) {
 // Namespaced families legitimately differ from the binary's name table: the serif is namespaced so a
 // reader with the retail family installed cannot put a different file in the resolution path.
 /** @type {Map<string, string>} declared family -> the family its file must report */
-const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
+const NAMESPACED = new Map([
+  ["Source Serif 4 Web", "Source Serif 4"],
+  ["Schibsted Grotesk Web", "Schibsted Grotesk"],
+  // Fontsource's wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
+  ["Martian Mono Web", "Martian Mono SemiExpanded"],
+]);
 
 for (const b of withFile) {
   const rel = relative(root, b.file);
@@ -449,8 +454,9 @@ if (update) {
 
 // Measured on a plain run: `--update` skips the per-binary baseline comparisons.
 // 512 after the playground stylesheets were retired with /playground (2026-09-28): their 8 checks
-// went with them, no block was skipped.
-const MINIMUM_CHECKS = 505;
+// went with them, no block was skipped. 438 after Inter's latin faces were replaced by Schibsted Grotesk and
+// Martian Mono (2026-10-26): fewer faces and binaries, no block skipped.
+const MINIMUM_CHECKS = 438;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(

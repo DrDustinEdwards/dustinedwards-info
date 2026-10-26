@@ -4,7 +4,7 @@
   width: 11rem;
   height: auto;
   margin: 0 0 1.5rem;
-  border-radius: 0.25rem;
+  border-radius: 0;
 }
 
 @media (min-width: 46rem) {

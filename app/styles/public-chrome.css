@@ -8,9 +8,12 @@
   --header-bg: var(--paper);
   --header-fg: var(--text);
   --header-fg-muted: var(--text-secondary);
-  --header-line: var(--dust);
+  /* The manual's mast: the name as the logotype over a hairline in the ink. */
+  --header-line: var(--text);
   --header-accent: var(--brand);
   --font-ui: var(--font-sans);
+  /* The page's gutter, so the name lines up with the running head and the page under it. */
+  --header-side: var(--gutter);
   z-index: var(--z-pinned-bar);
 }
 
@@ -27,9 +30,9 @@ html {
 .site-header-brand,
 .site-header-brand:visited {
   color: var(--header-fg);
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   line-height: 1;
   text-decoration: none;
 }
@@ -37,9 +40,6 @@ html {
 .site-header-brand:hover {
   color: var(--brand);
 }
-
-/* No fill rule for the mark: any rule here would beat the logo's own fills. Re-ink it through
- * .site-logo-brand. */
 
 .site-header a.cap-site-header-icon,
 .site-header a.cap-site-header-icon:visited {
@@ -115,4 +115,13 @@ html {
     gap: 0.5rem;
     font-size: 0.9375rem;
   }
+}
+
+/* The running head (site-header.tsx, capsomer/manual.css): under the mast, across the page's wide column. */
+.running-head-tracks {
+  margin-block-start: var(--s-5);
+}
+
+.running-head-trail {
+  font-weight: 400;
 }

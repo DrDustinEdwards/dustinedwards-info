@@ -1,13 +1,13 @@
 import { ThemeForm } from "capsomer/react/theme-switch";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useMatches } from "react-router";
 
 import { Enhance } from "~/components/enhance";
 import { SearchTrigger } from "~/components/search-trigger";
-import { SiteLogoHeader } from "~/components/site-logo";
 import { Icon, SiteNavPanel } from "~/components/site-nav-panel";
 import { SiteSpeculation } from "~/components/site-speculation";
 import { HeaderTip } from "~/components/header-tip";
 import { buildNav, type Menu, type NavIcon, type NavItem } from "~/lib/nav";
+import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 
 const NAV_ID = "site-nav";
@@ -101,6 +101,32 @@ function SheetRow({ link, pathname }: { link: SheetLink; pathname: string }) {
 }
 
 /**
+ * The running head under the header on every page but the home page, whose cover takes its place: the section's
+ * number and trail, and the deepest route's folio (its `handle.folio`) or the site's name.
+ */
+function RunningHead({ pathname }: { pathname: string }) {
+  const matches = useMatches();
+  if (pathname === "/") return null;
+  const section = sectionOf(pathname);
+  let folio: string | null | undefined;
+  for (const match of matches) {
+    const handle = match.handle as RunningHeadHandle | undefined;
+    if (handle?.folio) folio = handle.folio(match.loaderData) ?? folio;
+  }
+  return (
+    <div className="tracks running-head-tracks">
+      <div className="cap-running-head u-wide">
+        <span className="cap-running-head-name">
+          <span className="cap-running-head-no">{section.no}</span>
+          <span className="running-head-trail">{section.trail.join(" · ")}</span>
+        </span>
+        <span className="cap-running-head-folio">{folio ?? SITE.name}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Capsomer's site header (capsomer/components/site-header/site-header.md), written by hand because the public
  * plane does not hydrate: 56px, sticky, full width; the site's logo, its five sections on the right after the
  * divider, then Search and the theme, with the avatar's slot held empty after it so the theme sits where the admin's does. Under 768px it is one row, and a Menu button opens
@@ -112,10 +138,9 @@ export function SiteHeader() {
   const { pathname } = useLocation();
   const nav = buildNav();
   return (
+    <>
     <header className="cap-site-header site-header" data-cap="site-header" data-links="right" data-site-header="">
       <Link to="/" className="cap-site-header-logo site-header-brand">
-        {/* Decorative: the wordmark beside it is the link's name, so naming the mark would read twice. */}
-        <SiteLogoHeader className="site-header-mark" />
         {SITE.name}
       </Link>
       <nav className="cap-site-header-sections site-header-nav" id={NAV_ID} aria-label="Site" data-site-nav="">
@@ -192,5 +217,7 @@ export function SiteHeader() {
       {/* Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts. */}
       <Enhance module="header" />
     </header>
+    <RunningHead pathname={pathname} />
+    </>
   );
 }

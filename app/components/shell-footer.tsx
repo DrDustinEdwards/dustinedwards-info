@@ -1,8 +1,7 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import { GermomicsMark } from "~/components/germomics-mark";
 import { CapsidIcon, FlaskIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-tool-icons";
-import { SiteLogoHeader } from "~/components/site-logo";
 import {
   BRAND_PROFILES,
   type FooterLink,
@@ -13,6 +12,7 @@ import {
   SOCIAL_LINKS,
   TOOLS_HEADING,
 } from "~/lib/footer";
+import { sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 
 const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
@@ -21,6 +21,9 @@ const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
   capsid: CapsidIcon,
   flask: FlaskIcon,
 };
+
+/** Where the department is: Tarleton's main campus. */
+const ADDRESS_PLACE = "Stephenville, Texas";
 
 /** X's own logo path, unaltered, in the footer's ink. */
 function XMark() {
@@ -51,16 +54,31 @@ function FooterAnchor({ link }: { link: FooterLink }) {
  * copyright and nothing else (Dustin, 2026-10-11).
  */
 export function ShellFooter() {
+  const { pathname } = useLocation();
+  // The folio is the section's whole number, as the manual numbers a page by its part.
+  const folio = pathname === "/" ? "1" : sectionOf(pathname).no.split(".")[0];
   return (
     <footer className="site-shell-footer">
       <div className="tracks">
+        {/* The letterhead (capsomer/manual.css): the name as the logotype, the address beside it, the folio. */}
+        <div className="cap-letterhead">
+          <Link to="/" className="cap-letterhead-logo">
+            {SITE.name.split(" ").map((word) => (
+              <span key={word}>{word}</span>
+            ))}
+          </Link>
+          <p className="cap-letterhead-address">
+            <b>{SITE.department}</b>
+            <br />
+            {SITE.affiliation}
+            <br />
+            {ADDRESS_PLACE}
+          </p>
+          <span className="cap-letterhead-folio">{folio}</span>
+        </div>
         <div className="footer-grid">
-          {/* The brand block: logo, name, social marks, then the profile links and the feed. No title line: the hero carries it. */}
+          {/* Social marks, then the profile links and the feed. */}
           <div className="footer-identity">
-            <Link to="/" className="footer-home">
-              <SiteLogoHeader className="footer-logo" />
-              <span className="footer-name">{SITE.name}</span>
-            </Link>
             <ul className="footer-social" aria-label="Social media">
               {SOCIAL_LINKS.map((link) => (
                 <li key={link.to}>

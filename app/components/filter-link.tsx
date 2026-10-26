@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router";
-import { interWidthEm } from "~/lib/inter-width";
+import { uiWidthEm } from "~/lib/ui-width";
 
 /** One link in a `.list-filter` row: its name box is Inter's width, whichever face draws it. */
 export function FilterLink({
@@ -16,7 +16,7 @@ export function FilterLink({
   active: boolean;
   title?: string;
 }) {
-  const width = { "--name-w": `${interWidthEm(label, active ? 600 : 400)}em` } as CSSProperties;
+  const width = { "--name-w": `${uiWidthEm(label, active ? 600 : 400)}em` } as CSSProperties;
   return (
     <Link to={to} aria-current={active ? "true" : undefined} title={title}>
       <span className="filter-name" style={width}>

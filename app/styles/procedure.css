@@ -1,26 +1,36 @@
 /* Procedure pages and their printable sheets (app/components/procedure.tsx). Complete with script off:
    the scaling form is a plain GET and every flag is in the server's HTML. */
 
+/* The facts as a title block: ruled boxes sharing their rules, a mono label over each value (the manual's
+   form boxes, capsomer/manual.css). */
 .procedure-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.75rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   margin: 0 0 1.25rem;
-  padding: 0.875rem 0;
-  border-block: var(--line-w) solid var(--border);
+  border-block-start: var(--line-w) solid var(--text);
+  border-inline-start: var(--line-w) solid var(--text);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+}
+
+.procedure-facts > div {
+  min-inline-size: 0;
+  padding: 6px var(--s-3) var(--s-3);
+  border-inline-end: var(--line-w) solid var(--text);
+  border-block-end: var(--line-w) solid var(--text);
 }
 
 .procedure-facts dt {
   color: var(--text-secondary);
-  font-weight: 400;
+  font: 500 0.6875rem / 1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .procedure-facts dd {
   margin: 0.125rem 0 0;
   color: var(--text);
-  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .procedure-links {
@@ -177,27 +187,29 @@
   margin: 0;
 }
 
+/* A flag as a ruled note with a strip along its top: the danger color for a critical step, the family's for a
+   pause, the ink otherwise. */
 .procedure-flag {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.75rem;
-  border-inline-start: 3px solid var(--border);
-  background: var(--dust);
+  border: var(--line-w) solid var(--text);
+  border-block-start: 4px solid var(--text);
   font-size: 0.9375rem;
   line-height: 1.5;
 }
 
 .procedure-flag-critical {
-  border-inline-start-color: var(--text-danger);
+  border-block-start-color: var(--text-danger);
 }
 
 .procedure-flag-pause {
-  border-inline-start-color: var(--brand);
+  border-block-start-color: var(--brand);
 }
 
 .procedure-flag-label {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  letter-spacing: 0.01em;
+  font: 700 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .procedure-flag-critical .procedure-flag-label {
@@ -270,15 +282,16 @@
 
 .procedure-sheet-head h1 {
   margin: 0;
-  font-size: 1.5rem;
-  line-height: 1.2;
+  font: 700 1.75rem / 1.1 var(--font-sans);
+  letter-spacing: -0.02em;
 }
 
 .procedure-sheet-head p {
-  margin: 0.25rem 0 1rem;
+  margin: 0.5rem 0 1rem;
   color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 
 .procedure-sheet h2 {
@@ -320,7 +333,7 @@
 .procedure-workflow {
   margin-block: 1rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
 }
@@ -335,6 +348,9 @@
 }
 .procedure-workflow-links dt {
   color: var(--text-secondary);
+  font: 500 0.6875rem / 2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .procedure-workflow-links dd {
   display: flex;
@@ -382,6 +398,8 @@
 /* The QR code, top right of the sheet's head, so it prints beside the title and costs no line of the method. */
 .procedure-sheet-head {
   display: grid;
+  padding-block-start: var(--s-3);
+  border-block-start: 4px solid var(--text);
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 1rem;
 }

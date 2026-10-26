@@ -17,15 +17,27 @@ function orgLines(org: string): string[] {
   return [org.slice(0, at).trim(), org.slice(at + 1).trim()].filter(Boolean);
 }
 
+/** Where the department is: Tarleton's main campus. */
+const PLACE = "Stephenville, Texas";
+
+/**
+ * The cover of a technical report (the manual theme): the department and the place over a heavy rule, the
+ * name large, the role, and the organization at the foot over a hairline.
+ */
 export function HomeIntro() {
   return (
     <section className="home-intro h-card" aria-labelledby="intro-h">
+      <p className="cover-top">
+        <span>{SITE.department}</span>
+        <span>{PLACE}</span>
+      </p>
       <h1 className="intro-name p-name" id="intro-h">
         {SITE.name}
       </h1>
       <p className="intro-affil">
-        <span className="p-job-title">{SITE.role}</span>
-        <span>{SITE.department}</span>
+        <b className="p-job-title">{SITE.role}</b>
+      </p>
+      <p className="cover-foot">
         <span className="p-org">
           {orgLines(SITE.org).map((line, i) => (
             <Fragment key={line}>

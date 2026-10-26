@@ -4,9 +4,6 @@
   padding: 2rem 1.25rem 4rem;
 }
 
-.search-heading {
-  margin: 0 0 1rem;
-}
 
 .search-form {
   margin: 0 0 1.5rem;
@@ -28,7 +25,7 @@
   min-width: 0;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: 0;
   background: var(--paper);
   color: var(--text);
   font: inherit;
@@ -100,7 +97,7 @@
 .search-type {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--text-secondary);
   font-size: 0.6875rem;
   text-transform: uppercase;
@@ -121,7 +118,7 @@
 /* Gold, not purple: purple would read as brand rather than as a match. */
 .search-snippet mark {
   padding: 0 0.125rem;
-  border-radius: 0.125rem;
+  border-radius: 0;
   background: var(--mark-bg);
   color: var(--text);
 }

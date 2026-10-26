@@ -2,6 +2,7 @@ import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { DictionaryEntry } from "~/components/dictionary-entry";
+import { CONTENTS_MIN, contentsOf, PageContents } from "~/components/page-contents";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
@@ -88,8 +89,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const { page, trail, entry, roster, draft, search } = loaderData;
+  const sections = contentsOf(page.html);
   return (
     <PageShell
+      rail={sections.length >= CONTENTS_MIN ? <PageContents sections={sections} /> : undefined}
       trail={
         <>
           {contentPageJsonLd(page, trail, entry).map((block, i) => (

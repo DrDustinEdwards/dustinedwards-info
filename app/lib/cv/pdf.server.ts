@@ -16,7 +16,7 @@ import { purgeCv, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { cvFingerprint, cvPdfOptions, fontFaceRule, PDF_FONTS, renderCvHtml } from "~/lib/cv/pdf-html.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
-import interNormalUrl from "~/fonts/inter-latin-normal.woff2?url";
+import sansNormalUrl from "~/fonts/schibsted-grotesk-latin-normal.woff2?url";
 import serifItalicUrl from "~/fonts/source-serif-4-latin-italic.woff2?url";
 import serifNormalUrl from "~/fonts/source-serif-4-latin-normal.woff2?url";
 
@@ -30,7 +30,7 @@ export const FINGERPRINT_FIELD = "fingerprint";
 const FONT_URLS: Record<(typeof PDF_FONTS)[number]["file"], string> = {
   "source-serif-4-latin-normal.woff2": serifNormalUrl,
   "source-serif-4-latin-italic.woff2": serifItalicUrl,
-  "inter-latin-normal.woff2": interNormalUrl,
+  "schibsted-grotesk-latin-normal.woff2": sansNormalUrl,
 };
 
 /** A render that finds a newer CV after it started tries again, this many times at most. */

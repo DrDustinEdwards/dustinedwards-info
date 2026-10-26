@@ -1,15 +1,14 @@
+import { CONTENTS_MIN, PageContents } from "~/components/page-contents";
+
 import type { Route } from "../routes/+types/blog.$slug";
 
 type LoadedPost = Route.ComponentProps["loaderData"]["post"];
-
-/** Below this, a contents list is furniture rather than a map. */
-const TOC_MIN = 3;
 
 export function ymd(value: Date | string | number) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
-/** The rail: the machine-readable dates and, past `TOC_MIN` sections, the contents. */
+/** The rail: the machine-readable dates and, from `CONTENTS_MIN` sections, the contents. */
 export function PostRail({
   post,
   revisedLabel,
@@ -46,18 +45,7 @@ export function PostRail({
         )}
       </p>
 
-      {sections.length >= TOC_MIN && (
-        <nav className="post-toc" aria-labelledby="contents-heading">
-          <p id="contents-heading">Contents</p>
-          <ol>
-            {sections.map((entry) => (
-              <li key={entry.id}>
-                <a href={`#${entry.id}`}>{entry.text}</a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      )}
+      {sections.length >= CONTENTS_MIN && <PageContents sections={sections} label="Contents" className="post-toc" />}
     </div>
   );
 }

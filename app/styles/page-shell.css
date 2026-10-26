@@ -1,10 +1,70 @@
+/* Left-aligned under the running head, at the same gutter, as the manual's pages hang from their head. */
 .page {
-  padding: 2rem;
+  padding: 2rem var(--gutter);
 }
 
 .page-inner {
   max-width: 48rem;
-  margin: 0 auto;
+}
+
+.page-inner-railed {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-7);
+  max-width: none;
+}
+
+.page-column {
+  min-inline-size: 0;
+  max-inline-size: 48rem;
+}
+
+@media (min-width: 64rem) {
+  .page-inner-railed {
+    grid-template-columns: 14rem minmax(0, 48rem);
+    gap: var(--s-8);
+  }
+
+  .page-rail {
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    inset-block-start: calc(var(--header-h) + var(--s-5));
+    align-self: start;
+  }
+}
+
+/* The rail's index, small: the label in the mono over the manual's dotted-leader index, the leaders dropped. */
+.page-contents-label {
+  margin: 0 0 var(--s-2);
+  color: var(--text-secondary);
+  font: 500 0.6875rem / 1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The public plane's link rules are unlayered and the index's layered, so its ink is restated here. */
+.cap-leader-index-link,
+.cap-leader-index-link:visited {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.cap-leader-index-link:hover .cap-leader-index-name,
+.cap-leader-index-link[aria-current] .cap-leader-index-name {
+  color: var(--brand);
+}
+
+.page-contents .cap-leader-index-link {
+  gap: var(--s-3);
+  min-block-size: 0;
+  padding-block: var(--s-2);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.page-contents .cap-leader-index-no {
+  min-inline-size: 2ch;
 }
 
 .error-stack {
@@ -12,18 +72,20 @@
   overflow-x: auto;
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
   background: var(--paper);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
 
 .page-title {
-  margin: 0;
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--brand);
+  margin: 0 0 var(--s-5);
+  color: var(--text);
+  font-family: var(--t-h1-family);
+  font-size: var(--t-h1-size);
+  font-weight: var(--t-h1-weight);
+  letter-spacing: var(--t-h1-tracking);
+  line-height: var(--t-h1-leading);
+  text-wrap: balance;
 }
 
 .page-intro {
@@ -52,7 +114,6 @@
 .legal-banner {
   padding: 0.125rem 0.625rem;
   border: var(--line-w) solid var(--border-warning);
-  border-radius: 0.375rem;
   background: var(--tint-warning);
   color: var(--on-tint-warning);
   font-size: 0.875rem;
@@ -64,4 +125,16 @@
 .legal-updated {
   color: var(--text-secondary);
   font-size: 0.9375rem;
+}
+
+/* A page that sets its own head (about, contact, gone) takes the same title as `.page-title`. */
+.page-head h1 {
+  margin: 0 0 var(--s-5);
+  color: var(--text);
+  font-family: var(--t-h1-family);
+  font-size: var(--t-h1-size);
+  font-weight: var(--t-h1-weight);
+  letter-spacing: var(--t-h1-tracking);
+  line-height: var(--t-h1-leading);
+  text-wrap: balance;
 }

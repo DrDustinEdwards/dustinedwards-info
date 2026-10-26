@@ -18,8 +18,8 @@ export function LibraryCite({
   citation: ReturnType<typeof libraryCitation>;
 }) {
   return (
-    <section className="library-cite" aria-labelledby="library-cite-title">
-      <h2 id="library-cite-title" className="library-overview-title">
+    <section className="cap-part library-cite" aria-labelledby="library-cite-title">
+      <h2 id="library-cite-title" className="cap-part-title">
         Download and cite
       </h2>
       <p>

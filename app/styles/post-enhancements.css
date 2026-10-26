@@ -9,22 +9,20 @@
   transition: transform 0.1s linear;
 }
 
-.post-toc a[aria-current="location"] {
-  color: var(--brand);
-  font-weight: 500;
-}
-
 .post-series {
   margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
-  border-left: 3px solid var(--brand);
+  padding: 0.75rem 1rem 1rem;
+  border: var(--line-w) solid var(--text);
+  border-block-start: 0.25rem solid var(--text);
   background: var(--paper);
-  border-radius: 0 0.5rem 0.5rem 0;
+  font-family: var(--font-sans);
 }
 
 .post-series h2 {
   margin: 0 0 0.5rem;
-  font-size: 0.9375rem;
+  font: 500 0.6875rem / 1.7 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .post-series ol {
@@ -107,7 +105,7 @@
   max-width: 22rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0;
   background: var(--paper);
   box-shadow: var(--shadow-popover);
   font-size: 0.875rem;
@@ -175,7 +173,7 @@
   background: var(--paper);
   max-width: 100%;
   max-height: 85vh;
-  border-radius: 0.375rem;
+  border-radius: 0;
 }
 
 /* The dialog keeps overflow: visible because the close button is positioned against it. */
@@ -186,7 +184,7 @@
   min-height: 44px;
   padding: 0 1rem;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--paper);
   color: var(--text);
   font-size: 0.9375rem;
@@ -262,7 +260,7 @@
   margin: 0.5rem 0 1rem;
   padding: 0.25rem 0.75rem;
   border: 1px dashed var(--border-strong);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--paper);
   color: var(--text-secondary);
   font: inherit;
