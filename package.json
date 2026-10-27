@@ -142,7 +142,7 @@
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2003",
     "puppeteer": "25.4.0",
-    "satori": "0.29.0",
+    "satori": "0.33.5",
     "sharp": "0.35.5",
     "typescript": "5.9.3",
     "unpdf": "1.8.1",
