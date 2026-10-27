@@ -44,8 +44,8 @@ const PAGE_TWINS = new Set(CONTENT_PAGE_PATHS.map((p) => contentPageMarkdownPath
 
 /** The namespaces this module can list completely. */
 const OWNED = /^\/(?:research|teaching|software|recipes|writing)(?:\/|$)/;
-/** Listed elsewhere: papers and citation exports, feeds, tag and series pages. */
-const NOT_LISTED = /^\/(?:research\/publications|writing\/(?:tags|series|rss\.xml|feed\.json|atom\.xml))(?:[/.]|$)/;
+/** Listed elsewhere: papers and citation exports, the lab registry (strains, primers), feeds, tag and series pages. */
+const NOT_LISTED = /^\/(?:research\/publications|research\/lab|writing\/(?:tags|series|rss\.xml|feed\.json|atom\.xml))(?:[/.]|$)/;
 
 /**
  * @param {string} path
