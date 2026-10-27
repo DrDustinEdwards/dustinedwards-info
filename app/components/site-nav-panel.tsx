@@ -150,7 +150,7 @@ const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
   ),
 };
 
-export function Icon({ name }: { name: NavIcon }) {
+function Icon({ name }: { name: NavIcon }) {
   return (
     <svg
       className="site-nav-icon"

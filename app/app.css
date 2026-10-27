@@ -824,12 +824,19 @@ body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
   --site-inset: 1.5rem;
-  /* --header-h is the header's height, read by scroll-padding-top and the sticky post rail. Capsomer's
-     site header is 56px at every width (site-header.md) and reads the same property for its own height. */
-  --header-h: 3.5rem;
+  /* --header-h is what the pinned letterhead covers, read by the sticky rails and scroll margins: its 120px
+     band, and from 768px the 16px gap above it (capsomer site-header.md). */
+  --header-h: 7.5rem;
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
+}
+
+@media (min-width: 768px) {
+  html,
+  body {
+    --header-h: calc(7.5rem + 16px);
+  }
 }
 
 ::selection {

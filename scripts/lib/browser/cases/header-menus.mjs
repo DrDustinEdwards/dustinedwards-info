@@ -1,15 +1,15 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok, pollUntil } from "../harness.mjs";
+import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok } from "../harness.mjs";
 
 /*
- * The header (app/components/site-header.tsx) is Capsomer's site header written by hand, wired by
- * app/enhance/header.ts with Capsomer's behavior: 56px, sticky, full width; a disclosure button per section,
+ * The header (app/components/site-header.tsx) is Capsomer's letterhead written by hand, wired by
+ * app/enhance/header.ts with Capsomer's behavior: two rows, 120px, pinned at the top; a disclosure button per section,
  * never role=menu. A click toggles aria-expanded; Enter opens with focus on the panel's first link, Down
  * moves through it and Escape hands focus back; a mouse opens a panel at once and leaving closes it. The
- * panel starts under the header, one width, inside the viewport. On a phone the header is one row and the
- * Menu button opens Capsomer's sheet with every section's links. Every link the panels render answers 200,
+ * panel starts under the header, one width, inside the viewport. On a phone the letterhead keeps its links
+ * row, which scrolls sideways inside the band. Every link the panels render answers 200,
  * and the spotlights point at pages that carry what they say. On pages of its own, so no navigation here
  * voids a later case on the shared page.
  */
@@ -132,19 +132,26 @@ export async function run({ browser }) {
             width: Math.round(box.width),
             client: document.documentElement.clientWidth,
             position: getComputedStyle(header).position,
-            last: header.querySelector(".cap-site-header-tools > :nth-last-child(2)")?.className ?? "",
+            letterhead: header.getAttribute("data-variant") === "letterhead",
+            /* Search, then the theme: the places the admin gives them. */
+            tools: [...header.querySelectorAll(".cap-site-header-search, .cap-site-header-theme")]
+              .filter((el) => el.getBoundingClientRect().width > 0)
+              .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
+              .map((el) => (el.matches(".cap-site-header-search") ? "search" : "theme"))
+              .join(),
           }
         : null;
     });
     ok(
-      "the header is Capsomer's site header, wired: 56px, sticky, full width, and the account (Sign in) last before the phone's Menu",
+      "the header is Capsomer's letterhead, wired: 120px, pinned, inside the page's margins, with search and then the theme",
       frame !== null &&
         frame.capsomer &&
         frame.ready &&
-        frame.height === 56 &&
-        frame.width === frame.client &&
+        frame.letterhead &&
+        frame.height === 120 &&
+        frame.width < frame.client &&
         frame.position === "sticky" &&
-        frame.last.includes("cap-site-header-account"),
+        frame.tools === "search,theme",
       JSON.stringify(frame),
     );
 
@@ -276,77 +283,44 @@ export async function run({ browser }) {
       ok("the Research button is laid out for the hover check", false, "no box");
     }
 
-    /* Each icon control names itself in Capsomer's tip on hover. */
-    const searchAt = await page.evaluate(() => {
-      const r = document.querySelector("[data-search-trigger]")?.getBoundingClientRect();
-      return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+    /* The search box is a form to /search, so it searches with no script. */
+    const search = await page.evaluate(() => {
+      const form = document.querySelector("form[data-search-trigger]");
+      return form instanceof HTMLFormElement
+        ? { action: new URL(form.action).pathname, method: form.method, field: form.querySelector('input[name="q"]')?.getAttribute("type") ?? null }
+        : null;
     });
-    if (searchAt) {
-      await page.mouse.move(searchAt.x, searchAt.y, { steps: 2 });
-      const tip = await pollUntil(
-        () =>
-          page.evaluate(() => {
-            const t = document.querySelector("[data-search-trigger] .cap-site-header-tip");
-            return t instanceof HTMLElement && t.matches(":popover-open") ? (t.textContent ?? "").trim() : "";
-          }),
-        (text) => text.length > 0,
-        { everyMs: 100 },
-      );
-      await page.mouse.move(640, 880);
-      ok("hovering Search shows its tip, naming it and its keys", tip.startsWith("Search") && tip.endsWith("K"), JSON.stringify(tip));
-    } else {
-      ok("the Search control is laid out for the tip check", false, "no box");
-    }
+    ok(
+      "the header's search box is a GET form to /search with a q field",
+      search !== null && search.action === "/search" && search.method === "get" && search.field === "search",
+      JSON.stringify(search),
+    );
 
     const roles = await page.evaluate(() => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length);
     ok("no role=menu, menubar or menuitem after the enhancement ran", roles === 0, `${roles} found`);
 
-    /* Phone: one row, the Menu button opens the sheet with focus on its heading, Escape gives focus back. */
+    /* Phone: the letterhead keeps its links row, which scrolls sideways inside the band; a section button
+       opens its panel inside the window, one column. */
     await page.setViewport({ width: 390, height: 844 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
-    const row = await page.evaluate(() => ({
-      sections: getComputedStyle(/** @type {Element} */ (document.querySelector("[data-site-nav]"))).display,
-      menu: getComputedStyle(/** @type {Element} */ (document.querySelector("[data-header-menu]"))).display,
-      height: Math.round(document.querySelector("[data-site-header]")?.getBoundingClientRect().height ?? 0),
-    }));
-    await page.click("[data-header-menu]");
-    const sheet = await pollUntil(
-      () =>
-        page.evaluate(() => {
-          const d = /** @type {HTMLDialogElement | null} */ (document.querySelector("dialog.cap-site-header-sheet"));
-          return {
-            open: Boolean(d?.open && d.matches(":modal")),
-            expanded: document.querySelector("[data-header-menu]")?.getAttribute("aria-expanded"),
-            focusOnTitle: document.activeElement?.classList.contains("cap-site-header-sheet-title") ?? false,
-            links: d ? d.querySelectorAll("a[href]").length : 0,
-            signIn: Boolean(d?.querySelector('.cap-site-header-sheet-account a[href="/admin"]')),
-          };
-        }),
-      (s) => s.open,
-      { everyMs: 50, sleepFirst: false },
-    );
-    await page.keyboard.press("Escape");
-    // The dialog's close event, which sets aria-expanded back, is fired a task after it closes.
+    await page.click('button[aria-controls="site-nav-writing"]');
     await sleep(100);
-    const shut = await page.evaluate(() => ({
-      open: Boolean(/** @type {HTMLDialogElement | null} */ (document.querySelector("dialog.cap-site-header-sheet"))?.open),
-      expanded: document.querySelector("[data-header-menu]")?.getAttribute("aria-expanded"),
-      focusOnMenu: document.activeElement === document.querySelector("[data-header-menu]"),
-    }));
+    const phone = await page.evaluate(() => {
+      const nav = /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]"));
+      const panel = document.getElementById("site-nav-writing");
+      const box = panel?.getBoundingClientRect();
+      return {
+        row: getComputedStyle(nav).display,
+        swipes: nav.scrollWidth > nav.clientWidth && getComputedStyle(nav).overflowX === "auto",
+        open: Boolean(panel?.matches(":popover-open")),
+        inside: Boolean(box && box.left >= 0 && box.right <= document.documentElement.clientWidth),
+        tiles: getComputedStyle(/** @type {Element} */ (panel?.querySelector(".site-nav-tiles"))).gridTemplateColumns.split(" ").length,
+      };
+    });
     ok(
-      "on a phone the header is one 56px row, the Menu opens the sheet with focus on its heading and every section's links but no Sign in (it lives in the footer), and Escape gives focus back",
-      row.sections === "none" &&
-        row.menu !== "none" &&
-        row.height === 56 &&
-        sheet.open &&
-        sheet.expanded === "true" &&
-        sheet.focusOnTitle &&
-        sheet.links >= 40 &&
-        !sheet.signIn &&
-        !shut.open &&
-        shut.expanded === "false" &&
-        shut.focusOnMenu,
-      JSON.stringify({ row, sheet, shut }),
+      "on a phone the links row stays and swipes, and a section's panel opens inside the window in one column",
+      phone.row !== "none" && phone.swipes && phone.open && phone.inside && phone.tiles === 1,
+      JSON.stringify(phone),
     );
 
     /** @type {string[]} */
@@ -356,7 +330,8 @@ export async function run({ browser }) {
       await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
       const fit = await page.evaluate(() => {
         const header = document.querySelector("[data-site-header]");
-        const parts = [...(header?.querySelectorAll(".cap-site-header-logo, .cap-site-header-sections, .cap-site-header-tools") ?? [])]
+        /* The top row: the mark and the tools; the links row is under them and swipes on its own. */
+        const parts = [...(header?.querySelectorAll(".cap-site-header-logo, .cap-site-header-tools") ?? [])]
           .map((el) => el.getBoundingClientRect())
           .filter((r) => r.width > 0);
         const overlap = parts.some((r, i) => i > 0 && r.left < parts[i - 1].right);
@@ -367,10 +342,10 @@ export async function run({ browser }) {
           overlap,
         };
       });
-      if (fit.scroll > fit.client || fit.height !== 56 || fit.overlap) cramped.push(`${width}: ${JSON.stringify(fit)}`);
+      if (fit.scroll > fit.client || fit.height !== 120 || fit.overlap) cramped.push(`${width}: ${JSON.stringify(fit)}`);
     }
     ok(
-      "the header is one 56px row with no sideways scroll and nothing overlapping at 320, 360, 390, 767, 768, 800, 880 and 1024 wide",
+      "the letterhead is 120px with no sideways page scroll and nothing overlapping in its top row at 320, 360, 390, 767, 768, 800, 880 and 1024 wide",
       cramped.length === 0,
       cramped.join("; ") || "all fit",
     );

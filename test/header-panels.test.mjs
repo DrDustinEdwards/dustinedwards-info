@@ -103,14 +103,3 @@ await test("the spotlight and the tiles show the newest paper and the newest art
   assert.match(research, /Journal of Microbiology &amp; Biology Education, 2026/);
   assert.match(panelHtml("writing"), /Newest/);
 });
-
-await test("the phone's sheet carries every link the panels carry, and its Menu button opens it with no script", () => {
-  const navEnd = html.indexOf("</nav>", html.indexOf('id="site-nav"'));
-  const panels = new Set(hrefsIn(html.slice(html.indexOf('id="site-nav"'), navEnd)));
-  const sheet = html.slice(html.indexOf('id="site-sheet"'), html.indexOf("</dialog>"));
-  const inSheet = new Set(hrefsIn(sheet));
-  const missing = [...panels].filter((href) => !inSheet.has(href));
-  assert.deepEqual(missing, [], `the sheet lacks ${missing.join(", ")}`);
-  assert.ok(!inSheet.has("/admin"), "the sheet still carries Sign in; it is the footer's Admin link");
-  assert.match(html, /aria-controls="site-sheet"[^>]*command="show-modal"[^>]*commandfor="site-sheet"/);
-});

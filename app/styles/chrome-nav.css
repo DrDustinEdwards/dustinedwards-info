@@ -430,6 +430,29 @@ a.site-nav-row-title:hover {
   color: var(--brand);
 }
 
+/* On a phone the panel opens from the letterhead's links row: one column, scrolling inside the window. */
+@media (max-width: 559.98px) {
+  .site-nav-panel {
+    max-block-size: calc(100dvh - var(--header-h) - 1rem);
+    overflow-y: auto;
+  }
+
+  .site-nav-tiles,
+  .site-nav-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-nav-tile-item + .site-nav-tile-item {
+    border-inline-start: 0;
+    border-block-start: var(--nav-rule);
+  }
+
+  .site-nav-body[data-spotlight] .site-nav-rows {
+    border-inline-end: 0;
+    border-block-end: var(--nav-rule);
+  }
+}
+
 /* A sticky header would repeat on every printed sheet, so it is static here. */
 @media print {
   .site-header {
