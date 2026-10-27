@@ -206,7 +206,11 @@ async function listMatchesModel(/** @type {import("puppeteer").Page} */ page) {
 async function reducedMotion(/** @type {import("puppeteer").Page} */ page) {
   const enterAndCount = async () => {
     await page.click(tileSelector(CORE));
-    const animations = await page.evaluate(() => document.getAnimations().length);
+    // Only animations that run over time: the letterhead's fade follows the scroll position, so
+    // it stays listed as running and moves nothing on a zoom.
+    const animations = await page.evaluate(
+      () => document.getAnimations().filter((a) => a.timeline instanceof DocumentTimeline).length,
+    );
     const entered = await page.$eval("#family", (el) => el.hasAttribute("data-entered"));
     return { animations, entered };
   };
