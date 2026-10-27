@@ -2,7 +2,7 @@
 
 The admin MCP server for [dustinedwards.info](https://dustinedwards.info): a
 wrapper over the site's operator API that **contains no policy of its own**. Its
-own Worker, `dustinedwards-mcp`, at `https://admin-mcp.dustinedwards.info/mcp`.
+own Worker, `dustinedwards-admin-mcp`, at `https://admin-mcp.dustinedwards.info/mcp`.
 
 Its history before it moved into this repository is in `git log -- mcp/`.
 Governed by Capsid `capsid/rulings/mcp-2026-10-10.md`; the design is
@@ -67,7 +67,7 @@ about what is allowed would change.
   AI agent
      |  client leg: identifies WHO is operating
      v
-  dustinedwards-mcp  (this Worker)         no D1, no R2, no GitHub token
+  dustinedwards-admin-mcp  (this Worker)       no D1, no R2, no GitHub token
      |  API leg: OPERATOR_TOKEN, identifies WHAT it may do
      v
   POST /api/operator  on the dustinedwards Worker

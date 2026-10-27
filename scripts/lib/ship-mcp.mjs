@@ -1,6 +1,6 @@
 // `npm run ship:mcp`: the admin MCP Worker in mcp/ (Dustin Edwards Admin), deployed the way `npm run ship` deploys
 // the site. Ship's own preflight, clean-tree and CI read run first; this is what follows them. Ruling
-// mcp-2026-10-10: the MCP lives in this repo and deploys as its own Worker, `dustinedwards-mcp`.
+// mcp-2026-10-10: the MCP lives in this repo and deploys as its own Worker, `dustinedwards-admin-mcp`.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -208,7 +208,7 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run,
     refuse(
       `${config.origin}/health did not answer ${HEALTH_STREAK} consecutive 200s`,
       `Version ${version} is deployed. A new Custom Domain can take minutes for its certificate: re-run ship:mcp, ` +
-        "or check Workers & Pages, dustinedwards-mcp, Settings, Domains & Routes.",
+        "or check Workers & Pages, dustinedwards-admin-mcp, Settings, Domains & Routes.",
     );
   }
 
