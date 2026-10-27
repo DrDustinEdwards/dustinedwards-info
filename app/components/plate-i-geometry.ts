@@ -84,10 +84,10 @@ const CANVAS_WIDE: PlateLayout = {
 // 610 is the hero's right half at 1280 with a desktop scrollbar, plus the 90px gap beside the name.
 // Only the dish, plaques, leader starts and 1 cm bar scale; labels, tails and strokes keep canvas size.
 const WIDE_WIDTH = 610;
-// Longest left label is 131 at 14px mono and the one-line legend under it (240) must clear the rim;
-// longest right label is 85.
-const LEFT_LABELS = 198;
-const RIGHT_LABELS = 88;
+// Longest left label is 143 and longest right label ("ii · turbid") is 92, measured in the drawing's
+// own units; the right side keeps a few to spare so the label never meets the frame.
+const LEFT_LABELS = 190;
+const RIGHT_LABELS = 96;
 /** Leader elbow, tail and label gap on each side of the dish. */
 const LEADER = 31;
 const K = (WIDE_WIDTH - 2 * LEADER - LEFT_LABELS - RIGHT_LABELS) / 2 / CANVAS_WIDE.dish.rim;

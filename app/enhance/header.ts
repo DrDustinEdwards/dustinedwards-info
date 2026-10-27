@@ -12,9 +12,8 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
 /*
  * Capsomer's site header behavior (capsomer/behavior/site-header) on the markup site-header.tsx writes by
  * hand: each section's panel (hover opens at once, a click or a key holds it, Escape and a press outside close
- * it, arrow keys move through it, focus goes back to its button), each icon control's tip, and the phone's
- * Menu button and sheet. With no script none of this runs and nothing is lost: the panels open by
- * popovertarget and the sheet by invoker commands.
+ * it, arrow keys move through it, focus goes back to its button) and each icon control's tip. With no script
+ * none of this runs and nothing is lost: the panels open by popovertarget.
  */
 const header = document.querySelector<HTMLElement>("[data-site-header]");
 if (header) {
@@ -45,11 +44,5 @@ if (header) {
       const button = header.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
       if (button && document.activeElement === button) button.blur();
     });
-  }
-
-  // The sheet is the behavior's now; the invoker commands were its no-script path.
-  for (const element of header.querySelectorAll("[commandfor]")) {
-    element.removeAttribute("command");
-    element.removeAttribute("commandfor");
   }
 }

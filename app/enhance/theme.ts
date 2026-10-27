@@ -109,14 +109,6 @@ function enhanceSearchTrigger() {
   }
 
   for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
-    /* The header tip names the keys as key caps (Capsomer's tooltip), only now that they do something. */
-    const tip = trigger.querySelector(".cap-site-header-tip");
-    if (tip && !tip.querySelector(".cap-keys")) {
-      const keys = document.createElement("span");
-      keys.className = "cap-keys";
-      for (const key of [mac ? "\u2318" : "Ctrl", "K"]) keys.appendChild(document.createElement("kbd")).textContent = key;
-      tip.appendChild(keys);
-    }
     trigger.dataset.shortcutHint = "shown";
     trigger.addEventListener("click", (event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

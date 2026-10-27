@@ -1,7 +1,4 @@
-import { Link } from "react-router";
-
 import { ENHANCE_URLS } from "~/components/enhance";
-import { HeaderTip } from "~/components/header-tip";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
 import askCss from "~/styles/ask.css?url";
 
@@ -14,26 +11,31 @@ import askCss from "~/styles/ask.css?url";
 // One constant for the id, because a mismatched `aria-describedby` stops being announced silently.
 const HINT_ID = "search-shortcut-hint";
 
+/**
+ * The letterhead's search box (capsomer/site-header): a form to /search, so it works with no script; with
+ * script a click opens the palette (`theme.ts`), which also answers Command-K or Control-K.
+ */
 export function SearchTrigger() {
   return (
     <>
-      <Link
-        to="/search"
-        className="cap-site-header-icon search-trigger"
+      <form
+        className="cap-site-header-search search-trigger"
+        role="search"
+        aria-label="Site"
+        action="/search"
+        method="get"
         data-search-trigger=""
         data-palette={ENHANCE_URLS.palette}
         data-palette-css={`${paletteDialogCss},${askCss}`}
-        aria-label="Search"
-        aria-describedby={HINT_ID}
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
-        {/* No keys here: theme.ts adds the platform's once it is listening for them. */}
-        <HeaderTip text="Search" />
-      </Link>
-      {/* Outside the anchor, or it would join the link's own content. */}
+        <button type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+        </button>
+        <input type="search" name="q" placeholder="Search" aria-label="Search" aria-describedby={HINT_ID} autoComplete="off" />
+      </form>
       {/* A placeholder: the chord is platform-dependent, so `theme.ts` writes the real text before it unhides this. */}
       <span id={HINT_ID} className="sr-only" data-search-hint="" hidden>
         Search

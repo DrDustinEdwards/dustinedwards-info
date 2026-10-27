@@ -5,116 +5,32 @@
  * the bar above the page's other sticky parts (--z-pinned-bar, never --z-dropdown, which sits BELOW it).
  */
 .site-header {
-  --header-bg: var(--paper);
-  --header-fg: var(--text);
-  --header-fg-muted: var(--text-secondary);
-  /* The manual's mast: the name as the logotype over a hairline in the ink. */
-  --header-line: var(--text);
-  --header-accent: var(--brand);
+  /* The page's wide column (shell.css: the full width less the gutters), so the letterhead lines up with the
+     running head and the page under it. */
+  --header-max: 1000rem;
+  --header-gutter: var(--gutter);
   --font-ui: var(--font-sans);
-  /* The page's gutter, so the name lines up with the running head and the page under it. */
-  --header-side: var(--gutter);
   z-index: var(--z-pinned-bar);
-}
-
-/* On html, the scrolling element, so a focused element or anchor target never lands under the bar
- * (WCAG 2.2 2.4.11). */
-html {
-  scroll-padding-top: calc(var(--header-h) + 1rem);
 }
 
 /*
  * The public plane's link rules (app.css: a, a:visited, a:hover) are unlayered and Capsomer's header rules are
  * layered, so every link the header draws restates its color and drops the running-text underline here.
  */
-.site-header-brand,
-.site-header-brand:visited {
-  color: var(--header-fg);
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
+.site-header a:is(.cap-site-header-logo, .cap-site-header-link),
+.site-header a:is(.cap-site-header-logo, .cap-site-header-link):visited {
+  color: inherit;
   text-decoration: none;
 }
 
-.site-header-brand:hover {
-  color: var(--brand);
+/* The mark on the band: the plaque's purple parts in the band's light ink, the warm three as drawn. */
+.site-header .site-logo-brand {
+  fill: currentColor;
 }
 
-.site-header a.cap-site-header-icon,
-.site-header a.cap-site-header-icon:visited {
-  color: var(--header-fg-muted);
-  text-decoration: none;
-}
-
-.site-header a.cap-site-header-icon:hover {
-  color: var(--header-fg);
-}
-
-/* The avatar's 36px target, held empty, so the theme button sits where it does in the admin header. */
-.site-header .site-header-account-slot {
-  inline-size: 36px;
-  block-size: 36px;
-  flex: none;
-}
-
-.cap-site-header-sheet-list a,
-.cap-site-header-sheet-list a:visited {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.cap-site-header-sheet-list a[aria-current="page"] {
-  color: var(--paper);
-}
-
-.cap-site-header-sheet-icon .site-nav-icon {
-  color: var(--brand);
-}
-
-/* The phone's sheet in the site's own surface, the popover step the section panels use. */
-.site-header .cap-site-header-sheet {
-  background: var(--surface-popover);
-  color: var(--text);
-}
-
-/* The header's icon rule sets position: relative, which would pull the sheet's Close button out of its corner. */
-.site-header .cap-site-header-sheet > .cap-dialog-close {
-  position: absolute;
-  inset-block-start: 0.5rem;
-  inset-inline-end: 0.5rem;
-}
-
-/*
- * MEASURED, 2026-10-15: from 768px (Capsomer's phone breakpoint) to 900px the logo, the five sections and the
- * tools want about 830px, so the sections sit closer. Re-measure when a section's label changes.
- */
-@media (min-width: 768px) and (max-width: 899.98px) {
-  .site-header .cap-site-header-sections > ul {
-    gap: 14px;
-  }
-}
-
-/*
- * Under 768px the sections are hidden, but Capsomer's rule for links on the right (the sections, then the tools
- * 12px after them) still matches, so the tools would stop 12px after the logo instead of at the right edge.
- */
-@media (max-width: 767.98px) {
-  .site-header .cap-site-header-tools {
-    margin-inline-start: auto;
-  }
-}
-
-/* The narrowest phones (320 to 376): the wordmark and four controls fit one row with the controls touching. */
-@media (max-width: 23.5rem) {
-  .site-header .cap-site-header-tools {
-    gap: 0;
-  }
-
-  .site-header-brand {
-    gap: 0.5rem;
-    font-size: 0.9375rem;
-  }
+/* ThemeForm wraps the theme button in its own form, so the form takes the button's place after search. */
+.site-header .cap-theme-form {
+  order: 2;
 }
 
 /* The running head (site-header.tsx, capsomer/manual.css): under the mast, across the page's wide column. */

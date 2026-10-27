@@ -221,8 +221,9 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       }
     }
 
-    // With no script the narrow header menu is the navigation. Asserted by opening it and following a
-    // link: a popover that opens but whose links do not navigate would pass a check on `open`.
+    // With no script a phone's header is still the navigation: the letterhead keeps its links row, a section
+    // button opens its panel, and a link inside navigates. Asserted by following the link: a popover that
+    // opens but whose links do not navigate would pass a check on `open`.
     {
       const noScript = await browser.newPage();
       try {
@@ -230,48 +231,29 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         await noScript.setViewport({ width: 375, height: 700 });
         await noScript.goto(BASE, { waitUntil: "networkidle0" });
 
-        const menu = await noScript.evaluate(() => {
-          const button = document.querySelector("[data-header-menu]");
-          const sheet = document.getElementById(button?.getAttribute("commandfor") ?? "");
-          if (!button || !(sheet instanceof HTMLDialogElement)) return null;
-          return {
-            displayed: getComputedStyle(button).display !== "none",
-            open: sheet.open,
-            links: sheet.querySelectorAll("a").length,
-          };
-        });
-
-        ok(
-          "the header menu is present and closed with no script",
-          menu !== null && menu.displayed && !menu.open && menu.links > 0,
-          `menu state ${JSON.stringify(menu)}. At 375 the destinations live behind this control, ` +
-            `so an absent or hidden one is a header with no navigation at all.`,
-        );
-
         const opened = await clickOrFail(
           noScript,
-          "[data-header-menu]",
-          "the scriptless header menu button is present to click",
+          'button[aria-controls="site-nav-writing"]',
+          "the scriptless Writing button is in the phone's links row to click",
         );
         const isOpen = await pollUntil(
-          () => noScript.evaluate(() => Boolean(document.querySelector("dialog.cap-site-header-sheet")?.hasAttribute("open"))),
+          () => noScript.evaluate(() => Boolean(document.getElementById("site-nav-writing")?.matches(":popover-open"))),
           Boolean,
           { everyMs: 50, sleepFirst: false },
         );
         ok(
-          "the header menu OPENS with no script, because the button is the sheet's invoker (commandfor)",
+          "on a phone with no script the Writing button OPENS its panel (popovertarget)",
           opened && isOpen,
-          "clicking the button did not open it. A menu that needs script to open is not rule " +
+          "clicking the button did not open it. A panel that needs script to open is not rule " +
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        /* The sheet lists every section's links: one is what a reader follows. */
-        const link = await noScript.$("dialog.cap-site-header-sheet[open] .cap-site-header-sheet-list a[href^='/writing']");
+        const link = await noScript.$("#site-nav-writing a[href^='/writing/']");
         const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
-          "the open header sheet offers a link to follow",
+          "the open Writing panel offers a link to follow",
           link !== null && Boolean(target),
-          "no link inside the open sheet, so there is nothing for the reader to follow",
+          "no link inside the open panel, so there is nothing for the reader to follow",
         );
         if (link && target) {
           await Promise.all([
@@ -279,7 +261,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
             link.click(),
           ]);
           ok(
-            "a header menu link NAVIGATES with no script",
+            "a header panel link NAVIGATES on a phone with no script",
             new URL(noScript.url()).pathname === target,
             `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
               `contract; the other half is that the thing inside goes somewhere.`,
@@ -296,16 +278,14 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       const hint = document.querySelector("[data-search-hint]");
       const trigger = document.querySelector("[data-search-trigger]");
       if (!(hint instanceof HTMLElement) || !(trigger instanceof HTMLElement)) return null;
-      const described = trigger.getAttribute("aria-describedby");
+      const described = trigger.querySelector("input")?.getAttribute("aria-describedby") ?? null;
       return {
         unhidden: !hint.hidden,
         associated: Boolean(described) && described === hint.id && hint.id !== "",
-        /* The header tip names the live keys as key caps, ending in K; Command or Control comes first. */
-        titled: (trigger.querySelector(".cap-site-header-tip .cap-keys")?.textContent ?? "").trim().endsWith("K"),
         text: (hint.textContent ?? "").trim(),
         textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
-        /* Only the tip, shown on hover and focus, may carry key caps: none painted on the control at rest. */
-        painted: [...trigger.querySelectorAll("kbd")].some((kbd) => !kbd.closest(".cap-site-header-tip")),
+        /* No key caps painted on the search box: the chord is in the hint, read aloud. */
+        painted: trigger.querySelector("kbd") !== null,
       };
     });
     ok(
@@ -313,7 +293,6 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       hintShown !== null &&
         hintShown.unhidden &&
         hintShown.associated &&
-        hintShown.titled &&
         hintShown.text.length > 0 &&
         hintShown.textNamesKey &&
         !hintShown.painted,
@@ -321,7 +300,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         ? "the [data-search-hint] or [data-search-trigger] element is missing, so the " +
             "header lost the hint or the control"
         : `unhidden ${hintShown.unhidden}, aria-describedby resolves ${hintShown.associated}, ` +
-            `the tip names the keys ${hintShown.titled}, text ${JSON.stringify(hintShown.text)}, ` +
+            `text ${JSON.stringify(hintShown.text)}, ` +
             `that text names the chord ${hintShown.textNamesKey}, a <kbd> is painted inside ` +
             `the control ${hintShown.painted}. The theme bundle did not run, the badge came ` +
             `back, or a surface still advertises a shortcut that was retired.`,
