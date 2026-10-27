@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok, pollUntil } from "../harness.mjs";
+import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok } from "../harness.mjs";
 
 /*
  * The header (app/components/site-header.tsx) is Capsomer's letterhead written by hand, wired by
