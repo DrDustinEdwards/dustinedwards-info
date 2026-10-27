@@ -88,18 +88,9 @@
       "why": null
     },
     {
-      "id": "header-nav",
-      "module": "app/enhance/header.ts",
-      "enhancement": "Runs Capsomer's site-header behavior on the phone Menu: the button carries aria-expanded, the sheet opens as a modal dialog with focus on its title, and closing it returns focus to the button. It also hands the theme choice to Capsomer's applyTheme so the admin follows the same theme.",
-      "fallback": "The sheet is a dialog and the button labeled Menu opens it with an invoker command (command show-modal), so a current browser opens it, closes it on Escape and on its Close button, and returns focus with no script at all. Every destination inside is an ordinary link. The header is sticky in CSS, so nothing about its position depends on script. The footer carries the full link list as well.",
-      "fallbackKind": "selector",
-      "fallbackAt": ".cap-site-header-menu",
-      "why": null
-    },
-    {
       "id": "header-mega-menus",
       "module": "app/enhance/header.ts",
-      "enhancement": "Capsomer's site-header behavior places each of the five section panels (Research, Teaching, Software, Writing, About) under the header, opens it on hover and on click, closes it when the pointer leaves, on Escape or on an outside click, returns focus to the button, and keeps aria-expanded on each button true to the panel. On a phone the sections live in the Menu sheet instead.",
+      "enhancement": "Capsomer's site-header behavior places each of the five section panels (Research, Teaching, Software, Writing, About) under the header, opens it on hover and on click, closes it when the pointer leaves, on Escape or on an outside click, returns focus to the button, and keeps aria-expanded on each button true to the panel. On a phone the section buttons sit in a row that swipes, and a panel opens as one column that scrolls.",
       "fallback": "Each panel is a popover its section button opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. Each panel links to its section's hub page, which lists the same pages: the first quick link, or for About its About tile.",
       "fallbackKind": "selector",
       "fallbackAt": ".site-nav-panel",
