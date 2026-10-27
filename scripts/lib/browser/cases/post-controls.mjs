@@ -375,7 +375,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       const style = getComputedStyle(dialog);
       return {
         borderTopWidth: style.borderTopWidth,
-        borderRadius: style.borderTopLeftRadius,
+        paddingTop: style.paddingTop,
         background: style.backgroundColor,
       };
     });
@@ -383,10 +383,11 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       "the palette dialog is styled by the time it opens",
       dialogStyled !== null &&
         dialogStyled.borderTopWidth === "1px" &&
-        dialogStyled.borderRadius !== "0px",
+        dialogStyled.paddingTop === "0px",
       `computed ${JSON.stringify(dialogStyled)}. The dialog's stylesheet is fetched ` +
         `on the gesture beside the bundle and awaited before opening; a default ` +
-        `border here means it did not arrive, or arrived after the modal was up.`,
+        `border or padding here means it did not arrive, or arrived after the modal was up. ` +
+        `The NASA theme squares the corners, so the radius is no signal.`,
     );
 
     const afterGesture = await bundleFetches(page, "palette");

@@ -64,7 +64,10 @@ export async function run({ browser }) {
   {
     const header = html.slice(html.indexOf("data-site-header"), html.indexOf("</header>"));
     const footer = html.slice(html.indexOf('class="site-shell-footer"'));
-    const workspace = footer.slice(footer.indexOf('id="cap-family-footer-workspace"'), footer.indexOf("</nav>"));
+    /* The Network strip is a nav of its own above the Workspace group, so the group ends at the first
+       </nav> after its own heading, not the footer's first. */
+    const start = footer.indexOf('id="cap-family-footer-workspace"');
+    const workspace = footer.slice(start, footer.indexOf("</nav>", start));
     ok(
       "the Lab sign-in link is in the served footer's Workspace group, and not in the header",
       !header.includes('href="/lab"') && /<a [^>]*href="\/lab"[^>]*>/.test(workspace),
