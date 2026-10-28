@@ -209,7 +209,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
        * The h-entry is on `main`: the title and the article are siblings in the track grid, so an
        * article-scoped h-entry would have no p-name and no dt-published.
        */}
-      <main className="tracks post-tracks h-entry" id="main" tabIndex={-1}>
+      <main className="cap-page tracks post-tracks h-entry" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

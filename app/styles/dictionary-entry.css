@@ -155,7 +155,7 @@
 }
 
 .term-ety-label {
-  font-size: var(--t-label-size);
+  font-size: var(--fs-detail);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;

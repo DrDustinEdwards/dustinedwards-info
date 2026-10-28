@@ -48,7 +48,7 @@ export function TaxonomyListing({
   return (
     <>
       <SiteHeader />
-      <main className="tracks list-tracks" id="main" tabIndex={-1}>
+      <main className="cap-page tracks list-tracks" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -247,7 +247,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main id="main" className="tracks list-tracks" tabIndex={-1}>
+      <main id="main" className="cap-page tracks list-tracks" tabIndex={-1}>
         <header className="list-head">
           <h1 className="list-label cap-layout-grid" id="publications-title">
             Publications

@@ -1,4 +1,4 @@
-import { enhance } from "capsomer/behavior/site-header";
+import { enhance, type Suggest } from "capsomer/behavior/site-header";
 
 import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 
@@ -9,24 +9,30 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
   if (isAbandonedTransition(event.reason)) event.preventDefault();
 });
 
+type Hit = { url: string; type: string; title: string; documentTitle: string | null };
+
+/** The header's live search: the site's own /search, asked for JSON, as Capsomer's matches. */
+const suggest: Suggest = async (query, signal) => {
+  const response = await fetch(`/search?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" }, signal });
+  if (!response.ok) return [];
+  const { results = [] } = (await response.json()) as { results?: Hit[] };
+  return results.map((hit) => ({
+    url: hit.url.replace(/^https?:\/\/[^/]+/, ""),
+    title: hit.title,
+    kind: hit.type,
+    detail: hit.documentTitle && hit.documentTitle !== hit.title ? hit.documentTitle : undefined,
+  }));
+};
+
 /*
  * Capsomer's site header behavior (capsomer/behavior/site-header) on the markup site-header.tsx writes by
  * hand: each section's panel (hover opens at once, a click or a key holds it, Escape and a press outside close
- * it, arrow keys move through it, focus goes back to its button) and each icon control's tip. With no script
- * none of this runs and nothing is lost: the panels open by popovertarget.
+ * it, arrow keys move through it, focus goes back to its button), each icon control's tip, and search. With no
+ * script none of this runs and nothing is lost: the panels open by popovertarget and the search icon is a link.
  */
 const header = document.querySelector<HTMLElement>("[data-site-header]");
 if (header) {
-  /*
-   * Capsomer drops a control's aria-describedby when it wires the control's tip, because its tip only repeats
-   * the name. The search link's description is not its tip but the shortcut hint (theme.ts), so it is kept.
-   */
-  const described = Array.from(
-    header.querySelectorAll<HTMLElement>("[aria-describedby]"),
-    (element) => [element, element.getAttribute("aria-describedby") ?? ""] as const,
-  );
-  enhance();
-  for (const [element, ids] of described) element.setAttribute("aria-describedby", ids);
+  enhance(document, { suggest });
 
   /*
    * Capsomer sends focus to a panel's button whenever the panel closes with nothing focused, which is also how

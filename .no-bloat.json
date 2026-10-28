@@ -13,11 +13,11 @@
     ]
   },
   "baseline": {
-    "measured_at": "93cf7abb",
+    "measured_at": "1e48f9c",
     "knip": {},
     "jscpd": {
-      "clones": 22,
-      "percentage": 0.24
+      "clones": 19,
+      "percentage": 0.22
     }
   }
 }

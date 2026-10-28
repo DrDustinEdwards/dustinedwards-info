@@ -1,6 +1,6 @@
 /* The post's particulars as the manual's form: ruled boxes sharing their rules, a mono label over each fact. */
 .post-blocks {
-  margin: 0 0 var(--s-6);
+  margin: 0 0 var(--space-7);
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
 }

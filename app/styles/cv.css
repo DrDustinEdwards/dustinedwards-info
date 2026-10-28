@@ -14,12 +14,12 @@
 /* Head */
 
 .cv-head {
-  padding-block-end: var(--s-5);
+  padding-block-end: var(--space-6);
 }
 
 .cv-eyebrow {
-  margin: 0 0 var(--s-3);
-  padding-block-end: var(--s-2);
+  margin: 0 0 var(--space-4);
+  padding-block-end: var(--space-3);
   border-block-end: 4px solid var(--text);
   color: var(--text);
   font: 500 0.6875rem / 1.7 var(--font-mono);
@@ -38,7 +38,7 @@
 }
 
 .cv-lede {
-  margin: var(--s-3) 0 0;
+  margin: var(--space-4) 0 0;
   max-width: 44rem;
   font-family: var(--font-sans);
   font-size: 1.1875rem;
@@ -48,8 +48,8 @@
 .cv-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2) var(--s-4);
-  margin: var(--s-4) 0 0;
+  gap: var(--space-3) var(--space-5);
+  margin: var(--space-5) 0 0;
 }
 
 .cv-action {
@@ -81,13 +81,13 @@
 
 .cv-overview {
   border-block: var(--line-w) solid var(--dust);
-  padding-block: var(--s-5);
+  padding-block: var(--space-6);
 }
 
 .cv-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0 0 var(--s-5);
+  margin: 0 0 var(--space-6);
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
 }
@@ -95,7 +95,7 @@
 /* The counts as the manual's form: ruled boxes sharing their rules. */
 .cv-stat {
   min-width: 0;
-  padding: var(--s-2) var(--s-3) var(--s-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border-inline-end: var(--line-w) solid var(--text);
   border-block-end: var(--line-w) solid var(--text);
 }
@@ -111,8 +111,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: end;
-  column-gap: var(--s-3);
-  margin: var(--s-1) 0 0;
+  column-gap: var(--space-4);
+  margin: var(--space-2) 0 0;
 }
 
 .cv-stat-value {
@@ -132,7 +132,7 @@
 
 .cv-stat-sub {
   grid-column: 1 / -1;
-  margin-block-start: var(--s-1);
+  margin-block-start: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--t-small-size);
   font-variant-numeric: tabular-nums;
@@ -143,7 +143,7 @@
 }
 
 .cv-timeline-title {
-  margin: 0 0 var(--s-2);
+  margin: 0 0 var(--space-3);
   font-weight: 620;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .cv-timeline-hint {
-  margin: var(--s-2) 0 0;
+  margin: var(--space-3) 0 0;
   color: var(--text-secondary);
   font-size: var(--t-small-size);
 }
@@ -176,23 +176,23 @@
 
 .cv-filters {
   display: grid;
-  gap: var(--s-4);
-  margin-block: var(--s-5) var(--s-3);
+  gap: var(--space-5);
+  margin-block: var(--space-6) var(--space-4);
 }
 
 .cv-filter-row {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: var(--s-4) var(--s-5);
+  gap: var(--space-5) var(--space-6);
 }
 
 .cv-label {
   display: block;
-  margin: 0 0 var(--s-2);
+  margin: 0 0 var(--space-3);
   padding: 0;
   color: var(--text-secondary);
-  font-size: var(--t-label-size);
+  font-size: var(--fs-detail);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -246,7 +246,7 @@
 .cv-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
+  gap: var(--space-3);
 }
 
 .cv-chip {
@@ -311,7 +311,7 @@
 .cv-years-row {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--space-3);
   color: var(--text-secondary);
 }
 
@@ -319,7 +319,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-4);
+  gap: var(--space-5);
 }
 
 .cv-filter-actions:not(:has(> :not([hidden]))) {
@@ -353,7 +353,7 @@
 
 .cv-summary {
   margin: 0;
-  padding-block: var(--s-3);
+  padding-block: var(--space-4);
   border-block-end: var(--line-w) solid var(--dust);
   color: var(--text-secondary);
   font-size: var(--t-small-size);
@@ -363,7 +363,7 @@
 /* Results */
 
 .cv-group {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .cv-group[hidden],
@@ -375,9 +375,9 @@
 .cv-group-title {
   display: flex;
   align-items: baseline;
-  gap: var(--s-3);
+  gap: var(--space-4);
   margin: 0;
-  padding-block: var(--s-3) var(--s-2);
+  padding-block: var(--space-4) var(--space-3);
   border-block-start: var(--line-w-thick) solid var(--text);
   font-family: var(--font-sans);
   font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
@@ -395,15 +395,15 @@
 
 .cv-group-note {
   max-width: 48rem;
-  margin: var(--s-3) 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--text-secondary);
   font-size: var(--t-small-size);
   line-height: 1.55;
 }
 
 .cv-part-title {
-  margin: var(--s-5) 0 0;
-  padding-block-end: var(--s-1);
+  margin: var(--space-6) 0 0;
+  padding-block-end: var(--space-2);
   border-block-end: var(--line-w) solid var(--text);
   color: var(--text);
   font: 500 0.6875rem / 1.7 var(--font-mono);
@@ -526,22 +526,22 @@
 
 .cv-paper-panel,
 .cv-duty {
-  margin-block-start: var(--s-3);
-  padding-inline-start: var(--s-4);
+  margin-block-start: var(--space-4);
+  padding-inline-start: var(--space-5);
   border-inline-start: var(--line-w-thick) solid var(--tint-brand);
 }
 
 .cv-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2) var(--s-4);
+  gap: var(--space-3) var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .cv-panel-label {
-  margin: var(--s-3) 0 var(--s-1);
+  margin: var(--space-4) 0 var(--space-2);
   color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
@@ -558,7 +558,7 @@
 }
 
 .cv-cite {
-  padding: var(--s-2) var(--s-3);
+  padding: var(--space-3) var(--space-4);
   border: var(--line-w) solid var(--dust);
   border-radius: 0;
   font-family: var(--font-serif);
@@ -569,8 +569,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2) var(--s-3);
-  margin: var(--s-2) 0 0;
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0 0;
 }
 
 .cv-copy {
@@ -607,7 +607,7 @@
 }
 
 .cv-foot {
-  margin: var(--s-6) 0 0;
+  margin: var(--space-7) 0 0;
   color: var(--text-secondary);
   font-size: var(--t-small-size);
 }
@@ -617,7 +617,7 @@
 @media (max-width: 40rem) {
   .cv-stats {
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--s-3);
+    gap: var(--space-4);
   }
 
   .cv-stat {
@@ -654,7 +654,7 @@
   }
 
   .cv-filter-row {
-    gap: var(--s-4);
+    gap: var(--space-5);
   }
 
   .cv-filter-row > .cv-field,
@@ -734,14 +734,14 @@
 
 .cv-more-body {
   display: grid;
-  gap: var(--s-4);
+  gap: var(--space-5);
 }
 
 @media (max-width: 40rem) {
   .cv-more-summary {
     display: flex;
     align-items: center;
-    gap: var(--s-2);
+    gap: var(--space-3);
     min-height: var(--control-min);
     color: var(--brand);
     font-weight: 600;
@@ -754,7 +754,7 @@
   }
 
   .cv-more[open] > .cv-more-summary {
-    margin-block-end: var(--s-3);
+    margin-block-end: var(--space-4);
   }
 }
 

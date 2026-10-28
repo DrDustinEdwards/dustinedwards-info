@@ -2,12 +2,12 @@
 .site-map {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-  gap: var(--s-6) var(--s-7);
-  margin-block-start: var(--s-6);
+  gap: var(--space-7) var(--space-8);
+  margin-block-start: var(--space-7);
 }
 
 .site-map-heading {
-  margin: 0 0 var(--s-3);
+  margin: 0 0 var(--space-4);
   font-family: var(--font-sans);
   font-size: 1.125rem;
   font-weight: 600;
@@ -24,7 +24,7 @@
 }
 
 .site-map-list li + li {
-  margin-block-start: var(--s-1);
+  margin-block-start: var(--space-2);
 }
 
 .site-map-list a {

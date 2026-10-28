@@ -7,15 +7,15 @@
 .home-intro {
   display: flex;
   flex-direction: column;
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .cover-top {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--s-2) var(--s-5);
-  margin: 0 0 var(--s-6);
+  gap: var(--space-3) var(--space-6);
+  margin: 0 0 var(--space-7);
   padding-block-end: 0.625rem;
   border-block-end: 4px solid var(--text);
   font: 500 0.75rem / 1.4 var(--font-mono);
@@ -25,7 +25,7 @@
 
 /* The leading is 0.88 because the name breaks over two lines at every width. */
 .intro-name {
-  margin: 0 0 var(--s-5);
+  margin: 0 0 var(--space-6);
   /* NOT a <br>: the h-card's p-name is this element's text, and check:machine-readable would read
    * "DustinEdwards". */
   max-inline-size: min-content;
@@ -50,7 +50,7 @@
 }
 
 .cover-foot {
-  margin: var(--s-6) 0 0;
+  margin: var(--space-7) 0 0;
   padding-block-start: 0.625rem;
   border-block-start: var(--line-w) solid var(--text);
   font-family: var(--font-sans);
@@ -64,11 +64,11 @@
 }
 
 .home-section {
-  margin-block-start: var(--s-9);
+  margin-block-start: 6rem;
 }
 
 .home-section > :is(.home-rows, .home-refs, .cap-checklist, .podcast) {
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
 }
 
 /* Rows: a mono label in the margin, the title, a line under it. */
@@ -82,7 +82,7 @@
 .home-row {
   display: grid;
   grid-template-columns: 9rem minmax(0, 1fr);
-  column-gap: var(--s-4);
+  column-gap: var(--space-5);
   align-items: baseline;
   border-block-end: var(--line-w) solid var(--dust);
   padding-block: 0.875rem;
@@ -152,7 +152,7 @@
 .home-refs > li {
   display: grid;
   grid-template-columns: 2.5rem 3.5rem minmax(0, 1fr);
-  column-gap: var(--s-3);
+  column-gap: var(--space-4);
   padding-block: 0.875rem;
   border-block-end: var(--line-w) solid var(--dust);
   counter-increment: ref;
@@ -193,7 +193,7 @@
 }
 
 .home-more {
-  margin: var(--s-4) 0 0;
+  margin: var(--space-5) 0 0;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-weight: 500;
@@ -310,14 +310,14 @@
 }
 
 .tracks > .home-hero + .plate-key {
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--space-8);
 }
 
 .plate-key-entry {
   display: flex;
   flex-direction: column;
   margin: 0;
-  padding: var(--s-2) var(--s-3) var(--s-4);
+  padding: var(--space-3) var(--space-4) var(--space-5);
   border-inline-end: var(--line-w) solid var(--text);
   border-block-end: var(--line-w) solid var(--text);
 }
@@ -335,7 +335,7 @@
   display: block;
   inline-size: 40px;
   block-size: 40px;
-  margin-block: var(--s-2);
+  margin-block: var(--space-3);
 }
 
 .plate-key-num,
@@ -391,19 +391,19 @@
 /* 64rem: below it the right half is too narrow for the plate's labels to stay 14px. */
 .home-hero {
   display: grid;
-  gap: var(--s-7);
+  gap: var(--space-8);
 }
 
 @media (min-width: 64rem) {
   .home-hero {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    column-gap: var(--s-8);
+    column-gap: var(--space-9);
     align-items: end;
   }
 }
 
 .home-hero .cap-plate-box {
-  padding-block-start: var(--s-6);
+  padding-block-start: var(--space-7);
 }
 
 

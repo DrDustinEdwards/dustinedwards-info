@@ -10,7 +10,7 @@ await test("the advance table was measured from the UI face the site serves", ()
   assert.equal(
     sha256(readFileSync(UI_FILE)),
     UI_SHA256,
-    "app/fonts/schibsted-grotesk-latin-normal.woff2 changed; run npm run build:ui-advances and commit the table",
+    "capsomer/fonts/schibsted-grotesk-latin-wght-normal.woff2 changed; run npm run build:ui-advances and commit the table",
   );
 });
 

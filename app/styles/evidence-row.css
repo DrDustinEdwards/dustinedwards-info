@@ -15,7 +15,7 @@
 }
 
 .evidence > span {
-  padding: var(--s-3) var(--s-4);
+  padding: var(--space-4) var(--space-5);
   border-inline-end: var(--line-w) solid var(--text);
   border-block-end: var(--line-w) solid var(--text);
 }

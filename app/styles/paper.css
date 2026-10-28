@@ -25,7 +25,7 @@
 }
 
 .paper-head {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .paper-breadcrumb {
@@ -46,7 +46,7 @@
 }
 
 .paper-head .paper-authors {
-  margin: var(--s-4) 0 0;
+  margin: var(--space-5) 0 0;
   max-width: 54ch;
   color: var(--text-secondary);
   font-family: var(--font-sans);
@@ -75,7 +75,7 @@
 }
 
 .paper-cited {
-  margin: var(--s-4) 0 0;
+  margin: var(--space-5) 0 0;
   font-family: var(--font-sans);
   font-size: 0.875rem;
 }
@@ -87,7 +87,7 @@
 }
 
 .paper-summary {
-  margin: var(--s-5) 0 0;
+  margin: var(--space-6) 0 0;
   max-width: 54ch;
   color: var(--text);
   font-family: var(--font-serif);
@@ -98,7 +98,7 @@
 .paper-abstract,
 .paper-data,
 .paper-citedby {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .paper-abstract h2,
@@ -141,13 +141,13 @@
   display: flex;
   flex-wrap: wrap;
   column-gap: 0.875rem;
-  margin: var(--s-6) 0 0;
+  margin: var(--space-7) 0 0;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
 }
 
 .paper-update-notice {
-  margin: var(--s-5) 0 0;
+  margin: var(--space-6) 0 0;
   max-width: 54ch;
   border: var(--line-w) solid var(--border-warning);
   padding: 0.75rem 1rem;

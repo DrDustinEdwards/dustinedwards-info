@@ -272,40 +272,6 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       }
     }
 
-    // The hint must exist and be unhidden (a missing hint makes `!hidden` true), and the anchor's
-    // `aria-describedby` must resolve to it, or no screen reader reads it.
-    const hintShown = await page.evaluate(() => {
-      const hint = document.querySelector("[data-search-hint]");
-      const trigger = document.querySelector("[data-search-trigger]");
-      if (!(hint instanceof HTMLElement) || !(trigger instanceof HTMLElement)) return null;
-      const described = trigger.querySelector("input")?.getAttribute("aria-describedby") ?? null;
-      return {
-        unhidden: !hint.hidden,
-        associated: Boolean(described) && described === hint.id && hint.id !== "",
-        text: (hint.textContent ?? "").trim(),
-        textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
-        /* No key caps painted on the search box: the chord is in the hint, read aloud. */
-        painted: trigger.querySelector("kbd") !== null,
-      };
-    });
-    ok(
-      "the shortcut hint is unhidden, associated and unpainted once the palette is listening",
-      hintShown !== null &&
-        hintShown.unhidden &&
-        hintShown.associated &&
-        hintShown.text.length > 0 &&
-        hintShown.textNamesKey &&
-        !hintShown.painted,
-      hintShown === null
-        ? "the [data-search-hint] or [data-search-trigger] element is missing, so the " +
-            "header lost the hint or the control"
-        : `unhidden ${hintShown.unhidden}, aria-describedby resolves ${hintShown.associated}, ` +
-            `text ${JSON.stringify(hintShown.text)}, ` +
-            `that text names the chord ${hintShown.textNamesKey}, a <kbd> is painted inside ` +
-            `the control ${hintShown.painted}. The theme bundle did not run, the badge came ` +
-            `back, or a surface still advertises a shortcut that was retired.`,
-    );
-
     const beforeGesture = await bundleFetches(page, "palette");
     ok(
       "the palette bundle is NOT fetched by a page nobody searched on",
@@ -315,29 +281,27 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         `never opens search should never download the dialog.`,
     );
 
-    const triggerClicked = await clickOrFail(
-      page,
-      "[data-search-trigger]",
-      "the search trigger is present to click",
-    );
+    /* Command-K or Control-K (theme.ts); the header's search icon is Capsomer's and does not open the palette. */
+    await page.keyboard.down("Control");
+    await page.keyboard.press("k");
+    await page.keyboard.up("Control");
     /* Polled, not slept: opening costs a network round trip for the bundle, so a fixed wait races. */
     let paletteOpen = { open: false, focused: false };
     let navigatedToSearch = false;
-    if (triggerClicked) {
-      ({ paletteOpen, navigatedToSearch } = await pollUntil(
-        async () => ({
-          paletteOpen: await page.evaluate(() => ({
-            open: Boolean(document.querySelector("dialog.palette[open]")),
-            focused: document.activeElement?.classList.contains("palette-input") ?? false,
-          })),
-          // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
-          navigatedToSearch: /\/search(\?|$)/.test(page.url()),
-        }),
-        (r) => (r.paletteOpen.open && r.paletteOpen.focused) || r.navigatedToSearch,
-      ));
-    }
+    ({ paletteOpen, navigatedToSearch } = await pollUntil(
+      async () => ({
+        paletteOpen: await page.evaluate(() => ({
+          open: Boolean(document.querySelector("dialog.palette[open]")),
+          focused: document.activeElement?.classList.contains("palette-input") ?? false,
+        })),
+        // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
+        navigatedToSearch: /\/search(\?|$)/.test(page.url()),
+      }),
+      (r) => (r.paletteOpen.open && r.paletteOpen.focused) || r.navigatedToSearch,
+    ));
+
     ok(
-      "clicking the search trigger opens the palette with focus in its input, or navigates to /search",
+      "Control-K opens the palette with focus in its input, or navigates to /search",
       (paletteOpen.open && paletteOpen.focused) || navigatedToSearch,
       `open ${paletteOpen.open}, input focused ${paletteOpen.focused}, url ${page.url()}. ` +
         `The gesture is bound in theme.ts and the dialog is built by the bundle it appends, ` +

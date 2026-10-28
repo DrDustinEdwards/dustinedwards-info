@@ -1,8 +1,6 @@
-/* 64ch is measured in the READING face: ch resolves against the element's own font, so the serif is
- * set here. */
+/* Capsomer's --measure is in ch, which resolves against the element's own font, so the serif is set here
+ * and the reading line is measured in the reading face. */
 .post-tracks {
-  --measure: 64ch;
-
   font-family: var(--font-serif);
 }
 
@@ -42,12 +40,12 @@
 }
 
 .post-rail {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
   color: var(--text-secondary);
 }
 
 .post-tracks > .post-body {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .post-machine {
@@ -70,7 +68,7 @@
 }
 
 .post-toc {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
   text-align: left;
 }
 
@@ -85,7 +83,7 @@
 /* Floated into the rail from the prose, so a note lines up with its paragraph without measuring a
  * position. */
 .post-note {
-  margin-block: var(--s-4) var(--s-5);
+  margin-block: var(--space-5) var(--space-6);
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.5rem;
   color: var(--text-secondary);
@@ -118,7 +116,7 @@
     clear: inline-start;
     inline-size: var(--rail-w);
     margin-inline-start: calc(-1 * (var(--rail-w) + var(--rail-gap-w)));
-    margin-block: 0.375rem var(--s-4);
+    margin-block: 0.375rem var(--space-5);
     text-align: right;
   }
 }

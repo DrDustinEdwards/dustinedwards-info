@@ -28,11 +28,7 @@ import type { loader as rootLoader } from "~/root";
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
  * Sign-in is Cloudflare Access, in front of this layout, so no public route needs it.
  */
-import "@fontsource/schibsted-grotesk/400.css";
-import "@fontsource/schibsted-grotesk/500.css";
-import "@fontsource/schibsted-grotesk/600.css";
-import "@fontsource/schibsted-grotesk/800.css";
-import "@fontsource/martian-mono/400.css";
+import "capsomer/fonts.css";
 import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";

@@ -283,16 +283,18 @@ export async function run({ browser }) {
       ok("the Research button is laid out for the hover check", false, "no box");
     }
 
-    /* The search box is a form to /search, so it searches with no script. */
+    /* Search is Capsomer's icon: a link to /search, so it searches with no script, over a GET form with a q field. */
     const search = await page.evaluate(() => {
-      const form = document.querySelector("form[data-search-trigger]");
-      return form instanceof HTMLFormElement
-        ? { action: new URL(form.action).pathname, method: form.method, field: form.querySelector('input[name="q"]')?.getAttribute("type") ?? null }
+      const box = document.querySelector('[data-site-header] [data-cap-part="search"]');
+      const link = box?.querySelector('a[data-cap-part="search-trigger"]');
+      const form = box?.querySelector("form");
+      return link instanceof HTMLAnchorElement && form instanceof HTMLFormElement
+        ? { href: new URL(link.href).pathname, action: new URL(form.action).pathname, method: form.method, field: form.querySelector('input[name="q"]')?.getAttribute("type") ?? null }
         : null;
     });
     ok(
-      "the header's search box is a GET form to /search with a q field",
-      search !== null && search.action === "/search" && search.method === "get" && search.field === "search",
+      "the header's search icon links to /search over a GET form with a q field",
+      search !== null && search.href === "/search" && search.action === "/search" && search.method === "get" && search.field === "search",
       JSON.stringify(search),
     );
 

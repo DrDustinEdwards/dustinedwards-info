@@ -93,7 +93,7 @@ export async function run({ page, browser }) {
     /* A panel link to this very post (a Writing tile) is rightly the current page; any other marked link, the
        Writing hub included, is a link claiming a page the reader is not on. */
     const marked = await page.evaluate((path) =>
-      [...document.querySelectorAll(".site-header-nav a")]
+      [...document.querySelectorAll("[data-site-nav] a")]
         .filter((a) => a.getAttribute("aria-current") && a.getAttribute("href") !== path)
         .map((a) => `${(a.textContent || "").trim()} -> ${a.getAttribute("href")}`),
     firstPost);

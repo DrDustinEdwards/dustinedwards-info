@@ -110,7 +110,7 @@
 }
 .registry-facts + h2,
 .registry-note + h2 {
-  padding-block-start: var(--s-3);
+  padding-block-start: var(--space-4);
   border-block-start: var(--line-w) solid var(--text);
   font-weight: 700;
 }
