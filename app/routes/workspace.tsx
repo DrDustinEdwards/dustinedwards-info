@@ -20,11 +20,7 @@ import type { loader as rootLoader } from "~/root";
  * through their own Cloudflare Access application, never /admin's, and their row in `members` decides what they may
  * do. /admin stays the Primary Owner's alone. Capsomer's shell and stylesheets, as the admin plane.
  */
-import "@fontsource/schibsted-grotesk/400.css";
-import "@fontsource/schibsted-grotesk/500.css";
-import "@fontsource/schibsted-grotesk/600.css";
-import "@fontsource/schibsted-grotesk/800.css";
-import "@fontsource/martian-mono/400.css";
+import "capsomer/fonts.css";
 import "~/admin.css";
 import "~/lab.css";
 

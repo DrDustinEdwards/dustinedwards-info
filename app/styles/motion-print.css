@@ -22,7 +22,7 @@
     --print-rule: #999;
   }
 
-  .site-header,
+  .cap-site-header,
   .site-shell-footer,
   .reading-progress,
   .post-toc,
@@ -87,8 +87,7 @@
   navigation: none;
 }
 
-.search-form[data-pending],
-.search-trigger[aria-busy="true"] {
+.search-form[data-pending] {
   cursor: progress;
 }
 
@@ -153,7 +152,6 @@
 
   .search-form[data-pending],
   .ask-body[aria-busy="true"],
-  .search-trigger[aria-busy="true"],
   .btn-brand[aria-disabled="true"] {
     background-image: linear-gradient(var(--brand), var(--brand));
     background-repeat: no-repeat;

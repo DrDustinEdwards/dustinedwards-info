@@ -7,7 +7,6 @@ import { enhance as enhanceThemeForm } from "capsomer/behavior/theme-switch";
 // Capsomer's theme form (site-header.tsx): a press switches at once, writes the cookie the server reads, and
 // remembers the choice for the admin plane.
 enhanceThemeForm();
-enhanceSearchTrigger();
 
 /**
  * A custom event rather than `import()`, because vite wraps every `import()` in a preload helper that
@@ -28,7 +27,7 @@ function toSearch(reason: unknown) {
 
 function openPalette() {
   const trigger = document.querySelector<HTMLElement>("[data-palette]");
-  // The URL is hashed by the app build; the `?url` import in `search-trigger.tsx` is its one statement.
+  // The URL is hashed by the app build; the `?url` imports in `site-header.tsx` are its one statement.
   // Held to the loader's rule, because 'self' trusts whatever the loader inserts from this origin. The
   // element resolves and normalizes the URL, so `..` is gone before the check reads it, and the
   // origin is followed by the prefix's own `/`, so a longer host cannot match. Inline rather than a
@@ -88,42 +87,11 @@ function openPalette() {
   document.dispatchEvent(new Event(PALETTE_OPEN));
 }
 
-/**
- * The hint is set only from script, so a reader whose script did not run is never told about a key
- * that would do nothing. Platform detection is best-effort: the handler accepts meta or ctrl either way.
- */
-function isMac(): boolean {
-  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
-  const platform = nav.userAgentData?.platform ?? navigator.platform ?? navigator.userAgent;
-  return /mac/i.test(platform);
-}
-
-function enhanceSearchTrigger() {
-  const mac = isMac();
-  const chord = mac ? "Command-K" : "Control-K";
-
-  // Text before unhide, so the stale server placeholder is never the announced description.
-  for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
-    hint.textContent = `Press ${chord} to search`;
-    hint.hidden = false;
+// Command-K or Control-K opens the palette. The header's search icon is Capsomer's (app/enhance/header.ts) and
+// does not open it.
+document.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    openPalette();
   }
-
-  for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
-    trigger.dataset.shortcutHint = "shown";
-    trigger.addEventListener("click", (event) => {
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      event.preventDefault();
-      openPalette();
-    });
-  }
-
-  document.addEventListener("keydown", (event) => {
-    const meta = event.metaKey || event.ctrlKey;
-    if (meta && event.key.toLowerCase() === "k") {
-      event.preventDefault();
-      openPalette();
-      return;
-    }
-    // Deliberately no bare-slash shortcut: it collides with find-in-page.
-  });
-}
+});

@@ -22,11 +22,11 @@ import { loadCv } from "./lib/cv.mjs";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const CV_PDF_DEFAULT_OUT = path.join(ROOT, "build", "dustin-edwards-cv.pdf");
 
-/** The `@font-face` rules for the print document, read from app/fonts/. */
+/** The `@font-face` rules for the print document, read from app/fonts/ and Capsomer's fonts/ (the sans). */
 async function fontCss() {
   const rules = await Promise.all(
     PDF_FONTS.map(async ({ file, family, style }) =>
-      fontFaceRule(family, await readFile(path.join(ROOT, "app", "fonts", file)), style),
+      fontFaceRule(family, await readFile(path.join(ROOT, ...(file.startsWith("schibsted") ? ["node_modules", "capsomer"] : ["app"]), "fonts", file)), style),
     ),
   );
   return rules.join("\n");

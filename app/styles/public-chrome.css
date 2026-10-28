@@ -1,40 +1,20 @@
-/*
- * The site's slots in Capsomer's site header (capsomer/components/site-header, site-header.tsx). Capsomer fixes
- * the frame: 56px, sticky, full width, the order, the spacing, the controls. The site gives its band (the
- * paper and ink), its accent for the current section's underline, its UI face, and the stacking that keeps
- * the bar above the page's other sticky parts (--z-pinned-bar, never --z-dropdown, which sits BELOW it).
- */
-.site-header {
-  --font-ui: var(--font-sans);
-  z-index: var(--z-pinned-bar);
-}
-
-/*
- * The public plane's link rules (app.css: a, a:visited, a:hover) are unlayered and Capsomer's header rules are
- * layered, so every link the header draws restates its color and drops the running-text underline here.
- */
-.site-header a:is(.cap-site-header-logo, .cap-site-header-link),
-.site-header a:is(.cap-site-header-logo, .cap-site-header-link):visited {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* The mark on the band: the plaque's purple parts in the stripe's purple (--on), as every family site draws its mark on
-   the band, the warm three as drawn. */
-.site-header .site-logo-brand {
+/* The site's mark on Capsomer's letterhead band (site-header.tsx): the plaque's purple parts in the stripe's
+   purple (--on), as every family site draws its mark on the band, the warm three as drawn. */
+.cap-site-header .site-logo-brand {
   fill: var(--on);
-}
-
-/* ThemeForm wraps the theme button in its own form, so the form takes the button's place after search. */
-.site-header .cap-theme-form {
-  order: 2;
 }
 
 /* The running head (site-header.tsx, capsomer/manual.css): under the mast, across the page's wide column. */
 .running-head-tracks {
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
 }
 
 .running-head-trail {
   font-weight: 400;
+}
+
+/* Capsomer orders the letterhead's tools by the theme button (order 2, after search's 1); the no-script
+   ThemeForm wraps that button in its own form, so the form takes the button's place. */
+.cap-site-header .cap-theme-form {
+  order: 2;
 }

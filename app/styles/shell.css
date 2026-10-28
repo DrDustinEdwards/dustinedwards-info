@@ -1,8 +1,9 @@
 /* Do not restore the bar padding "just in case": it would be a blank band atop every page. */
 
-/* Named .tracks, not .page: .page has live consumers. At narrow widths the 1fr tracks are zero, so no
-   media query. */
-/* The rail is 0 wide here and a page opts in by setting --rail. */
+/* The columns inside Capsomer's page column (.cap-page, which every .tracks element also carries): the
+   reading line, the rail beside it and the wide track. Named .tracks, not .page: .page has live consumers.
+   At narrow widths the 1fr track is zero, so no media query. The rail is 0 wide here and a page opts in by
+   setting --rail. */
 .tracks {
   --rail-w: 7.5rem;
   --rail-gap-w: 1.5rem;
@@ -12,15 +13,10 @@
 
   display: grid;
   grid-template-columns:
-    [full-start] var(--edge)
-    [wide-start] 0
-    [rail-start] var(--rail) [rail-end] var(--rail-gap)
-    /* 100% minus the gutters, never 100%: 100% is the whole container, so the fixed tracks plus
-       gutters overflowed. */
-    [text-start] min(var(--measure), 100% - 2 * var(--edge) - var(--rail) - var(--rail-gap))
+    [wide-start rail-start] var(--rail) [rail-end] var(--rail-gap)
+    [text-start] min(var(--measure), 100% - var(--rail) - var(--rail-gap))
     [text-end]
-    minmax(0, 1fr) [wide-end]
-    var(--edge) [full-end];
+    minmax(0, 1fr) [wide-end];
 }
 
 .tracks > * {
@@ -35,43 +31,34 @@
   grid-column: wide;
 }
 
-.tracks > .u-full {
-  grid-column: full;
-}
-
 /* Grid does not collapse margins, so only start margins exist. .tracks > h2 + * (0,1,2) beats .tracks
    > figure (0,1,1). */
 .tracks > * + * {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .tracks > h2 {
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--space-8);
 }
 
 .tracks > h3 {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .tracks > figure {
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--space-8);
 }
 
 .tracks > h1 + *,
 .tracks > h2 + *,
 .tracks > h3 + * {
-  margin-block-start: var(--s-5);
-}
-
-/* The family footer (capsomer/family-footer.css) under the page, on the wide track. */
-.site-shell-footer .tracks > * {
-  grid-column: wide;
+  margin-block-start: var(--space-6);
 }
 
 /* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
    link colors and underlines are unlayered and would beat the strip's, so its links say them again here. */
 .page-breadcrumb {
-  margin: 0 0 var(--s-4);
+  margin: 0 0 var(--space-5);
 }
 
 .page-breadcrumb a,

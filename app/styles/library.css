@@ -33,8 +33,8 @@
 .library-pipeline {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--s-5) var(--s-4);
-  margin: var(--s-5) 0 0;
+  gap: var(--space-6) var(--space-5);
+  margin: var(--space-6) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -51,7 +51,7 @@
   content: "";
   position: absolute;
   inset-block-start: 0.75rem;
-  inset-inline: 0 calc(-1 * var(--s-4));
+  inset-inline: 0 calc(-1 * var(--space-5));
   border-block-start: 3px solid var(--text);
 }
 
@@ -66,7 +66,7 @@
   place-items: center;
   inline-size: 1.5rem;
   block-size: 1.5rem;
-  margin-block-end: var(--s-3);
+  margin-block-end: var(--space-4);
   border: 2px solid var(--text);
   border-radius: 50%;
   background: var(--paper);
@@ -101,7 +101,7 @@ a.library-stage-name:hover {
 .library-stage-tools {
   display: grid;
   gap: 0.25rem;
-  margin: var(--s-3) 0 0;
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
   font-size: 0.875rem;
@@ -111,14 +111,14 @@ a.library-stage-name:hover {
 .library-browse-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
 }
 
 .library-browse-grid > * {
   min-inline-size: 0;
-  padding: var(--s-4);
+  padding: var(--space-5);
   border-inline-end: var(--line-w) solid var(--text);
   border-block-end: var(--line-w) solid var(--text);
 }
@@ -126,7 +126,7 @@ a.library-stage-name:hover {
 .library-start {
   display: grid;
   align-content: start;
-  gap: var(--s-6);
+  gap: var(--space-7);
   margin: 0;
   list-style: none;
   background: var(--text);
@@ -135,7 +135,7 @@ a.library-stage-name:hover {
 
 .library-start > li {
   display: grid;
-  gap: var(--s-2);
+  gap: var(--space-3);
 }
 
 .library-start-mark {
@@ -164,7 +164,7 @@ a.library-stage-name:hover {
 }
 
 .library-subtitle {
-  margin: 0 0 var(--s-2);
+  margin: 0 0 var(--space-3);
   color: var(--text);
   font: 700 0.6875rem / 1.6 var(--font-mono);
   letter-spacing: 0.1em;
@@ -173,14 +173,14 @@ a.library-stage-name:hover {
 
 .library-browse .cap-leader-index-link {
   min-block-size: 0;
-  padding-block: var(--s-2);
+  padding-block: var(--space-3);
   font-size: 0.9375rem;
 }
 
 /* A course carries a second link to the page that describes it. */
 .library-tile-about {
   display: inline-block;
-  margin-block: 0 var(--s-2);
+  margin-block: 0 var(--space-3);
   font-size: 0.8125rem;
 }
 
@@ -201,9 +201,9 @@ a.library-stage-name:hover {
 }
 
 .library-cite p {
-  margin: 0 0 var(--s-3);
+  margin: 0 0 var(--space-4);
 }
 
 .library-cite .library-subtitle {
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
 }

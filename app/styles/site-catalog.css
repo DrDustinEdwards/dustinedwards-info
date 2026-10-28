@@ -34,7 +34,7 @@
    width (its filter tray on a phone). */
 @media (min-width: 60rem) {
   .site-catalog-wide {
-    inline-size: calc(min(var(--page-max), 100vw) - 2 * var(--gutter));
+    inline-size: calc(min(var(--page-max), 100vw) - 2 * var(--page-gutter));
   }
 }
 
@@ -42,14 +42,14 @@
    the table's head as mono labels over the ink, and each group's heading large over a rule. */
 .site-catalog .cap-catalog-filters {
   align-self: start;
-  padding: var(--s-4);
+  padding: var(--space-5);
   border: var(--line-w) solid var(--text);
 }
 
 .site-catalog .cap-catalog-filters::before {
   content: "Filter" / "";
-  margin: calc(-1 * var(--s-4)) calc(-1 * var(--s-4)) 0;
-  padding: 0.5rem var(--s-4);
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) 0;
+  padding: 0.5rem var(--space-5);
   background: var(--text);
   color: var(--paper);
   font: 700 0.75rem / 1.4 var(--font-mono);
@@ -74,7 +74,7 @@
 }
 
 .site-catalog .cap-catalog .cap-table tbody tr.cap-catalog-group > th {
-  padding-block-start: var(--s-7);
+  padding-block-start: var(--space-8);
   border-block-end: var(--line-w-thick) solid var(--text);
   font-size: 1.75rem;
   font-weight: 700;

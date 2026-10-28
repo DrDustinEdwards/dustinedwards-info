@@ -22,7 +22,7 @@ export function PageShell({
   return (
     <>
       <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
+      <main className="cap-page page" id="main" tabIndex={-1}>
         {lead}
         {rail !== undefined ? (
           <div className="page-inner page-inner-railed">

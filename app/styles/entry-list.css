@@ -1,6 +1,6 @@
 .entry-list {
   margin: 0;
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
   padding: 0;
   border-block-start: var(--line-w-thick) solid var(--text);
   list-style: none;
@@ -114,7 +114,7 @@
 }
 
 .list-empty {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
   color: var(--text-secondary);
   font-family: var(--font-serif);
   font-size: 1.0625rem;

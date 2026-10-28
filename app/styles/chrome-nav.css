@@ -30,7 +30,6 @@
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
-  font-variation-settings: var(--t-nav-vars);
   line-height: normal;
 }
 
@@ -57,12 +56,6 @@
 [data-theme="dark"] .site-nav-panel {
   --nav-card-bg: var(--surface-popover);
   box-shadow: none;
-}
-
-/* The section buttons take the letterhead's own link hover (capsomer/site-header.css), the same box and corners as
-   every family site's; while a button's panel is open it keeps that tint. */
-.site-header-nav [data-nav-button][aria-expanded="true"] {
-  background: var(--header-hover);
 }
 
 /*
@@ -435,17 +428,5 @@ a.site-nav-row-title:hover {
   .site-nav-body[data-spotlight] .site-nav-rows {
     border-inline-end: 0;
     border-block-end: var(--nav-rule);
-  }
-}
-
-/* A sticky header would repeat on every printed sheet, so it is static here. */
-@media print {
-  .site-header {
-    position: static;
-  }
-
-  .site-header-nav,
-  .site-header-tools {
-    display: none;
   }
 }

@@ -140,7 +140,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main id="main" className="tracks paper-tracks" tabIndex={-1}>
+      <main id="main" className="cap-page tracks paper-tracks" tabIndex={-1}>
         <header className="paper-head">
           <Breadcrumb trail={trail} />
 

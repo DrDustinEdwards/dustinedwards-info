@@ -209,7 +209,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main className="tracks home-tracks" id="main" tabIndex={-1}>
+      <main className="cap-page tracks home-tracks" id="main" tabIndex={-1}>
         {/* `rel="me"` links live in the footer; only `u-url` needed a home here. No `u-photo`: the site publishes none. */}
         <div className="home-hero u-wide">
           <HomeIntro />

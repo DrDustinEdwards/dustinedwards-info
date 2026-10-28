@@ -1,16 +1,25 @@
+import { searchHtml } from "capsomer/behavior/site-header";
 import { ThemeForm } from "capsomer/react/theme-switch";
 import { Link, useLocation, useMatches } from "react-router";
 
-import { Enhance } from "~/components/enhance";
-import { SearchTrigger } from "~/components/search-trigger";
+import { Enhance, ENHANCE_URLS } from "~/components/enhance";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
 import { SiteSpeculation } from "~/components/site-speculation";
 import { buildNav, type NavItem } from "~/lib/nav";
 import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
+import askCss from "~/styles/ask.css?url";
+import paletteDialogCss from "~/styles/palette-dialog.css?url";
 
 const NAV_ID = "site-nav";
+
+/**
+ * Capsomer's search icon and its field (searchHtml, the markup letterheadHtml writes): a link to /search with no
+ * script; app/enhance/header.ts wires it to answer from the site's /search as the person types. Its own wrapper
+ * is taken off so the element below is the one Capsomer's markup names.
+ */
+const SEARCH_INNER = searchHtml({ action: "/search", label: "Search dustinedwards.info" }).replace(/^<div[^>]*>|<\/div>$/g, "");
 
 const CHEVRON = (
   <svg className="cap-site-header-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -64,7 +73,7 @@ function RunningHead({ pathname }: { pathname: string }) {
     if (handle?.folio) folio = handle.folio(match.loaderData) ?? folio;
   }
   return (
-    <div className="tracks running-head-tracks">
+    <div className="cap-page tracks running-head-tracks">
       <div className="cap-running-head u-wide">
         <span className="cap-running-head-name">
           <span className="cap-running-head-no">{section.no}</span>
@@ -77,28 +86,36 @@ function RunningHead({ pathname }: { pathname: string }) {
 }
 
 /**
- * The family letterhead (capsomer/components/site-header, `data-variant="letterhead"`), written by hand because
- * the public plane does not hydrate: the mark with "Dustin Edwards", the search box and the theme in the top row,
- * Home and the five sections in the second, pinned at the top inside the page's margins. Capsomer keeps the
- * inbox and account slots empty, so search and the theme sit where the admin's do. Every link is in this markup with no script; app/enhance/header.ts
- * wires Capsomer's behavior (the panels and the tips) on top. No `prefetch="intent"`: it needs React
- * handlers and this plane does not hydrate, so hover prefetch comes from `SiteSpeculation`.
+ * The family letterhead (capsomer/components/site-header, `data-variant="letterhead"`), in the markup Capsomer's
+ * letterheadHtml writes, by hand only because the public plane does not hydrate and the sections open the site's
+ * own panels: the mark with "Dustin Edwards" (the headquarters' name, which Capsomer sets where the other sites'
+ * names sit), Home and the five sections, then search and the theme. Every link is in this markup with no script;
+ * app/enhance/header.ts wires Capsomer's behavior (the panels, the tips and search) on top. The palette's bundle
+ * rides on the header for Command-K (app/enhance/theme.ts); the header no longer opens it. No
+ * `prefetch="intent"`: it needs React handlers and this plane does not hydrate, so hover prefetch comes from
+ * `SiteSpeculation`.
  */
 export function SiteHeader() {
   const { pathname } = useLocation();
   const nav = buildNav();
   return (
     <>
-    <header className="cap-site-header site-header" data-cap="site-header" data-variant="letterhead" data-site-header="">
-      <Link to="/" className="cap-site-header-logo site-header-brand" aria-label={SITE.name}>
+    <header
+      className="cap-site-header"
+      data-cap="site-header"
+      data-variant="letterhead"
+      data-site-header=""
+      data-palette={ENHANCE_URLS.palette}
+      data-palette-css={`${paletteDialogCss},${askCss}`}
+    >
+      <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
         {/* Decorative: the name beside it is the link's name. */}
         <SiteLogoHeader className="site-header-mark" />
-        {/* The headquarters site: "Dustin Edwards" alone, at the agency's size (Dustin, 2026-10-27). */}
         <span className="cap-site-header-names" aria-hidden="true">
           <span className="cap-site-header-agency">{SITE.name}</span>
         </span>
       </Link>
-      <nav className="cap-site-header-sections site-header-nav" id={NAV_ID} aria-label="Site" data-site-nav="">
+      <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Site" data-site-nav="">
         <ul>
           <li>
             <Link to="/" className="cap-site-header-link" aria-current={pathname === "/" ? "page" : undefined}>
@@ -110,8 +127,8 @@ export function SiteHeader() {
           ))}
         </ul>
       </nav>
-      <div className="cap-site-header-tools site-header-tools">
-        <SearchTrigger />
+      <div className="cap-site-header-tools">
+        <div className="cap-site-header-search" data-cap-part="search" dangerouslySetInnerHTML={{ __html: SEARCH_INNER }} />
         {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
             and with script the theme module switches at once. The admin plane's shell reads the same choice
             from localStorage ("cap-theme"). */}

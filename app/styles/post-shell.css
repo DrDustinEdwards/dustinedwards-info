@@ -5,7 +5,7 @@
 }
 
 .post-head h1 {
-  margin: 0 0 var(--s-4);
+  margin: 0 0 var(--space-5);
   color: var(--text);
   font-family: var(--t-h1-family);
   font-size: var(--t-h1-size);
@@ -17,7 +17,7 @@
 }
 
 .post-dek {
-  margin: 0 0 var(--s-6);
+  margin: 0 0 var(--space-7);
   max-width: 44ch;
   color: var(--text-secondary);
   font-family: var(--font-prose);
@@ -38,7 +38,7 @@
 
 /* D1 stores no intrinsic dimensions, so fixing the width limits layout shift to one axis. */
 .post-cover {
-  margin: 0 0 var(--s-6);
+  margin: 0 0 var(--space-7);
 }
 
 .post-cover img {
@@ -51,7 +51,7 @@
 .post-series-steps {
   display: grid;
   gap: 0;
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 /* Previous and next are signs: an ink panel under a band of the family's color. */
@@ -66,7 +66,7 @@
 }
 
 .post-nav-target + .post-nav-target {
-  margin-block-start: var(--s-2);
+  margin-block-start: var(--space-3);
 }
 
 .post-nav-target:hover {
@@ -88,13 +88,13 @@
 }
 
 .post-series {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .post-backlinks {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
   border-block-start: var(--line-w) solid var(--dust);
-  padding-block-start: var(--s-4);
+  padding-block-start: var(--space-5);
 }
 
 .post-backlinks > p {
@@ -124,7 +124,7 @@
 }
 
 .post-history {
-  margin: var(--s-6) 0 0;
+  margin: var(--space-7) 0 0;
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
   color: var(--text-secondary);
@@ -149,8 +149,8 @@
 .post-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 var(--s-5);
-  margin-block-start: var(--s-6);
+  gap: 0 var(--space-6);
+  margin-block-start: var(--space-7);
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
   font-family: var(--font-sans);
@@ -177,11 +177,11 @@
 }
 
 .post-share {
-  margin-block-start: var(--s-2);
+  margin-block-start: var(--space-3);
 }
 
 .post-colophon-note {
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: 0.875rem;
@@ -189,7 +189,7 @@
 }
 
 .post-mentions {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .post-mention-excerpt {

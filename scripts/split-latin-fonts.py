@@ -40,7 +40,7 @@ CORE_EXTRA = [
     0xA0, 0xA9, 0xAE, 0xB0, 0xB2, 0xB5, 0xB7, 0xD7, 0x0304, 0x0308, 0x0329,
     0x2013, 0x2014, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2026, 0x2032, 0x2212,
 ]
-FACES = ["source-serif-4-latin-normal", "source-serif-4-latin-italic", "schibsted-grotesk-latin-normal", "schibsted-grotesk-latin-italic", "martian-mono-latin-normal"]
+FACES = ["source-serif-4-latin-normal", "source-serif-4-latin-italic"]
 
 
 def parse(ranges):
