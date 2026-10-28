@@ -2,8 +2,7 @@ import { Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } f
 import { can } from "@dustinedwards/site-runtime/members";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, type AdminEntry } from "capsomer/react/admin-shell";
-import { ThemeSwitch } from "capsomer/react/theme-switch";
+import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-shell";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
 import { labIdentity } from "~/lab/access.server";
@@ -11,7 +10,7 @@ import { labActorContext, loadLabActor, primaryOwnerSet } from "~/lab/actor.serv
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
-import { SITE_ORIGIN } from "~/lib/seo";
+import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/workspace";
 import type { loader as rootLoader } from "~/root";
 
@@ -119,7 +118,6 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
       ? [{ id: "members", label: "Members", href: "/lab/members", group: "People", icon: ICONS.members, current: at("/lab/members") }]
       : []),
   ];
-  const theme = rootData?.theme;
   const initials = loaderData.email.slice(0, 2).toUpperCase();
 
   return (
@@ -127,6 +125,9 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
         title="Lab bench"
+        letterhead
+        logo={{ href: "/lab", label: SITE.name, app: "Lab bench", mark: FAMILY_APPS.find((a) => a.id === "info")?.logo }}
+        viewSite="/"
         apps={[{ id: "lab", label: "Lab bench", href: "/lab", mono: "L", current: true }]}
         nav={nav}
         tabs={nav}
@@ -140,7 +141,6 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
           onSignOut: () => window.location.assign(ACCESS_LOGOUT_PATH),
         }}
         status={<span className="cap-muted">Signed in as {loaderData.email}</span>}
-        actions={<ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />}
         prefKey="lab-rail"
       >
         <MessageProvider>

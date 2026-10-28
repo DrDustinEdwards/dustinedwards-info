@@ -5,6 +5,7 @@ import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
+import { suggest } from "~/lib/search-suggest";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { accessIdentity } from "~/lib/access.server";
@@ -269,6 +270,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
         app="info"
+        letterhead
+        search={{ action: "/search", label: "Search dustinedwards.info", suggest }}
         page={page}
         nav={nav}
         tabs={nav.slice(0, 5)}
