@@ -19,9 +19,10 @@
   text-decoration: none;
 }
 
-/* The mark on the band: the plaque's purple parts in the band's light ink, the warm three as drawn. */
+/* The mark on the band: the plaque's purple parts in the stripe's purple (--on), as every family site draws its mark on
+   the band, the warm three as drawn. */
 .site-header .site-logo-brand {
-  fill: currentColor;
+  fill: var(--on);
 }
 
 /* ThemeForm wraps the theme button in its own form, so the form takes the button's place after search. */
