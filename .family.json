@@ -11,6 +11,11 @@
     "workers/security-headers.mjs": "the site's ratified overrides to buildSecurityHeaders, which it calls; the header names are keys, not a second builder",
     "scripts/lib/headers/static-set-and-cache.mjs": "the gate's hand-transcribed ratified set, compared against what the Worker sends"
   },
+  "tokens": {
+    "--text": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
+    "--scrim": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
+    "--line-strong": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer"
+  },
   "spelling": {
     "skip": [
       "content/publications/**",
