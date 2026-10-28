@@ -5,6 +5,7 @@ import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-shell";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
+import { suggest } from "~/lib/search-suggest";
 import { labIdentity } from "~/lab/access.server";
 import { labActorContext, loadLabActor, primaryOwnerSet } from "~/lab/actor.server";
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
@@ -128,6 +129,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
         letterhead
         logo={{ href: "/lab", label: SITE.name, app: "Lab bench", mark: FAMILY_APPS.find((a) => a.id === "info")?.logo }}
         viewSite="/"
+        search={{ action: "/search", label: "Search dustinedwards.info", suggest }}
         apps={[{ id: "lab", label: "Lab bench", href: "/lab", mono: "L", current: true }]}
         nav={nav}
         tabs={nav}
