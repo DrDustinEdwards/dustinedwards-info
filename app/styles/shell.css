@@ -12,15 +12,15 @@
 
   display: grid;
   grid-template-columns:
-    [full-start] var(--gutter)
+    [full-start] var(--edge)
     [wide-start] 0
     [rail-start] var(--rail) [rail-end] var(--rail-gap)
     /* 100% minus the gutters, never 100%: 100% is the whole container, so the fixed tracks plus
        gutters overflowed. */
-    [text-start] min(var(--measure), 100% - 2 * var(--gutter) - var(--rail) - var(--rail-gap))
+    [text-start] min(var(--measure), 100% - 2 * var(--edge) - var(--rail) - var(--rail-gap))
     [text-end]
     minmax(0, 1fr) [wide-end]
-    var(--gutter) [full-end];
+    var(--edge) [full-end];
 }
 
 .tracks > * {
@@ -64,24 +64,8 @@
 }
 
 /* The family footer (capsomer/family-footer.css) under the page, on the wide track. */
-.site-shell-footer {
-  margin-block-start: var(--s-8);
-  background: var(--paper);
-}
-
-@media (min-width: 48rem) {
-  .site-shell-footer {
-    margin-block-start: var(--s-9);
-  }
-}
-
 .site-shell-footer .tracks > * {
   grid-column: wide;
-}
-
-/* The family footer's band spaces it from the page. */
-.site-shell-footer .cap-family-footer {
-  margin-block-start: 0;
 }
 
 /* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own

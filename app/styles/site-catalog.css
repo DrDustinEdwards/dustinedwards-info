@@ -34,7 +34,7 @@
    width (its filter tray on a phone). */
 @media (min-width: 60rem) {
   .site-catalog-wide {
-    inline-size: min(72rem, calc(100vw - 2 * var(--gutter)));
+    inline-size: calc(min(var(--page-max), 100vw) - 2 * var(--gutter));
   }
 }
 

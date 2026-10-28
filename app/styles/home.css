@@ -397,7 +397,7 @@
 @media (min-width: 64rem) {
   .home-hero {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    column-gap: var(--gutter);
+    column-gap: var(--s-8);
     align-items: end;
   }
 }

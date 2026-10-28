@@ -211,6 +211,15 @@ for (const [mode, block] of MODES) {
   }
 }
 
+/** Every .css file under `dir`, at any depth. @param {string} dir @returns {string[]} */
+function walkCss(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).flatMap((name) => {
+    const p = join(dir, name);
+    return statSync(p).isDirectory() ? walkCss(p) : name.endsWith(".css") ? [p] : [];
+  });
+}
+
 // An undeclared `var()` drops silently, and every pass above walks declarations.
 
 {
@@ -218,8 +227,15 @@ for (const [mode, block] of MODES) {
   const code = allSourceCss().replace(/\/\*[\s\S]*?\*\//g, " ");
 
   const used = new Set([...code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].map((m) => m[1]));
+  /* Capsomer's sheets declare the family's tokens (--page-max, --ground, --header-h...); the site reads them. */
+  const capsomerDir = join(root, "node_modules", "capsomer");
+  const capsomerCss = ["tokens", "css", "components"]
+    .flatMap((dir) => walkCss(join(capsomerDir, dir)))
+    .map((p) => readFileSync(p, "utf8"))
+    .join("\n")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
   const declaredAnywhere = new Set(
-    [...code.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]),
+    [...`${code}\n${capsomerCss}`.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]),
   );
 
   /* Scope, both sides: an empty set on either side fails for the wrong reason. */

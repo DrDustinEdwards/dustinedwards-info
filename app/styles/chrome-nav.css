@@ -59,25 +59,10 @@
   box-shadow: none;
 }
 
-/* The section buttons: a soft wash on hover, the band's chip color while their panel is open. The wash is
-   rounded and as deep at the sides as above and below the 20px line in the 36px row (Dustin, 2026-10-26);
-   the list's gap gives back what the padding takes, so the buttons keep their 20px apart. */
-.site-header-nav > ul {
-  gap: 4px;
-}
-
-.site-header-nav .cap-site-header-link {
-  padding-inline: 8px;
-  border-radius: 0.5rem;
-}
-
-.site-header-nav [data-nav-button]:hover {
-  background: color-mix(in oklab, var(--brand) 6%, transparent);
-}
-
+/* The section buttons take the letterhead's own link hover (capsomer/site-header.css), the same box and corners as
+   every family site's; while a button's panel is open it keeps that tint. */
 .site-header-nav [data-nav-button][aria-expanded="true"] {
-  background: color-mix(in oklab, var(--brand) 14%, transparent);
-  color: var(--brand);
+  background: var(--header-hover);
 }
 
 /*

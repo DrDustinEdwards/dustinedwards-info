@@ -21,6 +21,8 @@ import "capsomer/site-dustinedwards.css";
 import "capsomer/popover.css";
 import "capsomer/dialog.css";
 import "capsomer/site-header.css";
+// Capsomer's utilities without its base: the family arrow on the footer's links.
+import "capsomer/utilities.css";
 import "capsomer/theme-switch.css";
 // The manual theme, public pages only: running head, parts, form boxes, index, checklist, plate, signs, letterhead.
 import "capsomer/manual.css";

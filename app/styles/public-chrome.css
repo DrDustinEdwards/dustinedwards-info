@@ -5,10 +5,6 @@
  * the bar above the page's other sticky parts (--z-pinned-bar, never --z-dropdown, which sits BELOW it).
  */
 .site-header {
-  /* The page's wide column (shell.css: the full width less the gutters), so the letterhead lines up with the
-     running head and the page under it. */
-  --header-max: 1000rem;
-  --header-gutter: var(--gutter);
   --font-ui: var(--font-sans);
   z-index: var(--z-pinned-bar);
 }
@@ -23,9 +19,10 @@
   text-decoration: none;
 }
 
-/* The mark on the band: the plaque's purple parts in the band's light ink, the warm three as drawn. */
+/* The mark on the band: the plaque's purple parts in the stripe's purple (--on), as every family site draws its mark on
+   the band, the warm three as drawn. */
 .site-header .site-logo-brand {
-  fill: currentColor;
+  fill: var(--on);
 }
 
 /* ThemeForm wraps the theme button in its own form, so the form takes the button's place after search. */

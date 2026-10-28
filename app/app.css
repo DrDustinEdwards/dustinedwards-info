@@ -268,14 +268,12 @@
   --z-tile-raise: 10; /* @kind other */
   --z-tile-body: 20; /* @kind other */
   --z-tile-action: 30; /* @kind other */
-  --z-sticky: 100; /* @kind other */
   --z-dropdown: 200; /* @kind other */
   --z-popover: 300; /* @kind other */
   --z-drawer-scrim: 400; /* @kind other */
   --z-drawer: 500; /* @kind other */
   --z-pinned-bar: 600; /* @kind other */
   --z-overlay-scrim: 700; /* @kind other */
-  --z-overlay: 800; /* @kind other */
   --z-progress: 900; /* @kind other */
   --z-transient: 1000; /* @kind other */
   --z-skip-link: 2000; /* @kind other */
@@ -347,20 +345,6 @@
   --t-nav-strong: 620;
 }
 
-/* Capsomer's manual theme (capsomer/manual.css) reads its faces and ground under its own names. */
-:root {
-  --ui: var(--font-sans);
-  --display: var(--font-sans);
-  --mono: var(--font-mono);
-  --prose: var(--font-prose);
-  --ground: var(--paper);
-  /* Square corners on the public pages' Capsomer controls, as the manual draws every box. */
-  --radius-s: 0;
-  --radius-m: 0;
-  --radius-l: 0;
-  --radius-xl: 0;
-}
-
 /* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
 :root {
   --s-1: 0.25rem;
@@ -373,8 +357,6 @@
   --s-8: 4rem;
   --s-9: 6rem;
 
-  --measure: 42rem;
-
   /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
@@ -383,19 +365,11 @@
   --line-w-thick: 0.125rem;
   --radius-control: 0;
 
-  --gutter: 1.5rem;
-}
-
-@media (min-width: 48rem) {
-  :root {
-    --gutter: 3rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  :root {
-    --gutter: 4.5rem;
-  }
+  /* The family page (capsomer --page-max, --page-gutter): the letterhead, the page and the footer line up on one
+     column on every family site. --edge is the page's margin, the gutter on a narrow window and wider on a wide
+     one; its 100% is the full-width box it pads or lays out. */
+  --gutter: var(--page-gutter);
+  --edge: max(var(--gutter), (100% - var(--page-max)) / 2 + var(--gutter));
 }
 
 :root {
@@ -410,8 +384,6 @@
   --motion-wait: 900ms;
 
   --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
-  /* Entrances: leave the start quickly and settle. */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Hexes are fixed values, never derived. The light and dark blocks do not cascade into
@@ -824,19 +796,9 @@ body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
   --site-inset: 1.5rem;
-  /* --header-h is what the pinned letterhead covers, read by the sticky rails and scroll margins: its 120px
-     band, and from 768px the 16px gap above it (capsomer site-header.md). */
-  --header-h: 7.5rem;
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
-}
-
-@media (min-width: 768px) {
-  html,
-  body {
-    --header-h: calc(7.5rem + 16px);
-  }
 }
 
 ::selection {

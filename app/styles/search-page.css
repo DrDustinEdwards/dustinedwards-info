@@ -1,6 +1,6 @@
 .search-page {
-  max-width: calc(48rem + 2 * var(--gutter));
-  padding: 2rem var(--gutter) 4rem;
+  max-width: calc(48rem + 2 * var(--edge));
+  padding: 2rem var(--edge) 4rem;
 }
 
 

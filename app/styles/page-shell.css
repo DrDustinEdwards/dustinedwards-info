@@ -1,6 +1,6 @@
 /* Left-aligned under the running head, at the same gutter, as the manual's pages hang from their head. */
 .page {
-  padding: 2rem var(--gutter);
+  padding: 2rem var(--edge);
 }
 
 .page-inner {
