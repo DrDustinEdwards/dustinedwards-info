@@ -12,15 +12,15 @@
 
   display: grid;
   grid-template-columns:
-    [full-start] var(--gutter)
+    [full-start] var(--edge)
     [wide-start] 0
     [rail-start] var(--rail) [rail-end] var(--rail-gap)
     /* 100% minus the gutters, never 100%: 100% is the whole container, so the fixed tracks plus
        gutters overflowed. */
-    [text-start] min(var(--measure), 100% - 2 * var(--gutter) - var(--rail) - var(--rail-gap))
+    [text-start] min(var(--measure), 100% - 2 * var(--edge) - var(--rail) - var(--rail-gap))
     [text-end]
     minmax(0, 1fr) [wide-end]
-    var(--gutter) [full-end];
+    var(--edge) [full-end];
 }
 
 .tracks > * {

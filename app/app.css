@@ -383,19 +383,11 @@
   --line-w-thick: 0.125rem;
   --radius-control: 0;
 
-  --gutter: 1.5rem;
-}
-
-@media (min-width: 48rem) {
-  :root {
-    --gutter: 3rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  :root {
-    --gutter: 4.5rem;
-  }
+  /* The family page (capsomer --page-max, --page-gutter): the letterhead, the page and the footer line up on one
+     column on every family site. --edge is the page's margin, the gutter on a narrow window and wider on a wide
+     one; its 100% is the full-width box it pads or lays out. */
+  --gutter: var(--page-gutter);
+  --edge: max(var(--gutter), (100% - var(--page-max)) / 2 + var(--gutter));
 }
 
 :root {

@@ -8,7 +8,7 @@
 .list-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  column-gap: var(--gutter);
+  column-gap: var(--s-8);
   margin-block-start: var(--s-6);
 }
 
