@@ -1,8 +1,9 @@
 /* Do not restore the bar padding "just in case": it would be a blank band atop every page. */
 
-/* Named .tracks, not .page: .page has live consumers. At narrow widths the 1fr tracks are zero, so no
-   media query. */
-/* The rail is 0 wide here and a page opts in by setting --rail. */
+/* The columns inside Capsomer's page column (.cap-page, which every .tracks element also carries): the
+   reading line, the rail beside it and the wide track. Named .tracks, not .page: .page has live consumers.
+   At narrow widths the 1fr track is zero, so no media query. The rail is 0 wide here and a page opts in by
+   setting --rail. */
 .tracks {
   --rail-w: 7.5rem;
   --rail-gap-w: 1.5rem;
@@ -12,15 +13,10 @@
 
   display: grid;
   grid-template-columns:
-    [full-start] var(--gutter)
-    [wide-start] 0
-    [rail-start] var(--rail) [rail-end] var(--rail-gap)
-    /* 100% minus the gutters, never 100%: 100% is the whole container, so the fixed tracks plus
-       gutters overflowed. */
-    [text-start] min(var(--measure), 100% - 2 * var(--gutter) - var(--rail) - var(--rail-gap))
+    [wide-start rail-start] var(--rail) [rail-end] var(--rail-gap)
+    [text-start] min(var(--measure), 100% - var(--rail) - var(--rail-gap))
     [text-end]
-    minmax(0, 1fr) [wide-end]
-    var(--gutter) [full-end];
+    minmax(0, 1fr) [wide-end];
 }
 
 .tracks > * {
@@ -35,169 +31,34 @@
   grid-column: wide;
 }
 
-.tracks > .u-full {
-  grid-column: full;
-}
-
 /* Grid does not collapse margins, so only start margins exist. .tracks > h2 + * (0,1,2) beats .tracks
    > figure (0,1,1). */
 .tracks > * + * {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .tracks > h2 {
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--space-8);
 }
 
 .tracks > h3 {
-  margin-block-start: var(--s-6);
+  margin-block-start: var(--space-7);
 }
 
 .tracks > figure {
-  margin-block-start: var(--s-7);
+  margin-block-start: var(--space-8);
 }
 
 .tracks > h1 + *,
 .tracks > h2 + *,
 .tracks > h3 + * {
-  margin-block-start: var(--s-5);
-}
-
-/* The letterhead (capsomer/manual.css .cap-letterhead) draws the footer's heavy rule; the link groups sit
-   under it in ruled columns, the manual's form boxes without the boxes. */
-.site-shell-footer {
-  margin-block-start: var(--s-8);
-  padding-block-end: var(--s-6);
-  background: var(--paper);
-}
-
-@media (min-width: 48rem) {
-  .site-shell-footer {
-    margin-block-start: var(--s-9);
-  }
-}
-
-.site-shell-footer .tracks > * {
-  grid-column: wide;
-}
-
-.site-shell-footer .tracks > * + * {
-  margin-block-start: 0;
-}
-
-/* The footer's own margin spaces the band from the page; the letterhead's rule sits under its stripe. */
-.footer-livery {
-  margin-block: 0 var(--s-5);
-}
-
-.cap-letterhead-logo,
-.cap-letterhead-logo:visited {
-  display: flex;
-  flex-direction: column;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.cap-letterhead-logo:hover {
-  color: var(--brand);
-}
-
-/* The name on the left and the three link columns to its right, their tops aligned. */
-.footer-letterhead {
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: start;
-}
-
-.footer-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--s-5);
-}
-
-@media (min-width: 48rem) {
-  .footer-columns {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: var(--gutter);
-  }
-}
-
-@media (max-width: 46rem) {
-  .footer-letterhead {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/*
- * The social marks share the footer's ink (Dustin, 2026-09-27). Each link's name is its text, read by
- * screen readers always and shown as a small label on hover and keyboard focus.
- */
-.footer-social {
-  display: flex;
-  gap: var(--s-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.footer-social-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-inline-size: var(--control-min-dense);
-  min-block-size: var(--control-min-dense);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.footer-social-link:hover,
-.footer-social-link:focus-visible {
-  color: var(--brand);
-}
-
-/* Visually hidden until hover or focus, never display:none, so it stays the accessible name. */
-.footer-social-label {
-  position: absolute;
-  inset-block-start: 100%;
-  inset-inline-start: 50%;
-  translate: -50% var(--s-1);
-  padding: 2px var(--s-2);
-  border: var(--line-w) solid var(--dust);
-  border-radius: 0;
-  background: var(--paper);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  pointer-events: none;
-  clip-path: inset(50%);
-  opacity: 0;
-}
-
-.footer-social-link:hover .footer-social-label,
-.footer-social-link:focus-visible .footer-social-label {
-  clip-path: none;
-  opacity: 1;
-}
-
-.footer-social-glyph {
-  display: inline-flex;
-}
-
-.footer-social-mark {
-  display: block;
-  inline-size: auto;
-  block-size: 1.5rem;
-}
-
-.footer-profiles {
-  margin-block-start: var(--s-3);
+  margin-block-start: var(--space-6);
 }
 
 /* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
    link colors and underlines are unlayered and would beat the strip's, so its links say them again here. */
 .page-breadcrumb {
-  margin: 0 0 var(--s-4);
+  margin: 0 0 var(--space-5);
 }
 
 .page-breadcrumb a,
@@ -219,91 +80,3 @@
   font-size: 0.875rem;
 }
 
-/* The G inside the inlined Germomics hexagon, knocked out to the footer's own ground. */
-.footer-mark-knockout {
-  fill: var(--paper);
-}
-
-.footer-heading {
-  margin: 0 0 var(--s-2);
-  color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.footer-links {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.footer-links a {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: var(--control-min-dense);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 400;
-  font-optical-sizing: none;
-  text-decoration: none;
-}
-
-.footer-links a:hover {
-  color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
-}
-
-.footer-links a:visited {
-  color: var(--text);
-}
-
-.footer-pair {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: var(--s-3);
-}
-
-.footer-pair > span {
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-}
-
-/* The private tools: set apart from the public links by a dust hairline, the site's line color. */
-.footer-private-link {
-  gap: var(--s-2);
-}
-
-/* Ink at rest, purple on hover and focus, like every clickable thing. */
-.footer-private-icon {
-  flex: none;
-  inline-size: 1rem;
-  block-size: 1rem;
-  color: var(--text);
-}
-
-.footer-private-link:hover .footer-private-icon,
-.footer-private-link:focus-visible .footer-private-icon {
-  color: var(--brand);
-}
-
-/* The sign-in lock: small and muted after the label, so the name still leads. */
-.footer-private-lock {
-  flex: none;
-  inline-size: 0.75rem;
-  block-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-.site-shell-footer-note {
-  margin-block-start: var(--s-6);
-  color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}

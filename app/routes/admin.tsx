@@ -5,6 +5,7 @@ import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
 
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
+import { suggest } from "~/lib/search-suggest";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { accessIdentity } from "~/lib/access.server";
@@ -28,11 +29,7 @@ import type { loader as rootLoader } from "~/root";
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
  * Sign-in is Cloudflare Access, in front of this layout, so no public route needs it.
  */
-import "@fontsource/schibsted-grotesk/400.css";
-import "@fontsource/schibsted-grotesk/500.css";
-import "@fontsource/schibsted-grotesk/600.css";
-import "@fontsource/schibsted-grotesk/800.css";
-import "@fontsource/martian-mono/400.css";
+import "capsomer/fonts.css";
 import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
@@ -273,6 +270,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <AdminShell
         app="info"
+        letterhead
+        search={{ action: "/search", label: "Search dustinedwards.info", suggest }}
         page={page}
         nav={nav}
         tabs={nav.slice(0, 5)}

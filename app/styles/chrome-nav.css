@@ -30,7 +30,6 @@
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
-  font-variation-settings: var(--t-nav-vars);
   line-height: normal;
 }
 
@@ -57,27 +56,6 @@
 [data-theme="dark"] .site-nav-panel {
   --nav-card-bg: var(--surface-popover);
   box-shadow: none;
-}
-
-/* The section buttons: a soft wash on hover, the band's chip color while their panel is open. The wash is
-   rounded and as deep at the sides as above and below the 20px line in the 36px row (Dustin, 2026-10-26);
-   the list's gap gives back what the padding takes, so the buttons keep their 20px apart. */
-.site-header-nav > ul {
-  gap: 4px;
-}
-
-.site-header-nav .cap-site-header-link {
-  padding-inline: 8px;
-  border-radius: 0.5rem;
-}
-
-.site-header-nav [data-nav-button]:hover {
-  background: color-mix(in oklab, var(--brand) 6%, transparent);
-}
-
-.site-header-nav [data-nav-button][aria-expanded="true"] {
-  background: color-mix(in oklab, var(--brand) 14%, transparent);
-  color: var(--brand);
 }
 
 /*
@@ -430,14 +408,25 @@ a.site-nav-row-title:hover {
   color: var(--brand);
 }
 
-/* A sticky header would repeat on every printed sheet, so it is static here. */
-@media print {
-  .site-header {
-    position: static;
+/* On a phone the panel opens from the letterhead's links row: one column, scrolling inside the window. */
+@media (max-width: 559.98px) {
+  .site-nav-panel {
+    max-block-size: calc(100dvh - var(--header-h) - 1rem);
+    overflow-y: auto;
   }
 
-  .site-header-nav,
-  .site-header-tools {
-    display: none;
+  .site-nav-tiles,
+  .site-nav-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .site-nav-tile-item + .site-nav-tile-item {
+    border-inline-start: 0;
+    border-block-start: var(--nav-rule);
+  }
+
+  .site-nav-body[data-spotlight] .site-nav-rows {
+    border-inline-end: 0;
+    border-block-end: var(--nav-rule);
   }
 }

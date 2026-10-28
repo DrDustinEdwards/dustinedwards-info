@@ -27,7 +27,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export default function LabOverview({ loaderData }: Route.ComponentProps) {
   return (
     <>
-      <PageHead title="Lab" lead={`You are signed in as ${loaderData.title}.`} />
+      <PageHead title="Lab bench" lead={`You are signed in as ${loaderData.title}.`} />
       {loaderData.reads ? (
         <p>
           <Link to="/lab/inventory">Inventory</Link>: the lots on the shelf, how much is left and where.

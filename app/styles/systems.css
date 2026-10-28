@@ -143,8 +143,8 @@
 /* On a phone the zoomed drawing takes the full width of the screen, past the page's gutters, to be read. */
 @media (max-width: 40rem) {
   .systems-map .cap-system-map[data-entered] .cap-system-map-stage {
-    width: calc(100% + 2 * var(--gutter));
+    width: calc(100% + 2 * var(--page-gutter));
     max-width: none;
-    margin-inline: calc(-1 * var(--gutter));
+    margin-inline: calc(-1 * var(--page-gutter));
   }
 }

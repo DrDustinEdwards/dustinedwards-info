@@ -1,6 +1,6 @@
 # Phages: the table on /research/phages
 
-The phage table on `/research/phages`, the section for each phage under it, and each phage's PhagesDB link are
+The phage table on `/research/phages` and each phage's PhagesDB link are
 files in `content/phages/`, one per phage, the source with its history (job_005b85bf32fc). They were two things in
 two places: a markdown table and eighty `###` sections typed into `content/pages/research-phages.md`, and a map of
 PhagesDB records in code (`PHAGESDB_RECORDS`, now gone) that a gate held the table to. Now a
@@ -16,7 +16,7 @@ operator can read: `list_phages` and `get_phage`, which return only what the pub
 ## The file
 
 `content/phages/<name in lower case>.md`: front matter and nothing else. The key is the name, so a file's name is
-its identity and two files cannot be one phage; it is also the id of the phage's heading on the page
+its identity and two files cannot be one phage; it is also the id of the phage's row in the table on the page
 (`/research/phages#acorn15`) and what the old `/discovery-of-{name}` addresses redirect to.
 
 ```markdown
@@ -73,7 +73,7 @@ calls PhagesDB at runtime; re-verify by hand and edit the file.
 ## How the page relates to the rows
 
 The page's own file, `content/pages/research-phages.md`, keeps the prose (the introduction, the headings and the
-caption) and carries two markers, each alone on its line:
+caption) and carries one marker, alone on its line:
 
 ```
 ## All phages
@@ -81,23 +81,21 @@ caption) and carries two markers, each alone on its line:
 Sorted by year, then by name.
 
 <!-- phages:table -->
-
-## The phages one by one
-
-<!-- phages:sections -->
 ```
 
-The page compile (`compilePage`, `app/lib/pages/compile.mjs`) replaces each marker with the markdown the rows
-draw (`phageTableMarkdown`, `phageSectionsMarkdown`) BEFORE anything reads the body. The table that was typed is
-now generated, byte for byte as it was, so the HTML, the markdown twin, the headings and their ids, the Dataset
+The page compile (`compilePage`, `app/lib/pages/compile.mjs`) replaces the marker with the table the rows draw
+(`phageTableMarkdown`) BEFORE anything reads the body, so the HTML, the markdown twin, the Dataset
 JSON-LD (its rows and its year span) and the search record all derive from one text, and none of them has a second
 copy to drift. The build, `sync:content`, a page save, `sync_pages` and a phage save all go through that door; a
-page that lacks a marker, has one twice, has one inline, or any other page that carries one, is refused.
+page that lacks the marker, has it twice, has it inline, or any other page that carries it, is refused.
+
+The table is the page's only list of the phages (a phage-by-phage section under it repeated the table and was
+removed on 2026-10-26), so a former name rides in the Phage cell, "Strudel (formerly Jentrie)", and a note in
+the Paper cell. Each row's name carries the phage's file key as its id, so `/research/phages#acorn15` lands on it.
 
 `app/lib/pages/invariants.mjs` still holds the page to what code depends on, now against the rows: the first
-table lists every phage in order with the six columns, a PhagesDB link for exactly the phages with a record, a
-`###` heading for each phage exactly once, and no PhagesDB link that no phage owns (a link typed into the prose is
-refused).
+table lists every phage in order with the six columns, a PhagesDB link for exactly the phages with a record,
+and no PhagesDB link that no phage owns (a link typed into the prose is refused).
 
 ## Facts the pages state: tokens, not typed numbers
 
@@ -158,12 +156,12 @@ that names the sync, never a page with no phages.
 
 | Output | From |
 | --- | --- |
-| The table and the sections on the page | `phageTableMarkdown` and `phageSectionsMarkdown`, in `compilePage`, compiled into the `pages` row |
+| The table on the page | `phageTableMarkdown`, in `compilePage`, compiled into the `pages` row |
 | The markdown twin | the same text, in the `pages` row's `markdown` |
 | The Dataset JSON-LD | `markdownTableFacts` over that text (rows, year span), in the page's structured data |
 | Search | the page's record in `search_docs`, written by the sync and by the write |
 | Search, facets, sort and the count | `PHAGES` in `app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx` over the phage rows; `app/enhance/catalog.ts` updates it in place |
-| The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the heading each file's name gives |
+| The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the table row each file's name gives |
 | The check | `phage-drift` on `/api/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs` |
 
 ## Known limits

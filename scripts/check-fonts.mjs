@@ -16,7 +16,9 @@ const { ok } = tally;
 
 console.log("\ncheck:fonts\n");
 
+// Capsomer's faces (capsomer/fonts.css, which routes/legacy-public.tsx imports) are the family's sans and mono.
 const SHEETS = [
+  join(root, "node_modules", "capsomer", "css", "fonts.css"),
   join(root, "app", "app.css"),
   ...readdirSync(join(root, "app", "styles"))
     .filter((f) => f.endsWith(".css"))
@@ -153,9 +155,8 @@ function fontFor(file) {
 /** @type {Map<string, string>} declared family -> the family its file must report */
 const NAMESPACED = new Map([
   ["Source Serif 4 Web", "Source Serif 4"],
-  ["Schibsted Grotesk Web", "Schibsted Grotesk"],
-  // Fontsource's wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
-  ["Martian Mono Web", "Martian Mono SemiExpanded"],
+  // The wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
+  ["Martian Mono", "Martian Mono SemiExpanded"],
 ]);
 
 for (const b of withFile) {
@@ -455,8 +456,9 @@ if (update) {
 // Measured on a plain run: `--update` skips the per-binary baseline comparisons.
 // 512 after the playground stylesheets were retired with /playground (2026-09-28): their 8 checks
 // went with them, no block was skipped. 438 after Inter's latin faces were replaced by Schibsted Grotesk and
-// Martian Mono (2026-10-26): fewer faces and binaries, no block skipped.
-const MINIMUM_CHECKS = 438;
+// Martian Mono (2026-10-26): fewer faces and binaries, no block skipped. 321 after those two came from
+// Capsomer's fonts.css, one variable file each, and the unused type levels and metric fallbacks went (2026-10-28).
+const MINIMUM_CHECKS = 321;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(

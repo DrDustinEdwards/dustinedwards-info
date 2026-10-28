@@ -152,7 +152,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       {/* The h-feed is `<main>` itself: head, filters and list are siblings. Not on archives: a filtered view is not this blog's feed. */}
-      <main className="tracks list-tracks h-feed" id="main" tabIndex={-1}>
+      <main className="cap-page tracks list-tracks h-feed" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

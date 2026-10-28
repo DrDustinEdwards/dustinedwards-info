@@ -10,7 +10,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 import {
   CARDED_PAGE_ROOTS,
@@ -100,7 +100,7 @@ await test("the phage table's Dataset facts come from the table itself", () => {
   const facts = markdownTableFacts(phages.markdown);
   assert.deepEqual(facts?.variableMeasured, ["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
   assert.equal(facts?.temporalCoverage, "2017/2025");
-  // One row per phage: the page gives each its own ### entry.
-  assert.equal(facts?.rows, [...phages.markdown.matchAll(/^### /gm)].length);
+  // One row per phage file.
+  assert.equal(facts?.rows, readdirSync(new URL("../content/phages/", import.meta.url)).filter((name) => name.endsWith(".md")).length);
   assert.equal(markdownTableFacts("No table here.\n"), null);
 });

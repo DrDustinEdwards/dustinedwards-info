@@ -40,7 +40,7 @@ const SLUG = "acorn15";
 const ID = `phage.${SLUG}`;
 const FILE = "content/phages/acorn15.md";
 const PAGE_FILE = "content/pages/research-phages.md";
-const ROW = "| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc²155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |";
+const ROW = "| Acorn15 | 2017 | *M. smegmatis* mc²155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |";
 const EDITED_ROW = ROW.replace("Hood County", "Parker County");
 /** Arlo names a genome paper, so the repository holds one for the save to find. */
 const PAPER_FILE = "content/publications/10-1128-mra-01242-18.md";
@@ -108,9 +108,9 @@ describe("a phage edit through the adapter is live at the next request", () => {
   // Cold pipeline (shiki, KaTeX) plus the page compile: longer than the default 30 s.
   it("shows the edit on the page, its twin and its search record, with no build or deploy", { timeout: 240_000 }, async () => {
     const before = await html();
-    // One row of the catalog: the name linking to its section, then the year, the host and the county, within one <tr>.
+    // One row of the catalog: the name carrying its anchor, then the year, the host and the county, within one <tr>.
     const within = "(?:(?!</tr>)[\\s\\S])*?";
-    const acornRow = (county: string) => new RegExp(`<a href="#acorn15">Acorn15</a></th>${within}>2017</td>${within}<em>M\\. smegmatis</em> mc²155</td>${within}>${county}</td>`);
+    const acornRow = (county: string) => new RegExp(`<span id="acorn15">Acorn15</span></th>${within}>2017</td>${within}<em>M\\. smegmatis</em> mc²155</td>${within}>${county}</td>`);
     expect(before).toMatch(acornRow("Hood County"));
     const twinBefore = await (await twin()).text();
     expect(twinBefore).toContain(ROW);
@@ -128,11 +128,10 @@ describe("a phage edit through the adapter is live at the next request", () => {
     expect((await commits())).toHaveLength(1);
     expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-phage]");
 
-    // The next request for the page carries the edit, in the table and in the Acorn15 section.
+    // The next request for the page carries the edit in the table.
     const page = await html();
     expect(page).not.toMatch(acornRow("Hood County"));
     expect(page).toMatch(acornRow("Parker County"));
-    expect(page).toContain("Found in 2017, Parker County, Texas.");
 
     // Its twin, the other face of the same page, carries the same edit.
     const res = await twin();
@@ -152,15 +151,14 @@ describe("a phage edit through the adapter is live at the next request", () => {
     expect(list.items.find((i) => i.id === ID)).toMatchObject({ kind: "phage", path: `${PATH}#acorn15` });
   });
 
-  it("a new phage is drawn into the table, the sections, the twin and the dataset facts", { timeout: 240_000 }, async () => {
+  it("a new phage is drawn into the table, the twin and the dataset facts", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/phage.zeta/draft`, { source: NEW_PHAGE, expectedVersion: null, changeId: "chg-new" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect((await source("content/phages/zeta.md"))).toBe(NEW_PHAGE);
 
     const page = await html();
-    expect(page).toContain('<a href="#zeta">Zeta</a>');
-    expect(page).toMatch(/<h3 id="zeta">Zeta/);
-    expect(await (await twin()).text()).toContain("| [Zeta](#zeta) | 2026 | *M. foliorum* | Erath County |  |  |");
+    expect(page).toContain('<span id="zeta">Zeta</span>');
+    expect(await (await twin()).text()).toContain("| Zeta | 2026 | *M. foliorum* | Erath County |  |  |");
     expect(page).toContain('"temporalCoverage":"2017/2026"');
     expect((await pageData()).page.dataset?.rows).toBe(76);
     expect((await rowFor("zeta"))?.slug).toBe("zeta");

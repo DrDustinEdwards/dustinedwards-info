@@ -70,16 +70,6 @@ main.app-page {
   }
 }
 
-/* The site's mark above the menu: its own paths, painted in the accent. */
-.admin-brand-mark {
-  height: 24px;
-  width: auto;
-}
-
-.site-logo-brand {
-  fill: var(--accent);
-}
-
 .cap-table th :is(.cap-status, .cap-pill) {
   margin-inline-start: var(--space-3);
 }

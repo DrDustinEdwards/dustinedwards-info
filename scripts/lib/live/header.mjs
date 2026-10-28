@@ -1,30 +1,14 @@
-// The site header as served: the search anchor, its hidden shortcut hint, and the theme form.
+// The site header as served: the search icon and the theme form.
 
 import { check, get } from "./client.mjs";
 
 export async function run() {
   const { text } = await get("/");
 
-  const start = text.indexOf('<a class="search-trigger"');
-  const end = text.indexOf("</a>", start);
-  const anchor = start === -1 ? "" : text.slice(start, end);
-  check("header: the search anchor is present", start !== -1);
-  check("header: the search anchor has an accessible name", anchor.includes('aria-label="Search"'));
-  // The no-JS wire never advertises the shortcut, which does not exist there.
+  // Capsomer's search icon: a link to the search page, so it works with no script.
   check(
-    "header: the shortcut description ships hidden in the no-JS state",
-    /<span[^>]*data-search-hint[^>]*hidden/.test(text) ||
-      /<span[^>]*hidden[^>]*data-search-hint/.test(text),
-  );
-  check(
-    "header: nothing paints the shortcut key on the wire",
-    !anchor.includes("<kbd"),
-  );
-  // The description is outside the anchor, so assert the association.
-  check(
-    "header: the search anchor names its description",
-    /aria-describedby="([^"]+)"/.test(anchor) &&
-      text.includes(`id="${/aria-describedby="([^"]+)"/.exec(anchor)?.[1]}"`),
+    "header: the search icon links to /search and has an accessible name",
+    /<a class="cap-site-header-icon cap-site-header-search-button" href="\/search" aria-label="Search [^"]+"/.test(text),
   );
   check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
   const themeButtons = text.match(/<button[^>]*name="theme"[^>]*>/g) ?? [];

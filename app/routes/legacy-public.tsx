@@ -16,14 +16,18 @@ import "~/app.css";
 // Capsomer's site header (site-header.tsx) and what it is built on, on every public page: its tokens, the
 // shared popover (the panels' placing and the tips) and dialog (the phone's sheet). Layered, so the site's
 // unlayered sheets below win wherever they touch the same thing.
+import "capsomer/fonts.css";
 import "capsomer/tokens.css";
 import "capsomer/site-dustinedwards.css";
 import "capsomer/popover.css";
 import "capsomer/dialog.css";
 import "capsomer/site-header.css";
+// Capsomer's utilities without its base: the family arrow on the footer's links.
+import "capsomer/utilities.css";
 import "capsomer/theme-switch.css";
 // The manual theme, public pages only: running head, parts, form boxes, index, checklist, plate, signs, letterhead.
 import "capsomer/manual.css";
+import "capsomer/family-footer.css";
 
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.

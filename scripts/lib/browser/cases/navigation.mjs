@@ -69,7 +69,7 @@ export async function run({ browser }) {
             y: box.top + box.height / 2,
           };
         };
-        const bar = pick(`.site-header-nav a[href="${path}"]`);
+        const bar = pick(`[data-site-nav] a[href="${path}"]`);
         if (bar) return { ...bar, via: "the header nav" };
         return null;
       }, href);
@@ -80,7 +80,7 @@ export async function run({ browser }) {
     /* The link sits in a section panel, closed until its button is pressed: open that panel (a click pins
        it) and read again. A link no panel holds is not laid out anywhere. */
     const opened = await probe.evaluate((path) => {
-      const link = document.querySelector(`.site-header-nav .site-nav-panel a[href="${path}"]`);
+      const link = document.querySelector(`[data-site-nav] .site-nav-panel a[href="${path}"]`);
       const panel = link?.closest("[data-nav-panel]");
       const button = panel ? document.querySelector(`button[aria-controls="${panel.id}"]`) : null;
       if (!(button instanceof HTMLElement)) return false;
@@ -122,7 +122,7 @@ export async function run({ browser }) {
   ok(
     "the header carries a laid-out /writing link for the navigation case to click",
     clickable,
-    '`.site-header-nav a[href="/writing"]` is not laid out with a non-zero box, even with its ' +
+    '`[data-site-nav] a[href="/writing"]` is not laid out with a non-zero box, even with its ' +
       "section panel opened. A " +
       "hidden link puts the click at the document corner and the navigation " +
       "assertions below then measure nothing, which is how one breakpoint read as " +

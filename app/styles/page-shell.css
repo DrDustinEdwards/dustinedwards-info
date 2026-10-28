@@ -1,6 +1,6 @@
 /* Left-aligned under the running head, at the same gutter, as the manual's pages hang from their head. */
 .page {
-  padding: 2rem var(--gutter);
+  padding-block: 2rem;
 }
 
 .page-inner {
@@ -10,7 +10,7 @@
 .page-inner-railed {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--s-7);
+  gap: var(--space-8);
   max-width: none;
 }
 
@@ -22,7 +22,7 @@
 @media (min-width: 64rem) {
   .page-inner-railed {
     grid-template-columns: 14rem minmax(0, 48rem);
-    gap: var(--s-8);
+    gap: var(--space-9);
   }
 
   .page-column {
@@ -33,14 +33,14 @@
     grid-column: 1;
     grid-row: 1;
     position: sticky;
-    inset-block-start: calc(var(--header-h) + var(--s-5));
+    inset-block-start: calc(var(--header-h) + var(--space-6));
     align-self: start;
   }
 }
 
 /* The rail's index, small: the label in the mono over the manual's dotted-leader index, the leaders dropped. */
 .page-contents-label {
-  margin: 0 0 var(--s-2);
+  margin: 0 0 var(--space-3);
   color: var(--text-secondary);
   font: 500 0.6875rem / 1.6 var(--font-mono);
   letter-spacing: 0.08em;
@@ -60,9 +60,9 @@
 }
 
 .page-contents .cap-leader-index-link {
-  gap: var(--s-3);
+  gap: var(--space-4);
   min-block-size: 0;
-  padding-block: var(--s-2);
+  padding-block: var(--space-3);
   font-size: 0.875rem;
   line-height: 1.35;
 }
@@ -82,7 +82,7 @@
 }
 
 .page-title {
-  margin: 0 0 var(--s-5);
+  margin: 0 0 var(--space-6);
   color: var(--text);
   font-family: var(--t-h1-family);
   font-size: var(--t-h1-size);
@@ -133,7 +133,7 @@
 
 /* A page that sets its own head (about, contact, gone) takes the same title as `.page-title`. */
 .page-head h1 {
-  margin: 0 0 var(--s-5);
+  margin: 0 0 var(--space-6);
   color: var(--text);
   font-family: var(--t-h1-family);
   font-size: var(--t-h1-size);
@@ -148,8 +148,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--s-5);
-  margin-block-end: var(--s-5);
+  gap: var(--space-6);
+  margin-block-end: var(--space-6);
 
   > .page-title {
     margin: 0;

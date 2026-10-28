@@ -96,9 +96,8 @@ await test("the calculator pages must still state what the calculator prints", a
   );
 });
 
-await test("the phage page must say where its table and sections are drawn", async () => {
+await test("the phage page must say where its table is drawn", async () => {
   assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:table -->", "")), /exactly once.*it has 0/);
-  assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:sections -->", "")), /exactly once.*it has 0/);
 });
 
 await test("the named software pages keep their name sections and their two exclusions", async () => {
@@ -130,7 +129,7 @@ const book = {
   idsOf: (/** @type {string} */ path) => (path === "/research/phages" ? idsIn('<h3 id="Acorn15">Acorn15</h3>') : null),
 };
 
-await test("links: a link that provably goes nowhere is refused, and an address the module cannot list passes", () => {
+await test("links: a link that provably goes nowhere is refused, and an address the module cannot list (a lab registry item) passes", () => {
   const errors = pageLinkErrors(
     {
       html: [
@@ -141,6 +140,7 @@ await test("links: a link that provably goes nowhere is refused, and an address 
         '<a href="/research/protocols/phage-dna-extraction.md">procedure twin</a>',
         '<a href="/writing/live">live post</a>',
         '<a href="/contact">unlisted namespace</a>',
+        '<a href="/research/lab/strains/smegmatis">lab registry item</a>',
         '<a href="https://example.org/x">external</a>',
       ].join(""),
     },

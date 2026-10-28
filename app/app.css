@@ -155,112 +155,8 @@
   line-gap-override: 0%;
 }
 
-/* The manual theme's faces, Capsomer's own: Schibsted Grotesk for heads, labels and controls, Martian Mono
-   for the small labels and figures. Namespaced "Web" like the serif, and cut into core and rest by
-   scripts/split-latin-fonts.py. */
-
-@font-face {
-  font-family: "Schibsted Grotesk Web";
-  font-style: normal;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("./fonts/schibsted-grotesk-latin-core-normal.woff2") format("woff2");
-  unicode-range: U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7,
-    U+0304, U+0308, U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
-}
-
-@font-face {
-  font-family: "Schibsted Grotesk Web";
-  font-style: normal;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("./fonts/schibsted-grotesk-latin-rest-normal.woff2") format("woff2");
-  unicode-range: U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6,
-    U+00B8-00D6, U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-    U+2000-2012, U+2015-2017, U+201A-201B, U+201E-2021, U+2023-2025, U+2027-2031, U+2033-206F,
-    U+20AC, U+2122, U+2191, U+2193, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "Schibsted Grotesk Web";
-  font-style: italic;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("./fonts/schibsted-grotesk-latin-core-italic.woff2") format("woff2");
-  unicode-range: U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7,
-    U+0304, U+0308, U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
-}
-
-@font-face {
-  font-family: "Schibsted Grotesk Web";
-  font-style: italic;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("./fonts/schibsted-grotesk-latin-rest-italic.woff2") format("woff2");
-  unicode-range: U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6,
-    U+00B8-00D6, U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-    U+2000-2012, U+2015-2017, U+201A-201B, U+201E-2021, U+2023-2025, U+2027-2031, U+2033-206F,
-    U+20AC, U+2122, U+2191, U+2193, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "Martian Mono Web";
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url("./fonts/martian-mono-latin-core-normal.woff2") format("woff2");
-  unicode-range: U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7,
-    U+0304, U+0308, U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
-}
-
-@font-face {
-  font-family: "Martian Mono Web";
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url("./fonts/martian-mono-latin-rest-normal.woff2") format("woff2");
-  unicode-range: U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6,
-    U+00B8-00D6, U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-    U+2000-2012, U+2015-2017, U+201A-201B, U+201E-2021, U+2023-2025, U+2027-2031, U+2033-206F,
-    U+20AC, U+2122, U+2191, U+2193, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Schibsted Grotesk 400 is 104.2% of Arial's advance over running UI text and 700 is 102.7% of Arial
-   Bold's; ascent and descent are its own (0.977, 0.258) divided by the size-adjust. */
-@font-face {
-  font-family: "Schibsted Grotesk Fallback";
-  font-style: normal;
-  font-weight: 100 549;
-  src: local("Arial");
-  size-adjust: 104.2%;
-  ascent-override: 93.72%;
-  descent-override: 24.74%;
-  line-gap-override: 0%;
-}
-
-@font-face {
-  font-family: "Schibsted Grotesk Fallback";
-  font-style: normal;
-  font-weight: 550 900;
-  src: local("Arial Bold"), local("Arial-BoldMT");
-  size-adjust: 102.7%;
-  ascent-override: 95.09%;
-  descent-override: 25.10%;
-  line-gap-override: 0%;
-}
-
-/* Martian Mono is 116.6% of Courier New's advance; ascent and descent 1.0 and 0.2 over that. */
-@font-face {
-  font-family: "Martian Mono Fallback";
-  font-style: normal;
-  font-weight: 100 800;
-  src: local("Courier New"), local("CourierNewPSMT");
-  size-adjust: 116.6%;
-  ascent-override: 85.76%;
-  descent-override: 17.15%;
-  line-gap-override: 0%;
-}
-
+/* The family's faces, Schibsted Grotesk and Martian Mono, are Capsomer's (capsomer/fonts.css, imported in
+   routes/legacy-public.tsx). */
 
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
 /* Not in the color blocks: check:contrast requires every token there to be a hex. */
@@ -268,14 +164,12 @@
   --z-tile-raise: 10; /* @kind other */
   --z-tile-body: 20; /* @kind other */
   --z-tile-action: 30; /* @kind other */
-  --z-sticky: 100; /* @kind other */
   --z-dropdown: 200; /* @kind other */
   --z-popover: 300; /* @kind other */
   --z-drawer-scrim: 400; /* @kind other */
   --z-drawer: 500; /* @kind other */
   --z-pinned-bar: 600; /* @kind other */
   --z-overlay-scrim: 700; /* @kind other */
-  --z-overlay: 800; /* @kind other */
   --z-progress: 900; /* @kind other */
   --z-transient: 1000; /* @kind other */
   --z-skip-link: 2000; /* @kind other */
@@ -284,11 +178,11 @@
 /* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
 
 :root {
-  --font-sans: "Schibsted Grotesk Web", "Inter", "Schibsted Grotesk Fallback", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Schibsted Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* Running text is the report's serif (the manual theme); labels and controls stay in the sans. */
   --font-prose: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
-  --font-mono: "Martian Mono Web", "Martian Mono Fallback", ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-serif: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia,
     "Times New Roman", serif;
 
@@ -296,85 +190,26 @@
   --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
-/* Set all five properties, never the font shorthand, which drops the variation axes. Weight is set
-   twice: font-weight selects the face, wght positions the axis. */
+/* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
+   Capsomer's type tokens. */
 :root {
-  /* 420, not 400: a hair heavier than book weight keeps small sans text from going thin. */
-  --t-body-family: var(--font-sans);
-  --t-body-size: clamp(1rem, 0.97rem + 0.14vw, 1.0625rem);
-  --t-body-leading: 1.65;
-  --t-body-weight: 420;
-  --t-body-vars: "wght" 420;
-
-  --t-small-family: var(--font-sans);
   --t-small-size: 0.875rem;
   --t-small-leading: 1.5;
-  --t-small-weight: 440;
-  --t-small-vars: "wght" 440;
-
-  --t-label-family: var(--font-sans);
-  --t-label-size: 0.8125rem;
-  --t-label-leading: 1.35;
-  --t-label-weight: 600;
-  --t-label-vars: "wght" 600;
-
-  --t-nav-family: var(--font-sans);
-  --t-nav-size: 0.9375rem;
-  --t-nav-weight: 400;
-  --t-nav-vars: "wght" 400;
-
-  --t-h3-family: var(--font-sans);
-  --t-h3-size: clamp(1.25rem, 1.16rem + 0.39vw, 1.375rem);
-  --t-h3-leading: 1.35;
-  --t-h3-weight: 620;
-  --t-h3-vars: "wght" 620;
 
   /* The manual's heads: bold sans, the h2 a part title over a hairline (capsomer/manual.css). */
-  --t-h2-family: var(--font-sans);
   --t-h2-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
   --t-h2-leading: 1.15;
-  --t-h2-weight: 700;
-  --t-h2-vars: "wght" 700;
 
   --t-h1-family: var(--font-sans);
   --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
   --t-h1-leading: 0.98;
   --t-h1-weight: 700;
   --t-h1-vars: "wght" 700;
-
   --t-h1-tracking: -0.04em;
-
-  --t-nav-strong: 620;
-}
-
-/* Capsomer's manual theme (capsomer/manual.css) reads its faces and ground under its own names. */
-:root {
-  --ui: var(--font-sans);
-  --display: var(--font-sans);
-  --mono: var(--font-mono);
-  --prose: var(--font-prose);
-  --ground: var(--paper);
-  /* Square corners on the public pages' Capsomer controls, as the manual draws every box. */
-  --radius-s: 0;
-  --radius-m: 0;
-  --radius-l: 0;
-  --radius-xl: 0;
 }
 
 /* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
 :root {
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.5rem;
-  --s-6: 2rem;
-  --s-7: 3rem;
-  --s-8: 4rem;
-  --s-9: 6rem;
-
-  --measure: 42rem;
-
   /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
@@ -383,19 +218,6 @@
   --line-w-thick: 0.125rem;
   --radius-control: 0;
 
-  --gutter: 1.5rem;
-}
-
-@media (min-width: 48rem) {
-  :root {
-    --gutter: 3rem;
-  }
-}
-
-@media (min-width: 64rem) {
-  :root {
-    --gutter: 4.5rem;
-  }
 }
 
 :root {
@@ -410,8 +232,6 @@
   --motion-wait: 900ms;
 
   --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
-  /* Entrances: leave the start quickly and settle. */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Hexes are fixed values, never derived. The light and dark blocks do not cascade into
@@ -824,9 +644,6 @@ body {
   /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
      public chrome reads it. */
   --site-inset: 1.5rem;
-  /* --header-h is the header's height, read by scroll-padding-top and the sticky post rail. Capsomer's
-     site header is 56px at every width (site-header.md) and reads the same property for its own height. */
-  --header-h: 3.5rem;
   background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
@@ -837,18 +654,10 @@ body {
   color: var(--text);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: var(--text-heading);
-}
-
 /* A link in running text is underlined because brand and visited purples fail CVD simulation on hue
-   alone. Element-level selectors, so any component rule that sets a color outranks them. */
-a {
+   alone. Element-level selectors, so any component rule that sets a color outranks them; the :where() keeps
+   them so while Capsomer's letterhead and family footer keep their own links. */
+a:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--brand);
   text-decoration: underline;
   text-decoration-thickness: 1px;
@@ -856,16 +665,16 @@ a {
   text-underline-offset: 0.25em;
 }
 
-a:visited {
+a:visited:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--visited);
 }
 
-a:hover {
+a:hover:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--brand-hover);
   text-decoration-color: var(--brand);
 }
 
-a:active {
+a:active:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--brand-pressed);
 }
 

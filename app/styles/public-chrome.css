@@ -1,127 +1,20 @@
-/*
- * The site's slots in Capsomer's site header (capsomer/components/site-header, site-header.tsx). Capsomer fixes
- * the frame: 56px, sticky, full width, the order, the spacing, the controls. The site gives its band (the
- * paper and ink), its accent for the current section's underline, its UI face, and the stacking that keeps
- * the bar above the page's other sticky parts (--z-pinned-bar, never --z-dropdown, which sits BELOW it).
- */
-.site-header {
-  --header-bg: var(--paper);
-  --header-fg: var(--text);
-  --header-fg-muted: var(--text-secondary);
-  /* The manual's mast: the name as the logotype over a hairline in the ink. */
-  --header-line: var(--text);
-  --header-accent: var(--brand);
-  --font-ui: var(--font-sans);
-  /* The page's gutter, so the name lines up with the running head and the page under it. */
-  --header-side: var(--gutter);
-  z-index: var(--z-pinned-bar);
-}
-
-/* On html, the scrolling element, so a focused element or anchor target never lands under the bar
- * (WCAG 2.2 2.4.11). */
-html {
-  scroll-padding-top: calc(var(--header-h) + 1rem);
-}
-
-/*
- * The public plane's link rules (app.css: a, a:visited, a:hover) are unlayered and Capsomer's header rules are
- * layered, so every link the header draws restates its color and drops the running-text underline here.
- */
-.site-header-brand,
-.site-header-brand:visited {
-  color: var(--header-fg);
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  text-decoration: none;
-}
-
-.site-header-brand:hover {
-  color: var(--brand);
-}
-
-.site-header a.cap-site-header-icon,
-.site-header a.cap-site-header-icon:visited {
-  color: var(--header-fg-muted);
-  text-decoration: none;
-}
-
-.site-header a.cap-site-header-icon:hover {
-  color: var(--header-fg);
-}
-
-/* The avatar's 36px target, held empty, so the theme button sits where it does in the admin header. */
-.site-header .site-header-account-slot {
-  inline-size: 36px;
-  block-size: 36px;
-  flex: none;
-}
-
-.cap-site-header-sheet-list a,
-.cap-site-header-sheet-list a:visited {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.cap-site-header-sheet-list a[aria-current="page"] {
-  color: var(--paper);
-}
-
-.cap-site-header-sheet-icon .site-nav-icon {
-  color: var(--brand);
-}
-
-/* The phone's sheet in the site's own surface, the popover step the section panels use. */
-.site-header .cap-site-header-sheet {
-  background: var(--surface-popover);
-  color: var(--text);
-}
-
-/* The header's icon rule sets position: relative, which would pull the sheet's Close button out of its corner. */
-.site-header .cap-site-header-sheet > .cap-dialog-close {
-  position: absolute;
-  inset-block-start: 0.5rem;
-  inset-inline-end: 0.5rem;
-}
-
-/*
- * MEASURED, 2026-10-15: from 768px (Capsomer's phone breakpoint) to 900px the logo, the five sections and the
- * tools want about 830px, so the sections sit closer. Re-measure when a section's label changes.
- */
-@media (min-width: 768px) and (max-width: 899.98px) {
-  .site-header .cap-site-header-sections > ul {
-    gap: 14px;
-  }
-}
-
-/*
- * Under 768px the sections are hidden, but Capsomer's rule for links on the right (the sections, then the tools
- * 12px after them) still matches, so the tools would stop 12px after the logo instead of at the right edge.
- */
-@media (max-width: 767.98px) {
-  .site-header .cap-site-header-tools {
-    margin-inline-start: auto;
-  }
-}
-
-/* The narrowest phones (320 to 376): the wordmark and four controls fit one row with the controls touching. */
-@media (max-width: 23.5rem) {
-  .site-header .cap-site-header-tools {
-    gap: 0;
-  }
-
-  .site-header-brand {
-    gap: 0.5rem;
-    font-size: 0.9375rem;
-  }
+/* The site's mark on Capsomer's letterhead band (site-header.tsx): the plaque's purple parts in the stripe's
+   purple (--on), as every family site draws its mark on the band, the warm three as drawn. */
+.cap-site-header .site-logo-brand {
+  fill: var(--on);
 }
 
 /* The running head (site-header.tsx, capsomer/manual.css): under the mast, across the page's wide column. */
 .running-head-tracks {
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--space-6);
 }
 
 .running-head-trail {
   font-weight: 400;
+}
+
+/* Capsomer orders the letterhead's tools by the theme button (order 2, after search's 1); the no-script
+   ThemeForm wraps that button in its own form, so the form takes the button's place. */
+.cap-site-header .cap-theme-form {
+  order: 2;
 }

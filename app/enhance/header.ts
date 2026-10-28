@@ -1,5 +1,6 @@
 import { enhance } from "capsomer/behavior/site-header";
 
+import { suggest } from "~/lib/search-suggest";
 import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 
 // The header module is on every public page, so the one rejection the browser raises when it abandons a view
@@ -12,22 +13,12 @@ window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => 
 /*
  * Capsomer's site header behavior (capsomer/behavior/site-header) on the markup site-header.tsx writes by
  * hand: each section's panel (hover opens at once, a click or a key holds it, Escape and a press outside close
- * it, arrow keys move through it, focus goes back to its button), each icon control's tip, and the phone's
- * Menu button and sheet. With no script none of this runs and nothing is lost: the panels open by
- * popovertarget and the sheet by invoker commands.
+ * it, arrow keys move through it, focus goes back to its button), each icon control's tip, and search. With no
+ * script none of this runs and nothing is lost: the panels open by popovertarget and the search icon is a link.
  */
 const header = document.querySelector<HTMLElement>("[data-site-header]");
 if (header) {
-  /*
-   * Capsomer drops a control's aria-describedby when it wires the control's tip, because its tip only repeats
-   * the name. The search link's description is not its tip but the shortcut hint (theme.ts), so it is kept.
-   */
-  const described = Array.from(
-    header.querySelectorAll<HTMLElement>("[aria-describedby]"),
-    (element) => [element, element.getAttribute("aria-describedby") ?? ""] as const,
-  );
-  enhance();
-  for (const [element, ids] of described) element.setAttribute("aria-describedby", ids);
+  enhance(document, { suggest });
 
   /*
    * Capsomer sends focus to a panel's button whenever the panel closes with nothing focused, which is also how
@@ -45,11 +36,5 @@ if (header) {
       const button = header.querySelector<HTMLElement>(`[aria-controls="${panel.id}"]`);
       if (button && document.activeElement === button) button.blur();
     });
-  }
-
-  // The sheet is the behavior's now; the invoker commands were its no-script path.
-  for (const element of header.querySelectorAll("[commandfor]")) {
-    element.removeAttribute("command");
-    element.removeAttribute("commandfor");
   }
 }

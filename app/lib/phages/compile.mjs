@@ -22,17 +22,15 @@ export function phagePath(/** @type {string} */ slug) {
   return `${PHAGES_DIR}/${slug}.md`;
 }
 
-/** The one page the table and the sections are drawn into. */
+/** The one page the table is drawn into. */
 export const PHAGES_PAGE_PATH = "/research/phages";
 
 /**
- * Where the page file says the generated markdown goes. Each stands alone on its line in the page's file, and the
- * page compile replaces it BEFORE rendering, so the HTML, the twin, the table of contents, the dataset facts and
- * the search record all come from one text. The page's prose, its headings and the table's caption stay in the
- * page file.
+ * Where the page file says the table goes. It stands alone on its line in the page's file, and the page compile
+ * replaces it BEFORE rendering, so the HTML, the twin, the table of contents, the dataset facts and the search
+ * record all come from one text. The page's prose, its headings and the table's caption stay in the page file.
  */
 export const TABLE_MARKER = "<!-- phages:table -->";
-export const SECTIONS_MARKER = "<!-- phages:sections -->";
 
 /**
  * The pages, besides the table's, whose text carries {{phage...}} tokens. A phage write re-derives each of them
@@ -41,7 +39,7 @@ export const SECTIONS_MARKER = "<!-- phages:sections -->";
  */
 export const PHAGE_FACT_PAGES = /** @type {const} */ (["/research", "/research/bacteriophages", "/research/science-education"]);
 
-/** The two hosts the table names, as the table's cell and a section's line write them. A new host is code. */
+/** The two hosts the table names, as the table's cell and the facet write them. A new host is code. */
 export const HOSTS = Object.freeze({
   smegmatis: { short: "*M. smegmatis* mc²155", long: "*Mycobacterium smegmatis* mc²155" },
   foliorum: { short: "*M. foliorum*", long: "*Microbacterium foliorum*" },
@@ -215,45 +213,40 @@ export function phageSetErrors(phages) {
   return errors;
 }
 
-/** The place a phage was found, as a section writes it after the year: ", Hood County, Texas", ", Texas" or "". */
-function foundPlace(/** @type {Phage} */ { county }) {
-  if (county === null) return "";
-  return county === STATE ? `, ${STATE}` : `, ${county}, ${STATE}`;
+/** A former name, as the table writes it after the phage's own: " (formerly Jentrie)" or "". */
+export function formerlyText(/** @type {Phage} */ { formerly }) {
+  return formerly ? ` (formerly ${formerly})` : "";
 }
 
-/** One phage's row in the table, in the table's columns. */
+/** One phage's row in the table, in the table's columns. The table is the page's only list of the phages, so a former name and a note ride in it. */
 export function phageTableRow(/** @type {Phage} */ phage) {
   const cells = [
-    `[${phage.name}](#${phageSlug(phage.name)})`,
+    `${phage.name}${formerlyText(phage)}`,
     String(phage.year),
     phage.host ? HOSTS[phage.host].short : "",
     phage.county ?? "",
     phage.phagesdb ? `[PhagesDB](${phagesDbUrl(phage.phagesdb)})` : "",
-    phage.paper ? `[Paper](/research/publications/${phage.paper}/)` : "",
+    [phage.paper ? `[Paper](/research/publications/${phage.paper}/)` : "", phage.note ?? ""].filter(Boolean).join(" "),
   ];
   return `| ${cells.join(" | ")} |`;
 }
 
-/** One phage's `###` section: what the row says in a sentence, and its links, as the page has always worded them. */
-export function phageSection(/** @type {Phage} */ phage) {
-  const found = `Found in ${phage.year}${foundPlace(phage)}.${phage.formerly ? ` Formerly named ${phage.formerly}.` : ""}`;
-  const first = phage.host ? `Host: ${HOSTS[phage.host].long}. ${found}` : found;
-  const links = [
-    phage.phagesdb ? `[${phage.name} on PhagesDB](${phagesDbUrl(phage.phagesdb)}).` : "",
-    phage.paper ? `[Genome announcement](/research/publications/${phage.paper}/).` : "",
-    phage.note ?? "",
-  ].filter(Boolean);
-  return [`### ${phage.name}`, first, ...(links.length > 0 ? [links.join(" ")] : [])].join("\n\n");
+/**
+ * The compiled page's HTML with each phage's name cell carrying the phage's file key as its id, so
+ * /research/phages#acorn15 names something: markdown cannot write an id, and the anchor checks (check:links, a
+ * page save) read the compiled HTML. The served table (app/routes/phages.tsx) carries the same ids.
+ *
+ * @param {string} path @param {string} html @param {Phage[] | undefined} phages
+ */
+export function withPhageRowIds(path, html, phages) {
+  if (path !== PHAGES_PAGE_PATH || !phages) return html;
+  const ids = new Map(phages.map((p) => [`${p.name}${formerlyText(p)}`, phageSlug(p.name)]));
+  return html.replace(/<tr>\n<td>([^<]*)<\/td>/g, (row, label) => (ids.has(label) ? `<tr>\n<td id="${ids.get(label)}">${label}</td>` : row));
 }
 
 /** The table's text: its header and one row per phage, in the page's order, no trailing newline. */
 export function phageTableMarkdown(/** @type {Phage[]} */ phages) {
   return [TABLE_HEADER, ...sortPhages(phages).map(phageTableRow)].join("\n");
-}
-
-/** The sections' text: one per phage, in the page's order, no trailing newline. */
-function phageSectionsMarkdown(/** @type {Phage[]} */ phages) {
-  return sortPhages(phages).map(phageSection).join("\n\n");
 }
 
 const countFormat = new Intl.NumberFormat("en-US");
@@ -355,10 +348,10 @@ export function expandPhageTokens(text, phages) {
   return errors.length > 0 ? { ok: false, errors } : { ok: true, text: out };
 }
 
-const markerLine = (/** @type {string} */ marker) => new RegExp(`^${marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "gm");
+const MARKER_LINE = new RegExp(`^${TABLE_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "gm");
 
 /**
- * The text a page body is judged and rendered as. The phage page must carry each marker once, alone on its line,
+ * The text a page body is judged and rendered as. The phage page must carry the marker once, alone on its line,
  * and every other page must carry none: a marker left in prose would render as nothing and hide a missing table.
  *
  * @param {string} path the page's registered path
@@ -367,30 +360,15 @@ const markerLine = (/** @type {string} */ marker) => new RegExp(`^${marker.repla
  * @returns {{ ok: false, errors: string[] } | { ok: true, markdown: string }}
  */
 export function expandPhagePage(path, body, phages) {
-  /** @type {string[]} */
-  const errors = [];
-  const markers = /** @type {const} */ ([
-    [TABLE_MARKER, () => phageTableMarkdown(phages ?? [])],
-    [SECTIONS_MARKER, () => phageSectionsMarkdown(phages ?? [])],
-  ]);
+  const anywhere = body.split(TABLE_MARKER).length - 1;
   if (path !== PHAGES_PAGE_PATH) {
-    for (const [marker] of markers) {
-      if (body.includes(marker)) errors.push(`${marker} belongs on ${PHAGES_PAGE_PATH} only`);
-    }
-    return errors.length > 0 ? { ok: false, errors } : { ok: true, markdown: body };
+    return anywhere > 0 ? { ok: false, errors: [`${TABLE_MARKER} belongs on ${PHAGES_PAGE_PATH} only`] } : { ok: true, markdown: body };
   }
   if (!phages || phages.length === 0) {
     return { ok: false, errors: ["the phage table has no rows to draw: the phages table is empty. Run the content sync (npm run sync:content -- --remote), or sync_phages."] };
   }
-  for (const [marker] of markers) {
-    const alone = (body.match(markerLine(marker)) ?? []).length;
-    const anywhere = body.split(marker).length - 1;
-    if (alone !== 1 || anywhere !== 1) {
-      errors.push(`the page must carry ${marker} exactly once, alone on its line (it has ${anywhere}); the phage rows are drawn there`);
-    }
+  if ((body.match(MARKER_LINE) ?? []).length !== 1 || anywhere !== 1) {
+    return { ok: false, errors: [`the page must carry ${TABLE_MARKER} exactly once, alone on its line (it has ${anywhere}); the phage rows are drawn there`] };
   }
-  if (errors.length > 0) return { ok: false, errors };
-  let markdown = body;
-  for (const [marker, draw] of markers) markdown = markdown.replace(markerLine(marker), () => draw());
-  return { ok: true, markdown };
+  return { ok: true, markdown: body.replace(MARKER_LINE, () => phageTableMarkdown(phages)) };
 }

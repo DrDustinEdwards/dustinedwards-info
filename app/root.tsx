@@ -18,7 +18,7 @@ import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 
-import uiCoreUrl from "./fonts/schibsted-grotesk-latin-core-normal.woff2?url";
+import uiFontUrl from "capsomer/fonts/schibsted-grotesk-latin-wght-normal.woff2?url";
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
 import katexCssUrl from "./styles/katex.generated.css?url";
 
@@ -70,11 +70,11 @@ export const links: Route.LinksFunction = () => [
     href: `${SITE_ORIGIN}/writing/feed.json`,
   },
   // `crossorigin` is mandatory: fonts are fetched in anonymous CORS mode whatever their origin, so a
-  // preload without it is a different request and the file is fetched twice. The core, which every
-  // page draws; the rest of the latin range loads only where a page needs it (app.css).
+  // preload without it is a different request and the file is fetched twice. Capsomer's UI face
+  // (capsomer/fonts.css), which every page draws.
   {
     rel: "preload",
-    href: uiCoreUrl,
+    href: uiFontUrl,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",
