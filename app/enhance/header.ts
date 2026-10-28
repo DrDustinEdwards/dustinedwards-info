@@ -1,5 +1,6 @@
-import { enhance, type Suggest } from "capsomer/behavior/site-header";
+import { enhance } from "capsomer/behavior/site-header";
 
+import { suggest } from "~/lib/search-suggest";
 import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 
 // The header module is on every public page, so the one rejection the browser raises when it abandons a view
@@ -8,21 +9,6 @@ import { isAbandonedTransition } from "~/lib/transition-abort.mjs";
 window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
   if (isAbandonedTransition(event.reason)) event.preventDefault();
 });
-
-type Hit = { url: string; type: string; title: string; documentTitle: string | null };
-
-/** The header's live search: the site's own /search, asked for JSON, as Capsomer's matches. */
-const suggest: Suggest = async (query, signal) => {
-  const response = await fetch(`/search?q=${encodeURIComponent(query)}`, { headers: { Accept: "application/json" }, signal });
-  if (!response.ok) return [];
-  const { results = [] } = (await response.json()) as { results?: Hit[] };
-  return results.map((hit) => ({
-    url: hit.url.replace(/^https?:\/\/[^/]+/, ""),
-    title: hit.title,
-    kind: hit.type,
-    detail: hit.documentTitle && hit.documentTitle !== hit.title ? hit.documentTitle : undefined,
-  }));
-};
 
 /*
  * Capsomer's site header behavior (capsomer/behavior/site-header) on the markup site-header.tsx writes by
