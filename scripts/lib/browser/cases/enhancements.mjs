@@ -193,7 +193,8 @@ export async function run({ page }) {
     });
     await new Promise((r) => setTimeout(r, 250));
     const status = await page.evaluate(() => {
-      const region = document.querySelector('[role="status"]');
+      // The copy region is the one appended to <body>; Capsomer's search results carry their own.
+      const region = document.querySelector('body > [role="status"]');
       return {
         exists: Boolean(region),
         text: region?.textContent?.trim() ?? "",

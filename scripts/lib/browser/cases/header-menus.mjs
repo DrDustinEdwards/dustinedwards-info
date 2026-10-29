@@ -133,22 +133,23 @@ export async function run({ browser }) {
             client: document.documentElement.clientWidth,
             position: getComputedStyle(header).position,
             letterhead: header.getAttribute("data-variant") === "letterhead",
-            /* Search, then the theme: the places the admin gives them. */
-            tools: [...header.querySelectorAll(".cap-site-header-search, .cap-site-header-theme")]
+            /* Search, then the theme: the places the admin gives them. The search wrapper is
+               display: contents, so its button is what has a box. */
+            tools: [...header.querySelectorAll(".cap-site-header-search-button, .cap-site-header-theme")]
               .filter((el) => el.getBoundingClientRect().width > 0)
               .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
-              .map((el) => (el.matches(".cap-site-header-search") ? "search" : "theme"))
+              .map((el) => (el.matches(".cap-site-header-search-button") ? "search" : "theme"))
               .join(),
           }
         : null;
     });
     ok(
-      "the header is Capsomer's letterhead, wired: 120px, pinned, inside the page's margins, with search and then the theme",
+      "the header is Capsomer's letterhead, wired: one 72px row, pinned, inside the page's margins, with search and then the theme",
       frame !== null &&
         frame.capsomer &&
         frame.ready &&
         frame.letterhead &&
-        frame.height === 120 &&
+        frame.height === 72 &&
         frame.width < frame.client &&
         frame.position === "sticky" &&
         frame.tools === "search,theme",

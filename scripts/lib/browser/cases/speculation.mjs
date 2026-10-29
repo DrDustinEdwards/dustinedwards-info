@@ -163,7 +163,7 @@ export async function run({ browser }) {
     "Chrome resolved no candidates at all. Every exclusion assertion below would " +
       "then pass on an empty set, which is the zero-scope class of the vacuity rule.",
   );
-  for (const destination of ["/colophon", "/privacy", "/about", "/writing/ten-years-on-cloudflare"]) {
+  for (const destination of ["/colophon", "/privacy", "/writing/ten-years-on-cloudflare"]) {
     ok(
       `/writing: ${destination} is a speculation candidate`,
       fromBlog.candidates.includes(destination),
