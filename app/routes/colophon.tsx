@@ -19,6 +19,7 @@ import {
   CARREL_NAME,
   CARREL_PAGE_PATH,
   CARREL_SENTENCE_REST,
+  CREDITS,
   SECURITY_TRADEOFF,
   SITE_OPERATION,
   COLOPHON_TITLE,
@@ -288,6 +289,14 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <a href={CAPSOMER_URL}>{CAPSOMER_NAME}</a>
           {CAPSOMER_SENTENCE_REST}
         </p>
+
+        <SectionHead id="credits" />
+        {CREDITS.map((credit) => (
+          <p key={credit.name}>
+            <a href={credit.url}>{credit.name}</a>
+            {credit.rest}
+          </p>
+        ))}
 
         <SectionHead id="not-adopted" />
         <p>{stack.notAdopted.length} entries.</p>

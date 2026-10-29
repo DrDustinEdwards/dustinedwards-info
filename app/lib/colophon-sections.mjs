@@ -105,6 +105,13 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "of this repository.",
   },
   {
+    id: "credits",
+    title: "Credits",
+    lead:
+      "The packages this site shares with my other sites adapt code from three " +
+      "open-source projects, each under the MIT license.",
+  },
+  {
     id: "not-adopted",
     title: "What was not adopted",
     lead:
@@ -184,6 +191,38 @@ const CAPSOMER_SENTENCE = "Capsomer is the shared design system this site will a
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);
+
+/**
+ * Each credit renders as its linked name followed by `rest`, so `rest` starts right after the name.
+ *
+ * @type {ReadonlyArray<{ name: string, url: string, rest: string }>}
+ */
+export const CREDITS = Object.freeze([
+  {
+    name: "Astro",
+    url: "https://astro.build",
+    rest:
+      " is the source of devkit's rules for when an island loads and of its dev " +
+      "toolbar audit rules. Site-runtime adapts Astro's speculation-rules " +
+      "approach to prefetching and its image layouts and widths, and Capsomer " +
+      "adapts Astro's size-matched fallback fonts.",
+  },
+  {
+    name: "EmDash",
+    url: "https://emdashcms.com",
+    rest:
+      " is the source of the scheduled updates to live posts that site-api and " +
+      "Carrel apply, and of the ideas behind focal points and captions on media.",
+  },
+  {
+    name: "Cloudflare Nimbus",
+    url: "https://github.com/cloudflare/nimbus",
+    rest:
+      " is the model for how Prelum serves Markdown copies of pages to AI " +
+      "agents, and Prelum uses Nimbus's own code to decide when a request " +
+      "prefers Markdown.",
+  },
+]);
 
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
 
@@ -266,6 +305,9 @@ function colophonPageInput(stack, features) {
     }
     if (id === "run") {
       return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}. ${CAPSOMER_SENTENCE} Its site is ${CAPSOMER_URL}.`;
+    }
+    if (id === "credits") {
+      return CREDITS.map((c) => `${c.name}${c.rest}`).join(" ");
     }
     if (id === "not-adopted") {
       // The label, never `n.status`: the page shows the label, so the index must.
