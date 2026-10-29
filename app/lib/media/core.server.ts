@@ -32,8 +32,10 @@ export type MediaObject = {
   deletable: boolean;
   /** The focal point in site-runtime ./image's spelling ("XxY", 0 to 1), or null for the center. */
   focus: string | null;
-  /** The index row's last write, which every metadata edit and a replace move. */
-  updatedAt: string;
+  /** When the file was trashed (the index's `trashed_at`), or null in the library. */
+  trashedAt: string | null;
+  /** The index row's revision, which every metadata edit, trash move and replace bump (writeMediaAtRev). */
+  rev: number;
 };
 
 type MediaPage = {
@@ -79,7 +81,8 @@ export function mediaObjectOf(row: MediaRow): MediaObject {
     placeholder: row.placeholder,
     deletable: row.storage !== "static",
     focus: focusText(row.focalX, row.focalY),
-    updatedAt: row.updatedAt,
+    trashedAt: row.trashedAt,
+    rev: row.rev,
   };
 }
 

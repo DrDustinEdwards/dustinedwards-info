@@ -1,8 +1,9 @@
 // The media library's D1 index: listing, counts, trash, tags and the upserts that keep it in step with R2.
-import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql, type SQL } from "drizzle-orm";
 import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
+import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
 import { media, mediaRefs, type MediaRef } from "./schema";
 import { getDb, notTrashed } from "./client";
 
@@ -32,7 +33,7 @@ function matchesQuery(q: string) {
 }
 
 /** ORDER BY for a listing; the caller adds the tie-break. */
-function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
+function orderFor(options: { sort?: string; dir?: string; trashed?: boolean; storedOnly?: boolean }) {
   if (options.trashed) return [desc(media.trashedAt)];
 
   const descending = options.dir !== "asc";
@@ -52,6 +53,8 @@ function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
         ),
       ];
     default:
+      // Without static rows (Carrel's library) nothing has a NULL upload time to bury, so newest is the whole order.
+      if (options.storedOnly) return [way(media.uploadedAt)];
       /*
        * Role rank, then newest: `uploaded_at DESC` alone sorts static rows (no upload event, so NULL)
        * last, burying the only insertable images.
@@ -63,39 +66,34 @@ function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
   }
 }
 
-/** One library page, newest first; `key` keeps offset pagination stable. */
-export async function listMediaPage(
-  env: Env,
-  options: {
-    page?: number;
-    limit?: number;
-    insertableOnly?: boolean;
-    role?: string;
-    unusedOnly?: boolean;
-    q?: string;
-    /** An exact tag, already normalized by the caller. */
-    tag?: string;
-    /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
-    lens?: string;
-    /** Keys repository code references. A parameter: scripts import `app/db` unbundled. */
-    templateKeys?: string[];
-    /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
-    sort?: string;
-    dir?: string;
-    /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
-    trashed?: boolean;
-    /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
-    storedOnly?: boolean;
-  } = {},
-) {
-  const limit = options.limit ?? 24;
-  const page = Math.max(1, options.page ?? 1);
-  const offset = (page - 1) * limit;
+/** What a library listing may filter and sort by: the page, the palette and Carrel's media group ask it. */
+type MediaListOptions = {
+  page?: number;
+  limit?: number;
+  insertableOnly?: boolean;
+  role?: string;
+  unusedOnly?: boolean;
+  q?: string;
+  /** An exact tag, already normalized by the caller. */
+  tag?: string;
+  /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
+  lens?: string;
+  /** Keys repository code references. A parameter: scripts import `app/db` unbundled. */
+  templateKeys?: string[];
+  /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
+  sort?: string;
+  dir?: string;
+  /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
+  trashed?: boolean;
+  /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
+  storedOnly?: boolean;
+};
 
+/** The WHERE of a listing, as SQL and never a post-filter, so a page is a full page and a count counts the same rows. */
+async function mediaWhere(env: Env, options: MediaListOptions) {
   // `role`, not `storage`: logos, favicons and diagram halves must never be inserted.
   const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
 
-  /* As SQL, not a post-filter, so a page is a full page. */
   const clauses = [];
   /* A branch, never optional, or trashed assets reappear in the picker. */
   clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
@@ -124,13 +122,20 @@ export async function listMediaPage(
     const twinKeys = JSON.stringify([...(await mediaTwins(env)).keys()]);
     clauses.push(sql`${media.key} IN (SELECT value FROM json_each(${twinKeys}))`);
   }
-  const where = clauses.length > 0 ? and(...clauses) : undefined;
+  return clauses.length > 0 ? and(...clauses) : undefined;
+}
+
+/** One library page, newest first; `key` keeps offset pagination stable. */
+export async function listMediaPage(env: Env, options: MediaListOptions = {}) {
+  const limit = options.limit ?? 24;
+  const page = Math.max(1, options.page ?? 1);
+  const offset = (page - 1) * limit;
 
   const db = getDb(env);
   const rows = await db
     .select()
     .from(media)
-    .where(where)
+    .where(await mediaWhere(env, options))
     /*
      * The role rank is only the default, never a prefix on an explicit sort. `key ASC` breaks ties,
      * because an unstable sort makes offset pagination skip and repeat rows.
@@ -142,6 +147,12 @@ export async function listMediaPage(
   // One extra row answers "is there another page" without a COUNT.
   const hasMore = rows.length > limit;
   return { rows: rows.slice(0, limit), page, hasMore };
+}
+
+/** How many rows a listing matches across every page. */
+export async function countMediaPage(env: Env, options: MediaListOptions = {}) {
+  const [row] = await getDb(env).select({ n: count() }).from(media).where(await mediaWhere(env, options));
+  return Number(row?.n ?? 0);
 }
 
 export async function mediaCounts(env: Env) {
@@ -229,23 +240,67 @@ export async function mediaTrashedCount(env: Env) {
   return Number(row?.n ?? 0);
 }
 
-/** Trashes an asset; R2 untouched. A repeat keeps the first timestamp. Returns if moved. */
-export async function trashMediaRecord(env: Env, key: string) {
-  const result = await getDb(env)
+type MediaRow = typeof media.$inferSelect;
+
+/** What a revision-checked write did: the row's new `rev`, or, when no row changed, the row as it is now. */
+export type MediaWriteOutcome = { written: true; rev: number } | { written: false; row: MediaRow | null };
+
+/**
+ * The one way an editable column changes: a single UPDATE that bumps `rev` and, given `expectedRev`, lands only
+ * on that revision, so a stale writer is refused in the same statement rather than after a read. `when` narrows it
+ * further (a trash lands only on a row not yet trashed); `storedOnly` keeps it off static rows. When no row
+ * changed, the row is read again so the caller can tell a missing key, a stale version and a no-op apart.
+ */
+export async function writeMediaAtRev(
+  env: Env,
+  key: string,
+  set: Omit<SQLiteUpdateSetSource<typeof media>, "key" | "rev" | "updatedAt">,
+  options: { expectedRev?: number; storedOnly?: boolean; when?: SQL } = {},
+): Promise<MediaWriteOutcome> {
+  const [row] = await getDb(env)
     .update(media)
-    .set({ trashedAt: sql`(datetime('now'))`, updatedAt: sql`(datetime('now'))` })
-    .where(and(eq(media.key, key), notTrashed()))
-    .run();
-  return { moved: (result.meta?.changes ?? 0) > 0 };
+    .set({ ...set, rev: sql`${media.rev} + 1`, updatedAt: sql`(datetime('now'))` })
+    .where(
+      and(
+        eq(media.key, key),
+        options.expectedRev === undefined ? undefined : eq(media.rev, options.expectedRev),
+        options.storedOnly ? ne(media.storage, "static") : undefined,
+        options.when,
+      ),
+    )
+    .returning({ rev: media.rev });
+  if (row) return { written: true, rev: row.rev };
+  return { written: false, row: await mediaRecord(env, key) };
 }
 
-export async function restoreMediaRecord(env: Env, key: string) {
-  const result = await getDb(env)
-    .update(media)
-    .set({ trashedAt: null, updatedAt: sql`(datetime('now'))` })
-    .where(and(eq(media.key, key), isNotNull(media.trashedAt)))
-    .run();
-  return { restored: (result.meta?.changes ?? 0) > 0 };
+/**
+ * Index columns that follow an R2 write the caller has already versioned with writeMediaAtRev (a focal point,
+ * a replace's measurements), so `rev` stays where that claim put it.
+ */
+export async function followMediaObject(
+  env: Env,
+  key: string,
+  set: Omit<SQLiteUpdateSetSource<typeof media>, "key" | "rev" | "updatedAt">,
+) {
+  await getDb(env).update(media).set(set).where(eq(media.key, key)).run();
+}
+
+/** Trashes an asset; R2 untouched. A repeat keeps the first timestamp and changes nothing. */
+export async function trashMediaRecord(
+  env: Env,
+  key: string,
+  options: { expectedRev?: number; storedOnly?: boolean } = {},
+) {
+  return writeMediaAtRev(env, key, { trashedAt: sql`(datetime('now'))` }, { ...options, when: notTrashed() });
+}
+
+/** Restores a trashed asset. A row not in the trash changes nothing. */
+export async function restoreMediaRecord(
+  env: Env,
+  key: string,
+  options: { expectedRev?: number; storedOnly?: boolean } = {},
+) {
+  return writeMediaAtRev(env, key, { trashedAt: null }, { ...options, when: isNotNull(media.trashedAt) });
 }
 
 export async function trashedMediaKeys(env: Env) {
@@ -257,14 +312,16 @@ export async function trashedMediaKeys(env: Env) {
   return rows.map((r) => r.key);
 }
 
-/** The only tag writer; `serializeTags` owns the stored form. */
-export async function setMediaTags(env: Env, key: string, input: string[] | string) {
-  await getDb(env)
-    .update(media)
-    .set({ tags: serializeTags(input), updatedAt: sql`(datetime('now'))` })
-    .where(eq(media.key, key))
-    .run();
-  return parseTags(serializeTags(input));
+/** The only tag writer; `serializeTags` owns the stored form. Answers the saved tags and what the write did. */
+export async function setMediaTags(
+  env: Env,
+  key: string,
+  input: string[] | string,
+  options: { expectedRev?: number; storedOnly?: boolean } = {},
+) {
+  const stored = serializeTags(input);
+  const outcome = await writeMediaAtRev(env, key, { tags: stored }, options);
+  return { tags: parseTags(stored), outcome };
 }
 
 /** Tag counts, in JS since tags share one delimited column. Trashed rows excluded. */
@@ -401,6 +458,8 @@ export async function upsertMediaRecord(
         ...(record.height !== undefined ? { height: record.height } : {}),
         ...(record.focalX !== undefined ? { focalX: record.focalX } : {}),
         ...(record.focalY !== undefined ? { focalY: record.focalY } : {}),
+        // An annotation writer, so it moves the version Carrel holds (writeMediaAtRev).
+        rev: sql`${media.rev} + 1`,
         updatedAt: now,
       },
     });

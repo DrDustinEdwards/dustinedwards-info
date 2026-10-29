@@ -152,6 +152,11 @@ export const media = sqliteTable(
     uploadedAt: text("uploaded_at"),
     createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
     updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+    /**
+     * Bumped by every write to alt, caption, tags, focal point, trash state or bytes, and checked in the
+     * same UPDATE's WHERE, so a stale write is refused rather than lost. Carrel's media version is "r<rev>".
+     */
+    rev: integer("rev").notNull().default(0),
   },
   (t) => [
     index("media_uploaded_idx").on(t.uploadedAt),
