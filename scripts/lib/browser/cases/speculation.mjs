@@ -1,18 +1,22 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { buildSpeculationRules } from "../../../../app/lib/speculation.mjs";
-import { speculationRulesHash } from "../../../../workers/csp.mjs";
+import { SPECULATION_RULES_HEADER } from "@dustinedwards/site-runtime/prefetch";
+
 import { BASE, ok } from "../harness.mjs";
 
 /*
- * Chrome refuses to prerender under CDP, so `activationStart` is always 0: never assert
- * it. The candidate list is Chrome's own reading of the rules.
+ * Hover prefetch (site-runtime ./prefetch): every public page names one rules file in its response header, and
+ * the rules are the package's, tested there. This holds the site to its half: the header is on the page, Chrome
+ * accepts the file under the enforced policy, and the site's own exclusions hold. The candidate list is Chrome's
+ * own reading of the rules. Chrome refuses to prerender under CDP, so `activationStart` is always 0: never assert it.
+ * The rules are one file for every page, so a page's links to itself are candidates too: a hover there costs one
+ * cached document request, where the old per-page inline rule excluded the page's own path.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ browser }) {
-  const PAGES = ["/", "/writing", "/writing/ten-years-on-cloudflare", "/colophon", "/privacy"];
-  /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], actions: string[], eagerness: string[], blocks: number, text: string, policy: string}>} */
+  const PAGES = ["/", "/writing", "/colophon"];
+  /** @type {Map<string, {header: string, accepted: boolean, errors: string[], candidates: string[], hrefs: string[]}>} */
   const seen = new Map();
 
   for (const path of PAGES) {
@@ -29,9 +33,7 @@ export async function run({ browser }) {
     const candidates = new Set();
     client.on("Preload.ruleSetUpdated", (event) => {
       ruleSets += 1;
-      if (event.ruleSet?.errorType) {
-        errors.push(`${event.ruleSet.errorType}: ${event.ruleSet.errorMessage ?? ""}`);
-      }
+      if (event.ruleSet?.errorType) errors.push(`${event.ruleSet.errorType}: ${event.ruleSet.errorMessage ?? ""}`);
     });
     client.on("Preload.preloadingAttemptSourcesUpdated", (event) => {
       for (const source of event.preloadingAttemptSources ?? []) {
@@ -42,117 +44,31 @@ export async function run({ browser }) {
     });
 
     const response = await probe.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    const policy = response?.headers()["content-security-policy"] ?? "";
-    /* The candidate list is computed after the rules are parsed, so it needs
-       a window; a zero read too early is not a zero. */
+    const header = response?.headers()[SPECULATION_RULES_HEADER.name.toLowerCase()] ?? "";
+    /* The candidate list is computed after the rules file arrives, so it needs a window; a zero read too early is not a zero. */
     await new Promise((r) => setTimeout(r, 1200));
-
-    const page = await probe.evaluate(() => {
-      const blocks = [...document.querySelectorAll('script[type="speculationrules"]')];
-      /** @type {string[]} */
-      const eagerness = [];
-      /* Harvested rather than looked up under one name, so a changed action shows up as one, not as an empty list. */
-      /** @type {string[]} */
-      const actions = [];
-      for (const block of blocks) {
-        try {
-          const payload = JSON.parse(block.textContent ?? "{}");
-          for (const [action, rules] of Object.entries(payload)) {
-            actions.push(action);
-            for (const rule of rules ?? []) eagerness.push(rule.eagerness);
-          }
-        } catch {
-          actions.push("UNPARSEABLE");
-          eagerness.push("UNPARSEABLE");
-        }
-      }
-      return {
-        blocks: blocks.length,
-        text: blocks[0]?.textContent ?? "",
-        actions,
-        eagerness,
-        hrefs: [
-          ...new Set(
-            [...document.querySelectorAll("a[href]")].map((a) => /** @type {HTMLAnchorElement} */ (a).href),
-          ),
-        ]
-          .filter((href) => href.startsWith(location.origin))
-          .map((href) => href.slice(location.origin.length)),
-      };
-    });
+    const hrefs = await probe.evaluate(() =>
+      [...new Set([...document.querySelectorAll("a[href]")].map((a) => /** @type {HTMLAnchorElement} */ (a).href))]
+        .filter((href) => href.startsWith(location.origin))
+        .map((href) => href.slice(location.origin.length)),
+    );
     await context.close();
-
-    seen.set(path, {
-      accepted: ruleSets > 0 && errors.length === 0,
-      errors,
-      candidates: [...candidates],
-      policy,
-      ...page,
-    });
+    seen.set(path, { header, accepted: ruleSets > 0 && errors.length === 0, errors, candidates: [...candidates], hrefs });
   }
 
   for (const path of PAGES) {
     const s = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get(path));
     ok(
-      `${path}: carries exactly one speculationrules block`,
-      s.blocks === 1,
-      `found ${s.blocks}. Two blocks on one page are two rule sets competing for ` +
-        `one budget, which is what having a site block and a blog block cost; ` +
-        `zero means the enhancement is absent and nothing else on the page changes.`,
+      `${path}: names the prefetch rules in its ${SPECULATION_RULES_HEADER.name} header`,
+      s.header === SPECULATION_RULES_HEADER.value,
+      `got ${JSON.stringify(s.header)}. Without it the page prefetches nothing and renders exactly the same.`,
     );
     ok(
       `${path}: CHROME ACCEPTED the rule set`,
       s.accepted,
       s.errors.length
-        ? `Chrome reported ${JSON.stringify(s.errors)}. A rejected rule set renders ` +
-          `identically to a good one and speculates nothing.`
-        : `no Preload.ruleSetUpdated event at all, so the block never reached the ` +
-          `speculation machinery. Under the enforced CSP the usual cause is a ` +
-          `script-src without this page's rules hash.`,
-    );
-    ok(
-      `${path}: the rendered rules are byte-identical to buildSpeculationRules for the path`,
-      s.text === buildSpeculationRules({ pathname: path }),
-      `rendered ${JSON.stringify(s.text.slice(0, 120))}. The Worker hashes the builder's text ` +
-        `for the request pathname, so any difference is a refused block.`,
-    );
-    const rulesSource = `'${await speculationRulesHash(path)}'`;
-    ok(
-      `${path}: the page's CSP carries its rules hash`,
-      s.policy.includes(rulesSource),
-      `expected ${rulesSource} in ${JSON.stringify(s.policy)}`,
-    );
-    ok(
-      `${path}: THE ACTION IS PREFETCH`,
-      s.actions.length === 1 && s.actions[0] === "prefetch",
-      `the payload's actions are ${JSON.stringify(s.actions)}, expected exactly ` +
-        `["prefetch"]. It was "prerender" until 2026-08-28, and that is the navigation ` +
-        `blink: a prerender that has not painted is still activatable, moderate ` +
-        `eagerness starts on pointerdown, and a click with no hover dwell swaps in an ` +
-        `empty frame host, so paint holding never runs and the reader gets the themed ` +
-        `canvas. Measured on production by screen capture with no CDP, fourteen runs ` +
-        `over both themes: every run with prerendering on showed blank frames at 100% ` +
-        `of the --paper token with a luma standard deviation of zero, and no run with it ` +
-        `off did. Prefetch warms the same credentialed response without creating a ` +
-        `frame host to activate.`,
-    );
-    ok(
-      `${path}: ONE rule, at moderate eagerness`,
-      s.eagerness.length === 1 && s.eagerness[0] === "moderate",
-      `eagerness values are ${JSON.stringify(s.eagerness)}, expected exactly ` +
-        `["moderate"]. An "immediate" rule for the header's destinations was built ` +
-        `and measured on 2026-08-28 and reverted on Dustin's verdict: it cost 4 to 5 ` +
-        `extra credentialed document requests on EVERY public page load, taking origin ` +
-        `document requests per page view from one to five or six, because a ` +
-        `cookie-carrying reader bypasses the platform cache and each speculation ` +
-        `therefore reaches this Worker. Its reappearance is that decision being undone.`,
-    );
-    ok(
-      `${path}: is not a candidate for its own speculation`,
-      !s.candidates.includes(path),
-      `the page speculates itself. That spends an origin request on a navigation ` +
-        `that cannot happen, and can evict a useful candidate from the two-slot ` +
-        `moderate budget.`,
+        ? `Chrome reported ${JSON.stringify(s.errors)}. A rejected rule set renders identically to a good one and prefetches nothing.`
+        : "no Preload.ruleSetUpdated event at all, so the rules file never reached the speculation machinery.",
     );
   }
 
@@ -160,16 +76,13 @@ export async function run({ browser }) {
   ok(
     "/writing: the candidate list is non-empty, so the assertions below are about something",
     fromBlog.candidates.length > 0,
-    "Chrome resolved no candidates at all. Every exclusion assertion below would " +
-      "then pass on an empty set, which is the zero-scope class of the vacuity rule.",
+    "Chrome resolved no candidates at all, and every exclusion below would pass on an empty set.",
   );
-  for (const destination of ["/colophon", "/privacy", "/writing/ten-years-on-cloudflare"]) {
+  for (const destination of ["/colophon", "/privacy"]) {
     ok(
-      `/writing: ${destination} is a speculation candidate`,
+      `/writing: ${destination} is a prefetch candidate`,
       fromBlog.candidates.includes(destination),
-      `it is not, so a click to it is a cold document load. ${destination} is linked ` +
-        `from this page and is a public HTML route, which is exactly the set the ` +
-        `document rule exists to cover.`,
+      `it is not, so a click to it is a cold document load. ${destination} is linked from this page and is a public page.`,
     );
   }
 
@@ -177,31 +90,17 @@ export async function run({ browser }) {
     {
       label: "a query string",
       matches: (/** @type {string} */ href) => href.includes("?"),
-      /*
-       * Do not spell the glob here: `stripComments` reads a slash-star in a string as a
-       * comment opener, hiding the `ok()` calls after it from any comment-stripping reader.
-       */
-      why:
-        "a filtered view is a database read per variant, and /writing renders one chip " +
-        "per tag; speculating them is a crawl of the tag index. The exclusion has to " +
-        "name the URLPattern `search` component. A pathname pattern that spells the " +
-        "query with a literal question mark reads it as part of the path, and planting " +
-        "that spelling resolved ZERO candidates on every page rather than merely " +
-        "leaking the queries.",
+      why: "a filtered view is a database read per variant, and /writing renders one chip per tag.",
     },
     {
-      label: "a non-page extension",
+      label: "a file extension",
       matches: (/** @type {string} */ href) => /\.(md|xml|json|txt)(\?|$)/.test(href),
-      why:
-        "feeds, the sitemap, robots, the llms pair and the .md representation twins are " +
-        "not documents a reader navigates to. /writing/rss.xml WAS a candidate under the " +
-        "old blog-prefix rule, measured 2026-08-28. The rule is not spelled out here " +
-        "for the slash-star reason given above.",
+      why: "feeds, the sitemap, robots, the llms pair and the .md twins are files, not pages a reader navigates to.",
     },
     {
       label: "the admin door",
       matches: (/** @type {string} */ href) => href === "/admin",
-      why: "prerendering a door warms nothing, and it is linked from the footer on every page.",
+      why: "prefetching a door warms nothing, and it is linked from the footer on every page.",
     },
   ];
   for (const exclusion of EXCLUSIONS) {
@@ -209,14 +108,13 @@ export async function run({ browser }) {
     ok(
       `/writing renders at least one link with ${exclusion.label}, so the exclusion has a subject`,
       links.length > 0,
-      `none found among ${fromBlog.hrefs.length} same-origin links. The assertion below ` +
-        `would pass because the page changed, not because the rule works.`,
+      `none found among ${fromBlog.hrefs.length} same-origin links; the assertion below would pass because the page changed.`,
     );
     const leaked = fromBlog.candidates.filter(exclusion.matches);
     ok(
       `NO CANDIDATE ON /writing CARRIES ${exclusion.label.toUpperCase()}`,
       leaked.length === 0,
-      `Chrome resolved ${JSON.stringify(leaked)} as speculation candidates. ${exclusion.why}`,
+      `Chrome resolved ${JSON.stringify(leaked)} as prefetch candidates. ${exclusion.why}`,
     );
   }
 }

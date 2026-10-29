@@ -2,7 +2,6 @@ import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/beha
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { LabEquipment, LabEquipmentItem, LabPrimer, LabPrimers, LabReagent, LabReagents, LabStrain, LabStrains } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
@@ -210,7 +209,7 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
       ) : (
         <LabPrimers result={queryCatalog(PRIMERS, page.primers, parseCatalogParams(PRIMERS, page.search))} />
       )}
-      <Enhance module="catalog" />
+      <template data-island="catalog" />
     </PageShell>
   );
 }

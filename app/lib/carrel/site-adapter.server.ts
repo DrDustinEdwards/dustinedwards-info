@@ -5,12 +5,14 @@
 
 import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
+import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
 import { getTableColumns } from "drizzle-orm";
 import { RouterContextProvider } from "react-router";
 
 import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
+import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
@@ -144,6 +146,13 @@ export function carrelSiteAdapter(options: {
     }
   }
 
+  /** A publish, an unpublish or a delete of a post drops the update waiting on it (site-api v0.10.0). */
+  const waiting = d1ScheduledUpdates(env.DB);
+  async function dropWaiting<T>(id: string, result: T): Promise<T> {
+    await waiting.remove(id).run();
+    return result;
+  }
+
   /** The stored file for a write that names a version; a version for a missing id is a conflict. */
   async function existing(id: string): Promise<string> {
     const file = await readFile(env, postPath(id));
@@ -223,7 +232,10 @@ export function carrelSiteAdapter(options: {
       const source = input.source ?? stored;
       // A post whose time is still ahead would publish invisible, so publishing now means now.
       const due = effectivePublishAt(source) > Date.now() ? new Date().toISOString() : undefined;
-      return write(id, input.changeId, withPublication(source, { draft: false, publishAt: due }), input.expectedVersion);
+      return dropWaiting(
+        id,
+        await write(id, input.changeId, withPublication(source, { draft: false, publishAt: due }), input.expectedVersion),
+      );
     },
 
     async schedule(id, input) {
@@ -243,7 +255,7 @@ export function carrelSiteAdapter(options: {
 
     async unpublish(id, input) {
       const source = await existing(id);
-      return write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
+      return dropWaiting(id, await write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion));
     },
 
     revisions(id) {
@@ -270,6 +282,7 @@ export function carrelSiteAdapter(options: {
       } catch (error) {
         return asSiteApiError(env, error, postPath(id));
       }
+      await waiting.remove(id).run();
     },
 
     // The page the save would publish: the same record renderAndWrite builds, rendered through the
@@ -321,5 +334,6 @@ export function carrelSiteAdapter(options: {
     content: registry.adapter,
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
+    schedules: postSchedules(env, write, statusOf),
   };
 }

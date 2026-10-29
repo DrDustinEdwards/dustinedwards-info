@@ -2,7 +2,6 @@ import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/beha
 import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { LabInventory } from "~/components/lab";
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
@@ -77,7 +76,7 @@ export default function LabRoute({ loaderData }: Route.ComponentProps) {
         {TITLE}
       </h1>
       <LabInventory rows={rows} result={result} />
-      <Enhance module="catalog" />
+      <template data-island="catalog" />
     </PageShell>
   );
 }

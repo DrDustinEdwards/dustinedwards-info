@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { FOLLOW_UP_MARKER, splitFollowUp } from "../app/lib/search/follow-up.mjs";
 import { FOLLOW_UP_INSTRUCTION, SYSTEM_PROMPT } from "../app/lib/search/ask-prompt.mjs";
-import { bundleEnhancement } from "../scripts/lib/enhance-bundle.mjs";
+import { builtIslandFiles } from "../scripts/lib/islands.mjs";
 
 await test("an answer with a follow-up splits into both", () => {
   assert.deepEqual(splitFollowUp("The answer.\nNEXT: What else is here?"), {
@@ -52,9 +52,13 @@ await test("an answer written the way the prompt asks splits into the right foll
 });
 
 // Reads the built artifact: the import that leaked the prompt was correct-looking source. Built here
-// by the app build's own bundler, so the bytes are the ones the page is served.
+// by the app build's own islands plugin, so the bytes are the ones the page is served: the ask island,
+// and every other file the build emits beside it, since a shared chunk could carry it too.
 await test("the built client bundle carries NO system prompt text", async () => {
-  const { code: built } = await bundleEnhancement("ask");
+  const files = await builtIslandFiles();
+  const built = files.map((file) => String(file.source)).join("\n");
+  const ask = files.find((file) => /^islands\/ask-[\w-]+\.js$/.test(file.fileName));
+  assert.ok(ask, `no ask island among ${files.map((file) => file.fileName).join(", ")}`);
 
   /* The needle is the prompt itself, so it cannot drift from what is actually secret. */
   const firstSentence = SYSTEM_PROMPT.split(". ")[0];
@@ -66,7 +70,7 @@ await test("the built client bundle carries NO system prompt text", async () => 
   );
 
   assert.ok(
-    built.includes(FOLLOW_UP_MARKER),
+    String(ask?.source).includes(FOLLOW_UP_MARKER),
     "the marker is absent too, so this test is reading the wrong file or an empty one",
   );
 });

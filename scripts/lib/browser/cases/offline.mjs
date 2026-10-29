@@ -50,12 +50,12 @@ async function keepOffline(context, page) {
   const kept = await page.evaluate(async (p) => {
     const cache = await caches.open("kept-v1");
     const keys = (await cache.keys()).map((r) => new URL(r.url).pathname);
-    return { page: keys.includes(p), files: keys.filter((k) => k.startsWith("/assets/")).length, pressed: document.querySelector(".offline-keep")?.getAttribute("aria-pressed") };
+    return { page: keys.includes(p), files: keys.filter((k) => k.startsWith("/assets/") || k.startsWith("/islands/")).length, pressed: document.querySelector(".offline-keep")?.getAttribute("aria-pressed") };
   }, path);
   ok(
     "keeping stores the page and the files it uses, and says so",
     kept.page && kept.files > 0 && kept.pressed === "true",
-    `page stored ${kept.page}, ${kept.files} file(s) under /assets/, aria-pressed=${kept.pressed}`,
+    `page stored ${kept.page}, ${kept.files} file(s) under /assets/ and /islands/, aria-pressed=${kept.pressed}`,
   );
 
   // The worker controls the next load; then the network goes, for the page and for the worker, whose own fetches the

@@ -17,11 +17,9 @@ import {
   failures,
   generateNonce,
   runOshpSuite,
-  scriptHash,
 } from "@dustinedwards/site-runtime";
-import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { SECURITY_HEADERS, SITE_HEADER_OVERRIDES } from "../workers/security-headers.mjs";
-import { contentSecurityPolicy, enhanceLoaderHash } from "../workers/csp.mjs";
+import { contentSecurityPolicy } from "../workers/csp.mjs";
 
 const suite = /** @type {any} */ (matter.engines.yaml.parse(readFileSync(new URL("../node_modules/@dustinedwards/site-runtime/oshp-tests-suite.yml", import.meta.url), "utf8")));
 const headerOf = (/** @type {string} */ caseName) => caseName.replace(/ \(should not exist\)$/, "");
@@ -50,16 +48,14 @@ await test("dustinedwards.info's declared set and policy pass the shared check, 
     headers.set("Content-Security-Policy", await contentSecurityPolicy("/", nonce));
     assert.deepEqual(failures(checkSecurityHeaders(headers, { standard: SECURITY_HEADERS, cloudflareWebAnalytics: true })), [], nonce ? "admin arm" : "public arm");
   }
-  assert.equal(await enhanceLoaderHash(), await scriptHash(ENHANCE_LOADER));
 });
 
 await test("this site's policy is what it was before the package built it", async () => {
-  const loader = await scriptHash(ENHANCE_LOADER);
   const policy = await contentSecurityPolicy("/", undefined);
-  assert.ok(policy.startsWith(`default-src 'self'; script-src '${loader}' '`), policy);
+  assert.ok(policy.startsWith("default-src 'self'; script-src 'self' https://static"), policy);
   assert.ok(policy.includes("'self' https://static.cloudflareinsights.com/beacon.min.js https://static.cloudflareinsights.com/beacon.min.js/; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; media-src 'self' https://"));
   assert.ok(policy.endsWith("; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; report-uri /api/csp-report; report-to csp-endpoint"));
   const admin = await contentSecurityPolicy("/admin", "0b1c2d3e-aaaa-bbbb-cccc-1234567890ab");
-  assert.ok(admin.includes("script-src 'nonce-0b1c2d3e-aaaa-bbbb-cccc-1234567890ab' 'sha256-"));
+  assert.ok(admin.includes("script-src 'nonce-0b1c2d3e-aaaa-bbbb-cccc-1234567890ab' 'self' https://static"), admin);
   assert.ok(admin.includes("style-src 'self' 'nonce-0b1c2d3e-aaaa-bbbb-cccc-1234567890ab'; style-src-attr"));
 });

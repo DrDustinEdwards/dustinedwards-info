@@ -3,7 +3,7 @@
 // modules (check:secrets).
 
 import { submitIndexNow } from "@drdustinedwards/site-helpers/indexnow";
-import { createSiteApi, type RateLimiter } from "@dustinedwards/site-api";
+import { createSiteApi, indexNowHook, type RateLimiter, type ScheduleRun } from "@dustinedwards/site-api";
 import { data, type RouterContextProvider } from "react-router";
 
 import { carrelSiteAdapter } from "~/lib/carrel/site-adapter.server";
@@ -30,6 +30,9 @@ function carrelLimiter(env: Env): RateLimiter {
   };
 }
 
+/** A published change tells IndexNow at once; a request from a preview origin sends nothing. */
+const HOOKS = [indexNowHook({ submit: submitIndexNow, origin: SITE_ORIGIN, key: INDEXNOW_KEY })];
+
 /** The package guards in order: prefix, rate limit, key, route. Off the prefix is a 404. */
 export async function handleCarrelRequest(
   request: Request,
@@ -45,10 +48,22 @@ export async function handleCarrelRequest(
     }),
     key: env.CARREL_SITE_KEY,
     limiter: carrelLimiter(env),
-    // A published change tells IndexNow at once; a request from a preview origin sends nothing.
-    onPageChange: (paths, from) =>
-      submitIndexNow({ origin: SITE_ORIGIN, key: INDEXNOW_KEY, urls: paths.map((path) => `${SITE_ORIGIN}${path}`), from: from.url }),
+    hooks: HOOKS,
   });
   if (!api.matches(request)) throw data("Not found", { status: 404 });
   return api.handle(request, getExecutionContext(context));
+}
+
+/**
+ * The cron's half (workers/app.ts scheduled()): puts every scheduled update that is due live, and runs the
+ * hooks for each. No request, so no preview renderer; nothing it does previews.
+ */
+export function runCarrelSchedules(env: Env, ctx: ExecutionContext, now: Date): Promise<ScheduleRun> {
+  const api = createSiteApi({
+    adapter: carrelSiteAdapter({ env, ctx, origin: SITE_ORIGIN, renderDocument: null }),
+    key: env.CARREL_SITE_KEY,
+    limiter: carrelLimiter(env),
+    hooks: HOOKS,
+  });
+  return api.runSchedules({ now });
 }

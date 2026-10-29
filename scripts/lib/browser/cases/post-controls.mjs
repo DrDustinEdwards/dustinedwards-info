@@ -256,10 +256,10 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           "no link inside the open panel, so there is nothing for the reader to follow",
         );
         if (link && target) {
-          await Promise.all([
-            noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
-            link.click(),
-          ]);
+          /* Polled, not waitForNavigation: with script off, a click on a link the hover prefetched commits the
+           * navigation but Puppeteer's lifecycle watcher never sees domcontentloaded (measured 2026-10-29). */
+          await link.click();
+          await pollUntil(() => Promise.resolve(new URL(noScript.url()).pathname), (path) => path === target);
           ok(
             "a header panel link NAVIGATES on a phone with no script",
             new URL(noScript.url()).pathname === target,

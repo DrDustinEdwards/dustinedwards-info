@@ -233,7 +233,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
       <ShellFooter />
-      {/* No <Enhance module="blog" />: its enhancements target `.prose` markup, which this page has none of. */}
+      {/* No blog island: its enhancements target `.prose` markup, which this page has none of. */}
     </>
   );
 }

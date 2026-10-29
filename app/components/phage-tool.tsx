@@ -1,6 +1,5 @@
 import { Fragment, type ReactNode } from "react";
 
-import { Enhance } from "~/components/enhance";
 import { TOOLS, resultView, runTool, textParts, toolValues, toolsOnPage, type ViewNode } from "~/lib/phage-tools.mjs";
 
 import "~/styles/phage-tools.css";
@@ -124,7 +123,7 @@ export function PhageTools({ path, search }: { path: string; search: string }) {
           </section>
         );
       })}
-      <Enhance module="tools" />
+      <template data-island="tools" />
     </>
   );
 }

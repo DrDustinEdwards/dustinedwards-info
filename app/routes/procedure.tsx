@@ -1,7 +1,6 @@
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
 import { listFrozenVersions } from "~/db/procedure-versions";
@@ -83,9 +82,9 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
       <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} lineage={lineage} />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
-      <Enhance module="run" />
+      <template data-island="run" />
       {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}
-      <Enhance module="offline" />
+      <template data-island="offline" />
     </PageShell>
   );
 }

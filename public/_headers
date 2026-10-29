@@ -10,9 +10,10 @@
 # own response finished at 3146ms. The revalidations, not the HTML, are what
 # stood between responseEnd and interactive.
 #
-# ONLY `/assets/*`, and the narrowness is the whole point. Everything under it
-# is Vite build output whose filename CONTAINS its content hash, so the URL
-# changes whenever the bytes do and a year is safe by construction.
+# ONLY `/assets/*` and `/islands/*`, and the narrowness is the whole point.
+# Everything under them is build output whose filename CONTAINS its content
+# hash, so the URL changes whenever the bytes do and a year is safe by
+# construction.
 #
 # Nothing else gets this. The logo, `favicon.ico` and the icon suite sit at
 # stable paths with no hash, so an immutable year would make replacing one
@@ -22,6 +23,12 @@
 # This changes STATIC ASSET caching only. HTML cache policy is untouched: it is
 # set per route in the app and governed by the cache-header rule.
 /assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The islands and the chunks they share (devkit's siteScript): every file is named by its content too
+# (/islands/<name>-<hash>.js, /islands/chunks/<name>-<hash>.js). /site.js, which carries their URLs, is not
+# hashed and keeps the default revalidation.
+/islands/*
   Cache-Control: public, max-age=31536000, immutable
 
 # The markdown twin of every paper is NOT here: since publications moved to D1 it is a Worker route

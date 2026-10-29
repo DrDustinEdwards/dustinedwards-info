@@ -1,7 +1,7 @@
 /*
  * Renders real components to HTML under plain node. The components are TSX behind `~/` imports and `?url`
  * assets, so Vite bundles an entry with the React that renders it, the bundle is written to a temporary
- * directory and imported from there. The one harness for the header, header-speculation and home hero tests.
+ * directory and imported from there. The one harness for the header and home hero tests.
  */
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { build } from "vite";
 
-import { enhancePlugin } from "../../scripts/lib/enhance-bundle.mjs";
+import { islandsPlugin } from "../../scripts/lib/islands.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -29,8 +29,8 @@ export async function bundleRenderer(entrySource) {
     resolve: { alias: [{ find: /^~\//, replacement: `${join(root, "app")}/` }] },
     ssr: { noExternal: true },
     plugins: [
-      // The header renders <Enhance module="header">, which reads its URL from `virtual:enhance`.
-      enhancePlugin(),
+      // The header reads the palette island's URL from `virtual:islands`.
+      islandsPlugin(),
       {
         name: "render-entry",
         enforce: "pre",

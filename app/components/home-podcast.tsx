@@ -1,4 +1,3 @@
-import { Enhance } from "~/components/enhance";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { clockTime } from "~/lib/podcast/clock.mjs";
 import { PODCAST_SITE_URL, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
@@ -98,7 +97,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
             <a href={episode.link}>Episode page</a>
             <a href={PODCAST_SITE_URL}>germomics.com</a>
           </p>
-          <Enhance module="podcast" />
+          <template data-island="podcast" />
         </article>
       ) : (
         <p className="home-more">

@@ -56,7 +56,7 @@ import {
   readView,
 } from "~/lib/media/view.mjs";
 import { rovingKey } from "~/lib/media/tile-nav.mjs";
-import { MEDIA_PAGE_SIZE, isViewable, listMedia, thumbUrl } from "~/lib/media/core.server";
+import { MEDIA_PAGE_SIZE, isViewable, listMedia, objectPositionOf, thumbUrl } from "~/lib/media/core.server";
 import {
   bulkTagMedia,
   bulkTrashMedia,
@@ -167,6 +167,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           key: object.key,
           url: object.url,
           thumb: thumbUrl(object.key, 320),
+          // The square thumbnail is cropped by CSS, around the file's focal point when it has one.
+          position: objectPositionOf(object.focus),
           alt: object.alt,
         })),
         truncated: listed.hasMore,
@@ -255,6 +257,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       objects: listed.objects.map((object) => ({
         ...object,
         thumb: thumbUrl(object.key, 320),
+        position: objectPositionOf(object.focus),
         viewable: isViewable(object.kind),
         citations: resolution.citations.get(object.key) ?? [],
         refCount: (refs.get(object.key) ?? []).length,

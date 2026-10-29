@@ -1,7 +1,8 @@
 import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
-import { WEBP_QUALITY } from "./encoding.mjs";
+import { images } from "./images.mjs";
+import { defineImages } from "@dustinedwards/site-runtime/image";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { toBase64 } from "@dustinedwards/site-runtime/encoding";
 
@@ -9,8 +10,8 @@ import { toBase64 } from "@dustinedwards/site-runtime/encoding";
 
 export const MEDIA_PAGE_SIZE = 24;
 
-// A closed set: the width lands in a cache key, and each distinct transform is billed.
-type ThumbWidth = 160 | 320 | 640;
+// The admin tiles' use (app/lib/media/images.mjs): 320 and 640, inside the route's closed set.
+type ThumbWidth = 320 | 640;
 
 export type MediaObject = {
   key: string;
@@ -29,6 +30,10 @@ export type MediaObject = {
   tags: string;
   placeholder: string | null;
   deletable: boolean;
+  /** The focal point in site-runtime ./image's spelling ("XxY", 0 to 1), or null for the center. */
+  focus: string | null;
+  /** The index row's last write, which every metadata edit and a replace move. */
+  updatedAt: string;
 };
 
 type MediaPage = {
@@ -40,7 +45,7 @@ type MediaPage = {
 export function thumbUrl(key: string, width: ThumbWidth) {
   // A static asset key already begins with `/`; prefixing `/media/` gives a double slash the R2 route 404s on.
   if (key.startsWith("/")) return key;
-  return `/media/${key}?w=${width}`;
+  return images.url(`/media/${key}`, { width });
 }
 
 export function isViewable(kind: string) {
@@ -73,7 +78,23 @@ export function mediaObjectOf(row: MediaRow): MediaObject {
     tags: row.tags,
     placeholder: row.placeholder,
     deletable: row.storage !== "static",
+    focus: focusText(row.focalX, row.focalY),
+    updatedAt: row.updatedAt,
   };
+}
+
+/** The index's two focal columns as one focal point, or null when either is unset. */
+function focusText(x: number | null, y: number | null): string | null {
+  if (x === null || y === null) return null;
+  const part = (n: number) => String(Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000);
+  return `${part(x)}x${part(y)}`;
+}
+
+/** A focal point as the CSS `object-position` of a cropped thumbnail; undefined leaves the center. */
+export function objectPositionOf(focus: string | null): string | undefined {
+  const match = focus ? /^([\d.]+)x([\d.]+)$/.exec(focus) : null;
+  if (!match) return undefined;
+  return `${Number(match[1]) * 100}% ${Number(match[2]) * 100}%`;
 }
 
 export async function listMedia(
@@ -115,18 +136,28 @@ export async function measureDimensions(
 
 const PLACEHOLDER_WIDTH = 20;
 
+/**
+ * The placeholder's own closed set, never served by /media: the transform goes through site-runtime's image
+ * route like every other, so the quality is always passed (without it the binding emits LOSSLESS WebP).
+ */
+const PLACEHOLDER = defineImages({ uses: { placeholder: { layout: "fixed", width: PLACEHOLDER_WIDTH } } });
+
 // LQIP, not ThumbHash or BlurHash: those need client-side decoding and the public plane ships no
-// framework script. The quality is required: without it the binding emits LOSSLESS WebP.
+// framework script. The caller has already decided the body is a raster; the binding reads its real format.
 export async function placeholderFor(
   env: Env,
   body: ReadableStream | ArrayBuffer,
 ): Promise<string | null> {
   const stream = body instanceof ArrayBuffer ? new Blob([body]).stream() : body;
+  const object = { body: stream, httpEtag: "", httpMetadata: { contentType: "image/webp" }, writeHttpMetadata() {} };
   try {
-    const result = await env.IMAGES.input(stream)
-      .transform({ width: PLACEHOLDER_WIDTH })
-      .output({ format: "image/webp", quality: WEBP_QUALITY });
-    const buffer = await result.response().arrayBuffer();
+    const response = await PLACEHOLDER.respond(new Request(`https://placeholder.invalid/p?w=${PLACEHOLDER_WIDTH}`), {
+      object,
+      images: env.IMAGES,
+    });
+    // Anything but a transformed size (no binding, a failed transform) is no placeholder.
+    if (!response.headers.get("x-image")?.startsWith("w=")) return null;
+    const buffer = await response.arrayBuffer();
     return `data:image/webp;base64,${toBase64(new Uint8Array(buffer))}`;
   } catch {
     return null;

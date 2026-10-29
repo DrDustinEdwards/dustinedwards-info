@@ -19,6 +19,7 @@ export const NON_DERIVED_TABLES = Object.freeze({
   members: "lab members and their titles (0030)",
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",
+  scheduled_updates: "updates Carrel scheduled on live posts, waiting for their time (0033)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */

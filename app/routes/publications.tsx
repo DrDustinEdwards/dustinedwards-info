@@ -1,7 +1,6 @@
 import { Catalog } from "capsomer/react/catalog";
 import { Link, redirect } from "react-router";
 
-import { Enhance } from "~/components/enhance";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -283,7 +282,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdText(publicationsJsonLd(origin, items)) }}
         />
-        <Enhance module="catalog" />
+        <template data-island="catalog" />
       </main>
       <ShellFooter />
     </>

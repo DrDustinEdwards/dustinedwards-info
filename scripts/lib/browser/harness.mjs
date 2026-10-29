@@ -122,8 +122,8 @@ export async function firstPathWith(target, paths, selector) {
 }
 
 /**
- * Requests for one enhancement bundle, from the resource timeline rather than the DOM, matched past
- * the content hash.
+ * Requests for one island, from the resource timeline rather than the DOM, matched past the content
+ * hash (/islands/<name>-<hash>.js).
  *
  * @param {import("puppeteer").Page} target
  * @param {string} stem
@@ -133,7 +133,7 @@ export const bundleFetches = (target, stem) =>
     (/** @type {string} */ s) =>
       performance
         .getEntriesByType("resource")
-        .filter((entry) => new RegExp(`/assets/${s}-[^/]*\\.js$`).test(entry.name)).length,
+        .filter((entry) => new RegExp(`/islands/${s}-[^/]*\\.js$`).test(entry.name)).length,
     stem,
   );
 

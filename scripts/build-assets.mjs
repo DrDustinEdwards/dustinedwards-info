@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 import { classify, excludedFromAssets, isRaster, roleOf } from "../app/lib/media/classify.mjs";
-import { WEBP_QUALITY } from "../app/lib/media/encoding.mjs";
+import { IMAGE_QUALITY } from "@dustinedwards/site-runtime/image";
 import { ASSET_MANIFEST_PATH as ASSET_MANIFEST_REPO_PATH } from "../app/lib/media/manifest.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
@@ -62,7 +62,7 @@ async function placeholderFor(sitePath) {
   const bytes = await readFile(path.join(PUBLIC_DIR, sitePath.slice(1)));
   const lqip = await sharp(bytes)
     .resize({ width: PLACEHOLDER_WIDTH })
-    .webp({ quality: WEBP_QUALITY })
+    .webp({ quality: IMAGE_QUALITY })
     .toBuffer();
   return {
     sha: createHash("sha256").update(bytes).digest("hex").slice(0, 16),

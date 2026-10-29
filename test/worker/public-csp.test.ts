@@ -2,26 +2,22 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { createElement as h } from "react";
 import { expect, it, vi } from "vitest";
 
-import { ENHANCE_LOADER } from "~/lib/enhance-loader.mjs";
 import { NAV } from "~/lib/nav";
-import { buildSpeculationRules } from "~/lib/speculation.mjs";
+import { SPECULATION_RULES_HEADER, SPECULATION_RULES_PATH } from "@dustinedwards/site-runtime/prefetch";
 
 import worker from "../../workers/app";
-import { enhanceLoaderHash, speculationRulesHash } from "../../workers/csp.mjs";
 import { checkSecurityHeaders, failures } from "@dustinedwards/site-runtime/check";
 import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 
 /*
  * A public page through the REAL root (its Layout, loader and middleware) and the real server
- * entry: the site header with its speculation rules and <Enhance> markers, a second marker, and a
- * JSON-LD block. What the policy has to allow is whatever this renders, so it is asserted here
+ * entry: the site header with its island markers, a second marker, and a JSON-LD block. What the policy has to allow is whatever this renders, so it is asserted here
  * against the rendered bytes rather than against the source.
  */
 vi.mock("virtual:react-router/server-build", async () => {
   const entryServer = await import("~/entry.server");
   const rootModule = await import("~/root");
   const { SiteHeader } = await import("~/components/site-header");
-  const { Enhance } = await import("~/components/enhance");
   const { stubServerBuild } = await import("./server-build");
   /* The route-module transform in the real build hands ErrorBoundary its `error` prop through this
    * wrapper. Without it the boundary gets no props here and renders its generic branch for a 404. */
@@ -33,7 +29,7 @@ vi.mock("virtual:react-router/server-build", async () => {
       null,
       h(SiteHeader),
       h("main", { id: "main" }, "page"),
-      h(Enhance, { module: "blog" }),
+      h("template", { "data-island": "blog" }),
       h("script", { type: "application/ld+json", dangerouslySetInnerHTML: { __html: "{}" } }),
     );
 
@@ -82,55 +78,39 @@ async function render(path: string) {
   return { response, html, scripts, policy: response.headers.get("content-security-policy") ?? "" };
 }
 
-it("renders a public page whose one executable inline script is the hashed loader, with no nonce", async () => {
+it("renders a public page with no inline script, no hash and no nonce, and /site.js to start its islands", async () => {
   const { response, html, scripts, policy } = await render("/");
   expect(response.status).toBe(200);
 
-  /* The policy: no nonce, and exactly two hashes, the loader's and this page's rules'. */
+  /* The policy: no nonce and no hash; 'self' covers /site.js and the islands it imports. */
   expect(policy).not.toContain("nonce-");
-  expect(policy.match(/'sha256-[^']+'/g)).toEqual([
-    `'${await enhanceLoaderHash()}'`,
-    `'${await speculationRulesHash("/")}'`,
-  ]);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ENHANCE_LOADER));
-  expect(await enhanceLoaderHash()).toBe(
-    `sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}`,
-  );
+  expect(policy).not.toMatch(/'sha256-/);
 
-  /* The document: no nonce anywhere, and no parser-inserted script src. */
+  /* The document: no nonce anywhere, and one script, /site.js, deferred. */
   expect(html).not.toMatch(/\snonce=/);
-  expect(html).not.toMatch(/<script\b[^>]*\ssrc=/);
-
-  const executable = scripts.filter((s) => s.type !== "application/ld+json" && s.type !== "speculationrules");
-  expect(executable.map((s) => s.text), "the loader, byte for byte, and nothing else").toEqual([ENHANCE_LOADER]);
-  expect(scripts.filter((s) => s.type === "speculationrules")).toHaveLength(1);
+  expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual(["/site.js"]);
+  expect(html).toMatch(/<script src="\/site\.js" defer="">/);
+  expect(scripts.filter((s) => s.type !== "application/ld+json").map((s) => s.text)).toEqual([""]);
   expect(scripts.filter((s) => s.type === "application/ld+json")).toHaveLength(1);
 
-  /* The markers the loader reads, each a same-origin /assets/ URL, and the loader after them all. */
-  const markers = [...html.matchAll(/<template data-enhance="([^"]+)"><\/template>/g)].map((m) => m[1] ?? "");
-  expect(markers.length).toBeGreaterThanOrEqual(3);
-  for (const url of markers) expect(url).toMatch(/^\/assets\/[\w-]+\.js$/);
-  expect(html.indexOf(ENHANCE_LOADER)).toBeGreaterThan(html.lastIndexOf("data-enhance="));
+  /* The markers /site.js starts: the header's two and the page's own. */
+  const markers = [...html.matchAll(/<template data-island="([a-z-]+)"><\/template>/g)].map((m) => m[1]);
+  expect(markers).toEqual(["theme", "header", "blog"]);
 });
 
-/*
- * The rules exclude the page itself, so the Worker hashes them per request from the URL's pathname
- * while SiteSpeculation renders them from `useLocation().pathname`. These are the paths where the
- * two could part: the page, a trailing slash, mixed case and an escape, and an unmatched URL that
- * the root error boundary renders as a 404.
- */
-it.each(["/", "/Blog/", "/no-such-page", "/a%20b/%C3%A9"])(
-  "hashes exactly the speculation rules %s renders",
-  async (path) => {
-    const { response, scripts, policy } = await render(path);
-    const rules = scripts.filter((s) => s.type === "speculationrules");
-    expect(rules, `status ${response.status}`).toHaveLength(1);
-    const text = rules[0]?.text ?? "";
-    expect(text).toBe(buildSpeculationRules({ pathname: new URL(`https://example.com${path}`).pathname }));
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-    expect(policy).toContain(`'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`);
-  },
-);
+/* Prefetch by header (site-runtime ./prefetch): every public page names the one rules file, which the Worker serves. */
+it("names the prefetch rules on a public page, and serves them", async () => {
+  for (const path of ["/", "/no-such-page"]) {
+    const { response } = await render(path);
+    expect(response.headers.get(SPECULATION_RULES_HEADER.name), path).toBe(SPECULATION_RULES_HEADER.value);
+  }
+  const ctx = createExecutionContext();
+  const rules = await worker.fetch(new Request(`https://example.com${SPECULATION_RULES_PATH}`) as never, env as never, ctx);
+  await waitOnExecutionContext(ctx);
+  expect(rules.headers.get("content-type")).toBe("application/speculationrules+json");
+  const body = JSON.stringify(await rules.json());
+  for (const prefix of ["/lab", "/media", "/search/ask"]) expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
+});
 
 /*
  * The 404 page's way on, for a reader arriving on an old link, as the markup a reader without script

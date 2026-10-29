@@ -9,7 +9,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
-import { bundleEnhancements, enhanceModuleSource } from "./enhance-bundle.mjs";
+import { islandsModuleSource } from "./islands.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -68,15 +68,12 @@ export async function bundleRoutes(entries) {
         contents: `module.exports = ${JSON.stringify(URL_ASSET)};`,
         loader: "js",
       }));
-      // The app build's own module source, from the same bundler, so the "kB gzipped" line is real.
-      // Every URL is the same sentinel as above, empty file name under a sentinel base, so the
-      // rendered HTML does not change each time a bundle hash does.
-      b.onResolve({ filter: /^virtual:enhance$/ }, (args) => ({ path: args.path, namespace: "enhance" }));
-      b.onLoad({ filter: /.*/, namespace: "enhance" }, async () => ({
-        contents: enhanceModuleSource(
-          (await bundleEnhancements()).map((bundle) => ({ ...bundle, fileName: "" })),
-          URL_ASSET,
-        ),
+      // The app build's own islands module, from a real islands build, so the "kB gzipped" line is real.
+      // Every URL is the same sentinel as above, so the rendered HTML does not change each time an island's
+      // hash does.
+      b.onResolve({ filter: /^virtual:islands$/ }, (args) => ({ path: args.path, namespace: "islands" }));
+      b.onLoad({ filter: /.*/, namespace: "islands" }, async () => ({
+        contents: await islandsModuleSource(URL_ASSET),
         loader: "js",
       }));
       b.onResolve({ filter: /^~\// }, (args) => ({ path: resolveAppPath(args.path) }));
