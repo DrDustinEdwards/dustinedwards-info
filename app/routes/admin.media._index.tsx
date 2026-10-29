@@ -1,7 +1,7 @@
 import { Form, data, useRevalidator, type FormProps } from "react-router";
 
-import { loadMedia, readMediaQuery, type IntentResult } from "@dustinedwards/site-api/admin";
-import { mediaDataOfKit, readMediaView } from "capsomer/behavior/media-library";
+import { loadMedia, loadMediaChanges, readMediaQuery, type IntentResult } from "@dustinedwards/site-api/admin";
+import { mediaDataOfKit, readMediaView, type KitMediaChanges } from "capsomer/behavior/media-library";
 import type { MediaRecord } from "capsomer/behavior/media";
 import { MediaLibrary, type FormComponent } from "capsomer/react/media-library";
 import { PageHead } from "capsomer/react/page-head";
@@ -15,8 +15,8 @@ import type { Route } from "./+types/admin.media._index";
  * intents as Carrel's, through the adapter Carrel's requests reach (lib/media/kit.server.ts). Browse,
  * search, tags, the lenses, upload, the inspector (alt text, tags, caption, focal point, crop and
  * replace), Trash with Undo, and delete for good after the kit asks for the count. Every action is a
- * form post, so it all works with no script; with script the posts answer in place. Rebuilding the
- * index is on /admin/tools.
+ * form post, so it all works with no script; with script the posts answer in place, and the page picks
+ * up what Carrel or another tab changed (`?changes=<cursor>`). Rebuilding the index is on /admin/tools.
  */
 
 export function meta() {
@@ -27,9 +27,7 @@ export function meta() {
 async function libraryData(context: Route.LoaderArgs["context"], request: Request) {
   const search = new URL(request.url).searchParams;
   const kit = await loadMedia(adminMediaSource(context, request), readMediaQuery(search));
-  // site-api v0.13.0 sorts by use; Capsomer's library (v0.39.0) has no such control yet, so it shows the default order.
-  const sort = kit.query.sort === "used" ? undefined : kit.query.sort;
-  return mediaDataOfKit({ ...kit, query: { ...kit.query, sort } }, { usedHref: useHref, view: readMediaView(search) });
+  return mediaDataOfKit(kit, { usedHref: useHref, view: readMediaView(search) });
 }
 
 /*
@@ -42,7 +40,9 @@ export const middleware: Route.MiddlewareFunction[] = [
     if (request.method === "POST") {
       return Response.json(await runAdminMediaIntent(context, request, await request.formData()));
     }
-    return Response.json(await libraryData(context, request), { headers: { "cache-control": "private, no-store" } });
+    const cursor = new URL(request.url).searchParams.get("changes");
+    const body = cursor === null ? await libraryData(context, request) : await loadMediaChanges(adminMediaSource(context, request), cursor);
+    return Response.json(body, { headers: { "cache-control": "private, no-store" } });
   },
 ];
 
@@ -84,6 +84,11 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
     const body = (await response.json().catch(() => null)) as { rows?: MediaRecord[] } | null;
     return body?.rows ?? [];
   };
+  const changes = async (cursor: string, signal: AbortSignal): Promise<KitMediaChanges | { reload: true }> => {
+    const response = await fetch(`${BASE}?changes=${encodeURIComponent(cursor)}`, { signal, headers: JSON_HEADERS });
+    if (!response.ok) throw new Error(`The server answered ${response.status}.`);
+    return (await response.json()) as KitMediaChanges | { reload: true };
+  };
   return (
     <div className="app-page">
       <PageHead title="Media" lead="The files the site stores and serves, the same library Carrel shows." />
@@ -96,6 +101,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
         inspector="form"
         search={search}
         bytesHref={(id) => `/media/${id}`}
+        changes={changes}
       />
     </div>
   );
