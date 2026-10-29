@@ -56,6 +56,7 @@
     "check:ask-guards": "node scripts/check-ask-guards.mjs",
     "check:test-assertions": "node scripts/check-test-assertions.mjs",
     "check:enhance-a11y": "node scripts/check-enhance-a11y.mjs",
+    "check:alt-text": "node scripts/check-alt-text.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:postinstall": "devkit-bootstrap --check",
     "check:urls": "node scripts/check-urls.mjs",
