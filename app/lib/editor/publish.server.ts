@@ -24,7 +24,6 @@ import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
-import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { deletePostFromD1, syncPostToD1, type PostRecord, type PublishEnv } from "./post-rows.server";
 
@@ -40,14 +39,6 @@ export class EditorError extends Error {
     this.name = "EditorError";
     this.field = options.field;
     this.line = options.line;
-  }
-}
-
-/** Not an error: thrown rather than returned so a caller that forgets a flag cannot skip the ceremony. */
-export class FirstPublishConfirmationRequired extends Error {
-  constructor() {
-    super("This post has never been public. The first publication needs confirming.");
-    this.name = "FirstPublishConfirmationRequired";
   }
 }
 
@@ -328,8 +319,6 @@ export async function savePost(
     isNew: boolean;
     /** Required: there is no safe default for an identity. */
     actor: Actor;
-    /** Absent means this caller has no ceremony, so the check is === false, not falsiness. */
-    firstPublishConfirmed?: boolean;
   },
 ) {
   const { actor } = options;
@@ -351,11 +340,6 @@ export async function savePost(
     priorRaw: existing ? existing.content : null,
   });
   const raw = decision.raw;
-
-  // After decide(), so a credential that may not publish at all is refused rather than asked to confirm.
-  if (decision.outcome === "published-first" && options.firstPublishConfirmed === false) {
-    throw new FirstPublishConfirmationRequired();
-  }
 
   // The gate: rendered from the STAMPED markdown before the commit, and its result is discarded.
   const gated = await validateAndRender(env, options.slug, raw);
@@ -381,7 +365,6 @@ export async function savePost(
       neighbors: null,
       purged: null as PurgeOutcome,
       d1Retried: false,
-      previewLinksRevoked: null as number | null,
       firstPublished: decision.firstPublished,
       published: false,
       outcome: decision.outcome,
@@ -417,19 +400,6 @@ export async function savePost(
 
   const neighbors = await refreshNeighborsAfterSave(env, record.slug);
 
-  // Revoked AFTER the D1 sync: the read path checks status = 'draft', so revoking first opens a window.
-  // A surviving token is inert, so a failure does not throw.
-  let previewLinksRevoked: number | null = null;
-  if (decision.published) {
-    try {
-      previewLinksRevoked = await revokeAllPreviewLinks(env, options.slug);
-    } catch (error) {
-      // null already means "not attempted", so a failure needs its own value.
-      console.error(JSON.stringify({ alert: "preview-link-revocation-failed", detail: errorMessage(error) }));
-      previewLinksRevoked = -1;
-    }
-  }
-
   // The Ask index must not fail a save: the commit has landed, and a failure here would split repo and D1.
   const askSync = await syncAskForPost(env, record);
 
@@ -442,8 +412,6 @@ export async function savePost(
     /** False when the cache purge failed or was never reached, null when the runtime cannot purge. */
     purged,
     d1Retried: converged.retried,
-    /** null: not attempted; -1: the attempt threw. */
-    previewLinksRevoked,
     firstPublished: decision.firstPublished,
     published: decision.published,
     outcome: decision.outcome,
@@ -469,7 +437,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
         message:
           `${result.failed.length} of ${result.failed.length + result.uploaded} Ask ` +
           `record(s) failed to upload after a retry: ${result.failed.join(", ")}. ` +
-          `The post saved. Re-run the Ask sync from /admin/posts to finish indexing it.`,
+          `The post saved. Rebuild the answer index from /admin/tools to finish indexing it.`,
       };
     }
     return { ok: true as const, ...result };

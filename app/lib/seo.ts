@@ -91,7 +91,7 @@ export function pageMeta(page: {
   });
 }
 
-export { SERP_DESCRIPTION_LIMIT, SERP_TITLE_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
+export { SERP_DESCRIPTION_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 
 /**
  * The `<title>` a search result shows (Prelum's `searchTitle`), with this site's name as the default suffix. Only this
@@ -138,7 +138,7 @@ export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
 /** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
-export const ROBOTS_DISALLOW = ["/admin", "/lab", "/preview", "/search/ask"];
+export const ROBOTS_DISALLOW = ["/admin", "/lab", "/search/ask"];
 
 /**
  * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that

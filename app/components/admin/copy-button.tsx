@@ -1,6 +1,3 @@
-import { useEffect, useRef, useState } from "react";
-
-import { LiveNotice } from "~/components/admin/live-notice";
 import { toast } from "~/components/admin/toast";
 import { copyText } from "~/lib/clipboard";
 
@@ -64,75 +61,5 @@ export function CopyButton({
       {/* Always named: the visible label is absent on a tile and only a fragment elsewhere. */}
       <span className="cap-sr-only">{name ?? `Copy the address for ${label}`}</span>
     </button>
-  );
-}
-
-/**
- * A text button whose own label reports the outcome, for rows where a toast has nowhere to show.
- * The label is only what a sighted author sees; a screen reader hears the outcome from LiveNotice's
- * regions, which are in the document before any copy, and both reset so a stale "Copied" never
- * describes a later press.
- */
-export function CopyTextButton({
-  value,
-  label,
-  name,
-  subject,
-}: {
-  value: string;
-  label: string;
-  /** Read after the label and never shown, so a row of identical "Copy" buttons each says which. */
-  name?: string;
-  /** What was copied, for the announcement: "the link starting abc123". */
-  subject: string;
-}) {
-  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
-  const timer = useRef(0);
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      window.clearTimeout(timer.current);
-    };
-  }, []);
-
-  const settle = (outcome: "copied" | "failed") => {
-    // A copy that settles after the row is gone (a revoke, a closed drawer) must not start a timer
-    // the unmount cleanup already ran past.
-    if (!mounted.current) return;
-    setCopied(outcome);
-    window.clearTimeout(timer.current);
-    // A failure stays longer: it asks the author to do something.
-    timer.current = window.setTimeout(() => setCopied(""), outcome === "copied" ? 2000 : 5000);
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        className="cap-btn"
-        data-size="sm"
-        data-variant="quiet"
-        onClick={() => {
-          // Emptied first, so a second copy of the same thing is announced again.
-          window.clearTimeout(timer.current);
-          setCopied("");
-          copyText(value).then(
-            () => settle("copied"),
-            () => settle("failed"),
-          );
-        }}
-      >
-        {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : label}
-        {name ? <span className="cap-sr-only"> {name}</span> : null}
-      </button>
-      <div className="cap-sr-only">
-        <LiveNotice
-          status={copied === "copied" ? `Copied ${subject}.` : null}
-          alert={copied === "failed" ? `Could not copy ${subject}. The browser blocked the clipboard.` : null}
-        />
-      </div>
-    </>
   );
 }

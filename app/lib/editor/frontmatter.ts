@@ -1,7 +1,5 @@
 import matter from "gray-matter";
 
-import { readIntent } from "./intent.mjs";
-import { draftForIntent } from "capsomer/publish-transition";
 import { errorMessage } from "../error-message.mjs";
 
 // Punctuation-bearing scalars are written as JSON strings: valid YAML double-quoted scalars that
@@ -51,16 +49,8 @@ export const EMPTY_FIELDS: PostFields = {
   updated: "",
 };
 
-/** Tags as an author types them: comma or newline separated, lower-cased, blanks dropped. */
-export function parseTagInput(input: string) {
-  return input
-    .split(/[,\n]/)
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-/** Multipart posts turn every newline into CRLF, so save and preview must both normalize here. */
-export function normalizeBody(body: string) {
+/** Multipart posts turn every newline into CRLF, so a save normalizes here. */
+function normalizeBody(body: string) {
   return body.replace(/\r\n/g, "\n").trim();
 }
 
@@ -239,90 +229,5 @@ export function parsePost(raw: string): PostFields {
   };
 }
 
-export const FR_CONTROL = "frControl";
-export const FR_TITLE = "frTitle";
-export const FR_URL = "frUrl";
-export const FR_INTERNAL = "frInternal";
-
-/** Mirrors the schema's rule for internal links. */
-const INTERNAL_PREFIX = "/writing/";
-
 type ReadingItem = { title: string; url: string };
 
-export function splitReading(raw: string) {
-  const items = readingEntries(raw);
-  return {
-    external: items.filter((item) => !item.url.startsWith(INTERNAL_PREFIX)),
-    internal: items.filter((item) => item.url.startsWith(INTERNAL_PREFIX)),
-  };
-}
-
-/**
- * The hidden marker separates "the author removed every row" from "the control never rendered",
- * which both arrive as no fields. A half row is kept so the schema refuses it by name.
- */
-function furtherReadingFromForm(form: FormData, carried: string): string {
-  if (form.get(FR_CONTROL) === null) return carried;
-
-  const titles = form.getAll(FR_TITLE).map((v) => String(v));
-  const urls = form.getAll(FR_URL).map((v) => String(v));
-  const items: ReadingItem[] = [];
-
-  for (let i = 0; i < Math.max(titles.length, urls.length); i += 1) {
-    const title = (titles[i] ?? "").trim();
-    const url = (urls[i] ?? "").trim();
-    if (!title && !url) continue;
-    items.push({ title, url });
-  }
-
-  // Each checkbox value carries slug and title as JSON, so the form's field names do not grow with
-  // the blog. The title is a snapshot from when the box was ticked.
-  for (const value of form.getAll(FR_INTERNAL)) {
-    let slug = "";
-    let title = "";
-    try {
-      const parsed: unknown = JSON.parse(String(value));
-      if (parsed && typeof parsed === "object") {
-        const record = parsed as Record<string, unknown>;
-        slug = typeof record.slug === "string" ? record.slug : "";
-        title = typeof record.title === "string" ? record.title : "";
-      }
-    } catch {
-      continue;
-    }
-    if (!slug) continue;
-    items.push({ title: title.trim() || slug, url: `${INTERNAL_PREFIX}${slug}` });
-  }
-
-  return items.length > 0 ? JSON.stringify(items) : "";
-}
-
-export function fieldsFromForm(form: FormData): PostFields {
-  const get = (key: string) => String(form.get(key) ?? "");
-  return {
-    title: get("title"),
-    slug: get("slug").trim().toLowerCase(),
-    description: get("description"),
-    date: get("date"),
-    tags: parseTagInput(get("tags")),
-    // From the button pressed, not a hidden field, so it works without script. Unknown means draft.
-    draft: draftForIntent(readIntent(form)),
-    publishAt: get("publishAt"),
-    coverSrc: get("coverSrc"),
-    coverAlt: get("coverAlt"),
-    body: get("body"),
-    firstPublished: get("firstPublished"),
-    // The hidden "false" always submits and a ticked box adds "true" after it, so the LAST value wins;
-    // form.get() returns the first, which would make the checkbox do nothing.
-    featured: (() => {
-      const all = form.getAll("featured").map((v) => String(v));
-      return all.length > 0 && all[all.length - 1] === "true";
-    })(),
-    series: get("series"),
-    part: get("part"),
-    furtherReading: furtherReadingFromForm(form, get("furtherReading")),
-    ogTitle: get("ogTitle"),
-    ogDescription: get("ogDescription"),
-    updated: get("updated"),
-  };
-}

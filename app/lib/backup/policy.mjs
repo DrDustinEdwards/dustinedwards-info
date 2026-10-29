@@ -29,7 +29,7 @@ export const REQUIRED_TABLES = Object.freeze(Object.keys(NON_DERIVED_TABLES));
  * Tables left out of the dump because they hold live credentials or one-time tokens. EMPTY, and
  * deliberately so: no table in the current schema holds either. The Better Auth tables (user,
  * session, account, verification) were dropped by migration 0026, admin sign-in is Cloudflare
- * Access and keeps no row, and preview-link tokens live in KV (app/lib/preview-token.mjs), not D1.
+ * Access and keeps no row.
  * A table added later that matches CREDENTIAL_COLUMN fails the dump by name until it is listed
  * here, with the reason, or its column is renamed.
  */

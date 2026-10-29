@@ -2,7 +2,7 @@
 /// <reference lib="dom.iterable" />
 
 import { BASE, ok, overflowScan, skip } from "../harness.mjs";
-import { MATHLESS_POST_PATH, MATH_PREVIEW_TOKEN } from "../seed.mjs";
+import { MATHLESS_POST_PATH, MATH_POST_PATH } from "../seed.mjs";
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
@@ -23,31 +23,29 @@ function stylesheetHrefs() {
 
 /**
  * @param {import("../harness.mjs").CaseContext} ctx
- * @param {boolean} mathPreviewSeeded whether the preview run seeded the fixture and its token
+ * @param {boolean} mathPreviewSeeded whether the preview run seeded the fixture row
  */
 export async function run({ page }, mathPreviewSeeded) {
   /* Paired controls: the box must really overflow and the sheet be linked. */
   if (!mathPreviewSeeded) {
     skip(
       "the math page cases",
-      `they need a seeded draft row and preview token in local storage, which only the ` +
-        `preview-driving mode writes. Under PUBLIC_ORIGIN the fixture is unpublished on ` +
-        `the deployed site and nothing here may publish it.`,
+      `they need the fixture row seeded in local storage, which only the preview-driving ` +
+        `mode writes. Under PUBLIC_ORIGIN the fixture is unpublished on the deployed site ` +
+        `and nothing here may publish it.`,
     );
   } else {
-    const MATH_PATH = `/preview/${MATH_PREVIEW_TOKEN}`;
+    const MATH_PATH = MATH_POST_PATH;
     const NARROW_MATH = 375;
 
     await page.setViewport({ width: NARROW_MATH, height: 800 });
     const response = await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
 
-    /* Every refusal is the same 404, so the door is asserted open first. */
+    /* Asserted first: a 404 here is a seed problem, and every case below would report the wrong cause. */
     ok(
-      `${MATH_PATH}: the preview door opened`,
+      `${MATH_PATH}: the fixture post is served`,
       response?.status() === 200,
-      `the preview answered ${response?.status()}. That route returns one 404 for every ` +
-        `refusal, so this is a seed problem: either the KV record is missing, or the row ` +
-        `is not a draft, or the slugs disagree.`,
+      `the post answered ${response?.status()}, so the seeded row did not apply or the slugs disagree.`,
     );
 
     /* React 19 `precedence` hoists the sheet above the color-scheme meta. */

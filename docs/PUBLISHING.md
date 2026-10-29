@@ -30,20 +30,20 @@ What covers this pipeline: `check:content` (render determinism), `check:policy` 
 
 ## The writers
 
-All three call the same `savePost`. Gates (zod frontmatter, the wide-dash check) run server side inside it, because a save is the only door into the source.
+Both call the same `savePost`. Gates (zod frontmatter, the wide-dash check) run server side inside it, because a save is the only door into the source.
 
     caller -> gates -> source write -> renderAndWrite -> D1 rows -> cache purge -> Ask index
 
 - One save is one D1 batch writing the file and its revision, carrying the markdown file only.
 - The rows are written only after the source write lands. There is no compensating revert: undoing the source write would destroy the source to repair a derived index.
 - Pages showing the post are purged by Cache-Tag. Ask is written last and cannot fail the save.
-- A save names the version it loaded: the file's blob sha (Carrel), or the store's head revision (the admin editor). A file changed since is refused, and the same check runs inside the batch, so a write that lands in between still cannot be overwritten.
+- A save names the version it loaded: the file's blob sha. A file changed since is refused, and the same check runs inside the batch, so a write that lands in between still cannot be overwritten.
 
 **Carrel** (`/api/carrel/v1`, `app/routes/api.carrel.v1.$.ts`) is where posts are written. Its own key reaches only that prefix, it is limited to 120 per 60 s, and each revision carries a change id joining it to Carrel's authorship record. It is a resource route inside the site Worker, so a save's cache purge reaches the cache the public pages live in.
 
 **The operator API** (`POST /api/operator`, bearer `OPERATOR_TOKEN`) serves the admin MCP in `mcp/`, ship and the watchdog. `GET /api/operator` returns the descriptors from `app/lib/operator/descriptors.ts`, which is the tool list; do not copy it here. The token is compared in constant time after both sides are hashed to 32 bytes; absent or under 32 characters, the endpoint returns 503. Limited 30 per 60 s through the site's Durable Object limiter on an `op:<id>` instance, keyed after authentication. Revisions carry `[operator:<id>]`. `savePost(env, options)` took a plain env rather than a Request, so exposing it needed no refactor: check whether a seam exists before budgeting to cut one.
 
-**The admin editor** (`/admin/posts`, history, `/admin/media`) re-serializes frontmatter in its own key order, so a save with no edits still writes a revision. The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, not the UI, because only the policy reads the prior file. Version history restores by putting an old file back through `savePost`: a new revision, gates run again, nothing rewritten.
+There is no post editor in the site's admin (removed 2026-10-29: every post was being written in Carrel, and two editors meant two sets of save and publish rules). The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, because only the policy reads the prior file. The upkeep that page held is on `/admin/tools`: rebuild the answer index, re-render every post and reset the day's answer budget.
 
 Published posts live at `/writing/<slug>`; the route modules keep their `blog.*` names. The old `/blog` feed addresses still answer with the feed; no other `/blog` address redirects (Dustin, 2026-10-20).
 

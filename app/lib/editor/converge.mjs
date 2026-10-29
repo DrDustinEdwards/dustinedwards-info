@@ -18,7 +18,7 @@ function divergenceMessage({ slug, commitSha, attempts, cause }) {
     `Your writing is stored and is not lost. The site will serve the ` +
     `previous version of this post until the index catches up. ` +
     `Do NOT save again; the save already landed and a second save changes nothing. ` +
-    `Repair: run sync_posts, or press Sync Ask corpus on /admin/posts, either of ` +
+    `Repair: run sync_posts, or press Re-render every post on /admin/tools, either of ` +
     `which rebuilds this row from the stored source.`
   );
 }
