@@ -31,6 +31,7 @@ import {
   type MediaUse,
 } from "@dustinedwards/site-api";
 import { writeFocus, type R2BucketLike } from "@dustinedwards/site-api/r2";
+import { editImage } from "@dustinedwards/site-runtime/image";
 
 import {
   addMediaRevision,
@@ -112,8 +113,8 @@ const TRANSFORM_QUALITY = 92;
 const REENCODED = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 type Encoded = "image/jpeg" | "image/png" | "image/webp" | "image/avif";
 
-/** Each transform as the binding's options. A quarter turn is clockwise, as the contract's rotate-90 is. */
-const TRANSFORMS: Record<MediaTransformOp, ImageTransform> = {
+/** Each transform as editImage's options. A quarter turn is clockwise, as the contract's rotate-90 is. */
+const TRANSFORMS: Record<MediaTransformOp, Pick<Parameters<typeof editImage>[2], "rotate" | "flip">> = {
   "rotate-90": { rotate: 90 },
   "rotate-180": { rotate: 180 },
   "rotate-270": { rotate: 270 },
@@ -128,11 +129,10 @@ function bufferOf(bytes: Uint8Array): ArrayBuffer {
   return buffer;
 }
 
-/** Runs one transform through the Images binding and answers the new bytes, in the picture's own type. */
-async function reencode(env: Env, body: ReadableStream | Uint8Array, transform: ImageTransform, format: Encoded, quality: number) {
-  const stream = body instanceof Uint8Array ? new Blob([bufferOf(body)]).stream() : body;
-  const result = await env.IMAGES.input(stream).transform(transform).output({ format, quality });
-  return new Uint8Array(await result.response().arrayBuffer());
+/** Runs one edit through the Images binding (site-runtime's editImage) and answers the new bytes, in the picture's own type. */
+async function reencode(env: Env, body: ReadableStream | Uint8Array, edit: Pick<Parameters<typeof editImage>[2], "rotate" | "flip" | "maxEdge">, format: Encoded, quality: number) {
+  const response = await editImage(env.IMAGES, body, { ...edit, format, quality });
+  return new Uint8Array(await response.arrayBuffer());
 }
 
 /** Keys repository code references: unattached also leaves these out, as in the admin library. */
@@ -327,8 +327,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       if (input.resize && REENCODED.has(input.contentType)) {
         const size = await measureDimensions(env, bufferOf(input.bytes));
         if (size && Math.max(size.width, size.height) > RESIZE.maxEdge) {
-          const edge = { width: RESIZE.maxEdge, height: RESIZE.maxEdge, fit: "scale-down" } as const;
-          bytes = await reencode(env, input.bytes, edge, input.contentType as Encoded, RESIZE.quality);
+          bytes = await reencode(env, input.bytes, { maxEdge: RESIZE.maxEdge }, input.contentType as Encoded, RESIZE.quality);
           resizedFrom = { width: size.width, height: size.height, bytes: input.bytes.byteLength };
         }
       }

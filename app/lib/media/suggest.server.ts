@@ -3,6 +3,7 @@
 // person accepts it, as an alt or a tags write. Only Dustin's own uploads are sent, never a visitor's data.
 
 import { anthropicRoute } from "@dustinedwards/site-runtime/ai-gateway";
+import { editImage } from "@dustinedwards/site-runtime/image";
 
 /** The vision model: natively multimodal, Cloudflare-hosted, with no license prompt to accept first. */
 export const SUGGEST_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
@@ -41,10 +42,8 @@ export function suggestGateway(env: { AI_GATEWAY_BASE_URL?: string }): GatewayOp
 
 /** A smaller copy of the picture as a data: URI, for the model to look at. */
 async function viewOf(env: SuggestEnv, object: R2ObjectBody): Promise<string> {
-  const result = await env.IMAGES.input(object.body)
-    .transform({ width: VIEW_EDGE, height: VIEW_EDGE, fit: "scale-down" })
-    .output({ format: "image/jpeg", quality: 80 });
-  const bytes = new Uint8Array(await result.response().arrayBuffer());
+  const response = await editImage(env.IMAGES, object.body, { maxEdge: VIEW_EDGE, format: "image/jpeg", quality: 80 });
+  const bytes = new Uint8Array(await response.arrayBuffer());
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return `data:image/jpeg;base64,${btoa(binary)}`;
