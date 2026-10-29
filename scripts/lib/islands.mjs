@@ -12,7 +12,7 @@ import { siteScript } from "@dustinedwards/devkit/vite/site-script";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** Absolute, so a harness run from another directory finds the same modules. */
-export const ISLANDS_DIR = join(root, "app", "enhance");
+const ISLANDS_DIR = join(root, "app", "enhance");
 
 /** The plugin with the site's options: /site.js from app/site.ts, and the dev toolbar only ever in `vite dev`. */
 export function islandsPlugin() {

@@ -2,7 +2,7 @@ import { defineImages } from "@dustinedwards/site-runtime/image";
 
 // CSS pixels, never physical: the browser multiplies by the device pixel ratio itself. The 44rem prose column
 // is about 704 CSS px.
-export const CONTENT_SIZES = "(min-width: 46rem) 704px, calc(100vw - 2rem)";
+const CONTENT_SIZES = "(min-width: 46rem) 704px, calc(100vw - 2rem)";
 
 /**
  * Every way the site shows an image from /media, and so the route's closed width set (site-runtime ./image):
