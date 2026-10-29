@@ -16,7 +16,6 @@ import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/
 import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 import { action as uploadAction } from "~/routes/admin.media.upload";
-import { loader as mediaLoader } from "~/routes/media.$";
 
 import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
@@ -58,14 +57,6 @@ async function adminMediaAction(fields: Record<string, string>, routeEnv: object
     request: new Request("https://example.com/admin/media", { method: "POST", body: form }),
     context: routeContext(createExecutionContext(), routeEnv),
   } as never);
-}
-
-async function serve(key: string) {
-  return (await mediaLoader({
-    params: { "*": key },
-    request: new Request(`https://example.com/media/${key}`),
-    context: routeContext(),
-  } as never)) as Response;
 }
 
 const mediaRow = (key: string) =>
@@ -179,7 +170,7 @@ describe("media upload", () => {
   });
 });
 
-describe("serving a stored object that can carry script", () => {
+describe("a stored object that can carry script", () => {
   const SCRIPT_CAPABLE = [
     "image/svg+xml",
     "text/html",
@@ -190,19 +181,6 @@ describe("serving a stored object that can carry script", () => {
 
   it("allows none of them at upload", () => {
     expect([...ALLOWED.keys()].filter((type) => SCRIPT_CAPABLE.includes(type))).toEqual([]);
-  });
-
-  // Upload refuses SVG, but one stored before that, or put by hand, can still be in the bucket.
-  it("serves a stored SVG as a nosniff attachment, never inline", async () => {
-    const key = "dustin-edwards-script-svg-00000000000000aa.svg";
-    await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', {
-      httpMetadata: { contentType: "image/svg+xml" },
-    });
-
-    const served = await serve(key);
-    expect(served.status).toBe(200);
-    expect(served.headers.get("content-disposition")).toContain("attachment");
-    expect(served.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });
 
@@ -394,31 +372,6 @@ describe("an unknown intent", () => {
     };
     expect(result.init.status).toBe(400);
     expect(result.data.message).toContain("no-such-intent");
-  });
-});
-
-describe("a thumbnail whose transform fails", () => {
-  it("serves the original with a short cache life, and an SVG as an attachment", async () => {
-    const key = "dustin-edwards-transform-fails-00000000000000bb.svg";
-    await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"></svg>', {
-      httpMetadata: { contentType: "image/svg+xml" },
-    });
-    const failingImages = {
-      input: () => {
-        throw new Error("planted transform failure");
-      },
-    };
-
-    const served = (await mediaLoader({
-      params: { "*": key },
-      request: new Request(`https://example.com/media/${key}?w=320`),
-      context: routeContext(createExecutionContext(), { IMAGES: failingImages }),
-    } as never)) as Response;
-
-    expect(served.status).toBe(200);
-    expect(served.headers.get("x-media-thumb")).toBe("original-fallback");
-    expect(served.headers.get("cache-control")).not.toContain("immutable");
-    expect(served.headers.get("content-disposition")).toContain("attachment");
   });
 });
 

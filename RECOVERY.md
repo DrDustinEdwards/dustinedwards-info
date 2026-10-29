@@ -388,14 +388,14 @@ That is deliberate: an unprotected metered endpoint must not serve.
 
 No resource to create and no id. It is enabled per Worker by the config alone.
 
-It powers `/media/<key>?w=160|320|640`, which transforms the single original in R2
+It powers `/media/<key>?w=<width>` (the closed set in `app/lib/media/images.mjs`), which transforms the single original in R2
 on request and stores no variants. It is the **binding** rather than the
 `/cdn-cgi/image/` URL syntax because the URL interface needs a customer zone:
 measured 2026-08-02, it answers 404 with Cloudflare error 1042 on `workers.dev`.
 The binding is account-scoped and works without a zone.
 
 If the binding is absent the thumbnail route falls back to serving the full
-original and says so in an `x-media-thumb: unavailable-no-images-binding` header,
+original and says so in an `x-image: unavailable-no-images-binding` header,
 so the failure is diagnosable rather than merely slow.
 
 Note: the Images binding requires an **Images-enabled account**. On a genuinely
@@ -521,7 +521,7 @@ Then check by hand:
 - `/blog` lists posts and page 2 exists
 - `/search?q=cloudflare` returns results (D1, no AI involved)
 - `/admin` redirects to the Cloudflare Access login and then admits only the people in its policy
-- `/media/<some key>?w=320` returns `image/webp` with `x-media-thumb: w=320`
+- `/media/<some key>?w=320` returns `image/webp` with `x-image: w=320 webp`
 - `/search/ask` answers, once the corpus is synced
 
 ---
