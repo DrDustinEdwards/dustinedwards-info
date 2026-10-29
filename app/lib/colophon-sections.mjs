@@ -209,7 +209,7 @@ export const CREDITS = Object.freeze([
   },
   {
     name: "EmDash",
-    url: "https://emdashcms.com",
+    url: "https://github.com/emdash-cms/emdash",
     rest:
       " is the source of the scheduled updates to live posts that site-api and " +
       "Carrel apply, and of the ideas behind focal points and captions on media.",
