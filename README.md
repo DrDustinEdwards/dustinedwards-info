@@ -21,9 +21,9 @@ consequence of it.
   Speed is judged by real-user measures (Core Web Vitals), not byte counts, and
   how far to hydrate public pages is still to be decided. Today public pages
   do not hydrate React: their JavaScript is a set of
-  small self-contained enhancement bundles, inserted by one inline loader the
-  CSP allows by its hash (`app/enhance/`, `app/lib/enhance-loader.mjs`). That is
-  the current shape, not a law. `/login` is a real form with the browser client
+  islands (`app/enhance/`), each loaded only where the page marks it, started by
+  one same-origin script, `/site.js` (devkit's `siteScript` and `startIslands`).
+  No public page runs an inline script. That is the current shape, not a law. `/login` is a real form with the browser client
   layered on top of it, and the admin plane behind it hydrates.
 
 Rebuilding the platform from nothing is a different job with its own document:

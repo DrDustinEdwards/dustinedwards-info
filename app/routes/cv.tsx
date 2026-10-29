@@ -1,6 +1,5 @@
 import { Fragment, type ReactNode } from "react";
 
-import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { readCv } from "~/db/cv";
 import { contentPageCardPath, contentPageMarkdownPath } from "~/lib/content-pages.mjs";
@@ -565,7 +564,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           own page under <a href="/research/publications">Publications</a>.
         </p>
       </div>
-      <Enhance module="cv" />
+      <template data-island="cv" />
     </PageShell>
   );
 }

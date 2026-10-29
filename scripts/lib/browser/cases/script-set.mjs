@@ -1,7 +1,6 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { ENHANCE_LOADER } from "../../../../app/lib/enhance-loader.mjs";
 import { BASE, ok } from "../harness.mjs";
 
 /**
@@ -27,40 +26,47 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
   for (const path of ["/", postForShape, "/search?q=workers"].filter(Boolean)) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const shape = await page.evaluate(() => ({
-      srcs: [...document.querySelectorAll("script[src]")].map(
-        (s) => s.getAttribute("src") ?? "",
-      ),
-      /* Resolved as the loader resolves them, since it sets `src` to the absolute URL. */
-      markers: [...document.querySelectorAll("template[data-enhance]")].map(
-        (t) => new URL(t.getAttribute("data-enhance") ?? "", location.href).href,
-      ),
-      /* Executable inline scripts: JSON-LD and speculation rules are data, not script. */
+      /* Same-origin only: the edge injects the approved analytics beacon from its own host. */
+      srcs: [...document.querySelectorAll("script[src]")]
+        .map((s) => new URL(s.getAttribute("src") ?? "", location.href))
+        .filter((u) => u.origin === location.origin)
+        .map((u) => u.pathname),
+      /* The page's island markers, read by tag so this case is not a loader of its own (devkit's family check). */
+      markers: [...document.getElementsByTagName("template")]
+        .filter((t) => t.hasAttribute("data-island"))
+        .map((t) => t.getAttribute("data-island") ?? ""),
+      /* startIslands marks each island it ran (devkit ./islands). */
+      ready: [...document.getElementsByTagName("template")]
+        .filter((t) => t.hasAttribute("data-island-ready"))
+        .map((t) => t.getAttribute("data-island") ?? ""),
+      /* The islands imported, from the resource timeline, past the content hash. */
+      loaded: performance
+        .getEntriesByType("resource")
+        .map((e) => /\/islands\/([a-z][a-z0-9-]*)-[A-Za-z0-9_-]{8}\.js$/.exec(new URL(e.name).pathname)?.[1] ?? "")
+        .filter(Boolean),
+      /* Executable inline scripts: JSON-LD is data, not script. */
       inline: [...document.querySelectorAll("script:not([src])")]
-        .filter((s) => !["application/ld+json", "speculationrules"].includes(s.getAttribute("type") ?? ""))
+        .filter((s) => (s.getAttribute("type") ?? "") !== "application/ld+json")
         .map((s) => s.textContent ?? ""),
       /* hasAttribute, because a browser hides a nonce's value from getAttribute. */
       nonced: document.querySelectorAll("[nonce]").length,
     }));
-    /* Enhancement bundles only: whatever else a page loads is not the loader's to insert. */
-    const bundles = shape.srcs.filter((src) => {
-      const name = src.split("/").pop() ?? "";
-      const stem = name.replace(/-[A-Za-z0-9_-]{8}\.js$/, "");
-      return enhanceStems.has(stem);
-    });
+    const named = [...new Set(shape.markers)].filter((name) => enhanceStems.has(name)).sort();
     ok(
-      `${path}: the loader inserted exactly the bundles the markers name`,
-      shape.markers.length > 0 &&
-        JSON.stringify([...new Set(shape.markers)].sort()) === JSON.stringify([...bundles].sort()),
-      `markers [${shape.markers.join(", ")}], enhancement scripts [${bundles.join(", ")}]. No ` +
-        `marker means the enhancement tags vanished; a marker with no script means the loader ` +
-        `did not run or was refused by the policy.`,
+      `${path}: /site.js started exactly the islands the markers name`,
+      named.length > 0 &&
+        JSON.stringify([...new Set(shape.ready)].sort()) === JSON.stringify(named) &&
+        JSON.stringify([...new Set(shape.loaded)].sort()) === JSON.stringify(named),
+      `markers [${named.join(", ")}], started [${shape.ready.join(", ")}], imported [${shape.loaded.join(", ")}]. ` +
+        `No marker means the island tags vanished; a marker never started means /site.js did not run, was ` +
+        `refused by the policy, or the island threw.`,
     );
     ok(
-      `${path}: the one executable inline script is the loader, and nothing carries a nonce`,
-      shape.inline.length === 1 && shape.inline[0] === ENHANCE_LOADER && shape.nonced === 0,
-      `${shape.inline.length} inline script(s), ${shape.nonced} nonced element(s). The public ` +
-        `policy allows the loader by hash and nothing else inline, and a nonce on a cached ` +
-        `page is shared by every reader.`,
+      `${path}: the one same-origin script is /site.js, nothing runs inline, and nothing carries a nonce`,
+      JSON.stringify(shape.srcs) === JSON.stringify(["/site.js"]) && shape.inline.length === 0 && shape.nonced === 0,
+      `scripts [${shape.srcs.join(", ")}], ${shape.inline.length} inline script(s), ${shape.nonced} nonced element(s). ` +
+        `The public policy allows same-origin files and nothing inline, and a nonce on a cached page is shared ` +
+        `by every reader.`,
     );
   }
 

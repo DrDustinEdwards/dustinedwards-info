@@ -21,11 +21,10 @@ The discriminator is who fetches it:
 
 ## Delivery
 
-- `media.$.ts` emits one format, WebP, unconditionally. `format=auto` is a `/cdn-cgi/image/` feature and absent here, and the `Accept` negotiation that replaced it was a cache-poisoning bug against `caches.default`, whose manual key carries no headers. AVIF measured 1.2% smaller; not worth it.
-- `WEBP_QUALITY` (85, `encoding.mjs`) is passed explicitly and written into the cache key. Without it the binding emitted lossless WebP, larger than the origin at every width.
-- Two closed width sets (`widths.mjs`), because width lands in a billing key: `THUMB_WIDTHS` `[160, 320, 640]` for admin, `CONTENT_WIDTHS` `[640, 1024, 1408]` for prose (a 44rem column at 2x). Other widths are 400.
-- `srcset` and `sizes` are written by the pipeline for `/media/` keys only; a static image in `public/` gets no ladder, so a post that wants one uploads. No `<picture>`. `gravity=auto` on tiles, plus two nullable focal override columns.
-- `cropSafe()` exempts the roster photos (keyed on `/phage-hunters/`): group photos, faces must not be cut.
+- `media.$.ts` is site-runtime's `./image` route (`images.respond()`), configured once in `app/lib/media/images.mjs` (`defineImages`). The format is in the URL (`?w=` is WebP, `&f=avif` AVIF), never negotiated from `Accept`, which was a cache-poisoning bug against `caches.default`, whose manual key carries no headers. The response says what it did in `x-image`.
+- Quality 85 (site-runtime's `IMAGE_QUALITY`) is passed explicitly and written into the cache key (`__q=85`). Without it the binding emitted lossless WebP, larger than the origin at every width.
+- One closed width set, because width lands in a billing key: the `content` use (a 44rem column, 704 CSS px, constrained) serves 640, 704, 1024 and 1408, with `breakpoints: [640, 1024, 1408]` so the widths served before the move still answer; the `tile` use (admin grid and the about photo) serves 320 and 640. Other widths are 400.
+- `srcset`, `sizes` and the AVIF and WebP `<picture>` sources are written by the pipeline for `/media/` keys only (Prelum's `imageProps` `sources`); a static image in `public/` gets no ladder, so a post that wants one uploads. Nothing is cropped: tiles are scaled.
 - Uploads refuse SVG (415, `svg-refused` in `upload-contract.mjs`), every `/media` response is sandboxed, and the stored type is the detected one, not the claimed one.
 - LQIP over ThumbHash or BlurHash, because hash formats need client decoding to paint. Static body images get a `has-lqip` background from the asset manifest. A `/media/` body image gets none, because the stored HTML is byte-compared and that placeholder lives only in R2. Width and height are always set.
 
@@ -46,4 +45,4 @@ Covered: markdown image, figure directive, frontmatter cover, links including re
 
 ## Not built
 
-Roster photos stay in `public/phage-hunters/`: a new cohort is a resize and a commit, not a runtime write, the static tier already gives dimensions, LQIP and transforms, and content-addressed keys would erase the path `cropSafe()` depends on. Migrate only if Dustin wants "upload next year's photo in the editor". Media versioning, AI tagging, rights management and lifecycle rules are team features for an audience of one. Trash (`trashed_at`, migration 0011, hides a file but never takes its URL down), tags, folders and exact-hash duplicate detection were built.
+Roster photos stay in `public/phage-hunters/`: a new cohort is a resize and a commit, not a runtime write, the static tier already gives dimensions, LQIP and transforms. Migrate only if Dustin wants "upload next year's photo in the editor". Media versioning, AI tagging, rights management and lifecycle rules are team features for an audience of one. Trash (`trashed_at`, migration 0011, hides a file but never takes its URL down), tags, folders and exact-hash duplicate detection were built.

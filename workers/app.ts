@@ -19,6 +19,11 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
 import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
+import {
+  SPECULATION_RULES_HEADER,
+  SPECULATION_RULES_PATH,
+  speculationRulesResponse,
+} from "@dustinedwards/site-runtime/prefetch";
 import { SECURITY_HEADERS } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { handleWebmentionVerify } from "./webmention-verify";
@@ -73,18 +78,31 @@ function applySecurityHeaders(headers: Headers) {
 }
 
 /**
+ * Hover prefetch (site-runtime ./prefetch): the rules beyond the package's own exclusions. /lab is signed in,
+ * /media is files, /login and /theme act on a request, and `/search/ask` is billed: prefetching it would spend
+ * model tokens on a click nobody made. File links (.md, .xml, .json, .txt) and links with a query are the
+ * package's defaults.
+ */
+const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
+
+/**
  * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
- * set, the report endpoint, the policy (feeds excepted) and the uncached default.
+ * set, the report endpoint, the policy (feeds excepted), the prefetch rules on a public page and the
+ * uncached default.
  */
 function applyDocumentHeaders(
   headers: Headers,
-  { timings, reportTo, csp }: { timings: Timings | undefined; reportTo: string; csp: string },
+  { timings, reportTo, csp, publicPage }: { timings: Timings | undefined; reportTo: string; csp: string; publicPage: boolean },
 ) {
   if (timings) headers.set("Server-Timing", serverTiming(timings));
   applySecurityHeaders(headers);
   headers.set("Reporting-Endpoints", reportTo);
   if (!isUnpolicedType(headers.get("content-type"))) {
     headers.set("Content-Security-Policy", csp);
+  }
+  // Public HTML only: the signed-in planes never prefetch.
+  if (publicPage && (headers.get("content-type") ?? "").startsWith("text/html")) {
+    headers.set(SPECULATION_RULES_HEADER.name, SPECULATION_RULES_HEADER.value);
   }
   if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
   applyEdgePolicy(headers);
@@ -105,7 +123,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     context.set(documentHandlerContext, requestHandler);
 
     // The private planes only (/admin, /lab): a public page is edge-cached with its header, so a nonce there would be shared
-    // by every reader; its one inline script is allowed by hash instead (workers/csp.mjs). A static
+    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs). A static
     // or derived nonce looks exactly like success: every page renders and the policy is worth
     // nothing.
     const adminNonce = isPrivatePath(url.pathname) ? crypto.randomUUID() : undefined;
@@ -122,11 +140,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
 
     // Absolute https (the gateway has already redirected plaintext): `Reporting-Endpoints` ignores anything else.
     const reportTo = reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, url.origin));
-    // The same pathname React Router reads off this request, so the hashed rules are the rendered ones.
-    const csp = await contentSecurityPolicy(url.pathname, adminNonce);
-
-
-    const document = { timings, reportTo, csp };
+    const csp = contentSecurityPolicy(url.pathname, adminNonce);
+    const document = { timings, reportTo, csp, publicPage: !isPrivatePath(url.pathname) };
 
     // `Response.redirect()` and friends return immutable headers, so a `set` throws; the catch
     // rebuilds and applies the same set.
@@ -197,6 +212,20 @@ export default {
     else await handleMediaEvents(batch, env);
   },
 
+  // The one cron (wrangler.jsonc.example): every scheduled update that is due goes live, and IndexNow is told.
+  // A failed one throws after the pass, so the invocation is recorded as failed; the next firing retries it.
+  // Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
+  scheduled(controller, env, ctx) {
+    ctx.waitUntil(
+      (async () => {
+        const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
+        const run = await runCarrelSchedules(env, ctx, new Date(controller.scheduledTime));
+        console.log(JSON.stringify({ schedules: run }));
+        if (run.failed > 0) throw new Error(`${run.failed} scheduled update(s) failed; the next firing retries them`);
+      })(),
+    );
+  },
+
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
@@ -209,6 +238,13 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   if (secure !== null) return redirectTo(request, secure);
 
   const url = new URL(request.url);
+
+  // The prefetch rules every public page's header names: one file, the same for every page, so no route renders it.
+  if (url.pathname === SPECULATION_RULES_PATH) {
+    const rules = speculationRulesResponse({ exclude: PREFETCH_EXCLUDE });
+    applySecurityHeaders(rules.headers);
+    return rules;
+  }
 
   // The old WordPress addresses, on the apex host only: the new site's own paths never reach this map.
   const wordpress = isApexHost(url.hostname) ? wordpressDisposition(url.pathname) : null;

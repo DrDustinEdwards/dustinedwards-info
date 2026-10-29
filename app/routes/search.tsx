@@ -1,7 +1,6 @@
 import { Link, data } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
-import { Enhance } from "~/components/enhance";
 import { SearchForm } from "~/components/search-form";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -420,7 +419,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </ul>
         ) : null}
 
-        <Enhance module="search" />
+        <template data-island="search" />
 
         {askAvailable && (params.q ?? "").trim().length > 0 ? (
           <AskMount question={params.q ?? ""} />

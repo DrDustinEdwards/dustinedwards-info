@@ -1,16 +1,17 @@
 import { dimensionsFromKey } from "./media/classify.mjs";
-import { CONTENT_SIZES, contentSrcSet } from "./media/widths.mjs";
+import { contentImage } from "./media/images.mjs";
 
 /**
- * Uses the body images' ladder, since a width the page advertises and the transform route refuses
- * is a broken image. A static `public/` cover has only one size, so it gets a plain `src`.
+ * The body images' use (app/lib/media/images.mjs), since a width the page advertises and the transform route
+ * refuses is a broken image. A static `public/` cover has only one size, so it gets a plain `src`.
  *
  * @param {string} src
  * @returns {{ srcSet?: string, sizes?: string }}
  */
 export function coverResponsive(src) {
   if (!src.startsWith("/media/")) return {};
-  return { srcSet: contentSrcSet(src.slice("/media/".length)), sizes: CONTENT_SIZES };
+  const { srcset, sizes } = contentImage(src, dimensionsFromKey(src));
+  return srcset ? { srcSet: srcset, sizes } : {};
 }
 
 /**

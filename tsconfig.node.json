@@ -199,16 +199,11 @@
     // the same principle as query.mjs: there must never be a second answer to
     // "what kind of thing is this file".
     "app/lib/media/classify.mjs",
-    // The transform ladders. The pipeline writes srcset from them and the Worker
-    // serves from them, so both projects must reach the one definition: a width
-    // the pipeline advertises but the route refuses is a 400 mid-article.
-    "app/lib/media/widths.mjs",
-    // The WebP quality every Images-binding call emits at. build:assets encodes
-    // its placeholders with the SAME constant the Worker transforms with, which
-    // is the whole reason it is a module rather than a literal in a route: it
-    // had two call sites before this project ever reached it, and they
-    // disagreed for months.
-    "app/lib/media/encoding.mjs",
+    // The site's images (site-runtime ./image defineImages). The pipeline writes
+    // srcset from it and the Worker serves from it, so both projects must reach
+    // the one definition: a width the pipeline advertises but the route refuses
+    // is a 400 mid-article.
+    "app/lib/media/images.mjs",
     // Where the asset manifest lives, POSIX and repo-relative. build:assets
     // writes it, check:content reconciles it and the Node resolver reads it;
     // the Worker asks GitHub for the same string. One statement, because a
@@ -239,17 +234,6 @@
     // of the policy, and because the drift it exists to catch is between the
     // list and the routes.
     "workers/feed-types.mjs",
-    // Listed because csp.mjs IMPORTS it: the policy's script hash is computed
-    // from the loader text this module holds, which is what keeps the two from
-    // drifting. Dependency-free.
-    "app/lib/enhance-loader.mjs",
-    // Imported by enhance-loader.mjs for the URL prefix. Dependency-free.
-    "app/lib/enhance-url.mjs",
-    // Listed because csp.mjs IMPORTS it too: the speculation rules' hash is
-    // computed from the builder SiteSpeculation renders with. Dependency-free.
-    "app/lib/speculation.mjs",
-    // Imported by speculation.mjs, which escapes its rules with it.
-    "app/lib/json-ld.mjs",
     // Listed because csp.mjs IMPORTS it: `media-src` is written from the same
     // audio host list the podcast feed parser accepts episodes against, so the
     // policy cannot refuse audio the home page renders. Dependency-free.

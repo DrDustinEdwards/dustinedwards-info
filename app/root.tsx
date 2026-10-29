@@ -11,7 +11,6 @@ import {
 
 import { ErrorPage } from "~/components/error-page";
 import { getNonce } from "~/lib/context";
-import { ENHANCE_LOADER } from "~/lib/enhance-loader.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
@@ -126,6 +125,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* After <Links /> so a site rule wins over the upstream katex rule. No `precedence`: React
             would lift the element above the color-scheme meta. */}
         {linksMath ? <link rel="stylesheet" href={katexCssUrl} /> : null}
+        {/* Starts every <template data-island> once the document is parsed (devkit's startIslands, app/site.ts).
+            Same-origin, so 'self' allows it with no hash; the nonce is admin's, undefined on public pages. */}
+        <script src="/site.js" defer nonce={nonce} />
       </head>
       <body>
         {adminPlane ? null : (
@@ -141,9 +143,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Scripts nonce={nonce} />
           </>
         ) : null}
-        {/* Last, so every <Enhance> marker is parsed before it runs. Allowed by its sha256 in the
-            policy; raw HTML, because the hash is of these exact bytes. The nonce is admin's. */}
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: ENHANCE_LOADER }} />
       </body>
     </html>
   );

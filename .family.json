@@ -9,7 +9,8 @@
   },
   "copies": {
     "workers/security-headers.mjs": "the site's ratified overrides to buildSecurityHeaders, which it calls; the header names are keys, not a second builder",
-    "scripts/lib/headers/static-set-and-cache.mjs": "the gate's hand-transcribed ratified set, compared against what the Worker sends"
+    "scripts/lib/headers/static-set-and-cache.mjs": "the gate's hand-transcribed ratified set, compared against what the Worker sends",
+    "app/lib/markdown-twin.ts": "the post twin's own negotiation: prefersMarkdown goes through the site's prefersType (negotiate.mjs), which every negotiated route shares, and markdownResponse sends Vary: Accept only on the never-stored negotiated variant, so the stored .md twin stays one cache entry"
   },
   "tokens": {
     "--text": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",

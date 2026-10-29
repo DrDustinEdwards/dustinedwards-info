@@ -375,9 +375,16 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
 /** The design's budget for the map's script: 25 KB gzip. */
 async function scriptBudget(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
-  const src = await page.$eval('template[data-enhance*="system-map"]', (el) => el.getAttribute("data-enhance"));
-  const response = src ? await fetch(new URL(src, BASE)) : null;
-  const bytes = response?.ok ? gzipSync(Buffer.from(await response.arrayBuffer()), { level: 9 }).length : -1;
+  // The island as the page loaded it, and the shared chunks it imports: what a reader downloads for the map.
+  const src = await page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name).find((n) => /\/islands\/system-map-[^/]*\.js$/.test(n)));
+  const fetchCode = async (/** @type {string} */ url) => {
+    const response = await fetch(url);
+    return response.ok ? { code: Buffer.from(await response.arrayBuffer()) } : null;
+  };
+  const island = src ? await fetchCode(src) : null;
+  const chunks = island ? [...island.code.toString("utf8").matchAll(/from"(\.\/chunks\/[^"]+)"/g)].map((m) => new URL(m[1], src).href) : [];
+  const files = island ? [island, ...(await Promise.all(chunks.map(fetchCode)))] : [];
+  const bytes = files.length > 0 && files.every(Boolean) ? files.reduce((n, f) => n + gzipSync(/** @type {{ code: Buffer }} */ (f).code, { level: 9 }).length, 0) : -1;
   ok(`/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`, bytes > 0 && bytes < SCRIPT_BUDGET_GZIP, `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`);
 }
 

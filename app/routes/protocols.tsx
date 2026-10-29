@@ -4,7 +4,6 @@ import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { LibraryCite } from "~/components/library-cite";
 import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
@@ -157,7 +156,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         citation={libraryCitation({ name: SITE.name, affiliation: SITE.affiliation, origin: SITE_ORIGIN })}
       />
       {rest ? <div className="prose" dangerouslySetInnerHTML={{ __html: rest }} /> : null}
-      <Enhance module="catalog" />
+      <template data-island="catalog" />
     </PageShell>
   );
 }

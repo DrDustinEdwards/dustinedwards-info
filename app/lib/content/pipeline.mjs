@@ -10,9 +10,9 @@ import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
 import { z } from "zod";
 
-import { ASSET_PREFIX, classify } from "../media/classify.mjs";
+import { ASSET_PREFIX, classify, dimensionsFromKey } from "../media/classify.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
-import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
+import { contentImage } from "../media/images.mjs";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
 
 import { readingTimeMinutes } from "./reading-time.mjs";
@@ -184,14 +184,17 @@ function mediaKeyOf(raw) {
 
 /**
  * Only /media/ keys are responsive: static assets never pass through the transform route, so their
- * widths would 404. The link goes to the unsized original, which srcset never serves.
+ * widths would 404. `sources` makes Prelum write a <picture>, AVIF then WebP; the <img> keeps the WebP
+ * srcset. The link goes to the unsized original, which srcset never serves.
  *
  * @param {string} src
  */
 function imageProps(src) {
   if (!src.startsWith("/media/")) return null;
   const key = src.slice("/media/".length);
-  return { srcSet: contentSrcSet(key), sizes: CONTENT_SIZES, href: `/media/${key}` };
+  const { srcset, sizes, sources } = contentImage(src, dimensionsFromKey(key));
+  if (!srcset) return { href: `/media/${key}` };
+  return { srcSet: srcset, sizes, sources: sources.map((s) => ({ type: s.type, srcSet: s.srcset })), href: `/media/${key}` };
 }
 
 const SITE_OPTIONS = {

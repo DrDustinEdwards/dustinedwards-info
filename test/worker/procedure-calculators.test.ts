@@ -50,7 +50,7 @@ describe("calculators in a procedure's steps", () => {
     expect(new Set(ids).size).toBe(ids.length);
     // Computed on the server from the worked example, so a reader without script sees an answer.
     expect(html).toContain("phage-tool-answer");
-    expect(html).toContain('data-enhance="');
+    expect(html).toContain('<template data-island="tools"></template>');
   });
 
   it("fills a field from the step's own words and says so", { timeout: 120_000 }, async () => {

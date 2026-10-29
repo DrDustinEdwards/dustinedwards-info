@@ -6,7 +6,6 @@ import { join } from "node:path";
 
 import { ALLOWED, SVG_TYPE, validateUpload } from "../../../app/lib/media/upload-contract.mjs";
 import { MEDIA_CSP, contentSecurityPolicy } from "../../../workers/csp.mjs";
-import { blockFrom } from "../source-body.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
 
@@ -55,45 +54,26 @@ export async function run() {
 
   /*
    * A stored SVG is served as an attachment: upload refuses it, but a legacy or hand-put object can
-   * still be in the bucket. Kept even though the media CSP blocks it, so it does not depend on the
-   * policy.
+   * still be in the bucket. The route is site-runtime's (./image), which attaches an SVG on every path
+   * that serves stored bytes and is tested there; this holds the route to it, so a hand-written
+   * response beside it cannot serve one inline.
    */
   {
-    /* Stripped like every other source here: a comment naming a type, the disposition or
-       `new Response(object.body` would otherwise satisfy or inflate the checks below. */
+    /* Stripped like every other source here: a comment naming the call would otherwise satisfy it. */
     const mediaRoute = stripComments(readFileSync(join(root, "app/routes/media.$.ts"), "utf8"));
-
-    const helperAt = mediaRoute.search(/function attachIfActive/);
-    ok("media: the svg attachment helper exists", helperAt !== -1,
-      "nothing sets Content-Disposition, so an uploaded SVG renders inline");
-
-    // Scoped to the helper's own body: asserting the file mentions attachment would pass on a comment.
-    const helperBody = helperAt === -1 ? "" : blockFrom(mediaRoute, helperAt);
-    /* Always SVG: it is not uploadable, but an object stored before the refusal or put by hand is. */
-    ok(`media: the helper refuses ${SVG_TYPE} inline`,
-      helperBody.includes(SVG_TYPE),
-      `a stored ${SVG_TYPE} object is not attached by this route, so it is served ` +
-        `inline from our own origin`);
-    ok("media: it sets content-disposition attachment",
-      /content-disposition"?,\s*"attachment/.test(helperBody),
-      "the helper exists but does not set the disposition");
-    ok("media: it sets nosniff alongside",
-      /x-content-type-options/.test(helperBody),
-      "an attachment a browser sniffs back to SVG defeats the disposition");
-
-    /* AND APPLIED ON EVERY PATH THAT SERVES THE STORED BYTES, the half a helper check cannot see. */
-    const bodyReturns = [...mediaRoute.matchAll(/new Response\(object\.body/g)].length;
-    const applications = [...mediaRoute.matchAll(/attachIfActive\(headers\)/g)].length;
-    ok("media: some path serves the stored bytes", bodyReturns > 0,
-      "no `new Response(object.body` found; this block is asserting nothing");
-    ok("media: every stored-bytes response applies the helper",
-      applications >= bodyReturns,
-      `${bodyReturns} response(s) return the object body but the helper is ` +
-        `applied ${applications} time(s). A path serves an SVG inline.`);
+    const imagesModule = stripComments(readFileSync(join(root, "app/lib/media/images.mjs"), "utf8"));
+    ok("media: the route answers with site-runtime's image route",
+      /return images\.respond\(request,/.test(mediaRoute) && /from "@dustinedwards\/site-runtime\/image"/.test(imagesModule),
+      "app/routes/media.$.ts does not return images.respond() from app/lib/media/images.mjs, so the SVG attachment " +
+        "and the closed width set are not the shared route's");
+    ok("media: no other response serves the stored bytes",
+      // The empty key's 404 is a string literal; any other body is the stored object's.
+      !/new Response\((?!"Not found")/.test(mediaRoute),
+      "the route builds a response of its own beside images.respond(); a path that serves an SVG inline is back");
   }
 
   /*
-   * The immutable year is scoped to /assets/*, whose names carry a content hash; the danger is the glob
+   * The immutable year is scoped to /assets/* and /islands/*, whose names carry a content hash; the danger is the glob
    * widening over stable paths. Read per block, since a file-wide reading cannot attribute a directive.
    */
   const HEADERS_FILE = "public/_headers";
@@ -104,7 +84,7 @@ export async function run() {
 
   /**
    * The longest freshness an UNHASHED path may declare, in seconds. Nothing recalls a stored
-   * entry: static assets are not in the purgeable page cache. /assets/* is exempt.
+   * entry: static assets are not in the purgeable page cache. /assets/* and /islands/* are exempt.
    */
   const MAX_UNHASHED_FRESHNESS = 3600;
 
@@ -135,19 +115,21 @@ export async function run() {
       `a path with no directives under it sets nothing. Found: ` +
         `${blocks.filter((b) => b.directives.length === 0).map((b) => b.path).join(", ")}`);
 
-    const hashed = blocks.filter((b) => b.path === "/assets/*");
-    ok("the hashed build output has a rule", hashed.length === 1,
-      `expected exactly one /assets/* block, found ${hashed.length}. ` +
-        `Without it every asset revalidates on every load.`);
+    /* Vite's /assets/ and devkit's /islands/ (the islands and their chunks): every name carries a content hash. */
+    const HASHED = ["/assets/*", "/islands/*"];
+    const hashed = blocks.filter((b) => HASHED.includes(b.path));
+    ok("the hashed build output has a rule", hashed.length === HASHED.length,
+      `expected one block each for ${HASHED.join(" and ")}, found ${hashed.length}. ` +
+        `Without them every asset revalidates on every load.`);
 
     const immutable = hashed.flatMap((b) =>
       b.directives.filter((d) => /immutable|max-age=\d{5,}/i.test(d)),
     );
-    ok("an immutable rule is declared", immutable.length > 0,
+    ok("an immutable rule is declared", immutable.length >= HASHED.length,
       "the file exists but pins nothing, so every asset still revalidates");
 
     /* THE PROPERTY, per block, and both max-age and s-maxage: a year at the edge is as un-revokable. */
-    const unhashed = blocks.filter((b) => b.path !== "/assets/*");
+    const unhashed = blocks.filter((b) => !HASHED.includes(b.path));
     const overFresh = unhashed.flatMap((b) =>
       b.directives.flatMap((d) => {
         if (/immutable/i.test(d)) return [`${b.path}: ${d} (immutable)`];
@@ -165,9 +147,9 @@ export async function run() {
     );
 
     // No page twin is a static file now: every page's twin, and the CV's, is a route whose headers are code
-    // (docs/PAGES.md, docs/CV.md), so the only rule left here is the hashed assets'.
+    // (docs/PAGES.md, docs/CV.md), so the only rules left here are the hashed assets'.
     ok("the paths declared here are the ones this site means to declare",
-      paths.every((p) => p === "/assets/*"),
+      paths.every((p) => HASHED.includes(p)),
       `an unrecognized rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
 
     /*

@@ -1,16 +1,15 @@
-// The ratified security headers by exact value, and the enforced CSP: the loader hash and no nonce on
-// public pages, a per-render nonce on the admin plane.
+// The ratified security headers by exact value, and the enforced CSP: no hash and no nonce on public
+// pages, which name their prefetch rules by header, and a per-render nonce on the admin plane.
 
-import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
-import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
-import { CSP_ENDPOINT_NAME, CSP_REPORT_PATH, enhanceLoaderHash, speculationRulesHash } from "../../../workers/csp.mjs";
+import { CSP_ENDPOINT_NAME, CSP_REPORT_PATH } from "../../../workers/csp.mjs";
 import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
+import { SPECULATION_RULES_HEADER } from "@dustinedwards/site-runtime/prefetch";
 import { declaredSecurityHeaders } from "../header-constants.mjs";
 import { ORIGIN, check, get } from "./client.mjs";
 
 /**
- * The executable inline scripts in a document: no `src`, and not a data block (JSON-LD) or
- * speculation rules, which `script-src` either does not gate or admits by keyword.
+ * The executable inline scripts in a document: no `src`, and not a data block (JSON-LD), which
+ * `script-src` does not gate.
  *
  * @param {string} html
  * @returns {string[]} each script's text
@@ -19,7 +18,7 @@ function inlineExecutableScripts(html) {
   return [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
     .filter(([, attrs]) => {
       const type = /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "";
-      return !/\bsrc=/.test(attrs ?? "") && type !== "application/ld+json" && type !== "speculationrules";
+      return !/\bsrc=/.test(attrs ?? "") && type !== "application/ld+json";
     })
     .map(([, , text]) => text ?? "");
 }
@@ -98,17 +97,12 @@ export async function run() {
     }
 
     /*
-     * PUBLIC: exactly the loader's hash and the page's rules hash and no nonce, on a render and on a
-     * cached copy alike; the one executable inline script is the loader, and the rules are the
-     * builder's text for the path, byte for byte. Both probes are of `/`.
+     * PUBLIC: no hash and no nonce, on a render and on a cached copy alike; no executable inline
+     * script, and the prefetch rules named by the header. Both probes are of `/`.
      */
-    const loaderSource = `'${await enhanceLoaderHash()}'`;
-    const rulesSource = `'${await speculationRulesHash("/")}'`;
-    const rulesText = buildSpeculationRules({ pathname: "/" });
     /** @param {string} label @param {{ res: Response, text: string }} probe */
     const assertPublic = (label, { res, text }) => {
       const policy = res.headers.get(ENFORCED) ?? "";
-      const hashes = policy.match(/'sha256-[^']+'/g) ?? [];
       check(
         `csp (${label}): the public policy carries no nonce`,
         !policy.includes("'nonce-"),
@@ -116,19 +110,14 @@ export async function run() {
           `reader of that copy would share the nonce.`,
       );
       check(
-        `csp (${label}): the public policy names exactly the loader's hash and the page's rules hash`,
-        JSON.stringify(hashes) === JSON.stringify([loaderSource, rulesSource]),
-        `hashes ${JSON.stringify(hashes)}, expected [${loaderSource}, ${rulesSource}]. The ` +
-          `deployed code and this checkout disagree, or another inline script was allowed.`,
-      );
-      const rules = [...text.matchAll(/<script type="speculationrules">([\s\S]*?)<\/script>/g)].map(
-        (m) => m[1],
+        `csp (${label}): the public policy names no hash`,
+        !/'sha256-/.test(policy),
+        `got ${JSON.stringify(policy)}. A public page runs no inline script, so a hash allows one nobody reviewed.`,
       );
       check(
-        `csp (${label}): the one speculationrules block is buildSpeculationRules("/"), byte for byte`,
-        rules.length === 1 && rules[0] === rulesText,
-        `${rules.length} block(s). Different text hashes differently, and Chrome refuses the ` +
-          `block silently.`,
+        `csp (${label}): the page names its prefetch rules in the ${SPECULATION_RULES_HEADER.name} header`,
+        res.headers.get(SPECULATION_RULES_HEADER.name) === SPECULATION_RULES_HEADER.value,
+        `got ${JSON.stringify(res.headers.get(SPECULATION_RULES_HEADER.name))}; without it the page prefetches nothing.`,
       );
       check(
         `csp (${label}): the document carries no nonce attribute`,
@@ -137,11 +126,10 @@ export async function run() {
       );
       const inline = inlineExecutableScripts(text);
       check(
-        `csp (${label}): the one executable inline script is the loader, byte for byte`,
-        inline.length === 1 && inline[0] === ENHANCE_LOADER,
+        `csp (${label}): the document carries no executable inline script`,
+        inline.length === 0,
         `${inline.length} executable inline script(s): ` +
-          `${JSON.stringify(inline.map((t) => t.slice(0, 60)))}. Anything else is refused by ` +
-          `the policy, and a loader that differs from its hash is refused with every enhancement.`,
+          `${JSON.stringify(inline.map((t) => t.slice(0, 60)))}. The policy refuses each of them.`,
       );
     };
 
@@ -176,7 +164,7 @@ export async function run() {
         `and protects nothing.`,
     );
     console.log(
-      `  csp: ENFORCED, public carries the loader hash and no nonce, admin nonce varies ` +
+      `  csp: ENFORCED, public carries no hash and no nonce, admin nonce varies ` +
         `(${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`,
     );
   }

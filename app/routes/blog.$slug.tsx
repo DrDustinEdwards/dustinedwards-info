@@ -7,9 +7,8 @@ import { PostMentions } from "~/components/post-mentions";
 import { PostRail, ymd } from "~/components/post-rail";
 import { SeriesNav } from "~/components/post-series-nav";
 import { EvidenceRow } from "~/components/evidence-row";
-import { ENHANCE_GZIP_BYTES } from "virtual:enhance";
+import { ISLAND_GZIP_BYTES } from "virtual:islands";
 
-import { Enhance } from "~/components/enhance";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
@@ -195,7 +194,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
   const sections = toc.filter((entry) => entry.depth === 2);
 
-  const gzipBytes = ENHANCE_GZIP_BYTES.blog;
+  const gzipBytes = ISLAND_GZIP_BYTES.blog;
   const evidence = [
     post.wordCount > 0 ? `${post.wordCount.toLocaleString("en-US")} words` : null,
     gzipBytes ? `${(gzipBytes / 1000).toFixed(2)} kB gzipped` : null,
@@ -354,7 +353,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         </article>
       </main>
       <ShellFooter />
-      <Enhance module="blog" />
+      <template data-island="blog" />
     </>
   );
 }

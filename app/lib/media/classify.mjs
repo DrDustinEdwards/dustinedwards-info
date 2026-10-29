@@ -156,16 +156,6 @@ export function roleOf(pathOrKey) {
 }
 
 /**
- * Roster photos may not be cropped: `fit=cover` cuts faces off group photographs. Keyed on the path,
- * so if these move to content-addressed R2 keys this must become a stored property.
- *
- * @param {string} pathOrKey
- */
-export function cropSafe(pathOrKey) {
-  return !pathOrKey.startsWith("/phage-hunters/");
-}
-
-/**
  * 16 hex characters (64 bits) is ample at this corpus size. The key carries `-<w>x<h>` so the Node build
  * and the Worker produce the same stored HTML without either reading bytes; the digest pins the bytes,
  * so it cannot go stale. The same image under two names is two objects.

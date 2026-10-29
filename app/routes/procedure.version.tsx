@@ -1,7 +1,6 @@
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView, VersionNotice } from "~/components/procedure";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
@@ -77,9 +76,9 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       <h1 className="page-title cap-layout-grid">{record.title}</h1>
       <VersionNotice record={record} current={current} />
       <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} lineage={lineage} />
-      <Enhance module="run" />
+      <template data-island="run" />
       {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}
-      <Enhance module="offline" />
+      <template data-island="offline" />
     </PageShell>
   );
 }

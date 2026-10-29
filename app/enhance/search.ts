@@ -202,4 +202,11 @@ export function enhanceSearch(): void {
   });
 }
 
-enhanceSearch();
+// An island (devkit ./islands): each <template data-island="search"> on the page calls this, and the first one runs it.
+let started = false;
+
+export default function start(): void {
+  if (started) return;
+  started = true;
+  enhanceSearch();
+}

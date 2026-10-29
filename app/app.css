@@ -178,11 +178,11 @@
 /* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
 
 :root {
-  --font-sans: "Schibsted Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Schibsted Grotesk", "Schibsted Grotesk Fallback", "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* Running text is the report's serif (the manual theme); labels and controls stay in the sans. */
   --font-prose: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
-  --font-mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-mono: "Martian Mono", "Martian Mono Fallback", ui-monospace, Menlo, Consolas, monospace;
   --font-serif: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia,
     "Times New Roman", serif;
 

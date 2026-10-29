@@ -13,7 +13,7 @@ const STATIC_SRC = "/research/publications/measured-latency.png";
 const render = (body) => renderWith(body, fixedSize);
 
 function anchorFor(/** @type {string} */ html, /** @type {string} */ src) {
-  for (const match of html.matchAll(/<a\b[^>]*>\s*<img\b[^>]*>/g)) {
+  for (const match of html.matchAll(/<a\b[^>]*>\s*(?:<picture>(?:<source\b[^>]*>)*)?<img\b[^>]*>/g)) {
     if (match[0].includes(`src="${src}"`)) return match[0];
   }
   return null;
@@ -63,10 +63,13 @@ await test("the wrap costs the image none of its own attributes", async () => {
   const media = html.match(new RegExp(`<img\\b[^>]*src="${MEDIA_SRC}"[^>]*>`))?.[0];
   assert.ok(media, "the media img tag is missing");
   assert.equal(attr(media, "src"), MEDIA_SRC);
-  assert.equal(
-    attr(media, "srcset"),
-    `${MEDIA_SRC}?w=640 640w, ${MEDIA_SRC}?w=1024 1024w, ${MEDIA_SRC}?w=1408 1408w`,
-  );
+  const ladder = [640, 704, 1024, 1408];
+  assert.equal(attr(media, "srcset"), ladder.map((w) => `${MEDIA_SRC}?w=${w} ${w}w`).join(", "));
+  // A <picture>: AVIF first, then WebP, over the same ladder (site-runtime ./image through Prelum's `sources`).
+  const picture = html.match(new RegExp(`<picture>((?:<source\\b[^>]*>)+)<img\\b[^>]*src="${MEDIA_SRC}"`))?.[1] ?? "";
+  const sources = [...picture.matchAll(/<source\b[^>]*>/g)].map((m) => m[0]);
+  assert.deepEqual(sources.map((tag) => attr(tag, "type")), ["image/avif", "image/webp"], `no picture around the media image:\n${html}`);
+  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}?w=${w}&#x26;f=avif ${w}w`).join(", "));
   assert.equal(attr(media, "sizes"), "(min-width: 46rem) 704px, calc(100vw - 2rem)");
   assert.equal(attr(media, "width"), "1280");
   assert.equal(attr(media, "height"), "720");
@@ -86,7 +89,7 @@ await test("an image the author already linked keeps the author's href", async (
   // The author's href is a decision; the wrap is a default and must not retarget it.
   const { html } = await render(`[![Linked by hand](${MEDIA_SRC})](https://example.com/paper)`);
   assert.equal((html.match(/<a\b/g) ?? []).length, 1, `expected one anchor:\n${html}`);
-  assert.match(html, /<a href="https:\/\/example\.com\/paper"><img/);
+  assert.match(html, /<a href="https:\/\/example\.com\/paper"><picture>/);
   assert.ok(!html.includes("image-link"), "the pipeline wrapped an already-linked image");
 });
 
