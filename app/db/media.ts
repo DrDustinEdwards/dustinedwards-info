@@ -4,7 +4,7 @@ import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
 import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
-import { media, mediaRefs, type MediaRef } from "./schema";
+import { media, mediaChanges, mediaRefs, mediaRevisions, type MediaRef } from "./schema";
 import { getDb, notTrashed } from "./client";
 
 export async function listMediaRecords(env: Env) {
@@ -87,7 +87,29 @@ type MediaListOptions = {
   trashed?: boolean;
   /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
   storedOnly?: boolean;
+  /** site-api v0.13.0: which way a picture lies, by its measured size (orientationOf's rule, in SQL). */
+  orientation?: "landscape" | "portrait" | "square";
+  /** site-api v0.13.0: what a file is by its type (kindOf's rule, in SQL). */
+  fileKind?: "image" | "video" | "audio" | "document";
+  /** The longest edge the `oversized` lens measures against: the site's resize maxEdge. */
+  maxEdge?: number;
 };
+
+/** A picture's edges, for the orientation filter: square when they differ by at most 1% of the longer (orientationOf). */
+function orientationClause(orientation: NonNullable<MediaListOptions["orientation"]>) {
+  const measured = sql`${media.width} > 0 AND ${media.height} > 0`;
+  const square = sql`abs(${media.width} - ${media.height}) * 100 <= max(${media.width}, ${media.height})`;
+  if (orientation === "square") return sql`(${measured} AND ${square})`;
+  const longer = orientation === "landscape" ? sql`${media.width} > ${media.height}` : sql`${media.height} > ${media.width}`;
+  return sql`(${measured} AND NOT (${square}) AND ${longer})`;
+}
+
+/** What a file is by its stored type: image, video and audio by the type's top level, everything else a document (kindOf). */
+function kindClause(kind: NonNullable<MediaListOptions["fileKind"]>) {
+  const top = sql`lower(coalesce(${media.mime}, ''))`;
+  if (kind !== "document") return sql`${top} LIKE ${`${kind}/%`}`;
+  return sql`NOT (${top} LIKE 'image/%' OR ${top} LIKE 'video/%' OR ${top} LIKE 'audio/%')`;
+}
 
 /** The WHERE of a listing, as SQL and never a post-filter, so a page is a full page and a count counts the same rows. */
 async function mediaWhere(env: Env, options: MediaListOptions) {
@@ -113,6 +135,11 @@ async function mediaWhere(env: Env, options: MediaListOptions) {
   if (options.lens === "unattached") clauses.push(uncited(options.templateKeys));
   if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
   if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
+  // The day in UTC, as the contract says: a license whose last day is today has not run out.
+  if (options.lens === "license-expired") clauses.push(sql`${media.licenseExpires} < date('now')`);
+  if (options.lens === "oversized" && options.maxEdge) clauses.push(sql`max(coalesce(${media.width}, 0), coalesce(${media.height}, 0)) > ${options.maxEdge}`);
+  if (options.orientation) clauses.push(orientationClause(options.orientation));
+  if (options.fileKind) clauses.push(kindClause(options.fileKind));
   /*
    * Twins are found by the digest inside the key, which SQLite cannot parse, so `mediaTwins` names
    * them; the filter is still SQL, before LIMIT and OFFSET, or a page of twins would come back short
@@ -374,6 +401,7 @@ export async function upsertMediaRecord(
     height?: number | null;
     focalX?: number | null;
     focalY?: number | null;
+    sha256?: string | null;
   },
 ) {
   const now = new Date().toISOString();
@@ -381,6 +409,7 @@ export async function upsertMediaRecord(
     .insert(media)
     .values({
       key: record.key,
+      sha256: record.sha256 ?? null,
       alt: record.alt ?? "",
       caption: record.caption ?? "",
       storage: record.storage ?? "r2",
@@ -412,6 +441,7 @@ export async function upsertMediaRecord(
         ...(record.height !== undefined ? { height: record.height } : {}),
         ...(record.focalX !== undefined ? { focalX: record.focalX } : {}),
         ...(record.focalY !== undefined ? { focalY: record.focalY } : {}),
+        ...(record.sha256 !== undefined ? { sha256: record.sha256 } : {}),
         // An annotation writer, so it moves the version Carrel holds (writeMediaAtRev).
         rev: sql`${media.rev} + 1`,
         updatedAt: now,
@@ -449,5 +479,103 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
     .where(inArray(mediaRefs.mediaKey, keys));
   const out = new Map<string, MediaRef[]>(keys.map((key) => [key, []]));
   for (const row of rows) out.get(row.mediaKey)?.push(row);
+  return out;
+}
+
+// ---------- site-api v0.13.0: duplicates, byte history and the change log
+
+/**
+ * The stored file holding exactly these bytes, trashed or not; null when none. By the row's own hash, then by the
+ * digest a content-addressed key carries for a row written before the hash was kept (the key's digest is the
+ * first 16 hex of the same SHA-256), then by the original of a picture shrunk at upload, so the same photo sent
+ * again finds the file it became.
+ */
+export async function mediaByHash(env: Env, sha256: string) {
+  const db = getDb(env);
+  const stored = ne(media.storage, "static");
+  const [byHash] = await db.select().from(media).where(and(eq(media.sha256, sha256), stored)).orderBy(asc(media.key)).limit(1);
+  if (byHash) return byHash;
+
+  const prefix = sha256.slice(0, 16);
+  const candidates = await db
+    .select()
+    .from(media)
+    .where(and(sql`${media.sha256} IS NULL`, stored, sql`instr(${media.key}, ${`-${prefix}`}) > 0`))
+    .orderBy(asc(media.key));
+  const byKey = candidates.find((row) => digestFromKey(row.key) === prefix);
+  if (byKey) return byKey;
+
+  const [original] = await db
+    .select({ key: mediaRevisions.mediaKey })
+    .from(mediaRevisions)
+    .where(and(eq(mediaRevisions.sha256, sha256), inArray(mediaRevisions.reason, ["upload", "import"]), sql`${mediaRevisions.backupKey} LIKE 'resized/%'`))
+    .limit(1);
+  return original ? mediaRecord(env, original.key) : null;
+}
+
+export type MediaRevisionRow = typeof mediaRevisions.$inferSelect;
+
+/** A file's byte history, newest first: the first row is its current bytes. Empty for a file never changed. */
+export async function mediaRevisionsOf(env: Env, key: string, limit = 100) {
+  return getDb(env)
+    .select()
+    .from(mediaRevisions)
+    .where(eq(mediaRevisions.mediaKey, key))
+    .orderBy(desc(mediaRevisions.id))
+    .limit(limit);
+}
+
+/** Records one set of a file's bytes; the newest row for a key is its current bytes. Answers the row's id. */
+export async function addMediaRevision(env: Env, row: Omit<typeof mediaRevisions.$inferInsert, "id">) {
+  const [added] = await getDb(env).insert(mediaRevisions).values(row).returning({ id: mediaRevisions.id });
+  return added!.id;
+}
+
+/** Names where MEDIA_BACKUP keeps a revision's bytes, once they stop being the current ones. */
+export async function keepMediaRevision(env: Env, id: number, backupKey: string) {
+  await getDb(env).update(mediaRevisions).set({ backupKey }).where(eq(mediaRevisions.id, id)).run();
+}
+
+/** The newest change's sequence number: where a library screen polls from. 0 before any change. */
+export async function mediaChangeCursor(env: Env) {
+  const [row] = await getDb(env).select({ seq: sql<number | null>`max(${mediaChanges.seq})` }).from(mediaChanges);
+  return Number(row?.seq ?? 0);
+}
+
+/**
+ * The keys changed after `since` and up to `upTo` (the cursor read first, so a change landing meanwhile waits for
+ * the next poll), each once at its latest change, oldest first: one more than `limit`, so the caller can tell
+ * whether more wait.
+ */
+export async function mediaChangedSince(env: Env, since: number, upTo: number, limit: number) {
+  const latest = sql<number>`max(${mediaChanges.seq})`;
+  return getDb(env)
+    .select({ key: mediaChanges.mediaKey, seq: latest })
+    .from(mediaChanges)
+    .where(sql`${mediaChanges.seq} > ${since} AND ${mediaChanges.seq} <= ${upTo}`)
+    .groupBy(mediaChanges.mediaKey)
+    .orderBy(asc(latest))
+    .limit(limit + 1);
+}
+
+/** Rows by key, for the keys a change poll names: one JSON parameter, so up to 200 keys stay under D1's parameter cap. */
+export async function mediaRecords(env: Env, keys: string[]) {
+  if (keys.length === 0) return [];
+  return getDb(env)
+    .select()
+    .from(media)
+    .where(sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`);
+}
+
+/** How many recorded citations each key has (the pipeline's media_refs), for a list page's usage counts. */
+export async function mediaRefCounts(env: Env, keys: string[]) {
+  const out = new Map<string, number>(keys.map((key) => [key, 0]));
+  if (keys.length === 0) return out;
+  const rows = await getDb(env)
+    .select({ key: mediaRefs.mediaKey, n: count() })
+    .from(mediaRefs)
+    .where(sql`${mediaRefs.mediaKey} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`)
+    .groupBy(mediaRefs.mediaKey);
+  for (const row of rows) out.set(row.key, Number(row.n));
   return out;
 }

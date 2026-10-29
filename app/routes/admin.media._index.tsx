@@ -27,7 +27,9 @@ export function meta() {
 async function libraryData(context: Route.LoaderArgs["context"], request: Request) {
   const search = new URL(request.url).searchParams;
   const kit = await loadMedia(adminMediaSource(context, request), readMediaQuery(search));
-  return mediaDataOfKit(kit, { usedHref: useHref, view: readMediaView(search) });
+  // site-api v0.13.0 sorts by use; Capsomer's library (v0.39.0) has no such control yet, so it shows the default order.
+  const sort = kit.query.sort === "used" ? undefined : kit.query.sort;
+  return mediaDataOfKit({ ...kit, query: { ...kit.query, sort } }, { usedHref: useHref, view: readMediaView(search) });
 }
 
 /*

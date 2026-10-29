@@ -30,6 +30,13 @@ export type MediaObject = {
   trashedAt: string | null;
   /** The index row's revision, which every metadata edit, trash move and replace bump (writeMediaAtRev). */
   rev: number;
+  /* site-api v0.13.0: the content hash, credit, license, source, license end and when it was taken. */
+  sha256: string | null;
+  credit: string;
+  license: string;
+  sourceUrl: string | null;
+  licenseExpires: string | null;
+  takenAt: string | null;
 };
 
 type MediaPage = {
@@ -67,6 +74,12 @@ export function mediaObjectOf(row: MediaRow): MediaObject {
     focus: focusText(row.focalX, row.focalY),
     trashedAt: row.trashedAt,
     rev: row.rev,
+    sha256: row.sha256,
+    credit: row.credit,
+    license: row.license,
+    sourceUrl: row.sourceUrl,
+    licenseExpires: row.licenseExpires,
+    takenAt: row.takenAt,
   };
 }
 

@@ -518,6 +518,184 @@ describe("media: alt, tags and the trash", () => {
   });
 });
 
+/* The media library's v0.13.0 ideas: duplicates, turns with their history, the change log, embedded metadata,
+ * the shrink at upload and the model's suggestions. Images and Workers AI have no local emulation, so both are
+ * recorded shapes: the transformer appends what it was asked to do, so its output differs from its input. */
+
+type Size = { width: number; height: number };
+
+/** An IMAGES binding that measures by `size` (or `sizeAfter` once a transform has run) and marks what it transformed. */
+function imagesThatTransform(size: Size = { width: 10, height: 10 }, sizeAfter: (steps: string) => Size = () => size) {
+  const marker = "|transformed:";
+  return {
+    info: async (stream: ReadableStream) => {
+      const text = new TextDecoder().decode(await new Response(stream).arrayBuffer());
+      const at = text.lastIndexOf(marker);
+      return at === -1 ? size : sizeAfter(text.slice(at + marker.length));
+    },
+    input: (stream: ReadableStream) => {
+      const steps: unknown[] = [];
+      const handle = {
+        transform: (step: unknown) => {
+          steps.push(step);
+          return handle;
+        },
+        output: async () => {
+          const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+          const marked = new Uint8Array([...bytes, ...new TextEncoder().encode(`${marker}${JSON.stringify(steps)}`)]);
+          return { response: () => new Response(marked) };
+        },
+      };
+      return handle;
+    },
+  };
+}
+
+/** A JPEG whose EXIF names an artist, a copyright and when it was taken, big-endian as many cameras write it. */
+function exifJpeg(fields: { artist: string; copyright: string; taken: string; offset: string }) {
+  const ascii = (s: string) => new TextEncoder().encode(`${s}\u0000`);
+  const tiff = new Uint8Array(512);
+  const view = new DataView(tiff.buffer);
+  let dataAt = 80;
+  const place = (bytes: Uint8Array) => {
+    tiff.set(bytes, dataAt);
+    dataAt += bytes.length;
+    return dataAt - bytes.length;
+  };
+  const entry = (at: number, tag: number, type: number, count: number, value: number) => {
+    view.setUint16(at, tag);
+    view.setUint16(at + 2, type);
+    view.setUint32(at + 4, count);
+    view.setUint32(at + 8, value);
+  };
+  tiff.set([0x4d, 0x4d, 0, 42, 0, 0, 0, 8]);
+  view.setUint16(8, 3);
+  const [artist, copyright, taken, offset] = [ascii(fields.artist), ascii(fields.copyright), ascii(fields.taken), ascii(fields.offset)];
+  entry(10, 0x013b, 2, artist.length, place(artist));
+  entry(22, 0x8298, 2, copyright.length, place(copyright));
+  entry(34, 0x8769, 4, 1, 50);
+  view.setUint16(50, 2);
+  entry(52, 0x9003, 2, taken.length, place(taken));
+  entry(64, 0x9011, 2, offset.length, place(offset));
+  const body = tiff.subarray(0, dataAt);
+  const length = 2 + 6 + body.length;
+  return new Uint8Array([0xff, 0xd8, 0xff, 0xe1, length >> 8, length & 0xff, 0x45, 0x78, 0x69, 0x66, 0, 0, ...body, 0xff, 0xd9]);
+}
+
+const uploadQuery = (seed: string, extra: Record<string, string> = {}) =>
+  new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...extra });
+
+const objectBytes = async (id: string) => new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
+
+type Revision = { rev: string; reason: string; current: boolean };
+
+describe("media: the v0.13.0 library", () => {
+  it("answers an upload of bytes it already holds with that file, under any name, and stores nothing new", async () => {
+    const id = await uploadThroughApi("duplicate-case");
+    const before = await mediaCount();
+    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("duplicate-case-renamed")}`, {
+      body: pngBytes("duplicate-case"),
+      type: "image/png",
+    });
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect(await response.json()).toMatchObject({ id, duplicateOf: id });
+    expect(await mediaCount()).toBe(before);
+  });
+
+  it("mirrors a picture in place, keeps the old bytes in its history, and a revert puts them back", async () => {
+    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform() };
+    const id = await uploadThroughApi("transform-case");
+    const original = await objectBytes(id);
+    const { version } = await mediaItem(id);
+
+    const turned = await mediaCall("POST", `${PREFIX}/media/${id}/transform`, { body: JSON.stringify({ op: "flip-h", expectedVersion: version, changeId: "chg-flip" }) }, overrides);
+    expect(turned.status, await turned.clone().text()).toBe(200);
+    const after = (await turned.json()) as MediaJson & { asNewFile: boolean };
+    expect(after).toMatchObject({ id, asNewFile: false });
+    expect(await objectBytes(id)).not.toEqual(original);
+
+    const history = (await (await mediaCall("GET", `${PREFIX}/media/${id}/history`, {}, overrides)).json()) as { revisions: Revision[] };
+    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([["transform", true], ["upload", false]]);
+
+    const reverted = await mediaCall("POST", `${PREFIX}/media/${id}/revert`, { body: JSON.stringify({ to: history.revisions[1]!.rev, expectedVersion: after.version, changeId: "chg-revert" }) }, overrides);
+    expect(reverted.status, await reverted.clone().text()).toBe(200);
+    expect(await objectBytes(id)).toEqual(original);
+  });
+
+  it("turns a picture that is not square into a new file with its alt, leaving the old one as it was", async () => {
+    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
+    const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: pngBytes("turn-case"), type: "image/png" }, overrides);
+    const { id, version } = (await upload.json()) as MediaJson;
+    const original = await objectBytes(id);
+
+    const turned = await mediaCall("POST", `${PREFIX}/media/${id}/transform`, { body: JSON.stringify({ op: "rotate-90", expectedVersion: version, changeId: "chg-turn" }) }, overrides);
+    expect(turned.status, await turned.clone().text()).toBe(200);
+    const made = (await turned.json()) as MediaJson & { asNewFile: boolean; width: number; height: number; alt: string };
+    expect(made).toMatchObject({ asNewFile: true, width: 10, height: 20, alt: "A wide chart" });
+    expect(made.id).not.toBe(id);
+    expect(made.id).toMatch(/-10x20\.png$/);
+    expect(await objectBytes(id)).toEqual(original);
+    expect((await mediaItem(id)).version).toBe(version);
+  });
+
+  it("says what changed since a cursor, and names a file deleted for good", async () => {
+    const first = (await (await mediaCall("GET", `${PREFIX}/media?limit=1`)).json()) as { changeCursor: string };
+    const id = await uploadThroughApi("changes-case");
+    type Changes = { items: MediaJson[]; removed: string[]; changeCursor: string; moreChanges: boolean };
+    const changed = (await (await mediaCall("GET", `${PREFIX}/media?changedSince=${first.changeCursor}`)).json()) as Changes;
+    expect(changed.items.map((i) => i.id)).toContain(id);
+    expect(changed.removed).toEqual([]);
+
+    expect((await mediaCall("DELETE", `${PREFIX}/media/${id}?changeId=chg-changes-delete`)).status).toBe(200);
+    const after = (await (await mediaCall("GET", `${PREFIX}/media?changedSince=${changed.changeCursor}`)).json()) as Changes;
+    expect(after.removed).toEqual([id]);
+    expect(after.items.map((i) => i.id)).not.toContain(id);
+  });
+
+  it("fills credit, license and the date taken from a JPEG's EXIF, and names what it filled", async () => {
+    const bytes = exifJpeg({ artist: "Example Photographer", copyright: "CC BY 4.0", taken: "2024:05:06 14:30:00", offset: "+01:00" });
+    const query = new URLSearchParams({ filename: "exif-case.jpg", changeId: "chg-exif" });
+    const response = await mediaCall("POST", `${PREFIX}/media?${query}`, { body: bytes, type: "image/jpeg" });
+    expect(response.status, await response.clone().text()).toBe(201);
+    expect(await response.json()).toMatchObject({
+      credit: "Example Photographer",
+      license: "CC BY 4.0",
+      takenAt: "2024-05-06T14:30:00+01:00",
+      embedded: ["credit", "license", "takenAt"],
+    });
+  });
+
+  it("shrinks a large picture at upload, unless asked not to, and keeps the original", async () => {
+    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({ width: 4096, height: 3072 })) };
+    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-case")}`, { body: pngBytes("resize-case"), type: "image/png" }, overrides);
+    expect(response.status, await response.clone().text()).toBe(201);
+    const shrunk = (await response.json()) as MediaJson & { width: number; resizedFrom?: Size & { bytes: number } };
+    expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: pngBytes("resize-case").length } });
+    const kept = (await testEnv.BACKUPS.list({ prefix: "resized/" })).objects.find((o) => o.key.endsWith(`/${shrunk.id}`));
+    expect(kept, "the original was not kept").toBeDefined();
+    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(pngBytes("resize-case"));
+
+    const kept2 = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`, { body: pngBytes("resize-no-case"), type: "image/png" }, overrides);
+    expect(await kept2.json()).toMatchObject({ width: 8000, height: 6000 });
+  });
+
+  it("suggests tags and alt text from the model, in the contract's spelling, and applies neither", async () => {
+    const id = await uploadThroughApi("suggest-case");
+    const sent: unknown[] = [];
+    const AI = {
+      run: async (model: string, input: unknown) => {
+        sent.push({ model, input });
+        return { response: 'Here you are: {"alt": "Three brass plaques set in a lawn.", "tags": ["Plaques", "lawn", "lawn", "not a tag!"]}' };
+      },
+    };
+    const response = await mediaCall("GET", `${PREFIX}/media/${id}/suggestions`, {}, { AI, IMAGES: imagesThatTransform() });
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect(await response.json()).toMatchObject({ id, alt: "Three brass plaques set in a lawn.", tags: ["plaques", "lawn"] });
+    expect(JSON.stringify(sent)).toContain("data:image/jpeg;base64,");
+    expect(await mediaItem(id)).toMatchObject({ alt: "", tags: [] });
+  });
+});
+
 describe("media: meta declares what the site accepts", () => {
   it("names media and the admin library's limits less SVG", async () => {
     const response = await get(`${PREFIX}/meta`);
@@ -527,6 +705,12 @@ describe("media: meta declares what the site accepts", () => {
     };
     expect(meta.capabilities.media).toBe(true);
     expect(meta.capabilities).toMatchObject({ mediaAlt: true, mediaTags: true, mediaTrash: true });
+    // v0.13.0: every idea but the resize pass, which a site whose addresses carry the size never offers.
+    expect(meta.capabilities).toMatchObject({
+      mediaDuplicates: true, mediaUsage: true, mediaFilters: true, mediaImport: true, mediaCredit: true, mediaTransform: true,
+      mediaHistory: true, mediaChanges: true, mediaResize: { maxEdge: 4096, quality: 85 }, mediaEmbedded: true, mediaSuggestions: true,
+    });
+    expect(meta.capabilities).not.toHaveProperty("mediaResizePass");
     expect(meta.capabilities.mediaUpload.maxBytes).toBe(MAX_BYTES);
     expect(meta.capabilities.mediaUpload.types).toEqual(
       [...ALLOWED.keys()].filter((type) => type !== "image/svg+xml"),

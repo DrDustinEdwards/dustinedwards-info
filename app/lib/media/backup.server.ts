@@ -1,5 +1,7 @@
-// NO SITE CODE PATH EVER DELETES FROM THE BACKUP (check:destructive enforces it), and nothing copies
-// backup to media, which would let a stale mirror overwrite a live object.
+// NO SITE CODE PATH EVER DELETES FROM THE BACKUP (check:destructive enforces it), and nothing copies the
+// mirror back to media, which would let a stale twin overwrite a live object. The one copy the other way is a
+// revert (revisions.server.ts): one named earlier revision, kept under `replaced/` by the write that overwrote
+// it, put back at the version the editor loaded. A mirror twin's key is a live key, so it is never one of those.
 
 import type { OperatorEnv } from "~/lib/operator/auth.server";
 
