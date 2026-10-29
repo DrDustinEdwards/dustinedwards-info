@@ -1,13 +1,26 @@
-import { data } from "react-router";
+import { Form, data } from "react-router";
 
-import { timedLoader } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
+import { Alert, Banner } from "capsomer/react/banner";
+import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
 import { Pill, Status } from "capsomer/react/status";
 import { Row, RowList } from "capsomer/react/row-list";
 
 import { PageHead } from "capsomer/react/page-head";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
+import {
+  askSyncConfirmCount,
+  regeneratePosts,
+  resetAskBudgetAndReport,
+  syncAskIndex,
+} from "~/lib/admin/tools-actions.server";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
+import { readAskBudget } from "~/lib/search/ask-guard.server";
 import { topZeroResults } from "~/lib/search/zero-result.server";
 import type { Route } from "./+types/admin.tools";
 
@@ -16,25 +29,161 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  return timedLoader(context, async () => {
+  return timedLoader(context, async (timings) => {
     const env = getEnv(context);
+    const askOn = askAvailable(env);
+    /* Uncached: the page that repairs drift must not act on the layout's cached count. */
+    const askPromise = timed(timings, "ask_status_uncached", () => context.get(askStatusContext)());
+    /*
+     * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
+     * rejection. A failing budget read must not take the page down, and it renders as a failure.
+     */
+    const budgetPromise = askOn
+      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
+          (budget) => ({ budget, budgetError: null }),
+          (error: unknown) => {
+            console.error(JSON.stringify({ alert: "ask-budget-read-failed", detail: errorMessage(error) }));
+            return { budget: null, budgetError: errorMessage(error) };
+          },
+        )
+      : Promise.resolve({ budget: null, budgetError: null });
     /* Presence only: a name and a boolean per secret, never a value. */
     // Spread rather than asserted: `Env` is an interface, so it has no implicit index signature.
     const secrets = auditSecrets({ ...env });
     const misses = await topZeroResults(env);
-    return data({ secrets, misses });
+    const ask = await askPromise;
+    const { budget, budgetError } = await budgetPromise;
+    return data({ secrets, misses, askOn, ask, budget, budgetError });
   });
 }
 
-export default function AdminTools({ loaderData }: Route.ComponentProps) {
-  const { secrets, misses } = loaderData;
+/*
+ * Posts are written in Carrel. What stays here is upkeep of what the site derives from them: the
+ * rendered rows and the answer index. The destructive intent checks its typed confirmation in its own
+ * branch, where check:destructive reads it, before the handler runs.
+ */
+export async function action({ request, context }: Route.ActionArgs) {
+  const form = await request.formData();
+  const env = getEnv(context);
+  const intent = form.get("intent");
+
+  if (intent === "regenerate") return regeneratePosts(env);
+
+  // Separate from Regenerate: D1 search must not be held hostage to the AI index, and the AI index
+  // must never be repaired by touching D1.
+  if (intent === "sync-ask") {
+    if (!askAvailable(env)) {
+      return { message: "Ask is not enabled: no AI Search binding.", failed: true as const };
+    }
+    /*
+     * "Sync" reads as additive and is not: `pruneAskCorpus` deletes every record this run did not
+     * upload. The count is 1 because how many it removes cannot be known first.
+     */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      return { confirmSyncAsk: await askSyncConfirmCount(env) };
+    }
+    return syncAskIndex(env);
+  }
+
+  if (intent === "reset-ask-budget") return resetAskBudgetAndReport(env);
+
+  return data(
+    {
+      message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.`,
+      failed: true as const,
+    },
+    { status: 400 },
+  );
+}
+
+export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
+  const { secrets, misses, askOn, ask, budget, budgetError } = loaderData;
   const missing = secrets.filter((s) => !s.present);
+  const confirmSyncAsk =
+    actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
+  const message = actionData && "message" in actionData ? actionData.message : undefined;
+  const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
+  const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
+
   return (
     <div className="app-page">
       <PageHead
         title="Tools"
-        lead="Which of the ratified secrets this deployment holds. Names and a word, never a value."
+        lead="The site's upkeep: the search index, which secrets this deployment holds, and searches that found nothing."
       />
+
+      {/*
+        The status region is always in the DOM, because a region inserted already holding its text is
+        often not read; a failure is an alert, which is read on insertion.
+      */}
+      <div role="status">{message && !failed ? <Banner tone="ok">{message}</Banner> : null}</div>
+      {message && failed ? <Alert tone="crit">{message}</Alert> : null}
+
+      {confirmSyncAsk !== undefined ? (
+        <ConfirmDialog
+          title="Rebuild the search answer index?"
+          body={
+            <p>
+              Every record not in this run is removed from the index, and saved answers are dropped. The
+              site currently has <strong>{confirmSyncAsk}</strong> post(s), so that is what the index will
+              hold afterwards.
+            </p>
+          }
+          requireTyped="1"
+          confirmLabel="Rebuild the index"
+          cancelHref="/admin/tools"
+        >
+          <input type="hidden" name="intent" value="sync-ask" />
+        </ConfirmDialog>
+      ) : null}
+
+      <Panel
+        title="Search"
+        src={
+          !askOn ? (
+            <Pill variant="outline">answers off</Pill>
+          ) : !ask ? (
+            <Status tone="warn">status unknown</Status>
+          ) : askDrifted ? (
+            <Status tone="warn">{`${ask.missing.length + ask.stale.length} behind`}</Status>
+          ) : (
+            <Status tone="ok">up to date</Status>
+          )
+        }
+        footer={
+          <Form method="post" className="cap-cluster">
+            {askOn ? (
+              <Button type="submit" name="intent" value="sync-ask" variant={askDrifted ? "primary" : undefined}>
+                Rebuild the answer index
+              </Button>
+            ) : null}
+            <Button type="submit" name="intent" value="regenerate">
+              Re-render every post
+            </Button>
+            {askOn ? (
+              <Button type="submit" name="intent" value="reset-ask-budget">
+                Reset today's answer budget
+              </Button>
+            ) : null}
+          </Form>
+        }
+      >
+        <p>
+          {!askOn
+            ? "Answers are not enabled: this deployment has no AI Search binding. Site search still works."
+            : !ask
+              ? "The answer index status could not be read, so whether answers are up to date is unknown."
+              : askDrifted
+                ? `${ask.missing.length} post(s) are missing from the answer index and ${ask.stale.length} ` +
+                  "record(s) in it no longer match the site, so an answer may quote text that has changed."
+                : `The answer index has all ${ask.expected} posts.`}
+          {budget
+            ? ` ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
+            : null}
+          {budgetError ? ` The answer budget could not be read: ${budgetError}` : null}
+        </p>
+      </Panel>
 
       <Panel
         title="Secrets"

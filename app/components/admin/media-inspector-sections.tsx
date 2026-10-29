@@ -1,4 +1,4 @@
-import { Form, Link } from "react-router";
+import { Form } from "react-router";
 import { Pill, Status } from "capsomer/react/status";
 
 import { CopyButton } from "~/components/admin/copy-button";
@@ -208,7 +208,7 @@ export function InspectorUsage({ detail }: { detail: FoundDetail }) {
             <ul className="app-form">
               {detail.refs.map((ref) => (
                 <li key={`ref-${ref.sourceId}-${ref.form}-${ref.detail ?? ""}`}>
-                  <Link to={`/admin/posts/${ref.sourceId}/edit`}>{ref.sourceId}</Link>{" "}
+                  <a href={`/writing/${ref.sourceId}`}>{ref.sourceId}</a>{" "}
                   <span className="cap-muted">
                     {ref.form}
                     {ref.detail ? `, ${ref.detail}` : ""}
@@ -217,7 +217,7 @@ export function InspectorUsage({ detail }: { detail: FoundDetail }) {
               ))}
               {detail.citations.map((citation) => (
                 <li key={`cite-${citation.id}-${citation.form}-${citation.detail}`}>
-                  <Link to={`/admin/posts/${citation.id}/edit`}>{citation.title}</Link>{" "}
+                  <a href={`/writing/${citation.id}`}>{citation.title}</a>{" "}
                   <span className="cap-muted">
                     {citation.form}, {citation.detail}, from the artifact scan
                   </span>

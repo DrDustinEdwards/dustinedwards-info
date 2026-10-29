@@ -35,7 +35,7 @@ export function askDriftVerdict(status) {
     detail:
       `Ask index drift ${drift}: ${status.missing.length} missing, ` +
       `${status.stale.length} stale, ${status.expected} expected, ` +
-      `${status.present} present. Repair with sync-ask on /admin/posts.`,
+      `${status.present} present. Repair with sync-ask on /admin/tools.`,
     counts: { expected: status.expected, present: status.present },
   };
 }

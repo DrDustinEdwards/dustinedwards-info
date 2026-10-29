@@ -23,8 +23,8 @@ const MENTION_SEED_ROWS = 2;
 
 /* `--file`, because the HTML's double quotes would break a cmd command string. */
 const MATH_SLUG = "math-typesetting-fixture";
-/** Fixed, so a re-run overwrites one KV record. `isWellFormedToken` is length-exact. */
-export const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
+/** The fixture stays a draft in the source; only the local row the preview run seeds is published. */
+export const MATH_POST_PATH = `/writing/${MATH_SLUG}`;
 export const MATHLESS_POST_PATH = "/writing/ten-years-on-cloudflare";
 
 /*
@@ -157,7 +157,7 @@ export function seedPreview() {
     if (fixture.draft !== true) {
       console.error(
         `check:browser failed. "${MATH_SLUG}" is not a draft. The fixture must stay ` +
-          `unpublished (it is a fixture), and the preview door below only opens for a draft.`,
+          `unpublished (it is a fixture); only the local row seeded below is published.`,
       );
       registry.clear();
       process.exit(1);
@@ -176,7 +176,7 @@ export function seedPreview() {
             q("post"),
             q(fixture.title),
             q(fixture.markdown),
-            q("draft"),
+            q("published"),
             String(publishAt),
             q(fixture.html),
             q(fixture.description),
@@ -192,28 +192,13 @@ export function seedPreview() {
 
     const row = runWrangler(`d1 execute dustinedwards --local --file "${sqlFile}"`, { cwd: root });
     refuseUnlessRan(row, row.output, [
-      "check:browser failed. the math fixture row did not apply, so /preview",
+      `check:browser failed. the math fixture row did not apply, so ${MATH_POST_PATH}`,
       "would answer 404 and every math case below would report the wrong cause.",
     ]);
-
-    /* `resolvePreview` re-checks post status, so a stale record cannot leak. */
-    const record = JSON.stringify({
-      slug: MATH_SLUG,
-      createdAt: Date.UTC(2026, 8, 6),
-      label: "check:browser math fixture",
-    });
-    /* The value from a file too: JSON with escaped quotes inside a cmd string held only by MSVCRT rules. */
-    const recordFile = join(SEED_DIR, "preview-token.json");
-    writeFileSync(recordFile, record, "utf8");
-    const kv = runWrangler(
-      `kv key put --binding APP_KV --local "preview:token:${MATH_PREVIEW_TOKEN}" --path "${recordFile}"`,
-      { cwd: root },
-    );
     removeSeedDir();
-    refuseUnlessRan(kv, kv.output, ["check:browser failed. the preview token did not reach local KV."]);
 
     mathPreviewSeeded = true;
-    console.log(`  seeded the ${MATH_SLUG} draft row and its preview token`);
+    console.log(`  seeded the ${MATH_SLUG} row, published in local storage only`);
   }
   return mathPreviewSeeded;
 }

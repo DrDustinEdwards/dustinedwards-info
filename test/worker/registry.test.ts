@@ -1,7 +1,6 @@
 import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { registryHandlers } from "~/lib/carrel/registry-handler.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
@@ -11,7 +10,7 @@ import { putSource, removeSource, source, stubSources, writes, type SourceStub }
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
- * reads and Carrel's handler to it. Each case starts from an empty registry table and a repository ahead of it. */
+ * reads to it. Each case starts from an empty registry table and a repository ahead of it. */
 
 vi.mock("~/kb/registry/kinds.mjs", () => ({
   KINDS: Object.freeze({
@@ -230,24 +229,5 @@ describe("the operator's reads and Carrel's handler", () => {
     }
     expect(await runTool(operatorEnv(), operator, "get_registry", { slug: "widget/nothing" })).toMatchObject({ ok: false, status: 404 });
     expect(await runTool(operatorEnv(), operator, "get_registry", { slug: "../x" })).toMatchObject({ ok: false, status: 400 });
-  });
-
-  it("serves one Carrel handler per kind, lists and reads its items, and unpublish sets the draft flag", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    expect((await sync()).ok).toBe(true);
-    const handlers = registryHandlers(gitEnv());
-    expect(handlers.map((h) => h.kind)).toEqual(["widget"]);
-    const [widget] = handlers;
-    if (!widget) throw new Error("no widget handler");
-
-    expect((await widget.list({})).map((s) => s.id)).toEqual(["a-red"]);
-    const doc = await widget.get("a-red");
-    expect(doc).toMatchObject({ kind: "widget", title: "A red widget", status: "published", source: RED });
-    expect(await widget.get("Not An Id")).toBeNull();
-
-    const result = await widget.unpublish("a-red", { changeId: "chg-unpublish", expectedVersion: String(doc?.version) });
-    expect(result).toMatchObject({ id: "a-red", status: "draft" });
-    expect((await source(PATHS.red))).toContain("draft: true");
-    expect(await rowFor("widget", "a-red")).toMatchObject({ status: "draft" });
   });
 });

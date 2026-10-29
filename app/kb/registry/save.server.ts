@@ -1,4 +1,4 @@
-// The one registry save, called by the site-api adapter for Carrel (app/lib/carrel/registry-handler.server.ts), and
+// The one registry save, called by the admin's Knowledge Base editor, and
 // the read the operator's get_registry tool answers. A save compiles the file the way CI does (compile.mjs), refuses
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row, so the registry changes on the next request with no build or

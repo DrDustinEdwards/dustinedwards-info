@@ -13,7 +13,6 @@ import { ORIGIN, failures, tally } from "./lib/live/client.mjs";
 import * as header from "./lib/live/header.mjs";
 import * as imageLink from "./lib/live/image-link.mjs";
 import * as pages from "./lib/live/pages.mjs";
-import * as preview from "./lib/live/preview.mjs";
 import * as securityCsp from "./lib/live/security-csp.mjs";
 import * as themeCss from "./lib/live/theme-css.mjs";
 import * as twinSearchAdmin from "./lib/live/twin-search-admin.mjs";
@@ -28,7 +27,6 @@ const corpus = await blogDraftsAsk.run();
 await pages.run();
 await cache.run();
 await securityCsp.run();
-await preview.run();
 await imageLink.run();
 await watchdog.run();
 

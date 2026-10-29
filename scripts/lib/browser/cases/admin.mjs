@@ -110,7 +110,6 @@ export async function run({ browser }) {
      */
     const SURFACES = [
       ["/admin", "the cockpit"],
-      ["/admin/posts", "the posts list"],
       ["/admin/media?view=grid", "the media library, grid"],
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
@@ -135,16 +134,18 @@ export async function run({ browser }) {
       );
     }
 
-    await admin.goto(`${ADMIN_ORIGIN}/admin/posts`, { waitUntil: "networkidle0" });
-    const slug = await admin.evaluate(() => {
-      const a = document.querySelector('a[href*="/edit"]');
+    /* The Knowledge Base's file view is the admin's one CodeMirror mount; posts are edited in Carrel. */
+    await admin.goto(`${ADMIN_ORIGIN}/admin/kb`, { waitUntil: "networkidle0" });
+    const entry = await admin.evaluate(() => {
+      const a = document.querySelector('a[href*="/admin/kb/entry/"]');
       return a ? a.getAttribute("href") : null;
     });
+    const slug = entry ? `${entry.split("?")[0]}?view=file` : null;
 
     ok(
-      "an edit route was reachable with the supplied session",
+      "an editor route was reachable with the supplied session",
       !!slug,
-      "no edit link on /admin/posts, so the mount assertions below examine nothing",
+      "no entry link on /admin/kb, so the mount assertions below examine nothing",
     );
 
     if (slug) {
@@ -513,7 +514,7 @@ export async function run({ browser }) {
       await admin.setViewport({ width, height: 800 });
       for (const [path, what] of [
         ["/admin", "the cockpit"],
-        ["/admin/posts", "the posts list"],
+        ["/admin/tools", "tools"],
         ["/admin/mentions", "the mentions queue"],
         ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
       ]) {

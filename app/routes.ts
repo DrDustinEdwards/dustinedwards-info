@@ -35,9 +35,6 @@ export default [
     route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", { id: "legacy-tag-feed" }),
     route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", { id: "legacy-series-rss" }),
     route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", { id: "legacy-series-feed" }),
-    // Top level, never under the post route: that route sends public cache headers, Workers Cache
-    // does not key on cookies and a preview link is cookieless, so sharing it would cache a draft.
-    route("preview/:token", "routes/preview.$token.tsx"),
     // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
     route("research/publications", "routes/publications.tsx"),
     // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
@@ -157,14 +154,6 @@ export default [
     route("logout", "routes/admin.logout.tsx"),
     route("media", "routes/admin.media._index.tsx"),
     route("media/upload", "routes/admin.media.upload.ts"),
-    // Read-only. POST because a whole post body does not belong in a query string, not because it writes.
-    route("preview", "routes/admin.preview.ts"),
-    route("posts", "routes/admin.posts._index.tsx"),
-    route("posts/new", "routes/admin.posts.new.tsx"),
-    route("posts/:slug/edit", "routes/admin.posts.$slug.edit.tsx"),
-    route("posts/:slug/history", "routes/admin.posts.$slug.history.tsx"),
-    // Loader only, no action, so restoring a revision cannot write.
-    route("posts/:slug/revisions", "routes/admin.posts.$slug.revisions.tsx"),
   ]),
 
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's

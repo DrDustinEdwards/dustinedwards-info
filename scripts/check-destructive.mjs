@@ -25,14 +25,12 @@ const PREDICATE = "confirmationSatisfied";
  * inverse control. Each of these must call the predicate inside its own branch.
  */
 const DESTRUCTIVE = new Set([
-  "admin.posts._index.tsx:bulk-delete",
-  "admin.posts.$slug.edit.tsx:delete",
   "admin.media._index.tsx:delete",
   "admin.media._index.tsx:empty-trash",
   // Both destroy records and cannot know their own removal count without running, so both confirm on
   // a count of one.
   "admin.media._index.tsx:rebuild",
-  "admin.posts._index.tsx:sync-ask",
+  "admin.tools.tsx:sync-ask",
   // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
   "admin.mentions.tsx:delete",
   "admin.mentions.tsx:sweep",
@@ -43,20 +41,8 @@ const DESTRUCTIVE = new Set([
  * unexplained entry here is how something destructive gets waved through.
  */
 const REVERSIBLE = new Map([
-  ["admin.posts._index.tsx:bulk-add-tag", "a tag, undone by remove"],
-  ["admin.posts._index.tsx:bulk-remove-tag", "a tag, undone by add"],
-  [
-    "admin.posts._index.tsx:duplicate",
-    "creates a new draft; removes and overwrites nothing, and savePost refuses a slug that exists",
-  ],
-  [
-    "admin.posts._index.tsx:unpublish",
-    "sets draft:true, undone by republish; the file, its history and first_published all stand",
-  ],
-  ["admin.posts._index.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
-  ["admin.posts._index.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
-  ["admin.posts.$slug.edit.tsx:preview-link", "mints, removes nothing"],
-  ["admin.posts.$slug.edit.tsx:revoke-preview-link", "revokes access; fails in the safe direction"],
+  ["admin.tools.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
+  ["admin.tools.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
   ["admin.media._index.tsx:trash", "a D1 flag; the object and its URL are untouched"],
   ["admin.media._index.tsx:restore", "the inverse of trash"],
   ["admin.media._index.tsx:bulk-trash", "trash, in bulk; same flag"],

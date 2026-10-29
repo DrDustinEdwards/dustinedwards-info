@@ -98,14 +98,15 @@ every row. `sync:content` compares those against a fresh build before every
 write and reports drift by class; same-source different-render is a
 Worker-versus-Node divergence, caught at ship time.
 
-### The editor is a second writer, not a second path
+### Carrel writes, through the one save
 
-`/admin/posts` commits ONE markdown file to GitHub through the Git Data API
-(which is what carries the `expectedHeadSha` conflict guard), and only then
-renders and writes D1 through `renderAndWrite`, the one door to a rendered
-row. The same zod gates run inside the action, because an API commit bypasses
-the local hooks entirely. `POST /api/operator` exposes that identical
-machinery to agents behind a bearer token. There is exactly one write path.
+Posts, pages, the CV and the other writing are edited in Carrel, which reaches
+the site through `/api/carrel/v1`. Each save writes ONE source file to D1 (which
+carries the version conflict guard), and only then renders and writes the
+rows through `renderAndWrite`, the one door to a rendered row. The zod gates
+run inside the save. `POST /api/operator` exposes that identical machinery to
+agents behind a bearer token. There is exactly one write path. The site's own
+admin keeps the Knowledge Base editor, media, mentions and its upkeep tools.
 
 ## Media
 

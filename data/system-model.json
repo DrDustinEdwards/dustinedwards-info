@@ -461,7 +461,7 @@
       "name": "AskBudget",
       "kind": "database",
       "technology": "Durable Object with SQLite",
-      "description": "The whole site's exact rate limiter: sign-in, the operator API, webmention, health, CSP reports, preview links and Ask."
+      "description": "The whole site's exact rate limiter: sign-in, the operator API, webmention, health, CSP reports and Ask."
     },
     {
       "id": "website-ai-search",

@@ -335,7 +335,7 @@ wrangler command for it.
 ### Corpus
 
 The corpus is **not** populated by any build step. After content is in D1 (step
-7), sign in to `/admin/posts` and press **Sync Ask corpus**. That uploads every
+7), sign in to `/admin/tools` and press **Rebuild the answer index**. That uploads every
 section record through the Items binding and then prunes items the corpus no
 longer contains. The prune matters: upload alone is an upsert, so a deleted post
 would stay answerable forever.
@@ -498,7 +498,7 @@ npm run build:og -- --remote           # social cards into R2
 npm run build:diagrams                 # mermaid renders into public/diagrams
 ```
 
-Finally, sign in to `/admin/posts` and press **Sync Ask corpus**.
+Finally, sign in to `/admin/tools` and press **Rebuild the answer index**.
 
 ---
 
@@ -632,9 +632,8 @@ image while the markdown kept the URL.
 Alt already written into post markdown survives, because that copy lives in the
 post; the record's copy, which pre-fills future insertions, does not.
 
-**KV contents.** Cached Ask answers, the health snapshot, draft preview tokens and
-small counters. All regenerate or are reissued on use, so this is a loss without
-consequence (an outstanding draft preview link stops working).
+**KV contents.** Cached Ask answers, the health snapshot and small counters. All
+regenerate on use, so this is a loss without consequence.
 
 **The Access application and its policy.** Account configuration, not in this repo.
 The team domain and AUD tag are in `wrangler.jsonc`, but the list of administrator

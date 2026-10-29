@@ -64,7 +64,7 @@ await test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error
       assert.equal(error.name, DIVERGENCE_ERROR_NAME, "must be distinguishable by name");
       assert.match(error.message, new RegExp(SLUG), "the error must NAME THE POST");
       assert.match(error.message, new RegExp(SHA), "and the commit that landed");
-      assert.match(error.message, /sync:content|Sync Ask corpus/, "and the repair path");
+      assert.match(error.message, /sync:content|Re-render every post/, "and the repair path");
       assert.match(error.message, /Do NOT save again/, "and that retrying does not help");
       assert.equal(error.cause?.message, "D1_TIMEOUT_2", "the original fault is preserved");
       return true;

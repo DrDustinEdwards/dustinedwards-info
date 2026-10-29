@@ -3,19 +3,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { OverflowMenu } from "~/components/admin/overflow-menu";
-import { RowMenu } from "~/components/admin/row-menu";
 
 const render = (node: React.ReactElement) => renderToStaticMarkup(node);
 
-describe("the overflow and row menus", () => {
+describe("the overflow menu", () => {
   it("open without script: a button names its panel by popovertarget and the panel is a popover", () => {
     const html = render(
-      createElement(RowMenu, { label: "Actions for A post", children: createElement("a", { href: "/x" }, "Edit") }),
+      createElement(OverflowMenu, { label: "More", children: createElement("a", { href: "/x" }, "Edit") }),
     );
     const target = html.match(/<button[^>]*popovertarget="([^"]+)"/i)?.[1];
     expect(target).toBeTruthy();
     expect(html).toContain(`id="${target}" popover="auto"`);
-    expect(html).toMatch(/<button type="button" class="cap-btn"[^>]*aria-label="Actions for A post"/);
     expect(html).not.toMatch(/<details|<summary/);
   });
 

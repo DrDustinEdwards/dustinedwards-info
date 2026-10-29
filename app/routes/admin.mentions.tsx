@@ -220,7 +220,7 @@ function MentionRow({
             {mention.authorUrl ? ` (${mention.authorUrl})` : ""} mentioned {mention.targetSlug}
           </>
         }
-        href={`/admin/posts/${mention.targetSlug}/edit`}
+        href={`/writing/${mention.targetSlug}`}
         renderLink={({ href, children, ...rest }) => (
           <Link to={href} {...rest}>
             {children}

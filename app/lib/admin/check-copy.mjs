@@ -15,7 +15,7 @@ const CHECK_COPY = {
         ? `${counts.expected - counts.present} of the ${counts.expected} posts are older on the site than in its source. Syncing re-renders them.`
         : "Some posts are older on the site than in its source. Syncing re-renders them.",
     passing: "Every post on the site matches its source.",
-    repair: { action: "/admin/posts", intent: "regenerate", label: "Re-render every post" },
+    repair: { action: "/admin/tools", intent: "regenerate", label: "Re-render every post" },
   },
   "procedures-drift": {
     name: "Procedures on the site",
@@ -110,7 +110,7 @@ const CHECK_COPY = {
         ? `The answer index has ${counts.present} of ${counts.expected} posts, so an answer may quote text that has changed.`
         : "The answer index is out of step with the posts, so an answer may quote text that has changed.",
     passing: "The answer index has every post, and none it should not.",
-    repair: { action: "/admin/posts", intent: "sync-ask", label: "Rebuild the answer index" },
+    repair: { action: "/admin/tools", intent: "sync-ask", label: "Rebuild the answer index" },
   },
   "media-index-drift": {
     name: "Media library",

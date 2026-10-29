@@ -9,7 +9,7 @@ import { suggest } from "~/lib/search-suggest";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { accessIdentity } from "~/lib/access.server";
-import { adminActorContext, adminSessionContext } from "~/lib/admin-actor.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
@@ -79,7 +79,6 @@ export const middleware: Route.MiddlewareFunction[] = [
       });
     }
     if (access.kind === "human") {
-      context.set(adminSessionContext, { user: { email: access.email } });
       context.set(adminActorContext, { kind: "admin", email: access.email });
     } else {
       /* A browser sends no `Authorization` header, so `authenticateSmoke` returns `absent` untouched. */
@@ -138,7 +137,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ context }: Route.LoaderArgs) {
   return timedLoader(context, async (timings) => {
     /*
-     * The badge reads a cached count from KV, never AI Search. /admin/posts calls the reader uncached,
+     * The badge reads a cached count from KV, never AI Search. /admin/tools calls the reader uncached,
      * because the page that fixes drift must not act on a stale number.
      */
     const [drift, counts] = await Promise.all([
@@ -163,7 +162,6 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
-  posts: <Icon d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h6M9 17h6" />,
   mentions: <Icon d="M4 5h16v11H11l-5 4v-4H4z" />,
   media: <Icon d="M3 5h18v14H3zM3 17l6-6 4 4 3-3 5 5M16.5 9.5h.01" />,
   kb: <Icon d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />,
@@ -173,15 +171,16 @@ const ICONS = {
 /** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
 function countNote(count: number | null, drift: number | null, maxAgeSeconds: number) {
   const size = count === null ? "" : count === 1 ? "item" : "items";
+  const lead = size ? `${size}, ` : "";
   if (drift === null) {
-    return `${size}, Ask index drift unknown: the check failed or ran out of time. Open Posts to check it.`;
+    return `${lead}Ask index drift unknown: the check failed or ran out of time. Open Tools to check it.`;
   }
   if (drift <= 0) return size;
   const minutes = Math.round(maxAgeSeconds / 60);
   const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
   return (
-    `${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
-    `This count is up to ${age} old; open Posts for the current figure and the repair.`
+    `${lead}${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
+    `This count is up to ${age} old; open Tools for the current figure and the repair.`
   );
 }
 
@@ -208,17 +207,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
   const nav: AdminEntry[] = [
     { id: "overview", label: FIRST_PAGE, href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
-    {
-      id: "posts",
-      label: "Posts",
-      href: "/admin/posts",
-      group: "Content",
-      icon: ICONS.posts,
-      current: at("/admin/posts"),
-      count: counts.posts ?? undefined,
-      countNote: countNote(counts.posts, askDrift, askDriftMaxAgeSeconds),
-      tone: askDrift === null || askDrift > 0 ? "warn" : undefined,
-    },
     {
       id: "media",
       label: "Media",
@@ -247,7 +235,17 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       icon: ICONS.kb,
       current: at("/admin/kb"),
     },
-    { id: "tools", label: "Tools", href: "/admin/tools", group: "Site", icon: ICONS.tools, current: at("/admin/tools") },
+    // Carries the answer index drift: the repair is on this page.
+    {
+      id: "tools",
+      label: "Tools",
+      href: "/admin/tools",
+      group: "Site",
+      icon: ICONS.tools,
+      current: at("/admin/tools"),
+      countNote: countNote(null, askDrift, askDriftMaxAgeSeconds) || undefined,
+      tone: askDrift === null || askDrift > 0 ? "warn" : undefined,
+    },
   ];
   /* The tab title is "<page> · dustinedwards.info": the menu entry the reader is in names the page. */
   const page = nav.find((entry) => entry.current)?.label;

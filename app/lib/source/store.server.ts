@@ -3,8 +3,6 @@
 // versions and the conflict guards are the ones the repository-backed saves had. Static files under public/ ship
 // with the deploy, so they are read from the assets binding, never from D1.
 
-import { createTwoFilesPatch } from "diff";
-
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import assetManifest from "../../../content/generated/assets.json";
 
@@ -212,8 +210,8 @@ export async function commitFiles(
 
 type PostCommit = { sha: string; message: string; author: string; date: string };
 
-/** A file's revisions, newest first. `sha` is the revision's blob sha, which readFile and getCommitPatch take. */
-export async function listCommitsForPath(env: SourceEnv, path: string, limit = 20): Promise<PostCommit[]> {
+/** A file's revisions, newest first. `sha` is the revision's blob sha, which readFile takes. */
+async function listCommitsForPath(env: SourceEnv, path: string, limit = 20): Promise<PostCommit[]> {
   const rows = await env.DB.prepare(
     `SELECT sha, message, author, created_at FROM source_revisions
      WHERE path = ?1 AND sha IS NOT NULL ORDER BY id DESC LIMIT ?2`,
@@ -246,21 +244,3 @@ export async function fileRevisionSource(env: SourceEnv, path: string | null, ve
   return (await readFile(env, path, version))?.content ?? null;
 }
 
-/** The change one revision made to a file, as a unified patch, or null when the file has no revision with that sha. */
-export async function getCommitPatch(env: SourceEnv, sha: string, path: string) {
-  const at = await env.DB.prepare(
-    `SELECT id, content FROM source_revisions WHERE path = ?1 AND sha = ?2 ORDER BY id DESC LIMIT 1`,
-  )
-    .bind(path, sha)
-    .first<{ id: number; content: string }>();
-  if (!at) return null;
-  const before = await env.DB.prepare(
-    `SELECT content FROM source_revisions WHERE path = ?1 AND id < ?2 ORDER BY id DESC LIMIT 1`,
-  )
-    .bind(path, at.id)
-    .first<{ content: string | null }>();
-  const old = before?.content ?? null;
-  const patch = createTwoFilesPatch(path, path, old ?? "", at.content, "", "", { context: 3 });
-  // The hunks only, as the repository's patch was: the file header lines name nothing the caller lacks.
-  return { patch: patch.split("\n").slice(4).join("\n"), status: old === null ? "added" : "modified" };
-}

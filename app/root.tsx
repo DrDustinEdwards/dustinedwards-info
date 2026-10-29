@@ -98,15 +98,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Not React's `precedence` hoisting: it lifts the sheet above the color-scheme meta, which must
   // arrive before the first stylesheet request.
   const postData = useRouteLoaderData("routes/blog.$slug") as { hasMath?: boolean } | undefined;
-  const previewData = useRouteLoaderData("routes/preview.$token") as
-    | { hasMath?: boolean }
-    | undefined;
-  // Unconditional in the editor: hasMath describes what was SAVED, not what the author is typing.
-  const editorWantsMath = matches.some(
-    (match) => (match.handle as { math?: boolean } | undefined)?.math === true,
-  );
-  const linksMath =
-    postData?.hasMath === true || previewData?.hasMath === true || editorWantsMath;
+  const linksMath = postData?.hasMath === true;
 
   return (
     <html lang="en" data-theme={theme} data-cap-site="dustinedwards">
