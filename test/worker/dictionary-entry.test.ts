@@ -35,8 +35,8 @@ describe.each(DICTIONARY_ENTRIES.map((entry) => [entry.term, entry] as const))("
     expect(html).not.toMatch(/<audio|autoplay/i);
   });
 
-  it("loads the pronunciation enhancement", () => {
-    expect(html).toMatch(/<template data-enhance="\/assets\/pronounce-[A-Za-z0-9_-]{8}\.js"><\/template>/);
+  it("loads the pronunciation island", () => {
+    expect(html).toContain('<template data-island="pronounce"></template>');
   });
 });
 

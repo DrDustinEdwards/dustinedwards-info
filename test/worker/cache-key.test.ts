@@ -2,7 +2,6 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { describe, expect, it } from "vitest";
 
 import worker, { cacheDimensions } from "../../workers/app";
-import { enhanceLoaderHash } from "../../workers/csp.mjs";
 import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
@@ -130,10 +129,10 @@ describe("the cache-header rule: the platform caches silence", () => {
     expect(first.headers.get("x-content-type-options")).toBe("nosniff");
     expect(first.headers.get("x-frame-options")).toBe(SECURITY_HEADERS["X-Frame-Options"]);
     /* The response is shared-cached with its header, so a nonce here would be every reader's.
-     * The page's one inline script is allowed by the loader's hash instead. */
+     * The page runs no inline script, so the policy names no hash either. */
     const policy = first.headers.get("content-security-policy") ?? "";
     expect(policy).not.toContain("nonce-");
-    expect(policy).toContain(`script-src '${await enhanceLoaderHash()}' 'sha256-`);
+    expect(policy).toContain("script-src 'self' ");
 
     /* Nothing per-request is left in a public policy, so two renders agree byte for byte. The
      * admin nonce, which does vary, is test/worker/ssr-nonce.test.ts's. */

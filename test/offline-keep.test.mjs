@@ -14,7 +14,7 @@ const markup = `<!doctype html><html><head>
   <link rel="stylesheet" href="/assets/root-1.css"><link rel="stylesheet" href="https://fonts.example/x.css">
   <script type="module" src="/assets/entry-1.js"></script>
 </head><body><div class="procedure"><p class="procedure-links"><a href="${PAGE}/sheet">Printable sheet</a></p>
-  <img src="/media/gel.png" alt="A gel"><template data-enhance="/assets/run-1.js"></template></div></body></html>`;
+  <img src="/media/gel.png" alt="A gel"><template data-island="run"></template></div></body></html>`;
 
 let run = 0;
 
@@ -74,10 +74,10 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
     },
     fetch: fetchFake,
     reportError: (/** @type {unknown} */ error) => void state.reported.push(error),
-    performance: { getEntriesByType: () => [{ name: `${ORIGIN}/fonts/inter.woff2`, initiatorType: "css" }, { name: `${ORIGIN}/api/x`, initiatorType: "fetch" }] },
+    performance: { getEntriesByType: () => [{ name: `${ORIGIN}/fonts/inter.woff2`, initiatorType: "css" }, { name: `${ORIGIN}/islands/run-1.js`, initiatorType: "script" }, { name: `${ORIGIN}/api/x`, initiatorType: "fetch" }] },
   };
   for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
-  await import(`../app/enhance/offline.ts?run=${(run += 1)}`);
+  (await import(`../app/enhance/offline.ts?run=${(run += 1)}`)).default();
   await new Promise((r) => setTimeout(r, 0));
   const button = () => document.querySelector(".offline-keep");
   const press = async () => {
@@ -107,7 +107,7 @@ await test("keeping stores the page at its own address and every same-origin fil
   const { button, press, state, keptPaths, document } = await load();
   await press();
   assert.deepEqual(state.registered, [{ url: "/sw.js", scope: "/" }]);
-  assert.deepEqual(keptPaths(), ["/assets/entry-1.js", "/assets/root-1.css", "/assets/run-1.js", "/fonts/inter.woff2", "/media/gel.png", PAGE].sort());
+  assert.deepEqual(keptPaths(), ["/assets/entry-1.js", "/assets/root-1.css", "/fonts/inter.woff2", "/islands/run-1.js", "/media/gel.png", PAGE].sort());
   assert.equal(button()?.getAttribute("aria-pressed"), "true");
   assert.equal(button()?.textContent, "Kept on this device");
   assert.match(document.querySelector(".offline-status")?.textContent ?? "", /opens with no connection/);

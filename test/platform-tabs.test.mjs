@@ -37,7 +37,7 @@ async function load({ userAgent = "Mozilla/5.0 (X11; Linux x86_64)", stored = nu
   };
   for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
   // A fresh query each time, so the module runs again on this page rather than coming from the import cache.
-  await import(`../app/enhance/platforms.ts?run=${(run += 1)}`);
+  (await import(`../app/enhance/platforms.ts?run=${(run += 1)}`)).default();
   /** @param {string} id */
   const shown = (id) => [...document.querySelectorAll(`#${id}-linux, #${id}-macos, #${id}-windows`)].filter((p) => !p.hidden).map((p) => p.dataset.platform);
   return { document, storage, shown };

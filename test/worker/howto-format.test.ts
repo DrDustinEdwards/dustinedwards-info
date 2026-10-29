@@ -45,7 +45,7 @@ describe("a software how-to's page", () => {
     expect(html).toContain("(Select-String -Pattern &#x27;^&gt;&#x27; -Path reads.fasta).Count");
     // The panels are all there and none is hidden: hiding is the script's, so a page with none shows them all.
     expect(html).not.toMatch(/class="procedure-platform"[^>]*hidden/);
-    expect(html).toContain('<template data-enhance="');
+    expect(html).toContain('<template data-island="platforms"></template>');
   });
 
   it("folds a challenge's solution into a <details>, which opens with no script", () => {

@@ -3,7 +3,6 @@ import { data } from "react-router";
 import type { ReactNode } from "react";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listPhages } from "~/db/phages";
@@ -130,7 +129,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
         />
       </div>
       <div className="prose" dangerouslySetInnerHTML={{ __html: after }} />
-      <Enhance module="catalog" />
+      <template data-island="catalog" />
     </PageShell>
   );
 }

@@ -1,7 +1,6 @@
 import { systemMapHtml } from "capsomer/behavior/system-map";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -97,7 +96,7 @@ export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
       <p className="systems-source">
         Public model, {MODEL.as_of}. <a href={`${SYSTEMS_PATH}.md`}>Markdown</a>
       </p>
-      <Enhance module="system-map" />
+      <template data-island="system-map" />
     </PageShell>
   );
 }

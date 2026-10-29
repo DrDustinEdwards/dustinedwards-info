@@ -2,7 +2,7 @@ import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
-import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
+import { islandsPlugin } from "./scripts/lib/islands.mjs";
 import { systemInsidesPlugin } from "./scripts/lib/system-insides-plugin.mjs";
 
 /**
@@ -56,8 +56,9 @@ export default defineConfig({
         : undefined,
     }),
     reactRouter(),
-    // The enhancement bundles, built beside the app and emitted into its client assets.
-    enhancePlugin(),
+    // /site.js and the islands it starts (app/enhance/*.ts), built beside the app and emitted into its client
+    // assets; the server reads their URLs and sizes from `virtual:islands`.
+    islandsPlugin(),
     // Every system's circle on /systems, drawn at build time (Capsomer's circleLayers).
     systemInsidesPlugin(),
   ],
@@ -71,8 +72,8 @@ export default defineConfig({
   build: {
     /*
      * **A WEBFONT IS NEVER INLINED, and this is a CSP refusal rather than a
-     * preference.** The enhancement bundles never reach this rule: the plugin
-     * above emits them as named assets, which no inline limit applies to.
+     * preference.** The islands never reach this rule: the plugin above emits
+     * them as named assets, which no inline limit applies to.
      *
      * MEASURED 2026-09-06 on the first build after the math stylesheet landed:
      * `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the default 4096-byte

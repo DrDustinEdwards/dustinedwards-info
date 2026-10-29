@@ -3,7 +3,6 @@ import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { Enhance } from "~/components/enhance";
 import { LibraryCite } from "~/components/library-cite";
 import { PageShell } from "~/components/page-shell";
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
@@ -193,7 +192,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
           })}
         />
       )}
-      <Enhance module="catalog" />
+      <template data-island="catalog" />
     </PageShell>
   );
 }

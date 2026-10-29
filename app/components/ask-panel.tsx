@@ -1,4 +1,3 @@
-import { Enhance } from "~/components/enhance";
 
 // The button ships hidden and the bundle unhides it, so a reader without script
 // never sees an inert control that looks live.
@@ -9,7 +8,7 @@ export function AskMount({ question }: { question: string }) {
         Ask AI about this
       </button>
       <div className="ask-container" data-ask-container="" hidden />
-      <Enhance module="ask" />
+      <template data-island="ask" />
     </div>
   );
 }

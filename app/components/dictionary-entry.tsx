@@ -1,4 +1,3 @@
-import { Enhance } from "~/components/enhance";
 import { listenLabel, type DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
 
 import "~/styles/dictionary-entry.css";
@@ -88,7 +87,7 @@ export function DictionaryEntry({ entry }: { entry: Entry }) {
           ),
         )}
       </p>
-      <Enhance module="pronounce" />
+      <template data-island="pronounce" />
     </section>
   );
 }

@@ -23,7 +23,6 @@ import {
   searchTitle,
 } from "~/lib/seo";
 import { PlateI, PlateKeyRow } from "~/components/plate-i";
-import { Enhance } from "~/components/enhance";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublications } from "~/db/publications";
@@ -231,7 +230,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
 
         <PlateKeyRow />
-        <Enhance module="plate" />
+        <template data-island="plate" />
 
         {/* The work in figures, as the manual sets type on stepped grays (capsomer/manual.css form boxes, tones). */}
         <dl className="cap-form-boxes home-readings" data-variant="tones">

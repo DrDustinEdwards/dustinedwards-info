@@ -58,9 +58,9 @@ export const MAP = [
   },
   {
     /* check-headers asserts where the admin nonce goes and that public scripts need none: the server
-       entry, the loader root renders, the marker <Enhance> renders and the speculation block. */
+       entry, the one script root renders (/site.js) and the media route (site-runtime's image route). */
     what: "the server entry or a script the CSP trusts",
-    test: /^app\/(entry\.server\.tsx|root\.tsx|lib\/(context\.ts|enhance-loader\.mjs)|components\/(enhance|site-speculation)\.tsx)$/,
+    test: /^app\/(entry\.server\.tsx|root\.tsx|site\.ts|lib\/(context\.ts|media\/images\.mjs)|routes\/media\.\$\.ts)$/,
     gates: ["check:headers"],
   },
   {

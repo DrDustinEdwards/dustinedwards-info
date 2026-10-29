@@ -1,22 +1,10 @@
 // The content security policy: both branches called rather than parsed, the feed exemption, the
-// nonce on the admin branch only, the loader hash on both, and the enforced header on both exits.
+// nonce on the admin branch only, no hash on either, and the enforced header on both exits.
 
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
-import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
-import {
-  APPROVED_SCRIPTS,
-  contentSecurityPolicy,
-  enhanceLoaderHash,
-  isPrivatePath,
-  speculationRulesHash,
-} from "../../../workers/csp.mjs";
-
-/** @param {string} text */
-const nodeHash = (text) => "sha256-" + createHash("sha256").update(text, "utf8").digest("base64");
+import { APPROVED_SCRIPTS, contentSecurityPolicy, isPrivatePath } from "../../../workers/csp.mjs";
 import { UNPOLICED_TYPES, isUnpolicedType } from "../../../workers/feed-types.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
@@ -237,79 +225,27 @@ export async function run(code) {
     );
   }
 
-  /*
-   * THE LOADER HASH, recomputed here with node:crypto from the constant root.tsx renders, so the
-   * policy's hash and the page's script are held to one text by a second implementation.
-   */
-  const expectedHash = nodeHash(ENHANCE_LOADER);
-  const computedHash = await enhanceLoaderHash();
-  ok(
-    "the loader hash is the sha256 of ENHANCE_LOADER in app/lib/enhance-loader.mjs",
-    computedHash === expectedHash,
-    "enhanceLoaderHash() returned " +
-      JSON.stringify(computedHash) +
-      ", node:crypto says " +
-      JSON.stringify(expectedHash) +
-      ". Every page's one inline script would be refused, and every enhancement with it.",
-  );
-  ok(
-    "the loader never contains `<`, so React renders it raw and the bytes stay the hashed bytes",
-    ENHANCE_LOADER.length > 0 && !ENHANCE_LOADER.includes("<"),
-    "a `<` can close the script element or open a comment, and the text the browser " +
-      "hashes is then not the text the policy names",
-  );
-
   const scriptSrc = directiveIn(publicCsp, "script-src");
   const adminScriptSrc = directiveIn(adminCsp, "script-src");
   /** @param {string} directive */
   const sourcesOf = (directive) => directive.split(" ").slice(1);
 
-  /*
-   * THE SPECULATION RULES HASH, per pathname: the rules exclude the page itself, so each path has
-   * its own text. Recomputed with node:crypto from the builder SiteSpeculation renders with.
-   */
-  /** @type {string[]} */
-  const ruleHashes = [];
-  for (const path of ["/", "/writing", "/writing/some-post", "/admin", "/no-such-page", "/writing/", "/a%20b"]) {
-    const got = await speculationRulesHash(path);
-    ruleHashes.push(got);
-    ok(
-      `the speculation rules hash for ${path} is the sha256 of buildSpeculationRules for it`,
-      got === nodeHash(buildSpeculationRules({ pathname: path })),
-      `speculationRulesHash(${JSON.stringify(path)}) returned ${JSON.stringify(got)}. The ` +
-        "block is then refused silently and the page speculates nothing.",
-    );
-    ok(
-      `the rules for ${path} never contain \`<\`, so React renders them raw`,
-      !buildSpeculationRules({ pathname: path }).includes("<"),
-      "a `<` in the rules can end the script element, and the hashed text is then not the rendered text",
-    );
-  }
-  ok(
-    "the rules hash differs by pathname, so it is taken from the request, not a constant",
-    new Set(ruleHashes).size === ruleHashes.length,
-    `hashes ${JSON.stringify(ruleHashes)}`,
-  );
-  const expectedRules = nodeHash(buildSpeculationRules({ pathname: PATH }));
-
-  /* PUBLIC: no nonce at all, since a cached page would share it, and exactly these two hashes. */
+  /* PUBLIC: no nonce at all, since a cached page would share it, and no hash: a page runs no inline script. */
   ok(
     "the PUBLIC policy carries no nonce source anywhere",
     !publicCsp.includes("'nonce-"),
     "public policy is " +
       JSON.stringify(publicCsp) +
       ". Public pages are edge-cached with their header, so a nonce there is one value " +
-      "every reader shares for the cache lifetime, which is what the loader hash replaced.",
+      "every reader shares for the cache lifetime.",
   );
   ok(
-    "the PUBLIC script-src is exactly the loader hash, the page's rules hash, 'self' and the approved files",
-    JSON.stringify(sourcesOf(scriptSrc)) ===
-      JSON.stringify([`'${expectedHash}'`, `'${expectedRules}'`, "'self'", ...APPROVED_SCRIPTS]),
+    "the PUBLIC script-src is exactly 'self' and the approved files",
+    JSON.stringify(sourcesOf(scriptSrc)) === JSON.stringify(["'self'", ...APPROVED_SCRIPTS]),
     "public script-src is " +
       JSON.stringify(scriptSrc) +
-      ". A third hash is an inline script nobody reviewed; a missing loader hash refuses every " +
-      "enhancement; a missing rules hash refuses the speculation block silently. " +
-      "'inline-speculation-rules' is not a substitute: Chrome and WebKit refuse the block with it.",
+      ". A hash is an inline script nobody reviewed: /site.js and the islands are same-origin files, and " +
+      "the prefetch rules come from a file the response header names, so no page needs one.",
   );
 
   /*
@@ -371,7 +307,7 @@ export async function run(code) {
       `the ${arm} script-src does NOT carry 'unsafe-inline'`,
       !directive.includes("'unsafe-inline'"),
       "adding it is the easy way to silence a violation report and it reduces the " +
-        "policy to decoration: every inline script on the site is a hash, so it is never needed.",
+        "policy to decoration: a public page runs no inline script, so it is never needed.",
     );
     ok(
       `the ${arm} script-src does NOT carry 'unsafe-eval'`,
@@ -401,8 +337,7 @@ export async function run(code) {
     /headers\.set\(\s*"Content-Security-Policy"/.test(code) &&
       !code.includes('"Content-Security-Policy-Report-Only"'),
     "the header reverted to Report-Only. Ruled 2026-08-17: the policy is ENFORCED, " +
-      "with shared caching kept on the public HTML routes, which since the loader " +
-      "hash carry no nonce at all.",
+      "with shared caching kept on the public HTML routes, which carry no nonce at all.",
   );
   ok(
     "the CSP is applied on BOTH exits, like the static set, through applyDocumentHeaders",

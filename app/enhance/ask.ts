@@ -1,6 +1,6 @@
-import { labelForUrl, urlForKey } from "~/lib/search/ask-keys.mjs";
-import { splitFollowUp } from "~/lib/search/follow-up.mjs";
-import { answerDelta, takeSseFrames } from "~/lib/search/sse.mjs";
+import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
+import { splitFollowUp } from "../lib/search/follow-up.mjs";
+import { answerDelta, takeSseFrames } from "../lib/search/sse.mjs";
 
 const CHUNKS_EVENT = "chunks";
 
@@ -270,4 +270,11 @@ function mountAskTriggers() {
   }
 }
 
-mountAskTriggers();
+// An island (devkit ./islands): each <template data-island="ask"> on the page calls this, and the first one runs it.
+let started = false;
+
+export default function start(): void {
+  if (started) return;
+  started = true;
+  mountAskTriggers();
+}

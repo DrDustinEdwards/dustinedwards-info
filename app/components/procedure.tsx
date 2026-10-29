@@ -1,4 +1,3 @@
-import { Enhance } from "~/components/enhance";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
@@ -318,7 +317,7 @@ export function ProcedureView({
           </ul>
         </section>
       ) : null}
-      {commandsOf(record).some((c) => c.platform) ? <Enhance module="platforms" /> : null}
+      {commandsOf(record).some((c) => c.platform) ? <template data-island="platforms" /> : null}
 
       {record.troubleshooting.length ? (
         <section aria-labelledby={troubleId}>
@@ -345,7 +344,7 @@ export function ProcedureView({
 
       <VersionHistory record={record} basePath={record.path} frozen={frozen} />
       <CiteBlock record={record} />
-      {hasCalculators(record) ? <Enhance module="tools" /> : null}
+      {hasCalculators(record) ? <template data-island="tools" /> : null}
 
       <section aria-labelledby={referencesId}>
         <Heading id={referencesId!}>References</Heading>
