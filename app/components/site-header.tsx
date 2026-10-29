@@ -2,10 +2,8 @@ import { searchHtml } from "capsomer/behavior/site-header";
 import { ThemeForm } from "capsomer/react/theme-switch";
 import { Link, useLocation, useMatches } from "react-router";
 
-import { Enhance, ENHANCE_URLS } from "~/components/enhance";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
-import { SiteSpeculation } from "~/components/site-speculation";
 import { buildNav, type NavItem } from "~/lib/nav";
 import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
@@ -90,10 +88,10 @@ function RunningHead({ pathname }: { pathname: string }) {
  * letterheadHtml writes, by hand only because the public plane does not hydrate and the sections open the site's
  * own panels: the mark with "Dustin Edwards" (the headquarters' name, which Capsomer sets where the other sites'
  * names sit), Home and the five sections, then search and the theme. Every link is in this markup with no script;
- * app/enhance/header.ts wires Capsomer's behavior (the panels, the tips and search) on top. The palette's bundle
- * rides on the header for Command-K (app/enhance/theme.ts); the header no longer opens it. No
+ * app/enhance/header.ts wires Capsomer's behavior (the panels, the tips and search) on top. The palette island
+ * starts on Command-K, with its stylesheets from the header (app/enhance/theme.ts); the header no longer opens it. No
  * `prefetch="intent"`: it needs React handlers and this plane does not hydrate, so hover prefetch comes from
- * `SiteSpeculation`.
+ * the rules file the Worker names in each public page's header (workers/app.ts).
  */
 export function SiteHeader() {
   const { pathname } = useLocation();
@@ -105,7 +103,7 @@ export function SiteHeader() {
       data-cap="site-header"
       data-variant="letterhead"
       data-site-header=""
-      data-palette={ENHANCE_URLS.palette}
+      data-palette=""
       data-palette-css={`${paletteDialogCss},${askCss}`}
     >
       <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
@@ -133,12 +131,10 @@ export function SiteHeader() {
             and with script the theme module switches at once. The admin plane's shell reads the same choice
             from localStorage ("cap-theme"). */}
         <ThemeForm action="/theme" prefKey="cap-theme" className="cap-site-header-icon cap-site-header-theme" />
-        <Enhance module="theme" />
+        <template data-island="theme" />
       </div>
-      {/* Here rather than in root's Layout, so it never reaches the admin plane. */}
-      <SiteSpeculation />
       {/* Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts. */}
-      <Enhance module="header" />
+      <template data-island="header" />
     </header>
     <RunningHead pathname={pathname} />
     </>
