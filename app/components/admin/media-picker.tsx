@@ -12,6 +12,8 @@ type PickerRow = {
   key: string;
   url: string;
   thumb: string;
+  /** The crop's `object-position`, from the file's focal point; absent for the center. */
+  position?: string;
   alt: string;
 };
 
@@ -89,7 +91,7 @@ export function MediaPicker({
               >
                 {/* The thumbnail, never the original, so the grid cannot pull full-resolution bytes. */}
                 <span className="cap-media-thumb">
-                  <img src={object.thumb} alt="" loading="lazy" width={160} height={160} />
+                  <img src={object.thumb} alt="" loading="lazy" width={160} height={160} style={object.position ? { objectPosition: object.position } : undefined} />
                 </span>
                 <span className="cap-media-name">{object.key.replace(/^posts\//, "")}</span>
               </button>

@@ -361,6 +361,8 @@ export async function upsertMediaRecord(
     uploadedAt?: string | null;
     width?: number | null;
     height?: number | null;
+    focalX?: number | null;
+    focalY?: number | null;
   },
 ) {
   const now = new Date().toISOString();
@@ -397,6 +399,8 @@ export async function upsertMediaRecord(
         ...(record.uploadedAt !== undefined ? { uploadedAt: record.uploadedAt } : {}),
         ...(record.width !== undefined ? { width: record.width } : {}),
         ...(record.height !== undefined ? { height: record.height } : {}),
+        ...(record.focalX !== undefined ? { focalX: record.focalX } : {}),
+        ...(record.focalY !== undefined ? { focalY: record.focalY } : {}),
         updatedAt: now,
       },
     });

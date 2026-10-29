@@ -374,7 +374,7 @@ type MediaInit = { body?: BodyInit; type?: string; key?: string };
 
 /** Through the route, with the recorded IMAGES binding and anything in `overrides` over the env. */
 function mediaCall(
-  method: "GET" | "POST" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
   init: MediaInit = {},
   overrides: object = {},
@@ -416,6 +416,59 @@ const mediaRowOf = (key: string) =>
 
 const mediaCount = async () =>
   (await testEnv.DB.prepare("SELECT count(*) AS n FROM media").first<{ n: number }>())?.n ?? 0;
+
+/* The focal point, caption and replace (site-api v0.10.0). */
+
+type MediaJson = { id: string; version: string; focus?: string | null; caption?: string; sizesNeedPurge?: boolean };
+
+const mediaItem = async (id: string) => (await (await mediaCall("GET", `${PREFIX}/media/${id}`)).json()) as MediaJson;
+
+function putJson(path: string, body: unknown) {
+  return mediaCall("PUT", `${PREFIX}${path}`, { body: JSON.stringify(body) });
+}
+
+describe("media: focal point, caption and replace", () => {
+  it("keeps a focal point on the object, where ./image crops around it, and moves the version", async () => {
+    const id = await uploadThroughApi("focus-case");
+    const before = await mediaItem(id);
+    const response = await putJson(`/media/${id}/focus`, { focus: "0.25x0.4", expectedVersion: before.version, changeId: "chg-focus" });
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect((await testEnv.MEDIA.head(id))?.customMetadata?.focus).toBe("0.25x0.4");
+    const after = await mediaItem(id);
+    expect(after.focus).toBe("0.25x0.4");
+    expect(after.version).not.toBe(before.version);
+  });
+
+  it("keeps a caption in the media index", async () => {
+    const id = await uploadThroughApi("caption-case");
+    const { version } = await mediaItem(id);
+    const response = await putJson(`/media/${id}/caption`, { caption: "Plaques on a lawn", expectedVersion: version, changeId: "chg-caption" });
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect((await mediaItem(id)).caption).toBe("Plaques on a lawn");
+  });
+
+  it("replaces the bytes under the same address, clears the focal point and keeps the old bytes in the backup", async () => {
+    const id = await uploadThroughApi("replace-case");
+    let { version } = await mediaItem(id);
+    const focused = await putJson(`/media/${id}/focus`, { focus: "0.1x0.9", expectedVersion: version, changeId: "chg-rf" });
+    ({ version } = (await focused.json()) as MediaJson);
+    const original = new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
+
+    const query = new URLSearchParams({ filename: "replace-case-2.png", changeId: "chg-replace", expectedVersion: version });
+    const response = await mediaCall(
+      "PUT",
+      `${PREFIX}/media/${id}/file?${query}`,
+      { body: pngBytes("replace-case-2"), type: "image/png" },
+      { MEDIA_BACKUP: testEnv.BACKUPS },
+    );
+    expect(response.status, await response.clone().text()).toBe(200);
+    expect(await response.json()).toMatchObject({ id, focus: null, sizesNeedPurge: false });
+    expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(pngBytes("replace-case-2"));
+    const kept = (await testEnv.BACKUPS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
+    expect(kept, "the old bytes were not kept").toBeDefined();
+    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(original);
+  });
+});
 
 describe("media: meta declares what the site accepts", () => {
   it("names media and the admin library's limits less SVG", async () => {

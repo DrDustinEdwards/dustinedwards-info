@@ -30,6 +30,10 @@ export type MediaObject = {
   tags: string;
   placeholder: string | null;
   deletable: boolean;
+  /** The focal point in site-runtime ./image's spelling ("XxY", 0 to 1), or null for the center. */
+  focus: string | null;
+  /** The index row's last write, which every metadata edit and a replace move. */
+  updatedAt: string;
 };
 
 type MediaPage = {
@@ -74,7 +78,23 @@ export function mediaObjectOf(row: MediaRow): MediaObject {
     tags: row.tags,
     placeholder: row.placeholder,
     deletable: row.storage !== "static",
+    focus: focusText(row.focalX, row.focalY),
+    updatedAt: row.updatedAt,
   };
+}
+
+/** The index's two focal columns as one focal point, or null when either is unset. */
+function focusText(x: number | null, y: number | null): string | null {
+  if (x === null || y === null) return null;
+  const part = (n: number) => String(Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000);
+  return `${part(x)}x${part(y)}`;
+}
+
+/** A focal point as the CSS `object-position` of a cropped thumbnail; undefined leaves the center. */
+export function objectPositionOf(focus: string | null): string | undefined {
+  const match = focus ? /^([\d.]+)x([\d.]+)$/.exec(focus) : null;
+  if (!match) return undefined;
+  return `${Number(match[1]) * 100}% ${Number(match[2]) * 100}%`;
 }
 
 export async function listMedia(

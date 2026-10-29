@@ -93,7 +93,16 @@ function Thumb({ object }: { object: TileProps["object"] }) {
       style={object.placeholder ? { backgroundImage: `url("${object.placeholder}")` } : undefined}
     >
       {object.viewable ? (
-        <img src={object.thumb} alt="" loading="lazy" decoding="async" width={320} height={320} />
+        <img
+          src={object.thumb}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width={320}
+          height={320}
+          // The tile is a square crop (object-fit: cover), cut around the file's focal point when it has one.
+          style={object.position ? { objectPosition: object.position } : undefined}
+        />
       ) : (
         <DocumentCard object={object} />
       )}

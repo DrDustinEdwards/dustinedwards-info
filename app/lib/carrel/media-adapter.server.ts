@@ -1,26 +1,31 @@
 // Carrel's media group (site-api v0.2.0) over the site's own media code: list over listMedia, upload
 // over storeUpload, get and delete over the same reference check the admin library's delete runs.
-// Nothing here stores, scans or deletes by a path of its own.
+// The focal point, caption and replace (v0.10.0) write the media index and, for the first and last,
+// the object itself through site-api's R2 helpers. Nothing here scans or deletes by a path of its own.
 
 import {
+  contentVersion,
   MediaId,
   MediaInUseError,
   NotFoundError,
   RefusedError,
+  VersionConflictError,
   type MediaAdapter,
   type MediaItem,
   type MediaUse,
 } from "@dustinedwards/site-api";
+import { replaceObject, writeFocus, type R2BucketLike } from "@dustinedwards/site-api/r2";
 
 import { claimMediaKeyForDelete, mediaRecord, upsertMediaRecord } from "~/db";
 import type { MediaRef } from "~/db/schema";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { mediaDeleteVerdict, mediaUsage } from "~/lib/media/actions.server";
-import { classify } from "~/lib/media/classify.mjs";
+import { classify, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import {
   deleteMediaObject,
   isManagedKey,
   listMedia,
+  measureDimensions,
   mediaObjectOf,
   type MediaObject,
 } from "~/lib/media/core.server";
@@ -43,8 +48,16 @@ function isoOrNull(value: string) {
   return value && !Number.isNaN(at) ? new Date(at).toISOString() : null;
 }
 
+/**
+ * A file's version: what its editable metadata and its bytes are now. The index row's `updated_at` moves on
+ * every write here and on a replace, and the fields themselves are in it so two writes in one second differ.
+ */
+function versionOf(object: MediaObject) {
+  return contentVersion([object.key, object.updatedAt, object.alt, object.caption, object.focus, object.size]);
+}
+
 /** One library object in the contract's terms. Deletable only where the site's own delete could act. */
-function itemOf(object: MediaObject): MediaItem {
+async function itemOf(object: MediaObject): Promise<MediaItem> {
   return {
     id: object.key,
     url: object.url,
@@ -56,7 +69,34 @@ function itemOf(object: MediaObject): MediaItem {
     alt: object.alt,
     uploadedAt: isoOrNull(object.uploaded),
     deletable: isManagedKey(object.key),
+    version: await versionOf(object),
+    focus: object.focus,
+    caption: object.caption,
   };
+}
+
+/** The stored file a write names, at the version the writer loaded; a static asset is never written here. */
+async function writable(env: Env, id: string, expectedVersion: string): Promise<MediaObject> {
+  const row = await mediaRecord(env, id);
+  if (!row || row.storage === "static") throw new NotFoundError("No such media.");
+  const object = mediaObjectOf(row);
+  const version = await versionOf(object);
+  if (version !== expectedVersion) throw new VersionConflictError(version);
+  return object;
+}
+
+/** The file's version after a write, read back from the index. */
+async function versionAfter(env: Env, id: string) {
+  const row = await mediaRecord(env, id);
+  if (!row) throw new Error(`${id} was written, but its index row cannot be read`);
+  return versionOf(mediaObjectOf(row));
+}
+
+/** "XxY" as the index's two columns. The package has already checked the spelling (focusOf). */
+function focalColumns(focus: string | null) {
+  if (focus === null) return { focalX: null, focalY: null };
+  const [x, y] = focus.split("x").map(Number);
+  return { focalX: x ?? null, focalY: y ?? null };
 }
 
 /**
@@ -84,6 +124,8 @@ function usesOf(citations: MediaCitation[], refs: MediaRef[]): MediaUse[] {
 }
 
 export function carrelMediaAdapter(env: Env): MediaAdapter {
+  // The binding's `put` takes a wider `onlyIf` than the helpers' narrow interface names; the shapes they use agree.
+  const bucket = env.MEDIA as unknown as R2BucketLike;
   return {
     limits: CARREL_MEDIA_LIMITS,
 
@@ -93,7 +135,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       const listed = await listMedia(env, { page, limit: query.limit, q: query.q, storedOnly: true });
       return {
         // A bucket key the id grammar cannot carry is left out rather than failing the whole page.
-        items: listed.objects.filter((o) => MediaId.safeParse(o.key).success).map(itemOf),
+        items: await Promise.all(listed.objects.filter((o) => MediaId.safeParse(o.key).success).map(itemOf)),
         nextCursor: listed.hasMore ? String(listed.page + 1) : null,
       };
     },
@@ -108,7 +150,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
             `so this file's uses are unknown.`,
         );
       }
-      return { ...itemOf(mediaObjectOf(row)), usedBy: usesOf(usage.citations, usage.refs) };
+      return { ...(await itemOf(mediaObjectOf(row))), usedBy: usesOf(usage.citations, usage.refs) };
     },
 
     async upload(input) {
@@ -165,6 +207,58 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
         throw new RefusedError(`${id} was cited or removed while this delete was being checked. Try again.`);
       }
       await deleteMediaObject(env, id);
+    },
+
+    // The object's customMetadata `focus` is what site-runtime ./image crops around; the index keeps the same
+    // point for the admin library's cropped thumbnails. Object first: the index is re-derivable, R2 is the truth.
+    async setFocus(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await writeFocus(bucket, id, input.focus);
+      await upsertMediaRecord(env, { key: id, ...focalColumns(input.focus) });
+      return { version: await versionAfter(env, id) };
+    },
+
+    async setCaption(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await upsertMediaRecord(env, { key: id, caption: input.caption });
+      return { version: await versionAfter(env, id) };
+    },
+
+    async replace(id, input) {
+      await writable(env, id, input.expectedVersion);
+      const bytes = new ArrayBuffer(input.bytes.byteLength);
+      new Uint8Array(bytes).set(input.bytes);
+      const dimensions = await measureDimensions(env, bytes);
+      // The key carries the picture's size (-<w>x<h>), and every page's srcset and aspect come from it.
+      const named = dimensionsFromKey(id);
+      if (named && (dimensions?.width !== named.width || dimensions?.height !== named.height)) {
+        throw new RefusedError(
+          `The new picture is ${dimensions ? `${dimensions.width}x${dimensions.height}` : "unmeasured"}, ` +
+            `but this file's address says ${named.width}x${named.height}, which every page sizes it by. ` +
+            `Upload it as a new file instead.`,
+        );
+      }
+      // The old bytes are kept in the backup bucket before they go: the mirror would overwrite their twin, and
+      // MEDIA is the one copy of an upload (wrangler.jsonc.example). Never deleted (check:destructive).
+      const old = await env.MEDIA.get(id);
+      if (!old) throw new NotFoundError("No such media.");
+      await env.MEDIA_BACKUP.put(`replaced/${new Date().toISOString()}/${id}`, old.body, {
+        httpMetadata: old.httpMetadata,
+        customMetadata: old.customMetadata,
+      });
+      await replaceObject(bucket, id, { bytes: input.bytes, contentType: input.contentType });
+      await upsertMediaRecord(env, {
+        key: id,
+        bytes: input.bytes.byteLength,
+        width: dimensions?.width ?? null,
+        height: dimensions?.height ?? null,
+        focalX: null,
+        focalY: null,
+      });
+      const row = await mediaRecord(env, id);
+      if (!row) throw new Error(`${id} was replaced, but its index row cannot be read`);
+      // The image route keys its cached sizes by the object's etag (site-runtime ./image 0.27.0), so none is stale.
+      return { item: await itemOf(mediaObjectOf(row)), sizesNeedPurge: false };
     },
   };
 }
