@@ -1,7 +1,7 @@
 // The operator publish policy, and the admin plane's smoke and session guards that enforce it.
 // Every rule has its paired negative: a policy that only refuses has not been shown to permit anything.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
@@ -312,48 +312,6 @@ refuses(
   );
 }
 
-/* The one way a smoke GET could still 500: adminSessionContext is unset and context.get throws. */
-{
-  /** @type {string[]} */
-  const readers = [];
-  const routes = join(root, "app", "routes");
-  for (const entry of readdirSync(routes, { withFileTypes: true })) {
-    if (!entry.isFile() || !/\.(ts|tsx)$/.test(entry.name)) continue;
-    const text = stripComments(readFileSync(join(routes, entry.name), "utf8"));
-    if (!text.includes("context.get(adminSessionContext)")) continue;
-    readers.push(entry.name);
-
-    const actionAt = text.indexOf("export async function action(");
-    // The body's end: the first line that is exactly `}` after the export,
-    // where every top-level function in this repo's formatting closes.
-    const actionEnd = actionAt === -1 ? -1 : text.indexOf("\n}", actionAt);
-    const reads = [];
-    for (
-      let at = text.indexOf("context.get(adminSessionContext)");
-      at !== -1;
-      at = text.indexOf("context.get(adminSessionContext)", at + 1)
-    ) {
-      reads.push(at);
-    }
-
-    eq(`${entry.name} declares an action to scope the read against`, actionAt > 0, true);
-    eq(`${entry.name}'s action body has a measurable end`, actionEnd > actionAt, true);
-    eq(
-      `${entry.name} reads the admin SESSION only inside the action body, never in ` +
-        `a loader or a helper outside it`,
-      reads.every((at) => at > actionAt && at < actionEnd),
-      true,
-    );
-  }
-
-  eq("the admin-session reader scan found a reader to check", readers.length > 0, true);
-  eq(
-    "and the readers are the ones this rule was written against",
-    readers.sort().join(", "),
-    "admin.posts.$slug.edit.tsx",
-  );
-}
-
 {
   const r = decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) });
   const stamped = readState(r.raw).firstPublished;
@@ -497,7 +455,7 @@ refuses(
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 77;
+const MINIMUM_CHECKS = 75;
 const floorBreach = assertFloor("check:policy", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) tally.fail(floorBreach);
 

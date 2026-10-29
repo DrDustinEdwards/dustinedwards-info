@@ -477,37 +477,10 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
   };
 }
 
-/** Exempt from `publiclyVisible()`: matches `status = 'draft'` only, with the slug from a valid preview token. */
-export async function getDraftPostForPreview(env: Env, slug: string) {
-  const db = getDb(env);
-  const rows = await db
-    .select()
-    .from(posts)
-    .where(and(eq(posts.slug, slug), eq(posts.kind, "post"), eq(posts.status, "draft")))
-    .limit(1);
-
-  const post = rows[0];
-  if (!post) return null;
-
-  const tagMap = await tagsForPosts(db, [post.id]);
-
-  // No neighbors: a draft has no place in the visible sequence.
-  return {
-    ...post,
-    tags: tagMap.get(post.id) ?? [],
-    previous: null as { slug: string; title: string } | null,
-    next: null as { slug: string; title: string } | null,
-  };
-}
-
-/** Admin only, so exempt from visibility. Media via `notTrashed()` to match the media page. */
+/** Admin only, so exempt from visibility. Via `notTrashed()` to match the media page. */
 export async function adminNavCounts(env: Env) {
-  const db = getDb(env);
-  const [postRow, mediaRow] = await Promise.all([
-    db.select({ n: count() }).from(posts).where(eq(posts.kind, "post")),
-    db.select({ n: count() }).from(media).where(notTrashed()),
-  ]);
-  return { posts: Number(postRow[0]?.n ?? 0), media: Number(mediaRow[0]?.n ?? 0) };
+  const mediaRow = await getDb(env).select({ n: count() }).from(media).where(notTrashed());
+  return { media: Number(mediaRow[0]?.n ?? 0) };
 }
 
 export async function listAllPostsForAdmin(env: Env) {
@@ -615,8 +588,8 @@ export async function getAdminPostRow(env: Env, slug: string) {
   );
 }
 
-/** All post tags, drafts included, for the admin filter; `listBlogTags` hides drafts. */
-export async function listAllPostTagsForAdmin(env: Env) {
+/** All post tags, drafts included, for the related and backlinks corpora; `listBlogTags` hides drafts. */
+async function listAllPostTagsForAdmin(env: Env) {
   return getDb(env)
     .select({ slug: posts.slug, tag: tags.slug })
     .from(postTags)

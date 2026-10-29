@@ -1,5 +1,4 @@
-// The two routes whose own header constants are the control: the draft preview and the health
-// endpoint, each held to a hand-transcribed ratified set.
+// The health endpoint, whose own header constants are the control, held to a hand-transcribed ratified set.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7,100 +6,6 @@ import { join } from "node:path";
 import { headerConstant } from "../header-constants.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
-
-export function runPreview() {
-  /*
-   * The one route whose headers are the access control: /preview/:token serves an unpublished post
-   * to a caller with no session, and the cookieless downgrade never fires for it.
-   */
-
-  console.log("\n  the draft preview route");
-
-  const PREVIEW_PATH = join(root, "app", "routes", "preview.$token.tsx");
-
-  /** Transcribed by hand, not read from the route. */
-  const RATIFIED_PREVIEW = {
-    "Cache-Control": "private, no-store",
-    "X-Robots-Tag": "noindex, nofollow",
-    Vary: "Cookie",
-  };
-
-  ok(
-    "app/routes/preview.$token.tsx exists",
-    existsSync(PREVIEW_PATH),
-    "the route that serves drafts is gone, or was renamed. Nothing below examines anything.",
-  );
-
-  if (existsSync(PREVIEW_PATH)) {
-    const previewSource = readFileSync(PREVIEW_PATH, "utf8");
-    const preview = stripComments(previewSource);
-
-    const previewHeaders = headerConstant(preview, "PREVIEW_HEADERS");
-    ok(
-      "the route declares a PREVIEW_HEADERS constant",
-      Boolean(previewHeaders),
-      "not found after stripping comments. Without it every value assertion below is vacuous.",
-    );
-    const previewDeclared = previewHeaders ?? {};
-
-    ok(
-      "PREVIEW_HEADERS is not empty",
-      Object.keys(previewDeclared).length > 0,
-      "parsed to zero entries, so every value assertion would pass vacuously",
-    );
-    ok(
-      `PREVIEW_HEADERS declares all ${Object.keys(RATIFIED_PREVIEW).length} ratified headers`,
-      Object.keys(previewDeclared).length === Object.keys(RATIFIED_PREVIEW).length,
-      `declares ${Object.keys(previewDeclared).length}: ${Object.keys(previewDeclared).join(", ") || "(none)"}`,
-    );
-
-    for (const [name, expected] of Object.entries(RATIFIED_PREVIEW)) {
-      ok(
-        `preview route declares ${name}`,
-        name in previewDeclared,
-        "the feature G ratification includes it and the route does not",
-      );
-      if (name in previewDeclared) {
-        ok(
-          `preview route's ${name} carries its ratified value`,
-          previewDeclared[name] === expected,
-          `expected ${JSON.stringify(expected)}, source has ${JSON.stringify(previewDeclared[name])}`,
-        );
-      }
-    }
-
-    for (const name of Object.keys(previewDeclared)) {
-      ok(
-        `${name} is a ratified preview header`,
-        name in RATIFIED_PREVIEW,
-        "the route declares it and the ratification does not. Add it here in the same commit, or remove it.",
-      );
-    }
-
-    /* NO PUBLIC BRANCH, named: the rule is that the identifier does not appear in this file AT ALL. */
-    ok(
-      "the preview route never references SHARED_CACHE_CONTROL",
-      !/\bSHARED_CACHE_CONTROL\b/.test(preview),
-      "blog.$slug.tsx is the neighboring file and exports a headers() of the same " +
-        "shape using it. On this route it would put an unpublished post into a " +
-        "shared cache entry keyed by path alone.",
-    );
-    ok(
-      "the preview route's headers() returns the declared constant",
-      /export\s+function\s+headers\s*\([^)]*\)\s*\{[^}]*PREVIEW_HEADERS/.test(preview),
-      "headers() must hand back PREVIEW_HEADERS, or the constant is documentation",
-    );
-    ok(
-      "the preview route also declares noindex in the markup",
-      /"?robots"?\s*[,:]/.test(preview) && preview.includes("noindex, nofollow"),
-      "the header is the control and the meta tag is the belt; both were ratified",
-    );
-
-    console.log(
-      `     ${Object.keys(previewDeclared).length} header(s) declared on /preview/:token`,
-    );
-  }
-}
 
 export function runHealth() {
   /* A health check served from cache is not a health check: no Cache-Control means heuristic freshness. */

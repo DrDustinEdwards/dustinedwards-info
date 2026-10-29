@@ -10,7 +10,7 @@ import * as gatewayAndPublicRoutes from "./lib/headers/gateway-and-public-routes
 import { root, tally } from "./lib/headers/gate.mjs";
 import * as mediaAndHeadersFile from "./lib/headers/media-and-headers-file.mjs";
 import * as noncePropagation from "./lib/headers/nonce-propagation.mjs";
-import { runHealth, runPreview } from "./lib/headers/route-header-consts.mjs";
+import { runHealth } from "./lib/headers/route-header-consts.mjs";
 import * as staticSetAndCache from "./lib/headers/static-set-and-cache.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 
@@ -31,7 +31,6 @@ const code = stripComments(source);
 const { declared, applications } = staticSetAndCache.run(code);
 await csp.run(code);
 noncePropagation.run();
-runPreview();
 
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,

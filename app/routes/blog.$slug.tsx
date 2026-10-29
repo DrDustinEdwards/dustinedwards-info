@@ -84,7 +84,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     [...view.post.related, ...view.post.backlinks].map((item) => item.slug),
   );
 
-  /* Here, not in `blogPostView`: `/preview/:token` shares that projection, and a draft preview must not grow mentions. */
   const [mentions, nextPublishAt] = await Promise.all([
     approvedMentionsFor(getEnv(context), post.slug),
     /* The previous and next links, the series parts and the related list can each name it once live. */

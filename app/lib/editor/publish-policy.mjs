@@ -166,7 +166,7 @@ export function decideDelete(options) {
       "Refused: deleting a post is reserved to the human admin. An operator " +
         "may create, edit, unpublish and republish a post, but not destroy it. " +
         "Unpublish it instead (draft: true), which is reversible, and ask " +
-        "Dustin to delete it from /admin/posts if it should go for good.",
+        "Dustin to delete it in Carrel if it should go for good.",
       "delete-requires-admin",
     );
   }
@@ -200,7 +200,7 @@ export function decide(options) {
       "Refused: publishing a post for the first time is reserved to the human " +
         "admin. This post has never been public, so an operator cannot set " +
         "draft to false on it. Save it as a draft (draft: true) and ask Dustin " +
-        "to publish it from /admin/posts. Once it has been published once, an " +
+        "to publish it in Carrel. Once it has been published once, an " +
         "operator may unpublish and republish it freely.",
       "first-publish-requires-admin",
     );

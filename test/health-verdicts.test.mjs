@@ -238,7 +238,7 @@ await test("A FAILING drift check carries its two counts, and nothing else new",
       {
         name: "ask-index-drift",
         ok: false,
-        detail: "Repair with sync-ask on /admin/posts.",
+        detail: "Repair with sync-ask on /admin/tools.",
         counts: { expected: 113, present: 108 },
       },
     ],

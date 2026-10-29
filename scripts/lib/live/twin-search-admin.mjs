@@ -78,9 +78,15 @@ export async function run() {
     check("search: Vary: Accept is set", (json.res.headers.get("vary") ?? "").includes("Accept"));
   }
 
-  for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
+  for (const path of ["/admin", "/admin/tools", "/admin/media"]) {
     const { status } = await get(path);
     check(`admin: ${path} redirects unauthenticated`, status === 302, `got ${status}`);
+  }
+
+  {
+    const robots = await get("/robots.txt");
+    /* Whole lines, so `/admin` cannot match a longer path. Advisory, not the control: Access is. */
+    check("robots.txt disallows /admin", robots.text.includes("\nDisallow: /admin\n"));
   }
 
   {

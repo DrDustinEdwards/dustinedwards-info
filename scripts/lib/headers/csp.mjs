@@ -206,11 +206,11 @@ export async function run(code) {
   for (const path of [
     "/admin",
     "/admin/",
-    "/admin/posts",
-    "/admin/posts/a-slug/edit",
+    "/admin/tools",
+    "/admin/kb/entry/a-slug",
     // A child route's single-fetch URL. It matches the slash arm, unlike the
     // layout's own `/admin.data`, which does not. Both are JSON either way.
-    "/admin/posts.data",
+    "/admin/tools.data",
     "/lab",
     "/lab/",
     "/lab/members",
