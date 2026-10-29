@@ -9,6 +9,7 @@ import {
   CARREL_NAME,
   CARREL_PAGE_PATH,
   CARREL_SENTENCE_REST,
+  CREDITS,
   SECURITY_TRADEOFF,
   SITE_OPERATION,
   statusLabel,
@@ -21,6 +22,19 @@ import {
  * @param {string} v
  */
 const el = (v) => `>${v}<`;
+
+/**
+ * Text as React writes it into the HTML: an apostrophe arrives as `&#x27;`.
+ *
+ * @param {string} v
+ */
+const html = (v) =>
+  v
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
 
 /**
  * Status goes through `statusLabel()`, since the page renders the label, not the raw enum.
@@ -67,6 +81,11 @@ export function colophonFacts(stack, features, id) {
       `href="${CAPSOMER_URL}">${CAPSOMER_NAME}</a>`,
       el(CAPSOMER_SENTENCE_REST),
     ];
+  if (id === "credits")
+    return CREDITS.flatMap((/** @type {any} */ c) => [
+      `href="${c.url}">${c.name}</a>`,
+      el(html(c.rest)),
+    ]);
   if (id === "not-adopted")
     return stack.notAdopted.flatMap((/** @type {any} */ n) => [
       `${n.name} <`,
