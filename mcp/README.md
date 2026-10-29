@@ -5,8 +5,7 @@ wrapper over the site's operator API that **contains no policy of its own**. Its
 own Worker, `dustinedwards-admin-mcp`, at `https://admin-mcp.dustinedwards.info/mcp`.
 
 Its history before it moved into this repository is in `git log -- mcp/`.
-Governed by Capsid `capsid/rulings/mcp-2026-10-10.md`; the design is
-`capsid/research/design-mcp-servers.md` section 6.
+The design is Capsid `capsid/research/design-mcp-servers.md` section 6.
 
 ## Tools
 
