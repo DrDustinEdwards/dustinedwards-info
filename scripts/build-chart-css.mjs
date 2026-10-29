@@ -22,7 +22,7 @@ export const CHART_CSS_PATH = path.join(ROOT, "app", "styles", "enarratio.css");
 /** @type {import("enarratio").Theme} */
 const theme = {
   name: "dustinedwards.info",
-  fonts: { body: '"Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif' },
+  fonts: { body: '"Schibsted Grotesk", "Schibsted Grotesk Fallback", ui-sans-serif, system-ui, sans-serif' },
   gridlines: "y",
   light: {
     background: "#fdfdfe", text: "#1c1727", mutedText: "#686471", grid: "#dfdce5", focus: "#4f2d7f",
