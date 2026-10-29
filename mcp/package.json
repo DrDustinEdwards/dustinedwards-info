@@ -22,7 +22,7 @@
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#766881e150d2de96689523c4e3530cc748c64cc0",
-    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#d187aa8d44803587dc6dc4b02b55c420244f186f",
+    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#a8edfe47c276a2f920e156f614f9553f8d96cc76",
     "@modelcontextprotocol/server": "2.3.1",
     "agents": "0.29.0",
     "zod": "4.6.6"
