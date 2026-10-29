@@ -211,35 +211,6 @@ export async function mediaTwins(env: Env) {
   return twins;
 }
 
-/** All lens counts in one query, on the filters' own predicates. Caller adds `duplicates`. */
-export async function mediaLensCounts(env: Env, templateKeys: string[] = []) {
-  const [row] = await getDb(env)
-    .select({
-      all: count(),
-      /* Through `uncited()`, never a copy, so count and filter cannot diverge. */
-      unattached: sql<number>`sum(CASE WHEN ${uncited(templateKeys)} THEN 1 ELSE 0 END)`,
-      noAlt: sql<number>`sum(CASE WHEN ${media.alt} = '' THEN 1 ELSE 0 END)`,
-      large: sql<number>`sum(CASE WHEN ${media.bytes} > ${LARGE_FILE_BYTES} THEN 1 ELSE 0 END)`,
-    })
-    .from(media)
-    .where(notTrashed());
-  return {
-    all: Number(row?.all ?? 0),
-    unattached: Number(row?.unattached ?? 0),
-    noAlt: Number(row?.noAlt ?? 0),
-    large: Number(row?.large ?? 0),
-  };
-}
-
-/** Rows in the trash. Not a pseudo-role: trash is orthogonal to role. */
-export async function mediaTrashedCount(env: Env) {
-  const [row] = await getDb(env)
-    .select({ n: count() })
-    .from(media)
-    .where(isNotNull(media.trashedAt));
-  return Number(row?.n ?? 0);
-}
-
 type MediaRow = typeof media.$inferSelect;
 
 /** What a revision-checked write did: the row's new `rev`, or, when no row changed, the row as it is now. */
@@ -322,23 +293,6 @@ export async function setMediaTags(
   const stored = serializeTags(input);
   const outcome = await writeMediaAtRev(env, key, { tags: stored }, options);
   return { tags: parseTags(stored), outcome };
-}
-
-/** Tag counts, in JS since tags share one delimited column. Trashed rows excluded. */
-export async function mediaTagCounts(env: Env) {
-  const rows = await getDb(env)
-    .select({ tags: media.tags })
-    .from(media)
-    .where(notTrashed());
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    for (const tag of parseTags(row.tags)) {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-  return [...counts.entries()]
-    .map(([tag, n]) => ({ tag, n }))
-    .sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag));
 }
 
 /** One row by key, for the detail view, which a URL can reach from any page. */

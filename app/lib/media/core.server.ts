@@ -1,17 +1,11 @@
 import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
-import { images } from "./images.mjs";
 import { defineImages } from "@dustinedwards/site-runtime/image";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { toBase64 } from "@dustinedwards/site-runtime/encoding";
 
 // Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
-
-export const MEDIA_PAGE_SIZE = 24;
-
-// The admin tiles' use (app/lib/media/images.mjs): 320 and 640, inside the route's closed set.
-type ThumbWidth = 320 | 640;
 
 export type MediaObject = {
   key: string;
@@ -43,16 +37,6 @@ type MediaPage = {
   page: number;
   hasMore: boolean;
 };
-
-export function thumbUrl(key: string, width: ThumbWidth) {
-  // A static asset key already begins with `/`; prefixing `/media/` gives a double slash the R2 route 404s on.
-  if (key.startsWith("/")) return key;
-  return images.url(`/media/${key}`, { width });
-}
-
-export function isViewable(kind: string) {
-  return kind === "image";
-}
 
 // Derived from `listMediaPage` and forwarded by spread: a hand-copied options type dropped axes
 // silently, because spreads are exempt from excess-property checks.
@@ -93,21 +77,11 @@ function focusText(x: number | null, y: number | null): string | null {
   return `${part(x)}x${part(y)}`;
 }
 
-/** A focal point as the CSS `object-position` of a cropped thumbnail; undefined leaves the center. */
-export function objectPositionOf(focus: string | null): string | undefined {
-  const match = focus ? /^([\d.]+)x([\d.]+)$/.exec(focus) : null;
-  if (!match) return undefined;
-  return `${Number(match[1]) * 100}% ${Number(match[2]) * 100}%`;
-}
-
 export async function listMedia(
   env: Env,
   options: ListMediaOptions = {},
 ): Promise<MediaPage> {
-  const { rows, page, hasMore } = await listMediaPage(env, {
-    ...options,
-    limit: options.limit ?? MEDIA_PAGE_SIZE,
-  });
+  const { rows, page, hasMore } = await listMediaPage(env, options);
 
   return { objects: rows.map(mediaObjectOf), page, hasMore };
 }

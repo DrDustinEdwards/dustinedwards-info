@@ -1,5 +1,4 @@
 import {
-  claimMediaKeyForDelete,
   mediaCounts,
   mediaRecord,
   mediaRefsFor,
@@ -11,27 +10,22 @@ import {
   type MediaWriteOutcome,
 } from "~/db";
 import type { MediaRef } from "~/db/schema";
-import { applyBulkTag } from "~/lib/admin/bulk-tag";
-import { errorMessage } from "~/lib/error-message.mjs";
 import { storageOf } from "./classify.mjs";
-import { deleteMediaObject, isManagedKey } from "./core.server";
+import { isManagedKey } from "./core.server";
 import { rebuildMediaIndex } from "./rebuild.server";
 import { resolveCitations, type MediaCitation } from "./resolvers.server";
-import { normalizeTags, parseTags } from "./tags.mjs";
 
 /*
- * One handler per intent of the media library's action. The route keeps the dispatch and, for the
- * three destructive intents, the typed confirmation: check:destructive reads both off the route's
- * own action, so a handler here runs only once the route has let it.
+ * The media index's writes and checks, under Carrel's media adapter, which the admin library also runs
+ * through site-api's content kit, and the rebuild on /admin/tools.
  */
 
-/** `refused` marks a result that changed nothing or failed, which the page announces as an alert. */
-type Message = { message: string; refused?: boolean };
+type Message = { message: string };
 
 /*
- * The core writes: plain values in, plain values out, shared by the form handlers below and Carrel's media
- * adapter, so the site has one write path for alt, tags and trash. Each lands in one revision-checked
- * statement (writeMediaAtRev); `expectedRev` is what a versioned caller loaded, and the admin form sends none.
+ * The core writes: plain values in, plain values out, under Carrel's media adapter, so the site has one
+ * write path for alt, tags and trash. Each lands in one revision-checked statement (writeMediaAtRev);
+ * `expectedRev` is the version the caller loaded.
  */
 
 /** What one core write did. `changed` is false when the row was already in the asked-for state. */
@@ -83,175 +77,6 @@ export async function applyMediaTrash(env: Env, key: string, options: MediaWrite
 
 export async function applyMediaRestore(env: Env, key: string, options: MediaWriteOptions = {}) {
   return settleMediaWrite(await restoreMediaRecord(env, key, options), options);
-}
-
-/** A core write's refusal as the admin page words it. */
-function refusalOf(write: Exclude<MediaWrite, { ok: true }>, key: string): Message {
-  if (write.reason === "unmanaged") return { message: "Not a managed media key.", refused: true };
-  if (write.reason === "missing") return { message: `${key} is not in the media index.`, refused: true };
-  return { message: `${key} changed while this was being saved. Reload and try again.`, refused: true };
-}
-
-export async function bulkTagMedia(
-  env: Env,
-  form: FormData,
-  intent: "bulk-add-tag" | "bulk-remove-tag",
-): Promise<Message> {
-  const keys = form.getAll("key").map(String).filter(Boolean);
-  if (keys.length === 0) return { message: "Nothing selected.", refused: true };
-
-  const wanted = normalizeTags(String(form.get("tag") ?? ""))[0];
-  if (!wanted) return { message: "Enter a tag first.", refused: true };
-  const adding = intent === "bulk-add-tag";
-
-  // Rows already in the target state are skipped, so updated_at is not touched for nothing.
-  const { done, skipped, failed } = await applyBulkTag({
-    ids: keys,
-    wanted,
-    adding,
-    missing: "no row",
-    read: async (key) => {
-      const row = await mediaRecord(env, key);
-      return row ? { item: row, tags: parseTags(row.tags) } : null;
-    },
-    write: async (key, _row, tags) => {
-      const write = await applyMediaTags(env, key, tags);
-      if (!write.ok) throw new Error(refusalOf(write, key).message);
-    },
-  });
-
-  return {
-    message:
-      `${adding ? "Tagged" : "Untagged"} ${done} of ${keys.length}` +
-      (skipped > 0 ? `, ${skipped} already ${adding ? "tagged" : "untagged"}` : "") +
-      "." +
-      (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
-    refused: failed.length > 0,
-  };
-}
-
-export async function setMediaTagsFromForm(env: Env, form: FormData): Promise<Message> {
-  const key = String(form.get("key") ?? "");
-  const tags = String(form.get("tags") ?? "").trim();
-
-  /* An empty field does not clear; clearing needs `clear`, so an accident cannot wipe every tag. */
-  const clearing = form.get("clear") !== null;
-  if (!tags && !clearing) {
-    return {
-      message:
-        `Nothing changed for ${key}. The tag field was empty, and an empty ` +
-        `field does not clear tags. Remove them one at a time, or press ` +
-        `Clear all.`,
-      refused: true,
-    };
-  }
-
-  const write = await applyMediaTags(env, key, clearing ? "" : tags);
-  if (!write.ok) return refusalOf(write, key);
-  const saved = write.tags;
-  return {
-    message: saved.length
-      ? `Tags saved for ${key}: ${saved.join(", ")}.`
-      : `Tags cleared for ${key}.`,
-  };
-}
-
-export async function bulkTrashMedia(env: Env, form: FormData): Promise<Message> {
-  const keys = form.getAll("key").map(String).filter(Boolean);
-  if (keys.length === 0) return { message: "Nothing selected.", refused: true };
-  let moved = 0;
-  let already = 0;
-  const failed: string[] = [];
-  for (const key of keys) {
-    try {
-      const write = await applyMediaTrash(env, key);
-      if (!write.ok) throw new Error(refusalOf(write, key).message);
-      if (write.changed) moved += 1;
-      else already += 1;
-    } catch (error) {
-      failed.push(`${key}: ${errorMessage(error)}`);
-    }
-  }
-  return {
-    message:
-      `Moved ${moved} of ${keys.length} to the trash` +
-      (already > 0 ? `, ${already} already there` : "") +
-      ". Every address still works and no published page changes." +
-      (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
-    refused: failed.length > 0,
-  };
-}
-
-export async function trashMedia(env: Env, form: FormData): Promise<Message> {
-  const key = String(form.get("key") ?? "");
-  const write = await applyMediaTrash(env, key);
-  if (!write.ok) return refusalOf(write, key);
-  return {
-    message: write.changed
-      ? `${key} moved to the trash. Its address still works and any page using it is unchanged; this hides it from the library.`
-      : `${key} was already in the trash.`,
-  };
-}
-
-export async function restoreMedia(env: Env, form: FormData): Promise<Message> {
-  const key = String(form.get("key") ?? "");
-  const write = await applyMediaRestore(env, key);
-  if (!write.ok) return refusalOf(write, key);
-  return {
-    message: write.changed
-      ? `${key} restored to the library.`
-      : `${key} was not in the trash.`,
-  };
-}
-
-/** Empties the trash the route has confirmed, keeping every key a post cites. */
-export async function emptyMediaTrash(env: Env, keys: string[]): Promise<Message> {
-  /* The same scan as the single delete: media_refs alone misses a citation the pipeline has not recorded. */
-  const resolution = await resolveCitations(env, keys.filter(isManagedKey));
-  if (!resolution.complete) {
-    return {
-      message:
-        `Nothing was deleted: the reference scan failed (${resolution.failed.join(", ")}), ` +
-        `so it cannot be confirmed that nothing cites these files.`,
-      refused: true,
-    };
-  }
-  const deleted: string[] = [];
-  const refused: string[] = [];
-  for (const key of keys) {
-    // Static rows have no object to remove, so emptying leaves them binned.
-    if (!isManagedKey(key)) {
-      refused.push(`${key} (static, nothing to delete)`);
-      continue;
-    }
-    if ((resolution.citations.get(key) ?? []).length > 0) {
-      refused.push(`${key} (a post cites it)`);
-      continue;
-    }
-    const claimed = await claimMediaKeyForDelete(env, key);
-    if (!claimed) {
-      refused.push(`${key} (something cites it)`);
-      continue;
-    }
-    try {
-      await deleteMediaObject(env, key);
-      deleted.push(key);
-    } catch (error) {
-      refused.push(`${key} (${errorMessage(error)})`);
-    }
-  }
-  return {
-    message:
-      `Emptied ${deleted.length} of ${keys.length}.` +
-      (refused.length ? ` Kept: ${refused.join("; ")}.` : ""),
-  };
-}
-
-export async function setMediaAlt(env: Env, form: FormData): Promise<Message> {
-  const key = String(form.get("key") ?? "");
-  const write = await applyMediaAlt(env, key, String(form.get("alt") ?? ""));
-  if (!write.ok) return refusalOf(write, key);
-  return { message: `Alt text saved for ${key}. Existing posts are unchanged.` };
 }
 
 /** The row count the rebuild confirmation shows. */
@@ -334,65 +159,4 @@ export async function mediaDeleteVerdict(env: Env, key: string): Promise<MediaDe
     return { kind: "cited", citations: usage.citations, refs: usage.refs };
   }
   return { kind: "clear" };
-}
-
-/** Deletes one object the route has confirmed, refusing a static key or anything cited. */
-export async function deleteMedia(env: Env, key: string): Promise<Message> {
-  const verdict = await mediaDeleteVerdict(env, key);
-
-  if (verdict.kind === "static") {
-    return {
-      message:
-        `Delete refused: ${key} is a static asset, served from the repo rather than R2. ` +
-        `Remove it with a commit that deletes the file, then rebuild the index.`,
-      refused: true,
-    };
-  }
-
-  if (verdict.kind === "unmanaged") return { message: "Not a managed media key.", refused: true };
-
-  if (verdict.kind === "scan-failed") {
-    return {
-      message: `Delete refused: the reference scan failed (${verdict.failed.join(", ")}), so it cannot be confirmed that nothing cites this object.`,
-      refused: true,
-    };
-  }
-
-  if (verdict.kind === "cited") {
-    const rows = verdict.refs;
-    const sources = new Set(rows.map((row) => `${row.sourceType}:${row.sourceId}`));
-    const refNote =
-      rows.length > 0
-        ? ` The pipeline recorded ${rows.length} reference(s) across ${sources.size} item(s).`
-        : "";
-    return {
-      message: `Delete refused. ${describeCitations(verdict.citations)}${refNote}`,
-      refused: true,
-    };
-  }
-
-  /* One statement claims the row only if nothing cites it now. Row first: an orphan object backfills. */
-  if (!(await claimMediaKeyForDelete(env, key))) {
-    return {
-      message: `Delete refused: ${key} was cited or removed while this delete was being checked. Reload and try again.`,
-      refused: true,
-    };
-  }
-
-  await deleteMediaObject(env, key);
-  return { message: `Deleted ${key} and its row. Nothing cited it.` };
-}
-
-function describeCitations(citations: MediaCitation[]) {
-  const byItem = new Map<string, MediaCitation[]>();
-  for (const citation of citations) {
-    const list = byItem.get(citation.id);
-    if (list) list.push(citation);
-    else byItem.set(citation.id, [citation]);
-  }
-  const parts = [...byItem.entries()].map(([id, list]) => {
-    const forms = [...new Set(list.map((c) => c.form))].join(", ");
-    return `${list[0]?.title ?? ""} (${id}: ${forms}, ${list.map((c) => c.detail).join("; ")})`;
-  });
-  return `Still cited by ${parts.length} post${parts.length === 1 ? "" : "s"}: ${parts.join(" and ")}.`;
 }

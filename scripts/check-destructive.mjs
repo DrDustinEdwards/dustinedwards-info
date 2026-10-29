@@ -25,11 +25,9 @@ const PREDICATE = "confirmationSatisfied";
  * inverse control. Each of these must call the predicate inside its own branch.
  */
 const DESTRUCTIVE = new Set([
-  "admin.media._index.tsx:delete",
-  "admin.media._index.tsx:empty-trash",
   // Both destroy records and cannot know their own removal count without running, so both confirm on
   // a count of one.
-  "admin.media._index.tsx:rebuild",
+  "admin.tools.tsx:rebuild",
   "admin.tools.tsx:sync-ask",
   // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
   "admin.mentions.tsx:delete",
@@ -43,13 +41,6 @@ const DESTRUCTIVE = new Set([
 const REVERSIBLE = new Map([
   ["admin.tools.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
   ["admin.tools.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
-  ["admin.media._index.tsx:trash", "a D1 flag; the object and its URL are untouched"],
-  ["admin.media._index.tsx:restore", "the inverse of trash"],
-  ["admin.media._index.tsx:bulk-trash", "trash, in bulk; same flag"],
-  ["admin.media._index.tsx:bulk-add-tag", "a tag, undone by remove"],
-  ["admin.media._index.tsx:bulk-remove-tag", "a tag, undone by add"],
-  ["admin.media._index.tsx:set-tags", "replaces the tag set; retypable"],
-  ["admin.media._index.tsx:set-alt", "overwrites alt text; retypable"],
   [
     "admin.mentions.tsx:approve",
     "sets a decision on a verified mention, undone by reject: the DB layer's " +
@@ -59,8 +50,9 @@ const REVERSIBLE = new Map([
   ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
 ]);
 
-// One upload path is selected by a shared predicate rather than an intent string, so this detector
-// cannot see it, nor any future intent routed the same way.
+// The media library's intents are site-api's content kit (runMediaIntent), which this detector cannot
+// see: its delete and empty-trash ask for the count before anything goes (askFirst, tested in site-api
+// and in test/worker/media.test.ts), and a site with a trash deletes only from it.
 
 const tally = createTally({ blankLine: true });
 const { ok } = tally;
@@ -119,8 +111,8 @@ ok(
 );
 ok(
   "the intent vocabulary is non-empty",
-  found.size >= 17,
-  `parsed ${found.size} intent(s), floor 17, measured 19 on 2026-08-24; every per-intent assertion above is vacuous if this is empty`,
+  found.size >= 7,
+  `parsed ${found.size} intent(s), floor 7, measured 8 on 2026-10-29 (the media library's moved to the content kit); every per-intent assertion above is vacuous if this is empty`,
 );
 
 // A new intent nobody classified fails by name rather than defaulting to safe.

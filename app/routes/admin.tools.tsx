@@ -19,6 +19,7 @@ import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { mediaRowTotal, rebuildMedia } from "~/lib/media/actions.server";
 import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";
 import { topZeroResults } from "~/lib/search/zero-result.server";
@@ -58,9 +59,9 @@ export async function loader({ context }: Route.LoaderArgs) {
 }
 
 /*
- * Posts are written in Carrel. What stays here is upkeep of what the site derives from them: the
- * rendered rows and the answer index. The destructive intent checks its typed confirmation in its own
- * branch, where check:destructive reads it, before the handler runs.
+ * Posts are written in Carrel. What stays here is upkeep of what the site derives: the rendered rows,
+ * the answer index and the media index. Each destructive intent checks its typed confirmation in its
+ * own branch, where check:destructive reads it, before the handler runs.
  */
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
@@ -88,6 +89,15 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "reset-ask-budget") return resetAskBudgetAndReport(env);
 
+  if (intent === "rebuild") {
+    /* A rebuild prunes rows whose source is gone. Count 1: the rows at risk are unknowable beforehand. */
+    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
+    if (!confirmationSatisfied(typed, 1)) {
+      return { confirmRebuild: await mediaRowTotal(env) };
+    }
+    return rebuildMedia(env);
+  }
+
   return data(
     {
       message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.`,
@@ -102,6 +112,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
   const missing = secrets.filter((s) => !s.present);
   const confirmSyncAsk =
     actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
+  const confirmRebuild =
+    actionData && "confirmRebuild" in actionData ? actionData.confirmRebuild : undefined;
   const message = actionData && "message" in actionData ? actionData.message : undefined;
   const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
@@ -110,7 +122,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
     <div className="app-page">
       <PageHead
         title="Tools"
-        lead="The site's upkeep: the search index, which secrets this deployment holds, and searches that found nothing."
+        lead="The site's upkeep: the search and media indexes, which secrets this deployment holds, and searches that found nothing."
       />
 
       {/*
@@ -182,6 +194,40 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
             ? ` ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
             : null}
           {budgetError ? ` The answer budget could not be read: ${budgetError}` : null}
+        </p>
+      </Panel>
+
+      {confirmRebuild !== undefined ? (
+        <ConfirmDialog
+          title="Rebuild the media index?"
+          body={
+            <p>
+              Every row is derived again from R2 and the repository, and a row whose file is gone is removed.
+              Alt text, captions and focal points are kept. The index holds <strong>{confirmRebuild}</strong>{" "}
+              row(s) now.
+            </p>
+          }
+          requireTyped="1"
+          confirmLabel="Rebuild the media index"
+          cancelHref="/admin/tools"
+        >
+          <input type="hidden" name="intent" value="rebuild" />
+        </ConfirmDialog>
+      ) : null}
+
+      <Panel
+        title="Media index"
+        footer={
+          <Form method="post" className="cap-cluster">
+            <Button type="submit" name="intent" value="rebuild">
+              Rebuild the media index
+            </Button>
+          </Form>
+        }
+      >
+        <p>
+          The media library reads an index of every file in R2 and every static asset in the repository. A
+          rebuild derives it again from both, for when the health check reports drift.
         </p>
       </Panel>
 
