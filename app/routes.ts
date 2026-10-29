@@ -153,7 +153,6 @@ export default [
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),
     route("media", "routes/admin.media._index.tsx"),
-    route("media/upload", "routes/admin.media.upload.ts"),
   ]),
 
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's

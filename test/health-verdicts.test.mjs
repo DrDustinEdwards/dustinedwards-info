@@ -340,7 +340,7 @@ await test("media drift: a row for a deleted object is drift on its own", () => 
 await test("media drift: the detail names a repair a reader can actually run", () => {
   const v = mediaDriftVerdict({ expected: 2, present: 1, missing: ["/a.png"], extra: [] });
   assert.match(v.detail, /sync_media/);
-  assert.match(v.detail, /admin\/media/);
+  assert.match(v.detail, /admin\/tools/);
 });
 
 await test("content drift: agreement on every sha is the quiet case", () => {

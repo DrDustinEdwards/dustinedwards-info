@@ -157,9 +157,22 @@ export const media = sqliteTable(
      * same UPDATE's WHERE, so a stale write is refused rather than lost. Carrel's media version is "r<rev>".
      */
     rev: integer("rev").notNull().default(0),
+
+    /* site-api v0.13.0 (drizzle/0035_media_library.sql). */
+    /** SHA-256 of the current bytes, lower case hex; NULL for a row written before it, whose key's digest stands in. */
+    sha256: text("sha256"),
+    /** Authored, like alt: who made it and the terms it is used under, "" for none. */
+    credit: text("credit").notNull().default(""),
+    license: text("license").notNull().default(""),
+    sourceUrl: text("source_url"),
+    /** YYYY-MM-DD, or NULL for a license with no end. */
+    licenseExpires: text("license_expires"),
+    /** From the file's embedded metadata at upload. */
+    takenAt: text("taken_at"),
   },
   (t) => [
     index("media_uploaded_idx").on(t.uploadedAt),
+    index("media_sha256_idx").on(t.sha256),
     index("media_storage_idx").on(t.storage),
     index("media_kind_idx").on(t.kind),
     index("media_role_idx").on(t.role),
@@ -169,6 +182,43 @@ export const media = sqliteTable(
      */
     index("media_trashed_idx").on(t.trashedAt),
   ],
+);
+
+/**
+ * A file's byte history (site-api v0.13.0): one row per set of bytes. The newest row for a key is the bytes in
+ * MEDIA; each earlier one names its copy in MEDIA_BACKUP, which nothing deletes. A file with no row has had only
+ * the bytes it was uploaded with.
+ */
+export const mediaRevisions = sqliteTable(
+  "media_revisions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    mediaKey: text("media_key").notNull(),
+    at: text("at").notNull(),
+    bytes: integer("bytes").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    /** upload | import | replace | transform | resize | revert */
+    reason: text("reason").notNull(),
+    sha256: text("sha256"),
+    /** Where MEDIA_BACKUP keeps these bytes; NULL while they are the current ones. */
+    backupKey: text("backup_key"),
+  },
+  (t) => [index("media_revisions_key_idx").on(t.mediaKey, t.id)],
+);
+
+/**
+ * Every change to an uploaded file's row, written by triggers on `media` (drizzle/0035_media_library.sql), so a
+ * library screen can ask what changed since a point (site-api's `changedSince`). Derived; never written here.
+ */
+export const mediaChanges = sqliteTable(
+  "media_changes",
+  {
+    seq: integer("seq").primaryKey({ autoIncrement: true }),
+    mediaKey: text("media_key").notNull(),
+    at: text("at").notNull().default(sql`(datetime('now'))`),
+  },
+  (t) => [index("media_changes_key_idx").on(t.mediaKey, t.seq)],
 );
 
 /**

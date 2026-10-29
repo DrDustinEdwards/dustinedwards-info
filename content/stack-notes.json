@@ -34,8 +34,12 @@
       "whyLoadBearing": "Both cheaper mechanisms were built first and both leaked. The GA ratelimit binding, configured at 5 per 60 seconds and attacked with 12 concurrent requests, refused 1, then 2, then 9, then 0 across four runs. A Durable Object using async storage.get then storage.put allowed 8 through a ceiling of 3, because a read and a write spanning an await is not atomic. The synchronous API allowed exactly 3, which is why the class is registered as new_sqlite_classes."
     },
     "images:IMAGES": {
-      "what": "Thumbnail and content-width transforms, computed on request from the original. Nothing is written back.",
+      "what": "Thumbnail and content-width transforms, computed on request from the original. Written back only when an editor turns or mirrors a picture, or uploads one larger than the library keeps, and then the earlier bytes are kept.",
       "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 on both of this site's addresses, with Cloudflare error 1042 on the workers.dev address (which has no zone) and a plain 404 on dustinedwards.info, so the binding is the only route to resizing."
+    },
+    "ai:AI": {
+      "what": "Workers AI, which suggests tags and alt text for a picture when an editor asks for them in the media library. Nothing it says is saved until a person accepts it.",
+      "whyLoadBearing": "Alt text is the step most often skipped, and a plain first draft of it makes the step quick. The call runs through AI Gateway when one is configured, with request and response bodies kept out of its logs, and only an editor's own uploads are sent, never anything from a visitor."
     },
     "browser:BROWSER": {
       "what": "A headless browser that prints the CV to PDF. The Worker calls it after each CV save and keeps one PDF in the derived bucket.",

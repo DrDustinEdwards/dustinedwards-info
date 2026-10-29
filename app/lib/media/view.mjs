@@ -226,55 +226,6 @@ export function formatAdded(uploaded) {
 }
 
 /**
- * No em dash allowed here, so an unmeasured row says so in words; 0x0 would be a claim.
- *
- * @param {number | null | undefined} width
- * @param {number | null | undefined} height
- * @returns {string}
- */
-export function formatDims(width, height) {
-  return width && height ? `${width}×${height}` : "not measured";
-}
-
-/**
- * Empty for a content-addressed key: unlike `folderOf`, which names a heading, it invents no folder.
- *
- * @param {string} key
- * @returns {string}
- */
-export function folderPrefix(key) {
-  const at = key.lastIndexOf("/");
-  return at > 0 ? `${key.slice(0, at)}/` : "";
-}
-
-/**
- * The last segment: the roster photos share their directory and differ only at the end.
- *
- * @param {{ originalName: string | null, key: string }} object
- * @returns {string}
- */
-export function displayName(object) {
-  if (object.originalName) return object.originalName;
-  const last = object.key.split("/").pop();
-  return last && last.length > 0 ? last : object.key;
-}
-
-/**
- * From the middle: these names differ at the end (`...session-01`, `...session-02`). The cap is 13
- * because the name gets 109px on a 153px tile (measured; 14 clipped by a pixel). Characters, not
- * pixels, because the server cannot measure a font; the CSS ellipsis is the backstop.
- *
- * @param {string} name
- * @param {number} [max]
- * @param {number} [tail]
- * @returns {string}
- */
-export function middleTruncate(name, max = 13, tail = 9) {
-  if (name.length <= max) return name;
-  return `${name.slice(0, max - tail - 1)}…${name.slice(-tail)}`;
-}
-
-/**
  * Shared by the Display popover and the column headers so both produce one URL. Only the active column
  * toggles. Always back to page one: page 3 of one sort is not page 3 of another.
  *

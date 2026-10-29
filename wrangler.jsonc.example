@@ -220,6 +220,13 @@
 	// Carries no id, so this line is complete as written. Not restated under `previews`: a preview has no CV
 	// save, and quickAction has no local emulation.
 	"browser": { "binding": "BROWSER" },
+	// Workers AI, for the media library's suggested tags and alt text (app/lib/media/suggest.server.ts): one
+	// call when an editor asks for a file's suggestions in Carrel or the admin library, never on a visitor's
+	// request, and never applied unasked. Through AI Gateway when AI_GATEWAY_BASE_URL (below) names one,
+	// which site-runtime's ./ai-gateway checks, with request and response bodies kept out of its logs. Carries
+	// no id, so this line is complete as written. Not restated under `previews`: a preview has no editor
+	// sign-in, and without the binding a suggestion is refused rather than billed.
+	"ai": { "binding": "AI" },
 	// The account the GraphQL Analytics API is queried against (the watchdog's
 	// error-rate read). No dataset binding: the site keeps no traffic counter of
 	// its own. Visits are Cloudflare Web Analytics, crawlers are AI Crawl Control;
@@ -254,12 +261,18 @@
 	// the lab-people group Capsid keeps equal to /lab/members. Its own tag, so a /admin token is
 	// refused at /lab and a /lab token at /admin. Empty until that application exists: /lab then
 	// says it is not set up and admits nobody.
+	//
+	// AI_GATEWAY_BASE_URL names the AI Gateway the media suggestions run through, as site-runtime's ./ai-gateway
+	// spells it: https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic. Empty here because it
+	// carries the account id (the real value lives in the gitignored wrangler.jsonc); empty, Workers AI is called
+	// directly. Not a credential: the binding authenticates itself.
 	"vars": {
 		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000",
 		"PREVIEW": "",
 		"ACCESS_TEAM_DOMAIN": "dustinedwards.cloudflareaccess.com",
 		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25",
-		"ACCESS_LAB_AUD": ""
+		"ACCESS_LAB_AUD": "",
+		"AI_GATEWAY_BASE_URL": ""
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:

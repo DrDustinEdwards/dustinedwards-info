@@ -108,14 +108,6 @@ export const LENS_NOTES = {
 };
 
 /**
- * @param {string} lens
- * @returns {string}
- */
-export function lensNoteFor(lens) {
-  return /** @type {Record<string, string>} */ (LENS_NOTES)[lens] ?? "";
-}
-
-/**
  * Offered, never applied: alt text nobody read is worse than a visibly empty field.
  *
  * @param {string} base a filename, no directory

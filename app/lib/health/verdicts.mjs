@@ -61,7 +61,7 @@ export function mediaDriftVerdict(status) {
       `Media index drift ${drift}: ${status.missing.length} missing, ` +
       `${status.extra.length} extra, ${status.expected} expected, ` +
       `${status.present} present. Repair with sync_media on the operator API, ` +
-      `or the rebuild action on /admin/media.`,
+      `or Rebuild the media index on /admin/tools.`,
     counts: { expected: status.expected, present: status.present },
   };
 }

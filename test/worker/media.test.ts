@@ -1,4 +1,5 @@
 import { createExecutionContext, env } from "cloudflare:test";
+import type { IntentResult } from "@dustinedwards/site-api/admin";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,12 +11,12 @@ import {
   trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
-import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
+import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
 import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
+import { storeUpload } from "~/lib/media/upload.server";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
-import { action as uploadAction } from "~/routes/admin.media.upload";
 
 import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
@@ -40,14 +41,12 @@ async function upload(
   dimensions: Dimensions,
   overrides: Record<string, unknown> = {},
 ) {
-  const form = new FormData();
-  form.append("file", new File([file.body], file.name, { type: file.type }));
-  const response = (await uploadAction({
-    request: new Request("https://example.com/admin/media/upload", { method: "POST", body: form }),
-    context: routeContext(createExecutionContext(), { ...envWithImages(dimensions), ...overrides }),
-  } as never)) as Response;
-  const body = (await response.json()) as { url?: string; key?: string; error?: string };
-  return { status: response.status, url: body.url, key: body.key ?? "", error: body.error };
+  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof storeUpload>[0];
+  const bytes = new TextEncoder().encode(file.body).buffer as ArrayBuffer;
+  const stored = await storeUpload(uploadEnv, { bytes, type: file.type, name: file.name });
+  return stored.ok
+    ? { status: 200, url: `/media/${stored.key}`, key: stored.key, error: undefined }
+    : { status: stored.status, url: undefined, key: "", error: stored.message };
 }
 
 async function adminMediaAction(fields: Record<string, string>, routeEnv: object = env) {
@@ -58,6 +57,9 @@ async function adminMediaAction(fields: Record<string, string>, routeEnv: object
     context: routeContext(createExecutionContext(), routeEnv),
   } as never);
 }
+
+/** The version the library would post for a file: the site's own, read the way the kit reads it. */
+const versionOf = async (key: string) => (await carrelMediaAdapter(mediaEnv()).get(key))?.version ?? "";
 
 const mediaRow = (key: string) =>
   env.DB.prepare("SELECT width, height, original_name, alt FROM media WHERE key = ?1")
@@ -155,16 +157,22 @@ describe("media upload", () => {
     expect(await env.MEDIA.get(key)).toBeTruthy();
   });
 
-  it("lets set-alt and delete act on the raster key an upload produced", async () => {
+  it("lets the library's alt, trash and delete act on the raster key an upload produced", async () => {
     const { key } = await upload(
       { name: "managed.png", type: "image/png", body: "raster bytes: managed" },
       { width: 640, height: 480 },
     );
 
-    await adminMediaAction({ intent: "set-alt", key, alt: "a wheat field at dusk" });
+    const alt = (await adminMediaAction({ intent: "alt", ids: key, versions: await versionOf(key), alt: "a wheat field at dusk" })) as IntentResult;
+    expect(alt.ok, alt.message).toBe(true);
     expect((await mediaRow(key))?.alt).toBe("a wheat field at dusk");
 
-    await adminMediaAction({ intent: "delete", key, [CONFIRM_FIELD]: "1" });
+    // A site with a trash deletes only from it, and the kit asks for the count first.
+    expect(((await adminMediaAction({ intent: "trash", ids: key, versions: await versionOf(key) })) as IntentResult).ok).toBe(true);
+    const asked = (await adminMediaAction({ intent: "delete", ids: key, versions: await versionOf(key) })) as IntentResult;
+    expect(asked.confirm?.typeToConfirm).toBe("1");
+    expect(await env.MEDIA.get(key)).toBeTruthy();
+    await adminMediaAction({ intent: "delete", ids: key, versions: await versionOf(key), confirm: "1" });
     expect(await env.MEDIA.get(key)).toBeNull();
     expect(await mediaRow(key)).toBeNull();
   });
@@ -328,12 +336,12 @@ describe("emptying the trash", () => {
 
     const result = (await adminMediaAction({
       intent: "empty-trash",
-      [CONFIRM_FIELD]: String(await trashedCount()),
-    })) as { message: string };
+      confirm: String(await trashedCount()),
+    })) as IntentResult;
 
     expect(await env.MEDIA.get(cited)).toBeTruthy();
     expect(await mediaRow(cited)).toBeTruthy();
-    expect(result.message).toContain(`${cited} (a post cites it)`);
+    expect(result.outcomes?.find((o) => o.id === cited)).toMatchObject({ ok: false, usedBy: [expect.objectContaining({ id: "cites-a-trashed-file" })] });
     expect(await env.MEDIA.get(uncited)).toBeNull();
   });
 
@@ -354,28 +362,24 @@ describe("emptying the trash", () => {
     });
 
     const result = (await adminMediaAction(
-      { intent: "empty-trash", [CONFIRM_FIELD]: String(await trashedCount()) },
+      { intent: "empty-trash", confirm: String(await trashedCount()) },
       { ...env, DB: brokenDb },
-    )) as { message: string };
+    )) as IntentResult;
 
-    expect(result.message).toMatch(/^Nothing was deleted: the reference scan failed/);
+    expect(result.outcomes?.find((o) => o.id === key)).toMatchObject({ ok: false, message: expect.stringMatching(/reference (scan failed|check could not complete)/) });
     expect(await env.MEDIA.get(key)).toBeTruthy();
     expect(await mediaRow(key)).toBeTruthy();
   });
 });
 
 describe("an unknown intent", () => {
-  it("answers 400 with a sentence, not a silent 200", async () => {
-    const result = (await adminMediaAction({ intent: "no-such-intent" })) as {
-      data: { message: string };
-      init: { status: number };
-    };
-    expect(result.init.status).toBe(400);
-    expect(result.data.message).toContain("no-such-intent");
+  it("is refused with a sentence, and changes nothing", async () => {
+    const result = (await adminMediaAction({ intent: "no-such-intent" })) as IntentResult;
+    expect(result).toMatchObject({ ok: false, message: expect.any(String) });
   });
 });
 
-describe("the media palette", () => {
+describe("quick search", () => {
   it("is answered as JSON, which a document loader cannot do", async () => {
     const { key } = await uploadKey("palette-target", { width: 20, height: 20 });
     await upsertMediaRecord(mediaEnv(), {
@@ -393,18 +397,18 @@ describe("the media palette", () => {
     ) => Promise<Response>;
     const response = await middleware(
       {
-        request: new Request("https://example.com/admin/media?palette=1&q=zanzibar", {
+        request: new Request("https://example.com/admin/media?q=zanzibar", {
           headers: { accept: "application/json" },
         }),
         context: routeContext(),
         params: {},
       } as never,
-      async () => new Response("the page, not the palette", { status: 500 }),
+      async () => new Response("the page, not the search", { status: 500 }),
     );
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/json");
-    const body = (await response.json()) as { results: Array<{ key: string }>; hasMore: boolean };
-    expect(body.results.map((r) => r.key)).toContain(key);
+    const body = (await response.json()) as { rows: Array<{ key: string }> };
+    expect(body.rows.map((r) => r.key)).toContain(key);
   });
 });

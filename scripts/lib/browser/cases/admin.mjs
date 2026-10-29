@@ -11,7 +11,7 @@ import {
   credentialAuthenticates,
   smokeRepair,
 } from "../credential.mjs";
-import { countCssRules, ok, overflowScan, skip } from "../harness.mjs";
+import { countCssRules, ok, overflowScan } from "../harness.mjs";
 
 /** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
 const ADMIN_RULE_MEASURED = 74;
@@ -169,315 +169,32 @@ export async function run({ browser }) {
       );
     }
 
-    /* Nothing here submits, under either credential: the cookie path runs as Dustin. */
-    await admin.setViewport({ width: 1280, height: 900 });
-
-    /* Sorted by size, not the default, so a header that hardcodes its active column fails. */
-    await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=list&sort=size`, {
-      waitUntil: "networkidle0",
-    });
-    const listHead = await admin.evaluate(() => {
-      const head = document.querySelector('table[data-view="list"] thead tr');
-      if (!head) return null;
-      const cells = [...head.querySelectorAll("th")].map((el) => {
-        const link = el.querySelector("a");
-        return {
-          label: (el.textContent || "").replace(/\s+/g, " ").trim(),
-          sortable: !!link,
-          href: link?.getAttribute("href") || "",
-          sortKey: link?.getAttribute("data-sort") || "",
-          /* The sort state in words inside the link: the sorted column says so, with no aria-sort. */
-          sorted: (link?.querySelector(".cap-sr-only")?.textContent || "").replace(/\s+/g, " ").trim(),
-        };
-      });
-      return { cells: cells.map((c) => ({ ...c, active: c.sorted !== "" })) };
-    });
-
-    ok(
-      "/admin/media?view=list: the list view renders its header row",
-      !!listHead && listHead.cells.length >= 5,
-      listHead
-        ? `${listHead.cells.length} header cell(s), expected the five columns`
-        : "no list table header at all, so the sort assertions below examine nothing",
-    );
-    ok(
-      "the list header marks exactly the column the URL sorted by",
-      !!listHead &&
-        listHead.cells.filter((c) => c.active).length === 1 &&
-        listHead.cells.some((c) => c.active && c.label.startsWith("Size")),
-      listHead
-        ? `active: ${listHead.cells.filter((c) => c.active).map((c) => c.label).join(", ") || "(none)"}. ` +
-          `The URL asked for sort=size, so Size and nothing else should say it is sorted.`
-        : "not measured",
-    );
     /*
-     * Every sortable cell is an anchor, so sorting has an address. Not every href carries `sort=`:
-     * `hrefWith` omits a parameter equal to its default.
+     * The library is Capsomer's MediaLibrary over the content kit, tested where it lives (Capsomer's
+     * browser suite and site-api's kit tests). What is this site's: that the page draws it with its
+     * stylesheet and the site's files in it. Nothing here submits.
      */
+    await admin.goto(`${ADMIN_ORIGIN}/admin/media`, { waitUntil: "networkidle0" });
+    const library = await admin.evaluate(() => {
+      const root = document.querySelector(".cap-media-lib");
+      return root
+        ? { display: getComputedStyle(root).display, files: root.querySelectorAll(".cap-media-tile").length }
+        : null;
+    });
     ok(
-      "every sortable header cell is a real link, so sorting has an address",
-      !!listHead &&
-        listHead.cells.filter((c) => c.sortable).length === 4 &&
-        listHead.cells
-          .filter((c) => c.sortable)
-          .every((c) => c.href.startsWith("/admin/media") && c.sortKey.length > 0),
-      listHead
-        ? `${listHead.cells.filter((c) => c.sortable).length} anchor(s) of the four sortable ` +
-          `columns; hrefs ${JSON.stringify(listHead.cells.filter((c) => c.sortable).map((c) => c.href))}. ` +
-          `A header cell that is not an anchor does not work with scripting off.`
+      "/admin/media draws the shared media library with its stylesheet",
+      !!library && library.display !== "inline",
+      library
+        ? `.cap-media-lib computed display=${library.display}: the media-library stylesheet did not apply`
+        : "no .cap-media-lib on the page, so the library did not render",
+    );
+    ok(
+      "the library lists the site's files",
+      !!library && library.files > 0,
+      library
+        ? "no .cap-media-tile in the library: the kit read no files from the site's own API"
         : "not measured",
     );
-    ok(
-      "exactly one column says it is sorted, and it is the sorted one",
-      !!listHead &&
-        listHead.cells.filter((c) => c.sorted).length === 1 &&
-        listHead.cells.some(
-          (c) => c.sorted === ", sorted descending" && c.label.startsWith("Size"),
-        ),
-      listHead
-        ? `sort words ${JSON.stringify(
-            listHead.cells.filter((c) => c.sortable).map((c) => `${c.label}=${c.sorted}`),
-          )}. The URL asked for sort=size and size defaults to descending.`
-        : "not measured",
-    );
-
-    /* The key comes off the page, never a fixture: the bucket owns it and may delete it. */
-    const firstKey = await admin.evaluate(() => {
-      const tile = document.querySelector("[data-tile]");
-      return tile ? tile.getAttribute("data-tile") : null;
-    });
-    ok(
-      "the media library lists an object to inspect",
-      !!firstKey,
-      "nothing carries data-tile, so the inspector assertions below examine nothing. " +
-        "An empty bucket would do this legitimately, and it would still be worth failing on: " +
-        "these cases cannot say anything about a library with no rows in it.",
-    );
-
-    if (firstKey) {
-      await admin.goto(
-        `${ADMIN_ORIGIN}/admin/media?view=list&key=${encodeURIComponent(firstKey)}`,
-        { waitUntil: "networkidle0" },
-      );
-      const inspector = await admin.evaluate((wanted) => {
-        const panel = document.querySelector("dialog[data-media-inspector]");
-        if (!panel) return null;
-        const r = panel.getBoundingClientRect();
-        return {
-          width: Math.round(r.width),
-          height: Math.round(r.height),
-          namesKey: (panel.textContent || "").includes(wanted.slice(0, 12)),
-          hasClose: !!panel.querySelector(".cap-dialog-close"),
-        };
-      }, firstKey);
-
-      ok(
-        "/admin/media?key=: the inspector opens on a key in the URL",
-        !!inspector,
-        "no inspector dialog rendered for a key taken off the library page itself. The inspector " +
-          "is URL-driven by design, so this is the whole of that contract.",
-      );
-      ok(
-        "the inspector is actually laid out, not present and collapsed",
-        !!inspector && inspector.width > 200 && inspector.height > 100,
-        inspector
-          ? `the inspector measures ${inspector.width}x${inspector.height}. A panel that exists ` +
-            `in the DOM at zero size is the mount class wearing a different hat.`
-          : "not measured",
-      );
-      ok(
-        "the inspector names the object it was opened for, and offers a way out",
-        !!inspector && inspector.namesKey && inspector.hasClose,
-        inspector
-          ? `namesKey=${inspector.namesKey} close=${inspector.hasClose}. An inspector showing a ` +
-            `DIFFERENT object than the URL asked for is worse than one that does not open.`
-          : "not measured",
-      );
-    }
-
-    /* The size is the half worth asserting: a sum over the wrong subset still renders a plausible number. */
-    await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=grid`, { waitUntil: "networkidle0" });
-    const beforeSelect = await admin.evaluate(() => !!document.querySelector(".cap-bulk"));
-    ok(
-      "the bulk bar is absent before anything is selected",
-      !beforeSelect,
-      "a bulk bar rendered with an empty selection would offer actions that act on nothing, " +
-        "and it would make the assertion below pass without a click happening at all",
-    );
-
-    const boxes = await admin.$$('input[type="checkbox"][name="key"]');
-    ok(
-      "the media grid renders row checkboxes to select",
-      boxes.length > 0,
-      "no checkbox carries name=key, so the bulk assertions below examine nothing",
-    );
-
-    if (boxes.length > 0) {
-      await boxes[0].click();
-      // The bar is rendered by React state, so it appears on the next paint
-      // rather than synchronously with the click.
-      await admin
-        .waitForSelector(".cap-bulk", { timeout: 5000 })
-        .catch(() => null);
-      const bulk = await admin.evaluate(() => {
-        const bar = document.querySelector(".cap-bulk");
-        if (!bar) return null;
-        const count = bar.querySelector(".cap-bulk-count");
-        const size = bar.querySelector(".cap-bulk-detail");
-        // The announcement is the form's status region, in the document before the bar mounted.
-        const status = bar.closest("form")?.querySelector(':scope > [role="status"]');
-        return {
-          count: (count?.textContent || "").replace(/\s+/g, " ").trim(),
-          size: (size?.textContent || "").trim(),
-          announced: (status?.textContent || "").trim(),
-          label: bar.getAttribute("aria-label") || "",
-        };
-      });
-
-      ok(
-        "selecting one row opens the bulk bar",
-        !!bulk,
-        "clicking a row checkbox did not produce .cap-bulk. Either the page is not hydrated " +
-          "or the selection state is not reaching the bar.",
-      );
-      ok(
-        "the bulk bar reports the count it was given",
-        !!bulk && bulk.count.startsWith("1 selected"),
-        bulk ? `count reads ${JSON.stringify(bulk.count)} after exactly one click` : "not measured",
-      );
-      /* `byteSize` over an empty subset renders "0 B", which is what a bar summing the wrong array shows. */
-      ok(
-        "the bulk bar sizes the selection rather than rendering an empty sum",
-        !!bulk && bulk.size.length > 0 && !/^0\s*B$/i.test(bulk.size),
-        bulk
-          ? `size reads ${JSON.stringify(bulk.size)}. "0 B" is what summing an empty or wrong ` +
-            `subset produces, and one selected object is not zero bytes.`
-          : "not measured",
-      );
-      ok(
-        "the bulk bar announces itself to a screen reader",
-        !!bulk && bulk.announced === "1 selected" && bulk.label.length > 0,
-        bulk
-          ? `status region reads ${JSON.stringify(bulk.announced)}, aria-label=${JSON.stringify(bulk.label)}. ` +
-            `The count region is the grid form's role=status, mounted before anything was selected, ` +
-            `because a region that mounts with its text is often never announced.`
-          : "not measured",
-      );
-    }
-
-    // The one confirmation a GET reaches; the others open from `actionData` and need a POST.
-    // It never submits: the enabled state is the assertion.
-    await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
-      waitUntil: "networkidle0",
-    });
-    /* The Trash chip's count, so "no modal" can be told apart from "empty trash". */
-    const trashed = await admin.evaluate(() => {
-      const chip = [...document.querySelectorAll(".cap-tab")].find((a) =>
-        /^\s*Trash/.test(a.textContent ?? ""),
-      );
-      const count = chip?.querySelector(".cap-tab-count")?.textContent?.trim() ?? "";
-      return /^\d+$/.test(count) ? Number(count) : null;
-    });
-    ok(
-      "/admin/media shows how many files are in the trash",
-      trashed !== null,
-      "no Trash tab with a numeric count, so an absent confirmation could not be told apart " +
-        "from an empty trash",
-    );
-    const modal = await admin.evaluate(() => {
-      const panel = document.querySelector('dialog.cap-dialog[role="alertdialog"]');
-      if (!panel) return null;
-      const prompt = panel.querySelector(".cap-confirm-typed label");
-      const typed = /Type\s+(\S+)\s+to confirm/i.exec(prompt?.textContent || "");
-      return {
-        // showModal() is what makes it modal; the element alone is only a dialog.
-        modal: panel.matches(":modal"),
-        required: typed ? typed[1] : "",
-        hasInput: !!panel.querySelector(".cap-confirm-typed input"),
-        confirmDisabled: !!panel.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
-      };
-    });
-
-    if (!modal && trashed === 0) {
-      skip(
-        "/admin/media?confirm=empty-trash: the typed-confirmation ladder",
-        "the trash is EMPTY on this deployment and the modal is gated on trashedCount > 0. " +
-          "Nothing is wrong and nothing was measured. This case covers itself again as soon as " +
-          "one object is trashed.",
-      );
-    } else if (!modal) {
-      ok(
-        "/admin/media?confirm=empty-trash renders the typed-confirmation dialog",
-        false,
-        `the trash holds ${trashed ?? "an unknown number of"} file(s) and the confirmation did ` +
-          `not render, so the destructive action has lost its confirmation or its route.`,
-      );
-    } else {
-      ok(
-        "the empty-trash confirmation is a real dialog",
-        modal.modal,
-        `a <dialog> that is not open as a modal. This ` +
-          `replaced window.prompt(), which was unreadable to a screen reader and which did not ` +
-          `run at all with scripting off, submitting the destruction unconfirmed.`,
-      );
-      ok(
-        "it asks for a specific string to be typed",
-        modal.hasInput && modal.required.length > 0,
-        `input=${modal.hasInput} required=${JSON.stringify(modal.required)}. The ladder is the ` +
-          `count, and a modal that asks for nothing is a dialog rather than a confirmation.`,
-      );
-      ok(
-        "the confirm button starts DISABLED on a hydrated page",
-        modal.confirmDisabled,
-        "the destructive button is pressable before anything has been typed. The server still " +
-          "re-checks, so this is early feedback rather than the check, but an ungated button " +
-          "means the ladder exists only on the server and the page contradicts it.",
-      );
-
-      if (modal.hasInput && modal.required) {
-        const field = ".cap-confirm-typed input";
-        // The WRONG value first. A button that enables on any input at all would
-        // pass an assertion that only ever typed the right answer.
-        await admin.type(field, `${modal.required}x`);
-        const afterWrong = await admin.evaluate(
-          () => !!document.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
-        );
-        ok(
-          "a WRONG value leaves the confirm button disabled",
-          afterWrong,
-          `typing ${JSON.stringify(`${modal.required}x`)} enabled the destructive button, so the ` +
-            `gate is "something was typed" rather than "the count was typed".`,
-        );
-
-        await admin.evaluate((sel) => {
-          const el = /** @type {HTMLInputElement | null} */ (document.querySelector(sel));
-          if (el) {
-            const setter = Object.getOwnPropertyDescriptor(
-              window.HTMLInputElement.prototype,
-              "value",
-            )?.set;
-            setter?.call(el, "");
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-          }
-        }, field);
-        await admin.type(field, modal.required);
-        const afterRight = await admin.evaluate(
-          () => !!document.querySelector('.cap-dialog-footer .cap-btn[data-variant="danger"][disabled]'),
-        );
-        ok(
-          "the exact value ENABLES the confirm button",
-          !afterRight,
-          `typing ${JSON.stringify(modal.required)}, which is the string the modal itself asks ` +
-            `for, left the button disabled. The ladder would then be unpassable and the trash ` +
-            `could not be emptied from the browser at all.`,
-        );
-        /*
-         * NOT SUBMITTED. Navigating away is the end of this case, deliberately,
-         * and the navigation is what discards the typed value.
-         */
-        await admin.goto(`${ADMIN_ORIGIN}/admin/media`, { waitUntil: "networkidle0" });
-      }
-    }
 
     /* Several widths, because the overflow is linear in the viewport; 1280 catches a fix that collapses desktop. */
     /* A rule count proves the admin's sheets arrived; the computed style proves the cascade applied them. */
