@@ -768,3 +768,18 @@ export const sourceGuard = sqliteTable(
   { ok: integer("ok").notNull() },
   (t) => [check("source_guard_ok", sql`${t.ok} = 1`)],
 );
+
+// Scheduled updates to live posts (drizzle/0033_scheduled_updates.sql, the site-api package's SCHEDULED_UPDATES_SQL):
+// one waiting update per post, read and written only through the package's d1ScheduledUpdates helper
+// (app/lib/carrel/schedules-adapter.server.ts). Times are UTC ISO text, so the due scan is a text comparison.
+export const scheduledUpdates = sqliteTable(
+  "scheduled_updates",
+  {
+    contentId: text("content_id").primaryKey(),
+    source: text("source").notNull(),
+    publishAt: text("publish_at").notNull(),
+    changeId: text("change_id").notNull(),
+    scheduledAt: text("scheduled_at").notNull(),
+  },
+  (t) => [index("scheduled_updates_due").on(t.publishAt)],
+);

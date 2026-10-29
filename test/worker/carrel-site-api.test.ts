@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
 import { previewPost, withPublication } from "~/lib/carrel/site-adapter.server";
+import { runCarrelSchedules } from "~/lib/carrel/site-api.server";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { commitFiles } from "~/lib/source/store.server";
@@ -304,6 +305,35 @@ describe("status belongs to the site", () => {
     expect(out).toBe(
       `---\ntitle: "T"\ndraft: false\nwriting_status: draft\nkey_takeaways:\n  - one\npublish_at: "2026-12-01T09:00:00.000Z"\n---\n\nBody\n`,
     );
+  });
+});
+
+describe("a scheduled update to a live post", () => {
+  it("keeps the live post served until its time, then the cron puts the update live and drops it", async () => {
+    const live = post("carrel-later", { draft: false, first_published: "2026-07-01", title: "Live" });
+    await putSource(postPath("carrel-later"), live);
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+
+    const response = await send("POST", `${PREFIX}/content/carrel-later/schedule`, {
+      source: post("carrel-later", { draft: false, first_published: "2026-07-01", title: "Updated" }),
+      publishAt: at,
+      expectedVersion: await gitBlobSha(live),
+      changeId: "chg-later",
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ status: "published", scheduledUpdate: { changeId: "chg-later" } });
+    expect(await source(postPath("carrel-later"))).toBe(live);
+
+    const env = siteEnv() as unknown as Env;
+    const early = await runCarrelSchedules(env, createExecutionContext(), new Date());
+    expect(early.applied).toHaveLength(0);
+
+    const run = await runCarrelSchedules(env, createExecutionContext(), new Date(Date.parse(at) + 1000));
+    expect(run).toMatchObject({ applied: [{ id: "carrel-later", kind: "update" }], failed: 0 });
+    const saved = (await source(postPath("carrel-later"))) ?? "";
+    expect(saved).toMatch(/^title: "?Updated"?$/m);
+    expect(saved).toMatch(/^draft: false$/m);
+    expect((await get(`${PREFIX}/content/carrel-later/schedule`)).status).toBe(404);
   });
 });
 
