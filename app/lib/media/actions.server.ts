@@ -7,7 +7,8 @@ import {
   restoreMediaRecord,
   setMediaTags,
   trashMediaRecord,
-  upsertMediaRecord,
+  writeMediaAtRev,
+  type MediaWriteOutcome,
 } from "~/db";
 import type { MediaRef } from "~/db/schema";
 import { applyBulkTag } from "~/lib/admin/bulk-tag";
@@ -26,6 +27,70 @@ import { normalizeTags, parseTags } from "./tags.mjs";
 
 /** `refused` marks a result that changed nothing or failed, which the page announces as an alert. */
 type Message = { message: string; refused?: boolean };
+
+/*
+ * The core writes: plain values in, plain values out, shared by the form handlers below and Carrel's media
+ * adapter, so the site has one write path for alt, tags and trash. Each lands in one revision-checked
+ * statement (writeMediaAtRev); `expectedRev` is what a versioned caller loaded, and the admin form sends none.
+ */
+
+/** What one core write did. `changed` is false when the row was already in the asked-for state. */
+export type MediaWrite =
+  | { ok: true; rev: number; changed: boolean }
+  | { ok: false; reason: "missing" | "static" | "unmanaged" }
+  | { ok: false; reason: "stale"; rev: number };
+
+export type MediaWriteOptions = { expectedRev?: number; storedOnly?: boolean };
+
+/** Reads a write's outcome: a missing key, a stale version, a static row, or a no-op on a row already there. */
+export function settleMediaWrite(outcome: MediaWriteOutcome, options: MediaWriteOptions): MediaWrite {
+  if (outcome.written) return { ok: true, rev: outcome.rev, changed: true };
+  const { row } = outcome;
+  if (!row) return { ok: false, reason: "missing" };
+  if (options.storedOnly && row.storage === "static") return { ok: false, reason: "static" };
+  if (options.expectedRev !== undefined && row.rev !== options.expectedRev) {
+    return { ok: false, reason: "stale", rev: row.rev };
+  }
+  return { ok: true, rev: row.rev, changed: false };
+}
+
+/** Saving alt rewrites no post: alt is contextual, so only future insertions pick it up. Uploads only. */
+export async function applyMediaAlt(
+  env: Env,
+  key: string,
+  alt: string,
+  options: MediaWriteOptions = {},
+): Promise<MediaWrite> {
+  if (!isManagedKey(key)) return { ok: false, reason: (await mediaRecord(env, key)) ? "unmanaged" : "missing" };
+  return settleMediaWrite(await writeMediaAtRev(env, key, { alt }, options), options);
+}
+
+/** The whole tag set, in whatever spelling `serializeTags` accepts. */
+export async function applyMediaTags(
+  env: Env,
+  key: string,
+  tags: string[] | string,
+  options: MediaWriteOptions = {},
+): Promise<MediaWrite & { tags: string[] }> {
+  const saved = await setMediaTags(env, key, tags, options);
+  return { ...settleMediaWrite(saved.outcome, options), tags: saved.tags };
+}
+
+/** Hides a file from the library; R2 and its address are untouched, so a page using it is unchanged. */
+export async function applyMediaTrash(env: Env, key: string, options: MediaWriteOptions = {}) {
+  return settleMediaWrite(await trashMediaRecord(env, key, options), options);
+}
+
+export async function applyMediaRestore(env: Env, key: string, options: MediaWriteOptions = {}) {
+  return settleMediaWrite(await restoreMediaRecord(env, key, options), options);
+}
+
+/** A core write's refusal as the admin page words it. */
+function refusalOf(write: Exclude<MediaWrite, { ok: true }>, key: string): Message {
+  if (write.reason === "unmanaged") return { message: "Not a managed media key.", refused: true };
+  if (write.reason === "missing") return { message: `${key} is not in the media index.`, refused: true };
+  return { message: `${key} changed while this was being saved. Reload and try again.`, refused: true };
+}
 
 export async function bulkTagMedia(
   env: Env,
@@ -49,7 +114,10 @@ export async function bulkTagMedia(
       const row = await mediaRecord(env, key);
       return row ? { item: row, tags: parseTags(row.tags) } : null;
     },
-    write: (key, _row, tags) => setMediaTags(env, key, tags),
+    write: async (key, _row, tags) => {
+      const write = await applyMediaTags(env, key, tags);
+      if (!write.ok) throw new Error(refusalOf(write, key).message);
+    },
   });
 
   return {
@@ -78,7 +146,9 @@ export async function setMediaTagsFromForm(env: Env, form: FormData): Promise<Me
     };
   }
 
-  const saved = await setMediaTags(env, key, clearing ? "" : tags);
+  const write = await applyMediaTags(env, key, clearing ? "" : tags);
+  if (!write.ok) return refusalOf(write, key);
+  const saved = write.tags;
   return {
     message: saved.length
       ? `Tags saved for ${key}: ${saved.join(", ")}.`
@@ -94,8 +164,9 @@ export async function bulkTrashMedia(env: Env, form: FormData): Promise<Message>
   const failed: string[] = [];
   for (const key of keys) {
     try {
-      const result = await trashMediaRecord(env, key);
-      if (result.moved) moved += 1;
+      const write = await applyMediaTrash(env, key);
+      if (!write.ok) throw new Error(refusalOf(write, key).message);
+      if (write.changed) moved += 1;
       else already += 1;
     } catch (error) {
       failed.push(`${key}: ${errorMessage(error)}`);
@@ -113,9 +184,10 @@ export async function bulkTrashMedia(env: Env, form: FormData): Promise<Message>
 
 export async function trashMedia(env: Env, form: FormData): Promise<Message> {
   const key = String(form.get("key") ?? "");
-  const { moved } = await trashMediaRecord(env, key);
+  const write = await applyMediaTrash(env, key);
+  if (!write.ok) return refusalOf(write, key);
   return {
-    message: moved
+    message: write.changed
       ? `${key} moved to the trash. Its address still works and any page using it is unchanged; this hides it from the library.`
       : `${key} was already in the trash.`,
   };
@@ -123,9 +195,10 @@ export async function trashMedia(env: Env, form: FormData): Promise<Message> {
 
 export async function restoreMedia(env: Env, form: FormData): Promise<Message> {
   const key = String(form.get("key") ?? "");
-  const { restored } = await restoreMediaRecord(env, key);
+  const write = await applyMediaRestore(env, key);
+  if (!write.ok) return refusalOf(write, key);
   return {
-    message: restored
+    message: write.changed
       ? `${key} restored to the library.`
       : `${key} was not in the trash.`,
   };
@@ -176,9 +249,8 @@ export async function emptyMediaTrash(env: Env, keys: string[]): Promise<Message
 
 export async function setMediaAlt(env: Env, form: FormData): Promise<Message> {
   const key = String(form.get("key") ?? "");
-  if (!isManagedKey(key)) return { message: "Not a managed media key.", refused: true };
-  // Saving alt rewrites no post: alt is contextual, so only future insertions pick it up.
-  await upsertMediaRecord(env, { key, alt: String(form.get("alt") ?? "") });
+  const write = await applyMediaAlt(env, key, String(form.get("alt") ?? ""));
+  if (!write.ok) return refusalOf(write, key);
   return { message: `Alt text saved for ${key}. Existing posts are unchanged.` };
 }
 

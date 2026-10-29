@@ -470,6 +470,52 @@ describe("media: focal point, caption and replace", () => {
   });
 });
 
+/* Alt, tags and the trash (site-api v0.4.0), through the admin library's own core writes. */
+
+const sendJson = (method: "PUT" | "POST", path: string, body: unknown) =>
+  mediaCall(method, `${PREFIX}${path}`, { body: JSON.stringify(body) });
+
+const listIds = async (query: string) =>
+  ((await (await mediaCall("GET", `${PREFIX}/media?${query}`)).json()) as { items: MediaJson[] }).items.map((i) => i.id);
+
+describe("media: alt, tags and the trash", () => {
+  it("REFUSES a stale version with 409 even within the same second, and keeps the first write", async () => {
+    const id = await uploadThroughApi("alt-race");
+    const { version } = await mediaItem(id);
+    const first = await sendJson("PUT", `/media/${id}/alt`, { alt: "First", expectedVersion: version, changeId: "chg-alt-1" });
+    expect(first.status, await first.clone().text()).toBe(200);
+    const moved = ((await first.json()) as MediaJson).version;
+    expect(moved).not.toBe(version);
+
+    // Sent at once, from the same loaded version: updated_at alone could not tell these apart.
+    const second = await sendJson("PUT", `/media/${id}/alt`, { alt: "Second", expectedVersion: version, changeId: "chg-alt-2" });
+    expect(second.status).toBe(409);
+    expect(await second.json()).toMatchObject({ error: "version-conflict", currentVersion: moved });
+    expect(await mediaRowOf(id)).toMatchObject({ alt: "First" });
+  });
+
+  it("filters by tag, and trash hides a file from the library until it is restored", async () => {
+    const id = await uploadThroughApi("tag-trash");
+    let { version } = await mediaItem(id);
+    const tagged = await sendJson("PUT", `/media/${id}/tags`, { tags: ["field-notes"], expectedVersion: version, changeId: "chg-tag" });
+    expect(tagged.status, await tagged.clone().text()).toBe(200);
+    ({ version } = (await tagged.json()) as MediaJson);
+    expect(await listIds("tag=field-notes")).toEqual([id]);
+
+    const trashed = await sendJson("POST", `/media/${id}/trash`, { expectedVersion: version, changeId: "chg-trash" });
+    expect(trashed.status, await trashed.clone().text()).toBe(200);
+    ({ version } = (await trashed.json()) as MediaJson);
+    expect(await listIds("tag=field-notes")).toEqual([]);
+    expect(await listIds("trashed=only&tag=field-notes")).toEqual([id]);
+    // The object stays, so a page that uses it keeps rendering.
+    expect(await testEnv.MEDIA.head(id)).not.toBeNull();
+
+    const restored = await sendJson("POST", `/media/${id}/restore`, { expectedVersion: version, changeId: "chg-restore" });
+    expect(restored.status, await restored.clone().text()).toBe(200);
+    expect(await listIds("tag=field-notes")).toEqual([id]);
+  });
+});
+
 describe("media: meta declares what the site accepts", () => {
   it("names media and the admin library's limits less SVG", async () => {
     const response = await get(`${PREFIX}/meta`);
@@ -478,6 +524,7 @@ describe("media: meta declares what the site accepts", () => {
       capabilities: { media: boolean; mediaUpload: { maxBytes: number; types: string[] } };
     };
     expect(meta.capabilities.media).toBe(true);
+    expect(meta.capabilities).toMatchObject({ mediaAlt: true, mediaTags: true, mediaTrash: true });
     expect(meta.capabilities.mediaUpload.maxBytes).toBe(MAX_BYTES);
     expect(meta.capabilities.mediaUpload.types).toEqual(
       [...ALLOWED.keys()].filter((type) => type !== "image/svg+xml"),
@@ -761,7 +808,8 @@ describe("the site-api conformance suite", () => {
       fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, {
           ...init,
-          headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.9" },
+          // Its own address, so the site's limiter (120 a minute per address) counts the suite alone, not the cases before it.
+          headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.10" },
         });
         try {
           return await (request.method === "GET" ? loader(argsFor(request)) : action(argsFor(request)));
