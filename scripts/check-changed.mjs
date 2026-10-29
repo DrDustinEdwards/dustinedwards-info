@@ -77,6 +77,12 @@ export const MAP = [
     gates: ["check:secrets"],
   },
   {
+    /* check-alt-text reads the HTML this pipeline writes, so a change to how it draws an image changes what it sees. */
+    what: "the markdown pipeline",
+    test: /^app\/lib\/(content\/pipeline|media\/images)\.mjs$/,
+    gates: ["check:alt-text"],
+  },
+  {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
     gates: ["check:headers", "check:policy", "check:secrets", RELATED],
@@ -84,7 +90,7 @@ export const MAP = [
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features", "check:links"],
+    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features", "check:links", "check:alt-text"],
   },
   {
     /* check-protocols compiles every procedure and fixture with the save tool's own validator. */
@@ -104,7 +110,7 @@ export const MAP = [
        save runs the same compile, so a change here changes what a save accepts. */
     what: "the page system",
     test: /^(app\/lib\/pages\/.+|app\/db\/pages\.ts|app\/lib\/(phage-table|phage-tools)\.mjs)$/,
-    gates: ["check:content", "check:links", RELATED],
+    gates: ["check:content", "check:links", "check:alt-text", RELATED],
   },
   {
     /* The file CI judges and the save judges: check:machine-readable runs the shared rules on it. */
@@ -117,7 +123,7 @@ export const MAP = [
        the result and check:machine-readable reads the twin, and the CV save runs the same compile. */
     what: "the CV system",
     test: /^(app\/lib\/cv\/.+|app\/db\/cv\.ts|scripts\/lib\/cv\.mjs|scripts\/build-cv-pdf\.mjs)$/,
-    gates: ["check:content", "check:links", "check:machine-readable", RELATED],
+    gates: ["check:content", "check:links", "check:machine-readable", "check:alt-text", RELATED],
   },
   {
     /* build:content compiles every entry with these modules and check:links reads the twin it leads; the
