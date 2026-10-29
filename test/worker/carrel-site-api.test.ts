@@ -501,6 +501,8 @@ describe("media: alt, tags and the trash", () => {
     expect(tagged.status, await tagged.clone().text()).toBe(200);
     ({ version } = (await tagged.json()) as MediaJson);
     expect(await listIds("tag=field-notes")).toEqual([id]);
+    // The count is across every page, of the same rows the page lists.
+    expect(((await (await mediaCall("GET", `${PREFIX}/media?tag=field-notes&limit=1`)).json()) as { total?: number }).total).toBe(1);
 
     const trashed = await sendJson("POST", `/media/${id}/trash`, { expectedVersion: version, changeId: "chg-trash" });
     expect(trashed.status, await trashed.clone().text()).toBe(200);

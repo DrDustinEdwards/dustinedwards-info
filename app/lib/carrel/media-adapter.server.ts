@@ -21,6 +21,7 @@ import { replaceObject, writeFocus, type R2BucketLike } from "@dustinedwards/sit
 
 import {
   claimMediaKeyForDelete,
+  countMediaPage,
   followMediaObject,
   mediaRecord,
   writeMediaAtRev,
@@ -176,6 +177,8 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     limits: CARREL_MEDIA_LIMITS,
 
     lenses: LENSES,
+    // Every upload's address carries its size (-<w>x<h>), so replace refuses a picture of another size.
+    replaceKeepsSize: true,
 
     async list(query) {
       const page = query.cursor && /^[1-9]\d{0,8}$/.test(query.cursor) ? Number(query.cursor) : 1;
@@ -184,22 +187,16 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       const sort = query.sort ?? "added";
       const dir = query.dir ?? (sort === "name" ? "asc" : "desc");
       // Bucket rows only: a static asset's key is a repo path, which is not a media id.
-      const listed = await listMedia(env, {
-        page,
-        limit: query.limit,
-        q: query.q,
-        tag: query.tag,
-        trashed,
-        lens: query.lens,
-        templateKeys: TEMPLATE_KEYS,
-        sort,
-        dir,
-        storedOnly: true,
-      });
+      const filter = { q: query.q, tag: query.tag, trashed, lens: query.lens, templateKeys: TEMPLATE_KEYS, storedOnly: true };
+      const [listed, total] = await Promise.all([
+        listMedia(env, { ...filter, page, limit: query.limit, sort, dir }),
+        countMediaPage(env, filter),
+      ]);
       return {
         // A bucket key the id grammar cannot carry is left out rather than failing the whole page.
         items: listed.objects.filter((o) => MediaId.safeParse(o.key).success).map(itemOf),
         nextCursor: listed.hasMore ? String(listed.page + 1) : null,
+        total,
         // The trash is always newest-trashed first (listMediaPage), so it claims no sort it did not apply.
         ...(trashed ? {} : { sorted: { sort, dir } }),
       };
