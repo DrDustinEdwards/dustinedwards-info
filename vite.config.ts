@@ -30,7 +30,7 @@ const BUILD_ID = Date.now().toString(36);
 
 /**
  * Set only by `npm run preview:local` and a local `check:browser`, in their children's environment.
- * AI_SEARCH and IMAGES have no local emulation, so the plugin would open a remote proxy session for
+ * AI_SEARCH, AI and IMAGES have no local emulation, so the plugin would open a remote proxy session for
  * them, and that needs a Cloudflare token. This build leaves them out instead, so wrangler.jsonc is
  * never swapped. Ask is off in such a build (askAvailable reads the binding). `npm run deploy`
  * rebuilds without the variable, so a build made this way never ships.
@@ -47,8 +47,11 @@ export default defineConfig({
       config: PREVIEW_LOCAL
         ? (config) => {
             // The customizer's result is merged, so a key can only be removed from the object itself.
-            const bindings: { ai_search?: unknown; images?: unknown; browser?: unknown } = config;
+            const bindings: { ai_search?: unknown; ai?: unknown; images?: unknown; browser?: unknown } = config;
             delete bindings.ai_search;
+            // Workers AI, for media suggestions: an editor's call, which a preview has no sign-in for; without it a
+            // suggestion is refused (suggest.server.ts).
+            delete bindings.ai;
             delete bindings.images;
             // The CV PDF's renderer: quickAction has no local emulation, and a save is not part of a preview.
             delete bindings.browser;

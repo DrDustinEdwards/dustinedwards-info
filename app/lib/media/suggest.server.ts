@@ -6,7 +6,7 @@ import { anthropicRoute } from "@dustinedwards/site-runtime/ai-gateway";
 import { editImage } from "@dustinedwards/site-runtime/image";
 
 /** The vision model: natively multimodal, Cloudflare-hosted, with no license prompt to accept first. */
-export const SUGGEST_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const SUGGEST_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
 /** The longest edge the model is shown: enough to name what is in a picture, and a small request. */
 const VIEW_EDGE = 768;
@@ -32,7 +32,7 @@ type SuggestEnv = Pick<Env, "IMAGES"> & { AI?: Ai; AI_GATEWAY_BASE_URL?: string 
  * not logged, and the site named on each log entry. Undefined when the site has no gateway: the call goes to
  * Workers AI directly.
  */
-export function suggestGateway(env: { AI_GATEWAY_BASE_URL?: string }): GatewayOptions | undefined {
+function suggestGateway(env: { AI_GATEWAY_BASE_URL?: string }): GatewayOptions | undefined {
   const route = anthropicRoute({ AI_GATEWAY_BASE_URL: env.AI_GATEWAY_BASE_URL }, "dustinedwards");
   if (!route.gateway) return undefined;
   const id = /\/v1\/[^/]+\/([^/]+)\/anthropic$/.exec(route.baseURL)?.[1];
@@ -50,7 +50,7 @@ async function viewOf(env: SuggestEnv, object: R2ObjectBody): Promise<string> {
 }
 
 /** The model's answer as tags and alt, from its JSON, wherever in the text it put it. */
-export function readSuggestion(answer: unknown): { tags: string[]; alt: string | null } {
+function readSuggestion(answer: unknown): { tags: string[]; alt: string | null } {
   const body = typeof answer === "object" && answer !== null && "response" in answer ? (answer as { response: unknown }).response : answer;
   let parsed: unknown = body;
   if (typeof body === "string") {

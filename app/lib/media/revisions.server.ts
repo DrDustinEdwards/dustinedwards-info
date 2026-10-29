@@ -67,7 +67,7 @@ export async function revisionBytes(env: Env, key: string, rev: string): Promise
  * Keeps the bytes a file has now as an earlier revision: copied to MEDIA_BACKUP before anything overwrites them,
  * and recorded first if the file had no history. Answers the backup key.
  */
-export async function keepCurrentBytes(env: Env, row: MediaRow): Promise<string> {
+async function keepCurrentBytes(env: Env, row: MediaRow): Promise<string> {
   const current = await env.MEDIA.get(row.key);
   if (!current) throw new NotFoundError("No such media.");
   const backupKey = `replaced/${new Date().toISOString()}/${row.key}`;
