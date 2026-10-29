@@ -59,6 +59,9 @@ const READERS = {
   browser: (config, out) => {
     if (config.browser?.binding) out.set(`browser:${config.browser.binding}`, "");
   },
+  ai: (config, out) => {
+    if (config.ai?.binding) out.set(`ai:${config.ai.binding}`, "");
+  },
   // The dataset name is compared, not omitted: it is the table the SQL API reads.
   analytics_engine_datasets: (config, out) => {
     for (const ae of config.analytics_engine_datasets ?? []) {
