@@ -34,6 +34,8 @@ export type MediaObject = {
   focus: string | null;
   /** The index row's last write, which every metadata edit and a replace move. */
   updatedAt: string;
+  /** When the file went to the trash, or null when it is in the library. */
+  trashedAt: string | null;
 };
 
 type MediaPage = {
@@ -80,6 +82,7 @@ export function mediaObjectOf(row: MediaRow): MediaObject {
     deletable: row.storage !== "static",
     focus: focusText(row.focalX, row.focalY),
     updatedAt: row.updatedAt,
+    trashedAt: row.trashedAt,
   };
 }
 

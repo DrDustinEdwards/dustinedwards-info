@@ -1,7 +1,8 @@
 // Carrel's media group (site-api v0.2.0) over the site's own media code: list over listMedia, upload
 // over storeUpload, get and delete over the same reference check the admin library's delete runs.
-// The focal point, caption and replace (v0.10.0) write the media index and, for the first and last,
-// the object itself through site-api's R2 helpers. Nothing here scans or deletes by a path of its own.
+// Alt text, tags and the trash (v0.4.0), the lenses and sorts (v0.6.0), and the focal point, caption
+// and replace (v0.10.0) write the media index and, for the focal point and replace, the object itself
+// through site-api's R2 helpers. Nothing here scans or deletes by a path of its own.
 
 import {
   contentVersion,
@@ -16,7 +17,15 @@ import {
 } from "@dustinedwards/site-api";
 import { replaceObject, writeFocus, type R2BucketLike } from "@dustinedwards/site-api/r2";
 
-import { claimMediaKeyForDelete, mediaRecord, upsertMediaRecord } from "~/db";
+import {
+  claimMediaKeyForDelete,
+  countMediaPage,
+  mediaRecord,
+  restoreMediaRecord,
+  setMediaTags,
+  trashMediaRecord,
+  upsertMediaRecord,
+} from "~/db";
 import type { MediaRef } from "~/db/schema";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { mediaDeleteVerdict, mediaUsage } from "~/lib/media/actions.server";
@@ -31,7 +40,12 @@ import {
 } from "~/lib/media/core.server";
 import type { MediaCitation } from "~/lib/media/resolvers.server";
 import { storeUpload } from "~/lib/media/upload.server";
+import { parseTags } from "~/lib/media/tags.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
+import templateRefs from "../../../content/generated/template-refs.json";
+
+/** Keys repository code references, from the build: a file one of them names is not unattached. */
+const TEMPLATE_REF_KEYS = Object.keys(templateRefs.refs);
 
 /**
  * What the admin library accepts, less SVG: an SVG is served as an attachment and never inserted
@@ -43,9 +57,11 @@ const CARREL_MEDIA_LIMITS = {
 };
 
 /** An ISO time, or null for an index row with no upload event or one that does not parse. */
-function isoOrNull(value: string) {
-  const at = Date.parse(value);
-  return value && !Number.isNaN(at) ? new Date(at).toISOString() : null;
+function isoOrNull(value: string | null) {
+  if (!value) return null;
+  // SQLite's datetime('now') has no zone and is UTC.
+  const at = Date.parse(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(value) ? `${value.replace(" ", "T")}Z` : value);
+  return Number.isNaN(at) ? null : new Date(at).toISOString();
 }
 
 /**
@@ -53,7 +69,7 @@ function isoOrNull(value: string) {
  * every write here and on a replace, and the fields themselves are in it so two writes in one second differ.
  */
 function versionOf(object: MediaObject) {
-  return contentVersion([object.key, object.updatedAt, object.alt, object.caption, object.focus, object.size]);
+  return contentVersion([object.key, object.updatedAt, object.alt, object.caption, object.focus, object.size, object.tags, object.trashedAt]);
 }
 
 /** One library object in the contract's terms. Deletable only where the site's own delete could act. */
@@ -72,6 +88,8 @@ async function itemOf(object: MediaObject): Promise<MediaItem> {
     version: await versionOf(object),
     focus: object.focus,
     caption: object.caption,
+    tags: parseTags(object.tags),
+    trashedAt: isoOrNull(object.trashedAt),
   };
 }
 
@@ -128,15 +146,35 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
   const bucket = env.MEDIA as unknown as R2BucketLike;
   return {
     limits: CARREL_MEDIA_LIMITS,
+    lenses: ["unattached", "no-alt", "large"],
+    // Every upload's address carries its size (-<w>x<h>), so replace refuses a picture of another size.
+    replaceKeepsSize: true,
 
     async list(query) {
       const page = query.cursor && /^[1-9]\d{0,8}$/.test(query.cursor) ? Number(query.cursor) : 1;
+      const trashed = query.trashed === "only";
+      // The contract's name runs A to Z and the others largest or newest first, unless `dir` says otherwise.
+      const dir = query.dir ?? (query.sort === "name" ? "asc" : "desc");
       // Bucket rows only: a static asset's key is a repo path, which is not a media id.
-      const listed = await listMedia(env, { page, limit: query.limit, q: query.q, storedOnly: true });
+      const filter = {
+        storedOnly: true,
+        trashed,
+        templateKeys: TEMPLATE_REF_KEYS,
+        ...(query.q ? { q: query.q } : {}),
+        ...(query.tag ? { tag: query.tag } : {}),
+        ...(query.lens ? { lens: query.lens } : {}),
+      };
+      const [listed, total] = await Promise.all([
+        listMedia(env, { ...filter, page, limit: query.limit, ...(query.sort ? { sort: query.sort, dir } : {}) }),
+        countMediaPage(env, filter),
+      ]);
       return {
         // A bucket key the id grammar cannot carry is left out rather than failing the whole page.
         items: await Promise.all(listed.objects.filter((o) => MediaId.safeParse(o.key).success).map(itemOf)),
         nextCursor: listed.hasMore ? String(listed.page + 1) : null,
+        total,
+        // The trash is always newest first.
+        ...(query.sort && !trashed ? { sorted: { sort: query.sort, dir } } : {}),
       };
     },
 
@@ -207,6 +245,32 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
         throw new RefusedError(`${id} was cited or removed while this delete was being checked. Try again.`);
       }
       await deleteMediaObject(env, id);
+    },
+
+    // Alt is contextual, so saving it rewrites no post: only later insertions pick it up.
+    async setAlt(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await upsertMediaRecord(env, { key: id, alt: input.alt });
+      return { version: await versionAfter(env, id) };
+    },
+
+    async setTags(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await setMediaTags(env, id, input.tags);
+      return { version: await versionAfter(env, id) };
+    },
+
+    // The trash only hides a file from the library: its address still works and no page changes.
+    async trash(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await trashMediaRecord(env, id);
+      return { version: await versionAfter(env, id) };
+    },
+
+    async restore(id, input) {
+      await writable(env, id, input.expectedVersion);
+      await restoreMediaRecord(env, id);
+      return { version: await versionAfter(env, id) };
     },
 
     // The object's customMetadata `focus` is what site-runtime ./image crops around; the index keeps the same

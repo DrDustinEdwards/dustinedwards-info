@@ -63,39 +63,34 @@ function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
   }
 }
 
-/** One library page, newest first; `key` keeps offset pagination stable. */
-export async function listMediaPage(
-  env: Env,
-  options: {
-    page?: number;
-    limit?: number;
-    insertableOnly?: boolean;
-    role?: string;
-    unusedOnly?: boolean;
-    q?: string;
-    /** An exact tag, already normalized by the caller. */
-    tag?: string;
-    /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
-    lens?: string;
-    /** Keys repository code references. A parameter: scripts import `app/db` unbundled. */
-    templateKeys?: string[];
-    /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
-    sort?: string;
-    dir?: string;
-    /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
-    trashed?: boolean;
-    /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
-    storedOnly?: boolean;
-  } = {},
-) {
-  const limit = options.limit ?? 24;
-  const page = Math.max(1, options.page ?? 1);
-  const offset = (page - 1) * limit;
+/** What a library listing may filter and sort by: the page, the palette and Carrel's media group ask it. */
+type MediaListOptions = {
+  page?: number;
+  limit?: number;
+  insertableOnly?: boolean;
+  role?: string;
+  unusedOnly?: boolean;
+  q?: string;
+  /** An exact tag, already normalized by the caller. */
+  tag?: string;
+  /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
+  lens?: string;
+  /** Keys repository code references. A parameter: scripts import `app/db` unbundled. */
+  templateKeys?: string[];
+  /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
+  sort?: string;
+  dir?: string;
+  /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
+  trashed?: boolean;
+  /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
+  storedOnly?: boolean;
+};
 
+/** The WHERE of a listing, as SQL and never a post-filter, so a page is a full page and a count counts the same rows. */
+async function mediaWhere(env: Env, options: MediaListOptions) {
   // `role`, not `storage`: logos, favicons and diagram halves must never be inserted.
   const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
 
-  /* As SQL, not a post-filter, so a page is a full page. */
   const clauses = [];
   /* A branch, never optional, or trashed assets reappear in the picker. */
   clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
@@ -124,13 +119,20 @@ export async function listMediaPage(
     const twinKeys = JSON.stringify([...(await mediaTwins(env)).keys()]);
     clauses.push(sql`${media.key} IN (SELECT value FROM json_each(${twinKeys}))`);
   }
-  const where = clauses.length > 0 ? and(...clauses) : undefined;
+  return clauses.length > 0 ? and(...clauses) : undefined;
+}
+
+/** One library page, newest first; `key` keeps offset pagination stable. */
+export async function listMediaPage(env: Env, options: MediaListOptions = {}) {
+  const limit = options.limit ?? 24;
+  const page = Math.max(1, options.page ?? 1);
+  const offset = (page - 1) * limit;
 
   const db = getDb(env);
   const rows = await db
     .select()
     .from(media)
-    .where(where)
+    .where(await mediaWhere(env, options))
     /*
      * The role rank is only the default, never a prefix on an explicit sort. `key ASC` breaks ties,
      * because an unstable sort makes offset pagination skip and repeat rows.
@@ -142,6 +144,12 @@ export async function listMediaPage(
   // One extra row answers "is there another page" without a COUNT.
   const hasMore = rows.length > limit;
   return { rows: rows.slice(0, limit), page, hasMore };
+}
+
+/** How many rows a listing matches across every page. */
+export async function countMediaPage(env: Env, options: MediaListOptions = {}) {
+  const [row] = await getDb(env).select({ n: count() }).from(media).where(await mediaWhere(env, options));
+  return Number(row?.n ?? 0);
 }
 
 export async function mediaCounts(env: Env) {

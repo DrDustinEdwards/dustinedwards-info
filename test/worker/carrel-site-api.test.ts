@@ -31,10 +31,10 @@ const HEAD = "a".repeat(40);
 
 const siteEnv = () => testEnv as unknown as Parameters<typeof renderAndWrite>[0];
 
-const headersFor = (key: string) => ({
+const headersFor = (key: string, ip = "203.0.113.9") => ({
   authorization: `Bearer ${key}`,
   "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
+  "cf-connecting-ip": ip,
 });
 
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
@@ -370,7 +370,8 @@ function pngBytes(seed: string) {
   return bytes;
 }
 
-type MediaInit = { body?: BodyInit; type?: string; key?: string };
+/** `ip` gives a case its own share of the limiter, which every other case here spends. */
+type MediaInit = { body?: BodyInit; type?: string; key?: string; ip?: string };
 
 /** Through the route, with the recorded IMAGES binding and anything in `overrides` over the env. */
 function mediaCall(
@@ -382,7 +383,7 @@ function mediaCall(
   const request = new Request(url, {
     method,
     headers: {
-      ...headersFor(init.key ?? testEnv.CARREL_SITE_KEY),
+      ...headersFor(init.key ?? testEnv.CARREL_SITE_KEY, init.ip),
       "content-type": init.type ?? "application/json",
     },
     ...(method === "GET" ? {} : { body: init.body }),
@@ -467,6 +468,48 @@ describe("media: focal point, caption and replace", () => {
     const kept = (await testEnv.BACKUPS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
     expect(kept, "the old bytes were not kept").toBeDefined();
     expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(original);
+  });
+});
+
+/* Alt text, tags and the trash (site-api v0.4.0), and the lenses (v0.6.0), as the admin library keeps them. */
+
+type MediaListJson = { items: Array<{ id: string; tags?: string[]; trashedAt?: string | null }>; total?: number };
+
+const KIT_IP = "203.0.113.10";
+const listOf = async (query: string) => (await (await mediaCall("GET", `${PREFIX}/media?${query}`, { ip: KIT_IP })).json()) as MediaListJson;
+const kitWrite = (method: "PUT" | "POST", path: string, body: unknown) =>
+  mediaCall(method, `${PREFIX}${path}`, { body: JSON.stringify(body), ip: KIT_IP });
+
+describe("media: alt text, tags, the trash and the lenses", () => {
+  it("saves alt and tags, moves a file to the trash and back, and lists what each lens names", async () => {
+    const query = new URLSearchParams({ filename: "kit-case.png", changeId: "chg-kit-case" });
+    const uploaded = await mediaCall("POST", `${PREFIX}/media?${query}`, { body: pngBytes("kit-case"), type: "image/png", ip: KIT_IP });
+    expect(uploaded.status).toBe(201);
+    const { id, version: first } = (await uploaded.json()) as MediaJson;
+    let version = first;
+    expect((await listOf("lens=no-alt")).items.map((i) => i.id)).toContain(id);
+
+    const alt = await kitWrite("PUT", `/media/${id}/alt`, { alt: "A lawn of plaques", expectedVersion: version, changeId: "chg-alt" });
+    expect(alt.status, await alt.clone().text()).toBe(200);
+    ({ version } = (await alt.json()) as MediaJson);
+    expect((await mediaRowOf(id))?.alt).toBe("A lawn of plaques");
+    expect((await listOf("lens=no-alt")).items.map((i) => i.id)).not.toContain(id);
+
+    const tags = await kitWrite("PUT", `/media/${id}/tags`, { tags: ["lawn", "plaques"], expectedVersion: version, changeId: "chg-tags" });
+    expect(tags.status, await tags.clone().text()).toBe(200);
+    ({ version } = (await tags.json()) as MediaJson);
+    expect(await listOf("tag=lawn")).toMatchObject({ items: [{ id, tags: ["lawn", "plaques"] }], total: 1 });
+    // A write at a version the file has moved past is a conflict, and changes nothing.
+    expect((await kitWrite("PUT", `/media/${id}/tags`, { tags: [], expectedVersion: "stale", changeId: "chg-stale" })).status).toBe(409);
+
+    const trashed = await kitWrite("POST", `/media/${id}/trash`, { expectedVersion: version, changeId: "chg-trash" });
+    expect(trashed.status, await trashed.clone().text()).toBe(200);
+    ({ version } = (await trashed.json()) as MediaJson);
+    expect((await listOf("")).items.map((i) => i.id)).not.toContain(id);
+    expect((await listOf("trashed=only")).items).toMatchObject([{ id, trashedAt: expect.stringMatching(/Z$/) }]);
+
+    expect((await kitWrite("POST", `/media/${id}/restore`, { expectedVersion: version, changeId: "chg-restore" })).status).toBe(200);
+    expect((await listOf("trashed=only")).items).toEqual([]);
   });
 });
 
