@@ -84,10 +84,10 @@ async function main() {
   const pages = [...(await renderContentPages()), ...(await renderOwnRoutePages())];
   const { documents, images, failures } = altTextFailures({ posts: readArtifact().posts, pages });
 
-  /* Measured by running this gate (2026-10-29: 50 published posts and pages, 6 images). */
+  /* Proves the gate read the content; not a count of it, so removing an image in Carrel never fails the build (2026-10-29: 50 documents, 6 images). */
   const breaches = [
-    assertFloor("check:alt-text", "published documents read", documents, 50),
-    assertFloor("check:alt-text", "images read", images, 6),
+    assertFloor("check:alt-text", "published documents read", documents, 1),
+    assertFloor("check:alt-text", "images read", images, 1),
   ].filter(Boolean);
 
   for (const failure of failures) console.log(`  FAIL  ${failure}`);
