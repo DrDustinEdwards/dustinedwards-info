@@ -11,13 +11,13 @@ import {
 
 import { ErrorPage } from "~/components/error-page";
 import { getNonce } from "~/lib/context";
+import { PRELOADS } from "~/lib/preloads";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 
-import uiFontUrl from "capsomer/fonts/schibsted-grotesk-latin-wght-normal.woff2?url";
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
 import katexCssUrl from "./styles/katex.generated.css?url";
 
@@ -75,16 +75,8 @@ export const links: Route.LinksFunction = () => [
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/feed.json`,
   },
-  // `crossorigin` is mandatory: fonts are fetched in anonymous CORS mode whatever their origin, so a
-  // preload without it is a different request and the file is fetched twice. Capsomer's UI face
-  // (capsomer/fonts.css), which every page draws.
-  {
-    rel: "preload",
-    href: uiFontUrl,
-    as: "font",
-    type: "font/woff2",
-    crossOrigin: "anonymous",
-  },
+  // Every page's preloads, also sent as the Early Hints `Link` header (app/lib/preloads.ts).
+  ...PRELOADS.links,
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

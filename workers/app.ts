@@ -29,6 +29,7 @@ import { handleMediaEvents } from "./media-events";
 import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
+import { PRELOADS } from "~/lib/preloads";
 
 export { AskBudget } from "./ask-budget";
 
@@ -87,8 +88,8 @@ const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
 
 /**
  * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
- * set, the report endpoint, the policy (feeds excepted), the prefetch rules on a public page and the
- * uncached default.
+ * set, the report endpoint, the policy (feeds excepted), the prefetch rules on a public page, the
+ * preloads on every page and the uncached default.
  */
 function applyDocumentHeaders(
   headers: Headers,
@@ -104,6 +105,9 @@ function applyDocumentHeaders(
   if (publicPage && (headers.get("content-type") ?? "").startsWith("text/html")) {
     headers.set(SPECULATION_RULES_HEADER.name, SPECULATION_RULES_HEADER.value);
   }
+  // Every HTML page: the same preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
+  // because a post already sends its markdown alternate and webmention endpoint in `Link`.
+  if ((headers.get("content-type") ?? "").startsWith("text/html")) headers.append("Link", PRELOADS.header);
   if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
   applyEdgePolicy(headers);
 }
