@@ -68,9 +68,11 @@ export const middleware: Route.MiddlewareFunction[] = [
     const timings = context.get(timingsContext).timings;
     const access = await timed(timings, "auth_access", () => accessIdentity(env, request));
     if (access.kind === "refused") {
-      /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page. */
-      throw new Response(`Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
-        status: 401,
+      /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page.
+         A verified person off ADMIN_EMAILS is a 403: Access let them in, this site does not. */
+      const notAdmin = access.reason === "not-admin";
+      throw new Response(notAdmin ? "Refused: this account is not an administrator of this site." : `Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
+        status: notAdmin ? 403 : 401,
         headers: {
           "content-type": "text/plain; charset=utf-8",
           "cache-control": "private, no-store",
