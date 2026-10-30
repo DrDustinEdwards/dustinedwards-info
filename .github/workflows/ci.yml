@@ -154,7 +154,7 @@ jobs:
   #   check:wrapper        the no-policy law and the security floor, read off the real source,
   #                        the config, and the site's operator tool list
   #   check:wrapper:plant  that the gate above actually fails, one planted violation at a time
-  #   test                 the tools, ownership, scope, the log and registration, against a fake site
+  #   test                 the tools, their declared scopes and output schemas, against a fake site
   #   build                a dry-run bundle: typecheck is not a build
   mcp:
     name: Admin MCP, clean checkout
