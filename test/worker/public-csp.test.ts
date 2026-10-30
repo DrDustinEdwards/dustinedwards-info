@@ -4,6 +4,7 @@ import { expect, it, vi } from "vitest";
 
 import { NAV } from "~/lib/nav";
 import { SPECULATION_RULES_HEADER, SPECULATION_RULES_PATH } from "@dustinedwards/site-runtime/prefetch";
+import { PRELOADS } from "~/lib/preloads";
 
 import worker from "../../workers/app";
 import { checkSecurityHeaders, failures } from "@dustinedwards/site-runtime/check";
@@ -98,11 +99,15 @@ it("renders a public page with no inline script, no hash and no nonce, and /site
   expect(markers).toEqual(["theme", "header", "blog"]);
 });
 
-/* Prefetch by header (site-runtime ./prefetch): every public page names the one rules file, which the Worker serves. */
-it("names the prefetch rules on a public page, and serves them", async () => {
+/*
+ * Prefetch by header (site-runtime ./prefetch): every public page names the one rules file, which the Worker serves.
+ * And the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads.
+ */
+it("names the prefetch rules and the preloads on a public page, and serves the rules", async () => {
   for (const path of ["/", "/no-such-page"]) {
     const { response } = await render(path);
     expect(response.headers.get(SPECULATION_RULES_HEADER.name), path).toBe(SPECULATION_RULES_HEADER.value);
+    expect(response.headers.get("Link"), path).toBe(PRELOADS.header);
   }
   const ctx = createExecutionContext();
   const rules = await worker.fetch(new Request(`https://example.com${SPECULATION_RULES_PATH}`) as never, env as never, ctx);
