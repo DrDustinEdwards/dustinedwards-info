@@ -5,6 +5,8 @@ import {
   cacheTags,
 } from "~/lib/seo";
 
+import type { ServerBuild } from "react-router";
+
 import { stubServerBuild } from "./server-build";
 
 /**
@@ -130,9 +132,9 @@ const build = stubServerBuild({
 export default build;
 /* `createRequestHandler` takes the module namespace, not its default, so the fields are
  * reachable both ways. */
-export const { entry, assets, basename, publicPath, assetsBuildDirectory, ssr, isSpaMode, prerender, routeDiscovery } = build;
+export const { entry, assets, basename, publicPath, assetsBuildDirectory, ssr, isSpaMode, prerender, routeDiscovery, unstable_apiOnly, unstable_apiServerOrigin } = build;
 /* `future` is annotated rather than destructured with the rest: its inferred
  * type names a path inside react-router's dist, which tsc refuses to emit as
  * non-portable. The value is the empty object the real build ships. */
-export const future: Record<string, never> = build.future;
+export const future: ServerBuild["future"] = build.future;
 export { routes };
