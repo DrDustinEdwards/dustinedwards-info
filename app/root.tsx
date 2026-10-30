@@ -64,6 +64,13 @@ export const links: Route.LinksFunction = () => [
   {
     tagName: "link",
     rel: "alternate",
+    type: "application/atom+xml",
+    title: `${SITE.name} blog`,
+    href: `${SITE_ORIGIN}/writing/atom.xml`,
+  },
+  {
+    tagName: "link",
+    rel: "alternate",
     type: "application/feed+json",
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/feed.json`,

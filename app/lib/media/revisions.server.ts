@@ -5,6 +5,7 @@
 // at the version the editor loaded, never the mirror's twin of a live key (backup.server.ts).
 
 import { NotFoundError } from "@dustinedwards/site-api";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import { replaceObject, type R2BucketLike } from "@dustinedwards/site-api/r2";
 
 import { addMediaRevision, followMediaObject, keepMediaRevision, mediaRevisionsOf, type MediaRevisionRow } from "~/db";
@@ -13,12 +14,6 @@ import type { media } from "~/db/schema";
 type MediaRow = typeof media.$inferSelect;
 
 export type RevisionReason = "upload" | "import" | "replace" | "transform" | "resize" | "revert";
-
-/** Lower case hex of the bytes' SHA-256, as the media index keeps it. */
-export async function sha256Of(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 /** D1's "YYYY-MM-DD HH:MM:SS" (UTC) or an ISO time, as an ISO time. */
 function isoOf(value: string | null | undefined): string {
@@ -92,7 +87,7 @@ export async function swapBytes(
   await keepCurrentBytes(env, row);
   // The binding's `put` takes a wider `onlyIf` than the helper's narrow interface names; the shapes it uses agree.
   await replaceObject(env.MEDIA as unknown as R2BucketLike, row.key, { bytes: next.bytes, contentType: next.contentType });
-  const sha256 = await sha256Of(next.bytes);
+  const sha256 = await sha256Hex(next.bytes);
   await addMediaRevision(env, {
     mediaKey: row.key,
     at: new Date().toISOString(),

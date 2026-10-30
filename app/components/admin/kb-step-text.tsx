@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MutableRefObject } from "react";
 
 import { Button } from "capsomer/react/button";
+import { escapeHtml } from "@dustinedwards/site-runtime/html";
 
 import { PIECE_NAMES, pieceLabel, stepPieces, writePiece, type Piece } from "~/kb/step-marks.mjs";
 
@@ -17,15 +18,13 @@ const UNITS = ["µl", "ml", "l", "mg", "g", "µg", "ng", "mM", "M", "%", "U", "t
 
 type Chip = Exclude<Piece, { kind: "text" }>;
 
-const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
 /** The step as the editor's markup: its words as text, each mark a chip that carries the text it was read from. */
 function chipHtml(text: string) {
   return stepPieces(text)
     .map((piece) => {
-      if (piece.kind === "text") return escape(piece.raw);
+      if (piece.kind === "text") return escapeHtml(piece.raw);
       const label = pieceLabel(piece);
-      return `<span class="kb-chip" data-kind="${piece.kind}" data-raw="${escape(piece.raw)}" contenteditable="false" role="button" tabindex="0" aria-label="${escape(`${PIECE_NAMES[piece.kind]}: ${label}`)}">${escape(label)}</span>`;
+      return `<span class="kb-chip" data-kind="${piece.kind}" data-raw="${escapeHtml(piece.raw)}" contenteditable="false" role="button" tabindex="0" aria-label="${escapeHtml(`${PIECE_NAMES[piece.kind]}: ${label}`)}">${escapeHtml(label)}</span>`;
     })
     .join("");
 }

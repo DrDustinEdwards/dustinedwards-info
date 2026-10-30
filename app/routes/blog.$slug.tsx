@@ -148,13 +148,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
       siteName: SITE.name,
       type: "article",
       article: articleFacts(toArticleSeo(post)),
+      markdown: `${canonical}.md`,
     }),
-    {
-      tagName: "link",
-      rel: "alternate",
-      type: "text/markdown",
-      href: `${canonical}.md`,
-    },
     /* A sender looks in two places and stops at the first, so both are emitted. */
     { tagName: "link", rel: "webmention", href: WEBMENTION_URL },
   ];

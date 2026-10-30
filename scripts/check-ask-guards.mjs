@@ -7,8 +7,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
-import { blockFrom, functionBody } from "./lib/source-body.mjs";
+import { functionBody } from "./lib/source-body.mjs";
 
+import { originVerdict } from "@dustinedwards/site-runtime/origin";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
@@ -124,15 +125,12 @@ const { eq } = tally;
     );
   }
 
-  /* AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries none, the progressive-enhancement rule. */
-  {
-    const predicate = stripComments(readFileSync(join(root, "app/lib/origin.mjs"), "utf8"));
-    const absent = /if\s*\(\s*origin\s*===\s*null\s*\|\|\s*origin\s*===\s*undefined\s*\|\|\s*origin\s*===\s*""\s*\)/.exec(
-      predicate,
-    );
+  /* AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries none, the progressive-enhancement rule.
+     The predicate is site-runtime's, so it is checked by calling it rather than by reading its source. */
+  for (const absent of [null, undefined, ""]) {
     eq(
-      "origin: an absent Origin is allowed by the predicate",
-      absent !== null && /ok:\s*true/.test(blockFrom(predicate, absent.index)),
+      `origin: an absent Origin (${JSON.stringify(absent) ?? "undefined"}) is allowed by the predicate`,
+      originVerdict(absent, "https://dustinedwards.info/ask").ok,
       true,
     );
   }

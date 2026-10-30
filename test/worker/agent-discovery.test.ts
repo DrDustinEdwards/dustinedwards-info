@@ -133,8 +133,8 @@ describe("discovery an agent starts from", () => {
 
   it("every page's head declares the feeds", () => {
     const feeds = (rootLinks() as unknown as Descriptor[]).filter((d) => d.rel === "alternate");
-    expect(feeds.map((d) => d.type).sort()).toEqual(["application/feed+json", "application/rss+xml"]);
-    for (const feed of feeds) expect(String(feed.href)).toMatch(/^https:\/\/.+\/writing\/(rss\.xml|feed\.json)$/);
+    expect(feeds.map((d) => d.type).sort()).toEqual(["application/atom+xml", "application/feed+json", "application/rss+xml"]);
+    for (const feed of feeds) expect(String(feed.href)).toMatch(/^https:\/\/.+\/writing\/(rss\.xml|atom\.xml|feed\.json)$/);
   });
 
   it("llms.txt and llms-full.txt name the home page as canonical", async () => {
