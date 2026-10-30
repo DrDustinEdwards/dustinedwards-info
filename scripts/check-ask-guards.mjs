@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { functionBody } from "./lib/source-body.mjs";
 
-import { originVerdict } from "../app/lib/origin.mjs";
+import { originVerdict } from "@dustinedwards/site-runtime/origin";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
