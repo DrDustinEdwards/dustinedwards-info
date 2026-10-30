@@ -1,6 +1,6 @@
 import { Outlet } from "react-router";
 
-import { ErrorPage } from "~/components/error-page";
+import { SiteErrorPage } from "~/components/error-page";
 
 import type { Route } from "./+types/legacy-public";
 
@@ -28,6 +28,10 @@ import "capsomer/theme-switch.css";
 // The manual theme, public pages only: running head, parts, form boxes, index, checklist, plate, signs, letterhead.
 import "capsomer/manual.css";
 import "capsomer/family-footer.css";
+// The error page (components/error-page.tsx): Capsomer's, the failed Empty with its buttons.
+import "capsomer/button.css";
+import "capsomer/empty.css";
+import "capsomer/error-page.css";
 
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.
@@ -49,5 +53,5 @@ export default function PublicLayout() {
  * old public CSS. root.tsx renders the same ErrorPage for an error above this layout.
  */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <ErrorPage error={error} />;
+  return <SiteErrorPage error={error} />;
 }

@@ -1,4 +1,4 @@
-import { SERP_TITLE_LIMIT, headTags, searchTitle as prelumSearchTitle, truncateForSerp } from "@drdustinedwards/site-helpers/head";
+import { defineHead, searchTitle as prelumSearchTitle, type PageHead } from "@drdustinedwards/site-helpers/head";
 import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
@@ -66,6 +66,17 @@ export function postSocial(post: PostSocialFields) {
 }
 
 /**
+ * Prelum's head for every public page: the site's facts once. No suffix, because a route passes its `<title>` already
+ * composed (`searchTitle`), which this still cuts to the search limit; the description is cut for search and the share
+ * card keeps it whole. The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
+ */
+export function siteHead(page: PageHead) {
+  // Built inside the call, not at module level: the watchdog Worker imports this module for SITE_ORIGIN, and a
+  // top-level call would put Prelum's head builder in its bundle (.worker-size.watchdog.json).
+  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE })(page);
+}
+
+/**
  * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without
  * an image renders as a bare link.
  */
@@ -82,19 +93,8 @@ export function pageMeta(page: {
   /** Prelum writes `noindex, follow`. */
   noindex?: boolean;
 }) {
-  return headTags({
-    origin: SITE_ORIGIN,
-    path: page.path,
-    title: truncateForSerp(page.title, SERP_TITLE_LIMIT),
-    // A title cut for search keeps its whole wording on the card.
-    socialTitle: page.socialTitle ?? page.title,
-    description: page.description,
-    image: page.image ?? DEFAULT_OG_IMAGE,
-    siteName: SITE.name,
-    type: page.ogType,
-    markdown: page.markdown,
-    noindex: page.noindex,
-  });
+  const { ogType, ...rest } = page;
+  return siteHead({ ...rest, type: ogType });
 }
 
 export { SERP_DESCRIPTION_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";

@@ -1,4 +1,3 @@
-import { headTags } from "@drdustinedwards/site-helpers/head";
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
@@ -39,6 +38,7 @@ import {
   articleFacts,
   breadcrumbJsonLd,
   postSocial,
+  siteHead,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
@@ -137,15 +137,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
     postSocial(post);
 
   return [
-    ...headTags({
-      origin: SITE_ORIGIN,
+    ...siteHead({
       path: `/writing/${post.slug}`,
       title: pageTitle,
+      fullTitle: true,
       description,
       socialTitle,
       socialDescription,
       image,
-      siteName: SITE.name,
       type: "article",
       article: articleFacts(toArticleSeo(post)),
       markdown: `${canonical}.md`,

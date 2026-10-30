@@ -1,5 +1,6 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { cache } from "cloudflare:workers";
+import { purgeTags, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
 
 import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
@@ -7,7 +8,6 @@ import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { cacheTags } from "~/lib/seo";
-import { errorMessage } from "~/lib/error-message.mjs";
 
 // A purge never throws and never blocks a write: a failed invalidation is a stale page and a log
 // line, not a 500 after a publish that already succeeded.
@@ -24,63 +24,32 @@ export function combinePurges(...outcomes: PurgeOutcome[]): PurgeOutcome {
   return outcomes.every((outcome) => outcome === true) ? true : null;
 }
 
-type PurgeResult = { success: boolean; errors?: Array<{ code: number; message: string }> };
-
 /**
+ * site-runtime's purge (./edge-cache): never throws, `null` where Miniflare has no purge API, and a refusal or a
+ * throw logged as `cache-purge-refused` or `cache-purge-threw`.
+ *
  * @param tags the cache tags to invalidate
  * @param why  one phrase naming the write that caused this, for the log line
  */
-async function purgeTags(tags: string[], why: string): Promise<PurgeOutcome> {
-  // Miniflare has no Workers Cache, so the API may be absent; a TypeError here would fail a save.
-  const purge = (cache as typeof cache & { purge?: (o: unknown) => Promise<PurgeResult> })?.purge;
-  if (typeof purge !== "function") {
-    console.log(JSON.stringify({ event: "cache-purge-skipped", why, reason: "no purge API on this runtime", tags }));
-    return null;
-  }
-
-  try {
-    // `purge` resolves `{ success: false }` on a refusal (usually the rate limit) rather than rejecting.
-    const result = await purge({ tags });
-    if (!result?.success) {
-      console.error(
-        JSON.stringify({
-          alert: "cache-purge-refused",
-          why,
-          tags,
-          errors: result?.errors ?? [],
-        }),
-      );
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        alert: "cache-purge-threw",
-        why,
-        tags,
-        detail: errorMessage(error),
-      }),
-    );
-    return false;
-  }
+function purge(tags: string[], why: string): Promise<PurgeOutcome> {
+  return purgeTags(cache as PurgeCache, tags, why);
 }
 
 /**
  * @param slug the post whose page changed
  */
 export async function purgePost(slug: string, why: string): Promise<PurgeOutcome> {
-  return purgeTags([`post:${slug}`], why);
+  return purge([`post:${slug}`], why);
 }
 
 // Not `purgeEverything`, which would also drop the hand-authored pages no publish changes.
 export async function purgePosts(why: string): Promise<PurgeOutcome> {
-  return purgeTags([cacheTags()], why);
+  return purge([cacheTags()], why);
 }
 
 /** Every procedure page, sheet and twin carries this one tag (app/kb/procedures/route.ts). */
 export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
-  return purgeTags(["procedures"], why);
+  return purge(["procedures"], why);
 }
 
 /**
@@ -88,7 +57,7 @@ export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
  * the registry's items by their own addresses and states none of their facts, so no other tag moves.
  */
 export async function purgeRegistry(why: string): Promise<PurgeOutcome> {
-  return purgeTags([REGISTRY_CACHE_TAG], why);
+  return purge([REGISTRY_CACHE_TAG], why);
 }
 
 /**
@@ -97,12 +66,12 @@ export async function purgeRegistry(why: string): Promise<PurgeOutcome> {
  * save purges both.
  */
 export async function purgePublications(why: string): Promise<PurgeOutcome> {
-  return purgeTags([PUBLICATIONS_CACHE_TAG, cacheTags()], why);
+  return purge([PUBLICATIONS_CACHE_TAG, cacheTags()], why);
 }
 
 /** Every content page and its twin carries this one tag (app/lib/pages/route.ts). */
 export async function purgePages(why: string): Promise<PurgeOutcome> {
-  return purgeTags([CONTENT_PAGES_CACHE_TAG], why);
+  return purge([CONTENT_PAGES_CACHE_TAG], why);
 }
 
 /**
@@ -111,7 +80,7 @@ export async function purgePages(why: string): Promise<PurgeOutcome> {
  * purges both, because purging only the program page would leave the home page's counts stale.
  */
 export async function purgeRoster(why: string): Promise<PurgeOutcome> {
-  return purgeTags([CONTENT_PAGES_CACHE_TAG, cacheTags()], why);
+  return purge([CONTENT_PAGES_CACHE_TAG, cacheTags()], why);
 }
 
 /**
@@ -119,15 +88,15 @@ export async function purgeRoster(why: string): Promise<PurgeOutcome> {
  * content-pages tag, so a phage save purges that tag (and only it). A phage appears nowhere else.
  */
 export async function purgePhages(why: string): Promise<PurgeOutcome> {
-  return purgeTags([CONTENT_PAGES_CACHE_TAG], why);
+  return purge([CONTENT_PAGES_CACHE_TAG], why);
 }
 
 /** /llms.txt carries this one tag (app/routes/llms.ts). */
 export async function purgeLlms(why: string): Promise<PurgeOutcome> {
-  return purgeTags([LLMS_CACHE_TAG], why);
+  return purge([LLMS_CACHE_TAG], why);
 }
 
 /** The CV page, its charts and its markdown twin carry this one tag (app/lib/cv/route.ts). */
 export async function purgeCv(why: string): Promise<PurgeOutcome> {
-  return purgeTags([CV_CACHE_TAG], why);
+  return purge([CV_CACHE_TAG], why);
 }

@@ -71,16 +71,6 @@
   min-inline-size: 2ch;
 }
 
-.error-stack {
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  background: var(--paper);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-}
-
 .page-title {
   margin: 0 0 var(--space-6);
   color: var(--text);
