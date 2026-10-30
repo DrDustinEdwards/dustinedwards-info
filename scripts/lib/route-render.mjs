@@ -13,7 +13,8 @@ import { islandsModuleSource } from "./islands.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const URL_ASSET = "asset-url-stubbed-by-route-render";
+// A root-relative path, so code that validates the URL it imported (site-runtime preloads) takes it.
+const URL_ASSET = "/asset-url-stubbed-by-route-render";
 
 /**
  * @param {string} spec
