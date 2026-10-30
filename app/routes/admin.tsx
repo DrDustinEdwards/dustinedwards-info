@@ -284,7 +284,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           // fetch cannot follow into a navigation, so a real form post (reloadDocument) does it.
           onSignOut: () => (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
         }}
-        status={<span className="cap-muted">Signed in as {loaderData.email}</span>}
         prefKey="admin-rail"
       >
         <MessageProvider>

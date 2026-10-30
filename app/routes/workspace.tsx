@@ -142,7 +142,6 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
           appLinks: [{ label: "View site", href: "/" }],
           onSignOut: () => window.location.assign(ACCESS_LOGOUT_PATH),
         }}
-        status={<span className="cap-muted">Signed in as {loaderData.email}</span>}
         prefKey="lab-rail"
       >
         <MessageProvider>

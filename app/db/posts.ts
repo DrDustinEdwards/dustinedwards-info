@@ -477,9 +477,15 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
   };
 }
 
-/** Admin only, so exempt from visibility. Via `notTrashed()` to match the media page. */
+/**
+ * Admin only, so exempt from visibility. The rows the media page lists: not trashed, and stored
+ * files only, since the site's static assets (fonts, favicons, diagrams) are not in the library.
+ */
 export async function adminNavCounts(env: Env) {
-  const mediaRow = await getDb(env).select({ n: count() }).from(media).where(notTrashed());
+  const mediaRow = await getDb(env)
+    .select({ n: count() })
+    .from(media)
+    .where(and(notTrashed(), ne(media.storage, "static")));
   return { media: Number(mediaRow[0]?.n ?? 0) };
 }
 
