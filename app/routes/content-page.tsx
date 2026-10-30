@@ -78,14 +78,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { page, draft } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, image: cardUrl(page) }),
-    {
-      tagName: "link",
-      rel: "alternate",
-      type: "text/markdown",
-      href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
-    },
-    ...(draft ? [{ name: "robots", content: "noindex" }] : []),
+    ...pageMeta({
+      title: page.seoTitle,
+      description: page.description,
+      path: page.path,
+      image: cardUrl(page),
+      markdown: contentPageMarkdownPath(page.path),
+      noindex: draft,
+    }),
   ];
 }
 

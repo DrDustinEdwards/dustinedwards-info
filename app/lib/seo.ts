@@ -77,6 +77,10 @@ export function pageMeta(page: {
   ogType?: "website" | "article";
   /** `og:title` and `twitter:title`, where they keep more than the search title (a paper's whole title). */
   socialTitle?: string;
+  /** The page's Markdown twin, a path on the site: Prelum links it as `<link rel="alternate" type="text/markdown">`. */
+  markdown?: string;
+  /** Prelum writes `noindex, follow`. */
+  noindex?: boolean;
 }) {
   return headTags({
     origin: SITE_ORIGIN,
@@ -88,6 +92,8 @@ export function pageMeta(page: {
     image: page.image ?? DEFAULT_OG_IMAGE,
     siteName: SITE.name,
     type: page.ogType,
+    markdown: page.markdown,
+    noindex: page.noindex,
   });
 }
 
