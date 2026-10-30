@@ -6,7 +6,7 @@
 
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 
-import { toHex } from "@dustinedwards/site-runtime/encoding";
+import { sha256Hex, toBase64 } from "@dustinedwards/site-runtime/encoding";
 import { OWNER_ORCID, SITE_ORIGIN } from "../seo.ts";
 import { cvMarkdownBody, cvMarkdownDocument } from "./markdown.mjs";
 
@@ -22,20 +22,12 @@ export const FINGERPRINT_LABEL = "CV data";
  * @returns {Promise<string>}
  */
 export async function cvFingerprint(CV) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(cvMarkdownDocument(CV)));
-  return toHex(digest).slice(0, 8);
-}
-
-/** @param {Uint8Array} bytes */
-function base64(bytes) {
-  let binary = "";
-  for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000));
-  return btoa(binary);
+  return (await sha256Hex(cvMarkdownDocument(CV))).slice(0, 8);
 }
 
 /** @param {string} family @param {Uint8Array} bytes @param {string} style */
 export function fontFaceRule(family, bytes, style) {
-  return `@font-face{font-family:"${family}";src:url(data:font/woff2;base64,${base64(bytes)}) format("woff2");font-style:${style};font-weight:100 900;}`;
+  return `@font-face{font-family:"${family}";src:url(data:font/woff2;base64,${toBase64(bytes)}) format("woff2");font-style:${style};font-weight:100 900;}`;
 }
 
 /** The three faces the print document uses: file name, family and style, for whoever reads them. */

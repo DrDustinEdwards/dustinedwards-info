@@ -32,6 +32,7 @@ import {
 } from "@dustinedwards/site-api";
 import { writeFocus, type R2BucketLike } from "@dustinedwards/site-api/r2";
 import { editImage } from "@dustinedwards/site-runtime/image";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 
 import {
   addMediaRevision,
@@ -71,7 +72,7 @@ import {
 } from "~/lib/media/core.server";
 import type { MediaCitation } from "~/lib/media/resolvers.server";
 import { readEmbedded } from "~/lib/media/embedded.server";
-import { historyOf, revisionBytes, sha256Of, swapBytes } from "~/lib/media/revisions.server";
+import { historyOf, revisionBytes, swapBytes } from "~/lib/media/revisions.server";
 import { suggestFor } from "~/lib/media/suggest.server";
 import { storeUpload } from "~/lib/media/upload.server";
 import { normalizeTags, parseTags } from "~/lib/media/tags.mjs";
@@ -363,7 +364,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
           width: resizedFrom.width,
           height: resizedFrom.height,
           reason: input.sourceUrl ? "import" : "upload",
-          sha256: input.sha256 ?? (await sha256Of(input.bytes)),
+          sha256: input.sha256 ?? (await sha256Hex(input.bytes)),
           backupKey,
         });
         await addMediaRevision(env, { mediaKey: stored.key, at, bytes: stored.bytes, width: stored.width, height: stored.height, reason: "resize", sha256: before.sha256 });

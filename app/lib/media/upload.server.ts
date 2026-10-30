@@ -1,3 +1,4 @@
+import { toHex } from "@dustinedwards/site-runtime/encoding";
 import { upsertMediaRecord } from "~/db";
 import { classify, contentKey, roleOf } from "./classify.mjs";
 import { measureDimensions } from "./core.server";
@@ -56,7 +57,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   const digest = await crypto.subtle.digest("SHA-256", file.bytes);
   const key = contentKey(digest, extension, dimensions, file.name);
   // The whole hash on the row (site-api v0.13.0 duplicates); the key carries only its first 16 hex.
-  const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const sha256 = toHex(digest);
 
   // Idempotent: the key is a function of the bytes and the name, so there is no exists check.
   await env.MEDIA.put(key, file.bytes, {
