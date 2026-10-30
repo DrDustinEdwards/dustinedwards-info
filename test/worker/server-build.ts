@@ -34,6 +34,9 @@ export function stubServerBuild({
     isSpaMode: false,
     prerender: [],
     routeDiscovery: { mode: "initial", manifestPath: "/__manifest" },
+    /* React Router 8.5 reads these on every request: the real build ships false and no origin unless the app is API-only. */
+    unstable_apiOnly: false,
+    unstable_apiServerOrigin: undefined,
     /* Present though undefined: a vi.mock module throws on a read of a key it lacks. */
     unstable_getCriticalCss: undefined,
   } as unknown as ServerBuild;
