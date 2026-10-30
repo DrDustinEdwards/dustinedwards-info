@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   no-bloat:
-    uses: DrDustinEdwards/devkit/.github/workflows/no-bloat.yml@766881e150d2de96689523c4e3530cc748c64cc0 # v0.17.0
+    uses: DrDustinEdwards/devkit/.github/workflows/no-bloat.yml@64997ae3facf4360eb676c57b7a5b5e8ec3350de # v0.18.0
     with:
       # The generated files the app imports, built as ci.yml builds them, local only. typegen writes the routes'
       # +types modules, which knip otherwise reports as unresolved imports.

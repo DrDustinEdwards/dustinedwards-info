@@ -7,6 +7,7 @@ import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
+import { HOME_PRELOADS } from "~/lib/preloads";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
@@ -39,6 +40,8 @@ import "~/styles/home.css";
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined);
 }
+
+export const links: Route.LinksFunction = () => HOME_PRELOADS.links;
 
 export function meta() {
   return pageMeta({
