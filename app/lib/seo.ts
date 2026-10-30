@@ -1,4 +1,4 @@
-import { defineHead, searchTitle as prelumSearchTitle } from "@drdustinedwards/site-helpers/head";
+import { defineHead, searchTitle as prelumSearchTitle, type PageHead } from "@drdustinedwards/site-helpers/head";
 import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
@@ -70,7 +70,11 @@ export function postSocial(post: PostSocialFields) {
  * composed (`searchTitle`), which this still cuts to the search limit; the description is cut for search and the share
  * card keeps it whole. The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
  */
-export const siteHead = defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE });
+export function siteHead(page: PageHead) {
+  // Built inside the call, not at module level: the watchdog Worker imports this module for SITE_ORIGIN, and a
+  // top-level call would put Prelum's head builder in its bundle (.worker-size.watchdog.json).
+  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE })(page);
+}
 
 /**
  * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without
