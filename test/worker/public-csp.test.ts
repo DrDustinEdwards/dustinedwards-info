@@ -126,7 +126,7 @@ it("names the prefetch rules and the preloads on a public page, and serves the r
 it("gives a 404 a search form and the header's sections", async () => {
   const { response, html, policy } = await render("/2019/05/phage-isolation-protocol");
   expect(response.status).toBe(404);
-  expect(html).toContain(">This page is not here.<");
+  expect(html).toContain(">Page not found<");
 
   const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
   const form = /<form\b([^>]*)>([\s\S]*?)<\/form>/.exec(main);

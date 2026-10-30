@@ -1,5 +1,4 @@
 import {
-  isRouteErrorResponse,
   Links,
   Meta,
   Outlet,
@@ -9,7 +8,10 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
-import { ErrorPage } from "~/components/error-page";
+import { errorTitle } from "capsomer/react/error-page";
+import { ThemeColor } from "capsomer/react/theme-switch";
+
+import { SiteErrorPage } from "~/components/error-page";
 import { getNonce } from "~/lib/context";
 import { PRELOADS } from "~/lib/preloads";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
@@ -42,9 +44,7 @@ export function loader({ request, context }: Route.LoaderArgs) {
  * has no title (WCAG 2.4.2). A matched route's own `meta` wins, so its not-found title stands.
  */
 export function meta({ error }: Route.MetaArgs) {
-  if (!error) return [];
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
-  return [{ title: `${notFound ? "Page not found" : "Error"} | ${SITE.name}` }];
+  return error ? [{ title: errorTitle(error, SITE.name) }] : [];
 }
 
 export const links: Route.LinksFunction = () => [
@@ -79,6 +79,8 @@ export const links: Route.LinksFunction = () => [
   ...PRELOADS.links,
 ];
 
+const THEME_GROUND = { light: "#fdfdfe", dark: "#0e0c12" };
+
 export function Layout({ children }: { children: React.ReactNode }) {
   // Layout also renders the error boundary, where the root loader may not have run.
   const data = useRouteLoaderData<typeof loader>("root");
@@ -106,10 +108,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Before any stylesheet: data-theme means nothing to the browser until the CSS is parsed. */}
         <meta name="color-scheme" content={colorSchemeMeta(data?.theme ?? "system")} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* Literal hexes: browser chrome does not resolve a custom property. check:contrast
-            asserts they match the palette. */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fdfdfe" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0c12" />
+        {/* Literal hexes, the palette's ground: browser chrome does not resolve a custom property. */}
+        <ThemeColor choice={theme ?? null} ground={THEME_GROUND} />
         <Meta />
         {/* <Links> takes a nonce from the framework context and has no opt-out. */}
         <Links />
@@ -144,5 +144,5 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  return <ErrorPage error={error} />;
+  return <SiteErrorPage error={error} />;
 }
