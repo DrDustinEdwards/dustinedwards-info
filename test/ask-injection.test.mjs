@@ -145,6 +145,14 @@ await test("CONTROL: an answer citing only public posts is served", async () => 
   assert.equal(answerOf(out), "Here is the answer.");
 });
 
+await test("AN ANSWER WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN", async () => {
+  // A chatbot's refusal or an unfilled blank on a public page is the harm; site-runtime tests the checks.
+  for (const deltas of [["As an AI language model, ", "I cannot say."], ["Write to [Your Name] for more."]]) {
+    const out = await drain(guardAnswerStream(sseStream([chunk("live")], deltas), ALL_PUBLIC));
+    assert.equal(answerOf(out), NO_ANSWER_TEXT, deltas.join(""));
+  }
+});
+
 await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", async () => {
   // Refused rather than filtered: the answer TEXT was written from those chunks, so keeping
   // the prose and dropping the link would still summarize a post nobody may read.

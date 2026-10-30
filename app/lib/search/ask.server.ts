@@ -20,6 +20,8 @@ import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 import {
+  ASK_MAX_TOKENS,
+  ASK_TIMEOUT_MS,
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
@@ -39,17 +41,32 @@ export function askAvailable(env: Env): boolean {
   return Boolean(env.AI_SEARCH);
 }
 
-/** The raw upstream SSE is handed through untouched: the client already parses SSE. */
+/**
+ * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no
+ * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAnswerStream
+ * bounds the rest). `max_tokens` is not in the binding's documented parameters; Cloudflare's own
+ * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer.
+ */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
-  return env.AI_SEARCH.chatCompletions({
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`AI Search did not answer within ${ASK_TIMEOUT_MS} ms`)), ASK_TIMEOUT_MS);
+  });
+  const call = env.AI_SEARCH.chatCompletions({
     // The last message is the retrieval query; decorating it costs the whole search.
     messages: askMessages(question),
     model: ASK_MODEL,
     stream: true,
+    max_tokens: ASK_MAX_TOKENS,
     ai_search_options: {
       max_num_results: MAX_CHUNKS,
     },
   });
+  try {
+    return await Promise.race([call, late]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** The cache copy is parsed inside waitUntil, so caching costs time-to-first-token nothing. */
