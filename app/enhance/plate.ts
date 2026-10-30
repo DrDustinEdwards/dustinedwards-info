@@ -42,26 +42,23 @@ export default function start(): void {
   }
 
   /*
-   * `fill: "backwards"` on purpose: when the animation ends the line drops back to its base style, a
-   * real style change that forces a repaint. A CSS animation holding its end state left the leaders
-   * unpainted in Chrome.
+   * Each leader grows from its start point with `transform: scale()`, which looks like the line being
+   * drawn and, unlike a stroke-dashoffset draw, runs on the compositor (Chrome composites transform
+   * and opacity on SVG elements). The plain `transform` property, not `scale`: Chrome does not
+   * composite the individual transform properties on SVG. The origin is the line's own start, in the
+   * drawing's coordinates; the stroke stays its width while the line grows.
    */
   function drawLeaders(svg: Element) {
     svg.querySelectorAll(".plate-leader").forEach((leader, i) => {
       leader.querySelectorAll<SVGLineElement>("line").forEach((line, j) => {
-        const len = String(Math.ceil(line.getTotalLength()));
-        line.animate(
-          [
-            { strokeDasharray: len, strokeDashoffset: len },
-            { strokeDasharray: len, strokeDashoffset: "0" },
-          ],
-          {
-            duration: j === 0 ? 600 : 260,
-            delay: i * 260 + (j === 0 ? 200 : 800),
-            easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
-            fill: "backwards",
-          },
-        );
+        line.style.transformBox = "view-box";
+        line.style.transformOrigin = `${line.getAttribute("x1")}px ${line.getAttribute("y1")}px`;
+        line.animate([{ transform: "scale(0)" }, { transform: "scale(1)" }], {
+          duration: j === 0 ? 600 : 260,
+          delay: i * 260 + (j === 0 ? 200 : 800),
+          easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
+          fill: "backwards",
+        });
       });
     });
   }
