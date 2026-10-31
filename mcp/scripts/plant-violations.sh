@@ -197,7 +197,7 @@ expect_fail "16. second service binding added"
 # 17. A tool registered around invokeTool skips ownership, scope and the log.
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('(args: Record<string, unknown>, ctx) =>\n          invokeTool(','(args: Record<string, unknown>, ctx) =>\n          tool.handler(env, args) ?? invokeTool(',1)
+s=s.replace('    return server;','    server.registerTool(\'dei_raw\', {}, (args: Record<string, unknown>) => TOOLS[0]!.handler(env, args));\n    return server;',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "17. tool registered around invokeTool"
 

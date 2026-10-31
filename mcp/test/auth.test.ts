@@ -2,16 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { agentScopes } from "../src/auth.ts";
+import { agentScopes as sharedAgentScopes } from "@dustinedwards/site-runtime/agent-keys";
 
-describe("agentScopes", () => {
-  test("an agent reads unless AGENT_WRITE names it", () => {
-    assert.deepEqual(agentScopes({}, "grok"), ["dei.read"]);
-    assert.deepEqual(agentScopes({ AGENT_WRITE: "" }, "grok"), ["dei.read"]);
-    assert.deepEqual(agentScopes({ AGENT_WRITE: "gemini, Grok" }, "grok"), ["dei.read", "dei.write"]);
-    assert.deepEqual(agentScopes({ AGENT_WRITE: "grokker" }, "grok"), ["dei.read"]);
-  });
-});
+import { SCOPES } from "../src/auth.ts";
+
+// The shared rule is tested in site-runtime; what is this server's is the deployed AGENT_WRITE below.
+const agentScopes = (env: { AGENT_WRITE?: string }, principal: string) => sharedAgentScopes(env, principal, SCOPES);
 
 describe("the deployed AGENT_WRITE", () => {
   // Read from the tracked config, the one the CI build and a fresh deploy start from, through the

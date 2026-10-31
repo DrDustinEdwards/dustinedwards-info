@@ -133,6 +133,7 @@ async function readJson(url, init) {
  * @param {{
  *   root: string,
  *   sha: string,
+ *   shaFull: string,
  *   early: { verdict: { ok: boolean, why: string, remedy?: string } | null, error: string },
  *   readCi: () => Promise<{ verdict: { ok: boolean, why: string, remedy?: string } | null, error: string }>,
  *   announce: (title: string) => void,
@@ -142,7 +143,7 @@ async function readJson(url, init) {
  * }} ship
  * @returns {Promise<number>}
  */
-export async function shipMcp({ root, sha, early, readCi, announce, refuse, run, target = "mcp" }) {
+export async function shipMcp({ root, sha, shaFull, early, readCi, announce, refuse, run, target = "mcp" }) {
   const kit = MCP_TARGETS[target];
   if (!kit) return refuse(`unknown mcp target ${JSON.stringify(target)}`, "Nothing was deployed.");
   const rel = [...kit.dir, "wrangler.jsonc"].join("/");
@@ -182,9 +183,17 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run,
   console.log(`  ${verdict.why}.`);
 
   announce(`Deploy ${kit.title}`);
+  // DEPLOY_SHA is what /health reports as `sha` (site-runtime's loginHandler), so the live Worker names its commit.
   const deployed = run(
     "node",
-    [join("mcp", "node_modules", "wrangler", "bin", "wrangler.js"), "deploy", "-c", join(...kit.dir, "wrangler.jsonc")],
+    [
+      join("mcp", "node_modules", "wrangler", "bin", "wrangler.js"),
+      "deploy",
+      "-c",
+      join(...kit.dir, "wrangler.jsonc"),
+      "--var",
+      `DEPLOY_SHA:${shaFull}`,
+    ],
     { capture: true },
   );
   if (deployed.code !== 0) refuse(`the deploy of ${kit.title} failed`, "The previous version is still serving.");
@@ -196,17 +205,19 @@ export async function shipMcp({ root, sha, early, readCi, announce, refuse, run,
     );
   }
 
-  announce(`${target}: ${config.origin}/health, ${HEALTH_STREAK} consecutive 200s`);
+  announce(`${target}: ${config.origin}/health, ${HEALTH_STREAK} consecutive 200s naming ${sha}`);
   let streak = 0;
   for (let i = 0; i < HEALTH_ATTEMPTS && streak < HEALTH_STREAK; i += 1) {
     const res = await readJson(`${config.origin}/health?ship=${sha}-${i}`, { headers: { "cache-control": "no-cache" } });
-    console.log(`  probe ${i + 1}: ${res.status || `FETCH FAILED ${res.error}`}`);
-    streak = res.status === 200 ? streak + 1 : 0;
+    // A 200 from the version before this one is not this deploy serving: only its own sha counts.
+    const serving = res.body?.sha;
+    console.log(`  probe ${i + 1}: ${res.status || `FETCH FAILED ${res.error}`}${res.status ? `, sha ${serving ?? "none"}` : ""}`);
+    streak = res.status === 200 && serving === shaFull ? streak + 1 : 0;
     if (streak < HEALTH_STREAK) await new Promise((r) => setTimeout(r, HEALTH_GAP_MS));
   }
   if (streak < HEALTH_STREAK) {
     refuse(
-      `${config.origin}/health did not answer ${HEALTH_STREAK} consecutive 200s`,
+      `${config.origin}/health did not answer ${HEALTH_STREAK} consecutive 200s naming ${shaFull}`,
       `Version ${version} is deployed. A new Custom Domain can take minutes for its certificate: re-run ship:mcp, ` +
         "or check Workers & Pages, dustinedwards-admin-mcp, Settings, Domains & Routes.",
     );
