@@ -74,8 +74,12 @@ export async function listMonitors(key) {
 }
 
 /**
- * The keyword is the full opening fragment: the bare word appears in every health body, so it
- * would fail open. This couples to the endpoint's key order.
+ * The health monitor reads /health, the family shape (site-runtime's healthResponse), not
+ * /api/health, whose 503 on any drift paged for a site that was up. The keyword is the quoted
+ * `"ok":true` fragment, not the bare word, which would fail open: it is absent from any body that
+ * is not a health answer (an error page, a redirect), so the monitor fails closed. One keyword
+ * cannot match both "pass" and "warn", so `ok` is the field: today it is true on pass only, so a
+ * warn (a stale dump, drift) pages; once site-runtime sets ok on warn too, only a fail does.
  *
  * @param {string} origin
  * @returns {Array<{ path: string, key: string, shape: Record<string, unknown> }>}
@@ -99,15 +103,15 @@ export function desiredMonitors(origin) {
     },
     {
       key: "health",
-      path: "/api/health",
+      path: "/health",
       shape: {
-        friendlyName: "dustinedwards.info /api/health",
-        url: `${base}/api/health`,
+        friendlyName: "dustinedwards.info /health",
+        url: `${base}/health`,
         type: "KEYWORD",
         interval: 300,
         timeout: 30,
         keywordType: "ALERT_NOT_EXISTS",
-        keywordValue: '{"ok":true',
+        keywordValue: '"ok":true',
         keywordCaseType: "CaseSensitive",
         successHttpResponseCodes: ["2xx"],
       },

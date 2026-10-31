@@ -427,7 +427,7 @@ third party. **Not wired up yet**: the project has to be created before this
 line means anything. Until then this row is a plan, not a destination.
 
 **UptimeRobot** is the outside opinion: <https://uptimerobot.com>. Two monitors,
-the home page and `/api/health`. If UptimeRobot says up and you say down, the
+the home page and `/health`. If UptimeRobot says up and you say down, the
 problem is between you and the site rather than in it.
 
 **The health snapshot** is what the colophon tile reads, and its AGE is the
