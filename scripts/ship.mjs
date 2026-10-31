@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { tierOutcome } from "./lib/tier-outcome.mjs";
-import { applyCommand, destructiveStatements, readBookmark, readMigrationList } from "./lib/pending-migrations.mjs";
+import { applyCommand, destructiveStatements, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
   SHIP_BUSY_NEEDLES,
@@ -348,7 +348,7 @@ if (ciGreenEarly) {
 
 /*
  * No migration may be pending when a deploy goes out. A pending migration whose statements are all additive
- * (`destructiveStatements` finds none) is applied here, after the D1 Time Travel bookmark is read and printed with its
+ * (`destructiveStatements` finds none) is applied here, after the D1 Time Travel bookmark step above, which printed its
  * restore command, so a merge needs no hand-run step. One that can lose data (DROP, DELETE, UPDATE, a rename) still
  * refuses and the operator applies it. An unreadable answer, a bookmark that cannot be read or a failed apply refuses.
  */
@@ -427,18 +427,8 @@ if (migrations.state === "pending") {
         "  Ship applies only additive migrations itself.",
     );
   }
-  const info = run("npx", ["wrangler", "d1", "time-travel", "info", DATABASE, "--json"], {
-    capture: true,
-    timeoutMs: 90_000,
-  });
-  const bookmark = info.code === 0 ? readBookmark(info.text) : "";
-  if (!bookmark) {
-    refuse(
-      "the D1 Time Travel bookmark could not be read, so there is no undo point for the migration",
-      `Nothing was applied. Check the token's D1 access, then re-run, or apply by hand:
-    ${applyCommand(DATABASE)}`,
-    );
-  }
+  /* The undo point is the bookmark the step "D1 Time Travel bookmark, before anything writes" read and refused without. */
+  const bookmark = undo.bookmark;
   console.log(`  applying ${migrations.pending.join(", ")}. To undo:`);
   console.log(`    npx wrangler d1 time-travel restore ${DATABASE} --bookmark=${bookmark}`);
   const applied = run("npx", ["wrangler", "d1", "migrations", "apply", DATABASE, "--remote"], {

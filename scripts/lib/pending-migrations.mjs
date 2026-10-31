@@ -97,20 +97,3 @@ export function destructiveStatements(sql) {
   return DESTRUCTIVE.filter(([pattern]) => pattern.test(body)).map(([, kind]) => kind);
 }
 
-/**
- * The bookmark from `wrangler d1 time-travel info <db> --json`, or "" when the output carries none.
- *
- * @param {string} text
- * @returns {string}
- */
-export function readBookmark(text) {
-  const raw = String(text ?? "");
-  const at = raw.indexOf("{");
-  if (at === -1) return "";
-  try {
-    const bookmark = JSON.parse(raw.slice(at, raw.lastIndexOf("}") + 1)).bookmark;
-    return typeof bookmark === "string" ? bookmark : "";
-  } catch {
-    return "";
-  }
-}

@@ -152,8 +152,10 @@ if (existsSync(SHIP)) {
       "calls additive; a DROP, DELETE, UPDATE or rename is the operator's call",
   );
   ok(
-    "ship reads the Time Travel bookmark before it applies a migration",
-    pendingBranch !== undefined && callsIn(pendingBranch.thenStatement, "readBookmark"),
+    "ship applies a migration only after the Time Travel bookmark step",
+    pendingBranch !== undefined &&
+      sf.text.indexOf('announce("D1 Time Travel bookmark, before anything writes")') !== -1 &&
+      sf.text.indexOf('announce("D1 Time Travel bookmark, before anything writes")') < pendingBranch.getStart(sf),
     "an applied migration is undone by a Time Travel restore, never by a Worker rollback, so " +
       "the undo point is read first and a missing one refuses",
   );

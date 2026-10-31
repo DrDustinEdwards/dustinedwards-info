@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applyCommand, destructiveStatements, readBookmark, readMigrationList } from "../scripts/lib/pending-migrations.mjs";
+import { applyCommand, destructiveStatements, readMigrationList } from "../scripts/lib/pending-migrations.mjs";
 
 /** Verbatim from `wrangler d1 migrations list dustinedwards --local`. */
 const PENDING_REAL = [
@@ -114,8 +114,3 @@ void test("destructiveStatements: additive SQL, trigger bodies and comments pass
   assert.deepEqual(destructiveStatements("INSERT OR REPLACE INTO settings VALUES ('a', 'b');"), ["REPLACE"]);
 });
 
-void test("readBookmark: reads wrangler's JSON after its banner, and gives '' when there is none", () => {
-  assert.equal(readBookmark(' ⛅️ wrangler 4.149.0\n{\n  "bookmark": "00000085-0000024c-00004c6d-8e61117bf38d7adb71b934ebbf891683",\n  "timestamp": "2026-10-31T11:00:00Z"\n}'), "00000085-0000024c-00004c6d-8e61117bf38d7adb71b934ebbf891683");
-  assert.equal(readBookmark("✘ [ERROR] Authentication error [code: 10000]"), "");
-  assert.equal(readBookmark('{"bookmark": null}'), "");
-});
