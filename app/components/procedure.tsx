@@ -1,3 +1,4 @@
+import { Picture } from "~/components/picture";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
@@ -9,6 +10,7 @@ import { fixedSectionIds, type ProcedureRecord } from "~/kb/procedures/render.mj
 import type { Lineage } from "~/kb/procedures/lineage.mjs";
 import { keyResources } from "~/kb/procedures/key-resources.mjs";
 import { miseEnPlace, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
+import { contentPicture } from "~/lib/media/images.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { type Block, EquipmentTable, Heading, KeyResourcesTable, MaterialsTable, ProcedureFacts, ScaleForm, Solutions, html, materialsHeading } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
@@ -205,12 +207,7 @@ export function ProcedureView({
       </p>
       <ProtocolWorkflow context={workflow} />
       {record.image ? (
-        <img
-          className="procedure-image"
-          src={record.image.src}
-          alt={record.image.alt}
-          {...(record.image.width && record.image.height ? { width: record.image.width, height: record.image.height } : {})}
-        />
+        <Picture picture={contentPicture(record.image.src, { ...record.image, className: "procedure-image" })} />
       ) : null}
       {(record.questions?.length ?? 0) + (record.objectives?.length ?? 0) > 0 ? (
         <section className="procedure-overview" aria-labelledby="overview">

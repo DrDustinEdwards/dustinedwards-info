@@ -33,6 +33,7 @@ import {
   personId,
   publicHtmlHeaders,
   publicationsJsonLd,
+  shareCard,
 } from "~/lib/seo";
 
 import type { Route } from "./+types/cv";
@@ -51,7 +52,7 @@ import "~/styles/cv.css";
 const PATH = CV_PAGE.path;
 /** The CV's own social card (CARDED_PAGE_ROOTS), which build:og draws from the same title and description. */
 const CARD_PATH = contentPageCardPath(CV_PAGE);
-const CARD = CARD_PATH ? `${SITE_ORIGIN}${CARD_PATH}` : undefined;
+const CARD = CARD_PATH ? shareCard(`${SITE_ORIGIN}${CARD_PATH}`, CV_PAGE.seoTitle) : undefined;
 
 // headers() is written out here because check:headers reads each public route's own source.
 export function headers() {

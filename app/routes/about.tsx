@@ -1,10 +1,14 @@
 import { data } from "react-router";
 
+import { pictureProps } from "@dustinedwards/site-runtime/image";
+
 import { PageShell } from "~/components/page-shell";
+import { Picture } from "~/components/picture";
 import { getPageByPath } from "~/db/pages";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
+import { images } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
@@ -14,7 +18,10 @@ import type { Route } from "./+types/about";
 import "~/styles/prose.css";
 import "~/styles/about.css";
 
-const PHOTO_SRC = `/media/${OWNER_PHOTO.key}`;
+const PHOTO = pictureProps(
+  images.attributes({ src: `/media/${OWNER_PHOTO.key}`, width: OWNER_PHOTO.width, height: OWNER_PHOTO.height }, "portrait"),
+  { alt: SITE.name, priority: true, className: "about-photo" },
+);
 
 /**
  * The prose is the page's D1 row (docs/PAGES.md): content/pages/about.md, compiled by the one page
@@ -65,17 +72,8 @@ export default function About({ loaderData }: Route.ComponentProps) {
       </header>
       {draft ? <p>Draft: only you can see this page.</p> : null}
 
-      {/* The same photo the Person record names; the 320 and 640 widths are the thumbnail set /media serves. */}
-      <img
-        className="about-photo"
-        src={`${PHOTO_SRC}?w=640`}
-        srcSet={`${PHOTO_SRC}?w=320 320w, ${PHOTO_SRC}?w=640 640w`}
-        sizes="(min-width: 46rem) 14rem, 11rem"
-        width={OWNER_PHOTO.width}
-        height={OWNER_PHOTO.height}
-        alt={SITE.name}
-        fetchPriority="high"
-      />
+      {/* The same photo the Person record names, and the page's LCP. */}
+      <Picture picture={PHOTO} />
 
       {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
       <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />

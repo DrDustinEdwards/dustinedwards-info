@@ -23,7 +23,8 @@ import { blogPostView } from "~/lib/blog-view";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
+import { Picture } from "~/components/picture";
+import { contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -238,18 +239,10 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             keyTakeaways={post.keyTakeaways ?? null}
           />
 
-          {/* Eager and high priority: this is the LCP element when present. */}
+          {/* Eager and high priority: this is the LCP element when present, and the body's first image gives way. */}
           {post.coverImage && (
             <figure className="post-cover">
-              <img
-                src={post.coverImage}
-                alt={post.coverAlt ?? ""}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                {...coverDimensions(post.coverImage)}
-                {...coverResponsive(post.coverImage)}
-              />
+              <Picture picture={contentPicture(post.coverImage, { alt: post.coverAlt ?? "", priority: true })} />
             </figure>
           )}
 

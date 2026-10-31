@@ -1,6 +1,6 @@
 import { getEnv } from "~/lib/context";
 import { bucketFor } from "~/lib/media/classify.mjs";
-import { images } from "~/lib/media/images.mjs";
+import { images, isStaticMedia } from "~/lib/media/images.mjs";
 import type { Route } from "./+types/media.$";
 import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
 
@@ -16,14 +16,30 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   if (!key) return new Response("Not found", { status: 404 });
 
   const env = getEnv(context);
-  const read = () => bucketFor(env, key).get(key);
+  const fromAssets = isStaticMedia(key);
+  const read = () => (fromAssets ? assetObject(env, key) : bucketFor(env, key).get(key));
   // `caches.default` is the Workers runtime's; the DOM lib does not declare it, hence the cast.
   const cache = (caches as typeof caches & { default: Cache }).default;
   return images.respond(request, {
     object: await read(),
     images: env.IMAGES,
     cache,
-    cacheControl: IMMUTABLE_CACHE_CONTROL,
+    // A static photograph keeps its name when its file changes, so it is cached for a day, not for good.
+    cacheControl: fromAssets ? "public, max-age=86400" : IMMUTABLE_CACHE_CONTROL,
     reread: read,
   });
+}
+
+/** A static photograph from the site's assets, in the shape the image route reads from R2; null when there is none. */
+async function assetObject(env: Env, key: string) {
+  // The ASSETS binding ignores the hostname and matches only the pathname.
+  const response = await env.ASSETS.fetch(new Request(`https://assets.local/${key}`));
+  if (!response.ok || !response.body) return null;
+  const contentType = response.headers.get("content-type") ?? "image/webp";
+  return {
+    body: response.body,
+    httpEtag: response.headers.get("etag") ?? `"${key}"`,
+    httpMetadata: { contentType },
+    writeHttpMetadata: (headers: Headers) => headers.set("content-type", contentType),
+  };
 }

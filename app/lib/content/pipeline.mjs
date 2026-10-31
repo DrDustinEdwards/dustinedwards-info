@@ -218,6 +218,13 @@ export async function renderBody({ file, body, resolveImage }) {
   return { html, toc, hasMath, diagrams, mediaRefs, blockedUrls };
 }
 
+/** @param {string} html */
+function demoteFirstImage(html) {
+  return html.replace(/<img\b[^>]*\bfetchpriority="high"[^>]*>/, (tag) =>
+    tag.replace(' fetchpriority="high"', "").replace('loading="eager"', 'loading="lazy"'),
+  );
+}
+
 /**
  * @param {object} options
  * @param {string} options.file path or label, used in error messages
@@ -243,11 +250,15 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     );
   }
 
-  const { html, toc, diagrams, mediaRefs, hasMath } = await renderBody({
+  const rendered = await renderBody({
     file,
     body: parsed.content,
     resolveImage,
   });
+  const { toc, diagrams, mediaRefs, hasMath } = rendered;
+  // The cover is the LCP where there is one, so the body's first image gives up Prelum's eager, high-priority pair:
+  // two images marked high is the same as none.
+  const html = fm.cover ? demoteFirstImage(rendered.html) : rendered.html;
 
   let cover = null;
   if (fm.cover) {
