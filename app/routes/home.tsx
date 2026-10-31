@@ -37,8 +37,12 @@ import type { Route } from "./+types/home";
 import "~/styles/home.css";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
+// The home faces as a `Link` header too, so Early Hints starts them; the Renderer appends every page's own.
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  return publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined);
+  return {
+    ...publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
+    Link: HOME_PRELOADS.header,
+  };
 }
 
 export const links: Route.LinksFunction = () => HOME_PRELOADS.links;

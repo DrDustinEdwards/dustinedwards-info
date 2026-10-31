@@ -63,6 +63,7 @@ export function meta() {
     title: `${COLOPHON_TITLE}, ${SITE.name}`,
     description: COLOPHON_DESCRIPTION,
     path: COLOPHON_URL,
+    trail: [[COLOPHON_TITLE, COLOPHON_URL]],
   });
 }
 

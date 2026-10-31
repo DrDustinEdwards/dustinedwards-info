@@ -27,9 +27,8 @@ import {
 import {
   SITE,
   SITE_ORIGIN,
-  breadcrumbJsonLd,
-  pageMeta,
   publicHtmlHeaders,
+  siteHead,
 } from "~/lib/seo";
 
 import type { Route } from "./+types/kb-library";
@@ -91,10 +90,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { base, items, empty } = loaderData;
   return [
-    ...pageMeta({
-      title: `${base.name} | ${SITE.name}`,
+    ...siteHead({
+      title: base.name,
       description: lead(base, items),
       path: base.library,
+      pageType: "CollectionPage",
+      trail: libraryTrail(base),
     }),
     {
       tagName: "link",
@@ -121,10 +122,11 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
     items,
     parseCatalogParams(catalog, search),
   );
+  // Prelum's page node, by its `@id`, with the list it holds.
   const collection = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "@id": `${SITE_ORIGIN}${base.library}#collectionpage`,
+    "@id": `${SITE_ORIGIN}${base.library}#webpage`,
     name: base.name,
     description: lead(base, items),
     url: `${SITE_ORIGIN}${base.library}`,
@@ -142,17 +144,10 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
   return (
     <PageShell
       trail={
-        <>
-          {[breadcrumbJsonLd(SITE_ORIGIN, trail), collection].map(
-            (block, i) => (
-              <script
-                key={i}
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }}
-              />
-            ),
-          )}
-        </>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }}
+        />
       }
     >
       <Breadcrumb trail={trail} />

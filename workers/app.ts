@@ -3,13 +3,14 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
-import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
+import { httpsRedirectStatus } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { THEME_COOKIE } from "capsomer/theme-server";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
-import { paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
+import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
 import { themeFromRequest } from "~/lib/theme";
-import { serverTiming, timingsContext, type Timings } from "~/lib/timing";
+import { timingsContext } from "~/lib/timing";
 import {
   CSP_ENDPOINT_NAME,
   CSP_REPORT_PATH,
@@ -17,8 +18,12 @@ import {
   isPrivatePath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
-import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
-import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
+import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
+import { cacheKey, forReader, forRenderer, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
+import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
+import { timedRender } from "@dustinedwards/site-runtime/server-timing";
+import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
+import { generateNonce, reportingEndpoints } from "@dustinedwards/site-runtime/csp";
 import {
   SPECULATION_RULES_HEADER,
   SPECULATION_RULES_PATH,
@@ -38,22 +43,8 @@ const requestHandler = createRequestHandler(
   import.meta.env.MODE,
 );
 
-// Omitting Cache-Control is not opting out: the platform caches it heuristically and cookies are not
-// in the key, so an authenticated /admin render would be served to anyone.
-const UNCACHED = "private, no-store";
-
-// `Cloudflare-CDN-Cache-Control` outranks `Cache-Control` at the edge, so it is stripped from any
-// response not marked shared, or a private one would become storable.
-function applyEdgePolicy(headers: Headers): void {
-  if (headers.get("cache-control") !== SHARED_CACHE_CONTROL) {
-    headers.delete(EDGE_CACHE_HEADER);
-    return;
-  }
-  if (!headers.has(EDGE_CACHE_HEADER)) headers.set(EDGE_CACHE_HEADER, EDGE_CACHE_CONTROL);
-}
-
-// The path is written into the key because a custom `cf.cacheKey` replaces the platform's path and
-// query rather than extending them. The platform cache is the only cache; do not add `caches.default`.
+// site-runtime's `cacheKey`: the path and the query without tracking parameters, plus the theme an HTML read is
+// rendered in. The platform cache is the only cache; do not add `caches.default`.
 export type RendererProps = { theme?: string };
 
 export function cacheDimensions(
@@ -66,11 +57,8 @@ export function cacheDimensions(
     !isPrivatePath(url.pathname) &&
     !negotiatesAwayFromHtml(request);
 
-  if (!themed) return { cacheKey: `${url.pathname}${url.search}`, props: {} };
-
-  const keyUrl = new URL(url);
-  keyUrl.searchParams.set("theme", theme);
-  return { cacheKey: `${keyUrl.pathname}${keyUrl.search}`, props: { theme } };
+  if (!themed) return { cacheKey: cacheKey(url), props: {} };
+  return { cacheKey: cacheKey(url, { dimensions: { theme } }), props: { theme } };
 }
 
 // The shared package's apply, authoritative: this site's set wins over anything a route set.
@@ -87,16 +75,16 @@ function applySecurityHeaders(headers: Headers) {
 const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
 
 /**
- * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
- * set, the report endpoint, the policy (feeds excepted), the prefetch rules on a public page, the
- * preloads on every page and the uncached default.
+ * Every header a rendered response leaves with: the security set, the report endpoint, the policy (feeds excepted),
+ * the prefetch rules on a public page and the day-long edge lifetime on a shared response that names none. An image or
+ * a feed may be embedded by another origin (corpFor).
  */
 function applyDocumentHeaders(
   headers: Headers,
-  { timings, reportTo, csp, publicPage }: { timings: Timings | undefined; reportTo: string; csp: string; publicPage: boolean },
+  { reportTo, csp, publicPage }: { reportTo: string; csp: string; publicPage: boolean },
 ) {
-  if (timings) headers.set("Server-Timing", serverTiming(timings));
   applySecurityHeaders(headers);
+  headers.set("Cross-Origin-Resource-Policy", corpFor(headers.get("content-type")));
   headers.set("Reporting-Endpoints", reportTo);
   if (!isUnpolicedType(headers.get("content-type"))) {
     headers.set("Content-Security-Policy", csp);
@@ -105,11 +93,9 @@ function applyDocumentHeaders(
   if (publicPage && (headers.get("content-type") ?? "").startsWith("text/html")) {
     headers.set(SPECULATION_RULES_HEADER.name, SPECULATION_RULES_HEADER.value);
   }
-  // Every HTML page: the same preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
-  // because a post already sends its markdown alternate and webmention endpoint in `Link`.
-  if ((headers.get("content-type") ?? "").startsWith("text/html")) headers.append("Link", PRELOADS.header);
-  if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
-  applyEdgePolicy(headers);
+  if (headers.get("cache-control") === SHARED_CACHE_CONTROL && !headers.has(EDGE_CACHE_HEADER)) {
+    headers.set(EDGE_CACHE_HEADER, EDGE_CACHE_CONTROL);
+  }
 }
 
 /**
@@ -127,53 +113,40 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     context.set(documentHandlerContext, requestHandler);
 
     // The private planes only (/admin, /lab): a public page is edge-cached with its header, so a nonce there would be shared
-    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs). A static
-    // or derived nonce looks exactly like success: every page renders and the policy is worth
-    // nothing.
-    const adminNonce = isPrivatePath(url.pathname) ? crypto.randomUUID() : undefined;
+    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
+    const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
     context.set(nonceContext, adminNonce);
 
-    // Stamped here because loaders run concurrently on one shared `timings` array; only after the
-    // handler returns is it complete.
-    const handlerStart = performance.now();
-    const response = await requestHandler(request, context);
-    const timings = context.get(timingsContext).timings;
-    if (timings) {
-      timings.push({ name: "worker_total", ms: performance.now() - handlerStart });
-    }
+    // Server-Timing on every response (site-runtime ./server-timing): `render`, and each loader's marks. The
+    // response comes back with mutable headers, rebuilt when the handler's were not (`Response.redirect()`).
+    const response = await timedRender((marks) => {
+      context.set(timingsContext, { timings: marks });
+      return requestHandler(request, context);
+    });
 
     // Absolute https (the gateway has already redirected plaintext): `Reporting-Endpoints` ignores anything else.
     const reportTo = reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, url.origin));
     const csp = contentSecurityPolicy(url.pathname, adminNonce);
-    const document = { timings, reportTo, csp, publicPage: !isPrivatePath(url.pathname) };
+    applyDocumentHeaders(response.headers, { reportTo, csp, publicPage: !isPrivatePath(url.pathname) });
 
-    // `Response.redirect()` and friends return immutable headers, so a `set` throws; the catch
-    // rebuilds and applies the same set.
-    try {
-      applyDocumentHeaders(response.headers, document);
-    } catch {
-      const headers = new Headers(response.headers);
-      applyDocumentHeaders(headers, document);
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    }
-
-    return response;
+    // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
+    // because a post already sends its markdown alternate and webmention endpoint in `Link`.
+    const hinted = withPreloadHeader(response, PRELOADS.header);
+    // Last: anything not a shared 200, setting a cookie, rendered for a HEAD or for a cookie other than the theme (which
+    // the key holds) leaves private, no-store with no edge header or tag.
+    return settleCacheHeaders(hinted, request, { publicCookies: [THEME_COOKIE] });
   }
 }
 
 /**
- * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives. `no-store` is
- * load-bearing: the scheme is not in the cache key, so a stored HTTPS redirect would loop HTTPS
- * readers, and a stored rename would outlive a change to the map.
+ * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives, with the security set, since it
+ * never passes through the Renderer. `no-store` is load-bearing: the scheme is not in the cache key, so a stored HTTPS
+ * redirect would loop HTTPS readers, and a stored rename would outlive a change to the map.
  */
 function redirectTo(request: Request, location: string) {
   return new Response(null, {
     status: httpsRedirectStatus(request.method),
-    headers: { Location: location, "Cache-Control": "no-store" },
+    headers: { ...SECURITY_HEADERS, Location: location, "Cache-Control": "no-store" },
   });
 }
 
@@ -233,25 +206,26 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
-  // First, so `http://www/x` is one hop to `https://apex/x` and not two.
-  const requested = new URL(request.url);
-  const apex = wwwRedirectTarget(requested.hostname, requested.pathname, requested.search);
+  // First, so `http://www/x` is one hop to `https://apex/x` and not two, an old WordPress address included.
+  const url = new URL(request.url);
+  const apex = wwwRedirectTarget(url.hostname, url.pathname, url.search);
   if (apex !== null) return redirectTo(request, apex);
 
-  const secure = httpsRedirectTarget(request.url);
-  if (secure !== null) return redirectTo(request, secure);
+  // The old WordPress addresses, on the apex host only: the new site's own paths never reach this map.
+  const wordpress = isApexHost(url.hostname) ? wordpressDisposition(url.pathname) : null;
 
-  const url = new URL(request.url);
+  // One hop to https and the slashless path (site-runtime ./url). A paper keeps its slash (below), and an old
+  // WordPress address keeps its own, so the map moves it in the same hop.
+  const canonical = canonicalRedirect(request, { except: wordpress ? [url.pathname] : [`${PUBLICATIONS_PREFIX}*`] });
+  if (canonical !== null) return canonical;
 
   // The prefetch rules every public page's header names: one file, the same for every page, so no route renders it.
   if (url.pathname === SPECULATION_RULES_PATH) {
-    const rules = speculationRulesResponse({ exclude: PREFETCH_EXCLUDE });
+    const rules = speculationRulesResponse({ exclude: PREFETCH_EXCLUDE }, request);
     applySecurityHeaders(rules.headers);
     return rules;
   }
 
-  // The old WordPress addresses, on the apex host only: the new site's own paths never reach this map.
-  const wordpress = isApexHost(url.hostname) ? wordpressDisposition(url.pathname) : null;
   if (wordpress?.status === 301) {
     return redirectTo(request, new URL(wordpress.location, url).toString());
   }
@@ -267,15 +241,11 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   const theme = themeFromRequest(request);
   const { cacheKey, props } = cacheDimensions(gone ?? url, request, theme);
 
-  const response = await ctx.exports.Renderer({ props }).fetch(gone ? new Request(gone, request) : request, {
+  const response = await ctx.exports.Renderer({ props }).fetch(forRenderer(gone ? new Request(gone, request) : request), {
     cf: { cacheKey },
   });
 
-  // Tells browsers and proxies not to hold a per-reader document. Not in the Renderer, whose
-  // response is the one the platform stores. Any cookie counts, failing closed.
-  const shared = response.headers.get("cache-control") === SHARED_CACHE_CONTROL;
-  const out =
-    shared && request.headers.has("cookie") ? withHeader(response, "cache-control", UNCACHED) : response;
-
-  return out;
+  // Tells browsers and proxies not to hold a per-reader document, any cookie but the theme the key holds counting;
+  // a reader who already holds the page gets a 304. Not in the Renderer, whose response is the one the platform stores.
+  return forReader(response, request, { publicCookies: [THEME_COOKIE] });
 }

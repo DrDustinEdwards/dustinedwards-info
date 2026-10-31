@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Button } from "capsomer/react/button";
@@ -38,7 +39,7 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   if (!can(actor, PERMISSION.read)) notFound();
   const id = idOf(params.id);
   if (!id) notFound();
-  const form = await request.formData();
+  const form = await cappedForm(request, ADMIN_FORM_BYTES);
   // The lot is the one in the address, whatever the form says.
   form.set("lot", String(id));
   return data(await inventoryAction(getEnv(context), actor, form, Date.now()), { headers: PRIVATE });

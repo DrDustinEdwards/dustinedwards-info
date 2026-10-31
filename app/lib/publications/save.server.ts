@@ -18,6 +18,7 @@ import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { recordsForPapers } from "~/lib/search/records.mjs";
+import { replaceSearchRecords } from "~/lib/search/replace.server";
 import { askAvailable, syncAskPaper } from "~/lib/search/ask.server";
 
 import { citationSeedsFrom } from "./cited-by.mjs";
@@ -113,18 +114,7 @@ export async function writePublicationRow(env: PublicationEnv, compiled: Compile
       db.prepare(`UPDATE publications SET markdown = markdown || ?1 WHERE slug = ?2`).bind(chunk, r.slug),
     ),
     db.prepare(`UPDATE publications SET source_blob_sha = ?1 WHERE slug = ?2`).bind(compiled.sourceBlobSha, r.slug),
-    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(uid),
-    ...records.map((s) =>
-      db
-        .prepare(
-          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
-             doc_title, doc_url, anchor, ordinal, status, publish_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
-        )
-        .bind(s.uid, s.url, s.type, s.title, s.body, s.tags, s.docTags, s.docUid, s.docTitle, s.docUrl, s.anchor, s.ordinal, s.status, null),
-    ),
-    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    ...replaceSearchRecords(db, uid, records),
   ]);
 }
 

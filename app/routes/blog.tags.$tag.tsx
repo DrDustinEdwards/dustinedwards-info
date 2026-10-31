@@ -3,6 +3,7 @@ import { data } from "react-router";
 import {
   TaxonomyListing,
   listingHref,
+  listingDescription,
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
 import { getBlogTag, listBlogPosts, nextScheduledPublishAt } from "~/db";
@@ -11,7 +12,7 @@ import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
   SITE,
-  pageMeta,
+  siteHead,
   cacheTags,
   publicHtmlHeaders,
   scheduledEdgeCacheControl,
@@ -57,12 +58,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
-  const { tag, page } = loaderData;
+  const { tag, page, posts, total } = loaderData;
   const path = listingHref(tagPath(tag.slug), page);
-  return pageMeta({
-    title: `Posts tagged ${tag.name} | ${SITE.name}`,
-    description: `Every post on ${SITE.name}'s blog tagged ${tag.name}.`,
+  return siteHead({
+    title: `Posts tagged ${tag.name}`,
+    description: listingDescription(`tagged ${tag.name}`, total, posts),
     path,
+    pageType: "CollectionPage",
   });
 }
 
@@ -72,7 +74,6 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
     <TaxonomyListing
       {...listing}
       base={tagPath(tag.slug)}
-      name={tag.name}
       heading={`Tagged ${tag.name}`}
       dek={`Every post on this blog tagged ${tag.name}.`}
     />

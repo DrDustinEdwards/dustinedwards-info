@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
-import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
+import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
 

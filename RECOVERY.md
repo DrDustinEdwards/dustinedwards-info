@@ -59,8 +59,8 @@ The order matters. Each step below names what breaks if it is done early.
 4. **D1 migrations.** *If run before step 1:* there is no database to apply to.
    *If skipped:* the first request that touches a table 500s.
 5. **Secrets.** *If set after deploy:* the Worker serves, but the editor and the
-   operator API fail until `OPERATOR_TOKEN` exists. Admin
-   sign-in is not a secret: it is the Access application (section 7).
+   operator API fail until `OPERATOR_TOKEN` exists, and /admin refuses every person
+   until `ADMIN_EMAILS` exists (sign-in itself is the Access application, section 7).
 6. **Deploy.** The Durable Object migration runs as part of this. *If the DO
    migration block is missing from the config:* the deploy is rejected, because a
    class cannot be bound without having been introduced by a migration.
@@ -449,13 +449,14 @@ needs no secret. Saving writes the local D1 source, so the editor needs none eit
 
 ### Admin sign-in (Cloudflare Access)
 
-There is no sign-in secret. `/admin` is guarded by a Cloudflare Access application, and the Worker
-verifies the signed token Access attaches (`app/lib/access.server.ts`). To recreate it on a new account:
+`/admin` is guarded by a Cloudflare Access application, and the Worker verifies the signed token Access
+attaches and checks its email against the `ADMIN_EMAILS` secret (`app/lib/access.server.ts`). To recreate
+it on a new account:
 
 1. Zero Trust > Access > Applications > Add > Self-hosted. Name `dustinedwards-login`. Destinations
    `<domain>/admin` and `<domain>/admin/*`.
-2. A policy (`dustinedwards-admin`) with action Allow and Include: Emails, one per administrator. That
-   policy is the only list of who may administer the site.
+2. A policy (`dustinedwards-admin`) with action Allow and Include: Emails, one per administrator, the
+   same people as `ADMIN_EMAILS` (`npx wrangler secret put ADMIN_EMAILS`, comma-separated).
 3. Copy the application's AUD tag and the team domain (`<team>.cloudflareaccess.com`) into the
    `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` vars in `wrangler.jsonc` (and the example), then deploy.
 
@@ -520,7 +521,7 @@ Then check by hand:
 - `/` renders and the mark is brand-colored in both themes
 - `/blog` lists posts and page 2 exists
 - `/search?q=cloudflare` returns results (D1, no AI involved)
-- `/admin` redirects to the Cloudflare Access login and then admits only the people in its policy
+- `/admin` redirects to the Cloudflare Access login and then admits only the people in its policy and `ADMIN_EMAILS`
 - `/media/<some key>?w=320` returns `image/webp` with `x-image: w=320 webp`
 - `/search/ask` answers, once the corpus is synced
 
@@ -636,8 +637,8 @@ post; the record's copy, which pre-fills future insertions, does not.
 regenerate on use, so this is a loss without consequence.
 
 **The Access application and its policy.** Account configuration, not in this repo.
-The team domain and AUD tag are in `wrangler.jsonc`, but the list of administrator
-emails lives only in the policy. Recreate it as in section 7.
+The team domain and AUD tag are in `wrangler.jsonc`, and the administrator emails are
+the `ADMIN_EMAILS` secret as well as the policy. Recreate it as in section 7.
 
 **Resource ids.** By design. The D1 `database_id` and KV namespace `id` are not in
 git, so a rebuild creates new resources with new ids. That is the intended

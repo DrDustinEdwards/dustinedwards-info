@@ -6,7 +6,7 @@
  */
 
 /** @type {ReadonlySet<string>} */
-export const UNPOLICED_TYPES = new Set([
+const UNPOLICED_TYPES = new Set([
   "application/rss+xml",
   "application/atom+xml",
   "application/json",

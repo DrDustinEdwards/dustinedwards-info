@@ -72,9 +72,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
-  const { page, draft } = loaderData;
+  const { page, trail, draft } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path }),
+    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, trail }),
     { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}` },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
@@ -100,7 +100,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
     <PageShell
       trail={
         <>
-          {contentPageJsonLd(page, trail, null).map((block, i) => (
+          {contentPageJsonLd(page, null).map((block, i) => (
             <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }} />
           ))}
         </>

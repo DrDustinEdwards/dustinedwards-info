@@ -40,8 +40,8 @@ const { eq } = tally;
 
   /* And the question is read from the BODY, or a restored loader bills on a hand-made GET. */
   eq(
-    "ask: the question is read from the request body",
-    /request\.formData\(\)/.test(askCode),
+    "ask: the question is read from the request body, to a ceiling",
+    /cappedForm\(\s*request\s*,/.test(askCode),
     true,
   );
   eq(
@@ -61,7 +61,7 @@ const { eq } = tally;
     true,
   );
 
-  const originAt = actionBody.indexOf("originVerdict(");
+  const originAt = actionBody.indexOf("refuseCrossSite(");
   const rateAt = actionBody.indexOf("checkAskRate(");
   eq("ask: the action takes an origin verdict", originAt !== -1, true);
   eq("ask: the action still rate limits", rateAt !== -1, true);
@@ -96,31 +96,17 @@ const { eq } = tally;
     true,
   );
 
-  eq(
-    "ask: a refused origin is answered 403",
-    /status:\s*403/.test(actionBody),
-    true,
-  );
-  eq(
-    "ask: the origin predicate is imported, not restated here",
-    /from\s+"~\/lib\/origin\.mjs"/.test(askCode),
-    true,
-  );
 
   for (const [label, routePath] of [
+    ["ask", "app/routes/search.ask.ts"],
     ["theme", "app/routes/theme.ts"],
     ["the admin plane", "app/routes/admin.tsx"],
+    ["the lab plane", "app/routes/workspace.tsx"],
   ]) {
     const code = stripComments(readFileSync(join(root, routePath), "utf8"));
     eq(
-      `origin: ${label} imports the shared predicate`,
-      /from\s+"~\/lib\/origin\.mjs"/.test(code),
-      true,
-    );
-    eq(`origin: ${label} calls originVerdict`, /originVerdict\(/.test(code), true);
-    eq(
-      `origin: ${label} refuses with 403`,
-      /status:\s*403/.test(code),
+      `origin: ${label} refuses a cross-site request with the shared check`,
+      /from\s+"@dustinedwards\/site-runtime\/origin"/.test(code) && /refuseCrossSite\(\s*request\b/.test(code),
       true,
     );
   }
@@ -354,7 +340,7 @@ const { eq } = tally;
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 57;
+const MINIMUM_CHECKS = 55;
 const floorBreach = assertFloor("check:ask-guards", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) tally.fail(floorBreach);
 

@@ -14,7 +14,7 @@ import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
-import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
+import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { timed, timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
@@ -54,23 +54,18 @@ export const middleware: Route.MiddlewareFunction[] = [
      * Covers resource routes, which the framework's document check never sees. Before the session
      * lookup, cheapest first. An absent Origin is allowed.
      */
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      const verdict = originVerdict(request.headers.get("origin"), request.url);
-      if (!verdict.ok) {
-        return new Response(ORIGIN_REFUSAL, {
-          status: 403,
-          headers: { "cache-control": "no-store" },
-        });
-      }
-    }
+    const refused = refuseCrossSite(request);
+    if (refused) return refused;
 
     /* Read, not created: root's middleware made one first, and a second would discard its marks. */
     const timings = context.get(timingsContext).timings;
     const access = await timed(timings, "auth_access", () => accessIdentity(env, request));
     if (access.kind === "refused") {
-      /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page. */
-      throw new Response(`Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
-        status: 401,
+      /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page.
+         A verified person off ADMIN_EMAILS is a 403: Access let them in, this site does not. */
+      const notAdmin = access.reason === "not-admin";
+      throw new Response(notAdmin ? "Refused: this account is not an administrator of this site." : `Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
+        status: notAdmin ? 403 : 401,
         headers: {
           "content-type": "text/plain; charset=utf-8",
           "cache-control": "private, no-store",

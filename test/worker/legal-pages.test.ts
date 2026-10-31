@@ -153,7 +153,7 @@ describe("the license wiring behind TERMS_PATH", () => {
   it("a Dataset's JSON-LD names the license URL, whatever the front matter says", async () => {
     const { page } = await pageData(TERMS_PATH);
     const dataset = { ...page, schemaType: "Dataset", license: "https://example.com/other", dataset: { variableMeasured: ["Phage"], temporalCoverage: null, rows: 1 } };
-    const nodes = contentPageJsonLd(dataset as never, [], null) as Array<Record<string, unknown>>;
+    const nodes = contentPageJsonLd(dataset as never, null) as Array<Record<string, unknown>>;
     const node = nodes.find((n) => n["@type"] === "Dataset");
     expect(node?.license).toBe(LICENSE_URL);
   });

@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
@@ -34,7 +35,7 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   const id = idOf(params.id);
   if (!id || !can(actor, PERMISSION.recordRun)) throw data("Not found.", { status: 404, headers: PRIVATE });
-  const result = await recordRun(getEnv(context), actor, await request.formData(), Date.now(), { replacesId: id });
+  const result = await recordRun(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now(), { replacesId: id });
   if (result.ok && result.runId) throw redirect(`/lab/runs/${result.runId}`, { headers: PRIVATE });
   return data(result, { headers: PRIVATE });
 }

@@ -48,7 +48,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   return [
-    ...pageMeta({ title: loaderData.seoTitle, description: loaderData.description, path: "/about" }),
+    ...pageMeta({
+      title: loaderData.seoTitle,
+      description: loaderData.description,
+      path: "/about",
+      pageType: "ProfilePage",
+      trail: [[loaderData.title, "/about"]],
+    }),
     ...(loaderData.draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
 }
