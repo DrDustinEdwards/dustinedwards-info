@@ -12,10 +12,11 @@ import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-re
 import { themeFromRequest } from "~/lib/theme";
 import { timingsContext } from "~/lib/timing";
 import {
-  CSP_ENDPOINT_NAME,
+  CSP_REPORT_GROUP,
   CSP_REPORT_PATH,
   contentSecurityPolicy,
   isPrivatePath,
+  stagedPolicy,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
@@ -84,19 +85,20 @@ function applySecurityHeaders(headers: Headers) {
 const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
 
 /**
- * Every header a rendered response leaves with: the security set, the report endpoint, the policy (feeds excepted),
+ * Every header a rendered response leaves with: the security set, the report endpoint, the policy and its Report-Only stage (feeds excepted),
  * the prefetch rules on a public page and the day-long edge lifetime on a shared response that names none. An image or
  * a feed may be embedded by another origin (corpFor).
  */
 function applyDocumentHeaders(
   headers: Headers,
-  { reportTo, csp, publicPage }: { reportTo: string; csp: string; publicPage: boolean },
+  { reportTo, csp, staged, publicPage }: { reportTo: string; csp: string; staged: string | undefined; publicPage: boolean },
 ) {
   applySecurityHeaders(headers);
   headers.set("Cross-Origin-Resource-Policy", corpFor(headers.get("content-type")));
   headers.set("Reporting-Endpoints", reportTo);
   if (!isUnpolicedType(headers.get("content-type"))) {
     headers.set("Content-Security-Policy", csp);
+    if (staged) headers.set("Content-Security-Policy-Report-Only", staged);
   }
   // Public HTML only: the signed-in planes never prefetch.
   if (publicPage && (headers.get("content-type") ?? "").startsWith("text/html")) {
@@ -143,9 +145,10 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     });
 
     // Absolute https (the gateway has already redirected plaintext): `Reporting-Endpoints` ignores anything else.
-    const reportTo = reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, url.origin));
+    const reportTo = reportingEndpoints(CSP_REPORT_GROUP, new URL(CSP_REPORT_PATH, url.origin));
     const csp = contentSecurityPolicy(url.pathname, adminNonce);
-    applyDocumentHeaders(response.headers, { reportTo, csp, publicPage: !isPrivatePath(url.pathname) });
+    const staged = stagedPolicy(url.pathname, adminNonce);
+    applyDocumentHeaders(response.headers, { reportTo, csp, staged, publicPage: !isPrivatePath(url.pathname) });
 
     // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
     // because a post already sends its markdown alternate and webmention endpoint in `Link`.
