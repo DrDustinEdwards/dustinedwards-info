@@ -32,8 +32,10 @@
 	// invocation log is enriched with the request context. This Worker has no
 	// requests, so the setting costs nothing here and states the account-wide
 	// stance rather than leaving one Worker as the exception nobody notices.
+	// head_sampling_rate stated (area 8, L1): every log kept, at four firings an hour.
 	"observability": {
 		"enabled": true,
+		"head_sampling_rate": 1,
 		"logs": {
 			"invocation_logs": false
 		},

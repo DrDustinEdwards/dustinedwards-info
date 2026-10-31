@@ -291,7 +291,9 @@ describe("/health", () => {
     const body = (await response.json()) as { status: string; db: string; checks: Array<{ name: string; status: string }> };
     expect(body).toMatchObject({ status: "warn", db: "up" });
     const byName = Object.fromEntries(body.checks.map((c) => [c.name, c.status]));
-    expect(byName).toMatchObject({ db: "pass", cron: "pass", "ask-index-drift": "warn" });
+    /* No cron has fired in a test database, so the cron check warns that CRON_JOBS never ran (site-runtime 0.54.0):
+     * the same list the scheduled handler runs is the list /health expects. */
+    expect(byName).toMatchObject({ db: "pass", cron: "warn", "ask-index-drift": "warn" });
     expect(byName).toHaveProperty("backup");
     /* /health names its drift checks before the run, from HEALTH_CHECK_NAMES: a check added to the run and not to
      * the list would never reach /health. */

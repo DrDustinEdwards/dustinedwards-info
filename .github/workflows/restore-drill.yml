@@ -37,10 +37,10 @@ jobs:
   # dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`).
   # devkit-ops-audit's R1 reads this job's newest run.
   drill:
-    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@00667358d7a72f07f92504dea30b4ffa318a8f46 # v0.20.12
+    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@65782d2c45431055672a315f0d126b62d0dd3aff # v0.20.14
     with:
       bucket: dustinedwards-backups
-      d1-dump-ref: v0.7.0
+      d1-dump-ref: v0.8.0
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
