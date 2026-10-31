@@ -94,6 +94,8 @@ jobs:
       # against the tag list on 2026-08-25, and it is the same sha the other two
       # workflows pin.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       # The Node version is READ FROM .nvmrc, never written here. A second
       # statement of it is a mirror, and this repo has paid for mirrors.
