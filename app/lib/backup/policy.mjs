@@ -24,6 +24,7 @@ export const NON_DERIVED_TABLES = Object.freeze({
   content_trash: "the posts in Carrel's trash and since when (0038)",
   post_redirects: "the old addresses of renamed posts, each answered with a 301 (0038)",
   scheduled_publishes: "posts scheduled before they were ever live, for the cron to announce (0038)",
+  page_404_daily: "missing-path counts per day, pruned after 90 days, converge toward nothing (0039)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */

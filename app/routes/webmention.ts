@@ -9,6 +9,7 @@ import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
 
 import type { Route } from "./+types/webmention";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { inputRefused } from "~/lib/body.server";
 
 /**
  * Public by necessity, and it writes rows, so four bounds: a per-IP rate, a publicly visible target,
@@ -43,6 +44,12 @@ function siteOrigins(request: Request): string[] {
   }
 }
 
+/** A refusal of what the sender sent (400, 413): `answer`, with its OWASP `input_validation_fail` line. */
+function refuseInput(request: Request, body: string, status: 400 | 413): Response {
+  inputRefused(request, status, body);
+  return answer(body, status);
+}
+
 function answer(body: string, status: number, extra: HeadersInit = {}): Response {
   const headers = new Headers({
     "content-type": "text/plain; charset=utf-8",
@@ -60,7 +67,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   /* Content-Length is a client hint: used to refuse early, never to permit. */
   const declared = Number(request.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
-    return answer("Payload Too Large", 413);
+    return refuseInput(request, "Payload Too Large", 413);
   }
 
   const env = getEnv(context);
@@ -82,7 +89,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   /* Checked on the header, where it is free. The protocol specifies only this encoding. */
   const contentType = (request.headers.get("content-type") ?? "").toLowerCase();
   if (!contentType.includes("application/x-www-form-urlencoded")) {
-    return answer(BAD_FORM, 400);
+    return refuseInput(request, BAD_FORM, 400);
   }
 
   let body: string | null;
@@ -91,34 +98,34 @@ export async function action({ request, context }: Route.ActionArgs) {
   } catch (error) {
     // The sender's body broke mid-read: its request is malformed, not this site down, so 400, logged.
     console.error(JSON.stringify({ alert: "webmention-body-unreadable", detail: errorMessage(error) }));
-    return answer(BAD_FORM, 400);
+    return refuseInput(request, BAD_FORM, 400);
   }
   if (body === null) {
-    return answer("Payload Too Large", 413);
+    return refuseInput(request, "Payload Too Large", 413);
   }
 
   const fields = new URLSearchParams(body);
   const source = fields.get("source") ?? "";
   const target = fields.get("target") ?? "";
   if (!source || !target) {
-    return answer(BAD_FORM, 400);
+    return refuseInput(request, BAD_FORM, 400);
   }
 
   const origins = siteOrigins(request);
   const slug = targetSlug(target, origins);
   if (slug === null) {
-    return answer(BAD_TARGET, 400);
+    return refuseInput(request, BAD_TARGET, 400);
   }
 
   // Refused before anything is written, so a URL this Worker will not fetch never becomes a row.
   const verdict = sourceVerdict(source, target, origins);
   if (!verdict.ok) {
-    return answer(verdict.reason, 400);
+    return refuseInput(request, verdict.reason, 400);
   }
 
   /* After the source check: only this costs a query, so garbage sources cannot make this site read D1. */
   if (!(await webmentionTarget(env, slug))) {
-    return answer(BAD_TARGET, 400);
+    return refuseInput(request, BAD_TARGET, 400);
   }
 
   /* A count, not a reservation: two concurrent requests can both pass at the boundary, one row past the cap. */

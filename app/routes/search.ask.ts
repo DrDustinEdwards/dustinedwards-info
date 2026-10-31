@@ -3,7 +3,7 @@
  * then a cached answer, then the model.
  */
 
-import { FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { FORM_BYTES, cappedForm, inputRefused } from "~/lib/body.server";
 import {
   answerLeaksPrompt,
   askAvailable,
@@ -99,9 +99,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   const question = String(body.get("q") ?? "").trim();
 
   if (!question) {
+    inputRefused(request, 400, "no question");
     return new Response("Missing q.", { status: 400 });
   }
   if (question.length > MAX_QUESTION_LENGTH) {
+    inputRefused(request, 400, "question too long");
     return new Response(`Question longer than ${MAX_QUESTION_LENGTH} characters.`, {
       status: 400,
     });

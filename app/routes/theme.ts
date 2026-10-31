@@ -1,4 +1,4 @@
-import { FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { FORM_BYTES, cappedForm, inputRefused } from "~/lib/body.server";
 import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { safeReturnTo } from "~/lib/return-to.mjs";
 import { isThemeChoice, themeCookie } from "capsomer/theme-server";
@@ -19,6 +19,7 @@ export async function action({ request }: Route.ActionArgs) {
    * change. `no-store`: a cacheable refusal is a refusal served to somebody else.
    */
   if (!isThemeChoice(choice)) {
+    inputRefused(request, 400, "theme not light or dark");
     return new Response("Theme must be light or dark.\n", {
       status: 400,
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
