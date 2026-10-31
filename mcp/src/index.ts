@@ -196,7 +196,7 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
      * 2025-11-25, Scope Selection Strategy), and a client with no challenge
      * scope asks for all of it, so it is read only; the provider publishes
      * requiredScopes there and in the 401's scope. Write is asked for by step-up
-     * (the tools' 403 insufficient_scope). The authorization server's catalogue,
+     * (the tools' 403 insufficient_scope). The authorization server's catalog,
      * scopesSupported, lists both.
      */
     requiredScopes: [SCOPE_READ],

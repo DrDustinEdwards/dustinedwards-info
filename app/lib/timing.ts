@@ -40,9 +40,5 @@ export function timedLoader<T>(
   return timed(timings, name, () => fn(timings));
 }
 
-// Names must be tokens: one malformed name makes the browser silently discard the whole header.
-export function serverTiming(timings: Timings) {
-  return timings
-    .map(({ name, ms }) => `${name.replace(/[^A-Za-z0-9_-]/g, "")};dur=${ms.toFixed(1)}`)
-    .join(", ");
-}
+// The header value, names cut to tokens: the family's one copy.
+export { serverTiming } from "@dustinedwards/site-runtime/server-timing";
