@@ -4,7 +4,7 @@ import { checkProse, WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
-import { answerDelta, frameFields, takeSseFrames } from "./sse.mjs";
+import { answerDelta, frameFields } from "./sse.mjs";
 
 /** The longest answer: two or three sentences and a follow-up line fit with room to spare. */
 export const ASK_MAX_TOKENS = 400;
@@ -147,20 +147,26 @@ async function chunksVerdict(frame, resolveVisible) {
 }
 
 /**
- * The checks of site-runtime's checkProse that the answer trips at high severity (a chatbot's refusal or
- * cutoff note, a blank, its markup, a stock phrase). An answer with any is not shown.
+ * The checks of site-runtime's checkProse that a paragraph trips at high severity (a chatbot's refusal or
+ * cutoff note, a blank, its markup, a stock phrase). A paragraph with any is not shown.
  *
- * @param {string} sse the whole answer stream as text
+ * @param {string} paragraph
  * @returns {string[]}
  */
-function highFindings(sse) {
-  const answer = takeSseFrames(`${sse}\n\n`)
-    .frames.filter((frame) => frame.event !== "chunks")
-    .map((frame) => answerDelta(frame.data) ?? "")
-    .join("");
-  return checkProse(answer)
+function highFindings(paragraph) {
+  return checkProse(paragraph)
     .filter((issue) => issue.severity === "high")
     .map((issue) => issue.check);
+}
+
+/**
+ * Where the first finished paragraph of `text` ends (after its blank line), or -1 while none has.
+ *
+ * @param {string} text
+ */
+function paragraphEnd(text) {
+  const blank = /\n[ \t]*\n/.exec(text);
+  return blank ? blank.index + blank[0].length : -1;
 }
 
 /**
@@ -178,58 +184,100 @@ function readBy(reader, deadline) {
   return Promise.race([reader.read(), late]).finally(() => clearTimeout(timer));
 }
 
+const DONE_FRAME = "data: [DONE]\n\n";
+
 /**
- * The answer is held until the model finishes, because only the whole text can be checked: the chunks
- * frame first (a refusal there stops the model at once), then the prose. Either refusal shows the
- * no-answer text in its place.
+ * The answer is shown a paragraph at a time: each is held until its blank line (or the end of the stream),
+ * checked whole with checkProse, and only then sent. The chunks frame is checked first (a refusal there
+ * stops the model at once) and is held with the first paragraph, so no citations show for an answer that
+ * never does. A refused paragraph ends the answer where it stands; if nothing was shown yet, the no-answer
+ * text takes its place. `onRefused` hears every refusal, and the caller must not cache that answer: a cut
+ * answer is not the answer. Only the chunks frame and the text reach the reader; other upstream frames are
+ * dropped, and the guard writes its own closing [DONE].
  *
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
+ * @param {() => void} [onRefused]
  * @returns {ReadableStream}
  */
-export function guardAnswerStream(upstream, resolveVisible) {
+export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  /** @param {ReadableStreamDefaultController} controller */
-  const replace = (controller) => {
-    for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) controller.enqueue(encoder.encode(piece));
-  };
 
   return new ReadableStream({
     async start(controller) {
+      /** @param {string} text */
+      const send = (text) => controller.enqueue(encoder.encode(text));
       const reader = upstream.getReader();
       const deadline = Date.now() + ASK_TIMEOUT_MS;
       let buffer = "";
-      /** @type {Uint8Array[]} */
-      const held = [];
-      let checked = false;
+      // Answer text not yet checked: the unfinished paragraph.
+      let text = "";
+      /** @type {string | null} */
+      let chunksFrame = null;
+      let shown = false;
+
+      const refuse = async () => {
+        onRefused();
+        await reader.cancel().catch(() => {});
+        if (shown) send(DONE_FRAME);
+        else for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) send(piece);
+        controller.close();
+      };
+
+      /** Sends a paragraph that passes; false for one that does not. @param {string} paragraph */
+      const release = (paragraph) => {
+        const findings = highFindings(paragraph);
+        if (findings.length > 0) {
+          console.error(JSON.stringify({ alert: "ask-answer-refused-prose", checks: findings }));
+          return false;
+        }
+        if (!shown) send(`${chunksFrame}\n\n`);
+        shown = true;
+        if (paragraph) send(`data: ${JSON.stringify({ choices: [{ delta: { content: paragraph } }] })}\n\n`);
+        return true;
+      };
+
       try {
         for (;;) {
           const { done, value } = await readBy(reader, deadline);
-          if (done) break;
-          held.push(value);
-          buffer += decoder.decode(value, { stream: true });
-          if (checked) continue;
+          // At the end, a closing blank line finishes a last frame the upstream left open.
+          buffer += done ? `${decoder.decode()}\n\n` : decoder.decode(value, { stream: true });
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() ?? "";
 
-          const at = buffer.indexOf("event: chunks");
-          if (at === -1) continue;
-          const frameEnd = buffer.indexOf("\n\n", at);
-          if (frameEnd === -1) continue;
-
-          checked = true;
-          if (await chunksVerdict(buffer.slice(at, frameEnd), resolveVisible)) {
-            await reader.cancel();
-            replace(controller);
-            controller.close();
-            return;
+          for (const frame of frames) {
+            const { event, data } = frameFields(frame);
+            if (event === "chunks") {
+              if (chunksFrame !== null) continue;
+              chunksFrame = frame;
+              if (await chunksVerdict(frame, resolveVisible)) return await refuse();
+              continue;
+            }
+            try {
+              text += answerDelta(JSON.parse(data)) ?? "";
+            } catch {
+              // [DONE], a keep-alive or a frame that is not JSON carries no text.
+            }
           }
+
+          // Nothing is released before the chunks frame passes: until then no paragraph can be checked.
+          if (chunksFrame !== null) {
+            for (let end = paragraphEnd(text); end !== -1; end = paragraphEnd(text)) {
+              if (!release(text.slice(0, end))) return await refuse();
+              text = text.slice(end);
+            }
+          }
+          if (done) break;
         }
+
         // Closed without ever showing a chunks event: nothing held can be checked, so none of it is shown.
-        const findings = checked ? highFindings(buffer) : [];
-        if (!checked) logUnverifiable("the stream ended without a chunks frame");
-        if (findings.length > 0) console.error(JSON.stringify({ alert: "ask-answer-refused-prose", checks: findings }));
-        if (!checked || findings.length > 0) replace(controller);
-        else for (const piece of held) controller.enqueue(piece);
+        if (chunksFrame === null) {
+          logUnverifiable("the stream ended without a chunks frame");
+          return await refuse();
+        }
+        if (!release(text)) return await refuse();
+        send(DONE_FRAME);
         controller.close();
       } catch (error) {
         await reader.cancel().catch(() => {});

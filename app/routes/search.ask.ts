@@ -143,14 +143,23 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     /* Guard first, then tee: the cache must store what the reader saw, including the guard's substitution. */
     const upstream = await askStream(env, question);
+    // Set before the guarded stream closes, so it is settled by the time `captured` is.
+    let refused = false;
     const { toReader, captured } = teeForCache(
-      guardAnswerStream(upstream, (slugs) => publiclyVisibleSlugs(env, slugs)),
+      guardAnswerStream(
+        upstream,
+        (slugs) => publiclyVisibleSlugs(env, slugs),
+        () => {
+          refused = true;
+        },
+      ),
     );
 
     getExecutionContext(context).waitUntil(
       (async () => {
         const answer = await captured;
-        if (!answer) return;
+        // A refusal may have cut the answer after its first paragraphs: what was shown is not the answer.
+        if (!answer || refused) return;
 
         /*
          * A no-chunk answer is not cached, or "nothing found" would stick for a week after the answering post
