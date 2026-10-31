@@ -8,8 +8,8 @@
     "npm": "12.2.0"
   },
   "scripts": {
-    "build": "node scripts/build-headers-file.mjs && react-router build",
-    "dev": "node scripts/build-headers-file.mjs && npm run build:stack && npm run build:content && react-router dev",
+    "build": "npm run build:headers && react-router build",
+    "dev": "npm run build:headers && npm run build:stack && npm run build:content && react-router dev",
     "typecheck": "devkit-bootstrap --types-only && react-router typegen && tsc -b",
     "predeploy": "node scripts/require-clean-tree.mjs",
     "deploy": "npm run build && wrangler deploy",
@@ -74,7 +74,7 @@
     "test:worker": "vitest run --config vitest.config.ts",
     "ship": "node scripts/ship.mjs",
     "ship:mcp": "node scripts/ship.mjs mcp",
-    "build:headers": "node scripts/build-headers-file.mjs"
+    "build:headers": "site-runtime-headers --site dustinedwards-info --out public/_headers --header \"tdm-reservation: 1\""
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -86,7 +86,7 @@
     "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.23.0",
     "@dustinedwards/d1-dump": "github:DrDustinEdwards/d1-dump#v0.8.0",
     "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#v0.17.0",
-    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.54.0",
+    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.58.0",
     "@fontsource-variable/source-serif-4": "5.3.0",
     "@lezer/highlight": "1.2.3",
     "@observablehq/plot": "0.6.17",

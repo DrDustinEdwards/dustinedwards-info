@@ -338,7 +338,7 @@
 	//
 	// EIGHT SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
 	// prefix: `auth:` (sign-in and /api/auth/*), `op:` (the operator API),
-	// `wm:` (webmention), `health:` (/api/health), `csp:` (/api/csp-report),
+	// `wm:` (webmention), `health:` (/api/health), `csp:` (/csp-report),
 	// plus the smoke actor, preview links and Ask itself. So deleting this
 	// block does not "disable Ask": it disables SIGN-IN, and it makes
 	// /api/health answer 503 by design, because a route that cannot reach its

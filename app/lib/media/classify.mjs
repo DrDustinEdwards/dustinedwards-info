@@ -59,7 +59,7 @@ const NOT_ASSETS = new Map([
   [
     "/_headers",
     "Cloudflare static-asset header rules. Consumed by the uploader at deploy " +
-      "time and never served, so it has no URL to index. Written by scripts/build-headers-file.mjs.",
+      "time and never served, so it has no URL to index. Written by site-runtime-headers.",
   ],
   [
     "/_redirects",
