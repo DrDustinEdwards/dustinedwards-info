@@ -79,7 +79,7 @@ export async function run({ browser }) {
       "a script-carrying object from /media does not run",
       "the objects are seeded into the LOCAL bucket, and a deployed origin's MEDIA bucket is " +
         "irreplaceable and is not written by a gate. The policy on a deployed origin is still " +
-        "asserted by check:headers and test/worker/media-csp.test.ts.",
+        "asserted by test/worker/media-csp.test.ts and site-runtime-security.",
     );
     return;
   }

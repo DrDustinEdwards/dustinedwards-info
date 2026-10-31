@@ -1,6 +1,10 @@
+import { timed, type Mark } from "@dustinedwards/site-runtime/server-timing";
 import { createContext, type RouterContextProvider } from "react-router";
 
-export type Timings = Array<{ name: string; ms: number }>;
+// The mark and its header are site-runtime's (./server-timing); this file adds the router context and the loader wrapper.
+export { serverTiming, timed } from "@dustinedwards/site-runtime/server-timing";
+
+export type Timings = Mark[];
 
 // Shared so the `admin.tsx` middleware and child loaders write into one Server-Timing header.
 export const timingsContext = createContext<{ timings?: Timings }>({});
@@ -11,20 +15,6 @@ export const timingsContext = createContext<{ timings?: Timings }>({});
  */
 export function wantsTiming(url: URL) {
   return url.searchParams.get("timing") === "1" || url.pathname === "/admin" || url.pathname.startsWith("/admin/");
-}
-
-export async function timed<T>(
-  into: Timings | undefined,
-  name: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  if (!into) return fn();
-  const start = performance.now();
-  try {
-    return await fn();
-  } finally {
-    into.push({ name, ms: performance.now() - start });
-  }
 }
 
 /**
@@ -38,11 +28,4 @@ export function timedLoader<T>(
 ): Promise<T> {
   const timings = context.get(timingsContext).timings;
   return timed(timings, name, () => fn(timings));
-}
-
-// Names must be tokens: one malformed name makes the browser silently discard the whole header.
-export function serverTiming(timings: Timings) {
-  return timings
-    .map(({ name, ms }) => `${name.replace(/[^A-Za-z0-9_-]/g, "")};dur=${ms.toFixed(1)}`)
-    .join(", ");
 }

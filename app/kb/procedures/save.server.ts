@@ -14,6 +14,7 @@ import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/regi
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
+import { replaceSearchRecords } from "~/lib/search/replace.server";
 
 import { freezeStatement, frozenBlobSha } from "~/db/procedure-versions";
 
@@ -154,18 +155,7 @@ export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<Retu
           }),
         ]
       : []),
-    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(uid),
-    ...records.map((s) =>
-      db
-        .prepare(
-          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
-             doc_title, doc_url, anchor, ordinal, status, publish_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
-        )
-        .bind(s.uid, s.url, s.type, s.title, s.body, s.tags, s.docTags, s.docUid, s.docTitle, s.docUrl, s.anchor, s.ordinal, s.status, null),
-    ),
-    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    ...replaceSearchRecords(db, uid, records),
   ]);
   if (needsFreeze(r)) {
     const frozen = await frozenBlobSha(env, r.slug, String(r.version));

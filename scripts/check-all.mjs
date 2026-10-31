@@ -56,7 +56,6 @@ export const TIERS = {
   "check:enhance-a11y": "offline",
   // Offline: the renderer takes alt from the reference alone, never from the media index in D1.
   "check:alt-text": "offline",
-  "check:headers": "offline",
   "check:urls": "offline",
   // Offline: the address book is built from the sources, never from D1, R2 or the network.
   "check:links": "offline",
