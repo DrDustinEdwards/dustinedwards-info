@@ -144,10 +144,20 @@ if (existsSync(SHIP)) {
 
   const pendingBranch = stateBranch("pending");
   ok(
-    "ship refuses on a PENDING migration",
-    pendingBranch !== undefined && callsIn(pendingBranch.thenStatement, "refuse"),
-    "it must refuse rather than apply: additive and destructive are " +
-      "indistinguishable from ship, so the operator decides",
+    "ship refuses a PENDING migration that can lose data",
+    pendingBranch !== undefined &&
+      callsIn(pendingBranch.thenStatement, "destructiveStatements") &&
+      callsIn(pendingBranch.thenStatement, "refuse"),
+    "ship applies only what destructiveStatements (scripts/lib/pending-migrations.mjs, unit tested) " +
+      "calls additive; a DROP, DELETE, UPDATE or rename is the operator's call",
+  );
+  ok(
+    "ship applies a migration only after the Time Travel bookmark step",
+    pendingBranch !== undefined &&
+      sf.text.indexOf('announce("D1 Time Travel bookmark, before anything writes")') !== -1 &&
+      sf.text.indexOf('announce("D1 Time Travel bookmark, before anything writes")') < pendingBranch.getStart(sf),
+    "an applied migration is undone by a Time Travel restore, never by a Worker rollback, so " +
+      "the undo point is read first and a missing one refuses",
   );
   const unreadableBranch = stateBranch("unreadable");
   ok(
