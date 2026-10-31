@@ -1,7 +1,6 @@
-# Written by scripts/build-headers-file.mjs from workers/security-headers.mjs (npm run build). Do not edit.
-# Only /assets/* and /islands/* are immutable: every other static file sits at a stable path and keeps the default revalidation.
+# Written by site-runtime-headers from the site registry (@dustinedwards/site-runtime/sites, dustinedwards-info). Do not edit.
 /*
-  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: accelerometer=(), autoplay=(), camera=(), cross-origin-isolated=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=(), clipboard-read=(), gamepad=(), hid=(), idle-detection=(), interest-cohort=(), serial=(), unload=(), clipboard-write=(self), screen-wake-lock=(self)
   Referrer-Policy: strict-origin-when-cross-origin
@@ -10,6 +9,8 @@
   X-DNS-Prefetch-Control: off
   X-Frame-Options: deny
   X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Embedder-Policy: credentialless; report-to="csp-endpoint"
+  Integrity-Policy-Report-Only: blocked-destinations=(script), endpoints=(csp-endpoint)
   tdm-reservation: 1
 
 /*.html

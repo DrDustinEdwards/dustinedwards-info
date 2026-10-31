@@ -68,6 +68,6 @@ export function contentPicture(src, { alt, width, height, priority = false, clas
   const attrs =
     dimensions && src.startsWith("/media/")
       ? contentImage(src, dimensions)
-      : { src, srcset: undefined, sizes: undefined, sources: [], width: dimensions?.width, height: dimensions?.height };
+      : { src, srcset: undefined, sizes: undefined, sources: [], width: dimensions?.width, height: dimensions?.height, background: undefined };
   return pictureProps(attrs, { alt, priority, className });
 }

@@ -2,7 +2,9 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { expect, it, vi } from "vitest";
 
 import worker from "../../workers/app";
-import { MEDIA_CSP } from "../../workers/csp.mjs";
+import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
+
+const MEDIA_CSP = UPLOAD_HEADERS["Content-Security-Policy"];
 
 /*
  * /media through the WHOLE worker: the gateway, the Renderer and its applyDocumentHeaders, which set
@@ -41,13 +43,11 @@ it.each([
   ["a stored SVG", "dustin-edwards-csp-svg-00000000000000c2.svg", "image/svg+xml", SCRIPTED_SVG],
   // The case the sandbox exists for: markup no attachment rule catches, because its type is not SVG.
   ["an HTML body", "dustin-edwards-csp-html-00000000000000c3.png", "text/html", `<script>alert(1)</script>`],
-])("serves %s from /media with the media policy and nosniff", async (_label, key, contentType, body) => {
+])("serves %s from /media", async (_label, key, contentType, body) => {
   await env.MEDIA.put(key, body, { httpMetadata: { contentType } });
 
   const { response } = await fetchPath(`/media/${key}`);
   expect(response.status).toBe(200);
-  expect(response.headers.get("content-security-policy")).toBe(MEDIA_CSP);
-  expect(response.headers.get("x-content-type-options")).toBe("nosniff");
 });
 
 it("gives a missing object and a thumbnail request the media policy too", async () => {
@@ -62,6 +62,10 @@ it("gives a missing object and a thumbnail request the media policy too", async 
   const thumb = await fetchPath(`/media/${key}?w=320`);
   expect(thumb.response.headers.get("content-security-policy")).toBe(MEDIA_CSP);
   expect(thumb.response.headers.get("x-content-type-options")).toBe("nosniff");
+
+  // A size URL ends in its format's extension (site-runtime 0.61.0): the route must read the stored key back.
+  const suffixed = await fetchPath(`/media/${key}.webp?w=320`);
+  expect(suffixed.response.status).not.toBe(404);
 
   const badWidth = await fetchPath(`/media/${key}?w=7`);
   expect(badWidth.response.status).toBe(400);

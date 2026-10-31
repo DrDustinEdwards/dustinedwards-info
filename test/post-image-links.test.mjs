@@ -64,12 +64,13 @@ await test("the wrap costs the image none of its own attributes", async () => {
   assert.ok(media, "the media img tag is missing");
   assert.equal(attr(media, "src"), MEDIA_SRC);
   const ladder = [640, 704, 1024, 1408];
-  assert.equal(attr(media, "srcset"), ladder.map((w) => `${MEDIA_SRC}?w=${w} ${w}w`).join(", "));
+  // Each size URL ends in its format's extension (site-runtime 0.61.0); the route reads the stored key back with originalKey.
+  assert.equal(attr(media, "srcset"), ladder.map((w) => `${MEDIA_SRC}.webp?w=${w} ${w}w`).join(", "));
   // A <picture>: AVIF first, then WebP, over the same ladder (site-runtime ./image through Prelum's `sources`).
   const picture = html.match(new RegExp(`<picture>((?:<source\\b[^>]*>)+)<img\\b[^>]*src="${MEDIA_SRC}"`))?.[1] ?? "";
   const sources = [...picture.matchAll(/<source\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(sources.map((tag) => attr(tag, "type")), ["image/avif", "image/webp"], `no picture around the media image:\n${html}`);
-  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}?w=${w}&#x26;f=avif ${w}w`).join(", "));
+  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}.avif?w=${w} ${w}w`).join(", "));
   assert.equal(attr(media, "sizes"), "(min-width: 46rem) 704px, calc(100vw - 2rem)");
   assert.equal(attr(media, "width"), "1280");
   assert.equal(attr(media, "height"), "720");
