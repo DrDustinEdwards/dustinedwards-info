@@ -12,6 +12,7 @@ import {
   type ScheduleRun,
 } from "@dustinedwards/site-api";
 import { d1SiteApiStore } from "@dustinedwards/site-api/store";
+import { logEvent } from "@dustinedwards/site-runtime/log";
 import { schedulePurgeHook } from "@dustinedwards/site-runtime/edge-cache";
 import { data, type RouterContextProvider } from "react-router";
 
@@ -63,7 +64,7 @@ function carrelApi(env: Env, ctx: ExecutionContext, origin: string, renderDocume
     adapter: carrelSiteAdapter({ env, ctx, origin, renderDocument }),
     key: env.CARREL_SITE_KEY,
     limiter: carrelLimiter(env),
-    log: (entry) => console.log(JSON.stringify(entry)),
+    log: (entry) => logEvent("site_api", entry),
     store,
     hooks: [
       indexNowHook({ submit: submitIndexNow, origin: SITE_ORIGIN, key: INDEXNOW_KEY }),

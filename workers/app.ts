@@ -222,7 +222,6 @@ const site = {
           run: async () => {
             const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
             const run = await runCarrelSchedules(env, ctx, at);
-            console.log(JSON.stringify({ schedules: run }));
             if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
           },
         },
