@@ -1,4 +1,7 @@
+import { redirect } from "react-router";
+
 import { getBlogPostMarkdown } from "~/db";
+import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv } from "~/lib/context";
 import { markdownResponse } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
@@ -8,6 +11,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const post = await getBlogPostMarkdown(getEnv(context), params.slug);
 
   if (!post) {
+    // A post Carrel renamed keeps its old twin address too, permanently moved, as the page does (blog.$slug.tsx).
+    const moved = await redirectFor(getEnv(context), params.slug);
+    if (moved) return redirect(`/writing/${moved}.md`, 301);
     return new Response("Not found\n", {
       status: 404,
       headers: { "content-type": "text/plain; charset=utf-8" },

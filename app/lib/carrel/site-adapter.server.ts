@@ -11,11 +11,14 @@
 import { RENDER_VERSION } from "@drdustinedwards/site-helpers/render/nomath";
 import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
+import { setTags as setFrontTags } from "@dustinedwards/site-api/frontmatter";
 import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
 import { getTableColumns } from "drizzle-orm";
 import { RouterContextProvider } from "react-router";
 
-import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
+import { listAllPostsForAdmin, postSlugsMatching, previewBlogPost, type PostRow } from "~/db";
+import { postAuthors } from "~/lib/blog-view";
+import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
@@ -25,15 +28,18 @@ import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-k
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import {
+  editFront,
   effectivePublishAt,
   forPreview,
   frontKey,
   statusOf,
+  withPostFieldKeys,
   withPublication,
   withPublishedAt,
   withSlug,
 } from "~/lib/carrel/front-matter-lines";
 import {
+  dropRedirectsTo,
   dropScheduledPublish,
   dropTrash,
   movePost,
@@ -142,7 +148,8 @@ export function carrelSiteAdapter(options: {
     try {
       const saved = await savePost(env, {
         slug: id,
-        raw,
+        // Carrel's post fields under their own keys (front-matter-lines.ts withPostFieldKeys).
+        raw: withPostFieldKeys(raw),
         // A create (null) is guarded by isNew; every other write by the post's own blob sha.
         expectedBlobSha: expectedVersion ?? undefined,
         isNew: expectedVersion === null,
@@ -192,9 +199,12 @@ export function carrelSiteAdapter(options: {
 
     async list(query) {
       const now = Date.now();
-      const needle = query.q?.toLowerCase();
+      // The title, the slug and the body (site-api's q), matched in D1.
+      const matched = query.q ? await postSlugsMatching(env, query.q) : null;
       const trash = await trashedAt(env);
-      const rows = (await listAllPostsForAdmin(env)).filter((row) => trash.has(row.slug) === (query.trashed === true));
+      const rows = (await listAllPostsForAdmin(env))
+        .filter((row) => trash.has(row.slug) === (query.trashed === true))
+        .filter((row) => !matched || matched.has(row.slug));
       const summaries: ContentSummary[] = rows.map((row) => {
         const at = row.publishAt ? row.publishAt.getTime() : null;
         const status: ContentStatus =
@@ -210,6 +220,8 @@ export function carrelSiteAdapter(options: {
           publishedAt: status === "published" && at !== null ? new Date(at).toISOString() : null,
           updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
           tags: row.tags,
+          authors: postAuthors(row.slug, row.authors),
+          ...(row.description ? { excerpt: row.description } : {}),
           trashedAt: trash.get(row.slug) ?? null,
         };
       });
@@ -217,31 +229,36 @@ export function carrelSiteAdapter(options: {
       if (query.trashed) {
         for (const summary of summaries) summary.version = (await readFile(env, postPath(summary.id)))?.sha;
       }
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries.filter((s) => !query.status || s.status === query.status);
     },
 
     async get(id) {
       const file = await readFile(env, postPath(id));
       if (!file) return null;
-      const updated = await env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
+      const row = await env.DB.prepare(`SELECT updated_at, description, authors FROM posts WHERE slug = ?1`)
         .bind(id)
-        .first<{ updated_at: number }>();
+        .first<{ updated_at: number; description: string | null; authors: string | null }>();
       const { firstPublished } = readState(file.content);
       const status = statusOf(file.content);
+      const at = new Date(effectivePublishAt(file.content)).toISOString();
       return {
         id,
         kind: "post",
         title: frontKey(file.content, "title") || id,
         status,
         path: firstPublished ? `/writing/${id}` : null,
-        publishAt: status === "scheduled" ? new Date(effectivePublishAt(file.content)).toISOString() : null,
-        publishedAt: firstPublished ? `${firstPublished}T00:00:00.000Z` : null,
-        updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
+        publishAt: status === "scheduled" ? at : null,
+        // The date the post is published under, as the list and the page read it (a backdated first publish keeps its
+        // date, where first_published is the day it first went out), and kept on a withdrawn post, which was public.
+        // A post scheduled again ahead has only its first day to name.
+        publishedAt: firstPublished ? (status === "scheduled" ? `${firstPublished}T00:00:00.000Z` : at) : null,
+        updatedAt: row ? new Date(row.updated_at * 1000).toISOString() : null,
+        authors: postAuthors(id, row?.authors ?? null),
+        ...(row?.description ? { excerpt: row.description } : {}),
         trashedAt: await trashedAtOf(env, id),
         format: "markdown",
-        source: file.content,
+        // Under site-api's post field keys, so Carrel's boxes read this site's older `description` and `part`.
+        source: withPostFieldKeys(file.content),
         version: file.sha,
       };
     },
@@ -300,6 +317,14 @@ export function carrelSiteAdapter(options: {
       return dropWaiting(id, await write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion));
     },
 
+    // The whole tag set, written into the front matter and saved like any edit: a live post stays live.
+    async setTags(id, input) {
+      const file = await readFile(env, postPath(id));
+      if (!file) throw new NotFoundError(`No post "${id}" exists.`);
+      if (file.sha !== input.expectedVersion) throw new VersionConflictError(file.sha);
+      return write(id, input.changeId, editFront(file.content, (front) => setFrontTags(front, input.tags)), file.sha);
+    },
+
     revisions(id) {
       return fileRevisions(env, postPath(id));
     },
@@ -324,7 +349,8 @@ export function carrelSiteAdapter(options: {
       } catch (error) {
         return asSiteApiError(env, error, postPath(id));
       }
-      await batch(waiting.remove(id), dropScheduledPublish(env, id), dropTrash(env, id));
+      // A redirect to a post that is gone would answer a 301 to a 404.
+      await batch(waiting.remove(id), dropScheduledPublish(env, id), dropTrash(env, id), dropRedirectsTo(env, id));
     },
 
     // A live or scheduled post is written as a draft first, so it leaves the site before it enters the trash.
@@ -425,6 +451,7 @@ export function carrelSiteAdapter(options: {
     content: registry.adapter,
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
+    mentions: carrelMentionsAdapter(env),
     schedules: postSchedules(env, write),
   };
 }

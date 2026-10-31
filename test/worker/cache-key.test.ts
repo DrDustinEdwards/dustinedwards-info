@@ -116,6 +116,12 @@ describe("negotiation", () => {
 });
 
 describe("the cache-header rule: the platform caches silence", () => {
+  it("keeps Carrel's API's own `no-store` on a refusal, which the family's site-api-live check reads exactly", async () => {
+    const response = await fetchThrough(new Request(`${ORIGIN}${STUB_PATHS.carrel}`));
+    expect(response.status).toBe(401);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
   it("stamps `private, no-store` on a response that declared nothing", async () => {
     /* A response with no `Cache-Control` is CACHED under RFC 9111 heuristic freshness, not
      * skipped, so a route opts IN to sharing and never opts out of refusal. */

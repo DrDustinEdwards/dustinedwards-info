@@ -68,7 +68,7 @@ function buildSql(posts) {
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
         `further_reading, og_title, og_description, related, og_image, source_blob_sha, ` +
         `render_hash, writing_status, assumed_audience, key_takeaways, changelog, backlinks, ` +
-        `updated_at) VALUES (` +
+        `updated_at, authors) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
@@ -81,7 +81,8 @@ function buildSql(posts) {
         `${sql(post.keyTakeaways ? JSON.stringify(post.keyTakeaways) : null)}, ` +
         `${sql(post.changelog ? JSON.stringify(post.changelog) : null)}, ` +
         `${sql(post.backlinks && post.backlinks.length > 0 ? JSON.stringify(post.backlinks) : null)}, ` +
-        `${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
+        `${updatedAt === null ? "unixepoch()" : num(updatedAt)}, ` +
+        `${sql(post.authors ? JSON.stringify(post.authors) : null)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
@@ -96,7 +97,7 @@ function buildSql(posts) {
         `assumed_audience = excluded.assumed_audience, ` +
         `key_takeaways = excluded.key_takeaways, changelog = excluded.changelog, ` +
         `backlinks = excluded.backlinks, ` +
-        `updated_at = excluded.updated_at;`,
+        `updated_at = excluded.updated_at, authors = excluded.authors;`,
     );
   }
 

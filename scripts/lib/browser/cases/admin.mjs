@@ -113,7 +113,6 @@ export async function run({ browser }) {
       ["/admin/media?view=grid", "the media library, grid"],
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
-      ["/admin/mentions", "the mentions queue"],
       ["/admin/kb", "the knowledge base"],
       ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
     ];
@@ -232,7 +231,6 @@ export async function run({ browser }) {
       for (const [path, what] of [
         ["/admin", "the cockpit"],
         ["/admin/tools", "tools"],
-        ["/admin/mentions", "the mentions queue"],
         ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });

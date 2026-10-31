@@ -155,7 +155,6 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
-  mentions: <Icon d="M4 5h16v11H11l-5 4v-4H4z" />,
   media: <Icon d="M3 5h18v14H3zM3 17l6-6 4 4 3-3 5 5M16.5 9.5h.01" />,
   kb: <Icon d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />,
   tools: <Icon d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h10M18 17h2M16 5v4M9 10v4M16 15v4" />,
@@ -209,15 +208,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       current: at("/admin/media"),
       count: counts.media ?? undefined,
       countNote: countNote(counts.media, 0, askDriftMaxAgeSeconds),
-    },
-    // No count: a pending mention is not worth a third query on every admin page.
-    {
-      id: "mentions",
-      label: "Mentions",
-      href: "/admin/mentions",
-      group: "Content",
-      icon: ICONS.mentions,
-      current: at("/admin/mentions"),
     },
     // No count: the tabs on the page count each base, and the rail needs no second read of the table.
     {

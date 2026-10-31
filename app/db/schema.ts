@@ -40,6 +40,8 @@ export const posts = sqliteTable(
     featured: integer("featured", { mode: "boolean" }).notNull().default(false),
     series: text("series"),
     part: integer("part"),
+    /** JSON array of display names in credit order, from the front matter; NULL is the site's owner alone. */
+    authors: text("authors"),
     /** JSON array of { title, url }. */
     furtherReading: text("further_reading"),
     ogTitle: text("og_title"),

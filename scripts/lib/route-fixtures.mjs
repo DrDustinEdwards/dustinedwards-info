@@ -32,6 +32,8 @@ export function postLoaderData(record, revisedDate) {
       next: null,
       series: record.series ?? null,
       part: record.part ?? null,
+      // As blog-view.ts postAuthors reads the row: the front matter's names, else the site's owner.
+      authors: record.authors ?? ["Dustin Edwards"],
       ogTitle: record.ogTitle ?? null,
       ogDescription: record.ogDescription ?? null,
       related: record.related ?? [],

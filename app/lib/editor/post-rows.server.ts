@@ -1,6 +1,5 @@
 // The post's D1 rows: the posts row, its tags, its search records and its media citations, written in one batch by a
 // save and cleared by the same statements on a delete. publish.server.ts decides what is written; this file writes it.
-import { combinePurges, purgePost, purgePosts } from "~/lib/cache-purge.server";
 import { mediaRefKey } from "~/lib/media-ref-key.mjs";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { statusForDraft } from "~/lib/search/visibility.mjs";
@@ -47,6 +46,7 @@ export function postColumnValues(record: PostRecord) {
     featured: record.featured ? 1 : 0,
     series: record.series,
     part: record.part,
+    authors: record.authors ? JSON.stringify(record.authors) : null,
     further_reading: JSON.stringify(record.furtherReading),
     og_title: record.ogTitle,
     og_description: record.ogDescription,
@@ -79,10 +79,10 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
            cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part,
            further_reading, og_title, og_description, related, source_blob_sha, render_hash,
            writing_status, assumed_audience, key_takeaways, changelog, backlinks,
-           updated_at)
+           updated_at, authors)
          VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
            ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26,
-           COALESCE(?27, unixepoch()))
+           COALESCE(?27, unixepoch()), ?28)
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
@@ -97,7 +97,7 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
            assumed_audience = excluded.assumed_audience,
            key_takeaways = excluded.key_takeaways, changelog = excluded.changelog,
            backlinks = excluded.backlinks,
-           updated_at = excluded.updated_at`,
+           updated_at = excluded.updated_at, authors = excluded.authors`,
       )
       .bind(
         v.slug,
@@ -127,6 +127,7 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
         v.changelog,
         v.backlinks,
         v.updated_at,
+        v.authors,
       ),
     ...record.tags.map((tag: string) =>
       db
@@ -208,11 +209,11 @@ function searchStatements(db: D1Database, record: PostRecord) {
   ];
 }
 
-/** Tag rows stay, as in the bulk sync. Stale media_refs would block deleting the image forever. */
+/**
+ * Tag rows stay, as in the bulk sync. Stale media_refs would block deleting the image forever. Purges nothing: its
+ * callers purge once the delete has landed (renderAndWrite says who).
+ */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
-  // Purged BEFORE the delete: a purge landing after a slow delete could re-store the removed page.
-  const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
-  const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
   const db = env.DB;
   await db.batch([
     clearPostTags(db, slug),
@@ -222,5 +223,4 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
     ...rebuildSearchIndexes(db),
     clearMediaRefs(db, slug),
   ]);
-  return { purged: combinePurges(purgedPage, purgedListings) };
 }

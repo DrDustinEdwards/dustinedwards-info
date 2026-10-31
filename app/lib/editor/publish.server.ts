@@ -3,7 +3,7 @@
 
 import { imageSize } from "image-size";
 
-import { purgePosts, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { purgePosts } from "~/lib/cache-purge.server";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
 import { postPath } from "~/lib/content/slug.mjs";
@@ -179,7 +179,9 @@ export async function renderRecord(env: PublishEnv, slug: string, raw: string) {
 
 /**
  * The only writer of a rendered row. blobSha proves the rendered bytes are the stored bytes, so a
- * truncated fetch fails here by name.
+ * truncated fetch fails here by name. It purges nothing: a Carrel write is purged after its answer
+ * (site-runtime purgeAfterWrite, app/lib/carrel/site-api.server.ts), a schedule by schedulePurgeHook, and
+ * the operator's tools and the bulk repairs purge once when they are done and report it.
  */
 export async function renderAndWrite(
   env: PublishEnv,
@@ -199,13 +201,7 @@ export async function renderAndWrite(
   }
 
   await syncPostToD1(env, record);
-
-  // Purges on a draft save too: an unpublish writes a draft row while changing every public listing.
-  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record. A failed purge
-  // never fails the write, but it is returned: the public pages stay stale until the cache expires.
-  const purged = await purgePosts(`renderAndWrite ${slug}`);
-
-  return { record, purged };
+  return { record };
 }
 
 /**
@@ -274,9 +270,7 @@ async function refreshNeighbors(env: PublishEnv, savedSlug: string) {
 async function refreshNeighborsAfterSave(env: PublishEnv, slug: string) {
   try {
     const updated = await refreshNeighbors(env, slug);
-    // The save's own purge ran before these rows changed, so a page re-stored in between would keep the old lists.
-    const purged = updated.length > 0 ? await purgePosts(`refreshNeighbors ${slug}`) : null;
-    return { ok: true as const, updated, purged };
+    return { ok: true as const, updated };
   } catch (error) {
     console.error(
       JSON.stringify({ alert: "neighbor-refresh-failed", slug, detail: errorMessage(error) }),
@@ -363,7 +357,6 @@ export async function savePost(
       record: gated,
       askSync: null,
       neighbors: null,
-      purged: null as PurgeOutcome,
       d1Retried: false,
       firstPublished: decision.firstPublished,
       published: false,
@@ -375,11 +368,9 @@ export async function savePost(
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
-  // False until a write lands: an unreached purge leaves the pages as stale as a failed one.
-  let purged: PurgeOutcome = false;
   const converged = await convergeWithRetry({
     write: async () => {
-      ({ record, purged } = await renderAndWrite(
+      ({ record } = await renderAndWrite(
         env,
         options.slug,
         raw,
@@ -409,8 +400,6 @@ export async function savePost(
     askSync,
     /** Other posts' related and backlinks lists rewritten by this save, or why they could not be. */
     neighbors,
-    /** False when the cache purge failed or was never reached, null when the runtime cannot purge. */
-    purged,
     d1Retried: converged.retried,
     firstPublished: decision.firstPublished,
     published: decision.published,
@@ -469,9 +458,9 @@ export async function deletePost(
     changes: [{ path: postPath(options.slug), content: null }],
   });
 
-  const { purged } = await deletePostFromD1(env, options.slug);
+  await deletePostFromD1(env, options.slug);
 
-  return { commitSha, purged, askRemoval: await removeAskForPost(env, options.slug) };
+  return { commitSha, askRemoval: await removeAskForPost(env, options.slug) };
 }
 
 /**
@@ -479,8 +468,8 @@ export async function deletePost(
  * the file and its history have moved to the new slug, whose save writes the rows again.
  */
 export async function forgetPostRows(env: PublishEnv, slug: string) {
-  const { purged } = await deletePostFromD1(env, slug);
-  return { purged, askRemoval: await removeAskForPost(env, slug) };
+  await deletePostFromD1(env, slug);
+  return { askRemoval: await removeAskForPost(env, slug) };
 }
 
 /**
@@ -523,10 +512,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
   )
     .bind(...keep)
     .all<{ slug: string }>();
-  let unpurged = 0;
-  for (const { slug } of orphans.results ?? []) {
-    if ((await deletePostFromD1(env, slug)).purged === false) unpurged += 1;
-  }
+  for (const { slug } of orphans.results ?? []) await deletePostFromD1(env, slug);
 
   for (const entry of files) {
     const slug = entry.slug;
@@ -537,8 +523,10 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
           `Main moved mid-rebuild; re-run the regenerate.`,
       );
     }
-    if ((await renderAndWrite(env, slug, file.content, entry.sha)).purged === false) unpurged += 1;
+    await renderAndWrite(env, slug, file.content, entry.sha);
   }
 
-  return { synced: files.length, removed: orphans.results?.length ?? 0, unpurged };
+  // One purge for the whole pass, reported: a failure leaves every page it rewrote stale until expiry.
+  const purged = await purgePosts("regenerate posts");
+  return { synced: files.length, removed: orphans.results?.length ?? 0, unpurged: purged === false ? files.length : 0 };
 }

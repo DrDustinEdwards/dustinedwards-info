@@ -171,6 +171,7 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
     coverImage: post.coverImage,
     ogImage: post.ogImage,
     tags: post.tags,
+    authors: post.authors,
   };
 }
 
@@ -219,11 +220,17 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           <p className="post-dek">{dek}</p>
           <EvidenceRow facts={evidence} />
           {/* `hidden`, not `.sr-only`, which is still announced. mf2 parsers read markup, not computed style. */}
-          <p className="p-author h-card" hidden>
-            <a className="p-name u-url" href="/">
-              {SITE.name}
-            </a>
-          </p>
+          {post.authors.map((name) => (
+            <p key={name} className="p-author h-card" hidden>
+              {name === SITE.name ? (
+                <a className="p-name u-url" href="/">
+                  {name}
+                </a>
+              ) : (
+                <span className="p-name">{name}</span>
+              )}
+            </p>
+          ))}
         </header>
 
         <PostRail post={post} revisedLabel={revisedLabel} sections={sections} />

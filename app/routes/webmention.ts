@@ -124,7 +124,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   /* A count, not a reservation: two concurrent requests can both pass at the boundary, one row past the cap. */
   const open = await countOpenWebmentions(env);
   if (open >= OPEN_QUEUE_CAP) {
-    // Moderating /admin/mentions reopens the endpoint.
+    // Moderating the queue in Carrel (app/lib/carrel/mentions-adapter.server.ts) reopens the endpoint.
     console.log(JSON.stringify({ event: "webmention-open-cap-refused", open, cap: OPEN_QUEUE_CAP }));
     return answer("Webmention queue is full, please retry later", 503);
   }

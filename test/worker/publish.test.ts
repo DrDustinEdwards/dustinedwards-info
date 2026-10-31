@@ -361,7 +361,7 @@ describe("savePost refreshes the other posts' derived lists", async () => {
     const result = await save("quiet-two", `${raw}
 A changed line.
 `);
-    expect(result.neighbors).toMatchObject({ ok: true, updated: [], purged: null });
+    expect(result.neighbors).toMatchObject({ ok: true, updated: [] });
   });
 
   it("REPORTS a failed neighbor write, and the commit and the saved row stand", async () => {

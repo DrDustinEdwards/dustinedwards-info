@@ -24,7 +24,7 @@ import {
   readRegistrySides,
   readRosterSides,
 } from "~/lib/health/checks.server";
-import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRegistry, purgeRoster } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgePosts, purgePhages, purgeProcedures, purgePublications, purgeRegistry, purgeRoster } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { readCv } from "~/db/cv";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
@@ -152,8 +152,6 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
   let repaired = 0;
-  // A failed purge never fails the repair, but it is counted: those pages stay stale until expiry.
-  let unpurged = 0;
   for (const slug of [...drift.changed, ...drift.unrowed]) {
     const entry = fileBySlug.get(slug);
     if (!entry) continue;
@@ -164,15 +162,18 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
           `mid-repair. Re-run sync_posts.`,
       );
     }
-    if ((await renderAndWrite(env, slug, file.content, entry.sha)).purged === false) unpurged += 1;
+    await renderAndWrite(env, slug, file.content, entry.sha);
     repaired += 1;
   }
 
   let removed = 0;
   for (const slug of drift.unfiled) {
-    if ((await deletePostFromD1(env, slug)).purged === false) unpurged += 1;
+    await deletePostFromD1(env, slug);
     removed += 1;
   }
+
+  // One purge for the repair, counted when it fails: every page it rewrote stays stale until expiry.
+  const unpurged = repaired + removed > 0 && (await purgePosts("sync_posts")) === false ? repaired + removed : 0;
 
   return convergedResult(await readContentSides(env), { repaired, removed, unpurged });
 }

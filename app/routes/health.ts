@@ -2,7 +2,7 @@
  * /health: site-runtime's healthResponse, what the outside reads: the UptimeRobot monitor, Capsid's watcher and the
  * family's ops audit. 503 only when D1 does not
  * answer. Warnings, never a 503: the newest complete dump older than 26 hours, a binding that does not answer, a cron
- * job that failed or stopped, and every drift check /api/health runs (the site is up while one drifts). /api/health
+ * job that failed or stopped, a cache purge that failed and has not been followed by one that worked, and every drift check /api/health runs (the site is up while one drifts). /api/health
  * stays the repair instrument the watchdog, ship and the admin MCP read. `sha` is the commit ship deployed
  * (DEPLOY_SHA); a hand deploy has none. Same limiter and budget as /api/health, because the drift checks cost.
  */
@@ -26,6 +26,7 @@ import { limitHit } from "~/lib/rate-limit.mjs";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { CHECK_TIMEOUT_MS } from "~/lib/health/verdicts.mjs";
 import { CRON_JOBS } from "~/lib/cron-jobs.mjs";
+import { purgeCheck } from "~/lib/purge-record.server";
 
 import type { Route } from "./+types/health";
 
@@ -86,6 +87,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       queueCheck("webmention-queue", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       cronCheck(env.DB, { jobs: [...CRON_JOBS] }),
+      // A purge that failed after a write: the pages it should have dropped are still served (purge-record.server.ts).
+      { name: "cache-purge", level: "warn", run: () => purgeCheck(env) },
       ...HEALTH_CHECK_NAMES.map((name) => ({
         name,
         level: "warn" as const,

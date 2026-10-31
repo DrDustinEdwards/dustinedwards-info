@@ -55,7 +55,12 @@ export const frontmatterSchema = z.object({
     .max(SLUG_MAX_LENGTH, `must be at most ${SLUG_MAX_LENGTH} characters`),
   date: isoDate,
   tags: z.array(z.string().min(1)).default([]),
-  description: z.string().min(1, "must not be empty"),
+  // The summary a listing and the meta description show. `excerpt` is site-api's post field (v0.17.0), the key Carrel
+  // writes; `description` is this site's own older key, still read so every stored file and revision renders.
+  excerpt: z.string().min(1, "must not be empty").optional(),
+  description: z.string().min(1, "must not be empty").optional(),
+  // site-api's `authors` post field: display names in credit order. None means the site's owner alone.
+  authors: z.array(z.string().trim().min(1).max(200)).min(1).max(50).optional(),
   draft: z.boolean().default(false),
   publish_at: isoDateTime.optional(),
   cover: z
@@ -73,6 +78,8 @@ export const frontmatterSchema = z.object({
     .optional(),
   featured: z.boolean().default(false),
   series: z.string().min(1).optional(),
+  // site-api's `seriesPart` post field, and this site's older `part`, read the same way as excerpt and description.
+  seriesPart: z.number().int().min(1, "must be 1 or greater").optional(),
   part: z.number().int().min(1, "must be 1 or greater").optional(),
   // Not `status`, which is the row's draft/published column. A closed set so readers learn it once.
   writing_status: z.enum(["notes", "draft", "in progress", "finished", "obsolete"]).optional(),
@@ -114,13 +121,29 @@ export const frontmatterSchema = z.object({
   // Server-owned, stamped on first publish. renderPost deliberately keeps it out of the record.
   first_published: isoDate.optional(),
 }).superRefine((value, ctx) => {
-  if (value.series && value.part === undefined) {
-    ctx.addIssue({ code: "custom", path: ["part"], message: "is required when series is set" });
+  if (value.excerpt === undefined && value.description === undefined) {
+    ctx.addIssue({ code: "custom", path: ["excerpt"], message: "is required (or the older description)" });
   }
-  if (value.part !== undefined && !value.series) {
-    ctx.addIssue({ code: "custom", path: ["series"], message: "is required when part is set" });
+  const part = value.seriesPart ?? value.part;
+  if (value.series && part === undefined) {
+    ctx.addIssue({ code: "custom", path: ["seriesPart"], message: "is required when series is set" });
   }
-});
+  if (part !== undefined && !value.series) {
+    ctx.addIssue({ code: "custom", path: ["series"], message: "is required when seriesPart is set" });
+  }
+  // One spelling of each: a file holding both would render one and show the other in Carrel.
+  if (value.excerpt !== undefined && value.description !== undefined) {
+    ctx.addIssue({ code: "custom", path: ["description"], message: "and excerpt are the same field; keep excerpt" });
+  }
+  if (value.seriesPart !== undefined && value.part !== undefined) {
+    ctx.addIssue({ code: "custom", path: ["part"], message: "and seriesPart are the same field; keep seriesPart" });
+  }
+}).transform(({ excerpt, seriesPart, ...value }) => ({
+  ...value,
+  // Every reader keeps the site's own names; only the file's key changed.
+  description: /** @type {string} */ (excerpt ?? value.description),
+  part: seriesPart ?? value.part,
+}));
 
 export { findWideDashes } from "./wide-dash.mjs";
 
@@ -285,6 +308,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     featured: fm.featured,
     series: fm.series ?? null,
     part: fm.part ?? null,
+    authors: fm.authors ?? null,
     writingStatus: fm.writing_status ?? null,
     assumedAudience: fm.assumed_audience ?? null,
     keyTakeaways: fm.key_takeaways ?? null,

@@ -143,7 +143,6 @@ export default [
   // Private: the admin layout gates every child via middleware.
   route("admin", "routes/admin.tsx", [
     index("routes/admin._index.tsx"),
-    route("mentions", "routes/admin.mentions.tsx"),
     // The Knowledge Base (docs/KNOWLEDGE-BASE.md): read-only, a tab per base and Needs info.
     route("kb", "routes/admin.kb.tsx"),
     // One file of it, edited and saved through the save the operator API uses (step 3).

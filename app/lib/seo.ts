@@ -240,11 +240,22 @@ type ArticleSeo = {
   coverImage: string | null;
   ogImage?: string | null;
   tags: string[];
+  /** Everyone the post credits, the first the primary author (blog-view.ts postAuthors). */
+  authors: string[];
 };
 
 /** The facts Prelum's `headTags` and `article` both read, so the Open Graph tags and the JSON-LD cannot drift apart. */
 export function articleFacts(post: ArticleSeo) {
-  return { published: post.publishAt, modified: post.updatedAt ?? post.publishAt, author: SITE.name, tags: post.tags };
+  return { published: post.publishAt, modified: post.updatedAt ?? post.publishAt, author: post.authors[0] ?? SITE.name, tags: post.tags };
+}
+
+/** One Person, or a list of them for a post that credits more than one. The owner keeps the site's address. */
+function articleAuthor(origin: string, authors: string[]): Record<string, unknown> {
+  const people = authors.map((name) =>
+    name === SITE.name ? { "@type": "Person", name, url: origin } : { "@type": "Person", name },
+  );
+  // A one-element list would change every existing post's JSON-LD for no reader; schema.org takes either form.
+  return (people.length === 1 ? people[0] : people) as Record<string, unknown>;
 }
 
 export function articleJsonLd(origin: string, post: ArticleSeo) {
@@ -260,7 +271,7 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       ogImage: post.ogImage ?? null,
     }).image.url,
     ...articleFacts(post),
-    author: { "@type": "Person", name: SITE.name, url: origin },
+    author: articleAuthor(origin, post.authors),
     publisher: { "@type": "Person", name: SITE.name, url: origin },
   });
 }

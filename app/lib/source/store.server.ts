@@ -4,6 +4,7 @@
 // with the deploy, so they are read from the assets binding, never from D1.
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
+import { IDENTITY } from "~/lib/identity.generated.mjs";
 import assetManifest from "../../../content/generated/assets.json";
 
 export class SourceError extends Error {
@@ -226,14 +227,20 @@ async function listCommitsForPath(env: SourceEnv, path: string, limit = 20): Pro
   }));
 }
 
-/** Carrel's revision list for one file: null when the file (or the id's owner) is absent. */
+/**
+ * Carrel's revision list for one file: null when the file (or the id's owner) is absent. Each revision is the whole
+ * file, so it holds every field. It names the person: every door that writes here (the admin's Access session, the
+ * operator token, Carrel's key) is the site owner's, so the stored `author` names the door, which the message's
+ * `[carrel:<change id>]` already carries. Carrel's actor (site-api 0.19.0) will name the person behind its key.
+ */
 export async function fileRevisions(env: SourceEnv, path: string | null) {
   if (!path || !(await readFile(env, path))) return null;
   const commits = await listCommitsForPath(env, path, 50);
   return commits.map((c) => ({
     version: c.sha,
     at: c.date,
-    author: c.author.slice(0, 200),
+    author: IDENTITY.name,
+    authors: [IDENTITY.name],
     message: c.message.slice(0, 2000),
   }));
 }

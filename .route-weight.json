@@ -28,7 +28,6 @@
       "routes/admin.media._index": 268912,
       "routes/phages": 260786,
       "routes/workspace.members": 241666,
-      "routes/admin.mentions": 240319,
       "routes/admin.tools": 239630,
       "routes/admin._index": 236070,
       "routes/workspace.runs.run": 234403,

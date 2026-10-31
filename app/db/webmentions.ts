@@ -90,15 +90,22 @@ export type WebmentionVerdict =
       authorUrl: string | null;
       excerpt: string | null;
     }
-  | { status: "failed"; failureReason: string };
+  | { status: "failed"; failureReason: string }
+  /** The source answered 410: the sender took the page down, so the mention is removed. */
+  | { status: "gone" };
 
-/** Only a row still `unverified` takes a verdict, so a stale fetch cannot overwrite a reset. */
+/** Only a row still `unverified` takes a verdict, so a stale fetch cannot overwrite a reset. A gone source deletes it. */
 export async function recordWebmentionVerdict(
   env: Env,
   id: number,
   verdict: WebmentionVerdict,
   now: Date = new Date(),
 ): Promise<void> {
+  const unverified = and(eq(webmentions.id, id), eq(webmentions.status, "unverified"));
+  if (verdict.status === "gone") {
+    await getDb(env).delete(webmentions).where(unverified);
+    return;
+  }
   const shared = { verifiedAt: now, decidedAt: null };
   const set =
     verdict.status === "pending"
@@ -115,10 +122,7 @@ export async function recordWebmentionVerdict(
           status: "failed" as const,
           failureReason: verdict.failureReason,
         };
-  await getDb(env)
-    .update(webmentions)
-    .set(set)
-    .where(and(eq(webmentions.id, id), eq(webmentions.status, "unverified")));
+  await getDb(env).update(webmentions).set(set).where(unverified);
 }
 
 /** The EXISTS on `posts` keeps an unpublished post's mentions hidden. */

@@ -515,6 +515,22 @@ describe("/webmention accepts and verifies", () => {
     expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.fetchError);
   });
 
+  it("REMOVES the mention when the source answers 410 Gone, rather than keeping it as failed", async () => {
+    const source = "https://elsewhere.example/taken-down";
+    stubSources({ [source]: { body: "Gone", status: 410 } });
+
+    const ctx = createExecutionContext();
+    await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.57" }),
+      context: mentionContext(ctx),
+    } as never);
+    await waitOnExecutionContext(ctx);
+    expect(await mentionRow(source)).not.toBeNull();
+    await deliver();
+
+    expect(await mentionRow(source)).toBeNull();
+  });
+
   it("FOLLOWS a redirect to another public page and verifies the page it lands on", async () => {
     const source = "https://elsewhere.example/moved";
     const landed = "https://elsewhere.example/moved-here";

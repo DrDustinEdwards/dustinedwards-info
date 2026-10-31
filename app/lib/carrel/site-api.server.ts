@@ -13,7 +13,7 @@ import {
 } from "@dustinedwards/site-api";
 import { d1SiteApiStore } from "@dustinedwards/site-api/store";
 import { logEvent } from "@dustinedwards/site-runtime/log";
-import { schedulePurgeHook } from "@dustinedwards/site-runtime/edge-cache";
+import { purgeAfterWrite, schedulePurgeHook } from "@dustinedwards/site-runtime/edge-cache";
 import { data, type RouterContextProvider } from "react-router";
 
 import { carrelSiteAdapter } from "~/lib/carrel/site-adapter.server";
@@ -54,9 +54,10 @@ const fromThisSite = (hook: PublishHook): PublishHook => ({
 /**
  * The package for one request or one cron pass. The store (drizzle/0037_site_api_store.sql) makes every write safe to
  * send again under its change id, keeps Carrel's preview links, retries a failed hook from the cron, and remembers
- * which pages each post last sent a webmention to. A changed live page tells IndexNow and the pages it links to; a
- * schedule has no request, and the cron's entrypoint cannot reach the Renderer's cache, so its change purges the stored
- * pages through the Renderer (workers/app.ts purgePages). A request's save purges inside savePost.
+ * which pages each post last sent a webmention to. A changed live page tells IndexNow and the pages it links to. The
+ * stored pages are purged through the Renderer's purgePages (workers/app.ts), which keeps a failure for /health: after
+ * an accepted content write by purgeAfterWrite (handleCarrelRequest), and after a schedule, which has no request, by
+ * schedulePurgeHook.
  */
 function carrelApi(env: Env, ctx: ExecutionContext, origin: string, renderDocument: RenderDocument) {
   const store = d1SiteApiStore(env.DB);
@@ -84,8 +85,17 @@ export async function handleCarrelRequest(
 ): Promise<Response> {
   const api = forRequest(request, context);
   if (!api.matches(request)) throw data("Not found", { status: 404 });
-  return api.handle(request, getExecutionContext(context));
+  const ctx = getExecutionContext(context);
+  const response = await api.handle(request, ctx);
+  // A content write changes posts and every listing; a preview, a preview link, a media write (the media adapter
+  // purges what it changes) and a mention decision (purged in the write, and reported) do not need this one.
+  const path = new URL(request.url).pathname;
+  // A runtime with no loopback to the Renderer (a test's context) purges nothing, as Miniflare's cache cannot.
+  if (CONTENT_WRITE.test(path) && ctx.exports) purgeAfterWrite(request, response, ctx, `carrel ${request.method} ${path}`);
+  return response;
 }
+
+const CONTENT_WRITE = /^\/api\/carrel\/v1\/content\//;
 
 /**
  * A preview link Carrel made (`/preview/<token>`, no key, app/routes/preview.$token.ts): the post's current source

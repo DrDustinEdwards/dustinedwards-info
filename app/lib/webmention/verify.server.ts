@@ -114,6 +114,11 @@ export async function inspectSource(
     at = next;
   }
 
+  // The W3C rule for a source that is gone: the mention is deleted, not kept as failed (webmention 3.2.2).
+  if (response.status === 410) {
+    await response.body?.cancel();
+    return { status: "gone" };
+  }
   if (!response.ok) {
     return { status: "failed", failureReason: FAILURE_REASONS.fetchError };
   }

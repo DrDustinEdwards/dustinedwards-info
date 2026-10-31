@@ -43,6 +43,11 @@ export async function redirectFor(env: DbEnv, slug: string): Promise<string | nu
   return row?.to_slug ?? null;
 }
 
+/** The redirects that lead to a post, dropped when it is deleted: a 301 to a page that is gone is a 404 in two hops. */
+export function dropRedirectsTo(env: DbEnv, slug: string) {
+  return env.DB.prepare(`DELETE FROM post_redirects WHERE to_slug = ?1`).bind(slug);
+}
+
 /**
  * Moves a post's file, its every revision and its waiting state from one slug to the other, and, when it was ever
  * public, leaves the old slug redirecting (an earlier rename's redirect is repointed, so there is never a chain). One

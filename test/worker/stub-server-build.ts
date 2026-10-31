@@ -20,6 +20,8 @@ export const STUB_PATHS = {
   silent: "/stub-silent",
   // The real path, not a stub one: the gateway renders "/gone" for a removed WordPress address.
   gone: "/gone",
+  // The real prefix: the Renderer keeps the site-api package's own `no-store` there.
+  carrel: "/api/carrel/v1/meta",
 } as const;
 
 export const STUB_PAGE_BODY = "stub page body";
@@ -100,6 +102,19 @@ const routes: Record<string, StubRoute> = {
         new Response(STUB_GONE_BODY, {
           status: 410,
           headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+    },
+  },
+  carrel: {
+    id: "carrel",
+    parentId: "root",
+    path: "api/carrel/v1/*",
+    module: {
+      /* The package's refusal of a request with no key: 401 problem+json, `no-store`. */
+      loader: () =>
+        new Response('{"error":"unauthorized"}', {
+          status: 401,
+          headers: { "content-type": "application/problem+json", "cache-control": "no-store" },
         }),
     },
   },

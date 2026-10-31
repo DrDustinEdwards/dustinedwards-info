@@ -499,6 +499,8 @@ export async function listAllPostsForAdmin(env: Env) {
         publishAt: posts.publishAt,
         updatedAt: posts.updatedAt,
         featured: posts.featured,
+        description: posts.description,
+        authors: posts.authors,
       })
       .from(posts)
       .where(eq(posts.kind, "post"))
@@ -507,6 +509,24 @@ export async function listAllPostsForAdmin(env: Env) {
   ]);
   const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+}
+
+/**
+ * Admin only, drafts included: the posts whose title, slug or markdown body holds `q`, ignoring case (Carrel's list
+ * search). `instr` on lowered text, not LIKE, so a `%` or `_` in the words is matched as itself.
+ */
+export async function postSlugsMatching(env: Env, q: string): Promise<Set<string>> {
+  const needle = q.toLowerCase();
+  const rows = await getDb(env)
+    .select({ slug: posts.slug })
+    .from(posts)
+    .where(
+      and(
+        eq(posts.kind, "post"),
+        sql`(instr(lower(${posts.title}), ${needle}) > 0 OR instr(${posts.slug}, ${needle}) > 0 OR instr(lower(${posts.body}), ${needle}) > 0)`,
+      ),
+    );
+  return new Set(rows.map((r) => r.slug));
 }
 
 /** Corpus for `withRelated`, drafts included: it filters candidates itself. */

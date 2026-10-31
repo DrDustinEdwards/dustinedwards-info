@@ -23,7 +23,7 @@ export function statusOf(raw: string, now = Date.now()): ContentStatus {
 }
 
 /** The source with its front matter edited; a source with none is refused, since its status cannot be set. */
-function editFront(raw: string, edit: (front: string) => string) {
+export function editFront(raw: string, edit: (front: string) => string) {
   const split = splitSource(raw);
   if (split.front === null) throw new RefusedError("The source has no frontmatter block, so its status cannot be set.");
   return joinSource({ ...split, front: edit(split.front) });
@@ -37,6 +37,30 @@ export function withPublication(raw: string, change: { draft: boolean; publishAt
     else if (change.publishAt !== undefined) out = setRawKey(out, "publish_at", JSON.stringify(change.publishAt));
     return out;
   });
+}
+
+/** This site's older front matter keys and site-api's post fields (v0.17.0) that replace them. */
+const LEGACY_POST_KEYS = [
+  ["description", "excerpt"],
+  ["part", "seriesPart"],
+] as const;
+
+/**
+ * A post's source under site-api's post field keys: `description` becomes `excerpt` and `part` becomes `seriesPart`,
+ * the value lines as they were. A file holding both keeps the package's. The pipeline reads either spelling, so every
+ * stored file and revision still renders; Carrel reads and writes only these (`postFieldsOf`, `setPostFields`).
+ */
+export function withPostFieldKeys(raw: string) {
+  const split = splitSource(raw);
+  if (split.front === null) return raw;
+  let front = split.front;
+  for (const [legacy, key] of LEGACY_POST_KEYS) {
+    if (!new RegExp(`^${legacy}:`, "m").test(front)) continue;
+    front = new RegExp(`^${key}:`, "m").test(front)
+      ? setBlock(front, legacy, [])
+      : front.replace(new RegExp(`^${legacy}:`, "m"), `${key}:`);
+  }
+  return front === split.front ? raw : joinSource({ ...split, front });
 }
 
 /** A rename's file: the same source under its new slug. */
@@ -55,7 +79,7 @@ export const withPublishedAt = (raw: string, at: string) =>
  * `# heading`). Only the preview does this; a save still refuses a post with no title.
  */
 export function forPreview(raw: string, slug: string, today = new Date().toISOString().slice(0, 10)) {
-  const split = splitSource(raw);
+  const split = splitSource(withPostFieldKeys(raw));
   let front = split.front ?? "draft: true";
   const fill = (key: string, value: string) => {
     if (!readKey(front, key).trim()) front = setRawKey(front, key, value);
@@ -63,7 +87,7 @@ export function forPreview(raw: string, slug: string, today = new Date().toISOSt
   fill("title", "Untitled");
   fill("slug", slug);
   fill("date", today);
-  fill("description", "Untitled");
+  fill("excerpt", "Untitled");
   return split.front === null
     ? `---\n${front}\n---\n${raw}`
     : joinSource({ ...split, front });

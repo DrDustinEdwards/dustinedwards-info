@@ -2,9 +2,10 @@ import { decideWebmention, deleteWebmention } from "~/db";
 import { purgePost } from "~/lib/cache-purge.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 
+// The operator API's mention decision (the admin MCP's dei_decide_mention). Carrel moderates through site-api's
+// mentions group instead (app/lib/carrel/mentions-adapter.server.ts), which checks a version this agent has none of.
 // Write and purge are one function: a forgotten purge is invisible, the page just stays stale.
-// Delete also needs `destroy`: it removes the only copy of what a stranger sent. The admin page passes
-// no actor because the layout middleware already refuses writes for the smoke credential.
+// Delete also needs `destroy`: it removes the only copy of what a stranger sent.
 
 type MentionDecision = "approve" | "reject" | "delete";
 

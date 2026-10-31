@@ -20,7 +20,7 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
-import { cacheKey, forReader, forRenderer, purgeTags, settleCacheHeaders, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
+import { cacheKey, forReader, forRenderer, settleCacheHeaders, withPurgePages } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -39,6 +39,7 @@ import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
 import { cronJob } from "~/lib/cron-jobs.mjs";
+import { recordPurge } from "~/lib/purge-record.server";
 
 export { AskBudget } from "./ask-budget";
 
@@ -107,17 +108,22 @@ function applyDocumentHeaders(
   }
 }
 
+const CARREL_API_PREFIX = "/api/carrel/v1/";
+const isCarrelApiPath = (pathname: string) => pathname.startsWith(CARREL_API_PREFIX);
+
 /**
  * The cacheable entrypoint; `default` has cache disabled. Document headers belong here, or they are absent from every hit.
  */
-export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
+export class Renderer extends withPurgePages(WorkerEntrypoint<Env, RendererProps>) {
   /**
-   * The RPC method site-runtime's schedulePurgeHook calls over the Worker's loopback when a Carrel schedule changes a
-   * post (app/lib/carrel/site-api.server.ts): the cron's entrypoint cannot reach this one's cache. Every page that
-   * shows a post carries `posts` (cacheTags). RPC methods bypass the cache.
+   * site-runtime's purge RPC, which purgeAfterWrite calls after a Carrel write and schedulePurgeHook after a schedule
+   * (app/lib/carrel/site-api.server.ts): every page that shows a post carries `posts` (cacheTags). A failure is kept
+   * where /health reads it (app/lib/purge-record.server.ts) until a purge succeeds, so a stale site is seen.
    */
-  async purgePages(why: string) {
-    return purgeTags(this.ctx.cache as PurgeCache | undefined, [cacheTags()], why);
+  override async purgePages(why: string, tags: string[] = [cacheTags()]) {
+    const purged = await super.purgePages(why, tags);
+    await recordPurge(this.env, why, purged);
+    return purged;
   }
 
   override async fetch(request: Request): Promise<Response> {
@@ -150,6 +156,9 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
     // because a post already sends its markdown alternate and webmention endpoint in `Link`.
     const hinted = withPreloadHeader(response, PRELOADS.header);
+    // Carrel's API (the site-api package) answers its own `no-store` on every response, refusals included, and the
+    // family's site-api-live check reads it exactly; it is no page and no cookie, so the downgrade below is not its.
+    if (isCarrelApiPath(url.pathname) && hinted.headers.get("cache-control") === "no-store") return hinted;
     // Last: anything not a shared 200, setting a cookie, rendered for a HEAD or for a cookie other than the theme (which
     // the key holds) leaves private, no-store with no edge header or tag.
     return settleCacheHeaders(hinted, request, { publicCookies: [THEME_COOKIE] });

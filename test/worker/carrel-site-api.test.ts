@@ -1,4 +1,4 @@
-import { createExecutionContext } from "cloudflare:test";
+import { createExecutionContext, env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
@@ -15,13 +15,14 @@ import { authenticateOperator } from "~/lib/operator/auth.server";
 import { runTool } from "~/lib/operator/api.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as postLoader } from "~/routes/blog.$slug";
+import { loader as twinLoader } from "~/routes/blog.$slug[.md]";
 import { loader as previewLinkLoader } from "~/routes/preview.$token";
 
 import { post } from "./fixtures";
 import { putSource, removeSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { bytesFor, envWithImages } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
-import { seedPost } from "./seed";
+import { seedMention, seedPost } from "./seed";
 import { testEnv } from "./test-env";
 
 /* Through the real route module, so the package's guard, the site's limiter and the adapter are the
@@ -34,10 +35,12 @@ const HEAD = "a".repeat(40);
 
 const siteEnv = () => testEnv as unknown as Parameters<typeof renderAndWrite>[0];
 
+/** One address per case, so the site's limiter (120 a minute per address) counts each case alone. */
+let caller = 0;
 const headersFor = (key: string) => ({
   authorization: `Bearer ${key}`,
   "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
+  "cf-connecting-ip": `198.51.100.${caller % 250}`,
 });
 
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
@@ -46,11 +49,11 @@ function get(url: string, key: string = testEnv.CARREL_SITE_KEY): Promise<Respon
   return loader(argsFor(new Request(url, { headers: headersFor(key) })));
 }
 
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
+function send(method: "PUT" | "POST" | "DELETE", url: string, body?: unknown): Promise<Response> {
   const request = new Request(url, {
     method,
     headers: headersFor(testEnv.CARREL_SITE_KEY),
-    body: JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return action(argsFor(request));
 }
@@ -58,6 +61,7 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
 let gh: SourceStub;
 
 beforeEach(async () => {
+  caller += 1;
   gh = await stubSources();
 });
 
@@ -1041,11 +1045,60 @@ describe("the v0.17.0 contract on posts", () => {
     const history = (await (await get(`${PREFIX}/content/v17-new/revisions`)).json()) as { items: unknown[] };
     expect(history.items).toHaveLength(2);
 
-    const args = { request: new Request(`${ORIGIN}/writing/v17-old`), params: { slug: "v17-old" }, context: routeContext() };
-    const moved = await (postLoader(args as never) as Promise<unknown>).catch((thrown: unknown) => thrown);
+    // A missing page is thrown as router data, which the wire carries as its status.
+    const page = async (slug: string) => {
+      const thrown = await (postLoader({ request: new Request(`${ORIGIN}/writing/${slug}`), params: { slug }, context: routeContext() } as never) as Promise<unknown>).catch(
+        (error: unknown) => error,
+      );
+      return thrown instanceof Response ? thrown : new Response(null, { status: (thrown as { init?: { status?: number } }).init?.status ?? 200 });
+    };
+    const twin = (slug: string) =>
+      twinLoader({ request: new Request(`${ORIGIN}/writing/${slug}.md`), params: { slug }, context: routeContext() } as never) as Promise<Response>;
+    const moved = await page("v17-old");
     expect(moved).toBeInstanceOf(Response);
-    expect((moved as Response).status).toBe(301);
-    expect((moved as Response).headers.get("location")).toBe("/writing/v17-new");
+    expect(moved.status).toBe(301);
+    expect(moved.headers.get("location")).toBe("/writing/v17-new");
+    const movedTwin = await twin("v17-old");
+    expect(movedTwin.status).toBe(301);
+    expect(movedTwin.headers.get("location")).toBe("/writing/v17-new.md");
+
+    // Once the post it leads to is deleted, the old address no longer redirects to a page that is gone.
+    const deleted = await send(
+      "DELETE",
+      `${PREFIX}/content/v17-new?expectedVersion=${await versionOf(postPath("v17-new"))}&changeId=chg-v17-delete`,
+    );
+    expect(deleted.status).toBe(200);
+    expect((await page("v17-old")).status).toBe(404);
+    expect((await twin("v17-old")).status).toBe(404);
+  });
+
+  it("records a revision for every publish, unpublish and rename, each naming the person, with every field", async () => {
+    await putSource(postPath("v17-history"), post("v17-history", { tags: "[alpha]" }));
+    const step = async (path: string, body: object) => {
+      const response = await send("POST", `${PREFIX}/content/${path}`, {
+        expectedVersion: await versionOf(postPath(path.split("/")[0]!)),
+        ...body,
+      });
+      expect(response.status, path).toBe(200);
+    };
+    await step("v17-history/publish", { changeId: "chg-hist-pub" });
+    await step("v17-history/unpublish", { changeId: "chg-hist-unpub" });
+    await step("v17-history/rename", { changeId: "chg-hist-rename", newId: "v17-history-moved" });
+
+    const history = (await (await get(`${PREFIX}/content/v17-history-moved/revisions`)).json()) as {
+      items: Array<{ version: string; author: string; authors?: string[]; message: string }>;
+    };
+    expect(history.items.slice(0, 3).map((r) => r.message)).toEqual([
+      expect.stringContaining("[carrel:chg-hist-rename]"),
+      expect.stringContaining("[carrel:chg-hist-unpub]"),
+      expect.stringContaining("[carrel:chg-hist-pub]"),
+    ]);
+    expect(history.items.every((r) => r.author === "Dustin Edwards" && r.authors?.[0] === "Dustin Edwards")).toBe(true);
+    // A revision is the whole file, so the published one holds its tags and its status alike.
+    const published = await get(`${PREFIX}/content/v17-history-moved/revisions/${history.items[2]!.version}`);
+    const { source: was } = (await published.json()) as { source: string };
+    expect(was).toMatch(/^draft: false$/m);
+    expect(was).toMatch(/^tags: \[alpha\]$/m);
   });
 
   it("publishes under the date Carrel names", async () => {
@@ -1059,6 +1112,82 @@ describe("the v0.17.0 contract on posts", () => {
     const saved = (await source(postPath("v17-dated"))) ?? "";
     expect(saved).toMatch(/^date: 2025-03-04$/m);
     expect(saved).toMatch(/^publish_at: "2025-03-04T05:06:07.000Z"$/m);
+
+    // The read and the list name the date it is published under, not the day it first went out.
+    const doc = (await (await get(`${PREFIX}/content/v17-dated`)).json()) as { publishedAt: string };
+    expect(doc.publishedAt).toBe("2025-03-04T05:06:07.000Z");
+    const listed = (await list("kind=post&limit=200")).items.find((i) => i.id === "v17-dated") as { publishedAt?: string };
+    expect(listed.publishedAt).toBe(doc.publishedAt);
+  });
+
+  it("reads this site's older keys as site-api's post fields, writes the package's, and filters by author", async () => {
+    await putSource(postPath("v17-fields"), post("v17-fields", { series: ["Fields", 2] }));
+    const meta = (await (await get(`${PREFIX}/meta`)).json()) as { capabilities: { postFields?: string[]; contentFilters?: string[] } };
+    expect(meta.capabilities.postFields).toEqual(["excerpt", "authors", "series", "seriesPart"]);
+    expect(meta.capabilities.contentFilters).toContain("author");
+
+    const doc = (await (await get(`${PREFIX}/content/v17-fields`)).json()) as { source: string; version: string };
+    expect(doc.source).toMatch(/^excerpt: "A description for v17-fields/m);
+    expect(doc.source).toMatch(/^seriesPart: 2$/m);
+    expect(doc.source).not.toMatch(/^(description|part):/m);
+
+    const credited = doc.source.replace(/^excerpt:/m, 'authors: ["Sample Author", "Dustin Edwards"]\nexcerpt:');
+    const saved = await send("PUT", `${PREFIX}/content/v17-fields/draft`, {
+      source: credited,
+      expectedVersion: doc.version,
+      changeId: "chg-v17-fields",
+    });
+    expect(saved.status).toBe(200);
+    expect(await source(postPath("v17-fields"))).toMatch(/^excerpt: /m);
+
+    const byAuthor = (await (await get(`${PREFIX}/content?author=Sample%20Author&limit=200`)).json()) as {
+      items: Array<{ id: string; authors?: string[]; excerpt?: string }>;
+    };
+    expect(byAuthor.items).toEqual([
+      expect.objectContaining({
+        id: "v17-fields",
+        authors: ["Sample Author", "Dustin Edwards"],
+        excerpt: expect.stringContaining("A description for v17-fields"),
+      }),
+    ]);
+    const owner = (await (await get(`${PREFIX}/content?author=Dustin%20Edwards&kind=post&limit=200`)).json()) as {
+      items: Array<{ id: string }>;
+    };
+    expect(owner.items.length).toBeGreaterThan(0);
+  });
+
+  it("sets a post's whole tag set as a save", async () => {
+    await putSource(postPath("v17-tags"), post("v17-tags", { tags: "[old]" }));
+    const before = await versionOf(postPath("v17-tags"));
+    const response = await send("PUT", `${PREFIX}/content/v17-tags/tags`, {
+      tags: ["alpha", "beta two"],
+      expectedVersion: before,
+      changeId: "chg-v17-tags",
+    });
+    expect(response.status).toBe(200);
+    expect(await source(postPath("v17-tags"))).toMatch(/^tags: \[alpha, beta two\]$/m);
+    expect(await versionOf(postPath("v17-tags"))).not.toBe(before);
+  });
+
+  it("lists with a total, in the order asked, and finds a word in the body", async () => {
+    for (const [slug, title] of [["v17-order-b", "Banana"], ["v17-order-a", "Apple"], ["v17-order-c", "Cherry"]] as const) {
+      const made = await send("PUT", `${PREFIX}/content/${slug}/draft`, {
+        source: post(slug, { title, body: `A paragraph about the quokkaword ${slug}.\n` }),
+        expectedVersion: null,
+        changeId: `chg-${slug}`,
+      });
+      expect(made.status).toBe(200);
+    }
+    const found = (await (await get(`${PREFIX}/content?q=quokkaword&sort=title&dir=asc&limit=2`)).json()) as {
+      items: Array<{ id: string }>;
+      total?: number;
+      sorted?: { sort: string; dir: string };
+      nextCursor: string | null;
+    };
+    expect(found.total).toBe(3);
+    expect(found.sorted).toEqual({ sort: "title", dir: "asc" });
+    expect(found.items.map((i) => i.id)).toEqual(["v17-order-a", "v17-order-b"]);
+    expect(found.nextCursor).not.toBeNull();
   });
 
   it("announces a first publish that goes live by time once, with no write", async () => {
@@ -1100,6 +1229,83 @@ describe("the v0.17.0 contract on posts", () => {
     expect(page.headers.get("x-robots-tag")).toMatch(/noindex/);
     expect(page.headers.get("cache-control")).toMatch(/no-store/);
     expect((await open(`/preview/${"x".repeat(43)}`)).status).toBe(404);
+  });
+});
+
+/* I2: the queue the /webmention endpoint fills, moderated from Carrel's MentionsList through site-api's mentions group. */
+describe("mentions", () => {
+  type Listed = {
+    items: Array<{ id: string; status: string; version: string; targetId: string }>;
+    counts: Record<string, number>;
+    expiring: { failed: number; rejected: number };
+    filtered?: { q?: string; targetId?: string };
+  };
+  const day = 24 * 60 * 60;
+  const now = () => Math.floor(Date.now() / 1000);
+  const mentions = async (query = "") => (await (await get(`${PREFIX}/mentions${query}`)).json()) as Listed;
+  const decide = (id: string, decision: string, expectedVersion: string, changeId: string) =>
+    send("POST", `${PREFIX}/mentions/${id}/decide`, { decision, expectedVersion, changeId });
+
+  beforeEach(async () => {
+    await env.DB.prepare(`DELETE FROM webmentions`).run();
+    await seedPost("mentioned-one");
+    await seedPost("mentioned-two");
+  });
+
+  it("lists the queue newest first with whole-queue counts, and filters by words and by post", async () => {
+    await seedMention("https://one.example/a", "mentioned-one", { status: "pending", receivedAt: now() - 60, excerpt: "A note on quolls." });
+    await seedMention("https://two.example/b", "mentioned-two", { status: "approved", receivedAt: now() - 120 });
+    await seedMention("https://three.example/c", "mentioned-one", { status: "failed", receivedAt: now() - 40 * day });
+
+    const all = await mentions();
+    expect(all.items.map((m) => m.targetId)).toEqual(["mentioned-one", "mentioned-two", "mentioned-one"]);
+    expect(all.counts).toEqual({ unverified: 0, pending: 1, approved: 1, rejected: 0, failed: 1 });
+    expect(all.expiring).toEqual({ failed: 1, rejected: 0 });
+
+    const words = await mentions("?q=QUOLLS");
+    expect(words.items.map((m) => m.status)).toEqual(["pending"]);
+    expect(words.filtered).toEqual({ q: "QUOLLS" });
+    expect(words.counts.approved).toBe(1);
+    const onePost = await mentions("?targetId=mentioned-two");
+    expect(onePost.items.map((m) => m.status)).toEqual(["approved"]);
+    expect((await mentions("?status=failed")).items).toHaveLength(1);
+  });
+
+  it("approves, takes the decision back, rejects and deletes, each at the version it was loaded at", async () => {
+    const id = String(await seedMention("https://one.example/a", "mentioned-one", { status: "pending", receivedAt: now() - 60, verifiedAt: now() - 50 }));
+    const first = (await mentions()).items[0]!;
+
+    const approved = await decide(id, "approve", first.version, "chg-m-approve");
+    expect(approved.status).toBe(200);
+    const after = (await approved.json()) as { status: string; version: string; purged: boolean | null };
+    expect(after).toMatchObject({ status: "approved", purged: null });
+    expect(after.version).not.toBe(first.version);
+
+    // A second writer still holding the first version is refused and told the current one.
+    const stale = await decide(id, "reject", first.version, "chg-m-stale");
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ currentVersion: after.version });
+
+    const reset = (await (await decide(id, "reset", after.version, "chg-m-reset")).json()) as { status: string; version: string };
+    expect(reset.status).toBe("pending");
+    const rejected = (await (await decide(id, "reject", reset.version, "chg-m-reject")).json()) as { status: string; version: string };
+    expect(rejected.status).toBe("rejected");
+
+    const gone = await send("DELETE", `${PREFIX}/mentions/${id}?expectedVersion=${rejected.version}&changeId=chg-m-delete`);
+    expect(gone.status).toBe(200);
+    expect((await mentions()).items).toEqual([]);
+  });
+
+  it("REFUSES a decision on a mention that failed verification, and sweeps only what is past its window", async () => {
+    const failed = String(await seedMention("https://one.example/old", "mentioned-one", { status: "failed", receivedAt: now() - 40 * day }));
+    await seedMention("https://one.example/new", "mentioned-one", { status: "failed", receivedAt: now() - day });
+    await seedMention("https://two.example/open", "mentioned-two", { status: "pending", receivedAt: now() - 400 * day });
+    const listed = (await mentions("?status=failed")).items.find((m) => m.id === failed)!;
+    expect((await decide(failed, "approve", listed.version, "chg-m-failed")).status).toBe(422);
+
+    const swept = await send("POST", `${PREFIX}/mentions/sweep`, { changeId: "chg-m-sweep" });
+    expect(await swept.json()).toMatchObject({ removed: { failed: 1, rejected: 0 } });
+    expect((await mentions()).counts).toMatchObject({ failed: 1, pending: 1 });
   });
 });
 

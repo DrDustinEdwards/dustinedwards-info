@@ -299,7 +299,7 @@ npx wrangler queues create dustinedwards-webmention-verify-dlq
 ```
 
 Consumer settings live in `wrangler.jsonc`, from the example file. A dead letter
-is a row left `unverified`, visible in /admin/mentions; the sender re-sending the
+is a row left `unverified`, visible in Carrel's mentions list; the sender re-sending the
 webmention resets the row and queues it again.
 
 ---

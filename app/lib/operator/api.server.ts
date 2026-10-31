@@ -16,6 +16,7 @@ import {
 import { UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
+import { purgePosts } from "~/lib/cache-purge.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { readFile } from "~/lib/source/store.server";
 
@@ -530,7 +531,8 @@ async function savePostTool(
       askSync: result.askSync,
       // Other posts' related and backlinks lists this save rewrote, or why it could not: reported, never raised.
       neighbors: result.neighbors,
-      purged: result.purged,
+      // The save purges nothing itself (renderAndWrite); this tool's purge, reported: false is stale pages.
+      purged: await purgePosts(`save_post ${slug}`),
     },
   };
 }
@@ -709,7 +711,7 @@ async function deletePostTool(
     data: {
       slug,
       commitSha: result.commitSha,
-      purged: result.purged,
+      purged: await purgePosts(`delete_post ${slug}`),
       askRemoval: result.askRemoval,
     },
   };

@@ -2,6 +2,7 @@ import type { getBlogPost, listSeriesParts } from "~/db";
 import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
 import { countWords } from "~/lib/content/reading-time.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { SITE } from "~/lib/seo";
 
 // The public post and the draft preview both render this one projection, so the preview cannot
 // quietly lose a section the public page has.
@@ -41,6 +42,12 @@ function parseJson(slug: string, field: string, value: string | null, fallback: 
   }
 }
 
+/** Everyone a post credits, in order: its front matter's `authors`, or the site's owner when it names none. */
+export function postAuthors(slug: string, stored: string | null): string[] {
+  const names = parseJson(slug, "authors", stored, null) as unknown;
+  return Array.isArray(names) && names.length > 0 && names.every((n) => typeof n === "string") ? [...new Set(names)] : [SITE.name];
+}
+
 export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
   const toc = parseJson(post.slug, "toc", post.toc, []) as Array<{
     depth: number;
@@ -71,6 +78,8 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       next: post.next,
       series: post.series,
       part: post.part,
+      // The front matter's `authors`, else the site's owner alone (drizzle/0039_post_authors.sql).
+      authors: postAuthors(post.slug, post.authors),
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
       backlinks: parseJson(post.slug, "backlinks", post.backlinks, []) as Array<{

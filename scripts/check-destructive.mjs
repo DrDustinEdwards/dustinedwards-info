@@ -29,9 +29,6 @@ const DESTRUCTIVE = new Set([
   // a count of one.
   "admin.tools.tsx:rebuild",
   "admin.tools.tsx:sync-ask",
-  // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
-  "admin.mentions.tsx:delete",
-  "admin.mentions.tsx:sweep",
 ]);
 
 /**
@@ -41,13 +38,6 @@ const DESTRUCTIVE = new Set([
 const REVERSIBLE = new Map([
   ["admin.tools.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
   ["admin.tools.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
-  [
-    "admin.mentions.tsx:approve",
-    "sets a decision on a verified mention, undone by reject: the DB layer's " +
-      "decidable set holds approved and rejected alongside pending precisely so " +
-      "the pair is a two-way door, and no column is removed either way",
-  ],
-  ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
 ]);
 
 // The media library's intents are site-api's content kit (runMediaIntent), which this detector cannot
@@ -111,8 +101,8 @@ ok(
 );
 ok(
   "the intent vocabulary is non-empty",
-  found.size >= 7,
-  `parsed ${found.size} intent(s), floor 7, measured 8 on 2026-10-29 (the media library's moved to the content kit); every per-intent assertion above is vacuous if this is empty`,
+  found.size >= 4,
+  `parsed ${found.size} intent(s), floor 4, measured 4 on 2026-10-31 (the mentions queue moved to Carrel); every per-intent assertion above is vacuous if this is empty`,
 );
 
 // A new intent nobody classified fails by name rather than defaulting to safe.

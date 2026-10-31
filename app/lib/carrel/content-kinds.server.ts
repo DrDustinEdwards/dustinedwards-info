@@ -9,6 +9,7 @@ import type {
   ContentDoc,
   ContentSummary,
   ListQuery,
+  PostField,
   PreviewInput,
   PublishInput,
   RenameInput,
@@ -53,12 +54,40 @@ export interface ContentKindHandler {
   /** v0.17.0, both or neither: soft delete, taking a live item off the site first, and its undo, always a draft. */
   trash?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
   restore?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
+  /** v0.6.0: the item's whole tag set, written like a save. A kind without it keeps no tags through Carrel. */
+  setTags?(slug: string, input: { tags: string[]; expectedVersion: string; changeId: string }): Promise<WriteResult>;
   /** v0.17.0: moves the item to `newSlug`, its history with it; `previousPath` is the old address, now a 301. */
   rename?(slug: string, input: Omit<RenameInput, "newId"> & { newSlug: string }): Promise<RenameResult>;
 }
 
 /** The list filters the registry applies (site-api v0.17.0); `trashed` comes with the posts' trash. */
-const FILTERS = ["kind", "tag", "published"] as const satisfies readonly ContentFilter[];
+const FILTERS = ["kind", "tag", "author", "published"] as const satisfies readonly ContentFilter[];
+
+/** The post fields a post renders from its front matter (site-api v0.17.0), under the package's keys. */
+const POST_FIELDS = ["excerpt", "authors", "series", "seriesPart"] as const satisfies readonly PostField[];
+
+type Sort = NonNullable<ListQuery["sort"]>;
+
+/** What each sort reads off a summary; a missing date sorts after every dated item, whichever way the list runs. */
+const SORT_KEYS: Record<Sort, (s: ContentSummary) => string | null> = {
+  updated: (s) => s.updatedAt,
+  published: (s) => s.publishedAt ?? s.publishAt,
+  title: (s) => s.title.toLowerCase(),
+};
+
+/** The contract's order: updated and published newest first, title A to Z, unless `dir` says otherwise. */
+function sortSummaries(items: ContentSummary[], sort: Sort, dir: "asc" | "desc") {
+  const key = SORT_KEYS[sort];
+  const sign = dir === "asc" ? 1 : -1;
+  return [...items].sort((a, b) => {
+    const x = key(a);
+    const y = key(b);
+    if (x === y) return a.id.localeCompare(b.id);
+    if (x === null) return 1;
+    if (y === null) return -1;
+    return (x < y ? -1 : 1) * sign;
+  });
+}
 
 export type ContentRegistry = {
   adapter: ContentAdapter;
@@ -88,19 +117,22 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     return found;
   };
 
+  const DONE = { trash: "trashed", restore: "restored", rename: "renamed", setTags: "tagged" } as const;
+
   /** The handler for an id whose kind can do `op`; a missing item is 404 and an item of another kind 422. */
-  const able = async (id: string, op: "trash" | "restore" | "rename") => {
+  const able = async (id: string, op: keyof typeof DONE) => {
     const found = route(id);
     if (!found) throw new NotFoundError(`No content kind owns the id ${id}.`);
     if (!found.handler[op]) {
       if (!(await found.handler.get(found.slug))) throw new NotFoundError();
-      throw new RefusedError(`A ${found.handler.kind} cannot be ${op === "rename" ? "renamed" : op === "trash" ? "trashed" : "restored"} from Carrel.`);
+      throw new RefusedError(`A ${found.handler.kind} cannot be ${DONE[op]} from Carrel.`);
     }
     return found as { handler: Required<Pick<ContentKindHandler, typeof op>> & ContentKindHandler; slug: string };
   };
 
   const adapter: ContentAdapter = {
     filters: FILTERS,
+    postFields: POST_FIELDS,
     publishedAtSettable: true,
 
     async list(query) {
@@ -115,17 +147,24 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
       const matching = lists
         .flat()
         .filter((s) => !query.tag || (s.tags ?? []).includes(query.tag))
+        .filter((s) => !query.author || (s.authors ?? []).includes(query.author))
         .filter((s) => {
           if (!query.publishedAfter && !query.publishedBefore) return true;
           const at = s.publishedAt ? Date.parse(s.publishedAt) : Number.NaN;
           return at >= after && at <= before;
         })
         .map((s) => ({ ...s, trashedAt: s.trashedAt ?? null }));
+      // Without `sort`, the newest updated first, as the contract says; every answer names the order it applied.
+      const sort = query.sort ?? "updated";
+      const dir = query.dir ?? (sort === "title" ? "asc" : "desc");
+      const sorted = sortSummaries(matching, sort, dir);
       const start = query.cursor && /^\d+$/.test(query.cursor) ? Number(query.cursor) : 0;
       const end = start + query.limit;
       return {
-        items: matching.slice(start, end),
-        nextCursor: end < matching.length ? String(end) : null,
+        items: sorted.slice(start, end),
+        nextCursor: end < sorted.length ? String(end) : null,
+        total: sorted.length,
+        sorted: { sort, dir },
       };
     },
 
@@ -177,6 +216,11 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
         throw new RefusedError(`A ${found.handler.kind} cannot be deleted from Carrel.`);
       }
       await found.handler.delete(found.slug, input);
+    },
+
+    async setTags(id, input) {
+      const { handler, slug } = await able(id, "setTags");
+      return encoded(handler.kind, await handler.setTags(slug, input));
     },
 
     async trash(id, input) {

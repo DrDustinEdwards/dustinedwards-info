@@ -39,6 +39,7 @@
     "0035_media_library.sql": "a904031f8d3163bab07e3e8822c5f6bcb5693c5c850f09e6a4ede00868bdf543",
     "0036_cron_runs.sql": "1ced44bced303be4248e8d23d1412118fde07378340a24c6bd8423e12e0b0967",
     "0037_site_api_store.sql": "d1b6bccdf40f4570f05f33a80b48fb23d89b753e001caf562e471fbdf058a53c",
-    "0038_carrel_posts.sql": "c82e248491d96c5e4d0aab1eaa9d545b017b1e182e8691c62a5161cfd981653b"
+    "0038_carrel_posts.sql": "c82e248491d96c5e4d0aab1eaa9d545b017b1e182e8691c62a5161cfd981653b",
+    "0039_post_authors.sql": "612152401df3663506e8b2fe03a322bbc26ce485d6eb33e549e81f9d9fe26e0a"
   }
 }
