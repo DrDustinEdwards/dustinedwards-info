@@ -224,7 +224,10 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   // One hop to https and the slashless path (site-runtime ./url). A paper keeps its slash (below), and an old
   // WordPress address keeps its own, so the map moves it in the same hop.
   const canonical = canonicalRedirect(request, { except: wordpress ? [url.pathname] : [`${PUBLICATIONS_PREFIX}*`] });
-  if (canonical !== null) return canonical;
+  if (canonical !== null) {
+    applySecurityHeaders(canonical.headers);
+    return canonical;
+  }
 
   // The prefetch rules every public page's header names: one file, the same for every page, so no route renders it.
   if (url.pathname === SPECULATION_RULES_PATH) {
