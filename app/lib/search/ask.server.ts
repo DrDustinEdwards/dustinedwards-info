@@ -70,7 +70,10 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
     stream: true,
     max_tokens: ASK_MAX_TOKENS,
     ai_search_options: {
-      max_num_results: MAX_CHUNKS,
+      // Under `retrieval`, where the binding's AiSearchOptions type and the AI Search docs put it
+      // (https://developers.cloudflare.com/ai-search/api/search/workers-binding/); at the top level it was
+      // ignored and the default of 10 chunks applied.
+      retrieval: { max_num_results: MAX_CHUNKS },
       custom_metadata: ASK_GATEWAY_METADATA,
     },
   });
