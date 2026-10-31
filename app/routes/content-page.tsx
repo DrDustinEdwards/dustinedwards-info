@@ -30,7 +30,8 @@ import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 import type { Route } from "./+types/content-page";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "enarratio/base.css";
 import "~/styles/prose.css";
 
 /**
