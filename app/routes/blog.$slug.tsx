@@ -36,7 +36,6 @@ import {
   SITE_ORIGIN,
   articleJsonLd,
   articleFacts,
-  breadcrumbJsonLd,
   postSocial,
   siteHead,
 } from "~/lib/seo";
@@ -133,14 +132,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const { canonical, pageTitle, description, socialTitle, socialDescription, image } =
-    postSocial(post);
+  const { canonical, description, socialTitle, socialDescription, image } = postSocial(post);
 
   return [
     ...siteHead({
       path: `/writing/${post.slug}`,
-      title: pageTitle,
-      fullTitle: true,
+      title: post.title,
       description,
       socialTitle,
       socialDescription,
@@ -205,14 +202,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLdText([
-              articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
-              breadcrumbJsonLd(SITE_ORIGIN, [
-                ["Home", "/"],
-                ["Writing", "/writing"],
-                [post.title, `/writing/${post.slug}`],
-              ]),
-            ]),
+            __html: jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
           }}
         />
 

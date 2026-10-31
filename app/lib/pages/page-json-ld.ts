@@ -1,9 +1,9 @@
-// The structured data a content page carries: its trail, its own node typed from the page, and its dictionary entry.
+// The structured data a content page carries beside Prelum's page and trail: its own node typed from the page, and its dictionary entry.
 // Shared by the research/* page route and the routes that draw a page's own piece themselves (the phage table).
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, type DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
-import { LICENSE_URL, SITE, SITE_ORIGIN, breadcrumbJsonLd, personId } from "~/lib/seo";
+import { LICENSE_URL, SITE, SITE_ORIGIN, personId } from "~/lib/seo";
 
 type ContentPage = PageRecord;
 
@@ -69,11 +69,9 @@ function pageJsonLd(page: ContentPage): object[] {
   ];
 }
 
-/** The page's structured data: the trail it shows, its own node or nodes, and its dictionary entry. */
-export function contentPageJsonLd(page: ContentPage, trail: Array<[string, string]>, entry: Entry | null) {
+/** The page's structured data: its own node or nodes, and its dictionary entry. */
+export function contentPageJsonLd(page: ContentPage, entry: Entry | null) {
   return [
-    // Only a trail the page shows: the visible one renders from two steps, and Google reads no fewer.
-    ...(trail.length >= 2 ? [breadcrumbJsonLd(SITE_ORIGIN, trail)] : []),
     ...pageJsonLd(page),
     ...(entry ? [definedTermJsonLd(entry, SITE_ORIGIN)] : []),
   ];

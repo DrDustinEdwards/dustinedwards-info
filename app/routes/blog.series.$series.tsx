@@ -3,6 +3,7 @@ import { data } from "react-router";
 import {
   TaxonomyListing,
   listingHref,
+  listingDescription,
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
 import { getBlogSeries, listSeriesPosts, nextScheduledPublishAt } from "~/db";
@@ -11,7 +12,7 @@ import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
   SITE,
-  pageMeta,
+  siteHead,
   cacheTags,
   publicHtmlHeaders,
   scheduledEdgeCacheControl,
@@ -58,12 +59,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
-  const { series, page } = loaderData;
+  const { series, page, posts, total } = loaderData;
   const path = listingHref(seriesPath(series.name), page);
-  return pageMeta({
-    title: `${series.name} | ${SITE.name}`,
-    description: `Every part of ${series.name}, a series on ${SITE.name}'s blog.`,
+  return siteHead({
+    title: series.name,
+    description: listingDescription(`in the series ${series.name}`, total, posts),
     path,
+    pageType: "CollectionPage",
   });
 }
 
@@ -73,7 +75,6 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
     <TaxonomyListing
       {...listing}
       base={seriesPath(series.name)}
-      name={series.name}
       heading={series.name}
       dek={`A series in ${series.total} part${series.total === 1 ? "" : "s"}, in order.`}
     />
