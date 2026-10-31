@@ -11,7 +11,7 @@ import { versionPath } from "~/kb/procedures/cite.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
-import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure.version";
 
@@ -51,7 +51,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const { record } = loaderData;
   return [
     // The canonical is the plain page, so the copies are never competing results for the same words.
-    ...pageMeta({ title: `${record.seoTitle} (version ${record.version})`, description: record.description, path: record.path }),
+    ...pageMeta({ title: `${record.seoTitle} (version ${record.version})`, description: record.description, path: record.path, trail: procedureTrail(record) }),
     { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${versionPath(record.path, String(record.version))}.md` },
   ];
 }
@@ -60,17 +60,10 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
   const { record, current, count, factor, units, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
-  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person, lineage)];
   const basePath = versionPath(record.path, String(record.version));
   return (
     <PageShell
-      trail={
-        <>
-          {blocks.map((block, i) => (
-            <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }} />
-          ))}
-        </>
-      }
+      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)) }} />}
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>

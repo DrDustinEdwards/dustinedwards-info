@@ -7,7 +7,6 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
 import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
-import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
@@ -16,10 +15,7 @@ import {
   EDGE_CACHE_HEADER,
   publicHtmlHeaders,
   scheduledEdgeCacheControl,
-  SITE,
-  SITE_ORIGIN,
-  breadcrumbJsonLd,
-  pageMeta,
+  siteHead,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
@@ -101,7 +97,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const filterLabel = [loaderData?.activeTag, loaderData?.activeYear]
     .filter(Boolean)
     .join(", ");
-  const title = filterLabel ? `Writing: ${filterLabel} | ${SITE.name}` : `Writing | ${SITE.name}`;
+  const title = filterLabel ? `Writing: ${filterLabel}` : "Writing";
   const description = "Writing on building for the web, mostly on Cloudflare.";
   /* Built from the same axes as `filterHref`, in order, so the canonical is byte-identical to the link. */
   const canonicalParams = new URLSearchParams();
@@ -122,7 +118,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       ? `/writing?${canonicalQuery}`
       : "/writing";
 
-  return pageMeta({ title, description, path });
+  return siteHead({ title, description, path, pageType: "CollectionPage", trail: [["Writing", "/writing"]] });
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {
@@ -153,18 +149,6 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       {/* The h-feed is `<main>` itself: head, filters and list are siblings. Not on archives: a filtered view is not this blog's feed. */}
       <main className="cap-page tracks list-tracks h-feed" id="main" tabIndex={-1}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText(
-              breadcrumbJsonLd(SITE_ORIGIN, [
-                ["Home", "/"],
-                ["Writing", "/writing"],
-              ]),
-            ),
-          }}
-        />
-
         <header className="list-head">
           {/* Implied properties are skipped for a root containing nested microformats, so this class supplies the only name. */}
           <h1 className="list-label p-name cap-layout-grid">Writing</h1>
