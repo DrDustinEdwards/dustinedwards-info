@@ -1,3 +1,5 @@
+import { originalKey } from "@dustinedwards/site-runtime/image";
+
 import { getEnv } from "~/lib/context";
 import { bucketFor } from "~/lib/media/classify.mjs";
 import { images, isStaticMedia } from "~/lib/media/images.mjs";
@@ -12,7 +14,9 @@ import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
  * Renderer) blocks an SVG too, so neither wall depends on the other.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const key = params["*"];
+  // A size URL ends in its format's extension (`photo.webp.webp?w=640`, site-runtime 0.61.0); the stored key is the
+  // path without it. A URL from before the suffix (`photo.webp?w=640`) is the key as it is.
+  const key = params["*"] ? originalKey(params["*"], request) : "";
   if (!key) return new Response("Not found", { status: 404 });
 
   const env = getEnv(context);

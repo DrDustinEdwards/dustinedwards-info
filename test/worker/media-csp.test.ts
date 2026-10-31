@@ -63,6 +63,10 @@ it("gives a missing object and a thumbnail request the media policy too", async 
   expect(thumb.response.headers.get("content-security-policy")).toBe(MEDIA_CSP);
   expect(thumb.response.headers.get("x-content-type-options")).toBe("nosniff");
 
+  // A size URL ends in its format's extension (site-runtime 0.61.0): the route must read the stored key back.
+  const suffixed = await fetchPath(`/media/${key}.webp?w=320`);
+  expect(suffixed.response.status).not.toBe(404);
+
   const badWidth = await fetchPath(`/media/${key}?w=7`);
   expect(badWidth.response.status).toBe(400);
   expect(badWidth.response.headers.get("content-security-policy")).toBe(MEDIA_CSP);
