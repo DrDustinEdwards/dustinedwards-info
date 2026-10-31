@@ -31,7 +31,7 @@ export const MCP_ROUTE = "/mcp";
 export const SERVER_INFO = {
   name: "dustinedwards-mcp",
   title: "Dustin Edwards Admin",
-  version: "0.3.0",
+  version: "0.4.0",
   websiteUrl: "https://dustinedwards.info",
   icons: [{ src: "https://dustinedwards.info/dustin-edwards-favicon.svg", mimeType: "image/svg+xml" }],
 };

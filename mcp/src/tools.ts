@@ -17,8 +17,8 @@
  *
  * NAMES (rule 5) are `dei_{action}_{resource}`. ANNOTATIONS (rule 6) are set
  * honestly per tool, with the reasoning beside each one that is not obvious.
- * RESPONSES (rule 7) page every list (default 25, at most 100, with has_more)
- * and an input error says how to fix the input.
+ * RESPONSES (rule 7) page every list (default 25, at most 100, with has_more and
+ * an opaque next_cursor) and an input error says how to fix the input.
  *
  * EVERY CALL GOES THROUGH site-runtime's invokeTool (mcp-handler.ts), which
  * proves the caller owns what the tool names (rule 12.1), checks the scope each
@@ -67,12 +67,34 @@ const limitSchema = z
   .optional()
   .describe("Optional. How many records to return, 1 to 100. Defaults to 25.");
 
-const offsetSchema = z
-  .number()
-  .int()
-  .min(0)
+/**
+ * An opaque cursor (checklist T8): the offset of the next page, encoded so a client passes back what it was given
+ * rather than building one. One this server did not give is refused before the round trip.
+ */
+const CURSOR = /^[A-Za-z0-9+/]{1,16}$/;
+
+function encodeCursor(offset: number): string {
+  return btoa(`o:${offset}`).replace(/=+$/, "");
+}
+
+/** The offset a cursor names, or null for one this server never gave. */
+export function decodeCursor(cursor: string): number | null {
+  if (!CURSOR.test(cursor)) return null;
+  let decoded = "";
+  try {
+    decoded = atob(cursor + "=".repeat((4 - (cursor.length % 4)) % 4));
+  } catch {
+    return null;
+  }
+  const match = /^o:(\d{1,6})$/.exec(decoded);
+  return match ? Number(match[1]) : null;
+}
+
+const cursorSchema = z
+  .string()
+  .refine((cursor) => decodeCursor(cursor) !== null, "cursor is not one this tool gave. Leave it out to start from the first page.")
   .optional()
-  .describe("Optional. How many records to skip: pass next_offset from the previous page. Defaults to 0.");
+  .describe("Optional. Leave it out for the first page; to read on, pass next_cursor from the previous page.");
 
 const PROCEDURE_FORMAT =
   "THE FILE FORMAT is documented in the site repository's docs/PROCEDURES.md. " +
@@ -134,10 +156,14 @@ function refusal(result: { status: number; error?: string; detail?: unknown }): 
  * next move differs between them.
  */
 function wrapperFailure(cause: unknown): ToolOutput {
+  // The detail goes to the Worker log only (checklist S4): the client hears what kind of failure it was, never the
+  // error's own text, which can name a binding, an address or an upstream answer.
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  console.error(JSON.stringify({ alert: "wrapper-failure", kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail }));
   const message =
     cause instanceof ApiLegError
-      ? `The wrapper could not complete its request to the operator API (${cause.kind}): ${cause.message}`
-      : `The wrapper failed unexpectedly: ${cause instanceof Error ? cause.message : String(cause)}`;
+      ? `The wrapper could not complete its request to the operator API (${cause.kind}). The detail is in the server's log.`
+      : "The wrapper failed unexpectedly. The detail is in the server's log.";
   return { isError: true, content: [{ type: "text", text: message }] };
 }
 
@@ -161,7 +187,7 @@ async function runPaged(
   env: ToolEnv,
   tool: string,
   args: Record<string, unknown>,
-  page: { limit?: unknown; offset?: unknown },
+  page: { limit?: unknown; cursor?: unknown },
   preface = "",
 ): Promise<ToolOutput> {
   try {
@@ -172,10 +198,11 @@ async function runPaged(
     if (!key) return ok(data, preface);
     const all = data[key] as unknown[];
     const limit = typeof page.limit === "number" ? page.limit : 25;
-    const offset = typeof page.offset === "number" ? page.offset : 0;
+    // The schema refused a cursor this server never gave, so a string here decodes.
+    const offset = typeof page.cursor === "string" ? (decodeCursor(page.cursor) ?? 0) : 0;
     data[key] = all.slice(offset, offset + limit);
     const hasMore = offset + limit < all.length;
-    data.page = { offset, limit, total: all.length, has_more: hasMore, next_offset: hasMore ? offset + limit : null };
+    data.page = { limit, total: all.length, has_more: hasMore, next_cursor: hasMore ? encodeCursor(offset + limit) : null };
     return ok(data, preface);
   } catch (cause) {
     return wrapperFailure(cause);
@@ -214,7 +241,7 @@ const READ_ONLY: Annotations = { readOnlyHint: true, destructiveHint: false, ide
 const API_ANSWER = z.looseObject({});
 const PAGED_ANSWER = z.looseObject({
   page: z
-    .object({ offset: z.number(), limit: z.number(), total: z.number(), has_more: z.boolean(), next_offset: z.number().nullable() })
+    .object({ limit: z.number(), total: z.number(), has_more: z.boolean(), next_cursor: z.string().nullable() })
     .optional(),
 });
 const SITE_CHECK = z.object({
@@ -393,7 +420,7 @@ export const TOOLS: ToolDefinition[] = [
           .optional()
           .describe("Optional. Narrow the list to one status. Omit for the whole queue."),
         limit: limitSchema,
-        offset: offsetSchema,
+        cursor: cursorSchema,
       }),
       outputSchema: PAGED_ANSWER,
       annotations: READ_ONLY,
@@ -540,7 +567,7 @@ export const TOOLS: ToolDefinition[] = [
           .optional()
           .describe("Optional, for registry 'registry' only: narrow the list to one kind, such as primer."),
         limit: limitSchema,
-        offset: offsetSchema,
+        cursor: cursorSchema,
       }),
       outputSchema: PAGED_ANSWER,
       annotations: READ_ONLY,
@@ -653,7 +680,7 @@ export const TOOLS: ToolDefinition[] = [
           .optional()
           .describe("Optional, for action save. Inferred from whether the file exists; supply only to be explicit."),
         limit: limitSchema,
-        offset: offsetSchema,
+        cursor: cursorSchema,
       }),
       outputSchema: PAGED_ANSWER,
       annotations: {

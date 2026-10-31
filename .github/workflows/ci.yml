@@ -157,6 +157,9 @@ jobs:
   #                        the config, and the site's operator tool list
   #   check:wrapper:plant  that the gate above actually fails, one planted violation at a time
   #   test                 the tools, their declared scopes and output schemas, against a fake site
+  #   check:conformance    the official MCP conformance suite against the real protocol layer and tools
+  #                        (test/conformance-entry.ts in wrangler dev), held to .conformance.json's
+  #                        baseline in each era, then the authorization server's CIMD and registration
   #   build                a dry-run bundle: typecheck is not a build
   mcp:
     name: Admin MCP, clean checkout
@@ -191,4 +194,5 @@ jobs:
       - run: npm run check:wrapper
       - run: npm run check:wrapper:plant
       - run: npm test
+      - run: npm run check:conformance
       - run: npm run build

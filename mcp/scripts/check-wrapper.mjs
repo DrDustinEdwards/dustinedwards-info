@@ -643,6 +643,11 @@ check(
   /resourceMetadata: \{\s*resource: `\$\{origin\}\$\{MCP_ROUTE\}`/.test(withoutComments(indexText)),
   "Rule 12.2: reject any token not issued for this server.",
 );
+check(
+  "the MCP door re-checks the token's audience with site-runtime's shared audienceRefusal",
+  /audienceRefusal\(auth, mcpResource\(env\), \[SCOPE_READ\]\)/.test(withoutComments(indexText)),
+  "Rule 12.2 and checklist A5: the shared check, against the resource this server expects, before anything else.",
+);
 
 // --- the agent key path, ruling 37 -----------------------------------------
 
