@@ -9,7 +9,6 @@ import { limitHit } from "~/lib/rate-limit.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { publicHealthBody } from "~/lib/health/verdicts.mjs";
 import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
-import { backupAge } from "~/lib/backup/age.server";
 
 import type { Route } from "./+types/api.health";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -100,12 +99,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      */
     await writeHealthSnapshot(env, body, new Date().toISOString());
 
-    /*
-     * Reported beside the checks and NOT one of them: a stale dump must not turn the verdict red,
-     * because ship refuses unless this is ok and the first deploy that adds the dump has none yet.
-     * Two fields and no message, since this is public; the watchdog throws when the dump fails.
-     */
-    return healthJson({ ...body, backup: await backupAge(env) }, body.ok ? 200 : 503);
+    // The dump's age is /health's `backup`, a warning there: a stale dump must not turn this verdict red.
+    return healthJson(body, body.ok ? 200 : 503);
   } catch (error) {
     console.error(
       JSON.stringify({

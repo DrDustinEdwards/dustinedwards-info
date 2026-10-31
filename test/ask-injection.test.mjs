@@ -145,6 +145,51 @@ await test("CONTROL: an answer citing only public posts is served", async () => 
   assert.equal(answerOf(out), "Here is the answer.");
 });
 
+await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS THE ANSWER UNCACHED", async () => {
+  // A chatbot's refusal or an unfilled blank on a public page is the harm; site-runtime tests the checks.
+  for (const deltas of [["As an AI language model, ", "I cannot say."], ["Write to [Your Name] for more."]]) {
+    const out = await drain(guardAnswerStream(sseStream([chunk("live")], deltas), ALL_PUBLIC));
+    assert.equal(answerOf(out), NO_ANSWER_TEXT, deltas.join(""));
+  }
+
+  // Fed by hand, so the first paragraph must reach the reader while the second has not yet arrived.
+  const encoder = new TextEncoder();
+  let feed;
+  const upstream = new ReadableStream({ start: (c) => void (feed = c) });
+  const send = (d) => feed.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`));
+  let refused = false;
+  const reader = guardAnswerStream(upstream, ALL_PUBLIC, () => {
+    refused = true;
+  }).getReader();
+  const decoder = new TextDecoder();
+  let out = "";
+
+  feed.enqueue(encoder.encode(`event: chunks\ndata: ${JSON.stringify([chunk("live")])}\n\n`));
+  send("D1 is Cloudflare's ");
+  send("SQL database.\n\nAs an AI");
+  const first = "D1 is Cloudflare's SQL database.\n\n";
+  while (answerOf(out) !== first) {
+    let timer;
+    const { value } = await Promise.race([
+      reader.read(),
+      new Promise((_, reject) => (timer = setTimeout(() => reject(new Error(`held: ${out}`)), 1000))),
+    ]).finally(() => clearTimeout(timer));
+    out += decoder.decode(value, { stream: true });
+  }
+
+  send(" language model, I cannot say.");
+  feed.close();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out += decoder.decode(value, { stream: true });
+  }
+  assert.equal(answerOf(out), first, "nothing after the refused paragraph is shown");
+  assert.ok(out.includes('"key":"writing/live.md"'), "the citations of the shown paragraph stay");
+  assert.ok(out.endsWith("data: [DONE]\n\n"), "the answer ends cleanly");
+  assert.equal(refused, true, "the route skips the cache for a refused answer");
+});
+
 await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", async () => {
   // Refused rather than filtered: the answer TEXT was written from those chunks, so keeping
   // the prose and dropping the link would still summarize a post nobody may read.

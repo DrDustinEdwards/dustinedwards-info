@@ -93,7 +93,10 @@
 }
 
 /* The counts as the manual's form: ruled boxes sharing their rules. */
+/* Each box is a Capsomer chart frame in its tile form (the count's numbers behind "Show data"), laid out as
+   the manual's form box rather than the frame's grid. */
 .cv-stat {
+  display: block;
   min-width: 0;
   padding: var(--space-3) var(--space-4) var(--space-4);
   border-inline-end: var(--line-w) solid var(--text);
@@ -102,7 +105,7 @@
 
 .cv-stat dt {
   color: var(--text);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
+  font: 500 0.75rem / 1.6 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -124,10 +127,25 @@
   line-height: 1;
 }
 
+/* The sparkline and its "Show data" join the count's grid: the line beside the figure, the table under
+   the detail line. */
 .cv-spark {
+  display: contents;
+  --enarratio-series-1: var(--brand);
+}
+
+.cv-spark > svg.enarratio {
   display: block;
+  width: 100%;
   max-width: 7.5rem;
-  color: var(--text-secondary);
+  height: auto;
+}
+
+.cv-spark > .enarratio-data {
+  grid-column: 1 / -1;
+  order: 1;
+  margin-block-start: var(--space-2);
+  font-size: var(--t-small-size);
 }
 
 .cv-stat-sub {
@@ -142,24 +160,18 @@
   margin: 0;
 }
 
-.cv-timeline-title {
-  margin: 0 0 var(--space-3);
-  font-weight: 620;
-}
-
+/* The CV's own colors per type, in app/lib/cv/view.mjs CHART_SERIES order, so publications stay purple. */
 .cv-timeline-plot {
   min-height: 13.75rem;
+  --enarratio-series-1: var(--chart-purple);
+  --enarratio-series-2: var(--chart-cadet);
+  --enarratio-series-3: var(--chart-claret);
+  --enarratio-series-4: var(--chart-sage);
 }
 
 /* Bars outside the selected year range, marked by app/lib/cv/charts.ts. */
 .cv-timeline-plot [data-cv-out] {
   opacity: 0.28;
-}
-
-.cv-spark svg {
-  display: block;
-  width: 100%;
-  height: auto;
 }
 
 .cv-timeline-hint[hidden] {

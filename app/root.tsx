@@ -8,6 +8,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { iconLinks } from "@drdustinedwards/site-helpers/icons";
 import { errorTitle } from "capsomer/react/error-page";
 import { ThemeColor } from "capsomer/react/theme-switch";
 
@@ -38,10 +39,7 @@ export function meta({ error }: Route.MetaArgs) {
 
 export const links: Route.LinksFunction = () => [
   // `links` from every matched route are merged and `meta` is NOT, so these ride on every page.
-  { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
-  { rel: "icon", href: "/dustin-edwards-favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/dustin-edwards-apple-touch-icon.png" },
-  { rel: "manifest", href: "/site.webmanifest" },
+  ...iconLinks(),
   // feed+json although served as application/json: readers scan autodiscovery for the feed types.
   {
     tagName: "link",

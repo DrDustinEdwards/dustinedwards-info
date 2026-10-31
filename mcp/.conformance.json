@@ -5,7 +5,7 @@
     "vars": { "STUB_URL": "http://localhost:8790/", "OPERATOR_TOKEN": "conformance-stub-token-000000000000" }
   },
   "stub": 8790,
-  "auth": { "port": 8791, "persist": ".wrangler/state-conformance-auth", "localUpstream": true, "resourceMetadata": false },
+  "auth": { "port": 8791, "persist": ".wrangler/state-conformance-auth", "localUpstream": true, "vars": { "PUBLIC_ORIGIN": "http://localhost:8791" } },
   "scenarios": [
     { "spec": "2026-07-28", "scenario": "server-stateless", "passed": 24, "total": 28, "note": "SDK lacks MissingRequiredClientCapabilityError (-32021)" },
     { "spec": "2025-11-25", "scenario": "server-initialize" }

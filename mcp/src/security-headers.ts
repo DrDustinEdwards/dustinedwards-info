@@ -88,7 +88,10 @@ export async function withSecurityHeaders(response: Response, origin: string): P
   if (response.status === 101 || (response as Response & { webSocket?: unknown }).webSocket) return response;
   const headers = new Headers(response.headers);
   applyHeaderSet(headers, securityHeaders);
-  const isHtml = (headers.get("content-type") ?? "").toLowerCase().includes("text/html");
+  // A text type names its charset (site-runtime's check, H2): the SDK's event stream is sent as a bare text/event-stream.
+  const type = headers.get("content-type") ?? "";
+  if (/^text\/|[/+]xml\b/i.test(type) && !/;\s*charset=/i.test(type)) headers.set("content-type", `${type}; charset=utf-8`);
+  const isHtml = type.toLowerCase().includes("text/html");
   headers.set("Content-Security-Policy", isHtml ? await consentPageCsp() : NON_HTML_CSP);
   headers.set("Reporting-Endpoints", reportingEndpoints(CSP_ENDPOINT_NAME, new URL(CSP_REPORT_PATH, origin)));
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
