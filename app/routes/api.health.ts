@@ -16,10 +16,15 @@ import { errorMessage } from "~/lib/error-message.mjs";
 const HEALTH_RATE_LIMIT = 20;
 const HEALTH_RATE_PERIOD_SECONDS = 60;
 
-/** A cacheable 503 would keep reporting a failure after the site recovered. */
+/**
+ * A cacheable 503 would keep reporting a failure after the site recovered. Never indexed, as /health is not (area 8,
+ * H1): this route stays public only because ship's readiness step, the watchdog, operator-sync, the admin MCP and the
+ * colophon's health tile read its 503-on-drift verdict, which /health deliberately reports as a warning.
+ */
 const HEALTH_HEADERS = {
   "Cache-Control": "no-store",
   "Content-Type": "application/json; charset=utf-8",
+  "X-Robots-Tag": "noindex",
 };
 
 function healthJson(body: unknown, status: number, extra: HeadersInit = {}): Response {

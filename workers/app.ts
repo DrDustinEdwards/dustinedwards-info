@@ -38,7 +38,9 @@ import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
+import { countNotFound, pruneNotFound } from "@dustinedwards/site-runtime/not-found";
 import { cronJob } from "~/lib/cron-jobs.mjs";
+import { learnRoutes, routeName } from "./route-name";
 
 export { AskBudget } from "./ask-budget";
 
@@ -47,8 +49,13 @@ function isNightly(at: Date): boolean {
   return at.getUTCHours() === 5 && at.getUTCMinutes() === 0;
 }
 
+// The build's route manifest also names each request log line's route (./route-name).
 const requestHandler = createRequestHandler(
-  () => import("virtual:react-router/server-build"),
+  () =>
+    import("virtual:react-router/server-build").then((build) => {
+      learnRoutes(build);
+      return build;
+    }),
   import.meta.env.MODE,
 );
 
@@ -193,6 +200,9 @@ type FetchArgs = Parameters<NonNullable<ExportedHandler<Env>["fetch"]>>;
 const site = {
   async fetch(request, env, ctx) {
     const response = await gateway(request, env, ctx);
+    // Each 404 a GET gets, stored page or live, counted per path, referring host and UTC day (site-runtime
+    // ./not-found, drizzle/0039; the privacy page names it). Never a preview link's, whose path carries its token.
+    if (!new URL(request.url).pathname.startsWith("/preview/")) countNotFound(env.DB, request, response, ctx);
     // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
     // are served before the Worker runs, so robots.txt's Disallow is what covers those.
     // The workers.dev address keeps answering after the cutover (the watchdog, the browser tests and
@@ -208,7 +218,7 @@ const site = {
   },
 
   // The one cron (wrangler.jsonc.example), every minute: every Carrel schedule that is due goes live with the publish
-  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
+  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump and the 404 prune run too. runJobs records each job in cron_runs for /health's
   // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
   // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
   // Every firing of the one key gets the job list: there is no other key this Worker can receive.
@@ -226,7 +236,11 @@ const site = {
           },
         },
         ...(isNightly(at)
-          ? [{ ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
+          ? [
+              { ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) },
+              // The 404 counts keep 90 days (site-runtime pruneNotFound's default), as the privacy page says.
+              { ...cronJob("prune-404"), run: () => pruneNotFound(env.DB, { days: 90 }) },
+            ]
           : []),
       ]),
     );
@@ -237,13 +251,9 @@ const site = {
 // A person idle for an hour on either private plane, /admin or /lab, is signed out of Access (site-runtime ./access).
 // Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
 // never reads the other's cookie as no request. Every request writes one `request` line
-// (site-runtime withRequestLog: cf-ray, method, path, status, ms and the deployed sha), with no address, cookie or
-// query, so it records nothing the privacy page would have to name. tokenPath cuts any segment after /preview/, the
-// one address a capability has ridden in a path here (the traces note in wrangler.jsonc.example).
-//
-// NO 404 COUNTER (area 8, N1 and N7): site-runtime's countNotFound would store each missing path and its referring
-// host in D1, and the privacy page names everything the site records, so the counter waits for that page's wording.
-// With no rows there is nothing to prune.
+// (site-runtime withRequestLog: cf-ray, method, path, the matched route, status, ms and the deployed sha), with no
+// address, cookie or query, so it records nothing the privacy page would have to name. tokenPath cuts any segment
+// after /preview/, the one address a capability has ridden in a path here (the traces note in wrangler.jsonc.example).
 export default {
   ...site,
   fetch: withRequestLog(
@@ -253,7 +263,11 @@ export default {
       const lab = () => withAdminIdle(request, app, { prefixes: ["/lab"], cookieName: "__Host-lab-seen" });
       return withAdminIdle(request, lab, { prefixes: ["/admin"] });
     },
-    { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
+    {
+      sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
+      route: routeName,
+      tokenPath: /\/preview\/[^/?#\s'"]+/g,
+    },
   ),
 } satisfies ExportedHandler<Env>;
 

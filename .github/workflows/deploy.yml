@@ -180,6 +180,9 @@ jobs:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      # The full sha ship deploys, for the live gate below.
+      sha: ${{ steps.main.outputs.sha }}
     # Ship polls to stability for 5 probes 10s apart and waits out an Ask
     # convergence window of up to 2 minutes, on top of a build and the full gate
     # tier. Measured locally at roughly 6 to 9 minutes end to end.
@@ -216,6 +219,7 @@ jobs:
       # deploys the tip of main, locally and here, so a stale ref is refused
       # rather than silently fast-forwarded past the commit that was asked for.
       - name: Put the requested commit on main, and refuse unless it is main's tip
+        id: main
         env:
           REQUESTED: ${{ needs.decide.outputs.ref }}
         run: |
@@ -228,6 +232,7 @@ jobs:
           fi
           git checkout -B main "$want"
           git branch --set-upstream-to=origin/main main
+          echo "sha=${want}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -441,3 +446,35 @@ jobs:
       - name: Remove the staged token
         if: always()
         run: rm -f "$RUNNER_TEMP/operator-token"
+
+  # THE LIVE GATE (area 8, D7): the job Capsid's deploy watcher reads (capsid src/deploy-outcomes.ts finds a job named
+  # "live gate" and records the deploy in deploy_outcomes), as it reads devkit's worker-deploy.yml on the other sites.
+  # The name stays byte for byte. Ship has already polled the new version to stability and refused on every miss; this
+  # job records that the commit it shipped is the one /health reports. Ship has no rollback step, so a refusal here is
+  # recorded "unverified", never "rolled back". Only after a ship that succeeded: a refused ship deployed nothing.
+  # /health allows 20 reads a minute per address, so the poll is 24 reads 5 seconds apart.
+  live-gate:
+    name: live gate
+    needs: ship
+    if: needs.ship.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: /health reports the commit ship deployed
+        env:
+          SHA: ${{ needs.ship.outputs.sha }}
+        run: |
+          set -uo pipefail
+          live=""
+          for i in $(seq 1 24); do
+            live=$(curl -sS --max-time 10 -H "cache-control: no-cache" "https://dustinedwards.info/health?gate=${GITHUB_RUN_ID}-${i}" \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(String(JSON.parse(s).sha??""))}catch{}})') || live=""
+            if [ "$live" = "$SHA" ]; then
+              echo "dustinedwards.info/health reports ${SHA}."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::the live gate refused: /health reports ${live:-no sha}, not ${SHA}, the commit this run shipped."
+          exit 1

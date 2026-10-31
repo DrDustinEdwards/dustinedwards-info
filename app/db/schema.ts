@@ -914,3 +914,18 @@ export const scheduledPublishes = sqliteTable(
   },
   (t) => [index("scheduled_publishes_due").on(t.publishAt)],
 );
+
+// The 404 counts (drizzle/0039_not_found.sql, site-runtime's NOT_FOUND_SQL), written by countNotFound in workers/app.ts
+// and read by Carrel's 404 report (notFoundReport). Declared so the schema test sees its index; the SQL is the package's.
+export const page404Daily = sqliteTable(
+  "page_404_daily",
+  {
+    id: text("id").primaryKey(),
+    day: integer("day").notNull(),
+    path: text("path").notNull(),
+    referrerHost: text("referrer_host").notNull().default(""),
+    kind: text("kind").notNull().default("page"),
+    hitCount: integer("hit_count").notNull().default(0),
+  },
+  (t) => [uniqueIndex("page_404_daily_day_path_referrer_uq").on(t.day, t.path, t.referrerHost)],
+);

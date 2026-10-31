@@ -1,4 +1,4 @@
-import { Link, data, redirect } from "react-router";
+import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
@@ -22,6 +22,7 @@ import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { redirectFor } from "~/lib/carrel/post-state.server";
+import { renameRedirect } from "@dustinedwards/site-runtime/url";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { Picture } from "~/components/picture";
@@ -66,15 +67,17 @@ export const middleware: Route.MiddlewareFunction[] = [
   },
 ];
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   // A Carrel preview renders its own row through this same loader, so it matches the published page.
   const preview = context.get(postPreviewContext);
   const post =
     preview?.slug === params.slug ? preview : await getBlogPost(getEnv(context), params.slug);
   if (!post) {
-    // A post Carrel renamed keeps its old address, permanently moved (drizzle/0038_carrel_posts.sql).
-    const moved = await redirectFor(getEnv(context), params.slug);
-    if (moved) throw redirect(`/writing/${moved}`, 301);
+    // A post Carrel renamed keeps its old address, permanently moved (drizzle/0038_carrel_posts.sql), through
+    // site-runtime's renameRedirect: 301 (308 for another method), the query kept, never stored.
+    const env = getEnv(context);
+    const moved = await renameRedirect(request, { prefix: "/writing/", renames: (slug) => redirectFor(env, slug) });
+    if (moved) throw moved;
     throw data("Not found", { status: 404 });
   }
 
