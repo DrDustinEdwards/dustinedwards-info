@@ -1,0 +1,6 @@
+rules:
+  dangerous-triggers:
+    ignore:
+      # workflow_run is guarded: the decide job deploys only after CI succeeded on a push to main and only at
+      # main's tip (deploy.yml, decide).
+      - deploy.yml:104
