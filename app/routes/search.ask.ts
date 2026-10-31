@@ -23,6 +23,7 @@ import {
   reserveAskBudget,
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
+import { logEvent } from "@dustinedwards/site-runtime/log";
 import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { publiclyVisibleSlugs } from "~/db";
 import { clientIp } from "~/lib/client-ip";
@@ -151,7 +152,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         },
         (reason) => {
           cut = true;
-          console.error(JSON.stringify({ alert: "ask-answer-cut", reason }));
+          logEvent("ask_answer_cut", { reason }, { level: "warn" });
         },
       ),
     );
