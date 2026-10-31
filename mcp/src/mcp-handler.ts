@@ -13,20 +13,31 @@
  * capture, never on a release note. Without it this is a modern-only server.
  */
 
-import { routeMcpEra } from "@dustinedwards/site-runtime/mcp-server";
+import {
+  invokeTool,
+  mcpCacheHints,
+  routeMcpEra,
+  toolScopeChallenge,
+  type McpServerInfo,
+} from "@dustinedwards/site-runtime/mcp-server";
 import { isLegacyRequest, McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 
-import { TOOLS, invokeTool, type ToolEnv } from "./tools";
-import type { Caller } from "./auth";
+import { TOOLS, type ToolEnv } from "./tools";
+import { SCOPES, type Caller } from "./auth";
 
 export const MCP_ROUTE = "/mcp";
 
-const SERVER_INFO = {
+export const SERVER_INFO = {
   name: "dustinedwards-mcp",
   title: "Dustin Edwards Admin",
-  version: "0.2.0",
-} as const;
+  version: "0.3.0",
+  websiteUrl: "https://dustinedwards.info",
+  icons: [{ src: "https://dustinedwards.info/dustin-edwards-favicon.svg", mimeType: "image/svg+xml" }],
+};
+
+/** This server as refusals, the step-up challenge and the tool-call log name it. */
+export const SERVER: McpServerInfo = { site: "dustinedwards.info", scopes: SCOPES, name: SERVER_INFO.name, version: SERVER_INFO.version };
 
 const INSTRUCTIONS =
   "Runs dustinedwards.info: site health and drift repair, webmention moderation, media, " +
@@ -48,10 +59,23 @@ function buildServer(env: ToolEnv, caller: Caller | undefined) {
       instructions: INSTRUCTIONS,
       // Bounds the elements a tool input may hold (GHSA-46jr-4wx8-v453; Grok audit 2026-10-21, DE-4).
       maxToolInputElements: 10_000,
+      // One administrator's results, so every hint is private; the list changes only on deploy.
+      cacheHints: mcpCacheHints({ ttlMs: 3_600_000 }),
     });
     for (const tool of TOOLS) {
-      server.registerTool(tool.name, tool.config, (args: Record<string, unknown>) =>
-        invokeTool(env, caller, tool, args ?? {}),
+      // A grant without the tool's scope gets the 403 step-up before the tool runs (scopeChallenge);
+      // invokeTool still checks the scope, for an agent key, which has no OAuth grant behind it.
+      server.registerTool(
+        tool.name,
+        { ...tool.config, scopeChallenge: toolScopeChallenge(env, SERVER, tool) },
+        (args: Record<string, unknown>, ctx) =>
+          invokeTool(env, SERVER, {
+            caller,
+            tool,
+            args: args ?? {},
+            meta: ctx.mcpReq._meta as { traceparent?: unknown } | undefined,
+            run: () => tool.handler(env, args ?? {}),
+          }),
       );
     }
     return server;

@@ -10,7 +10,7 @@
  */
 
 import { safeEqual } from "@dustinedwards/site-runtime/compare";
-import { authorizeCall as checkCall, mcpScopes } from "@dustinedwards/site-runtime/mcp-server";
+import { mcpScopes } from "@dustinedwards/site-runtime/mcp-server";
 
 /** The Cloudflare Access identity carried on an OAuth grant, set at sign-in. */
 export interface Props extends Record<string, unknown> {
@@ -47,8 +47,6 @@ export type Caller =
   | { kind: "admin"; props: Props; scopes: readonly string[] }
   | { kind: "agent"; principal: string; scopes: readonly string[] };
 
-export { callerName } from "@dustinedwards/site-runtime/mcp-server";
-
 /** Scopes an agent holds: read, plus write when AGENT_WRITE names it. */
 export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): string[] {
   const writers = (env.AGENT_WRITE ?? "")
@@ -56,22 +54,6 @@ export function agentScopes(env: { AGENT_WRITE?: string }, principal: string): s
     .map((name) => name.trim().toLowerCase())
     .filter(Boolean);
   return writers.includes(principal) ? [SCOPE_READ, SCOPE_WRITE] : [SCOPE_READ];
-}
-
-/**
- * THE PER-CALL OWNERSHIP CHECK. Ruling mcp-2026-10-10, rule 12.1.
- *
- * Every id a tool takes (a mention id, a procedure slug, a registry address)
- * names a record on dustinedwards.info, and the owner of every one of them is
- * the site's single administrator. So proving the caller owns the id is proving
- * the caller IS that administrator, or an agent the administrator configured,
- * and it is proved here on every call rather than once at the door: a grant is
- * long lived, and the door check alone would let a grant outlive its authority.
- *
- * Returns null when the call may proceed, or the refusal to show the caller.
- */
-export function authorizeCall(env: { ADMIN_EMAIL?: string }, caller: Caller | undefined, scope: Scope): string | null {
-  return checkCall(env, caller, scope, { site: "dustinedwards.info", scopes: SCOPES });
 }
 
 /**

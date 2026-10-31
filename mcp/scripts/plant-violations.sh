@@ -197,21 +197,21 @@ expect_fail "16. second service binding added"
 # 17. A tool registered around invokeTool skips ownership, scope and the log.
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('invokeTool(env, caller, tool, args ?? {}),','tool.handler(env, args ?? {}),',1)
+s=s.replace('(args: Record<string, unknown>, ctx) =>\n          invokeTool(','(args: Record<string, unknown>, ctx) =>\n          tool.handler(env, args) ?? invokeTool(',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "17. tool registered around invokeTool"
 
-# 18. The per-call ownership check removed (rule 12.1).
+# 18. The shared door handed scopes other than this server's (rule 12.1, 12.3).
 python3 -c "
-p='src/auth.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('return checkCall(env, caller, scope, { site: \"dustinedwards.info\", scopes: SCOPES });','return null;',1)
+p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
+s=s.replace('const SERVER: McpServerInfo = { site: \"dustinedwards.info\", scopes: SCOPES,','const SERVER: McpServerInfo = { site: \"dustinedwards.info\", scopes: { read: \"\", write: \"\" },',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "18. authorizeCall no longer runs the shared per-call check"
+expect_fail "18. invokeTool given scopes other than this server's"
 
 # 19. Registration without the redirect allowlist (rule 13).
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('registrationRefusal(env.DCR_REDIRECT_URIS, clientMetadata)','null',1)
+s=s.replace('registrationRefusal([...DCR_CALLBACKS, env.DCR_REDIRECT_URIS ?? \"\"].join(\",\"), clientMetadata)','null',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "19. registration allowlist bypassed"
 
