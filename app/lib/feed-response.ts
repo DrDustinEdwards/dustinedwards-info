@@ -13,7 +13,7 @@ import { tagPath } from "~/lib/tag-path.mjs";
 
 export type FeedFormat = "json" | "rss" | "atom";
 
-/** check:headers reads these literals and asserts isUnpolicedType() exempts each from the CSP. */
+/** Each is a type isUnpolicedType() exempts from the CSP (workers/feed-types.mjs). */
 const FEED_CONTENT_TYPES = {
   /*
    * `application/json`, not `application/feed+json`: Cloudflare does not compress `+json` types, and

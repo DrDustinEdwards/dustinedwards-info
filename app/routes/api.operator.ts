@@ -1,3 +1,4 @@
+import { cappedJson } from "~/lib/body.server";
 import { getEnv } from "~/lib/context";
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
 import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
@@ -8,6 +9,9 @@ import type { Route } from "./+types/api.operator";
  * A resource route, so the action can return a raw Response. One POST taking `{ tool, args }`, so an
  * MCP front end maps onto it: `tools/call` carries a name and an argument object.
  */
+
+// upload_media may carry a picture as base64 (descriptors.ts): its 10 MB, a third larger, and the rest of the call.
+const OPERATOR_BODY_BYTES = 15 * 1024 * 1024;
 
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(body, null, 2), {
@@ -48,8 +52,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   let body: unknown;
   try {
-    body = await request.json();
-  } catch {
+    body = await cappedJson(request, OPERATOR_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof Response) return error;
     return json({ ok: false, error: "Body must be JSON." }, 400);
   }
 

@@ -10,6 +10,5 @@
     { "spec": "2026-07-28", "scenario": "server-stateless", "passed": 24, "total": 28, "note": "SDK lacks MissingRequiredClientCapabilityError (-32021)" },
     { "spec": "2025-11-25", "scenario": "server-initialize" }
   ],
-  "registration": { "allowed": { "var": "DCR_REDIRECT_URIS" } },
-  "after": "scripts/conformance-headers.mjs"
+  "registration": { "allowed": { "var": "DCR_REDIRECT_URIS" } }
 }

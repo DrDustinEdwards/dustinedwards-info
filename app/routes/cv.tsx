@@ -53,7 +53,6 @@ const PATH = CV_PAGE.path;
 const CARD_PATH = contentPageCardPath(CV_PAGE);
 const CARD = CARD_PATH ? `${SITE_ORIGIN}${CARD_PATH}` : undefined;
 
-// headers() is written out here because check:headers reads each public route's own source.
 export function headers() {
   return new Headers(publicHtmlHeaders(CV_HTML_TAGS));
 }
