@@ -1,4 +1,4 @@
-import { readCappedBytes } from "@dustinedwards/site-runtime/body";
+import { readCappedBytes, requireJson } from "@dustinedwards/site-runtime/body";
 
 /** Ceilings for a request body: a form a reader sends, a signed-in form, and one that carries a picture (upload-contract.mjs). */
 export const FORM_BYTES = 64 * 1024;
@@ -16,6 +16,9 @@ export async function cappedForm(request: Request, max: number): Promise<FormDat
   return (await capped(request, max)).formData();
 }
 
+/** A JSON body; one of any other type throws the 415 first (requireJson), since a form or text/plain post needs no preflight. */
 export async function cappedJson(request: Request, max: number): Promise<unknown> {
+  const refused = requireJson(request);
+  if (refused) throw refused;
   return (await capped(request, max)).json();
 }
