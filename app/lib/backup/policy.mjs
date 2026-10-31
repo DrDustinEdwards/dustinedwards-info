@@ -20,21 +20,25 @@ export const NON_DERIVED_TABLES = Object.freeze({
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",
   scheduled_updates: "updates Carrel scheduled on live posts, waiting for their time (0033)",
+  webmention_targets: "the pages each post last sent a webmention to, so a removed link is told too (0036)",
+  content_trash: "the posts in Carrel's trash and since when (0038)",
+  post_redirects: "the old addresses of renamed posts, each answered with a 301 (0038)",
+  scheduled_publishes: "posts scheduled before they were ever live, for the cron to announce (0038)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */
 export const REQUIRED_TABLES = Object.freeze(Object.keys(NON_DERIVED_TABLES));
 
 /**
- * Tables left out of the dump because they hold live credentials or one-time tokens. EMPTY, and
- * deliberately so: no table in the current schema holds either. The Better Auth tables (user,
- * session, account, verification) were dropped by migration 0026, admin sign-in is Cloudflare
- * Access and keeps no row.
+ * Tables left out of the dump because they hold live credentials or one-time tokens. One:
+ * `preview_links` (0036), the SHA-256 of each Carrel preview link's token, since a restore would bring
+ * back links that were revoked or had expired. The Better Auth tables (user, session, account,
+ * verification) were dropped by migration 0026, admin sign-in is Cloudflare Access and keeps no row.
  * A table added later that matches CREDENTIAL_COLUMN fails the dump by name until it is listed
  * here, with the reason, or its column is renamed.
  */
 /** @type {readonly string[]} */
-export const EXCLUDED_TABLES = Object.freeze(/** @type {string[]} */ ([]));
+export const EXCLUDED_TABLES = Object.freeze(["preview_links"]);
 
 /** A column name that says it holds a credential. Matched case-insensitively, camelCase included. */
 export const CREDENTIAL_COLUMN = /password|passwd|secret|token|api_?key|credential|private_?key/i;

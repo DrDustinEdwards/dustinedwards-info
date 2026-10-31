@@ -48,13 +48,13 @@ await test("every required table exists in the migrated schema, so the list cann
   assert.deepEqual(REQUIRED_TABLES, Object.keys(NON_DERIVED_TABLES));
 });
 
-await test("no table in the migrated schema holds a credential column, which is why EXCLUDED_TABLES is empty", () => {
+await test("only the excluded tables in the migrated schema hold a credential column", () => {
   for (const entry of schema) {
-    if (/^\s*CREATE\s+VIRTUAL/i.test(entry.sql)) continue;
+    if (/^\s*CREATE\s+VIRTUAL/i.test(entry.sql) || EXCLUDED_TABLES.includes(entry.name)) continue;
     const bad = columnNames(entry.sql).filter((c) => CREDENTIAL_COLUMN.test(c));
     assert.deepEqual(bad, [], `${entry.name} has ${bad.join(", ")}`);
   }
-  assert.deepEqual([...EXCLUDED_TABLES], []);
+  assert.deepEqual([...EXCLUDED_TABLES], ["preview_links"]);
 });
 
 await test("PLANTED: an empty dump is refused", () => {

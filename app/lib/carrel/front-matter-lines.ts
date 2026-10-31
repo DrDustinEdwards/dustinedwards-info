@@ -1,35 +1,53 @@
-// Status edits on a content file's front matter, by line, for every kind Carrel writes. Shared by the
-// kind handlers: a status change must leave every other key byte for byte.
+// Front matter edits for every kind Carrel writes, on site-api's frontmatter module (`@dustinedwards/site-api/
+// frontmatter`), which replaces one top-level key's block and returns every other block byte for byte: a status change
+// must leave the keys the site does not know as they were.
 
-import { RefusedError } from "@dustinedwards/site-api";
+import { RefusedError, type ContentStatus } from "@dustinedwards/site-api";
+import { joinSource, readKey, setBlock, setRawKey, splitSource } from "@dustinedwards/site-api/frontmatter";
+
+import { readState } from "~/lib/editor/publish-policy.mjs";
+
+/** One top-level key of a source's front matter as text, "" when it has none. */
+export const frontKey = (raw: string, key: string) => readKey(splitSource(raw).front, key);
+
+/** A post's effective publication time, as the pipeline computes it: publish_at, else the date. */
+export function effectivePublishAt(raw: string): number {
+  return Date.parse(frontKey(raw, "publish_at").trim() || `${frontKey(raw, "date")}T00:00:00.000Z`);
+}
+
+/** Draft, scheduled or published, from the file itself, which is the only authority on status. */
+export function statusOf(raw: string, now = Date.now()): ContentStatus {
+  if (readState(raw).draft) return "draft";
+  const at = frontKey(raw, "publish_at").trim();
+  return at && Date.parse(at) > now ? "scheduled" : "published";
+}
+
+/** The source with its front matter edited; a source with none is refused, since its status cannot be set. */
+function editFront(raw: string, edit: (front: string) => string) {
+  const split = splitSource(raw);
+  if (split.front === null) throw new RefusedError("The source has no frontmatter block, so its status cannot be set.");
+  return joinSource({ ...split, front: edit(split.front) });
+}
+
+/** Sets `draft`, and `publish_at` when given (null removes it), as JSON-quoted text. */
+export function withPublication(raw: string, change: { draft: boolean; publishAt?: string | null }) {
+  return editFront(raw, (front) => {
+    let out = setRawKey(front, "draft", change.draft ? "true" : "false");
+    if (change.publishAt === null) out = setBlock(out, "publish_at", []);
+    else if (change.publishAt !== undefined) out = setRawKey(out, "publish_at", JSON.stringify(change.publishAt));
+    return out;
+  });
+}
+
+/** A rename's file: the same source under its new slug. */
+export const withSlug = (raw: string, slug: string) => editFront(raw, (front) => setRawKey(front, "slug", slug));
 
 /**
- * Sets `draft` and `publish_at` by line, leaving every other key byte for byte: serializePost writes
- * only the fields the editor knows, and a status change must not drop the others. The values are
- * written as serializePost writes them.
+ * A publish under a date of Carrel's choosing (site-api v0.17.0 `publishedAt`): the post's `date` is that day and its
+ * `publish_at` that moment, which together are the publication time every page reads (effectivePublishAt).
  */
-export function withPublication(raw: string, change: { draft: boolean; publishAt?: string | null }) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
-  if (!match) throw new RefusedError("The source has no frontmatter block, so its status cannot be set.");
-  let lines = match[1]!.split(/\r?\n/);
-
-  const set = (key: string, value: string | null) => {
-    const at = lines.findIndex((line) => line.startsWith(`${key}:`));
-    if (value === null) {
-      if (at !== -1) lines = lines.filter((_, i) => i !== at);
-    } else if (at !== -1) {
-      lines[at] = `${key}: ${value}`;
-    } else {
-      lines.push(`${key}: ${value}`);
-    }
-  };
-
-  set("draft", change.draft ? "true" : "false");
-  if (change.publishAt !== undefined) {
-    set("publish_at", change.publishAt === null ? null : JSON.stringify(change.publishAt));
-  }
-  return `---\n${lines.join("\n")}\n---${raw.slice(match[0].length)}`;
-}
+export const withPublishedAt = (raw: string, at: string) =>
+  editFront(raw, (front) => setRawKey(setRawKey(front, "date", at.slice(0, 10)), "publish_at", JSON.stringify(at)));
 
 /**
  * What a preview renders: the source with the keys a post cannot render without filled in where they are absent or
@@ -37,19 +55,16 @@ export function withPublication(raw: string, change: { draft: boolean; publishAt
  * `# heading`). Only the preview does this; a save still refuses a post with no title.
  */
 export function forPreview(raw: string, slug: string, today = new Date().toISOString().slice(0, 10)) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
-  const lines = match ? match[1]!.split(/\r?\n/) : [];
+  const split = splitSource(raw);
+  let front = split.front ?? "draft: true";
   const fill = (key: string, value: string) => {
-    const at = lines.findIndex((line) => line.startsWith(`${key}:`));
-    const current = at === -1 ? "" : lines[at]!.slice(key.length + 1).trim();
-    if (current && current !== '""' && current !== "''") return;
-    if (at === -1) lines.push(`${key}: ${value}`);
-    else lines[at] = `${key}: ${value}`;
+    if (!readKey(front, key).trim()) front = setRawKey(front, key, value);
   };
   fill("title", "Untitled");
   fill("slug", slug);
   fill("date", today);
   fill("description", "Untitled");
-  if (!match) lines.push("draft: true");
-  return `---\n${lines.join("\n")}\n---${match ? raw.slice(match[0].length) : `\n${raw}`}`;
+  return split.front === null
+    ? `---\n${front}\n---\n${raw}`
+    : joinSource({ ...split, front });
 }

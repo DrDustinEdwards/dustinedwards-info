@@ -475,6 +475,15 @@ export async function deletePost(
 }
 
 /**
+ * A renamed post's rows under its old slug, its search records and its Ask records, cleared (site-api v0.17.0 rename):
+ * the file and its history have moved to the new slug, whose save writes the rows again.
+ */
+export async function forgetPostRows(env: PublishEnv, slug: string) {
+  const { purged } = await deletePostFromD1(env, slug);
+  return { purged, askRemoval: await removeAskForPost(env, slug) };
+}
+
+/**
  * The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not
  * swallowed. Null means Ask is not configured; a failure is `ok: false`, never the same null.
  */

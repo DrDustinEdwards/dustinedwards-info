@@ -5,7 +5,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
-import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { cacheTags, EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { THEME_COOKIE } from "capsomer/theme-server";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
 import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
@@ -20,7 +20,8 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
-import { cacheKey, forReader, forRenderer, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
+import { cacheKey, forReader, forRenderer, purgeTags, settleCacheHeaders, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
+import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -103,6 +104,15 @@ function applyDocumentHeaders(
  * The cacheable entrypoint; `default` has cache disabled. Document headers belong here, or they are absent from every hit.
  */
 export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
+  /**
+   * The RPC method site-runtime's schedulePurgeHook calls over the Worker's loopback when a Carrel schedule changes a
+   * post (app/lib/carrel/site-api.server.ts): the cron's entrypoint cannot reach this one's cache. Every page that
+   * shows a post carries `posts` (cacheTags). RPC methods bypass the cache.
+   */
+  async purgePages(why: string) {
+    return purgeTags(this.ctx.cache as PurgeCache | undefined, [cacheTags()], why);
+  }
+
   override async fetch(request: Request): Promise<Response> {
     const env = this.env;
     const ctx = this.ctx;
@@ -190,18 +200,25 @@ const site = {
     else await handleMediaEvents(batch, env);
   },
 
-  // The one cron (wrangler.jsonc.example): every scheduled update that is due goes live, and IndexNow is told.
-  // A failed one throws after the pass, so the invocation is recorded as failed; the next firing retries it.
-  // Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
-  scheduled(controller, env, ctx) {
-    ctx.waitUntil(
-      (async () => {
-        const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
-        const run = await runCarrelSchedules(env, ctx, new Date(controller.scheduledTime));
-        console.log(JSON.stringify({ schedules: run }));
-        if (run.failed > 0) throw new Error(`${run.failed} scheduled update(s) failed; the next firing retries them`);
-      })(),
-    );
+  // The one cron, every minute (wrangler.jsonc.example), its job recorded in D1 cron_runs by site-runtime ./cron:
+  // every Carrel schedule that is due goes live with the publish hooks (IndexNow, the purge, webmentions), failed hooks
+  // run again and the trash past 30 days is emptied (site-api's runSchedules). A failed schedule fails the job after
+  // the pass, and the next firing retries it. Awaited, not handed to waitUntil, whose rejection is only logged while
+  // the invocation counts as a success. Imported here, not at the top: the gateway never loads the save path, and
+  // neither does the test entry.
+  async scheduled(controller, env, ctx) {
+    await runJobs(env.DB, [
+      {
+        name: "carrel-schedules",
+        everyMinutes: 1,
+        run: async () => {
+          const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
+          const run = await runCarrelSchedules(env, ctx, new Date(controller.scheduledTime));
+          console.log(JSON.stringify({ schedules: run }));
+          if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
+        },
+      },
+    ]);
   },
 
 } satisfies ExportedHandler<Env>;

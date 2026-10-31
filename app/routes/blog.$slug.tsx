@@ -1,4 +1,4 @@
-import { Link, data } from "react-router";
+import { Link, data, redirect } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
@@ -21,6 +21,7 @@ import {
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
+import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { Picture } from "~/components/picture";
@@ -71,6 +72,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const post =
     preview?.slug === params.slug ? preview : await getBlogPost(getEnv(context), params.slug);
   if (!post) {
+    // A post Carrel renamed keeps its old address, permanently moved (drizzle/0038_carrel_posts.sql).
+    const moved = await redirectFor(getEnv(context), params.slug);
+    if (moved) throw redirect(`/writing/${moved}`, 301);
     throw data("Not found", { status: 404 });
   }
 
