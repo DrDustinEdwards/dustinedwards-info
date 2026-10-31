@@ -1,11 +1,10 @@
 // Separate from app.ts so the worker tests can call it on both branches.
 
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
-import { buildContentSecurityPolicy, buildPolicy } from "@dustinedwards/site-runtime/csp";
+import { buildContentSecurityPolicy, buildStagedPolicy } from "@dustinedwards/site-runtime/csp";
+import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
 
-export const CSP_REPORT_PATH = "/api/csp-report";
-
-export const CSP_ENDPOINT_NAME = "csp-endpoint";
+export { CSP_REPORT_GROUP, CSP_REPORT_PATH } from "@dustinedwards/site-runtime/csp";
 
 /**
  * Exact-or-slash, not a bare prefix, so a future `/administrator` route cannot pick up the admin
@@ -52,23 +51,6 @@ function isMediaPath(pathname) {
   return pathname === "/media" || pathname.startsWith("/media/");
 }
 
-/**
- * Every /media response, whatever its type: stored bytes are never a page of this site, so they get
- * no script, no connection and a sandbox, which gives an opened file an opaque origin. That is what
- * stops an SVG or an HTML body (a hand-put object, a legacy upload, a wrong content type) from
- * running as the site. `img-src 'self' data:` and `style-src 'unsafe-inline'` are what the browser's
- * own image viewer needs when a reader opens an image directly.
- *
- * TRAP: `sandbox` breaks Chrome's built-in PDF viewer, which refuses to load in a sandboxed
- * document. No PDF is served from /media today; one must be served elsewhere, never through here.
- */
-export const MEDIA_CSP = buildPolicy([
-  "default-src 'none'",
-  "img-src 'self' data:",
-  "style-src 'unsafe-inline'",
-  "sandbox",
-]);
-
 /*
  * THE ONLY THIRD-PARTY SCRIPTS THE SITE RUNS, each an exact file URL and not a host, so nothing else
  * on that host is trusted. A script that makes the site better can be added here deliberately:
@@ -89,7 +71,7 @@ export const MEDIA_CSP = buildPolicy([
  * and the islands it imports are same-origin, so 'self' covers them, and the prefetch rules come from
  * a same-origin file the response header names (site-runtime ./prefetch), which needs no allowance.
  * The admin plane is `private, no-store`, so its per-request nonce is sound, and it keeps it for
- * <Scripts>, the sidebar script and CodeMirror's inline <style>. A /media path gets MEDIA_CSP instead,
+ * <Scripts>, the sidebar script and CodeMirror's inline <style>. A /media path gets UPLOAD_HEADERS' policy instead,
  * chosen here so the Renderer keeps one place that sets the header.
  *
  * @param {string} pathname the request URL's pathname
@@ -97,17 +79,40 @@ export const MEDIA_CSP = buildPolicy([
  * @returns {string}
  */
 export function contentSecurityPolicy(pathname, adminNonce) {
-  if (isMediaPath(pathname)) return MEDIA_CSP;
-  // What this site loads, the one list the package builds the policy from. No 'strict-dynamic': browsers ignore every host
-  // source while it is present, so an approved file could never run; 'self' covers /site.js and the islands. The
-  // admin plane's nonce also covers CodeMirror's inline <style>, which cannot be turned off. Nonces do not apply to style
-  // attributes, and Shiki emits about 117 inline style="" per post, so those are allowed as attributes only.
-  return buildContentSecurityPolicy({
+  // Every /media response, whatever its type: stored bytes are never a page of this site, so they get UPLOAD_HEADERS'
+  // sandboxed default-src 'none', which stops an SVG or an HTML body from running as the site. TRAP: `sandbox` breaks
+  // Chrome's built-in PDF viewer; no PDF is served from /media, and one must never be.
+  if (isMediaPath(pathname)) return /** @type {string} */ (UPLOAD_HEADERS["Content-Security-Policy"]);
+  return buildContentSecurityPolicy(pagePolicy(adminNonce)).value;
+}
+
+/**
+ * What the site's registry entry stages (Trusted Types and default-src 'none'), sent as
+ * Content-Security-Policy-Report-Only beside the enforced policy until the reports are quiet. A /media
+ * file has none: its policy is already default-src 'none' and runs no script.
+ *
+ * @param {string} pathname the request URL's pathname
+ * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab), else undefined
+ * @returns {string | undefined}
+ */
+export function stagedPolicy(pathname, adminNonce) {
+  if (isMediaPath(pathname)) return undefined;
+  return buildStagedPolicy(pagePolicy(adminNonce), { trustedTypes: true, denyUnlisted: true }).value;
+}
+
+/**
+ * What this site loads, the one list the package builds the policy from. No 'strict-dynamic': browsers ignore every host
+ * source while it is present, so an approved file could never run; 'self' covers /site.js and the islands. The
+ * admin plane's nonce also covers CodeMirror's inline <style>, which cannot be turned off. Nonces do not apply to style
+ * attributes, and Shiki emits about 117 inline style="" per post, so those are allowed as attributes only.
+ *
+ * @param {string | undefined} adminNonce
+ */
+function pagePolicy(adminNonce) {
+  return {
     sources: { img: ["data:"], media: PODCAST_AUDIO_HOSTS.map((host) => `https://${host}`) },
     nonce: adminNonce || undefined,
     styleAttributesInline: true,
     cloudflareWebAnalytics: true,
-    reportUri: CSP_REPORT_PATH,
-    reportTo: CSP_ENDPOINT_NAME,
-  }).value;
+  };
 }

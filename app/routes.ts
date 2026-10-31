@@ -174,7 +174,7 @@ export default [
   route("health", "routes/health.ts"),
   route("api/health", "routes/api.health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("api/csp-report", "routes/api.csp-report.ts"),
+  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.
