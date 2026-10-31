@@ -411,6 +411,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: npm run ship
 
+      # devkit-warm fetches every sitemap page once, so the first reader of each page after a deploy gets a stored page
+      # rather than a render: the "Warm the stored pages" step of devkit's worker-deploy.yml, which this deploy does not
+      # use. It never fails the job.
+      - name: Warm the stored pages
+        run: npx devkit-warm https://dustinedwards.info
+
       # Even when ship fails. The runner is ephemeral, so this is belt beside
       # braces, and a credential that outlives its use because a step failed is
       # a habit worth not having.
