@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   site:
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@d9d5a3448a50f183c3c8b4a5f293717728717245 # v0.20.8
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@00667358d7a72f07f92504dea30b4ffa318a8f46 # v0.20.12
     with:
       # The app build, as ci.yml builds it; the dry run then follows the Vite plugin's redirect to build/server.
       prepare: |
@@ -27,12 +27,12 @@ jobs:
         npm run build
 
   watchdog:
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@d9d5a3448a50f183c3c8b4a5f293717728717245 # v0.20.8
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@00667358d7a72f07f92504dea30b4ffa318a8f46 # v0.20.12
     with:
       config: .worker-size.watchdog.json
 
   mcp:
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@d9d5a3448a50f183c3c8b4a5f293717728717245 # v0.20.8
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@00667358d7a72f07f92504dea30b4ffa318a8f46 # v0.20.12
     with:
       # devkit's bin comes from the root install; mcp/ has its own lockfile and wrangler.
       install: npm ci --ignore-scripts && npm ci --prefix mcp

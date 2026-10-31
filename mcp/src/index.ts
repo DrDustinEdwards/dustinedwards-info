@@ -26,27 +26,24 @@
  *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
- *   /.well-known/security.txt  the family's security contact (RFC 9116)
  *   /health                liveness
- *   /csp-report            the CSP violation sink, csp-report.ts
+ *   /.well-known/security.txt and /csp-report  answered by withMcpHeaders
  *
- * Every response, whichever route made it, leaves through withSecurityHeaders.
+ * Every response, whichever route made it, leaves through site-runtime's withMcpHeaders.
  */
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
-import { checkRateLimit, mcpOriginRefusal, refuse } from "@dustinedwards/site-runtime/mcp-server";
+import { checkRateLimit, mcpOriginRefusal, refuse, withMcpHeaders } from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
-import { securityTxtResponse } from "@dustinedwards/site-runtime/security-txt";
+import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
 
 import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
 import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
-import { CSP_REPORT_PATH, withSecurityHeaders } from "./security-headers";
-import { handleCspReport } from "./csp-report";
 import type { ApiEnv } from "./api-client";
 
 /** The door's limiter. The class keeps its name, so the existing binding and migration stay as they are. */
@@ -229,21 +226,9 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
   return built;
 }
 
-/**
- * Every request is routed here and every answer leaves through withSecurityHeaders
- * (security-headers.ts), the one place this Worker's security headers are set. A throw
- * becomes a logged 500 that carries them too, rather than Cloudflare's bare error page.
- */
+/** Every request is routed here; withMcpHeaders below sets every security header on the answer. */
 async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
-
-  // The site's contact and expiry (app/routes/security-txt.ts); renew both together.
-  if (url.pathname === "/.well-known/security.txt") {
-    return securityTxtResponse({ origin: url.origin, contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" });
-  }
-
-  // Outside the provider: browsers send violation reports without credentials.
-  if (url.pathname === CSP_REPORT_PATH) return handleCspReport(request, env);
 
   // The measurement instrument sits OUTSIDE the OAuth provider deliberately.
   // It exists to observe unauthenticated client behavior, so putting it behind
@@ -301,16 +286,28 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    let response: Response;
-    try {
-      response = await route(request, env, ctx);
-    } catch (error) {
-      console.error(
-        JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
-      );
-      response = refuse("Internal error. The request was not completed.", 500);
-    }
-    return withSecurityHeaders(response, new URL(request.url).origin);
-  },
+  /*
+   * The entry's full set, the consent page's hashed-style policy and the load-nothing policy for the rest, on every
+   * response. It also answers security.txt (the site's contact and expiry, app/routes/security-txt.ts; renew both
+   * together) and the CSP sink, metered per address because a page tripping ten rules sends ten reports. A throw
+   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page.
+   */
+  fetch: withMcpHeaders<Env>(
+    async (request, env, ctx) => {
+      try {
+        return await route(request, env, ctx as ExecutionContext);
+      } catch (error) {
+        console.error(
+          JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
+        );
+        return refuse("Internal error. The request was not completed.", 500);
+      }
+    },
+    {
+      site: dustinedwardsMcp,
+      securityTxt: { contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" },
+      allowReport: async (request, env) =>
+        (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${request.headers.get("cf-connecting-ip") ?? "unknown"}`, 60)).allowed,
+    },
+  ),
 } satisfies ExportedHandler<Env>;
