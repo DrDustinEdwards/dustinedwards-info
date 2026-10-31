@@ -26,6 +26,7 @@
  *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
+ *   /.well-known/security.txt  the family's security contact (RFC 9116)
  *   /health                liveness
  *   /csp-report            the CSP violation sink, csp-report.ts
  *
@@ -38,6 +39,7 @@ import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
 import { checkRateLimit, mcpOriginRefusal, refuse } from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
+import { securityTxtResponse } from "@dustinedwards/site-runtime/security-txt";
 
 import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
@@ -234,6 +236,11 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
  */
 async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
+
+  // The site's contact and expiry (app/routes/security-txt.ts); renew both together.
+  if (url.pathname === "/.well-known/security.txt") {
+    return securityTxtResponse({ origin: url.origin, contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" });
+  }
 
   // Outside the provider: browsers send violation reports without credentials.
   if (url.pathname === CSP_REPORT_PATH) return handleCspReport(request, env);
