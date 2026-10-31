@@ -138,10 +138,10 @@ export default function start(): void {
 
   /* Enarratio's layer: bar links become keyboard filter buttons with details on hover and focus. */
   /*
-   * A filter that leaves nothing to chart is answered with one sentence marked data-cv-timeline-empty in place of
-   * the figure (app/lib/cv/charts.ts), so the chart is absent then and comes back when a filter selects something.
+   * A filter that leaves nothing to chart is answered with the frame's no-data state in place of the figure
+   * (app/lib/cv/charts.ts), so the chart is absent then and comes back when a filter selects something.
    */
-  const EMPTY = "[data-cv-timeline-empty]";
+  const EMPTY = '[data-state="nodata"]';
   let timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
   if (!timeline && !timelineHost.querySelector(EMPTY)) throw new Error("cv: the timeline is not an Enarratio figure.");
 
@@ -198,16 +198,20 @@ export default function start(): void {
       });
   }
 
-  /** The figure is updated in place when there is one, and made again when the sentence stood in its place. */
+  /**
+   * The figure is updated in place when there is one (update() takes the figure, not its frame), and the frame
+   * made again when the no-data state stood in its place.
+   */
   function drawTimeline(markup: string, state: CvState) {
-    if (markup.includes("data-cv-timeline-empty")) {
+    const drawn = new DOMParser().parseFromString(markup, "text/html").querySelector("figure.enarratio");
+    if (!drawn) {
       timeline?.destroy();
       timeline = undefined;
       timelineHost.innerHTML = markup;
       return;
     }
     if (timeline) {
-      timeline.update(markup);
+      timeline.update(drawn.outerHTML);
     } else {
       timelineHost.innerHTML = markup;
       timeline = enhance().find((chart) => chart.figure.id === TIMELINE_ID);

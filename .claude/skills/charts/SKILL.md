@@ -79,8 +79,8 @@ order they are written in, so the chart reads in the order the markdown does.
    chart, labels each line at its end; series also differ by shape or position,
    so hue is never the sole channel.
 3. **Colors come from Enarratio's theme, assigned automatically.** The theme is
-   the site's theme in `scripts/build-chart-css.mjs`, written to `app/styles/enarratio.css` by
-   `npm run build:chart-css`. NEVER write a hex, and never ask for a specific
+   Capsomer's: `capsomer/tokens.css` maps every `--enarratio-*` property onto the
+   family tokens, beside `enarratio/base.css`. NEVER write a hex, and never ask for a specific
    color. One stored SVG serves light and dark because the custom property
    resolves per theme in the browser. More than eight series fails the build.
 4. **Data must be real and recorded.** House voice standard: every quantitative
@@ -95,10 +95,10 @@ order they are written in, so the chart reads in the order the markdown does.
 ## What you get, automatically
 
     <figure class="chart-figure enarratio" data-enarratio="bar">
-      <p class="enarratio-title">...</p>      when title is set
+      <figcaption class="enarratio-head">     the title, and the alt shown as the finding
       <svg role="img" aria-label="{alt}">     the accessible name lives HERE
-      <figcaption>...</figcaption>            when the body has a caption
-      <details class="enarratio-data">        generated equivalent data table
+      <div class="enarratio-caption">         when the body has a caption
+      <details class="enarratio-data">        "Show data": the generated data table
     </figure>
 
 The name goes on the SVG and NEVER on the figure. `role="img"` makes its
@@ -142,7 +142,7 @@ posts.json is a gitignored local build product):
 Commit the markdown alone; `sync:content` or the next ship lands the render in
 D1, and the content-drift health check repairs any gap within one poll.
 
-If you bump `enarratio`, run `npm run build:chart-css` and compare a chart's
+If you bump `enarratio`, compare a chart's
 SVG from `build:content` against the one the Worker stores after a save:
 Node-versus-workerd byte parity is a property of its pinned Plot and linkedom,
 and no gate proves it.
