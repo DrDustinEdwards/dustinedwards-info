@@ -17,7 +17,8 @@
 	// absence of the positive flag.
 	"compatibility_flags": ["global_fetch_strictly_public"],
 
-	"observability": { "enabled": true },
+	// head_sampling_rate stated (area 8, L1): every log kept; an admin server's traffic is one person's.
+	"observability": { "enabled": true, "head_sampling_rate": 1 },
 	// Minified with the source maps uploaded, and without esbuild's keep_names wrappers (about 12 KiB of
 	// the bundle): nothing here reads a function's or class's own name, and the error classes this
 	// Worker tests by name (AuthorizationError, CimdFetchError) set `this.name` themselves.

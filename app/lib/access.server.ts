@@ -1,5 +1,6 @@
 import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
+import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runtime/log";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -54,7 +55,9 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
   const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
   if (identity.kind !== "human" || localDevelopment(request)) return identity;
-  return adminEmails(env).includes(identity.email) ? identity : { kind: "refused", reason: "not-admin" };
+  if (adminEmails(env).includes(identity.email)) return identity;
+  refusedLog("not-admin");
+  return { kind: "refused", reason: "not-admin" };
 }
 
 /**
@@ -77,10 +80,49 @@ export async function verifyAccessRequest(
   let source: KeySource | undefined;
   const lazyKeys: KeySource = (kid, fresh) => (source ??= keys(teamDomain))(kid, fresh);
   const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
-  if (!verdict.ok) return verdict.reason === "not-configured" || verdict.reason === "no-token" ? { kind: "absent" } : { kind: "refused", reason: verdict.reason };
+  if (!verdict.ok) {
+    if (verdict.reason === "not-configured" || verdict.reason === "no-token") return { kind: "absent" };
+    refusedLog(verdict.reason);
+    return { kind: "refused", reason: verdict.reason };
+  }
 
   const { email, common_name: commonName } = verdict.claims;
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
   if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
+  refusedLog("no-identity");
   return { kind: "refused", reason: "no-identity" };
+}
+
+/** The headers every /admin and /lab refusal carries. */
+export const REFUSAL_HEADERS = {
+  "content-type": "text/plain; charset=utf-8",
+  "cache-control": "private, no-store",
+  "x-robots-tag": "noindex, nofollow",
+} as const;
+
+/**
+ * A refusal at /admin or /lab (`plane`), written as one OWASP `authz_fail` line (site-runtime ./log) before it goes
+ * back, so a run of refusals shows in Workers Logs. The line carries the plane, the reason and the status, never the
+ * person: the log scrubs any email out of it.
+ */
+export function refusal(
+  request: Request,
+  plane: "admin" | "lab",
+  reason: string,
+  status: 401 | 403,
+  body: string,
+  headers: Record<string, string> = {},
+): Response {
+  logRefusal(request, plane, reason, status);
+  return new Response(body, { status, headers: { ...REFUSAL_HEADERS, ...headers } });
+}
+
+/** The `authz_fail` line alone, for a refusal made elsewhere (site-runtime ./origin's cross-site 403). */
+export function logRefusal(request: Request, plane: "admin" | "lab", reason: string, status: number): void {
+  logEvent(OWASP_EVENTS.authorizationFailure, { ...requestFields(request), plane, reason, status }, { level: "warn" });
+}
+
+/** A presented Access token refused, under the OWASP name (area 8, L4): the reason only, never the token or the email. */
+function refusedLog(reason: string) {
+  logEvent(OWASP_EVENTS.authorizationFailure, { via: "access", reason }, { level: "warn" });
 }

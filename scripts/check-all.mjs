@@ -50,6 +50,8 @@ export const TIERS = {
   "check:contrast": "offline",
   "check:secrets": "offline",
   "check:migrations": "offline",
+  // The console.* ratchet (devkit-console, .console.json): raw calls in server code may only go down.
+  "check:console": "offline",
   "check:policy": "offline",
   "check:ask-guards": "offline",
   "check:test-assertions": "offline",

@@ -200,6 +200,28 @@ interface HealthRun {
   failed: HealthCheck[];
 }
 
+/**
+ * Every check runHealthChecks runs, in its order. /health names its checks before the run starts, so that each one
+ * waits on the run inside healthResponse's timeout; the /health test compares this list with what the run returns.
+ */
+export const HEALTH_CHECK_NAMES = [
+  "ask-index-drift",
+  "media-index-drift",
+  "media-backup-drift",
+  "content-drift",
+  "procedures-drift",
+  "dictionary-drift",
+  "roster-drift",
+  "phage-drift",
+  "registry-drift",
+  "pages-drift",
+  "cv-drift",
+  "cv-pdf-drift",
+  "publications-drift",
+  "llms-drift",
+  "fts-equality",
+] as const;
+
 /** A check that throws is reported as failed, or one broken check would silence every other. */
 export async function runHealthChecks(env: Env, options: HealthOptions = {}): Promise<HealthRun> {
   /* Every check is independent and each has its own timeout, so they run together: the run takes as long as its slowest

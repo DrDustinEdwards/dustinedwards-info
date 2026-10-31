@@ -1,0 +1,40 @@
+{
+  "files": [
+    "app/**/*.{ts,tsx,mjs}",
+    "workers/**/*.{ts,mjs}",
+    "mcp/src/**/*.{ts,mjs}"
+  ],
+  "baseline": {
+    "measured_at": "e505cbe",
+    "calls": 59,
+    "files": {
+      "app/enhance/run.ts": 1,
+      "app/enhance/theme.ts": 1,
+      "app/entry.server.tsx": 1,
+      "app/lib/blog-view.ts": 1,
+      "app/lib/citations.server.ts": 1,
+      "app/lib/cv/pdf.server.ts": 1,
+      "app/lib/editor/converge.mjs": 1,
+      "app/lib/editor/publish.server.ts": 4,
+      "app/lib/health/snapshot.server.ts": 2,
+      "app/lib/media/resolvers.server.ts": 1,
+      "app/lib/media/upload.server.ts": 2,
+      "app/lib/operator/api.server.ts": 1,
+      "app/lib/podcast/podcast.server.ts": 1,
+      "app/lib/publications/save.server.ts": 1,
+      "app/lib/search/ask-prompt.mjs": 2,
+      "app/lib/search/ask.server.ts": 4,
+      "app/lib/webmention/verify.server.ts": 2,
+      "app/routes/admin.kb.preview.tsx": 1,
+      "app/routes/admin.tools.tsx": 1,
+      "app/routes/api.health.ts": 3,
+      "app/routes/search.ask.ts": 2,
+      "app/routes/search.tsx": 1,
+      "app/routes/webmention.ts": 3,
+      "mcp/src/index.ts": 3,
+      "workers/media-events.ts": 4,
+      "workers/watchdog.ts": 12,
+      "workers/webmention-verify.ts": 2
+    }
+  }
+}

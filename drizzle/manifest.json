@@ -1,5 +1,6 @@
 {
-  "note": "sha256 of each migration. check:migrations compares against this. Adding a migration means adding its hash in the same commit.",
+  "note": "sha256 of each migration. devkit-migrations (run by check:migrations) compares against this. Adding a migration means adding its hash in the same commit.",
+  "expand_only_after": "0036_cron_runs.sql",
   "sha256": {
     "0001_init.sql": "8e5137edc0989174b77aecc9298c4484e316c943faa3446463aa7ae8cac6d1c3",
     "0002_blog_content.sql": "abba6c483bd0b2fd8b492f1d85a8384c55b16a2e730568637e9c5d38e72f9fe3",

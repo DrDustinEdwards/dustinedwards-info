@@ -170,7 +170,10 @@ Only `npm run ship` deploys. After a merge to main,
 `wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
 
 Migrations are separate and hand-written in `drizzle/`. Add a new numbered file;
-never edit an applied one. drizzle-kit is deliberately not a dependency.
+never edit an applied one. drizzle-kit is deliberately not a dependency. `ship`
+applies a pending migration itself when every statement is additive, after
+printing the D1 Time Travel restore command; one with a DROP, DELETE, UPDATE or
+rename refuses, and you apply it by hand:
 
 ```bash
 wrangler d1 migrations apply dustinedwards --local

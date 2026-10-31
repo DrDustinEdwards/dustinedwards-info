@@ -1,7 +1,7 @@
-// Monitors are matched by the URL they point at, not by name, and the manifest is written from
+// Monitors are matched by the URL they point at, then by the manifest's id for the same key, not by name, and the manifest is written from
 // what the API returned.
 
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { readDevVar } from "./lib/dev-vars.mjs";
@@ -62,6 +62,12 @@ const existing = await listMonitors(key);
 console.log(`  ${existing.length} monitor(s) on the account`);
 
 const desired = desiredMonitors(SITE_ORIGIN);
+/**
+ * The last manifest, read so a monitor whose URL moved (the health monitor, /api/health to /health)
+ * is updated in place by its id rather than left alerting beside a new one.
+ * @type {Record<string, { id: number, url: string }>}
+ */
+const previous = existsSync(MANIFEST_PATH) ? JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) : {};
 /** @type {Record<string, { id: number, url: string }>} */
 const manifest = {};
 let changed = 0;
@@ -82,7 +88,9 @@ function manifestEntry(name, body) {
 
 for (const want of desired) {
   const url = /** @type {string} */ (want.shape.url);
-  const match = existing.find((m) => String(m.url).replace(/\/+$/, "") === url.replace(/\/+$/, ""));
+  const match =
+    existing.find((m) => String(m.url).replace(/\/+$/, "") === url.replace(/\/+$/, "")) ??
+    existing.find((m) => previous[want.key] && m.id === previous[want.key].id);
 
   // The contact travels with every write: a monitor that lost its contact fails silently.
   const payload = {
