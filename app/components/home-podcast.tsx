@@ -95,6 +95,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
           </div>
           <p className="home-more podcast-links">
             <a href={episode.link}>Episode page</a>
+            {episode.transcriptUrl ? <a href={episode.transcriptUrl}>Transcript</a> : null}
             <a href={PODCAST_SITE_URL}>germomics.com</a>
           </p>
           <template data-island="podcast" />
