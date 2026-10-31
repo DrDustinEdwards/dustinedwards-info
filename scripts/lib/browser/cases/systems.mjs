@@ -59,7 +59,7 @@ export async function run({ browser }) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 900 });
   // axe is injected as a script, which the site's policy rightly refuses; the policy itself is
-  // check:headers' and the script-set case's to judge.
+  // site-runtime-security's and the script-set case's to judge.
   await page.setBypassCSP(true);
   try {
     // Each part on its own: one that throws is a failed check, and the parts after it still run.

@@ -94,7 +94,7 @@ export default [
     route("research/*", "routes/content-page.tsx"),
     route("teaching/*", "routes/teaching.tsx"),
     // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
-    // route's, which check:headers reads per file.
+    // route's.
     route("software/*", "routes/software.tsx"),
     route("about", "routes/about.tsx"),
     // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.

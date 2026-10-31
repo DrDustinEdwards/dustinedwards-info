@@ -10,7 +10,7 @@ import { labIdentity } from "~/lab/access.server";
 import { labActorContext, loadLabActor, primaryOwnerSet } from "~/lab/actor.server";
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
-import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
+import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/workspace";
 import type { loader as rootLoader } from "~/root";
@@ -49,10 +49,8 @@ export function noAccessText(email: string): string {
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      const verdict = originVerdict(request.headers.get("origin"), request.url);
-      if (!verdict.ok) throw new Response(ORIGIN_REFUSAL, { status: 403, headers: PRIVATE });
-    }
+    const refused = refuseCrossSite(request, PRIVATE);
+    if (refused) throw refused;
 
     const identity = await labIdentity(env, request);
     if (identity.kind === "refused") {

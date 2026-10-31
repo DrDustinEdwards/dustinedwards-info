@@ -1,4 +1,4 @@
-// Separate from app.ts so the gate can call it on both branches and assert the strings it returns.
+// Separate from app.ts so the worker tests can call it on both branches.
 
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 import { CLOUDFLARE_WEB_ANALYTICS, buildContentSecurityPolicy, buildPolicy } from "@dustinedwards/site-runtime/csp";
@@ -72,8 +72,8 @@ export const MEDIA_CSP = buildPolicy([
 /**
  * THE ONLY THIRD-PARTY SCRIPTS THE SITE RUNS, each an exact file URL and not a host, so nothing else
  * on that host is trusted. A script that makes the site better can be added here deliberately:
- * name the file, say what it is for and what it sends, and the gate (check:headers) and the privacy
- * page change in the same commit. Dustin approves the line; a session does not add one on its own.
+ * name the file, say what it is for and what it sends, and the privacy page changes in the same
+ * commit. Dustin approves the line; a session does not add one on its own.
  *
  * Injected by Cloudflare's edge, not rendered by this code, so it carries no nonce and no hash, and
  * its `integrity` value changes whenever Cloudflare ships a new beacon, so pinning that hash here would

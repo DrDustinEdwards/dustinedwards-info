@@ -1,41 +1,39 @@
-# Cloudflare Workers Assets header rules. Copied into build/client/ by Vite,
-# because `public/` is the publicDir, and read by the assets runtime.
-#
-# WHY THIS FILE EXISTS. Workers Assets defaults every asset to
-# `cache-control: public, max-age=0, must-revalidate`. MEASURED on production
-# 2026-08-16, on one full document load of /admin/media: 14 asset requests, all
-# 14 going to the network, every one returning headers only (transferSize 300
-# against encoded bodies of up to 60 kB, so a 304 with the body already on
-# disk). Median 689ms each and 1204ms for the slowest, against a document whose
-# own response finished at 3146ms. The revalidations, not the HTML, are what
-# stood between responseEnd and interactive.
-#
-# ONLY `/assets/*` and `/islands/*`, and the narrowness is the whole point.
-# Everything under them is build output whose filename CONTAINS its content
-# hash, so the URL changes whenever the bytes do and a year is safe by
-# construction.
-#
-# Nothing else gets this. The logo, `favicon.ico` and the icon suite sit at
-# stable paths with no hash, so an immutable year would make replacing one
-# unshippable, and this repo has already recorded browsers holding a stale
-# favicon hard enough to look like a failed deploy.
-#
-# This changes STATIC ASSET caching only. HTML cache policy is untouched: it is
-# set per route in the app and governed by the cache-header rule.
+# Written by scripts/build-headers-file.mjs from workers/security-headers.mjs (npm run build). Do not edit.
+# Only /assets/* and /islands/* are immutable: every other static file sits at a stable path and keeps the default revalidation.
+/*
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: accelerometer=(), autoplay=(), camera=(), cross-origin-isolated=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=(), clipboard-read=(), gamepad=(), hid=(), idle-detection=(), interest-cohort=(), serial=(), unload=(), clipboard-write=(self)
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-DNS-Prefetch-Control: off
+  X-Frame-Options: deny
+  X-Permitted-Cross-Domain-Policies: none
+  tdm-reservation: 1
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The islands and the chunks they share (devkit's siteScript): every file is named by its content too
-# (/islands/<name>-<hash>.js, /islands/chunks/<name>-<hash>.js). /site.js, which carries their URLs, is not
-# hashed and keeps the default revalidation.
 /islands/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The markdown twin of every paper is NOT here: since publications moved to D1 it is a Worker route
-# (app/routes/publications.$slug[.md].ts), which sets its own cache, tag, noindex and canonical headers in code,
-# so a save through Carrel reaches it with no deploy. A rule here would be a stale copy of them.
+/diagrams/*
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
 
-# The Research, Teaching and Software page twins and the CV's twin are NOT here: they are served from D1 by
-# app/routes/content-page[.md].ts and app/routes/cv[.md].ts (docs/PAGES.md, docs/CV.md), which set their headers in
-# code, as every routed twin does. A static file at one of those addresses would win over the route, so none is
-# written.
+/phage-hunters/*
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
+
+/dustin-edwards-og-image.png
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
+
+/dustin-edwards-logo.svg
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
+
+/dustin-edwards-logo-dark.svg
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin

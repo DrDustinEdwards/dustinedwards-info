@@ -7,8 +7,6 @@ import { SPECULATION_RULES_HEADER, SPECULATION_RULES_PATH } from "@dustinedwards
 import { PRELOADS } from "~/lib/preloads";
 
 import worker from "../../workers/app";
-import { checkSecurityHeaders, failures } from "@dustinedwards/site-runtime/check";
-import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 
 /*
  * A public page through the REAL root (its Layout, loader and middleware) and the real server
@@ -148,12 +146,4 @@ it("gives a 404 a search form and the header's sections", async () => {
 
   /* The form submits to this origin, which the policy's form-action allows. */
   expect(policy).toContain("form-action 'self'");
-});
-
-/* The shared package's check (packages/security-headers), on this site's real response: the reusable
- * gate foxing and txasm run on theirs. The public arm here; the admin arm is in ssr-nonce.test.ts's
- * territory and is held by test/security-headers-package.test.mjs against the same policy builder. */
-it("passes the shared security-headers check on a rendered public page", async () => {
-  const { response } = await render("/");
-  expect(failures(checkSecurityHeaders(response.headers, { standard: SECURITY_HEADERS, cloudflareWebAnalytics: true }))).toEqual([]);
 });

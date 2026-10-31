@@ -1,3 +1,4 @@
+import { UPLOAD_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, data, useRevalidator, type FormProps } from "react-router";
 
 import { loadMedia, loadMediaChanges, readMediaQuery, type IntentResult } from "@dustinedwards/site-api/admin";
@@ -38,7 +39,7 @@ export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     if (!prefersType(request, "application/json")) return next();
     if (request.method === "POST") {
-      return Response.json(await runAdminMediaIntent(context, request, await request.formData()));
+      return Response.json(await runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES)));
     }
     const cursor = new URL(request.url).searchParams.get("changes");
     const body = cursor === null ? await libraryData(context, request) : await loadMediaChanges(adminMediaSource(context, request), cursor);
@@ -52,7 +53,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 /* The kit asks before a delete or emptying the trash (`confirm`), and changes nothing until the count is typed. */
 export async function action({ request, context }: Route.ActionArgs): Promise<IntentResult> {
-  return runAdminMediaIntent(context, request, await request.formData());
+  return runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES));
 }
 
 // Moving between views (search, a tag, a file to open) is the router's GET, so it stays in the app; a

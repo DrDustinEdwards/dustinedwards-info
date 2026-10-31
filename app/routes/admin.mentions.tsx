@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
@@ -95,7 +96,7 @@ type ActionResult = {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
-  const form = await request.formData();
+  const form = await cappedForm(request, ADMIN_FORM_BYTES);
   const intent = String(form.get("intent") ?? "");
 
   if (!isIntent(intent)) {
