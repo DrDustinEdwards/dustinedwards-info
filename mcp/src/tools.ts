@@ -27,6 +27,7 @@
  */
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import { logEvent } from "@dustinedwards/site-runtime/log";
 import { z } from "zod";
 
 import { watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
@@ -159,7 +160,7 @@ function wrapperFailure(cause: unknown): ToolOutput {
   // The detail goes to the Worker log only (checklist S4): the client hears what kind of failure it was, never the
   // error's own text, which can name a binding, an address or an upstream answer.
   const detail = cause instanceof Error ? cause.message : String(cause);
-  console.error(JSON.stringify({ alert: "wrapper-failure", kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail }));
+  logEvent("wrapper_failure", { kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail }, { level: "error" });
   const message =
     cause instanceof ApiLegError
       ? `The wrapper could not complete its request to the operator API (${cause.kind}). The detail is in the server's log.`
