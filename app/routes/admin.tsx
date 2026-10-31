@@ -14,7 +14,7 @@ import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
-import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
+import { isolationVerdict, originRefusal, refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { timed, timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
@@ -58,6 +58,12 @@ export const middleware: Route.MiddlewareFunction[] = [
     if (refused) {
       logRefusal(request, "admin", "cross-site", refused.status);
       return refused;
+    }
+    /* Resource isolation: another site may link to an admin page and nothing more, never load one as a subresource. */
+    if (!isolationVerdict(request).ok) {
+      const isolated = originRefusal();
+      logRefusal(request, "admin", "cross-site-load", isolated.status);
+      return isolated;
     }
 
     /* Read, not created: root's middleware made one first, and a second would discard its marks. */

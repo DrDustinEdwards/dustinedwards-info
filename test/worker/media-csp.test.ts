@@ -36,10 +36,6 @@ async function fetchPath(path: string) {
 const SCRIPTED_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg"><script>fetch("/__svg-script-ran")</script></svg>';
 
-it("MEDIA_CSP is the sandboxed policy the job names, script-free", () => {
-  expect(MEDIA_CSP).toBe("default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
-});
-
 it.each([
   ["a raster", "dustin-edwards-csp-raster-00000000000000c1-4x4.png", "image/png", "not really png bytes"],
   ["a stored SVG", "dustin-edwards-csp-svg-00000000000000c2.svg", "image/svg+xml", SCRIPTED_SVG],

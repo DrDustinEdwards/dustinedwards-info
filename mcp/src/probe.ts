@@ -58,6 +58,8 @@
  * probe credential to exist or leak.
  */
 
+import { readCapped } from "@dustinedwards/site-runtime/body";
+
 export interface ProbeEnv {
   PROBE_KV: KVNamespace;
 }
@@ -129,7 +131,7 @@ async function record(env: ProbeEnv, request: Request, body: unknown): Promise<v
   });
 }
 
-/** The largest request body a capture keeps whole (Grok audit 2026-10-21, DE-5). */
+/** The largest request body a capture reads (Grok audit 2026-10-21, DE-5). */
 const MAX_CAPTURED_BODY = 16_384;
 
 export async function handleProbe(request: Request, env: ProbeEnv, _origin: string): Promise<Response> {
@@ -140,10 +142,11 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
 
   let body: unknown = null;
   if (request.method === "POST") {
-    const raw = await request.text();
-    if (raw.length > MAX_CAPTURED_BODY) {
-      // A real MCP request is a few hundred bytes; a body this large is stored as its size and a prefix.
-      body = { OVERSIZED: raw.length, start: raw.slice(0, 500) };
+    // Read to the ceiling as it arrives (site-runtime ./body), so a large post is never held whole.
+    const raw = await readCapped(request, MAX_CAPTURED_BODY);
+    if (raw === null) {
+      // A real MCP request is a few hundred bytes; a body this large is stored as the fact that it was.
+      body = { OVERSIZED: `over ${MAX_CAPTURED_BODY} bytes` };
     } else {
       try {
         body = raw ? JSON.parse(raw) : null;

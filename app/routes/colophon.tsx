@@ -169,7 +169,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               {gates} {gates === 1 ? "check" : "checks"}
             </a>,
             <span className="evidence-health" data-health-age={healthAge}>
-              <Link to="/api/health">
+              <Link to="/health">
                 {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
                 {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
               </Link>

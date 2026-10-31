@@ -47,8 +47,8 @@ export class AskBudget extends RateLimiter<Env> {
     return { ok, spent: count };
   }
 
-  /** Today's spend of the daily budget, read without counting. Not `peek`: the shared class's `peek` reads a per-key limit. */
-  budgetToday(): { day: string; count: number } {
+  /** The day's spend, counting nothing. Not `peek`, which is the shared class's per-key read (site-runtime 0.51.0). */
+  peekBudget(): { day: string; count: number } {
     const day = new Date().toISOString().slice(0, 10);
     const rows = this.ctx.storage.sql
       .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, day)

@@ -403,7 +403,17 @@ async function restoreScratch(dir, tables, dumps, timings, state) {
     `the widest statement is ${widest(rewritten)} bytes against D1's ${D1_STATEMENT_LIMIT}. D1 would refuse it ` +
       `with SQLITE_TOOBIG and the restored database would be missing the rows after it.`,
   );
-  await writeFile(combined, rewritten, "utf8");
+  /* The migrations' triggers fire on the load: media_changes_ai writes a media_changes row for every
+     media row loaded, and the dump's own media_changes rows then collide on seq (UNIQUE constraint
+     failed: media_changes.seq, 2026-10-31). The dump already holds what the triggers wrote, so the
+     load runs with every trigger dropped and recreates them, as the migrations made them, at the end. */
+  const triggers = /** @type {Array<{ name: string, sql: string }>} */ (
+    await query(scratch(SCRATCH_DB), "SELECT name, sql FROM sqlite_master WHERE type = 'trigger' ORDER BY name")
+  );
+  console.log(`  ${triggers.length} trigger(s) held off during the load: ${triggers.map((t) => t.name).join(", ")}`);
+  const drops = triggers.map((t) => `DROP TRIGGER IF EXISTS "${t.name}";`).join("\n");
+  const creates = triggers.map((t) => `${t.sql};`).join("\n");
+  await writeFile(combined, `${drops}\n${rewritten}${creates}\n`, "utf8");
 
   const load = wrangler(`d1 execute ${scratch(SCRATCH_DB)} --remote --yes --file "${combined}"`);
   ok(

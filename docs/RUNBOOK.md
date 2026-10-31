@@ -267,6 +267,14 @@ node scripts/split-dump.mjs "$dir\_restore.sql"
 npx wrangler d1 execute dustinedwards --remote --file "$dir\_restore.sql"
 ```
 
+Before running that last line, if the migrations made any triggers (they did:
+`media_changes_ai` and its siblings write `media_changes` whenever `media` changes),
+put a `DROP TRIGGER` for each at the top of `_restore.sql` and its `CREATE TRIGGER`
+from `drizzle/` at the bottom. Otherwise loading `media` fires the trigger and the
+dump's own `media_changes` rows then fail with `UNIQUE constraint failed:
+media_changes.seq`. `check:restore` does this and prints the triggers it held off.
+Found 2026-10-31 by `check:restore`, which restored 0 posts.
+
 `split-dump` is not optional. D1 refuses one statement over 100 KB (`SQLITE_TOOBIG`) and the
 export writes each row as one literal `INSERT`, so a paper's full text in `publications` (five rows
 are over the line, the largest about 141 KB) or a long protocol cannot load as exported. The script
@@ -451,7 +459,7 @@ third party. **Not wired up yet**: the project has to be created before this
 line means anything. Until then this row is a plan, not a destination.
 
 **UptimeRobot** is the outside opinion: <https://uptimerobot.com>. Two monitors,
-the home page and `/api/health`. If UptimeRobot says up and you say down, the
+the home page and `/health`. If UptimeRobot says up and you say down, the
 problem is between you and the site rather than in it.
 
 **The health snapshot** is what the colophon tile reads, and its AGE is the
