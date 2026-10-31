@@ -1,3 +1,4 @@
+import { originalKey } from "@dustinedwards/site-runtime/image";
 import { getEnv } from "~/lib/context";
 import { bucketFor } from "~/lib/media/classify.mjs";
 import { images, isStaticMedia } from "~/lib/media/images.mjs";
@@ -12,8 +13,10 @@ import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
  * Renderer) blocks an SVG too, so neither wall depends on the other.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const key = params["*"];
-  if (!key) return new Response("Not found", { status: 404 });
+  const path = params["*"];
+  if (!path) return new Response("Not found", { status: 404 });
+  // A size URL is suffixed (photo.jpg.webp?w=640); the stored key is the original's.
+  const key = originalKey(path, request);
 
   const env = getEnv(context);
   const fromAssets = isStaticMedia(key);
