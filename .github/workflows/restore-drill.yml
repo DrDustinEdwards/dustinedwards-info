@@ -33,7 +33,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # THE RETAINED DUMP: devkit's shared drill restores the newest complete nightly run in
+  # dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`).
+  # devkit-ops-audit's R1 reads this job's newest run.
   drill:
+    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@d9d5a3448a50f183c3c8b4a5f293717728717245 # v0.20.8
+    with:
+      bucket: dustinedwards-backups
+      d1-dump-ref: v0.7.0
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # The export path RUNBOOK section 4 documents: production exported and restored into a scratch D1.
+  export-drill:
     name: Restore into a scratch database
     runs-on: ubuntu-latest
     # Measured at about five and a half minutes on the first full run. Twenty
@@ -63,15 +76,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run check:restore
-
-      # THE RETAINED DUMP, drilled too (job_e40ec706c10a). The step above proves production exports
-      # and restores today; this one proves the newest nightly d1-dump run in dustinedwards-backups
-      # restores, and refuses when /api/health reports it missing or over 30 hours old.
-      - name: Drill the newest nightly dump
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run drill:backup
 
       # ALWAYS, so a failed drill still says what it left behind. The drill
       # deletes its scratch database in a `finally`, which does not run on a

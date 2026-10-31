@@ -1,6 +1,5 @@
-// The nightly D1 dump. The Worker holds DB and BACKUPS; the watchdog's cron reaches it through the
-// operator API (workers/watchdog.ts), because the site Worker has no cron by ruling and the
-// watchdog holds no database binding.
+// The nightly D1 dump, run by the site Worker's own cron at 05:00 UTC (workers/app.ts), and by hand
+// through the operator API's backup_d1.
 //
 // BACKUPS is a separate bucket from MEDIA_BACKUP on purpose: check:destructive allows pruneDumps on
 // this binding and no delete at all on the media mirror.

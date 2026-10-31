@@ -169,6 +169,8 @@ export default [
     route("runs/:id", "routes/workspace.runs.run.tsx"),
   ]),
 
+  // The uptime probe's health, in the family shape; /api/health is the drift-repair instrument the watchdog reads.
+  route("health", "routes/health.ts"),
   route("api/health", "routes/api.health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
   route("api/csp-report", "routes/api.csp-report.ts"),

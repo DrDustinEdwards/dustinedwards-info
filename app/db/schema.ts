@@ -839,7 +839,7 @@ export const scheduledUpdates = sqliteTable(
   (t) => [index("scheduled_updates_due").on(t.publishAt)],
 );
 
-// site-api's store (drizzle/0036_site_api_store.sql, the package's SITE_API_STORE_SQL): safe retries by change id, failed
+// site-api's store (drizzle/0037_site_api_store.sql, the package's SITE_API_STORE_SQL): safe retries by change id, failed
 // publish hooks waiting to run again, preview links (only each token's SHA-256) and the webmentions each page last sent.
 // Read and written only through d1SiteApiStore (app/lib/carrel/site-api.server.ts).
 export const siteApiWrites = sqliteTable(
@@ -886,17 +886,6 @@ export const webmentionTargets = sqliteTable("webmention_targets", {
   source: text("source").primaryKey(),
   targets: text("targets").notNull(),
   sentAt: text("sent_at").notNull(),
-});
-
-// site-runtime's cron record (drizzle/0037_cron_runs.sql, its CRON_SQL), written only by runJobs. Epoch milliseconds.
-export const cronRuns = sqliteTable("cron_runs", {
-  name: text("name").primaryKey().notNull(),
-  everyMinutes: integer("every_minutes").notNull(),
-  firstStartedAt: integer("first_started_at"),
-  lastStartedAt: integer("last_started_at"),
-  lastOkAt: integer("last_ok_at"),
-  lastFailedAt: integer("last_failed_at"),
-  lastError: text("last_error"),
 });
 
 // What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,

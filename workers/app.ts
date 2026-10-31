@@ -21,7 +21,6 @@ import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
 import { cacheKey, forReader, forRenderer, purgeTags, settleCacheHeaders, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
-import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -37,8 +36,14 @@ import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
+import { runJobs } from "@dustinedwards/site-runtime/cron";
 
 export { AskBudget } from "./ask-budget";
+
+/** The one firing a day that takes the nightly D1 dump: 05:00 UTC. */
+function isNightly(at: Date): boolean {
+  return at.getUTCHours() === 5 && at.getUTCMinutes() === 0;
+}
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -200,25 +205,30 @@ const site = {
     else await handleMediaEvents(batch, env);
   },
 
-  // The one cron, every minute (wrangler.jsonc.example), its job recorded in D1 cron_runs by site-runtime ./cron:
-  // every Carrel schedule that is due goes live with the publish hooks (IndexNow, the purge, webmentions), failed hooks
-  // run again and the trash past 30 days is emptied (site-api's runSchedules). A failed schedule fails the job after
-  // the pass, and the next firing retries it. Awaited, not handed to waitUntil, whose rejection is only logged while
-  // the invocation counts as a success. Imported here, not at the top: the gateway never loads the save path, and
-  // neither does the test entry.
-  async scheduled(controller, env, ctx) {
-    await runJobs(env.DB, [
-      {
-        name: "carrel-schedules",
-        everyMinutes: 1,
-        run: async () => {
-          const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
-          const run = await runCarrelSchedules(env, ctx, new Date(controller.scheduledTime));
-          console.log(JSON.stringify({ schedules: run }));
-          if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
+  // The one cron, every minute (wrangler.jsonc.example): every Carrel schedule that is due goes live with the publish
+  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied (site-api's
+  // runSchedules); at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's cron
+  // check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
+  // retries it. Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
+  scheduled(controller, env, ctx) {
+    const at = new Date(controller.scheduledTime);
+    ctx.waitUntil(
+      runJobs(env.DB, [
+        {
+          name: "carrel-schedules",
+          everyMinutes: 1,
+          run: async () => {
+            const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
+            const run = await runCarrelSchedules(env, ctx, at);
+            console.log(JSON.stringify({ schedules: run }));
+            if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
+          },
         },
-      },
-    ]);
+        ...(isNightly(at)
+          ? [{ name: "backup", everyMinutes: 1440, run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
+          : []),
+      ]),
+    );
   },
 
 } satisfies ExportedHandler<Env>;

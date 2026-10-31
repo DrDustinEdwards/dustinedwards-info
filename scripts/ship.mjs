@@ -479,7 +479,8 @@ if (!verdict || !verdict.ok) {
 console.log(`  ${verdict.why}.`);
 
 announce("Deploy");
-const deploy = run("npm", ["run", "deploy"], { capture: true });
+// DEPLOY_SHA is what /health reports as `sha`, so a probe can tell which commit is serving.
+const deploy = run("npm", ["run", "deploy", "--", "--var", `DEPLOY_SHA:${shaFull}`], { capture: true });
 if (deploy.code !== 0) {
   refuse("the deploy failed", "Nothing was synced. The previous version is still serving.");
 }

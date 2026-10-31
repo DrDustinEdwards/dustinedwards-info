@@ -51,7 +51,7 @@ const fromThisSite = (hook: PublishHook): PublishHook => ({
 });
 
 /**
- * The package for one request or one cron pass. The store (drizzle/0036_site_api_store.sql) makes every write safe to
+ * The package for one request or one cron pass. The store (drizzle/0037_site_api_store.sql) makes every write safe to
  * send again under its change id, keeps Carrel's preview links, retries a failed hook from the cron, and remembers
  * which pages each post last sent a webmention to. A changed live page tells IndexNow and the pages it links to; a
  * schedule has no request, and the cron's entrypoint cannot reach the Renderer's cache, so its change purges the stored
