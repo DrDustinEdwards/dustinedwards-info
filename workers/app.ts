@@ -19,7 +19,7 @@ import {
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
-import { cacheKey, forReader, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
+import { cacheKey, forReader, forRenderer, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -132,9 +132,9 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
     // because a post already sends its markdown alternate and webmention endpoint in `Link`.
     const hinted = withPreloadHeader(response, PRELOADS.header);
-    // Last: anything not a shared 200, or setting a cookie, leaves private, no-store with no edge header or tag. Not
-    // given the request: a theme cookie reaches here, and the theme is in the key.
-    return settleCacheHeaders(hinted);
+    // Last: anything not a shared 200, setting a cookie, rendered for a HEAD or for a cookie other than the theme (which
+    // the key holds) leaves private, no-store with no edge header or tag.
+    return settleCacheHeaders(hinted, request, { publicCookies: [THEME_COOKIE] });
   }
 }
 
@@ -241,7 +241,7 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   const theme = themeFromRequest(request);
   const { cacheKey, props } = cacheDimensions(gone ?? url, request, theme);
 
-  const response = await ctx.exports.Renderer({ props }).fetch(gone ? new Request(gone, request) : request, {
+  const response = await ctx.exports.Renderer({ props }).fetch(forRenderer(gone ? new Request(gone, request) : request), {
     cf: { cacheKey },
   });
 

@@ -148,13 +148,13 @@ export function run(code) {
   );
   ok(
     "THE RENDERER RETURNS settleCacheHeaders(...) AS ITS LAST STEP",
-    /return\s+settleCacheHeaders\(\s*\w+\s*\)\s*;\s*\}\s*\}\s*$/.test(renderer.trim()),
+    /return\s+settleCacheHeaders\([^;]*\)\s*;\s*\}\s*\}\s*$/.test(renderer.trim()),
     "anything returned around it can leave a private response, or a 404 under a shared route, storable",
   );
   ok(
-    "settleCacheHeaders is not given the request",
-    !/settleCacheHeaders\(\s*\w+\s*,/.test(renderer),
-    "the theme cookie reaches the Renderer, so with the request no themed page would ever be stored",
+    "settleCacheHeaders is given the request, with the theme cookie public",
+    /settleCacheHeaders\(\s*\w+\s*,\s*request\s*,\s*\{\s*publicCookies:\s*\[\s*THEME_COOKIE\s*\]\s*\}\s*\)/.test(renderer),
+    "without the request a HEAD's empty answer is stored (germomics, 2026-10-30); without the theme public no themed page is",
   );
   ok(
     "the Renderer stamps the default edge lifetime only on a response marked shared",
