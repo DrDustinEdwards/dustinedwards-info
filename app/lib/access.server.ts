@@ -1,5 +1,6 @@
 import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
+import { logEvent, OWASP_EVENTS } from "@dustinedwards/site-runtime/log";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -54,7 +55,9 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
   const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
   if (identity.kind !== "human" || localDevelopment(request)) return identity;
-  return adminEmails(env).includes(identity.email) ? identity : { kind: "refused", reason: "not-admin" };
+  if (adminEmails(env).includes(identity.email)) return identity;
+  refusedLog("not-admin");
+  return { kind: "refused", reason: "not-admin" };
 }
 
 /**
@@ -77,10 +80,20 @@ export async function verifyAccessRequest(
   let source: KeySource | undefined;
   const lazyKeys: KeySource = (kid, fresh) => (source ??= keys(teamDomain))(kid, fresh);
   const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
-  if (!verdict.ok) return verdict.reason === "not-configured" || verdict.reason === "no-token" ? { kind: "absent" } : { kind: "refused", reason: verdict.reason };
+  if (!verdict.ok) {
+    if (verdict.reason === "not-configured" || verdict.reason === "no-token") return { kind: "absent" };
+    refusedLog(verdict.reason);
+    return { kind: "refused", reason: verdict.reason };
+  }
 
   const { email, common_name: commonName } = verdict.claims;
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
   if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
+  refusedLog("no-identity");
   return { kind: "refused", reason: "no-identity" };
+}
+
+/** A presented Access token refused, under the OWASP name (area 8, L4): the reason only, never the token or the email. */
+function refusedLog(reason: string) {
+  logEvent(OWASP_EVENTS.authorizationFailure, { via: "access", reason }, { level: "warn" });
 }

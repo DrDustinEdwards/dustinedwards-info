@@ -30,7 +30,7 @@ export const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx|mjs)$/,
-    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", RELATED],
+    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", "check:console", RELATED],
   },
   {
     /* check-policy and check-ask-guards read route files by name and scan app/routes. */

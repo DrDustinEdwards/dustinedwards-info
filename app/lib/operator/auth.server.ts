@@ -1,6 +1,7 @@
 // The token is the whole boundary: compared in constant time, and never echoed, logged or put in an error.
 
 import { safeEqual } from "@dustinedwards/site-runtime/compare";
+import { logEvent, OWASP_EVENTS } from "@dustinedwards/site-runtime/log";
 
 import { tokenLabel } from "~/lib/bearer.server";
 import { limitHit } from "~/lib/rate-limit.mjs";
@@ -9,6 +10,12 @@ const OPERATOR_RATE_LIMIT = 30;
 const OPERATOR_RATE_PERIOD_SECONDS = 60;
 
 const MIN_TOKEN_LENGTH = 32;
+
+/* Refusals are logged under the OWASP Logging Vocabulary's names (area 8, L4), with no part of the presented token. */
+function refused(): AuthResult {
+  logEvent(OWASP_EVENTS.signInFailure, { via: "operator-bearer" }, { level: "warn" });
+  return { ok: false, status: 401, error: "Invalid or missing bearer token." };
+}
 
 export type OperatorEnv = Env & { OPERATOR_TOKEN?: string };
 
@@ -40,16 +47,12 @@ export async function authenticateOperator(
 
   // Refused on length BEFORE the hash: `safeEqual` hashes both operands, which an anonymous caller
   // could otherwise request in any size. Twice the length, not equal, so it is not a length oracle.
-  if (presented.length > configured.length * 2) {
-    return { ok: false, status: 401, error: "Invalid or missing bearer token." };
-  }
+  if (presented.length > configured.length * 2) return refused();
 
   // Still compared when absent, so a missing header and a wrong token take the same path and time
   // (an empty side is refused by `safeEqual` after both hashes, never before them).
   const valid = await safeEqual(presented, configured);
-  if (!valid) {
-    return { ok: false, status: 401, error: "Invalid or missing bearer token." };
-  }
+  if (!valid) return refused();
 
   const id = tokenLabel(presented);
 
@@ -70,6 +73,7 @@ export async function meterOperator(
     };
   }
   if (verdict.status === "limited") {
+    logEvent(OWASP_EVENTS.rateLimitExceeded, { via: "operator", id }, { level: "warn" });
     return {
       ok: false,
       status: 429,
