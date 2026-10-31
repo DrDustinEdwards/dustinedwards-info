@@ -106,6 +106,16 @@ export const frontmatterSchema = z.object({
     .default([]),
   og_title: z.string().min(1).optional(),
   og_description: z.string().min(1).optional(),
+  // site-api's search fields (description is the one above): Carrel writes them under these shared names.
+  searchTitle: z.string().min(1).optional(),
+  image: z
+    .string()
+    .regex(/^\/(?![/\\])/, "must be a site-absolute path, not //host or a full URL")
+    .refine(isAllowedUrl, "protocol is not allowed (https, http, mailto or relative only)")
+    .optional(),
+  imageAlt: z.string().min(1).optional(),
+  canonical: z.string().url().refine((v) => /^https?:/.test(v), "must be an http(s) URL").optional(),
+  noindex: z.boolean().default(false),
   /**
    * A date, not a timestamp: the build derives it from git and the editor cannot know the time of
    * the commit it is about to create, so only a date lets the two agree.
@@ -271,6 +281,15 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     }
   }
 
+  const searchFields = {
+    ...(fm.searchTitle ? { searchTitle: fm.searchTitle } : {}),
+    ...(fm.image ? { image: fm.image, ...(fm.imageAlt ? { imageAlt: fm.imageAlt } : {}) } : {}),
+    ...(fm.canonical ? { canonical: fm.canonical } : {}),
+    ...(fm.noindex ? { noindex: true } : {}),
+  };
+  const imageKey = fm.image ? mediaKeyOf(fm.image) : null;
+  if (imageKey) mediaRefs.push({ key: imageKey, form: "other", detail: "share image" });
+
   return {
     slug: fm.slug,
     title: fm.title,
@@ -290,6 +309,8 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     furtherReading: fm.further_reading,
     ogTitle: fm.og_title ?? null,
     ogDescription: fm.og_description ?? null,
+    /** The search fields beside description, or null when the post sets none (the posts.search_fields column). */
+    searchFields: Object.keys(searchFields).length > 0 ? searchFields : null,
     updated: fm.updated ?? null,
     readingTimeMinutes: readingTimeMinutes(parsed.content),
     // Never stored: it rides only so check:content can compare it with htmlHasMath.

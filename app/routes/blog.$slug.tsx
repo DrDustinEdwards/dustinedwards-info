@@ -134,7 +134,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const { canonical, pageTitle, description, socialTitle, socialDescription, image } =
+  const { canonical, canonicalHref, noindex, pageTitle, description, socialTitle, socialDescription, image } =
     postSocial(post);
 
   return [
@@ -146,6 +146,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
       socialTitle,
       socialDescription,
       image,
+      canonical: canonicalHref,
+      noindex,
       type: "article",
       article: articleFacts(toArticleSeo(post)),
       markdown: `${canonical}.md`,

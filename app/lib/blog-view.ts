@@ -2,6 +2,7 @@ import type { getBlogPost, listSeriesParts } from "~/db";
 import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
 import { countWords } from "~/lib/content/reading-time.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
+import type { PostSearchFields } from "~/lib/seo";
 
 // The public post and the draft preview both render this one projection, so the preview cannot
 // quietly lose a section the public page has.
@@ -73,6 +74,7 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       part: post.part,
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
+      searchFields: parseJson(post.slug, "search_fields", post.searchFields, null) as PostSearchFields | null,
       backlinks: parseJson(post.slug, "backlinks", post.backlinks, []) as Array<{
         slug: string;
         title: string;

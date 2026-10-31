@@ -5,6 +5,7 @@
 
 import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
+import { SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
 import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
 import { getTableColumns } from "drizzle-orm";
 import { RouterContextProvider } from "react-router";
@@ -328,7 +329,8 @@ export function carrelSiteAdapter(options: {
 
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },
-    content: registry.adapter,
+    // The search fields a post renders from its frontmatter (renderPost); the other kinds keep their own heads.
+    content: { ...registry.adapter, searchFields: SEARCH_FIELDS },
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
     schedules: postSchedules(env, write, statusOf),
