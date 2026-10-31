@@ -16,8 +16,8 @@ Moved from Capsid (`dustinedwards/media-module-architecture.md`) on 2026-10-13 a
 `role` is `content | brand | generated | icon`, derived by `classify.mjs`. The picker offers `content` only; the library shows every role. The first filter (`kind='image'` and static or R2) offered 26 rows of which 9 were insertable: the `/diagrams/*.svg` files are light/dark pairs the `:::diagram` directive inserts, and picking one inserts half a pair.
 
 The discriminator is who fetches it:
-- **icon**: declared to the platform via `<link rel>` or the webmanifest. `favicon.ico` and `site.webmanifest` keep unprefixed names because browsers request them unprompted; the rest are `dustin-edwards-*`.
-- **brand**: named by application code. `dustin-edwards-og-image.png` (the default card in `seo.ts`), the four `dustin-edwards-logo*.svg` files and `dustin-edwards-favicon.svg`.
+- **icon**: declared to the platform via `<link rel>` or the webmanifest: Prelum's shared icon paths (`ICONS`), unprefixed because browsers request them unprompted.
+- **brand**: named by application code. `dustin-edwards-og-image.png` (the default card in `seo.ts`) and the four `dustin-edwards-logo*.svg` files.
 
 ## Delivery
 
