@@ -16,10 +16,11 @@ export type FeedFormat = "json" | "rss" | "atom";
 /** Each is a type isUnpolicedType() exempts from the CSP (workers/feed-types.mjs). */
 const FEED_CONTENT_TYPES = {
   /*
-   * `application/json`, not `application/feed+json`: Cloudflare does not compress `+json` types, and
-   * this is the largest response on the site. Readers identify it by the `version` member.
+   * The JSON Feed's own type, so corpFor (site-runtime ./headers) marks it cross-origin as it does RSS and Atom.
+   * Cloudflare's default compression list leaves out `+json` feed types, and this is the site's largest response:
+   * only a zone Compression Rule naming application/feed+json keeps it compressed.
    */
-  json: "application/json; charset=utf-8",
+  json: "application/feed+json; charset=utf-8",
   rss: "application/rss+xml; charset=utf-8",
   atom: "application/atom+xml; charset=utf-8",
 } as const;

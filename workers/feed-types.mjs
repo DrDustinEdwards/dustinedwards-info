@@ -9,6 +9,7 @@
 const UNPOLICED_TYPES = new Set([
   "application/rss+xml",
   "application/atom+xml",
+  "application/feed+json",
   "application/json",
   "application/xml",
   // The CV PDF (app/routes/cv-pdf.ts). Its address was a static asset, which carried no policy, and a policy on

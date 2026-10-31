@@ -53,7 +53,6 @@ export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/dustin-edwards-favicon.svg", type: "image/svg+xml" },
   { rel: "apple-touch-icon", href: "/dustin-edwards-apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
-  // feed+json although served as application/json: readers scan autodiscovery for the feed types.
   {
     tagName: "link",
     rel: "alternate",
