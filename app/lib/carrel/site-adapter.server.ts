@@ -18,7 +18,7 @@ import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/conte
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { withPublication } from "~/lib/carrel/front-matter-lines";
+import { forPreview, withPublication } from "~/lib/carrel/front-matter-lines";
 import { documentHandler } from "~/lib/carrel/document-handler.server";
 import { dictionaryHandler } from "~/lib/carrel/dictionary-handler.server";
 import { pageHandler } from "~/lib/carrel/page-handler.server";
@@ -290,7 +290,7 @@ export function carrelSiteAdapter(options: {
       const slug = previewSlug ?? UNSAVED_PREVIEW_SLUG;
       let record: PostRecord;
       try {
-        record = await renderRecord(env, slug, input.source);
+        record = await renderRecord(env, slug, forPreview(input.source, slug));
       } catch (error) {
         return asSiteApiError(env, error, postPath(slug));
       }

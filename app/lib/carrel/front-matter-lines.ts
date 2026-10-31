@@ -30,3 +30,26 @@ export function withPublication(raw: string, change: { draft: boolean; publishAt
   }
   return `---\n${lines.join("\n")}\n---${raw.slice(match[0].length)}`;
 }
+
+/**
+ * What a preview renders: the source with the keys a post cannot render without filled in where they are absent or
+ * empty, so a draft with no front matter or no title previews as "Untitled" (site-api's conformance sends a bare
+ * `# heading`). Only the preview does this; a save still refuses a post with no title.
+ */
+export function forPreview(raw: string, slug: string, today = new Date().toISOString().slice(0, 10)) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
+  const lines = match ? match[1]!.split(/\r?\n/) : [];
+  const fill = (key: string, value: string) => {
+    const at = lines.findIndex((line) => line.startsWith(`${key}:`));
+    const current = at === -1 ? "" : lines[at]!.slice(key.length + 1).trim();
+    if (current && current !== '""' && current !== "''") return;
+    if (at === -1) lines.push(`${key}: ${value}`);
+    else lines[at] = `${key}: ${value}`;
+  };
+  fill("title", "Untitled");
+  fill("slug", slug);
+  fill("date", today);
+  fill("description", "Untitled");
+  if (!match) lines.push("draft: true");
+  return `---\n${lines.join("\n")}\n---${match ? raw.slice(match[0].length) : `\n${raw}`}`;
+}

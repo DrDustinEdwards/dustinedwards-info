@@ -8,6 +8,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { commitFiles } from "~/lib/source/store.server";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
+import { documentHandlerContext, postPreviewContext } from "~/lib/context";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
@@ -353,6 +354,29 @@ describe("the preview", () => {
 
     expect(published).not.toBeNull();
     expect(preview).toEqual(published);
+  });
+
+  it("ALLOWS a draft with no front matter as \"Untitled\", and a save of it is still REFUSED", async () => {
+    const request = new Request(`${PREFIX}/preview`, {
+      method: "POST",
+      headers: headersFor(testEnv.CARREL_SITE_KEY),
+      body: JSON.stringify({ source: "# A heading only\n" }),
+    });
+    const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
+    args.context.set(documentHandlerContext, async (_request, context) =>
+      new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, { headers: { "content-type": "text/html" } }),
+    );
+    const preview = await action(args as never);
+    expect(preview.status).toBe(200);
+    expect(await preview.text()).toContain("<title>Untitled</title>");
+
+    const saved = await send("PUT", `${PREFIX}/content/no-title/draft`, {
+      source: "# A heading only\n",
+      expectedVersion: null,
+      changeId: "chg-no-title",
+    });
+    expect(saved.status).toBe(422);
+    expect(await source(postPath("no-title"))).toBeUndefined();
   });
 });
 
@@ -987,7 +1011,16 @@ describe("the site-api conformance suite", () => {
           headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.10" },
         });
         try {
-          return await (request.method === "GET" ? loader(argsFor(request)) : action(argsFor(request)));
+          if (request.method === "GET") return await loader(argsFor(request));
+          // The Worker puts the app's document renderer on the context (workers/app.ts); a test has no app build, so
+          // this stand-in renders the post the preview handed it, which is what the preview case reads.
+          const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
+          args.context.set(documentHandlerContext, async (_request, context) =>
+            new Response(`<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`, {
+              headers: { "content-type": "text/html; charset=utf-8" },
+            }),
+          );
+          return await action(args as never);
         } catch (thrown) {
           // A refusal outside the prefix is thrown (a Response or router data); the wire would carry it as its status.
           if (thrown instanceof Response) return thrown;
