@@ -148,6 +148,6 @@ describe("http is redirected before anything else happens", () => {
     const response = await fetchThrough(new Request("http://example.com/stub-page"));
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe("https://example.com/stub-page");
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });

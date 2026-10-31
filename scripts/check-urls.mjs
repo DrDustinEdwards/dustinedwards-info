@@ -223,9 +223,17 @@ for (const [label, property] of SCHEMA_FIELDS) {
   const loopbackAt = firstAt(
     (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
   );
-  const httpsAt = firstAt(callTo("httpsRedirectTarget"));
+  const httpsAt = firstAt(callTo("canonicalRedirect"));
   assert("redirects: the cache loopback was located", loopbackAt !== -1, "ctx.exports.Renderer not found");
-  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "httpsRedirectTarget is not called");
+  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "canonicalRedirect is not called");
+  // The map is read before the canonical redirect (which leaves a mapped path's slash for it), but answered after.
+  /** @type {Record<string, number>} */
+  const decidedAt = {
+    wordpressDisposition: firstAt(
+      (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "wordpress.location",
+    ),
+    paperSlashTarget: firstAt(callTo("paperSlashTarget")),
+  };
   for (const name of ["wordpressDisposition", "paperSlashTarget"]) {
     const callAt = firstAt(callTo(name));
     assert(
@@ -240,8 +248,8 @@ for (const [label, property] of SCHEMA_FIELDS) {
         "cost a render and a database read to discover",
     );
     assert(
-      `redirects: the HTTPS redirect still runs before ${name}`,
-      httpsAt !== -1 && callAt !== -1 && httpsAt < callAt,
+      `redirects: the HTTPS redirect still runs before ${name}'s redirect`,
+      httpsAt !== -1 && decidedAt[name] !== -1 && httpsAt < decidedAt[name],
       "a plaintext request must reach HTTPS before anything else decides anything",
     );
   }

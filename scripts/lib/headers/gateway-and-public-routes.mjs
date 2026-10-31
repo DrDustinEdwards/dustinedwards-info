@@ -1,4 +1,4 @@
-// The https upgrade in the gateway, ahead of the loopback, and the public HTML routes' one shared
+// The canonical (https, slashless) redirect in the gateway, ahead of the loopback, and the public HTML routes' one shared
 // headers() with its cache tag.
 
 import { existsSync, readFileSync } from "node:fs";
@@ -24,7 +24,7 @@ export function run(code) {
     const fetchBody = gatewayAt === -1 ? "" : appCode.slice(gatewayAt);
     ok("the gateway body is non-empty", fetchBody.length > 200, `${fetchBody.length} chars`);
 
-    const redirectAt = fetchBody.indexOf("httpsRedirectTarget(");
+    const redirectAt = fetchBody.indexOf("canonicalRedirect(");
     const loopbackAt = fetchBody.indexOf("ctx.exports.Renderer");
     ok(
       "the gateway takes an https redirect decision",
@@ -51,27 +51,27 @@ export function run(code) {
     );
     ok(
       "the https upgrade lives in the gateway ONLY",
-      !rendererBody.includes("httpsRedirectTarget("),
+      !rendererBody.includes("canonicalRedirect("),
       "the renderer runs on a cache miss only, so an upgrade decided there is skipped on a hit",
     );
 
-    /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
-    /* The decision answers through redirectTo, whose body is the response every redirect gets. */
+    /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. site-runtime's
+       canonicalRedirect answers private, no-store; the site's own redirects answer through redirectTo. */
     const decision = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 200);
     const redirectBlock = appCode.match(/function\s+redirectTo\s*\([\s\S]*?\n\}/)?.[0] ?? "";
     ok(
       "the redirect block was located",
-      /redirectTo\(\s*request\s*,\s*secure\s*\)/.test(decision) && redirectBlock.includes("Location"),
+      /if\s*\(\s*canonical\s*!==\s*null\s*\)\s*return\s+canonical\s*;/.test(decision) && redirectBlock.includes("Location"),
       "the assertion below would examine the wrong bytes",
     );
     ok(
-      "THE REDIRECT IS no-store, so it cannot be cached under a scheme-blind key",
+      "THE SITE'S OWN REDIRECTS ARE no-store, so they cannot be cached under a scheme-blind key",
       /no-store/.test(redirectBlock),
       "the cache-header rule: with no Cache-Control it is CACHED, and a cached redirect loops HTTPS readers",
     );
     ok(
-      "the redirect predicate is imported rather than restated",
-      /from\s+"~\/lib\/https-redirect\.mjs"/.test(appCode),
+      "the canonical redirect is site-runtime's, imported rather than restated",
+      /import\s*\{\s*canonicalRedirect\s*\}\s*from\s+"@dustinedwards\/site-runtime\/url"/.test(appCode),
       "a second copy of the loopback exemption is how local development breaks",
     );
   }

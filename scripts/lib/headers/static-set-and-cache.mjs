@@ -1,5 +1,5 @@
 // The static security headers in workers/app.ts, held to the ratified set in both directions, and
-// the cache-control default and edge policy both exits stamp.
+// the Renderer's last step, site-runtime's settleCacheHeaders.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -123,116 +123,51 @@ export function run(code) {
     "the helper both exits call does not call applySecurityHeaders, so neither exit ships the set",
   );
   ok(
-    "applyDocumentHeaders is called on BOTH exits (mutable and the immutable rebuild)",
-    applications >= 3,
-    `found ${applications} occurrence(s) including the definition; expected the definition ` +
-      `plus one call per exit. A redirect that misses it ships with no security headers.`,
+    "applyDocumentHeaders is called by the Renderer",
+    applications >= 2,
+    `found ${applications} occurrence(s) including the definition. A response that misses it ships with no security headers.`,
   );
   ok(
-    "the immutable rebuild exists and stamps a fresh Headers copy",
-    /new\s+Headers\s*\(\s*response\.headers\s*\)/.test(code) &&
-      /new\s+Response\s*\(\s*response\.body/.test(code),
-    "the Response.redirect() path must be rebuilt, not silently skipped",
+    "the Renderer renders through timedRender, which hands back mutable headers",
+    /timedRender\s*\(/.test(code) && /from\s+"@dustinedwards\/site-runtime\/server-timing"/.test(code),
+    "without it a Response.redirect() from a route has immutable headers, and applyDocumentHeaders throws on it",
   );
 
-  /* Guards an auth bypass: with no Cache-Control an /admin render is stored under heuristic freshness
-     under a cookieless key. Both exits. */
+  /* Guards an auth bypass: with no Cache-Control an /admin render is stored under heuristic freshness under a
+     cookieless key, and an edge header left on a private or non-200 response makes it storable. site-runtime's
+     settleCacheHeaders does both, so it must run last in the Renderer. */
 
-  console.log("\n  cache-control default");
+  console.log("\n  cache-control default and edge policy");
 
-  const RATIFIED_UNCACHED = "private, no-store";
-
-  const uncached = code.match(/const\s+UNCACHED\s*=\s*"([^"]*)"\s*;/);
+  const rendererAt = code.search(/export\s+class\s+Renderer\b/);
+  const renderer = rendererAt === -1 ? "" : blockFrom(code, rendererAt);
   ok(
-    "workers/app.ts declares an UNCACHED constant",
-    Boolean(uncached),
-    "not found after stripping comments. Without it nothing below examines anything.",
+    "settleCacheHeaders comes from site-runtime ./edge-cache",
+    /import\s*\{[^}]*\bsettleCacheHeaders\b[^}]*\}\s*from\s*"@dustinedwards\/site-runtime\/edge-cache"/.test(code),
+    "a local copy is how the status and Set-Cookie checks went missing",
   );
   ok(
-    `the uncached default is exactly "${RATIFIED_UNCACHED}"`,
-    uncached !== null && uncached[1] === RATIFIED_UNCACHED,
-    `source has ${JSON.stringify(uncached ? uncached[1] : null)}. ` +
-      `\`private\` alone satisfies Cloudflare's edge; \`no-store\` is what makes ` +
-      `intermediaries and the browser treat it the same way.`,
+    "THE RENDERER RETURNS settleCacheHeaders(...) AS ITS LAST STEP",
+    /return\s+settleCacheHeaders\(\s*\w+\s*\)\s*;\s*\}\s*\}\s*$/.test(renderer.trim()),
+    "anything returned around it can leave a private response, or a 404 under a shared route, storable",
   );
-
-  /* In the helper both exits call, which the assertion on applyDocumentHeaders above counts. */
-  const guards = [
-    ...documentHeaders.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g),
-  ];
   ok(
-    "the no-Cache-Control default is applied in applyDocumentHeaders, so on BOTH exits",
-    guards.length >= 1,
-    `found ${guards.length} guard(s) in the helper both exits call. A redirect that misses it ` +
-      `is stored in a shared cache, and /admin returns 302.`,
+    "settleCacheHeaders is not given the request",
+    !/settleCacheHeaders\(\s*\w+\s*,/.test(renderer),
+    "the theme cookie reaches the Renderer, so with the request no themed page would ever be stored",
   );
-
-  let guardsSettingUncached = 0;
-  for (const guard of guards) {
-    /* The guard's own consequent: a braced block, or the one statement it governs. */
-    const rest = documentHeaders.slice((guard.index ?? 0) + guard[0].length);
-    const after = /^\s*\{/.test(rest) ? blockFrom(rest, 0) : rest.slice(0, rest.indexOf(";") + 1);
-    if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
-  }
   ok(
-    "every one of those guards sets UNCACHED",
-    guards.length > 0 && guardsSettingUncached === guards.length,
-    `${guardsSettingUncached} of ${guards.length} guards set it`,
+    "the Renderer stamps the default edge lifetime only on a response marked shared",
+    /===\s*SHARED_CACHE_CONTROL\s*&&\s*!\s*headers\.has\(\s*EDGE_CACHE_HEADER\s*\)/.test(documentHeadersOf(code)),
+    "the edge header OUTRANKS Cache-Control at Cloudflare, so one stamped on a private response makes it storable",
   );
-
-  /*
-   * `s-maxage` implies `proxy-revalidate`, and Cloudflare then refuses to serve stale. So the edge policy
-   * is in `Cloudflare-CDN-Cache-Control`, and neither string may carry a directive that switches SWR off.
-   */
-
-  console.log("\n  edge policy");
-
   {
     const seoCode = stripComments(readFileSync(join(root, "app", "lib", "seo.ts"), "utf8"));
-    const shared = seoCode.match(/export\s+const\s+SHARED_CACHE_CONTROL\s*=\s*"([^"]*)"\s*;/);
-    const edgeTemplate = seoCode.match(/const\s+edgeCacheControl\s*=\s*\([^)]*\)\s*=>\s*`([^`]*)`/);
-    const edgeHeader = seoCode.match(/export\s+const\s+EDGE_CACHE_HEADER\s*=\s*"([^"]*)"\s*;/);
-    const SWR_KILLERS = /\b(?:s-maxage|must-revalidate|proxy-revalidate|no-cache)\b/i;
     ok(
-      "seo.ts declares the shared string, the edge template and the edge header",
-      Boolean(shared && edgeTemplate && edgeHeader),
-      `found shared=${Boolean(shared)} template=${Boolean(edgeTemplate)} header=${Boolean(edgeHeader)}`,
-    );
-    ok(
-      "the shared string carries nothing that disables stale-while-revalidate",
-      shared !== null && !SWR_KILLERS.test(shared[1]),
-      `SHARED_CACHE_CONTROL is ${JSON.stringify(shared?.[1])}. Each of s-maxage, must-revalidate, ` +
-        `proxy-revalidate and no-cache makes Cloudflare block on a render instead of serving stale.`,
-    );
-    ok(
-      "the edge policy is stale-while-revalidate and nothing that disables it",
-      edgeTemplate !== null &&
-        /stale-while-revalidate=/.test(edgeTemplate[1]) &&
-        /\bmax-age=/.test(edgeTemplate[1]) &&
-        !SWR_KILLERS.test(edgeTemplate[1]),
-      `edge template is ${JSON.stringify(edgeTemplate?.[1])}`,
-    );
-    ok(
-      "the edge header is the Cloudflare-only one, which the browser never sees",
-      edgeHeader !== null && edgeHeader[1].toLowerCase() === "cloudflare-cdn-cache-control",
-      `EDGE_CACHE_HEADER is ${JSON.stringify(edgeHeader?.[1])}. CDN-Cache-Control passes downstream; ` +
-        `Cache-Control would reach the browser and defeat every purge.`,
-    );
-    const stamps = [...documentHeaders.matchAll(/\bapplyEdgePolicy\(\s*headers\s*\)/g)];
-    ok(
-      "the Renderer stamps the edge policy on BOTH exits, through applyDocumentHeaders",
-      stamps.length >= 1,
-      `found ${stamps.length} call(s). A shared response that misses it carries no edge policy and ` +
-        `falls back to Cache-Control, which is max-age=0.`,
-    );
-    const body = code.match(/function\s+applyEdgePolicy\s*\([^)]*\)[^{]*\{([\s\S]*?)\n\}/);
-    ok(
-      "the stamp removes an edge header from anything not marked shared",
-      body !== null &&
-        /!==\s*SHARED_CACHE_CONTROL/.test(body[1]) &&
-        /headers\.delete\(\s*EDGE_CACHE_HEADER\s*\)/.test(body[1]),
-      "the edge header OUTRANKS Cache-Control at Cloudflare, so one left on a private response " +
-        "makes it storable under a cookieless key",
+      "seo.ts takes the shared string and the edge header from site-runtime, declaring neither",
+      /export\s*\{[^}]*\bEDGE_CACHE_HEADER\b[^}]*\bSHARED_CACHE_CONTROL\b[^}]*\}/.test(seoCode) &&
+        !/const\s+(?:SHARED_CACHE_CONTROL|EDGE_CACHE_HEADER)\s*=/.test(seoCode),
+      "a second spelling of either string is one a stored page can disagree with",
     );
   }
 
