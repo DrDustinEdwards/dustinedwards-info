@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
+import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
@@ -292,6 +293,10 @@ describe("/health", () => {
     const byName = Object.fromEntries(body.checks.map((c) => [c.name, c.status]));
     expect(byName).toMatchObject({ db: "pass", cron: "pass", "ask-index-drift": "warn" });
     expect(byName).toHaveProperty("backup");
+    /* /health names its drift checks before the run, from HEALTH_CHECK_NAMES: a check added to the run and not to
+     * the list would never reach /health. */
+    const run = await runHealthChecks(env as never);
+    expect(run.checks.map((c) => c.name)).toEqual([...HEALTH_CHECK_NAMES]);
   });
 });
 
