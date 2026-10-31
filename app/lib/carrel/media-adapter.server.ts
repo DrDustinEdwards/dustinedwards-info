@@ -20,14 +20,14 @@ import {
   NotFoundError,
   RefusedError,
   VersionConflictError,
+  stripLocation,
+  toArrayBuffer,
   transformFocus,
   turnsSize,
   type MediaAdapter,
   type MediaItem,
   type MediaLens,
-  type MediaResize,
   type MediaTransformOp,
-  type MediaUploaded,
   type MediaUse,
 } from "@dustinedwards/site-api";
 import { writeFocus, type R2BucketLike } from "@dustinedwards/site-api/r2";
@@ -71,10 +71,9 @@ import {
   type MediaObject,
 } from "~/lib/media/core.server";
 import type { MediaCitation } from "~/lib/media/resolvers.server";
-import { readEmbedded } from "~/lib/media/embedded.server";
 import { historyOf, revisionBytes, swapBytes } from "~/lib/media/revisions.server";
 import { suggestFor } from "~/lib/media/suggest.server";
-import { storeUpload } from "~/lib/media/upload.server";
+import { RESIZE, storeUpload } from "~/lib/media/upload.server";
 import { normalizeTags, parseTags } from "~/lib/media/tags.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import templateRefs from "../../../content/generated/template-refs.json";
@@ -100,13 +99,6 @@ function isoOrNull(value: string) {
  */
 const LENSES: readonly MediaLens[] = ["unattached", "no-alt", "large", "duplicates", "license-expired", "oversized"];
 
-/**
- * What an upload shrinks to unless it says `resize=no`: the longer edge kept, and the quality it is encoded at. Wide
- * enough that a phone photo (4032 pixels) keeps its size; a larger camera file is shrunk, its original kept in the
- * backup bucket and in the file's history.
- */
-const RESIZE: MediaResize = { maxEdge: 4096, quality: 85 };
-
 /** The quality a turn or a mirror encodes at: high, since each one re-encodes a lossy picture. */
 const TRANSFORM_QUALITY = 92;
 
@@ -122,19 +114,6 @@ const TRANSFORMS: Record<MediaTransformOp, Pick<Parameters<typeof editImage>[2],
   "flip-h": { flip: "h" },
   "flip-v": { flip: "v" },
 };
-
-/** A view's bytes as a fresh ArrayBuffer, not `bytes.buffer`, which may be a larger allocation than the view. */
-function bufferOf(bytes: Uint8Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(buffer).set(bytes);
-  return buffer;
-}
-
-/** Runs one edit through the Images binding (site-runtime's editImage) and answers the new bytes, in the picture's own type. */
-async function reencode(env: Env, body: ReadableStream | Uint8Array, edit: Pick<Parameters<typeof editImage>[2], "rotate" | "flip" | "maxEdge">, format: Encoded, quality: number) {
-  const response = await editImage(env.IMAGES, body, { ...edit, format, quality });
-  return new Uint8Array(await response.arrayBuffer());
-}
 
 /** Keys repository code references: unattached also leaves these out, as in the admin library. */
 const TEMPLATE_KEYS = Object.keys((templateRefs as { refs: Record<string, string[]> }).refs);
@@ -318,22 +297,10 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       return { ...itemOf(mediaObjectOf(row), usedBy.length), usedBy, twins };
     },
 
+    // site-api's prepareUpload (inside storeUpload) reads the embedded fields, converts a HEIC, takes the location
+    // out and shrinks to RESIZE unless the upload said no; the original is kept below, so nothing is lost.
     async upload(input) {
-      // Read before any shrink, which drops the metadata with the pixels.
-      const found = readEmbedded(input.bytes, input.contentType);
-
-      // Shrunk to RESIZE unless the upload said no; the original is kept below, so nothing is lost.
-      let bytes = input.bytes;
-      let resizedFrom: MediaUploaded["resizedFrom"];
-      if (input.resize && REENCODED.has(input.contentType)) {
-        const size = await measureDimensions(env, bufferOf(input.bytes));
-        if (size && Math.max(size.width, size.height) > RESIZE.maxEdge) {
-          bytes = await reencode(env, input.bytes, { maxEdge: RESIZE.maxEdge }, input.contentType as Encoded, RESIZE.quality);
-          resizedFrom = { width: size.width, height: size.height, bytes: input.bytes.byteLength };
-        }
-      }
-
-      const stored = await storeUpload(env, { bytes: bufferOf(bytes), type: input.contentType, name: input.filename });
+      const stored = await storeUpload(env, { bytes: input.bytes, type: input.contentType, name: input.filename, resize: input.resize, sha256: input.sha256 });
       if (!stored.ok) throw new RefusedError(stored.message);
       // The object landed and its row did not. Keys are content-addressed, so a retry is the repair.
       if (!stored.recorded) {
@@ -347,15 +314,17 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       const before = await mediaRecord(env, stored.key);
       if (!before) throw new Error(`${stored.key} was stored and recorded, but its index row cannot be read`);
       // The embedded fields fill only what is empty; an import keeps the address it came from.
+      const found = stored.prepared.embedded;
       const embedded = (["credit", "license", "caption", "takenAt"] as const).filter((field) => found[field] && !before[field]);
       const fill = Object.fromEntries(embedded.map((field) => [field, found[field]]));
       if (embedded.length > 0 || input.sourceUrl) {
         await writeMediaAtRev(env, stored.key, { ...fill, ...(input.sourceUrl ? { sourceUrl: input.sourceUrl } : {}) }, { storedOnly: true });
       }
-      if (resizedFrom) {
+      const { resizedFrom, original } = stored.prepared;
+      if (resizedFrom && original) {
         // The original in the backup bucket and in the file's history, as the revision the shrink replaced.
         const backupKey = `resized/${new Date().toISOString()}/${stored.key}`;
-        await env.MEDIA_BACKUP.put(backupKey, bufferOf(input.bytes), { httpMetadata: { contentType: input.contentType } });
+        await env.MEDIA_BACKUP.put(backupKey, original, { httpMetadata: { contentType: stored.prepared.contentType } });
         const at = new Date().toISOString();
         await addMediaRevision(env, {
           mediaKey: stored.key,
@@ -364,7 +333,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
           width: resizedFrom.width,
           height: resizedFrom.height,
           reason: input.sourceUrl ? "import" : "upload",
-          sha256: input.sha256 ?? (await sha256Hex(input.bytes)),
+          sha256: await sha256Hex(original),
           backupKey,
         });
         await addMediaRevision(env, { mediaKey: stored.key, at, bytes: stored.bytes, width: stored.width, height: stored.height, reason: "resize", sha256: before.sha256 });
@@ -460,7 +429,9 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     },
 
     async replace(id, input) {
-      const dimensions = await measureDimensions(env, bufferOf(input.bytes));
+      // Lossless: the location goes and no pixel changes, as at upload.
+      const bytes = stripLocation(input.bytes, input.contentType);
+      const dimensions = await measureDimensions(env, toArrayBuffer(bytes));
       // The key carries the picture's size (-<w>x<h>), and every page's srcset and aspect come from it.
       const named = dimensionsFromKey(id);
       if (named && (dimensions?.width !== named.width || dimensions?.height !== named.height)) {
@@ -479,7 +450,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       await swapBytes(
         env,
         current,
-        { bytes: input.bytes, contentType: input.contentType, width: dimensions?.width ?? null, height: dimensions?.height ?? null, reason: "replace" },
+        { bytes, contentType: input.contentType, width: dimensions?.width ?? null, height: dimensions?.height ?? null, reason: "replace" },
         { focalX: null, focalY: null },
       );
       const row = await mediaRecord(env, id);
@@ -512,7 +483,8 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       }
       const object = await env.MEDIA.get(id);
       if (!object) throw new NotFoundError("No such media.");
-      const bytes = await reencode(env, object.body, TRANSFORMS[input.op], type as Encoded, TRANSFORM_QUALITY);
+      const edited = await editImage(env.IMAGES, object.body, { ...TRANSFORMS[input.op], format: type as Encoded, quality: TRANSFORM_QUALITY });
+      const bytes = new Uint8Array(await edited.arrayBuffer());
       const swapped = turnsSize(input.op);
       const width = swapped ? row.height : row.width;
       const height = swapped ? row.width : row.height;
@@ -522,7 +494,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       if (input.asNewFile) {
         // The old file stays as it was, so a stale version is refused here rather than claimed.
         if (row.rev !== revOf(input.expectedVersion)) throw new VersionConflictError(versionOf(row.rev), "The file changed since it was loaded.");
-        const stored = await storeUpload(env, { bytes: bufferOf(bytes), type, name: row.originalName ?? id });
+        const stored = await storeUpload(env, { bytes, type, name: row.originalName ?? id });
         if (!stored.ok) throw new RefusedError(stored.message);
         if (!stored.recorded) throw new Error(`${stored.key} was stored but its index row was not written; send the turn again`);
         const { alt, caption, tags, credit, license, sourceUrl, licenseExpires, takenAt } = row;

@@ -1,7 +1,8 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { mirrorObject } from "~/lib/media/backup.server";
-import { measureDimensions, placeholderFor } from "~/lib/media/core.server";
+import { placeholderAndColor } from "@dustinedwards/site-api";
+import { measureDimensions } from "~/lib/media/core.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
@@ -80,7 +81,7 @@ async function indexOne(env: Env, key: string) {
     // Derived here, or the upsert erases the bulk pass's placeholder. A second GET, because `.info()`
     // consumed the first body stream.
     const reread = await bucketFor(env, key).get(key);
-    if (reread) placeholder = await placeholderFor(env, reread.body);
+    if (reread) placeholder = (await placeholderAndColor(env.IMAGES, new Uint8Array(await reread.arrayBuffer()))).placeholder;
   }
 
   await upsertDerivedMedia(env, {

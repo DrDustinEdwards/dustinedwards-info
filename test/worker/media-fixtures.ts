@@ -9,9 +9,12 @@ import { contentKey } from "~/lib/media/classify.mjs";
 
 type Dimensions = { width: number; height: number } | null;
 
-/** Distinct bytes per seed, so distinct content-addressed keys. */
+/** A PNG's signature, which an upload's bytes must begin with (site-api's prepareUpload). */
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** Distinct bytes per seed, so distinct content-addressed keys; signed as a PNG. */
 export function bytesFor(seed: string) {
-  return new TextEncoder().encode(`fake-image-bytes:${seed}`);
+  return new Uint8Array([...PNG_SIGNATURE, ...new TextEncoder().encode(`fake-image-bytes:${seed}`)]);
 }
 
 /** The content-addressed PNG key `bytesFor(seed)` would be stored under at `dimensions`. */
@@ -26,7 +29,7 @@ export const PLACEHOLDER_BODY = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
  * The env with an `IMAGES` binding of a recorded shape, since it has no local emulation.
  * `dimensions` null models an SVG: the real binding answers with no `width`. Pass `encodes` to
  * give it a transformer too, false being the unreadable source (an SVG, a PDF, a corrupt upload)
- * that makes `placeholderFor` return null rather than throw. Without it there is no transformer.
+ * that makes the placeholder null rather than throw. Without it there is no transformer.
  */
 export function envWithImages(dimensions: Dimensions, encodes?: boolean) {
   return {

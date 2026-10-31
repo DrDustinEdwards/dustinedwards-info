@@ -160,7 +160,7 @@ export function roleOf(pathOrKey) {
  * and the Worker produce the same stored HTML without either reading bytes; the digest pins the bytes,
  * so it cannot go stale. The same image under two names is two objects.
  *
- * @param {ArrayBuffer} digest
+ * @param {ArrayBuffer | Uint8Array} digest
  * @param {string} extension
  * @param {{ width: number, height: number } | null} [dimensions]
  * @param {string | null} [name]

@@ -2,7 +2,8 @@ import assetManifest from "../../../content/generated/assets.json";
 
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
-import { measureDimensions, placeholderFor } from "./core.server";
+import { placeholderAndColor } from "@dustinedwards/site-api";
+import { measureDimensions } from "./core.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 
@@ -102,7 +103,7 @@ async function indexObject(env: Env, object: MediaSource): Promise<string | null
       : null;
     const dimensions = measured?.dimensions ?? null;
     const placeholder = measurable
-      ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
+      ? await bucket.get(object.key).then(async (o) => (o ? (await placeholderAndColor(env.IMAGES, new Uint8Array(await o.arrayBuffer()))).placeholder : null))
       : null;
 
     // The filename is re-derived from the object's custom metadata, so `original_name` is truly derived.
@@ -142,7 +143,7 @@ async function indexStaticFile(env: Env, path: string): Promise<string | null> {
       : null;
     const dimensions = measured?.dimensions ?? null;
     const placeholder = measurable
-      ? await placeholderFor(env, new Response(buffer.slice(0)).body as ReadableStream)
+      ? (await placeholderAndColor(env.IMAGES, new Uint8Array(buffer))).placeholder
       : null;
 
     await upsertDerivedMedia(env, {

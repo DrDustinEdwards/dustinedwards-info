@@ -1,9 +1,7 @@
 import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
-import { defineImages } from "@dustinedwards/site-runtime/image";
 import { errorMessage } from "~/lib/error-message.mjs";
-import { toBase64 } from "@dustinedwards/site-runtime/encoding";
 
 // Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
 
@@ -122,36 +120,6 @@ export async function measureDimensions(
     return { width: info.width, height: info.height };
   }
   return null;
-}
-
-const PLACEHOLDER_WIDTH = 20;
-
-/**
- * The placeholder's own closed set, never served by /media: the transform goes through site-runtime's image
- * route like every other, so the quality is always passed (without it the binding emits LOSSLESS WebP).
- */
-const PLACEHOLDER = defineImages({ uses: { placeholder: { layout: "fixed", width: PLACEHOLDER_WIDTH } } });
-
-// LQIP, not ThumbHash or BlurHash: those need client-side decoding and the public plane ships no
-// framework script. The caller has already decided the body is a raster; the binding reads its real format.
-export async function placeholderFor(
-  env: Env,
-  body: ReadableStream | ArrayBuffer,
-): Promise<string | null> {
-  const stream = body instanceof ArrayBuffer ? new Blob([body]).stream() : body;
-  const object = { body: stream, httpEtag: "", httpMetadata: { contentType: "image/webp" }, writeHttpMetadata() {} };
-  try {
-    const response = await PLACEHOLDER.respond(new Request(`https://placeholder.invalid/p?w=${PLACEHOLDER_WIDTH}`), {
-      object,
-      images: env.IMAGES,
-    });
-    // Anything but a transformed size (no binding, a failed transform) is no placeholder.
-    if (!response.headers.get("x-image")?.startsWith("w=")) return null;
-    const buffer = await response.arrayBuffer();
-    return `data:image/webp;base64,${toBase64(new Uint8Array(buffer))}`;
-  } catch {
-    return null;
-  }
 }
 
 // No reference check here on purpose: the safety belongs in the action, which has the resolver's answer.

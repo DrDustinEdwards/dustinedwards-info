@@ -180,13 +180,8 @@ export async function uploadMediaTool(
   if (!source.ok) return source;
   const { bytes, type } = source;
 
-  // A fresh ArrayBuffer, not `bytes.buffer`: that is the whole allocation, not the view, so a later change
-  // to a producer could hash and store the wrong bytes.
-  const payload = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(payload).set(bytes);
-
   const stored = await storeUpload(env, {
-    bytes: payload,
+    bytes,
     type,
     name: declaredName || defaultName(type, url),
   });

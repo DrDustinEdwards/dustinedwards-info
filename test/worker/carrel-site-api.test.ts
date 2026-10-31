@@ -359,17 +359,6 @@ describe("the preview", () => {
 /* Media (site-api v0.2.0): the site's own store, list, reference check and delete, behind the same
  * key and limiter. Each case uploads its own bytes, so its own content-addressed key. */
 
-const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
-/** Fake image bytes behind a real PNG signature, which the package checks before the site reads them. */
-function pngBytes(seed: string) {
-  const body = bytesFor(seed);
-  const bytes = new Uint8Array(PNG_SIGNATURE.length + body.length);
-  bytes.set(PNG_SIGNATURE);
-  bytes.set(body, PNG_SIGNATURE.length);
-  return bytes;
-}
-
 type MediaInit = { body?: BodyInit; type?: string; key?: string };
 
 /** Through the route, with the recorded IMAGES binding and anything in `overrides` over the env. */
@@ -402,7 +391,7 @@ function mediaCall(
 async function uploadThroughApi(seed: string, alt = "") {
   const query = new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, alt });
   const response = await mediaCall("POST", `${PREFIX}/media?${query}`, {
-    body: pngBytes(seed),
+    body: bytesFor(seed),
     type: "image/png",
   });
   expect(response.status).toBe(201);
@@ -458,12 +447,12 @@ describe("media: focal point, caption and replace", () => {
     const response = await mediaCall(
       "PUT",
       `${PREFIX}/media/${id}/file?${query}`,
-      { body: pngBytes("replace-case-2"), type: "image/png" },
+      { body: bytesFor("replace-case-2"), type: "image/png" },
       { MEDIA_BACKUP: testEnv.BACKUPS },
     );
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id, focus: null, sizesNeedPurge: false });
-    expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(pngBytes("replace-case-2"));
+    expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(bytesFor("replace-case-2"));
     const kept = (await testEnv.BACKUPS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
     expect(kept, "the old bytes were not kept").toBeDefined();
     expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(original);
@@ -594,7 +583,7 @@ describe("media: the v0.13.0 library", () => {
     const id = await uploadThroughApi("duplicate-case");
     const before = await mediaCount();
     const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("duplicate-case-renamed")}`, {
-      body: pngBytes("duplicate-case"),
+      body: bytesFor("duplicate-case"),
       type: "image/png",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -624,7 +613,7 @@ describe("media: the v0.13.0 library", () => {
 
   it("turns a picture that is not square into a new file with its alt, leaving the old one as it was", async () => {
     const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
-    const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: pngBytes("turn-case"), type: "image/png" }, overrides);
+    const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: bytesFor("turn-case"), type: "image/png" }, overrides);
     const { id, version } = (await upload.json()) as MediaJson;
     const original = await objectBytes(id);
 
@@ -667,15 +656,15 @@ describe("media: the v0.13.0 library", () => {
 
   it("shrinks a large picture at upload, unless asked not to, and keeps the original", async () => {
     const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({ width: 4096, height: 3072 })) };
-    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-case")}`, { body: pngBytes("resize-case"), type: "image/png" }, overrides);
+    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-case")}`, { body: bytesFor("resize-case"), type: "image/png" }, overrides);
     expect(response.status, await response.clone().text()).toBe(201);
     const shrunk = (await response.json()) as MediaJson & { width: number; resizedFrom?: Size & { bytes: number } };
-    expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: pngBytes("resize-case").length } });
+    expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length } });
     const kept = (await testEnv.BACKUPS.list({ prefix: "resized/" })).objects.find((o) => o.key.endsWith(`/${shrunk.id}`));
     expect(kept, "the original was not kept").toBeDefined();
-    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(pngBytes("resize-case"));
+    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(bytesFor("resize-case"));
 
-    const kept2 = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`, { body: pngBytes("resize-no-case"), type: "image/png" }, overrides);
+    const kept2 = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`, { body: bytesFor("resize-no-case"), type: "image/png" }, overrides);
     expect(await kept2.json()).toMatchObject({ width: 8000, height: 6000 });
   });
 
@@ -739,7 +728,7 @@ describe("media: uploads the site would refuse are refused", () => {
   it("REFUSES an oversized upload with 413 and stores nothing", async () => {
     const before = await mediaCount();
     const bytes = new Uint8Array(MAX_BYTES + 1);
-    bytes.set(PNG_SIGNATURE);
+    bytes.set(bytesFor("huge"));
     const response = await mediaCall("POST", `${PREFIX}/media?filename=huge.png&changeId=chg-huge`, {
       body: bytes,
       type: "image/png",
