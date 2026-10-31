@@ -1,5 +1,5 @@
 import { defineHead, searchTitle as prelumSearchTitle, type PageHead } from "@drdustinedwards/site-helpers/head";
-import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
+import { article, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
@@ -56,7 +56,6 @@ export function postSocial(post: PostSocialFields) {
   const socialImage = post.coverImage ?? post.ogImage ?? null;
   return {
     canonical,
-    pageTitle: searchTitle(post.title),
     description,
     socialTitle: post.ogTitle ?? post.title,
     socialDescription: post.ogDescription ?? description,
@@ -65,20 +64,33 @@ export function postSocial(post: PostSocialFields) {
   };
 }
 
+const SUFFIX = ` | ${SITE.name}`;
+
+/** The sections a breadcrumb trail passes through when a page names none of its own (`trail`). */
+const SECTIONS = { "/writing": "Writing", "/research": "Research", "/teaching": "Teaching", "/software": "Software" };
+
+/** A visible trail (app/components/breadcrumb.tsx), from its hub down to the page. */
+export type Trail = Array<[string, string]>;
+
 /**
- * Prelum's head for every public page: the site's facts once. No suffix, because a route passes its `<title>` already
- * composed (`searchTitle`), which this still cuts to the search limit; the description is cut for search and the share
- * card keeps it whole. The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
+ * Prelum's head for every public page: the site's facts once. `title` is the page's own and takes the site's suffix,
+ * unless `fullTitle`; the share card keeps the suffix too. A page that shows a trail passes it, so its BreadcrumbList
+ * (Prelum's, the only one) says what the page shows, from the home page down; any other page's is built from `SECTIONS`.
+ * The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
  */
-export function siteHead(page: PageHead) {
+export function siteHead({ trail, ...page }: PageHead & { trail?: Trail }) {
   // Built inside the call, not at module level: the watchdog Worker imports this module for SITE_ORIGIN, and a
   // top-level call would put Prelum's head builder in its bundle (.worker-size.watchdog.json).
-  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE })(page);
+  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE, suffix: SUFFIX, sections: SECTIONS })({
+    ...page,
+    socialTitle: page.socialTitle ?? (page.fullTitle ? undefined : `${page.title}${SUFFIX}`),
+    ...(trail ? { breadcrumbs: [{ name: SITE.name, path: "/" }, ...trail.map(([name, path]) => ({ name, path }))] } : {}),
+  });
 }
 
 /**
- * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without
- * an image renders as a bare link.
+ * A page whose `title` is already the whole `<title>`. `summary_large_image` always: the image falls back to the site
+ * mark, and a `twitter:card` without an image renders as a bare link.
  */
 export function pageMeta(page: {
   title: string;
@@ -92,9 +104,12 @@ export function pageMeta(page: {
   markdown?: string;
   /** Prelum writes `noindex, follow`. */
   noindex?: boolean;
+  /** The WebPage subtype: `CollectionPage` for a list. */
+  pageType?: string;
+  trail?: Trail;
 }) {
   const { ogType, ...rest } = page;
-  return siteHead({ ...rest, type: ogType });
+  return siteHead({ ...rest, type: ogType, fullTitle: true });
 }
 
 export { SERP_DESCRIPTION_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
@@ -115,14 +130,14 @@ export function personJsonLd(origin: string) {
 
 /**
  * The About page is a ProfilePage about the same Person the home page describes: the shared `@id` is
- * what makes the two one entity rather than two people with one name.
+ * what makes the two one entity rather than two people with one name. Its own `@id` is Prelum's page node, so the two are one page.
  */
 export function profilePageJsonLd(origin: string, page: { path: string; description: string }) {
   const { "@context": context, ...person } = personNode(origin);
   return {
     "@context": context,
     "@type": "ProfilePage",
-    "@id": `${origin}${page.path}`,
+    "@id": `${origin}${page.path}#webpage`,
     url: `${origin}${page.path}`,
     name: `About ${SITE.name}`,
     description: page.description,
@@ -257,10 +272,6 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     author: { "@type": "Person", name: SITE.name, url: origin },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
   });
-}
-
-export function breadcrumbJsonLd(origin: string, trail: Array<[string, string]>) {
-  return breadcrumbs(origin, trail.map(([name, path]) => ({ name, path })));
 }
 
 export function webSiteJsonLd(origin: string) {

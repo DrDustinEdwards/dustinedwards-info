@@ -7,10 +7,9 @@ import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { listRegistry } from "~/db/registry";
 import { getEnv } from "~/lib/context";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { INVENTORY, LAB_PATH, inventoryRows, kindLabel } from "~/kb/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
-import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 
 import type { Route } from "./+types/lab";
 
@@ -50,6 +49,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { rows: inventoryRows(items, phages), search: url.search };
 }
 
+const TRAIL: Trail = [
+  ["Research", "/research"],
+  [TITLE, LAB_PATH],
+];
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const kinds = [...new Set(loaderData.rows.map((row) => row.kind))].map((kind) => `${kindLabel(kind).toLowerCase()}s`);
@@ -57,21 +61,17 @@ export function meta({ loaderData }: Route.MetaArgs) {
     title: `${TITLE}: ${kinds.join(", ")}`,
     description: `The lab's reference catalog: ${kinds.join(" and ")}, each with its own facts.`,
     path: LAB_PATH,
+    pageType: "CollectionPage",
+    trail: TRAIL,
   });
 }
 
 export default function LabRoute({ loaderData }: Route.ComponentProps) {
   const { rows, search } = loaderData;
-  const trail: Array<[string, string]> = [
-    ["Research", "/research"],
-    [TITLE, LAB_PATH],
-  ];
   const result = queryCatalog(INVENTORY, rows, parseCatalogParams(INVENTORY, search));
   return (
-    <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}
-    >
-      <Breadcrumb trail={trail} />
+    <PageShell>
+      <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid" id="registry-title">
         {TITLE}
       </h1>
