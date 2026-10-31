@@ -225,7 +225,9 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
-// An admin idle for an hour is signed out of Access (site-runtime ./access). Every request writes one `request` line
+// A person idle for an hour on either private plane, /admin or /lab, is signed out of Access (site-runtime ./access).
+// Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
+// never reads the other's cookie as no request. Every request writes one `request` line
 // (site-runtime withRequestLog: cf-ray, method, path, status, ms and the deployed sha), with no address, cookie or
 // query, so it records nothing the privacy page would have to name. tokenPath cuts any segment after /preview/, the
 // one address a capability has ridden in a path here (the traces note in wrangler.jsonc.example).
@@ -237,8 +239,11 @@ export default {
   ...site,
   fetch: withRequestLog(
     // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
-    (request: Request, env: Env, ctx: ExecutionContext) =>
-      withAdminIdle(request, () => site.fetch(request as FetchArgs[0], env, ctx)),
+    (request: Request, env: Env, ctx: ExecutionContext) => {
+      const app = () => site.fetch(request as FetchArgs[0], env, ctx);
+      const lab = () => withAdminIdle(request, app, { prefixes: ["/lab"], cookieName: "__Host-lab-seen" });
+      return withAdminIdle(request, lab, { prefixes: ["/admin"] });
+    },
     { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
   ),
 } satisfies ExportedHandler<Env>;
