@@ -174,11 +174,15 @@ async function tagsForPosts(db: DB, postIds: number[]) {
   return groupValues(rows, (row) => row.postId, (row) => row.slug);
 }
 
+/** Leaves out a post marked noindex (site-api's search field), for the sitemap and llms-full.txt. */
+const indexable = () => sql`COALESCE(json_extract(${posts.searchFields}, '$.noindex'), 0) = 0`;
+
 export async function listBlogPosts(
   env: Env,
   options: {
     tag?: string | null;
     year?: string | null;
+    indexedOnly?: boolean;
     page?: number;
     perPage?: number;
     timings?: Timings;
@@ -193,6 +197,7 @@ export async function listBlogPosts(
   /* The filters stay apart from the visibility predicate because `listingSpanSelect` composes its own. */
   const narrowing: (SQL | undefined)[] = [];
   if (tag) narrowing.push(carriesTag(db, tag));
+  if (options.indexedOnly) narrowing.push(indexable());
   if (year) {
     narrowing.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
   }
@@ -622,6 +627,7 @@ type FeedOptions = {
   series?: string | null;
   /** `part` for a series feed; anything else is newest first. */
   orderBy?: "date" | "part";
+  indexedOnly?: boolean;
 };
 
 /** The filter and order both feed listings share. Narrowed in the query: slicing afterwards would cap before narrowing. */
@@ -629,6 +635,7 @@ function feedScope(db: DB, options: FeedOptions) {
   const clauses = [isBlogPost()];
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
+  if (options.indexedOnly) clauses.push(indexable());
   const order =
     options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : newestFirstOrder();
   return { where: and(...clauses), order };

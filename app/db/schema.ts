@@ -59,6 +59,8 @@ export const posts = sqliteTable(
     /** JSON array of { date, note }, authored. Not `updatedAt`, which every sync rewrites. */
     changelog: text("changelog"),
     ogImage: text("og_image"),
+    /** JSON of site-api's search fields beside description ({ searchTitle, image, imageAlt, canonical, noindex }), NULL when none. */
+    searchFields: text("search_fields"),
     /** Git blob sha1 of the source markdown (`gitBlobSha()`), what the content-drift check compares. */
     sourceBlobSha: text("source_blob_sha"),
     renderHash: text("render_hash"),

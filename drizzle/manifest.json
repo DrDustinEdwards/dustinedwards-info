@@ -35,6 +35,7 @@
     "0032_source_files.sql": "3441bac1d5a42a4ab50f9c103ab88b1a794400779ea6236b87817dac7f485dd0",
     "0033_scheduled_updates.sql": "792962a08972b9744fc53c8c26eff47f8f256d7619c1f7c5a5c4615c912216a6",
     "0034_media_rev.sql": "240d27c48d2fbfe8f41ae9eb99cbf502468a2a290cd2af3e139fa2226a2573fe",
-    "0035_media_library.sql": "a904031f8d3163bab07e3e8822c5f6bcb5693c5c850f09e6a4ede00868bdf543"
+    "0035_media_library.sql": "a904031f8d3163bab07e3e8822c5f6bcb5693c5c850f09e6a4ede00868bdf543",
+    "0036_post_search_fields.sql": "dbf7bb8a8385fa34533b573d907be44b3c523a1ff08b646e9deec57f5b50e058"
   }
 }

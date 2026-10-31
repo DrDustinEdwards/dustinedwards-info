@@ -125,7 +125,7 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     registrySources,
     postsWithImages,
   ] = await Promise.all([
-    listBlogPosts(env, { perPage: 1000 }),
+    listBlogPosts(env, { perPage: 1000, indexedOnly: true }),
     listBlogTags(env),
     listBlogSeries(env),
     nextScheduledPublishAt(env),
