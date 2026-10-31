@@ -48,7 +48,9 @@ import {
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
 
-import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Caller, type Props } from "./auth";
+import { agentPrincipal, agentScopes } from "@dustinedwards/site-runtime/agent-keys";
+
+import { SCOPE_READ, SCOPES, type Caller, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
 import { handleMcp, MCP_ROUTE, SERVER } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
@@ -177,7 +179,7 @@ async function agentHandler(
    * server, and vice versa. Fails closed when the binding is missing, exactly
    * as the other door does.
    */
-  const scopes = agentScopes(env, principal);
+  const scopes = agentScopes(env, principal, SCOPES);
   const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `agent:${principal}`);
   if (!limit.allowed) return rateLimited(env, { kind: "agent", principal, scopes }, limit.retryAfter);
 

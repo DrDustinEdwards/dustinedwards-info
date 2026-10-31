@@ -465,11 +465,14 @@ for (const name of EXPECTED_TOOLS) {
   // site-runtime's invokeTool is the door: it refuses first, logs started (or refuses), runs
   // `run`, logs finished, and is tested there. What is provable here is that every handler is
   // reached only as its `run`, with this server's scopes.
+  // site-runtime's registerTools registers each tool the grant can call with invokeTool around its handler (tested
+  // there). Provable here: it is the one registration, given TOOLS and this server, and nothing calls a handler or
+  // registers a tool around it.
   check(
-    "every tool is registered through site-runtime's invokeTool",
-    /import \{[^}]*\binvokeTool\b[^}]*\} from "@dustinedwards\/site-runtime\/mcp-server"/.test(withoutComments(handlerText)) &&
-      /invokeTool\(env, SERVER, \{[\s\S]*?run: \(\) => tool\.handler\(env, args \?\? \{\}\)/.test(handlerCode) &&
-      (handlerCode.match(/tool\.handler\(/g) ?? []).length === 1 &&
+    "every tool is registered through site-runtime's registerTools, which wraps each in invokeTool",
+    /import \{[^}]*\bregisterTools\b[^}]*\} from "@dustinedwards\/site-runtime\/mcp-server"/.test(withoutComments(handlerText)) &&
+      /registerTools\([^,]+, TOOLS, \{\s*env,\s*server: SERVER,\s*caller,/.test(handlerCode) &&
+      !/\.handler\(|\.registerTool\(/.test(handlerCode) &&
       !/function invokeTool|appendAudit/.test(codeOnly(toolsText)),
     "Rule 12: ownership, scope and the log are in invokeTool; a direct handler call skips them.",
   );
@@ -671,10 +674,7 @@ check(
  * reason, and getting it backwards cost five failing assertions on the first
  * run of this block.
  */
-const authText = files.find((f) => f.name === "auth.ts")?.text ?? "";
-const authCode = codeOnly(authText);
 const indexCode = codeOnly(indexText);
-const authStrings = withoutComments(authText);
 const indexStrings = withoutComments(indexText);
 
 check(
@@ -712,7 +712,7 @@ check(
    * from the matched secret's NAME, and index.ts passes that return value
    * straight through to the handler. Nothing reads it off the request.
    */
-  /name\.slice\(AGENT_KEY_PREFIX\.length\)/.test(authCode) &&
+  /import \{[^}]*\bagentPrincipal\b[^}]*\} from "@dustinedwards\/site-runtime\/agent-keys"/.test(indexStrings) &&
     /const principal = await agentPrincipal\(/.test(indexCode) &&
     /agentHandler\(request, env, ctx, principal\)/.test(indexCode),
   "If a caller could name itself, the audit line would record whatever it " +
@@ -720,18 +720,15 @@ check(
     "presented key matched.",
 );
 
+/*
+ * The key comparison itself (constant time, a blank secret never matching, the
+ * name from the secret) is site-runtime's ./agent-keys, tested there. What this
+ * server could still get wrong is a local copy beside it.
+ */
 check(
-  "an empty or blank agent secret cannot match",
-  /typeof value !== "string" \|\| !value\.trim\(\)/.test(authStrings),
-  "A secret accidentally set to the empty string would otherwise become a key " +
-    "that any bearer satisfies. Fail closed.",
-);
-
-check(
-  "the agent comparison goes through safeEqual, never a string compare",
-  /await safeEqual\(presented, value\)/.test(authCode),
-  "A raw compare leaks the secret's length through the loop bound. " +
-    "safeEqual (site-runtime/compare) hashes both sides to a fixed 32 bytes first.",
+  "no local agent-key code: the matching is site-runtime's ./agent-keys",
+  !files.some((f) => /AGENT_KEY_|safeEqual\(/.test(codeOnly(f.text)) || /"AGENT_KEY_/.test(withoutComments(f.text))),
+  "A second copy of the key comparison is a second place for it to be wrong (checklist S6).",
 );
 
 /*

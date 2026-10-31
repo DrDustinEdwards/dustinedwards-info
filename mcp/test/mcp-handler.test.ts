@@ -171,16 +171,24 @@ describe("handleMcp", () => {
     assert.ok(api.logs.every((line) => !line.includes(TOKEN)));
   });
 
-  test("the caller reaches the tool: a read-only grant is refused a write over the wire", async () => {
-    const { message } = await callTool("dei_backup_media", {}, READER);
+  test("a read-only grant is listed no write tool, and is refused a write over the wire", async () => {
+    // T7: site-runtime's registerTools lists only what the grant can call; a tool whose action decides stays.
+    const listed = (await rpc("tools/list", {}, READER)).message.result.tools.map((t: { name: string }) => t.name);
+    assert.ok(!listed.includes("dei_backup_media") && listed.includes("dei_manage_procedure"), listed.join());
+    const unlisted = (await callTool("dei_backup_media", {}, READER)).message;
+    assert.ok(unlisted.error || unlisted.result?.isError === true, JSON.stringify(unlisted));
+    const { message } = await callTool("dei_manage_procedure", { action: "save", slug: "p", raw: "r" }, READER);
     assert.equal(message.result.isError, true);
     assert.match(message.result.content[0].text, /read access only/);
     assert.equal(api.calls.length, 0);
   });
 
-  test("a request with no caller runs no tool", async () => {
+  test("a request with no caller lists and runs no tool", async () => {
+    // With no tool registered the server offers no tools at all, so tools/list is an error or an empty list.
+    const list = (await rpc("tools/list", {}, null)).message;
+    assert.ok(list.error || list.result?.tools?.length === 0, JSON.stringify(list));
     const { message } = await callTool("dei_check_site", {}, null);
-    assert.equal(message.result.isError, true);
+    assert.ok(message.error || message.result?.isError === true, JSON.stringify(message));
     assert.equal(api.calls.length, 0);
   });
 

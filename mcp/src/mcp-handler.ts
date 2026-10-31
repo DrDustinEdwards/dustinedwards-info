@@ -13,13 +13,7 @@
  * capture, never on a release note. Without it this is a modern-only server.
  */
 
-import {
-  invokeTool,
-  mcpCacheHints,
-  routeMcpEra,
-  toolScopeChallenge,
-  type McpServerInfo,
-} from "@dustinedwards/site-runtime/mcp-server";
+import { mcpCacheHints, registerTools, routeMcpEra, type McpServerInfo } from "@dustinedwards/site-runtime/mcp-server";
 import { isLegacyRequest, McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 
@@ -59,25 +53,22 @@ function buildServer(env: ToolEnv, caller: Caller | undefined) {
       instructions: INSTRUCTIONS,
       // Bounds the elements a tool input may hold (GHSA-46jr-4wx8-v453; Grok audit 2026-10-21, DE-4).
       maxToolInputElements: 10_000,
-      // One administrator's results, so every hint is private; the list changes only on deploy.
+      // Private, because the list depends on the grant (below); it changes only on deploy otherwise.
       cacheHints: mcpCacheHints({ ttlMs: 3_600_000 }),
     });
-    for (const tool of TOOLS) {
-      // A grant without the tool's scope gets the 403 step-up before the tool runs (scopeChallenge);
-      // invokeTool still checks the scope, for an agent key, which has no OAuth grant behind it.
-      server.registerTool(
-        tool.name,
-        { ...tool.config, scopeChallenge: toolScopeChallenge(env, SERVER, tool) },
-        (args: Record<string, unknown>, ctx) =>
-          invokeTool(env, SERVER, {
-            caller,
-            tool,
-            args: args ?? {},
-            meta: ctx.mcpReq._meta as { traceparent?: unknown } | undefined,
-            run: () => tool.handler(env, args ?? {}),
-          }),
-      );
-    }
+    /*
+     * site-runtime's registerTools: only the tools this caller's grant can call are listed (checklist T7, a read grant
+     * sees no write-only tool; dei_manage_procedure, whose action decides, stays), each with the server's icon, the
+     * 403 step-up (scopeChallenge) and invokeTool around its handler, which checks the scope again for an agent key and
+     * writes the log before and after.
+     */
+    // The cast: registerTools types its callback's result as unknown, the SDK as a CallToolResult; invokeTool's is one.
+    registerTools(server as unknown as Parameters<typeof registerTools>[0], TOOLS, {
+      env,
+      server: SERVER,
+      caller,
+      icons: SERVER_INFO.icons,
+    });
     return server;
   };
 }

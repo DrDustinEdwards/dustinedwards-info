@@ -28,6 +28,7 @@
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { logEvent } from "@dustinedwards/site-runtime/log";
+import { outsideResult } from "@dustinedwards/site-runtime/mcp-server";
 import { z } from "zod";
 
 import { watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
@@ -118,9 +119,14 @@ export type ToolOutput = {
   structuredContent?: Record<string, unknown>;
 };
 
-function ok(data: Record<string, unknown>, preface = ""): ToolOutput {
-  const json = JSON.stringify(data, null, 2);
-  return { content: [{ type: "text", text: preface ? `${preface}\n\n${json}` : json }], structuredContent: data };
+/**
+ * A success. With `outside`, the answer holds text strangers wrote (a mention's author or excerpt), so it goes out as
+ * site-runtime's outsideResult (checklist S2): the notice, then the JSON inside `<data label="...">` delimiters, and the
+ * notice beside the fields of structuredContent.
+ */
+function ok(data: Record<string, unknown>, outside?: string): ToolOutput {
+  if (outside) return outsideResult(outside, data);
+  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data };
 }
 
 function inputError(message: string): ToolOutput {
@@ -189,14 +195,14 @@ async function runPaged(
   tool: string,
   args: Record<string, unknown>,
   page: { limit?: unknown; cursor?: unknown },
-  preface = "",
+  outside?: string,
 ): Promise<ToolOutput> {
   try {
     const result = await callOperator(env, tool, args);
     if (!result.ok) return refusal(result);
     const data = { ...((result.data ?? {}) as Record<string, unknown>) };
     const key = Object.keys(data).find((k) => Array.isArray(data[k]));
-    if (!key) return ok(data, preface);
+    if (!key) return ok(data, outside);
     const all = data[key] as unknown[];
     const limit = typeof page.limit === "number" ? page.limit : 25;
     // The schema refused a cursor this server never gave, so a string here decodes.
@@ -204,7 +210,7 @@ async function runPaged(
     data[key] = all.slice(offset, offset + limit);
     const hasMore = offset + limit < all.length;
     data.page = { limit, total: all.length, has_more: hasMore, next_cursor: hasMore ? encodeCursor(offset + limit) : null };
-    return ok(data, preface);
+    return ok(data, outside);
   } catch (cause) {
     return wrapperFailure(cause);
   }
@@ -427,7 +433,7 @@ export const TOOLS: ToolDefinition[] = [
       annotations: READ_ONLY,
     },
     handler: (env, args) =>
-      runPaged(env, "list_mentions", args.status ? { status: args.status } : {}, args, EXTERNAL_DATA_NOTE),
+      runPaged(env, "list_mentions", args.status ? { status: args.status } : {}, args, "mentions"),
   },
 
   {
