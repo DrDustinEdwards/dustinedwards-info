@@ -89,7 +89,7 @@ export async function reserveAskBudget(env: Env): Promise<GuardVerdict> {
 
 export async function readAskBudget(env: Env): Promise<{ day: string; count: number; limit: number }> {
   const budget = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("global"));
-  const { day, count } = await budget.peek();
+  const { day, count } = await budget.budgetToday();
   return { day, count, limit: DAILY_ANSWER_BUDGET };
 }
 

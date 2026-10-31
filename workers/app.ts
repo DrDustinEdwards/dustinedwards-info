@@ -223,10 +223,15 @@ const site = {
 } satisfies ExportedHandler<Env>;
 
 // A person idle for an hour on either private plane, /admin or /lab, is signed out of Access (site-runtime ./access).
-const IDLE_PREFIXES = ["/admin", "/lab"] as const;
+// Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
+// never reads the other's cookie as no request.
 export default {
   ...site,
-  fetch: (request, env, ctx) => withAdminIdle(request, () => site.fetch(request, env, ctx), { prefixes: IDLE_PREFIXES }),
+  fetch: (request, env, ctx) => {
+    const app = () => site.fetch(request, env, ctx);
+    const lab = () => withAdminIdle(request, app, { prefixes: ["/lab"], cookieName: "__Host-lab-seen" });
+    return withAdminIdle(request, lab, { prefixes: ["/admin"] });
+  },
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
