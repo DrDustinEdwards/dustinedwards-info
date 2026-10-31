@@ -1,7 +1,7 @@
 // A paper's canonical URL is the slash form, because Google Scholar honors `citation_pdf_url` only when the
 // PDF sits in the abstract page's own subdirectory. Not a move: the slashless form was never the page.
 
-const PUBLICATIONS_PREFIX = "/research/publications/";
+export const PUBLICATIONS_PREFIX = "/research/publications/";
 
 // The HTTPS redirect's own rule, so the redirect helpers never disagree.
 export { httpsRedirectStatus as pdfRedirectStatus } from "../https-redirect.mjs";
