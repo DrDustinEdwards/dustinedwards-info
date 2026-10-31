@@ -128,6 +128,7 @@ if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.j
       kv: (c.kv_namespaces ?? []).map((n) => n.binding).sort(),
       dobj: (c.durable_objects?.bindings ?? []).map((b) => b.class_name).sort(),
       services: (c.services ?? []).map((b) => `${b.binding}:${b.service}`).sort(),
+      r2: (c.r2_buckets ?? []).map((b) => `${b.binding}:${b.bucket_name}`).sort(),
       routes: JSON.stringify(c.routes ?? []),
       migrations: (c.migrations ?? []).map((m) => m.new_sqlite_classes ?? []).flat().sort(),
       flags: (c.compatibility_flags ?? []).slice().sort(),
@@ -149,7 +150,6 @@ if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.j
 // one thing it must not have.
 const FORBIDDEN_BINDING_KEYS = [
   "d1_databases",
-  "r2_buckets",
   "ai",
   "vectorize",
   "hyperdrive",
@@ -168,6 +168,14 @@ for (const key of FORBIDDEN_BINDING_KEYS) {
     `Found ${key}. The wrapper's only route to the app is an HTTP call to the operator API.`,
   );
 }
+
+// The one R2 bucket is the tool-call log's own copies (checklist L6-L7), never one of the site's.
+const actualR2 = (config.r2_buckets ?? []).map((b) => `${b.binding}:${b.bucket_name}`).sort();
+check(
+  "the only R2 bucket is AUDIT_BUCKET, the tool-call log's copies",
+  JSON.stringify(actualR2) === JSON.stringify(["AUDIT_BUCKET:dustinedwards-admin-mcp-tool-calls"]),
+  `Found ${actualR2.join(", ") || "(none)"}. A bucket of the site's would be a second route to its data.`,
+);
 
 const ALLOWED_KV = ["OAUTH_KV", "PROBE_KV"];
 const actualKv = (config.kv_namespaces ?? []).map((n) => n.binding).sort();
@@ -484,6 +492,16 @@ for (const name of EXPECTED_TOOLS) {
 }
 
 // The API leg's credential is confined to the module that owns it.
+// The log's bucket has one reader: the scheduled export in index.ts, which hands it to site-runtime's
+// exportAuditLog. A tool reaching it would turn the log's copies into a store the server writes at will.
+const bucketHolders = files.filter((f) => withoutComments(f.text).includes("AUDIT_BUCKET")).map((f) => f.name);
+check(
+  "AUDIT_BUCKET appears only in index.ts, and only for exportAuditLog",
+  JSON.stringify(bucketHolders) === JSON.stringify(["index.ts"]) &&
+    /exportAuditLog\(env, env\.AUDIT_BUCKET\)/.test(withoutComments(files.find((f) => f.name === "index.ts")?.text ?? "")),
+  `Found in: ${bucketHolders.join(", ") || "(nowhere)"}. The bucket holds the log's copies and nothing else.`,
+);
+
 const tokenHolders = files.filter((f) => withoutComments(f.text).includes("OPERATOR_TOKEN")).map((f) => f.name);
 check(
   "OPERATOR_TOKEN appears only in api-client.ts",

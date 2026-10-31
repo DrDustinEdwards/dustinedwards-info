@@ -27,7 +27,7 @@
  *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
- *   /health                liveness
+ *   /health                liveness, the deployed commit and the tool-call log's check
  *   /.well-known/security.txt and /csp-report  answered by withMcpHeaders
  *
  * Every response, whichever route made it, leaves through site-runtime's withMcpHeaders.
@@ -35,7 +35,7 @@
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
-import { recordAudit, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import { exportAuditLog, recordAudit, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
 import {
   audienceRefusal,
@@ -72,6 +72,8 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
   DCR_REDIRECT_URIS?: string;
   /** Comma-separated agent principals that hold dei.write. */
   AGENT_WRITE?: string;
+  /** The tool-call log's copies in R2 (the scheduled export below, checklist L6-L7). Nothing else is stored there. */
+  AUDIT_BUCKET?: R2Bucket;
 }
 
 /** The canonical resource every grant and token is bound to: this server's /mcp, as the provider names it below. */
@@ -334,4 +336,11 @@ export default {
         (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${request.headers.get("cf-connecting-ip") ?? "unknown"}`, 60)).allowed,
     },
   ),
+  // The daily copy of the tool-call log to R2 and the 90-day prune of copied rows (checklist L6-L7). A failed write
+  // throws, so the cron run shows failed, and /health's tool-call-log check alerts once rows go uncopied for two days.
+  scheduled: async (_controller, env) => {
+    if (!env.AUDIT_BUCKET) throw new Error("AUDIT_BUCKET is not bound; the tool-call log is not copied");
+    const done = await exportAuditLog(env, env.AUDIT_BUCKET);
+    console.log(JSON.stringify({ event: "tool_call_log_exported", exported: done.exported, pruned: done.pruned }));
+  },
 } satisfies ExportedHandler<Env>;

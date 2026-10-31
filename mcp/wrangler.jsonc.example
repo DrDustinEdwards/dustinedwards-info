@@ -66,10 +66,20 @@
 	"services": [{ "binding": "SITE", "service": "dustinedwards" }],
 
 	// BINDINGS ARE AN ALLOWLIST, and check:wrapper derives its expectations from
-	// this block. There is deliberately NO D1, NO R2, and no binding of any kind
-	// that could reach the publish machinery: the only path to it is an HTTP
-	// request over the SITE binding to /api/operator. Adding a binding here that touches app data
-	// would break the wrapper's central guarantee, so the gate fails on one.
+	// this block. There is deliberately NO D1, no R2 bucket of the site's, and no
+	// binding of any kind that could reach the publish machinery: the only path to
+	// it is an HTTP request over the SITE binding to /api/operator. Adding a binding
+	// here that touches app data would break the wrapper's central guarantee, so the
+	// gate fails on one.
+	//
+	// The one R2 bucket holds only copies of this server's own tool-call log
+	// (checklist L6-L7): the daily cron copies new rows as tool-calls/<first>-<last>.json,
+	// then the log drops copied rows older than 90 days. The bucket's lock rule on
+	// tool-calls/ keeps a copy from being changed or removed. check:wrapper allows
+	// exactly this binding and this bucket.
+	"r2_buckets": [{ "binding": "AUDIT_BUCKET", "bucket_name": "dustinedwards-admin-mcp-tool-calls" }],
+	"triggers": { "crons": ["23 4 * * *"] },
+
 	"kv_namespaces": [
 		{
 			// Token and grant storage for workers-oauth-provider.
