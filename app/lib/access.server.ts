@@ -1,18 +1,21 @@
-import { accessKeys, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
+import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
- * for each request it lets through; this reads that token and trusts nothing else. The allowed people
- * live in ONE place, the Access policy (Zero Trust > Access > Applications > dustinedwards-login >
- * Policies): anyone it admits holds a token for this application, so adding or removing an
- * administrator is a policy edit and no code or deploy.
+ * for each request it lets through; this reads that token and trusts nothing else. The administrators
+ * are ADMIN_EMAILS (a secret, comma-separated, read by site-runtime's `adminEmails`), checked here as
+ * well as by the Access policy (Zero Trust > Access > Applications > dustinedwards-login > Policies),
+ * so a policy that admits too much still makes nobody else an administrator. Unset, nobody is.
  *
  * The token check itself (signature by a published key, RS256 pinned, issuer, audience, dates, the
  * cached key set) is the family's one copy, `@dustinedwards/site-runtime/access`. What is here is the
  * site's own reading of a verdict:
  *
  * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
+ *   From `accessIdentity`, also on ADMIN_EMAILS; a person Access admitted who is not is `refused`
+ *   (`not-admin`). /lab's identity (app/lab/access.server.ts) is not checked against the list: its
+ *   members are not administrators, and their rows decide what they may do.
  * - `service`: an Access service token (no person). Never an administrator; it only gets a request
  *   past Access, and the bearer credentials below still decide what it may do.
  * - `absent`: no token, or this Worker has no Access configuration.
@@ -49,7 +52,9 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
   // The header is added only on paths the Access application covers (/admin). The same token also
   // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
-  return verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+  const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+  if (identity.kind !== "human" || localDevelopment(request)) return identity;
+  return adminEmails(env).includes(identity.email) ? identity : { kind: "refused", reason: "not-admin" };
 }
 
 /**

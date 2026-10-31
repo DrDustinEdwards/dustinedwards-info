@@ -27,6 +27,12 @@ declare global {
      */
     PRIMARY_OWNER_EMAIL?: string;
     /**
+     * Who may administer /admin, comma-separated (site-runtime's `adminEmails`), checked in code behind the Access
+     * policy `dustinedwards-admin`. A secret for the same reason as PRIMARY_OWNER_EMAIL. Optional by contract: absent,
+     * nobody is an administrator and /admin refuses every person (the read-only smoke bearer still renders).
+     */
+    ADMIN_EMAILS?: string;
+    /**
      * This site's Capsid agent key, holding the write grant on the `dustinedwards` namespace, for POST
      * /ops/access-sync only: Capsid holds the Cloudflare token and writes the lab's Access group. Optional by
      * contract: absent, /lab/members still records every change and says the allow list was not touched.
