@@ -147,7 +147,7 @@
     },
     {
       "url": "tel:+15550100",
-      "allowed": false
+      "allowed": true
     },
     {
       "url": "file:///etc/passwd",
