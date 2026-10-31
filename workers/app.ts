@@ -36,8 +36,14 @@ import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
+import { runJobs } from "@dustinedwards/site-runtime/cron";
 
 export { AskBudget } from "./ask-budget";
+
+/** The one five-minute firing a day that takes the nightly D1 dump: 05:00 UTC. */
+function isNightly(at: Date): boolean {
+  return at.getUTCHours() === 5 && at.getUTCMinutes() < 5;
+}
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -190,17 +196,27 @@ const site = {
     else await handleMediaEvents(batch, env);
   },
 
-  // The one cron (wrangler.jsonc.example): every scheduled update that is due goes live, and IndexNow is told.
-  // A failed one throws after the pass, so the invocation is recorded as failed; the next firing retries it.
-  // Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
+  // The one cron (wrangler.jsonc.example), every five minutes: every scheduled update that is due goes live, and
+  // IndexNow is told; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
+  // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
+  // retries it. Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
   scheduled(controller, env, ctx) {
+    const at = new Date(controller.scheduledTime);
     ctx.waitUntil(
-      (async () => {
-        const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
-        const run = await runCarrelSchedules(env, ctx, new Date(controller.scheduledTime));
-        console.log(JSON.stringify({ schedules: run }));
-        if (run.failed > 0) throw new Error(`${run.failed} scheduled update(s) failed; the next firing retries them`);
-      })(),
+      runJobs(env.DB, [
+        {
+          name: "carrel-schedules",
+          everyMinutes: 5,
+          run: async () => {
+            const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
+            const run = await runCarrelSchedules(env, ctx, at);
+            if (run.failed > 0) throw new Error(`${run.failed} scheduled update(s) failed; the next firing retries them`);
+          },
+        },
+        ...(isNightly(at)
+          ? [{ name: "backup", everyMinutes: 1440, run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
+          : []),
+      ]),
     );
   },
 

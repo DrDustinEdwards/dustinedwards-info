@@ -12,6 +12,7 @@
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.
  */
 
+import { PUBLICATIONS_PREFIX } from "./publications/pdf-redirect.mjs";
 import { SITE_ORIGIN } from "./site-origin.mjs";
 
 const APEX_HOSTS = new Set(["dustinedwards.info", "www.dustinedwards.info"]);
@@ -36,7 +37,11 @@ export function isApexHost(hostname) {
 export function wwwRedirectTarget(hostname, pathname, search) {
   if (hostname.toLowerCase() !== "www.dustinedwards.info") return null;
   const disposition = wordpressDisposition(pathname);
-  const target = disposition?.status === 301 ? disposition.location : `${pathname}${search}`;
+  // The apex drops a trailing slash (canonicalRedirect), except on a paper and an old WordPress address, so it goes in
+  // this same hop: `http://www/about/` is one redirect, not two.
+  const path =
+    disposition === null && !pathname.startsWith(PUBLICATIONS_PREFIX) ? pathname.replace(/(.)\/+$/, "$1") : pathname;
+  const target = disposition?.status === 301 ? disposition.location : `${path}${search}`;
   return new URL(target, SITE_ORIGIN).toString();
 }
 

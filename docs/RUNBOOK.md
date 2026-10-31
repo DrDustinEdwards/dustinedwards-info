@@ -164,12 +164,12 @@ Two paths. Try them in this order.
 ### 4-pre. The retained nightly dump
 
 Since the Knowledge Base, D1 holds rows the repository does not (webmentions, sealed procedure
-versions, inventory lots and locations, lab members and their audit trails). The watchdog asks the
-operator API for `backup_d1` every day at 05:00 UTC. It dumps every table to `dustinedwards-backups`
+versions, inventory lots and locations, lab members and their audit trails). The site Worker's own
+cron runs the `backup` job every day at 05:00 UTC (`workers/app.ts`; by hand, the operator API's `backup_d1`). It dumps every table to `dustinedwards-backups`
 (`BACKUPS`) under `backups/json/<run id>/`, checks the dump against `app/lib/backup/policy.mjs`,
 writes `_complete.json` only if the check passes, then prunes to 14 daily, 8 weekly and 6 monthly runs.
-`/api/health` reports `backup.last_ok` and `backup.age_hours`; a failed run throws in the watchdog,
-which is the alert. Nothing in the dump is a credential: see `EXCLUDED_TABLES` in the policy file.
+`/health` reports `backup.last_ok` and `backup.age_hours` and warns past 26 hours; a failed run is
+the `cron` check's warning there, and its error is in the `cron_runs` row. Nothing in the dump is a credential: see `EXCLUDED_TABLES` in the policy file.
 
 Restore it into a copy first, never over the live database. Download a run, then:
 
