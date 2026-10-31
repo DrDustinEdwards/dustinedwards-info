@@ -139,8 +139,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     /* Guard first, then tee: the cache must store what the reader saw, including the guard's substitution. */
     const upstream = await askStream(env, question);
-    // Set before the guarded stream closes, so it is settled by the time `captured` is.
+    // Set before the guarded stream closes, so they are settled by the time `captured` is.
     let refused = false;
+    let cut = false;
     const { toReader, captured } = teeForCache(
       guardAnswerStream(
         upstream,
@@ -148,14 +149,21 @@ export async function action({ request, context }: Route.ActionArgs) {
         () => {
           refused = true;
         },
+        (reason) => {
+          cut = true;
+          console.error(JSON.stringify({ alert: "ask-answer-cut", reason }));
+        },
       ),
     );
 
     getExecutionContext(context).waitUntil(
       (async () => {
         const answer = await captured;
-        // A refusal may have cut the answer after its first paragraphs: what was shown is not the answer.
-        if (!answer || refused) return;
+        /*
+         * A refusal may have cut the answer after its first paragraphs, and an answer the model did not finish
+         * (stopped at max_tokens) is not the answer either: neither is cached, or every later reader would get it.
+         */
+        if (!answer || refused || cut) return;
 
         /*
          * A no-chunk answer is not cached, or "nothing found" would stick for a week after the answering post

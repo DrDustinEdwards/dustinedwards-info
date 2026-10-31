@@ -4,7 +4,7 @@ import { checkProse, WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
-import { answerDelta, frameFields } from "./sse.mjs";
+import { CUT_EVENT, answerDelta, finishReason, frameFields } from "./sse.mjs";
 
 /** The longest answer: two or three sentences and a follow-up line fit with room to spare. */
 export const ASK_MAX_TOKENS = 400;
@@ -14,7 +14,10 @@ export const ASK_TIMEOUT_MS = 20_000;
 
 /**
  * Sent bare: AI Search embeds and searches the final user message, so any decoration is searched too.
- * Fence markers around it returned zero chunks, since keyword_match_mode defaults to "and".
+ * Fence markers around it returned zero chunks, since keyword_match_mode defaults to "and". That is why the
+ * question is not wrapped in site-runtime's untrusted() (checklist C10): its `<data label="...">` tags would be
+ * searched as words. The system prompt labels this message as data instead (SYSTEM_PROMPT_BOUNDARY_SENTENCE),
+ * and the guard, not the prompt, is what keeps an injected answer off the page and out of the cache.
  *
  * @param {string} question
  * @returns {Array<{ role: "system" | "user", content: string }>}
@@ -195,12 +198,17 @@ const DONE_FRAME = "data: [DONE]\n\n";
  * answer is not the answer. Only the chunks frame and the text reach the reader; other upstream frames are
  * dropped, and the guard writes its own closing [DONE].
  *
+ * An answer the model did not finish (a `finish_reason` other than `stop`, such as `length` at ASK_MAX_TOKENS) is
+ * shown as far as it got, followed by a `cut` event naming the reason, so the reader is told; `onCut` hears it, and
+ * the caller must not cache that answer either.
+ *
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
  * @param {() => void} [onRefused]
+ * @param {(reason: string) => void} [onCut]
  * @returns {ReadableStream}
  */
-export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}) {
+export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}, onCut = () => {}) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 
@@ -216,6 +224,8 @@ export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}
       /** @type {string | null} */
       let chunksFrame = null;
       let shown = false;
+      /** @type {string | undefined} */
+      let stopped;
 
       const refuse = async () => {
         onRefused();
@@ -255,7 +265,9 @@ export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}
               continue;
             }
             try {
-              text += answerDelta(JSON.parse(data)) ?? "";
+              const parsed = JSON.parse(data);
+              text += answerDelta(parsed) ?? "";
+              stopped = finishReason(parsed) ?? stopped;
             } catch {
               // [DONE], a keep-alive or a frame that is not JSON carries no text.
             }
@@ -277,6 +289,10 @@ export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}
           return await refuse();
         }
         if (!release(text)) return await refuse();
+        if (stopped !== undefined && stopped !== "stop") {
+          onCut(stopped);
+          send(`event: ${CUT_EVENT}\ndata: ${JSON.stringify({ reason: stopped })}\n\n`);
+        }
         send(DONE_FRAME);
         controller.close();
       } catch (error) {

@@ -204,3 +204,33 @@ await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", 
   assert.ok(!out.includes("a-draft"), `the draft's key reached the client: ${out}`);
   assert.ok(!out.includes("secret"), `the answer text reached the client: ${out}`);
 });
+
+await test("AN ANSWER CUT AT MAX_TOKENS IS SHOWN AS CUT AND NEVER CACHED; A FINISHED ONE IS NOT FLAGGED", async () => {
+  // C4: the cache stored answers stopped at max_tokens as whole ones. The upstream says why it stopped in
+  // the last frame's finish_reason (OpenAI's shape): "length" is a cut answer, "stop" a finished one.
+  const finishing = (reason) => {
+    const encoder = new TextEncoder();
+    const frames = [
+      `event: chunks\ndata: ${JSON.stringify([chunk("live")])}\n\n`,
+      `data: ${JSON.stringify({ choices: [{ delta: { content: "D1 is Cloudflare's SQL" } }] })}\n\n`,
+      `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: reason }] })}\n\n`,
+      `data: [DONE]\n\n`,
+    ];
+    return new ReadableStream({
+      start(controller) {
+        for (const frame of frames) controller.enqueue(encoder.encode(frame));
+        controller.close();
+      },
+    });
+  };
+
+  const cuts = [];
+  const cut = await drain(guardAnswerStream(finishing("length"), ALL_PUBLIC, undefined, (r) => cuts.push(r)));
+  assert.equal(answerOf(cut), "D1 is Cloudflare's SQL", "what the model wrote is still shown");
+  assert.match(cut, /event: cut\ndata: \{"reason":"length"\}\n\ndata: \[DONE\]\n\n$/, "the reader is told it was cut");
+  assert.deepEqual(cuts, ["length"], "the route hears the cut, and skips the cache");
+
+  const whole = await drain(guardAnswerStream(finishing("stop"), ALL_PUBLIC, undefined, (r) => cuts.push(r)));
+  assert.ok(!whole.includes("event: cut"), whole);
+  assert.deepEqual(cuts, ["length"]);
+});

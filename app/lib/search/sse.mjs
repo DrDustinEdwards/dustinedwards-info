@@ -57,3 +57,20 @@ export function answerDelta(data) {
     ?.choices?.[0]?.delta?.content;
   return typeof delta === "string" ? delta : undefined;
 }
+
+/**
+ * Why the model stopped, from a completion frame's `choices[0].finish_reason` (OpenAI's shape, which AI Search
+ * streams), or undefined for a frame that does not say. `"stop"` is a finished answer; `"length"` is one cut at
+ * `max_tokens`.
+ *
+ * @param {unknown} data a parsed frame's data
+ * @returns {string | undefined}
+ */
+export function finishReason(data) {
+  const reason = /** @type {{ choices?: Array<{ finish_reason?: unknown }> } | null} */ (data)?.choices?.[0]
+    ?.finish_reason;
+  return typeof reason === "string" && reason.length > 0 ? reason : undefined;
+}
+
+/** The event the Ask guard sends after an answer the model did not finish, so the reader is told it was cut. */
+export const CUT_EVENT = "cut";
