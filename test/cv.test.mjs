@@ -152,7 +152,7 @@ await test("a range filter fades exactly the timeline's bars outside it", () => 
     label: "Output per year",
     hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
   });
-  const bars = [...markup.matchAll(/<a [^>]*data-enarratio-key=[^>]*>/g)].map((m) => m[0]);
+  const bars = [...markup.matchAll(/<rect [^>]*data-enarratio-href=[^>]*>/g)].map((m) => m[0]);
   assert.equal(bars.length, years.length, "one bar per year");
   const faded = bars.filter((bar) => bar.includes('data-cv-out=""'));
   const fadedYears = faded.map((bar) => bar.match(/data-enarratio-x="(\d{4})"/)?.[1]).sort();
