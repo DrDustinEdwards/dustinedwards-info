@@ -32,6 +32,7 @@ import type { Route } from "./+types/content-page";
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "capsomer/tokens.css";
 import "enarratio/base.css";
+import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
 
 /**

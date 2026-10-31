@@ -45,6 +45,7 @@ import "~/styles/post-rail.css";
 import "~/styles/evidence-row.css";
 import "capsomer/tokens.css";
 import "enarratio/base.css";
+import "capsomer/chart-frame.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
