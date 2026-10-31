@@ -156,6 +156,10 @@ export default [
     route("media", "routes/admin.media._index.tsx"),
   ]),
 
+  // The hashed admin list for the Access drift check. Under /admin so Access covers it, outside the layout because
+  // the caller is a service token, not a person; the route answers only that token.
+  route("admin/access-drift", "routes/admin.access-drift.ts"),
+
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's
   // middleware admits a person only with an active row in `members`, read on every request. Not /admin, which stays
   // the Primary Owner's alone. Module files are workspace.* because routes/lab.tsx is the public /research/lab.
