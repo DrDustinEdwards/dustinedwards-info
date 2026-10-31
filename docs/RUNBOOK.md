@@ -374,10 +374,13 @@ and confirm the next scheduled watchdog run repairs rather than reports.
 token itself (`app/lib/access.server.ts`: signature against the team's published keys, `aud` equal to
 `ACCESS_AUD`, `iss` equal to the team domain, expiry). Both values are plain vars in `wrangler.jsonc`.
 
-**Who may administer the site is one list: the Access policy `dustinedwards-admin`.** Zero Trust >
-Access > Applications > `dustinedwards-login` > Policies > `dustinedwards-admin` > the Include rule
-"Emails". Add or remove an address there and save; no code, no deploy. Every edit is recorded under
-the email in that person's token.
+**Who may administer the site is the `ADMIN_EMAILS` secret** (comma-separated), and the Access policy
+`dustinedwards-admin` (Zero Trust > Access > Applications > `dustinedwards-login` > Policies >
+`dustinedwards-admin` > the Include rule "Emails") must admit the same people. The Worker checks the
+token's email against `ADMIN_EMAILS` too, so a policy that admits too much makes nobody else an
+administrator (they get a 403). Add or remove an administrator in both: `npx wrangler secret put
+ADMIN_EMAILS` and the policy; no deploy. Unset, nobody is an administrator. Every edit is recorded
+under the email in that person's token.
 
 **Machines** (CI, smoke) cannot sign in, so they use an Access service token in a second policy of
 the same application (action Service Auth), plus the existing `SMOKE_TOKEN` bearer. A service token

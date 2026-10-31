@@ -11,7 +11,7 @@ import { routeContext, throughMiddleware } from "./route-helpers";
 
 const TEAM = "team.cloudflareaccess.com";
 const AUD = "app-tag-0123";
-const VARS = { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
+const VARS = { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD, ADMIN_EMAILS: "Dustin@Example.com, wife@example.com, a@b.c" };
 
 async function signer() {
   const stub = await stubAccess({
@@ -136,12 +136,17 @@ describe("the admin layout with Cloudflare Access", () => {
     return { thrown: null, actor };
   }
 
-  it("admits the person a verified token names, and records them as the actor", async () => {
+  it("admits a person on ADMIN_EMAILS as the actor, and refuses one Access admitted who is not, or anyone when it is unset", async () => {
     const { mint, fetch } = await signer();
     vi.spyOn(globalThis, "fetch").mockImplementation(fetch);
-    const { thrown, actor } = await through(request(await mint({ email: "wife@example.com" })), VARS);
-    expect(thrown).toBeNull();
-    expect(actor).toEqual({ kind: "admin", email: "wife@example.com" });
+    const admitted = await through(request(await mint({ email: "wife@example.com" })), VARS);
+    expect(admitted.actor).toEqual({ kind: "admin", email: "wife@example.com" });
+    const stranger = await through(request(await mint({ email: "stranger@example.com" })), VARS);
+    expect(stranger.actor).toBeUndefined();
+    expect((stranger.thrown as Response).status).toBe(403);
+    const unset = await through(request(await mint({ email: "wife@example.com" })), { ...VARS, ADMIN_EMAILS: "" });
+    expect(unset.actor).toBeUndefined();
+    expect((unset.thrown as Response).status).toBe(403);
   });
 
   it("answers 401 to a token that does not verify, rather than a login page", async () => {
