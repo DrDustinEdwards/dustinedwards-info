@@ -10,6 +10,9 @@ export const ALLOWED = new Map([
   ["image/jpeg", "jpg"],
   ["image/avif", "avif"],
   ["image/gif", "gif"],
+  // Stored as JPEG (site-api's prepareUpload converts them), so the extension is never used.
+  ["image/heic", "jpg"],
+  ["image/heif", "jpg"],
 ]);
 
 // NOT IN THE ALLOWLIST, and refused by name rather than as an unknown type: an SVG can carry script,
@@ -65,19 +68,19 @@ const UPLOAD_ERRORS = {
   "too-large": `That image is over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
   "svg-refused": SVG_REFUSED,
   "content-mismatch":
-    "That file begins as markup, so it is not the image type it was uploaded " +
-    "as. Markup is not accepted: export the image as PNG or WebP.",
+    "That file's bytes are not the image type it was uploaded as. " +
+    "Export the image again as PNG, JPEG or WebP.",
   "images-unavailable":
     "The image could not be measured, because Cloudflare Images did not answer. " +
     "Nothing was stored; try again.",
 };
 
 /**
- * `no-file` is left to each caller, because its repair differs. Takes the BYTES because the type is a
- * claim: SVG bytes declared `image/png` would escape the SVG-as-attachment rule and be served inline.
+ * `no-file` is left to each caller, because its repair differs. The byte signature is site-api's prepareUpload's,
+ * after this: SVG bytes declared `image/png` fail it as `content-mismatch`.
  *
- * @param {{ type: string, bytes: ArrayBuffer }} file what arrived, before any store
- * @returns {{ code: "unsupported-type" | "svg-refused" | "too-large" | "content-mismatch", message: string, status: number } | null}
+ * @param {{ type: string, bytes: { byteLength: number } }} file what arrived, before any store
+ * @returns {{ code: "unsupported-type" | "svg-refused" | "too-large", message: string, status: number } | null}
  */
 export function validateUpload({ type, bytes }) {
   const size = bytes.byteLength;
@@ -103,36 +106,7 @@ export function validateUpload({ type, bytes }) {
     };
   }
 
-  // Last: the only check that reads the payload.
-  if (beginsAsMarkup(bytes)) {
-    return {
-      code: "content-mismatch",
-      message:
-        `Those bytes begin as markup and the declared type is "${type}". ` +
-        `Markup, SVG included, is not accepted: export the image as PNG or WebP.`,
-      status: 415,
-    };
-  }
-
   return null;
-}
-
-/**
- * One byte, `<`: an XML declaration, a doctype, a comment and `<svg` all start with it. The BOM skip
- * matters: a file saved from a Windows editor carries one.
- *
- * @param {ArrayBuffer} bytes
- * @returns {boolean}
- */
-export function beginsAsMarkup(bytes) {
-  const view = new Uint8Array(bytes);
-  let at = 0;
-  if (view[0] === 0xef && view[1] === 0xbb && view[2] === 0xbf) at = 3;
-  // A leading NUL is not skipped: that would be UTF-16, which no allowed type is.
-  while (at < view.length && (view[at] === 0x20 || view[at] === 0x09 || view[at] === 0x0a || view[at] === 0x0d)) {
-    at += 1;
-  }
-  return view[at] === 0x3c;
 }
 
 /**

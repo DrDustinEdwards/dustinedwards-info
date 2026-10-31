@@ -1,4 +1,4 @@
-import { Link, data } from "react-router";
+import { Link, data, redirect } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
@@ -21,9 +21,11 @@ import {
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
+import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
+import { Picture } from "~/components/picture";
+import { contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -70,6 +72,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const post =
     preview?.slug === params.slug ? preview : await getBlogPost(getEnv(context), params.slug);
   if (!post) {
+    // A post Carrel renamed keeps its old address, permanently moved (drizzle/0038_carrel_posts.sql).
+    const moved = await redirectFor(getEnv(context), params.slug);
+    if (moved) throw redirect(`/writing/${moved}`, 301);
     throw data("Not found", { status: 404 });
   }
 
@@ -230,18 +235,10 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             keyTakeaways={post.keyTakeaways ?? null}
           />
 
-          {/* Eager and high priority: this is the LCP element when present. */}
+          {/* Eager and high priority: this is the LCP element when present, and the body's first image gives way. */}
           {post.coverImage && (
             <figure className="post-cover">
-              <img
-                src={post.coverImage}
-                alt={post.coverAlt ?? ""}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                {...coverDimensions(post.coverImage)}
-                {...coverResponsive(post.coverImage)}
-              />
+              <Picture picture={contentPicture(post.coverImage, { alt: post.coverAlt ?? "", priority: true })} />
             </figure>
           )}
 

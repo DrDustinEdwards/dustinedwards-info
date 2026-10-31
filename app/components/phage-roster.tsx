@@ -1,3 +1,7 @@
+import { pictureProps } from "@dustinedwards/site-runtime/image";
+
+import { Picture } from "~/components/picture";
+import { images, mediaSrc } from "~/lib/media/images.mjs";
 import type { Cohort } from "~/lib/roster/compile.mjs";
 
 /**
@@ -9,18 +13,17 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
   return (
     <section aria-labelledby="roster">
       <h2 id="roster">Roster</h2>
-      {cohorts.map((entry, index) => (
+      {cohorts.map((entry) => (
         <section key={entry.year} aria-labelledby={`year-${entry.year}`}>
           <h3 id={`year-${entry.year}`}>{entry.year}</h3>
           {entry.photo ? (
             <figure>
-              <img
-                src={entry.photo.src}
-                width={entry.photo.width}
-                height={entry.photo.height}
-                alt={entry.photo.alt}
-                loading={index === 0 ? "eager" : "lazy"}
-                decoding="async"
+              {/* Below the page's prose, so none is the LCP: every photo loads lazily, through /media's sizes. */}
+              <Picture
+                picture={pictureProps(
+                  images.attributes({ src: mediaSrc(entry.photo.src), width: entry.photo.width, height: entry.photo.height }, "content"),
+                  { alt: entry.photo.alt },
+                )}
               />
             </figure>
           ) : null}

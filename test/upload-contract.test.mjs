@@ -7,7 +7,6 @@ import {
   MAX_BYTES,
   UPLOAD_FORM_INTENT,
   UPLOAD_RETURN_PATH,
-  beginsAsMarkup,
   isFormUpload,
   uploadErrorBody,
   uploadErrorSentence,
@@ -90,18 +89,6 @@ await test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", ()
   );
 });
 
-await test("VALIDATION REFUSES markup declared as a raster, which is the origin rule", () => {
-  // `media.$.ts` serves SVG as an attachment based on the STORED content type,
-  // so SVG bytes stored as image/png would escape it.
-  const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
-  const refusal = validateUpload({ type: "image/png", bytes: svg.buffer });
-
-  assert.equal(refusal.code, "content-mismatch");
-  assert.equal(refusal.status, 415);
-  assert.match(refusal.message, /image\/png/);
-  assert.doesNotMatch(refusal.message, /Upload an SVG/, "the repair must not point at a refused type");
-});
-
 await test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to do", () => {
   const svg = new TextEncoder().encode(
     '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
@@ -131,30 +118,11 @@ await test("SVG is in neither the allowlist nor the picker's accept attribute", 
   assert.doesNotMatch(uploadErrorSentence("unsupported-type"), /svg/);
 });
 
-await test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
-  const encode = (text) => new TextEncoder().encode(text).buffer;
-
-  assert.equal(beginsAsMarkup(encode("<svg/>")), true);
-  assert.equal(beginsAsMarkup(encode("\n\t  <?xml version=\"1.0\"?>")), true);
-  // A UTF-8 BOM (from a Windows editor) in front of the `<` would defeat the check.
-  assert.equal(beginsAsMarkup(buffer(0xef, 0xbb, 0xbf, 0x3c, 0x73)), true);
-
-  assert.equal(beginsAsMarkup(buffer(...PNG_MAGIC)), false, "PNG");
-  assert.equal(beginsAsMarkup(buffer(0xff, 0xd8, 0xff)), false, "JPEG");
-  assert.equal(beginsAsMarkup(buffer(0x52, 0x49, 0x46, 0x46)), false, "WebP/RIFF");
-  assert.equal(beginsAsMarkup(buffer(0x47, 0x49, 0x46, 0x38)), false, "GIF");
-  assert.equal(beginsAsMarkup(buffer(0x00, 0x00, 0x00, 0x20, 0x66, 0x74)), false, "AVIF/ftyp");
-
-  assert.equal(beginsAsMarkup(new ArrayBuffer(0)), false);
-  assert.equal(beginsAsMarkup(buffer(0x20, 0x20, 0x20)), false);
-});
-
 await test("EVERY REFUSAL validateUpload can return is a code the form can render", () => {
   const svg = new TextEncoder().encode("<svg/>").buffer;
   const refusals = [
     validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) }),
     validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES + 1) }),
-    validateUpload({ type: "image/png", bytes: svg }),
     validateUpload({ type: "image/svg+xml", bytes: svg }),
   ];
 

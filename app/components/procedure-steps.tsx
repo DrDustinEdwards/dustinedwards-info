@@ -1,8 +1,10 @@
+import { Picture } from "~/components/picture";
 import { StepCalculators } from "~/components/phage-tool";
 import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";
 import { gramsPerCup, ingredientNames, showQuantity, showTemperatures, stepId, stepIngredients, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
 import { type Step, html } from "~/components/procedure-materials";
+import { contentPicture } from "~/lib/media/images.mjs";
 
 /* The procedure page's method (procedure.tsx): its steps, their flags and the commands they run. */
 
@@ -84,15 +86,7 @@ export function StepItem({
         ),
       )}
       {step.photos.map((p) => (
-        <img
-          key={p.src}
-          className="procedure-photo"
-          src={p.src}
-          alt={p.alt}
-          loading="lazy"
-          decoding="async"
-          {...(p.width && p.height ? { width: p.width, height: p.height } : {})}
-        />
+        <Picture key={p.src} picture={contentPicture(p.src, { ...p, className: "procedure-photo" })} />
       ))}
       {brief
         ? null

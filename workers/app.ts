@@ -5,7 +5,7 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
-import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { cacheTags, EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { THEME_COOKIE } from "capsomer/theme-server";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
 import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
@@ -20,7 +20,7 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
-import { cacheKey, forReader, forRenderer, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
+import { cacheKey, forReader, forRenderer, purgeTags, settleCacheHeaders, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -42,9 +42,9 @@ import { cronJob } from "~/lib/cron-jobs.mjs";
 
 export { AskBudget } from "./ask-budget";
 
-/** The one five-minute firing a day that takes the nightly D1 dump: 05:00 UTC. */
+/** The one firing a day that takes the nightly D1 dump: 05:00 UTC. */
 function isNightly(at: Date): boolean {
-  return at.getUTCHours() === 5 && at.getUTCMinutes() < 5;
+  return at.getUTCHours() === 5 && at.getUTCMinutes() === 0;
 }
 
 const requestHandler = createRequestHandler(
@@ -111,6 +111,15 @@ function applyDocumentHeaders(
  * The cacheable entrypoint; `default` has cache disabled. Document headers belong here, or they are absent from every hit.
  */
 export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
+  /**
+   * The RPC method site-runtime's schedulePurgeHook calls over the Worker's loopback when a Carrel schedule changes a
+   * post (app/lib/carrel/site-api.server.ts): the cron's entrypoint cannot reach this one's cache. Every page that
+   * shows a post carries `posts` (cacheTags). RPC methods bypass the cache.
+   */
+  async purgePages(why: string) {
+    return purgeTags(this.ctx.cache as PurgeCache | undefined, [cacheTags()], why);
+  }
+
   override async fetch(request: Request): Promise<Response> {
     const env = this.env;
     const ctx = this.ctx;
@@ -198,8 +207,8 @@ const site = {
     else await handleMediaEvents(batch, env);
   },
 
-  // The one cron (wrangler.jsonc.example), every five minutes: every scheduled update that is due goes live, and
-  // IndexNow is told; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
+  // The one cron (wrangler.jsonc.example), every minute: every Carrel schedule that is due goes live with the publish
+  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
   // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
   // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
   // Every firing of the one key gets the job list: there is no other key this Worker can receive.
@@ -213,7 +222,7 @@ const site = {
           run: async () => {
             const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
             const run = await runCarrelSchedules(env, ctx, at);
-            if (run.failed > 0) throw new Error(`${run.failed} scheduled update(s) failed; the next firing retries them`);
+            if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
           },
         },
         ...(isNightly(at)

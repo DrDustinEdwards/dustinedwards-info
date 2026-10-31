@@ -402,6 +402,7 @@ export async function upsertMediaRecord(
     focalX?: number | null;
     focalY?: number | null;
     sha256?: string | null;
+    placeholder?: string | null;
   },
 ) {
   const now = new Date().toISOString();
@@ -421,6 +422,7 @@ export async function upsertMediaRecord(
       uploadedAt: record.uploadedAt ?? null,
       width: record.width ?? null,
       height: record.height ?? null,
+      placeholder: record.placeholder ?? null,
       updatedAt: now,
     })
     .onConflictDoUpdate({
@@ -442,6 +444,7 @@ export async function upsertMediaRecord(
         ...(record.focalX !== undefined ? { focalX: record.focalX } : {}),
         ...(record.focalY !== undefined ? { focalY: record.focalY } : {}),
         ...(record.sha256 !== undefined ? { sha256: record.sha256 } : {}),
+        ...(record.placeholder !== undefined ? { placeholder: record.placeholder } : {}),
         // An annotation writer, so it moves the version Carrel holds (writeMediaAtRev).
         rev: sql`${media.rev} + 1`,
         updatedAt: now,

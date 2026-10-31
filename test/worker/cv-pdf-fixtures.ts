@@ -38,7 +38,12 @@ export const fakeAssets = {
 export function collectingContext() {
   const pending: Promise<unknown>[] = [];
   const ctx = {
-    waitUntil: (work: Promise<unknown>) => void pending.push(work),
+    // Like the runtime's waitUntil, which owns a rejection: without the catch, a render that fails before the
+    // test calls settle() is an unhandled rejection (the store's writes now finish the response after it fails).
+    waitUntil: (work: Promise<unknown>) => {
+      work.catch(() => undefined);
+      pending.push(work);
+    },
     passThroughOnException: () => undefined,
   } as unknown as ExecutionContext;
   return { ctx, settle: () => Promise.allSettled(pending.splice(0)) };

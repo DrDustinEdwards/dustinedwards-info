@@ -42,8 +42,7 @@ async function upload(
   overrides: Record<string, unknown> = {},
 ) {
   const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof storeUpload>[0];
-  const bytes = new TextEncoder().encode(file.body).buffer as ArrayBuffer;
-  const stored = await storeUpload(uploadEnv, { bytes, type: file.type, name: file.name });
+  const stored = await storeUpload(uploadEnv, { bytes: bytesFor(file.body), type: file.type, name: file.name });
   return stored.ok
     ? { status: 200, url: `/media/${stored.key}`, key: stored.key, error: undefined }
     : { status: stored.status, url: undefined, key: "", error: stored.message };

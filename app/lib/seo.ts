@@ -1,9 +1,10 @@
-import { defineHead, searchTitle as prelumSearchTitle, type PageHead } from "@drdustinedwards/site-helpers/head";
+import { defineHead, searchTitle as prelumSearchTitle, type HeadImage, type PageHead } from "@drdustinedwards/site-helpers/head";
 import { article, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
 import { TERMS_PATH } from "./license.mjs";
+import { dimensionsFromKey } from "./media/classify.mjs";
 import { canonicalAuthor } from "./publications/authors.mjs";
 import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
@@ -23,7 +24,15 @@ export { SITE_ORIGIN };
 /** The `license` of every Dataset: the site's terms page (app/lib/license.mjs). */
 export const LICENSE_URL = `${SITE_ORIGIN}${TERMS_PATH}`;
 
-const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
+/** The size every share card is drawn at: build:og's cards and the site card. */
+const CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/** A drawn share card as Prelum's head reads it, so og:image carries its size and alt text. */
+export function shareCard(url: string, alt: string): HeadImage {
+  return { url, ...CARD_SIZE, alt };
+}
+
+const DEFAULT_OG_IMAGE = shareCard(`${SITE_ORIGIN}/dustin-edwards-og-image.png`, "A microscope, the site's mark, on purple");
 
 // The person, the role, the headship, the department and the university are the CV's: derived from
 // content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
@@ -54,20 +63,25 @@ type PostSocialFields = {
   ogTitle?: string | null;
   ogDescription?: string | null;
   coverImage?: string | null;
+  coverAlt?: string | null;
   ogImage?: string | null;
 };
 
 export function postSocial(post: PostSocialFields) {
   const canonical = `${SITE_ORIGIN}/writing/${post.slug}`;
   const description = post.description ?? SITE.description;
-  const socialImage = post.coverImage ?? post.ogImage ?? null;
+  // A cover's size is in its key; a drawn card shows the title.
+  const image: HeadImage = post.coverImage
+    ? { url: `${SITE_ORIGIN}${post.coverImage}`, ...dimensionsFromKey(post.coverImage), ...(post.coverAlt ? { alt: post.coverAlt } : {}) }
+    : post.ogImage
+      ? shareCard(`${SITE_ORIGIN}${post.ogImage}`, post.ogTitle ?? post.title)
+      : DEFAULT_OG_IMAGE;
   return {
     canonical,
     description,
     socialTitle: post.ogTitle ?? post.title,
     socialDescription: post.ogDescription ?? description,
-    image: socialImage ? `${SITE_ORIGIN}${socialImage}` : DEFAULT_OG_IMAGE,
-    usingDefaultImage: socialImage === null,
+    image,
   };
 }
 
@@ -103,7 +117,7 @@ export function pageMeta(page: {
   title: string;
   description: string;
   path: string;
-  image?: string;
+  image?: HeadImage | string;
   ogType?: "website" | "article";
   /** `og:title` and `twitter:title`, where they keep more than the search title (a paper's whole title). */
   socialTitle?: string;
@@ -244,7 +258,7 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       description: post.description,
       coverImage: post.coverImage,
       ogImage: post.ogImage ?? null,
-    }).image,
+    }).image.url,
     ...articleFacts(post),
     author: { "@type": "Person", name: SITE.name, url: origin },
     publisher: { "@type": "Person", name: SITE.name, url: origin },

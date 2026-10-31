@@ -179,4 +179,6 @@ export default [
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.
   route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
+  // Carrel's shareable preview links: no key, the token is the address, and the package answers private and noindex.
+  route("preview/:token", "routes/preview.$token.ts"),
 ] satisfies RouteConfig;

@@ -25,7 +25,7 @@ import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
-import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { SITE_ORIGIN, pageMeta, publicHtmlHeaders, shareCard } from "~/lib/seo";
 
 import type { Route } from "./+types/content-page";
 
@@ -73,7 +73,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
 function cardUrl(page: PageRecord) {
   const path = contentPageCardPath(page);
-  return path ? `${SITE_ORIGIN}${path}` : undefined;
+  return path ? shareCard(`${SITE_ORIGIN}${path}`, page.seoTitle) : undefined;
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

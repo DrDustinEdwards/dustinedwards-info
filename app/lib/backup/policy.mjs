@@ -20,16 +20,20 @@ export const NON_DERIVED_TABLES = Object.freeze({
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",
   scheduled_updates: "updates Carrel scheduled on live posts, waiting for their time (0033)",
+  webmention_targets: "the pages each post last sent a webmention to, so a removed link is told too (0037)",
+  content_trash: "the posts in Carrel's trash and since when (0038)",
+  post_redirects: "the old addresses of renamed posts, each answered with a 301 (0038)",
+  scheduled_publishes: "posts scheduled before they were ever live, for the cron to announce (0038)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */
 export const REQUIRED_TABLES = Object.freeze(Object.keys(NON_DERIVED_TABLES));
 
 /**
- * Tables left out of the dump because they hold live credentials or one-time tokens. EMPTY, and
- * deliberately so: no table in the current schema holds either. The Better Auth tables (user,
- * session, account, verification) were dropped by migration 0026, admin sign-in is Cloudflare
- * Access and keeps no row.
+ * Tables left out of the dump because they hold live credentials or one-time tokens. One:
+ * `preview_links` (0037), the SHA-256 of each Carrel preview link's token, since a restore would bring
+ * back links that were revoked or had expired. The Better Auth tables (user, session, account,
+ * verification) were dropped by migration 0026, admin sign-in is Cloudflare Access and keeps no row.
  *
  * The credential-column check is d1-dump's (`credentials: true` in d1-backup.server.ts, its
  * CREDENTIAL_COLUMN): a table added later with a column named for a password, secret, token, key or
@@ -37,4 +41,4 @@ export const REQUIRED_TABLES = Object.freeze(Object.keys(NON_DERIVED_TABLES));
  * renamed. This file held its own copy of that check until d1-dump v0.8.0 took it.
  */
 /** @type {readonly string[]} */
-export const EXCLUDED_TABLES = Object.freeze(/** @type {string[]} */ ([]));
+export const EXCLUDED_TABLES = Object.freeze(["preview_links"]);
