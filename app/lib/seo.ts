@@ -10,6 +10,13 @@ import { decodeEntities } from "./publications/entities.mjs";
 import { paperPath } from "./publications/paths.mjs";
 
 import { SITE_ORIGIN } from "./site-origin.mjs";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  PAGES_CACHE_TAG,
+  UNCACHED,
+  publicPageHeaders,
+} from "@dustinedwards/site-runtime/edge-cache";
 
 export { SITE_ORIGIN };
 
@@ -146,11 +153,10 @@ export function profilePageJsonLd(origin: string, page: { path: string; descript
 }
 
 /**
- * Needs no `Vary`: the theme is part of the cache key in `workers/app.ts`. Never add
- * must-revalidate, proxy-revalidate, no-cache or s-maxage: each disables stale-while-revalidate at
- * Cloudflare (RFC 9111 4.2.4). Browser max-age stays 0 because purges cannot reach a browser.
+ * site-runtime ./edge-cache's strings. Needs no `Vary`: the theme is part of the cache key in `workers/app.ts`.
+ * Browser max-age stays 0 because purges cannot reach a browser.
  */
-export const SHARED_CACHE_CONTROL = "public, max-age=0";
+export { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL };
 
 /** A response whose address changes when its bytes do (hashed media, uploads). */
 export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -161,50 +167,26 @@ export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 /** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
 export const ROBOTS_DISALLOW = ["/admin", "/lab", "/search/ask"];
 
-/**
- * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that
- * lists posts expires at the next scheduled publish_at. Never parse a lifetime back out of a string:
- * a failed parse has to substitute a false lifetime.
- */
-const EDGE_FRESH_SECONDS = 86_400;
-const EDGE_STALE_SECONDS = 604_800;
-
 // Short because the home page carries the latest Germomics episode, which no write purges.
 export const HOME_EDGE_FRESH_SECONDS = 600;
 
-/**
- * A publish_at seconds away would otherwise send a max-age near zero, and every read until it passed
- * would be a render. A minute is the most a scheduled post can lag its time for it.
- */
-const SCHEDULED_FLOOR_SECONDS = 60;
+/** The edge lifetime site-runtime's `publicPageHeaders` gives: a day fresh, a week stale, `until` capping the first. */
+const edgeCacheControl = (freshSeconds?: number, until: Date | null = null, now?: Date) =>
+  publicPageHeaders({ freshSeconds, until, now })[EDGE_CACHE_HEADER] as string;
 
-const edgeCacheControl = (fresh: number) =>
-  `max-age=${fresh}, stale-while-revalidate=${EDGE_STALE_SECONDS}`;
-
-/**
- * Sent as `Cloudflare-CDN-Cache-Control`, not `s-maxage`: `s-maxage` implies proxy-revalidate, so
- * Cloudflare refuses to serve stale and every read past the lifetime blocks on a render.
- */
-export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
+/** The Renderer stamps it on a shared response that names no edge lifetime of its own. */
+export const EDGE_CACHE_CONTROL = edgeCacheControl();
 
 /** Short because the colophon's site-health tile age is the watchdog's liveness. */
 export const HEALTH_EDGE_CACHE_CONTROL = edgeCacheControl(600);
 
 /**
  * The edge policy for a page that lists posts. A scheduled post goes live with no write to purge on,
- * so the page expires when the next one does; with nothing scheduled it is the plain policy.
+ * so the page expires when the next one does (no sooner than a minute); with nothing scheduled it is the plain policy.
  */
-export function scheduledEdgeCacheControl(
-  now: Date,
-  nextPublishAt: Date | null,
-  fresh: number = EDGE_FRESH_SECONDS,
-): string {
-  if (!nextPublishAt) return edgeCacheControl(fresh);
-  const untilPublish = Math.ceil((nextPublishAt.getTime() - now.getTime()) / 1000);
-  return edgeCacheControl(Math.min(fresh, Math.max(SCHEDULED_FLOOR_SECONDS, untilPublish)));
+export function scheduledEdgeCacheControl(now: Date, nextPublishAt: Date | null, fresh?: number): string {
+  return edgeCacheControl(fresh, nextPublishAt, now);
 }
-
-export const EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control";
 
 // A misspelled tag is a purge that silently does nothing: `cache.purge` succeeds on an unmatched tag.
 export function cacheTags(slug?: string): string {
@@ -217,8 +199,6 @@ export function cacheTags(slug?: string): string {
  * `PROCEDURES_CACHE_TAG` names (app/kb/procedures/route.ts); test/worker/cache-tags.test.ts pins both.
  */
 export const POSTS_AND_PROCEDURES_CACHE_TAGS = `${cacheTags()},procedures`;
-
-const PAGES_CACHE_TAG = "pages";
 
 /**
  * The Renderer stamps `EDGE_CACHE_CONTROL` beside `SHARED_CACHE_CONTROL`; pass `edge` only to depart
@@ -234,11 +214,8 @@ export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) 
 
 export const HTML_VARY_ACCEPT = "Accept";
 
-/**
- * Also applied by `workers/app.ts` to any response with no `Cache-Control`, and to cookie-bearing
- * requests on the HTML routes.
- */
-export const NO_STORE_CACHE_CONTROL = "private, no-store";
+/** site-runtime's `UNCACHED`: what settleCacheHeaders gives anything not marked shared. */
+export const NO_STORE_CACHE_CONTROL = UNCACHED;
 
 type ArticleSeo = {
   slug: string;

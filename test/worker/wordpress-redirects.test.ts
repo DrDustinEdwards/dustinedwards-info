@@ -149,7 +149,7 @@ describe("the map's edges", () => {
   });
 
   it("NEVER applies on another host: workers.dev passes the path to the Renderer", async () => {
-    const moved = await get("https://dustinedwards.dustin-edwards.workers.dev/virus-isolation/");
+    const moved = await get("https://dustinedwards.dustin-edwards.workers.dev/virus-isolation");
     expect(moved.status).not.toBe(301);
   });
 });

@@ -16,22 +16,11 @@ import { getNonce } from "~/lib/context";
 import { PRELOADS } from "~/lib/preloads";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
-import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
 import katexCssUrl from "./styles/katex.generated.css?url";
-
-// Middleware, not the loader: loaders run alongside each other, so a collector made in one is
-// invisible to another.
-export const middleware: Route.MiddlewareFunction[] = [
-  async ({ request, context }, next) => {
-    const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
-    context.set(timingsContext, { timings });
-    return next();
-  },
-];
 
 export function loader({ request, context }: Route.LoaderArgs) {
   // The nonce is carried through the loader because `Layout` cannot reach the request context.
