@@ -49,7 +49,7 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const put = async (source: string, expectedVersion: string | null | undefined = undefined, changeId = "chg-llms") =>
+const put = async (source: string, expectedVersion: string | null | undefined = undefined, changeId = `chg-llms-${crypto.randomUUID()}`) =>
   send("PUT", `${PREFIX}/content/${ID}/draft`, {
     source,
     expectedVersion: expectedVersion === undefined ? await versionOf(LLMS_PATH) : expectedVersion,
@@ -120,12 +120,12 @@ describe("an edit through the adapter is live at the next request", () => {
 
     const response = await put(EDITED);
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-llms" });
+    expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: expect.stringMatching(/^chg-llms-/) });
 
     // The repository is the source, and it holds the edit.
     expect((await source(LLMS_PATH))).toBe(EDITED);
     const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
-    expect(message).toContain("[carrel:chg-llms]");
+    expect(message).toContain("[carrel:chg-llms-");
 
     // The next request for /llms.txt carries it, and the row is exactly the file.
     expect(await (await served()).text()).toBe(EDITED);
