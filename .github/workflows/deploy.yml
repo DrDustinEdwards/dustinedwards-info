@@ -71,7 +71,7 @@
 # ## IT REUSES ship.mjs. IT DOES NOT REIMPLEMENT IT.
 #
 # `npm run ship` is the pipeline, in ship's own order, with every refusal it
-# already fails closed on: clean tree, no pending migrations, build, THE FULL
+# already fails closed on: clean tree, pending migrations applied (additive) or refused, build, THE FULL
 # OFFLINE GATE TIER, CI green for this exact sha, deploy, poll to stability,
 # check:content, D1 sync, then both derived indexes converged with the deploy
 # left standing on a miss. Running the gate tier as a separate step before ship

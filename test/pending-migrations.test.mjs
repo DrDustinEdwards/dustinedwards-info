@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applyCommand, readMigrationList } from "../scripts/lib/pending-migrations.mjs";
+import { applyCommand, destructiveStatements, readBookmark, readMigrationList } from "../scripts/lib/pending-migrations.mjs";
 
 /** Verbatim from `wrangler d1 migrations list dustinedwards --local`. */
 const PENDING_REAL = [
@@ -94,4 +94,28 @@ await test("the refusal carries the exact next command, database filled in", () 
     applyCommand("dustinedwards"),
     "npx wrangler d1 migrations apply dustinedwards --remote",
   );
+});
+
+void test("destructiveStatements: additive SQL, trigger bodies and comments pass; anything that can lose data is named", () => {
+  const additive = [
+    "-- drop table posts; is only a comment",
+    "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT DEFAULT 'delete from x');",
+    "ALTER TABLE posts ADD COLUMN canonical TEXT;",
+    "CREATE INDEX notes_body ON notes(body);",
+    "INSERT INTO settings (key, value) VALUES ('a', 'b');",
+    "CREATE TRIGGER notes_ad AFTER DELETE ON notes BEGIN DELETE FROM notes_fts WHERE rowid = old.id; END;",
+  ].join("\n");
+  assert.deepEqual(destructiveStatements(additive), []);
+  assert.deepEqual(destructiveStatements("DROP TABLE session;"), ["DROP"]);
+  assert.deepEqual(destructiveStatements("ALTER TABLE posts DROP COLUMN category;"), ["ALTER TABLE ... DROP or RENAME"]);
+  assert.deepEqual(destructiveStatements("ALTER TABLE media RENAME TO media_old;"), ["ALTER TABLE ... DROP or RENAME"]);
+  assert.deepEqual(destructiveStatements("UPDATE posts SET draft = 0;"), ["UPDATE"]);
+  assert.deepEqual(destructiveStatements("DELETE FROM media;"), ["DELETE"]);
+  assert.deepEqual(destructiveStatements("INSERT OR REPLACE INTO settings VALUES ('a', 'b');"), ["REPLACE"]);
+});
+
+void test("readBookmark: reads wrangler's JSON after its banner, and gives '' when there is none", () => {
+  assert.equal(readBookmark(' ⛅️ wrangler 4.149.0\n{\n  "bookmark": "00000085-0000024c-00004c6d-8e61117bf38d7adb71b934ebbf891683",\n  "timestamp": "2026-10-31T11:00:00Z"\n}'), "00000085-0000024c-00004c6d-8e61117bf38d7adb71b934ebbf891683");
+  assert.equal(readBookmark("✘ [ERROR] Authentication error [code: 10000]"), "");
+  assert.equal(readBookmark('{"bookmark": null}'), "");
 });
