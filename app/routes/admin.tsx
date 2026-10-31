@@ -8,7 +8,7 @@ import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
 import { suggest } from "~/lib/search-suggest";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
-import { accessIdentity } from "~/lib/access.server";
+import { accessIdentity, logRefusal, refusal } from "~/lib/access.server";
 import { adminActorContext } from "~/lib/admin-actor.server";
 import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
@@ -55,7 +55,10 @@ export const middleware: Route.MiddlewareFunction[] = [
      * lookup, cheapest first. An absent Origin is allowed.
      */
     const refused = refuseCrossSite(request);
-    if (refused) return refused;
+    if (refused) {
+      logRefusal(request, "admin", "cross-site", refused.status);
+      return refused;
+    }
 
     /* Read, not created: root's middleware made one first, and a second would discard its marks. */
     const timings = context.get(timingsContext).timings;
@@ -64,14 +67,13 @@ export const middleware: Route.MiddlewareFunction[] = [
       /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page.
          A verified person off ADMIN_EMAILS is a 403: Access let them in, this site does not. */
       const notAdmin = access.reason === "not-admin";
-      throw new Response(notAdmin ? "Refused: this account is not an administrator of this site." : `Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
-        status: notAdmin ? 403 : 401,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "private, no-store",
-          "x-robots-tag": "noindex, nofollow",
-        },
-      });
+      throw refusal(
+        request,
+        "admin",
+        access.reason,
+        notAdmin ? 403 : 401,
+        notAdmin ? "Refused: this account is not an administrator of this site." : `Refused: the Cloudflare Access token did not verify (${access.reason}).`,
+      );
     }
     if (access.kind === "human") {
       context.set(adminActorContext, { kind: "admin", email: access.email });
@@ -80,6 +82,7 @@ export const middleware: Route.MiddlewareFunction[] = [
       const smoke = await authenticateSmoke(env, request);
       if (smoke.kind === "refused") {
         /* A presented credential gets an answer, not a login page: each failure needs a different repair. */
+        if (smoke.status === 401) logRefusal(request, "admin", "smoke-token", 401);
         throw new Response(smoke.error, {
           status: smoke.status,
           headers: {
@@ -93,30 +96,19 @@ export const middleware: Route.MiddlewareFunction[] = [
       if (smoke.kind !== "ok") {
         /* Access vouches for a person only on the apex's /admin; a request that reached here without it
            (workers.dev, a preview, or Access misconfigured) is told where the door is, never signed in. */
-        throw new Response(`Admin signs in at ${SITE_ORIGIN}/admin, through Cloudflare Access.`, {
-          status: 403,
-          headers: {
-            "content-type": "text/plain; charset=utf-8",
-            "cache-control": "private, no-store",
-            "x-robots-tag": "noindex, nofollow",
-          },
-        });
+        throw refusal(request, "admin", "no-access-token", 403, `Admin signs in at ${SITE_ORIGIN}/admin, through Cloudflare Access.`);
       }
 
       /* An allowlist, not a denylist: a route answering PUT tomorrow is refused the day it is written. */
       if (request.method !== "GET" && request.method !== "HEAD") {
-        throw new Response(
+        throw refusal(
+          request,
+          "admin",
+          "smoke-read-only",
+          403,
           `Refused (${SMOKE_READ_ONLY_POLICY}): the smoke credential is READ ONLY. ` +
             `${request.method} is not available to it on any admin route. ` +
             `It may render pages and it may not change anything.`,
-          {
-            status: 403,
-            headers: {
-              "content-type": "text/plain; charset=utf-8",
-              "cache-control": "private, no-store",
-              "x-robots-tag": "noindex, nofollow",
-            },
-          },
         );
       }
 

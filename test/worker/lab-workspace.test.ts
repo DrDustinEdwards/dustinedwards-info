@@ -192,9 +192,9 @@ describe("the /lab gate", () => {
     const lab = signer(LAB_AUD);
     vi.spyOn(globalThis, "fetch").mockImplementation(lab.fetch);
     const noApp = await through(await lab.mint(PRIMARY), { ...VARS, ACCESS_LAB_AUD: "" });
-    expect(noApp.thrown?.status).toBe(503);
+    expect(noApp.thrown?.status).toBe(403);
     const noOwner = await through(await lab.mint(PRIMARY), { ...VARS, PRIMARY_OWNER_EMAIL: "" });
-    expect(noOwner.thrown?.status).toBe(503);
+    expect(noOwner.thrown?.status).toBe(403);
   });
 });
 

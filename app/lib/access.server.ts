@@ -1,5 +1,6 @@
 import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
+import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runtime/log";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -83,4 +84,33 @@ export async function verifyAccessRequest(
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
   if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
   return { kind: "refused", reason: "no-identity" };
+}
+
+/** The headers every /admin and /lab refusal carries. */
+export const REFUSAL_HEADERS = {
+  "content-type": "text/plain; charset=utf-8",
+  "cache-control": "private, no-store",
+  "x-robots-tag": "noindex, nofollow",
+} as const;
+
+/**
+ * A refusal at /admin or /lab (`plane`), written as one OWASP `authz_fail` line (site-runtime ./log) before it goes
+ * back, so a run of refusals shows in Workers Logs. The line carries the plane, the reason and the status, never the
+ * person: the log scrubs any email out of it.
+ */
+export function refusal(
+  request: Request,
+  plane: "admin" | "lab",
+  reason: string,
+  status: 401 | 403,
+  body: string,
+  headers: Record<string, string> = {},
+): Response {
+  logRefusal(request, plane, reason, status);
+  return new Response(body, { status, headers: { ...REFUSAL_HEADERS, ...headers } });
+}
+
+/** The `authz_fail` line alone, for a refusal made elsewhere (site-runtime ./origin's cross-site 403). */
+export function logRefusal(request: Request, plane: "admin" | "lab", reason: string, status: number): void {
+  logEvent(OWASP_EVENTS.authorizationFailure, { ...requestFields(request), plane, reason, status }, { level: "warn" });
 }

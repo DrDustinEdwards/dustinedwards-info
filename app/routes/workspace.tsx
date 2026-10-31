@@ -7,6 +7,7 @@ import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-s
 import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
 import { suggest } from "~/lib/search-suggest";
 import { labIdentity } from "~/lab/access.server";
+import { REFUSAL_HEADERS, logRefusal, refusal } from "~/lib/access.server";
 import { labActorContext, loadLabActor, primaryOwnerSet } from "~/lab/actor.server";
 import { PERMISSION, titleLabel } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
@@ -30,12 +31,6 @@ export function meta() {
 
 export const handle = { hydrate: true };
 
-const PRIVATE = {
-  "content-type": "text/plain; charset=utf-8",
-  "cache-control": "private, no-store",
-  "x-robots-tag": "noindex, nofollow",
-};
-
 /** The words a person with no access reads. It names nobody, and it is the same for a stranger and a removed member. */
 export function noAccessText(email: string): string {
   return `No access. Ask your lab manager to add ${email}.`;
@@ -44,33 +39,34 @@ export function noAccessText(email: string): string {
 /**
  * Default deny: Access must vouch for a person with this application's own token, and that person must hold an
  * active, unexpired row (or be the Primary Owner). Anything else is refused before any child runs, and the row is read
- * on every request, so a removal takes effect on the next click.
+ * on every request, so a removal takes effect on the next click. Every refusal is a 401 or 403 with its `authz_fail`
+ * log line, never a 503: a workspace that is not set up yet refuses like a closed door, and says why.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
-    const refused = refuseCrossSite(request, PRIVATE);
-    if (refused) throw refused;
+    const crossSite = refuseCrossSite(request, REFUSAL_HEADERS);
+    if (crossSite) {
+      logRefusal(request, "lab", "cross-site", crossSite.status);
+      throw crossSite;
+    }
 
     const identity = await labIdentity(env, request);
     if (identity.kind === "refused") {
-      throw new Response(`Refused: the Cloudflare Access token did not verify (${identity.reason}).`, { status: 401, headers: PRIVATE });
+      throw refusal(request, "lab", identity.reason, 401, `Refused: the Cloudflare Access token did not verify (${identity.reason}).`);
     }
     if (identity.kind !== "human") {
-      const configured = Boolean(env.ACCESS_LAB_AUD);
-      throw new Response(
-        configured
-          ? `The lab signs in at ${SITE_ORIGIN}/lab, through Cloudflare Access.`
-          : "The lab workspace is not set up yet: its Cloudflare Access application (ACCESS_LAB_AUD) is not configured.",
-        { status: identity.kind === "service" ? 403 : configured ? 403 : 503, headers: PRIVATE },
-      );
+      if (!env.ACCESS_LAB_AUD) {
+        throw refusal(request, "lab", "not-configured", 403, "The lab workspace is not set up yet: its Cloudflare Access application (ACCESS_LAB_AUD) is not configured.");
+      }
+      throw refusal(request, "lab", identity.kind === "service" ? "service-token" : "no-access-token", 403, `The lab signs in at ${SITE_ORIGIN}/lab, through Cloudflare Access.`);
     }
     if (!primaryOwnerSet(env)) {
-      throw new Response("The lab workspace is not set up yet: PRIMARY_OWNER_EMAIL is not set.", { status: 503, headers: PRIVATE });
+      throw refusal(request, "lab", "no-primary-owner", 403, "The lab workspace is not set up yet: PRIMARY_OWNER_EMAIL is not set.");
     }
 
     const actor = await loadLabActor(env, identity.email, Date.now());
-    if (!actor) throw new Response(noAccessText(identity.email), { status: 403, headers: PRIVATE });
+    if (!actor) throw refusal(request, "lab", "not-a-member", 403, noAccessText(identity.email));
     context.set(labActorContext, actor);
     return next();
   },

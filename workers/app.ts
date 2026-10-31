@@ -222,10 +222,11 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
-// An admin idle for an hour is signed out of Access (site-runtime ./access).
+// A person idle for an hour on either private plane, /admin or /lab, is signed out of Access (site-runtime ./access).
+const IDLE_PREFIXES = ["/admin", "/lab"] as const;
 export default {
   ...site,
-  fetch: (request, env, ctx) => withAdminIdle(request, () => site.fetch(request, env, ctx)),
+  fetch: (request, env, ctx) => withAdminIdle(request, () => site.fetch(request, env, ctx), { prefixes: IDLE_PREFIXES }),
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {

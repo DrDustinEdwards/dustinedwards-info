@@ -397,6 +397,38 @@ the vars and deploy: every request is then treated as not having come through Ac
 **Local development:** `vite dev` on localhost is admitted as `dev@localhost` (only when the build is a
 development build and the host is localhost; a production build compiles that branch out).
 
+## 5c. The lab sign-in (Cloudflare Access)
+
+`/lab` is the lab members' workspace. Lab members are not administrators: they are the people with an
+active row in `members` (managed at `/lab/members`) plus the Primary Owner (`PRIMARY_OWNER_EMAIL`). So
+`/lab` has its own Access application, never `dustinedwards-login`: that application's people are
+administrators (`ADMIN_EMAILS`), and a lab token must never open `/admin` (capsid
+docs/design/design-identity-roles.md). The Worker checks the lab token against `ACCESS_LAB_AUD` and
+refuses an /admin token there, and the reverse at /admin. Until the application exists, `/lab` answers
+403 "not set up yet" and admits nobody. Both planes sign a person out of Access after an hour idle
+(`withAdminIdle`, workers/app.ts), and every refusal at either one writes an `authz_fail` log line.
+
+Set it up once, in the Cloudflare dashboard (Zero Trust):
+
+1. **The group.** Access controls > Rule groups > Add a group. Name `lab-people`. Include: Emails, one
+   per lab member (Capsid's sync keeps it equal to `/lab/members` once it is pinned, step 6). Save, and
+   copy the group's id.
+2. **The application.** Access controls > Applications > Add an application > Self-hosted. Name
+   `dustinedwards-lab-login`. Session duration 24 hours. Public hostname: domain `dustinedwards.info`,
+   path `lab`. Identity providers: One-time PIN only.
+3. **Its people policy.** In that application, Add a policy: name `dustinedwards-lab-members`, action
+   Allow, Include: Rule group `lab-people`. Add a second Include rule, Emails, with the Primary Owner's
+   email, so the Primary Owner gets in with no row.
+4. **Its machine policy** (only when an instrument or CI needs `/lab`): name `dustinedwards-lab-service`,
+   action Service Auth, Include: Service Token, the token for that machine.
+5. **The tag.** In the application's Overview, copy the Application Audience (AUD) tag into
+   `ACCESS_LAB_AUD` in `wrangler.jsonc` and deploy. Check: an unsigned `curl -sI https://dustinedwards.info/lab`
+   answers 302 to `dustinedwards.cloudflareaccess.com`.
+6. **The sync.** Pin the group in Capsid's `access_sync_groups` (the insert in Capsid
+   `migrations/0040_access_sync_groups.sql`, namespace `dustinedwards`, name `lab-people`), and set
+   `CAPSID_ACCESS_SYNC_KEY` on this Worker. Until then `/lab/members` records each change and says
+   Access was not touched; add or remove the email in `lab-people` by hand.
+
 ## 6. Where the logs are
 
 **Workers Logs**, live tail, the first place to look:
