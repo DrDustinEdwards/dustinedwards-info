@@ -93,8 +93,9 @@
 }
 
 /* The counts as the manual's form: ruled boxes sharing their rules. */
-/* Each box is a Capsomer chart frame in its tile form (the count's numbers behind "Show data"), laid out as
-   the manual's form box rather than the frame's grid. */
+/* Each box is a count with its inline sparkline (Capsomer's inline primitive: role="img", named by its
+   numbers, so no frame) and the numbers behind "Show data" in .cap-data, laid out as the manual's form box
+   rather than .cap-data's grid. */
 .cv-stat {
   display: block;
   min-width: 0;
@@ -123,7 +124,7 @@
   font-family: var(--font-sans);
   font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
   font-weight: 700;
-  font-variant-numeric: tabular-nums lining-nums;
+  font-variant-numeric: var(--figures) lining-nums;
   line-height: 1;
 }
 
@@ -131,13 +132,17 @@
    the detail line. */
 .cv-spark {
   display: contents;
-  --enarratio-series-1: var(--brand);
 }
 
-.cv-spark > svg.enarratio {
+.cv-spark-line {
+  display: block;
+  min-width: 0;
+  max-width: 7.5rem;
+}
+
+.cv-spark-line > svg.enarratio {
   display: block;
   width: 100%;
-  max-width: 7.5rem;
   height: auto;
 }
 
@@ -153,20 +158,16 @@
   margin-block-start: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--t-small-size);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--figures);
 }
 
 .cv-timeline {
   margin: 0;
 }
 
-/* The CV's own colors per type, in app/lib/cv/view.mjs CHART_SERIES order, so publications stay purple. */
+/* Colors are capsomer/enarratio.css's series, in app/lib/cv/view.mjs CHART_SERIES order. */
 .cv-timeline-plot {
   min-height: 13.75rem;
-  --enarratio-series-1: var(--chart-purple);
-  --enarratio-series-2: var(--chart-cadet);
-  --enarratio-series-3: var(--chart-claret);
-  --enarratio-series-4: var(--chart-sage);
 }
 
 /* Bars outside the selected year range, marked by app/lib/cv/charts.ts. */
@@ -651,8 +652,8 @@
     font-size: 1.75rem;
   }
 
-  .cv-spark {
-    width: 6rem;
+  .cv-spark-line {
+    max-width: 6rem;
   }
 
   .cv-entry {

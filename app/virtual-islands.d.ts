@@ -11,6 +11,7 @@ declare module "virtual:islands" {
     | "ask"
     | "blog"
     | "catalog"
+    | "charts"
     | "cv"
     | "header"
     | "offline"

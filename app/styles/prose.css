@@ -133,14 +133,6 @@
   margin: 0;
 }
 
-/* A chart's head is its figcaption: the title in ink over the muted finding, as Capsomer's chart frame
-   sets it (posts' charts are not in the frame yet). */
-.prose .enarratio-head .enarratio-title {
-  color: var(--text);
-  font-size: 1rem;
-  font-weight: 600;
-}
-
 /* No opacity on this text: it composites after check:contrast reads the token, so a passing pair can
    ship below 4.5:1. */
 .figure-credit {

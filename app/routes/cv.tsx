@@ -40,8 +40,8 @@ import type { Route } from "./+types/cv";
 
 import "capsomer/tokens.css";
 import "capsomer/status.css";
+import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
-import "enarratio/base.css";
 import "~/styles/cv.css";
 
 /*
@@ -328,8 +328,8 @@ function Stat({
   name: string;
 }) {
   return (
-    <div className="cv-stat cap-chart" data-variant="tile">
-      <dt className="cap-chart-title">{label}</dt>
+    <div className="cv-stat cap-data">
+      <dt>{label}</dt>
       <dd>
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
