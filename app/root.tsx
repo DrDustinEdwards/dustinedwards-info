@@ -8,6 +8,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { iconLinks } from "@drdustinedwards/site-helpers/icons";
 import { errorTitle } from "capsomer/react/error-page";
 import { ThemeColor } from "capsomer/react/theme-switch";
 
@@ -16,22 +17,11 @@ import { getNonce } from "~/lib/context";
 import { PRELOADS } from "~/lib/preloads";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
-import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
 
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
 import katexCssUrl from "./styles/katex.generated.css?url";
-
-// Middleware, not the loader: loaders run alongside each other, so a collector made in one is
-// invisible to another.
-export const middleware: Route.MiddlewareFunction[] = [
-  async ({ request, context }, next) => {
-    const timings: Timings | undefined = wantsTiming(new URL(request.url)) ? [] : undefined;
-    context.set(timingsContext, { timings });
-    return next();
-  },
-];
 
 export function loader({ request, context }: Route.LoaderArgs) {
   // The nonce is carried through the loader because `Layout` cannot reach the request context.
@@ -49,10 +39,7 @@ export function meta({ error }: Route.MetaArgs) {
 
 export const links: Route.LinksFunction = () => [
   // `links` from every matched route are merged and `meta` is NOT, so these ride on every page.
-  { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
-  { rel: "icon", href: "/dustin-edwards-favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/dustin-edwards-apple-touch-icon.png" },
-  { rel: "manifest", href: "/site.webmanifest" },
+  ...iconLinks(),
   // feed+json although served as application/json: readers scan autodiscovery for the feed types.
   {
     tagName: "link",

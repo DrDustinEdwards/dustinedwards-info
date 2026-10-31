@@ -238,7 +238,7 @@ describe("a filter that leaves nothing to chart", () => {
     const res = await chartsLoader({ request: new Request(`${ORIGIN}/cv/charts.json${query}`), context: routeContext(), params: {} } as never);
     return { res, body: (await res.json()) as { timeline: string; papers: string; grants: string; students: string } };
   };
-  const EMPTY = "data-cv-timeline-empty";
+  const EMPTY = 'data-state="nodata"';
   const NONE = "No entries match these filters, so there is nothing to chart.";
   const UNCHARTED = "none of the entries these filters select is one of those";
 

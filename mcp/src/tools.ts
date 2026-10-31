@@ -20,18 +20,19 @@
  * RESPONSES (rule 7) page every list (default 25, at most 100, with has_more)
  * and an input error says how to fix the input.
  *
- * EVERY CALL GOES THROUGH invokeTool, which proves the caller owns what the
- * tool names (rule 12.1), checks the scope (12.3), and writes the append-only
- * log before and after (12.4). A tool handler never runs without all three.
+ * EVERY CALL GOES THROUGH site-runtime's invokeTool (mcp-handler.ts), which
+ * proves the caller owns what the tool names (rule 12.1), checks the scope each
+ * tool declares here (12.3), and writes the append-only log before and after
+ * (12.4). A tool handler never runs without all three.
  */
 
-import { appendAudit, loggedArgs, loggedResult, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { z } from "zod";
 
 import { watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
 
 import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client";
-import { authorizeCall, callerName, SCOPE_READ, SCOPE_WRITE, type Caller, type Scope } from "./auth";
+import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
 
 export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
 
@@ -196,12 +197,45 @@ export interface ToolDefinition {
     title: string;
     description: string;
     inputSchema: z.ZodObject<z.ZodRawShape>;
+    /** What structuredContent holds on success; the SDK validates it there. */
+    outputSchema: z.ZodObject<z.ZodRawShape>;
     annotations: Annotations;
   };
   handler: (env: ToolEnv, args: Record<string, unknown>) => Promise<ToolOutput>;
 }
 
 const READ_ONLY: Annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+
+/**
+ * OUTPUT SCHEMAS. Most tools pass the operator API's answer on as the API wrote
+ * it, so they promise only an object whose fields are the API's; a list says
+ * where its page sits. The two tools that build their own answer describe it.
+ */
+const API_ANSWER = z.looseObject({});
+const PAGED_ANSWER = z.looseObject({
+  page: z
+    .object({ offset: z.number(), limit: z.number(), total: z.number(), has_more: z.boolean(), next_offset: z.number().nullable() })
+    .optional(),
+});
+const SITE_CHECK = z.object({
+  pipeline: z.unknown(),
+  health: z.object({
+    status: z.number(),
+    ok: z.boolean(),
+    failing: z.array(z.string()),
+    checks: z.array(z.unknown()),
+    unreachable: z.string().optional(),
+  }),
+});
+const REPAIR_REPORT = z.object({
+  healthy: z.boolean(),
+  repaired: z.array(z.record(z.string(), z.unknown())),
+  note: z.string().optional(),
+  failing: z.array(z.string()).optional(),
+  stopped: z.string().optional(),
+  still_failing: z.array(z.string()).optional(),
+  verdict: z.string().optional(),
+});
 
 /**
  * Which operator tools each registry kind reads through. The keys are the
@@ -243,6 +277,7 @@ export const TOOLS: ToolDefinition[] = [
         "the names of any failing. A failing check whose name ends in -drift is a derived store behind " +
         "its source, which dei_repair_drift converges. Read only.",
       inputSchema: z.object({}),
+      outputSchema: SITE_CHECK,
       annotations: READ_ONLY,
     },
     handler: async (env) => {
@@ -286,6 +321,7 @@ export const TOOLS: ToolDefinition[] = [
         "a full upload, so an ask-index-drift still failing straight after sync_ask is worth one more " +
         "dei_check_site before calling it a miss.",
       inputSchema: z.object({}),
+      outputSchema: REPAIR_REPORT,
       annotations: {
         readOnlyHint: false,
         // Not destructive: a sync removes a derived row only when its source
@@ -359,6 +395,7 @@ export const TOOLS: ToolDefinition[] = [
         limit: limitSchema,
         offset: offsetSchema,
       }),
+      outputSchema: PAGED_ANSWER,
       annotations: READ_ONLY,
     },
     handler: (env, args) =>
@@ -383,6 +420,7 @@ export const TOOLS: ToolDefinition[] = [
         mention_id: z.number().int().positive().describe("The mention's id, from dei_review_mentions."),
         decision: z.enum(["approve", "reject"]).describe("approve or reject."),
       }),
+      outputSchema: API_ANSWER,
       annotations: {
         readOnlyHint: false,
         // Not destructive: approve and reject are each undone by the other.
@@ -433,6 +471,7 @@ export const TOOLS: ToolDefinition[] = [
           .optional()
           .describe("Optional. The filename to record as the image's original name. Defaults to the URL's last segment."),
       }),
+      outputSchema: API_ANSWER,
       annotations: {
         readOnlyHint: false,
         // Not destructive: the key is a digest of the bytes, so the only object
@@ -464,6 +503,7 @@ export const TOOLS: ToolDefinition[] = [
         "then reads both back and reports objects, twins, missing and mismatched, counted after the " +
         "writes. COPIES ONLY: it has no delete in either bucket and never copies backup to media.",
       inputSchema: z.object({}),
+      outputSchema: API_ANSWER,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     handler: (env) => run(env, "backup_media", {}),
@@ -502,6 +542,7 @@ export const TOOLS: ToolDefinition[] = [
         limit: limitSchema,
         offset: offsetSchema,
       }),
+      outputSchema: PAGED_ANSWER,
       annotations: READ_ONLY,
     },
     handler: async (env, args) => {
@@ -540,6 +581,7 @@ export const TOOLS: ToolDefinition[] = [
           .optional()
           .describe("Optional. The DOIs to refresh. Omit for every published paper."),
       }),
+      outputSchema: API_ANSWER,
       annotations: {
         readOnlyHint: false,
         // Not destructive: a count that cannot be read keeps its old value.
@@ -569,6 +611,7 @@ export const TOOLS: ToolDefinition[] = [
         "new DOI once.",
       inputSchema: z.object({}),
       // Open world: it reads ORCID and Crossref.
+      outputSchema: API_ANSWER,
       annotations: { ...READ_ONLY, openWorldHint: true },
     },
     handler: (env) => run(env, "check_publications", {}),
@@ -612,6 +655,7 @@ export const TOOLS: ToolDefinition[] = [
         limit: limitSchema,
         offset: offsetSchema,
       }),
+      outputSchema: PAGED_ANSWER,
       annotations: {
         readOnlyHint: false,
         // Not destructive: a save is a new commit on top of history and the
@@ -637,67 +681,3 @@ export const TOOLS: ToolDefinition[] = [
     },
   },
 ];
-
-/**
- * THE ONE DOOR TO A TOOL HANDLER.
- *
- * In order: prove the caller owns what the tool names and holds its scope
- * (a refusal is logged and nothing is sent), write the `started` row (and
- * refuse if the log cannot be written, so no call runs unlogged), run the tool,
- * write the `finished` row. The log rows name the caller and never carry a
- * credential.
- */
-export async function invokeTool(
-  env: ToolEnv,
-  caller: Caller | undefined,
-  tool: ToolDefinition,
-  args: Record<string, unknown>,
-): Promise<ToolOutput> {
-  const scope = typeof tool.scope === "function" ? tool.scope(args) : tool.scope;
-  const refused = authorizeCall(env, caller, scope);
-  const callId = crypto.randomUUID();
-  const who = caller ? callerName(caller) : "unknown";
-  const logged = await loggedArgs(args);
-
-  if (refused || !caller) {
-    const output = inputError(refused ?? "Refused.");
-    // A refusal is a call too, and is logged; it sent nothing, so a failed
-    // write here goes to the Worker log rather than changing the answer.
-    await appendAudit(env, { callId, phase: "refused", caller: who, tool: tool.name, args: logged, result: loggedResult(output) }).catch(
-      (cause) => console.error(JSON.stringify({ audit: "tool-call-log-refusal-failed", callId, caller: who, tool: tool.name, error: String(cause) })),
-    );
-    return output;
-  }
-  try {
-    await appendAudit(env, { callId, phase: "started", caller: who, tool: tool.name, args: logged });
-  } catch (cause) {
-    return inputError(
-      `Refused: the tool-call log could not be written (${cause instanceof Error ? cause.message : String(cause)}), ` +
-        "and no tool runs unlogged. Nothing was sent to the site.",
-    );
-  }
-
-  const output = await tool.handler(env, args);
-
-  try {
-    await appendAudit(env, {
-      callId,
-      phase: "finished",
-      caller: who,
-      tool: tool.name,
-      args: logged,
-      result: loggedResult(output),
-    });
-  } catch (cause) {
-    console.error(
-      JSON.stringify({
-        audit: "tool-call-log-finish-failed",
-        callId,
-        caller: who,
-        tool: tool.name,
-        error: cause instanceof Error ? cause.message : String(cause),
-      }),
-    );
-  }
-  return output;
-}

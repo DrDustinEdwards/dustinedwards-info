@@ -65,6 +65,8 @@ jobs:
       # here used to say v4, which was false about its own sha and is exactly
       # the mislabel that gets a pin "restored" to the wrong release.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       # The version is READ FROM .nvmrc rather than written here. A second
       # statement of the Node version is a mirror, and this repo has been bitten
@@ -154,7 +156,7 @@ jobs:
   #   check:wrapper        the no-policy law and the security floor, read off the real source,
   #                        the config, and the site's operator tool list
   #   check:wrapper:plant  that the gate above actually fails, one planted violation at a time
-  #   test                 the tools, ownership, scope, the log and registration, against a fake site
+  #   test                 the tools, their declared scopes and output schemas, against a fake site
   #   build                a dry-run bundle: typecheck is not a build
   mcp:
     name: Admin MCP, clean checkout
@@ -166,6 +168,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:

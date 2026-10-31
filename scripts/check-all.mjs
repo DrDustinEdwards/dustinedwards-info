@@ -50,13 +50,14 @@ export const TIERS = {
   "check:contrast": "offline",
   "check:secrets": "offline",
   "check:migrations": "offline",
+  // The console.* ratchet (devkit-console, .console.json): raw calls in server code may only go down.
+  "check:console": "offline",
   "check:policy": "offline",
   "check:ask-guards": "offline",
   "check:test-assertions": "offline",
   "check:enhance-a11y": "offline",
   // Offline: the renderer takes alt from the reference alone, never from the media index in D1.
   "check:alt-text": "offline",
-  "check:headers": "offline",
   "check:urls": "offline",
   // Offline: the address book is built from the sources, never from D1, R2 or the network.
   "check:links": "offline",

@@ -32,8 +32,10 @@
 	// invocation log is enriched with the request context. This Worker has no
 	// requests, so the setting costs nothing here and states the account-wide
 	// stance rather than leaving one Worker as the exception nobody notices.
+	// head_sampling_rate stated (area 8, L1): every log kept, at four firings an hour.
 	"observability": {
 		"enabled": true,
+		"head_sampling_rate": 1,
 		"logs": {
 			"invocation_logs": false
 		},
@@ -45,15 +47,14 @@
 	// decides when the colophon calls its health verdict stale, and
 	// the two must mean the same number of seconds: change them together.
 	//
-	// FOUR FIRINGS DO EXTRA JOBS, each in its own quarter hour so neither collides with the health
+	// THREE FIRINGS DO EXTRA JOBS, each in its own quarter hour so neither collides with the health
 	// poll or with each other: Sunday 03:00 to 03:14 UTC calls the operator API's refresh_citations
 	// (isCitationRefreshWindow, workers/watchdog.ts), so the publication citation counts stay
 	// current; every day 04:00 to 04:14 UTC calls purge_zero_results (isZeroResultPurgeWindow,
 	// workers/watchdog.ts), so expired zero-result search queries are removed without the admin
-	// Tools page's old button; every day 05:00 to 05:14 UTC calls backup_d1 (isD1BackupWindow, workers/watchdog.ts), the nightly D1 dump
-	// into the BACKUPS bucket; every day 06:00 to 06:14 UTC calls check_publications
-	// (isPublicationCheckWindow, workers/watchdog.ts) and mails each new DOI once. All four windows are in code, not a second or third entry here, which
-	// would also fire the health poll again. The site Worker keeps `crons: []` either way.
+	// Tools page's old button; every day 06:00 to 06:14 UTC calls check_publications
+	// (isPublicationCheckWindow, workers/watchdog.ts) and mails each new DOI once. All three windows are in code, not a second or third entry here, which
+	// would also fire the health poll again. The nightly D1 dump is the site Worker's own cron job (workers/app.ts).
 	"triggers": {
 		"crons": ["*/15 * * * *"]
 	},

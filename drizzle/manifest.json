@@ -1,5 +1,6 @@
 {
-  "note": "sha256 of each migration. check:migrations compares against this. Adding a migration means adding its hash in the same commit.",
+  "note": "sha256 of each migration. devkit-migrations (run by check:migrations) compares against this. Adding a migration means adding its hash in the same commit.",
+  "expand_only_after": "0036_cron_runs.sql",
   "sha256": {
     "0001_init.sql": "8e5137edc0989174b77aecc9298c4484e316c943faa3446463aa7ae8cac6d1c3",
     "0002_blog_content.sql": "abba6c483bd0b2fd8b492f1d85a8384c55b16a2e730568637e9c5d38e72f9fe3",
@@ -36,6 +37,9 @@
     "0033_scheduled_updates.sql": "792962a08972b9744fc53c8c26eff47f8f256d7619c1f7c5a5c4615c912216a6",
     "0034_media_rev.sql": "240d27c48d2fbfe8f41ae9eb99cbf502468a2a290cd2af3e139fa2226a2573fe",
     "0035_media_library.sql": "a904031f8d3163bab07e3e8822c5f6bcb5693c5c850f09e6a4ede00868bdf543",
-    "0036_post_search_fields.sql": "dbf7bb8a8385fa34533b573d907be44b3c523a1ff08b646e9deec57f5b50e058"
+    "0036_cron_runs.sql": "1ced44bced303be4248e8d23d1412118fde07378340a24c6bd8423e12e0b0967",
+    "0037_site_api_store.sql": "d1b6bccdf40f4570f05f33a80b48fb23d89b753e001caf562e471fbdf058a53c",
+    "0038_carrel_posts.sql": "c82e248491d96c5e4d0aab1eaa9d545b017b1e182e8691c62a5161cfd981653b",
+    "0039_post_search_fields.sql": "dbf7bb8a8385fa34533b573d907be44b3c523a1ff08b646e9deec57f5b50e058"
   }
 }

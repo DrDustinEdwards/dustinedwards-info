@@ -5,7 +5,7 @@
 // `content/posts` is absent: post citations belong to the other tracker, and an asset must not claim both.
 export const SOURCE_ROOTS = ["app", "workers"];
 
-export const SOURCE_FILES = ["public/site.webmanifest", "content/features.json"];
+export const SOURCE_FILES = ["content/features.json"];
 
 // Each paper's file names its PDF by path (`pdfPath`) and each dictionary entry its pronunciation clip (`audio`), so
 // these markdown files are sources: without them every hosted PDF and clip would read as unreferenced. Passed

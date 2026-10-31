@@ -71,7 +71,7 @@
 # ## IT REUSES ship.mjs. IT DOES NOT REIMPLEMENT IT.
 #
 # `npm run ship` is the pipeline, in ship's own order, with every refusal it
-# already fails closed on: clean tree, no pending migrations, build, THE FULL
+# already fails closed on: clean tree, pending migrations applied (additive) or refused, build, THE FULL
 # OFFLINE GATE TIER, CI green for this exact sha, deploy, poll to stability,
 # check:content, D1 sync, then both derived indexes converged with the deploy
 # left standing on a miss. Running the gate tier as a separate step before ship
@@ -111,14 +111,10 @@ on:
   schedule:
     - cron: "23 */6 * * *"
 
-# `actions: write` is not decoration. Ship reads the Actions API to learn whether
-# CI concluded success for this exact sha, and refuses if it cannot; and its last
-# step starts browser.yml against the deploy, which is a dispatch.
-# Without read the deploy fails closed; without write it stands and reports the
-# browser test as a miss.
+# Read only by default. `decide` only reads main's tip; the one write grant is on
+# the `ship` job, which is where it is used.
 permissions:
   contents: read
-  actions: write
 
 # QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
 # leave the account serving whichever one happened to finish last, which is not
@@ -188,6 +184,14 @@ jobs:
     # convergence window of up to 2 minutes, on top of a build and the full gate
     # tier. Measured locally at roughly 6 to 9 minutes end to end.
     timeout-minutes: 30
+    # `actions: write` is not decoration. Ship reads the Actions API to learn whether
+    # CI concluded success for this exact sha, and refuses if it cannot; and its last
+    # step starts browser.yml against the deploy, which is a dispatch.
+    # Without read the deploy fails closed; without write it stands and reports the
+    # browser test as a miss.
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       # SHA-pinned, same commits the other two workflows pin: actions/checkout
@@ -200,6 +204,10 @@ jobs:
           # Full history, because ship's first step is `git pull --ff-only`
           # against origin/main, and a fast-forward check needs the ancestry.
           fetch-depth: 0
+          # The token is not left in .git/config while npm ci, the build and ship
+          # run beside the Cloudflare secrets. Nothing here pushes, and the repo is
+          # public, so ship's `git pull --ff-only` needs no credential.
+          persist-credentials: false
 
       # SHIP PULLS BEFORE IT DOES ANYTHING ELSE, and a checkout of a sha is a
       # detached HEAD with no upstream, so run 36218900911 refused at step 1
@@ -402,6 +410,30 @@ jobs:
           OPERATOR_TOKEN_FILE: ${{ runner.temp }}/operator-token
           GH_TOKEN: ${{ github.token }}
         run: npm run ship
+
+      # THE ADMIN MCP SHIPS IN THE SAME RUN, after the site it binds. It was the
+      # one Worker still shipped from Dustin's laptop (`npm run ship:mcp`); this
+      # is that same command, with its own gates, deploy and live discovery
+      # checks. Its config is gitignored, so it is rebuilt from the tracked
+      # example and the live Worker's own bindings: no new secret.
+      - name: Write the admin MCP config
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/apply-mcp-config.mjs
+
+      - name: npm run ship:mcp
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: npm run ship:mcp
+
+      # devkit-warm fetches every sitemap page once, so the first reader of each page after a deploy gets a stored page
+      # rather than a render: the "Warm the stored pages" step of devkit's worker-deploy.yml, which this deploy does not
+      # use. It never fails the job.
+      - name: Warm the stored pages
+        run: npx devkit-warm https://dustinedwards.info
 
       # Even when ship fails. The runner is ephemeral, so this is belt beside
       # braces, and a credential that outlives its use because a step failed is

@@ -72,6 +72,11 @@ export function meta({ loaderData }: Route.MetaArgs) {
       title,
       description,
       path: loaderData?.canonicalPath ?? PUBLICATIONS_URL,
+      pageType: "CollectionPage",
+      trail: [
+        ["Research", "/research"],
+        ["Publications", PUBLICATIONS_URL],
+      ],
     }),
     ...(loaderData?.noindex ? [{ name: "robots", content: "noindex, follow" }] : []),
   ];

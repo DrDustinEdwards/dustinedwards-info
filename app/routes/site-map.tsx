@@ -2,7 +2,7 @@ import { Link, data } from "react-router";
 
 import { PageShell } from "~/components/page-shell";
 import { getEnv } from "~/lib/context";
-import { EDGE_CACHE_HEADER, SITE, pageMeta, publicHtmlHeaders, scheduledEdgeCacheControl } from "~/lib/seo";
+import { EDGE_CACHE_HEADER, publicHtmlHeaders, scheduledEdgeCacheControl, siteHead } from "~/lib/seo";
 import { SITE_MAP_PATH, lineText, siteMapSections } from "~/lib/site-map.mjs";
 import { SITE_URLS_CACHE_TAGS, gatherSiteUrls } from "~/lib/site-urls.server";
 
@@ -29,8 +29,8 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta() {
-  return pageMeta({
-    title: `Site map | ${SITE.name}`,
+  return siteHead({
+    title: "Site map",
     description: "Every page on this site by its title, grouped as the header menu groups them.",
     path: SITE_MAP_PATH,
   });

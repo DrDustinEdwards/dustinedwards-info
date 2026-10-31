@@ -13,7 +13,7 @@ import { lineageFor } from "~/kb/procedures/lineage.server";
 import { libraryItems, workflowContext } from "~/kb/procedures/library.mjs";
 import { proofFor } from "~/kb/procedures/proof.server";
 import { procedureTrail, PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
-import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure";
 
@@ -56,7 +56,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record, draft } = loaderData;
   return [
-    ...pageMeta({ title: record.seoTitle, description: record.description, path: record.path }),
+    ...pageMeta({ title: record.seoTitle, description: record.description, path: record.path, trail: procedureTrail(record) }),
     { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${record.path}.md` },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
@@ -66,16 +66,9 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
   const { record, draft, count, factor, units, workflow, proof, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
-  const blocks = [breadcrumbJsonLd(SITE_ORIGIN, trail), procedureJsonLd(record, SITE_ORIGIN, person, lineage)];
   return (
     <PageShell
-      trail={
-        <>
-          {blocks.map((block, i) => (
-            <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }} />
-          ))}
-        </>
-      }
+      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)) }} />}
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>

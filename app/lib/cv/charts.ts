@@ -4,18 +4,19 @@
  * route renders them into the page, so they are in the HTML with script off, and /cv/charts.json
  * renders them again for app/enhance/cv.ts when a filter changes. Both get markup back.
  *
- * Enarratio's stylesheet is app/styles/enarratio.css (scripts/build-chart-css.mjs), because the public
- * policy allows no inline <style>. With script off each bar is a link to its year's filtered page;
- * its enhancement layer (enarratio/enhance) turns the bars into keyboard filter buttons and reports a
- * selection as an `enarratio:select` event, which app/enhance/cv.ts turns into a year range.
+ * The timeline is Enarratio's figure in Capsomer's chart frame, styled by Capsomer's token mapping
+ * (capsomer/tokens.css) and Enarratio's base.css. With script off each bar is a link to its year's
+ * filtered page; its enhancement layer (enarratio/enhance) turns the bars into keyboard filter buttons
+ * and reports a selection as an `enarratio:select` event, which app/enhance/cv.ts turns into a year range.
  */
 
-import { sparkline } from "enarratio";
+import { frameHtml, noDataHtml } from "capsomer/behavior/chart-frame";
+import { dataTableBlock, sparkline } from "enarratio";
 import { barChart } from "enarratio/plot";
 
 import { TIMELINE_ID } from "./view.mjs";
 
-type TimelineSeries = { key: string; label: string; token: string; values: number[] };
+type TimelineSeries = { key: string; label: string; values: number[] };
 
 export type TimelineInput = {
   years: number[];
@@ -35,22 +36,16 @@ export type TimelineInput = {
 export type SparklineInput = {
   years: number[];
   values: number[];
-  selected: [number, number] | null;
+  /** What is counted, for the table's column and name: "Publications". */
+  name: string;
   label: string;
 };
 
 const TIMELINE = { width: 640, height: 220 };
 
-const NOTHING_TO_CHART = "There is nothing to chart for these filters.";
+const TIMELINE_TITLE = "Output by year";
 
-/**
- * The timeline's place when nothing is charted: one plain sentence in the page's note style, marked so
- * app/enhance/cv.ts knows no Enarratio figure is there. The text is ours, never a visitor's, so it is not escaped.
- */
-const EMPTY_TIMELINE_ATTR = "data-cv-timeline-empty";
-function emptyTimeline(text: string): string {
-  return `<p class="cv-timeline-hint" ${EMPTY_TIMELINE_ATTR}="">${text}</p>`;
-}
+const NOTHING_TO_CHART = "There is nothing to chart for these filters.";
 
 /**
  * One row per counted entry, which is the shape Enarratio counts. The bars outside the selected range
@@ -62,11 +57,13 @@ export function timelineSvg(input: TimelineInput): string {
   const rows = series.flatMap((s) =>
     years.flatMap((year, i) => Array.from({ length: s.values[i] ?? 0 }, () => ({ year, type: s.label }))),
   );
-  // Enarratio throws "data is empty" for no rows, which would be a 500 for a filter that selects nothing chartable.
-  if (rows.length === 0) return emptyTimeline(input.emptyText ?? NOTHING_TO_CHART);
+  // Enarratio throws "data is empty" for no rows, which would be a 500 for a filter that selects nothing chartable;
+  // the frame's no-data state (data-state="nodata") stands in its place, which app/enhance/cv.ts looks for.
+  if (rows.length === 0) return noDataHtml(TIMELINE_TITLE, input.emptyText ?? NOTHING_TO_CHART);
   const width = Math.max(280, Math.round(input.width ?? TIMELINE.width));
   const markup = barChart({
     id: TIMELINE_ID,
+    title: TIMELINE_TITLE,
     data: rows,
     x: "year",
     series: "type",
@@ -76,14 +73,13 @@ export function timelineSvg(input: TimelineInput): string {
     maxXTicks: width < 520 ? 5 : width < 1000 ? 11 : years.length,
     xDomain: years,
     seriesDomain: series.map((s) => s.label),
-    colors: Object.fromEntries(series.map((s) => [s.label, s.token])),
     xLabel: null,
-    yLabel: null,
+    yLabel: "Entries",
     alt: input.label,
     width,
     height: TIMELINE.height,
   });
-  return fadeOutside(markup, selected);
+  return frameHtml(fadeOutside(markup, selected));
 }
 
 /**
@@ -97,7 +93,12 @@ function fadeOutside(markup: string, selected: [number, number] | null) {
   );
 }
 
-/** A line of per-year values; the number beside it carries the value. */
+/**
+ * A line of per-year values beside its count (a chart in a sentence, so no frame), with its numbers by
+ * year behind "Show data".
+ */
 export function sparklineSvg(input: SparklineInput): string {
-  return sparkline({ values: input.values, alt: input.label, area: true, color: "var(--brand)" });
+  const svg = sparkline({ values: input.values, alt: input.label, area: true, inline: true });
+  const table = { columns: ["Year", input.name], rows: input.years.map((year, i) => [String(year), String(input.values[i] ?? 0)]) };
+  return svg + dataTableBlock(table, `${input.name} per year`);
 }

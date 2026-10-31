@@ -30,7 +30,9 @@ import { SITE_ORIGIN, pageMeta, publicHtmlHeaders, shareCard } from "~/lib/seo";
 import type { Route } from "./+types/content-page";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "enarratio/base.css";
+import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
 
 /**
@@ -76,12 +78,13 @@ function cardUrl(page: PageRecord) {
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
-  const { page, draft } = loaderData;
+  const { page, trail, draft } = loaderData;
   return [
     ...pageMeta({
       title: page.seoTitle,
       description: page.description,
       path: page.path,
+      trail,
       image: cardUrl(page),
       markdown: contentPageMarkdownPath(page.path),
       noindex: draft,
@@ -98,7 +101,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       rail={sections.length >= CONTENTS_MIN ? <PageContents sections={sections} /> : null}
       trail={
         <>
-          {contentPageJsonLd(page, trail, entry).map((block, i) => (
+          {contentPageJsonLd(page, entry).map((block, i) => (
             <script
               key={i}
               type="application/ld+json"

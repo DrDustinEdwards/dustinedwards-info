@@ -1,18 +1,22 @@
-import { accessKeys, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
+import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
+import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runtime/log";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
- * for each request it lets through; this reads that token and trusts nothing else. The allowed people
- * live in ONE place, the Access policy (Zero Trust > Access > Applications > dustinedwards-login >
- * Policies): anyone it admits holds a token for this application, so adding or removing an
- * administrator is a policy edit and no code or deploy.
+ * for each request it lets through; this reads that token and trusts nothing else. The administrators
+ * are ADMIN_EMAILS (a secret, comma-separated, read by site-runtime's `adminEmails`), checked here as
+ * well as by the Access policy (Zero Trust > Access > Applications > dustinedwards-login > Policies),
+ * so a policy that admits too much still makes nobody else an administrator. Unset, nobody is.
  *
  * The token check itself (signature by a published key, RS256 pinned, issuer, audience, dates, the
  * cached key set) is the family's one copy, `@dustinedwards/site-runtime/access`. What is here is the
  * site's own reading of a verdict:
  *
  * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
+ *   From `accessIdentity`, also on ADMIN_EMAILS; a person Access admitted who is not is `refused`
+ *   (`not-admin`). /lab's identity (app/lab/access.server.ts) is not checked against the list: its
+ *   members are not administrators, and their rows decide what they may do.
  * - `service`: an Access service token (no person). Never an administrator; it only gets a request
  *   past Access, and the bearer credentials below still decide what it may do.
  * - `absent`: no token, or this Worker has no Access configuration.
@@ -49,13 +53,17 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
   // The header is added only on paths the Access application covers (/admin). The same token also
   // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
-  return verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+  const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+  if (identity.kind !== "human" || localDevelopment(request)) return identity;
+  if (adminEmails(env).includes(identity.email)) return identity;
+  return { kind: "refused", reason: "not-admin" };
 }
 
 /**
  * One Access application's verdict on a request, as this site reads it: its token, from the header (or, with `cookie`,
  * the `CF_Authorization` cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their
- * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws.
+ * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws. Nothing
+ * here logs: the route that answers a refusal writes its one `authz_fail` line (`refusal` below).
  */
 export async function verifyAccessRequest(
   env: Env,
@@ -72,10 +80,42 @@ export async function verifyAccessRequest(
   let source: KeySource | undefined;
   const lazyKeys: KeySource = (kid, fresh) => (source ??= keys(teamDomain))(kid, fresh);
   const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
-  if (!verdict.ok) return verdict.reason === "not-configured" || verdict.reason === "no-token" ? { kind: "absent" } : { kind: "refused", reason: verdict.reason };
+  if (!verdict.ok) {
+    if (verdict.reason === "not-configured" || verdict.reason === "no-token") return { kind: "absent" };
+    return { kind: "refused", reason: verdict.reason };
+  }
 
   const { email, common_name: commonName } = verdict.claims;
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
   if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
   return { kind: "refused", reason: "no-identity" };
+}
+
+/** The headers every /admin and /lab refusal carries. */
+export const REFUSAL_HEADERS = {
+  "content-type": "text/plain; charset=utf-8",
+  "cache-control": "private, no-store",
+  "x-robots-tag": "noindex, nofollow",
+} as const;
+
+/**
+ * A refusal at /admin or /lab (`plane`), written as one OWASP `authz_fail` line (site-runtime ./log) before it goes
+ * back, so a run of refusals shows in Workers Logs. The line carries the plane, the reason and the status, never the
+ * person: the log scrubs any email out of it.
+ */
+export function refusal(
+  request: Request,
+  plane: "admin" | "lab",
+  reason: string,
+  status: 401 | 403,
+  body: string,
+  headers: Record<string, string> = {},
+): Response {
+  logRefusal(request, plane, reason, status);
+  return new Response(body, { status, headers: { ...REFUSAL_HEADERS, ...headers } });
+}
+
+/** The `authz_fail` line alone, for a refusal made elsewhere (site-runtime ./origin's cross-site 403). */
+export function logRefusal(request: Request, plane: "admin" | "lab", reason: string, status: number): void {
+  logEvent(OWASP_EVENTS.authorizationFailure, { ...requestFields(request), plane, reason, status }, { level: "warn" });
 }

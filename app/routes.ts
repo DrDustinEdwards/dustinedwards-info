@@ -94,7 +94,7 @@ export default [
     route("research/*", "routes/content-page.tsx"),
     route("teaching/*", "routes/teaching.tsx"),
     // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
-    // route's, which check:headers reads per file.
+    // route's.
     route("software/*", "routes/software.tsx"),
     route("about", "routes/about.tsx"),
     // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
@@ -122,6 +122,7 @@ export default [
     // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
     route("site-map", "routes/site-map.tsx"),
     route("robots.txt", "routes/robots.ts"),
+    route("site.webmanifest", "routes/site-webmanifest.ts"),
     route("ai.txt", "routes/ai-txt.ts"),
     route(".well-known/security.txt", "routes/security-txt.ts"),
     route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),
@@ -155,6 +156,10 @@ export default [
     route("media", "routes/admin.media._index.tsx"),
   ]),
 
+  // The hashed admin list for the Access drift check. Under /admin so Access covers it, outside the layout because
+  // the caller is a service token, not a person; the route answers only that token.
+  route("admin/access-drift", "routes/admin.access-drift.ts"),
+
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's
   // middleware admits a person only with an active row in `members`, read on every request. Not /admin, which stays
   // the Primary Owner's alone. Module files are workspace.* because routes/lab.tsx is the public /research/lab.
@@ -168,11 +173,16 @@ export default [
     route("runs/:id", "routes/workspace.runs.run.tsx"),
   ]),
 
+  // The uptime probe's health, in the family shape: UptimeRobot, Capsid's watcher and the colophon link read it.
+  // /api/health is the drift-repair instrument the watchdog, ship's readiness, the admin MCP and operator-sync read.
+  route("health", "routes/health.ts"),
   route("api/health", "routes/api.health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("api/csp-report", "routes/api.csp-report.ts"),
+  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.
   route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
+  // Carrel's shareable preview links: no key, the token is the address, and the package answers private and noindex.
+  route("preview/:token", "routes/preview.$token.ts"),
 ] satisfies RouteConfig;

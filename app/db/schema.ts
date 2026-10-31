@@ -840,3 +840,79 @@ export const scheduledUpdates = sqliteTable(
   },
   (t) => [index("scheduled_updates_due").on(t.publishAt)],
 );
+
+// site-api's store (drizzle/0037_site_api_store.sql, the package's SITE_API_STORE_SQL): safe retries by change id, failed
+// publish hooks waiting to run again, preview links (only each token's SHA-256) and the webmentions each page last sent.
+// Read and written only through d1SiteApiStore (app/lib/carrel/site-api.server.ts).
+export const siteApiWrites = sqliteTable(
+  "site_api_writes",
+  {
+    changeId: text("change_id").primaryKey(),
+    route: text("route").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: integer("status"),
+    response: text("response"),
+    state: text("state").notNull(),
+    at: text("at").notNull(),
+  },
+  (t) => [index("site_api_writes_at").on(t.at)],
+);
+
+export const hookRetries = sqliteTable(
+  "hook_retries",
+  {
+    id: text("id").primaryKey(),
+    hook: text("hook").notNull(),
+    event: text("event").notNull(),
+    attempts: integer("attempts").notNull(),
+    nextAt: text("next_at").notNull(),
+    lastError: text("last_error").notNull(),
+  },
+  (t) => [index("hook_retries_due").on(t.nextAt)],
+);
+
+export const previewLinks = sqliteTable(
+  "preview_links",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    contentId: text("content_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    revokedAt: text("revoked_at"),
+    changeId: text("change_id").notNull(),
+  },
+  (t) => [index("preview_links_content").on(t.contentId, t.expiresAt)],
+);
+
+export const webmentionTargets = sqliteTable("webmention_targets", {
+  source: text("source").primaryKey(),
+  targets: text("targets").notNull(),
+  sentAt: text("sent_at").notNull(),
+});
+
+// What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,
+// app/lib/carrel/post-state.server.ts): the trash, the redirects a rename leaves, and the first publishes that go live
+// by time. Times are UTC ISO text.
+export const contentTrash = sqliteTable("content_trash", {
+  contentId: text("content_id").primaryKey(),
+  trashedAt: text("trashed_at").notNull(),
+  changeId: text("change_id").notNull(),
+});
+
+export const postRedirects = sqliteTable("post_redirects", {
+  fromSlug: text("from_slug").primaryKey(),
+  toSlug: text("to_slug").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const scheduledPublishes = sqliteTable(
+  "scheduled_publishes",
+  {
+    contentId: text("content_id").primaryKey(),
+    publishAt: text("publish_at").notNull(),
+    changeId: text("change_id").notNull(),
+  },
+  (t) => [index("scheduled_publishes_due").on(t.publishAt)],
+);

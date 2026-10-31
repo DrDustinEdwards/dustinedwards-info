@@ -69,3 +69,31 @@ export function readMigrationList({ code, text }) {
 export function applyCommand(database) {
   return `npx wrangler d1 migrations apply ${database} --remote`;
 }
+
+/*
+ * ADDITIVE OR NOT, read off the SQL. Ship applies a pending migration itself only when none of its statements can lose
+ * data; anything else is refused and left to the operator, as every pending migration was before. Conservative on
+ * purpose: a backfill UPDATE or a table rebuild's DROP refuses, and a hand run is one command. Trigger bodies are cut
+ * first, because an FTS trigger's DELETE runs on a later write, not at migration time.
+ */
+const DESTRUCTIVE = /** @type {const} */ ([
+  [/\bdrop\s+(?:table|index|view|trigger)\b/i, "DROP"],
+  [/\balter\s+table\b[^;]*?\b(?:drop|rename)\b/i, "ALTER TABLE ... DROP or RENAME"],
+  [/\bdelete\s+from\b/i, "DELETE"],
+  [/\bupdate\s+(?:or\s+\w+\s+)?["`\w.]+\s+set\b/i, "UPDATE"],
+  [/\breplace\s+into\b|\binsert\s+or\s+replace\b/i, "REPLACE"],
+]);
+
+/**
+ * @param {string} sql one migration file
+ * @returns {string[]} the kinds of destructive statement it holds; empty means additive
+ */
+export function destructiveStatements(sql) {
+  const body = String(sql ?? "")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/'(?:[^']|'')*'/g, "''")
+    .replace(/\bcreate\s+(?:temp\s+|temporary\s+)?trigger\b[\s\S]*?\bbegin\b[\s\S]*?\bend\s*;/gi, " ");
+  return DESTRUCTIVE.filter(([pattern]) => pattern.test(body)).map(([, kind]) => kind);
+}
+

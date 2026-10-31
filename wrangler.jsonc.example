@@ -139,10 +139,13 @@
 	},
 	// ONE CRON, AND THIS KEY OWNS THE SET.
 	//
-	// Every five minutes `scheduled()` in workers/app.ts runs site-api's
-	// runSchedules: a live post's scheduled update (the scheduled_updates table)
-	// goes live at its time and IndexNow is told. A scheduled post that was never
-	// live needs none of this; its publish_at makes it visible by time.
+	// Every minute `scheduled()` in workers/app.ts runs site-api's runSchedules
+	// through site-runtime's runJobs (D1 cron_runs): a live post's scheduled
+	// update (the scheduled_updates table) goes live at its time, a post
+	// scheduled before it was ever live (visible by its publish_at alone) is
+	// announced once it is (scheduled_publishes), and both run the publish hooks:
+	// IndexNow, the page purge and webmentions. Failed hooks run again and the
+	// trash past 30 days is emptied.
 	//
 	// The key is never left out. Until 2026-09-07 it was absent, and wrangler then
 	// leaves whatever cron is registered on the account alone: an hourly
@@ -152,7 +155,7 @@
 	// does not reach is not exempt"). Stated here, the live schedules have
 	// something to be compared against in both directions. The watchdog keeps its
 	// own */15 for the health poll and the windowed jobs.
-	"triggers": { "crons": ["*/5 * * * *"] },
+	"triggers": { "crons": ["* * * * *"] },
 	// Static assets, so the Worker can read them through a binding. The Vite
 	// plugin supplies `directory` from the client build output; setting it here
 	// would fight that.
@@ -335,7 +338,7 @@
 	//
 	// EIGHT SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
 	// prefix: `auth:` (sign-in and /api/auth/*), `op:` (the operator API),
-	// `wm:` (webmention), `health:` (/api/health), `csp:` (/api/csp-report),
+	// `wm:` (webmention), `health:` (/api/health), `csp:` (/csp-report),
 	// plus the smoke actor, preview links and Ask itself. So deleting this
 	// block does not "disable Ask": it disables SIGN-IN, and it makes
 	// /api/health answer 503 by design, because a route that cannot reach its

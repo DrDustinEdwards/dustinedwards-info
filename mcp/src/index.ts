@@ -15,34 +15,35 @@
  *
  * Request routing, outermost first:
  *
- *   /mcp                   OAuthProvider validates a client-leg access token,
+ *   /mcp                   a foreign Origin is refused first; then
+ *                          OAuthProvider validates a client-leg access token,
  *                          then apiHandler re-checks the admin grant, rate
  *                          limits, and hands off to the era router
  *   /authorize /callback   the consent flow and Access sign-in, login-handler.ts
- *   /register              rate limited per address, then the OAuth library,
- *                          which refuses any redirect URI not allowlisted
+ *   /register              site-runtime's registrationLimited (per address and
+ *                          per day), then the OAuth library, which refuses any
+ *                          redirect URI not allowlisted
  *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
  *   /health                liveness
- *   /csp-report            the CSP violation sink, csp-report.ts
+ *   /.well-known/security.txt and /csp-report  answered by withMcpHeaders
  *
- * Every response, whichever route made it, leaves through withSecurityHeaders.
+ * Every response, whichever route made it, leaves through site-runtime's withMcpHeaders.
  */
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
-import { isAdminUser, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
-import { checkRateLimit, refuse } from "@dustinedwards/site-runtime/mcp-server";
+import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
+import { checkRateLimit, mcpOriginRefusal, refuse, withMcpHeaders } from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
+import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
 
 import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
 import { handleMcp, MCP_ROUTE } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
-import { CSP_REPORT_PATH, withSecurityHeaders } from "./security-headers";
-import { handleCspReport } from "./csp-report";
 import type { ApiEnv } from "./api-client";
 
 /** The door's limiter. The class keeps its name, so the existing binding and migration stay as they are. */
@@ -159,9 +160,6 @@ async function agentHandler(
   return handleMcp(request, env, ctx, { kind: "agent", principal, scopes: agentScopes(env, principal) });
 }
 
-/** How many registrations one address may make per minute. */
-const REGISTRATIONS_PER_MINUTE = 5;
-
 /**
  * The provider, built once per isolate from its env, because three of its
  * settings are configuration: the canonical resource, and the registration
@@ -189,9 +187,18 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
     resourceMetadata: {
       resource: `${origin}${MCP_ROUTE}`,
       authorization_servers: [origin],
-      scopes_supported: [SCOPE_READ],
       resource_name: "Dustin Edwards Admin",
     },
+    /*
+     * LEAST SCOPE FIRST. The protected resource metadata's scopes_supported is
+     * "the minimal set of scopes necessary for basic functionality" (MCP
+     * 2025-11-25, Scope Selection Strategy), and a client with no challenge
+     * scope asks for all of it, so it is read only; the provider publishes
+     * requiredScopes there and in the 401's scope. Write is asked for by step-up
+     * (the tools' 403 insufficient_scope). The authorization server's catalog,
+     * scopesSupported, lists both.
+     */
+    requiredScopes: [SCOPE_READ],
     scopesSupported: SCOPES.all,
     // BOTH client identity paths. Rule 13.
     //
@@ -201,15 +208,15 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
     //
     // DCR, TIGHTENED, for Grok and Gemini, which still require RFC 7591 as of
     // 2026-10-09. registrationRefusal allows only redirect URIs listed exactly in
-    // DCR_REDIRECT_URIS (none listed refuses every registration), the route is
-    // rate limited per address before the provider sees it, and a registration
+    // the shared DCR_CALLBACKS or DCR_REDIRECT_URIS, the route is rate limited
+    // before the provider sees it, and a registration
     // grants nothing: a grant still comes only from the consent page, the Access
     // sign-in and isAdminUser. Remove when Grok and Gemini support CIMD, at the
     // latest when the specification removes DCR.
     clientIdMetadataDocumentEnabled: true,
     clientRegistrationEndpoint: "/register",
     clientRegistrationCallback: ({ clientMetadata }) => {
-      const why = registrationRefusal(env.DCR_REDIRECT_URIS, clientMetadata);
+      const why = registrationRefusal([...DCR_CALLBACKS, env.DCR_REDIRECT_URIS ?? ""].join(","), clientMetadata);
       if (!why) return undefined;
       console.log(JSON.stringify({ audit: "registration-refused", why }));
       return { code: "invalid_redirect_uri", description: why };
@@ -219,16 +226,9 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
   return built;
 }
 
-/**
- * Every request is routed here and every answer leaves through withSecurityHeaders
- * (security-headers.ts), the one place this Worker's security headers are set. A throw
- * becomes a logged 500 that carries them too, rather than Cloudflare's bare error page.
- */
+/** Every request is routed here; withMcpHeaders below sets every security header on the answer. */
 async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
-
-  // Outside the provider: browsers send violation reports without credentials.
-  if (url.pathname === CSP_REPORT_PATH) return handleCspReport(request, env);
 
   // The measurement instrument sits OUTSIDE the OAuth provider deliberately.
   // It exists to observe unauthenticated client behavior, so putting it behind
@@ -266,6 +266,10 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
    * alternative to HOLDING a grant, not to the protocol around one.
    */
   if (url.pathname === MCP_ROUTE) {
+    // Before any token check, so a page on another origin learns nothing from
+    // a 401 (DNS rebinding). No Origin, this origin and claude.ai pass.
+    const foreign = mcpOriginRefusal(request, ["https://claude.ai"]);
+    if (foreign) return foreign;
     const principal = await agentPrincipal(
       env as unknown as Record<string, unknown>,
       request.headers.get("authorization"),
@@ -273,32 +277,37 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     if (principal) return agentHandler(request, env, ctx, principal);
   }
 
-  if (url.pathname === "/register") {
-    const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-    const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `register:${ip}`, REGISTRATIONS_PER_MINUTE);
-    if (!limit.allowed) {
-      return refuse(
-        `Rate limited. This server allows ${REGISTRATIONS_PER_MINUTE} client registrations per minute per address.`,
-        429,
-        { "retry-after": String(limit.retryAfter) },
-      );
-    }
+  if (url.pathname === "/register" && request.method === "POST") {
+    const limited = await registrationLimited(request, env.OAUTH_KV);
+    if (limited) return limited;
   }
 
   return oauthProvider(env).fetch(request, env, ctx);
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    let response: Response;
-    try {
-      response = await route(request, env, ctx);
-    } catch (error) {
-      console.error(
-        JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
-      );
-      response = refuse("Internal error. The request was not completed.", 500);
-    }
-    return withSecurityHeaders(response, new URL(request.url).origin);
-  },
+  /*
+   * The entry's full set, the consent page's hashed-style policy and the load-nothing policy for the rest, on every
+   * response. It also answers security.txt (the site's contact and expiry, app/routes/security-txt.ts; renew both
+   * together) and the CSP sink, metered per address because a page tripping ten rules sends ten reports. A throw
+   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page.
+   */
+  fetch: withMcpHeaders<Env>(
+    async (request, env, ctx) => {
+      try {
+        return await route(request, env, ctx as ExecutionContext);
+      } catch (error) {
+        console.error(
+          JSON.stringify({ alert: "unhandled-error", detail: error instanceof Error ? error.message : String(error) }),
+        );
+        return refuse("Internal error. The request was not completed.", 500);
+      }
+    },
+    {
+      site: dustinedwardsMcp,
+      securityTxt: { contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" },
+      allowReport: async (request, env) =>
+        (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${request.headers.get("cf-connecting-ip") ?? "unknown"}`, 60)).allowed,
+    },
+  ),
 } satisfies ExportedHandler<Env>;

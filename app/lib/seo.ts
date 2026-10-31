@@ -1,5 +1,5 @@
 import { defineHead, searchTitle as prelumSearchTitle, type HeadImage, type PageHead } from "@drdustinedwards/site-helpers/head";
-import { article, breadcrumbs, website } from "@drdustinedwards/site-helpers/schema";
+import { article, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
@@ -11,6 +11,13 @@ import { decodeEntities } from "./publications/entities.mjs";
 import { paperPath } from "./publications/paths.mjs";
 
 import { SITE_ORIGIN } from "./site-origin.mjs";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  PAGES_CACHE_TAG,
+  UNCACHED,
+  publicPageHeaders,
+} from "@dustinedwards/site-runtime/edge-cache";
 
 export { SITE_ORIGIN };
 
@@ -78,7 +85,8 @@ export function postSocial(post: PostSocialFields) {
       : DEFAULT_OG_IMAGE;
   return {
     canonical,
-    pageTitle: searchTitle(search.searchTitle ?? post.title),
+    /** The title a search result shows, before the site's suffix: the author's search title, else the post's. */
+    title: search.searchTitle ?? post.title,
     /** The canonical the head links: the author's, else the page's own. */
     canonicalHref: search.canonical ?? canonical,
     noindex: search.noindex === true,
@@ -89,20 +97,33 @@ export function postSocial(post: PostSocialFields) {
   };
 }
 
+const SUFFIX = ` | ${SITE.name}`;
+
+/** The sections a breadcrumb trail passes through when a page names none of its own (`trail`). */
+const SECTIONS = { "/writing": "Writing", "/research": "Research", "/teaching": "Teaching", "/software": "Software" };
+
+/** A visible trail (app/components/breadcrumb.tsx), from its hub down to the page. */
+export type Trail = Array<[string, string]>;
+
 /**
- * Prelum's head for every public page: the site's facts once. No suffix, because a route passes its `<title>` already
- * composed (`searchTitle`), which this still cuts to the search limit; the description is cut for search and the share
- * card keeps it whole. The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
+ * Prelum's head for every public page: the site's facts once. `title` is the page's own and takes the site's suffix,
+ * unless `fullTitle`; the share card keeps the suffix too. A page that shows a trail passes it, so its BreadcrumbList
+ * (Prelum's, the only one) says what the page shows, from the home page down; any other page's is built from `SECTIONS`.
+ * The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
  */
-export function siteHead(page: PageHead) {
+export function siteHead({ trail, ...page }: PageHead & { trail?: Trail }) {
   // Built inside the call, not at module level: the watchdog Worker imports this module for SITE_ORIGIN, and a
   // top-level call would put Prelum's head builder in its bundle (.worker-size.watchdog.json).
-  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE })(page);
+  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE, suffix: SUFFIX, sections: SECTIONS })({
+    ...page,
+    socialTitle: page.socialTitle ?? (page.fullTitle ? undefined : `${page.title}${SUFFIX}`),
+    ...(trail ? { breadcrumbs: [{ name: SITE.name, path: "/" }, ...trail.map(([name, path]) => ({ name, path }))] } : {}),
+  });
 }
 
 /**
- * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without
- * an image renders as a bare link.
+ * A page whose `title` is already the whole `<title>`. `summary_large_image` always: the image falls back to the site
+ * mark, and a `twitter:card` without an image renders as a bare link.
  */
 export function pageMeta(page: {
   title: string;
@@ -116,9 +137,12 @@ export function pageMeta(page: {
   markdown?: string;
   /** Prelum writes `noindex, follow`. */
   noindex?: boolean;
+  /** The WebPage subtype: `CollectionPage` for a list. */
+  pageType?: string;
+  trail?: Trail;
 }) {
   const { ogType, ...rest } = page;
-  return siteHead({ ...rest, type: ogType });
+  return siteHead({ ...rest, type: ogType, fullTitle: true });
 }
 
 export { SERP_DESCRIPTION_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
@@ -139,14 +163,14 @@ export function personJsonLd(origin: string) {
 
 /**
  * The About page is a ProfilePage about the same Person the home page describes: the shared `@id` is
- * what makes the two one entity rather than two people with one name.
+ * what makes the two one entity rather than two people with one name. Its own `@id` is Prelum's page node, so the two are one page.
  */
 export function profilePageJsonLd(origin: string, page: { path: string; description: string }) {
   const { "@context": context, ...person } = personNode(origin);
   return {
     "@context": context,
     "@type": "ProfilePage",
-    "@id": `${origin}${page.path}`,
+    "@id": `${origin}${page.path}#webpage`,
     url: `${origin}${page.path}`,
     name: `About ${SITE.name}`,
     description: page.description,
@@ -155,11 +179,10 @@ export function profilePageJsonLd(origin: string, page: { path: string; descript
 }
 
 /**
- * Needs no `Vary`: the theme is part of the cache key in `workers/app.ts`. Never add
- * must-revalidate, proxy-revalidate, no-cache or s-maxage: each disables stale-while-revalidate at
- * Cloudflare (RFC 9111 4.2.4). Browser max-age stays 0 because purges cannot reach a browser.
+ * site-runtime ./edge-cache's strings. Needs no `Vary`: the theme is part of the cache key in `workers/app.ts`.
+ * Browser max-age stays 0 because purges cannot reach a browser.
  */
-export const SHARED_CACHE_CONTROL = "public, max-age=0";
+export { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL };
 
 /** A response whose address changes when its bytes do (hashed media, uploads). */
 export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -170,50 +193,26 @@ export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 /** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
 export const ROBOTS_DISALLOW = ["/admin", "/lab", "/search/ask"];
 
-/**
- * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that
- * lists posts expires at the next scheduled publish_at. Never parse a lifetime back out of a string:
- * a failed parse has to substitute a false lifetime.
- */
-const EDGE_FRESH_SECONDS = 86_400;
-const EDGE_STALE_SECONDS = 604_800;
-
 // Short because the home page carries the latest Germomics episode, which no write purges.
 export const HOME_EDGE_FRESH_SECONDS = 600;
 
-/**
- * A publish_at seconds away would otherwise send a max-age near zero, and every read until it passed
- * would be a render. A minute is the most a scheduled post can lag its time for it.
- */
-const SCHEDULED_FLOOR_SECONDS = 60;
+/** The edge lifetime site-runtime's `publicPageHeaders` gives: a day fresh, a week stale, `until` capping the first. */
+const edgeCacheControl = (freshSeconds?: number, until: Date | null = null, now?: Date) =>
+  publicPageHeaders({ freshSeconds, until, now })[EDGE_CACHE_HEADER] as string;
 
-const edgeCacheControl = (fresh: number) =>
-  `max-age=${fresh}, stale-while-revalidate=${EDGE_STALE_SECONDS}`;
-
-/**
- * Sent as `Cloudflare-CDN-Cache-Control`, not `s-maxage`: `s-maxage` implies proxy-revalidate, so
- * Cloudflare refuses to serve stale and every read past the lifetime blocks on a render.
- */
-export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
+/** The Renderer stamps it on a shared response that names no edge lifetime of its own. */
+export const EDGE_CACHE_CONTROL = edgeCacheControl();
 
 /** Short because the colophon's site-health tile age is the watchdog's liveness. */
 export const HEALTH_EDGE_CACHE_CONTROL = edgeCacheControl(600);
 
 /**
  * The edge policy for a page that lists posts. A scheduled post goes live with no write to purge on,
- * so the page expires when the next one does; with nothing scheduled it is the plain policy.
+ * so the page expires when the next one does (no sooner than a minute); with nothing scheduled it is the plain policy.
  */
-export function scheduledEdgeCacheControl(
-  now: Date,
-  nextPublishAt: Date | null,
-  fresh: number = EDGE_FRESH_SECONDS,
-): string {
-  if (!nextPublishAt) return edgeCacheControl(fresh);
-  const untilPublish = Math.ceil((nextPublishAt.getTime() - now.getTime()) / 1000);
-  return edgeCacheControl(Math.min(fresh, Math.max(SCHEDULED_FLOOR_SECONDS, untilPublish)));
+export function scheduledEdgeCacheControl(now: Date, nextPublishAt: Date | null, fresh?: number): string {
+  return edgeCacheControl(fresh, nextPublishAt, now);
 }
-
-export const EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control";
 
 // A misspelled tag is a purge that silently does nothing: `cache.purge` succeeds on an unmatched tag.
 export function cacheTags(slug?: string): string {
@@ -226,8 +225,6 @@ export function cacheTags(slug?: string): string {
  * `PROCEDURES_CACHE_TAG` names (app/kb/procedures/route.ts); test/worker/cache-tags.test.ts pins both.
  */
 export const POSTS_AND_PROCEDURES_CACHE_TAGS = `${cacheTags()},procedures`;
-
-const PAGES_CACHE_TAG = "pages";
 
 /**
  * The Renderer stamps `EDGE_CACHE_CONTROL` beside `SHARED_CACHE_CONTROL`; pass `edge` only to depart
@@ -243,11 +240,8 @@ export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) 
 
 export const HTML_VARY_ACCEPT = "Accept";
 
-/**
- * Also applied by `workers/app.ts` to any response with no `Cache-Control`, and to cookie-bearing
- * requests on the HTML routes.
- */
-export const NO_STORE_CACHE_CONTROL = "private, no-store";
+/** site-runtime's `UNCACHED`: what settleCacheHeaders gives anything not marked shared. */
+export const NO_STORE_CACHE_CONTROL = UNCACHED;
 
 type ArticleSeo = {
   slug: string;
@@ -281,10 +275,6 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     author: { "@type": "Person", name: SITE.name, url: origin },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
   });
-}
-
-export function breadcrumbJsonLd(origin: string, trail: Array<[string, string]>) {
-  return breadcrumbs(origin, trail.map(([name, path]) => ({ name, path })));
 }
 
 export function webSiteJsonLd(origin: string) {

@@ -20,87 +20,25 @@ export const NON_DERIVED_TABLES = Object.freeze({
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",
   scheduled_updates: "updates Carrel scheduled on live posts, waiting for their time (0033)",
+  webmention_targets: "the pages each post last sent a webmention to, so a removed link is told too (0037)",
+  content_trash: "the posts in Carrel's trash and since when (0038)",
+  post_redirects: "the old addresses of renamed posts, each answered with a 301 (0038)",
+  scheduled_publishes: "posts scheduled before they were ever live, for the cron to announce (0038)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */
 export const REQUIRED_TABLES = Object.freeze(Object.keys(NON_DERIVED_TABLES));
 
 /**
- * Tables left out of the dump because they hold live credentials or one-time tokens. EMPTY, and
- * deliberately so: no table in the current schema holds either. The Better Auth tables (user,
- * session, account, verification) were dropped by migration 0026, admin sign-in is Cloudflare
- * Access and keeps no row.
- * A table added later that matches CREDENTIAL_COLUMN fails the dump by name until it is listed
- * here, with the reason, or its column is renamed.
+ * Tables left out of the dump because they hold live credentials or one-time tokens. One:
+ * `preview_links` (0037), the SHA-256 of each Carrel preview link's token, since a restore would bring
+ * back links that were revoked or had expired. The Better Auth tables (user, session, account,
+ * verification) were dropped by migration 0026, admin sign-in is Cloudflare Access and keeps no row.
+ *
+ * The credential-column check is d1-dump's (`credentials: true` in d1-backup.server.ts, its
+ * CREDENTIAL_COLUMN): a table added later with a column named for a password, secret, token, key or
+ * a token's hash fails the dump by name until it is listed here, with the reason, or its column is
+ * renamed. This file held its own copy of that check until d1-dump v0.8.0 took it.
  */
 /** @type {readonly string[]} */
-export const EXCLUDED_TABLES = Object.freeze(/** @type {string[]} */ ([]));
-
-/** A column name that says it holds a credential. Matched case-insensitively, camelCase included. */
-export const CREDENTIAL_COLUMN = /password|passwd|secret|token|api_?key|credential|private_?key/i;
-
-/**
- * @param {string} sql a CREATE TABLE statement
- * @returns {string[]} the column names it declares
- */
-export function columnNames(sql) {
-  const open = sql.indexOf("(");
-  const close = sql.lastIndexOf(")");
-  if (open < 0 || close < open) return [];
-  const body = sql.slice(open + 1, close);
-  const parts = [];
-  let depth = 0;
-  let current = "";
-  for (const ch of body) {
-    if (ch === "(") depth += 1;
-    if (ch === ")") depth -= 1;
-    if (ch === "," && depth === 0) {
-      parts.push(current);
-      current = "";
-    } else current += ch;
-  }
-  parts.push(current);
-  const names = [];
-  for (const part of parts) {
-    const text = part.trim();
-    if (!text || /^(constraint|primary|unique|foreign|check)\b/i.test(text)) continue;
-    const match = /^(?:"([^"]+)"|`([^`]+)`|\[([^\]]+)\]|(\S+))/.exec(text);
-    const name = match?.[1] ?? match?.[2] ?? match?.[3] ?? match?.[4];
-    if (name) names.push(name);
-  }
-  return names;
-}
-
-/**
- * This site's own problems that stop a dump being marked complete, each naming the table. d1-dump's
- * runCheckedBackup runs its standard checks first (not empty, every REQUIRED_TABLES table present,
- * nothing excluded in the dump), then these. An empty list from both is the only pass.
- *
- * @param {{
- *   tables: Array<{ name: string, rows: number }>,
- *   excluded: string[],
- *   schema: Array<{ type: string, name: string, sql: string }>,
- * }} dump what dumpDatabase returned, and the CREATE statements of the database it read
- * @param {{ allowedExcluded?: readonly string[] }} [policy]
- * @returns {string[]}
- */
-export function dumpProblems(dump, policy = {}) {
-  const allowedExcluded = policy.allowedExcluded ?? EXCLUDED_TABLES;
-  const problems = [];
-  const held = new Set(dump.tables.map((t) => t.name));
-
-  for (const name of dump.excluded) {
-    if (!allowedExcluded.includes(name)) problems.push(`table ${name} was excluded but is not on the excluded list, so its rows would be lost silently`);
-  }
-
-  for (const entry of dump.schema) {
-    if (entry.type !== "table" || /^\s*CREATE\s+VIRTUAL/i.test(entry.sql)) continue;
-    if (dump.excluded.includes(entry.name)) continue;
-    if (!held.has(entry.name)) continue;
-    const credential = columnNames(entry.sql).filter((c) => CREDENTIAL_COLUMN.test(c));
-    if (credential.length > 0) {
-      problems.push(`table ${entry.name} has credential-looking column(s) ${credential.join(", ")} and is in the dump; exclude it with a reason or rename the column`);
-    }
-  }
-  return problems;
-}
+export const EXCLUDED_TABLES = Object.freeze(["preview_links"]);

@@ -5,11 +5,14 @@
 import { NotFoundError, RefusedError } from "@dustinedwards/site-api";
 import type {
   ContentAdapter,
+  ContentFilter,
   ContentDoc,
   ContentSummary,
   ListQuery,
   PreviewInput,
   PublishInput,
+  RenameInput,
+  RenameResult,
   Revision,
   SaveDraftInput,
   ScheduleInput,
@@ -25,8 +28,13 @@ import { DEFAULT_KIND, decodeContentId, encodeContentId } from "./content-id.mjs
  */
 export interface ContentKindHandler {
   kind: string;
-  /** Every item of the kind matching q and status; the registry merges kinds and pages the result. */
-  list(query: Pick<ListQuery, "q" | "status">): Promise<ContentSummary[]>;
+  /**
+   * Every item of the kind matching q and status; the registry merges kinds, applies the other filters and pages the
+   * result. A kind with a trash lists only its trashed items when `trashed` is true, and never them otherwise.
+   */
+  list(query: Pick<ListQuery, "q" | "status" | "trashed">): Promise<ContentSummary[]>;
+  /** True when `publish` takes `publishedAt` (site-api v0.17.0); a kind without it refuses one. */
+  publishedAtSettable?: boolean;
   get(slug: string): Promise<ContentDoc | null>;
   saveDraft(slug: string, input: SaveDraftInput): Promise<WriteResult>;
   publish(slug: string, input: PublishInput): Promise<WriteResult>;
@@ -42,7 +50,15 @@ export interface ContentKindHandler {
   delete?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<void>;
   /** The page the item would publish; `slug` is null for an unsaved new item. */
   preview?(slug: string | null, input: PreviewInput): Promise<string>;
+  /** v0.17.0, both or neither: soft delete, taking a live item off the site first, and its undo, always a draft. */
+  trash?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
+  restore?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
+  /** v0.17.0: moves the item to `newSlug`, its history with it; `previousPath` is the old address, now a 301. */
+  rename?(slug: string, input: Omit<RenameInput, "newId"> & { newSlug: string }): Promise<RenameResult>;
 }
+
+/** The list filters the registry applies (site-api v0.17.0); `trashed` comes with the posts' trash. */
+const FILTERS = ["kind", "tag", "published"] as const satisfies readonly ContentFilter[];
 
 export type ContentRegistry = {
   adapter: ContentAdapter;
@@ -72,14 +88,39 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     return found;
   };
 
+  /** The handler for an id whose kind can do `op`; a missing item is 404 and an item of another kind 422. */
+  const able = async (id: string, op: "trash" | "restore" | "rename") => {
+    const found = route(id);
+    if (!found) throw new NotFoundError(`No content kind owns the id ${id}.`);
+    if (!found.handler[op]) {
+      if (!(await found.handler.get(found.slug))) throw new NotFoundError();
+      throw new RefusedError(`A ${found.handler.kind} cannot be ${op === "rename" ? "renamed" : op === "trash" ? "trashed" : "restored"} from Carrel.`);
+    }
+    return found as { handler: Required<Pick<ContentKindHandler, typeof op>> & ContentKindHandler; slug: string };
+  };
+
   const adapter: ContentAdapter = {
+    filters: FILTERS,
+    publishedAtSettable: true,
+
     async list(query) {
+      const after = query.publishedAfter ? Date.parse(query.publishedAfter) : -Infinity;
+      const before = query.publishedBefore ? Date.parse(query.publishedBefore) : Infinity;
+      const asked = handlers.filter((h) => (!query.kind || h.kind === query.kind) && (!query.trashed || h.trash));
       const lists = await Promise.all(
-        handlers.map(async (h) =>
-          (await h.list({ q: query.q, status: query.status })).map((s) => encoded(h.kind, s)),
+        asked.map(async (h) =>
+          (await h.list({ q: query.q, status: query.status, trashed: query.trashed })).map((s) => encoded(h.kind, s)),
         ),
       );
-      const matching = lists.flat();
+      const matching = lists
+        .flat()
+        .filter((s) => !query.tag || (s.tags ?? []).includes(query.tag))
+        .filter((s) => {
+          if (!query.publishedAfter && !query.publishedBefore) return true;
+          const at = s.publishedAt ? Date.parse(s.publishedAt) : Number.NaN;
+          return at >= after && at <= before;
+        })
+        .map((s) => ({ ...s, trashedAt: s.trashedAt ?? null }));
       const start = query.cursor && /^\d+$/.test(query.cursor) ? Number(query.cursor) : 0;
       const end = start + query.limit;
       return {
@@ -102,6 +143,9 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
 
     async publish(id, input) {
       const { handler, slug } = owner(id);
+      if (input.publishedAt !== undefined && !handler.publishedAtSettable) {
+        throw new RefusedError(`A ${handler.kind} has no publication date to set; publish it without publishedAt.`);
+      }
       return encoded(handler.kind, await handler.publish(slug, input));
     },
 
@@ -133,6 +177,24 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
         throw new RefusedError(`A ${found.handler.kind} cannot be deleted from Carrel.`);
       }
       await found.handler.delete(found.slug, input);
+    },
+
+    async trash(id, input) {
+      const { handler, slug } = await able(id, "trash");
+      return encoded(handler.kind, await handler.trash(slug, input));
+    },
+
+    async restore(id, input) {
+      const { handler, slug } = await able(id, "restore");
+      return encoded(handler.kind, await handler.restore(slug, input));
+    },
+
+    async rename(id, input) {
+      const { handler, slug } = await able(id, "rename");
+      const target = decodeContentId(input.newId);
+      if (target.kind !== handler.kind) throw new RefusedError(`A ${handler.kind} keeps its kind when renamed.`);
+      const { newId: _newId, ...rest } = input;
+      return encoded(handler.kind, await handler.rename(slug, { ...rest, newSlug: target.slug }));
     },
   };
 

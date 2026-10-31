@@ -38,7 +38,10 @@ import {
 
 import type { Route } from "./+types/cv";
 
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "capsomer/status.css";
+import "capsomer/chart-frame.css";
+import "enarratio/base.css";
 import "~/styles/cv.css";
 
 /*
@@ -54,7 +57,6 @@ const PATH = CV_PAGE.path;
 const CARD_PATH = contentPageCardPath(CV_PAGE);
 const CARD = CARD_PATH ? shareCard(`${SITE_ORIGIN}${CARD_PATH}`, CV_PAGE.seoTitle) : undefined;
 
-// headers() is written out here because check:headers reads each public route's own source.
 export function headers() {
   return new Headers(publicHtmlHeaders(CV_HTML_TAGS));
 }
@@ -85,7 +87,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function meta() {
   return [
-    ...pageMeta({ title: CV_PAGE.seoTitle, description: CV_PAGE.description, path: PATH, image: CARD }),
+    ...pageMeta({ title: CV_PAGE.seoTitle, description: CV_PAGE.description, path: PATH, image: CARD, trail: [[CV_PAGE.title, PATH]] }),
     {
       tagName: "link",
       rel: "alternate",
@@ -98,7 +100,7 @@ export function meta() {
 
 /**
  * The page about the Person, and a ScholarlyArticle per paper the site holds, joined by the Person's @id.
- * No BreadcrumbList: the page shows no trail, and a one-step list is one Google reads as invalid.
+ * The page's `@id` is Prelum's page node, which carries its trail, so the two are one page.
  */
 function cvJsonLd(cv: Cv) {
   const records = cv.entries.flatMap((e) => (e.paper?.record ? [e.paper.record] : []));
@@ -106,7 +108,7 @@ function cvJsonLd(cv: Cv) {
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "@id": `${SITE_ORIGIN}${PATH}`,
+      "@id": `${SITE_ORIGIN}${PATH}#webpage`,
       url: `${SITE_ORIGIN}${PATH}`,
       name: `${CV_PAGE.title}, ${cv.person.name}`,
       description: CV_PAGE.description,
@@ -326,13 +328,13 @@ function Stat({
   name: string;
 }) {
   return (
-    <div className="cv-stat">
-      <dt>{label}</dt>
+    <div className="cv-stat cap-chart" data-variant="tile">
+      <dt className="cap-chart-title">{label}</dt>
       <dd>
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
         </span>
-        <span className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={{ __html: spark }} />
+        <div className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={{ __html: spark }} />
         {sub ? <span className="cv-stat-sub">{sub}</span> : null}
       </dd>
     </div>
@@ -396,7 +398,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             />
           </dl>
           <div className="cv-timeline">
-            <p className="cv-timeline-title">Output by year</p>
             <div className="cv-timeline-plot" data-cv-timeline="" dangerouslySetInnerHTML={{ __html: charts.timeline }} />
             <p className="cv-timeline-hint" data-cv-hint="" hidden>
               Select a year&rsquo;s bar to show only that year, and select it again for every year. The key filters by type.

@@ -9,12 +9,11 @@ import { getRegistryItem, listRegistry } from "~/db/registry";
 import { listPublishedLibraryRecords } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { EQUIPMENT_CATALOG, LAB_PATH, PRIMERS, REAGENTS, STRAINS, equipmentRow, equipmentRows, hasItemPage, itemPath, kindFromSegment, kindPath, primerRow, primerRows, protocolsUsing, protocolsUsingStrain, reagentLabel, reagentRow, reagentRows, reagentSource, strainRow, strainRows } from "~/kb/registry/catalog.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import type { EquipmentRow, PrimerRow, ReagentRow, StrainRow } from "~/kb/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
-import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 
 import type { Route } from "./+types/lab.kind";
 
@@ -103,80 +102,89 @@ export async function loader({ request, params, context }: Route.LoaderArgs): Pr
   return { page: { view: "item", kind, primer, primers, usedBy: protocolsUsing(primer, protocols), draft } };
 }
 
+/** The trail the page shows: the registry, the kind's list, then the item on an item's page. */
+function trailOf(page: Page): Trail {
+  const item = itemOf(page);
+  return [
+    ["Research", "/research"],
+    ["Lab registry", LAB_PATH],
+    [kindTitle(page.kind), kindPath(page.kind)],
+    ...(item ? ([[item.name, itemPath(page.kind, item.id)]] as Trail) : []),
+  ];
+}
+
+const itemOf = (page: Page) =>
+  page.view !== "item" ? null : page.kind === "strain" ? page.strain : page.kind === "reagent" ? page.reagent : page.kind === "equipment" ? page.equipment : page.primer;
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const page = loaderData.page;
+  const head = (title: string, description: string, path: string) =>
+    pageMeta({ title, description, path, trail: trailOf(page), ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}) });
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (page.view === "kind") {
     if (page.kind === "strain") {
-      return pageMeta({
-        title: "Strains: the bacterial hosts of the lab's phage work",
-        description: `The ${plural(page.strains.length, "bacterial strain")} the lab's phages are isolated on, with each one's culture collection number and the phages counted from the phages table.`,
-        path: kindPath(page.kind),
-      });
+      return head(
+        "Strains: the bacterial hosts of the lab's phage work",
+        `The ${plural(page.strains.length, "bacterial strain")} the lab's phages are isolated on, with each one's culture collection number and the phages counted from the phages table.`,
+        kindPath(page.kind),
+      );
     }
     if (page.kind === "equipment") {
-      return pageMeta({
-        title: "Equipment: the instruments and labware the lab's protocols use",
-        description: `The ${plural(page.items.length, "item")} the lab's protocols list under Equipment, in one table: manufacturer, rotor where it matters, and the protocols that use each.`,
-        path: kindPath(page.kind),
-      });
+      return head(
+        "Equipment: the instruments and labware the lab's protocols use",
+        `The ${plural(page.items.length, "item")} the lab's protocols list under Equipment, in one table: manufacturer, rotor where it matters, and the protocols that use each.`,
+        kindPath(page.kind),
+      );
     }
     if (page.kind === "reagent") {
-      return pageMeta({
-        title: "Reagents: what the lab's protocols use",
-        description: `The ${plural(page.reagents.length, "reagent")} the lab's protocols use, in one table: supplier, catalog number, a link, and the protocols that use each. A reagent the lab prepares links its recipe.`,
-        path: kindPath(page.kind),
-      });
+      return head(
+        "Reagents: what the lab's protocols use",
+        `The ${plural(page.reagents.length, "reagent")} the lab's protocols use, in one table: supplier, catalog number, a link, and the protocols that use each. A reagent the lab prepares links its recipe.`,
+        kindPath(page.kind),
+      );
     }
-    return pageMeta({
-      title: "Primers: sequences, targets and melting temperatures",
-      description: `The ${plural(page.primers.length, "primer")} the lab's protocols use, with each sequence as stored and its length and melting temperature computed.`,
-      path: kindPath(page.kind),
-    });
+    return head(
+      "Primers: sequences, targets and melting temperatures",
+      `The ${plural(page.primers.length, "primer")} the lab's protocols use, with each sequence as stored and its length and melting temperature computed.`,
+      kindPath(page.kind),
+    );
   }
   const noindex = page.draft ? [{ name: "robots", content: "noindex" }] : [];
-  const usedIn = (uses: Used) => (uses.length > 0 ? `, used in ${plural(uses.length, "protocol")}` : "");
+  // The protocols by name, so a page with no supplier or maker on record still says what it is for.
+  const usedIn = (uses: Used) => (uses.length > 0 ? `, used in ${new Intl.ListFormat("en").format(uses.map((u) => u.title))}` : "");
   if (page.kind === "reagent") {
     const { reagent } = page;
     const source = reagent.preparedInLab ? "prepared in the lab" : [reagentSource(reagent), reagent.catalogNumber].filter(Boolean).join(", ") || "a reagent";
-    return [...pageMeta({ title: `${reagentLabel(reagent)}: reagent`, description: `${reagentLabel(reagent)}: ${source}${usedIn(reagent.uses)}.`, path: reagent.path }), ...noindex];
+    const contents = reagent.contents ? ` (${reagent.contents})` : "";
+    return [...head(`${reagentLabel(reagent)}: reagent`, `${reagentLabel(reagent)}${contents}: ${source}${usedIn(reagent.uses)}.`, reagent.path), ...noindex];
   }
   if (page.kind === "equipment") {
     const { equipment } = page;
-    const maker = equipment.manufacturer ? `made by ${equipment.manufacturer}` : "lab equipment";
-    return [...pageMeta({ title: `${equipment.name}: equipment`, description: `${equipment.name}: ${maker}${usedIn(equipment.uses)}.`, path: equipment.path }), ...noindex];
+    const maker = [equipment.manufacturer ? `made by ${equipment.manufacturer}` : "lab equipment", equipment.rotor ? `rotor ${equipment.rotor}` : null].filter(Boolean).join(", ");
+    return [...head(`${equipment.name}: equipment`, `${equipment.name}: ${maker}${usedIn(equipment.uses)}.`, equipment.path), ...noindex];
   }
   if (page.kind === "strain") {
     const { strain } = page;
     const facts = [strain.collection && strain.collectionNumber ? `${strain.collection} ${strain.collectionNumber}` : null, `${plural(strain.phages.length, "phage")} isolated on it`]
       .filter(Boolean)
       .join(", ");
-    return [...pageMeta({ title: `${strain.name}: strain`, description: `${strain.name}: ${strain.organism ?? "bacterial"} host strain, ${facts}.`, path: strain.path }), ...noindex];
+    return [...head(`${strain.name}: strain`, `${strain.name}: ${strain.organism ?? "bacterial"} host strain, ${facts}.`, strain.path), ...noindex];
   }
   const { primer } = page;
   const facts = [primer.direction ? `${primer.direction} primer` : "primer", primer.target ? `for ${primer.target}` : null].filter(Boolean).join(" ");
   const sizes = [primer.length ? `${primer.length} nt` : null, primer.tm !== null ? `Tm ${primer.tm} °C` : null].filter(Boolean).join(", ");
-  return [...pageMeta({ title: `${primer.name}: primer`, description: `${primer.name}: ${facts}${sizes ? `, ${sizes}` : ""}.`, path: primer.path }), ...noindex];
+  return [...head(`${primer.name}: primer`, `${primer.name}: ${facts}${sizes ? `, ${sizes}` : ""}.`, primer.path), ...noindex];
 }
 
 export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
   const page = loaderData.page;
-  const item =
-    page.view !== "item" ? null : page.kind === "strain" ? page.strain : page.kind === "reagent" ? page.reagent : page.kind === "equipment" ? page.equipment : page.primer;
-  const trail: Array<[string, string]> = [
-    ["Research", "/research"],
-    ["Lab registry", LAB_PATH],
-    [kindTitle(page.kind), kindPath(page.kind)],
-    ...(item ? ([[item.name, itemPath(page.kind, item.id)]] as Array<[string, string]>) : []),
-  ];
-  const crumbs = (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />
-  );
+  const item = itemOf(page);
+  const trail = trailOf(page);
   if (page.view === "item") {
     const draft = page.draft;
     return (
-      <PageShell trail={crumbs}>
+      <PageShell>
         <Breadcrumb trail={trail} />
         <h1 className="page-title cap-layout-grid" id="registry-title">
           {item?.name}
@@ -195,7 +203,7 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
     );
   }
   return (
-    <PageShell trail={crumbs}>
+    <PageShell>
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid" id="registry-title">
         {kindTitle(page.kind)}

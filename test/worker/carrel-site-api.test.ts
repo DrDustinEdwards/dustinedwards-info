@@ -8,11 +8,14 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { commitFiles } from "~/lib/source/store.server";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
+import { documentHandlerContext, postPreviewContext } from "~/lib/context";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
 import { runTool } from "~/lib/operator/api.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
+import { loader as postLoader } from "~/routes/blog.$slug";
+import { loader as previewLinkLoader } from "~/routes/preview.$token";
 
 import { post } from "./fixtures";
 import { putSource, removeSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
@@ -353,6 +356,29 @@ describe("the preview", () => {
 
     expect(published).not.toBeNull();
     expect(preview).toEqual(published);
+  });
+
+  it("ALLOWS a draft with no front matter as \"Untitled\", and a save of it is still REFUSED", async () => {
+    const request = new Request(`${PREFIX}/preview`, {
+      method: "POST",
+      headers: headersFor(testEnv.CARREL_SITE_KEY),
+      body: JSON.stringify({ source: "# A heading only\n" }),
+    });
+    const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
+    args.context.set(documentHandlerContext, async (_request, context) =>
+      new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, { headers: { "content-type": "text/html" } }),
+    );
+    const preview = await action(args as never);
+    expect(preview.status).toBe(200);
+    expect(await preview.text()).toContain("<title>Untitled</title>");
+
+    const saved = await send("PUT", `${PREFIX}/content/no-title/draft`, {
+      source: "# A heading only\n",
+      expectedVersion: null,
+      changeId: "chg-no-title",
+    });
+    expect(saved.status).toBe(422);
+    expect(await source(postPath("no-title"))).toBeUndefined();
   });
 });
 
@@ -966,6 +992,117 @@ describe("content delete", () => {
 
 });
 
+describe("the v0.17.0 contract on posts", () => {
+  const live = (slug: string) => post(slug, { draft: false, first_published: "2026-07-01" });
+  const list = async (query: string) =>
+    (await (await get(`${PREFIX}/content?${query}`)).json()) as {
+      items: Array<{ id: string; trashedAt?: string | null; version?: string }>;
+      filtered?: string[];
+    };
+
+  it("trashes a live post off the site, lists it only in the trash, and restores it as a draft", async () => {
+    await putSource(postPath("v17-trash"), live("v17-trash"));
+    await seedPost("v17-trash");
+
+    const trashed = await send("POST", `${PREFIX}/content/v17-trash/trash`, {
+      expectedVersion: await versionOf(postPath("v17-trash")),
+      changeId: "chg-v17-trash",
+    });
+    expect(trashed.status).toBe(200);
+    expect(await trashed.json()).toMatchObject({ status: "draft" });
+    expect(await source(postPath("v17-trash"))).toMatch(/^draft: true$/m);
+
+    expect((await list("limit=200")).items.map((i) => i.id)).not.toContain("v17-trash");
+    const trash = await list("trashed=true&kind=post&limit=200");
+    expect(trash.filtered).toEqual(["kind", "trashed"]);
+    expect(trash.items).toEqual([
+      expect.objectContaining({ id: "v17-trash", version: await versionOf(postPath("v17-trash")), trashedAt: expect.any(String) }),
+    ]);
+
+    const version = await versionOf(postPath("v17-trash"));
+    const republish = await send("POST", `${PREFIX}/content/v17-trash/publish`, { expectedVersion: version, changeId: "chg-v17-pub" });
+    expect(republish.status).toBe(422);
+    const restored = await send("POST", `${PREFIX}/content/v17-trash/restore`, { expectedVersion: version, changeId: "chg-v17-restore" });
+    expect(await restored.json()).toMatchObject({ status: "draft" });
+    expect((await list("limit=200")).items.map((i) => i.id)).toContain("v17-trash");
+  });
+
+  it("renames a live post with its history, and its old address answers a permanent redirect", async () => {
+    await putSource(postPath("v17-old"), live("v17-old"));
+    const renamed = await send("POST", `${PREFIX}/content/v17-old/rename`, {
+      newId: "v17-new",
+      expectedVersion: await versionOf(postPath("v17-old")),
+      changeId: "chg-v17-rename",
+    });
+    expect(renamed.status).toBe(200);
+    expect(await renamed.json()).toMatchObject({ id: "v17-new", status: "published", previousPath: "/writing/v17-old" });
+    expect(await source(postPath("v17-old"))).toBeUndefined();
+    expect(await source(postPath("v17-new"))).toMatch(/^slug: v17-new$/m);
+    const history = (await (await get(`${PREFIX}/content/v17-new/revisions`)).json()) as { items: unknown[] };
+    expect(history.items).toHaveLength(2);
+
+    const args = { request: new Request(`${ORIGIN}/writing/v17-old`), params: { slug: "v17-old" }, context: routeContext() };
+    const moved = await (postLoader(args as never) as Promise<unknown>).catch((thrown: unknown) => thrown);
+    expect(moved).toBeInstanceOf(Response);
+    expect((moved as Response).status).toBe(301);
+    expect((moved as Response).headers.get("location")).toBe("/writing/v17-new");
+  });
+
+  it("publishes under the date Carrel names", async () => {
+    await putSource(postPath("v17-dated"), post("v17-dated"));
+    const response = await send("POST", `${PREFIX}/content/v17-dated/publish`, {
+      expectedVersion: await versionOf(postPath("v17-dated")),
+      changeId: "chg-v17-dated",
+      publishedAt: "2025-03-04T05:06:07.000Z",
+    });
+    expect(await response.json()).toMatchObject({ status: "published" });
+    const saved = (await source(postPath("v17-dated"))) ?? "";
+    expect(saved).toMatch(/^date: 2025-03-04$/m);
+    expect(saved).toMatch(/^publish_at: "2025-03-04T05:06:07.000Z"$/m);
+  });
+
+  it("announces a first publish that goes live by time once, with no write", async () => {
+    await putSource(postPath("v17-later"), post("v17-later"));
+    const at = new Date(Date.now() + 3_600_000).toISOString();
+    const scheduled = await send("POST", `${PREFIX}/content/v17-later/schedule`, {
+      publishAt: at,
+      expectedVersion: await versionOf(postPath("v17-later")),
+      changeId: "chg-v17-later",
+    });
+    expect(await scheduled.json()).toMatchObject({ status: "scheduled" });
+    const version = await versionOf(postPath("v17-later"));
+
+    const env = siteEnv() as unknown as Env;
+    const after = new Date(Date.parse(at) + 1000);
+    const run = await runCarrelSchedules(env, createExecutionContext(), after);
+    expect(run.applied).toEqual([expect.objectContaining({ id: "v17-later", kind: "publish", version })]);
+    expect(await versionOf(postPath("v17-later"))).toBe(version);
+    expect((await runCarrelSchedules(env, createExecutionContext(), after)).applied).toEqual([]);
+  });
+
+  it("serves a preview link with no key, noindex and never stored, and refuses an unknown token", async () => {
+    await putSource(postPath("v17-share"), post("v17-share", { title: "Shared draft" }));
+    const made = await send("POST", `${PREFIX}/preview-links`, { id: "v17-share", changeId: "chg-v17-share" });
+    expect(made.status).toBe(201);
+    const { url } = (await made.json()) as { url: string };
+    const token = new URL(url).pathname.split("/").pop()!;
+
+    const open = (path: string) => {
+      const context = routeContext();
+      context.set(documentHandlerContext, async (_request, ctx) =>
+        new Response(`<title>${ctx.get(postPreviewContext)?.title}</title>`, { headers: { "content-type": "text/html" } }),
+      );
+      return previewLinkLoader({ request: new Request(`${ORIGIN}${path}`), params: {}, context } as never);
+    };
+    const page = await open(`/preview/${token}`);
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("<title>Shared draft</title>");
+    expect(page.headers.get("x-robots-tag")).toMatch(/noindex/);
+    expect(page.headers.get("cache-control")).toMatch(/no-store/);
+    expect((await open(`/preview/${"x".repeat(43)}`)).status).toBe(404);
+  });
+});
+
 describe("the site-api conformance suite", () => {
   it("passes against the real route, with write probes", async () => {
     const { runConformance } = await import("@dustinedwards/site-api/conformance");
@@ -987,7 +1124,16 @@ describe("the site-api conformance suite", () => {
           headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.10" },
         });
         try {
-          return await (request.method === "GET" ? loader(argsFor(request)) : action(argsFor(request)));
+          if (request.method === "GET") return await loader(argsFor(request));
+          // The Worker puts the app's document renderer on the context (workers/app.ts); a test has no app build, so
+          // this stand-in renders the post the preview handed it, which is what the preview case reads.
+          const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
+          args.context.set(documentHandlerContext, async (_request, context) =>
+            new Response(`<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`, {
+              headers: { "content-type": "text/html; charset=utf-8" },
+            }),
+          );
+          return await action(args as never);
         } catch (thrown) {
           // A refusal outside the prefix is thrown (a Response or router data); the wire would carry it as its status.
           if (thrown instanceof Response) return thrown;

@@ -15,17 +15,17 @@ import { paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import ContentPage, { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
 import Cv, { loader as cvLoader, meta as cvMeta } from "~/routes/cv";
-import Publications, { loader as publicationsLoader } from "~/routes/publications";
-import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
+import Publications, { loader as publicationsLoader, meta as publicationsMeta } from "~/routes/publications";
+import Paper, { loader as paperLoader, meta as paperMeta } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCv, seedDictionary, seedPages, seedPublications, seedRoster } from "./seed";
 
 /*
  * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
- * through its own route module, every <script type="application/ld+json"> is parsed, and every node is
- * checked against the properties schema.org and Google's rich-result documentation require and
- * recommend for its type. A breadcrumb list must say exactly what the visible trail says.
+ * through its own route module, head and body, every <script type="application/ld+json"> is parsed, and every
+ * node is checked against the properties schema.org and Google's rich-result documentation require and
+ * recommend for its type. Each page has one breadcrumb list, and it says what the visible trail says.
  *
  * The site never fills a missing fact in, so a recommended property may be absent, but only where
  * MISSING below names it and says why. An entry that no longer matches anything fails too, so the
@@ -79,6 +79,7 @@ const RULES: Record<string, Rule> = {
   },
   WebSite: { required: ["name", "url"], recommended: ["description"] },
   WebPage: { required: ["name", "url"], recommended: ["description"] },
+  CollectionPage: { required: ["name", "url"], recommended: ["description"] },
   ProfilePage: { required: ["mainEntity"], recommended: [] },
   DefinedTerm: { required: ["name", "description", "inDefinedTermSet"], recommended: [] },
   Person: { required: ["name"], recommended: [] },
@@ -127,10 +128,16 @@ const context = () => routeContext();
 
 const READABLE_PAGE_PATHS = publishedContentPagePaths(PUBLISHED_PAGES);
 
+/** The JSON-LD in a route's `meta`, as the script elements the document head carries. */
+const head = (tags: unknown) =>
+  (tags as Array<Record<string, unknown>>)
+    .flatMap((tag) => ("script:ld+json" in tag ? [`<script type="application/ld+json">${JSON.stringify(tag["script:ld+json"])}</script>`] : []))
+    .join("");
+
 async function contentPage(path: string): Promise<Page> {
   const request = new Request(`${SITE_ORIGIN}${path}`);
   const loaderData = await contentPageLoader({ request, params: {}, context: context() } as never);
-  return { path, html: renderRoute(path, ContentPage, { loaderData }) };
+  return { path, html: renderRoute(path, ContentPage, { loaderData }) + head(contentPageMeta({ loaderData } as never)) };
 }
 
 async function pages(): Promise<Page[]> {
@@ -142,20 +149,20 @@ async function pages(): Promise<Page[]> {
   {
     const request = new Request(`${SITE_ORIGIN}/cv`);
     const loaderData = await cvLoader({ request, params: {}, context: context() } as never);
-    out.push({ path: "/cv", html: renderRoute("/cv", Cv, { loaderData }) });
+    out.push({ path: "/cv", html: renderRoute("/cv", Cv, { loaderData }) + head(cvMeta()) });
   }
   {
     const path = "/research/publications";
     const request = new Request(`${SITE_ORIGIN}${path}`);
     const loaderData = await publicationsLoader({ request, params: {}, context: context() } as never);
-    out.push({ path, html: renderRoute(path, Publications, { loaderData }) });
+    out.push({ path, html: renderRoute(path, Publications, { loaderData }) + head(publicationsMeta({ loaderData } as never)) });
   }
   for (const paper of await listPublishedPublications(env as never)) {
     const { slug } = paper;
     const path = paperPath(slug);
     const request = new Request(`${SITE_ORIGIN}${path}`);
     const loaderData = await paperLoader({ request, params: { slug }, context: context() } as never);
-    out.push({ path, html: renderRoute(path, Paper, { loaderData }) });
+    out.push({ path, html: renderRoute(path, Paper, { loaderData }) + head(paperMeta({ loaderData } as never)) });
   }
   return out;
 }
@@ -217,16 +224,11 @@ const rendered = await pages();
 describe("every JSON-LD block on the pages", () => {
   it("covers every content page, the CV, the publications list and every paper", () => {
     expect(rendered.length).toBe(READABLE_PAGE_PATHS.length + 1 + PAPER_COUNT);
-    // Scope, so a pattern that matched no script element cannot pass every case below: only the two
-    // hubs emit nothing.
-    expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([
-      "/research",
-      "/teaching",
-    ]);
+    // Scope, so a pattern that matched no script element cannot pass every case below.
+    expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([]);
   });
 
   it.each(rendered.map((page) => [page.path, page] as const))("%s: every block parses and every node has its required properties", (_path, page) => {
-    // A hub with no trail and no declared type (/research, /teaching) emits none, and that passes.
     const found = blocks(page.html).flatMap((block) => nodes(block));
     for (const node of found) {
       const type = String(node["@type"]);
@@ -259,26 +261,22 @@ describe("every JSON-LD block on the pages", () => {
     expect(MISSING.filter((m) => !used.has(m)).map((m) => `${m.type}.${m.property}`), "stale MISSING entries").toEqual([]);
   });
 
-  it.each(rendered.map((page) => [page.path, page] as const))("%s: a breadcrumb list says exactly what the visible trail says", (_path, page) => {
-    const visible = visibleTrail(page.html);
+  it.each(rendered.map((page) => [page.path, page] as const))("%s: one breadcrumb list, from the home page down the visible trail", (_path, page) => {
     const lists = blocks(page.html)
       .flatMap((block) => nodes(block))
       .filter((node) => node["@type"] === "BreadcrumbList");
-    if (visible.length === 0) {
-      expect(lists, `${page.path} marks up a trail it does not show`).toEqual([]);
-      return;
-    }
     expect(lists).toHaveLength(1);
     const items = (lists[0]?.itemListElement ?? []) as Node[];
-    // Google reads a trail of two steps or more.
-    expect(items.length).toBeGreaterThanOrEqual(2);
     expect(items.map((item) => item.position)).toEqual(items.map((_, i) => i + 1));
-    expect(items.map((item) => item.name)).toEqual(visible.map((step) => step.name));
-    visible.forEach((step, i) => {
-      const item = String(items[i]?.item);
-      expect(item.startsWith(SITE_ORIGIN), `${page.path}: ${item}`).toBe(true);
-      if (step.href) expect(item).toBe(`${SITE_ORIGIN}${step.href}`);
-    });
+    expect(items[0]?.item).toBe(`${SITE_ORIGIN}/`);
+    // A hub shows no trail of one step; a deeper page's list is the trail it shows.
+    const visible = visibleTrail(page.html);
+    if (visible.length > 0) {
+      expect(items.slice(1).map((item) => item.name)).toEqual(visible.map((step) => step.name));
+      visible.forEach((step, i) => {
+        if (step.href) expect(items[i + 1]?.item).toBe(`${SITE_ORIGIN}${step.href}`);
+      });
+    }
     // The last step is this page, which the visible trail shows unlinked.
     expect(items.at(-1)?.item).toBe(`${SITE_ORIGIN}${page.path}`);
   });

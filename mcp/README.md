@@ -31,15 +31,21 @@ by default, at most 100, with `has_more` and `next_offset`.
 
 ## Security floor (rules 12 and 13)
 
-- Every tool call goes through `invokeTool`: the caller is re-proved to be the
-  administrator (or a configured agent) and to hold the tool's scope, then an
-  append-only `ToolCallLog` row is written before and after the call. A call that
-  cannot be logged does not run.
+- Every tool call goes through site-runtime's `invokeTool`: the caller is re-proved
+  to be the administrator (or a configured agent) and to hold the scope the tool
+  declares, then an append-only `ToolCallLog` row is written before and after the
+  call. A call that cannot be logged does not run. Sign-ins are logged there too.
+- Least scope first: the protected resource metadata and the 401 name only
+  `dei.read`; a write tool called on a read grant answers 403
+  `insufficient_scope` naming `dei.read dei.write`, so the client can step up.
+- A foreign `Origin` on `/mcp` is refused before any token check; no Origin, this
+  origin and `https://claude.ai` pass.
 - Access tokens are bound to `PUBLIC_ORIGIN/mcp` (RFC 8707); a token for any
   other resource is refused. The API leg is `OPERATOR_TOKEN`, never the client's token.
 - CIMD for Claude, Claude Code and ChatGPT. DCR at `/register` for Grok and
-  Gemini, tightened: 5 registrations per minute per address, and every redirect
-  URI must be listed exactly in `DCR_REDIRECT_URIS`. A refused registration's
+  Gemini, tightened: site-runtime's `registrationLimited` (5 an hour per address,
+  30 a day in all), and every redirect URI must be one of site-runtime's
+  `DCR_CALLBACKS` or listed exactly in `DCR_REDIRECT_URIS`. A refused registration's
   Worker log line `registration-refused` names the URI it asked for; add it to
   `mcp/wrangler.jsonc.example` by PR.
 - Agent keys (`AGENT_KEY_<NAME>`) read only unless `AGENT_WRITE` names them. It names `grok`, whose key is its only door.

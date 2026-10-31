@@ -495,18 +495,23 @@ export async function adminNavCounts(env: Env) {
 }
 
 export async function listAllPostsForAdmin(env: Env) {
-  return getDb(env)
-    .select({
-      slug: posts.slug,
-      title: posts.title,
-      status: posts.status,
-      publishAt: posts.publishAt,
-      updatedAt: posts.updatedAt,
-      featured: posts.featured,
-    })
-    .from(posts)
-    .where(eq(posts.kind, "post"))
-    .orderBy(desc(posts.publishAt));
+  const [rows, tagRows] = await Promise.all([
+    getDb(env)
+      .select({
+        slug: posts.slug,
+        title: posts.title,
+        status: posts.status,
+        publishAt: posts.publishAt,
+        updatedAt: posts.updatedAt,
+        featured: posts.featured,
+      })
+      .from(posts)
+      .where(eq(posts.kind, "post"))
+      .orderBy(desc(posts.publishAt)),
+    listAllPostTagsForAdmin(env),
+  ]);
+  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
+  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
 /** Corpus for `withRelated`, drafts included: it filters candidates itself. */

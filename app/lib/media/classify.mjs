@@ -1,3 +1,4 @@
+import { ICONS } from "@drdustinedwards/site-helpers/icons";
 import { toHex } from "@dustinedwards/site-runtime/encoding";
 
 const TYPES = new Map([
@@ -58,7 +59,7 @@ const NOT_ASSETS = new Map([
   [
     "/_headers",
     "Cloudflare static-asset header rules. Consumed by the uploader at deploy " +
-      "time and never served, so it has no URL to index. Subject of check:headers.",
+      "time and never served, so it has no URL to index. Written by site-runtime-headers.",
   ],
   [
     "/_redirects",
@@ -139,18 +140,12 @@ export function roleOf(pathOrKey) {
   if (pathOrKey.startsWith("/diagrams/")) return "generated";
 
   // The OG image is brand, not icon: `seo.ts` names it as the default social card.
-  if (/^\/dustin-edwards-(logo(-[a-z]+)*\.svg|favicon\.svg|og-image\.png)$/.test(pathOrKey)) {
+  if (/^\/dustin-edwards-(logo(-[a-z]+)*\.svg|og-image\.png)$/.test(pathOrKey)) {
     return "brand";
   }
 
-  // `favicon.ico` and `site.webmanifest` keep unprefixed names because browsers request them unprompted.
-  if (
-    /^\/(favicon\.ico|site\.webmanifest|dustin-edwards-(apple-touch-icon\.png|android-chrome-[\dx]+\.png|maskable-icon-[\dx]+\.png))$/.test(
-      pathOrKey,
-    )
-  ) {
-    return "icon";
-  }
+  // Prelum's shared icon paths, which browsers request unprompted.
+  if (/** @type {string[]} */ (Object.values(ICONS)).includes(pathOrKey)) return "icon";
 
   return "content";
 }

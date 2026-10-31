@@ -2,7 +2,13 @@
 // route, the key, the rate limit and every body's shape; this adapter maps its content and preview
 // calls onto the site's own save, render and history code. Nothing here writes around savePost.
 // Media (v0.2.0) is its own module, over the site's media code.
+//
+// v0.17.0 on posts: trash and restore (a trashed post is a draft listed only in the trash, content_trash), rename (the
+// file and its history move, and the old address of a post ever public answers a 301, post_redirects), a publish under
+// a date Carrel names (the post's `date` and `publish_at`), the list's kind, tag and published filters
+// (content-kinds.server.ts) and the render version. State the file does not hold is post-state.server.ts.
 
+import { RENDER_VERSION } from "@drdustinedwards/site-helpers/render/nomath";
 import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import { SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
@@ -14,12 +20,29 @@ import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
-import { postPath } from "~/lib/content/slug.mjs";
+import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
-import { withPublication } from "~/lib/carrel/front-matter-lines";
+import {
+  effectivePublishAt,
+  forPreview,
+  frontKey,
+  statusOf,
+  withPublication,
+  withPublishedAt,
+  withSlug,
+} from "~/lib/carrel/front-matter-lines";
+import {
+  dropScheduledPublish,
+  dropTrash,
+  movePost,
+  putScheduledPublish,
+  putTrash,
+  trashedAt,
+  trashedAtOf,
+} from "~/lib/carrel/post-state.server";
 import { documentHandler } from "~/lib/carrel/document-handler.server";
 import { dictionaryHandler } from "~/lib/carrel/dictionary-handler.server";
 import { pageHandler } from "~/lib/carrel/page-handler.server";
@@ -27,11 +50,12 @@ import { cvHandler } from "~/lib/carrel/cv-handler.server";
 import { phageHandler } from "~/lib/carrel/phage-handler.server";
 import { rosterHandler } from "~/lib/carrel/roster-handler.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
-import { parsePost } from "~/lib/editor/frontmatter";
 import {
   deletePost,
+  forgetPostRows,
   renderRecord,
   savePost,
+  validateAndRender,
 } from "~/lib/editor/publish.server";
 import { postColumnValues, type PostRecord } from "~/lib/editor/post-rows.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
@@ -53,19 +77,6 @@ const PREVIEW_ROW_ID = Number.MAX_SAFE_INTEGER;
 
 /** The slug a preview renders at when Carrel sends no id: a new post that has none yet. */
 const UNSAVED_PREVIEW_SLUG = "carrel-preview";
-
-/** Draft, scheduled or published, from the file itself, which is the only authority on status. */
-function statusOf(raw: string, now = Date.now()): ContentStatus {
-  if (readState(raw).draft) return "draft";
-  const at = parsePost(raw).publishAt.trim();
-  return at && Date.parse(at) > now ? "scheduled" : "published";
-}
-
-/** The effective publication time, as the pipeline computes it: publish_at, else the date. */
-function effectivePublishAt(raw: string): number {
-  const fields = parsePost(raw);
-  return Date.parse(fields.publishAt.trim() || `${fields.date}T00:00:00.000Z`);
-}
 
 /**
  * The drizzle row getBlogPost would read once this record were synced: the synced columns decoded
@@ -145,11 +156,29 @@ export function carrelSiteAdapter(options: {
     }
   }
 
-  /** A publish, an unpublish or a delete of a post drops the update waiting on it (site-api v0.10.0). */
+  /**
+   * A publish, an unpublish, a trash or a delete of a post drops the update waiting on it (site-api v0.10.0), and the
+   * first publish the cron would otherwise announce (post-state.server.ts).
+   */
   const waiting = d1ScheduledUpdates(env.DB);
+  /** The package's statements are D1's own, typed by the part it uses. */
+  const batch = (...statements: unknown[]) => env.DB.batch(statements as D1PreparedStatement[]);
   async function dropWaiting<T>(id: string, result: T): Promise<T> {
-    await waiting.remove(id).run();
+    await batch(waiting.remove(id), dropScheduledPublish(env, id));
     return result;
+  }
+
+  /** The stored file at the version the caller loaded: 404 when there is none, 409 when it moved on. */
+  async function current(id: string, expectedVersion: string) {
+    const file = await readFile(env, postPath(id));
+    if (!file) throw new NotFoundError(`No post "${id}" exists.`);
+    if (file.sha !== expectedVersion) throw new VersionConflictError(file.sha);
+    return file;
+  }
+
+  /** A trashed post is restored before anything puts it on the site. */
+  async function refuseTrashed(id: string) {
+    if (await trashedAtOf(env, id)) throw new RefusedError("This post is in the trash; restore it first.");
   }
 
   /** The stored file for a write that names a version; a version for a missing id is a conflict. */
@@ -165,7 +194,9 @@ export function carrelSiteAdapter(options: {
     async list(query) {
       const now = Date.now();
       const needle = query.q?.toLowerCase();
-      const summaries: ContentSummary[] = (await listAllPostsForAdmin(env)).map((row) => {
+      const trash = await trashedAt(env);
+      const rows = (await listAllPostsForAdmin(env)).filter((row) => trash.has(row.slug) === (query.trashed === true));
+      const summaries: ContentSummary[] = rows.map((row) => {
         const at = row.publishAt ? row.publishAt.getTime() : null;
         const status: ContentStatus =
           row.status === "draft" ? "draft" : at !== null && at > now ? "scheduled" : "published";
@@ -179,8 +210,14 @@ export function carrelSiteAdapter(options: {
           publishAt: status === "scheduled" && at !== null ? new Date(at).toISOString() : null,
           publishedAt: status === "published" && at !== null ? new Date(at).toISOString() : null,
           updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+          tags: row.tags,
+          trashedAt: trash.get(row.slug) ?? null,
         };
       });
+      // The trash names each post's version, which site-api's cron deletes it at once it has been there 30 days.
+      if (query.trashed) {
+        for (const summary of summaries) summary.version = (await readFile(env, postPath(summary.id)))?.sha;
+      }
       return summaries
         .filter((s) => !query.status || s.status === query.status)
         .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
@@ -192,18 +229,18 @@ export function carrelSiteAdapter(options: {
       const updated = await env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
         .bind(id)
         .first<{ updated_at: number }>();
-      const fields = parsePost(file.content);
       const { firstPublished } = readState(file.content);
       const status = statusOf(file.content);
       return {
         id,
         kind: "post",
-        title: fields.title || id,
+        title: frontKey(file.content, "title") || id,
         status,
         path: firstPublished ? `/writing/${id}` : null,
-        publishAt: status === "scheduled" ? new Date(Date.parse(fields.publishAt)).toISOString() : null,
+        publishAt: status === "scheduled" ? new Date(effectivePublishAt(file.content)).toISOString() : null,
         publishedAt: firstPublished ? `${firstPublished}T00:00:00.000Z` : null,
         updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
+        trashedAt: await trashedAtOf(env, id),
         format: "markdown",
         source: file.content,
         version: file.sha,
@@ -219,16 +256,23 @@ export function carrelSiteAdapter(options: {
       const raw = file
         ? withPublication(input.source, {
             draft: readState(file.content).draft,
-            publishAt: parsePost(file.content).publishAt.trim() || null,
+            publishAt: frontKey(file.content, "publish_at").trim() || null,
           })
         : withPublication(input.source, { draft: true });
       return write(id, input.changeId, raw, input.expectedVersion);
     },
 
+    publishedAtSettable: true,
+
     async publish(id, input) {
       // Read even when source is sent: a version for an id that does not exist is a conflict.
       const stored = await existing(id);
-      const source = input.source ?? stored;
+      await refuseTrashed(id);
+      let source = input.source ?? stored;
+      // Under the date Carrel names (never later than now: the package allows a minute's grace for a clock).
+      if (input.publishedAt) {
+        source = withPublishedAt(source, new Date(Math.min(Date.parse(input.publishedAt), Date.now())).toISOString());
+      }
       // A post whose time is still ahead would publish invisible, so publishing now means now.
       const due = effectivePublishAt(source) > Date.now() ? new Date().toISOString() : undefined;
       return dropWaiting(
@@ -243,13 +287,13 @@ export function carrelSiteAdapter(options: {
         throw new RefusedError("publishAt is not in the future; publish it now instead.");
       }
       const stored = await existing(id);
+      await refuseTrashed(id);
       const source = input.source ?? stored;
-      return write(
-        id,
-        input.changeId,
-        withPublication(source, { draft: false, publishAt: new Date(at).toISOString() }),
-        input.expectedVersion,
-      );
+      const publishAt = new Date(at).toISOString();
+      const result = await write(id, input.changeId, withPublication(source, { draft: false, publishAt }), input.expectedVersion);
+      // It goes live by its publish_at with no write; this is how the cron hears it, once, to run the publish hooks.
+      await putScheduledPublish(env, id, publishAt, input.changeId).run();
+      return result;
     },
 
     async unpublish(id, input) {
@@ -281,7 +325,55 @@ export function carrelSiteAdapter(options: {
       } catch (error) {
         return asSiteApiError(env, error, postPath(id));
       }
-      await waiting.remove(id).run();
+      await batch(waiting.remove(id), dropScheduledPublish(env, id), dropTrash(env, id));
+    },
+
+    // A live or scheduled post is written as a draft first, so it leaves the site before it enters the trash.
+    async trash(id, input) {
+      const file = await current(id, input.expectedVersion);
+      const result =
+        statusOf(file.content) === "draft"
+          ? { id, version: file.sha, status: "draft" as const, changeId: input.changeId }
+          : await write(id, input.changeId, withPublication(file.content, { draft: true }), file.sha);
+      await batch(putTrash(env, id, input.changeId), waiting.remove(id), dropScheduledPublish(env, id));
+      return result;
+    },
+
+    async restore(id, input) {
+      const file = await current(id, input.expectedVersion);
+      if (!(await trashedAtOf(env, id))) throw new RefusedError("This post is not in the trash.");
+      await dropTrash(env, id).run();
+      return { id, version: file.sha, status: statusOf(file.content), changeId: input.changeId };
+    },
+
+    // The file and every revision move to the new slug, then the post is saved there (its rows, search and Ask records
+    // follow) and its old rows go. Rendered under the new slug first, so a source the new slug refuses moves nothing.
+    async rename(id, input) {
+      const file = await current(id, input.expectedVersion);
+      const to = input.newSlug;
+      if (!SLUG_PATTERN.test(to) || to.length > SLUG_MAX_LENGTH) {
+        throw new RefusedError(`"${to}" is not a post slug: lower case letters and digits joined by single hyphens.`);
+      }
+      if (await readFile(env, postPath(to))) throw new RefusedError(`A post with the slug "${to}" already exists.`);
+      const raw = withSlug(file.content, to);
+      try {
+        await validateAndRender(env, to, raw);
+      } catch (error) {
+        return asSiteApiError(env, error, postPath(id));
+      }
+      const everPublic = readState(file.content).firstPublished !== null;
+      const moved = await movePost(env, {
+        from: id,
+        to,
+        fromPath: postPath(id),
+        toPath: postPath(to),
+        sha: file.sha,
+        redirect: everPublic,
+      });
+      if (!moved) throw new VersionConflictError((await readFile(env, postPath(id)))?.sha ?? null);
+      await forgetPostRows(env, id);
+      const result = await write(to, input.changeId, raw, file.sha);
+      return { ...result, previousPath: everPublic ? `/writing/${id}` : null };
     },
 
     // The page the save would publish: the same record renderAndWrite builds, rendered through the
@@ -291,7 +383,7 @@ export function carrelSiteAdapter(options: {
       const slug = previewSlug ?? UNSAVED_PREVIEW_SLUG;
       let record: PostRecord;
       try {
-        record = await renderRecord(env, slug, input.source);
+        record = await renderRecord(env, slug, forPreview(input.source, slug));
       } catch (error) {
         return asSiteApiError(env, error, postPath(slug));
       }
@@ -329,10 +421,12 @@ export function carrelSiteAdapter(options: {
 
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },
+    // Every deploy renders the whole corpus again (docs/PUBLISHING.md), so the stored HTML is this Prelum's.
+    renderVersion: RENDER_VERSION,
     // The search fields a post renders from its frontmatter (renderPost); the other kinds keep their own heads.
     content: { ...registry.adapter, searchFields: SEARCH_FIELDS },
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
-    schedules: postSchedules(env, write, statusOf),
+    schedules: postSchedules(env, write),
   };
 }

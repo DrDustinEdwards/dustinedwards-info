@@ -3,7 +3,7 @@ import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 
-import type { Route } from "./+types/api.csp-report";
+import type { Route } from "./+types/csp-report";
 
 /**
  * The CSP violation sink the policy names: the family's one receiver (site-runtime's csp-report).

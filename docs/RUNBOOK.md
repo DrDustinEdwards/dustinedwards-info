@@ -164,12 +164,12 @@ Two paths. Try them in this order.
 ### 4-pre. The retained nightly dump
 
 Since the Knowledge Base, D1 holds rows the repository does not (webmentions, sealed procedure
-versions, inventory lots and locations, lab members and their audit trails). The watchdog asks the
-operator API for `backup_d1` every day at 05:00 UTC. It dumps every table to `dustinedwards-backups`
+versions, inventory lots and locations, lab members and their audit trails). The site Worker's own
+cron runs the `backup` job every day at 05:00 UTC (`workers/app.ts`; by hand, the operator API's `backup_d1`). It dumps every table to `dustinedwards-backups`
 (`BACKUPS`) under `backups/json/<run id>/`, checks the dump against `app/lib/backup/policy.mjs`,
 writes `_complete.json` only if the check passes, then prunes to 14 daily, 8 weekly and 6 monthly runs.
-`/api/health` reports `backup.last_ok` and `backup.age_hours`; a failed run throws in the watchdog,
-which is the alert. Nothing in the dump is a credential: see `EXCLUDED_TABLES` in the policy file.
+`/health` reports `backup.last_ok` and `backup.age_hours` and warns past 26 hours; a failed run is
+the `cron` check's warning there, and its error is in the `cron_runs` row. Nothing in the dump is a credential: see `EXCLUDED_TABLES` in the policy file.
 
 Restore it into a copy first, never over the live database. Download a run, then:
 
@@ -266,6 +266,14 @@ $order | ForEach-Object {
 node scripts/split-dump.mjs "$dir\_restore.sql"
 npx wrangler d1 execute dustinedwards --remote --file "$dir\_restore.sql"
 ```
+
+Before running that last line, if the migrations made any triggers (they did:
+`media_changes_ai` and its siblings write `media_changes` whenever `media` changes),
+put a `DROP TRIGGER` for each at the top of `_restore.sql` and its `CREATE TRIGGER`
+from `drizzle/` at the bottom. Otherwise loading `media` fires the trigger and the
+dump's own `media_changes` rows then fail with `UNIQUE constraint failed:
+media_changes.seq`. `check:restore` does this and prints the triggers it held off.
+Found 2026-10-31 by `check:restore`, which restored 0 posts.
 
 `split-dump` is not optional. D1 refuses one statement over 100 KB (`SQLITE_TOOBIG`) and the
 export writes each row as one literal `INSERT`, so a paper's full text in `publications` (five rows
@@ -374,10 +382,13 @@ and confirm the next scheduled watchdog run repairs rather than reports.
 token itself (`app/lib/access.server.ts`: signature against the team's published keys, `aud` equal to
 `ACCESS_AUD`, `iss` equal to the team domain, expiry). Both values are plain vars in `wrangler.jsonc`.
 
-**Who may administer the site is one list: the Access policy `dustinedwards-admin`.** Zero Trust >
-Access > Applications > `dustinedwards-login` > Policies > `dustinedwards-admin` > the Include rule
-"Emails". Add or remove an address there and save; no code, no deploy. Every edit is recorded under
-the email in that person's token.
+**Who may administer the site is the `ADMIN_EMAILS` secret** (comma-separated), and the Access policy
+`dustinedwards-admin` (Zero Trust > Access > Applications > `dustinedwards-login` > Policies >
+`dustinedwards-admin` > the Include rule "Emails") must admit the same people. The Worker checks the
+token's email against `ADMIN_EMAILS` too, so a policy that admits too much makes nobody else an
+administrator (they get a 403). Add or remove an administrator in both: `npx wrangler secret put
+ADMIN_EMAILS` and the policy; no deploy. Unset, nobody is an administrator. Every edit is recorded
+under the email in that person's token.
 
 **Machines** (CI, smoke) cannot sign in, so they use an Access service token in a second policy of
 the same application (action Service Auth), plus the existing `SMOKE_TOKEN` bearer. A service token
@@ -393,6 +404,38 @@ the vars and deploy: every request is then treated as not having come through Ac
 
 **Local development:** `vite dev` on localhost is admitted as `dev@localhost` (only when the build is a
 development build and the host is localhost; a production build compiles that branch out).
+
+## 5c. The lab sign-in (Cloudflare Access)
+
+`/lab` is the lab members' workspace. Lab members are not administrators: they are the people with an
+active row in `members` (managed at `/lab/members`) plus the Primary Owner (`PRIMARY_OWNER_EMAIL`). So
+`/lab` has its own Access application, never `dustinedwards-login`: that application's people are
+administrators (`ADMIN_EMAILS`), and a lab token must never open `/admin` (capsid
+docs/design/design-identity-roles.md). The Worker checks the lab token against `ACCESS_LAB_AUD` and
+refuses an /admin token there, and the reverse at /admin. Until the application exists, `/lab` answers
+403 "not set up yet" and admits nobody. Both planes sign a person out of Access after an hour idle
+(`withAdminIdle`, workers/app.ts), and every refusal at either one writes an `authz_fail` log line.
+
+Set it up once, in the Cloudflare dashboard (Zero Trust):
+
+1. **The group.** Access controls > Rule groups > Add a group. Name `lab-people`. Include: Emails, one
+   per lab member (Capsid's sync keeps it equal to `/lab/members` once it is pinned, step 6). Save, and
+   copy the group's id.
+2. **The application.** Access controls > Applications > Add an application > Self-hosted. Name
+   `dustinedwards-lab-login`. Session duration 24 hours. Public hostname: domain `dustinedwards.info`,
+   path `lab`. Identity providers: One-time PIN only.
+3. **Its people policy.** In that application, Add a policy: name `dustinedwards-lab-members`, action
+   Allow, Include: Rule group `lab-people`. Add a second Include rule, Emails, with the Primary Owner's
+   email, so the Primary Owner gets in with no row.
+4. **Its machine policy** (only when an instrument or CI needs `/lab`): name `dustinedwards-lab-service`,
+   action Service Auth, Include: Service Token, the token for that machine.
+5. **The tag.** In the application's Overview, copy the Application Audience (AUD) tag into
+   `ACCESS_LAB_AUD` in `wrangler.jsonc` and deploy. Check: an unsigned `curl -sI https://dustinedwards.info/lab`
+   answers 302 to `dustinedwards.cloudflareaccess.com`.
+6. **The sync.** Pin the group in Capsid's `access_sync_groups` (the insert in Capsid
+   `migrations/0040_access_sync_groups.sql`, namespace `dustinedwards`, name `lab-people`), and set
+   `CAPSID_ACCESS_SYNC_KEY` on this Worker. Until then `/lab/members` records each change and says
+   Access was not touched; add or remove the email in `lab-people` by hand.
 
 ## 6. Where the logs are
 
@@ -416,7 +459,7 @@ third party. **Not wired up yet**: the project has to be created before this
 line means anything. Until then this row is a plan, not a destination.
 
 **UptimeRobot** is the outside opinion: <https://uptimerobot.com>. Two monitors,
-the home page and `/api/health`. If UptimeRobot says up and you say down, the
+the home page and `/health`. If UptimeRobot says up and you say down, the
 problem is between you and the site rather than in it.
 
 **The health snapshot** is what the colophon tile reads, and its AGE is the

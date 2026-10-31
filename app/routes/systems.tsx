@@ -2,8 +2,7 @@ import { systemMapHtml } from "capsomer/behavior/system-map";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
-import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 import {
   SYSTEMS_PATH,
   SYSTEM_PARAM,
@@ -61,6 +60,8 @@ export function loader({ request }: Route.LoaderArgs) {
   return { chosen: chosenSystem(MODEL, new URL(request.url).searchParams.get(SYSTEM_PARAM)) };
 }
 
+const TRAIL: Trail = [[TITLE, SYSTEMS_PATH]];
+
 export function meta({ loaderData }: Route.MetaArgs) {
   const chosen = loaderData?.chosen ? MODEL.systems.find((s) => s.id === loaderData.chosen) : undefined;
   // One page, so one canonical address whichever system is chosen.
@@ -69,21 +70,22 @@ export function meta({ loaderData }: Route.MetaArgs) {
       title: `${TITLE}: the family as a capsid`,
       description: `The ${MODEL.systems.length} systems Dustin Edwards runs, on one map.`,
       path: SYSTEMS_PATH,
+      trail: TRAIL,
     });
   }
   return pageMeta({
     title: `${chosen.name}, in the family of systems`,
     description: chosen.description ?? (chosen.domain ? `${chosen.name}, at ${chosen.domain}.` : chosen.name),
     path: SYSTEMS_PATH,
+    trail: TRAIL,
   });
 }
 
 export default function SystemsRoute({ loaderData }: Route.ComponentProps) {
   const chosen = loaderData.chosen;
-  const trail: Array<[string, string]> = [[TITLE, SYSTEMS_PATH]];
   return (
-    <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)) }} />}>
-      <Breadcrumb trail={trail} />
+    <PageShell>
+      <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid">{TITLE}</h1>
       {/* The map is a string from Capsomer, every text in it escaped there. A chosen system is drawn zoomed in. */}
       <div className="systems-map" dangerouslySetInnerHTML={{ __html: chosen ? mapHtml(chosen) : MAP }} />

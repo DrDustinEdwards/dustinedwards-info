@@ -11,6 +11,7 @@
 import { isAdminUser, loginHandler, type LoginEnv as SharedLoginEnv } from "@dustinedwards/site-runtime/mcp-login";
 
 import { SCOPE_READ, SCOPE_WRITE } from "./auth";
+import { SERVER_INFO } from "./mcp-handler";
 
 export interface LoginEnv extends SharedLoginEnv {
   ADMIN_EMAIL?: string;
@@ -28,4 +29,6 @@ uploading and backing up media, refreshing citations, saving a procedure) need t
 box below. It will not be able to publish a procedure for the first time; that
 stays with you.</p>`,
   admit: isAdminUser,
+  // Every sign-in, admitted or refused, is a row in the tool-call log.
+  audit: { name: SERVER_INFO.name, version: SERVER_INFO.version },
 });

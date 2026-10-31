@@ -35,7 +35,8 @@ function headerRules() {
 function headersFor(path) {
   /** @type {Map<string, string>} */
   const out = new Map();
-  for (const rule of headerRules()) {
+  // `/*` is the security set every static file carries (site-runtime-headers), not a rule for one path.
+  for (const rule of headerRules().filter((r) => r.path !== "/*")) {
     const [before, after = null] = rule.path.split("*");
     let splat = "";
     if (after === null) {

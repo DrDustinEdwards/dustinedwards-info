@@ -33,7 +33,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # THE RETAINED DUMP: devkit's shared drill restores the newest complete nightly run in
+  # dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`).
+  # devkit-ops-audit's R1 reads this job's newest run.
   drill:
+    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@65782d2c45431055672a315f0d126b62d0dd3aff # v0.20.14
+    with:
+      bucket: dustinedwards-backups
+      d1-dump-ref: v0.8.0
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # The export path RUNBOOK section 4 documents: production exported and restored into a scratch D1.
+  export-drill:
     name: Restore into a scratch database
     runs-on: ubuntu-latest
     # Measured at about five and a half minutes on the first full run. Twenty
@@ -44,6 +57,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -61,15 +76,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run check:restore
-
-      # THE RETAINED DUMP, drilled too (job_e40ec706c10a). The step above proves production exports
-      # and restores today; this one proves the newest nightly d1-dump run in dustinedwards-backups
-      # restores, and refuses when /api/health reports it missing or over 30 hours old.
-      - name: Drill the newest nightly dump
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run drill:backup
 
       # ALWAYS, so a failed drill still says what it left behind. The drill
       # deletes its scratch database in a `finally`, which does not run on a

@@ -2,11 +2,13 @@
 /// <reference lib="dom.iterable" />
 
 // A script-carrying object served from /media does not run: the sandboxed media policy
-// (MEDIA_CSP in workers/csp.mjs) stops it, observed in a real browser rather than read off a header.
+// (UPLOAD_HEADERS from site-runtime, chosen in workers/csp.mjs) stops it, observed in a real browser rather than read off a header.
 
-import { MEDIA_CSP } from "../../../../workers/csp.mjs";
+import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
 import { BASE, DRIVES_PREVIEW, FETCH_TIMEOUT_MS, ok, skip } from "../harness.mjs";
 import { MEDIA_SCRIPT_MARKER, MEDIA_SCRIPT_SENTINEL, MEDIA_SEEDS } from "../seed.mjs";
+
+const MEDIA_CSP = UPLOAD_HEADERS["Content-Security-Policy"];
 
 /**
  * Opens `key` in its own page and reports whether the stored script ran. `strip` names the response
@@ -79,7 +81,7 @@ export async function run({ browser }) {
       "a script-carrying object from /media does not run",
       "the objects are seeded into the LOCAL bucket, and a deployed origin's MEDIA bucket is " +
         "irreplaceable and is not written by a gate. The policy on a deployed origin is still " +
-        "asserted by check:headers and test/worker/media-csp.test.ts.",
+        "asserted by test/worker/media-csp.test.ts and site-runtime-security.",
     );
     return;
   }

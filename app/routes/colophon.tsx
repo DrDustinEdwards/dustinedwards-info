@@ -63,6 +63,7 @@ export function meta() {
     title: `${COLOPHON_TITLE}, ${SITE.name}`,
     description: COLOPHON_DESCRIPTION,
     path: COLOPHON_URL,
+    trail: [[COLOPHON_TITLE, COLOPHON_URL]],
   });
 }
 
@@ -168,7 +169,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               {gates} {gates === 1 ? "check" : "checks"}
             </a>,
             <span className="evidence-health" data-health-age={healthAge}>
-              <Link to="/api/health">
+              <Link to="/health">
                 {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
                 {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
               </Link>

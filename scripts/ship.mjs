@@ -2,12 +2,13 @@
 // sync because `sync-content.mjs` runs no gate.
 
 import { spawn, spawnSync } from "node:child_process";
+import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
 import { tierOutcome } from "./lib/tier-outcome.mjs";
-import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
+import { applyCommand, destructiveStatements, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
   SHIP_BUSY_NEEDLES,
@@ -35,6 +36,7 @@ import { missReport } from "./lib/ship-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 import { teeSelfToLog } from "./lib/ship-transcript.mjs";
 import { shipMcp } from "./lib/ship-mcp.mjs";
+import { readBookmark } from "./lib/d1-bookmark.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -345,13 +347,38 @@ if (ciGreenEarly) {
 }
 
 /*
- * No migration may be pending when a deploy goes out. It refuses and never applies: ship cannot
- * tell an additive migration from a destructive one. Pending or unreadable both refuse.
+ * No migration may be pending when a deploy goes out. A pending migration whose statements are all additive
+ * (`destructiveStatements` finds none) is applied here, after the D1 Time Travel bookmark step above, which printed its
+ * restore command, so a merge needs no hand-run step. One that can lose data (DROP, DELETE, UPDATE, a rename) still
+ * refuses and the operator applies it. An unreadable answer, a bookmark that cannot be read or a failed apply refuses.
  */
 
-announce("The deployed database has every migration");
-
 const DATABASE = "dustinedwards";
+
+/*
+ * The undo point (area 8, R4), taken before the migration check and before the deploy and the content sync write
+ * to D1, as devkit's worker-deploy takes it before its pre-deploy guard. A bookmark that cannot be read refuses:
+ * nothing writes without a point to go back to. Printed with the one command that goes back, and written to the
+ * run's summary when this runs in the deploy workflow.
+ */
+announce("D1 Time Travel bookmark, before anything writes");
+const undo = readBookmark(root, DATABASE);
+if (!undo.bookmark) {
+  refuse(
+    `the Time Travel bookmark of ${DATABASE} could not be read:\n${undo.output.trim().split("\n").slice(-5).join("\n")}`,
+    "Nothing was deployed. The token needs D1 read; check it with " +
+      `\`npx wrangler d1 time-travel info ${DATABASE}\`.`,
+  );
+}
+const undoLines = [
+  `D1 ${DATABASE} before this ship: bookmark ${undo.bookmark} at ${undo.at}. To undo what it wrote:`,
+  "",
+  `    npx wrangler d1 time-travel restore ${DATABASE} --bookmark=${undo.bookmark}`,
+];
+console.log(`  ${undoLines.join("\n  ")}`);
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${undoLines.join("\n")}\n`);
+
+announce("The deployed database has every migration");
 
 /*
  * `readMigrationList` never throws, so the wrapper throws on `unreadable` only. `pending`
@@ -387,15 +414,40 @@ try {
 }
 
 if (migrations.state === "pending") {
-  refuse(
-    `the deployed database is missing ${migrations.pending.length} migration(s): ` +
-      migrations.pending.join(", "),
-    `Apply them first, then re-run ship:
+  const destructive = migrations.pending.flatMap((/** @type {string} */ name) =>
+    destructiveStatements(readFileSync(join(root, "drizzle", name), "utf8")).map((kind) => `${name} (${kind})`),
+  );
+  if (destructive.length > 0) {
+    refuse(
+      `the deployed database is missing ${migrations.pending.length} migration(s), and these can lose data: ` +
+        destructive.join(", "),
+      `Apply them yourself once you have decided, then re-run ship:
     ${applyCommand(DATABASE)}
   ` +
-      "  Ship does not apply migrations itself: additive and destructive look " +
-      "the same from here, so the choice is yours.",
+        "  Ship applies only additive migrations itself.",
+    );
+  }
+  /* The undo point is the bookmark the step "D1 Time Travel bookmark, before anything writes" read and refused without. */
+  const bookmark = undo.bookmark;
+  console.log(`  applying ${migrations.pending.join(", ")}. To undo:`);
+  console.log(`    npx wrangler d1 time-travel restore ${DATABASE} --bookmark=${bookmark}`);
+  const applied = run("npx", ["wrangler", "d1", "migrations", "apply", DATABASE, "--remote"], {
+    capture: true,
+    timeoutMs: 300_000,
+  });
+  const after = readMigrationList(
+    run("npx", ["wrangler", "d1", "migrations", "list", DATABASE, "--remote"], { capture: true, timeoutMs: 90_000 }),
   );
+  if (applied.code !== 0 || after.state !== "clean") {
+    refuse(
+      `applying the migrations did not leave the deployed database clean (${after.reason})`,
+      `Nothing was deployed. Read the output above, then:
+    ${applyCommand(DATABASE)}
+  To go back to before this run:
+    npx wrangler d1 time-travel restore ${DATABASE} --bookmark=${bookmark}`,
+    );
+  }
+  migrations = after;
 }
 if (migrations.state === "unreadable") {
   refuse(
@@ -479,7 +531,8 @@ if (!verdict || !verdict.ok) {
 console.log(`  ${verdict.why}.`);
 
 announce("Deploy");
-const deploy = run("npm", ["run", "deploy"], { capture: true });
+// DEPLOY_SHA is what /health reports as `sha`, so a probe can tell which commit is serving.
+const deploy = run("npm", ["run", "deploy", "--", "--var", `DEPLOY_SHA:${shaFull}`], { capture: true });
 if (deploy.code !== 0) {
   refuse("the deploy failed", "Nothing was synced. The previous version is still serving.");
 }

@@ -30,18 +30,18 @@ export const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx|mjs)$/,
-    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", RELATED],
+    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", "check:console", RELATED],
   },
   {
-    /* check-policy, check-ask-guards and check-headers read route files by name and scan app/routes. */
+    /* check-policy and check-ask-guards read route files by name and scan app/routes. */
     what: "a route module",
     test: /^app\/routes\/.+\.(ts|tsx)$/,
-    gates: ["check:policy", "check:ask-guards", "check:headers"],
+    gates: ["check:policy", "check:ask-guards"],
   },
   {
-    /* check-ask-guards reads the origin predicate, the operator bearer and API, and the Ask corpus. */
-    what: "a module the Ask and origin guards read",
-    test: /^app\/lib\/(origin\.mjs|operator\/.+\.ts|search\/(ask\.server\.ts|search\.server\.ts|visibility\.mjs))$/,
+    /* check-ask-guards reads the operator bearer and API, and the Ask corpus. */
+    what: "a module the Ask guards read",
+    test: /^app\/lib\/(operator\/.+\.ts|search\/(ask\.server\.ts|search\.server\.ts|visibility\.mjs))$/,
     gates: ["check:ask-guards"],
   },
   {
@@ -55,13 +55,6 @@ export const MAP = [
     what: "the operator API ship calls",
     test: /^app\/lib\/operator\/(api|sync-tools)\.server\.ts$/,
     gates: ["check:migrations"],
-  },
-  {
-    /* check-headers asserts where the admin nonce goes and that public scripts need none: the server
-       entry, the one script root renders (/site.js) and the media route (site-runtime's image route). */
-    what: "the server entry or a script the CSP trusts",
-    test: /^app\/(entry\.server\.tsx|root\.tsx|site\.ts|lib\/(context\.ts|media\/images\.mjs)|routes\/media\.\$\.ts)$/,
-    gates: ["check:headers"],
   },
   {
     what: "the schema or a migration",
@@ -85,7 +78,7 @@ export const MAP = [
   {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
-    gates: ["check:headers", "check:policy", "check:secrets", RELATED],
+    gates: ["check:urls", "check:policy", "check:secrets", RELATED],
   },
   {
     what: "a post or other content",
@@ -165,10 +158,10 @@ export const MAP = [
     gates: ["check:urls", "check:fonts", "check:links"],
   },
   {
-    /* check-headers asserts which entrypoint wrangler.jsonc.example lets the platform cache. */
+    /* check-urls asserts which entrypoint wrangler.jsonc.example lets the platform cache. */
     what: "the wrangler config example",
     test: /^wrangler\..*jsonc?(\.example)?$/,
-    gates: ["check:secrets", "check:headers"],
+    gates: ["check:secrets", "check:urls"],
   },
   {
     what: "a test",

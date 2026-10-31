@@ -1,4 +1,4 @@
-import { Link, data } from "react-router";
+import { Link, data, redirect } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
@@ -21,6 +21,7 @@ import {
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
+import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { Picture } from "~/components/picture";
@@ -37,7 +38,6 @@ import {
   SITE_ORIGIN,
   articleJsonLd,
   articleFacts,
-  breadcrumbJsonLd,
   postSocial,
   siteHead,
 } from "~/lib/seo";
@@ -45,7 +45,9 @@ import type { Route } from "./+types/blog.$slug";
 
 import "~/styles/post-rail.css";
 import "~/styles/evidence-row.css";
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "enarratio/base.css";
+import "capsomer/chart-frame.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
@@ -70,6 +72,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const post =
     preview?.slug === params.slug ? preview : await getBlogPost(getEnv(context), params.slug);
   if (!post) {
+    // A post Carrel renamed keeps its old address, permanently moved (drizzle/0038_carrel_posts.sql).
+    const moved = await redirectFor(getEnv(context), params.slug);
+    if (moved) throw redirect(`/writing/${moved}`, 301);
     throw data("Not found", { status: 404 });
   }
 
@@ -134,14 +139,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const { canonical, canonicalHref, noindex, pageTitle, description, socialTitle, socialDescription, image } =
+  const { canonical, canonicalHref, noindex, title, description, socialTitle, socialDescription, image } =
     postSocial(post);
 
   return [
     ...siteHead({
       path: `/writing/${post.slug}`,
-      title: pageTitle,
-      fullTitle: true,
+      title,
       description,
       socialTitle,
       socialDescription,
@@ -208,14 +212,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLdText([
-              articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
-              breadcrumbJsonLd(SITE_ORIGIN, [
-                ["Home", "/"],
-                ["Writing", "/writing"],
-                [post.title, `/writing/${post.slug}`],
-              ]),
-            ]),
+            __html: jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
           }}
         />
 
