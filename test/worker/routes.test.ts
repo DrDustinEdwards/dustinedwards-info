@@ -6,6 +6,7 @@ import { readHealthTile } from "~/lib/health/snapshot.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
+import { loader as familyHealthLoader } from "~/routes/health";
 
 import { freezeAtWindowStart, routeContext } from "./route-helpers";
 
@@ -269,6 +270,28 @@ describe("/api/health", () => {
     /* Asserted by absence: the scaffold body carried a `message` field this route never
      * produces. */
     expect(body).not.toHaveProperty("message");
+  });
+});
+
+describe("/health", () => {
+  it("reports drift as a warning, never a 503, in the family shape", async () => {
+    /* Locally AI Search is absent, so ask-index-drift fails: /api/health answers 503, /health warns. */
+    const ctx = createExecutionContext();
+    const response = await familyHealthLoader({
+      request: new Request("https://example.com/health", { headers: { "cf-connecting-ip": "203.0.113.20" } }),
+      context: routeContext(ctx),
+      params: {},
+    } as never);
+    await waitOnExecutionContext(ctx);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/health+json");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = (await response.json()) as { status: string; db: string; checks: Array<{ name: string; status: string }> };
+    expect(body).toMatchObject({ status: "warn", db: "up" });
+    const byName = Object.fromEntries(body.checks.map((c) => [c.name, c.status]));
+    expect(byName).toMatchObject({ db: "pass", cron: "pass", "ask-index-drift": "warn" });
+    expect(byName).toHaveProperty("backup");
   });
 });
 
