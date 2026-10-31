@@ -185,7 +185,9 @@ function mediaKeyOf(raw) {
 /**
  * Only /media/ keys are responsive: static assets never pass through the transform route, so their
  * widths would 404. `sources` makes Prelum write a <picture>, AVIF then WebP; the <img> keeps the WebP
- * srcset. The link goes to the unsized original, which srcset never serves.
+ * srcset. The link goes to the unsized original, which srcset never serves. A GIF's reduced-motion stills (site-runtime
+ * 0.43, a source with `media`) are left out: this Prelum's <picture> writes no `media`, so a still would win for every
+ * reader. The GIF stays animated, as before.
  *
  * @param {string} src
  */
@@ -194,7 +196,7 @@ function imageProps(src) {
   const key = src.slice("/media/".length);
   const { srcset, sizes, sources } = contentImage(src, dimensionsFromKey(key));
   if (!srcset) return { href: `/media/${key}` };
-  return { srcSet: srcset, sizes, sources: sources.map((s) => ({ type: s.type, srcSet: s.srcset })), href: `/media/${key}` };
+  return { srcSet: srcset, sizes, sources: sources.filter((s) => !s.media).map((s) => ({ type: s.type, srcSet: s.srcset })), href: `/media/${key}` };
 }
 
 const SITE_OPTIONS = {

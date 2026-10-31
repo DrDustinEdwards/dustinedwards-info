@@ -15,7 +15,7 @@ export const ALLOWED = new Map([
 // NOT IN THE ALLOWLIST, and refused by name rather than as an unknown type: an SVG can carry script,
 // and /media is this site's own origin. The /media CSP (workers/csp.mjs) is the second wall, for
 // anything that reaches the bucket some other way.
-export const SVG_TYPE = "image/svg+xml";
+const SVG_TYPE = "image/svg+xml";
 
 const SVG_REFUSED =
   "SVG is not accepted: it can carry script, and /media is this site's own origin. " +

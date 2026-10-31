@@ -111,14 +111,10 @@ on:
   schedule:
     - cron: "23 */6 * * *"
 
-# `actions: write` is not decoration. Ship reads the Actions API to learn whether
-# CI concluded success for this exact sha, and refuses if it cannot; and its last
-# step starts browser.yml against the deploy, which is a dispatch.
-# Without read the deploy fails closed; without write it stands and reports the
-# browser test as a miss.
+# Read only by default. `decide` only reads main's tip; the one write grant is on
+# the `ship` job, which is where it is used.
 permissions:
   contents: read
-  actions: write
 
 # QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
 # leave the account serving whichever one happened to finish last, which is not
@@ -188,6 +184,14 @@ jobs:
     # convergence window of up to 2 minutes, on top of a build and the full gate
     # tier. Measured locally at roughly 6 to 9 minutes end to end.
     timeout-minutes: 30
+    # `actions: write` is not decoration. Ship reads the Actions API to learn whether
+    # CI concluded success for this exact sha, and refuses if it cannot; and its last
+    # step starts browser.yml against the deploy, which is a dispatch.
+    # Without read the deploy fails closed; without write it stands and reports the
+    # browser test as a miss.
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       # SHA-pinned, same commits the other two workflows pin: actions/checkout
@@ -200,6 +204,10 @@ jobs:
           # Full history, because ship's first step is `git pull --ff-only`
           # against origin/main, and a fast-forward check needs the ancestry.
           fetch-depth: 0
+          # The token is not left in .git/config while npm ci, the build and ship
+          # run beside the Cloudflare secrets. Nothing here pushes, and the repo is
+          # public, so ship's `git pull --ff-only` needs no credential.
+          persist-credentials: false
 
       # SHIP PULLS BEFORE IT DOES ANYTHING ELSE, and a checkout of a sha is a
       # detached HEAD with no upstream, so run 36218900911 refused at step 1

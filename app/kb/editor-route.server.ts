@@ -1,6 +1,7 @@
 // The two editor routes' shared half (admin.kb.entry.tsx and admin.kb.item.tsx): read the file for the page, and run
 // Check or Save for its form. A save that lands redirects back to the page, so a reload never posts it twice.
 
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { data, redirect, type RouterContextProvider } from "react-router";
 
 import type { KbEditorActionData } from "~/components/admin/kb-file-editor";
@@ -30,7 +31,7 @@ export async function kbEditorLoader({ request, context }: Args, target: KbTarge
 
 export async function kbEditorAction({ request, context }: Args, target: KbTarget) {
   const env = getEnv(context);
-  const form = await request.formData();
+  const form = await cappedForm(request, ADMIN_FORM_BYTES);
   const intent = String(form.get("intent") ?? "");
   const posted = form.get("model");
 

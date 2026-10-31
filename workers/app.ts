@@ -17,8 +17,8 @@ import {
   isPrivatePath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
-import { applyHeaderSet } from "@dustinedwards/site-runtime/headers";
-import { reportingEndpoints } from "@dustinedwards/site-runtime/csp";
+import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
+import { generateNonce, reportingEndpoints } from "@dustinedwards/site-runtime/csp";
 import {
   SPECULATION_RULES_HEADER,
   SPECULATION_RULES_PATH,
@@ -89,7 +89,7 @@ const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
 /**
  * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
  * set, the report endpoint, the policy (feeds excepted), the prefetch rules on a public page, the
- * preloads on every page and the uncached default.
+ * preloads on every page and the uncached default. An image or a feed may be embedded by another origin (corpFor).
  */
 function applyDocumentHeaders(
   headers: Headers,
@@ -97,6 +97,7 @@ function applyDocumentHeaders(
 ) {
   if (timings) headers.set("Server-Timing", serverTiming(timings));
   applySecurityHeaders(headers);
+  headers.set("Cross-Origin-Resource-Policy", corpFor(headers.get("content-type")));
   headers.set("Reporting-Endpoints", reportTo);
   if (!isUnpolicedType(headers.get("content-type"))) {
     headers.set("Content-Security-Policy", csp);
@@ -127,10 +128,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     context.set(documentHandlerContext, requestHandler);
 
     // The private planes only (/admin, /lab): a public page is edge-cached with its header, so a nonce there would be shared
-    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs). A static
-    // or derived nonce looks exactly like success: every page renders and the policy is worth
-    // nothing.
-    const adminNonce = isPrivatePath(url.pathname) ? crypto.randomUUID() : undefined;
+    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
+    const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
     context.set(nonceContext, adminNonce);
 
     // Stamped here because loaders run concurrently on one shared `timings` array; only after the
@@ -166,14 +165,14 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
 }
 
 /**
- * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives. `no-store` is
- * load-bearing: the scheme is not in the cache key, so a stored HTTPS redirect would loop HTTPS
- * readers, and a stored rename would outlive a change to the map.
+ * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives, with the security set, since it
+ * never passes through the Renderer. `no-store` is load-bearing: the scheme is not in the cache key, so a stored HTTPS
+ * redirect would loop HTTPS readers, and a stored rename would outlive a change to the map.
  */
 function redirectTo(request: Request, location: string) {
   return new Response(null, {
     status: httpsRedirectStatus(request.method),
-    headers: { Location: location, "Cache-Control": "no-store" },
+    headers: { ...SECURITY_HEADERS, Location: location, "Cache-Control": "no-store" },
   });
 }
 

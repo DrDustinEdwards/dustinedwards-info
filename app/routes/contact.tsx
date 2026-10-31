@@ -1,5 +1,5 @@
 import { PageShell } from "~/components/page-shell";
-import { OWNER_FACULTY_PAGE, SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { OWNER_FACULTY_PAGE, publicHtmlHeaders, siteHead } from "~/lib/seo";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
@@ -13,8 +13,8 @@ export function headers() {
 }
 
 export function meta() {
-  return pageMeta({
-    title: `Contact | ${SITE.name}`,
+  return siteHead({
+    title: "Contact",
     description: "How to reach Dustin Edwards: email, and his Tarleton State University faculty page.",
     path: "/contact",
   });

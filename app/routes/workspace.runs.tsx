@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
@@ -31,7 +32,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireRecorder(actor);
-  const result = await recordRun(getEnv(context), actor, await request.formData(), Date.now());
+  const result = await recordRun(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now());
   if (result.ok && result.runId) throw redirect(`/lab/runs/${result.runId}`, { headers: PRIVATE });
   return data(result, { headers: PRIVATE });
 }

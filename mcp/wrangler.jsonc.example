@@ -18,7 +18,11 @@
 	"compatibility_flags": ["global_fetch_strictly_public"],
 
 	"observability": { "enabled": true },
+	// Minified with the source maps uploaded, and without esbuild's keep_names wrappers (about 12 KiB of
+	// the bundle): nothing here reads a function's or class's own name, and the error classes this
+	// Worker tests by name (AuthorizationError, CimdFetchError) set `this.name` themselves.
 	"minify": true,
+	"keep_names": false,
 	"upload_source_maps": true,
 
 	// ONE PUBLIC ADDRESS. admin-mcp.dustinedwards.info is a Custom Domain on the

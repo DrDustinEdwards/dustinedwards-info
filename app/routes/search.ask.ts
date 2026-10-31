@@ -3,6 +3,7 @@
  * then a cached answer, then the model.
  */
 
+import { FORM_BYTES, cappedForm } from "~/lib/body.server";
 import {
   answerLeaksPrompt,
   askAvailable,
@@ -22,7 +23,7 @@ import {
   reserveAskBudget,
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
-import { ASK_ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
+import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { publiclyVisibleSlugs } from "~/db";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
@@ -81,16 +82,11 @@ export function loader() {
 export async function action({ request, context }: Route.ActionArgs) {
   /*
    * First because it is free. A hostile page's thousand readers are a thousand IPs, each inside its
-   * allowance; Origin is the field that page cannot control. An absent Origin is allowed: that client
-   * spends its own bounded allowance.
+   * allowance; Sec-Fetch-Site and Origin are what that page cannot control. A request with neither is
+   * allowed: that client spends its own bounded allowance.
    */
-  const origin = originVerdict(request.headers.get("origin"), request.url);
-  if (!origin.ok) {
-    return new Response(ASK_ORIGIN_REFUSAL, {
-      status: 403,
-      headers: { "cache-control": "no-store" },
-    });
-  }
+  const crossSite = refuseCrossSite(request);
+  if (crossSite) return crossSite;
 
   const env = getEnv(context);
 
@@ -99,7 +95,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return new Response("Ask is not enabled.", { status: 404 });
   }
 
-  const body = await request.formData();
+  const body = await cappedForm(request, FORM_BYTES);
   const question = String(body.get("q") ?? "").trim();
 
   if (!question) {

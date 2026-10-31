@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ProcedureView } from "~/components/procedure";
@@ -28,7 +29,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
   const slug = params.slug;
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return Response.json({ error: "No such entry." }, { status: 404 });
-  const form = await request.formData();
+  const form = await cappedForm(request, ADMIN_FORM_BYTES);
   const written = rawFromForm(String(form.get("original") ?? ""), String(form.get("model") ?? ""));
   if ("errors" in written) return Response.json({ errors: written.errors });
   try {

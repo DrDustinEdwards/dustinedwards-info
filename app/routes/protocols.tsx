@@ -20,7 +20,7 @@ import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { registryTabs } from "~/kb/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
-import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 
 import type { Route } from "./+types/protocols";
 
@@ -63,11 +63,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { page: row.record, draft: row.status === "draft", items, registry, search: url.search };
 }
 
+const TRAIL: Trail = [
+  ["Research", "/research"],
+  ["Protocols", LIBRARY_PATH],
+];
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { page, draft } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path }),
+    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, pageType: "CollectionPage", trail: TRAIL }),
     { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}` },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
@@ -86,19 +91,16 @@ const cells = {
 
 export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProps) {
   const { page, draft, items, registry, search } = loaderData;
-  const trail: Array<[string, string]> = [
-    ["Research", "/research"],
-    ["Protocols", LIBRARY_PATH],
-  ];
   // The introduction is the prose before the page's first heading; the sections follow the library.
   const split = page.html.indexOf("<h2");
   const intro = split === -1 ? page.html : page.html.slice(0, split);
   const rest = split === -1 ? "" : page.html.slice(split);
   const result = queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, search));
+  // Prelum's page node, by its `@id`, with the list it holds.
   const collection = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "@id": `${SITE_ORIGIN}${LIBRARY_PATH}#collectionpage`,
+    "@id": `${SITE_ORIGIN}${LIBRARY_PATH}#webpage`,
     name: page.title,
     description: page.description,
     url: `${SITE_ORIGIN}${LIBRARY_PATH}`,
@@ -115,15 +117,9 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
   };
   return (
     <PageShell
-      trail={
-        <>
-          {[breadcrumbJsonLd(SITE_ORIGIN, trail), collection].map((block, i) => (
-            <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }} />
-          ))}
-        </>
-      }
+      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }} />}
     >
-      <Breadcrumb trail={trail} />
+      <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid" id="library-title">
         {page.title}
       </h1>

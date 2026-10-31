@@ -1,4 +1,5 @@
-import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
+import { FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { safeReturnTo } from "~/lib/return-to.mjs";
 import { isThemeChoice, themeCookie } from "capsomer/theme-server";
 
@@ -7,15 +8,10 @@ import type { Route } from "./+types/theme";
 /** The Referer is checked against this origin before it is trusted, or this is an open redirect. */
 export async function action({ request }: Route.ActionArgs) {
   /* An absent Origin is allowed: the no-script form post carries none. The literal "null" is refused. */
-  const verdict = originVerdict(request.headers.get("origin"), request.url);
-  if (!verdict.ok) {
-    return new Response(ORIGIN_REFUSAL, {
-      status: 403,
-      headers: { "cache-control": "no-store" },
-    });
-  }
+  const refused = refuseCrossSite(request);
+  if (refused) return refused;
 
-  const form = await request.formData();
+  const form = await cappedForm(request, FORM_BYTES);
   const choice = form.get("theme");
 
   /*

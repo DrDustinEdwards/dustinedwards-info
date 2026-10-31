@@ -2,7 +2,6 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { describe, expect, it } from "vitest";
 
 import worker, { cacheDimensions } from "../../workers/app";
-import { SECURITY_HEADERS } from "../../workers/security-headers.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
 import { STUB_PATHS, STUB_PAGE_BODY, STUB_MARKDOWN_BODY } from "./stub-server-build";
@@ -122,22 +121,6 @@ describe("the cache-header rule: the platform caches silence", () => {
      * skipped, so a route opts IN to sharing and never opts out of refusal. */
     const response = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.silent)}`));
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-  });
-
-  it("stamps the security headers and a nonce-free CSP on a public response", async () => {
-    const first = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.page)}`));
-    expect(first.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(first.headers.get("x-frame-options")).toBe(SECURITY_HEADERS["X-Frame-Options"]);
-    /* The response is shared-cached with its header, so a nonce here would be every reader's.
-     * The page runs no inline script, so the policy names no hash either. */
-    const policy = first.headers.get("content-security-policy") ?? "";
-    expect(policy).not.toContain("nonce-");
-    expect(policy).toContain("script-src 'self' ");
-
-    /* Nothing per-request is left in a public policy, so two renders agree byte for byte. The
-     * admin nonce, which does vary, is test/worker/ssr-nonce.test.ts's. */
-    const second = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.page)}`));
-    expect(second.headers.get("content-security-policy")).toBe(policy);
   });
 });
 

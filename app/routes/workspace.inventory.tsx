@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Button } from "capsomer/react/button";
@@ -32,7 +33,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireReader(actor);
-  return data(await inventoryAction(getEnv(context), actor, await request.formData(), Date.now()), { headers: PRIVATE });
+  return data(await inventoryAction(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now()), { headers: PRIVATE });
 }
 
 const STATUS_TEXT = { in_stock: "In stock", empty: "Empty", discarded: "Discarded" } as const;
