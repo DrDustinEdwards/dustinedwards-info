@@ -18,6 +18,7 @@ import {
   isPrivatePath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
+import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
 import { cacheKey, forReader, forRenderer, settleCacheHeaders } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
@@ -172,7 +173,7 @@ type FetchArgs = Parameters<NonNullable<ExportedHandler<Env>["fetch"]>>;
  * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
  * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme.
  */
-export default {
+const site = {
   async fetch(request, env, ctx) {
     const response = await gateway(request, env, ctx);
     // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
@@ -203,6 +204,12 @@ export default {
     );
   },
 
+} satisfies ExportedHandler<Env>;
+
+// An admin idle for an hour is signed out of Access (site-runtime ./access).
+export default {
+  ...site,
+  fetch: (request, env, ctx) => withAdminIdle(request, () => site.fetch(request, env, ctx)),
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
