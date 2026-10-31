@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.18.0",
-    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.34.0",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.20.5",
+    "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.46.0",
     "@modelcontextprotocol/server": "2.4.0",
     "agents": "0.32.0",
     "zod": "4.6.6"

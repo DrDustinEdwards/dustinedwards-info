@@ -61,23 +61,17 @@ await test("untracked, staged, unstaged and committed paths are all listed, once
 const DECLARED = new Set([
   "check:policy",
   "check:ask-guards",
-  "check:headers",
   "check:features",
   "check:machine-readable",
   "check:urls",
 ]);
 
-await test("THE PLANT: a route edit reaches the three gates that parse routes", () => {
+await test("THE PLANT: a route edit reaches the two gates that parse routes", () => {
   const { gates } = gatesFor("app/routes/search.ask.ts", DECLARED);
-  for (const gate of ["check:policy", "check:ask-guards", "check:headers"]) {
+  for (const gate of ["check:policy", "check:ask-guards"]) {
     assert.ok(gates.includes(gate), `${gate} reads route modules and must run on a route edit`);
   }
   assert.ok(gates.includes(RELATED));
-});
-
-await test("root.tsx and entry.server.tsx reach headers", () => {
-  assert.ok(gatesFor("app/root.tsx", DECLARED).gates.includes("check:headers"));
-  assert.ok(gatesFor("app/entry.server.tsx", DECLARED).gates.includes("check:headers"));
 });
 
 await test("the related-test walk follows ~/ and relative imports, is cycle-safe, and skips what it cannot resolve", () => {

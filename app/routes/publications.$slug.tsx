@@ -25,17 +25,16 @@ import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
 import citedByArtifact from "../../data/publications.cited-by.json";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
-  breadcrumbJsonLd,
   isSiteOwner,
-  pageMeta,
   personId,
   personNode,
   publicHtmlHeaders,
-  searchTitle,
   SERP_DESCRIPTION_LIMIT,
   SITE,
   SITE_ORIGIN,
+  siteHead,
   truncateForSerp,
+  type Trail,
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";
 
@@ -75,7 +74,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   };
 }
 
-/** Citation tags stay here, not in `pageMeta`: they are not social metadata. */
+/** Citation tags stay here, not in `siteHead`: they are not social metadata. */
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: `Publication, ${SITE.name}` }];
 
@@ -89,12 +88,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
     : `${title}. ${decodeEntities(paper.journal ?? "")} ${paper.year}`.trim();
 
   return [
-    ...pageMeta({
-      title: searchTitle(title),
-      socialTitle: `${title} | ${SITE.name}`,
+    ...siteHead({
+      title,
       description: truncateForSerp(summary, SERP_DESCRIPTION_LIMIT),
       path: pagePath,
-      ogType: "article",
+      type: "article",
+      trail: paperTrail(title, pagePath),
     }),
     // A manuscript with no DOI has no registry record to cite, so it carries no Scholar tags.
     ...(paper.doi ? buildCitationTags(paper, { abstractUrl, pdfUrl }) : []),
@@ -105,6 +104,15 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${SITE_ORIGIN}${paperMarkdownPath(slug)}`,
     },
+  ];
+}
+
+/** One trail for the visible breadcrumb and the head's BreadcrumbList, so the two cannot disagree. */
+function paperTrail(title: string, pagePath: string): Trail {
+  return [
+    ["Research", "/research"],
+    ["Publications", PUBLICATIONS_PATH],
+    [title, pagePath],
   ];
 }
 
@@ -130,12 +138,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
   const { paper, slug, hosted, pagePath, pdfPath, cited, citedBy, citedByFetchedAt, topics } =
     loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
-  // One trail for the visible breadcrumb and its BreadcrumbList, so the two cannot disagree.
-  const trail: Array<[string, string]> = [
-    ["Research", "/research"],
-    ["Publications", PUBLICATIONS_PATH],
-    [decodeEntities(paper.title), pagePath],
-  ];
+  const trail = paperTrail(decodeEntities(paper.title), pagePath);
 
   return (
     <>
@@ -301,7 +304,6 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 personNode: personNode(SITE_ORIGIN),
                 topics,
               }),
-              breadcrumbJsonLd(SITE_ORIGIN, trail),
             ]),
           }}
         />

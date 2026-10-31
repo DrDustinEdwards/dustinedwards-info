@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { parseJsonc } from "./lib/wrangler-surface.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
@@ -255,6 +256,17 @@ for (const [label, property] of SCHEMA_FIELDS) {
   }
 }
 
+// Which entrypoint the platform may cache, read off wrangler.jsonc.example: gateway cache on would serve these redirects
+// from a store and hide readership, Renderer cache off renders every request, cross_version on serves stale.
+{
+  const example = parseJsonc(join(root, "wrangler.jsonc.example"));
+  assert("cache: Workers Cache is enabled at the top level", example.cache?.enabled === true);
+  assert("cache: the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled === false);
+  assert("cache: the RENDERER entrypoint has cache ENABLED", example.exports?.Renderer?.cache?.enabled === true);
+  /* ABSENT rather than false: writing it would be a second place to state a safe default. */
+  assert("cache: cross_version_cache is not enabled, so a deploy invalidates the cache", !(example.cache?.cross_version_cache ?? false));
+}
+
 assert(
   "the frontmatter fixture still carries its permanent negatives",
   fixture.frontmatterCases.filter((c) => c.label.startsWith("PERMANENT NEGATIVE")).length >= 10,
@@ -289,7 +301,7 @@ console.log(
 
 // Measured by running it, with slack smaller than one fixture case, so deleting a case cannot hide
 // inside the tolerance.
-const MINIMUM_CHECKS = 109;
+const MINIMUM_CHECKS = 113;
 tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

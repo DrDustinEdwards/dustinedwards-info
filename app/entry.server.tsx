@@ -38,7 +38,7 @@ export default async function handleRequest(
   // No `await body.allReady` for crawlers: the only Suspense boundary is on the admin plane. If a
   // public route ever streams one, restore the wait, not a user-agent sniff.
 
-  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("Content-Type", "text/html; charset=utf-8");
   return new Response(body, {
     headers: responseHeaders,
     status: responseStatusCode,

@@ -1,3 +1,4 @@
+import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, data } from "react-router";
 import { MANAGE_MEMBERS, can } from "@dustinedwards/site-runtime/members";
 import { Banner } from "capsomer/react/banner";
@@ -33,7 +34,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireManager(actor);
-  const result = await membersAction(getEnv(context), actor, await request.formData(), Date.now());
+  const result = await membersAction(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now());
   return data(result, { headers: PRIVATE });
 }
 

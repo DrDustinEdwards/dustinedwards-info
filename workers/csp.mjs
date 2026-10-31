@@ -1,7 +1,7 @@
-// Separate from app.ts so the gate can call it on both branches and assert the strings it returns.
+// Separate from app.ts so the worker tests can call it on both branches.
 
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
-import { CLOUDFLARE_WEB_ANALYTICS, buildContentSecurityPolicy, buildPolicy } from "@dustinedwards/site-runtime/csp";
+import { buildContentSecurityPolicy, buildPolicy } from "@dustinedwards/site-runtime/csp";
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -69,20 +69,19 @@ export const MEDIA_CSP = buildPolicy([
   "sandbox",
 ]);
 
-/**
+/*
  * THE ONLY THIRD-PARTY SCRIPTS THE SITE RUNS, each an exact file URL and not a host, so nothing else
  * on that host is trusted. A script that makes the site better can be added here deliberately:
- * name the file, say what it is for and what it sends, and the gate (check:headers) and the privacy
- * page change in the same commit. Dustin approves the line; a session does not add one on its own.
+ * name the file, say what it is for and what it sends, and the privacy page changes in the same
+ * commit. Dustin approves the line; a session does not add one on its own.
  *
  * Injected by Cloudflare's edge, not rendered by this code, so it carries no nonce and no hash, and
  * its `integrity` value changes whenever Cloudflare ships a new beacon, so pinning that hash here would
  * silently block it within weeks. That is why the policy names the file instead. It reports to this
  * site's own /cdn-cgi/rum, which `connect-src 'self'` already allows.
  */
-// Cloudflare Web Analytics, automatic setup, written once in the shared package (CLOUDFLARE_WEB_ANALYTICS): the file URL and
-// its versioned path prefix. The policy below asks the package for it by name.
-export const APPROVED_SCRIPTS = CLOUDFLARE_WEB_ANALYTICS.script;
+// Today that is Cloudflare Web Analytics, automatic setup: its file URL and versioned path prefix are written once in
+// site-runtime (CLOUDFLARE_WEB_ANALYTICS), and the policy below asks the package for it by name.
 
 /**
  * Public pages get no nonce: header and body are edge-cached together, so a nonce there would be

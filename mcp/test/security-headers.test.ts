@@ -1,23 +1,19 @@
 /**
- * The security headers, graded by the shared package's own check on responses the real handlers
- * make: /health, a 404, the consent page, a refused consent POST, the callback's errors, a
- * redirect, an MCP initialize over the real protocol layer, the probe and the CSP sink. The entry
- * (index.ts) imports the OAuth library, which Node cannot load, so check:conformance grades the
- * real entry under wrangler dev.
+ * What the wrapper must keep while it applies the set: the consent page's own policy, the strict policy and no COOP
+ * everywhere else, the MCP stream, a redirect, and the CSP sink. The set itself is graded live (site-runtime-security).
  */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { checkSecurityHeaders, failures, parsePolicy } from "@dustinedwards/site-runtime/check";
+import { parsePolicy } from "@dustinedwards/site-runtime/check";
 import { scriptHash } from "@dustinedwards/site-runtime/csp";
 
 import { AuthorizationError } from "@cloudflare/workers-oauth-provider";
 import { CONSENT_STYLE } from "@dustinedwards/site-runtime/mcp-login";
 import { defaultHandler, type LoginEnv } from "../src/login-handler.ts";
 import { handleMcp } from "../src/mcp-handler.ts";
-import { handleProbe } from "../src/probe.ts";
 import { handleCspReport } from "../src/csp-report.ts";
-import { CSP_REPORT_PATH, NON_HTML_CSP, consentPageCsp, securityHeaders, withSecurityHeaders } from "../src/security-headers.ts";
+import { CSP_REPORT_PATH, NON_HTML_CSP, consentPageCsp, withSecurityHeaders } from "../src/security-headers.ts";
 import { WRITER, freshEnv } from "./fake-operator.ts";
 
 const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
@@ -60,11 +56,6 @@ const LOGIN_ENV = {
 
 const login = (path: string, init?: RequestInit) => defaultHandler.fetch(new Request(`${ORIGIN}${path}`, init), LOGIN_ENV);
 
-function assertGraded(label: string, response: Response) {
-  const failed = failures(checkSecurityHeaders(response.headers, { standard: securityHeaders }));
-  assert.deepEqual(failed, [], `${label}: ${failed.map((f) => `${f.name} (${f.detail})`).join("; ")}`);
-}
-
 const initialize = () =>
   handleMcp(
     new Request(`${ORIGIN}/mcp`, {
@@ -82,30 +73,7 @@ const initialize = () =>
     WRITER,
   );
 
-const RESPONSES: Array<[string, () => Promise<Response>]> = [
-  ["GET /health", () => login("/health")],
-  ["a 404", () => login("/nowhere")],
-  ["the consent page", () => login("/authorize?client_id=x")],
-  ["a consent POST without its handle", () => login("/authorize", { method: "POST", body: new FormData() })],
-  ["the callback without a code", () => login("/callback")],
-  ["a redirect with immutable headers", async () => Response.redirect("https://client.example.com/cb", 302)],
-  ["an MCP initialize", initialize],
-  ["the probe", () => handleProbe(new Request(`${ORIGIN}/probe/health`), {} as never, ORIGIN)],
-  ["a CSP report", () => handleCspReport(new Request(`${ORIGIN}${CSP_REPORT_PATH}`, { method: "POST", body: "{}" }), {})],
-];
-
 describe("security headers", () => {
-  for (const [label, make] of RESPONSES) {
-    test(`${label} carries the set and an enforced policy`, async () => {
-      assertGraded(label, await withSecurityHeaders(await make(), ORIGIN));
-    });
-  }
-
-  test("the check bites: a response this Worker made, unwrapped, fails it", async () => {
-    const bare = await login("/health");
-    assert.ok(failures(checkSecurityHeaders(bare.headers, { standard: securityHeaders })).length > 0);
-  });
-
   test("the consent page's policy trusts exactly the style it renders, and has no form-action", async () => {
     const response = await withSecurityHeaders(await login("/authorize?client_id=x"), ORIGIN);
     const html = await response.text();
