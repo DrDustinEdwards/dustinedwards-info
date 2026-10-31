@@ -56,14 +56,14 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
   const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
   if (identity.kind !== "human" || localDevelopment(request)) return identity;
   if (adminEmails(env).includes(identity.email)) return identity;
-  refusedLog("not-admin");
   return { kind: "refused", reason: "not-admin" };
 }
 
 /**
  * One Access application's verdict on a request, as this site reads it: its token, from the header (or, with `cookie`,
  * the `CF_Authorization` cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their
- * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws.
+ * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws. Nothing
+ * here logs: the route that answers a refusal writes its one `authz_fail` line (`refusal` below).
  */
 export async function verifyAccessRequest(
   env: Env,
@@ -82,14 +82,12 @@ export async function verifyAccessRequest(
   const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
   if (!verdict.ok) {
     if (verdict.reason === "not-configured" || verdict.reason === "no-token") return { kind: "absent" };
-    refusedLog(verdict.reason);
     return { kind: "refused", reason: verdict.reason };
   }
 
   const { email, common_name: commonName } = verdict.claims;
   if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
   if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
-  refusedLog("no-identity");
   return { kind: "refused", reason: "no-identity" };
 }
 
@@ -120,9 +118,4 @@ export function refusal(
 /** The `authz_fail` line alone, for a refusal made elsewhere (site-runtime ./origin's cross-site 403). */
 export function logRefusal(request: Request, plane: "admin" | "lab", reason: string, status: number): void {
   logEvent(OWASP_EVENTS.authorizationFailure, { ...requestFields(request), plane, reason, status }, { level: "warn" });
-}
-
-/** A presented Access token refused, under the OWASP name (area 8, L4): the reason only, never the token or the email. */
-function refusedLog(reason: string) {
-  logEvent(OWASP_EVENTS.authorizationFailure, { via: "access", reason }, { level: "warn" });
 }
