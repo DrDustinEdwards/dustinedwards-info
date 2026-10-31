@@ -37,6 +37,8 @@ import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
+import { withRequestLog } from "@dustinedwards/site-runtime/log";
+import { cronJob } from "~/lib/cron-jobs.mjs";
 
 export { AskBudget } from "./ask-budget";
 
@@ -199,14 +201,15 @@ const site = {
   // The one cron (wrangler.jsonc.example), every five minutes: every scheduled update that is due goes live, and
   // IndexNow is told; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
   // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
-  // retries it. Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
+  // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
+  // Every firing of the one key gets the job list: there is no other key this Worker can receive.
+  // Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
   scheduled(controller, env, ctx) {
     const at = new Date(controller.scheduledTime);
     ctx.waitUntil(
       runJobs(env.DB, [
         {
-          name: "carrel-schedules",
-          everyMinutes: 5,
+          ...cronJob("carrel-schedules"),
           run: async () => {
             const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
             const run = await runCarrelSchedules(env, ctx, at);
@@ -214,7 +217,7 @@ const site = {
           },
         },
         ...(isNightly(at)
-          ? [{ name: "backup", everyMinutes: 1440, run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
+          ? [{ ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
           : []),
       ]),
     );
@@ -222,10 +225,22 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
-// An admin idle for an hour is signed out of Access (site-runtime ./access).
+// An admin idle for an hour is signed out of Access (site-runtime ./access). Every request writes one `request` line
+// (site-runtime withRequestLog: cf-ray, method, path, status, ms and the deployed sha), with no address, cookie or
+// query, so it records nothing the privacy page would have to name. tokenPath cuts any segment after /preview/, the
+// one address a capability has ridden in a path here (the traces note in wrangler.jsonc.example).
+//
+// NO 404 COUNTER (area 8, N1 and N7): site-runtime's countNotFound would store each missing path and its referring
+// host in D1, and the privacy page names everything the site records, so the counter waits for that page's wording.
+// With no rows there is nothing to prune.
 export default {
   ...site,
-  fetch: (request, env, ctx) => withAdminIdle(request, () => site.fetch(request, env, ctx)),
+  fetch: withRequestLog(
+    // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
+    (request: Request, env: Env, ctx: ExecutionContext) =>
+      withAdminIdle(request, () => site.fetch(request as FetchArgs[0], env, ctx)),
+    { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
+  ),
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
@@ -240,7 +255,10 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   // One hop to https and the slashless path (site-runtime ./url). A paper keeps its slash (below), and an old
   // WordPress address keeps its own, so the map moves it in the same hop.
   const canonical = canonicalRedirect(request, { except: wordpress ? [url.pathname] : [`${PUBLICATIONS_PREFIX}*`] });
-  if (canonical !== null) return canonical;
+  if (canonical !== null) {
+    applySecurityHeaders(canonical.headers);
+    return canonical;
+  }
 
   // The prefetch rules every public page's header names: one file, the same for every page, so no route renders it.
   if (url.pathname === SPECULATION_RULES_PATH) {

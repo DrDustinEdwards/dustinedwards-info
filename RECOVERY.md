@@ -545,11 +545,11 @@ Dustin's inbox by email:
   `UPTIMEROBOT_API_KEY` by design, records the step as SKIPPED, leaves the
   monitors where they were, and does not end red; they are reconciled at the
   domain move by hand or by a local ship. A local ship missing the key is a
-  MISS). Two monitors, the home page and `/api/health`,
+  MISS). Two monitors, the home page and `/health`,
   from OUTSIDE Cloudflare, which the watchdog cannot be (a Worker cannot make an
-  ordinary request to a Worker on its own zone). `/api/health` answers 503 when
-  any check fails, so the second monitor catches a failing check as well as an
-  outage. They mail the account's active email contact once on down and once on
+  ordinary request to a Worker on its own zone). `/health` answers 503 only when
+  D1 does not answer and reports drift as a warning, so the second monitor pages
+  for an outage, not for drift the watchdog repairs; it keys on `"ok":true`. They mail the account's active email contact once on down and once on
   up; `uptime-ensure` refuses to create a monitor with no such contact.
 - **The browser test** (`.github/workflows/browser.yml`), started by ship after
   every deploy and weekly as a backstop. A failed run emails the account that

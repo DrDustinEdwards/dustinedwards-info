@@ -2,7 +2,7 @@
 // sync because `sync-content.mjs` runs no gate.
 
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,6 +36,7 @@ import { missReport } from "./lib/ship-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 import { teeSelfToLog } from "./lib/ship-transcript.mjs";
 import { shipMcp } from "./lib/ship-mcp.mjs";
+import { readBookmark } from "./lib/d1-bookmark.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -352,9 +353,32 @@ if (ciGreenEarly) {
  * refuses and the operator applies it. An unreadable answer, a bookmark that cannot be read or a failed apply refuses.
  */
 
-announce("The deployed database has every migration");
-
 const DATABASE = "dustinedwards";
+
+/*
+ * The undo point (area 8, R4), taken before the migration check and before the deploy and the content sync write
+ * to D1, as devkit's worker-deploy takes it before its pre-deploy guard. A bookmark that cannot be read refuses:
+ * nothing writes without a point to go back to. Printed with the one command that goes back, and written to the
+ * run's summary when this runs in the deploy workflow.
+ */
+announce("D1 Time Travel bookmark, before anything writes");
+const undo = readBookmark(root, DATABASE);
+if (!undo.bookmark) {
+  refuse(
+    `the Time Travel bookmark of ${DATABASE} could not be read:\n${undo.output.trim().split("\n").slice(-5).join("\n")}`,
+    "Nothing was deployed. The token needs D1 read; check it with " +
+      `\`npx wrangler d1 time-travel info ${DATABASE}\`.`,
+  );
+}
+const undoLines = [
+  `D1 ${DATABASE} before this ship: bookmark ${undo.bookmark} at ${undo.at}. To undo what it wrote:`,
+  "",
+  `    npx wrangler d1 time-travel restore ${DATABASE} --bookmark=${undo.bookmark}`,
+];
+console.log(`  ${undoLines.join("\n  ")}`);
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${undoLines.join("\n")}\n`);
+
+announce("The deployed database has every migration");
 
 /*
  * `readMigrationList` never throws, so the wrapper throws on `unreadable` only. `pending`

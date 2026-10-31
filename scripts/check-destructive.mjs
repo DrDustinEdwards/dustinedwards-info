@@ -378,6 +378,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    */
   const BACKUP_PASSED_TO = new Map([
     ["app/lib/media/backup.server.ts:listAll", "pages through bucket.list() and returns the objects; it has no other call"],
+    ["app/routes/health.ts:r2Check", "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"],
   ]);
 
   const sources = [
