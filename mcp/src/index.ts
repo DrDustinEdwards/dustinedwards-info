@@ -26,7 +26,8 @@
  *   /token                 served by the OAuth library
  *   /.well-known/*         ditto
  *   /probe/*               the client measurement instrument, probe.ts
- *   /health                liveness
+ *   /health                site-runtime's healthResponse: the deployed commit and a check per
+ *                          binding (login-handler.ts)
  *   /.well-known/security.txt and /csp-report  answered by withMcpHeaders
  *
  * Every response, whichever route made it, leaves through site-runtime's withMcpHeaders.
@@ -36,6 +37,7 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
+import { withRequestLog } from "@dustinedwards/site-runtime/log";
 import { checkRateLimit, mcpOriginRefusal, refuse, withMcpHeaders } from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
@@ -290,9 +292,10 @@ export default {
    * The entry's full set, the consent page's hashed-style policy and the load-nothing policy for the rest, on every
    * response. It also answers security.txt (the site's contact and expiry, app/routes/security-txt.ts; renew both
    * together) and the CSP sink, metered per address because a page tripping ten rules sends ten reports. A throw
-   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page.
+   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page. withRequestLog writes one
+   * `request` line per request (site-runtime ./log: path, status, ms and the deployed commit; never a query).
    */
-  fetch: withMcpHeaders<Env>(
+  fetch: withRequestLog(withMcpHeaders<Env>(
     async (request, env, ctx) => {
       try {
         return await route(request, env, ctx as ExecutionContext);
@@ -309,5 +312,5 @@ export default {
       allowReport: async (request, env) =>
         (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${request.headers.get("cf-connecting-ip") ?? "unknown"}`, 60)).allowed,
     },
-  ),
+  ), { sha: (env: Env) => env.DEPLOY_SHA }),
 } satisfies ExportedHandler<Env>;
