@@ -1,8 +1,11 @@
 {
-  "generated": 51,
+  "generated": 47,
   "refs": {
     "/audio/capsid.mp3": [
       "content/dictionary/capsid.md"
+    ],
+    "/audio/capsomer.mp3": [
+      "content/dictionary/capsomer.md"
     ],
     "/audio/carrel.mp3": [
       "content/dictionary/carrel.md"
@@ -10,26 +13,15 @@
     "/audio/enarratio.mp3": [
       "content/dictionary/enarratio.md"
     ],
-    "/dustin-edwards-android-chrome-192x192.png": [
-      "public/site.webmanifest"
+    "/dustin-edwards-logo-dark.svg": [
+      "workers/security-headers.mjs"
     ],
-    "/dustin-edwards-android-chrome-512x512.png": [
-      "public/site.webmanifest"
-    ],
-    "/dustin-edwards-apple-touch-icon.png": [
-      "app/root.tsx"
-    ],
-    "/dustin-edwards-favicon.svg": [
-      "app/root.tsx"
-    ],
-    "/dustin-edwards-maskable-icon-512x512.png": [
-      "public/site.webmanifest"
+    "/dustin-edwards-logo.svg": [
+      "workers/security-headers.mjs"
     ],
     "/dustin-edwards-og-image.png": [
-      "app/lib/seo.ts"
-    ],
-    "/favicon.ico": [
-      "app/root.tsx"
+      "app/lib/seo.ts",
+      "workers/security-headers.mjs"
     ],
     "/phage-hunters/dustin-edwards-2017.webp": [
       "content/roster/2017.md"
@@ -150,11 +142,8 @@
     ],
     "/research/publications/10-7589-jwd-d-22-00023/dustin-edwards-10-7589-jwd-d-22-00023.pdf": [
       "content/publications/10-7589-jwd-d-22-00023.md"
-    ],
-    "/site.webmanifest": [
-      "app/root.tsx"
     ]
   },
-  "filesRead": 521,
+  "filesRead": 565,
   "assetsConsidered": 64
 }

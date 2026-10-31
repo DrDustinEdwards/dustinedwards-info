@@ -113,7 +113,7 @@ await test("the scan reads source, and refuses the artifact that lists every ass
   // Each cohort's file names its photograph by path, so these markdown files are sources too.
   assert.ok(isSourceFile("content/roster/2025.md"));
   assert.ok(isSourceFile("workers/app.ts"));
-  assert.ok(isSourceFile("public/site.webmanifest"));
+  assert.ok(isSourceFile("content/features.json"));
   // SELF-REFERENTIAL. `assets.json` IS the asset inventory, so reading it would
   // mark all 58 static files as referenced by repository code and collapse the
   // third state into "everything".
