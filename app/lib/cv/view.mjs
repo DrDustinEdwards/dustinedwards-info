@@ -87,12 +87,12 @@ export const SORTS = /** @type {const} */ ([
 /** The timeline figure's id, which Enarratio's `enarratio:select` events carry as `chartId`. */
 export const TIMELINE_ID = "cv-timeline";
 
-/** The types the timeline stacks, in stacking order, each with its chart token. */
+/** The types the timeline stacks, in stacking order; app/styles/cv.css colors the series in this order. */
 export const CHART_SERIES = /** @type {const} */ ([
-  ["publication", "Publications", "var(--chart-purple)"],
-  ["grant", "Grants", "var(--chart-cadet)"],
-  ["talk", "Invited talks", "var(--chart-claret)"],
-  ["award", "Awards", "var(--chart-sage)"],
+  ["publication", "Publications"],
+  ["grant", "Grants"],
+  ["talk", "Invited talks"],
+  ["award", "Awards"],
 ]);
 
 const TYPE_IDS = new Set(TYPES.map(([id]) => /** @type {string} */ (id)));
@@ -383,10 +383,9 @@ export function chartYears(all) {
 export function timelineData(all, state) {
   const years = chartYears(all);
   const shown = all.filter((f) => matches(f, state, { ignoreYears: true }));
-  const series = CHART_SERIES.map(([key, label, token]) => ({
+  const series = CHART_SERIES.map(([key, label]) => ({
     key,
     label,
-    token,
     values: years.map((y) => shown.filter((f) => f.type === key && f.year === y).length),
   }));
   return { years, series, selected: selectedRange(state, years), entries: shown.length };

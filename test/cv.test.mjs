@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
 import { buildCvFrom } from "../scripts/lib/cv.mjs";
 import { buildPublications } from "../scripts/lib/publications.mjs";
@@ -21,7 +20,6 @@ import {
   timelineData,
   timelineEmptyText,
 } from "../app/lib/cv/view.mjs";
-import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
 import { FINGERPRINT_LABEL, cvFingerprint, cvPdfOptions, renderCvHtml } from "../app/lib/cv/pdf-html.mjs";
 
 // The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The
@@ -149,7 +147,7 @@ await test("a range filter fades exactly the timeline's bars outside it", () => 
   const years = [2019, 2020, 2021, 2022, 2023];
   const markup = timelineSvg({
     years,
-    series: [{ key: "publication", label: "Publications", token: "var(--brand)", values: [1, 1, 1, 1, 1] }],
+    series: [{ key: "publication", label: "Publications", values: [1, 1, 1, 1, 1] }],
     selected: [2020, 2021],
     label: "Output per year",
     hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
@@ -179,20 +177,18 @@ await test("a filter that selects nothing chartable gets a sentence, never an En
   // The case from the report: grants as senior author selects no entry at all.
   const none = timelineFor("type=grant&role=senior-author");
   assert.equal(none.data.entries, 0);
-  assert.equal(
-    none.markup,
-    '<p class="cv-timeline-hint" data-cv-timeline-empty="">No entries match these filters, so there is nothing to chart.</p>',
-  );
+  assert.match(none.markup, /data-state="nodata"/);
+  assert.match(none.markup, /No entries match these filters, so there is nothing to chart\./);
   // Entries match, but none is a charted type: courses and service are the CV's largest examples.
   const uncharted = timelineFor("type=service");
   assert.ok(uncharted.data.entries > 0);
-  assert.match(uncharted.markup, /data-cv-timeline-empty/);
+  assert.match(uncharted.markup, /data-state="nodata"/);
   assert.match(uncharted.markup, /publications, grants, invited talks and awards, and none of the entries/);
   // The innocent cases: anything with a charted entry is still a figure, with no sentence.
   for (const query of ["", "type=publication", "type=grant&from=2018&to=2022", "role=first-author&sort=newest", "area=bacteriophages&type=talk"]) {
     const { markup } = timelineFor(query);
     assert.ok(markup.includes("<svg"), `${query || "no filter"} draws the chart`);
-    assert.ok(!markup.includes("data-cv-timeline-empty"), `${query || "no filter"} has no empty sentence`);
+    assert.ok(!markup.includes('data-state="nodata"'), `${query || "no filter"} has no empty sentence`);
   }
 });
 
@@ -212,7 +208,7 @@ await test("no combination of the CV's filters throws, and the sentence appears 
     const { data, markup } = timelineFor(query); // a throw here is the 500
     const state = parseState(new URLSearchParams(query));
     const chartable = FACTS.some((f) => matches(f, state, { ignoreYears: true }) && charted.has(f.type) && f.year !== null);
-    assert.equal(markup.includes("data-cv-timeline-empty"), !chartable, `?${query}`);
+    assert.equal(markup.includes('data-state="nodata"'), !chartable, `?${query}`);
     if (!chartable) empties += 1;
     assert.equal(data.entries, FACTS.filter((f) => matches(f, state, { ignoreYears: true })).length, `?${query}`);
   }
@@ -265,6 +261,3 @@ await test("the print document carries the fingerprint it is stored under, and o
   assert.ok(options.footerTemplate.includes(CV.edition));
 });
 
-await test("the committed chart stylesheet is Enarratio's current output (npm run build:chart-css)", () => {
-  assert.equal(readFileSync(CHART_CSS_PATH, "utf8"), chartCss());
-});

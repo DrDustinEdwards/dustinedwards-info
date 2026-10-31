@@ -43,7 +43,8 @@ import type { Route } from "./+types/blog.$slug";
 
 import "~/styles/post-rail.css";
 import "~/styles/evidence-row.css";
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "enarratio/base.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
