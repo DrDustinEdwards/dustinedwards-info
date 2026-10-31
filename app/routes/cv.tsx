@@ -38,7 +38,10 @@ import {
 
 import type { Route } from "./+types/cv";
 
-import "~/styles/enarratio.css";
+import "capsomer/tokens.css";
+import "capsomer/status.css";
+import "capsomer/chart-frame.css";
+import "enarratio/base.css";
 import "~/styles/cv.css";
 
 /*
@@ -325,13 +328,13 @@ function Stat({
   name: string;
 }) {
   return (
-    <div className="cv-stat">
-      <dt>{label}</dt>
+    <div className="cv-stat cap-chart" data-variant="tile">
+      <dt className="cap-chart-title">{label}</dt>
       <dd>
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
         </span>
-        <span className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={{ __html: spark }} />
+        <div className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={{ __html: spark }} />
         {sub ? <span className="cv-stat-sub">{sub}</span> : null}
       </dd>
     </div>
@@ -395,7 +398,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             />
           </dl>
           <div className="cv-timeline">
-            <p className="cv-timeline-title">Output by year</p>
             <div className="cv-timeline-plot" data-cv-timeline="" dangerouslySetInnerHTML={{ __html: charts.timeline }} />
             <p className="cv-timeline-hint" data-cv-hint="" hidden>
               Select a year&rsquo;s bar to show only that year, and select it again for every year. The key filters by type.

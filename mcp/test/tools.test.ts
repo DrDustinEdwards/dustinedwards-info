@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { TOOLS, invokeTool } from "../src/tools.ts";
+import { invokeTool } from "@dustinedwards/site-runtime/mcp-server";
+
+import { SERVER } from "../src/mcp-handler.ts";
+import { TOOLS } from "../src/tools.ts";
 import {
-  ADMIN,
   AUDIT,
   FIRST_PUBLISH_REFUSAL,
   READER,
@@ -24,11 +26,13 @@ function tool(name: string) {
   return found;
 }
 
-/** Validates the args as the MCP server would, then goes through the one door. */
+/** Validates the args as the MCP server would, then goes through the one door, as mcp-handler.ts does. */
 async function call(name: string, args: Record<string, unknown>, caller: Caller | undefined = WRITER) {
   const t = tool(name);
   const parsed = t.config.inputSchema.parse(args) as Record<string, unknown>;
-  return invokeTool(ENV, caller, t, parsed);
+  const output = await invokeTool(ENV, SERVER, { caller, tool: t, args: parsed, run: () => t.handler(ENV, parsed) });
+  if (!output.isError) t.config.outputSchema.parse((output as { structuredContent?: unknown }).structuredContent);
+  return output as Awaited<ReturnType<typeof t.handler>>;
 }
 
 let api: FakeOperator;
@@ -301,7 +305,7 @@ describe("tool results", () => {
   });
 
   test("an unconfigured wrapper says so as a tool error and sends nothing", async () => {
-    const out = await invokeTool({ ...ENV, SITE: undefined }, WRITER, tool("dei_backup_media"), {});
+    const out = await tool("dei_backup_media").handler({ ...ENV, SITE: undefined }, {});
     assert.match(out.content[0].text, /\(unconfigured\): .*SITE service binding/);
     assert.equal(api.calls.length, 0);
   });
@@ -333,50 +337,6 @@ describe("the wrapper adds no policy of its own", () => {
   });
 });
 
-/**
- * RULE 12.1, PLANTED. Every tool names records whose owner is the site's one
- * administrator, so every call proves the caller is that administrator. Delete
- * the isAdminUser line from site-runtime's authorizeCall and these fail.
- */
-describe("every call proves the caller owns what it names", () => {
-  const stranger: Caller = {
-    kind: "admin",
-    props: { email: "someone-else@example.com", scopes: ["dei.read", "dei.write"] },
-    scopes: ["dei.read", "dei.write"],
-  };
-
-  for (const t of TOOLS) {
-    test(`${t.name} refuses a grant that is not the administrator's, and sends nothing`, async () => {
-      const out = await invokeTool(ENV, stranger, t, { action: "list", registry: "pages", mention_id: 1, decision: "approve" });
-      assert.equal(out.isError, true);
-      assert.match(out.content[0].text, /does not belong to the administrator/);
-      assert.equal(api.calls.length + api.healthCalls.length, 0);
-      assert.deepEqual(AUDIT.rows.map((r) => [r.phase, r.caller]), [["refused", "access:someone-else@example.com"]]);
-    });
-  }
-
-  test("no caller at all is refused", async () => {
-    const out = await invokeTool(ENV, undefined, tool("dei_check_site"), {});
-    assert.match(out.content[0].text, /no caller identity/);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("the administrator matched without case also passes", async () => {
-    const out = await invokeTool({ ...ENV, ADMIN_EMAIL: "Admin@Example.com" }, READER, tool("dei_check_site"), {});
-    assert.equal(out.isError, undefined);
-  });
-
-  test("a grant from the old GitHub sign-in, with no email, is refused", async () => {
-    const old = { kind: "admin", props: { id: 1, login: "admin", name: null }, scopes: ["dei.read"] } as unknown as Caller;
-    const out = await invokeTool(ENV, old, tool("dei_check_site"), {});
-    assert.match(out.content[0].text, /does not belong to the administrator/);
-  });
-
-  test("ADMIN is the configured email", () => {
-    assert.equal(ENV.ADMIN_EMAIL, ADMIN);
-  });
-});
-
 describe("least scope: read by default, write only when granted", () => {
   test("a read-only grant reads", async () => {
     const out = await call("dei_read_registry", { registry: "pages" }, READER);
@@ -402,55 +362,5 @@ describe("least scope: read by default, write only when granted", () => {
   test("dei_manage_procedure list and get need only read", async () => {
     assert.equal((await call("dei_manage_procedure", { action: "list" }, READER)).isError, undefined);
     assert.equal((await call("dei_manage_procedure", { action: "get", slug: "p" }, READER)).isError, undefined);
-  });
-
-  test("an agent without AGENT_WRITE reads only", async () => {
-    const agent: Caller = { kind: "agent", principal: "grok", scopes: ["dei.read"] };
-    assert.equal((await call("dei_check_site", {}, agent)).isError, undefined);
-    assert.equal((await call("dei_backup_media", {}, agent)).isError, true);
-  });
-});
-
-describe("the append-only tool-call log", () => {
-  test("every call writes started then finished, naming the caller and the result", async () => {
-    await call("dei_backup_media", {});
-    assert.deepEqual(
-      AUDIT.rows.map((r) => r.phase),
-      ["started", "finished"],
-    );
-    assert.equal(AUDIT.rows[0].caller, `access:${ADMIN}`);
-    assert.equal(AUDIT.rows[0].tool, "dei_backup_media");
-    assert.equal(AUDIT.rows[0].callId, AUDIT.rows[1].callId);
-    assert.deepEqual(AUDIT.rows[1].result, { isError: false, text: JSON.stringify({ done: true }, null, 2) });
-  });
-
-  test("a long argument is logged as its length and a digest, not its content", async () => {
-    const raw = "x".repeat(500);
-    await call("dei_manage_procedure", { action: "save", slug: "p", raw });
-    const args = AUDIT.rows[0].args as { raw: { chars: number; sha256: string } };
-    assert.equal(args.raw.chars, 500);
-    assert.match(args.raw.sha256, /^[0-9a-f]{16}$/);
-    assert.ok(!JSON.stringify(AUDIT.rows).includes(raw));
-  });
-
-  test("when the log cannot be written, the call does not run", async () => {
-    AUDIT.failNext();
-    const out = await call("dei_backup_media", {});
-    assert.equal(out.isError, true);
-    assert.match(out.content[0].text, /no tool runs unlogged/);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("with no log binding at all, nothing runs", async () => {
-    const out = await invokeTool({ ...ENV, TOOL_CALL_LOG: undefined }, WRITER, tool("dei_check_site"), {});
-    assert.equal(out.isError, true);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("a refused call writes one refused row with the reason, and sends nothing", async () => {
-    await call("dei_backup_media", {}, READER);
-    assert.deepEqual(AUDIT.rows.map((r) => r.phase), ["refused"]);
-    assert.match(String((AUDIT.rows[0].result as { text: string }).text), /read access only/);
-    assert.equal(api.calls.length, 0);
   });
 });

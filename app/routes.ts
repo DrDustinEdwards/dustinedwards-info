@@ -122,6 +122,7 @@ export default [
     // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
     route("site-map", "routes/site-map.tsx"),
     route("robots.txt", "routes/robots.ts"),
+    route("site.webmanifest", "routes/site-webmanifest.ts"),
     route("ai.txt", "routes/ai-txt.ts"),
     route(".well-known/security.txt", "routes/security-txt.ts"),
     route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),

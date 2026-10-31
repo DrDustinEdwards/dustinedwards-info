@@ -353,14 +353,19 @@ for (const f of files) {
 // login host appears as a literal. The operator API is reached through the
 // OPERATOR_API_URL var rather than a literal, so a hardcoded app URL fails here.
 const ALLOWED_HOSTS = ["tool-call-log.invalid"];
+// Addresses this Worker names and never fetches, matched as whole literals so the
+// host stays unallowed anywhere else: the Origin it admits, and the serverInfo
+// website and icon, which a client fetches.
+const NAMED_NOT_FETCHED = ['"https://claude.ai"', '"https://dustinedwards.info"', '"https://dustinedwards.info/dustin-edwards-favicon.svg"'];
+const unnamed = (text) => NAMED_NOT_FETCHED.reduce((t, literal) => t.replaceAll(literal, '""'), text);
 const URL_RE = /https?:\/\/([a-z0-9.-]+)/gi;
 for (const f of files) {
-  for (const m of readFileSync(join(SRC, f.name), "utf8").matchAll(URL_RE)) {
+  for (const m of unnamed(readFileSync(join(SRC, f.name), "utf8")).matchAll(URL_RE)) {
     const host = m[1].toLowerCase();
     // Documentation links in comments are fine, so comments are stripped, but
     // the host lives in a STRING literal and codeOnly() would delete it. That
     // mistake let a planted exfiltration host through undetected.
-    if (!withoutComments(f.text).includes(host)) continue;
+    if (!unnamed(withoutComments(f.text)).includes(host)) continue;
     check(
       `src/${f.name} outbound host ${host} is allowlisted`,
       ALLOWED_HOSTS.includes(host),
@@ -455,27 +460,23 @@ for (const name of EXPECTED_TOOLS) {
  * skip all three.
  */
 {
-  const handlerCode = codeOnly(readFileSync(join(SRC, "mcp-handler.ts"), "utf8"));
+  const handlerText = readFileSync(join(SRC, "mcp-handler.ts"), "utf8");
+  const handlerCode = codeOnly(handlerText);
+  // site-runtime's invokeTool is the door: it refuses first, logs started (or refuses), runs
+  // `run`, logs finished, and is tested there. What is provable here is that every handler is
+  // reached only as its `run`, with this server's scopes.
   check(
-    "every tool is registered through invokeTool",
-    /invokeTool\(env, caller, tool, args/.test(handlerCode) && !/tool\.handler\(/.test(handlerCode),
+    "every tool is registered through site-runtime's invokeTool",
+    /import \{[^}]*\binvokeTool\b[^}]*\} from "@dustinedwards\/site-runtime\/mcp-server"/.test(withoutComments(handlerText)) &&
+      /invokeTool\(env, SERVER, \{[\s\S]*?run: \(\) => tool\.handler\(env, args \?\? \{\}\)/.test(handlerCode) &&
+      (handlerCode.match(/tool\.handler\(/g) ?? []).length === 1 &&
+      !/function invokeTool|appendAudit/.test(codeOnly(toolsText)),
     "Rule 12: ownership, scope and the log are in invokeTool; a direct handler call skips them.",
   );
-  const invoke = codeOnly(toolsText.slice(toolsText.indexOf("export async function invokeTool(")));
-  const at = (re) => invoke.search(re);
   check(
-    "invokeTool authorizes, then logs started, then runs the handler, then logs finished",
-    at(/authorizeCall\(/) >= 0 &&
-      at(/authorizeCall\(/) < at(/phase: "", caller: who/) &&
-      at(/tool\.handler\(env, args\)/) > at(/authorizeCall\(/) &&
-      (invoke.match(/appendAudit\(/g) ?? []).length === 3,
-    "Rule 12.1 and 12.4: refuse first, log every call, never run unlogged.",
-  );
-  const authCodeOnly = codeOnly(readFileSync(join(SRC, "auth.ts"), "utf8"));
-  check(
-    "authorizeCall re-runs the administrator check on every call (site-runtime's authorizeCall)",
-    /return checkCall\(env, caller, scope, \{ site: "", scopes: SCOPES \}\)/.test(authCodeOnly),
-    "Rule 12.1: the per-call ownership proof. test/tools.test.ts plants a stranger and must see it refused.",
+    "invokeTool names this server's scopes, so a tool's declared scope is checked against dei.read and dei.write",
+    /const SERVER: McpServerInfo = \{ site: "", scopes: SCOPES,/.test(handlerCode),
+    "Rule 12.1 and 12.3: the per-call ownership proof and the scope check.",
   );
 }
 
@@ -625,13 +626,13 @@ check(
 // passes the exact redirect allowlist and a per-address rate limit first.
 check(
   "every registration passes the exact redirect allowlist",
-  /clientRegistrationCallback:[\s\S]*registrationRefusal\(env\.DCR_REDIRECT_URIS, clientMetadata\)/.test(codeOnly(indexText)),
+  /clientRegistrationCallback:[\s\S]*registrationRefusal\(\[\.\.\.DCR_CALLBACKS, env\.DCR_REDIRECT_URIS \?\? ""\]\.join\(""\), clientMetadata\)/.test(codeOnly(indexText)),
   "Rule 13: redirect URIs allowlisted exactly; an unchecked registration is the deprecated DCR.",
 );
 check(
   "registration is rate limited per address before the provider sees it",
   /url\.pathname === "\/register"/.test(withoutComments(indexText)) &&
-    /checkRateLimit\(env\.OPERATOR_RATE_LIMIT, `register:\$\{ip\}`, REGISTRATIONS_PER_MINUTE\)/.test(withoutComments(indexText)),
+    /registrationLimited\(request, env\.OAUTH_KV\)/.test(withoutComments(indexText)),
   "Rule 13: registration rate limited.",
 );
 

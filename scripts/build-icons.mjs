@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,13 +8,14 @@ import { Resvg } from "@resvg/resvg-js";
 import { buildAssetManifest } from "./build-assets.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const ICONS_BIN = join(ROOT, "node_modules/@drdustinedwards/site-helpers/bin/icons.mjs");
 
 const DARK = "#B7A5E0";
 const TILE = "#4F2D7F";
 
 /**
- * Favicon tiles only: the tile halved the mark's contrast, so the small tiles take the muted chrome
- * token and the large tiles keep lavender.
+ * The icon tile's mark: lavender halved the small sizes' contrast, so the tile takes the muted chrome
+ * token and only the OG card keeps lavender.
  */
 const ICO_MARK = "#EDE8F5";
 
@@ -89,31 +91,6 @@ function png(svg, size) {
   return new Resvg(svg, { fitTo: { mode: "width", value: size } }).render().asPng();
 }
 
-/** @param {Array<{ size: number, data: Buffer }>} images */
-function ico(images) {
-  const header = Buffer.alloc(6);
-  header.writeUInt16LE(0, 0); // reserved
-  header.writeUInt16LE(1, 2); // type: icon
-  header.writeUInt16LE(images.length, 4);
-
-  const dir = Buffer.alloc(16 * images.length);
-  let offset = header.length + dir.length;
-  images.forEach(({ size, data }, i) => {
-    const o = i * 16;
-    dir[o] = size >= 256 ? 0 : size; // width, 0 means 256
-    dir[o + 1] = size >= 256 ? 0 : size; // height
-    dir[o + 2] = 0; // palette size
-    dir[o + 3] = 0; // reserved
-    dir.writeUInt16LE(1, o + 4); // color planes
-    dir.writeUInt16LE(32, o + 6); // bits per pixel
-    dir.writeUInt32LE(data.length, o + 8);
-    dir.writeUInt32LE(offset, o + 12);
-    offset += data.length;
-  });
-
-  return Buffer.concat([header, dir, ...images.map((i) => i.data)]);
-}
-
 const outArg = process.argv.indexOf("--out");
 if (outArg !== -1 && !process.argv[outArg + 1]) {
   console.error("build:icons: --out needs a directory");
@@ -136,30 +113,9 @@ function emit(name, data) {
 
 console.log(`build:icons -> ${OUT}`);
 
-// The adaptive one. Transparent, because it is the variant that can choose.
-emit("dustin-edwards-favicon.svg", faviconSvg());
-
-// The tiles. Lavender mark on brand purple, because none of these can query.
-// ICO sizes are the MEASURED contents of the shipped container, not a guess.
-const ICO_SIZES = [16, 32, 48];
-emit(
-  "favicon.ico",
-  ico(
-    ICO_SIZES.map((size) => ({
-      size,
-      // Small tiles get less padding: at the smallest size the silhouette needs the room.
-      data: png(square({ size, mark: ICO_MARK, tile: TILE, pad: 0.1 }), size),
-    })),
-  ),
-);
-
-emit("dustin-edwards-apple-touch-icon.png", png(square({ size: 180, mark: DARK, tile: TILE, pad: 0.14 }), 180));
-emit("dustin-edwards-android-chrome-192x192.png", png(square({ size: 192, mark: DARK, tile: TILE, pad: 0.12 }), 192));
-emit("dustin-edwards-android-chrome-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.12 }), 512));
-
-// Maskable: the launcher may crop to a circle, so the ink's diagonal has to clear it, which is why
-// the padding is much larger.
-emit("dustin-edwards-maskable-icon-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.19 }), 512));
+// The tile Prelum's prelum-icons draws every icon file from, at its shared paths.
+emit("icon.svg", faviconSvg());
+execFileSync(process.execPath, [ICONS_BIN, "--svg", join(OUT, "icon.svg"), "--background", TILE, "--out", OUT], { stdio: "inherit" });
 
 emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 

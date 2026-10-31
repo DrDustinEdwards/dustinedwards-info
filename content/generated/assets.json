@@ -1,6 +1,7 @@
 {
-  "generated": 65,
+  "generated": 64,
   "paths": [
+    "/apple-touch-icon.png",
     "/audio/capsid.mp3",
     "/audio/capsomer.mp3",
     "/audio/carrel.mp3",
@@ -11,20 +12,19 @@
     "/diagrams/dustin-edwards-b54765cf-light.svg",
     "/diagrams/dustin-edwards-e2394abb-dark.svg",
     "/diagrams/dustin-edwards-e2394abb-light.svg",
-    "/dustin-edwards-android-chrome-192x192.png",
-    "/dustin-edwards-android-chrome-512x512.png",
-    "/dustin-edwards-apple-touch-icon.png",
-    "/dustin-edwards-favicon.svg",
     "/dustin-edwards-germomics-mark.svg",
     "/dustin-edwards-logo-dark.svg",
     "/dustin-edwards-logo-header-dark.svg",
     "/dustin-edwards-logo-header.svg",
     "/dustin-edwards-logo.svg",
-    "/dustin-edwards-maskable-icon-512x512.png",
     "/dustin-edwards-og-image.png",
     "/dustin-edwards-orcid-id.svg",
     "/favicon.ico",
     "/fonts/dustin-edwards-ofl.txt",
+    "/icon-192.png",
+    "/icon-512.png",
+    "/icon-maskable-512.png",
+    "/icon.svg",
     "/phage-hunters/dustin-edwards-2017.webp",
     "/phage-hunters/dustin-edwards-2018.webp",
     "/phage-hunters/dustin-edwards-2019.webp",
@@ -64,8 +64,7 @@
     "/research/publications/10-3390-v3101815/dustin-edwards-10-3390-v3101815.pdf",
     "/research/publications/10-7589-2018-08-187/dustin-edwards-10-7589-2018-08-187.pdf",
     "/research/publications/10-7589-2019-04-088/dustin-edwards-10-7589-2019-04-088.pdf",
-    "/research/publications/10-7589-jwd-d-22-00023/dustin-edwards-10-7589-jwd-d-22-00023.pdf",
-    "/site.webmanifest"
+    "/research/publications/10-7589-jwd-d-22-00023/dustin-edwards-10-7589-jwd-d-22-00023.pdf"
   ],
   "placeholders": {
     "/phage-hunters/dustin-edwards-2017.webp": {
