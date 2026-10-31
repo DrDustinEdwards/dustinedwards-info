@@ -36,6 +36,7 @@ await test("www redirects to the apex in one hop, merging the old-address map, a
   assert.equal(wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"), "https://dustinedwards.info/research/phages?x=1");
   assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"), "https://dustinedwards.info/teaching/virus-isolation");
   assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/user/", ""), "https://dustinedwards.info/user/");
+  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/about/", ""), "https://dustinedwards.info/about");
   assert.equal(wwwRedirectTarget("dustinedwards.info", "/", ""), null);
   assert.equal(wwwRedirectTarget("dustinedwards.dustin-edwards.workers.dev", "/", ""), null);
 });
