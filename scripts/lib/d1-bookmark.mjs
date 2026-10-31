@@ -12,7 +12,7 @@ import { join } from "node:path";
  * @param {string} text
  * @returns {string | null}
  */
-export function parseBookmark(text) {
+function parseBookmark(text) {
   const start = text.indexOf("{");
   if (start < 0) return null;
   try {
