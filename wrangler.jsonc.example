@@ -262,8 +262,9 @@
 	// ACCESS_LAB_AUD names the separate Access application that guards /lab-bench
 	// (dustinedwards-lab-login, capsid docs/design/design-identity-roles.md), whose policy allows
 	// the lab-members group Capsid keeps equal to /lab-bench/members. Its own tag, so a /admin token is
-	// refused at /lab-bench and a /lab-bench token at /admin. Empty until that application exists: /lab-bench then
-	// says it is not set up and admits nobody.
+	// refused at /lab-bench and a /lab-bench token at /admin. Like ACCESS_AUD it is not a credential: the tag is in
+	// every token Access issues. Empty, /lab-bench would say it is not set up and admit nobody; it was empty until that
+	// application existed.
 	//
 	// AI_GATEWAY_BASE_URL names the AI Gateway the media suggestions run through, as site-runtime's ./ai-gateway
 	// spells it: https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic. Empty here because it
@@ -274,7 +275,7 @@
 		"PREVIEW": "",
 		"ACCESS_TEAM_DOMAIN": "dustinedwards.cloudflareaccess.com",
 		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25",
-		"ACCESS_LAB_AUD": "",
+		"ACCESS_LAB_AUD": "8ec1420e613392850264f5ea03c02479d1fa21c12936625b2c87e62e195d4b80",
 		"AI_GATEWAY_BASE_URL": ""
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()

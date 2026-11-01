@@ -430,7 +430,7 @@ Set it up once, in the Cloudflare dashboard (Zero Trust):
 4. **Its machine policy** (only when an instrument or CI needs `/lab-bench`): name `dustinedwards-lab-service`,
    action Service Auth, Include: Service Token, the token for that machine.
 5. **The tag.** In the application's Overview, copy the Application Audience (AUD) tag into
-   `ACCESS_LAB_AUD` in `wrangler.jsonc` and deploy. Check: an unsigned `curl -sI https://dustinedwards.info/lab-bench`
+   `ACCESS_LAB_AUD` in `wrangler.jsonc.example` (the tag is public, like `ACCESS_AUD`) and merge, which deploys. Check: an unsigned `curl -sI https://dustinedwards.info/lab-bench`
    answers 302 to `dustinedwards.cloudflareaccess.com`.
 6. **The sync.** Pin the group in Capsid's `access_sync_groups` (the insert in Capsid
    `migrations/0040_access_sync_groups.sql`, namespace `dustinedwards`, name `lab-members`), and set
