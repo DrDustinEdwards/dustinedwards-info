@@ -17,7 +17,7 @@ const { eq } = tally;
 
 /* THE LIGHTBOX IS A REAL MODAL DIALOG, asserted on source because check:browser skips. */
 {
-  const blog = stripComments(readFileSync(join(root, "app/enhance/blog.ts"), "utf8"));
+  const blog = stripComments(readFileSync(join(root, "node_modules/@drdustinedwards/site-helpers/render-enhance.mjs"), "utf8"));
   const overlay = blog.slice(blog.indexOf("function openOverlay"));
   const body = overlay.slice(0, overlay.indexOf("\n}"));
   eq("lightbox: the scan found openOverlay", body.length > 200, true);
@@ -37,7 +37,7 @@ const { eq } = tally;
 }
 
 {
-  const blog = stripComments(readFileSync(join(root, "app/enhance/blog.ts"), "utf8"));
+  const blog = stripComments(readFileSync(join(root, "node_modules/@drdustinedwards/site-helpers/render-enhance.mjs"), "utf8"));
   const fn = blog.slice(blog.indexOf("function footnotePreviews"));
   const body = fn.slice(0, fn.indexOf("\n}"));
   eq("footnotes: the scan found footnotePreviews", body.length > 200, true);
@@ -48,7 +48,7 @@ const { eq } = tally;
   );
   eq(
     "footnotes: 1.4.13 hoverable, entering the bubble cancels the hide",
-    /bubble\.addEventListener\("mouseenter", cancelHide\)/.test(body),
+    /note\.addEventListener\("mouseenter", cancelHide\)/.test(body),
     true,
   );
   eq(
@@ -63,7 +63,7 @@ const { eq } = tally;
   );
   eq(
     "footnotes: 1.3.1 the reference is described by its preview, and gets its old description back",
-    /setAttribute\("aria-describedby", `\$\{bubble\.id\} \$\{prior\}`\)/.test(body) &&
+    /setAttribute\("aria-describedby", `\$\{note\.id\} \$\{prior\}`\)/.test(body) &&
       /owner\?\.setAttribute\("aria-describedby", prior\)/.test(body),
     true,
   );
