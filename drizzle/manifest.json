@@ -40,6 +40,7 @@
     "0036_cron_runs.sql": "1ced44bced303be4248e8d23d1412118fde07378340a24c6bd8423e12e0b0967",
     "0037_site_api_store.sql": "d1b6bccdf40f4570f05f33a80b48fb23d89b753e001caf562e471fbdf058a53c",
     "0038_carrel_posts.sql": "c82e248491d96c5e4d0aab1eaa9d545b017b1e182e8691c62a5161cfd981653b",
-    "0039_post_search_fields.sql": "dbf7bb8a8385fa34533b573d907be44b3c523a1ff08b646e9deec57f5b50e058"
+    "0039_post_search_fields.sql": "dbf7bb8a8385fa34533b573d907be44b3c523a1ff08b646e9deec57f5b50e058",
+    "0040_site_api_media_uploads.sql": "6ab14fa6dffde1cd11b45704db117431fbc8a00bba2629e0ac8a035d3e48e9c1"
   }
 }

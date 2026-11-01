@@ -890,6 +890,13 @@ export const webmentionTargets = sqliteTable("webmention_targets", {
   sentAt: text("sent_at").notNull(),
 });
 
+// site-api 0.21.0 (migration 0040): the media file each upload's duplicates key became. Only d1SiteApiStore reads it.
+export const mediaUploads = sqliteTable("media_uploads", {
+  sha256: text("sha256").primaryKey(),
+  mediaId: text("media_id").notNull(),
+  at: text("at").notNull(),
+});
+
 // What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,
 // app/lib/carrel/post-state.server.ts): the trash, the redirects a rename leaves, and the first publishes that go live
 // by time. Times are UTC ISO text.
