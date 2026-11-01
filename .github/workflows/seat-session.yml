@@ -19,16 +19,17 @@ concurrency:
   group: seat-session
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: read
-  issues: read
-  # For the Capsid key exchange below, and nothing else: the Action is given
-  # github_token, so it never exchanges an OIDC token of its own.
-  id-token: write
+permissions: {}
 
 jobs:
   session:
+    permissions:
+      contents: write
+      pull-requests: read
+      issues: read
+      # For the Capsid key exchange below, and nothing else: the Action is given
+      # github_token, so it never exchanges an OIDC token of its own.
+      id-token: write
     runs-on: ubuntu-latest
     timeout-minutes: 120
     # The secrets live on this environment, whose deployment-branch rule allows only

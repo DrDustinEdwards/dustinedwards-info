@@ -21,4 +21,4 @@ concurrency:
 
 jobs:
   workflow-audit:
-    uses: DrDustinEdwards/devkit/.github/workflows/workflow-audit.yml@65782d2c45431055672a315f0d126b62d0dd3aff # v0.20.14
+    uses: DrDustinEdwards/devkit/.github/workflows/workflow-audit.yml@454002f526e5e8e645a9c110605880e220b611a0 # v0.21.0

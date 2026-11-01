@@ -48,7 +48,9 @@ await test("secrets come from the seat environment, the transcript stays out of 
     assert.ok(refused.includes(entry), `${entry} is not refused`);
   }
   assert.doesNotMatch(/--allowedTools "([^"]*)"/.exec(CODE)?.[1] ?? "", /wrangler|deploy|ship|gh:/);
-  assert.match(CODE, /^permissions:\n {2}contents: write\n {2}pull-requests: read\n {2}issues: read\n {2}id-token: write\n\n/m);
+  // Read-nothing at the top; the one job holds the writes (area 12 checklist C3).
+  assert.match(CODE, /^permissions: \{\}\n/m);
+  assert.match(CODE, /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: read\n {6}issues: read\n(?: {6}#.*\n)* {6}id-token: write\n {4}runs-on:/m);
 });
 
 await test("the Capsid key comes from the OIDC exchange, before checkout, and no long-lived runner key is read", () => {
