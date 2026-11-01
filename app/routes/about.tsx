@@ -8,7 +8,8 @@ import { getPageByPath } from "~/db/pages";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
-import { images } from "~/lib/media/images.mjs";
+import { mediaRecord } from "~/db/media";
+import { images, mediaVersion } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
@@ -18,10 +19,27 @@ import type { Route } from "./+types/about";
 import "~/styles/prose.css";
 import "~/styles/about.css";
 
-const PHOTO = pictureProps(
-  images.attributes({ src: `/media/${OWNER_PHOTO.key}`, width: OWNER_PHOTO.width, height: OWNER_PHOTO.height }, "portrait"),
-  { alt: SITE.name, priority: true, className: "about-photo" },
-);
+/**
+ * The portrait as the page draws it: its sizes carry the file's version, the bytes' hash from its library row (a replace
+ * writes it) else its key's digest, and it shows the row's stored placeholder while it loads. A row that cannot be read
+ * leaves the key's digest and no placeholder, rather than taking the page down.
+ */
+async function portrait(env: Env) {
+  const row = await mediaRecord(env, OWNER_PHOTO.key).catch(() => null);
+  return pictureProps(
+    images.attributes(
+      {
+        src: `/media/${OWNER_PHOTO.key}`,
+        width: OWNER_PHOTO.width,
+        height: OWNER_PHOTO.height,
+        version: mediaVersion(OWNER_PHOTO.key, row?.sha256 ?? null),
+        placeholder: row?.placeholder ?? null,
+      },
+      "portrait",
+    ),
+    { alt: SITE.name, priority: true, className: "about-photo" },
+  );
+}
 
 /**
  * The prose is the page's D1 row (docs/PAGES.md): content/pages/about.md, compiled by the one page
@@ -37,12 +55,12 @@ export function headers() {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const row = await getPageByPath(env, "/about");
+  const [row, photo] = await Promise.all([getPageByPath(env, "/about"), portrait(env)]);
   // No row: the content sync has not written it yet. A draft is the signed-in admin's alone, like any page.
   if (!row) throw data(null, { status: 404 });
   if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { title, seoTitle, description, html } = row.record;
-  return { title, seoTitle, description, html, draft: row.status === "draft" };
+  return { title, seoTitle, description, html, draft: row.status === "draft", photo };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -60,7 +78,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function About({ loaderData }: Route.ComponentProps) {
-  const { title, description, html, draft } = loaderData;
+  const { title, description, html, draft, photo } = loaderData;
   return (
     <PageShell
       rail={null}
@@ -79,7 +97,7 @@ export default function About({ loaderData }: Route.ComponentProps) {
       {draft ? <p>Draft: only you can see this page.</p> : null}
 
       {/* The same photo the Person record names, and the page's LCP. */}
-      <Picture picture={PHOTO} />
+      <Picture picture={photo} />
 
       {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
       <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
