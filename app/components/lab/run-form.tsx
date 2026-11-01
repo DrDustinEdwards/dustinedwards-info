@@ -1,6 +1,7 @@
 // The form a lab member records a run with, and the correction of one: the protocol, the day, the outcome, a note and
 // the lots it used. Plain fields, so it works with no script.
 
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { Form } from "react-router";
 import { Button } from "capsomer/react/button";
 import { Field } from "capsomer/react/field";
@@ -22,7 +23,7 @@ export function RunForm({
   defaults?: { procedure?: string; run_on?: string; outcome?: string; note?: string | null; lots?: Array<{ lot_id: number; amount_used: number | null; emptied: number }> };
 }) {
   return (
-    <Form method="post" action={replaces ? `/lab/runs/${replaces}` : "/lab/runs"} className="lab-form">
+    <Form method="post" action={replaces ? `${LAB_BENCH_PATH}/runs/${replaces}` : `${LAB_BENCH_PATH}/runs`} className="lab-form">
       <div className="lab-fields">
         <Field label="Protocol" required>
           <select className="cap-input" name="procedure" required defaultValue={defaults?.procedure ?? ""}>

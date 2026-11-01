@@ -1,5 +1,5 @@
 /**
- * /lab/members: who may sign in to the lab, and every change to that list (capsid docs/design/design-identity-roles.md,
+ * /lab-bench/members: who may sign in to the lab, and every change to that list (capsid docs/design/design-identity-roles.md,
  * "The members page"; docs/KNOWLEDGE-BASE.md step 5). The page is Capsomer's `people-roles`; this module is what it
  * shows and what each of its posts does.
  *

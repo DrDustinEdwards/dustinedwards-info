@@ -6,12 +6,12 @@ import { getMember } from "~/db/members";
 import { LAB_CATALOG } from "./titles.mjs";
 
 /**
- * Who is asking in /lab, set by the workspace layout's middleware once Access and the person's row have both said yes.
+ * Who is asking in /lab-bench, set by the workspace layout's middleware once Access and the person's row have both said yes.
  * Handlers ask `can(actor, PERMISSION.x)` of it and nothing else.
  */
 export const labActorContext = createContext<Actor>();
 
-/** Whether the Primary Owner is configured; without it /lab admits nobody, the Primary Owner included. */
+/** Whether the Primary Owner is configured; without it /lab-bench admits nobody, the Primary Owner included. */
 export function primaryOwnerSet(env: Env): boolean {
   return !!env.PRIMARY_OWNER_EMAIL?.trim();
 }

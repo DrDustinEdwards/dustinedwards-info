@@ -1,5 +1,5 @@
 /**
- * The /lab workspace's titles and what each may do (capsid docs/design/design-identity-roles.md, "Layers and
+ * The /lab-bench workspace's titles and what each may do (capsid docs/design/design-identity-roles.md, "Layers and
  * permissions"; docs/KNOWLEDGE-BASE.md step 5). The rules every app shares are site-runtime's `./members`; this file
  * is only the lab's own list. Code asks `can(actor, PERMISSION)`, never which title a person holds, so a title can be
  * renamed or split without touching a check.

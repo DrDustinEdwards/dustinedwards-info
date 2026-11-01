@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
@@ -36,7 +37,7 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   const id = idOf(params.id);
   if (!id || !can(actor, PERMISSION.recordRun)) throw data("Not found.", { status: 404, headers: PRIVATE });
   const result = await recordRun(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now(), { replacesId: id });
-  if (result.ok && result.runId) throw redirect(`/lab/runs/${result.runId}`, { headers: PRIVATE });
+  if (result.ok && result.runId) throw redirect(`${LAB_BENCH_PATH}/runs/${result.runId}`, { headers: PRIVATE });
   return data(result, { headers: PRIVATE });
 }
 
@@ -44,11 +45,11 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
   const { run, lots, procedures, allLots, canCorrect, lotRows } = loaderData;
   return (
     <>
-      <PageHead renderLink={crumbLink} crumbs={[{ label: "Runs", href: "/lab/runs" }, { label: `Run ${run.id}` }]} title={`Run ${run.id}: ${run.title}`} />
+      <PageHead renderLink={crumbLink} crumbs={[{ label: "Runs", href: `${LAB_BENCH_PATH}/runs` }, { label: `Run ${run.id}` }]} title={`Run ${run.id}: ${run.title}`} />
       <Result result={actionData} />
       {run.replaced_by ? (
         <p>
-          Corrected by <Link to={`/lab/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>. This record stays as it was saved.
+          Corrected by <Link to={`${LAB_BENCH_PATH}/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>. This record stays as it was saved.
         </p>
       ) : null}
       <dl className="lab-facts">
@@ -67,7 +68,7 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
           <>
             <dt>Corrects</dt>
             <dd>
-              <Link to={`/lab/runs/${run.replaces_run_id}`}>Run {run.replaces_run_id}</Link>
+              <Link to={`${LAB_BENCH_PATH}/runs/${run.replaces_run_id}`}>Run {run.replaces_run_id}</Link>
             </dd>
           </>
         ) : null}
@@ -87,7 +88,7 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
               <tr key={l.lot_id}>
                 <th scope="row">{l.item}</th>
                 <td>
-                  <Link to={`/lab/inventory/${l.lot_id}`} className="cap-mono">
+                  <Link to={`${LAB_BENCH_PATH}/inventory/${l.lot_id}`} className="cap-mono">
                     {l.lot_number}
                   </Link>
                 </td>

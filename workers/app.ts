@@ -1,4 +1,5 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
@@ -77,12 +78,12 @@ function applySecurityHeaders(headers: Headers) {
 }
 
 /**
- * Hover prefetch (site-runtime ./prefetch): the rules beyond the package's own exclusions. /lab is signed in,
+ * Hover prefetch (site-runtime ./prefetch): the rules beyond the package's own exclusions. /lab-bench is signed in,
  * /media is files, /login and /theme act on a request, and `/search/ask` is billed: prefetching it would spend
  * model tokens on a click nobody made. File links (.md, .xml, .json, .txt) and links with a query are the
  * package's defaults.
  */
-const PREFETCH_EXCLUDE = ["/lab", "/media", "/login", "/theme", "/search/ask"];
+const PREFETCH_EXCLUDE = [LAB_BENCH_PATH, "/media", "/login", "/theme", "/search/ask"];
 
 /**
  * Every header a rendered response leaves with: the security set, the report endpoint, the policy and its Report-Only stage (feeds excepted),
@@ -132,7 +133,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // For the Carrel preview, which renders a page through the same routes without a second fetch.
     context.set(documentHandlerContext, requestHandler);
 
-    // The private planes only (/admin, /lab): a public page is edge-cached with its header, so a nonce there would be shared
+    // The private planes only (/admin, /lab-bench): a public page is edge-cached with its header, so a nonce there would be shared
     // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
     const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
     context.set(nonceContext, adminNonce);
@@ -237,7 +238,7 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
-// A person idle for an hour on either private plane, /admin or /lab, is signed out of Access (site-runtime ./access).
+// A person idle for an hour on either private plane, /admin or /lab-bench, is signed out of Access (site-runtime ./access).
 // Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
 // never reads the other's cookie as no request. Every request writes one `request` line
 // (site-runtime withRequestLog: cf-ray, method, path, status, ms and the deployed sha), with no address, cookie or
@@ -253,7 +254,7 @@ export default {
     // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
     (request: Request, env: Env, ctx: ExecutionContext) => {
       const app = () => site.fetch(request as FetchArgs[0], env, ctx);
-      const lab = () => withAdminIdle(request, app, { prefixes: ["/lab"], cookieName: "__Host-lab-seen" });
+      const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen" });
       return withAdminIdle(request, lab, { prefixes: ["/admin"] });
     },
     { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
