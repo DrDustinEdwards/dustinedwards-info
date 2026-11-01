@@ -415,7 +415,8 @@ function mediaCall(
 
 /** Uploads through the API and answers the stored id. */
 async function uploadThroughApi(seed: string, alt = "") {
-  const query = new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, alt });
+  // site-api 0.19+ refuses an undescribed upload: no alt is the decorative choice.
+  const query = new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...(alt ? { alt } : { decorative: "yes" }) });
   const response = await mediaCall("POST", `${PREFIX}/media?${query}`, {
     body: bytesFor(seed),
     type: "image/png",
@@ -598,7 +599,7 @@ function exifJpeg(fields: { artist: string; copyright: string; taken: string; of
 }
 
 const uploadQuery = (seed: string, extra: Record<string, string> = {}) =>
-  new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...extra });
+  new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...("alt" in extra ? {} : { decorative: "yes" }), ...extra });
 
 const objectBytes = async (id: string) => new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
 
@@ -669,7 +670,7 @@ describe("media: the v0.13.0 library", () => {
 
   it("fills credit, license and the date taken from a JPEG's EXIF, and names what it filled", async () => {
     const bytes = exifJpeg({ artist: "Example Photographer", copyright: "CC BY 4.0", taken: "2024:05:06 14:30:00", offset: "+01:00" });
-    const query = new URLSearchParams({ filename: "exif-case.jpg", changeId: "chg-exif" });
+    const query = new URLSearchParams({ filename: "exif-case.jpg", changeId: "chg-exif", decorative: "yes" });
     const response = await mediaCall("POST", `${PREFIX}/media?${query}`, { body: bytes, type: "image/jpeg" });
     expect(response.status, await response.clone().text()).toBe(201);
     expect(await response.json()).toMatchObject({
@@ -700,7 +701,7 @@ describe("media: the v0.13.0 library", () => {
     const AI = {
       run: async (model: string, input: unknown) => {
         sent.push({ model, input });
-        return { response: 'Here you are: {"alt": "Three brass plaques set in a lawn.", "tags": ["Plaques", "lawn", "lawn", "not a tag!"]}' };
+        return { response: { alt: "Three brass plaques set in a lawn.", tags: ["Plaques", "lawn", "lawn", "not a tag!"] } };
       },
     };
     const response = await mediaCall("GET", `${PREFIX}/media/${id}/suggestions`, {}, { AI, IMAGES: imagesThatTransform() });

@@ -480,6 +480,8 @@ export const TOOLS: ToolDefinition[] = [
         "or a whole data: URI).\n\n" +
         "Returns url, key, bytes, width, height and `recorded`. `recorded:false` means the object landed " +
         "and its annotation row did not; dei_repair_drift's sync_media derives it again.\n\n" +
+        "Describe the image: `alt` says what it shows, or `decorative: true` for one that adds nothing a reader would miss. " +
+        "An upload with neither, or both, is refused before anything is fetched.\n\n" +
         "POLICY, enforced by the API and not by this wrapper: raster images only (SVG is refused, since " +
         "it can carry script), a size ceiling, https URLs only. There is NO delete over this credential, " +
         "so upload the image you mean to use rather than several to choose between.",
@@ -504,6 +506,15 @@ export const TOOLS: ToolDefinition[] = [
           .min(1)
           .optional()
           .describe("Optional. The filename to record as the image's original name. Defaults to the URL's last segment."),
+        alt: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("What the picture shows, for a reader who cannot see it. Required unless decorative is true."),
+        decorative: z
+          .boolean()
+          .optional()
+          .describe("Optional. true for a picture that adds nothing a reader would miss; it is stored with empty alt. Never with alt."),
       }),
       outputSchema: API_ANSWER,
       annotations: {
@@ -524,6 +535,8 @@ export const TOOLS: ToolDefinition[] = [
         ...(args.url ? { url: args.url } : {}),
         ...(args.type ? { type: args.type } : {}),
         ...(args.name ? { name: args.name } : {}),
+        ...(args.alt ? { alt: args.alt } : {}),
+        ...(args.decorative ? { decorative: true } : {}),
       }),
   },
 

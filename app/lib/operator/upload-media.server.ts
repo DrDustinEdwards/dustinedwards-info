@@ -1,5 +1,7 @@
 import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
 import { storeUpload } from "~/lib/media/upload.server";
+import { applyMediaAlt } from "~/lib/media/actions.server";
+import { altRefusal } from "@dustinedwards/site-api";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "@dustinedwards/site-runtime/body";
 import { fromBase64 } from "@dustinedwards/site-runtime/encoding";
@@ -157,6 +159,8 @@ export async function uploadMediaTool(
   const url = typeof args.url === "string" ? args.url.trim() : "";
   const declaredType = typeof args.type === "string" ? args.type.trim().toLowerCase() : "";
   const declaredName = typeof args.name === "string" ? args.name.trim() : "";
+  const alt = typeof args.alt === "string" ? args.alt.trim() : "";
+  const decorative = args.decorative === true;
 
   // Both sources is refused, not resolved: picking one could store the wrong image under a valid digest.
   if (data && url) {
@@ -176,18 +180,30 @@ export async function uploadMediaTool(
     };
   }
 
+  // Before any fetch or store: an image is described before it is uploaded, as in the editors (site-api 0.19+,
+  // ATAG 2.0 B.2.3). Decorative is stored as empty alt.
+  const refusal = altRefusal(alt, decorative, declaredName || null);
+  if (refusal) return { ok: false, status: 400, error: refusal, detail: { code: "alt-required" } };
+
   const source = data ? bytesFromData(data, declaredType) : await bytesFromUrl(url, declaredType);
   if (!source.ok) return source;
   const { bytes, type } = source;
+  const name = declaredName || defaultName(type, url);
+  const nameRefusal = declaredName ? null : altRefusal(alt, decorative, name);
+  if (nameRefusal) return { ok: false, status: 400, error: nameRefusal, detail: { code: "alt-required" } };
 
-  const stored = await storeUpload(env, {
-    bytes,
-    type,
-    name: declaredName || defaultName(type, url),
-  });
+  const stored = await storeUpload(env, { bytes, type, name });
 
   if (!stored.ok) {
     return { ok: false, status: stored.status, error: stored.message, detail: { code: stored.code } };
+  }
+  if (alt) {
+    // Without its row the alt has nowhere to land, and an undescribed file is what this refuses. Keys are content-addressed,
+    // so sending it again is the repair.
+    const written = stored.recorded ? await applyMediaAlt(env, stored.key, alt) : { ok: false as const, reason: "unrecorded" };
+    if (!written.ok) {
+      return { ok: false, status: 500, error: `${stored.key} was stored, but its alt text was not saved (${written.reason}). Send the upload again.` };
+    }
   }
 
   return {
