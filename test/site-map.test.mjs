@@ -59,7 +59,7 @@ await test("every public page route is in the sitemap's list or exempted by name
     LAB_PATH,
   ]);
   const routes = [...(await declaredRouteModules()).keys()].filter(
-    (path) => !/[:*]/.test(path) && !/\.[a-z]+$/.test(path) && !/^\/(admin|lab|api)(\/|$)/.test(path),
+    (path) => !/[:*]/.test(path) && !/\.[a-z]+$/.test(path) && !/^\/(admin|lab-bench|api)(\/|$)/.test(path),
   );
   const missing = routes.filter((path) => !listed.has(path) && !EXEMPT.has(path));
   assert.deepEqual(missing, [], "a page route neither listed by app/lib/site-urls.server.ts nor exempted here");

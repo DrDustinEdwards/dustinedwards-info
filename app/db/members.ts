@@ -1,4 +1,4 @@
-// The /lab workspace's people (drizzle/0030_lab_members.sql). D1 is the source. Read uncached on every request, so a
+// The /lab-bench workspace's people (drizzle/0030_lab_members.sql). D1 is the source. Read uncached on every request, so a
 // removal or an expiry takes effect on the next click; written only by app/lab/members.server.ts, each change in
 // one batch with its member_audit row.
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";

@@ -5,6 +5,7 @@ import { INDEXNOW_KEY } from "./lib/indexnow.mjs";
 import { BASES } from "./kb/bases.mjs";
 import { LIBRARY_BASES } from "./kb/libraries.mjs";
 import { LIBRARY_PATH } from "./kb/procedures/taxonomy.mjs";
+import { LAB_BENCH_PATH } from "./lab/path.mjs";
 
 export default [
   // TEMPORARY: everything a visitor can see sits under one layout, which owns the old public CSS. The public
@@ -163,7 +164,7 @@ export default [
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's
   // middleware admits a person only with an active row in `members`, read on every request. Not /admin, which stays
   // the Primary Owner's alone. Module files are workspace.* because routes/lab.tsx is the public /research/lab.
-  route("lab", "routes/workspace.tsx", [
+  route(LAB_BENCH_PATH.slice(1), "routes/workspace.tsx", [
     index("routes/workspace._index.tsx"),
     route("members", "routes/workspace.members.tsx"),
     // Step 7: lots and run records. Append-only runs; every lot change writes its kb_audit row.

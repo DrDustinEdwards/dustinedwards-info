@@ -725,8 +725,8 @@ export const kbRunLots = sqliteTable(
   ],
 );
 
-// The /lab workspace's people (docs/KNOWLEDGE-BASE.md step 5, drizzle/0030_lab_members.sql). D1 is the source: people
-// change on /lab/members and nowhere else. The rules are site-runtime's `./members`, the titles `app/lab/titles.mjs`;
+// The /lab-bench workspace's people (docs/KNOWLEDGE-BASE.md step 5, drizzle/0030_lab_members.sql). D1 is the source: people
+// change on /lab-bench/members and nowhere else. The rules are site-runtime's `./members`, the titles `app/lab/titles.mjs`;
 // the Primary Owner is PRIMARY_OWNER_EMAIL and never a row.
 export const members = sqliteTable(
   "members",

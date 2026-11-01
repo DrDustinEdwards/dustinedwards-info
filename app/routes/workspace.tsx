@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Empty } from "capsomer/react/empty";
@@ -60,7 +61,7 @@ export const middleware: Route.MiddlewareFunction[] = [
       if (!env.ACCESS_LAB_AUD) {
         throw refusal(request, "lab", "not-configured", 403, "The lab workspace is not set up yet: its Cloudflare Access application (ACCESS_LAB_AUD) is not configured.");
       }
-      throw refusal(request, "lab", identity.kind === "service" ? "service-token" : "no-access-token", 403, `The lab signs in at ${SITE_ORIGIN}/lab, through Cloudflare Access.`);
+      throw refusal(request, "lab", identity.kind === "service" ? "service-token" : "no-access-token", 403, `The lab signs in at ${SITE_ORIGIN}${LAB_BENCH_PATH}, through Cloudflare Access.`);
     }
     if (!primaryOwnerSet(env)) {
       throw refusal(request, "lab", "no-primary-owner", 403, "The lab workspace is not set up yet: PRIMARY_OWNER_EMAIL is not set.");
@@ -94,7 +95,7 @@ const ICONS = {
   members: <Icon d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7M18 14a6 6 0 0 1 4 6v1" />,
 };
 
-const RouterLink = shellLink("/lab");
+const RouterLink = shellLink(LAB_BENCH_PATH);
 
 const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
 
@@ -103,15 +104,15 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
   const { pathname } = useLocation();
   const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
   const nav: AdminEntry[] = [
-    { id: "overview", label: "Overview", href: "/lab", icon: ICONS.overview, current: pathname === "/lab" || pathname === "/lab/" },
+    { id: "overview", label: "Overview", href: LAB_BENCH_PATH, icon: ICONS.overview, current: pathname === LAB_BENCH_PATH || pathname === `${LAB_BENCH_PATH}/` },
     ...(loaderData.reads
-      ? [{ id: "inventory", label: "Inventory", href: "/lab/inventory", group: "Bench", icon: ICONS.inventory, current: at("/lab/inventory") }]
+      ? [{ id: "inventory", label: "Inventory", href: `${LAB_BENCH_PATH}/inventory`, group: "Bench", icon: ICONS.inventory, current: at(`${LAB_BENCH_PATH}/inventory`) }]
       : []),
     ...(loaderData.records
-      ? [{ id: "runs", label: "Runs", href: "/lab/runs", group: "Bench", icon: ICONS.runs, current: at("/lab/runs") }]
+      ? [{ id: "runs", label: "Runs", href: `${LAB_BENCH_PATH}/runs`, group: "Bench", icon: ICONS.runs, current: at(`${LAB_BENCH_PATH}/runs`) }]
       : []),
     ...(loaderData.manages
-      ? [{ id: "members", label: "Members", href: "/lab/members", group: "People", icon: ICONS.members, current: at("/lab/members") }]
+      ? [{ id: "members", label: "Members", href: `${LAB_BENCH_PATH}/members`, group: "People", icon: ICONS.members, current: at(`${LAB_BENCH_PATH}/members`) }]
       : []),
   ];
   const initials = loaderData.email.slice(0, 2).toUpperCase();
@@ -122,10 +123,10 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
       <AdminShell
         title="Lab bench"
         letterhead
-        logo={{ href: "/lab", label: SITE.name, app: "Lab bench", mark: FAMILY_APPS.find((a) => a.id === "info")?.logo }}
+        logo={{ href: LAB_BENCH_PATH, label: SITE.name, app: "Lab bench", mark: FAMILY_APPS.find((a) => a.id === "info")?.logo }}
         viewSite="/"
         search={{ action: "/search", label: "Search dustinedwards.info", suggest }}
-        apps={[{ id: "lab", label: "Lab bench", href: "/lab", mono: "L", current: true }]}
+        apps={[{ id: "lab", label: "Lab bench", href: LAB_BENCH_PATH, mono: "L", current: true }]}
         nav={nav}
         tabs={nav}
         renderLink={RouterLink}

@@ -112,7 +112,7 @@ it("names the prefetch rules and the preloads on a public page, and serves the r
   await waitOnExecutionContext(ctx);
   expect(rules.headers.get("content-type")).toBe("application/speculationrules+json");
   const body = JSON.stringify(await rules.json());
-  for (const prefix of ["/lab", "/media", "/search/ask"]) expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
+  for (const prefix of ["/lab-bench", "/media", "/search/ask"]) expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
 });
 
 /*

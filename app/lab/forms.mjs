@@ -1,5 +1,5 @@
 /**
- * What every /lab form reads the same way: a trimmed field, a real calendar date, today's date in UTC, and an amount.
+ * What every /lab-bench form reads the same way: a trimmed field, a real calendar date, today's date in UTC, and an amount.
  * Pure, so the members, inventory and run pages refuse the same bad input with the same words.
  */
 

@@ -78,13 +78,13 @@ checks) would have to be rebuilt for no gain a reader would see.
 
 ## Roles (DECIDE 3: replaced by the identity design, built in step 5)
 
-Built as the /lab workspace in step 5, on capsid docs/design/design-identity-roles.md, which replaced the proposal
+Built as the /lab-bench workspace in step 5, on capsid docs/design/design-identity-roles.md, which replaced the proposal
 below. Kept for the record.
 
 **Not approved.** Who signs in and what lab people may do is its own job, job_4acb6ae89b9f (one roles model across the
-family; likely a separate `/lab` workspace for operational lab data, `/admin` owner-only, levels Owner, Lab manager and
+family; likely a separate `/lab-bench` workspace for operational lab data, `/admin` owner-only, levels Owner, Lab manager and
 Lab worker). Until it is answered this build adds no non-owner sign-in, no roles and no members page, puts no
-lab-member feature in `/admin`, and keeps the names and paths that design reserves (`/lab`) free. What follows is the
+lab-member feature in `/admin`, and keeps the names and paths that design reserves (`/lab-bench`) free. What follows is the
 proposal that was put to Dustin, kept for that job to read.
 
 Today every person Cloudflare Access admits to `/admin` is the admin (`app/routes/admin.tsx`). Students and staff
@@ -191,13 +191,13 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
    registry item by `item_kind` and `item_id` with no foreign key, because `sync:content` rewrites the registry;
    `kb_audit` takes one row per write to a lot or location. Nothing writes them yet and no panel shows them: the
    Inventory tab and every write path wait for job_4acb6ae89b9f, since lots are edited by lab people. The write paths
-   came with step 7, in /lab rather than /admin.)
-5. **Roles**: the /lab workspace on site-runtime's members (job_4409e06c39d4; capsid docs/design/design-identity-roles.md).
-   (Done: `/lab` is its own Access application (`ACCESS_LAB_AUD`), so a /admin token is refused there and a /lab token
+   came with step 7, in /lab-bench rather than /admin.)
+5. **Roles**: the /lab-bench workspace on site-runtime's members (job_4409e06c39d4; capsid docs/design/design-identity-roles.md).
+   (Done: `/lab-bench` is its own Access application (`ACCESS_LAB_AUD`), so a /admin token is refused there and a /lab-bench token
    at /admin, and /admin stays the Primary Owner's alone. The layout (`app/routes/workspace.tsx`) admits the Primary
    Owner (`PRIMARY_OWNER_EMAIL`, a secret, never a row) and anyone with an active, unexpired row in `members`, read on
    every request; anyone else reads "No access. Ask your lab manager to add <email>." The titles are Lab manager and
-   Lab worker (`app/lab/titles.mjs`), and code asks for permissions, never titles. `/lab/members` is Capsomer's
+   Lab worker (`app/lab/titles.mjs`), and code asks for permissions, never titles. `/lab-bench/members` is Capsomer's
    people-roles, a 404 to anyone without `manage_members`; every change is checked again by site-runtime's
    `checkChange`, written with its `member_audit` row in one batch, then sent whole to Capsid's `/ops/access-sync`
    with `CAPSID_ACCESS_SYNC_KEY`, whose answer lands on the audit row. Without that key the page records the change
@@ -208,15 +208,15 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
    page after Equipment and in its twin, computed from the record. No RRID field yet: none of the registry's four kinds
    is a resource RRIDs cover, so the field arrives with the first kind that is, such as an antibody or a plasmid.)
 7. **Run records with lots** (P2), lot and run pages, the trace from a lot to its runs (job_4409e06c39d4).
-   (Done: `/lab/inventory` lists the lots with their item, amount, expiry, place and status; `edit_inventory` adds and
+   (Done: `/lab-bench/inventory` lists the lots with their item, amount, expiry, place and status; `edit_inventory` adds and
    changes lots and locations, `use_lot` marks a lot opened or empty, and every write to a lot or a location writes its
    `kb_audit` row in the same batch, the lot before and after copied by SQLite inside the transaction
-   (`app/db/inventory.ts`). `/lab/runs` records a run of a published protocol with the lots it used
+   (`app/db/inventory.ts`). `/lab-bench/runs` records a run of a published protocol with the lots it used
    (`kb_runs`, `kb_run_lots`, `drizzle/0031_kb_runs.sql`): the amount used comes off each lot in the lot's own unit, a
    lot first used is marked opened, a lot the run emptied is marked empty, each of those a `kb_audit` row. Runs are
    append-only (Dustin, 2026-10-11): triggers refuse any UPDATE or DELETE, and a correction is a new run whose
    `replaces_run_id` names the run it replaces, at most once per run, recorded by its author or a reader of all runs;
-   a correction records its lots for the trace and changes none. A lot's page (`/lab/inventory/<id>`) lists every run
+   a correction records its lots for the trace and changes none. A lot's page (`/lab-bench/inventory/<id>`) lists every run
    that used it to a reader of all runs, and a person's own runs to anyone else, with the lot's history. A run's page
    is a 404 to anyone who may not see it. Runs stay private and are never published.)
 8. **Public libraries** for Recipes and Software how-tos, item pages for reagents and equipment (A1), the search facet (A2).

@@ -15,7 +15,7 @@ import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runti
  *
  * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
  *   From `accessIdentity`, also on ADMIN_EMAILS; a person Access admitted who is not is `refused`
- *   (`not-admin`). /lab's identity (app/lab/access.server.ts) is not checked against the list: its
+ *   (`not-admin`). /lab-bench's identity (app/lab/access.server.ts) is not checked against the list: its
  *   members are not administrators, and their rows decide what they may do.
  * - `service`: an Access service token (no person). Never an administrator; it only gets a request
  *   past Access, and the bearer credentials below still decide what it may do.
@@ -61,7 +61,7 @@ export async function accessIdentity(env: Env, request: Request, keys: TeamKeys 
 
 /**
  * One Access application's verdict on a request, as this site reads it: its token, from the header (or, with `cookie`,
- * the `CF_Authorization` cookie), checked against `audience`. /admin and /lab (app/lab/access.server.ts) each pass their
+ * the `CF_Authorization` cookie), checked against `audience`. /admin and /lab-bench (app/lab/access.server.ts) each pass their
  * own application's tag, so a token for one is refused at the other. A key set that cannot be fetched throws. Nothing
  * here logs: the route that answers a refusal writes its one `authz_fail` line (`refusal` below).
  */
@@ -91,7 +91,7 @@ export async function verifyAccessRequest(
   return { kind: "refused", reason: "no-identity" };
 }
 
-/** The headers every /admin and /lab refusal carries. */
+/** The headers every /admin and /lab-bench refusal carries. */
 export const REFUSAL_HEADERS = {
   "content-type": "text/plain; charset=utf-8",
   "cache-control": "private, no-store",
@@ -99,7 +99,7 @@ export const REFUSAL_HEADERS = {
 } as const;
 
 /**
- * A refusal at /admin or /lab (`plane`), written as one OWASP `authz_fail` line (site-runtime ./log) before it goes
+ * A refusal at /admin or /lab-bench (`plane`), written as one OWASP `authz_fail` line (site-runtime ./log) before it goes
  * back, so a run of refusals shows in Workers Logs. The line carries the plane, the reason and the status, never the
  * person: the log scrubs any email out of it.
  */

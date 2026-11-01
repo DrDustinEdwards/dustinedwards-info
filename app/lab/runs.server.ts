@@ -1,5 +1,5 @@
 /**
- * /lab/runs: run records with the lots they used (docs/KNOWLEDGE-BASE.md step 7, finding P2), so a bad lot traces to
+ * /lab-bench/runs: run records with the lots they used (docs/KNOWLEDGE-BASE.md step 7, finding P2), so a bad lot traces to
  * every run that used it.
  *
  * Append-only (Dustin, 2026-10-11): a saved run is never edited. A correction is a new run naming the one it replaces,
