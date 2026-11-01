@@ -24,6 +24,7 @@ import {
   summaryText,
   yearOptions,
 } from "~/lib/cv/view.mjs";
+import { thing } from "@drdustinedwards/site-helpers/schema";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
@@ -105,15 +106,13 @@ export function meta() {
 function cvJsonLd(cv: Cv) {
   const records = cv.entries.flatMap((e) => (e.paper?.record ? [e.paper.record] : []));
   return [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
+    thing("WebPage", {
       "@id": `${SITE_ORIGIN}${PATH}#webpage`,
       url: `${SITE_ORIGIN}${PATH}`,
       name: `${CV_PAGE.title}, ${cv.person.name}`,
       description: CV_PAGE.description,
       about: { "@id": personId(SITE_ORIGIN) },
-    },
+    }),
     ...publicationsJsonLd(SITE_ORIGIN, records),
   ];
 }

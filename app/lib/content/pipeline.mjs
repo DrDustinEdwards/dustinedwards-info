@@ -12,7 +12,7 @@ import { z } from "zod";
 
 import { ASSET_PREFIX, classify, dimensionsFromKey } from "../media/classify.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
-import { contentImage, images, mediaVersion } from "../media/images.mjs";
+import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
 
 import { readingTimeMinutes } from "./reading-time.mjs";
@@ -205,8 +205,8 @@ function imageProps(src) {
   if (!src.startsWith("/media/")) return null;
   const key = src.slice("/media/".length);
   const { srcset, sizes, sources } = contentImage(src, dimensionsFromKey(key));
-  // The original, versioned like its sizes (mediaVersion), so a link to it is never a stale copy either.
-  const href = images.url(`/media/${key}`, { version: mediaVersion(key) });
+  // The original, versioned like its sizes (mediaContentVersion), so a link to it is never a stale copy either.
+  const href = images.url(`/media/${key}`, { version: mediaContentVersion(key) });
   if (!srcset) return { href };
   return { srcSet: srcset, sizes, sources: sources.filter((s) => !s.media).map((s) => ({ type: s.type, srcSet: s.srcset })), href };
 }

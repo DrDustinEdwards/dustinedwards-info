@@ -9,6 +9,8 @@
  * carries the subject label "software." in italics, as a dictionary marks a specialized sense.
  */
 
+import { thing } from "@drdustinedwards/site-helpers/schema";
+
 /**
  * An etymology is text with foreign words marked, so the page can set them in italics with their
  * language and the twin can emphasize them: a string is plain text, a pair is [lang, word].
@@ -91,9 +93,7 @@ export function dictionaryEntryMarkdown(entry, origin = "") {
  * @param {string} origin
  */
 export function definedTermJsonLd(entry, origin) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "DefinedTerm",
+  return thing("DefinedTerm", {
     name: entry.term,
     description: entry.senses[1],
     url: `${origin}${entry.path}`,
@@ -102,5 +102,5 @@ export function definedTermJsonLd(entry, origin) {
       name: "Software names on dustinedwards.info",
       url: `${origin}/software`,
     },
-  };
+  });
 }

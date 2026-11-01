@@ -7,6 +7,8 @@
 // A timer's remaining time is computed from the moment it ends, not counted down, so a phone that sleeps or a page
 // that reloads mid-incubation still knows how long is left.
 
+import { thing } from "@drdustinedwards/site-helpers/schema";
+
 import { SITE_ORIGIN } from "../../lib/site-origin.mjs";
 
 export const RUN_VERSION = 1;
@@ -195,16 +197,18 @@ const LAB_PROCESS_PROFILE = "https://bioschemas.org/profiles/LabProcess/0.1-DRAF
 export function runRecord(run, steps, origin = SITE_ORIGIN) {
   // A run made on a frozen version's page carries its /v/ address; the protocol's identity is its plain page.
   const page = run.path.replace(/\/v\/[^/]+$/, "");
+  // The LabProcess node is Prelum's `thing`; the record's own fields follow it as they are, since a null scale or an empty
+  // note is part of the saved record's format (RUN_VERSION), not a missing fact.
   return {
-    "@context": "https://schema.org",
-    "@type": "LabProcess",
-    "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROCESS_PROFILE },
-    name: `Run of ${run.title}`,
-    executesLabProtocol: { "@type": "LabProtocol", "@id": `${origin}${page}#procedure`, name: run.title, url: `${origin}${run.path}`, ...(run.version ? { version: run.version } : {}) },
-    startTime: when(run.startedAt),
-    ...(run.finishedAt !== null ? { endTime: when(run.finishedAt) } : {}),
-    ...(run.note.trim() ? { description: run.note.trim() } : {}),
-    ...(run.scale !== null ? { parameterValue: [{ "@type": "PropertyValue", name: "Scale", value: run.scale }] } : {}),
+    ...thing("LabProcess", {
+      "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROCESS_PROFILE },
+      name: `Run of ${run.title}`,
+      executesLabProtocol: { "@type": "LabProtocol", "@id": `${origin}${page}#procedure`, name: run.title, url: `${origin}${run.path}`, ...(run.version ? { version: run.version } : {}) },
+      startTime: when(run.startedAt),
+      ...(run.finishedAt !== null ? { endTime: when(run.finishedAt) } : {}),
+      ...(run.note.trim() ? { description: run.note.trim() } : {}),
+      ...(run.scale !== null ? { parameterValue: [{ "@type": "PropertyValue", name: "Scale", value: run.scale }] } : {}),
+    }),
     record: "dustinedwards.info run",
     format: RUN_VERSION,
     procedure: { path: run.path, title: run.title, version: run.version },

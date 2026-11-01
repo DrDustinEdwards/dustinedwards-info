@@ -5,7 +5,7 @@ import { getFrozenVersion } from "~/db/procedure-versions";
 import { getEnv } from "~/lib/context";
 import { sheetAddress } from "~/kb/procedures/cite.mjs";
 import { PROCEDURES_CACHE_TAG, readScale } from "~/kb/procedures/route";
-import { SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
+import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure.version.sheet";
 
@@ -34,11 +34,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record } = loaderData;
-  return [
-    { title: `${record.title} (version ${record.version}): printable sheet` },
-    { name: "robots", content: "noindex" },
-    { tagName: "link", rel: "canonical", href: `${SITE_ORIGIN}${record.path}` },
-  ];
+  // Prelum's head (pageMeta): not indexed, and canonical to the procedure's page, the copy that is.
+  return pageMeta({ title: `${record.title} (version ${record.version}): printable sheet`, description: record.description, path: record.path, noindex: true });
 }
 
 export default function ProcedureVersionSheetRoute({ loaderData }: Route.ComponentProps) {

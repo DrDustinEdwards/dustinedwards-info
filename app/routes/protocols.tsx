@@ -13,6 +13,7 @@ import { listRegistry } from "~/db/registry";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
+import { thing } from "@drdustinedwards/site-helpers/schema";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/kb/procedures/library.mjs";
@@ -97,9 +98,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
   const rest = split === -1 ? "" : page.html.slice(split);
   const result = queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, search));
   // Prelum's page node, by its `@id`, with the list it holds.
-  const collection = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collection = thing("CollectionPage", {
     "@id": `${SITE_ORIGIN}${LIBRARY_PATH}#webpage`,
     name: page.title,
     description: page.description,
@@ -114,7 +113,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         url: `${SITE_ORIGIN}${item.path}`,
       })),
     },
-  };
+  });
   return (
     <PageShell
       trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }} />}

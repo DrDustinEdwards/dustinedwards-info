@@ -1,17 +1,10 @@
-// What the admin and lab shells share (routes/admin.tsx, routes/workspace.tsx): the theme bootstrap, the icon frame and
-// the shell's link.
+// What the admin and lab shells share (routes/admin.tsx, routes/workspace.tsx): the icon frame and the shell's link. The
+// theme bootstrap is Capsomer's own themeScript (capsomer/theme-server), run before first paint by each shell.
 
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { LinkProps } from "capsomer/react/admin-shell";
 import type { BreadcrumbProps } from "capsomer/react/breadcrumb";
-
-/**
- * Capsomer's own one-liner (theme-switch.md), run before first paint so a remembered theme never
- * flashes the other one. The plane's nonce is what lets the policy run it.
- */
-export const THEME_SCRIPT =
-  'try{var t=localStorage.getItem("cap-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}';
 
 /* The shell's own family: a 24 box, a 1.6 stroke, drawn in currentColor (admin-shell.md, "Icons"). */
 export function Icon({ d }: { d: string }) {
