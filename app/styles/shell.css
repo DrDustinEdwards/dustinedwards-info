@@ -56,19 +56,20 @@
 }
 
 /* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
-   link colors are unlayered and would beat the strip's, so its links say them again here. */
+   link colors are unlayered and would beat the strip's, so its links say them again here: --on-sign, which
+   stays light on the sign in both themes (--ground is dark in dark mode). */
 .page-breadcrumb {
   margin: 0 0 var(--space-5);
 }
 
 .page-breadcrumb a,
 .page-breadcrumb a:visited {
-  color: var(--ground);
+  color: var(--on-sign);
   text-decoration: none;
 }
 
 .page-breadcrumb a:hover {
-  background: color-mix(in srgb, var(--ground) 18%, transparent);
+  background: color-mix(in srgb, var(--on-sign) 18%, transparent);
 }
 
 .protocol-neighbors {
