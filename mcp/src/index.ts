@@ -21,6 +21,8 @@
  *                          grant, rate limits (a refusal is a tool-call log
  *                          row), and hands off to the era router
  *   /authorize /callback   the consent flow and Access sign-in, login-handler.ts
+ *   /owner                 the owner page: your grants with Revoke, the agent keys and the tool-call log
+ *                          (site-runtime ./owner-page, mounted by the same login handler)
  *   /register              site-runtime's registrationLimited (per address and
  *                          per day), then the OAuth library, which refuses any
  *                          redirect URI not allowlisted
