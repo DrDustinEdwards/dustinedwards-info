@@ -76,7 +76,8 @@ await test("the generated module is exactly what the CV files derive, so no copy
 await test("the site settings, the person record, the home title source and the CV header all read the derived identity", () => {
   assert.equal(SITE.role, IDENTITY.role);
   assert.equal(SITE.jobTitle, IDENTITY.jobTitle);
-  assert.equal(SITE.description, `Dr. ${IDENTITY.name}, ${IDENTITY.role}`);
+  assert.ok(SITE.description.startsWith(`Dr. ${IDENTITY.name}, ${IDENTITY.role}`), "the description opens with the name and the role");
+  assert.ok(SITE.description.length >= 70 && SITE.description.length <= 155, "and is the 70 to 155 characters search shows");
   const person = personNode("https://example.test");
   assert.equal(person.jobTitle, IDENTITY.jobTitle);
   assert.equal(person.honorificSuffix, IDENTITY.degree);

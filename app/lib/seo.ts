@@ -40,8 +40,8 @@ const DEFAULT_OG_IMAGE = shareCard(`${SITE_ORIGIN}/dustin-edwards-og-image.png`,
 // so a CV change reaches the site settings, the titles, the About text and the structured data.
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
 // (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
-// The description is the name and the role only (Dustin, 2026-10-15: "It should be just 'Dr. Dustin Edwards,
-// Professor and Virologist'"). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
+// The description is the name and the role, then what the work is about, so it is 70 to 155 characters, the length search
+// shows (area 1; it was the name and role alone, Dustin 2026-10-15, which was 44). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
 const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree) ? "Dr. " : "";
 export const SITE = {
   name: IDENTITY.name,
@@ -53,7 +53,7 @@ export const SITE = {
   department: IDENTITY.department,
   eyebrow: IDENTITY.role,
   tagline: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`,
-  description: `${HONORIFIC}${IDENTITY.name}, ${IDENTITY.role}`,
+  description: `${HONORIFIC}${IDENTITY.name}, ${IDENTITY.role}. Research on retroviruses and bacteriophage genomics, and on how undergraduate research is taught.`,
 } as const;
 
 /** site-api's search fields beside description, as the posts.search_fields column holds them. */
