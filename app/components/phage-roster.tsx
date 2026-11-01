@@ -2,6 +2,7 @@ import { pictureProps } from "@dustinedwards/site-runtime/image";
 
 import { Picture } from "~/components/picture";
 import { images, mediaSrc } from "~/lib/media/images.mjs";
+import { staticPhoto } from "~/lib/media/static-media";
 import type { Cohort } from "~/lib/roster/compile.mjs";
 
 /**
@@ -21,7 +22,10 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
               {/* Below the page's prose, so none is the LCP: every photo loads lazily, through /media's sizes. */}
               <Picture
                 picture={pictureProps(
-                  images.attributes({ src: mediaSrc(entry.photo.src), width: entry.photo.width, height: entry.photo.height }, "content"),
+                  images.attributes(
+                    { src: mediaSrc(entry.photo.src), width: entry.photo.width, height: entry.photo.height, ...staticPhoto(entry.photo.src) },
+                    "content",
+                  ),
                   { alt: entry.photo.alt },
                 )}
               />

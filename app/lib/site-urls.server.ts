@@ -3,6 +3,7 @@ import { listPublishedPageSources, listPublishedPageTitles } from "~/db/pages";
 import { listPostsWithImages } from "~/db/posts";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listPublishedRegistrySources, listRegistry } from "~/db/registry";
+import { listRoster } from "~/db/roster";
 import { listPublishedPublicationSources, listPublishedPublications } from "~/db/publications";
 import { BASES } from "~/kb/bases.mjs";
 import { LIBRARY_BASES } from "~/kb/libraries.mjs";
@@ -12,7 +13,9 @@ import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
+import { mediaSrc } from "~/lib/media/images.mjs";
+import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
+import { OWNER_PHOTO, POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { SiteUrl, Tally } from "~/lib/site-map.mjs";
 import { SOURCE_DATES } from "~/lib/source-dates.generated.mjs";
@@ -124,8 +127,9 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     paperSources,
     registrySources,
     postsWithImages,
+    cohorts,
   ] = await Promise.all([
-    listBlogPosts(env, { perPage: 1000 }),
+    listBlogPosts(env, { perPage: 1000, indexedOnly: true }),
     listBlogTags(env),
     listBlogSeries(env),
     nextScheduledPublishAt(env),
@@ -141,6 +145,9 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     listPublishedPublicationSources(env),
     listPublishedRegistrySources(env),
     listPostsWithImages(env),
+    // The program page's cohort photos, for its image:image entries. A roster that cannot be read leaves them out
+    // rather than taking the whole sitemap down with it; the page itself reports the fault.
+    listRoster(env).catch(() => []),
   ]);
   const titleOf = (path: string) => pageTitles.get(path) ?? DATA_PAGE_TITLES[path];
   const cvDate = treeDate(CV_SOURCE_TREES);
@@ -169,18 +176,27 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     "/research/publications": newestPaper,
   };
 
+  /** The pictures a page draws outside its prose, as the image sitemap lists them: About's portrait, the roster's photos. */
+  const pageImages: Record<string, string[]> = {
+    "/about": [`/media/${OWNER_PHOTO.key}`],
+    [ROSTER_PAGE_PATH]: cohorts.flatMap((cohort) => (cohort.photo ? [mediaSrc(cohort.photo.src)] : [])),
+  };
+  const withImages = (path: string) => (pageImages[path]?.length ? { images: pageImages[path] } : {});
+
   const urls: SiteUrl[] = [
     // A page with a route of its own (About) is listed in its place, and only while its row is published.
     ...STATIC_PAGES.filter(({ path }) => !CONTENT_PAGES_OWN_ROUTE.includes(path) || pageTitles.has(path)).map(({ path, title, sources }) => ({
       path,
       lastmod: latest([sourceDate(sources), pageDate(path), listed[path]]),
       title: pageTitles.get(path) ?? title,
+      ...withImages(path),
     })),
     // In the registry's order, which is the order the sitemap has always listed them in.
     ...CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || pageTitles.has(path)).map((path) => ({
       path,
       lastmod: pageDate(path),
       title: titleOf(path) ?? path,
+      ...withImages(path),
     })),
     // No showcase filter: a crawler has no double-counting problem.
     ...paperUrls,

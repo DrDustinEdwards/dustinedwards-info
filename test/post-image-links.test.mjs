@@ -5,6 +5,8 @@ import { attr, fixedSize, render as renderWith } from "./lib/render.mjs";
 
 const MEDIA_KEY = "dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const MEDIA_SRC = `/media/${MEDIA_KEY}`;
+// The file's version every address carries (`v=`, the digest its key spells), so a changed file is a new URL.
+const VERSION = "a1b2c3d4e5f6";
 const STATIC_SRC = "/research/publications/measured-latency.png";
 
 // Fixed, and deliberately not the dimensions in the key: an assertion that
@@ -43,8 +45,8 @@ await test("a media image is wrapped in an anchor to the UNSIZED original", asyn
   assert.ok(anchor, `no anchor wraps the media image:\n${html}`);
   assert.equal(
     attr(anchor, "href"),
-    MEDIA_SRC,
-    "the href must be the unsized original, with no ?w= transform",
+    `${MEDIA_SRC}?v=${VERSION}`,
+    "the href must be the unsized original, versioned, with no ?w= transform",
   );
   assert.equal(attr(anchor, "class"), "image-link");
 });
@@ -65,12 +67,12 @@ await test("the wrap costs the image none of its own attributes", async () => {
   assert.equal(attr(media, "src"), MEDIA_SRC);
   const ladder = [640, 704, 1024, 1408];
   // Each size URL ends in its format's extension (site-runtime 0.61.0); the route reads the stored key back with originalKey.
-  assert.equal(attr(media, "srcset"), ladder.map((w) => `${MEDIA_SRC}.webp?w=${w} ${w}w`).join(", "));
+  assert.equal(attr(media, "srcset"), ladder.map((w) => `${MEDIA_SRC}.webp?v=${VERSION}&#x26;w=${w} ${w}w`).join(", "));
   // A <picture>: AVIF first, then WebP, over the same ladder (site-runtime ./image through Prelum's `sources`).
   const picture = html.match(new RegExp(`<picture>((?:<source\\b[^>]*>)+)<img\\b[^>]*src="${MEDIA_SRC}"`))?.[1] ?? "";
   const sources = [...picture.matchAll(/<source\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(sources.map((tag) => attr(tag, "type")), ["image/avif", "image/webp"], `no picture around the media image:\n${html}`);
-  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}.avif?w=${w} ${w}w`).join(", "));
+  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}.avif?v=${VERSION}&#x26;w=${w} ${w}w`).join(", "));
   assert.equal(attr(media, "sizes"), "(min-width: 46rem) 704px, calc(100vw - 2rem)");
   assert.equal(attr(media, "width"), "1280");
   assert.equal(attr(media, "height"), "720");

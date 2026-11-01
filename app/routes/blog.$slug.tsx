@@ -25,7 +25,7 @@ import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { Picture } from "~/components/picture";
-import { contentPicture } from "~/lib/media/images.mjs";
+import { articleCrops, contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -139,16 +139,19 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const { canonical, description, socialTitle, socialDescription, image } = postSocial(post);
+  const { canonical, canonicalHref, noindex, title, description, socialTitle, socialDescription, image } =
+    postSocial(post);
 
   return [
     ...siteHead({
       path: `/writing/${post.slug}`,
-      title: post.title,
+      title,
       description,
       socialTitle,
       socialDescription,
       image,
+      canonical: canonicalHref,
+      noindex,
       type: "article",
       article: articleFacts(toArticleSeo(post)),
       markdown: `${canonical}.md`,
@@ -170,6 +173,7 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
     updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
     coverImage: post.coverImage,
     ogImage: post.ogImage,
+    images: articleCrops(post.coverImage, SITE_ORIGIN),
     tags: post.tags,
   };
 }

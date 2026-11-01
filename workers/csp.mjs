@@ -114,5 +114,8 @@ function pagePolicy(adminNonce) {
     nonce: adminNonce || undefined,
     styleAttributesInline: true,
     cloudflareWebAnalytics: true,
+    // The post players (YouTube, Spotify and the rest of Dustin's list) a post may embed; the registry entry's `embeds`
+    // opt-in delegates their features in the Permissions-Policy.
+    embeds: true,
   };
 }
