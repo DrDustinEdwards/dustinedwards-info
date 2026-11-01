@@ -43,7 +43,7 @@ beforeEach(() => {
 afterEach(() => api.restore());
 
 describe("the tool surface", () => {
-  test("is exactly the ten dei_ tools, each named once", () => {
+  test("is exactly the eleven dei_ tools, each named once", () => {
     assert.deepEqual(
       TOOLS.map((t) => t.name),
       [
@@ -56,7 +56,8 @@ describe("the tool surface", () => {
         "dei_read_registry",
         "dei_refresh_citations",
         "dei_check_publications",
-        "dei_manage_procedure",
+        "dei_read_procedure",
+        "dei_save_procedure",
       ],
     );
   });
@@ -77,7 +78,8 @@ describe("the tool surface", () => {
       dei_read_registry: [true, false, true, false],
       dei_refresh_citations: [false, false, true, true],
       dei_check_publications: [true, false, true, true],
-      dei_manage_procedure: [false, false, false, false],
+      dei_read_procedure: [true, false, true, false],
+      dei_save_procedure: [false, false, false, false],
     };
     for (const t of TOOLS) {
       const a = t.config.annotations;
@@ -87,7 +89,6 @@ describe("the tool surface", () => {
 
   test("a read-only tool needs only dei.read, and every other tool needs dei.write", () => {
     for (const t of TOOLS) {
-      if (typeof t.scope === "function") continue;
       assert.equal(t.scope, t.config.annotations.readOnlyHint ? "dei.read" : "dei.write", t.name);
     }
   });
@@ -119,15 +120,15 @@ const MAPPINGS: Array<{ name: string; args: Record<string, unknown>; tool: strin
   { name: "dei_read_registry", args: { registry: "registry", registry_kind: "primer" }, tool: "list_registry", sent: { kind: "primer" } },
   { name: "dei_read_registry", args: { registry: "registry", record_key: "primer/m13" }, tool: "get_registry", sent: { slug: "primer/m13" } },
   { name: "dei_read_registry", args: { registry: "publications" }, tool: "list_publications", sent: {} },
-  { name: "dei_manage_procedure", args: { action: "list" }, tool: "list_procedures", sent: {} },
-  { name: "dei_manage_procedure", args: { action: "get", slug: "dna-prep" }, tool: "get_procedure", sent: { slug: "dna-prep" } },
+  { name: "dei_read_procedure", args: { action: "list" }, tool: "list_procedures", sent: {} },
+  { name: "dei_read_procedure", args: { action: "get", slug: "dna-prep" }, tool: "get_procedure", sent: { slug: "dna-prep" } },
   {
-    name: "dei_manage_procedure",
-    args: { action: "save", slug: "dna-prep", raw: "r", expected_head_sha: SHA, is_new: false },
+    name: "dei_save_procedure",
+    args: { slug: "dna-prep", raw: "r", expected_head_sha: SHA, is_new: false },
     tool: "save_procedure",
     sent: { slug: "dna-prep", raw: "r", expectedHeadSha: SHA, isNew: false },
   },
-  { name: "dei_manage_procedure", args: { action: "save", slug: "p", raw: "r" }, tool: "save_procedure", sent: { slug: "p", raw: "r" } },
+  { name: "dei_save_procedure", args: { slug: "p", raw: "r" }, tool: "save_procedure", sent: { slug: "p", raw: "r" } },
 ];
 
 describe("each tool maps to its operator requests", () => {
@@ -211,7 +212,7 @@ describe("lists come back a page at a time", () => {
     // Passing the cursor back reads on from where the first page stopped, to the last page.
     const procedures = Array.from({ length: 30 }, (_, i) => ({ slug: `p${i}` }));
     api.reply({ body: { ok: true, data: { headSha: SHA, procedures } } });
-    const next = await call("dei_manage_procedure", { action: "list", cursor: data.page.next_cursor });
+    const next = await call("dei_read_procedure", { action: "list", cursor: data.page.next_cursor });
     const rest = next.structuredContent as { procedures: Array<{ slug: string }>; page: Record<string, unknown> };
     assert.deepEqual(rest.procedures.map((p) => p.slug), ["p25", "p26", "p27", "p28", "p29"]);
     assert.equal(rest.page.has_more, false);
@@ -228,15 +229,9 @@ describe("lists come back a page at a time", () => {
 
 describe("input errors say how to fix the input", () => {
   test("get without a slug", async () => {
-    const out = await call("dei_manage_procedure", { action: "get" });
+    const out = await call("dei_read_procedure", { action: "get" });
     assert.equal(out.isError, true);
     assert.match(out.content[0].text, /needs slug/);
-    assert.equal(api.calls.length, 0);
-  });
-
-  test("save without raw", async () => {
-    const out = await call("dei_manage_procedure", { action: "save", slug: "p" });
-    assert.match(out.content[0].text, /needs raw/);
     assert.equal(api.calls.length, 0);
   });
 
@@ -261,9 +256,11 @@ describe("input errors say how to fix the input", () => {
     ["dei_decide_mention", { mention_id: 1, decision: "delete" }],
     ["dei_upload_media", { url: "" }],
     ["dei_read_registry", { registry: "posts" }],
-    ["dei_manage_procedure", { action: "delete", slug: "p" }],
-    ["dei_manage_procedure", { action: "get", slug: "A_b" }],
-    ["dei_manage_procedure", { action: "save", slug: "p", raw: "r", expected_head_sha: "xyz1234" }],
+    ["dei_read_procedure", { action: "save", slug: "p" }],
+    ["dei_read_procedure", { action: "get", slug: "A_b" }],
+    ["dei_save_procedure", { slug: "p" }],
+    ["dei_save_procedure", { slug: "p", raw: "r", expected_head_sha: "xyz1234" }],
+    ["dei_save_procedure", { slug: "p", raw: "r", action: "save" }],
     ["dei_refresh_citations", { dois: [] }],
   ];
   for (const [name, args] of bad) {
@@ -276,7 +273,7 @@ describe("input errors say how to fix the input", () => {
 describe("tool results", () => {
   test("a 403 first-publish refusal reaches the caller in the API's words", async () => {
     api.reply(FIRST_PUBLISH_REFUSAL);
-    const out = await call("dei_manage_procedure", { action: "save", slug: "a", raw: "---\ndraft: false\n---\n" });
+    const out = await call("dei_save_procedure", { slug: "a", raw: "---\ndraft: false\n---\n" });
     assert.equal(out.isError, true);
     assert.equal(out.content[0].text, `${FIRST_PUBLISH_REFUSAL.body.error}\npolicy: first-publish-requires-admin`);
     assert.deepEqual(out.structuredContent, {
@@ -291,7 +288,7 @@ describe("tool results", () => {
       status: 422,
       body: { ok: false, error: "procedure failed validation", detail: { errors: ["step 2: no timer", 5, "MISSING: temp"], line: 0 } },
     });
-    const out = await call("dei_manage_procedure", { action: "save", slug: "p", raw: "r" });
+    const out = await call("dei_save_procedure", { slug: "p", raw: "r" });
     assert.equal(out.content[0].text, "procedure failed validation\nline: 0\nstep 2: no timer\nMISSING: temp");
   });
 
@@ -316,7 +313,7 @@ describe("tool results", () => {
   test("no tool output or log carries the operator token", async () => {
     for (const reply of [{ body: { ok: true, data: {} } }, FIRST_PUBLISH_REFUSAL, { throws: new Error("x") }]) {
       api.reply(reply);
-      const out = await call("dei_manage_procedure", { action: "get", slug: "a" });
+      const out = await call("dei_read_procedure", { action: "get", slug: "a" });
       assert.ok(!JSON.stringify(out).includes(TOKEN));
     }
     assert.ok(api.logs.every((line) => !line.includes(TOKEN)));
@@ -327,7 +324,7 @@ describe("tool results", () => {
 describe("the wrapper adds no policy of its own", () => {
   test("a first publish is forwarded for the API to decide", async () => {
     const raw = "---\ndraft: false\n---\n";
-    await call("dei_manage_procedure", { action: "save", slug: "p", raw });
+    await call("dei_save_procedure", { slug: "p", raw });
     assert.equal(api.calls.length, 1);
     assert.equal(api.calls[0].body?.args.raw, raw);
   });
@@ -352,7 +349,7 @@ describe("least scope: read by default, write only when granted", () => {
     ["dei_upload_media", { url: "https://x.test/a.png" }],
     ["dei_backup_media", {}],
     ["dei_refresh_citations", {}],
-    ["dei_manage_procedure", { action: "save", slug: "p", raw: "r" }],
+    ["dei_save_procedure", { slug: "p", raw: "r" }],
   ] as const) {
     test(`a read-only grant cannot run ${name}, and is told how to get write`, async () => {
       const out = await call(name, args, READER);
@@ -362,8 +359,8 @@ describe("least scope: read by default, write only when granted", () => {
     });
   }
 
-  test("dei_manage_procedure list and get need only read", async () => {
-    assert.equal((await call("dei_manage_procedure", { action: "list" }, READER)).isError, undefined);
-    assert.equal((await call("dei_manage_procedure", { action: "get", slug: "p" }, READER)).isError, undefined);
+  test("dei_read_procedure list and get need only read", async () => {
+    assert.equal((await call("dei_read_procedure", { action: "list" }, READER)).isError, undefined);
+    assert.equal((await call("dei_read_procedure", { action: "get", slug: "p" }, READER)).isError, undefined);
   });
 });
