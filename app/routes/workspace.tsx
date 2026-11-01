@@ -3,8 +3,9 @@ import { can } from "@dustinedwards/site-runtime/members";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-shell";
+import { themeScript } from "capsomer/theme-server";
 
-import { Icon, THEME_SCRIPT, shellLink } from "~/components/admin/shell-parts";
+import { Icon, shellLink } from "~/components/admin/shell-parts";
 import { suggest } from "~/lib/search-suggest";
 import { labIdentity } from "~/lab/access.server";
 import { REFUSAL_HEADERS, logRefusal, refusal } from "~/lib/access.server";
@@ -117,7 +118,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: themeScript() }} />
       <AdminShell
         title="Lab bench"
         letterhead

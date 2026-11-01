@@ -59,7 +59,7 @@ describe("handleMcp", () => {
     assert.equal(api.calls.length, 0);
   });
 
-  test("tools/list offers the ten dei_ tools and nothing else", async () => {
+  test("tools/list offers the eleven dei_ tools and nothing else", async () => {
     const { message } = await rpc("tools/list", {});
     assert.deepEqual(
       message.result.tools.map((t: { name: string }) => t.name).sort(),
@@ -68,11 +68,12 @@ describe("handleMcp", () => {
         "dei_check_publications",
         "dei_check_site",
         "dei_decide_mention",
-        "dei_manage_procedure",
+        "dei_read_procedure",
         "dei_read_registry",
         "dei_refresh_citations",
         "dei_repair_drift",
         "dei_review_mentions",
+        "dei_save_procedure",
         "dei_upload_media",
       ],
     );
@@ -87,7 +88,7 @@ describe("handleMcp", () => {
 
   test("tools/call becomes one operator request with the bearer and the tool's args", async () => {
     api.reply({ body: { ok: true, data: { slug: "a", raw: "x" } } });
-    const { message } = await callTool("dei_manage_procedure", { action: "get", slug: "a" });
+    const { message } = await callTool("dei_read_procedure", { action: "get", slug: "a" });
     assert.equal(api.calls.length, 1);
     assert.deepEqual(api.calls[0].body, { tool: "get_procedure", args: { slug: "a" } });
     assert.equal(api.calls[0].headers.get("authorization"), `Bearer ${TOKEN}`);
@@ -96,7 +97,7 @@ describe("handleMcp", () => {
 
   test("a 403 first-publish refusal reaches the agent verbatim as a tool error", async () => {
     api.reply(FIRST_PUBLISH_REFUSAL);
-    const { message } = await callTool("dei_manage_procedure", { action: "save", slug: "a", raw: "---\ndraft: false\n---\n" });
+    const { message } = await callTool("dei_save_procedure", { slug: "a", raw: "---\ndraft: false\n---\n" });
     assert.equal(message.error, undefined, "a refusal is a tool result, not a protocol error");
     assert.equal(message.result.isError, true);
     assert.equal(
@@ -107,7 +108,7 @@ describe("handleMcp", () => {
   });
 
   test("a malformed slug fails at the schema with no operator request", async () => {
-    const { message } = await callTool("dei_manage_procedure", { action: "get", slug: "Not A Slug" });
+    const { message } = await callTool("dei_read_procedure", { action: "get", slug: "Not A Slug" });
     assert.equal(api.calls.length, 0);
     const failed = message.error !== undefined || message.result?.isError === true;
     assert.ok(failed, JSON.stringify(message));
@@ -164,22 +165,21 @@ describe("handleMcp", () => {
       (await callTool("dei_backup_media", {})).raw,
     ];
     api.reply(FIRST_PUBLISH_REFUSAL);
-    bodies.push((await callTool("dei_manage_procedure", { action: "save", slug: "a", raw: "r" })).raw);
+    bodies.push((await callTool("dei_save_procedure", { slug: "a", raw: "r" })).raw);
     api.reply({ throws: new Error("down") });
     bodies.push((await callTool("dei_backup_media", {})).raw);
     for (const body of bodies) assert.ok(!body.includes(TOKEN));
     assert.ok(api.logs.every((line) => !line.includes(TOKEN)));
   });
 
-  test("a read-only grant is listed no write tool, and is refused a write over the wire", async () => {
-    // T7: site-runtime's registerTools lists only what the grant can call; a tool whose action decides stays.
+  test("a read-only grant is listed no write tool, and a write it names anyway runs nothing", async () => {
+    // T7: site-runtime's registerTools lists only what the grant can call, and every tool's scope is fixed.
     const listed = (await rpc("tools/list", {}, READER)).message.result.tools.map((t: { name: string }) => t.name);
-    assert.ok(!listed.includes("dei_backup_media") && listed.includes("dei_manage_procedure"), listed.join());
-    const unlisted = (await callTool("dei_backup_media", {}, READER)).message;
-    assert.ok(unlisted.error || unlisted.result?.isError === true, JSON.stringify(unlisted));
-    const { message } = await callTool("dei_manage_procedure", { action: "save", slug: "p", raw: "r" }, READER);
-    assert.equal(message.result.isError, true);
-    assert.match(message.result.content[0].text, /read access only/);
+    assert.ok(!listed.includes("dei_save_procedure") && listed.includes("dei_read_procedure"), listed.join());
+    for (const [name, args] of [["dei_backup_media", {}], ["dei_save_procedure", { slug: "p", raw: "r" }]] as const) {
+      const { message } = await callTool(name, args, READER);
+      assert.ok(message.error || message.result?.isError === true, JSON.stringify(message));
+    }
     assert.equal(api.calls.length, 0);
   });
 

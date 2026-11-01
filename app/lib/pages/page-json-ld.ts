@@ -1,5 +1,7 @@
 // The structured data a content page carries beside Prelum's page and trail: its own node typed from the page, and its dictionary entry.
 // Shared by the research/* page route and the routes that draw a page's own piece themselves (the phage table).
+import { thing } from "@drdustinedwards/site-helpers/schema";
+
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, type DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
@@ -18,9 +20,7 @@ function pageJsonLd(page: ContentPage): object[] {
   const pageUrl = `${SITE_ORIGIN}${page.path}`;
   const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
   const isDataset = page.schemaType === "Dataset";
-  const node = {
-    "@context": "https://schema.org",
-    "@type": page.schemaType,
+  const node = thing(page.schemaType, {
     "@id": `${pageUrl}#${page.schemaType.toLowerCase()}`,
     // A dataset is named by what it holds; the page's short title ("Our phages") names the page.
     name: isDataset ? page.seoTitle : page.title,
@@ -53,19 +53,17 @@ function pageJsonLd(page: ContentPage): object[] {
           },
         }
       : {}),
-  };
+  });
   if (page.schemaType !== "SoftwareApplication" || !page.codeRepository) return [node];
   return [
     node,
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareSourceCode",
+    thing("SoftwareSourceCode", {
       "@id": `${pageUrl}#softwaresourcecode`,
       name: page.title,
       codeRepository: page.codeRepository,
       author: person,
       targetProduct: { "@id": node["@id"] },
-    },
+    }),
   ];
 }
 

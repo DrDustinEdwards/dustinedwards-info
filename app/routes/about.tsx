@@ -9,7 +9,7 @@ import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { mediaRecord } from "~/db/media";
-import { images, mediaVersion } from "~/lib/media/images.mjs";
+import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
@@ -32,7 +32,7 @@ async function portrait(env: Env) {
         src: `/media/${OWNER_PHOTO.key}`,
         width: OWNER_PHOTO.width,
         height: OWNER_PHOTO.height,
-        version: mediaVersion(OWNER_PHOTO.key, row?.sha256 ?? null),
+        version: mediaContentVersion(OWNER_PHOTO.key, row?.sha256 ?? null),
         placeholder: row?.placeholder ?? null,
       },
       "portrait",

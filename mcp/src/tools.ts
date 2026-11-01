@@ -1,5 +1,5 @@
 /**
- * The ten tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * The eleven tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6.
  *
  * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Eleven one-call tools became nine
@@ -225,8 +225,8 @@ type Annotations = {
 
 export interface ToolDefinition {
   name: string;
-  /** The scope a call needs. A function where the action decides it. */
-  scope: Scope | ((args: Record<string, unknown>) => Scope);
+  /** The scope a call needs: fixed per tool, so a read grant is listed only tools it can always call (T7). */
+  scope: Scope;
   config: {
     title: string;
     description: string;
@@ -310,7 +310,7 @@ export const TOOLS: ToolDefinition[] = [
         "independently, and the site's own readiness endpoint, /api/health, with every check it ran and " +
         "the names of any failing. A failing check whose name ends in -drift is a derived store behind " +
         "its source, which dei_repair_drift converges. Read only.",
-      inputSchema: z.object({}),
+      inputSchema: z.strictObject({}),
       outputSchema: SITE_CHECK,
       annotations: READ_ONLY,
     },
@@ -354,7 +354,7 @@ export const TOOLS: ToolDefinition[] = [
         "and never edits one. The Ask index can list short for about a minute after " +
         "a full upload, so an ask-index-drift still failing straight after sync_ask is worth one more " +
         "dei_check_site before calling it a miss.",
-      inputSchema: z.object({}),
+      inputSchema: z.strictObject({}),
       outputSchema: REPAIR_REPORT,
       annotations: {
         readOnlyHint: false,
@@ -421,7 +421,7 @@ export const TOOLS: ToolDefinition[] = [
         "with the reason). Unfiltered by default, which is what the moderation queue shows; pass status " +
         "to narrow it. Use the ids with dei_decide_mention.\n\n" +
         EXTERNAL_DATA_NOTE,
-      inputSchema: z.object({
+      inputSchema: z.strictObject({
         status: z
           .enum(["unverified", "pending", "approved", "rejected", "failed"])
           .optional()
@@ -450,7 +450,7 @@ export const TOOLS: ToolDefinition[] = [
         "Deleting a mention is not offered here: it removes the only copy of what a stranger sent, so it " +
         "is the administrator's, in the site's admin screen (the API refuses an operator delete with 403 " +
         "mention-delete-requires-admin). Reject instead; it can be undone.",
-      inputSchema: z.object({
+      inputSchema: z.strictObject({
         mention_id: z.number().int().positive().describe("The mention's id, from dei_review_mentions."),
         decision: z.enum(["approve", "reject"]).describe("approve or reject."),
       }),
@@ -483,7 +483,7 @@ export const TOOLS: ToolDefinition[] = [
         "POLICY, enforced by the API and not by this wrapper: raster images only (SVG is refused, since " +
         "it can carry script), a size ceiling, https URLs only. There is NO delete over this credential, " +
         "so upload the image you mean to use rather than several to choose between.",
-      inputSchema: z.object({
+      inputSchema: z.strictObject({
         data: z
           .string()
           .min(1)
@@ -536,7 +536,7 @@ export const TOOLS: ToolDefinition[] = [
         "Copies every object in the media bucket that has no byte-identical twin into the backup bucket, " +
         "then reads both back and reports objects, twins, missing and mismatched, counted after the " +
         "writes. COPIES ONLY: it has no delete in either bucket and never copies backup to media.",
-      inputSchema: z.object({}),
+      inputSchema: z.strictObject({}),
       outputSchema: API_ANSWER,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -557,7 +557,7 @@ export const TOOLS: ToolDefinition[] = [
         "roster (a cohort year such as 2025), phages (a phage slug such as acorn15), registry (an item " +
         "address kind/id such as primer/m13-forward; registry_kind narrows the list), publications (a " +
         "publication slug). Read only: these are written through Carrel, not here.",
-      inputSchema: z.object({
+      inputSchema: z.strictObject({
         registry: z
           .enum(Object.keys(REGISTRY_READS) as [RegistryName, ...RegistryName[]])
           .describe("Which registry to read."),
@@ -607,7 +607,7 @@ export const TOOLS: ToolDefinition[] = [
         "were replaced) and failures (doi, stage, detail for each count that could not be read). A DOI " +
         "that fails keeps the count it had; a partial failure comes back as an error carrying the same " +
         "detail. The watchdog runs this weekly.",
-      inputSchema: z.object({
+      inputSchema: z.strictObject({
         dois: z
           .array(z.string().min(1).max(200))
           .min(1)
@@ -643,7 +643,7 @@ export const TOOLS: ToolDefinition[] = [
         "nothing: a found paper is added through Carrel. A source that could not be read comes back as an " +
         "error carrying the report from the sources that did. The watchdog runs this daily and mails each " +
         "new DOI once.",
-      inputSchema: z.object({}),
+      inputSchema: z.strictObject({}),
       // Open world: it reads ORCID and Crossref.
       outputSchema: API_ANSWER,
       annotations: { ...READ_ONLY, openWorldHint: true },
@@ -652,44 +652,60 @@ export const TOOLS: ToolDefinition[] = [
   },
 
   {
-    name: "dei_manage_procedure",
-    scope: (args) => (args.action === "save" ? SCOPE_WRITE : SCOPE_READ),
+    name: "dei_read_procedure",
+    scope: SCOPE_READ,
     config: {
-      title: "List, read or save a lab procedure",
+      title: "List or read a lab procedure",
       description:
-        "Keeps the site's lab procedures (protocols, recipes, computational procedures). Three actions:\n" +
+        "Reads the site's lab procedures (protocols, recipes, computational procedures). Two actions:\n" +
         "- list: every procedure, drafts included, a page at a time, with slug, path, profile, title, " +
         "draft, version, updated and gaps (values recorded as MISSING).\n" +
         "- get (slug): the COMPLETE file as `raw`, the headSha, `record` (the procedure as structured " +
         "data: sections, steps, materials, equipment, timers, temperatures, spins, flags) and `gaps`. " +
-        "Read `record` to find the step being asked about; edit `raw`, because `raw` is what is saved.\n" +
-        "- save (slug, raw, expected_head_sha): commits the WHOLE file to content/procedures/<slug>.md " +
-        "on main and syncs D1, so the page changes without a deploy. THE INTENDED USE is a small exact " +
-        "edit: get, change the one value asked for, leave every other line, send the whole file back " +
-        "with the headSha. A 422 carries the validator's own messages: report them, fix what they " +
-        "name, try again. A 409 means main moved: get again and redo the edit.\n\n" +
+        "Read `record` to find the step being asked about; to change it, edit `raw` and send it to " +
+        "dei_save_procedure with the headSha. Writes nothing.",
+      inputSchema: z.strictObject({
+        action: z.enum(["list", "get"]).describe("list or get."),
+        slug: procedureSlugSchema.optional().describe("For action get."),
+        limit: limitSchema,
+        cursor: cursorSchema,
+      }),
+      outputSchema: PAGED_ANSWER,
+      annotations: READ_ONLY,
+    },
+    handler: async (env, args) => {
+      if (args.action === "list") return runPaged(env, "list_procedures", {}, args);
+      if (!args.slug) return inputError("Action get needs slug. Call action list for the slugs.");
+      return run(env, "get_procedure", { slug: args.slug });
+    },
+  },
+
+  {
+    name: "dei_save_procedure",
+    scope: SCOPE_WRITE,
+    config: {
+      title: "Save a lab procedure",
+      description:
+        "Commits the WHOLE file to content/procedures/<slug>.md on main and syncs D1, so the page " +
+        "changes without a deploy. THE INTENDED USE is a small exact edit: dei_read_procedure action " +
+        "get, change the one value asked for, leave every other line, send the whole file back here " +
+        "with the headSha as expected_head_sha. A 422 carries the validator's own messages: report " +
+        "them, fix what they name, try again. A 409 means main moved: get again and redo the edit.\n\n" +
         PROCEDURE_FORMAT +
         "\n\nPOLICY, enforced by the API and not by this wrapper: an operator may create and edit a " +
         "procedure but may NOT perform its FIRST publication (draft true to false). That is refused " +
         "with HTTP 403 and policy name 'first-publish-requires-admin', the system working correctly, " +
         "not an error to retry: leave draft true and tell the human the procedure is staged.",
-      inputSchema: z.object({
-        action: z.enum(["list", "get", "save"]).describe("list, get or save."),
-        slug: procedureSlugSchema.optional(),
-        raw: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("For action save: the complete procedure file including its YAML front matter block."),
+      inputSchema: z.strictObject({
+        slug: procedureSlugSchema,
+        raw: z.string().min(1).describe("The complete procedure file including its YAML front matter block."),
         expected_head_sha: headShaSchema,
         is_new: z
           .boolean()
           .optional()
-          .describe("Optional, for action save. Inferred from whether the file exists; supply only to be explicit."),
-        limit: limitSchema,
-        cursor: cursorSchema,
+          .describe("Optional. Inferred from whether the file exists; supply only to be explicit."),
       }),
-      outputSchema: PAGED_ANSWER,
+      outputSchema: API_ANSWER,
       annotations: {
         readOnlyHint: false,
         // Not destructive: a save is a new commit on top of history and the
@@ -699,19 +715,12 @@ export const TOOLS: ToolDefinition[] = [
         openWorldHint: false,
       },
     },
-    handler: async (env, args) => {
-      if (args.action === "list") return runPaged(env, "list_procedures", {}, args);
-      if (!args.slug) return inputError(`Action ${String(args.action)} needs slug. Call action list for the slugs.`);
-      if (args.action === "get") return run(env, "get_procedure", { slug: args.slug });
-      if (!args.raw) {
-        return inputError("Action save needs raw, the whole file. Call action get, edit its raw, and send it back.");
-      }
-      return run(env, "save_procedure", {
+    handler: async (env, args) =>
+      run(env, "save_procedure", {
         slug: args.slug,
         raw: args.raw,
         ...(args.expected_head_sha ? { expectedHeadSha: args.expected_head_sha } : {}),
         ...(args.is_new !== undefined ? { isNew: args.is_new } : {}),
-      });
-    },
+      }),
   },
 ];

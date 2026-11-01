@@ -1,6 +1,8 @@
 // The schema type comes from the curated type field, never the journal name. Only the owner's author
 // entry becomes an @id reference: replacing the array would drop up to 143 co-authors.
 
+import { thing } from "@drdustinedwards/site-helpers/schema";
+
 import { decodeEntities } from "./entities.mjs";
 
 // abstract is still a ScholarlyArticle: hiding abstracts on the site is editorial, not a claim about them.
@@ -58,9 +60,7 @@ export function paperJsonLd(paper, context) {
       : { "@type": "Person", name: decodeEntities(name) },
   );
 
-  const article = {
-    "@context": "https://schema.org",
-    "@type": schemaTypeFor(paper.type),
+  const article = thing(schemaTypeFor(paper.type), {
     "@id": context.pageUrl,
     headline: decodeEntities(paper.title),
     name: decodeEntities(paper.title),
@@ -112,7 +112,7 @@ export function paperJsonLd(paper, context) {
     ...(context.topics && context.topics.length > 0
       ? { about: context.topics.map((t) => ({ "@type": "Thing", name: t.label })) }
       : {}),
-  };
+  });
 
   // The Person node first, so the @id the authors reference is defined in the same graph.
   return [context.personNode, article];

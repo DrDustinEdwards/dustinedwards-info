@@ -3,6 +3,8 @@
 // recipe, following Google's recipe structured-data guidance, and schema.org HowTo for a computational procedure, the closest type
 // for a sequence of commands with tools and supplies. Only facts the record states: a gap stays out.
 
+import { thing } from "@drdustinedwards/site-helpers/schema";
+
 import { citeFacts } from "./cite.mjs";
 import { readConditions } from "./marks.mjs";
 
@@ -113,8 +115,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
     ...(s.doi ? { identifier: `https://doi.org/${s.doi}`, url: `https://doi.org/${s.doi}` } : s.url ? { url: s.url } : {}),
   }))];
   const cite = citeFacts(record);
+  // Prelum's `thing` writes the context and the type, then these, and drops an empty field.
   const common = {
-    "@context": "https://schema.org",
     "@id": `${url}#procedure`,
     name: record.title,
     description: record.description,
@@ -128,9 +130,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
   };
 
   if (record.profile === "protocol") {
-    return {
+    return thing("LabProtocol", {
       ...common,
-      "@type": "LabProtocol",
       "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROTOCOL_PROFILE },
       reagent: record.materials.map((m) => m.display),
       labEquipment: record.equipment.map((e) => e.name),
@@ -141,7 +142,7 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       ...(isoDuration(record.time.total) ? { totalTime: isoDuration(record.time.total) } : {}),
       ...(protocolParameters(record).length ? { parameter: protocolParameters(record) } : {}),
       step: steps,
-    };
+    });
   }
 
   if (record.profile === "recipe") {
@@ -152,9 +153,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       return m ? Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0) : null;
     };
     const total = prep && cook ? isoDuration(`${(minutes(prep) ?? 0) + (minutes(cook) ?? 0)} minutes`) : null;
-    return {
+    return thing("Recipe", {
       ...common,
-      "@type": "Recipe",
       ...(record.image ? { image: [`${origin}${record.image.src}`] } : {}),
       ...(record.servings ? { recipeYield: String(record.servings) } : {}),
       ...(record.cuisine ? { recipeCuisine: record.cuisine } : {}),
@@ -164,12 +164,11 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       ...(total ? { totalTime: total } : {}),
       recipeIngredient: record.materials.map((m) => (m.amount ? `${m.amount} ${m.display}` : m.display)),
       recipeInstructions: steps,
-    };
+    });
   }
 
-  return {
+  return thing("HowTo", {
     ...common,
-    "@type": "HowTo",
     tool: record.materials
       .filter((m) => m.kind === "software")
       .map((m) => ({ "@type": "HowToTool", name: m.version ? `${m.display} ${m.version}` : m.display })),
@@ -177,5 +176,5 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       .filter((m) => m.kind !== "software")
       .map((m) => ({ "@type": "HowToSupply", name: m.display })),
     step: steps,
-  };
+  });
 }

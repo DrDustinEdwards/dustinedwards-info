@@ -340,12 +340,12 @@ export function checkProjects(ctx) {
   ok("the Capsomer page links its home", readPage("software-capsomer.md").includes("](https://capsomer.dustinedwards.info)"));
   ok("the hub links the Capsomer page", hub.includes("](/software/capsomer)"));
 
-  // The page's node is built in the module the content-page route and the phage page share.
+  // The page's node is built in the module the content-page route and the phage page share, by Prelum's `thing`.
   const contentPageSource = codeOf(join(root, "app", "lib", "pages", "page-json-ld.ts"));
   ok(
     "software pages emit @type from the page",
-    /"@type":\s*page\.schemaType/.test(contentPageSource) &&
-      !/"@type":\s*"SoftwareApplication"/.test(contentPageSource),
+    /\bthing\(page\.schemaType,/.test(contentPageSource) &&
+      !/thing\("SoftwareApplication"|"@type":\s*"SoftwareApplication"/.test(contentPageSource),
     "the type has to come from the markdown, or every software page is emitted as an application",
   );
 
