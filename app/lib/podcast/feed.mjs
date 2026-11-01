@@ -25,9 +25,7 @@ const EPISODE_PAGE_HOSTS = ["germomics.com", "www.germomics.com"];
  *   audioType: string,
  *   season: number | null,
  *   episode: number | null,
- *   transcriptUrl?: string,
  * }} PodcastEpisode
- *   `transcriptUrl`: the episode page's transcript section, when the feed lists a transcript (`podcast:transcript`).
  */
 
 /**
@@ -112,8 +110,6 @@ export function parsePodcastFeed(xml) {
       audioType,
       season: positiveInt(textOf(item, "itunes:season")),
       episode: positiveInt(textOf(item, "itunes:episode")),
-      // The page's readable transcript, not the caption file the feed names: a reader follows it from the player.
-      ...(attrOf(item, "podcast:transcript", "url") ? { transcriptUrl: `${link}#transcript` } : {}),
     });
   }
   return episodes.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
