@@ -103,6 +103,8 @@ export async function validateAndRender(
       raw,
       expectedSlug: slug,
       resolveImage: makeResolveImage(env),
+      // A chart's CSV, cited from the media library (`:::chart{src="/media/<key>.csv"}`, checklist E3).
+      readChartData: async (key: string) => (await env.MEDIA.get(key))?.text() ?? null,
     });
   } catch (error) {
     if (error instanceof ContentError) {

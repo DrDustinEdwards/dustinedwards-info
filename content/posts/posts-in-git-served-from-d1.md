@@ -32,7 +32,7 @@ The architectural rule that matters is that exactly one renderer module exists, 
 
 The rule has a measurable price, and you should measure yours before accepting it. Bundling full Shiki into the Worker produced a 14 MB output, because Shiki includes every grammar. Restricting to `shiki/core` with an explicit language allowlist brought the highlighter to roughly 615 KB gzipped and the Worker from 1.49 MB to 3.55 MB. A language outside the allowlist renders as plain unhighlighted code, identically everywhere, which is the correct degradation.
 
-:::chart{type="bar" x="configuration" y="worker_mb" title="Worker bundle size by highlighter configuration" alt="Bar chart of Worker bundle sizes in megabytes for three highlighter configurations: no server-side highlighter at 1.49 MB, shiki core with a language allowlist at 3.55 MB, and full Shiki with every grammar at 14 MB. The allowlist configuration is the accepted middle."}
+:::chart{type="bar" x="configuration" y="worker_mb" title="Worker bundle size by highlighter configuration" alt="Worker size for three highlighter setups: no server highlighter 1.49 MB, Shiki core with a short language list 3.55 MB, and full Shiki 14 MB. The short list is the middle choice."}
 ```csv
 configuration,worker_mb
 no highlighter,1.49

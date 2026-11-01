@@ -13,7 +13,13 @@ export const ALLOWED = new Map([
   // Stored as JPEG (site-api's prepareUpload converts them), so the extension is never used.
   ["image/heic", "jpg"],
   ["image/heif", "jpg"],
+  // A chart's data (checklist E3): a post cites it as `:::chart{src="/media/<key>"}`, and the render reads it through
+  // Prelum's chartData (app/lib/content/chart-data.mjs). Text, so it has no size and no Images step.
+  ["text/csv", "csv"],
 ]);
+
+/** The data files in ALLOWED: stored as uploaded, with no size in the key. */
+export const DATA_TYPES = new Set(["text/csv"]);
 
 // NOT IN THE ALLOWLIST, and refused by name rather than as an unknown type: an SVG can carry script,
 // and /media is this site's own origin. The /media CSP (workers/csp.mjs) is the second wall, for
@@ -63,7 +69,7 @@ export function uploadErrorBody(message) {
 const UPLOAD_ERRORS = {
   "no-file": "No file was chosen.",
   "unsupported-type":
-    `That file type is not one this endpoint accepts. Uploads here are images: ` +
+    `That file type is not one this endpoint accepts. Uploads here are images and chart data: ` +
     `${[...ALLOWED.keys()].map((mime) => mime.split("/")[1]).join(", ")}.`,
   "too-large": `That image is over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
   "svg-refused": SVG_REFUSED,
@@ -93,7 +99,7 @@ export function validateUpload({ type, bytes }) {
   if (!ALLOWED.has(type)) {
     return {
       code: "unsupported-type",
-      message: `Unsupported image type "${type || "unknown"}".`,
+      message: `Unsupported file type "${type || "unknown"}".`,
       status: 415,
     };
   }
@@ -101,7 +107,7 @@ export function validateUpload({ type, bytes }) {
   if (size > MAX_BYTES) {
     return {
       code: "too-large",
-      message: `Image is ${byteSize(size)}, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
+      message: `The file is ${byteSize(size)}, over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
       status: 413,
     };
   }

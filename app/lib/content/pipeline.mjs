@@ -11,6 +11,7 @@ import matter from "gray-matter";
 import { z } from "zod";
 
 import { ASSET_PREFIX, classify, dimensionsFromKey } from "../media/classify.mjs";
+import { makeChartData } from "./chart-data.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
@@ -213,22 +214,43 @@ function imageProps(src) {
 
 const SITE_OPTIONS = {
   media: { keyOf: mediaKeyOf, imageProps },
-  packs: [editorialPack({ assetPrefix: ASSET_PREFIX })],
 };
+
+/**
+ * The editorial pack for one render. `strictCharts` refuses a chart with no title, too many series or author text above
+ * grade 9 (checklist E4), so the publish names it before it goes live. `readChartData` reads a cited CSV from the
+ * media library (chart-data.mjs); without it a `:::chart{src}` is refused, as Prelum does.
+ *
+ * @param {((key: string) => Promise<string | null>) | undefined} readChartData
+ * @param {Set<string>} cited
+ */
+function packsFor(readChartData, cited) {
+  return [
+    editorialPack({
+      assetPrefix: ASSET_PREFIX,
+      strictCharts: true,
+      ...(readChartData ? { chartData: makeChartData(readChartData, cited) } : {}),
+    }),
+  ];
+}
 
 /**
  * @param {object} options
  * @param {string} options.file label used in error messages
  * @param {string} options.body markdown with frontmatter already stripped
  * @param {(src: string) => Promise<{ width: number, height: number }>} options.resolveImage
+ * @param {(key: string) => Promise<string | null>} [options.readChartData] reads a chart's CSV from the media library
  */
-export async function renderBody({ file, body, resolveImage }) {
+export async function renderBody({ file, body, resolveImage, readChartData }) {
+  /** @type {Set<string>} */
+  const cited = new Set();
   const { html, toc, hasMath, diagrams, mediaRefs, blockedUrls } = await render({
     file,
     body,
     resolveImage,
-    options: { ...SITE_OPTIONS, highlight: getHighlight() },
+    options: { ...SITE_OPTIONS, packs: packsFor(readChartData, cited), highlight: getHighlight() },
   });
+  for (const key of cited) mediaRefs.push({ key, form: "other", detail: "chart data" });
   return { html, toc, hasMath, diagrams, mediaRefs, blockedUrls };
 }
 
@@ -245,8 +267,9 @@ function demoteFirstImage(html) {
  * @param {string} options.raw the whole file including frontmatter
  * @param {string} options.expectedSlug slug the filename implies
  * @param {(src: string) => Promise<{ width: number, height: number }>} options.resolveImage
+ * @param {(key: string) => Promise<string | null>} [options.readChartData]
  */
-export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
+export async function renderPost({ file, raw, expectedSlug, resolveImage, readChartData }) {
   const parsed = matter(raw);
   const result = frontmatterSchema.safeParse(parsed.data);
   if (!result.success) {
@@ -268,6 +291,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     file,
     body: parsed.content,
     resolveImage,
+    readChartData,
   });
   const { toc, diagrams, mediaRefs, hasMath } = rendered;
   // The cover is the LCP where there is one, so the body's first image gives up Prelum's eager, high-priority pair:
