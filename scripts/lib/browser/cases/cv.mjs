@@ -19,7 +19,9 @@ const readCv = (page) =>
     papers: document.querySelector('[data-cv-count="papers"]')?.textContent ?? "",
     grants: document.querySelector('[data-cv-count="grants"]')?.textContent ?? "",
     bars: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key]").length,
-    barLinks: document.querySelectorAll("[data-cv-timeline] a[href][data-enarratio-key]").length,
+    barLinks: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key][data-enarratio-href]").length,
+    years: document.querySelectorAll("[data-cv-timeline] table tbody th").length,
+    yearLinks: document.querySelectorAll('[data-cv-timeline] table tbody th a[href^="/cv?from="]').length,
     drawn: document.querySelector("[data-cv-timeline]")?.getAttribute("data-cv-drawn") ?? "",
     enhanced: document.querySelector("[data-cv]")?.hasAttribute("data-cv-enhanced") ?? false,
   }));
@@ -37,10 +39,12 @@ export async function run({ browser }) {
       full.all > 200 && full.shown === full.all && Number(full.papers) > 30,
       `${full.shown} of ${full.all} entries shown, ${full.papers} publications counted`,
     );
+    /* Enarratio 0.5: with script off each year is a link in the chart's data table, and each bar carries
+       its year's link in data-enarratio-href for enhance() to follow. */
     ok(
-      "cv, script off: the timeline is server-rendered, each bar a link to its year",
-      full.bars > 10 && full.barLinks === full.bars,
-      `${full.barLinks} of ${full.bars} bars are links`,
+      "cv, script off: the timeline is server-rendered, each year a link in its data table",
+      full.bars > 10 && full.barLinks === full.bars && full.years > 10 && full.yearLinks === full.years,
+      `${full.barLinks} of ${full.bars} bars carry a link, ${full.yearLinks} of ${full.years} years are links`,
     );
     await off.goto(`${BASE}/cv?type=grant&from=2020`, { waitUntil: "load" });
     const filtered = await readCv(off);
