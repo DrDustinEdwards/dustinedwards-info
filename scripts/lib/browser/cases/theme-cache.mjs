@@ -119,7 +119,7 @@ export async function run({ page, browser }) {
        * "15/15 passing" (post-deploy run 196). Only the tile's link text is masked; the health-tile case
        * asserts the verdict.
        */
-      .replace(/(data-health-age="A"><a href="\/api\/health"[^>]*>)[^<]*/, "$1VERDICT");
+      .replace(/(data-health-age="A"><a href="\/health"[^>]*>)[^<]*/, "$1VERDICT");
 
   /**
    * One cache-buster per run, never per fetch: `/research/publications` renders the request URL into its
@@ -164,7 +164,12 @@ export async function run({ page, browser }) {
     html
       .replace(/<html[^>]*>/, "<html>")
       /* The color-scheme meta carries the theme by design; its own case asserts the value. */
-      .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
+      .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"')
+      /*
+       * So do the theme-color tags (Capsomer themeColorTags): one per scheme with its media query when the
+       * reader never chose, one for the chosen theme otherwise. The run of tags is masked as a whole.
+       */
+      .replace(/(?:<meta name="theme-color"[^>]*>)+/, '<meta name="theme-color" content="T"/>');
 
   /**
    * `footerOrderCompared` exists so a THEME_CACHED of one cannot report a clean sweep.
@@ -179,7 +184,8 @@ export async function run({ page, browser }) {
     const visited = await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     ok(
       `${path}: the page answers 200 in the browser`,
-      visited?.status() === 200,
+      /* 304 is the browser revalidating a page this run already loaded: the 200 it holds is current. */
+      visited?.status() === 200 || visited?.status() === 304,
       `answered ${visited?.status() ?? "(no response)"}. Every case on this path below would ` +
         `be about an error page.`,
     );
