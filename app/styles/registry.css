@@ -45,6 +45,8 @@
 .registry-facts dd {
   margin: 0;
   min-inline-size: 0;
+  /* A source written out as its address is one unbroken word wider than a phone (WCAG 1.4.10). */
+  overflow-wrap: anywhere;
 }
 @media (max-width: 36rem) {
   .registry-facts {
