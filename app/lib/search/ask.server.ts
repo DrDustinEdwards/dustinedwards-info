@@ -33,6 +33,9 @@ export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
+/** Two entries, the most the gateway log takes from AI Search; `ai-search`, `task` and `origin` are reserved. */
+const ASK_GATEWAY_METADATA = { site: "dustinedwards", feature: "ask" };
+
 /** Bounds the answer, not the corpus: past it, retrieval widens the net without widening the answer. */
 const MAX_CHUNKS = 6;
 
@@ -45,7 +48,15 @@ export function askAvailable(env: Env): boolean {
  * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no
  * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAnswerStream
  * bounds the rest). `max_tokens` is not in the binding's documented parameters; Cloudflare's own
- * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer.
+ * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer, so the guard
+ * reads each answer's finish_reason and a cut one is never cached (guardAnswerStream).
+ *
+ * The gateway (checklist G1, C13): AI Search has no per-request gateway option and no route through site-runtime's
+ * shared caller, which speaks Anthropic's Messages API. Every AI Search instance is connected to an AI Gateway, and
+ * "query rewriting and response generation also run through your gateway"
+ * (https://developers.cloudflare.com/ai-search/configuration/models/ai-gateway/); the instance's `ai_gateway_id`
+ * names it (https://developers.cloudflare.com/ai-search/api/instances/workers-binding/). What a request can set is
+ * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by site and feature.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -59,7 +70,11 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
     stream: true,
     max_tokens: ASK_MAX_TOKENS,
     ai_search_options: {
-      max_num_results: MAX_CHUNKS,
+      // Under `retrieval`, where the binding's AiSearchOptions type and the AI Search docs put it
+      // (https://developers.cloudflare.com/ai-search/api/search/workers-binding/); at the top level it was
+      // ignored and the default of 10 chunks applied.
+      retrieval: { max_num_results: MAX_CHUNKS },
+      custom_metadata: ASK_GATEWAY_METADATA,
     },
   });
   try {

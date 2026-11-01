@@ -1,6 +1,6 @@
 import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
-import { answerDelta, takeSseFrames } from "../lib/search/sse.mjs";
+import { CUT_EVENT, answerDelta, takeSseFrames } from "../lib/search/sse.mjs";
 
 const CHUNKS_EVENT = "chunks";
 
@@ -115,7 +115,12 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   const followUp = el("p", "ask-followup");
   followUp.hidden = true;
 
-  attach(panel, header, status, body, sources, followUp, announcer);
+  // Shown only when the server says the model stopped before finishing (a `cut` event), so a cut answer never
+  // reads as a whole one.
+  const cutNote = el("p", "ask-cut", "This answer was cut off before it finished. The sources below say more.");
+  cutNote.hidden = true;
+
+  attach(panel, header, status, body, cutNote, sources, followUp, announcer);
   attach(container, panel);
   // A frame later, so the region is in the tree before its text changes and the change is heard.
   requestAnimationFrame(() => {
@@ -217,6 +222,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     try {
       await readFrames(response.body, (eventName, parsed) => {
         if (eventName === CHUNKS_EVENT) onChunks(parsed);
+        else if (eventName === CUT_EVENT) cutNote.hidden = false;
         else onAnswer(parsed);
       });
     } catch {
@@ -226,7 +232,10 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 
     body.removeAttribute("aria-busy");
     if (answer.trim().length === 0) fail("No answer for that one.");
-    else announcer.textContent = `AI answer: ${splitFollowUp(answer).answer}`;
+    else {
+      const cut = cutNote.hidden ? "" : ` ${cutNote.textContent}`;
+      announcer.textContent = `AI answer: ${splitFollowUp(answer).answer}${cut}`;
+    }
   })();
 
   /*

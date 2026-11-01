@@ -251,6 +251,8 @@ type ArticleSeo = {
   updatedAt: Date | null;
   coverImage: string | null;
   ogImage?: string | null;
+  /** The cover's Article crops, absolute (articleCrops), written in place of the share image where there are any. */
+  images?: Array<{ url: string; width: number; height: number }>;
   tags: string[];
 };
 
@@ -264,7 +266,7 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     url: `${origin}/writing/${post.slug}`,
     headline: post.title,
     description: post.description,
-    image: postSocial({
+    image: post.images?.length ? post.images : postSocial({
       slug: post.slug,
       title: post.title,
       description: post.description,
