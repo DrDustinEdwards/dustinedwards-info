@@ -55,6 +55,9 @@ export const SITE = {
   description: `${HONORIFIC}${IDENTITY.name}, ${IDENTITY.role}`,
 } as const;
 
+/** site-api's search fields beside description, as the posts.search_fields column holds them. */
+export type PostSearchFields = { searchTitle?: string; image?: string; imageAlt?: string; canonical?: string; noindex?: boolean };
+
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
 type PostSocialFields = {
   slug: string;
@@ -65,19 +68,28 @@ type PostSocialFields = {
   coverImage?: string | null;
   coverAlt?: string | null;
   ogImage?: string | null;
+  searchFields?: PostSearchFields | null;
 };
 
 export function postSocial(post: PostSocialFields) {
   const canonical = `${SITE_ORIGIN}/writing/${post.slug}`;
   const description = post.description ?? SITE.description;
-  // A cover's size is in its key; a drawn card shows the title.
-  const image: HeadImage = post.coverImage
+  const search = post.searchFields ?? {};
+  // The post's own share image, then its cover (a size is in its key), then a drawn card that shows the title.
+  const image: HeadImage = search.image
+    ? { url: `${SITE_ORIGIN}${search.image}`, ...dimensionsFromKey(search.image), ...(search.imageAlt ? { alt: search.imageAlt } : {}) }
+    : post.coverImage
     ? { url: `${SITE_ORIGIN}${post.coverImage}`, ...dimensionsFromKey(post.coverImage), ...(post.coverAlt ? { alt: post.coverAlt } : {}) }
     : post.ogImage
       ? shareCard(`${SITE_ORIGIN}${post.ogImage}`, post.ogTitle ?? post.title)
       : DEFAULT_OG_IMAGE;
   return {
     canonical,
+    /** The title a search result shows, before the site's suffix: the author's search title, else the post's. */
+    title: search.searchTitle ?? post.title,
+    /** The canonical the head links: the author's, else the page's own. */
+    canonicalHref: search.canonical ?? canonical,
+    noindex: search.noindex === true,
     description,
     socialTitle: post.ogTitle ?? post.title,
     socialDescription: post.ogDescription ?? description,
