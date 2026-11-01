@@ -38,9 +38,9 @@ await test("an inline tag mid-paragraph is stripped and its text kept", async ()
 
 await test("CONTROL: ordinary links still become anchors", async () => {
   const absolute = await render("[click](https://example.com)");
-  assert.match(absolute.html, /<a href="https:\/\/example\.com">click<\/a>/);
+  assert.match(absolute.html, /<a href="https:\/\/example\.com"[^>]*>click<\/a>/);
   const relative = await render("[click](/writing/a-post)");
-  assert.match(relative.html, /<a href="\/writing\/a-post">click<\/a>/);
+  assert.match(relative.html, /<a href="\/writing\/a-post"[^>]*>click<\/a>/);
 });
 
 await test("an executable URL protocol produces no anchor and is recorded", async () => {

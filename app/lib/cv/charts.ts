@@ -4,8 +4,7 @@
  * route renders them into the page, so they are in the HTML with script off, and /cv/charts.json
  * renders them again for app/enhance/cv.ts when a filter changes. Both get markup back.
  *
- * The timeline is Enarratio's figure in Capsomer's chart frame, styled by Capsomer's token mapping
- * (capsomer/tokens.css) and Enarratio's base.css. With script off each bar is a link to its year's
+ * The timeline is Enarratio's figure in Capsomer's chart frame, styled by capsomer/enarratio.css. With script off each bar is a link to its year's
  * filtered page; its enhancement layer (enarratio/enhance) turns the bars into keyboard filter buttons
  * and reports a selection as an `enarratio:select` event, which app/enhance/cv.ts turns into a year range.
  */
@@ -100,5 +99,6 @@ function fadeOutside(markup: string, selected: [number, number] | null) {
 export function sparklineSvg(input: SparklineInput): string {
   const svg = sparkline({ values: input.values, alt: input.label, area: true, inline: true });
   const table = { columns: ["Year", input.name], rows: input.years.map((year, i) => [String(year), String(input.values[i] ?? 0)]) };
-  return svg + dataTableBlock(table, `${input.name} per year`);
+  // The line in a box of its own, so it has a width to sit in: its parent, .cv-spark, is display: contents.
+  return `<span class="cv-spark-line">${svg}</span>` + dataTableBlock(table, `${input.name} per year`);
 }

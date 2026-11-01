@@ -46,7 +46,7 @@ import type { Route } from "./+types/blog.$slug";
 import "~/styles/post-rail.css";
 import "~/styles/evidence-row.css";
 import "capsomer/tokens.css";
-import "enarratio/base.css";
+import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
@@ -340,6 +340,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       </main>
       <ShellFooter />
       <template data-island="blog" />
+      {post.html.includes("data-prelum-chart") ? <template data-island="charts" /> : null}
     </>
   );
 }

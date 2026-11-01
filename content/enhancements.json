@@ -169,6 +169,15 @@
       "why": null
     },
     {
+      "id": "post-chart-redraw",
+      "module": "app/enhance/charts.ts",
+      "enhancement": "A post's or page's :::chart is redrawn to its column's width by Prelum's render/chart-enhance, so a phone gets a chart at its own size with 12 px text, and gains Enarratio's enhancement layer: a keyboard walk between points, focus announcements, tooltips, legend filters, a sortable table, and Download SVG and PNG.",
+      "fallback": "Prelum draws the chart into the stored HTML at 700 px, with its title, finding, data table behind Show data and Download CSV link, so it reads in full with script off.",
+      "fallbackKind": "selector",
+      "fallbackAt": "[data-prelum-chart]",
+      "why": null
+    },
+    {
       "id": "cv-filters-live",
       "module": "app/enhance/cv.ts",
       "enhancement": "The CV at /cv filters, searches and sorts on every input with no reload: the entries, the group counts, the headline counts, the facet counts and both charts redraw together, a status region announces how many entries show, and the state is written to the query string so a copied URL opens the same view.",
