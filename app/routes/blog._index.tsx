@@ -98,7 +98,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
     .filter(Boolean)
     .join(", ");
   const title = filterLabel ? `Writing: ${filterLabel}` : "Writing";
-  const description = "Writing on building for the web, mostly on Cloudflare.";
+  const description =
+    "Writing on building for the web, mostly on Cloudflare: every post on Dustin Edwards's blog, by tag and year, with its feeds.";
   /* Built from the same axes as `filterHref`, in order, so the canonical is byte-identical to the link. */
   const canonicalParams = new URLSearchParams();
   if (loaderData?.activeTag) canonicalParams.set("tag", loaderData.activeTag);

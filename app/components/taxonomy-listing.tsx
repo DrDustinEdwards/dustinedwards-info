@@ -1,11 +1,12 @@
-import { Link, redirect } from "react-router";
+import { redirect } from "react-router";
 
+import { Breadcrumb } from "~/components/breadcrumb";
 import { EvidenceRow } from "~/components/evidence-row";
 import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listingFacts } from "~/lib/blog-listing.mjs";
-import { SITE } from "~/lib/seo";
+import { SITE, type Trail } from "~/lib/seo";
 
 /** A taxonomy page's URL for page `n`: the bare path for the first page, `?page=n` after it. */
 export function listingHref(base: string, n: number) {
@@ -21,6 +22,14 @@ export function listingDescription(what: string, total: number, posts: Array<{ t
 /** Out of range redirects to the last real page, so the URL never claims a page that does not exist. */
 export function redirectPastLastPage(page: number, pageCount: number, base: string) {
   if (page > pageCount) throw redirect(listingHref(base, pageCount));
+}
+
+/** A tag or series page's trail, for its visible breadcrumb and its head's BreadcrumbList alike, so the two agree. */
+export function listingTrail(heading: string, base: string): Trail {
+  return [
+    ["Writing", "/writing"],
+    [heading, base],
+  ];
 }
 
 type ListingPost = Parameters<typeof PostRow>[0]["post"];
@@ -39,7 +48,7 @@ export function TaxonomyListing({
   /** The page's path, which its feeds hang off. */
   base: string;
   heading: string;
-  /** The sentence under the heading; an "All posts" link follows it. */
+  /** The sentence under the heading. The trail above the heading leads back to all posts. */
   dek: React.ReactNode;
   posts: ListingPost[];
   page: number;
@@ -52,10 +61,9 @@ export function TaxonomyListing({
       <SiteHeader />
       <main className="cap-page tracks list-tracks" id="main" tabIndex={-1}>
         <header className="list-head">
+          <Breadcrumb trail={listingTrail(heading, base)} />
           <h1 className="list-label cap-layout-grid">{heading}</h1>
-          <p className="list-dek">
-            {dek} <Link to="/writing">All posts</Link>
-          </p>
+          <p className="list-dek">{dek}</p>
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 

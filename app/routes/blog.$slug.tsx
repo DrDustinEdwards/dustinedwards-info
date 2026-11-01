@@ -1,5 +1,6 @@
 import { Link, data, redirect } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
+import { Breadcrumb } from "~/components/breadcrumb";
 import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
 import { PostMentions } from "~/components/post-mentions";
@@ -40,6 +41,7 @@ import {
   articleFacts,
   postSocial,
   siteHead,
+  type Trail,
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
@@ -134,6 +136,14 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return headers;
 }
 
+/** One trail for the visible breadcrumb and the head's BreadcrumbList, so the two cannot disagree. */
+function postTrail(post: { title: string; slug: string }): Trail {
+  return [
+    ["Writing", "/writing"],
+    [post.title, `/writing/${post.slug}`],
+  ];
+}
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) {
     return [{ title: `Not found | ${SITE.name}` }];
@@ -155,6 +165,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "article",
       article: articleFacts(toArticleSeo(post)),
       markdown: `${canonical}.md`,
+      trail: postTrail(post),
     }),
     /* A sender looks in two places and stops at the first, so both are emitted. */
     { tagName: "link", rel: "webmention", href: WEBMENTION_URL },
@@ -218,6 +229,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         />
 
         <header className="post-head">
+          <Breadcrumb trail={postTrail(post)} />
           <h1 className="p-name cap-layout-grid">{post.title}</h1>
           {/* The meta tag's string: `postSocial` falls back to the site description, so the raw column would differ from the head. */}
           <p className="post-dek">{dek}</p>

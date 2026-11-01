@@ -63,7 +63,8 @@
 
 .page-breadcrumb a,
 .page-breadcrumb a:visited {
-  color: var(--ground);
+  /* The sign's own text color: --ground is the page's, which in dark mode is as dark as the sign. */
+  color: var(--on-sign);
   text-decoration: none;
 }
 
