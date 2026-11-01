@@ -72,7 +72,8 @@ await test("the wrap costs the image none of its own attributes", async () => {
   const picture = html.match(new RegExp(`<picture>((?:<source\\b[^>]*>)+)<img\\b[^>]*src="${MEDIA_SRC}"`))?.[1] ?? "";
   const sources = [...picture.matchAll(/<source\b[^>]*>/g)].map((m) => m[0]);
   assert.deepEqual(sources.map((tag) => attr(tag, "type")), ["image/avif", "image/webp"], `no picture around the media image:\n${html}`);
-  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}.avif?v=${VERSION}&#x26;w=${w} ${w}w`).join(", "));
+  // AVIF only up to Cloudflare's 1,200 px limit (site-runtime 0.68.3): a wider step of the AVIF source is WebP.
+  assert.equal(attr(sources[0], "srcset"), ladder.map((w) => `${MEDIA_SRC}.${w <= 1200 ? "avif" : "webp"}?v=${VERSION}&#x26;w=${w} ${w}w`).join(", "));
   assert.equal(attr(media, "sizes"), "(min-width: 46rem) 704px, calc(100vw - 2rem)");
   assert.equal(attr(media, "width"), "1280");
   assert.equal(attr(media, "height"), "720");
