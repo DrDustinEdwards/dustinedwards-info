@@ -25,7 +25,7 @@ import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { Picture } from "~/components/picture";
-import { contentPicture } from "~/lib/media/images.mjs";
+import { articleCrops, contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -170,6 +170,7 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
     updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
     coverImage: post.coverImage,
     ogImage: post.ogImage,
+    images: articleCrops(post.coverImage, SITE_ORIGIN),
     tags: post.tags,
   };
 }

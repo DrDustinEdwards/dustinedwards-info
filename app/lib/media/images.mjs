@@ -1,6 +1,6 @@
 import { defineImages, pictureProps } from "@dustinedwards/site-runtime/image";
 
-import { dimensionsFromKey } from "./classify.mjs";
+import { digestFromKey, dimensionsFromKey } from "./classify.mjs";
 
 // CSS pixels, never physical: the browser multiplies by the device pixel ratio itself. The 44rem prose column
 // is about 704 CSS px.
@@ -31,9 +31,11 @@ export function mediaSrc(src) {
  * share it, so a width the page advertises is never a 400 mid-article. `breakpoints` keeps the widths the
  * site served before the move (640, 1024, 1408), so cached pages and feeds that link `?w=1024` still work;
  * the content use then serves 640, 704, 1024 and 1408. `tile` is the admin grid and `portrait` the about photo
- * (both 320 and 640), scaled, never cropped.
+ * (both 320 and 640), scaled, never cropped. `shareImages` adds the 1200-wide crops a post's Article JSON-LD names
+ * (articleCrops).
  */
 export const images = defineImages({
+  shareImages: true,
   breakpoints: [640, 1024, 1408],
   uses: {
     content: { layout: "constrained", width: 704, sizes: CONTENT_SIZES },
@@ -41,6 +43,21 @@ export const images = defineImages({
     portrait: { layout: "fixed", width: 320, sizes: "(min-width: 46rem) 14rem, 11rem" },
   },
 });
+
+/**
+ * A /media file's version, which its size URLs carry (`v=`, site-runtime ./image), so a file whose bytes change is a new
+ * URL and none is cached stale for the year a size is kept: the bytes' sha256 where the caller read the row (a replace
+ * or a turn in place writes it), else the digest its content key carries (dustin-edwards-<name>-<digest>-<w>x<h>.<ext>).
+ * Rendered bodies, covers and procedure photos use the key's digest, which the Node build can read too, so a post
+ * renders the same in the Worker and in the build; a file replaced in place keeps that address in them until the post
+ * is rendered again from a row that holds its new hash.
+ *
+ * @param {string} keyOrPath a /media key or path
+ * @param {string | null} [sha256]
+ */
+export function mediaVersion(keyOrPath, sha256 = null) {
+  return sha256 ?? digestFromKey(keyOrPath);
+}
 
 /**
  * Responsive attributes for one /media image in the prose column. A key that does not carry its size gets the
@@ -52,7 +69,22 @@ export const images = defineImages({
  */
 export function contentImage(src, dimensions) {
   const { width, height } = dimensions ?? { width: 2816, height: 2816 };
-  return images.attributes({ src, width, height }, "content");
+  return images.attributes({ src, width, height, version: mediaVersion(src) }, "content");
+}
+
+/**
+ * A post cover's Article image set, absolute: the 16:9, 4:3 and 1:1 crops at 1200 wide Google asks for, versioned. Empty
+ * for a cover that is not a /media raster whose key spells its size, so the JSON-LD keeps its one share image.
+ *
+ * @param {string | null} src the cover's path
+ * @param {string} origin
+ */
+export function articleCrops(src, origin) {
+  const dimensions = src?.startsWith("/media/") ? dimensionsFromKey(src) : null;
+  if (!src || !dimensions) return [];
+  return images
+    .articleImages({ src, ...dimensions, version: mediaVersion(src) })
+    .map(({ url, width, height }) => ({ url: new URL(url, origin).href, width, height }));
 }
 
 /**
