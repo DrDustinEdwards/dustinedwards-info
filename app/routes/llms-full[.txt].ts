@@ -16,7 +16,7 @@ import type { Route } from "./+types/llms-full[.txt]";
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const [posts, nextPublishAt] = await Promise.all([
-    listBlogPostsFullText(env),
+    listBlogPostsFullText(env, { indexedOnly: true }),
     nextScheduledPublishAt(env),
   ]);
 
