@@ -1,4 +1,4 @@
-// The small pieces the /lab pages share: a post's result line and a table in Capsomer's scrolling region.
+// The small pieces the /lab-bench pages share: a post's result line and a table in Capsomer's scrolling region.
 
 import type { ReactNode } from "react";
 import { Alert } from "capsomer/react/banner";

@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, data } from "react-router";
 import { MANAGE_MEMBERS, can } from "@dustinedwards/site-runtime/members";
@@ -65,13 +66,13 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
             <Button type="submit" variant="danger">
               Remove {confirm.name}
             </Button>{" "}
-            <a className="cap-btn" href="/lab/members">
+            <a className="cap-btn" href={`${LAB_BENCH_PATH}/members`}>
               Cancel
             </a>
           </Form>
         </Panel>
       ) : null}
-      <PeopleRoles data={{ ...people, ...(actionData?.result ? { result: actionData.result } : {}) }} action="/lab/members" closeHref="/lab/members" />
+      <PeopleRoles data={{ ...people, ...(actionData?.result ? { result: actionData.result } : {}) }} action={`${LAB_BENCH_PATH}/members`} closeHref={`${LAB_BENCH_PATH}/members`} />
       {canEditTerms ? (
         <Panel title="Semester end dates">
           <Form method="post" reloadDocument>

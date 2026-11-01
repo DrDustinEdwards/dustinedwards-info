@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
@@ -52,7 +53,7 @@ export default function LabInventory({ loaderData, actionData }: Route.Component
             <tr key={lot.id}>
               <th scope="row">{lot.item}</th>
               <td>
-                <Link to={`/lab/inventory/${lot.id}`} className="cap-mono">
+                <Link to={`${LAB_BENCH_PATH}/inventory/${lot.id}`} className="cap-mono">
                   {lot.lot_number}
                 </Link>
               </td>

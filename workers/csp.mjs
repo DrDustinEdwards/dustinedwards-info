@@ -1,3 +1,5 @@
+import { LAB_BENCH_PATH } from "../app/lab/path.mjs";
+
 // Separate from app.ts so the worker tests can call it on both branches.
 
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
@@ -19,18 +21,18 @@ function isAdminPath(pathname) {
 }
 
 /**
- * The /lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members signed in through their own Access application.
+ * The /lab-bench workspace (docs/KNOWLEDGE-BASE.md step 5): lab members signed in through their own Access application.
  * Exact-or-slash like the admin plane, so the public `/research/lab` and a future `/laboratory` stay public.
  *
  * @param {string} pathname
  * @returns {boolean}
  */
 function isLabPath(pathname) {
-  return pathname === "/lab" || pathname.startsWith("/lab/");
+  return pathname === LAB_BENCH_PATH || pathname.startsWith(`${LAB_BENCH_PATH}/`);
 }
 
 /**
- * The signed-in planes, /admin and /lab: every response there is `private, no-store`, so each render gets its own
+ * The signed-in planes, /admin and /lab-bench: every response there is `private, no-store`, so each render gets its own
  * nonce and is never edge-cached or themed into a shared key.
  *
  * @param {string} pathname
@@ -75,7 +77,7 @@ function isMediaPath(pathname) {
  * chosen here so the Renderer keeps one place that sets the header.
  *
  * @param {string} pathname the request URL's pathname
- * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab), else undefined
+ * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab-bench), else undefined
  * @returns {string}
  */
 export function contentSecurityPolicy(pathname, adminNonce) {
@@ -92,7 +94,7 @@ export function contentSecurityPolicy(pathname, adminNonce) {
  * file has none: its policy is already default-src 'none' and runs no script.
  *
  * @param {string} pathname the request URL's pathname
- * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab), else undefined
+ * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab-bench), else undefined
  * @returns {string | undefined}
  */
 export function stagedPolicy(pathname, adminNonce) {

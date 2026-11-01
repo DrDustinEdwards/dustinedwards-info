@@ -14,7 +14,7 @@ import { loader as membersLoader } from "~/routes/workspace.members";
 import { routeContext, throughMiddleware } from "./route-helpers";
 
 /*
- * The /lab workspace (docs/KNOWLEDGE-BASE.md step 5): its own Access application, a row in `members` for everyone
+ * The /lab-bench workspace (docs/KNOWLEDGE-BASE.md step 5): its own Access application, a row in `members` for everyone
  * but the Primary Owner, and site-runtime's rules for every change. Each rule here was seen red once, by breaking
  * the code it names (see the pull request).
  */
@@ -112,8 +112,8 @@ beforeEach(async () => {
   await seed(STAFF);
 });
 
-describe("the /lab gate", () => {
-  async function through(token: string | null, overrides: object = VARS, mw: readonly unknown[] = labMiddleware, path = "/lab") {
+describe("the /lab-bench gate", () => {
+  async function through(token: string | null, overrides: object = VARS, mw: readonly unknown[] = labMiddleware, path = "/lab-bench") {
     const context = routeContext(undefined, overrides);
     const request = new Request(`${SITE_ORIGIN}${path}`, { headers: token ? { "cf-access-jwt-assertion": token } : {} });
     let seen: Actor | undefined;
@@ -149,7 +149,7 @@ describe("the /lab gate", () => {
     expect(seen?.layer).toBe(0);
   });
 
-  it("refuses an /admin token at /lab, by its audience", async () => {
+  it("refuses an /admin token at /lab-bench, by its audience", async () => {
     const admin = signer(ADMIN_AUD);
     vi.spyOn(globalThis, "fetch").mockImplementation(admin.fetch);
     const { thrown, seen } = await through(await admin.mint(PRIMARY));
@@ -158,7 +158,7 @@ describe("the /lab gate", () => {
     expect(await thrown?.text()).toContain("audience");
   });
 
-  it("refuses a /lab token at /admin, by its audience", async () => {
+  it("refuses a /lab-bench token at /admin, by its audience", async () => {
     const lab = signer(LAB_AUD);
     vi.spyOn(globalThis, "fetch").mockImplementation(lab.fetch);
     const { thrown } = await through(await lab.mint(PRIMARY), VARS, adminMiddleware, "/admin");
@@ -199,10 +199,10 @@ describe("the /lab gate", () => {
 });
 
 describe("who may manage whom", () => {
-  it("gives a Lab worker a 404 at /lab/members", async () => {
+  it("gives a Lab worker a 404 at /lab-bench/members", async () => {
     const context = routeContext(undefined, VARS);
     context.set(labActorContext, await actor(WORKER));
-    const thrown = await membersLoader({ context, request: new Request(`${SITE_ORIGIN}/lab/members`), params: {} } as never).catch((e) => e);
+    const thrown = await membersLoader({ context, request: new Request(`${SITE_ORIGIN}/lab-bench/members`), params: {} } as never).catch((e) => e);
     expect(thrown?.init?.status ?? thrown?.status).toBe(404);
   });
 
@@ -254,7 +254,7 @@ describe("who may manage whom", () => {
   });
 
   it("shows a Lab manager only the Lab workers and themselves, with no actions on their own row", async () => {
-    const page = await membersPage(testEnv, await actor(MANAGER), new URL(`${SITE_ORIGIN}/lab/members`), NOW);
+    const page = await membersPage(testEnv, await actor(MANAGER), new URL(`${SITE_ORIGIN}/lab-bench/members`), NOW);
     expect(page.people.people.map((p) => [p.email, p.manageable, p.you ?? false])).toEqual([
       [MANAGER, false, true],
       [WORKER, true, false],
@@ -289,7 +289,7 @@ describe("each change, its audit row and the Access sync", () => {
     expect(await memberRow(WORKER)).toMatchObject({ end_date: "2027-05-14" });
     const [row] = await auditRows();
     expect(row).toMatchObject({ action: "renew", cloudflare: "failed", cloudflare_error: SYNC_NOT_SET_UP_REASON });
-    const page = await membersPage(testEnv, await actor(MANAGER), new URL(`${SITE_ORIGIN}/lab/members`), NOW);
+    const page = await membersPage(testEnv, await actor(MANAGER), new URL(`${SITE_ORIGIN}/lab-bench/members`), NOW);
     expect(page.syncNotice).toBe(SYNC_NOT_SET_UP);
     expect(page.people.people.find((p) => p.email === WORKER)).toMatchObject({ sync: "failed", syncError: SYNC_NOT_SET_UP_REASON });
   });

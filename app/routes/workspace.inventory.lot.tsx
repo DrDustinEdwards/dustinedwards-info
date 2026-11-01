@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
@@ -61,7 +62,7 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
     <>
       <PageHead
         renderLink={crumbLink}
-        crumbs={[{ label: "Inventory", href: "/lab/inventory" }, { label: `Lot ${lot.lot_number}` }]}
+        crumbs={[{ label: "Inventory", href: `${LAB_BENCH_PATH}/inventory` }, { label: `Lot ${lot.lot_number}` }]}
         title={`${lot.item}, lot ${lot.lot_number}`}
       />
       <Result result={actionData} />
@@ -100,7 +101,7 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
             {runs.map((r) => (
               <tr key={r.id}>
                 <th scope="row">
-                  <Link to={`/lab/runs/${r.id}`}>Run {r.id}</Link>
+                  <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
                   {r.replaced_by ? <span className="cap-muted">, corrected by run {r.replaced_by}</span> : null}
                 </th>
                 <td>{r.title}</td>

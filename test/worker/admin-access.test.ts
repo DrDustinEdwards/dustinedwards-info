@@ -82,7 +82,7 @@ describe("the site's reading of an Access verdict", () => {
     expect(await accessIdentity(env, request("not-a-token"), keys)).toEqual({ kind: "refused", reason: "malformed" });
   });
 
-  it("reads the CF_Authorization cookie for /admin's identity, and never for /lab's", async () => {
+  it("reads the CF_Authorization cookie for /admin's identity, and never for /lab-bench's", async () => {
     const { keys, mint } = await signer();
     const env = { ...VARS, ACCESS_LAB_AUD: AUD } as unknown as Env;
     const withCookie = new Request(`${SITE_ORIGIN}/admin`, { headers: { cookie: `CF_Authorization=${await mint({ email: "a@b.c" })}` } });
@@ -90,7 +90,7 @@ describe("the site's reading of an Access verdict", () => {
     expect(await labIdentity(env, withCookie, keys)).toEqual({ kind: "absent" });
   });
 
-  it("checks /lab against its own audience, so an /admin token is refused there", async () => {
+  it("checks /lab-bench against its own audience, so an /admin token is refused there", async () => {
     const { keys, mint } = await signer();
     const env = { ...VARS, ACCESS_LAB_AUD: "lab-tag" } as unknown as Env;
     const adminToken = await mint({ email: "a@b.c" });

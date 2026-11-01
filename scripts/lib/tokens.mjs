@@ -23,7 +23,7 @@ const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
 
 /** The admin plane's one sheet: Capsomer's tokens and components, outside the site's palette gates. */
 const ADMIN_CSS_PATH = join(root, "app", "admin.css");
-/** The /lab workspace's sheet: Capsomer's plane like admin.css, built on its tokens, not the public palette. */
+/** The /lab-bench workspace's sheet: Capsomer's plane like admin.css, built on its tokens, not the public palette. */
 const LAB_CSS_PATH = join(root, "app", "lab.css");
 
 /**

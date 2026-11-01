@@ -1,4 +1,4 @@
-/* The /lab workspace: the admin plane's Capsomer stylesheet (admin.css, imported first by routes/workspace.tsx) and
+/* The /lab-bench workspace: the admin plane's Capsomer stylesheet (admin.css, imported first by routes/workspace.tsx) and
    the components only the lab uses. Nothing of the lab's own: the members page is Capsomer's people-roles. */
 @import "capsomer/menu.css";
 @import "capsomer/people-roles.css";

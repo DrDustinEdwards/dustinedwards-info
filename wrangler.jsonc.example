@@ -259,10 +259,10 @@
 	// token Access issues. app/lib/access.server.ts verifies each request's signed token
 	// against them; a Worker without both treats every request as not coming through Access.
 	//
-	// ACCESS_LAB_AUD names the separate Access application that guards /lab
+	// ACCESS_LAB_AUD names the separate Access application that guards /lab-bench
 	// (dustinedwards-lab-login, capsid docs/design/design-identity-roles.md), whose policy allows
-	// the lab-people group Capsid keeps equal to /lab/members. Its own tag, so a /admin token is
-	// refused at /lab and a /lab token at /admin. Empty until that application exists: /lab then
+	// the lab-members group Capsid keeps equal to /lab-bench/members. Its own tag, so a /admin token is
+	// refused at /lab-bench and a /lab-bench token at /admin. Empty until that application exists: /lab-bench then
 	// says it is not set up and admits nobody.
 	//
 	// AI_GATEWAY_BASE_URL names the AI Gateway the media suggestions run through, as site-runtime's ./ai-gateway

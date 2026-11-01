@@ -70,7 +70,7 @@ export async function run({ browser }) {
     const workspace = footer.slice(start, footer.indexOf("</nav>", start));
     ok(
       "the Lab sign-in link is in the served footer's Workspace group, and not in the header",
-      !header.includes('href="/lab"') && /<a [^>]*href="\/lab"[^>]*>/.test(workspace),
+      !header.includes('href="/lab-bench"') && /<a [^>]*href="\/lab-bench"[^>]*>/.test(workspace),
       "the lab workspace link moved from the bar to the footer's Workspace group (Dustin, 2026-10-14)",
     );
   }
@@ -194,11 +194,11 @@ export async function run({ browser }) {
     );
 
     const lab = await page.evaluate(() => {
-      const link = document.querySelector('[aria-labelledby="cap-family-footer-workspace"] a[href="/lab"]');
+      const link = document.querySelector('[aria-labelledby="cap-family-footer-workspace"] a[href="/lab-bench"]');
       const box = link?.getBoundingClientRect();
       return link && box
         ? {
-            onBar: Boolean(document.querySelector('[data-site-header] a[href="/lab"]')),
+            onBar: Boolean(document.querySelector('[data-site-header] a[href="/lab-bench"]')),
             shown: box.width > 0 && box.right <= document.documentElement.clientWidth,
             text: (link.textContent ?? "").trim(),
             locked: Boolean(link.querySelector(".cap-family-footer-lock")),
@@ -206,7 +206,7 @@ export async function run({ browser }) {
         : null;
     });
     ok(
-      "Lab sign-in is off the bar at 1280 and sits in the footer's Workspace group, visible, with the lock, going to /lab",
+      "Lab sign-in is off the bar at 1280 and sits in the footer's Workspace group, visible, with the lock, going to /lab-bench",
       lab !== null && !lab.onBar && lab.shown && lab.text === "Lab bench" && lab.locked,
       JSON.stringify(lab),
     );

@@ -93,7 +93,7 @@ await test("every link the five panels render resolves: a declared route, a real
 
 await test("the Lab sign-in link and the 404 page's sections are routes too", async () => {
   const routes = await declaredRouteModules();
-  assert.ok(routes.has("/lab"), "the Lab sign-in link (the footer's Workspace group) needs /lab");
+  assert.ok(routes.has("/lab-bench"), "the Lab sign-in link (the footer's Workspace group) needs /lab-bench");
   assert.ok(routes.has("/search"));
 });
 

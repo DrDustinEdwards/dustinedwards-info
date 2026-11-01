@@ -23,6 +23,8 @@
     "app/lib/identity.generated.mjs",
     // The terms path, which `app/lib/seo.ts` builds LICENSE_URL from and export-response.mjs puts in its Link header.
     "app/lib/license.mjs",
+    // The Lab bench path, which app/lib/seo.ts builds ROBOTS_DISALLOW from.
+    "app/lab/path.mjs",
     // Listed because `app/lib/seo.ts` IMPORTS it, not because a script here
     // calls it, which is the same reason `app/lib/media/byte-size.mjs` is
     // listed below. `publicationsJsonLd` decodes character references so the

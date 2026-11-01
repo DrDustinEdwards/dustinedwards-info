@@ -1,5 +1,5 @@
 /**
- * /lab/inventory: the lab's lots and where they are (docs/KNOWLEDGE-BASE.md steps 4 and 7). A lot names a registry
+ * /lab-bench/inventory: the lab's lots and where they are (docs/KNOWLEDGE-BASE.md steps 4 and 7). A lot names a registry
  * item by its kind and id; the item's public facts stay in content/registry/, and the lot's number, amount, expiry and
  * place live only in D1. Every write to a lot or a location writes its kb_audit row in the same batch
  * (app/db/inventory.ts). Who may do what is a permission, never a title: `read` to see, `use_lot` to mark a lot opened

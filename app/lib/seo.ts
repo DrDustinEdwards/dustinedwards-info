@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "../lab/path.mjs";
 import { defineHead, searchTitle as prelumSearchTitle, type HeadImage, type PageHead } from "@drdustinedwards/site-helpers/head";
 import { article, website } from "@drdustinedwards/site-helpers/schema";
 
@@ -191,7 +192,7 @@ export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 export const HOURLY_CACHE_CONTROL = "public, max-age=3600";
 
 /** Paths no crawler needs, in /robots.txt and /ai.txt alike. /search/ask is here because every answer is billed. */
-export const ROBOTS_DISALLOW = ["/admin", "/lab", "/search/ask"];
+export const ROBOTS_DISALLOW = ["/admin", LAB_BENCH_PATH, "/search/ask"];
 
 // Short because the home page carries the latest Germomics episode, which no write purges.
 export const HOME_EDGE_FRESH_SECONDS = 600;

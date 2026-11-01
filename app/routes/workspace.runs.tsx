@@ -1,3 +1,4 @@
+import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
@@ -33,7 +34,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireRecorder(actor);
   const result = await recordRun(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now());
-  if (result.ok && result.runId) throw redirect(`/lab/runs/${result.runId}`, { headers: PRIVATE });
+  if (result.ok && result.runId) throw redirect(`${LAB_BENCH_PATH}/runs/${result.runId}`, { headers: PRIVATE });
   return data(result, { headers: PRIVATE });
 }
 
@@ -53,7 +54,7 @@ export default function LabRuns({ loaderData, actionData }: Route.ComponentProps
           {runs.map((r) => (
             <tr key={r.id}>
               <th scope="row">
-                <Link to={`/lab/runs/${r.id}`}>Run {r.id}</Link>
+                <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
                 {r.replaced_by ? <span className="cap-muted">, corrected by run {r.replaced_by}</span> : null}
                 {r.replaces_run_id ? <span className="cap-muted">, corrects run {r.replaces_run_id}</span> : null}
               </th>
