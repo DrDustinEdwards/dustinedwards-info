@@ -3,6 +3,7 @@ import { data } from "react-router";
 import {
   TaxonomyListing,
   listingHref,
+  listingTrail,
   listingDescription,
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
@@ -66,6 +67,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     description: listingDescription(`in the series ${series.name}`, total, posts),
     path,
     pageType: "CollectionPage",
+    trail: listingTrail(series.name, path),
   });
 }
 

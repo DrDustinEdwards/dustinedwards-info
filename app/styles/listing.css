@@ -25,6 +25,16 @@
   .list-head > .list-label {
     grid-row: 1 / span 4;
   }
+
+  /* A tag or series page's trail runs across the head, above the title and its line. */
+  .list-head > .page-breadcrumb {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .list-head:has(> .page-breadcrumb) > .list-label {
+    grid-row: 2 / span 4;
+  }
 }
 
 .list-label {

@@ -68,7 +68,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!chosen) {
     return pageMeta({
       title: `${TITLE}: the family as a capsid`,
-      description: `The ${MODEL.systems.length} systems Dustin Edwards runs, on one map.`,
+      description: `The ${MODEL.systems.length} systems Dustin Edwards runs, drawn as one capsid-shaped map; choose a system to see it on its own.`,
       path: SYSTEMS_PATH,
       trail: TRAIL,
     });

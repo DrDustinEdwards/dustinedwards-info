@@ -119,8 +119,16 @@ const itemOf = (page: Page) =>
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const page = loaderData.page;
+  // An item's own facts can be a few words; a short one says where it sits and what the page adds, so search shows more than a fragment.
+  const tail = page.kind === "strain" ? " From the lab registry, with the phages isolated on it." : " From the lab registry, with the protocols that use it.";
   const head = (title: string, description: string, path: string) =>
-    pageMeta({ title, description, path, trail: trailOf(page), ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}) });
+    pageMeta({
+      title,
+      description: page.view === "item" && description.length < 70 ? `${description}${tail}` : description,
+      path,
+      trail: trailOf(page),
+      ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}),
+    });
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (page.view === "kind") {
     if (page.kind === "strain") {
