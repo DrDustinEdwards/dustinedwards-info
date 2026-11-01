@@ -79,7 +79,7 @@ await test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", ()
 
   assert.equal(refusal.code, "too-large");
   assert.equal(refusal.status, 413);
-  assert.match(refusal.message, /Image is 10\.0 MB, over the 10 MB limit\./);
+  assert.match(refusal.message, /The file is 10\.0 MB, over the 10 MB limit\./);
 
   // Exactly at the limit is accepted: the rule is `>`, and a refusing-side-only
   // assertion would miss an off-by-one that costs a legitimate 10 MB upload.

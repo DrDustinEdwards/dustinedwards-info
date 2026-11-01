@@ -2,7 +2,7 @@ import { prepareUpload, RefusedError, type MediaResize, type PreparedUpload } fr
 import { fromHex } from "@dustinedwards/site-runtime/encoding";
 import { upsertMediaRecord } from "~/db";
 import { classify, contentKey, roleOf } from "./classify.mjs";
-import { ALLOWED, MAX_BYTES, validateUpload } from "./upload-contract.mjs";
+import { ALLOWED, DATA_TYPES, MAX_BYTES, validateUpload } from "./upload-contract.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
 
@@ -61,10 +61,11 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   const extension = ALLOWED.get(prepared.contentType);
   if (!extension) throw new Error(`storeUpload: prepareUpload answered "${prepared.contentType}", which is not in ALLOWED.`);
 
-  // Every allowed type is a raster, so no size means Images did not answer: the key carries `-<w>x<h>` and would be
-  // permanent and sizeless and never render.
+  // Every allowed type but a data file is a raster, so no size means Images did not answer: the key carries `-<w>x<h>`
+  // and would be permanent and sizeless and never render. A data file (CSV) has no size and its key carries none.
+  const data = DATA_TYPES.has(prepared.contentType);
   const dimensions = prepared.width && prepared.height ? { width: prepared.width, height: prepared.height } : null;
-  if (!dimensions) {
+  if (!dimensions && !data) {
     console.error(JSON.stringify({ alert: "upload-unmeasurable", name: file.name }));
     return { ok: false, code: "images-unavailable", message: "Cloudflare Images could not measure the image. Nothing was stored; try again.", status: 503 };
   }
@@ -95,8 +96,8 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
       bytes: prepared.bytes.byteLength,
       originalName: prepared.filename,
       uploadedAt: new Date().toISOString(),
-      width: dimensions.width,
-      height: dimensions.height,
+      width: dimensions?.width ?? null,
+      height: dimensions?.height ?? null,
       sha256: prepared.sha256,
       placeholder: prepared.placeholder,
     });
@@ -105,5 +106,5 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
     console.error(JSON.stringify({ alert: "media-record-write-failed", detail: errorMessage(error) }));
   }
 
-  return { ok: true, key, bytes: prepared.bytes.byteLength, width: dimensions.width, height: dimensions.height, recorded, prepared };
+  return { ok: true, key, bytes: prepared.bytes.byteLength, width: dimensions?.width ?? null, height: dimensions?.height ?? null, recorded, prepared };
 }
