@@ -34,6 +34,7 @@ export function postLoaderData(record, revisedDate) {
       part: record.part ?? null,
       ogTitle: record.ogTitle ?? null,
       ogDescription: record.ogDescription ?? null,
+      searchFields: record.searchFields ?? null,
       related: record.related ?? [],
       backlinks: record.backlinks ?? [],
       changelog: record.changelog ?? null,

@@ -220,8 +220,7 @@
     // Node tooling imports it, so both projects must reach it.
     "app/lib/editor/publish-transition.mjs",
     // The Content Security Policy and the header set. The Worker builds every
-    // response header from them, and scripts/build-headers-file.mjs writes the
-    // static files' set from the second. Under workers/ rather than app/
+    // response header from them. Under workers/ rather than app/
     // because they are response policy, not routing.
     "workers/csp.mjs",
     "workers/security-headers.mjs",

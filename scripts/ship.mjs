@@ -331,7 +331,7 @@ if (early.verdict?.state === "running") {
 
 /* The admin MCP: its own gates, deploy and live checks, after the shared preflight and CI read above. */
 if (MCP_TARGET) {
-  process.exit(await shipMcp({ root, sha, early, readCi, announce, refuse, run, target: TARGET }));
+  process.exit(await shipMcp({ root, sha, shaFull, early, readCi, announce, refuse, run, target: TARGET }));
 }
 
 /** Chooses the path only. The step below decides the deploy, on every path. */

@@ -47,6 +47,7 @@ const EXEMPT = new Map([
   ["/webmention", "the webmention endpoint"],
   ["/login", "forwards to /admin"],
   ["/health", "the uptime probe's JSON, not a page"],
+  ["/csp-report", "the CSP and Reporting API sink, a POST endpoint"],
 ]);
 
 await test("every public page route is in the sitemap's list or exempted by name with a reason", async () => {

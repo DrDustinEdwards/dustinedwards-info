@@ -17,8 +17,9 @@
  *
  *   /mcp                   a foreign Origin is refused first; then
  *                          OAuthProvider validates a client-leg access token,
- *                          then apiHandler re-checks the admin grant, rate
- *                          limits, and hands off to the era router
+ *                          then apiHandler re-checks its audience and the admin
+ *                          grant, rate limits (a refusal is a tool-call log
+ *                          row), and hands off to the era router
  *   /authorize /callback   the consent flow and Access sign-in, login-handler.ts
  *   /register              site-runtime's registrationLimited (per address and
  *                          per day), then the OAuth library, which refuses any
@@ -34,15 +35,24 @@
 
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
-import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import { recordAudit, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
-import { checkRateLimit, mcpOriginRefusal, refuse, withMcpHeaders } from "@dustinedwards/site-runtime/mcp-server";
+import {
+  audienceRefusal,
+  callerName,
+  checkRateLimit,
+  mcpOriginRefusal,
+  refuse,
+  withMcpHeaders,
+} from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
 
-import { agentPrincipal, agentScopes, SCOPE_READ, SCOPES, type Props } from "./auth";
+import { agentPrincipal, agentScopes } from "@dustinedwards/site-runtime/agent-keys";
+
+import { SCOPE_READ, SCOPES, type Caller, type Props } from "./auth";
 import { defaultHandler, type LoginEnv } from "./login-handler";
-import { handleMcp, MCP_ROUTE } from "./mcp-handler";
+import { handleMcp, MCP_ROUTE, SERVER } from "./mcp-handler";
 import { handleProbe, type ProbeEnv } from "./probe";
 import type { ApiEnv } from "./api-client";
 
@@ -64,6 +74,30 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
   AGENT_WRITE?: string;
 }
 
+/** The canonical resource every grant and token is bound to: this server's /mcp, as the provider names it below. */
+function mcpResource(env: Env): string {
+  return `${(env.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "")}${MCP_ROUTE}`;
+}
+
+const RATE_LIMITED =
+  "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
+  "limit independently of this one.";
+
+/**
+ * A door's refusal for one caller over the limit, with its row in the tool-call log first (checklist L2), so a
+ * burst shows up there and not only in the Worker log. The row names the caller, never a credential.
+ */
+async function rateLimited(env: Env, caller: Caller, retryAfter: number, clientId?: string): Promise<Response> {
+  await recordAudit(env, {
+    callId: crypto.randomUUID(),
+    phase: "rate-limited",
+    caller: callerName(caller),
+    server: { name: SERVER.name, version: SERVER.version },
+    ...(clientId ? { clientId } : {}),
+  });
+  return refuse(RATE_LIMITED, 429, { "retry-after": String(retryAfter) });
+}
+
 /**
  * The authenticated MCP surface.
  *
@@ -74,7 +108,12 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
  */
 const apiHandler = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const props = (ctx as ExecutionContext & { props?: Props }).props;
+    const { props, auth } = ctx as ExecutionContext & { props?: Props; auth?: { audience?: unknown; clientId?: string } };
+
+    // The token must have been issued for this server (RFC 8707, rule 12.2): site-runtime's shared check, against
+    // the resource this server expects rather than the one the provider was configured with.
+    const wrongAudience = audienceRefusal(auth, mcpResource(env), [SCOPE_READ]);
+    if (wrongAudience) return wrongAudience;
 
     if (!props || !isAdminUser(env, props)) {
       return refuse(
@@ -86,18 +125,11 @@ const apiHandler = {
     // Both doors have locks. Keyed by the operator's verified email rather than
     // by IP, because the identity is known here and it is the thing worth
     // limiting. Fails closed if the binding is missing.
-    const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `operator:${props.email.toLowerCase()}`);
-    if (!limit.allowed) {
-      return refuse(
-        "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
-          "limit independently of this one.",
-        429,
-        { "retry-after": String(limit.retryAfter) },
-      );
-    }
-
     // A grant minted before scopes existed carries none, and reads only.
     const scopes = Array.isArray(props.scopes) ? props.scopes : [SCOPE_READ];
+    const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `operator:${props.email.toLowerCase()}`);
+    if (!limit.allowed) return rateLimited(env, { kind: "admin", props, scopes }, limit.retryAfter, auth?.clientId);
+
     return handleMcp(request, env, ctx, { kind: "admin", props, scopes });
   },
 };
@@ -147,17 +179,11 @@ async function agentHandler(
    * server, and vice versa. Fails closed when the binding is missing, exactly
    * as the other door does.
    */
+  const scopes = agentScopes(env, principal, SCOPES);
   const limit = await checkRateLimit(env.OPERATOR_RATE_LIMIT, `agent:${principal}`);
-  if (!limit.allowed) {
-    return refuse(
-      "Rate limited. This wrapper allows 30 requests per 60 seconds. The operator API applies its own " +
-        "limit independently of this one.",
-      429,
-      { "retry-after": String(limit.retryAfter) },
-    );
-  }
+  if (!limit.allowed) return rateLimited(env, { kind: "agent", principal, scopes }, limit.retryAfter);
 
-  return handleMcp(request, env, ctx, { kind: "agent", principal, scopes: agentScopes(env, principal) });
+  return handleMcp(request, env, ctx, { kind: "agent", principal, scopes });
 }
 
 /**
@@ -190,15 +216,13 @@ function oauthProvider(env: Env): OAuthProvider<Env> {
       resource_name: "Dustin Edwards Admin",
     },
     /*
-     * LEAST SCOPE FIRST. The protected resource metadata's scopes_supported is
-     * "the minimal set of scopes necessary for basic functionality" (MCP
-     * 2025-11-25, Scope Selection Strategy), and a client with no challenge
-     * scope asks for all of it, so it is read only; the provider publishes
-     * requiredScopes there and in the 401's scope. Write is asked for by step-up
-     * (the tools' 403 insufficient_scope). The authorization server's catalog,
-     * scopesSupported, lists both.
+     * EVERY SCOPE IN THE PROTECTED RESOURCE METADATA (checklist A1, RFC 9728). The provider publishes
+     * requiredScopes as the resource's scopes_supported and as the 401's scope, so both name dei.read and
+     * dei.write, as Foxhound Admin's do. Least scope first still holds where it is decided: every grant holds
+     * read, write only when the consent page's box is ticked (loginHandler), and a tool needing write without
+     * it gets the 403 step-up. The authorization server's catalog, scopesSupported, lists both too.
      */
-    requiredScopes: [SCOPE_READ],
+    requiredScopes: SCOPES.all,
     scopesSupported: SCOPES.all,
     // BOTH client identity paths. Rule 13.
     //

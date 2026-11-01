@@ -156,6 +156,10 @@ export default [
     route("media", "routes/admin.media._index.tsx"),
   ]),
 
+  // The hashed admin list for the Access drift check. Under /admin so Access covers it, outside the layout because
+  // the caller is a service token, not a person; the route answers only that token.
+  route("admin/access-drift", "routes/admin.access-drift.ts"),
+
   // The lab workspace (docs/KNOWLEDGE-BASE.md step 5): lab members, through their own Access application. The layout's
   // middleware admits a person only with an active row in `members`, read on every request. Not /admin, which stays
   // the Primary Owner's alone. Module files are workspace.* because routes/lab.tsx is the public /research/lab.
@@ -174,7 +178,7 @@ export default [
   route("health", "routes/health.ts"),
   route("api/health", "routes/api.health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("api/csp-report", "routes/api.csp-report.ts"),
+  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.

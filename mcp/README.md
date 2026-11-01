@@ -27,7 +27,7 @@ Read tools need `dei.read`; the others need `dei.write`, ticked on the consent p
 | `dei_manage_procedure` | list, get or save a lab procedure; first publication is admin-only | write, no, no, no |
 
 No post tools: Carrel owns all writing on every site (rule 11). Lists page at 25
-by default, at most 100, with `has_more` and `next_offset`.
+by default, at most 100, with `has_more` and an opaque `next_cursor`.
 
 ## Security floor (rules 12 and 13)
 

@@ -50,6 +50,7 @@ export function postColumnValues(record: PostRecord) {
     further_reading: JSON.stringify(record.furtherReading),
     og_title: record.ogTitle,
     og_description: record.ogDescription,
+    search_fields: record.searchFields ? JSON.stringify(record.searchFields) : null,
     related: JSON.stringify(record.related ?? []),
     source_blob_sha: record.sourceBlobSha ?? null,
     render_hash: record.renderHash ?? null,
@@ -79,10 +80,10 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
            cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part,
            further_reading, og_title, og_description, related, source_blob_sha, render_hash,
            writing_status, assumed_audience, key_takeaways, changelog, backlinks,
-           updated_at)
+           search_fields, updated_at)
          VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
            ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26,
-           COALESCE(?27, unixepoch()))
+           ?28, COALESCE(?27, unixepoch()))
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
@@ -96,7 +97,7 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
            writing_status = excluded.writing_status,
            assumed_audience = excluded.assumed_audience,
            key_takeaways = excluded.key_takeaways, changelog = excluded.changelog,
-           backlinks = excluded.backlinks,
+           backlinks = excluded.backlinks, search_fields = excluded.search_fields,
            updated_at = excluded.updated_at`,
       )
       .bind(
@@ -127,6 +128,7 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
         v.changelog,
         v.backlinks,
         v.updated_at,
+        v.search_fields,
       ),
     ...record.tags.map((tag: string) =>
       db
