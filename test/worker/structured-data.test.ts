@@ -261,22 +261,23 @@ describe("every JSON-LD block on the pages", () => {
     expect(MISSING.filter((m) => !used.has(m)).map((m) => `${m.type}.${m.property}`), "stale MISSING entries").toEqual([]);
   });
 
-  it.each(rendered.map((page) => [page.path, page] as const))("%s: one breadcrumb list, from the home page down the visible trail", (_path, page) => {
+  it.each(rendered.map((page) => [page.path, page] as const))("%s: a breadcrumb list exactly when a trail is shown, from the home page down", (_path, page) => {
     const lists = blocks(page.html)
       .flatMap((block) => nodes(block))
       .filter((node) => node["@type"] === "BreadcrumbList");
-    expect(lists).toHaveLength(1);
+    const visible = visibleTrail(page.html);
+    // A top-level page shows no trail, so its markup carries none (Prelum 0.28+); a page inside a section has one, and a
+    // hub inside a section (/research/publications) still shows none.
+    const insideSection = page.path.split("/").filter(Boolean).length >= 2;
+    expect(lists).toHaveLength(visible.length > 0 || insideSection ? 1 : 0);
+    if (lists.length === 0) return;
     const items = (lists[0]?.itemListElement ?? []) as Node[];
     expect(items.map((item) => item.position)).toEqual(items.map((_, i) => i + 1));
     expect(items[0]?.item).toBe(`${SITE_ORIGIN}/`);
-    // A hub shows no trail of one step; a deeper page's list is the trail it shows.
-    const visible = visibleTrail(page.html);
-    if (visible.length > 0) {
-      expect(items.slice(1).map((item) => item.name)).toEqual(visible.map((step) => step.name));
-      visible.forEach((step, i) => {
-        if (step.href) expect(items[i + 1]?.item).toBe(`${SITE_ORIGIN}${step.href}`);
-      });
-    }
+    if (visible.length > 0) expect(items.slice(1).map((item) => item.name)).toEqual(visible.map((step) => step.name));
+    visible.forEach((step, i) => {
+      if (step.href) expect(items[i + 1]?.item).toBe(`${SITE_ORIGIN}${step.href}`);
+    });
     // The last step is this page, which the visible trail shows unlinked.
     expect(items.at(-1)?.item).toBe(`${SITE_ORIGIN}${page.path}`);
   });
