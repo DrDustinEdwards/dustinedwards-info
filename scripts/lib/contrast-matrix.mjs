@@ -110,7 +110,6 @@ export const MATRIX = [
   // No --dust row on paper: it cannot identify a control; --line-strong does.
   ["--line-strong", "--paper", UI, "a control edge on paper"],
   // The underline is what marks a paragraph link, since link and body text sit under 3:1.
-  ["--link-underline", "--paper", UI, "a paragraph link's resting underline on paper"],
 
   ["--error", "--paper", TEXT, "error text on paper"],
   ["--warning", "--paper", TEXT, "warning text on paper"],

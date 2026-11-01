@@ -5,6 +5,10 @@
   font-family: var(--font-prose);
   font-size: 1.0625rem;
   line-height: 1.7;
+  /* A word longer than the line (a DNA sequence, an address) breaks rather than widening the page at
+     320 px (WCAG 1.4.10). break-word, not anywhere: a word only breaks when it cannot fit, and a table
+     or figure's min-content is left alone. */
+  overflow-wrap: break-word;
 }
 
 .prose {

@@ -56,7 +56,7 @@
 }
 
 /* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
-   link colors and underlines are unlayered and would beat the strip's, so its links say them again here. */
+   link colors are unlayered and would beat the strip's, so its links say them again here. */
 .page-breadcrumb {
   margin: 0 0 var(--space-5);
 }
@@ -68,7 +68,7 @@
 }
 
 .page-breadcrumb a:hover {
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--ground) 18%, transparent);
 }
 
 .protocol-neighbors {

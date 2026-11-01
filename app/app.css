@@ -311,9 +311,6 @@
   --placeholder: color-mix(in srgb, #686471 90%, #fdfdfe);
   /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
   --dust: #dfdce5;
-  /* the resting underline of a link in running text: the lightest step from dust toward ink that
-     reaches 3:1 on paper, since the line, not the hue, is what marks the link */
-  --link-underline: #918e96;
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #918e96;
   --brand-pressed: #2f1a4d;
@@ -404,8 +401,6 @@
     --placeholder: #888690;
     --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
     --dust: #343238;
-    /* Dust itself: it already clears 3:1 on the dark paper. */
-    --link-underline: #6b6970;
     --line-strong: #8a8890;
     --brand-pressed: #a08ecd;
     --glass-fill-paper: #0f0d14;
@@ -492,7 +487,6 @@
   --placeholder: #888690;
   --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
   --dust: #343238;
-  --link-underline: #6b6970;
   --line-strong: #8a8890;
   --brand-pressed: #a08ecd;
   --glass-fill-paper: #0f0d14;
@@ -654,15 +648,46 @@ body {
   color: var(--text);
 }
 
-/* A link in running text is underlined because brand and visited purples fail CVD simulation on hue
-   alone. Element-level selectors, so any component rule that sets a color outranks them; the :where() keeps
-   them so while Capsomer's letterhead and family footer keep their own links. */
+/* Links are Capsomer's (capsomer/base.css and capsomer/link.css, link.md) on the site's own colors: no line
+   (--link-decoration), and a link in running text is told from the words around it by weight (--link-weight),
+   because brand and visited purples fail CVD simulation on hue alone (WCAG 1.4.1: G183 and F73 take weight as a
+   cue that is not color). Under the pointer a text link (no class) darkens on a soft tint (--link-hover-bg), which a
+   press makes stronger, cloned onto each line it wraps to; a menu is told by its place, and a component link draws
+   its own. link.css adds the
+   mark for a link that leaves the site, opens a file or sends mail. Element-level and :where(), so any component
+   rule outranks them; Capsomer's letterhead and family footer keep their own links. */
 a:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--brand);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 0.25em;
+  text-decoration: var(--link-decoration);
+}
+
+/* Weight only where a link sits among words of the body's weight: not in a menu, which is told by its place, and
+   not in a heading or other bold run, which it would make lighter. */
+a:where(:not([class*="cap-"], nav a, :is(h1, h2, h3, h4, h5, h6, b, strong, th, dt, .cap-form-boxes, .cap-checklist-line) a, .cap-site-header a, .cap-family-footer a)) {
+  font-weight: var(--link-weight);
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)) {
+  border-radius: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
+}
+
+a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):active {
+  background: var(--link-pressed-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-pressed-bg);
+}
+
+/* Forced colors paint no tint, so the pointer gets the system's own cue. */
+@media (forced-colors: active) {
+  a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):hover {
+    text-decoration: underline;
+  }
 }
 
 a:visited:not(:where(.cap-site-header a, .cap-family-footer a)) {
@@ -671,7 +696,6 @@ a:visited:not(:where(.cap-site-header a, .cap-family-footer a)) {
 
 a:hover:not(:where(.cap-site-header a, .cap-family-footer a)) {
   color: var(--brand-hover);
-  text-decoration-color: var(--brand);
 }
 
 a:active:not(:where(.cap-site-header a, .cap-family-footer a)) {
