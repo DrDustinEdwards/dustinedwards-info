@@ -8,12 +8,14 @@
  * of the site's Google project, so a change there cannot affect operator access here.
  */
 
+import { auditLogCheck, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import { healthResponse } from "@dustinedwards/site-runtime/health";
 import { isAdminUser, loginHandler, type LoginEnv as SharedLoginEnv } from "@dustinedwards/site-runtime/mcp-login";
 
 import { SCOPE_READ, SCOPE_WRITE } from "./auth";
 import { SERVER_INFO } from "./mcp-handler";
 
-export interface LoginEnv extends SharedLoginEnv {
+export interface LoginEnv extends SharedLoginEnv, Partial<AuditEnv> {
   ADMIN_EMAIL?: string;
 }
 
@@ -31,4 +33,7 @@ stays with you.</p>`,
   admit: isAdminUser,
   // Every sign-in, admitted or refused, is a row in the tool-call log.
   audit: { name: SERVER_INFO.name, version: SERVER_INFO.version },
+  // The deployed commit, and the tool-call log's check (checklist L8): a call started and never finished, a spike in
+  // calls, or rows not copied to AUDIT_BUCKET for two days.
+  health: (env) => healthResponse({ sha: env.DEPLOY_SHA, checks: [auditLogCheck(env)] }),
 });

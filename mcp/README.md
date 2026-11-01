@@ -72,7 +72,7 @@ about what is allowed would change.
   AI agent
      |  client leg: identifies WHO is operating
      v
-  dustinedwards-admin-mcp  (this Worker)       no D1, no R2, no GitHub token
+  dustinedwards-admin-mcp  (this Worker)       no D1, no site R2 (one bucket of its own log copies), no GitHub token
      |  API leg: OPERATOR_TOKEN, identifies WHAT it may do
      v
   POST /api/operator  on the dustinedwards Worker
