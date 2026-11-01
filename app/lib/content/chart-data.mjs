@@ -9,7 +9,7 @@
  * @param {string} src
  * @returns {string | null}
  */
-export function chartSourceKey(src) {
+function chartSourceKey(src) {
   const match = /^\/media\/([a-z0-9][a-z0-9-]*\.csv)$/.exec(src.trim());
   return match?.[1] ?? null;
 }

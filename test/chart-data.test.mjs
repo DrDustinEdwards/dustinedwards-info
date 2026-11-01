@@ -12,13 +12,13 @@ const chart = (/** @type {string} */ src) =>
 const draw = (/** @type {string} */ src) =>
   renderBody({ file: "test.md", body: chart(src), resolveImage: async () => null, readChartData: read });
 
-test("a chart drawn from a media-library CSV records the file as used", async () => {
+await test("a chart drawn from a media-library CSV records the file as used", async () => {
   const { html, mediaRefs } = await draw("/media/sample-counts.csv");
   assert.match(html, /<svg\b/);
   assert.ok(mediaRefs.some((ref) => ref.key === "sample-counts.csv" && ref.detail === "chart data"));
 });
 
-test("a chart src outside the media library refuses the render", async () => {
+await test("a chart src outside the media library refuses the render", async () => {
   await assert.rejects(draw("https://example.com/counts.csv"));
   await assert.rejects(draw("/media/missing.csv"));
 });
