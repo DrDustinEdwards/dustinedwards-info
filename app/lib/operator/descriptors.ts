@@ -439,6 +439,8 @@ export const TOOL_DESCRIPTORS: Readonly<
         "own type or the fetched response's Content-Type.",
       name: "string, optional, the filename to record as original_name. Defaults " +
         "to the URL's last path segment, or upload.<ext>.",
+      alt: "string, what the picture shows. Required unless decorative is true; not the file name, an address or a word such as \"image\".",
+      decorative: "boolean, optional, true for a picture that adds nothing a reader would miss (stored with empty alt). Never with alt.",
     },
     returns:
       "url and key, the same two the editor's upload returns, plus bytes, " +
