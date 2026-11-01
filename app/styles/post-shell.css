@@ -171,9 +171,8 @@
 
 .post-action:hover {
   color: var(--brand-hover);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
 }
 
 .post-share {

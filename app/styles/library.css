@@ -88,7 +88,8 @@
 
 a.library-stage-name:hover {
   color: var(--brand);
-  text-decoration: underline;
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
 }
 
 .library-stage-n {
@@ -155,7 +156,7 @@ a.library-stage-name:hover {
 }
 
 .library-start-title:hover {
-  text-decoration: underline;
+  background: color-mix(in srgb, var(--paper) 18%, transparent);
 }
 
 .library-start-why {
@@ -197,6 +198,8 @@ a.library-stage-name:hover {
 .library-cite-text {
   padding: 0.75rem 1rem;
   border: 1px solid var(--text);
+  /* The citation ends in the page's address, one unbroken word wider than a phone (WCAG 1.4.10). */
+  overflow-wrap: anywhere;
   user-select: all;
 }
 

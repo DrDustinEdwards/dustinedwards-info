@@ -5,7 +5,7 @@
   text-decoration: none;
 }
 
-/* These sit in a line of text, so they keep the global link underline from app.css: brand and body
+/* These sit in a line of text, so they keep the global link weight from app.css: brand and body
    text are under 3:1 apart, and color alone fails axe link-in-text-block. */
 .paper-cited a,
 .paper-citedby-list a {

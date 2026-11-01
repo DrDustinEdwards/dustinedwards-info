@@ -524,7 +524,9 @@
   align-items: center;
   min-block-size: 2.75rem;
   padding: 0 0.75rem;
+  border-radius: 0;
   color: var(--text);
+  font-weight: inherit;
   text-decoration: none;
   border-block-end: 3px solid transparent;
 }

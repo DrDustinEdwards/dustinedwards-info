@@ -32,9 +32,6 @@
   min-block-size: var(--control-min-dense);
   padding-block: 2px;
   color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
 }
 
 .site-map-list a:hover {
