@@ -58,7 +58,7 @@ function buildServer(env: ToolEnv, caller: Caller | undefined) {
     });
     /*
      * site-runtime's registerTools: only the tools this caller's grant can call are listed (checklist T7, a read grant
-     * sees no write-only tool; dei_manage_procedure, whose action decides, stays), each with the server's icon, the
+     * sees no write tool, and every tool's scope is fixed), each with the server's icon, the
      * 403 step-up (scopeChallenge) and invokeTool around its handler, which checks the scope again for an agent key and
      * writes the log before and after.
      */

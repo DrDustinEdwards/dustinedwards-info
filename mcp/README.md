@@ -24,7 +24,8 @@ Read tools need `dei.read`; the others need `dei.write`, ticked on the consent p
 | `dei_read_registry` | list or read pages, llms, cv, dictionary, roster, phages, registry, publications | read, no, yes, no |
 | `dei_refresh_citations` | fresh OpenAlex citation counts, all or by DOI | write, no, yes, yes |
 | `dei_check_publications` | DOIs on ORCID or Crossref the site lacks, and papers ORCID lacks | read, no, yes, yes |
-| `dei_manage_procedure` | list, get or save a lab procedure; first publication is admin-only | write, no, no, no |
+| `dei_read_procedure` | list the lab procedures, or read one whole with its structured record | read, no, yes, no |
+| `dei_save_procedure` | save one lab procedure's whole file; first publication is admin-only | write, no, no, no |
 
 No post tools: Carrel owns all writing on every site (rule 11). Lists page at 25
 by default, at most 100, with `has_more` and an opaque `next_cursor`.
