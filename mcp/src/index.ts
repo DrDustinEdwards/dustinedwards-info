@@ -36,6 +36,7 @@
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import { exportAuditLog, recordAudit, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
+import { logEvent } from "@dustinedwards/site-runtime/log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
 import {
   audienceRefusal,
@@ -341,6 +342,6 @@ export default {
   scheduled: async (_controller, env) => {
     if (!env.AUDIT_BUCKET) throw new Error("AUDIT_BUCKET is not bound; the tool-call log is not copied");
     const done = await exportAuditLog(env, env.AUDIT_BUCKET);
-    console.log(JSON.stringify({ event: "tool_call_log_exported", exported: done.exported, pruned: done.pruned }));
+    logEvent("tool_call_log_exported", { exported: done.exported, pruned: done.pruned });
   },
 } satisfies ExportedHandler<Env>;
