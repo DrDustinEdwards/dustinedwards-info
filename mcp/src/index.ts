@@ -45,6 +45,7 @@ import {
   callerName,
   checkRateLimit,
   mcpOriginRefusal,
+  probeDoor,
   refuse,
   withMcpHeaders,
 } from "@dustinedwards/site-runtime/mcp-server";
@@ -77,6 +78,8 @@ export interface Env extends Partial<ApiEnv>, Partial<RateLimitEnv>, Partial<Aud
   AGENT_WRITE?: string;
   /** The tool-call log's copies in R2 (the scheduled export below, checklist L6-L7). Nothing else is stored there. */
   AUDIT_BUCKET?: R2Bucket;
+  /** The list-only test key for the daily live check (site-runtime probeDoor): lists tools, runs none. */
+  MCP_PROBE_KEY?: string;
 }
 
 /** The canonical resource every grant and token is bound to: this server's /mcp, as the provider names it below. */
@@ -299,6 +302,10 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     // a 401 (DNS rebinding). No Origin, this origin and claude.ai pass.
     const foreign = mcpOriginRefusal(request, ["https://claude.ai"]);
     if (foreign) return foreign;
+    // THE LIST-ONLY TEST KEY (Dustin 2026-11-01, "do the best practice"): MCP_PROBE_KEY lets the daily live check
+    // connect and list tools, and nothing else; it never reaches the operator API. No key, or no secret set, is null.
+    const probed = await probeDoor(request, env, { server: SERVER, limiter: env.OPERATOR_RATE_LIMIT, serve: (req, caller) => handleMcp(req, env, ctx, caller) });
+    if (probed) return probed;
     const principal = await agentPrincipal(
       env as unknown as Record<string, unknown>,
       request.headers.get("authorization"),

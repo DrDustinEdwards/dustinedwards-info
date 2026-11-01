@@ -45,4 +45,6 @@ export type Scope = typeof SCOPE_READ | typeof SCOPE_WRITE;
  */
 export type Caller =
   | { kind: "admin"; props: Props; scopes: readonly string[] }
-  | { kind: "agent"; principal: string; scopes: readonly string[] };
+  | { kind: "agent"; principal: string; scopes: readonly string[] }
+  /** The list-only test key (index.ts, site-runtime probeDoor): listed the read tools, refused every call. */
+  | { kind: "probe"; principal: string; scopes: readonly string[] };
