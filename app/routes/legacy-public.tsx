@@ -24,6 +24,9 @@ import "capsomer/dialog.css";
 import "capsomer/site-header.css";
 // Capsomer's utilities without its base: the family arrow on the footer's links.
 import "capsomer/utilities.css";
+// Capsomer's link system: the mark for a link that leaves the site, opens a file or sends mail (app.css draws
+// the rest of each link from Capsomer's link tokens).
+import "capsomer/link.css";
 import "capsomer/theme-switch.css";
 // The manual theme, public pages only: running head, parts, form boxes, index, checklist, plate, signs, letterhead.
 import "capsomer/manual.css";

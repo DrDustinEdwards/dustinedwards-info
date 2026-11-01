@@ -156,6 +156,7 @@
   min-block-size: 2.75rem;
   padding-inline: 1.125rem;
   border-block-start: 0.25rem solid var(--brand);
+  border-radius: 0;
   background: var(--text);
   color: var(--paper);
   font-weight: 500;
@@ -176,7 +177,7 @@
   line-height: 1.7;
 }
 
-/* Inside the "Subscribe:" line, so the global link underline from app.css stays: color alone fails
+/* Inside the "Subscribe:" line, so the global link weight from app.css stays: color alone fails
    axe link-in-text-block against the secondary text around it. */
 .list-feeds a {
   color: var(--brand);
@@ -185,6 +186,7 @@
 
 .pager a:hover {
   background: var(--brand);
+  box-shadow: none;
 }
 
 .list-search button:hover {

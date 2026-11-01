@@ -60,17 +60,15 @@
   color: var(--brand);
   font: inherit;
   font-size: 0.9375rem;
-  font-weight: 560;
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.25em;
+  font-weight: var(--link-weight);
+  text-decoration: none;
   cursor: pointer;
 }
 
 .cv-action:hover {
   color: var(--brand-hover);
-  text-decoration-color: var(--brand);
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
 }
 
 .cv-action[hidden] {
@@ -473,8 +471,6 @@
 
 .cv-title a:hover {
   color: var(--brand);
-  text-decoration: underline;
-  text-decoration-color: var(--brand);
 }
 
 .cv-amount {

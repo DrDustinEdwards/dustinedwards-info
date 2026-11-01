@@ -118,7 +118,6 @@
 .home-row-title a:hover,
 .home-refs a:hover {
   color: var(--brand);
-  text-decoration: underline;
 }
 
 .home-row-summary {
@@ -189,7 +188,6 @@
 
 .home-section .cap-checklist-line > a:hover {
   color: var(--brand);
-  text-decoration: underline;
 }
 
 .home-more {

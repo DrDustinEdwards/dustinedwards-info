@@ -291,8 +291,8 @@ a.site-nav-row-title:hover {
 }
 
 .site-nav-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  background: var(--link-hover-bg);
+  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
 }
 
 /* The spotlight: the whole right column, a shade off the card, the whole of it a link. */
