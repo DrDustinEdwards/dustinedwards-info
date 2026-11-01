@@ -8,6 +8,7 @@ import { PageShell } from "~/components/page-shell";
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
+import { thing } from "@drdustinedwards/site-helpers/schema";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { countOf } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
@@ -123,9 +124,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
     parseCatalogParams(catalog, search),
   );
   // Prelum's page node, by its `@id`, with the list it holds.
-  const collection = {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
+  const collection = thing("CollectionPage", {
     "@id": `${SITE_ORIGIN}${base.library}#webpage`,
     name: base.name,
     description: lead(base, items),
@@ -140,7 +139,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         url: `${SITE_ORIGIN}${item.path}`,
       })),
     },
-  };
+  });
   return (
     <PageShell
       trail={

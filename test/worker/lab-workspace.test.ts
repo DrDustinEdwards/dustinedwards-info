@@ -1,4 +1,5 @@
 import { stubAccess } from "@dustinedwards/devkit/access";
+import { resetDb } from "@dustinedwards/devkit/d1";
 import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Actor, MemberRow } from "@dustinedwards/site-runtime/members";
@@ -52,10 +53,8 @@ function signer(audience: string) {
 }
 
 async function seed(rows: Array<MemberRow & { added_by?: string }>, terms: string[] = TERMS) {
+  await resetDb(env.DB);
   await env.DB.batch([
-    env.DB.prepare("DELETE FROM members"),
-    env.DB.prepare("DELETE FROM member_audit"),
-    env.DB.prepare("DELETE FROM member_terms"),
     ...rows.map((r) =>
       env.DB.prepare("INSERT INTO members (email, name, title, end_date, status, added_by) VALUES (?, ?, ?, ?, ?, ?)").bind(
         r.email,

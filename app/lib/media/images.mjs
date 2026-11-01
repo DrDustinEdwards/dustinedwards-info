@@ -50,12 +50,13 @@ export const images = defineImages({
  * or a turn in place writes it), else the digest its content key carries (dustin-edwards-<name>-<digest>-<w>x<h>.<ext>).
  * Rendered bodies, covers and procedure photos use the key's digest, which the Node build can read too, so a post
  * renders the same in the Worker and in the build; a file replaced in place keeps that address in them until the post
- * is rendered again from a row that holds its new hash.
+ * is rendered again from a row that holds its new hash. Not site-api's `mediaVersion` (`r` and the index row's rev, the
+ * version its media writes are checked against): this one is the bytes' digest, which a size URL needs and the build can read.
  *
  * @param {string} keyOrPath a /media key or path
  * @param {string | null} [sha256]
  */
-export function mediaVersion(keyOrPath, sha256 = null) {
+export function mediaContentVersion(keyOrPath, sha256 = null) {
   return sha256 ?? digestFromKey(keyOrPath);
 }
 
@@ -69,7 +70,7 @@ export function mediaVersion(keyOrPath, sha256 = null) {
  */
 export function contentImage(src, dimensions) {
   const { width, height } = dimensions ?? { width: 2816, height: 2816 };
-  return images.attributes({ src, width, height, version: mediaVersion(src) }, "content");
+  return images.attributes({ src, width, height, version: mediaContentVersion(src) }, "content");
 }
 
 /**
@@ -83,7 +84,7 @@ export function articleCrops(src, origin) {
   const dimensions = src?.startsWith("/media/") ? dimensionsFromKey(src) : null;
   if (!src || !dimensions) return [];
   return images
-    .articleImages({ src, ...dimensions, version: mediaVersion(src) })
+    .articleImages({ src, ...dimensions, version: mediaContentVersion(src) })
     .map(({ url, width, height }) => ({ url: new URL(url, origin).href, width, height }));
 }
 

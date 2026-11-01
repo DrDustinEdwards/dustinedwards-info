@@ -1,5 +1,5 @@
 import { defineHead, searchTitle as prelumSearchTitle, type HeadImage, type PageHead } from "@drdustinedwards/site-helpers/head";
-import { article, website } from "@drdustinedwards/site-helpers/schema";
+import { article, thing, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { IDENTITY } from "./identity.generated.mjs";
@@ -356,12 +356,10 @@ export function personId(origin: string) {
 
 /** Not a duplicate of `personJsonLd`: this `@id` joins papers to a person. */
 export function personNode(origin: string) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Person",
+  return thing("Person", {
     "@id": personId(origin),
     ...personFacts(origin),
-  };
+  });
 }
 
 /** What both Person nodes say about the owner, in their key order. No alternate names. */
@@ -414,9 +412,8 @@ export function publicationsJsonLd(
   const id = personId(origin);
   return [
     personNode(origin),
-    ...items.map((p) => ({
-      "@context": "https://schema.org",
-      "@type": p.type ? schemaTypeFor(p.type) : "ScholarlyArticle",
+    ...items.map((p) =>
+      thing(p.type ? schemaTypeFor(p.type) : "ScholarlyArticle", {
       "@id": origin + paperPath(p.slug),
       // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
       headline: decodeEntities(p.title),
@@ -444,6 +441,7 @@ export function publicationsJsonLd(
             },
           }
         : {}),
-    })),
+      }),
+    ),
   ];
 }
