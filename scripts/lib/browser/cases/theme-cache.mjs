@@ -119,7 +119,7 @@ export async function run({ page, browser }) {
        * "15/15 passing" (post-deploy run 196). Only the tile's link text is masked; the health-tile case
        * asserts the verdict.
        */
-      .replace(/(data-health-age="A"><a href="\/api\/health"[^>]*>)[^<]*/, "$1VERDICT");
+      .replace(/(data-health-age="A"><a href="\/health"[^>]*>)[^<]*/, "$1VERDICT");
 
   /**
    * One cache-buster per run, never per fetch: `/research/publications` renders the request URL into its
