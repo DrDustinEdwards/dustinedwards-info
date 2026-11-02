@@ -22,9 +22,12 @@
   gap: 0.5rem;
 }
 
+/* A percentage width makes the input give up its size=20 minimum, so the row fits a 320 px screen
+   even where the form shrinks to its content (the 404 page's centered column). WCAG 1.4.10. */
 .search-input {
   flex: 1 1 auto;
   min-width: 0;
+  inline-size: 100%;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0;
