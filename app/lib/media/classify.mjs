@@ -11,6 +11,8 @@ const TYPES = new Map([
   ["svg", { kind: "image", mime: "image/svg+xml" }],
   ["ico", { kind: "image", mime: "image/x-icon" }],
   ["pdf", { kind: "document", mime: "application/pdf" }],
+  // A chart's data from the media library (upload-contract.mjs DATA_TYPES).
+  ["csv", { kind: "document", mime: "text/csv; charset=utf-8" }],
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
   // The pronunciation clips under /audio/ (content/dictionary/*.md), generated once, never per visit.
   ["mp3", { kind: "other", mime: "audio/mpeg" }],

@@ -10,6 +10,7 @@ import {
 } from "../../app/lib/content/pipeline.mjs";
 import { dimensionsFromKey, isRaster, roleOf } from "../../app/lib/media/classify.mjs";
 import { ASSET_MANIFEST_PATH } from "../../app/lib/media/manifest.mjs";
+import { SITE_ORIGIN } from "../../app/lib/site-origin.mjs";
 
 export { ContentError };
 
@@ -98,5 +99,20 @@ export async function renderPost(file, raw) {
     raw,
     expectedSlug: path.basename(file, ".md"),
     resolveImage: makeResolveImage(file),
+    readChartData: readLiveMedia,
   });
+}
+
+/**
+ * A chart's CSV for the Node build, read from the live site's media library: the bucket is the Worker's binding, and
+ * the file is public at /media/<key> once uploaded.
+ *
+ * @param {string} key
+ * @returns {Promise<string | null>}
+ */
+async function readLiveMedia(key) {
+  const response = await fetch(`${SITE_ORIGIN}/media/${key}`);
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`/media/${key} answered ${response.status}`);
+  return response.text();
 }
