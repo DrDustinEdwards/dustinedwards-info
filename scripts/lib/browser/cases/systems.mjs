@@ -43,7 +43,7 @@ async function open(page, theme, path = "/systems") {
 
 /** Focuses a system's hexagon: an SVG link, which Puppeteer's page.focus refuses as not an HTMLElement. */
 async function focusCell(/** @type {import("puppeteer").Page} */ page, /** @type {string} */ id) {
-  await page.$eval(`#network a.cap-system-map-cell[data-id="${id}"]`, (el) => /** @type {SVGElement} */ (el).focus());
+  await page.$eval(`#network a.cap-system-map-cell[data-id="${id}"]`, (el) => el.focus());
 }
 
 /** The network's second tab: the plain map of cards. */
