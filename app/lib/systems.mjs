@@ -1,6 +1,6 @@
 // The network of systems at /systems and each system at /systems/<id>: Capsid's public model
 // (data/system-model.json, the document Capsid serves at /public/model/v1.json) checked, then shown
-// by Capsomer's system map, the network as cards and one system at level 2 (Dustin, 2026-11-03).
+// by Capsomer's system map, the network as hexagons (the plain map of cards a tab away) and one system at level 2 (Dustin, 2026-11-03).
 // Ruling: capsid/rulings/system-explorer-2026-10-10.md, answer 9 (the same component as the explorer).
 //
 // Every system is drawn whole, a private repo's included (Dustin, 2026-10-23: "do not exclude

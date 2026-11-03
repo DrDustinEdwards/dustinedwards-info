@@ -39,10 +39,10 @@ const BUDGETS = [
 ];
 const RUNS = 3;
 /**
- * Fails closed below this: the case's checks plus one per budget. Measured by running the gate: 19 on 2026-11-03,
+ * Fails closed below this: the case's checks plus one per budget. Measured by running the gate: 21 on 2026-11-03, when the hexagons became the first view (17 in the case); 19 earlier that day,
  * when the map became cards with a page per system (15 checks in the case, down from 26).
  */
-const MINIMUM_CHECKS = 19;
+const MINIMUM_CHECKS = 21;
 
 console.log("\ncheck:systems-map\n");
 await preflight();
