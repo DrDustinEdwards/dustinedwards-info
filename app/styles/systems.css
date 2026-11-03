@@ -3,6 +3,12 @@
  * site's tokens. The map itself is Capsomer's (capsomer/system-map.css), drawn on Capsomer's tokens as the lab
  * registry's catalog is.
  */
+/* The map takes the page's whole width, as the CV does, so the four groups stand side by side on a wide screen; the
+   words around it keep their own measure. */
+.page-inner:has(> .systems-map) {
+  max-width: none;
+}
+
 .systems-lead {
   max-inline-size: 46rem;
   margin-block: 0.5rem 0.75rem;
@@ -21,4 +27,10 @@
 .systems-source {
   color: var(--text-secondary);
   font-size: 0.9em;
+}
+
+/* The card carries the focus ring (Capsomer's :focus-within), so the site's own ring on every focused element
+   (app.css, unlayered, so it outranks Capsomer's layer) is taken off the card's link, or the name gets a second. */
+.systems-map .cap-system-map-card-name a:focus-visible {
+  outline: none;
 }
