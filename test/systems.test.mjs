@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { chosenSystem, connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemHref, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import { connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemPath, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
@@ -64,18 +64,10 @@ await test("lines name things that exist, ids are unique and the counts agree", 
   }
 });
 
-await test("the map draws every system once, linking to no page of its own", () => {
-  const model = loadSystemModel(fixture());
-  const data = mapData(model);
-  assert.deepEqual(data.systems.map((s) => s.id), ["core", "kit", "app", "hidden"]);
-  // One page: choosing a system shows it in place, so no system links away.
-  assert.deepEqual(data.systems.map((s) => s.href), [undefined, undefined, undefined, undefined]);
-  const hidden = data.systems.find((s) => s.id === "hidden");
-  assert.equal(hidden.private, true);
-  assert.equal(hidden.description, "Kept private.");
-  assert.equal(data.relationships.length, 3);
-  // The box under a part names its kind; the longer technology is on the page and in the twin.
-  assert.deepEqual(data.containers, [{ id: "core-worker", system: "core", name: "Worker", kind: "worker" }]);
+await test("the map draws every system once, each linking to its own page here", () => {
+  const data = mapData(loadSystemModel(fixture()));
+  assert.deepEqual(data.systems.map((s) => s.href), ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"]);
+  assert.equal(systemPath("a b"), "/systems/a%20b");
 });
 
 await test("a system's connections read from its own end", () => {
@@ -86,21 +78,12 @@ await test("a system's connections read from its own end", () => {
   assert.deepEqual(read("core"), ["Installs Kit", "Coordinates Hidden"]);
 });
 
-await test("a chosen system lives in the query, and a value naming no system chooses nothing", () => {
-  const model = loadSystemModel(fixture());
-  assert.equal(systemHref("kit"), "/systems?system=kit");
-  assert.equal(chosenSystem(model, "kit"), "kit");
-  for (const value of [null, undefined, "", "nowhere", "Kit", "kit "]) assert.equal(chosenSystem(model, value), null, String(value));
-});
-
 await test("the twin holds every system's facts, a private one without its source", () => {
   const model = loadSystemModel(fixture());
   const all = systemsMarkdown(model, "https://example.com");
   for (const s of model.systems) assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
   assert.match(all, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/m);
-  // No system twin of its own any more: every link goes to the page with that system chosen.
-  assert.doesNotMatch(all, /\/systems\/[a-z]/);
-  assert.match(all, /^- On the map: https:\/\/example\.com\/systems\?system=kit$/m);
+  assert.match(all, /^- Its page: https:\/\/example\.com\/systems\/kit$/m);
   const one = systemSectionMarkdown(model, "hidden", "https://example.com");
   assert.match(one, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/);
   assert.match(one, /- Address: https:\/\/hidden\.example\.org/);
@@ -112,7 +95,7 @@ await test("the twin holds every system's facts, a private one without its sourc
   // A name that also appears in the verb is linked as the name, not inside the verb.
   const named = fixture();
   named.systems[1].name = "Installs";
-  assert.match(systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\?system=kit\)$/m);
+  assert.match(systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\/kit\)$/m);
   assert.doesNotMatch(systemSectionMarkdown(model, "kit", "https://example.com"), /#### Inside/);
 });
 

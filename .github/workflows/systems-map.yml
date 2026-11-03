@@ -16,16 +16,14 @@ on:
   pull_request:
     paths:
       - data/system-model.json
-      - data/system-layouts.json
       - app/lib/systems.mjs
       - app/routes/systems.tsx
+      - app/routes/system.tsx
       # Brackets are a glob class in a path filter, so the file's own are escaped.
       - 'app/routes/systems\[.md\].ts'
       - app/routes.ts
       - app/enhance/system-map.ts
       - app/styles/systems.css
-      # Every system's circle, drawn at build time by Capsomer and put into the map by the route.
-      - scripts/lib/system-insides-plugin.mjs
       - vite.config.ts
       - scripts/check-systems-map.mjs
       - scripts/lib/browser/cases/systems.mjs

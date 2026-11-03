@@ -17,9 +17,12 @@ import { mediaSrc } from "~/lib/media/images.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
 import { OWNER_PHOTO, POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
+import { loadSystemModel, systemPath } from "~/lib/systems.mjs";
 import type { SiteUrl, Tally } from "~/lib/site-map.mjs";
 import { SOURCE_DATES } from "~/lib/source-dates.generated.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
+
+import rawSystemModel from "../../data/system-model.json";
 
 /**
  * The public pages with a route of their own, each with the title the site map shows. Kept in step with
@@ -213,6 +216,8 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     ...registryItems
       .filter((item) => hasItemPage(item.kind))
       .map((item) => ({ path: itemPath(item.kind, item.id), lastmod: sourceDate([itemSource(item)]), title: item.name, tally: REGISTRY_ITEMS })),
+    // Each system's page, as new as the model it is drawn from.
+    ...loadSystemModel(rawSystemModel).systems.map((s) => ({ path: systemPath(s.id), lastmod: sourceDate(["app/routes/system.tsx", "data/system-model.json"]), title: s.name })),
     ...postUrls,
     // A tag or series is as new as its newest post.
     ...tagList.map((t) => ({ path: tagPath(t.slug), lastmod: t.lastmod, title: t.name, tally: TAGS })),

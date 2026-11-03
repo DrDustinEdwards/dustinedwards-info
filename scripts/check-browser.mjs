@@ -173,7 +173,12 @@ if (subjectReachable) {
    * redirects to the new one): the four old-address checks of the case now named sitemap-feeds, and the
    * systems case's one 301 check for the old /systems/<id> pages.
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 231 : 206;
+  /*
+   * Less 11 on both on 2026-11-03, when /systems became cards with a page per system (Dustin's yes that day): the
+   * circles' zooming, the arrow keys, the ?system= address and its facts went (26 checks), and the cards, their
+   * lighting, the system pages, a flow's steps and the 404 came (15).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 220 : 195;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
