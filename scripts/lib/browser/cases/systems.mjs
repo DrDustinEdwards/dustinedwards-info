@@ -111,11 +111,11 @@ async function focusLightsTies(/** @type {import("puppeteer").Page} */ page) {
   await page.focus(`#network .cap-system-map-card[data-id="${SHARED}"] a`);
   const lit = await page.$eval("#network", (root) => ({
     lit: /** @type {HTMLElement} */ (root).dataset.lit ?? null,
-    self: root.querySelectorAll("[data-tie='self']").length,
-    tied: root.querySelectorAll("[data-tie]:not([data-tie='self'])").length,
-    words: [...root.querySelectorAll("[data-tie]:not([data-tie='self']) .cap-system-map-card-tie")].every((el) => /^(Used by|Uses|Uses and used by) /.test(el.textContent ?? "")),
+    self: root.querySelectorAll(".cap-system-map-card[data-tie='self']").length,
+    tied: root.querySelectorAll(".cap-system-map-card[data-tie]:not([data-tie='self'])").length,
+    words: [...root.querySelectorAll(".cap-system-map-card[data-tie]:not([data-tie='self']) .cap-system-map-card-tie")].every((el) => /^(Used by|Uses|Uses and used by) /.test(el.textContent ?? "")),
   }));
-  const card = await page.$eval(`#network [data-id="${SHARED}"]`, (el) => /** @type {HTMLElement} */ (el).dataset.usedBy?.split(" ").filter(Boolean).length ?? 0);
+  const card = await page.$eval(`#network .cap-system-map-card[data-id="${SHARED}"]`, (el) => /** @type {HTMLElement} */ (el).dataset.usedBy?.split(" ").filter(Boolean).length ?? 0);
   ok(
     "/systems: focusing a card lights it and every system tied to it, each saying how in words",
     lit.lit === SHARED && lit.self === 1 && lit.tied >= card && lit.tied > 0 && lit.words,
