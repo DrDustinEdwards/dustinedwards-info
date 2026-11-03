@@ -123,8 +123,8 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.65.0",
-    "@cloudflare/vitest-plugin": "1.4.7",
+    "@cloudflare/vite-plugin": "1.66.0",
+    "@cloudflare/vitest-plugin": "1.4.11",
     "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.21.0",
     "@mermaid-js/mermaid-cli": "11.17.0",
     "@react-router/dev": "8.5.1",
@@ -147,6 +147,6 @@
     "unpdf": "1.8.1",
     "vite": "8.1.6",
     "vitest": "4.1.11",
-    "wrangler": "4.152.0"
+    "wrangler": "4.156.0"
   }
 }
