@@ -62,6 +62,54 @@ export async function run({ browser }) {
     await off.close();
   }
 
+  /*
+   * The island runs after the first paint as often as before it (site.js is deferred and the island a dynamic
+   * import), and each thing it added or took away moved the page: the phone's filter fold measured CLS 0.41
+   * to 0.86, Apply 0.011. So the island is held until the page has painted with its fonts and is scrolled to
+   * the filters, the shifts counted from there, and then let run. A held request that never comes is a failed case, not a pass.
+   */
+  const late = await browser.newPage();
+  try {
+    await late.setViewport({ width: 320, height: 800 });
+    await late.evaluateOnNewDocument(() => {
+      const w = /** @type {any} */ (window);
+      w.__cls = 0;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) w.__cls += /** @type {any} */ (entry).value;
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    /** @type {(() => void)[]} */
+    const held = [];
+    let holding = true;
+    await late.setRequestInterception(true);
+    late.on("request", (request) => {
+      if (holding && /\/islands\/cv-[^/]*\.js/.test(request.url())) held.push(() => void request.continue());
+      else void request.continue();
+    });
+    await late.goto(`${BASE}/cv`, { waitUntil: "load" });
+    /* Scrolled to the filters, where a reader who scrolls before the island runs is, and where the fold moved the most. */
+    await late.evaluate(async () => {
+      await document.fonts.ready;
+      scrollTo(0, (document.querySelector(".cv-filters")?.getBoundingClientRect().top ?? 0) + scrollY - 200);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      /** @type {any} */ (window).__cls = 0;
+    });
+    holding = false;
+    for (const release of held.splice(0)) release();
+    const ran = await late
+      .waitForSelector("[data-cv][data-cv-enhanced]", { timeout: 15_000 })
+      .then(() => true, () => false);
+    await new Promise((r) => setTimeout(r, 1000));
+    const cls = await late.evaluate(() => /** @type {any} */ (window).__cls);
+    ok(
+      "cv, 320px: the island running after the first paint moves nothing (CLS under 0.01)",
+      ran && cls < 0.01,
+      ran ? `CLS ${cls.toFixed(4)} once app/enhance/cv.ts ran` : "the held island never ran",
+    );
+  } finally {
+    await late.close();
+  }
+
   /* Live, in a page of its own too: this case must not leave the shared page somewhere else. */
   const page = await browser.newPage();
   try {

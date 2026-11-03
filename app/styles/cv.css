@@ -173,10 +173,6 @@
   opacity: 0.28;
 }
 
-.cv-timeline-hint[hidden] {
-  display: none;
-}
-
 .cv-timeline-hint {
   margin: var(--space-3) 0 0;
   color: var(--text-secondary);
@@ -356,6 +352,25 @@
 .cv-apply[hidden],
 .cv-clear[hidden] {
   display: none;
+}
+
+/*
+ * What app/enhance/cv.ts adds or takes away (Print, the chart hint, Apply), drawn by `scripting` from the
+ * first paint, so the page does not move when the island runs. Script off keeps Apply and loses the two
+ * that need script.
+ */
+@media (scripting: none) {
+  [data-cv-print],
+  .cv-timeline-hint {
+    display: none;
+  }
+}
+
+@media (scripting: enabled) {
+  .cv-apply,
+  .cv-filter-actions:not(:has(> .cv-clear:not([hidden]))) {
+    display: none;
+  }
 }
 
 .cv-clear {
@@ -764,6 +779,29 @@
 
   .cv-more[open] > .cv-more-summary {
     margin-block-end: var(--space-4);
+  }
+}
+
+/*
+ * The server sends the panel closed unless a filter is on, the state app/enhance/cv.ts leaves on a phone,
+ * so the fold never moves the page. Wider than a phone, and everywhere with script off, the closed panel
+ * still shows its body; a browser without ::details-content shows its summary to open it instead.
+ */
+@media (width > 40rem), (scripting: none) {
+  .cv-more::details-content {
+    content-visibility: visible;
+  }
+
+  .cv-more-summary {
+    display: none;
+  }
+}
+
+@supports not selector(::details-content) {
+  @media (width > 40rem), (scripting: none) {
+    .cv-more-summary {
+      display: list-item;
+    }
   }
 }
 

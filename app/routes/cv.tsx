@@ -363,7 +363,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             <a href={CV_PDF_PATH} className="cv-action">
               Download PDF
             </a>
-            <button type="button" className="cv-action" data-cv-print="" hidden>
+            <button type="button" className="cv-action" data-cv-print="">
               Print
             </button>
             <a href={contentPageMarkdownPath(PATH)} className="cv-action">
@@ -398,7 +398,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           </dl>
           <div className="cv-timeline">
             <div className="cv-timeline-plot" data-cv-timeline="" dangerouslySetInnerHTML={{ __html: charts.timeline }} />
-            <p className="cv-timeline-hint" data-cv-hint="" hidden>
+            <p className="cv-timeline-hint" data-cv-hint="">
               Select a year&rsquo;s bar to show only that year, and select it again for every year. The key filters by type.
             </p>
           </div>
@@ -418,7 +418,9 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               />
             </label>
           </div>
-          <details className="cv-more" open data-cv-more="">
+          {/* Sent as app/enhance/cv.ts leaves it on a phone, so the fold never moves the page; cv.css shows it
+              open wider than that and with script off. */}
+          <details className="cv-more" open={activeCount(state) > 0} data-cv-more="">
             <summary className="cv-more-summary">
               Filters and sort <span data-cv-active="">{activeCount(state) > 0 ? `(${activeCount(state)} on)` : ""}</span>
             </summary>
