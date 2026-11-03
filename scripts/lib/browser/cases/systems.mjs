@@ -41,6 +41,11 @@ async function open(page, theme, path = "/systems") {
   await page.waitForSelector(".cap-system-map[data-cap-ready]", { timeout: 10_000 });
 }
 
+/** Focuses a system's hexagon: an SVG link, which Puppeteer's page.focus refuses as not an HTMLElement. */
+async function focusCell(/** @type {import("puppeteer").Page} */ page, /** @type {string} */ id) {
+  await page.$eval(`#network a.cap-system-map-cell[data-id="${id}"]`, (el) => /** @type {SVGElement} */ (el).focus());
+}
+
 /** The network's second tab: the plain map of cards. */
 async function plainMap(/** @type {import("puppeteer").Page} */ page) {
   await page.click("#network-tab-plain");
@@ -96,7 +101,7 @@ async function everyCardOpensItsPage(/** @type {import("puppeteer").Page} */ pag
 /** Focusing a hexagon lights its lines; on the plain map, Tab reaches each card's link, and focusing one lights it and the systems tied to it. */
 async function focusLightsTies(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
-  await page.focus(`#network a.cap-system-map-cell[data-id="${SHARED}"]`);
+  await focusCell(page, SHARED);
   const hex = await page.$eval("#network", (root) => ({
     lit: /** @type {HTMLElement} */ (root).dataset.lit ?? null,
     lines: root.querySelectorAll(".cap-system-map-comb-lines [data-on]").length,
@@ -255,7 +260,7 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
     const found = [];
     await open(page, theme);
     found.push(...(await scan()).map((v) => `at rest: ${v}`));
-    await page.focus(`#network a.cap-system-map-cell[data-id="${SHARED}"]`);
+    await focusCell(page, SHARED);
     found.push(...(await scan()).map((v) => `lit: ${v}`));
     await plainMap(page);
     found.push(...(await scan()).map((v) => `plain map: ${v}`));
