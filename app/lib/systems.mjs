@@ -258,7 +258,7 @@ const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${
  * What a system's page says about it: its sentence, and that its repo is private when it is.
  * @param {{ description?: string, private?: boolean }} s a system in the model or on the map
  */
-export const summaryOf = (s) => [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
+const summaryOf = (s) => [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
 
 /**
  * The repo link a public system shows: its first repo, unless it has none.
