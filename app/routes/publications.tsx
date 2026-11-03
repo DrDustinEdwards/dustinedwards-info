@@ -1,6 +1,7 @@
 import { Catalog } from "capsomer/react/catalog";
 import { Link, redirect } from "react-router";
 
+import { Breadcrumb } from "~/components/breadcrumb";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -63,6 +64,12 @@ const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   },
 };
 
+/** One trail for the visible breadcrumb and the head's BreadcrumbList, so the two cannot disagree. */
+const TRAIL: Array<[string, string]> = [
+  ["Research", "/research"],
+  ["Publications", PUBLICATIONS_URL],
+];
+
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData?.pageTitle ?? `Publications, ${SITE.name}`;
   const description = loaderData?.pageDescription ?? PUBLICATIONS_DESCRIPTION;
@@ -73,10 +80,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       description,
       path: loaderData?.canonicalPath ?? PUBLICATIONS_URL,
       pageType: "CollectionPage",
-      trail: [
-        ["Research", "/research"],
-        ["Publications", PUBLICATIONS_URL],
-      ],
+      trail: TRAIL,
     }),
     ...(loaderData?.noindex ? [{ name: "robots", content: "noindex, follow" }] : []),
   ];
@@ -253,6 +257,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       <main id="main" className="cap-page tracks list-tracks" tabIndex={-1}>
         <header className="list-head">
+          <Breadcrumb trail={TRAIL} />
           <h1 className="list-label cap-layout-grid" id="publications-title">
             Publications
           </h1>
