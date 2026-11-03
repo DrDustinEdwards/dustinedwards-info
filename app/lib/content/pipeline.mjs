@@ -217,8 +217,8 @@ const SITE_OPTIONS = {
 };
 
 /**
- * The editorial pack for one render. `strictCharts` refuses a chart with no title, too many series or author text above
- * grade 9 (checklist E4), so the publish names it before it goes live. `readChartData` reads a cited CSV from the
+ * The editorial pack for one render. `strictCharts` refuses a chart with no title or too many series (checklist E4),
+ * so the publish names it before it goes live. `readChartData` reads a cited CSV from the
  * media library (chart-data.mjs); without it a `:::chart{src}` is refused, as Prelum does.
  *
  * @param {((key: string) => Promise<string | null>) | undefined} readChartData
