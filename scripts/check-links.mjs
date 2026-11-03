@@ -35,6 +35,7 @@ import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs"
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { seriesPath } from "../app/lib/series-path.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
+import { loadSystemModel, systemPath } from "../app/lib/systems.mjs";
 import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
 import { renderContentPages, renderOwnRoutePages } from "./build-content.mjs";
 import { buildDictionary } from "./lib/dictionary.mjs";
@@ -113,6 +114,14 @@ for (const item of registryItems.filter((i) => hasItemPage(i.kind))) {
   served.add(itemPath(item.kind, item.id));
   served.add(`${itemPath(item.kind, item.id)}.md`);
   moduleOf.set(itemPath(item.kind, item.id), routes.get("/research/lab/:kind/:id?") ?? "");
+}
+
+// The network of systems (app/lib/systems.mjs): each system's page and its twin, from the committed model.
+const systemModel = loadSystemModel(JSON.parse(readFileSync(join(root, "data/system-model.json"), "utf8")));
+for (const { id } of systemModel.systems) {
+  served.add(systemPath(id));
+  served.add(`${systemPath(id)}.md`);
+  moduleOf.set(systemPath(id), routes.get("/systems/:id") ?? "");
 }
 
 // The papers (docs/PUBLICATIONS.md): each page, its twin and its exports, drawn from D1 by routes, compiled

@@ -4,9 +4,9 @@
 //
 //   npm run check:systems-map
 //
-// Two parts. The browser case (scripts/lib/browser/cases/systems.mjs): keyboard to every node,
-// the list against the model, reduced motion, layout shift, the INP proxy under 4x throttling,
-// frame gaps (warn only), axe in both themes and the script's gzip budget. Then Lighthouse on
+// Two parts. The browser case (scripts/lib/browser/cases/systems.mjs): every card and its page,
+// lighting by keyboard, a flow's steps, the pages with no script, layout shift, the INP proxy under
+// 4x throttling, axe in both themes and the script's gzip budget. Then Lighthouse on
 // /systems, mobile profile, median of three, through a brotli proxy because the preview serves
 // uncompressed and the deployed site does not (scripts/lib/browser/compressing-proxy.mjs): CLS 0.05, TBT 150ms (the lab proxy for INP 100ms) and
 // 3 MB in total, the design's numbers; LCP fails over the site's 2.5s and warns over the design's
@@ -38,8 +38,11 @@ const BUDGETS = [
   { audit: "total-byte-weight", label: "page weight", max: 3_000_000, unit: " bytes" },
 ];
 const RUNS = 3;
-/** Fails closed below this: the case's checks plus one per budget. Measured by running the gate. */
-const MINIMUM_CHECKS = 30;
+/**
+ * Fails closed below this: the case's checks plus one per budget. Measured by running the gate: 19 on 2026-11-03,
+ * when the map became cards with a page per system (15 checks in the case, down from 26).
+ */
+const MINIMUM_CHECKS = 19;
 
 console.log("\ncheck:systems-map\n");
 await preflight();

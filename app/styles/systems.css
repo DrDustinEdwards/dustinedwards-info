@@ -1,150 +1,24 @@
 /*
- * The family of systems (app/routes/systems.tsx): the page's layout on the site's tokens. The map itself is
- * Capsomer's (capsomer/system-map.css), drawn on Capsomer's tokens as the lab registry's catalog is.
+ * The network of systems (app/routes/systems.tsx) and one system (app/routes/system.tsx): the pages' layout on the
+ * site's tokens. The map itself is Capsomer's (capsomer/system-map.css), drawn on Capsomer's tokens as the lab
+ * registry's catalog is.
  */
 .systems-lead {
   max-inline-size: 46rem;
-  margin-block: 0.5rem 1.5rem;
+  margin-block: 0.5rem 0.75rem;
   color: var(--text-secondary);
+}
+
+.systems-links {
+  margin-block: 0 1.5rem;
+  overflow-wrap: anywhere;
 }
 
 .systems-map {
   margin-block: 2rem 1.5rem;
 }
 
-/*
- * Every system's facts follow the map. With no script they are all shown, one after another; with script, only the
- * chosen system's (data-chosen, set by the server from ?system= and by app/enhance/system-map.ts on each choice),
- * so choosing shows its facts in place. Decided by scripting rather than a class the script adds, so a page served
- * with a system chosen paints that system alone from the first frame.
- */
-@media (scripting: enabled) {
-  .systems-facts:not([data-chosen]) {
-    display: none;
-  }
-
-  /* With script the Plain map button opens Capsomer's list as columns, so the list's own toggle under the map
-     would be a second way to the same thing (Dustin, 2026-10-18). With no script the list stays, open. */
-  .systems-map .cap-system-map:not([data-view="plain"]) .cap-system-map-list {
-    display: none;
-  }
-}
-
-.systems-facts + .systems-facts {
-  margin-block-start: 2.5rem;
-}
-
-.systems-facts h2 {
-  margin-block: 0 0.25rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.systems-facts h3 {
-  margin-block: 1.5rem 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.systems-facts h4 {
-  margin-block: 1rem 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.systems-facts ul {
-  margin: 0;
-  padding-inline-start: 1.25rem;
-  list-style: disc;
-}
-
-.systems-facts li + li {
-  margin-block-start: 0.25rem;
-}
-
-.systems-facts dl {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin-block: 0 1.5rem;
-}
-
-.systems-facts dt {
-  color: var(--text-secondary);
-}
-
-.systems-facts dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.systems-all {
-  margin-block-end: 2rem;
-}
-
 .systems-source {
   color: var(--text-secondary);
   font-size: 0.9em;
-}
-
-/*
- * Zooming into a system is Capsomer's (its map with circles). The head, then the detail line above the drawing,
- * which never moves when the drawing changes height.
- */
-.systems-map .cap-system-map-head {
-  order: -2;
-}
-
-.systems-map .cap-system-map-detail {
-  order: -1;
-}
-
-/*
- * The detail line as plain words above the drawing, not a box (Dustin, 2026-10-18). Capsomer keeps its height fixed,
- * so choosing never moves the drawing.
- */
-.systems-map .cap-system-map-detail {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-}
-
-/* The strip holds the chosen system's name only. The sentence is under the drawing, and the part names are the
-   circle's own label. One line high, so choosing never moves the drawing. Capsomer's height is !important in its
-   layer, so this is too, in the same layer. */
-@layer cap.components {
-  .systems-map .cap-system-map-detail {
-    block-size: 2rem !important;
-  }
-}
-
-.systems-map .cap-system-map-detail-text {
-  position: absolute;
-  inline-size: 1px;
-  block-size: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/*
- * Capsomer's markup has the detail line and the view buttons hidden until its script shows them. Above the drawing,
- * showing the detail line would push the drawing down on load, so the route sends both shown and they are hidden
- * here only where no script runs, where neither would do anything.
- */
-@media (scripting: none) {
-  .systems-map .cap-system-map-detail,
-  .systems-map .cap-system-map-views {
-    display: none;
-  }
-}
-
-/* On a phone the zoomed drawing takes the full width of the screen, past the page's gutters, to be read. */
-@media (max-width: 40rem) {
-  .systems-map .cap-system-map[data-entered] .cap-system-map-stage {
-    width: calc(100% + 2 * var(--page-gutter));
-    max-width: none;
-    margin-inline: calc(-1 * var(--page-gutter));
-  }
 }

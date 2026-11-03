@@ -1,7 +1,7 @@
-// The family of systems at /systems: Capsid's public model (data/system-model.json, the
-// document Capsid serves at /public/model/v1.json) checked, then drawn by Capsomer's system
-// map. Ruling: capsid/rulings/system-explorer-2026-10-10.md; design:
-// capsid/research/design-system-explorer.md, sections 2 and 3 (slice 4).
+// The network of systems at /systems and each system at /systems/<id>: Capsid's public model
+// (data/system-model.json, the document Capsid serves at /public/model/v1.json) checked, then shown
+// by Capsomer's system map, the network as cards and one system at level 2 (Dustin, 2026-11-03).
+// Ruling: capsid/rulings/system-explorer-2026-10-10.md, answer 9 (the same component as the explorer).
 //
 // Every system is drawn whole, a private repo's included (Dustin, 2026-10-23: "do not exclude
 // private repos", "fully wired just like the public ones"); a private system carries no repo
@@ -163,22 +163,8 @@ export function loadSystemModel(raw) {
   return result.model;
 }
 
-/**
- * The query parameter that names the chosen system on /systems. There is one page: a system is a
- * state of it, kept in the address so a shared link opens with that system chosen.
- */
-export const SYSTEM_PARAM = "system";
-
-/** The address of /systems with one system chosen. @param {string} id */
-export const systemHref = (id) => `${SYSTEMS_PATH}?${SYSTEM_PARAM}=${encodeURIComponent(id)}`;
-
-/**
- * The system a query value names, or null when it names none: an unknown value is the page with
- * nothing chosen, never an error.
- * @param {SystemModel} model
- * @param {string | null | undefined} value
- */
-export const chosenSystem = (model, value) => (value && model.systems.some((s) => s.id === value) ? value : null);
+/** The page of one system: Capsomer's system map at level 2. @param {string} id */
+export const systemPath = (id) => `${SYSTEMS_PATH}/${encodeURIComponent(id)}`;
 
 /**
  * The Capsid explorer, built from the same public model, so every system here has a page
@@ -191,11 +177,11 @@ export const explorerUrl = (id) => `${EXPLORER_ORIGIN}/s/${id}/`;
 export const explorerLabel = (id) => `${new URL(EXPLORER_ORIGIN).host}/s/${id}`;
 
 /**
- * What Capsomer's map draws, the same as the explorer's (Capsomer's modelMapData): every system with no link of its
- * own, since choosing one shows its facts on the same page (app/enhance/system-map.ts), every line and the parts.
+ * What Capsomer's map shows, the same as the explorer's (Capsomer's modelMapData): every system, linking to its own
+ * page here, every line and the parts.
  * @param {SystemModel} model
  */
-export const mapData = (model) => modelMapData(model);
+export const mapData = (model) => modelMapData(model, systemPath);
 
 // How a line reads from each end.
 /** @type {Record<SystemModel["relationships"][number]["kind"], [string, string]>} */
@@ -282,7 +268,7 @@ export const repoOf = (s) => (s.private ? undefined : s.repos?.[0]);
 
 /**
  * The markdown twin of /systems: every system, grouped by ring, each with the facts the page shows
- * when it is chosen, so an agent reads what a person does.
+ * on its page, so an agent reads what a person does.
  * @param {SystemModel} model
  * @param {string} origin
  */
@@ -304,7 +290,7 @@ export function systemsMarkdown(model, origin) {
 }
 
 /**
- * One system's section of /systems.md: what the page shows when that system is chosen.
+ * One system's section of /systems.md: what its page shows.
  * @param {SystemModel} model
  * @param {string} id
  * @param {string} origin
@@ -314,7 +300,7 @@ export function systemSectionMarkdown(model, id, origin) {
   if (!s) return null;
   const lines = [`### ${s.name}${s.private ? " (private)" : ""}`, ""];
   lines.push(summaryOf(s), "");
-  lines.push(`- On the map: ${origin}${systemHref(s.id)}`);
+  lines.push(`- Its page: ${origin}${systemPath(s.id)}`);
   if (s.domain) lines.push(`- Address: https://${s.domain}`);
   const repo = repoOf(s);
   if (repo) lines.push(`- Source: ${repo}`);
@@ -328,7 +314,7 @@ export function systemSectionMarkdown(model, id, origin) {
   const links = connectionsOf(model, id);
   lines.push("", "#### Connections", "");
   if (links.length === 0) lines.push("No connections.");
-  for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemHref(c.other)})`);
+  for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemPath(c.other)})`);
   lines.push("");
   return lines.join("\n");
 }

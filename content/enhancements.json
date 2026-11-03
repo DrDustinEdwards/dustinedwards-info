@@ -243,8 +243,8 @@
     {
       "id": "system-map",
       "module": "app/enhance/system-map.ts",
-      "enhancement": "The family of systems at /systems becomes Capsomer's interactive map: one tab stop with the arrow keys between neighbors, one tap on any system zooms into its circle, with its parts inside, the systems it connects to round the rim (a tap on one zooms there) and each wire from the part that uses it, and Back to all systems, Escape or a tap outside the circle returns to the map; a Plain map view shows the list as columns. Zooming in also shows that system's facts below the map, in place, and keeps it in the address as ?system=<id>, so a shared link opens zoomed in.",
-      "fallback": "The page is complete as served: the drawing is one named picture, the list of every system grouped by ring is open beneath it, every system's facts and connections follow the map, and /systems?system=<id> draws that system's lines and its circle on the server.",
+      "enhancement": "The network of systems at /systems and each system's page at /systems/<id> use Capsomer's system map: pointing at a system's card, or focusing its link, lights the systems it uses and the ones that use it, each saying how it is tied, and mutes the rest; on a system's page Start, Next and Back step a flow, lighting the parts each step touches and saying where it is, and Escape stops.",
+      "fallback": "The pages are complete as served: every system is a card that links to its page, each card says how many systems it uses and is used by, a system's page lists what uses it, its parts and what it uses in words, and every flow is an ordered list.",
       "fallbackKind": "selector",
       "fallbackAt": ".systems-map",
       "why": null
