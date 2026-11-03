@@ -10,14 +10,17 @@ import rawModel from "../../data/system-model.json";
 // Route-scoped: the map is Capsomer's, and only the systems pages draw it.
 import "capsomer/tokens.css";
 import "capsomer/system-map.css";
+// The map's two views, hexagons and the plain map, are Capsomer's tabs.
+import "capsomer/tabs.css";
 import "~/styles/systems.css";
 
 /**
- * The network of systems at /systems: Capsomer's system map at level 1, every system a card in its group, then the
- * shared packages and the core (Dustin, 2026-11-03). A card's link opens the system's own page (app/routes/system.tsx).
+ * The network of systems at /systems: Capsomer's system map at level 1, hexagons first (the core in the middle, the shared
+ * packages around it, what people use by group outside, every tie a line), and the plain map of cards a tab away
+ * (Dustin, 2026-11-03). A card's link opens the system's own page (app/routes/system.tsx).
  * The data is the committed copy of Capsid's public model (data/system-model.json), checked when the module loads, so a
- * bad file fails the build and never reaches a reader. The whole map is in the HTML; the script
- * (app/enhance/system-map.ts) only lights a card's ties under the pointer or the focus.
+ * bad file fails the build and never reaches a reader. The whole map is in the HTML, lines included; the
+ * script (app/enhance/system-map.ts) adds the tabs and lights a system's ties under the pointer or the focus.
  */
 export function headers() {
   return publicHtmlHeaders();
@@ -29,7 +32,7 @@ const TRAIL: Trail = [[TITLE, SYSTEMS_PATH]];
 const MAP = systemMapHtml(mapData(MODEL), {
   id: "network",
   label: "The network of systems",
-  caption: "Point at a system, or tab to it, to light what it uses and what uses it. Open one to see its parts.",
+  caption: "Capsid at the core, the shared packages around it, and what people use, by group, on the outside. Point at a system to light what it uses and what uses it, or open it.",
   ringNames: { shared: "Shared packages", core: "Core" },
   headingLevel: 2,
 });
@@ -37,7 +40,7 @@ const MAP = systemMapHtml(mapData(MODEL), {
 export function meta() {
   return pageMeta({
     title: `${TITLE}: the network`,
-    description: `The ${MODEL.systems.length} systems Dustin Edwards runs, each a card with what it uses and what uses it, and a page of its own with its parts.`,
+    description: `The ${MODEL.systems.length} systems Dustin Edwards runs, drawn as a map of what each uses and what uses it, each with a page of its own for its parts.`,
     path: SYSTEMS_PATH,
     markdown: `${SYSTEMS_PATH}.md`,
     trail: TRAIL,
