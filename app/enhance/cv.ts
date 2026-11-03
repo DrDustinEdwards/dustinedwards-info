@@ -275,7 +275,7 @@ export default function start(): void {
     window.history.replaceState(window.history.state, "", url);
   }
 
-  /* Instant filtering, so the Apply button is only for script off. */
+  /* Instant filtering, so the Apply button is only for script off (cv.css hides it from the first paint). */
   for (const button of form.querySelectorAll<HTMLElement>("[data-cv-apply]")) button.hidden = true;
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -337,8 +337,6 @@ export default function start(): void {
     apply(readState(), { announceNow: true });
   });
 
-  for (const hint of root.querySelectorAll<HTMLElement>("[data-cv-hint]")) hint.hidden = false;
-
   /* Copying a citation: the plain one is on the page, BibTeX and RIS come from the paper's export route. */
   async function citationText(button: HTMLElement): Promise<string> {
     const kind = button.dataset.cvCopy;
@@ -375,13 +373,14 @@ export default function start(): void {
   }
 
   for (const button of root.querySelectorAll<HTMLButtonElement>("[data-cv-print]")) {
-    button.hidden = false;
     button.addEventListener("click", () => window.print());
   }
 
   /*
    * On a phone the filters fold behind their summary, open only when a filter is on; wider, they are
-   * always open and the summary is not shown. Script off, they stay open everywhere.
+   * always open and the summary is not shown. Script off, they stay open everywhere. The server sends the
+   * phone's state and cv.css draws the rest, so this changes nothing on the first paint; it keeps the fold
+   * right when the width changes.
    */
   const more = root.querySelector("details[data-cv-more]");
   if (more instanceof HTMLDetailsElement) {
