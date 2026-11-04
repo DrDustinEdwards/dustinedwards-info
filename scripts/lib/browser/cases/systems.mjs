@@ -48,6 +48,9 @@ async function focusCell(/** @type {import("puppeteer").Page} */ page, /** @type
 
 /** The network's second tab: the plain map of cards. */
 async function plainMap(/** @type {import("puppeteer").Page} */ page) {
+  // Focusing a hexagon can scroll the tabs up under the sticky site header, where a click lands
+  // on the header; bring them to the middle of the screen first, as a reader would.
+  await page.$eval("#network-tab-plain", (tab) => tab.scrollIntoView({ block: "center" }));
   await page.click("#network-tab-plain");
   await page.waitForSelector("#network .cap-system-map-network:not([hidden])", { timeout: 10_000 });
 }
