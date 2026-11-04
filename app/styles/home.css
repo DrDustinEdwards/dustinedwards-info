@@ -253,9 +253,16 @@
   }
 }
 
+/* Drafting lettering, as an engineering drawing's (Capsomer Drafting, Leroy style): labels in capitals
+   (ASME Y14.2 4.3), the unit on the scale bar left in lowercase. */
 .plate-label,
 .plate-scale {
-  font-family: var(--font-mono);
+  font-family: var(--drafting);
+}
+
+.plate-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .plate-label {
@@ -263,7 +270,7 @@
   font-size: 10.5px;
 }
 
-/* 12px, not 14: Martian Mono runs wide, and the right-hand labels have 88 user units. */
+/* 12px: the right-hand labels have 88 user units. */
 .plate--wide .plate-label,
 .plate--wide .plate-scale {
   font-size: 12px;

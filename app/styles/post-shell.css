@@ -80,10 +80,11 @@
   text-transform: uppercase;
 }
 
+/* Previous and next are wayfinding, so the airport sign face (Capsomer's --wayfinding, Overpass Bold). */
 .post-nav-title {
-  font-family: var(--font-sans);
+  font-family: var(--wayfinding);
   font-size: 1.0625rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
 }
 

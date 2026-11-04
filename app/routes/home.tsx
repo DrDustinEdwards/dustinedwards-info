@@ -239,8 +239,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <PlateKeyRow />
         <template data-island="plate" />
 
-        {/* The work in figures, as the manual sets type on stepped grays (capsomer/manual.css form boxes, tones). */}
-        <dl className="cap-form-boxes home-readings" data-variant="tones">
+        {/* The work in figures as an instrument panel, the Apollo DSKY's lit seven-segment readouts under
+            drafting legends (capsomer/manual.css form boxes, panel; Dustin, 2026-11-04). */}
+        <dl className="cap-form-boxes home-readings" data-variant="panel">
           <div className="cap-form-boxes-box">
             <dt>Papers</dt>
             <dd>{paperCount}</dd>

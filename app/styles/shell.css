@@ -55,21 +55,10 @@
   margin-block-start: var(--space-6);
 }
 
-/* The trail as the direction strip of the manual's signs (capsomer/manual.css .cap-direction). The site's own
-   link colors are unlayered and would beat the strip's, so its links say them again here. */
+/* The trail as airport direction signs (capsomer/manual.css .cap-direction): Overpass, FAA arrows and the page
+   you are on as a location sign. app.css leaves the strip's links out of the site's link color. */
 .page-breadcrumb {
   margin: 0 0 var(--space-5);
-}
-
-.page-breadcrumb a,
-.page-breadcrumb a:visited {
-  /* The sign's own text color: --ground is the page's, which in dark mode is as dark as the sign. */
-  color: var(--on-sign);
-  text-decoration: none;
-}
-
-.page-breadcrumb a:hover {
-  background: color-mix(in srgb, var(--ground) 18%, transparent);
 }
 
 .protocol-neighbors {

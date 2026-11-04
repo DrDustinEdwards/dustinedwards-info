@@ -349,9 +349,8 @@ for (const req of variationRequests) {
 // The faces build-og.mjs reads to draw the social cards, because satori cannot read woff2. Whether the
 // cards share the site's typeface, and which typeface that is, is a design default and is not asserted.
 const OG_FACES = [
-  { file: join(root, "assets", "fonts", "SchibstedGrotesk-Regular.woff"), weight: 400 },
-  { file: join(root, "assets", "fonts", "SchibstedGrotesk-Bold.woff"), weight: 700 },
-  { file: join(root, "assets", "fonts", "SourceSerif4-Display-Bold.ttf"), weight: 700 },
+  { file: join(root, "assets", "fonts", "Jost-Regular.woff"), weight: 400 },
+  { file: join(root, "assets", "fonts", "Jost-SemiBold.woff"), weight: 600 },
 ];
 
 for (const face of OG_FACES) {
@@ -458,7 +457,9 @@ if (update) {
 // went with them, no block was skipped. 438 after Inter's latin faces were replaced by Schibsted Grotesk and
 // Martian Mono (2026-10-26): fewer faces and binaries, no block skipped. 321 after those two came from
 // Capsomer's fonts.css, one variable file each, and the unused type levels and metric fallbacks went (2026-10-28).
-const MINIMUM_CHECKS = 321;
+// 297 after the site nav set its weights with font-weight, not bare "wght" font-variation-settings (2026-11-04):
+// each bare request was checked against every variable face, and three such requests went; no block skipped.
+const MINIMUM_CHECKS = 297;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(

@@ -14,8 +14,9 @@
 /* Each latin face is two files, a core of the characters pages draw and the rest of the range, cut
    from the originals by scripts/split-latin-fonts.py; check:fonts holds each range below to its
    file. A page drawing only the core never downloads the rest. */
-/* Inter stays for the Greek and math Schibsted Grotesk lacks: whole blocks minus the arrows and minus
-   sign the latin carries, so a page with a minus sign never fetches the math file. */
+/* Inter's latin is Capsomer's (capsomer/fonts.css, the opsz file). These add the Greek and math blocks
+   under the same family name, minus the arrows and minus sign the latin carries, so a page with a minus
+   sign never fetches the math file. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -183,8 +184,8 @@
   line-gap-override: 0%;
 }
 
-/* The family's faces, Schibsted Grotesk and Martian Mono, are Capsomer's (capsomer/fonts.css, imported in
-   routes/legacy-public.tsx). */
+/* The network's faces (Inter, Martian Mono, Overpass, Jost, Capsomer Drafting, DSEG7) are Capsomer's
+   (capsomer/fonts.css, imported in routes/legacy-public.tsx); each downloads only where a page uses it. */
 
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
 /* Not in the color blocks: check:contrast requires every token there to be a hex. */
@@ -206,7 +207,7 @@
 /* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
 
 :root {
-  --font-sans: "Schibsted Grotesk", "Schibsted Grotesk Fallback", "Inter", ui-sans-serif, system-ui, sans-serif,
+  --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   /* Running text is the report's serif (the manual theme); labels and controls stay in the sans. */
   --font-prose: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
@@ -231,9 +232,11 @@
   --t-h1-family: var(--font-sans);
   --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
   --t-h1-leading: 0.98;
-  --t-h1-weight: 700;
-  --t-h1-vars: "wght" 700;
-  --t-h1-tracking: -0.04em;
+  /* Titles in Inter Light (Capsomer's --weight-title), the 1976 manual's Helvetica Light; the opsz axis
+     draws Inter's display cut at this size, already set tight, so the tracking stays light. */
+  --t-h1-weight: var(--weight-title);
+  --t-h1-vars: "wght" 300;
+  --t-h1-tracking: -0.02em;
 }
 
 /* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
@@ -683,8 +686,9 @@ body {
    press makes stronger, cloned onto each line it wraps to; a menu is told by its place, and a component link draws
    its own. link.css adds the
    mark for a link that leaves the site, opens a file or sends mail. Element-level and :where(), so any component
-   rule outranks them; Capsomer's letterhead and family footer keep their own links. */
-a:not(:where(.cap-site-header a, .cap-family-footer a)) {
+   rule outranks them; Capsomer's letterhead and family footer keep their own links, and so do the dark signs (the
+   direction strip and a.cap-sign), whose light type this unlayered color would otherwise paint purple on the sign. */
+a:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a, .cap-sign)) {
   color: var(--brand);
   text-decoration: var(--link-decoration);
 }

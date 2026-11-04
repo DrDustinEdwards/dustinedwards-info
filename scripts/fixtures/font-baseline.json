@@ -33,7 +33,6 @@
   "app/fonts/source-serif-4-latin-rest-normal.woff2": "c822a8e5632910af294ed7f606fc5f2bde197b52174fdba023fb620440e06b49",
   "app/fonts/source-serif-4-math-italic.woff2": "a107b7db8b718c0796d2b2b77c547fd524af4a1a3195c49863fc22270f23a7c7",
   "app/fonts/source-serif-4-math-normal.woff2": "a73065dbc87efa9de03c9210b6e3a3c06197abecdbc5a8752843272fb0ef6ca9",
-  "assets/fonts/SchibstedGrotesk-Bold.woff": "bb65563dcf6fed433358721d5dea39144e17855ccf1a8aa76bc622e26fcedf38",
-  "assets/fonts/SchibstedGrotesk-Regular.woff": "9d78d3131c3eea961075fb408021e6d06cb92726d04dfa73ef1c911ecbbcf116",
-  "assets/fonts/SourceSerif4-Display-Bold.ttf": "21cdf0cfb165ef9dd8d3eefd77cca32be863e9b86ce7165bae046121cc603dea"
+  "assets/fonts/Jost-Regular.woff": "cbff28109ce89d7a6513fc0a6d441b46b14c9c050c6cc1ee96eaccbfc7fef082",
+  "assets/fonts/Jost-SemiBold.woff": "30aa823efb48c1ef8f90119f61039d8c58071f2e30a3d7fa130414f81f80a095"
 }

@@ -26,7 +26,7 @@ export const CV_PDF_DEFAULT_OUT = path.join(ROOT, "build", "dustin-edwards-cv.pd
 async function fontCss() {
   const rules = await Promise.all(
     PDF_FONTS.map(async ({ file, family, style }) =>
-      fontFaceRule(family, await readFile(path.join(ROOT, ...(file.startsWith("schibsted") ? ["node_modules", "capsomer"] : ["app"]), "fonts", file)), style),
+      fontFaceRule(family, await readFile(path.join(ROOT, ...(file.startsWith("inter-") ? ["node_modules", "capsomer"] : ["app"]), "fonts", file)), style),
     ),
   );
   return rules.join("\n");
