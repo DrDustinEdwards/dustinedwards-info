@@ -43,6 +43,7 @@ import {
   siteHead,
   type Trail,
 } from "~/lib/seo";
+import { PROSE_PRELOADS } from "~/lib/preloads";
 import type { Route } from "./+types/blog.$slug";
 
 import "~/styles/post-rail.css";
@@ -111,7 +112,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     {
       /* Comma-joined: RFC 8288's spelling for more than one relation in one `Link`. */
       headers: {
-        Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", "),
+        Link: [linkToMarkdown(post.slug), linkToWebmention(), PROSE_PRELOADS.header].join(", "),
         /* Set in the loader: `HeadersArgs` carries no `params`, so the slug is not in scope there. */
         "Cache-Tag": cacheTags(post.slug),
         [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
@@ -119,6 +120,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     },
   );
 }
+
+export const links: Route.LinksFunction = () => PROSE_PRELOADS.links;
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   const headers = new Headers({

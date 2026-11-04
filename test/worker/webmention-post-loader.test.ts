@@ -132,7 +132,8 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     /* A header that gained the endpoint by replacing the twin would be a silent regression. */
     expect(link).toContain(`rel="alternate"`);
     expect(link).toContain(`/writing/${POST_SLUG}.md`);
-    /* One header, two values, comma joined, which is how RFC 8288 spells it. */
-    expect(link?.split(", ")).toHaveLength(2);
+    expect(link).toContain(`rel=preload`);
+    /* One header, three values (the twin, the endpoint, the text face's preload), comma joined, which is how RFC 8288 spells it. */
+    expect(link?.split(", ")).toHaveLength(3);
   });
 });

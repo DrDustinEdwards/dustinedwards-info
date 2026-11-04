@@ -6,8 +6,11 @@
 
 /* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
    paths immutable. */
-/* swap, not optional: optional gives a face about 100 ms and a preloaded 70 KB file misses it, so
-   first visits drew Arial. The fallbacks below keep the swap from re-wrapping a line. */
+/* optional, not swap (Dustin, 2026-11-04, Google's advice: web.dev "Best practices for fonts"): a face that
+   misses its ~100 ms window leaves the visit in its size-matched fallback below, so text never moves once
+   drawn. Under swap the fallbacks, within about 1% of each face, still re-wrapped a title or a control row
+   now and then (D5). This replaces the earlier swap ruling, made when a first visit fell back to plain Arial;
+   the fallbacks are matched now, and lib/preloads.ts preloads each page's first face so it usually arrives. */
 /* Each latin face is two files, a core of the characters pages draw and the rest of the range, cut
    from the originals by scripts/split-latin-fonts.py; check:fonts holds each range below to its
    file. A page drawing only the core never downloads the rest. */
@@ -17,7 +20,7 @@
   font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/inter-greek-normal.woff2") format("woff2");
   unicode-range: U+0370-03FF;
 }
@@ -26,7 +29,7 @@
   font-family: "Inter";
   font-style: italic;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/inter-greek-italic.woff2") format("woff2");
   unicode-range: U+0370-03FF;
 }
@@ -35,7 +38,7 @@
   font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/inter-math-normal.woff2") format("woff2");
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
@@ -44,7 +47,7 @@
   font-family: "Inter";
   font-style: italic;
   font-weight: 100 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/inter-math-italic.woff2") format("woff2");
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
@@ -54,7 +57,7 @@
   font-family: "Source Serif 4 Web";
   font-style: normal;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-latin-core-normal.woff2") format("woff2");
   unicode-range: U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7,
     U+0304, U+0308, U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
@@ -64,7 +67,7 @@
   font-family: "Source Serif 4 Web";
   font-style: normal;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-latin-rest-normal.woff2") format("woff2");
   unicode-range: U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6,
     U+00B8-00D6, U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
@@ -113,7 +116,7 @@
   font-family: "Source Serif 4 Web";
   font-style: italic;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-latin-core-italic.woff2") format("woff2");
   unicode-range: U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7,
     U+0304, U+0308, U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
@@ -123,7 +126,7 @@
   font-family: "Source Serif 4 Web";
   font-style: italic;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-latin-rest-italic.woff2") format("woff2");
   unicode-range: U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6,
     U+00B8-00D6, U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
@@ -135,7 +138,7 @@
   font-family: "Source Serif 4 Web";
   font-style: normal;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-greek-normal.woff2") format("woff2");
   unicode-range: U+0370-03FF;
 }
@@ -144,7 +147,7 @@
   font-family: "Source Serif 4 Web";
   font-style: italic;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-greek-italic.woff2") format("woff2");
   unicode-range: U+0370-03FF;
 }
@@ -153,7 +156,7 @@
   font-family: "Source Serif 4 Web";
   font-style: normal;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-math-normal.woff2") format("woff2");
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
@@ -162,7 +165,7 @@
   font-family: "Source Serif 4 Web";
   font-style: italic;
   font-weight: 200 900;
-  font-display: swap;
+  font-display: optional;
   src: url("./fonts/source-serif-4-math-italic.woff2") format("woff2");
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
