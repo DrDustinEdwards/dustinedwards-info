@@ -150,3 +150,8 @@
 .paper-row-links a:hover {
   color: var(--brand-hover);
 }
+
+/* The bibliography in figures under the dek (publications.tsx BibliographyReadings, capsomer form boxes, readings). */
+.publications-readings {
+  margin-block: var(--space-5) 0;
+}

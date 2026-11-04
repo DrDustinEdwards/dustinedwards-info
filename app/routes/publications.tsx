@@ -2,7 +2,6 @@ import { Catalog } from "capsomer/react/catalog";
 import { Link, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { EvidenceRow } from "~/components/evidence-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listPublishedPublications } from "~/db/publications";
@@ -36,7 +35,6 @@ import "capsomer/chips.css";
 import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
-import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/site-catalog.css";
 import "~/styles/publications.css";
@@ -231,21 +229,32 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
   );
 }
 
-function bibliographyFacts(span: {
-  papers: number;
-  firstYear: number | null;
-  lastYear: number | null;
-  venues: number;
+/**
+ * The bibliography in figures, as the manual's readings (capsomer/manual.css form boxes, readings): each count a
+ * large figure under its label, for the papers listed now (a topic narrows them). Citations are the papers' own
+ * OpenAlex counts, summed; a paper with no count yet adds nothing.
+ */
+function BibliographyReadings({
+  span,
+  cited,
+}: {
+  span: { papers: number; firstYear: number | null; venues: number };
+  cited: number;
 }) {
-  return [
-    `${span.papers} paper${span.papers === 1 ? "" : "s"}`,
-    span.firstYear && span.lastYear
-      ? span.firstYear === span.lastYear
-        ? String(span.firstYear)
-        : `${span.firstYear} to ${span.lastYear}`
-      : null,
-    span.venues > 0 ? `${span.venues} venue${span.venues === 1 ? "" : "s"}` : null,
-  ];
+  const box = (label: string, value: number) => (
+    <div className="cap-form-boxes-box">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+  return (
+    <dl className="cap-form-boxes publications-readings" data-variant="readings">
+      {box("Papers", span.papers)}
+      {span.venues > 0 ? box("Journals", span.venues) : null}
+      {cited > 0 ? box("Times cited", cited) : null}
+      {span.firstYear ? box("Since", span.firstYear) : null}
+    </dl>
+  );
 }
 
 export default function Publications({ loaderData }: Route.ComponentProps) {
@@ -266,7 +275,10 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
             undergraduate research is taught. Full text is hosted here where I have the
             publisher version, with links out to the record of version otherwise.
           </p>
-          <EvidenceRow facts={bibliographyFacts(span)} />
+          <BibliographyReadings
+            span={span}
+            cited={items.reduce((sum, p) => sum + (p.doi ? (citations[p.doi]?.count ?? 0) : 0), 0)}
+          />
         </header>
 
         <div className="papers site-catalog">

@@ -49,43 +49,7 @@
 
 .post-nav,
 .post-series-steps {
-  display: grid;
-  gap: 0;
   margin-block-start: var(--space-7);
-}
-
-/* Previous and next are signs: an ink panel under a band of the family's color. */
-.post-nav-target,
-.post-nav-target:visited {
-  display: block;
-  padding: 0.625rem 1rem 0.75rem;
-  border-block-start: 0.25rem solid var(--brand);
-  background: var(--text);
-  color: var(--paper);
-  text-decoration: none;
-}
-
-.post-nav-target + .post-nav-target {
-  margin-block-start: var(--space-3);
-}
-
-.post-nav-target:hover {
-  background: var(--brand);
-}
-
-.post-nav-label {
-  display: block;
-  font: 500 0.6875rem / 1.7 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Previous and next are wayfinding, so the airport sign face (Capsomer's --wayfinding, Overpass Bold). */
-.post-nav-title {
-  font-family: var(--wayfinding);
-  font-size: 1.0625rem;
-  font-weight: 700;
-  line-height: 1.35;
 }
 
 .post-series {

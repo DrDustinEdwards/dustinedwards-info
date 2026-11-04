@@ -359,3 +359,8 @@
   line-height: 1.35;
   text-wrap: balance;
 }
+
+/* The signs to the pages either side in a sequence (content-page.tsx, app/lib/content-pages.mjs PAGE_SEQUENCES). */
+.page-signs {
+  margin-block-start: var(--space-7);
+}
