@@ -65,7 +65,7 @@ read back, then a cache purge by the tag `llms` (the route carries it as its `Ca
 
 ## Drift
 
-`llms-drift` (`/api/health`) compares the file's git blob sha, read from the stored source,
+`llms-drift` (`/health`) compares the file's git blob sha, read from the stored source,
 with the blob sha of the bytes in the settings row. A missing row counts as drift, because `/llms.txt` would
 then serve the bundled copy. The watchdog repairs it through `sync_llms`, the same loop the other kinds use
 (`convergeKind`): re-judge the file, write the row, read it back, purge. It refuses a source with no

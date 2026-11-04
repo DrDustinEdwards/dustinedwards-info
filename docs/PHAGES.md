@@ -162,7 +162,7 @@ that names the sync, never a page with no phages.
 | Search | the page's record in `search_docs`, written by the sync and by the write |
 | Search, facets, sort and the count | `PHAGES` in `app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx` over the phage rows; `app/enhance/catalog.ts` updates it in place |
 | The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the table row each file's name gives |
-| The check | `phage-drift` on `/api/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs` |
+| The check | `phage-drift` on `/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs` |
 
 ## Known limits
 

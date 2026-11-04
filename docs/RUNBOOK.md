@@ -16,7 +16,7 @@ run the thing rather than trust a sentence someone wrote months ago.
 ## 0. First, thirty seconds
 
 ```powershell
-curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
+curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
 `{"ok":true,...}` means the Worker is up and every check passed. Anything else,
@@ -77,7 +77,7 @@ npx wrangler rollback <VERSION-ID> --message "2am rollback, <one line why>"
 Then check the site is actually better:
 
 ```powershell
-curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
+curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
 **Rollback can refuse, and the reason is not obvious.** If a secret was changed
@@ -114,7 +114,7 @@ source, so rebuilding is safe and repeatable rather than a last resort.
 fifteen minutes, so if content drift is the problem it may already be repairing:
 
 ```powershell
-curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
+curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
 Look for `content-drift` in the `checks` array. A procedure file that moved
@@ -303,7 +303,7 @@ section 3.
 **6. Check it.**
 
 ```powershell
-curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
+curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
 **This whole path is rehearsed weekly** by `npm run check:restore`, which does
@@ -368,7 +368,7 @@ copies.
 Do them in one sitting, then prove it:
 
 ```powershell
-curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
+curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
 and confirm the next scheduled watchdog run repairs rather than reports.

@@ -1,5 +1,5 @@
-/* /api/health bodies for the tests that read one: the readiness step and the watchdog's
- * repair planner. The fourteen checks are the ones the endpoint reports, in its order. */
+/* /health bodies for the tests that read one: the readiness step and the watchdog's repair planner.
+ * The drift checks are the ones the endpoint reports, in its order, after the database's. */
 
 export const CHECK_NAMES = [
   "ask-index-drift",
@@ -19,31 +19,37 @@ export const CHECK_NAMES = [
   "fts-equality",
 ];
 
+const pass = (name) => ({ name, status: "pass" });
+
 /** Every check passing. */
-export const HEALTHY = { ok: true, checks: CHECK_NAMES.map((name) => ({ name, ok: true })) };
+export const HEALTHY = { status: "pass", ok: true, checks: [pass("db"), ...CHECK_NAMES.map(pass)] };
 
 /**
- * All fourteen checks, with each one named in `drift` failing and carrying its detail.
+ * Every check, with each one named in `drift` warning and carrying its counts as /health words them.
  *
  * @param {Record<string, { expected: number, present: number }>} drift
  */
 export const bodyDrifted = (drift) => ({
-  ok: false,
-  checks: CHECK_NAMES.map((name) =>
-    name in drift ? { name, ok: false, ...drift[name] } : { name, ok: true },
-  ),
+  status: "warn",
+  ok: true,
+  checks: [
+    pass("db"),
+    ...CHECK_NAMES.map((name) =>
+      name in drift
+        ? { name, status: "warn", detail: `${drift[name].present} of ${drift[name].expected}` }
+        : pass(name),
+    ),
+  ],
 });
 
 /**
- * A passing fts-equality followed by `failing`, in the order given. Unknown classes are
+ * A passing fts-equality followed by `failing`, each warning, in the order given. Unknown classes are
  * allowed, which is what the watchdog's notify arm needs.
  *
  * @param {string[]} failing
  */
 export const bodyFailing = (failing) => ({
-  ok: false,
-  checks: [
-    { name: "fts-equality", ok: true },
-    ...failing.map((name) => ({ name, ok: false })),
-  ],
+  status: "warn",
+  ok: true,
+  checks: [pass("fts-equality"), ...failing.map((name) => ({ name, status: "warn" }))],
 });

@@ -1,5 +1,5 @@
 /**
- * One row of /api/health, as ship and the watchdog read it. `waitedMs` is set only by settleAskDrift.
+ * One row of /health, as ship and the watchdog read it (rows.mjs healthChecks). `waitedMs` is set only by settleAskDrift.
  *
  * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number, waitedMs?: number }} HealthCheckRow
  */
