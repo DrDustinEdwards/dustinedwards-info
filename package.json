@@ -147,5 +147,10 @@
     "vite": "8.1.6",
     "vitest": "4.1.11",
     "wrangler": "4.156.0"
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "puppeteer": true,
+    "workerd": false
   }
 }
