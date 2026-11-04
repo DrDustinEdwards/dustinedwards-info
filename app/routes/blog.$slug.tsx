@@ -6,6 +6,7 @@ import { PostHistory } from "~/components/post-history";
 import { PostMentions } from "~/components/post-mentions";
 import { PostRail, ymd } from "~/components/post-rail";
 import { SeriesNav } from "~/components/post-series-nav";
+import { Signs } from "~/components/signs";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ISLAND_GZIP_BYTES } from "virtual:islands";
 
@@ -286,6 +287,10 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </section>
           )}
 
+          {/* The runway holding position marking (capsomer/manual.css .cap-hold): the post ends here; what follows is
+              about it. Drawn, with no words (Dustin, 2026-11-04). */}
+          <hr className="cap-hold" />
+
           <nav className="post-actions" aria-label="Use this post elsewhere">
             <a
               className="post-action"
@@ -337,20 +342,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
           {post.backlinks.length > 0 && <PostBacklinks backlinks={post.backlinks} />}
 
-          <nav className="post-nav" aria-label="More posts">
-            {post.previous && (
-              <Link className="post-nav-target" to={`/writing/${post.previous.slug}`} rel="prev">
-                <span className="post-nav-label">Previous</span>
-                <span className="post-nav-title">{post.previous.title}</span>
-              </Link>
-            )}
-            {post.next && (
-              <Link className="post-nav-target" to={`/writing/${post.next.slug}`} rel="next">
-                <span className="post-nav-label">Next</span>
-                <span className="post-nav-title">{post.next.title}</span>
-              </Link>
-            )}
-          </nav>
+          <div className="post-nav">
+            <Signs
+              label="More posts"
+              prev={post.previous ? { href: `/writing/${post.previous.slug}`, title: post.previous.title, label: "Previous post" } : null}
+              next={post.next ? { href: `/writing/${post.next.slug}`, title: post.next.title, label: "Next post" } : null}
+            />
+          </div>
         </article>
       </main>
       <ShellFooter />

@@ -329,7 +329,8 @@
   }
 }
 
-/* Where a protocol sits in the phage workflow: the stage, then the neighbors and calculators as plain link rows. */
+/* Where a protocol sits in the phage workflow: the stage, the protocols either side as signs, then the calculators
+   as a plain link row. */
 .procedure-workflow {
   margin-block: 1rem;
   padding: 0.75rem 1rem;
@@ -339,6 +340,9 @@
 }
 .procedure-workflow-stage {
   margin: 0 0 0.5rem;
+}
+.procedure-workflow > .cap-signs:not(:last-child) {
+  margin-block-end: 0.75rem;
 }
 .procedure-workflow-links {
   display: grid;
@@ -591,4 +595,45 @@
 
 .offline-status:empty {
   display: none;
+}
+
+/* A PCR program as cue cards, one a stage (procedure.tsx CyclingProgram, capsomer/manual.css .cap-cue and
+   .cap-roll), in place of the prose's cycling table. A row of cards as wide as the column allows; one under
+   another on a phone. Inside .prose, whose unlayered list rules (markers, inset, margins) would otherwise
+   outrank Capsomer's layered ones, so each list here restates the manual's own spacing. */
+.prose .procedure-program {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prose .procedure-program > .cap-cue {
+  margin: 0;
+}
+
+.prose .procedure-program .cap-roll {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.prose .procedure-program .cap-cue-lines {
+  margin: var(--space-3) var(--space-4) 0;
+  padding: var(--space-3) 0 0;
+  list-style: none;
+}
+
+.prose .procedure-program li {
+  margin: 0;
+}
+
+.prose .procedure-program .cap-cue-strip {
+  margin: 0 0 var(--space-3);
+}
+
+.prose .procedure-program .cap-cue-title {
+  margin: 0 var(--space-4) var(--space-3);
 }

@@ -47,3 +47,8 @@
 .colophon-evidence {
   margin-block: 1.5rem 2rem;
 }
+
+/* Under it, each /health check as a cockpit light (colophon.tsx HealthPanel, capsomer .cap-annunciator). */
+.colophon-annunciator {
+  margin-block: -0.75rem 2rem;
+}

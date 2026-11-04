@@ -121,6 +121,39 @@ export const CONTENT_PAGES_OWN_ROUTE = ["/about"];
 export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([...CONTENT_PAGE_PATHS, ...CONTENT_PAGES_OWN_ROUTE]);
 
 /**
+ * Pages read one after another, each a way on to the next with signs at its foot (content-page.tsx, Capsomer's
+ * `.cap-signs`). Each `label` is what a screen reader hears before the title; the sign shows the title alone.
+ */
+export const PAGE_SEQUENCES = /** @type {const} */ ([
+  {
+    // The Phage Discovery Program's two semesters, in teaching order (content/pages/teaching.md).
+    paths: ["/teaching/virus-isolation", "/teaching/phage-bioinformatics"],
+    prev: "Previous semester",
+    next: "Next semester",
+  },
+]);
+
+/**
+ * The pages either side of `path` in its sequence, or nulls for a page in none.
+ *
+ * @param {string} path
+ * @returns {{ prev: { path: string, label: string } | null, next: { path: string, label: string } | null }}
+ */
+export function pageSequenceNeighbors(path) {
+  for (const sequence of PAGE_SEQUENCES) {
+    const at = /** @type {readonly string[]} */ (sequence.paths).indexOf(path);
+    if (at === -1) continue;
+    const before = sequence.paths[at - 1];
+    const after = sequence.paths[at + 1];
+    return {
+      prev: before ? { path: before, label: sequence.prev } : null,
+      next: after ? { path: after, label: sequence.next } : null,
+    };
+  }
+  return { prev: null, next: null };
+}
+
+/**
  * The headings on these pages that the header menus link to by anchor, as `path#id`. A menu shows a
  * section link only once it is listed here, and the build refuses an entry whose page has no heading
  * with that id, so no menu link lands on the top of a page for want of its heading.

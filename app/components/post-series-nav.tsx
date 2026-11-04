@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { Signs } from "~/components/signs";
 import { seriesPath } from "~/lib/series-path.mjs";
 
 import type { Route } from "../routes/+types/blog.$slug";
@@ -43,18 +44,11 @@ export function SeriesNav({
       </ol>
       {(seriesPrevious || seriesNext) && (
         <div className="post-series-steps">
-          {seriesPrevious && (
-            <Link className="post-nav-target" to={`/writing/${seriesPrevious.slug}`}>
-              <span className="post-nav-label">Previous part</span>
-              <span className="post-nav-title">{seriesPrevious.title}</span>
-            </Link>
-          )}
-          {seriesNext && (
-            <Link className="post-nav-target" to={`/writing/${seriesNext.slug}`}>
-              <span className="post-nav-label">Next part</span>
-              <span className="post-nav-title">{seriesNext.title}</span>
-            </Link>
-          )}
+          <Signs
+            label={`Parts of ${series}`}
+            prev={seriesPrevious ? { href: `/writing/${seriesPrevious.slug}`, title: seriesPrevious.title, label: "Previous part" } : null}
+            next={seriesNext ? { href: `/writing/${seriesNext.slug}`, title: seriesNext.title, label: "Next part" } : null}
+          />
         </div>
       )}
     </nav>

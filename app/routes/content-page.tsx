@@ -7,6 +7,7 @@ import { CONTENTS_MIN, contentsOf, PageContents } from "~/components/page-conten
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
+import { Signs } from "~/components/signs";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
@@ -18,6 +19,7 @@ import {
   contentPageCardPath,
   contentPageMarkdownPath,
   contentPageTrail,
+  pageSequenceNeighbors,
 } from "~/lib/content-pages.mjs";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
@@ -59,7 +61,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const page = row.record;
   // The page it sits under, by title, for the trail above it (the course above its FAQ).
   const parent = page.path.slice(0, page.path.lastIndexOf("/"));
-  const titles = await getPublishedPageTitles(env, parent ? [parent] : []);
+  // The pages either side in a sequence (the two semesters of a course), by title, for the signs at its foot.
+  const sequence = pageSequenceNeighbors(page.path);
+  const ways = [sequence.prev?.path, sequence.next?.path].filter((p): p is string => !!p);
+  const titles = await getPublishedPageTitles(env, [...(parent ? [parent] : []), ...ways]);
+  const way = (n: { path: string; label: string } | null) => {
+    const title = n ? titles.get(n.path) : undefined;
+    return n && title ? { href: n.path, title, label: n.label } : null;
+  };
+  const signs = { prev: way(sequence.prev), next: way(sequence.next) };
   // The lead a named Software page opens with, drawn from D1 beside the page (docs/DICTIONARY.md): an entry
   // edit is live at the next request, and a page with no published entry has none.
   const entry = await getPublishedEntryByPath(env, page.path);
@@ -67,7 +77,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // The program page carries the roster, drawn from D1 beside the page (docs/ROSTER.md); no other page reads it.
   const roster = page.path === ROSTER_PAGE_PATH ? await listRoster(env) : null;
   // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
-  return { page, trail, entry, roster, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
+  return { page, trail, entry, roster, signs, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
@@ -93,7 +103,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
-  const { page, trail, entry, roster, draft, search } = loaderData;
+  const { page, trail, entry, roster, signs, draft, search } = loaderData;
   const sections = contentsOf(page.html);
   const patch = patchOf(page.path);
   return (
@@ -139,6 +149,11 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       {roster ? (
         <div className="prose">
           <PhageRoster cohorts={roster} />
+        </div>
+      ) : null}
+      {signs.prev || signs.next ? (
+        <div className="page-signs">
+          <Signs label="More in this program" prev={signs.prev} next={signs.next} />
         </div>
       ) : null}
     </PageShell>

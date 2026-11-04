@@ -145,6 +145,36 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   );
 }
 
+/** A /health status as a cockpit light: at rest, caution (amber) or warning (red), and the word it says. */
+const LIGHTS = {
+  pass: { state: "normal", word: "Pass" },
+  warn: { state: "caution", word: "Caution" },
+  fail: { state: "warning", word: "Warning" },
+} as const;
+
+/**
+ * Every /health check as a tile on a cockpit caution and warning panel (capsomer/manual.css .cap-annunciator), from
+ * the snapshot the watchdog stores. A stale snapshot shows every tile dark, since an old light is not a reading;
+ * with no snapshot there is no panel, and the evidence line above says why.
+ */
+function HealthPanel({ health }: { health: Route.ComponentProps["loaderData"]["health"] }) {
+  if (health.state !== "fresh" && health.state !== "stale") return null;
+  const fresh = health.state === "fresh";
+  return (
+    <ul className="cap-annunciator colophon-annunciator" aria-label={fresh ? "Health checks" : "Health checks, last read too long ago"}>
+      {health.checks.map((check) => {
+        const light = fresh ? LIGHTS[check.status] : { state: "off", word: "No reading" };
+        return (
+          <li key={check.name} data-state={light.state}>
+            {check.name}
+            <span className="cap-annunciator-state">{light.word}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function Colophon({ loaderData }: Route.ComponentProps) {
   const { health } = loaderData;
   const gates = stack.gates.length;
@@ -177,6 +207,8 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           ]}
         />
       </div>
+
+      <HealthPanel health={health} />
 
       <div className="prose">
         <p>{COLOPHON_VERSIONS}</p>
