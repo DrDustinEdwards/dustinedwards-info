@@ -19,3 +19,10 @@ export const PRELOADS = preloads([font(uiFontUrl)]);
  * on every page they slowed /systems, which draws neither, from 2.0s to 2.5s LCP (check:systems-map, mobile profile).
  */
 export const HOME_PRELOADS = preloads([font(textFontUrl), font(monoFontUrl)]);
+
+/**
+ * A post's text face, Source Serif (app.css, its Latin core): the title and body every post draws first. With
+ * font-display: optional, a face that is found late leaves the visit in its fallback, so it is preloaded here
+ * rather than left for the stylesheet to find.
+ */
+export const PROSE_PRELOADS = preloads([font(textFontUrl)]);
