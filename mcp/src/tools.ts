@@ -31,8 +31,7 @@ import { logEvent } from "@dustinedwards/site-runtime/log";
 import { outsideResult } from "@dustinedwards/site-runtime/mcp-server";
 import { z } from "zod";
 
-import { failingCheckNames, watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
-import { healthChecks } from "../../app/lib/health/rows.mjs";
+import { failingCheckNames, healthChecks, watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
 
 import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client";
 import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
