@@ -2,7 +2,40 @@
 // a compound failure may share a root cause. No token still fails the run: alert-only, never silence.
 
 import { awaitAskConvergence } from "./ask-converge.mjs";
-import { healthChecks } from "./rows.mjs";
+
+/**
+ * /health's checks as the readers that act on them want them: ship's readiness, the watchdog's repair
+ * planner, operator-sync's Ask re-read and the admin MCP. /health (site-runtime's healthResponse) gives each
+ * check a status, and a drift check that fails carries "present of expected" as its detail; this turns that
+ * into `ok` and the two counts, so every reader judges the same rows the same way.
+ *
+ * @typedef {{ name: string, status: "pass" | "warn" | "fail", ok: boolean, expected?: number, present?: number, waitedMs?: number }} HealthRow
+ */
+
+const COUNTS = /^(\d+) of (\d+)$/;
+
+/**
+ * Fails closed: a body that is not a /health answer has no rows, and a row with no status is not a pass.
+ *
+ * @param {unknown} body the parsed /health body
+ * @returns {HealthRow[]}
+ */
+export function healthChecks(body) {
+  const checks = /** @type {any} */ (body)?.checks;
+  if (!Array.isArray(checks)) return [];
+  return checks
+    .filter((c) => c && typeof c === "object" && typeof c.name === "string")
+    .map((c) => {
+      const status = c.status === "pass" || c.status === "warn" || c.status === "fail" ? c.status : "fail";
+      const counts = status !== "pass" && typeof c.detail === "string" ? COUNTS.exec(c.detail) : null;
+      return {
+        name: c.name,
+        status,
+        ok: status === "pass",
+        ...(counts ? { present: Number(counts[1]), expected: Number(counts[2]) } : {}),
+      };
+    });
+}
 
 /** Only idempotent repairs through the operator API, since this runs unattended. Map order is repair order. */
 const REPAIRABLE = /** @type {const} */ ({

@@ -264,7 +264,6 @@
     "app/lib/health/ask-converge.mjs",
     // How every reader of /health turns its checks into rows: ship's readiness, operator-sync, the
     // watchdog's repair plan, the snapshot and the admin MCP.
-    "app/lib/health/rows.mjs",
     // Imported by modules listed above, so this project must reach them too:
     // the status rule (pdf-redirect), the thrown-value reader (pipeline,
     // upload-contract), the byte and hash encodings (classify, hashes, diagram,

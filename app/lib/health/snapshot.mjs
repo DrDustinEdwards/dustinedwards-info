@@ -3,7 +3,7 @@
 // and Capsomer's network board read it every few minutes and would keep a dead watchdog looking alive).
 // Measured: running the suite in a page loader cost about 1.2 s, so the colophon reads this instead.
 
-import { healthChecks } from "./rows.mjs";
+import { healthChecks } from "./repair.mjs";
 
 /** One key, not a prefix: a prefix would invite a second writer. */
 export const HEALTH_SNAPSHOT_KEY = "health:snapshot";

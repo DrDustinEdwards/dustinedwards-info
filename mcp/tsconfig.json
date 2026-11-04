@@ -22,7 +22,6 @@
     "src/**/*.ts",
     "worker-configuration.d.ts",
     "../app/lib/health/repair.mjs",
-    "../app/lib/health/rows.mjs",
     "../app/lib/health/ask-converge.mjs"
   ]
 }

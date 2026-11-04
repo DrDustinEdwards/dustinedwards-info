@@ -2,7 +2,7 @@
  * /health: site-runtime's healthResponse, the site's one health endpoint. The outside reads it (the UptimeRobot
  * monitor, Capsid's watcher, the network's ops audit, Capsomer's network board), and so do the instruments that act
  * on it: the watchdog (which repairs drift and stores the colophon's snapshot), ship's readiness, operator-sync and
- * the admin MCP, each through app/lib/health/rows.mjs. 503 only when D1 does not answer. Warnings, never a 503: the
+ * the admin MCP, each through healthChecks in app/lib/health/repair.mjs. 503 only when D1 does not answer. Warnings, never a 503: the
  * newest complete dump older than 26 hours, a binding that does not answer, a cron job that failed or stopped, and
  * every drift check (the site is up while one drifts). `sha` is the commit ship deployed (DEPLOY_SHA); a hand deploy
  * has none. Rate limited, because the drift checks cost.
@@ -59,7 +59,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   /* The drift checks run once, started here and not awaited, so each named check below waits on the run inside
      healthResponse's checkTimeoutMs, beside the binding checks: a slow run holds /health no longer than any other
-     check. A detail carries only "present of expected" (rows.mjs reads it back), because this is public; the full
+     check. A detail carries only "present of expected" (repair.mjs reads it back), because this is public; the full
      detail (the missing keys) goes to Workers Logs under alert=health-check-failed. */
   const drift = runHealthChecks(env);
   drift.then(
