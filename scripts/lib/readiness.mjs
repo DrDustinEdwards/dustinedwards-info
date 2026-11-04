@@ -1,3 +1,5 @@
+import { healthChecks } from "../../app/lib/health/repair.mjs";
+
 /**
  * @typedef {import("../../app/lib/health/ask-converge.mjs").HealthCheckRow} HealthCheckRow
  */
@@ -23,7 +25,7 @@ const NOTHING_SYNCED =
  * @param {string[]} deferred
  * @returns {ReadinessVerdict}
  */
-export function readinessVerdict(status, text, path = "/api/health", deferred = []) {
+export function readinessVerdict(status, text, path = "/health", deferred = []) {
   if (status === 429) {
     return {
       ok: false,
@@ -55,12 +57,11 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
     };
   }
 
-  const value = /** @type {{ ok?: unknown, checks?: unknown }} */ (body);
-  const checks = Array.isArray(value.checks)
-    ? /** @type {HealthCheckRow[]} */ (value.checks)
-    : [];
+  const value = /** @type {{ status?: unknown }} */ (body);
+  /** @type {HealthCheckRow[]} */
+  const checks = healthChecks(body);
 
-  // Any JSON on the origin can carry an `ok` field by accident; only a health report has checks.
+  // Any JSON on the origin can carry a `status` field by accident; only a health report has checks.
   if (checks.length === 0) {
     return {
       ok: false,
@@ -71,11 +72,11 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
   }
 
   const deferredNames = Array.isArray(deferred) ? deferred.filter((n) => typeof n === "string") : [];
-  // `=== true`, as the deferred read below does: a string "false" or a missing ok is not a pass.
+  // A warn is a failure here: /health stays 200 while a drift check warns, and ship must not sync over one.
   const failed = checks.filter((c) => c.ok !== true).map((c) => c.name ?? "(unnamed)");
-  const gatingFailed = failed.filter((name) => !deferredNames.includes(name));
+  const gatingFailed = failed.filter((name) => !deferredNames.includes(name) && !(name in NOT_DEPLOY_CHECKS));
 
-  // Not the endpoint's own `ok`: that is false when any check fails, deferred ones included.
+  // Not the endpoint's own status: that is warn when any check warns, deferred ones included.
   if (gatingFailed.length > 0) {
     return {
       ok: false,
@@ -85,10 +86,10 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
     };
   }
 
-  if (value.ok !== true && failed.length === 0) {
+  if (value.status !== "pass" && failed.length === 0) {
     return {
       ok: false,
-      why: `${path} reports the site is not healthy (${status}), failing: (ok is not true but no check is marked failing)`,
+      why: `${path} reports the site is not healthy (${status}), failing: (status is not pass but no check is marked failing)`,
       remedy: `Repair the failing check, or run the sync by hand if it is the repair. ${NOTHING_SYNCED}`,
       checks,
     };
@@ -113,14 +114,14 @@ export function readinessLines(checks) {
 
 /**
  * Read after the repair steps: a failing deferred check here means the repair ran and did not work.
- * The detail string is absent because the public body drops it on purpose (row counts, unauthenticated).
+ * A drift row carries only its two counts; the why is in Workers Logs.
  *
  * @param {HealthCheckRow[]} checks
  * @param {Record<string, string>} deferred
  * @param {string} [path]
  * @returns {{ misses: string[], converged: string[] }}
  */
-export function deferredMisses(checks, deferred, path = "/api/health") {
+export function deferredMisses(checks, deferred, path = "/health") {
   /** @type {string[]} */
   const misses = [];
   /** @type {string[]} */
@@ -145,8 +146,8 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
         ? `, after re-reading for ${Math.round(row.waitedMs / 1000)}s`
         : "";
     misses.push(
-      `${name} is STILL failing after ${repairedBy}${counts}${waited}. The endpoint withholds ` +
-        `its detail on purpose; the why is in Workers Logs under alert=health-check-failed`,
+      `${name} is STILL failing after ${repairedBy}${counts}${waited}. The endpoint says ` +
+        `no more than the counts on purpose; the why is in Workers Logs`,
     );
   }
 
@@ -174,6 +175,16 @@ export const DEFERRED_CHECKS = {
   "cv-pdf-drift": "the CV PDF converge",
   "ask-index-drift": "the Ask converge",
   "media-index-drift": "the media converge",
+};
+
+/**
+ * /health checks a deploy neither breaks nor repairs, printed and never refused on: refusing a ship over a
+ * stale nightly dump would hold back the fix for something else. Each value says why.
+ */
+/** @type {Record<string, string>} */
+const NOT_DEPLOY_CHECKS = {
+  backup: "the nightly D1 dump's age",
+  cron: "the scheduled jobs' last runs",
 };
 
 /**

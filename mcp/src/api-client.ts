@@ -98,7 +98,7 @@ export async function callOperator(
   };
 }
 
-/** One reading of the site's public readiness endpoint, in the shape the watchdog's repair plan reads. */
+/** One reading of the site's public health endpoint, in the shape the watchdog's repair plan reads. */
 export interface HealthReading {
   status: number;
   body: unknown;
@@ -106,14 +106,14 @@ export interface HealthReading {
 }
 
 /**
- * Reads `/api/health` over the same binding. Public and unauthenticated on the
+ * Reads `/health` over the same binding. Public and unauthenticated on the
  * site, so no bearer is sent: the operator token goes only where it is needed.
  * Never throws, and keeps the cause, exactly as the watchdog's reader does: a
  * reading that never happened must not be mistaken for a healthy or failing one.
  */
 export async function readHealth(env: Partial<ApiEnv>): Promise<HealthReading> {
   try {
-    const { status, body } = await callApi(env, { ...LEG, api: "The site" }, "/api/health", {
+    const { status, body } = await callApi(env, { ...LEG, api: "The site" }, "/health", {
       anonymous: true,
       headers: { "cache-control": "no-cache" },
     });

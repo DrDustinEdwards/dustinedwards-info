@@ -304,7 +304,7 @@ if (existsSync(SHIP)) {
     true,
   );
 
-  /* READINESS, BETWEEN DEPLOY AND FIRST WRITE: five 200s are blind to what /api/health reports. */
+  /* READINESS, BETWEEN DEPLOY AND FIRST WRITE: five 200s are blind to what /health reports. */
   const readinessAt = shipSource.indexOf("READINESS_PATH} reports ok");
   eq(
     "readiness: the step was located",
@@ -313,7 +313,7 @@ if (existsSync(SHIP)) {
   );
   eq(
     "readiness: ship asks the health endpoint",
-    /const\s+READINESS_PATH\s*=\s*"\/api\/health"/.test(shipSource),
+    /const\s+READINESS_PATH\s*=\s*"\/health"/.test(shipSource),
     true,
   );
   eq(
@@ -331,10 +331,10 @@ if (existsSync(SHIP)) {
   eq("readiness: the module was read", readinessSource.length > 1000, true);
   eq(
     "readiness: the verdict is decided from the parsed body, not the status",
-    /value\.ok\s*!==\s*true/.test(readinessSource),
+    /value\.status\s*!==\s*"pass"/.test(readinessSource),
     true,
   );
-  /* AND A BODY WITH NO CHECKS REFUSES: any JSON on the origin can carry ok:true. */
+  /* AND A BODY WITH NO CHECKS REFUSES: any JSON on the origin can carry status:"pass". */
   eq(
     "readiness: a body carrying no checks is refused",
     /checks\.length\s*===\s*0/.test(readinessSource),

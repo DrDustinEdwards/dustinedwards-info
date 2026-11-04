@@ -17,7 +17,6 @@ import {
   mediaDriftVerdict,
   ftsEqualityVerdict,
   mediaBackupDriftVerdict,
-  publicHealthBody,
   withTimeout,
   CHECK_TIMEOUT_MS,
 } from "../app/lib/health/verdicts.mjs";
@@ -151,54 +150,6 @@ await test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => 
   assert.match(verdict.detail, /identity/);
 });
 
-await test("the wire body carries names and booleans only", () => {
-  // Row counts, index sizes and an R2 object key: none of it may reach an unauthenticated endpoint.
-  const run = {
-    checks: [
-      { name: "ask-index-drift", ok: false, detail: "Ask index drift 9: 9 missing, 46 expected" },
-      { name: "media-backup-drift", ok: false, detail: "first missing: posts/private-upload.png" },
-      { name: "fts-equality", ok: true, detail: "search_docs=46=identity=prose" },
-    ],
-  };
-
-  const body = publicHealthBody(run);
-  const wire = JSON.stringify(body);
-
-  for (const leak of ["46", "posts/", "private-upload", "search_docs", "drift 9", "missing"]) {
-    assert.ok(!wire.includes(leak), `the wire body leaks ${JSON.stringify(leak)}: ${wire}`);
-  }
-
-  assert.equal(body.ok, false);
-  assert.deepEqual(
-    body.checks.map((c) => c.name),
-    ["ask-index-drift", "media-backup-drift", "fts-equality"],
-    "order is part of the shape the workflow parses",
-  );
-  assert.deepEqual(
-    body.checks.map((c) => c.ok),
-    [false, false, true],
-  );
-});
-
-await test("ok is true only when every check passed", () => {
-  const pass = { name: "a", ok: true, detail: "" };
-  const fail = { name: "b", ok: false, detail: "" };
-
-  assert.equal(publicHealthBody({ checks: [pass, pass] }).ok, true);
-  assert.equal(publicHealthBody({ checks: [pass, fail] }).ok, false);
-  assert.equal(publicHealthBody({ checks: [fail] }).ok, false);
-});
-
-await test("a field added to a check later cannot leak by inheritance", () => {
-  // The body is rebuilt field by field rather than spread, so this stays true
-  // when someone adds a field to HealthCheck without thinking about the wire.
-  const body = publicHealthBody({
-    checks: [{ name: "a", ok: true, detail: "x", secretToken: "SHOULD-NOT-APPEAR" }],
-  });
-  assert.ok(!JSON.stringify(body).includes("SHOULD-NOT-APPEAR"));
-  assert.deepEqual(Object.keys(body.checks[0]), ["name", "ok"]);
-});
-
 await test("a check that answers in time is passed through untouched", async () => {
   const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
   assert.deepEqual(verdict, { ok: true, detail: "fine" });
@@ -230,58 +181,6 @@ await test("the timeout clears the day's slowest measured healthy path", () => {
   );
 });
 
-await test("A FAILING drift check carries its two counts, and nothing else new", () => {
-  // A drift check's body must say how far apart the sides are: one record apart mid-rebuild
-  // is not the same event as a hundred.
-  const body = publicHealthBody({
-    checks: [
-      {
-        name: "ask-index-drift",
-        ok: false,
-        detail: "Repair with sync-ask on /admin/tools.",
-        counts: { expected: 113, present: 108 },
-      },
-    ],
-  });
-  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["expected", "name", "ok", "present"]);
-  assert.equal(body.checks[0].expected, 113);
-  assert.equal(body.checks[0].present, 108);
-});
-
-await test("A PASSING check stays exactly as narrow as it was", () => {
-  const body = publicHealthBody({
-    checks: [
-      { name: "fts-equality", ok: true, detail: "counts", counts: { expected: 1, present: 1 } },
-    ],
-  });
-  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
-});
-
-await test("THE DETAIL STRING NEVER TRAVELS, on either outcome", () => {
-  // detail carries an R2 OBJECT KEY on media-backup-drift and the shadow table
-  // names on fts-equality. That is what the names-and-booleans rule is for.
-  const serialized = JSON.stringify(
-    publicHealthBody({
-      checks: [
-        { name: "media-backup-drift", ok: false, detail: "og/secret-key.png has no twin" },
-        { name: "fts-equality", ok: true, detail: "search_identity_docsize=113" },
-      ],
-    }),
-  );
-  assert.doesNotMatch(serialized, /secret-key/, "an R2 key must not reach the wire");
-  assert.doesNotMatch(serialized, /docsize/, "shadow table names must not either");
-  assert.doesNotMatch(serialized, /detail/, "the field itself must be absent");
-});
-
-await test("a failing check with NO counts is still just name and ok", () => {
-  // fts-equality has no two-sided comparison to report, so it opts out by
-  // simply not carrying counts rather than by being special-cased.
-  const body = publicHealthBody({
-    checks: [{ name: "fts-equality", ok: false, detail: "a shadow table name" }],
-  });
-  assert.deepEqual(Object.keys(body.checks[0]).sort(), ["name", "ok"]);
-});
-
 await test("askDriftVerdict supplies the counts it fails on", () => {
   const v = askDriftVerdict({ missing: ["a"], stale: [], expected: 113, present: 112 });
   assert.equal(v.ok, false);
@@ -299,8 +198,6 @@ await test("media drift: agreement is ok and says both counts", () => {
   assert.equal(v.ok, true);
   assert.match(v.detail, /69 expected/);
   assert.match(v.detail, /69 present/);
-  // A passing check carries no counts onto the wire. publicHealthBody opts them
-  // in only for failures, so a green body stays names and booleans.
   assert.equal(v.counts, undefined);
 });
 

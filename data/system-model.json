@@ -397,7 +397,7 @@
       "name": "Watchdog",
       "kind": "cron",
       "technology": "Second Worker on a 15-minute cron",
-      "description": "Reads the site's /api/health over a service binding, runs the repair plan and the nightly D1 dump through the operator API, and emails an alert when the state changes."
+      "description": "Reads the site's /health over a service binding, stores it as the colophon's snapshot, runs the repair plan and the nightly D1 dump through the operator API, and emails an alert when the state changes."
     },
     {
       "id": "website-kv",

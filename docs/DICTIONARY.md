@@ -107,7 +107,7 @@ with the same entry. A draft entry is not read by either.
 | The DefinedTerm | `definedTermJsonLd` in `app/lib/dictionary-entries.mjs`, in the page's structured data |
 | The markdown twin's lead | `dictionaryEntryMarkdown`, in the page's twin, compiled into the `pages` row |
 | Search | `dictionaryEntryText`, leading the page's record in `search_docs`, written by the sync and by the write |
-| The check | `dictionary-drift` on `/api/health`, repaired by `sync_dictionary`; `test/dictionary.test.mjs` |
+| The check | `dictionary-drift` on `/health`, repaired by `sync_dictionary`; `test/dictionary.test.mjs` |
 
 ## Known limits
 

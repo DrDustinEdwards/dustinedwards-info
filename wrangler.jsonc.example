@@ -339,10 +339,10 @@
 	//
 	// EIGHT SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
 	// prefix: `auth:` (sign-in and /api/auth/*), `op:` (the operator API),
-	// `wm:` (webmention), `health:` (/api/health), `csp:` (/csp-report),
+	// `wm:` (webmention), `health:` (/health), `csp:` (/csp-report),
 	// plus the smoke actor, preview links and Ask itself. So deleting this
 	// block does not "disable Ask": it disables SIGN-IN, and it makes
-	// /api/health answer 503 by design, because a route that cannot reach its
+	// /health answer 503 by design, because a route that cannot reach its
 	// limiter must not serve.
 	//
 	// ## WHY IT IS NOT BEING RENAMED, ruled 2026-09-11
@@ -356,7 +356,7 @@
 	// green CI run for its exact sha, so that is three ship windows.
 	//
 	// And the non-atomic window is the worst one this site has. During it the
-	// binding may not resolve, which means sign-in fails, /api/health answers
+	// binding may not resolve, which means sign-in fails, /health answers
 	// 503, the watchdog wakes on that 503, and the watchdog's own repair call
 	// is metered through the same object and cannot get through either. A
 	// cosmetic change whose failure mode is a paging storm with the repair

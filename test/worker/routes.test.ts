@@ -6,8 +6,7 @@ import { readHealthTile } from "~/lib/health/snapshot.server";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
-import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
-import { loader as familyHealthLoader } from "~/routes/health";
+import { loader as healthLoader } from "~/routes/health";
 
 import { freezeAtWindowStart, routeContext } from "./route-helpers";
 
@@ -116,170 +115,15 @@ describe("/theme", () => {
 
 /* The health loader is the slowest thing here (0.98 to 2.01 s in production). Its time budget is
  * the suite default in `vitest.config.ts`, stated once there. */
-describe("/api/health", () => {
-  const healthRequest = (ip = "203.0.113.1") =>
-    new Request("https://example.com/api/health", {
-      headers: { "cf-connecting-ip": ip },
-    });
-
-  it("is NEVER cacheable, on every verdict", async () => {
-    /* A cached health check answers "healthy" from an old entry whether the Worker is fine or
-     * not. The route states the header itself so a later `headers` export cannot drop it unseen. */
-    const ctx = createExecutionContext();
-    const response = await healthLoader({
-      request: healthRequest("203.0.113.10"),
-      context: routeContext(ctx),
-      params: {},
-    } as never);
-    await waitOnExecutionContext(ctx);
-
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-type")).toContain("application/json");
-    /* THE STATUS LINE IS THE ALERT. A 200 carrying `{"ok": false}` is read by
-     * `curl --fail` as health and the alert is never sent. */
-    const body = (await response.json()) as { ok: boolean };
-    expect(response.status).toBe(body.ok ? 200 : 503);
-  });
-
-  it("WRITES A SNAPSHOT for both verdicts, and it is what was answered with", async () => {
-    await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
-
-    const ctx = createExecutionContext();
-    const response = await healthLoader({
-      request: healthRequest("203.0.113.11"),
-      context: routeContext(ctx),
-      params: {},
-    } as never);
-    const body = (await response.json()) as { ok: boolean; checks: Array<{ ok: boolean }> };
-    await waitOnExecutionContext(ctx);
-
-    const stored = await env.APP_KV.get(HEALTH_SNAPSHOT_KEY, "json");
-    expect(stored).toBeTruthy();
-    /* What is stored is what was answered, so the home tile cannot keep showing the last good
-     * answer while the site fails. This run fails locally (no AI Search), hence the useful case. */
-    expect(stored).toMatchObject({
-      ok: body.ok,
-      total: body.checks.length,
-      failed: body.checks.filter((c) => !c.ok).length,
-    });
-  });
-
-  it("REFUSES past the per-IP rate, with the same body shape and a Retry-After", async () => {
-    /* The limiter is gate 0 because every check below it costs. The budget is spent directly
-     * through the route's Durable Object, so the one loader call is the subject and must be the
-     * first refusal. The limiter is keyed per IP, so this case has an address of its own. */
-    /* Frozen: the limiter keys on a FIXED wall-clock window, and a boundary between the spend
-     * and the loader call would hand the loader a fresh allowance. */
-    freezeAtWindowStart();
-
-    const ip = "203.0.113.99";
-    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));
-    /* The route's own numbers, which it deliberately does not export: 20 per
-     * 60 seconds. Spent to the edge, so the next call is the first refusal. */
-    let lastOk = true;
-    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit([{ limit: 20, windowSeconds: 60 }])).ok;
-    /* The allowance was real: if `hit` had refused early, the assertion below would pass
-     * against a limiter this case did not exhaust. */
-    expect(lastOk).toBe(true);
-
-    const ctx = createExecutionContext();
-    const refusal = await healthLoader({
-      request: healthRequest(ip),
-      context: routeContext(ctx),
-      params: {},
-    } as never);
-    await waitOnExecutionContext(ctx);
-
-    expect(refusal.status).toBe(429);
-    expect(refusal.headers.get("retry-after")).toBe("60");
-    expect(refusal.headers.get("cache-control")).toBe("no-store");
-    /* THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the watching workflow's
-     * parse succeeds and reports a named cause rather than "body did not
-     * parse". */
-    expect(await refusal.json()).toMatchObject({
-      ok: false,
-      checks: [{ name: "rate-limited", ok: false }],
-    });
-  });
-
-  it("does NOT serve at all when the limiter is missing", async () => {
-    /* A missing `ASK_BUDGET` is a broken deployment, and 503 is how this endpoint reports one,
-     * so the monitor alerts rather than quietly losing its guard. */
-    const ctx = createExecutionContext();
-    const response = await healthLoader({
-      request: healthRequest("203.0.113.12"),
-      context: routeContext(ctx, { ASK_BUDGET: undefined }),
-      params: {},
-    } as never);
-    await waitOnExecutionContext(ctx);
-
-    expect(response.status).toBe(503);
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toMatchObject({
-      ok: false,
-      checks: [{ name: "rate-limiter-unavailable", ok: false }],
-    });
-  });
-
-  it("carries NO detail string, and a failing check carries only its two counts", async () => {
-    /* Every `detail` is dropped: they carry an R2 key and FTS shadow table names, and this route
-     * is unauthenticated. A failing check carries only `expected` and `present`. Both shapes are
-     * asserted, or an implementation leaking detail on every check would pass. */
-    const ctx = createExecutionContext();
-    const response = await healthLoader({
-      request: healthRequest("203.0.113.13"),
-      context: routeContext(ctx),
-      params: {},
-    } as never);
-    await waitOnExecutionContext(ctx);
-
-    const body = (await response.json()) as {
-      checks: Array<Record<string, unknown> & { ok: boolean }>;
-    };
-    expect(body.checks.length).toBeGreaterThan(0);
-    for (const check of body.checks) {
-      expect(check).not.toHaveProperty("detail");
-      expect(Object.keys(check).sort()).toEqual(
-        check.ok ? ["name", "ok"] : expect.arrayContaining(["name", "ok"]),
-      );
-      if (!check.ok) {
-        /* Only ever the two counts beside the name, never a string. */
-        for (const key of Object.keys(check)) {
-          expect(["name", "ok", "expected", "present"]).toContain(key);
-        }
-      }
-    }
-  });
-
-  it("answers a non-GET as a METHOD error, not as a framework crash", async () => {
-    /* React Router's default for a loader-only route answers a POST with 405, a "server error"
-     * body and no `Allow`. The status alone would pass against that, so the header, the body
-     * shape and `no-store` are what discriminate. */
-    const response = await healthAction();
-
-    expect(response.status).toBe(405);
-    expect(response.headers.get("allow")).toBe("GET");
-    /* The SAME contract every other answer here uses, so the health workflow's
-     * parse succeeds and names a cause rather than falling into its "body did
-     * not parse" branch. */
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-type")).toContain("application/json");
-
-    const body = (await response.json()) as { ok: boolean; checks: Array<{ name: string; ok: boolean }> };
-    expect(body.ok).toBe(false);
-    expect(body.checks).toEqual([{ name: "method-not-allowed", ok: false }]);
-    /* Asserted by absence: the scaffold body carried a `message` field this route never
-     * produces. */
-    expect(body).not.toHaveProperty("message");
-  });
-});
-
 describe("/health", () => {
-  it("reports drift as a warning, never a 503, in the family shape", async () => {
-    /* Locally AI Search is absent, so ask-index-drift fails: /api/health answers 503, /health warns. */
+  const healthRequest = (ip: string) =>
+    new Request("https://example.com/health", { headers: { "cf-connecting-ip": ip } });
+
+  it("reports drift as a warning, never a 503, in the network shape", async () => {
+    /* Locally AI Search is absent, so ask-index-drift fails: /health warns. */
     const ctx = createExecutionContext();
-    const response = await familyHealthLoader({
-      request: new Request("https://example.com/health", { headers: { "cf-connecting-ip": "203.0.113.20" } }),
+    const response = await healthLoader({
+      request: healthRequest("203.0.113.20"),
       context: routeContext(ctx),
       params: {},
     } as never);
@@ -288,8 +132,17 @@ describe("/health", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/health+json");
     expect(response.headers.get("cache-control")).toBe("no-store");
-    const body = (await response.json()) as { status: string; db: string; checks: Array<{ name: string; status: string }> };
+    const body = (await response.json()) as {
+      status: string;
+      db: string;
+      checks: Array<{ name: string; status: string; detail?: string }>;
+    };
     expect(body).toMatchObject({ status: "warn", db: "up" });
+    /* PUBLIC, so a drift check's detail is its two counts and nothing else: the run's own detail names R2 keys and
+       FTS shadow tables. repair.mjs healthChecks reads the counts back for ship and the watchdog. */
+    for (const check of body.checks.filter((c) => HEALTH_CHECK_NAMES.includes(c.name as never))) {
+      if (check.detail !== undefined) expect(check.detail).toMatch(/^(\d+ of \d+)?$/);
+    }
     const byName = Object.fromEntries(body.checks.map((c) => [c.name, c.status]));
     /* No cron has fired in a test database, so the cron check warns that CRON_JOBS never ran (site-runtime 0.54.0):
      * the same list the scheduled handler runs is the list /health expects. */
@@ -299,6 +152,26 @@ describe("/health", () => {
      * the list would never reach /health. */
     const run = await runHealthChecks(env as never);
     expect(run.checks.map((c) => c.name)).toEqual([...HEALTH_CHECK_NAMES]);
+  });
+
+  it("REFUSES past the per-IP rate, in the same shape and with a Retry-After", async () => {
+    /* The limiter comes first because every check below it costs. Frozen: the limiter keys on a FIXED wall-clock
+       window, and a boundary between the spend and the loader call would hand the loader a fresh allowance. */
+    freezeAtWindowStart();
+    const ip = "203.0.113.99";
+    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));
+    let lastOk = true;
+    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit([{ limit: 20, windowSeconds: 60 }])).ok;
+    expect(lastOk).toBe(true);
+
+    const ctx = createExecutionContext();
+    const refusal = await healthLoader({ request: healthRequest(ip), context: routeContext(ctx), params: {} } as never);
+    await waitOnExecutionContext(ctx);
+
+    expect(refusal.status).toBe(429);
+    expect(refusal.headers.get("retry-after")).toBe("60");
+    expect(refusal.headers.get("cache-control")).toBe("no-store");
+    expect(await refusal.json()).toMatchObject({ status: "fail", checks: [{ name: "rate-limited", status: "fail" }] });
   });
 });
 

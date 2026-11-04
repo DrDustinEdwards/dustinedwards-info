@@ -31,7 +31,7 @@ import { logEvent } from "@dustinedwards/site-runtime/log";
 import { outsideResult } from "@dustinedwards/site-runtime/mcp-server";
 import { z } from "zod";
 
-import { watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
+import { failingCheckNames, healthChecks, watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
 
 import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client";
 import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
@@ -288,13 +288,13 @@ const REGISTRY_READS = {
 
 type RegistryName = keyof typeof REGISTRY_READS;
 
-/** The names of failing checks in a health reading. */
-function failing(body: unknown): string[] {
-  const checks = (body as { checks?: unknown } | null)?.checks;
-  if (!Array.isArray(checks)) return [];
-  return checks
-    .filter((c) => c && typeof c === "object" && (c as { ok?: unknown }).ok === false)
-    .map((c) => String((c as { name?: unknown }).name));
+/** The names of the checks a /health reading does not pass, read as the watchdog reads them. */
+const failing = (body: unknown): string[] => failingCheckNames(body);
+
+/** Every check passes: /health's own `ok` stays true while a drift check warns. */
+function allPass(body: unknown): boolean {
+  const checks = healthChecks(body);
+  return checks.length > 0 && checks.every((c) => c.ok);
 }
 
 export const TOOLS: ToolDefinition[] = [
@@ -307,7 +307,7 @@ export const TOOLS: ToolDefinition[] = [
         "One look at whether dustinedwards.info is well: the publishing pipeline's stores reported " +
         "SEPARATELY (the head sha, the counts in the repository, in D1 and in the search index, and " +
         "whether the AI index and GitHub are configured), because they can disagree and fail " +
-        "independently, and the site's own readiness endpoint, /api/health, with every check it ran and " +
+        "independently, and the site's own health endpoint, /health, with every check it ran and " +
         "the names of any failing. A failing check whose name ends in -drift is a derived store behind " +
         "its source, which dei_repair_drift converges. Read only.",
       inputSchema: z.strictObject({}),
@@ -319,14 +319,13 @@ export const TOOLS: ToolDefinition[] = [
         const pipeline = await callOperator(env, "sync_status", {});
         if (!pipeline.ok) return refusal(pipeline);
         const health = await readHealth(env);
-        const body = health.body as { ok?: unknown; checks?: unknown } | null;
         return ok({
           pipeline: pipeline.data,
           health: {
             status: health.status,
-            ok: body?.ok === true,
-            failing: failing(body),
-            checks: Array.isArray(body?.checks) ? body.checks : [],
+            ok: allPass(health.body),
+            failing: failing(health.body),
+            checks: healthChecks(health.body),
             ...(health.error ? { unreachable: health.error } : {}),
           },
         });
@@ -342,10 +341,10 @@ export const TOOLS: ToolDefinition[] = [
     config: {
       title: "Repair drift and read it back",
       description:
-        "Reads /api/health, and for every failing check that is a known drift class runs the operator " +
+        "Reads /health, and for every failing check that is a known drift class runs the operator " +
         "repair that converges it (sync_posts, sync_procedures, sync_dictionary, sync_roster, " +
         "sync_phages, sync_registry, sync_pages, sync_publications, sync_llms, sync_cv, sync_cv_pdf, " +
-        "sync_ask, sync_media, backup_media), in the watchdog's order, then reads /api/health again and " +
+        "sync_ask, sync_media, backup_media), in the watchdog's order, then reads /health again and " +
         "reports each repair's own read-back verdict and what is still failing. It is the plan the " +
         "fifteen-minute watchdog runs, the same code, so it repairs nothing the watchdog would not.\n\n" +
         "It REPAIRS NOTHING when any failing check is not a known drift class, because a compound failure " +
@@ -396,7 +395,7 @@ export const TOOLS: ToolDefinition[] = [
         const after = await readHealth(env);
         const outcome = watchdogOutcome({ misses, recheck: after });
         return ok({
-          healthy: (after.body as { ok?: unknown } | null)?.ok === true,
+          healthy: allPass(after.body),
           repaired,
           still_failing: failing(after.body),
           verdict: outcome.length === 0 ? "converged" : outcome.map((a) => (a.type === "notify" ? a.reason : "")).join(" "),

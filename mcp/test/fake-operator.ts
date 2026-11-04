@@ -11,7 +11,7 @@ import type { Caller } from "../src/auth.ts";
 export const TOKEN = "op-token-0123456789abcdef0123456789abcdef";
 export const ORIGIN = "https://site.test";
 export const API_URL = `${ORIGIN}/api/operator`;
-export const HEALTH_URL = `${ORIGIN}/api/health`;
+export const HEALTH_URL = `${ORIGIN}/health`;
 export const ADMIN = "admin@example.com";
 
 /** A SITE binding whose fetch is whatever globalThis.fetch is at call time. */
@@ -85,7 +85,7 @@ type Reply = { status?: number; body: unknown } | { raw: string; status?: number
 export interface FakeOperator {
   /** Requests to /api/operator. */
   calls: Recorded[];
-  /** Requests to /api/health. */
+  /** Requests to /health. */
   healthCalls: Recorded[];
   logs: string[];
   /** The next operator reply, or one per call chosen by tool name. */
@@ -109,7 +109,7 @@ export function fakeOperator(initial: Reply = { body: { ok: true, data: {} } }):
   const consoleMethods = ["log", "info", "warn", "error", "debug", "trace"] as const;
   const realConsole = consoleMethods.map((m) => [m, console[m]] as const);
   let next: Reply | ((tool: string) => Reply) = initial;
-  let readings: Reply[] = [{ body: { ok: true, checks: [] } }];
+  let readings: Reply[] = [{ body: { status: "pass", ok: true, checks: [{ name: "db", status: "pass" }] } }];
 
   const fake: FakeOperator = {
     calls: [],
@@ -137,7 +137,7 @@ export function fakeOperator(initial: Reply = { body: { ok: true, data: {} } }):
     const request = new Request(input, init);
     const text = await request.text();
     const recorded = { url: request.url, method: request.method, headers: request.headers, body: text ? JSON.parse(text) : null };
-    if (new URL(request.url).pathname === "/api/health") {
+    if (new URL(request.url).pathname === "/health") {
       fake.healthCalls.push(recorded);
       const reading = readings.length > 1 ? readings.shift()! : readings[0]!;
       return answer(reading);

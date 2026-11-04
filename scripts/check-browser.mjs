@@ -11,7 +11,6 @@ import * as admin from "./lib/browser/cases/admin.mjs";
 import * as cv from "./lib/browser/cases/cv.mjs";
 import * as enhancements from "./lib/browser/cases/enhancements.mjs";
 import * as headerMenus from "./lib/browser/cases/header-menus.mjs";
-import * as healthTile from "./lib/browser/cases/health-tile.mjs";
 import * as layout from "./lib/browser/cases/layout.mjs";
 import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
@@ -116,7 +115,6 @@ try {
   );
 
   const ctx = { page, browser };
-  await healthTile.run(ctx);
   await themeCache.run(ctx);
   await navigation.run(ctx);
   await headerMenus.run(ctx);

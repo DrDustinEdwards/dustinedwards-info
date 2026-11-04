@@ -3,6 +3,40 @@
 
 import { awaitAskConvergence } from "./ask-converge.mjs";
 
+/**
+ * /health's checks as the readers that act on them want them: ship's readiness, the watchdog's repair
+ * planner, operator-sync's Ask re-read and the admin MCP. /health (site-runtime's healthResponse) gives each
+ * check a status, and a drift check that fails carries "present of expected" as its detail; this turns that
+ * into `ok` and the two counts, so every reader judges the same rows the same way.
+ *
+ * @typedef {{ name: string, status: "pass" | "warn" | "fail", ok: boolean, expected?: number, present?: number, waitedMs?: number }} HealthRow
+ */
+
+const COUNTS = /^(\d+) of (\d+)$/;
+
+/**
+ * Fails closed: a body that is not a /health answer has no rows, and a row with no status is not a pass.
+ *
+ * @param {unknown} body the parsed /health body
+ * @returns {HealthRow[]}
+ */
+export function healthChecks(body) {
+  const checks = /** @type {any} */ (body)?.checks;
+  if (!Array.isArray(checks)) return [];
+  return checks
+    .filter((c) => c && typeof c === "object" && typeof c.name === "string")
+    .map((c) => {
+      const status = c.status === "pass" || c.status === "warn" || c.status === "fail" ? c.status : "fail";
+      const counts = status !== "pass" && typeof c.detail === "string" ? COUNTS.exec(c.detail) : null;
+      return {
+        name: c.name,
+        status,
+        ok: status === "pass",
+        ...(counts ? { present: Number(counts[1]), expected: Number(counts[2]) } : {}),
+      };
+    });
+}
+
 /** Only idempotent repairs through the operator API, since this runs unattended. Map order is repair order. */
 const REPAIRABLE = /** @type {const} */ ({
   // Content first: sync_ask reads search_docs, which sync_posts, sync_procedures, sync_dictionary,
@@ -34,7 +68,7 @@ const REPAIRABLE = /** @type {const} */ ({
 });
 
 /**
- * @param {unknown} failingNames names of checks reporting ok:false
+ * @param {unknown} failingNames names of the checks /health does not pass
  * @param {{ hasToken: boolean }} options
  * @returns {{
  *   repair: string[],
@@ -101,17 +135,15 @@ export function repairPlan(failingNames, { hasToken }) {
 }
 
 /**
- * An unreadable body yields no names, so repairPlan alerts rather than writes. ok === false, not !ok,
- * so a check missing the field is not counted as failing.
+ * An unreadable body yields no names, so repairPlan alerts rather than writes. Every check /health does
+ * not pass is named, a binding's or the backup's warn among them: those are not drift, so they alert.
  *
  * @param {unknown} body
  * @returns {string[]}
  */
 export function failingCheckNames(body) {
-  const checks = /** @type {any} */ (body)?.checks;
-  if (!Array.isArray(checks)) return [];
-  return checks
-    .filter((c) => c && typeof c === "object" && c.ok === false && typeof c.name === "string")
+  return healthChecks(body)
+    .filter((c) => !c.ok)
     .map((c) => c.name);
 }
 
@@ -130,23 +162,19 @@ export function failingCheckNames(body) {
  */
 
 /**
- * A 200 whose body says `ok: true`; anything else, a 503 included, is unhealthy.
+ * A 200 whose every check passes; anything else, a warn or a 503, is unhealthy. Not /health's own `ok`,
+ * which stays true while a drift check warns.
  *
  * @param {HealthReading | null | undefined} reading
  * @returns {boolean}
  */
 function isHealthyReading(reading) {
-  const body = reading?.body;
-  return (
-    Number(reading?.status) === 200 &&
-    !!body &&
-    typeof body === "object" &&
-    /** @type {any} */ (body).ok === true
-  );
+  const checks = healthChecks(reading?.body);
+  return Number(reading?.status) === 200 && checks.length > 0 && checks.every((c) => c.ok);
 }
 
 /**
- * Anything but a healthy 200 takes the same path: a 503 is how this endpoint reports a failing check.
+ * Anything but a healthy 200 takes the same path: a warn names the drift, a 503 the database.
  *
  * @param {HealthReading} reading
  * @param {{ hasToken: boolean }} options
@@ -217,10 +245,8 @@ export function watchdogOutcome({ misses, recheck }) {
  * @returns {string[]}
  */
 function failingWithCounts(body) {
-  const checks = /** @type {any} */ (body)?.checks;
-  if (!Array.isArray(checks)) return [];
-  return checks
-    .filter((c) => c && typeof c === "object" && c.ok === false && typeof c.name === "string")
+  return healthChecks(body)
+    .filter((c) => !c.ok)
     .map((c) =>
       typeof c.expected === "number" && typeof c.present === "number"
         ? `${c.name} (expected ${c.expected}, present ${c.present})`
@@ -255,8 +281,7 @@ export async function settleAskRecheck({ recheck, attempted, reread, sleep, now 
       // A reading that never arrived names no drift, so the last real one stands.
       if (Number(reading?.status) === 0) return null;
       latest = reading;
-      const checks = /** @type {any} */ (reading.body)?.checks;
-      return Array.isArray(checks) ? (checks.find((c) => c?.name === "ask-index-drift") ?? null) : null;
+      return healthChecks(reading.body).find((c) => c.name === "ask-index-drift") ?? null;
     },
     sleep,
     now,

@@ -7,6 +7,7 @@ import {
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
 } from "../../app/lib/health/ask-converge.mjs";
+import { healthChecks } from "../../app/lib/health/repair.mjs";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 
@@ -58,7 +59,7 @@ async function operatorSync(tool, { origin, token }) {
 }
 
 /**
- * The ask-index-drift row from /api/health. AI Search is eventually consistent, so drift is re-read
+ * The ask-index-drift row from /health. AI Search is eventually consistent, so drift is re-read
  * before it is a miss, and through health, which writes nothing; `sync_ask` would repair what it
  * measures.
  *
@@ -66,18 +67,17 @@ async function operatorSync(tool, { origin, token }) {
  * @returns {Promise<any>} the row, or null when health did not report one
  */
 export async function readAskDrift(origin) {
-  const res = await fetch(`${origin}/api/health`, {
+  const res = await fetch(`${origin}/health`, {
     headers: { "user-agent": "ship", "cache-control": "no-cache" },
     signal: AbortSignal.timeout(30_000),
   });
-  // Parsed regardless of status: health answers 503 when ANY check fails, including ones this
-  // reading is not asking about, and the body is still the answer.
+  // Parsed regardless of status: health answers 503 when the database fails, and the body is still the answer.
   const health = await res.json().catch(() => null);
-  return health?.checks?.find((/** @type {any} */ c) => c?.name === "ask-index-drift") ?? null;
+  return healthChecks(health).find((c) => c.name === "ask-index-drift") ?? null;
 }
 
 /**
- * sync_ask, then, when the write-back read has not converged, re-reads /api/health for the Ask
+ * sync_ask, then, when the write-back read has not converged, re-reads /health for the Ask
  * index to catch up on its own.
  *
  * @param {OperatorTarget} target
@@ -105,7 +105,7 @@ export async function convergeAsk(target) {
     const firstReading =
       `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
     console.log(
-      `  not converged on the write-back (${firstReading}). Re-reading /api/health for up ` +
+      `  not converged on the write-back (${firstReading}). Re-reading /health for up ` +
         `to ${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
     );
 

@@ -1,10 +1,11 @@
 /**
- * /health: site-runtime's healthResponse, what the outside reads: the UptimeRobot monitor, Capsid's watcher and the
- * family's ops audit. 503 only when D1 does not
- * answer. Warnings, never a 503: the newest complete dump older than 26 hours, a binding that does not answer, a cron
- * job that failed or stopped, and every drift check /api/health runs (the site is up while one drifts). /api/health
- * stays the repair instrument the watchdog, ship and the admin MCP read. `sha` is the commit ship deployed
- * (DEPLOY_SHA); a hand deploy has none. Same limiter and budget as /api/health, because the drift checks cost.
+ * /health: site-runtime's healthResponse, the site's one health endpoint. The outside reads it (the UptimeRobot
+ * monitor, Capsid's watcher, the network's ops audit, Capsomer's network board), and so do the instruments that act
+ * on it: the watchdog (which repairs drift and stores the colophon's snapshot), ship's readiness, operator-sync and
+ * the admin MCP, each through healthChecks in app/lib/health/repair.mjs. 503 only when D1 does not answer. Warnings, never a 503: the
+ * newest complete dump older than 26 hours, a binding that does not answer, a cron job that failed or stopped, and
+ * every drift check (the site is up while one drifts). `sha` is the commit ship deployed (DEPLOY_SHA); a hand deploy
+ * has none. Rate limited, because the drift checks cost.
  */
 
 import { backupHealth } from "@dustinedwards/d1-dump";
@@ -58,9 +59,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   /* The drift checks run once, started here and not awaited, so each named check below waits on the run inside
      healthResponse's checkTimeoutMs, beside the binding checks: a slow run holds /health no longer than any other
-     check. A detail carries only the two counts, as on /api/health. */
+     check. A detail carries only "present of expected" (repair.mjs reads it back), because this is public; the full
+     detail (the missing keys) goes to Workers Logs under alert=health-check-failed. */
   const drift = runHealthChecks(env);
-  drift.catch(() => {}); // Each check's run reports the rejection; this keeps an unwaited one from being unhandled.
+  drift.then(
+    (run) => {
+      if (run.failed.length === 0) return;
+      console.error(
+        JSON.stringify({
+          alert: "health-check-failed",
+          failed: run.failed.map((c) => c.name),
+          detail: run.failed.map((c) => c.detail),
+        }),
+      );
+    },
+    () => {}, // Each check's run reports the rejection; this keeps an unwaited one from being unhandled.
+  );
   /* LEVELS (area 8, H3). Only `db` (the ping) is fail: without D1 no page renders, so that is the site down. Every
      binding below is warn, because the site still serves its pages without it: MEDIA and IMAGES fall back to the
      original or a missing figure, OG to no card, APP_KV to an uncached read, MEDIA_BACKUP is the mirror, AI only

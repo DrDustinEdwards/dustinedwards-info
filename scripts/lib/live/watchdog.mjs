@@ -3,7 +3,7 @@
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../../../app/lib/health/snapshot.mjs";
 import { check, get, strip } from "./client.mjs";
 
-/* Ship's poll also refreshes the snapshot, so this proves less just after a ship. */
+/* The watchdog is the snapshot's one writer (it stores each /health it reads), so its age is the watchdog's. */
 export async function run() {
   const bust = `vl-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const { text, status } = await get(`/colophon?watchdog=${bust}`);
@@ -14,7 +14,7 @@ export async function run() {
     "watchdog: the colophon carries a health verdict rather than a placeholder",
     attr !== undefined,
     "no element on /colophon carries data-health-age. The tile is in its `missing` state, " +
-      "which means NOTHING has written the snapshot: not the watchdog, not ship, " +
+      "which means the watchdog has never stored a /health reading. " +
       "Check the watchdog's cron and the APP_KV binding.",
   );
 
@@ -32,8 +32,8 @@ export async function run() {
     "watchdog: the live health verdict is under two poll intervals old",
     Number.isInteger(age) && age < bound,
     `the tile reports a verdict ${age} second(s) old against a bound of ${bound}s ` +
-      `(two ${HEALTH_POLL_INTERVAL_SECONDS}s intervals). Nothing has polled /api/health ` +
-      `recently, so the watchdog Worker is not firing. Check its Cron Trigger with ` +
+      `(two ${HEALTH_POLL_INTERVAL_SECONDS}s intervals). The watchdog has not stored a ` +
+      `/health reading recently, so the watchdog Worker is not firing. Check its Cron Trigger with ` +
       `\`npx wrangler deployments list -c wrangler.watchdog.jsonc\` and its logs; until it is ` +
       `fixed, only the external uptime monitors are watching.`,
   );

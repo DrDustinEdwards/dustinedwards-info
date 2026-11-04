@@ -19,6 +19,7 @@ function snapshotAgedBy(secondsAgo, overrides = {}) {
     ok: true,
     total: 5,
     failed: 0,
+    checks: ["db", "backup", "media", "content-drift", "fts-equality"].map((name) => ({ name, status: "pass" })),
     readAt: new Date(NOW - secondsAgo * 1000).toISOString(),
     ...overrides,
   };
@@ -64,6 +65,9 @@ await test("FAILS CLOSED on every malformed field, one at a time", () => {
     "ok not a boolean": { ok: "yes" },
     "total not a number": { total: "5" },
     "failed not a number": { failed: null },
+    "checks absent": { checks: undefined },
+    "checks short of the total": { checks: [{ name: "db", status: "pass" }] },
+    "a check with no status": { checks: Array.from({ length: 5 }, (_, i) => ({ name: `c${i}` })) },
   };
   for (const [name, override] of Object.entries(cases)) {
     assert.equal(healthTile(snapshotAgedBy(60, override), NOW).state, "missing", name);
@@ -89,30 +93,42 @@ await test("formatAge never claims a precision the fifteen minute schedule lacks
   assert.equal(formatAge(86400 * 3), "3 days ago");
 });
 
-await test("snapshotFromBody counts what the endpoint answered with, not a HealthRun", () => {
+await test("snapshotFromBody keeps each /health check's name and status, and no detail", () => {
   const body = {
-    ok: false,
+    status: "warn",
+    ok: true,
     checks: [
-      { name: "a", ok: true },
-      { name: "b", ok: false },
-      { name: "c", ok: true },
-      { name: "d", ok: false },
+      { name: "db", status: "pass" },
+      { name: "content-drift", status: "warn", detail: "14 of 16" },
+      { name: "media", status: "pass" },
+      { name: "backup", status: "warn", detail: "newest complete dump is 30 hours old" },
     ],
   };
-  const snapshot = snapshotFromBody(body, "2026-08-26T14:00:00.000Z");
-  assert.deepEqual(snapshot, {
+  assert.deepEqual(snapshotFromBody(body, "2026-08-26T14:00:00.000Z"), {
     ok: false,
     total: 4,
     failed: 2,
     readAt: "2026-08-26T14:00:00.000Z",
+    checks: [
+      { name: "db", status: "pass" },
+      { name: "content-drift", status: "warn" },
+      { name: "media", status: "pass" },
+      { name: "backup", status: "warn" },
+    ],
   });
 });
 
-await test("body to snapshot to tile round trips the counts the page renders", () => {
-  const body = { ok: true, checks: [{ ok: true }, { ok: true }, { ok: true }] };
+await test("a body that is not a /health answer is never stored", () => {
+  for (const body of [null, {}, { status: "fail" }, { checks: [] }, "<html>"]) {
+    assert.equal(snapshotFromBody(body, "2026-08-26T14:00:00.000Z"), null, JSON.stringify(body));
+  }
+});
+
+await test("body to snapshot to tile round trips what the colophon renders", () => {
+  const body = { status: "pass", checks: ["db", "media", "fts-equality"].map((name) => ({ name, status: "pass" })) };
   const tile = healthTile(snapshotFromBody(body, new Date(NOW - 30_000).toISOString()), NOW);
   assert.equal(tile.state, "fresh");
   assert.equal(tile.total, 3);
   assert.equal(tile.failed, 0);
-  assert.equal(`${tile.total - tile.failed}/${tile.total}`, "3/3");
+  assert.equal(tile.checks.length, 3);
 });
