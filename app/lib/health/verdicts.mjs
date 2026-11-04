@@ -408,27 +408,3 @@ export function withTimeout(promise, ms, name) {
     );
   });
 }
-
-/**
- * Detail strings never reach this unauthenticated wire: they carry an R2 object key and shadow table
- * names. A FAILING check carries its two counts, so a flap can be sized; a passing one, name and ok.
- *
- * @param {{ checks: Array<{ name: string, ok: boolean, counts?: { expected: number, present: number } }> }} run
- * @returns {{ ok: boolean, checks: Array<{ name: string, ok: boolean, expected?: number, present?: number }> }}
- */
-export function publicHealthBody(run) {
-  return {
-    ok: run.checks.every((c) => c.ok),
-    checks: run.checks.map((c) => {
-      // Field by field, not spread, so a field added to HealthCheck later cannot leak onto the wire.
-      if (c.ok || !c.counts) return { name: c.name, ok: c.ok };
-      return {
-        name: c.name,
-        ok: c.ok,
-        expected: c.counts.expected,
-        present: c.counts.present,
-      };
-    }),
-  };
-}
-

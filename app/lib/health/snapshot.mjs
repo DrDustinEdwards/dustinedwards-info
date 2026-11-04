@@ -1,5 +1,9 @@
-// Written only by /api/health, which the watchdog polls, so the tile's AGE is the watchdog's liveness:
-// nothing else may stamp this key. Measured: running the suite in the home loader cost about 1.2 s.
+// /health's verdict, written only by the watchdog Worker after each read of /health, so the tile's AGE is
+// the watchdog's liveness: nothing else may stamp this key, /health included (UptimeRobot, Capsid's watcher
+// and Capsomer's network board read it every few minutes and would keep a dead watchdog looking alive).
+// Measured: running the suite in a page loader cost about 1.2 s, so the colophon reads this instead.
+
+import { healthChecks } from "./rows.mjs";
 
 /** One key, not a prefix: a prefix would invite a second writer. */
 export const HEALTH_SNAPSHOT_KEY = "health:snapshot";
@@ -11,13 +15,14 @@ export const HEALTH_POLL_INTERVAL_SECONDS = 15 * 60;
 export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECONDS;
 
 /**
- * @typedef {{ ok: boolean, total: number, failed: number, readAt: string }} HealthSnapshot
+ * @typedef {{ name: string, status: "pass" | "warn" | "fail" }} SnapshotCheck
+ * @typedef {{ ok: boolean, total: number, failed: number, readAt: string, checks: SnapshotCheck[] }} HealthSnapshot
  */
 
 /**
  * @typedef {(
- *   | { state: "fresh", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number }
- *   | { state: "stale", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number }
+ *   | { state: "fresh", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number, checks: SnapshotCheck[] }
+ *   | { state: "stale", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number, checks: SnapshotCheck[] }
  *   | { state: "missing" }
  *   | { state: "unreadable" }
  * )} HealthTile
@@ -35,9 +40,14 @@ export function healthTile(snapshot, nowMs) {
   if (!snapshot || typeof snapshot !== "object") return { state: "missing" };
 
   const value = /** @type {Record<string, unknown>} */ (snapshot);
-  const { ok, total, failed, readAt } = value;
+  const { ok, total, failed, readAt, checks } = value;
 
   if (typeof readAt !== "string") return { state: "missing" };
+  if (!Array.isArray(checks) || checks.length !== total) return { state: "missing" };
+  const named = checks.filter(
+    (c) => c && typeof c.name === "string" && (c.status === "pass" || c.status === "warn" || c.status === "fail"),
+  );
+  if (named.length !== checks.length) return { state: "missing" };
   if (typeof ok !== "boolean") return { state: "missing" };
   if (!Number.isFinite(total) || !Number.isFinite(failed)) return { state: "missing" };
 
@@ -54,6 +64,7 @@ export function healthTile(snapshot, nowMs) {
     failed: /** @type {number} */ (failed),
     readAt,
     ageSeconds,
+    checks: named.map((c) => ({ name: c.name, status: c.status })),
   };
 }
 
@@ -74,17 +85,21 @@ export function formatAge(ageSeconds) {
 }
 
 /**
- * Counts only: per-check details carry an R2 key and shadow table names, and the home page is public.
+ * Each check's name and status, as public as /health itself, and no detail. Null for a body that is not a
+ * /health answer, so a refusal or an error page is never stored as a verdict.
  *
- * @param {{ ok: boolean, checks: Array<{ ok: boolean }> }} body
+ * @param {unknown} body the parsed /health body
  * @param {string} readAt an ISO 8601 timestamp
- * @returns {HealthSnapshot}
+ * @returns {HealthSnapshot | null}
  */
 export function snapshotFromBody(body, readAt) {
+  const checks = healthChecks(body);
+  if (checks.length === 0) return null;
   return {
-    ok: body.ok,
-    total: body.checks.length,
-    failed: body.checks.filter((c) => !c.ok).length,
+    ok: checks.every((c) => c.ok),
+    total: checks.length,
+    failed: checks.filter((c) => !c.ok).length,
     readAt,
+    checks: checks.map((c) => ({ name: c.name, status: c.status })),
   };
 }

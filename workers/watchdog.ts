@@ -17,6 +17,7 @@ import {
   errorRateQuery,
   errorRateVerdict,
 } from "../app/lib/health/error-rate.mjs";
+import { HEALTH_SNAPSHOT_KEY, snapshotFromBody } from "../app/lib/health/snapshot.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo";
 import { errorMessage } from "../app/lib/error-message.mjs";
 
@@ -26,7 +27,8 @@ const SITE_SCRIPT_NAME = "dustinedwards";
 /**
  * A separate Worker because a watcher inside the site dies with it. It reaches the site only through
  * the `SITE` service binding (error 1042 refuses same-zone Worker fetch), so it cannot prove the site
- * is reachable from outside. It must never write the health snapshot, whose age is its liveness.
+ * is reachable from outside. It is the health snapshot's one writer: each /health it reads is stored for the
+ * colophon, so the snapshot's age is this Worker's liveness.
  */
 
 // `ALERT_EMAIL` is a var, not a secret: an inbox address grants nothing.
@@ -82,14 +84,28 @@ const ALERT_FROM = { email: "watchdog@dustinedwards.info", name: "dustinedwards.
 
 type Reading = { status: number; body: unknown; error?: string };
 
+// Never throws: a failed write costs the colophon one fresh reading, a throw would cost the alert. A body
+// that is not a /health answer is not stored, so the snapshot ages into `stale` rather than lying.
+async function writeSnapshot(env: WatchdogEnv, body: unknown): Promise<void> {
+  const snapshot = snapshotFromBody(body, new Date().toISOString());
+  if (!snapshot || !env.APP_KV) return;
+  try {
+    await env.APP_KV.put(HEALTH_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.error(JSON.stringify({ alert: "health-snapshot-write-failed", error: errorMessage(error) }));
+  }
+}
+
 // Never throws, and keeps the cause: a timeout is a site problem, a 1042 is a misdirected binding.
 // Exported only so the worker test can drive the catch.
 export async function readHealth(env: WatchdogEnv): Promise<Reading> {
   try {
-    const response = await env.SITE.fetch(`${SITE_ORIGIN}/api/health`, {
+    const response = await env.SITE.fetch(`${SITE_ORIGIN}/health`, {
       headers: { "user-agent": "watchdog", "cache-control": "no-cache" },
     });
-    return { status: response.status, body: await response.json().catch(() => null) };
+    const body = await response.json().catch(() => null);
+    await writeSnapshot(env, body);
+    return { status: response.status, body };
   } catch (error) {
     return {
       status: 0,
@@ -333,7 +349,7 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
 }
 
 /**
- * Not a health check: `ship` refuses unless `/api/health` is ok, so an error spike there would block
+ * Not a health check: `ship` refuses unless `/health` passes, so an error spike there would block
  * deploying the fix. Never throws, and any failure to read the rate is reported as not ok.
  * Exported only so the worker test can drive it against a stubbed analytics API.
  */

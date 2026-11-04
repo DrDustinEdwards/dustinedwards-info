@@ -15,8 +15,8 @@ Read tools need `dei.read`; the others need `dei.write`, ticked on the consent p
 
 | Tool | Does | Hints (read, destructive, idempotent, open world) |
 |---|---|---|
-| `dei_check_site` | `sync_status` plus `/api/health`, with the failing checks named | read, no, yes, no |
-| `dei_repair_drift` | the watchdog's repair plan: each failing drift check's sync, then a re-read of `/api/health` | write, no, yes, no |
+| `dei_check_site` | `sync_status` plus `/health`, with the failing checks named | read, no, yes, no |
+| `dei_repair_drift` | the watchdog's repair plan: each failing drift check's sync, then a re-read of `/health` | write, no, yes, no |
 | `dei_review_mentions` | the webmention queue, a page at a time, stranger text marked as data | read, no, yes, no |
 | `dei_decide_mention` | approve or reject one mention (delete stays in the admin screen) | write, no, yes, no |
 | `dei_upload_media` | one image into the media bucket, content-addressed | write, no, yes, yes |

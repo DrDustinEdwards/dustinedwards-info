@@ -14,7 +14,7 @@ import { islandsPlugin } from "./scripts/lib/islands.mjs";
  * and NOTHING BETWEEN THEM. No test ran a loader, an action, D1, KV, R2 or the
  * Cache API, so every route-level fact had to be established by probing
  * production. Three defects reached the wire that this layer catches offline in
- * seconds: the uncached markdown twin, the unguarded `/api/health`, and the
+ * seconds: the uncached markdown twin, the unguarded health endpoint, and the
  * `/theme` origin gap. Each of those has a named case here that says so.
  *
  * ## THE INSTRUMENT, and what it can and cannot see
@@ -183,7 +183,7 @@ export default defineConfig({
      *
      * ## Why it is not vitest's 5s default
      *
-     * MEASURED THE HARD WAY, 2026-08-29: three `/api/health` cases failed
+     * MEASURED THE HARD WAY, 2026-08-29: three health endpoint cases failed
      * inside `ship` at 5065ms, 5777ms and 5218ms, which is the default timeout
      * and not a defect in anything they assert. Every one of them was green
      * minutes earlier on an idle machine. `ship` runs the whole offline tier,

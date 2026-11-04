@@ -181,7 +181,7 @@ Live buckets for reference: `dustinedwards-media` is location `ENAM`,
   derives the D1 row and the TWIN as well, from the
   object as it is now. This keeps the never-a-dual-write rule: the Worker still
   writes only to `MEDIA`.
-- **On drift.** `media-backup-drift` in `/api/health` compares every `MEDIA`
+- **On drift.** `media-backup-drift` in `/health` compares every `MEDIA`
   object against its twin and reports `objects`, `twins` and `missing`, so zero
   missing cannot be mistaken for zero examined. The watchdog cron polls that
   endpoint every fifteen minutes and self-repairs the class through
@@ -534,7 +534,7 @@ on a page somebody happened to open. Three paths exist, and each reaches
 Dustin's inbox by email:
 
 - **The watchdog Worker** (`workers/watchdog.ts`, every 15 minutes, inside
-  Cloudflare). It reads `/api/health` through a service binding, runs the
+  Cloudflare). It reads `/health` through a service binding, runs the
   repairs `app/lib/health/repair.mjs` allows, re-reads, and also reads the site
   Worker's error rate. It mails `ALERT_EMAIL` through Cloudflare Email Sending
   ONCE when health goes red and once when it recovers, never per firing. The

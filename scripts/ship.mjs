@@ -65,7 +65,7 @@ const POLL_COUNT = 5;
 const POLL_GAP_MS = 10_000;
 
 /** `check:migrations` asserts this endpoint and that the step runs between deploy and sync. */
-const READINESS_PATH = "/api/health";
+const READINESS_PATH = "/health";
 
 
 let step = 0;

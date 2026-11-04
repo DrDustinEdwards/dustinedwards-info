@@ -142,9 +142,9 @@ describe("each tool maps to its operator requests", () => {
     });
   }
 
-  test("dei_check_site reads sync_status and /api/health, and names the failing checks", async () => {
+  test("dei_check_site reads sync_status and /health, and names the failing checks", async () => {
     api.reply({ body: { ok: true, data: { headSha: SHA } } });
-    api.health({ status: 503, body: { ok: false, checks: [{ name: "pages-drift", ok: false }, { name: "fts", ok: true }] } });
+    api.health({ body: { status: "warn", ok: true, checks: [{ name: "pages-drift", status: "warn" }, { name: "fts", status: "pass" }] } });
     const out = await call("dei_check_site", {});
     assert.deepEqual(api.calls[0].body, { tool: "sync_status", args: {} });
     assert.equal(api.healthCalls.length, 1);
@@ -152,7 +152,7 @@ describe("each tool maps to its operator requests", () => {
     const health = out.structuredContent?.health as { failing: string[]; ok: boolean; status: number };
     assert.deepEqual(health.failing, ["pages-drift"]);
     assert.equal(health.ok, false);
-    assert.equal(health.status, 503);
+    assert.equal(health.status, 200);
   });
 });
 
@@ -165,8 +165,8 @@ describe("dei_repair_drift runs the watchdog's plan and reads it back", () => {
 
   test("each known drift runs its repair in the watchdog's order, then rechecks", async () => {
     api.health(
-      { status: 503, body: { ok: false, checks: [{ name: "pages-drift", ok: false }, { name: "content-drift", ok: false }] } },
-      { body: { ok: true, checks: [] } },
+      { body: { status: "warn", ok: true, checks: [{ name: "pages-drift", status: "warn" }, { name: "content-drift", status: "warn" }] } },
+      { body: { status: "pass", ok: true, checks: [{ name: "pages-drift", status: "pass" }] } },
     );
     api.reply({ body: { ok: true, data: { converged: true, expected: 3, present: 3 } } });
     const out = await call("dei_repair_drift", {});
@@ -180,7 +180,7 @@ describe("dei_repair_drift runs the watchdog's plan and reads it back", () => {
   });
 
   test("an unknown failing check stops every repair and says which", async () => {
-    api.health({ status: 503, body: { ok: false, checks: [{ name: "pages-drift", ok: false }, { name: "d1-down", ok: false }] } });
+    api.health({ body: { status: "warn", ok: true, checks: [{ name: "pages-drift", status: "warn" }, { name: "d1-down", status: "warn" }] } });
     const out = await call("dei_repair_drift", {});
     assert.equal(api.calls.length, 0);
     assert.match(String(out.structuredContent?.stopped), /d1-down/);
@@ -188,8 +188,8 @@ describe("dei_repair_drift runs the watchdog's plan and reads it back", () => {
 
   test("a repair that does not converge is reported as a miss", async () => {
     api.health(
-      { status: 503, body: { ok: false, checks: [{ name: "media-index-drift", ok: false }] } },
-      { status: 503, body: { ok: false, checks: [{ name: "media-index-drift", ok: false }] } },
+      { body: { status: "warn", ok: true, checks: [{ name: "media-index-drift", status: "warn" }] } },
+      { body: { status: "warn", ok: true, checks: [{ name: "media-index-drift", status: "warn" }] } },
     );
     api.reply({ body: { ok: true, data: { converged: false } } });
     const out = await call("dei_repair_drift", {});

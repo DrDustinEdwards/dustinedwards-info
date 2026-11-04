@@ -74,8 +74,8 @@ export async function listMonitors(key) {
 }
 
 /**
- * The health monitor reads /health, the family shape (site-runtime's healthResponse), not
- * /api/health, whose 503 on any drift paged for a site that was up. The keyword is the quoted
+ * The health monitor reads /health, the network shape (site-runtime's healthResponse), which
+ * answers 503 only when the site is down, never on drift. The keyword is the quoted
  * `"ok":true` fragment, not the bare word, which would fail open: it is absent from any body that
  * is not a health answer (an error page, a redirect), so the monitor fails closed. One keyword
  * cannot match both "pass" and "warn", so `ok` is the field: today it is true on pass only, so a

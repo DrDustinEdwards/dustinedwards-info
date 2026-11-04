@@ -91,9 +91,9 @@ describe("callOperator: what comes back", () => {
 });
 
 describe("readHealth", () => {
-  test("GETs SITE_ORIGIN/api/health with no bearer", async () => {
-    api.health({ status: 503, body: { ok: false, checks: [] } });
-    assert.deepEqual(await readHealth(ENV), { status: 503, body: { ok: false, checks: [] } });
+  test("GETs SITE_ORIGIN/health with no bearer", async () => {
+    api.health({ status: 503, body: { status: "fail", ok: false, checks: [{ name: "db", status: "fail" }] } });
+    assert.deepEqual(await readHealth(ENV), { status: 503, body: { status: "fail", ok: false, checks: [{ name: "db", status: "fail" }] } });
     assert.equal(api.healthCalls[0].url, HEALTH_URL);
     assert.equal(api.healthCalls[0].method, "GET");
     assert.equal(api.healthCalls[0].headers.get("authorization"), null);

@@ -111,21 +111,20 @@ await test("a non-string in the failing list cannot smuggle itself past the clas
 
 await test("failing names are read from the body, passing ones ignored", () => {
   const body = {
-    ok: false,
+    status: "warn",
     checks: [
-      { name: "ask-index-drift", ok: false, expected: 99, present: 90 },
-      { name: "fts-equality", ok: true },
-      { name: "media-index-drift", ok: false, expected: 69, present: 68 },
+      { name: "ask-index-drift", status: "warn", detail: "90 of 99" },
+      { name: "fts-equality", status: "pass" },
+      { name: "media-index-drift", status: "warn", detail: "68 of 69" },
     ],
   };
   assert.deepEqual(failingCheckNames(body), ["ask-index-drift", "media-index-drift"]);
 });
 
-await test("A CHECK MISSING ok IS NOT COUNTED AS FAILING", () => {
-  // `ok === false` rather than `!ok`: a body whose shape changed must route to alert-only, not
-  // to a repair decided on a field that was not there.
-  const body = { ok: false, checks: [{ name: "mystery" }, { name: "other", ok: null }] };
-  assert.deepEqual(failingCheckNames(body), []);
+await test("A CHECK MISSING ITS STATUS IS FAILING, and an unknown one routes to alert-only", () => {
+  // A body whose shape changed must not read as healthy, nor be repaired on a field that was not there.
+  const body = { status: "warn", checks: [{ name: "mystery" }, { name: "other", status: null }] };
+  assert.deepEqual(failingCheckNames(body), ["mystery", "other"]);
   assert.equal(repairPlan(failingCheckNames(body), WITH).alertOnly, true);
 });
 
@@ -208,7 +207,7 @@ await test("a throttled watchdog notifies rather than reporting the site unhealt
   /* A 429 names `rate-limited`, deliberately not a repairable class, so it falls to the unknown
    * arm and the mail names the throttle. */
   const actions = watchdogActions(
-    { status: 429, body: { ok: false, checks: [{ name: "rate-limited", ok: false }] } },
+    { status: 429, body: { status: "fail", checks: [{ name: "rate-limited", status: "fail" }] } },
     WITH,
   );
   assert.deepEqual(actions.map((a) => a.type), ["notify"]);

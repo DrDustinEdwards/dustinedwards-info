@@ -21,7 +21,7 @@ export function meta() {
   return [{ title: "Overview · Admin" }, { name: "robots", content: "noindex" }];
 }
 
-/** Reads the same instruments as /api/health and the operator tool, so it cannot disagree with them. */
+/** Reads the same instruments as /health and the operator tool, so it cannot disagree with them. */
 export async function loader({ context }: Route.LoaderArgs) {
   return timedLoader(context, async (timings) => {
     const env = getEnv(context);

@@ -2,6 +2,7 @@ import { env } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
 import { watchdogActions } from "~/lib/health/repair.mjs";
+import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import watchdog, { readErrorRate, readHealth } from "../../workers/watchdog";
 
 describe("the watchdog's health reading", () => {
@@ -66,16 +67,15 @@ describe("the watchdog's repair loop", () => {
             { status: 422 },
           );
         }
-        return Response.json(
-          {
-            ok: false,
-            checks: [
-              { name: "content-drift", ok: false },
-              { name: "ask-index-drift", ok: false },
-            ],
-          },
-          { status: 503 },
-        );
+        return Response.json({
+          status: "warn",
+          ok: true,
+          checks: [
+            { name: "db", status: "pass" },
+            { name: "content-drift", status: "warn", detail: "14 of 16" },
+            { name: "ask-index-drift", status: "warn", detail: "120 of 121" },
+          ],
+        });
       },
     };
 
@@ -98,6 +98,30 @@ describe("the watchdog's repair loop", () => {
     expect(sent[0]?.text).toContain(refusal);
     /* No API token here, so the rate read "ok" without being read; the mail must say so. */
     expect(sent[0]?.text).toContain("error rate NOT CHECKED");
+  });
+});
+
+describe("the colophon's health snapshot", () => {
+  it("is what the watchdog read from /health, and nothing that is not a /health answer", async () => {
+    /* The watchdog is the snapshot's one writer, so the colophon's age is the watchdog's liveness. */
+    await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
+    const answer = (body: unknown) => ({ SITE: { fetch: async () => Response.json(body) }, APP_KV: env.APP_KV }) as never;
+
+    await readHealth(answer({ status: "warn", checks: [{ name: "db", status: "pass" }, { name: "backup", status: "warn", detail: "old" }] }));
+    const stored = await env.APP_KV.get(HEALTH_SNAPSHOT_KEY, "json");
+    expect(stored).toMatchObject({
+      ok: false,
+      total: 2,
+      failed: 1,
+      checks: [
+        { name: "db", status: "pass" },
+        { name: "backup", status: "warn" },
+      ],
+    });
+    expect(JSON.stringify(stored)).not.toContain("old");
+
+    await readHealth(answer({ error: "not a health answer" }));
+    expect(await env.APP_KV.get(HEALTH_SNAPSHOT_KEY, "json")).toEqual(stored);
   });
 });
 
