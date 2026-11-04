@@ -182,7 +182,7 @@ export const DEFERRED_CHECKS = {
  * stale nightly dump would hold back the fix for something else. Each value says why.
  */
 /** @type {Record<string, string>} */
-export const NOT_DEPLOY_CHECKS = {
+const NOT_DEPLOY_CHECKS = {
   backup: "the nightly D1 dump's age",
   cron: "the scheduled jobs' last runs",
 };
