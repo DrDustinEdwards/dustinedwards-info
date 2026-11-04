@@ -124,7 +124,7 @@ export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([...CONTENT_PAG
  * Pages read one after another, each a way on to the next with signs at its foot (content-page.tsx, Capsomer's
  * `.cap-signs`). Each `label` is what a screen reader hears before the title; the sign shows the title alone.
  */
-export const PAGE_SEQUENCES = /** @type {const} */ ([
+const PAGE_SEQUENCES = /** @type {const} */ ([
   {
     // The Phage Discovery Program's two semesters, in teaching order (content/pages/teaching.md).
     paths: ["/teaching/virus-isolation", "/teaching/phage-bioinformatics"],
