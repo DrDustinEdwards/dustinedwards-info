@@ -687,8 +687,9 @@ body {
    its own. link.css adds the
    mark for a link that leaves the site, opens a file or sends mail. Element-level and :where(), so any component
    rule outranks them; Capsomer's letterhead and family footer keep their own links, and so do the dark signs (the
-   direction strip and a.cap-sign), whose light type this unlayered color would otherwise paint purple on the sign. */
-a:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a, .cap-sign)) {
+   direction strip and a.cap-sign) and a link drawn as a button (a.cap-btn), whose type this unlayered color would
+   otherwise paint purple on the sign or on the primary button's purple. */
+a:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a, .cap-sign, .cap-btn)) {
   color: var(--brand);
   text-decoration: var(--link-decoration);
 }
