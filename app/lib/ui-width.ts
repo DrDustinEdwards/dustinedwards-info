@@ -1,7 +1,7 @@
 import { UI_ADVANCES } from "./ui-advances.generated.ts";
 
 /*
- * A filter link's box is sized from the UI face's own advances (Schibsted Grotesk), so the row wraps the
+ * A filter link's box is sized from the UI face's own advances (Inter, at the filter's 14px optical size), so the row wraps the
  * same way in whichever face is drawing it. Wrapping by measured glyph width re-flowed the /writing tag row when Inter replaced
  * its fallback: the metric-matched Arial held the row still only between size-adjust 108% and 110%, and
  * a machine with a different Arial fell outside that window (nightly CLS 0.094).

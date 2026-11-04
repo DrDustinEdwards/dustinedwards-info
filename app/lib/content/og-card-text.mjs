@@ -76,7 +76,7 @@ export function titleFontSize(title) {
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache
 // ignores a restyled PNG under an unchanged key forever.
-const OG_TEMPLATE_VERSION = 6;
+const OG_TEMPLATE_VERSION = 7;
 
 /**
  * Hashes exactly what the card draws, AS DRAWN (through cardTitle, cardDescription, longDateUTC), so

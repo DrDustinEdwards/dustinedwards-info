@@ -162,7 +162,9 @@ function card(post) {
         display: "flex",
         flexDirection: "column",
         background: GROUND,
-        fontFamily: "Schibsted Grotesk",
+        // A share card is a standalone poster, so it is set wholly in Jost, the free Futura: NASA NHB
+        // 1430.2 section 5.4 allows Futura for a self-contained piece, headed in its Demibold (Dustin, 2026-11-04).
+        fontFamily: "Jost",
       },
     },
     el(
@@ -179,12 +181,11 @@ function card(post) {
         {
           style: {
             display: "flex",
-            fontFamily: "Source Serif 4",
             fontSize: titleFontSize(title),
-            fontWeight: 700,
+            fontWeight: 600,
             color: INK,
             lineHeight: 1.12,
-            letterSpacing: "-0.01em",
+            letterSpacing: "-0.005em",
             // Satori honors `wordBreak` but ignores `overflowWrap`.
             wordBreak: "break-word",
           },
@@ -224,7 +225,7 @@ function card(post) {
           borderTop: `8px solid ${PLAIN}`,
           color: SKY,
           fontSize: 22,
-          fontWeight: 700,
+          fontWeight: 600,
           letterSpacing: "0.16em",
         },
       },
@@ -460,25 +461,18 @@ async function main() {
   /** @type {any[]} */
   const fonts = [
     {
-      // The site's interface face. satori reads woff but not woff2, so these are the latin woff files.
-      name: "Schibsted Grotesk",
+      // Jost (Fontsource 5.3.0 latin, OFL, assets/fonts/OFL-jost.txt): satori reads woff but not woff2,
+      // nor variation axes, so these are the static 400 and 600 files.
+      name: "Jost",
       weight: 400,
       style: "normal",
-      data: await readFile(path.join("assets", "fonts", "SchibstedGrotesk-Regular.woff")),
+      data: await readFile(path.join("assets", "fonts", "Jost-Regular.woff")),
     },
     {
-      name: "Schibsted Grotesk",
-      weight: 700,
+      name: "Jost",
+      weight: 600,
       style: "normal",
-      data: await readFile(path.join("assets", "fonts", "SchibstedGrotesk-Bold.woff")),
-    },
-    {
-      // A static instance of the served variable file (wght 700, opsz 60): satori reads neither
-      // woff2 nor variation axes. check:fonts pins it to the served family.
-      name: "Source Serif 4",
-      weight: 700,
-      style: "normal",
-      data: await readFile(path.join("assets", "fonts", "SourceSerif4-Display-Bold.ttf")),
+      data: await readFile(path.join("assets", "fonts", "Jost-SemiBold.woff")),
     },
   ];
 
