@@ -51,8 +51,9 @@
     line-height: 1.5;
   }
 
-  /* [data-enhanced] is carried too, or it would outrank this by one attribute selector. */
+  /* [data-lang] and [data-enhanced] are carried too, or they would outrank this by one attribute selector. */
   .prose pre,
+  .prose pre[data-lang],
   .prose pre[data-enhanced] {
     padding-top: 0.75rem;
     white-space: pre-wrap;
