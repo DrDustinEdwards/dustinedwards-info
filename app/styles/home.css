@@ -23,7 +23,8 @@
   text-transform: uppercase;
 }
 
-/* The leading is 0.88 because the name breaks over two lines at every width. */
+/* The leading is 0.88 because the name breaks over two lines at every width. Light, as every title on the
+   network is (Dustin, 2026-11-05); the footer name stays bold. */
 .intro-name {
   margin: 0 0 var(--space-6);
   /* NOT a <br>: the h-card's p-name is this element's text, and check:machine-readable would read
@@ -32,7 +33,7 @@
   color: var(--text);
   font-family: var(--font-sans);
   font-size: clamp(3.25rem, 1.6rem + 6.8vw, 7rem);
-  font-weight: 700;
+  font-weight: var(--weight-title);
   letter-spacing: -0.045em;
   line-height: 0.88;
 }

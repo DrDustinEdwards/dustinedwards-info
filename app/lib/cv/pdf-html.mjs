@@ -34,7 +34,7 @@ export function fontFaceRule(family, bytes, style) {
 export const PDF_FONTS = /** @type {const} */ ([
   { file: "source-serif-4-latin-normal.woff2", family: "Source Serif 4", style: "normal" },
   { file: "source-serif-4-latin-italic.woff2", family: "Source Serif 4", style: "italic" },
-  { file: "inter-latin-opsz-normal.woff2", family: "Inter", style: "normal" },
+  { file: "inter-latin-wght-normal.woff2", family: "Inter", style: "normal" },
 ]);
 
 const PRINT_CSS = `

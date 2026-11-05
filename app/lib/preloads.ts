@@ -1,7 +1,7 @@
 import { preloads } from "@dustinedwards/site-runtime/preload";
 
 import monoFontUrl from "capsomer/fonts/martian-mono-latin-wght-normal.woff2?url";
-import uiFontUrl from "capsomer/fonts/inter-latin-opsz-normal.woff2?url";
+import uiFontUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
 import textFontUrl from "~/fonts/source-serif-4-latin-core-normal.woff2?url";
 
 const font = (href: string) => ({ href, as: "font" as const, type: "font/woff2" });
