@@ -12,6 +12,7 @@ import { listPostFiles, readFile } from "~/lib/source/store.server";
 import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { copyMissingTwins } from "~/lib/media/backup.server";
+import { dropHealthVerdicts } from "~/lib/health/verdict-cache.server";
 import {
   readContentSides,
   readLlmsSides,
@@ -100,6 +101,7 @@ export async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
 // Safe unattended: no delete branch in either bucket, and it never writes the primary.
 export async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
   const { copied, gone, status } = await copyMissingTwins(env);
+  await dropHealthVerdicts(env);
 
   return {
     ok: true,
@@ -119,6 +121,7 @@ export async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
 export async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
   const rebuilt = await rebuildMediaIndex(env);
   const status = await mediaIndexStatus(env);
+  await dropHealthVerdicts(env);
 
   return {
     ok: true,

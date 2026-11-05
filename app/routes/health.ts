@@ -8,7 +8,6 @@
  * has none. Rate limited, because the drift checks cost.
  */
 
-import { backupHealth } from "@dustinedwards/d1-dump";
 import { cronCheck } from "@dustinedwards/site-runtime/cron";
 import {
   aiCheck,
@@ -25,6 +24,7 @@ import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
+import { cachedBackupHealth } from "~/lib/health/verdict-cache.server";
 import { CHECK_TIMEOUT_MS } from "~/lib/health/verdicts.mjs";
 import { CRON_JOBS } from "~/lib/cron-jobs.mjs";
 
@@ -85,7 +85,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      because a consumer is not a binding this Worker holds. */
   return healthResponse({
     ping: () => env.DB.prepare("SELECT 1").first(),
-    backup: () => backupHealth(env.BACKUPS),
+    backup: () => cachedBackupHealth(env),
     sha: (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
     checkTimeoutMs: CHECK_TIMEOUT_MS,
     checks: [
