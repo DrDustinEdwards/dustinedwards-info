@@ -42,7 +42,7 @@ export function askDriftVerdict(status) {
 
 /**
  * Both directions summed, since they can cancel in a count comparison while both are true. Here R2 is
- * the truth and D1 the projection; media-backup-drift is the other way round.
+ * the truth and D1 the projection.
  *
  * @param {{ expected: number, present: number, missing: string[], extra: string[] }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -63,47 +63,6 @@ export function mediaDriftVerdict(status) {
       `${status.present} present. Repair with sync_media on the operator API, ` +
       `or Rebuild the media index on /admin/tools.`,
     counts: { expected: status.expected, present: status.present },
-  };
-}
-
-/**
- * The counts travel so zero missing cannot mean zero examined. Mismatched is counted apart from missing:
- * a wrong copy, not an absent one, means something rewrote the mirror.
- *
- * @param {{ objects: number, twins: number, missing: string[], mismatched: string[] }} status
- * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
- */
-export function mediaBackupDriftVerdict(status) {
-  const missing = status.missing.length;
-  const mismatched = status.mismatched.length;
-
-  if (status.objects === 0) {
-    return {
-      ok: true,
-      detail:
-        "MEDIA bucket holds no objects, so the mirror has nothing to hold either. " +
-        "0 objects, 0 twins, 0 missing: examined nothing rather than verified anything.",
-    };
-  }
-
-  if (missing === 0 && mismatched === 0) {
-    return {
-      ok: true,
-      detail:
-        `Every MEDIA object has a byte-identical twin: ${status.objects} objects, ` +
-        `${status.twins} twins, 0 missing.`,
-    };
-  }
-
-  return {
-    ok: false,
-    detail:
-      `Media backup drift: ${status.objects} objects, ${status.twins} twins, ` +
-      `${missing} missing, ${mismatched} mismatched. ` +
-      `First missing: ${status.missing[0] ?? "none"}. ` +
-      `First mismatched: ${status.mismatched[0] ?? "none"}. ` +
-      `Repair with backup_media on the operator API, which only ever copies.`,
-    counts: { expected: status.objects, present: status.twins },
   };
 }
 

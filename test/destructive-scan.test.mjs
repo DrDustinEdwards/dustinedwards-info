@@ -122,18 +122,18 @@ await test("a policy must be a non-empty string literal in the descriptor object
 
 await test("a delete through an alias, a destructure or a bracket is caught", () => {
   for (const src of [
-    "const b = env.MEDIA_BACKUP; await b.delete(k);",
-    "const { MEDIA_BACKUP: m } = env; await m.delete(k);",
-    'await env["MEDIA_BACKUP"].delete(k);',
+    "const b = env.MEDIA_REVISIONS; await b.delete(k);",
+    "const { MEDIA_REVISIONS: m } = env; await m.delete(k);",
+    'await env["MEDIA_REVISIONS"].delete(k);',
   ]) {
-    assert.equal(bindingUses(parseSource("x.ts", src), "MEDIA_BACKUP").deletes.length, 1, src);
+    assert.equal(bindingUses(parseSource("x.ts", src), "MEDIA_REVISIONS").deletes.length, 1, src);
   }
 });
 
 await test("a comment naming the binding is not a use, and a helper it is handed to is reported", () => {
-  const quiet = bindingUses(parseSource("x.ts", "// env.MEDIA_BACKUP.delete(k)\nconst a = 1;"), "MEDIA_BACKUP");
+  const quiet = bindingUses(parseSource("x.ts", "// env.MEDIA_REVISIONS.delete(k)\nconst a = 1;"), "MEDIA_REVISIONS");
   assert.equal(quiet.mentions, 0);
   assert.equal(quiet.deletes.length, 0);
-  const handed = bindingUses(parseSource("x.ts", "await wipe(env.MEDIA_BACKUP);"), "MEDIA_BACKUP");
+  const handed = bindingUses(parseSource("x.ts", "await wipe(env.MEDIA_REVISIONS);"), "MEDIA_REVISIONS");
   assert.deepEqual(handed.passedTo, ["wipe"]);
 });

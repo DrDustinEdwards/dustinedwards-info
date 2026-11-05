@@ -534,7 +534,7 @@ export async function addMediaRevision(env: Env, row: Omit<typeof mediaRevisions
   return added!.id;
 }
 
-/** Names where MEDIA_BACKUP keeps a revision's bytes, once they stop being the current ones. */
+/** Names where MEDIA_REVISIONS keeps a revision's bytes, once they stop being the current ones. */
 export async function keepMediaRevision(env: Env, id: number, backupKey: string) {
   await getDb(env).update(mediaRevisions).set({ backupKey }).where(eq(mediaRevisions.id, id)).run();
 }

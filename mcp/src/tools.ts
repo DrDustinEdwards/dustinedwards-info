@@ -344,7 +344,7 @@ export const TOOLS: ToolDefinition[] = [
         "Reads /health, and for every failing check that is a known drift class runs the operator " +
         "repair that converges it (sync_posts, sync_procedures, sync_dictionary, sync_roster, " +
         "sync_phages, sync_registry, sync_pages, sync_publications, sync_llms, sync_cv, sync_cv_pdf, " +
-        "sync_ask, sync_media, backup_media), in the watchdog's order, then reads /health again and " +
+        "sync_ask, sync_media), in the watchdog's order, then reads /health again and " +
         "reports each repair's own read-back verdict and what is still failing. It is the plan the " +
         "fifteen-minute watchdog runs, the same code, so it repairs nothing the watchdog would not.\n\n" +
         "It REPAIRS NOTHING when any failing check is not a known drift class, because a compound failure " +
@@ -543,11 +543,13 @@ export const TOOLS: ToolDefinition[] = [
     name: "dei_backup_media",
     scope: SCOPE_WRITE,
     config: {
-      title: "Back up the media bucket",
+      title: "Back up the media now",
       description:
-        "Copies every object in the media bucket that has no byte-identical twin into the backup bucket, " +
-        "then reads both back and reports objects, twins, missing and mismatched, counted after the " +
-        "writes. COPIES ONLY: it has no delete in either bucket and never copies backup to media.",
+        "Runs the nightly files backup now: one pass each over the media bucket and the revision store into " +
+        "the backups bucket (files/media/ and files/revisions/), which Capsid copies to Amazon. It copies new " +
+        "and changed files and drops a copy only 30 days after its file is gone; it never writes or deletes in " +
+        "the media bucket or the revision store. A pass stops at 1000 writes or five minutes and the next " +
+        "goes on from there. Reports each backup's counts and whether its pass completed.",
       inputSchema: z.strictObject({}),
       outputSchema: API_ANSWER,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },

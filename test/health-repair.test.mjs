@@ -33,25 +33,6 @@ await test("both drift classes repair both, in a stable order, without duplicate
   assert.equal(plan.alertOnly, false);
 });
 
-await test("the mirror is repairable, because a copy cannot lose anything", () => {
-  // The only repair with no destructive branch: it copies MEDIA to MEDIA_BACKUP and deletes
-  // from neither.
-  const plan = repairPlan(["media-backup-drift"], WITH);
-  assert.deepEqual(plan.repair, ["backup_media"]);
-  assert.equal(plan.alertOnly, false);
-  assert.deepEqual(plan.unknown, []);
-});
-
-await test("the mirror repair joins the others without disturbing their order", () => {
-  const plan = repairPlan(
-    ["media-backup-drift", "content-drift", "ask-index-drift"],
-    WITH,
-  );
-  // Content before Ask is load bearing (sync_posts rewrites what sync_ask
-  // reads); the mirror is order-independent and simply lands last.
-  assert.deepEqual(plan.repair, ["sync_posts", "sync_ask", "backup_media"]);
-});
-
 await test("PLANT: A NON-DRIFT FAILURE MUST NOT TRIGGER REPAIR", () => {
   /* `fts-equality` has no automated repair, and `media-unbacked` is a retired class: a stale
    * caller naming it is exactly the case where firing a repair would be wrong. */

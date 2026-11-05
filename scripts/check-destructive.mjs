@@ -265,9 +265,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ],
     [
       "backup_media",
-      "COPIES ONLY. It has no delete branch in either bucket and nothing is ever " +
-        "copied backup to media; check:destructive's own MEDIA_BACKUP sweep below " +
-        "is what holds that",
+      "d1-dump backupFiles passes over MEDIA and MEDIA_REVISIONS into BACKUPS: it only reads the two " +
+        "sources, and removes a copy under files/ in BACKUPS only 30 days after its source is gone. The " +
+        "MEDIA_REVISIONS sweep and the BACKUPS allow-list below hold that",
     ],
     [
       "backup_d1",
@@ -342,34 +342,34 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       : [];
 
   /**
-   * Read off the syntax tree: a comment naming the binding is not a use, `env["MEDIA_BACKUP"]` and a
+   * Read off the syntax tree: a comment naming the binding is not a use, `env["MEDIA_REVISIONS"]` and a
    * local alias are, and a delete is only one whose receiver IS the binding.
    *
    * @param {string} name
    * @param {string} text
    */
-  const backupUses = (name, text) => bindingUses(parseSource(name, text), "MEDIA_BACKUP");
+  const backupUses = (name, text) => bindingUses(parseSource(name, text), "MEDIA_REVISIONS");
 
   // A matcher that cannot detect the violation agrees with every file it reads, so it is proven first.
   ok(
     "the backup-delete scan detects a real delete",
-    backupUses("c.ts", "await env.MEDIA_BACKUP.delete(key);").deletes.length === 1,
+    backupUses("c.ts", "await env.MEDIA_REVISIONS.delete(key);").deletes.length === 1,
     "it matched nothing, so the sweep below would pass over a genuine violation",
   );
   ok(
     "the backup-delete scan follows a local alias",
-    backupUses("c.ts", "const b = env.MEDIA_BACKUP; await b.delete(key);").deletes.length === 1,
-    "a delete through `const b = env.MEDIA_BACKUP` would pass unseen",
+    backupUses("c.ts", "const b = env.MEDIA_REVISIONS; await b.delete(key);").deletes.length === 1,
+    "a delete through `const b = env.MEDIA_REVISIONS` would pass unseen",
   );
   ok(
     "the backup-delete scan ignores a put",
-    backupUses("c.ts", "await env.MEDIA_BACKUP.put(key, body);").deletes.length === 0,
+    backupUses("c.ts", "await env.MEDIA_REVISIONS.put(key, body);").deletes.length === 0,
     "a scan that fires on any use of the binding would be unusable",
   );
   ok(
     "the backup-delete scan does not fire on a delete from MEDIA",
-    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").deletes.length === 0,
-    "deleting a media object is legitimate; only the mirror is protected",
+    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_REVISIONS;").deletes.length === 0,
+    "deleting a media object is legitimate; only the revision store is protected",
   );
 
   /**
@@ -377,7 +377,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    * delete from what it is given, so a new call site fails by name until someone has read it.
    */
   const BACKUP_PASSED_TO = new Map([
-    ["app/lib/media/backup.server.ts:listAll", "pages through bucket.list() and returns the objects; it has no other call"],
+    ["app/lib/backup/d1-backup.server.ts:backupFiles", "d1-dump's files backup: it lists and reads its source and writes and deletes only in the backup bucket it is given"],
     ["app/routes/health.ts:r2Check", "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"],
   ]);
 
@@ -401,7 +401,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   const passedSeen = new Set();
   for (const file of sources) {
     const text = readFileSync(file, "utf8");
-    if (!text.includes("MEDIA_BACKUP")) continue;
+    if (!text.includes("MEDIA_REVISIONS")) continue;
     const rel = file.slice(root.length + 1).replaceAll("\\", "/");
     const uses = backupUses(file, text);
     if (uses.mentions === 0) continue;
@@ -411,40 +411,40 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       const id = `${rel}:${callee}`;
       passedSeen.add(id);
       ok(
-        `${id} is handed MEDIA_BACKUP and has been read`,
+        `${id} is handed MEDIA_REVISIONS and has been read`,
         BACKUP_PASSED_TO.has(id),
-        "a function given the backup binding can delete from it where this sweep cannot see. " +
+        "a function given the revision store can delete from it where this sweep cannot see. " +
           "Read it, and add it to BACKUP_PASSED_TO with the reason it cannot delete.",
       );
     }
   }
   for (const id of BACKUP_PASSED_TO.keys()) {
-    ok(`${id} is still handed MEDIA_BACKUP`, passedSeen.has(id), "the entry is stale");
+    ok(`${id} is still handed MEDIA_REVISIONS`, passedSeen.has(id), "the entry is stale");
   }
 
   // Zero files naming the binding means it was renamed, and every assertion above would be true of nothing.
   ok(
-    "at least one source file reaches the MEDIA_BACKUP binding",
+    "at least one source file reaches the MEDIA_REVISIONS binding",
     mentioning > 0,
-    "no file names it, so either the mirror is gone or this gate is watching a " +
+    "no file names it, so either the revision store is gone or this gate is watching a " +
       "binding that no longer exists",
   );
 
   ok(
-    "no source deletes from the backup bucket",
+    "no source deletes from the revision store",
     violations.length === 0,
-    `${violations.length} delete(s) against MEDIA_BACKUP: ${violations.join(" | ")}`,
+    `${violations.length} delete(s) against MEDIA_REVISIONS: ${violations.join(" | ")}`,
   );
 
   console.log(
-    `  backup bucket: ${sources.length} source file(s) swept, ${mentioning} reach ` +
-      `MEDIA_BACKUP, ${violations.length} delete from it`,
+    `  revision store: ${sources.length} source file(s) swept, ${mentioning} reach ` +
+      `MEDIA_REVISIONS, ${violations.length} delete from it`,
   );
 }
 
-// The dump bucket is pruned by retention, which is a delete, so it gets the opposite rule from the
-// media mirror: the d1-dump package may be handed BACKUPS and nothing else may, and pruneDumps may be
-// handed BACKUPS and never MEDIA_BACKUP. Read off the syntax tree, as the sweep above is.
+// The backups bucket is pruned by retention, which is a delete, so it gets the opposite rule from the
+// revision store: the d1-dump package may be handed BACKUPS and nothing else may, and pruneDumps may be
+// handed BACKUPS and never MEDIA_REVISIONS. Read off the syntax tree, as the sweep above is.
 {
   /** @param {string} dir @returns {string[]} */
   const walk = (dir) =>
@@ -456,7 +456,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       : [];
   // runCheckedBackup (d1-dump 0.5.0) is dumpDatabase, writeCompleteMarker and pruneDumps in that order, and prunes
   // only after the marker, so it deletes nothing pruneDumps would not.
-  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth", "runCheckedBackup"]);
+  // backupFiles (d1-dump 0.7.0) writes under files/<name>/ and removes a copy there only 30 days after its source is
+  // gone; filesHealth reads that backup's _complete.json and nothing else.
+  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth", "runCheckedBackup", "backupFiles", "filesHealth"]);
   /** @param {string} text */
   const dumpUses = (text) => bindingUses(parseSource("c.ts", text), "BACKUPS");
 
@@ -471,8 +473,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     "the callee allow-list below would be vacuous",
   );
   ok(
-    "the dump-bucket scan does not mistake MEDIA_BACKUP for BACKUPS",
-    dumpUses("await pruneDumps(env.MEDIA_BACKUP);").mentions === 0,
+    "the dump-bucket scan does not mistake MEDIA_REVISIONS for BACKUPS",
+    dumpUses("await pruneDumps(env.MEDIA_REVISIONS);").mentions === 0,
     "the two bindings must stay distinguishable, or this rule and the media rule collapse into one",
   );
 
@@ -485,7 +487,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   for (const file of sources) {
     const text = readFileSync(file, "utf8");
     const rel = file.slice(root.length + 1).replaceAll("\\", "/");
-    if (rel !== "scripts/check-destructive.mjs" && /pruneDumps\s*\(\s*[^)]*MEDIA_BACKUP/.test(text.replace(/\/\/.*$/gm, ""))) mediaPruned.push(rel);
+    if (rel !== "scripts/check-destructive.mjs" && /pruneDumps\s*\(\s*[^)]*MEDIA_REVISIONS/.test(text.replace(/\/\/.*$/gm, ""))) mediaPruned.push(rel);
     if (!text.includes("BACKUPS")) continue;
     const uses = dumpUses(text);
     if (uses.mentions === 0) continue;
@@ -506,9 +508,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     `${stray.length} use(s) outside the allow-list: ${stray.join(" | ")}. Read the callee, then add it to DUMP_FUNCTIONS with the reason.`,
   );
   ok(
-    "pruneDumps is never aimed at MEDIA_BACKUP",
+    "pruneDumps is never aimed at MEDIA_REVISIONS",
     mediaPruned.length === 0,
-    `retention would delete media mirror objects: ${mediaPruned.join(", ")}`,
+    `retention would delete revision store objects: ${mediaPruned.join(", ")}`,
   );
 }
 

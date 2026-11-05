@@ -23,8 +23,14 @@ const PRODUCTION_DB = "dustinedwards";
  */
 let PRODUCTION_ID = null;
 const MIGRATIONS_DIR = "drizzle";
-const MEDIA_BUCKET = "dustinedwards-media";
-const MEDIA_BACKUP_BUCKET = "dustinedwards-media-backup";
+/** Each bucket the nightly files backup copies, by its name under files/ in BACKUPS_BUCKET (d1-backup.server.ts). */
+const FILES_BACKUPS = [
+  { name: "media", bucket: "dustinedwards-media" },
+  { name: "revisions", bucket: "dustinedwards-media-revisions" },
+];
+const BACKUPS_BUCKET = "dustinedwards-backups";
+/** A file newer than this may not have met a nightly pass yet: filesHealth's own stale threshold. */
+const FILES_GRACE_HOURS = 26;
 
 /** Dated rather than random so a leaked database is identifiable, and prefixed for the guard. */
 const SCRATCH_PREFIX = "restore-drill-";
@@ -535,51 +541,49 @@ async function verifyCounts(live) {
 }
 
 /**
- * Every MEDIA object against its MEDIA_BACKUP twin. Reads the buckets from outside the Worker, so the
- * mirror is asserted by something that is not maintaining it.
+ * Every object in each backed-up bucket against its copy under files/<name>/ in the backups bucket. Reads the buckets
+ * from outside the Worker, so the backup is asserted by something that is not taking it. A file newer than
+ * FILES_GRACE_HOURS may not have met a nightly pass yet, so it is noted, not failed. devkit's files drill restores a
+ * sample of the copies; this checks that none is missing.
  */
-async function verifyMediaMirror() {
-  const [sources, twins] = await Promise.all([
-    retryRead(() => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }), {
-      label: "check:restore MEDIA list",
-    }),
-    retryRead(() => listAllObjects({ bucket: MEDIA_BACKUP_BUCKET, remote: true }), {
-      label: "check:restore MEDIA_BACKUP list",
-    }),
-  ]);
-  const twinByKey = new Map(twins.map((o) => [o.key, o]));
-  /** @type {string[]} */
-  const unbacked = [];
-  for (const source of sources) {
-    const twin = twinByKey.get(source.key);
-    if (!twin) {
-      unbacked.push(`${source.key} (no twin)`);
-      continue;
+async function verifyFilesBackups() {
+  const since = Date.now() - FILES_GRACE_HOURS * 3_600_000;
+  for (const { name, bucket } of FILES_BACKUPS) {
+    const prefix = `files/${name}/`;
+    const [sources, copies] = await Promise.all([
+      retryRead(() => listAllObjects({ bucket, remote: true }), { label: `check:restore ${bucket} list` }),
+      retryRead(() => listAllObjects({ bucket: BACKUPS_BUCKET, prefix, remote: true }), {
+        label: `check:restore ${BACKUPS_BUCKET}/${prefix} list`,
+      }),
+    ]);
+    const copyByKey = new Map(copies.map((o) => [o.key.slice(prefix.length), o]));
+    /** @type {string[]} */
+    const unbacked = [];
+    let recent = 0;
+    for (const source of sources) {
+      const copy = copyByKey.get(source.key);
+      /* ETag, corroborated by size, degrading to size for a multipart etag, which is not a digest. */
+      const multipart = source.etag.includes("-") || (copy?.etag ?? "").includes("-");
+      const identical = copy && (multipart ? source.size === copy.size : source.etag === copy.etag && source.size === copy.size);
+      if (identical) continue;
+      if (Date.parse(source.uploaded) > since) {
+        recent += 1;
+        continue;
+      }
+      unbacked.push(copy ? `${source.key} (${multipart ? "size" : "etag"} differs)` : `${source.key} (no copy)`);
     }
-    /* ETag, corroborated by size, degrading to size for a multipart etag (backup.server.ts has the reason). */
-    const multipart = source.etag.includes("-") || twin.etag.includes("-");
-    const identical = multipart
-      ? source.size === twin.size
-      : source.etag === twin.etag && source.size === twin.size;
-    if (!identical) {
-      unbacked.push(
-        `${source.key} (${multipart ? "size" : "etag"} differs: ` +
-          `${source.size}/${source.etag} against ${twin.size}/${twin.etag})`,
-      );
-    }
+    ok(
+      `EVERY ${bucket} OBJECT HAS AN IDENTICAL COPY UNDER ${BACKUPS_BUCKET}/${prefix}`,
+      unbacked.length === 0,
+      `${unbacked.length} of ${sources.length}: ${unbacked.slice(0, 5).join("; ")}. The files backup is the only ` +
+        `copy of an upload outside its bucket, and Capsid copies it to Amazon from there.`,
+    );
+    console.log(
+      `  ${name}: ${sources.length} object(s) in ${bucket}, ${copies.length} under ${prefix}` +
+        (recent > 0 ? `, ${recent} newer than ${FILES_GRACE_HOURS}h not yet copied` : "") +
+        (sources.length === 0 ? " (the bucket is empty, so this verified nothing)" : ""),
+    );
   }
-  ok(
-    "EVERY MEDIA OBJECT HAS AN IDENTICAL TWIN IN MEDIA_BACKUP",
-    unbacked.length === 0,
-    `${unbacked.length} of ${sources.length}: ${unbacked.slice(0, 5).join("; ")}. ` +
-      `The mirror is the only thing standing between this site's own delete ` +
-      `paths and an unrecoverable object.`,
-  );
-  console.log(
-    `  media: ${sources.length} object(s) in ${MEDIA_BUCKET}, ${twins.length} in ` +
-      `${MEDIA_BACKUP_BUCKET}, ${sources.length - unbacked.length} identical` +
-      (sources.length === 0 ? " (the bucket is empty, so this verified nothing)" : ""),
-  );
 }
 
 async function main() {
@@ -599,7 +603,7 @@ async function main() {
     const { tables, dumps, live } = await exportProd(dir, timings);
     await restoreScratch(dir, tables, dumps, timings, state);
     await verifyCounts(live);
-    await verifyMediaMirror();
+    await verifyFilesBackups();
   } finally {
     if (state.created) {
       const dropped = wrangler(`d1 delete ${scratch(SCRATCH_DB)} --skip-confirmation`);

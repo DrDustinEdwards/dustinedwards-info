@@ -188,7 +188,7 @@ export const media = sqliteTable(
 
 /**
  * A file's byte history (site-api v0.13.0): one row per set of bytes. The newest row for a key is the bytes in
- * MEDIA; each earlier one names its copy in MEDIA_BACKUP, which nothing deletes. A file with no row has had only
+ * MEDIA; each earlier one names its copy in MEDIA_REVISIONS, which nothing deletes. A file with no row has had only
  * the bytes it was uploaded with.
  */
 export const mediaRevisions = sqliteTable(
@@ -203,7 +203,7 @@ export const mediaRevisions = sqliteTable(
     /** upload | import | replace | transform | resize | revert */
     reason: text("reason").notNull(),
     sha256: text("sha256"),
-    /** Where MEDIA_BACKUP keeps these bytes; NULL while they are the current ones. */
+    /** Where MEDIA_REVISIONS keeps these bytes; NULL while they are the current ones. */
     backupKey: text("backup_key"),
   },
   (t) => [index("media_revisions_key_idx").on(t.mediaKey, t.id)],

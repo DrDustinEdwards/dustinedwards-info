@@ -121,13 +121,6 @@ const CHECK_COPY = {
     passing: "Every stored file is listed, and nothing is listed that is not there.",
     repair: { action: "/admin/media", intent: "rebuild", label: "Rebuild the library listing" },
   },
-  "media-backup-drift": {
-    name: "Media backups",
-    // No counts: it compares key sets and etags, not totals, so the verdict's detail is used.
-    failing: () => null,
-    passing: "Every uploaded file has a second, byte-identical copy.",
-    repair: null,
-  },
   "fts-equality": {
     name: "Site search",
     // Same: five subqueries compared pairwise, not a total against a total.
