@@ -30,7 +30,7 @@ export function readinessVerdict(status, text, path = "/health", deferred = []) 
     return {
       ok: false,
       why: `${path} answered 429: this address is rate limited`,
-      remedy: `That is the limiter working, not the site failing. Wait a minute and run ship again. ${NOTHING_SYNCED}`,
+      remedy: `That is the limiter working, not the site failing. Wait a minute and re-run the deploy's converge job. ${NOTHING_SYNCED}`,
       checks: [],
     };
   }
@@ -72,7 +72,7 @@ export function readinessVerdict(status, text, path = "/health", deferred = []) 
   }
 
   const deferredNames = Array.isArray(deferred) ? deferred.filter((n) => typeof n === "string") : [];
-  // A warn is a failure here: /health stays 200 while a drift check warns, and ship must not sync over one.
+  // A warn is a failure here: /health stays 200 while a drift check warns, and converge must not sync over one.
   const failed = checks.filter((c) => c.ok !== true).map((c) => c.name ?? "(unnamed)");
   const gatingFailed = failed.filter((name) => !deferredNames.includes(name) && !(name in NOT_DEPLOY_CHECKS));
 
@@ -197,7 +197,7 @@ const NOT_DEPLOY_CHECKS = {
 export async function fetchHealth(url) {
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": "ship", "cache-control": "no-cache" },
+      headers: { "user-agent": "deploy-converge", "cache-control": "no-cache" },
       redirect: "manual",
     });
     return { status: res.status, text: await res.text(), error: "" };

@@ -51,12 +51,6 @@ export const MAP = [
     gates: ["check:enhance-a11y"],
   },
   {
-    /* check-migrations reads the operator API and its sync tools behind the sync_ask and sync_media ship calls. */
-    what: "the operator API ship calls",
-    test: /^app\/lib\/operator\/(api|sync-tools)\.server\.ts$/,
-    gates: ["check:migrations"],
-  },
-  {
     what: "the schema or a migration",
     test: /^(app\/db\/schema\.ts|drizzle\/.+)$/,
     gates: ["check:migrations", RELATED],

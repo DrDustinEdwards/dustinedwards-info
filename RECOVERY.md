@@ -467,13 +467,14 @@ token the admin refuses everyone, except the read-only smoke bearer. See docs/RU
 
 ## 8. Deploy
 
-`npm run typecheck`, then `npm run ship`, run by Dustin once CI is green for that
-exact sha. After a merge to main,
-`.github/workflows/deploy.yml` runs the same ship. Only `npm run ship` deploys;
-never run `npm run deploy` by hand (ship runs it) or bare `wrangler deploy`:
-they skip ship's refusals, and `.claude/hooks/no-direct-deploy.sh` refuses both
-in a session. On a rebuilt account where ship cannot pass yet (no CI run, no
-token file), stop: how the first deploy goes is Dustin's decision.
+A merge to main deploys: once CI passes, `.github/workflows/deploy.yml` runs
+devkit's worker-deploy (D1 bookmark, pre-deploy guard, deploy, live gate,
+rollback), then its converge job (`scripts/converge.mjs`) and the admin MCP.
+`gh workflow run deploy.yml --ref main` runs it by hand. Never run `npm run
+deploy` or bare `wrangler deploy`: they skip the live gate and the converge job,
+and `.claude/hooks/no-direct-deploy.sh` refuses both in a session. On a rebuilt
+account where the workflow cannot pass yet (no CI run, no secrets), stop: how
+the first deploy goes is Dustin's decision.
 
 ---
 

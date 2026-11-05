@@ -1,443 +1,169 @@
-# THE DEPLOY BUTTON. Ruled 2026-08-25, option C of three.
+# THE DEPLOY. A merge to main deploys (Dustin 2026-09-23): after CI concludes success on a push to main, this ships
+# that commit, through devkit's worker-deploy.yml, as the network's other Worker sites do. worker-deploy reads the D1
+# Time Travel bookmark, runs the pre-deploy guard below (config ids, queues, additive migrations, the content's source
+# from D1, the build), deploys with DEPLOY_SHA set, waits for /health to report this commit, runs
+# scripts/verify-deploy.mjs, and rolls the Worker back when it refuses. Its limits are devkit's README, "The shared
+# deploy": a rollback swaps code and bindings, never a migration; that is the bookmark's restore command, in the summary.
 #
-# Deploying has been one laptop's job: `npm run ship` on Dustin's machine, with
-# his gh session, his operator token and the one real wrangler.jsonc. That path
-# STAYS and is unchanged; this is a second door to the same pipeline, and the
-# reason it exists is a defect class rather than convenience.
+# Then `converge` (scripts/converge.mjs) brings the deployed site's data and helpers into step: the watchdog, the
+# uptime monitors, the D1 sync, the Ask index, the CV PDF, the share cards and the media index, then the browser test.
+# A converge miss leaves the deploy standing and fails the run. `mcp` ships the admin MCP the same way as the site.
 #
-# **IT KILLS THE TREE-DURING-SHIP CLASS STRUCTURALLY.** `npm run deploy` builds
-# from the WORKING TREE, not from HEAD. On 2026-08-07 a deploy went out from a
-# dirty tree and ran in production for two days as code that existed on no
-# commit; on a later window a session edited a file mid-ship and the deploy was
-# coherent only because the build had already finished. Ship refuses a dirty
-# tree now, and a rule says nobody touches the tree while a window is open, but
-# both of those are a human remembering. A runner checks out a sha into an empty
-# machine and there is no working tree to diverge: the class cannot occur.
+# THE SWITCH. `gh variable set AUTO_DEPLOY --body off` stops the automatic and scheduled runs; any other value, or
+# none, turns them back on. A dispatch from main deploys either way.
 #
-# **A MERGE TO MAIN DEPLOYS (Dustin 2026-09-23, reversing option C's "deploy
-# stays a decision" for the development phase).** The decision moved to the
-# merge. A change a visitor sees waits for Dustin's yes. After CI concludes
-# success on main, this workflow ships that exact sha. It is still one
-# pipeline, `npm run ship`, with every refusal ship already carries. Not `on: push`: `workflow_run` after CI, so
-# nothing deploys a commit whose CI failed.
-#
-# **THE SWITCH.** `gh variable set AUTO_DEPLOY --body off` stops automatic runs;
-# `gh variable delete AUTO_DEPLOY` (or any other value) turns them back on. A
-# manual dispatch works either way. Reviewed at the domain move.
-#
-# ## THE PRICE, STATED
-#
-# A Cloudflare API token now lives in GitHub's trust domain. It is scoped to
-# Edit Cloudflare Workers on ONE account, it can be revoked on its own without
-# touching anything else, and it is the real cost of either option B or C. The
-# creation steps are below and they matter: the GLOBAL API KEY MUST NEVER BE
-# USED HERE, because it carries every permission on every zone the account owns
-# and cannot be scoped or revoked independently.
-#
-# ## WHAT DUSTIN HAS TO DO, ONCE
-#
-# This workflow ships DORMANT: it refuses, by name, until four secrets exist.
-#
-#   1. Create a SCOPED token at
-#      dash.cloudflare.com/profile/api-tokens -> Create Token
-#      -> "Edit Cloudflare Workers" template,
-#      -> THEN ADD ONE PERMISSION: Account -> D1 -> Edit.
-#      Account Resources: Include -> this account only.
-#      Zone Resources: not needed while the site is on workers.dev.
-#      Copy it once; the dashboard never shows it again.
-#
-#      THE ADDED D1 PERMISSION IS NOT OPTIONAL and this line is a correction:
-#      the template alone was specified here, a token minted from it was set,
-#      and ship refused at step 2 because the template does not carry D1.
-#      Ship reads the deployed schema and then runs the content sync, both
-#      direct D1 API calls. The step below refuses by name if it is missing
-#      again, in three seconds rather than forty.
-#
-#   2. Set the four secrets:
-#        gh secret set CLOUDFLARE_API_TOKEN      (paste the token)
-#        gh secret set CLOUDFLARE_ACCOUNT_ID     (dashboard -> Workers -> Account ID)
-#        gh secret set D1_DATABASE_ID            (the real wrangler.jsonc's value)
-#        gh secret set KV_NAMESPACE_ID           (the real wrangler.jsonc's value)
-#
-#      OPERATOR_TOKEN is already set, and this reuses it. SMOKE_TOKEN is not
-#      needed here.
-#
-# The two ids are account-scoped identifiers rather than credentials, and they
-# are secrets here for the same reason they are gitignored: the portfolio's
-# public-repo hygiene rule. Only those two come from GitHub; every other line of
-# the config still comes from the tracked example, which is the one description
-# of this Worker's bindings. See scripts/apply-config-ids.mjs.
-#
-# ## IT REUSES ship.mjs. IT DOES NOT REIMPLEMENT IT.
-#
-# `npm run ship` is the pipeline, in ship's own order, with every refusal it
-# already fails closed on: clean tree, pending migrations applied (additive) or refused, build, THE FULL
-# OFFLINE GATE TIER, CI green for this exact sha, deploy, poll to stability,
-# check:content, D1 sync, then both derived indexes converged with the deploy
-# left standing on a miss. Running the gate tier as a separate step before ship
-# would run it twice and, worse, would run it in a DIFFERENT order from the one
-# that file documents.
-#
-# Ship reads its operator token from a FILE named by OPERATOR_TOKEN_FILE. That
-# contract is not widened here: the secret is written to a file under
-# RUNNER_TEMP and the variable points at it. No flag was added to ship, because
-# a second way to supply the same credential is a second thing to keep in step,
-# and the file contract is satisfiable here in two lines.
-#
-# ## WHAT THIS CANNOT DO
-#
-# It cannot deploy an uncommitted change: it checks out a ref. That is the
-# point, and it is also the one thing the laptop path can still do, which is why
-# the laptop path stays.
+# SECRETS. CLOUDFLARE_API_TOKEN (a scoped token: the Edit Cloudflare Workers template plus Account, D1, Edit, on this
+# account only; never the global API key) and CLOUDFLARE_ACCOUNT_ID reach worker-deploy. The redacted config values
+# come from the live Workers' own bindings (scripts/apply-config-ids.mjs), so no id is a secret. OPERATOR_TOKEN is the
+# converge job's only other one.
 
 name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Branch, tag or sha to deploy. CI must be green for it."
-        required: false
-        default: main
-  # After CI finishes on main. The `decide` job below turns this into a deploy only when CI
-  # succeeded on a push to main, AUTO_DEPLOY is not "off", and the commit is still main's tip.
+  # After CI finishes on main. `decide` turns this into a deploy only when CI succeeded on a push to main, AUTO_DEPLOY
+  # is not "off", and the commit is still main's tip.
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  # The content's source is D1 (scripts/lib/content-source.mjs), so a Carrel save starts no CI run. The header's
-  # facts, the footer's pages, the sitemap dates and a new post's card are build products, so main's tip is shipped
-  # again every six hours to rebuild them from D1. Skipped like an automatic run when AUTO_DEPLOY is off.
+  # The content's source is D1 (scripts/lib/content-source.mjs), so a Carrel save starts no CI run. The header's facts,
+  # the footer's pages, the sitemap dates and a new post's card are build products, so main's tip ships again every six
+  # hours to rebuild them from D1.
   schedule:
     - cron: "23 */6 * * *"
 
-# Read only by default. `decide` only reads main's tip; the one write grant is on
-# the `ship` job, which is where it is used.
 permissions:
   contents: read
 
-# QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
-# leave the account serving whichever one happened to finish last, which is not
-# necessarily the one dispatched last. cancel-in-progress is FALSE: canceling a
-# deploy mid-flight is how a half-applied state happens, and ship's own steps
-# (deploy, then D1 sync, then two index convergences) are exactly the sequence
-# that must not be interrupted.
+# Queue, never race, and never cancel a deploy in flight: a half-run deploy, sync and index convergence is the state
+# that must not happen.
 concurrency:
   group: deploy
   cancel-in-progress: false
 
 jobs:
-  # WHAT TO DEPLOY, AND WHETHER. A dispatch deploys what it names, and the ship job's own step still refuses
-  # anything but main's tip. An automatic run deploys the sha CI just passed, and only when:
-  #   - CI concluded success, on a PUSH (a PR's CI never deploys), to main;
-  #   - the AUTO_DEPLOY repository variable is not "off" (Dustin's switch);
-  #   - that sha is still main's tip. A newer merge means a newer CI run, which deploys the newer tip, so
-  #     an older one is skipped quietly here rather than failing the ship job's tip check and alerting.
+  # worker-deploy deploys github.sha, which on every trigger here is main's tip. So `decide` deploys only when the
+  # commit CI passed is that tip; a newer merge has its own CI run, which deploys it.
   decide:
     name: Decide
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       deploy: ${{ steps.decide.outputs.deploy }}
-      ref: ${{ steps.decide.outputs.ref }}
     steps:
       - id: decide
         env:
           EVENT: ${{ github.event_name }}
-          DISPATCH_REF: ${{ inputs.ref }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
           CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           CI_EVENT: ${{ github.event.workflow_run.event }}
           CI_BRANCH: ${{ github.event.workflow_run.head_branch }}
           CI_SHA: ${{ github.event.workflow_run.head_sha }}
           AUTO_DEPLOY: ${{ vars.AUTO_DEPLOY }}
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo "Dispatched for ${DISPATCH_REF}."
-            { echo "deploy=true"; echo "ref=${DISPATCH_REF}"; } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [ "$EVENT" = "schedule" ]; then
-            [ "$AUTO_DEPLOY" != "off" ] || { echo "Not deploying: AUTO_DEPLOY is off."; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
-            echo "Scheduled rebuild of main's tip from D1's content."
-            { echo "deploy=true"; echo "ref=main"; } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           skip() { echo "Not deploying: $1"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          go() { echo "$1"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0; }
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            [ "$REF" = "refs/heads/main" ] || { echo "::error::Dispatch from main. ${REF} is not what ships."; exit 1; }
+            go "Dispatched; deploying main's tip ${SHA}."
+          fi
+          [ "$AUTO_DEPLOY" != "off" ] || skip "AUTO_DEPLOY is off. Deploy by hand with: gh workflow run deploy.yml --ref main"
+          [ "$EVENT" != "schedule" ] || go "Scheduled rebuild of main's tip ${SHA} from D1's content."
           [ "$CI_CONCLUSION" = "success" ] || skip "CI concluded ${CI_CONCLUSION} on ${CI_SHA}."
           [ "$CI_EVENT" = "push" ] || skip "CI ran for a ${CI_EVENT}, not a push to main."
           [ "$CI_BRANCH" = "main" ] || skip "CI ran on ${CI_BRANCH}, not main."
-          [ "$AUTO_DEPLOY" != "off" ] || skip "AUTO_DEPLOY is off. Deploy by hand with: gh workflow run deploy.yml --ref main"
-          tip="$(gh api "repos/${REPO}/commits/main" --jq .sha)"
-          [ "$CI_SHA" = "$tip" ] || skip "${CI_SHA} is no longer main's tip (${tip}); that commit's own CI deploys it."
-          echo "CI passed on main's tip ${CI_SHA}; deploying it."
-          { echo "deploy=true"; echo "ref=${CI_SHA}"; } >> "$GITHUB_OUTPUT"
+          [ "$CI_SHA" = "$SHA" ] || skip "${CI_SHA} is no longer main's tip (${SHA}); that commit's own CI deploys it."
+          go "CI passed on main's tip ${SHA}; deploying it."
 
-  ship:
-    name: Gates, deploy, sync
+  site:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@56adc0c3072f0661961ae658bc644da8533b4cb4 # v0.21.2
+    with:
+      worker-name: dustinedwards
+      d1-database: dustinedwards
+      health-url: https://dustinedwards.info/health
+      sha-var: DEPLOY_SHA
+      verify-command: node scripts/verify-deploy.mjs
+      # The config's redacted values, any new queue, the additive migrations, then the build from D1's content (a path
+      # D1 has never held is seeded from the repository first).
+      pre-deploy: >-
+        node scripts/apply-config-ids.mjs
+        && node scripts/ensure-queues.mjs wrangler.jsonc
+        && npx devkit-migrations drizzle --apply dustinedwards
+        && node scripts/seed-sources.mjs --remote
+        && node scripts/pull-sources.mjs --remote
+        && npm run build:stack
+        && npm run build:content
+        && npm run build
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  converge:
+    name: Converge
+    needs: site
     runs-on: ubuntu-latest
-    # Ship polls to stability for 5 probes 10s apart and waits out an Ask
-    # convergence window of up to 2 minutes, on top of a build and the full gate
-    # tier. Measured locally at roughly 6 to 9 minutes end to end.
     timeout-minutes: 30
-    # `actions: write` is not decoration. Ship reads the Actions API to learn whether
-    # CI concluded success for this exact sha, and refuses if it cannot; and its last
-    # step starts browser.yml against the deploy, which is a dispatch.
-    # Without read the deploy fails closed; without write it stands and reports the
-    # browser test as a miss.
+    # `actions: write` dispatches browser.yml against the deploy, converge's last step.
     permissions:
       contents: read
       actions: write
-
     steps:
-      # SHA-pinned, same commits the other two workflows pin: actions/checkout
-      # v7.0.1 and actions/setup-node v7.0.0, verified against their tag lists
-      # on 2026-08-25.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The dispatched ref, or on an automatic run the exact sha CI passed.
-          ref: ${{ needs.decide.outputs.ref }}
-          # Full history, because ship's first step is `git pull --ff-only`
-          # against origin/main, and a fast-forward check needs the ancestry.
-          fetch-depth: 0
-          # The token is not left in .git/config while npm ci, the build and ship
-          # run beside the Cloudflare secrets. Nothing here pushes, and the repo is
-          # public, so ship's `git pull --ff-only` needs no credential.
           persist-credentials: false
-
-      # SHIP PULLS BEFORE IT DOES ANYTHING ELSE, and a checkout of a sha is a
-      # detached HEAD with no upstream, so run 36218900911 refused at step 1
-      # ("You are not currently on a branch"). The requested commit goes onto a
-      # local main tracking origin/main, and must BE origin/main's tip: ship
-      # deploys the tip of main, locally and here, so a stale ref is refused
-      # rather than silently fast-forwarded past the commit that was asked for.
-      - name: Put the requested commit on main, and refuse unless it is main's tip
-        env:
-          REQUESTED: ${{ needs.decide.outputs.ref }}
-        run: |
-          set -euo pipefail
-          want="$(git rev-parse HEAD)"
-          tip="$(git rev-parse origin/main)"
-          if [ "$want" != "$tip" ]; then
-            echo "::error::${REQUESTED} is ${want}, but origin/main is ${tip}. Ship deploys main's tip; dispatch with ref=main or with that sha. Nothing was built or deployed."
-            exit 1
-          fi
-          git checkout -B main "$want"
-          git branch --set-upstream-to=origin/main main
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
-
-      # EVERY SECRET IS CHECKED BEFORE ANYTHING IS BUILT OR INSTALLED, and the
-      # refusal names the missing one and the command that fixes it.
-      #
-      # This is ship's own stance applied one layer out: it checks
-      # OPERATOR_TOKEN_FILE before the build because a configuration problem is
-      # fixable in seconds and must not cost a deploy that has already run its
-      # gates. A missing CLOUDFLARE_API_TOKEN discovered at the deploy step
-      # would waste ten minutes and surface as a wrangler authentication stack
-      # trace, which names the symptom rather than the cause.
-      # ALERT_EMAIL JOINED THE LIST 2026-08-29, and it is the one whose absence
-      # would NOT have been loud. A placeholder database_id fails at the deploy;
-      # a placeholder ALERT_EMAIL deploys perfectly and mails every watchdog
-      # alert to the reserved example.com, so the monitor looks healthy while
-      # being unable to reach anybody. Refused here for that reason.
-      - name: Refuse without the six secrets
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-          KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
-          OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
-          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
-        run: |
-          set -euo pipefail
-          missing=""
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_DATABASE_ID KV_NAMESPACE_ID OPERATOR_TOKEN ALERT_EMAIL; do
-            # Indirect expansion, so the loop reads the value without ever
-            # echoing it.
-            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::This deploy workflow is DORMANT until its secrets exist. Missing:${missing}. Set each with: gh secret set <NAME>. The Cloudflare token must be a SCOPED token (Create Token -> Edit Cloudflare Workers -> Account Resources: this account only), never the global API key, which cannot be scoped or revoked on its own. Nothing was built and nothing was deployed."
-            exit 1
-          fi
-          echo "All six secrets are present."
-
-      # postinstall bootstraps wrangler.jsonc by COPYING the tracked example,
-      # which carries placeholder ids.
       - name: Install
         run: npm ci
-
-      # ...so the two account-scoped ids go in here, before any gate reads the
-      # config and long before wrangler is asked to deploy against it. The
-      # script refuses five ways rather than patching partially; its header says
-      # why each one is a named refusal.
       - name: Put the redacted values into the wrangler configs
-        # CLOUDFLARE_ACCOUNT_ID joined the script's list on 2026-08-29 (vars.CLOUDFLARE_ACCOUNT_ID)
-        # and this step never passed it, so every dispatch since refused here before building.
         env:
-          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-          KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: node scripts/apply-config-ids.mjs
-
-      # THE TOKEN MUST REACH EVERY SURFACE THIS DEPLOY TOUCHES, and it is asked
-      # here rather than discovered forty seconds into ship.
-      #
-      # This step exists because the instruction above USED TO BE WRONG. It said
-      # "Edit Cloudflare Workers template" and nothing else, and a token minted
-      # from exactly that template CANNOT SHIP THIS WORKER: the template grants
-      # Workers Scripts, KV, R2 and Queues, and does not grant D1. Ship refused
-      # at its step 2 with Cloudflare API code 7403, which is one message
-      # covering an invalid account and an unpermitted product, so the log named
-      # neither. Measured on the runner 2026-08-25: workers-scripts, workers-kv,
-      # r2 and queues all answered 200; d1 answered 401.
-      #
-      # THE LIST IS WHAT THE DEPLOY IS MEASURED TO CALL, not every binding:
-      #   workers/scripts   `wrangler deploy` itself
-      #   d1/database       ship reads the deployed schema, then `d1 execute`s
-      #                     the content sync. Both are direct D1 API calls.
-      #   queues            the config declares a consumer, and wrangler
-      #                     registers it at deploy (updateQueueConsumers).
-      # AI Search is deliberately ABSENT: the token has no autorag permission and
-      # does not need one. An `ai_search` binding is serialized as script
-      # metadata and resolved by no API call, read out of wrangler 4.107.0.
-      # Asking for a permission the deploy never uses is a wider credential in
-      # GitHub for nothing.
-      #
-      # A READ probe, because the templates grant Edit: a token that can read a
-      # surface holds that product group. STATED RESIDUE: a hand-built token
-      # carrying only the Read group would pass this and still fail its write.
-      - name: Refuse if the token cannot reach D1, Workers and Queues
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -uo pipefail
-          unreachable=""
-          probe() {
-            url="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/$2"
-            code=$(curl -sS -o /tmp/probe.json -w "%{http_code}" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$url")
-            echo "  $1 -> http $code"
-            if [ "$code" != "200" ]; then unreachable="$unreachable $1"; fi
-          }
-          probe "workers" "workers/scripts"
-          probe "d1" "d1/database"
-          probe "queues" "queues"
-          if [ -n "$unreachable" ]; then
-            echo "::error::The Cloudflare API token cannot reach:${unreachable}. The account id itself is fine if any surface answered 200. Re-mint the token at dash.cloudflare.com/profile/api-tokens with the Edit Cloudflare Workers template AND an added Account -> D1 -> Edit permission, Account Resources scoped to this account only, then: gh secret set CLOUDFLARE_API_TOKEN. Nothing was built and nothing was deployed."
-            exit 1
-          fi
-          echo "The token reaches every surface this deploy calls."
-
-      # A NEW QUEUE NO LONGER NEEDS A HAND-RUN `wrangler queues create`. wrangler refuses a producer
-      # or consumer whose queue does not exist, so before this step a PR adding one (the webmention
-      # verify queue, job_a58c8e1be3fc) blocked on a manual create before its merge could deploy.
-      # Create-only and idempotent: an existing queue is left alone, nothing is ever deleted.
-      - name: Create any queue the config names that does not exist yet
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/ensure-queues.mjs wrangler.jsonc
-
-      # THE LOCAL D1 HAS TO EXIST, because ship's gate tier includes
-      # `check:backup`, which verifies the per-table export path against the
-      # LOCAL database and fails with "sqlite_master returned no tables" on a
-      # machine that has never applied a migration.
-      #
-      # THE GATE WAS RIGHT AND THE RUNNER WAS WRONG, which is why this is a new
-      # step and not an exclusion. On Dustin's laptop the local database is a
-      # side effect of months of `--local` work; a runner is an empty machine,
-      # so the gate had no subject to examine. Excluding it would have bought a
-      # green deploy by removing an assertion, and a gate that examines nothing
-      # reports what a clean sweep reports.
-      #
-      # `--local` only: this writes miniflare state under .wrangler/ and never
-      # touches the deployed database. The schema it builds is exactly what
-      # drizzle/ declares, which is the schema check:backup should be reading.
-      # The migrations build the SCHEMA; the sync puts CONTENT in it. Both are
-      # needed, and the second one is here because the first alone moved the
-      # failure rather than fixing it: with an empty database check:backup
-      # reported "only 1 of 11 exports carried any rows, expected at least 4",
-      # the one being the table migration 0008 seeds. A schema with no rows
-      # cannot demonstrate that the export path carries data, which is the
-      # whole assertion.
-      #
-      # `--local` on both, so neither touches the deployed database. This is the
-      # same derivation the laptop's local database was built by, which is why
-      # the gate has always passed there and never here.
-      # build:stack matches ci.yml's step. stack.json
-      # became a build product on 2026-09-08 and build:content reads it, so this
-      # step refused with ENOENT on the first dispatch after (run 36218330627).
-      - name: Create the local D1 the gate tier reads
-        run: |
-          set -euo pipefail
-          npx wrangler d1 migrations apply dustinedwards --local
-          npm run build:stack
-          npm run build:content
-          npm run sync:content -- --local
-
-      # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and
-      # it is not being widened. `printf %s` rather than `echo`, so the file
-      # holds the token and nothing else.
+      # converge reads the operator token from the file OPERATOR_TOKEN_FILE names; `printf %s`, so the file holds the
+      # token and nothing else.
       - name: Stage the operator token
         env:
           OPERATOR_TOKEN: ${{ secrets.OPERATOR_TOKEN }}
         run: |
           set -euo pipefail
+          [ -n "$OPERATOR_TOKEN" ] || { echo "::error::The OPERATOR_TOKEN secret is not set, so nothing can be synced."; exit 1; }
           printf '%s' "$OPERATOR_TOKEN" > "$RUNNER_TEMP/operator-token"
           chmod 600 "$RUNNER_TEMP/operator-token"
-          echo "Staged a $(wc -c < "$RUNNER_TEMP/operator-token")-byte token."
-
-      # ONE COMMAND, ship's own order, every refusal it already carries.
-      #
-      # GH_TOKEN is what `gh auth token` returns inside a workflow, and ship
-      # needs it for exactly one thing: reading whether CI concluded success for
-      # this sha. `ciVerdict` counts only runs whose event is `push`, so this
-      # dispatch run cannot see itself and report that CI is still running.
-      - name: npm run ship
+      - name: Converge
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OPERATOR_TOKEN_FILE: ${{ runner.temp }}/operator-token
           GH_TOKEN: ${{ github.token }}
-        run: npm run ship
-
-      # THE ADMIN MCP SHIPS IN THE SAME RUN, after the site it binds. It was the
-      # one Worker still shipped from Dustin's laptop (`npm run ship:mcp`); this
-      # is that same command, with its own gates, deploy and live discovery
-      # checks. Its config is gitignored, so it is rebuilt from the tracked
-      # example and the live Worker's own bindings: no new secret.
-      - name: Write the admin MCP config
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/apply-mcp-config.mjs
-
-      - name: npm run ship:mcp
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GH_TOKEN: ${{ github.token }}
-        run: npm run ship:mcp
-
-      # devkit-warm fetches every sitemap page once, so the first reader of each page after a deploy gets a stored page
-      # rather than a render: the "Warm the stored pages" step of devkit's worker-deploy.yml, which this deploy does not
-      # use. It never fails the job.
+        run: node scripts/converge.mjs
+      # Every sitemap page fetched once, so its first reader gets a stored page. It never fails the job.
       - name: Warm the stored pages
         run: npx devkit-warm https://dustinedwards.info
-
-      # Even when ship fails. The runner is ephemeral, so this is belt beside
-      # braces, and a credential that outlives its use because a step failed is
-      # a habit worth not having.
       - name: Remove the staged token
         if: always()
         run: rm -f "$RUNNER_TEMP/operator-token"
+
+  # After the site it binds (SITE is a service binding). Its config is gitignored, so it is rebuilt from the tracked
+  # example and the live Worker's own bindings (scripts/apply-mcp-config.mjs).
+  mcp:
+    needs: site
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@56adc0c3072f0661961ae658bc644da8533b4cb4 # v0.21.2
+    with:
+      worker-name: dustinedwards-admin-mcp
+      working-directory: mcp
+      install: npm ci
+      pre-deploy: node ../scripts/apply-mcp-config.mjs
+      health-url: https://admin-mcp.dustinedwards.info/health
+      sha-var: DEPLOY_SHA
+      verify-command: node ../scripts/verify-mcp.mjs
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
