@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse hook on Bash: production writes go through `npm run ship` and
-# nothing else. Blocks wrangler deploy, wrangler versions upload, npm run
+# PreToolUse hook on Bash: production writes go through the deploy workflow
+# (.github/workflows/deploy.yml) and nothing else. Blocks wrangler deploy, wrangler versions upload, npm run
 # deploy, and any wrangler d1 execute that is neither a SELECT nor a data write
 # made with readable SQL after a fresh backup.
 #
@@ -15,10 +15,10 @@
 #
 # ## What it protects
 #
-# The deploy contract is `npm run ship` (scripts/ship.mjs): CI green for the
-# exact HEAD sha, the operator token checked before the build, the indexes
-# converged after. A bare `wrangler deploy` satisfies none of it and looks like
-# it worked. The `dustin-workflow` skill was found telling every Cloudflare session to deploy
+# The deploy contract is .github/workflows/deploy.yml: CI green for main's tip,
+# devkit's worker-deploy with its D1 bookmark, live gate and rollback, the
+# indexes converged after. A bare `wrangler deploy` satisfies none of it and
+# looks like it worked. The `dustin-workflow` skill was found telling every Cloudflare session to deploy
 # with `npx wrangler deploy` (fixed 2026-09-04); this is the enforcement half of
 # that correction, because a skill can be re-edited and a hook refuses.
 #
@@ -26,8 +26,8 @@
 # the three that were asked for. It runs `wrangler deploy` from package.json, so
 # a guard that blocked the wrangler spellings and allowed this one could be
 # satisfied by accident, which is the "a fix in N-1 of N sites is not a fix"
-# shape in FAILURES.md. `npm run ship` is untouched: it invokes wrangler as a
-# child process, which no PreToolUse hook sees or should see.
+# shape in FAILURES.md. Nothing local deploys: a merge to main does, or
+# `gh workflow run deploy.yml --ref main`.
 #
 # ## SCOPED TO THIS REPO, 2026-09-05
 #
@@ -41,8 +41,8 @@
 #
 # SINCE 2026-10-10 THE ADMIN MCP IS INSIDE THIS REPO, in mcp/ (ruling
 # mcp-2026-10-10). A deploy from there runs inside the site root, so the arms
-# below refuse it like any other, and `npm run ship:mcp` is its one door,
-# allowed by the same `npm run ship` arm. The `../dustinedwards-mcp` cases
+# below refuse it like any other, and the deploy workflow's `mcp` job is its
+# one door. The `../dustinedwards-mcp` cases
 # above and in the replay stay as the generic outside-the-repo example.
 #
 # The effective directory is the LAST `cd` in the command resolved against the
@@ -245,12 +245,11 @@ def effective_dir(command, cwd):
 
 # WHERE THIS COMMAND RUNS, and whether that is this repo. Scoped 2026-09-05.
 #
-# The deploy contract is a statement about THE SITE: `npm run ship` is the only
-# reproducible way to deploy this Worker. It is not a statement about every
+# The deploy contract is a statement about THE SITE: the deploy workflow is the
+# only reproducible way to deploy this Worker. It is not a statement about every
 # repository a session happens to touch, and this hook fires on every Bash call
 # in a session started here, so `cd ../dustinedwards-mcp && npm run deploy` was
-# refused for a rule that has nothing to say about it. The admin MCP has no ship
-# pipeline and deploys exactly that way by its own README.
+# refused for a rule that has nothing to say about it.
 #
 # So the deploy arms below are scoped: outside this repo they do not fire. The
 # d1 arms are NOT scoped and stay global, because they name the site database in
@@ -274,11 +273,6 @@ else:
     root = normalize(site_root)
     here = normalize(where)
     outside_site = here != root and not here.startswith(root + "/")
-
-# `npm run ship` is the one door and is never blocked, even though it deploys.
-# Checked first so a compound command that ships is not caught by a later arm.
-if re.search(r"\bnpm\b[^|;&]*\brun\b[^|;&]*\bship\b", cmd):
-    sys.exit(0)
 
 if not outside_site and re.search(r"(?i)\bnpm\b[^|;&]*\brun\b[^|;&]*\bdeploy\b", cmd):
     sys.exit(5)
@@ -389,13 +383,13 @@ sys.exit(0)
 '
 rc=$?
 
-rule16="The deploy contract is npm run ship: CI green for the exact HEAD sha, the operator token checked before the build, both indexes converged after. Use: npm run ship"
+rule16="The deploy is .github/workflows/deploy.yml: CI green for main tip, then worker-deploy with its live gate and rollback, then the converge job. Merge to main, or: gh workflow run deploy.yml --ref main"
 
 case "$rc" in
   0) exit 0 ;;
   5) block "Blocked: npm run deploy. It runs wrangler deploy from the working tree, which is a deploy nobody can reproduce. $rule16" ;;
   6) block "Blocked: wrangler deploy. $rule16" ;;
-  7) block "Blocked: wrangler versions upload. It puts a version on the account outside the ship contract. $rule16" ;;
+  7) block "Blocked: wrangler versions upload. It puts a version on the account outside the deploy workflow. $rule16" ;;
   8) block "Blocked: wrangler d1 execute carrying a statement that is neither a SELECT nor a data write (INSERT, UPDATE, DELETE, REPLACE). Schema changes go through migrations." ;;
   10) block "Blocked: wrangler d1 execute carrying a data write with no per-table backup under six hours old. A driver writes to D1 only after confirming the latest backup: run npm run check:backup -- --remote first, then report exactly what the write changed." ;;
   9) block "Blocked: wrangler d1 execute whose SQL this check cannot read (a --file, or no --command). An unverifiable statement is not a read. Pass the SQL inline as --command \"SELECT ...\" if it is a read." ;;

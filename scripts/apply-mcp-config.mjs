@@ -1,4 +1,4 @@
-// Writes mcp/wrangler.jsonc for CI's `npm run ship:mcp` (deploy.yml): the tracked example with its four placeholders
+// Writes mcp/wrangler.jsonc for deploy.yml's `mcp` job (its worker-deploy pre-deploy guard): the tracked example with its four placeholders
 // filled from what the live dustinedwards-admin-mcp Worker is bound to now, read from the Cloudflare API. So CI needs no
 // new secret and the admin MCP keeps the values it was last shipped with by hand. Patches by text, as
 // apply-config-ids.mjs does, so the comments survive. It never prints a value.

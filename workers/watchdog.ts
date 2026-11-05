@@ -501,7 +501,7 @@ async function runRepairs(
             "The operator API REFUSED the content itself (422), so repeating this " +
               "cannot converge. That is what a repository ahead of the deployed " +
               "build looks like: the content is valid and the renderer in " +
-              "production is older than it. Deploy (npm run ship), then let the " +
+              "production is older than it. Deploy (merge to main), then let the " +
               "next poll converge it.",
           ]
         : []),

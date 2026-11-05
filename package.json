@@ -64,15 +64,13 @@
     "check:protocols": "node scripts/check-protocols.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:restore": "node scripts/restore-drill.mjs",
-    "check:migrations": "node scripts/check-migrations.mjs",
+    "check:migrations": "devkit-migrations drizzle --min 25",
     "check:console": "devkit-console",
     "check:tests": "node scripts/check-tests.mjs",
     "check:worker": "node scripts/check-worker.mjs",
     "check:types": "npm run -s typecheck",
     "test": "node --test \"test/**/*.test.mjs\"",
     "test:worker": "vitest run --config vitest.config.ts",
-    "ship": "node scripts/ship.mjs",
-    "ship:mcp": "node scripts/ship.mjs mcp",
     "build:headers": "site-runtime-headers --site dustinedwards-info --out public/_headers --header \"tdm-reservation: 1\""
   },
   "dependencies": {

@@ -149,7 +149,7 @@ jobs:
   # THE ADMIN MCP, mcp/ (Dustin Edwards Admin), moved here from its own repo on 2026-10-10 with
   # the CI it had there. Its own job because it is its own package: its own lockfile, its own SDK
   # and OAuth versions, its own Worker. Run on every push rather than on a path filter, so CI's
-  # verdict for a sha always covers mcp/ and `npm run ship:mcp` can require it.
+  # verdict for a sha always covers mcp/ before deploy.yml's `mcp` job deploys it.
   #
   #   typecheck            wrangler types plus tsc -b, the folder's src and the one app module
   #                        it imports (app/lib/health/repair.mjs)

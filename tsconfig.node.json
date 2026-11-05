@@ -11,7 +11,7 @@
     // typo in it should fail here rather than at the next test run.
     "vitest.config.ts",
     "scripts/**/*",
-    // The site origin (site-origin.mjs, re-exported by seo.ts). `ship.mjs` polls the deploy it just made, so the copy
+    // The site origin (site-origin.mjs, re-exported by seo.ts). `verify-deploy.mjs` reads the deploy it just made, so the copy
     // that goes stale is the one that polls the wrong host and reports a
     // healthy site nobody is looking at. It imports the constant rather than
     // restating it, so this project has to reach the module.

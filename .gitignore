@@ -118,57 +118,18 @@ wrangler.watchdog.jsonc
 # files included.
 .smoke-token
 
-# Session scratch space. A working directory an investigation leaves behind,
-# holding capture scripts and intermediate output that belong to nobody.
-#
-# IGNORED rather than merely untracked, for the reason /og-samples/ below is:
-# `npm run ship` refuses on any dirty tree, untracked files included, so an
-# unignored scratch directory blocks every ship window until somebody moves it
-# out of the repo by hand. Added 2026-08-28, when it did.
+# Session scratch space: an investigation's capture scripts and output, which belong to nobody.
 /.scratch/
 
-# What the last content pull wrote from D1 (scripts/pull-sources.mjs). Ignored for the /.ship-logs/ reason below:
-# ship refuses on any dirty tree, untracked files included.
+# What the last content pull wrote from D1 (scripts/pull-sources.mjs).
 /.content-pull.json
 
-# Ship's own transcript, one timestamped file per run, written unconditionally
-# by scripts/ship.mjs.
-#
-# IGNORED FOR TWO INDEPENDENT REASONS, and either alone would be enough.
-#
-#   1. The same one /.scratch/ above has: ship refuses on any dirty tree,
-#      untracked files included. A log ship wrote itself, left untracked, would
-#      make the next ship refuse because of the previous one. That is a gate
-#      failing itself, which is worse than no log.
-#   2. IT CARRIES ACCOUNT-SCOPED IDS. `wrangler deploy` prints its binding
-#      table, which names the KV namespace id and CLOUDFLARE_ACCOUNT_ID by
-#      value, and the watchdog's table prints ALERT_EMAIL. Those are exactly the
-#      values wrangler.jsonc and wrangler.watchdog.jsonc are gitignored to keep
-#      out of this repository, so a tracked ship log would put them back.
-#
-# It carries no token. Checked before this was added rather than assumed:
-# `wrangler secret` bindings do not appear in the deploy table at all, and the
-# only OPERATOR_TOKEN value in ship.mjs goes into an Authorization header that
-# is never echoed. What ship prints about the token is the FILE PATH, on one
-# refusal branch, which is a path and not a credential.
-/.ship-logs/
-
-# check:browser's record of the long-running children it started, one JSON
-# object per line, read and cleared by the NEXT run's preflight.
-#
-# IGNORED FOR THE `/.ship-logs/` REASON, which is the one that actually bites:
-# ship refuses on any dirty tree, untracked files included, so a file the gate
-# writes about itself would make the next ship refuse because of the last
-# check:browser. It carries nothing else: process ids and the needles used to
-# re-identify them, no paths outside this repo and no credential.
+# check:browser's record of the long-running children it started, one JSON object per line, read and cleared by the
+# next run's preflight: process ids and the needles that re-identify them, nothing else.
 /.gate-pids/
 
-# Social card review renders, written by `build:og -- --out og-samples`.
-# Untracked because the PNG bytes are not deterministic and are deliberately
-# kept out of the gated artifact, and IGNORED rather than merely untracked
-# because `npm run ship` refuses on any dirty tree, untracked files included:
-# without this line every ship window needs the directory moved out of the repo
-# by hand, which is what happened on 2026-08-14.
+# Social card review renders, written by `build:og -- --out og-samples`. The PNG bytes are not deterministic and are
+# deliberately kept out of the gated artifact.
 /og-samples/
 
 !.dev.vars.example

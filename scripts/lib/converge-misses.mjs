@@ -1,18 +1,18 @@
-// What ship prints when the deploy landed but a later step missed. One row per miss in a table, so a
+// What converge prints when the deploy landed but a later step missed. One row per miss in a table, so a
 // new step adds a row rather than a fifth copy of the same branch.
 
 /**
- * @typedef {object} ShipMiss
+ * @typedef {object} ConvergeMiss
  * @property {string} key the short name printed beside the miss
  * @property {string} title what is behind, in the headline
  * @property {string} text the miss, or "" when the step did not miss
  */
 
 /**
- * The lines ship prints to stderr before it exits nonzero, or none when nothing missed. Every miss
+ * The lines converge prints to stderr before it exits nonzero, or none when nothing missed. Every miss
  * is named: the faults are independent.
  *
- * @param {ShipMiss[]} misses in the order the steps ran
+ * @param {ConvergeMiss[]} misses in the order the steps ran
  * @param {string} sha the commit that was deployed
  * @returns {string[]}
  */
@@ -27,7 +27,7 @@ export function missReport(misses, sha) {
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
       `  assets until its sync succeeds; both operations are idempotent: re-run\n` +
-      `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n` +
+      `  the deploy's converge job, or call sync_ask / sync_media on the operator API.\n` +
       `  Render drift here has ALREADY SURVIVED a converge write and a second\n` +
       `  sync, so it is not the benign first-sync ordering artifact (a render\n` +
       `  from the previously deployed Worker), which\n` +
@@ -37,7 +37,7 @@ export function missReport(misses, sha) {
       `  wrote the D1 one; a re-run is not the repair.\n\n` +
       `  A WATCHDOG miss is the one line above that is about the WATCHER rather\n` +
       `  than the site: the previously deployed watchdog keeps firing, so the\n` +
-      `  site is still watched, by older code. Re-run \`npm run ship\`, or deploy\n` +
+      `  site is still watched, by older code. Re-run the converge job, or deploy\n` +
       `  it alone with \`npx wrangler deploy -c wrangler.watchdog.jsonc\`.\n\n` +
       `  The watchdog reads the same index drift every fifteen minutes and\n` +
       `  attempts the same repair itself before it alerts; the external uptime\n` +

@@ -17,5 +17,5 @@ a registry, refresh citations, keep a procedure.
 
 ## Commands
 
-Deploy is `npm run ship:mcp` from the repository root, never `wrangler deploy`.
+A merge to main deploys it (the `mcp` job of `.github/workflows/deploy.yml`); never `wrangler deploy`.
 `package.json` lists the rest; README.md says what each gate proves.

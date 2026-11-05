@@ -164,15 +164,17 @@ secret.
 
 ## Deploying
 
-Only `npm run ship` deploys. After a merge to main,
-`.github/workflows/deploy.yml` runs it once CI passes, unless `AUTO_DEPLOY` is
-`off`. Never run `npm run deploy` by hand (ship runs it as its own step) or bare
-`wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
+A merge to main deploys. Once CI passes, `.github/workflows/deploy.yml` deploys
+main's tip through devkit's worker-deploy, which rolls the Worker back when
+`scripts/verify-deploy.mjs` refuses it, then runs `scripts/converge.mjs` (the
+watchdog, the D1 sync and the derived indexes) and deploys the admin MCP the
+same way, unless `AUTO_DEPLOY` is `off`. Never run `npm run deploy` by hand or
+bare `wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
 
 Migrations are separate and hand-written in `drizzle/`. Add a new numbered file;
-never edit an applied one. drizzle-kit is deliberately not a dependency. `ship`
-applies a pending migration itself when every statement is additive, after
-printing the D1 Time Travel restore command; one with a DROP, DELETE, UPDATE or
+never edit an applied one. drizzle-kit is deliberately not a dependency. The
+deploy applies a pending migration itself (`devkit-migrations --apply`) when
+every statement is additive, after printing the D1 Time Travel restore command; one with a DROP, DELETE, UPDATE or
 rename refuses, and you apply it by hand:
 
 ```bash
