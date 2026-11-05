@@ -46,7 +46,7 @@ export async function cvPdfStamp(CV) {
  *
  * @param {import("./entries.mjs").Cv} CV
  */
-export function cvFooterCss(CV) {
+function cvFooterCss(CV) {
   const footer = `${CV.person.name}, Curriculum Vitae, ${CV.edition}`;
   const text = `"${footer.replace(/[\\"]/g, "\\$&").replace(/</g, "\\3c ")}"`;
   const box = 'font-family: "Inter", Arial, sans-serif; font-size: 7.5pt; color: #6a6159;';
