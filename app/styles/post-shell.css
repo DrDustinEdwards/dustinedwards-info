@@ -192,7 +192,7 @@
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: var(--weight-heading);
   letter-spacing: normal;
   line-height: 1.4;
 }

@@ -56,7 +56,7 @@
 
 .prose h3 {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: var(--weight-heading);
 }
 
 .prose p,
