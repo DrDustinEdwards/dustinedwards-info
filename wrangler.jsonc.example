@@ -353,8 +353,8 @@
 	// Cloudflare's own guidance a Durable Object class rename is a
 	// THREE-DEPLOY rollout, because the namespace's class pointer and the
 	// Worker code that exports the class are not updated atomically. In this
-	// repository a deploy is a full `npm run ship` run that refuses without a
-	// green CI run for its exact sha, so that is three ship windows.
+	// repository a deploy is a full deploy.yml run that waits for a green CI
+	// run for its exact sha, so that is three deploy windows.
 	//
 	// And the non-atomic window is the worst one this site has. During it the
 	// binding may not resolve, which means sign-in fails, /health answers

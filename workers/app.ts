@@ -40,7 +40,10 @@ import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
+import { countNotFound, pruneNotFound } from "@dustinedwards/site-runtime/not-found";
 import { cronJob } from "~/lib/cron-jobs.mjs";
+import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
+import { SITE_ORIGIN } from "~/lib/seo";
 
 export { AskBudget } from "./ask-budget";
 
@@ -197,6 +200,9 @@ type FetchArgs = Parameters<NonNullable<ExportedHandler<Env>["fetch"]>>;
 const site = {
   async fetch(request, env, ctx) {
     const response = await gateway(request, env, ctx);
+    // Each 404 a GET gets, stored page or live, counted per path, referring host and UTC day (site-runtime
+    // ./not-found, drizzle/0041; the privacy page names it). Never a preview link's, whose path carries its token.
+    if (!new URL(request.url).pathname.startsWith("/preview/")) countNotFound(env.DB, request, response, ctx);
     // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
     // are served before the Worker runs, so robots.txt's Disallow is what covers those.
     // The workers.dev address keeps answering after the cutover (the watchdog, the browser tests and
@@ -212,7 +218,7 @@ const site = {
   },
 
   // The one cron (wrangler.jsonc.example), every minute: every Carrel schedule that is due goes live with the publish
-  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump and the media files backup run too. runJobs records each job in cron_runs for /health's
+  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump, the media files backup and the 404 prune run too. runJobs records each job in cron_runs for /health's
   // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
   // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
   // Every firing of the one key gets the job list: there is no other key this Worker can receive.
@@ -233,6 +239,8 @@ const site = {
           ? [
               { ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) },
               { ...cronJob("media-backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupMedia(env) },
+              // The 404 counts keep 90 days, as the privacy page says.
+              { ...cronJob("prune-404"), run: () => pruneNotFound(env.DB, { days: 90 }) },
             ]
           : []),
       ]),
@@ -241,22 +249,27 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
+// Prelum's markdownCopies: every public page has a Markdown copy at its path plus .md and answers Accept: text/markdown,
+// which llms.txt promises. The site's own twins (posts, papers, research, the CV) and its own llms-full.txt win; the
+// wrapper only fills in the pages the site answers 404 or HTML for. The private planes get no copy.
+const withMarkdownCopies = markdownCopies(
+  // The wrapper types the request as a plain Request; it hands on the one the runtime gave it, or a GET it made from it.
+  (request: Request, env: Env, ctx: ExecutionContext) => site.fetch(request as FetchArgs[0], env, ctx),
+  { origin: SITE_ORIGIN, llmsFull: false, skip: isPrivatePath },
+);
+
 // A person idle for an hour on either private plane, /admin or /lab-bench, is signed out of Access (site-runtime ./access).
 // Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
 // never reads the other's cookie as no request. Every request writes one `request` line
 // (site-runtime withRequestLog: cf-ray, method, path, status, ms and the deployed sha), with no address, cookie or
 // query, so it records nothing the privacy page would have to name. tokenPath cuts any segment after /preview/, the
 // one address a capability has ridden in a path here (the traces note in wrangler.jsonc.example).
-//
-// NO 404 COUNTER (area 8, N1 and N7): site-runtime's countNotFound would store each missing path and its referring
-// host in D1, and the privacy page names everything the site records, so the counter waits for that page's wording.
-// With no rows there is nothing to prune.
 export default {
   ...site,
   fetch: withRequestLog(
     // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
     (request: Request, env: Env, ctx: ExecutionContext) => {
-      const app = () => site.fetch(request as FetchArgs[0], env, ctx);
+      const app = async () => withMarkdownCopies(request, env, ctx);
       const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen" });
       return withAdminIdle(request, lab, { prefixes: ["/admin"] });
     },

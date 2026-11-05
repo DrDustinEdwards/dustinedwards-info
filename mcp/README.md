@@ -55,12 +55,14 @@ by default, at most 100, with `has_more` and an opaque `next_cursor`.
 
 ## Deploy
 
-Only `npm run ship:mcp` from the repository root deploys this Worker. It needs
-`mcp/wrangler.jsonc` (gitignored: it carries the real `OAUTH_KV` and `PROBE_KV`
-ids; fill the example's ids from `npx wrangler kv namespace list`). It refuses
-without green CI for the exact sha, runs typecheck, check:wrapper, the tests and
-the build, deploys, and then proves `/health` and a `server/discover` call on
-`https://admin-mcp.dustinedwards.info`.
+A merge to main deploys this Worker, after the site: the `mcp` job of
+`.github/workflows/deploy.yml` calls devkit's worker-deploy from this folder. CI's
+admin MCP job has already run typecheck, check:wrapper, the tests and the build
+for that sha. `scripts/apply-mcp-config.mjs` writes `mcp/wrangler.jsonc`
+(gitignored: it carries the real `OAUTH_KV` and `PROBE_KV` ids) from the live
+Worker's bindings; the live gate waits for `/health` to report the commit, and
+`scripts/verify-mcp.mjs` checks discovery and a `server/discover` call on
+`https://admin-mcp.dustinedwards.info`, rolling the Worker back when it refuses.
 
 ## The law
 

@@ -87,7 +87,7 @@ silently reverting the secret too. Deploy forward instead, or use
 deploy.
 
 **Rolling back does not change the repo.** The code that broke it is still on
-`main` and the next `npm run ship` will put it back. So once the site is stable,
+`main` and the next deploy (a merge, or the six-hourly run) will put it back. So once the site is stable,
 revert it for real, by pull request:
 
 ```powershell

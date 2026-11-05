@@ -1,5 +1,11 @@
-// Patches placeholders by text and never parse-and-reserialises, which would strip the comments
-// these configs depend on. It never prints an id.
+// Writes the redacted values into wrangler.jsonc and wrangler.watchdog.jsonc for the deploy (deploy.yml's pre-deploy
+// guard and its converge job): each value is read from what the live Worker is bound to now, through the Cloudflare
+// API, as scripts/apply-mcp-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
+// token and account id that devkit's worker-deploy passes, and a Worker keeps the database, namespace and address it
+// was last deployed with. The account id comes from CLOUDFLARE_ACCOUNT_ID.
+//
+// Patches placeholders by text and never parse-and-reserialises, which would strip the comments these configs depend
+// on. It never prints a value.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -9,129 +15,86 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** @param {string} why @returns {never} */
 function refuse(why) {
-  console.error(`\napply-config-ids REFUSED: ${why}\n`);
+  console.error(`\napply-config-ids REFUSED: ${why} Nothing was deployed.\n`);
   process.exit(1);
 }
 
-// A change to the example must fail loudly here, not leave a deploy bound to a database that does not exist.
+/**
+ * Each placeholder, and where its value lives: a binding of a live Worker (`worker`, `type`, `binding`, and the first
+ * field of `from` it carries), or the account id. The settings API names a D1 binding's id `id` or `database_id`, so
+ * both are read. A change to the example must fail loudly here, not leave a deploy bound to a database that does not
+ * exist.
+ * @type {Array<{ config: string, name: string, key: string, placeholder: string, worker?: string, type?: string, binding?: string, from?: string[] }>}
+ */
 const FIELDS = [
-  {
-    config: "wrangler.jsonc",
-    name: "d1_databases[0].database_id",
-    key: "database_id",
-    env: "D1_DATABASE_ID",
-    placeholder: "00000000-0000-0000-0000-000000000000",
-  },
-  {
-    config: "wrangler.jsonc",
-    name: "kv_namespaces[0].id",
-    key: "id",
-    env: "KV_NAMESPACE_ID",
-    placeholder: "00000000000000000000000000000000",
-  },
-  {
-    config: "wrangler.jsonc",
-    name: "vars.CLOUDFLARE_ACCOUNT_ID",
-    key: "CLOUDFLARE_ACCOUNT_ID",
-    env: "CLOUDFLARE_ACCOUNT_ID",
-    placeholder: "00000000000000000000000000000000",
-  },
-  // The watchdog binds the same KV namespace and reads the same account id. Without these two, run
-  // 36219656356 deployed the site and then failed the watchdog deploy on a namespace of zeros.
-  {
-    config: "wrangler.watchdog.jsonc",
-    name: "kv_namespaces[0].id",
-    key: "id",
-    env: "KV_NAMESPACE_ID",
-    placeholder: "00000000000000000000000000000000",
-  },
-  {
-    config: "wrangler.watchdog.jsonc",
-    name: "vars.CLOUDFLARE_ACCOUNT_ID",
-    key: "CLOUDFLARE_ACCOUNT_ID",
-    env: "CLOUDFLARE_ACCOUNT_ID",
-    placeholder: "00000000000000000000000000000000",
-  },
-  {
-    config: "wrangler.watchdog.jsonc",
-    name: "vars.ALERT_EMAIL",
-    key: "ALERT_EMAIL",
-    env: "ALERT_EMAIL",
-    placeholder: "alerts@example.com",
-  },
+  { config: "wrangler.jsonc", name: "d1_databases[0].database_id", key: "database_id", placeholder: "00000000-0000-0000-0000-000000000000", worker: "dustinedwards", type: "d1", binding: "DB", from: ["id", "database_id"] },
+  { config: "wrangler.jsonc", name: "kv_namespaces[0].id", key: "id", placeholder: "00000000000000000000000000000000", worker: "dustinedwards", type: "kv_namespace", binding: "APP_KV", from: ["namespace_id"] },
+  { config: "wrangler.jsonc", name: "vars.CLOUDFLARE_ACCOUNT_ID", key: "CLOUDFLARE_ACCOUNT_ID", placeholder: "00000000000000000000000000000000" },
+  // The watchdog binds the same KV namespace and reads the same account id. Without these two, run 36219656356
+  // deployed the site and then failed the watchdog deploy on a namespace of zeros.
+  { config: "wrangler.watchdog.jsonc", name: "kv_namespaces[0].id", key: "id", placeholder: "00000000000000000000000000000000", worker: "dustinedwards-watchdog", type: "kv_namespace", binding: "APP_KV", from: ["namespace_id"] },
+  { config: "wrangler.watchdog.jsonc", name: "vars.CLOUDFLARE_ACCOUNT_ID", key: "CLOUDFLARE_ACCOUNT_ID", placeholder: "00000000000000000000000000000000" },
+  { config: "wrangler.watchdog.jsonc", name: "vars.ALERT_EMAIL", key: "ALERT_EMAIL", placeholder: "alerts@example.com", worker: "dustinedwards-watchdog", type: "plain_text", binding: "ALERT_EMAIL", from: ["text"] },
 ];
 
-/**
- * Key plus placeholder: two fields share a placeholder of thirty-two zeros, so the value alone is ambiguous.
- *
- * @param {{ key: string, placeholder: string }} field
- */
-const needleFor = (field) => `"${field.key}": "${field.placeholder}"`;
+const token = process.env.CLOUDFLARE_API_TOKEN ?? "";
+const account = (process.env.CLOUDFLARE_ACCOUNT_ID ?? "").trim();
+if (!token || !account) refuse("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must both be set.");
+
+/** @type {Map<string, Array<Record<string, unknown>>>} */
+const bindings = new Map();
+for (const worker of new Set(FIELDS.flatMap((f) => (f.worker ? [f.worker] : [])))) {
+  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${worker}/settings`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(30_000),
+  }).catch((error) => refuse(`the Cloudflare API could not be reached: ${error instanceof Error ? error.message : String(error)}.`));
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(body?.result?.bindings)) refuse(`the settings of ${worker} could not be read (HTTP ${response.status}).`);
+  bindings.set(worker, body.result.bindings);
+}
+
+/** @param {(typeof FIELDS)[number]} field @returns {string} */
+function valueOf(field) {
+  if (!field.worker) return account;
+  const bound = bindings.get(field.worker)?.find((b) => b.name === field.binding && b.type === field.type);
+  const live = (field.from ?? []).map((key) => bound?.[key]).find((value) => typeof value === "string" && value.trim());
+  if (typeof live !== "string" || !live.trim()) refuse(`${field.worker} has no ${field.type} binding ${field.binding} to copy into ${field.name}.`);
+  return live.trim();
+}
+
+/** Key plus placeholder: two fields share a placeholder of thirty-two zeros, so the value alone is ambiguous. */
+const needleFor = (/** @type {{ key: string, placeholder: string }} */ field) => `"${field.key}": "${field.placeholder}"`;
 
 const CONFIGS = [...new Set(FIELDS.map((f) => f.config))];
-
 for (const config of CONFIGS) {
-  if (!existsSync(join(root, config))) {
-    refuse(
-      `${config} does not exist. postinstall bootstraps it from ${config}.example; ` +
-        `run npm ci first.`,
-    );
-  }
+  if (!existsSync(join(root, config))) refuse(`${config} does not exist. postinstall bootstraps it from ${config}.example; run npm ci first.`);
 }
 
 for (const config of CONFIGS) {
   const path = join(root, config);
   let text = readFileSync(path, "utf8");
-
+  /** @type {Array<[string, string]>} */
+  const written = [];
   for (const field of FIELDS.filter((f) => f.config === config)) {
-    const value = (process.env[field.env] ?? "").trim();
-    if (!value) {
-      refuse(
-        `${field.env} is not set, so ${field.name} would stay a placeholder. Set it ` +
-          `with: gh secret set ${field.env}`,
-      );
-    }
-    if (value === field.placeholder) {
-      refuse(`${field.env} is the placeholder value itself, which patches nothing.`);
-    }
-
-    // Counted before replacing: `replace` on a string swaps the FIRST match and reports nothing, so
-    // a needle appearing twice would leave one behind and this would print success.
+    const value = valueOf(field);
+    if (value === field.placeholder) refuse(`${field.name}'s live value is the placeholder itself, which patches nothing.`);
+    // Counted before replacing: `replace` on a string swaps the FIRST match and reports nothing, so a needle appearing
+    // twice would leave one behind and this would print success.
     const needle = needleFor(field);
     const occurrences = text.split(needle).length - 1;
-    if (occurrences === 0) {
-      refuse(
-        `the placeholder for ${field.name} was not found in ${config}. The ` +
-          `example changed shape, and patching nothing would look exactly like ` +
-          `patching correctly.`,
-      );
+    if (occurrences !== 1) {
+      refuse(`the placeholder for ${field.name} appears ${occurrences} times in ${config}, not once: the example changed shape.`);
     }
-    if (occurrences > 1) {
-      refuse(
-        `the placeholder for ${field.name} appears ${occurrences} times in ${config}, so ` +
-          `which one to patch is ambiguous. Refusing rather than guessing.`,
-      );
-    }
-
-    // A replacer function, not a string: in a replacement string `$&` and `$1` are patterns, so a
-    // value carrying a dollar sign would be written as something else.
+    // A replacer function, not a string: in a replacement string `$&` and `$1` are patterns.
     text = text.replace(needle, () => `"${field.key}": "${value}"`);
+    written.push([needle, `"${field.key}": "${value}"`]);
     console.log(`  patched ${field.name} in ${config}`);
   }
-
   writeFileSync(path, text, "utf8");
-
   // Read back: a write that did not take is invisible from the exit code of writeFileSync.
   const after = readFileSync(path, "utf8");
-  for (const field of FIELDS.filter((f) => f.config === config)) {
-    if (after.includes(needleFor(field))) {
-      refuse(`${field.name} is still a placeholder in ${config} after the write.`);
-    }
-    // The placeholder being gone is half of it; the value being there is the other half.
-    const value = (process.env[field.env] ?? "").trim();
-    if (!after.includes(`"${field.key}": "${value}"`)) {
-      refuse(`${field.name} is not in ${config} after the write, though its placeholder is gone.`);
-    }
+  for (const [needle, line] of written) {
+    if (after.includes(needle) || !after.includes(line)) refuse(`${config} does not carry its values after the write.`);
   }
 }
 

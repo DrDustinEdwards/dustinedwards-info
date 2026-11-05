@@ -12,9 +12,9 @@ export const KEY_ABSENT_LINE =
 
 /** What ship prints when the step is skipped: the real cause, what was not done, and when it will be. */
 export const UPTIME_SKIP_NOTE =
-  "this ship ran on a GitHub runner, which holds no UptimeRobot key by design, so the external " +
+  "this deploy ran on a GitHub runner, which holds no UptimeRobot key by design, so the external " +
   "uptime monitors were NOT touched and keep pointing where they pointed before this deploy. " +
-  "They are reconciled at the domain move, by hand in UptimeRobot or by a local `npm run ship` " +
+  "They are reconciled at the domain move, by hand in UptimeRobot or by `node scripts/uptime-ensure.mjs` " +
   "on the operator machine, which holds the key";
 
 /**

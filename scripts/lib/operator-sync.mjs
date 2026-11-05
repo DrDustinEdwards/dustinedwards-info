@@ -1,4 +1,4 @@
-// The two converge steps ship runs through the deployed Worker's operator API: sync_ask brings the
+// The two converge steps scripts/converge.mjs runs through the deployed Worker's operator API: sync_ask brings the
 // Ask index into step and sync_media the media index. Each returns a miss rather than refusing,
 // because every failure here happens after the deploy has landed.
 
@@ -37,7 +37,7 @@ async function operatorSync(tool, { origin, token }) {
         "content-type": "application/json",
       },
       body: JSON.stringify({ tool, args: {} }),
-      // Bounded: a stalled POST after the deploy has landed would hang ship with the deploy unreported.
+      // Bounded: a stalled POST after the deploy has landed would hang the converge job with the deploy unreported.
       signal: AbortSignal.timeout(OPERATOR_TIMEOUT_MS),
     });
     body = await response.json().catch(() => null);
@@ -68,7 +68,7 @@ async function operatorSync(tool, { origin, token }) {
  */
 export async function readAskDrift(origin) {
   const res = await fetch(`${origin}/health`, {
-    headers: { "user-agent": "ship", "cache-control": "no-cache" },
+    headers: { "user-agent": "deploy-converge", "cache-control": "no-cache" },
     signal: AbortSignal.timeout(30_000),
   });
   // Parsed regardless of status: health answers 503 when the database fails, and the body is still the answer.

@@ -233,11 +233,12 @@
   }
 }
 
+/* Inline only: the block padding is prose.css's, and the top is post-enhancements.css's room for Copy. */
 .post-body .prose pre {
   border: 0;
   border-block: var(--line-w) solid var(--dust);
   border-radius: 0;
-  padding: 1rem 0;
+  padding-inline: 0;
 }
 
 .post-body .prose blockquote {

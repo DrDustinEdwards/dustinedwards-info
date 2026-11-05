@@ -43,11 +43,11 @@ await test("secrets come from the seat environment, the transcript stays out of 
   assert.match(CODE, /^ {4}environment: seat$/m);
   assert.match(CODE, /show_full_output: false/);
   const refused = list("disallowedTools");
-  // Only `npm run ship` deploys (.claude/hooks/no-direct-deploy.sh), and a session never does.
-  for (const entry of ["Bash(npm run deploy:*)", "Bash(npm run ship:*)", "Bash(npx wrangler:*)", "Bash(wrangler:*)", "Bash(gh:*)", "Bash(curl:*)"]) {
+  // Only deploy.yml deploys (.claude/hooks/no-direct-deploy.sh), and a session never does.
+  for (const entry of ["Bash(npm run deploy:*)", "Bash(npx wrangler:*)", "Bash(wrangler:*)", "Bash(gh:*)", "Bash(curl:*)"]) {
     assert.ok(refused.includes(entry), `${entry} is not refused`);
   }
-  assert.doesNotMatch(/--allowedTools "([^"]*)"/.exec(CODE)?.[1] ?? "", /wrangler|deploy|ship|gh:/);
+  assert.doesNotMatch(/--allowedTools "([^"]*)"/.exec(CODE)?.[1] ?? "", /wrangler|deploy|gh:/);
   // Read-nothing at the top; the one job holds the writes (area 12 checklist C3).
   assert.match(CODE, /^permissions: \{\}\n/m);
   assert.match(CODE, /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: read\n {6}issues: read\n(?: {6}#.*\n)* {6}id-token: write\n {4}runs-on:/m);

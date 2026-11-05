@@ -1,0 +1,5 @@
+{
+  "unprobed": {
+    "AUDIT_BUCKET": "Only the daily exportAuditLog may touch it (scripts/check-wrapper.mjs). The tool-call-log check on /health alerts when rows go uncopied to it for two days."
+  }
+}

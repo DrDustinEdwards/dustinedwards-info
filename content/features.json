@@ -312,7 +312,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/theme"
+          "path": "/theme",
+          "anonymousGet": false
         },
         {
           "kind": "gate",
@@ -327,7 +328,8 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/theme"
+          "path": "/theme",
+          "anonymousGet": false
         }
       ]
     },

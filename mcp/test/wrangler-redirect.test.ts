@@ -2,7 +2,7 @@
  * A local build must not be captured by a site build's wrangler redirect. The site's
  * `react-router build` writes ../.wrangler/deploy/config.json, and a bare `wrangler` in this
  * folder then refuses with "Found both a user configuration file and a deploy configuration
- * file" (it stopped the first local ship:mcp, 2026-10-10). CI never has that file, so only a
+ * file" (it stopped the first local MCP deploy, 2026-10-10). CI never has that file, so only a
  * planted copy can show it. The scripts name their config with -c, which skips the lookup.
  */
 import { spawnSync } from "node:child_process";

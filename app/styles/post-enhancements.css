@@ -36,13 +36,15 @@
 }
 
 /* Room for the script-added furniture is reserved only when script can run (scripting: enabled, or
-   [data-enhanced]). */
+   [data-enhanced]), and only on the blocks that get it (Prelum decorates `pre[data-lang]`). The attribute
+   selector also outranks prose.css's later `.prose pre { padding: 1rem }`; at equal rank that rule won and
+   the room arrived with the furniture, shifting the page 20 px a block (chart-audit D5, 2026-11-05). */
 .prose pre {
   position: relative;
 }
 
 @media (scripting: enabled) {
-  .prose pre {
+  .prose pre[data-lang] {
     padding-top: 2.25rem;
   }
 }

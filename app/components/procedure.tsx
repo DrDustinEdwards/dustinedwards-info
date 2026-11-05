@@ -15,6 +15,7 @@ import { contentPicture } from "~/lib/media/images.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { type Block, EquipmentTable, Heading, KeyResourcesTable, MaterialsTable, ProcedureFacts, ScaleForm, Solutions, html, materialsHeading } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
+import { RENDERED } from "~/lib/content/render-version";
 
 /**
  * Every procedure page is drawn by these components from its D1 record (docs/PROCEDURES.md): the page,
@@ -249,7 +250,7 @@ export function ProcedureView({
   const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   const keyGroups = keyResources(record);
   return (
-    <div className="prose procedure" data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
+    <div className="prose procedure" {...RENDERED} data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
       <ProcedureFacts record={record} lineage={lineage} />
       <p className="procedure-links">
         {sheetPath ? (

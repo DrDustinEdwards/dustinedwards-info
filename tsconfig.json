@@ -10,7 +10,7 @@
     /*
      * A SCRIPT MAY IMPORT A `.ts` MODULE BY ITS REAL FILENAME.
      *
-     * Node 24 strips types on the fly, so `scripts/ship.mjs` can import
+     * Node 24 strips types on the fly, so `scripts/converge.mjs` can import
      * `app/lib/seo.ts` directly and stop restating the site origin. Node's ESM
      * resolver needs the extension in the specifier and TypeScript refuses one
      * by default. Safe here because nothing in this repository emits: `noEmit`

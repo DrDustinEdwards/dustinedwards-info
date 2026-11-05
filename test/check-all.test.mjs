@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { WINDOWS_CRASH_CODES } from "../scripts/lib/tier-outcome.mjs";
+import { WINDOWS_CRASH_CODES } from "../scripts/lib/windows-crash-codes.mjs";
 
 await test("importing check-all with --all on the command line does not set SCHEMA_LIVE", async () => {
   const before = process.env.SCHEMA_LIVE;

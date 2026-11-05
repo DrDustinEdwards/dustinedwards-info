@@ -1,5 +1,5 @@
-// The mcp ship target's two pure halves: which config it will deploy from, and whether the live
-// discovery documents describe the server. The rest of the target deploys, so it is not run here.
+// The admin MCP live gate's two pure halves: which config it reads the origin from, and whether the live
+// discovery documents describe the server.
 
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { MCP_GATES, MCP_TARGETS, discoveryProblems, mcpConfig } from "../scripts/lib/ship-mcp.mjs";
+import { discoveryProblems, mcpConfig } from "../scripts/verify-mcp.mjs";
 
 const ORIGIN = "https://admin-mcp.dustinedwards.info";
 
@@ -64,17 +64,11 @@ await test("unreachable documents are named by status", () => {
 });
 
 function root(config) {
-  const dir = mkdtempSync(join(tmpdir(), "ship-mcp-"));
+  const dir = mkdtempSync(join(tmpdir(), "verify-mcp-"));
   mkdirSync(join(dir, "mcp"));
-  if (config !== null) writeFileSync(join(dir, "mcp", "wrangler.jsonc"), config);
+  if (config !== null) writeFileSync(join(dir, "mcp", "wrangler.jsonc.example"), config);
   return dir;
 }
-
-await test("mcpConfig refuses a missing config, the example's placeholders, and a non-https origin", () => {
-  assert.match(mcpConfig(root(null)).why, /does not exist/);
-  assert.match(mcpConfig(root('{ "kv_namespaces": [{ "id": "YOUR_OAUTH_KV_ID" }] }')).why, /placeholders/);
-  assert.match(mcpConfig(root('{ "vars": { "PUBLIC_ORIGIN": "http://x.test" } }')).why, /https PUBLIC_ORIGIN/);
-});
 
 await test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
   const config = `{
@@ -82,13 +76,4 @@ await test("mcpConfig reads PUBLIC_ORIGIN through comments", () => {
     "vars": { "PUBLIC_ORIGIN": "${ORIGIN}/" }
   }`;
   assert.deepEqual(mcpConfig(root(config)), { ok: true, origin: ORIGIN });
-});
-
-await test("the gates are the four CI's mcp job runs, typecheck first", () => {
-  assert.deepEqual(MCP_GATES, ["typecheck", "check:wrapper", "test", "build"]);
-});
-
-await test("the mcp target deploys mcp/ and runs the four gates", () => {
-  assert.deepEqual(MCP_TARGETS.mcp.dir, ["mcp"]);
-  assert.deepEqual(MCP_TARGETS.mcp.gates, MCP_GATES);
 });

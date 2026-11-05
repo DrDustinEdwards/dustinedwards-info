@@ -246,8 +246,8 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
         ok(
           `not-adopted entry "${name}" does not call CI missing`,
           !namesCi(name) && !namesCi(reason),
-          `ci.yml runs on every push to main and ship refuses a HEAD without a green ` +
-            `run for its sha, so an entry under "What was not adopted" naming continuous ` +
+          `ci.yml runs on every push to main and deploy.yml deploys only a commit with a green ` +
+            `CI run, so an entry under "What was not adopted" naming continuous ` +
             `integration is a false sentence on the page. Entry: ${JSON.stringify({ name, status: entry.status })}`,
         );
       }

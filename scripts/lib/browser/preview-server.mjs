@@ -17,7 +17,7 @@ import { BASE, DRIVES_PREVIEW, PORT, PUBLIC_ORIGIN, root } from "./harness.mjs";
 /** Declared here because the port preflight needs them before any spawn. */
 const VITE_NEEDLES = ["vite", "preview", String(PORT)];
 
-/** Gitignored, or `npm run ship` would refuse the dirty tree. */
+/** Gitignored, so a gate run leaves the tree clean. */
 export const registry = new ChildRegistry(join(root, ".gate-pids", "check-browser.jsonl"));
 
 /** Last run's children, then the port's holders; refuses to start on a stranger. */

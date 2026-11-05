@@ -99,7 +99,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       aiCheck("ai", env.AI),
       // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
       { name: "browser", level: "warn", run: async () => typeof env.BROWSER?.fetch === "function" || { ok: false, detail: "binding missing" } },
-      queueCheck("webmention-queue", env.WEBMENTION_VERIFY),
+      queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       cronCheck(env.DB, { jobs: [...CRON_JOBS] }),
       ...HEALTH_CHECK_NAMES.map((name) => ({

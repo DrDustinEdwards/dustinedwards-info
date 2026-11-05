@@ -33,8 +33,12 @@ export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
-/** Two entries, the most the gateway log takes from AI Search; `ai-search`, `task` and `origin` are reserved. */
-const ASK_GATEWAY_METADATA = { site: "dustinedwards", feature: "ask" };
+/**
+ * Two entries, the most the gateway log takes from AI Search; `ai-search`, `task` and `origin` are reserved. The keys
+ * are site-runtime's (`anthropicRoute` in ./ai-gateway tags `{ app, feature }`), so one gateway filter finds a site's
+ * calls whichever door they took.
+ */
+const ASK_GATEWAY_METADATA = { app: "dustinedwards", feature: "ask" };
 
 /** Bounds the answer, not the corpus: past it, retrieval widens the net without widening the answer. */
 const MAX_CHUNKS = 6;
@@ -56,7 +60,7 @@ export function askAvailable(env: Env): boolean {
  * "query rewriting and response generation also run through your gateway"
  * (https://developers.cloudflare.com/ai-search/configuration/models/ai-gateway/); the instance's `ai_gateway_id`
  * names it (https://developers.cloudflare.com/ai-search/api/instances/workers-binding/). What a request can set is
- * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by site and feature.
+ * `custom_metadata`, up to two entries on the gateway's log, so Ask's calls are told apart by app and feature.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   let timer: ReturnType<typeof setTimeout> | undefined;

@@ -1,17 +1,7 @@
 // Windows reuses pids, so nothing here kills on a pid alone: the live command line must still match.
 
 import { spawnSync } from "node:child_process";
-import {
-  appendFileSync,
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-  writeSync,
-} from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const isWindows = process.platform === "win32";
@@ -331,46 +321,6 @@ export class ChildRegistry {
 }
 
 /**
- * By command line, never by process name: every one of them is `node`. Self's ANCESTORS are
- * excused with it, because the ship needle matches ship's own launchers (the tee parent, and
- * on Windows the `cmd /c node scripts/ship.mjs` shell).
- *
- * @param {Map<number, { ppid: number, command: string }>} table
- * @param {Array<{ needle: string, what: string }>} needles
- * @param {number} [self]
- * @returns {Array<{ pid: number, what: string }>}
- */
-export function busyProcesses(table, needles, self = 0) {
-  const excused = new Set([self]);
-  // Bounded: a reused pid can manufacture a parentage cycle.
-  for (let pid = table.get(self)?.ppid; pid && !excused.has(pid) && excused.size <= table.size; ) {
-    excused.add(pid);
-    pid = table.get(pid)?.ppid;
-  }
-  /** @type {Array<{ pid: number, what: string }>} */
-  const found = [];
-  for (const [pid, entry] of table) {
-    if (excused.has(pid)) continue;
-    for (const { needle, what } of needles) {
-      if (entry.command.includes(normalizeCommand(needle))) {
-        found.push({ pid, what });
-        break;
-      }
-    }
-  }
-  return found;
-}
-
-// Here rather than in ship.mjs so a test can import the real list: importing ship.mjs runs a ship.
-export const SHIP_BUSY_NEEDLES = [
-  { needle: "scripts/check-all.mjs", what: "a check:all run" },
-  { needle: "scripts/check-browser.mjs", what: "a check:browser run" },
-  { needle: "preview --port 4173", what: "an orphaned preview server" },
-  // Two ships on one checkout run two builds into one build/ (2026-09-24: one wiped the other's manifest).
-  { needle: "scripts/ship.mjs", what: "another ship" },
-];
-
-/**
  * A recorded pid is killed only while it still hangs off the recorded tree: alive, and its live
  * parent is the recorded runner or another recorded pid. Windows reuses pids, so a recorded pid
  * alone may now be anything; a reused pid's parent is almost never in the same recorded set.
@@ -388,82 +338,3 @@ export function recordedTreeLeftovers(recorded, table, rootPid) {
     return live !== undefined && pid !== rootPid && family.has(live.ppid);
   });
 }
-
-/**
- * The pid a lock file names while that pid is alive and still the locking script: a crashed
- * holder's file names a dead pid, or one Windows has handed to something else.
- *
- * @param {string} lockPath
- * @param {Map<number, { ppid: number, command: string }>} table
- * @param {string} needle what the holder's command line must contain
- * @returns {number | null}
- */
-export function lockHolder(lockPath, table, needle) {
-  let text;
-  try {
-    text = readFileSync(lockPath, "utf8");
-  } catch (error) {
-    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return null;
-    throw error;
-  }
-  const pid = Number(text.trim());
-  if (!Number.isInteger(pid) || pid <= 0) return null;
-  const live = table.get(pid);
-  return live && live.command.includes(normalizeCommand(needle)) ? pid : null;
-}
-
-/**
- * Created exclusively, so two takers cannot both win. A file left by a dead holder is taken over
- * and reported. Needs a readable table, because only the table can tell a live holder from a dead one.
- *
- * @param {string} lockPath
- * @param {Map<number, { ppid: number, command: string }>} table
- * @param {string} needle
- * @param {number} [self]
- * @returns {{ ok: true, tookOver: number | null } | { ok: false, holder: number }}
- */
-export function takeLock(lockPath, table, needle, self = process.pid) {
-  mkdirSync(dirname(lockPath), { recursive: true });
-  /** @type {number | null} */
-  let tookOver = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const fd = openSync(lockPath, "wx");
-      writeSync(fd, String(self));
-      closeSync(fd);
-      return { ok: true, tookOver };
-    } catch (error) {
-      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "EEXIST") throw error;
-    }
-    const holder = lockHolder(lockPath, table, needle);
-    if (holder !== null && holder !== self) return { ok: false, holder };
-    tookOver = Number(readFileSync(lockPath, "utf8").trim()) || 0;
-    rmSync(lockPath, { force: true });
-  }
-  // Lost the race for a stale file to another taker, which now holds it.
-  const holder = Number(readFileSync(lockPath, "utf8").trim()) || 0;
-  return { ok: false, holder };
-}
-
-/**
- * Removes the lock only while this process still holds it.
- * @param {string} lockPath
- * @param {number} [self]
- */
-export function releaseLock(lockPath, self = process.pid) {
-  let text;
-  try {
-    text = readFileSync(lockPath, "utf8");
-  } catch (error) {
-    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return;
-    throw error;
-  }
-  if (text.trim() === String(self)) rmSync(lockPath, { force: true });
-}
-
-/**
- * Relative to the checkout root. Held for a whole ship, so a gate run started after ship's one-time
- * process scan still finds it (check-all refuses while a live ship holds it).
- */
-export const SHIP_LOCK_FILE = ".gate-pids/ship.lock";
-export const SHIP_LOCK_NEEDLE = "ship.mjs";
