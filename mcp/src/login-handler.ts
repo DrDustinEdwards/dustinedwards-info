@@ -9,7 +9,7 @@
  */
 
 import { auditLogCheck, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
-import { durableObjectCheck, healthResponse, kvCheck, r2Check, type HealthCheck } from "@dustinedwards/site-runtime/health";
+import { durableObjectCheck, healthResponse, kvCheck, type HealthCheck } from "@dustinedwards/site-runtime/health";
 import { isAdminUser, loginHandler, type LoginEnv as SharedLoginEnv } from "@dustinedwards/site-runtime/mcp-login";
 
 import { SCOPE_READ, SCOPE_WRITE } from "./auth";
@@ -43,9 +43,10 @@ stays with you.</p>`,
 /**
  * One check per binding in wrangler.jsonc.example, as Foxing Admin's door does. Fail level for what the door cannot
  * work without: OAUTH_KV (no token is checked), SITE (no tool reaches the operator API) and OPERATOR_RATE_LIMIT (every
- * /mcp call is a 429: it fails closed). Warn for PROBE_KV (only the measurement probe uses it) and AUDIT_BUCKET (only
- * the daily copy of the log). SITE is checked by presence only, since a request over it would be an operator API call;
- * the Durable Object check mints an id and wakes no object.
+ * /mcp call is a 429: it fails closed). Warn for PROBE_KV (only the measurement probe uses it). SITE is checked by
+ * presence only, since a request over it would be an operator API call; the Durable Object check mints an id and wakes
+ * no object. AUDIT_BUCKET is not touched here: only exportAuditLog may (check:wrapper), and the log's own check alerts
+ * when its copy is two days late (mcp/.ops-audit.json).
  */
 function bindingChecks(env: Env): HealthCheck[] {
   const site: HealthCheck = {
@@ -59,6 +60,5 @@ function bindingChecks(env: Env): HealthCheck[] {
     { ...site, level: "fail" },
     { ...bound("operator-rate-limit", env.OPERATOR_RATE_LIMIT, (b) => durableObjectCheck("operator-rate-limit", b)), level: "fail" },
     { ...bound("probe-kv", env.PROBE_KV, (b) => kvCheck("probe-kv", b)), level: "warn" },
-    { ...bound("audit-bucket", env.AUDIT_BUCKET, (b) => r2Check("audit-bucket", b)), level: "warn" },
   ];
 }
