@@ -54,7 +54,7 @@ export async function renderPdf(CV) {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
     await page.evaluateHandle("document.fonts.ready");
-    return await page.pdf(cvPdfOptions(CV));
+    return await page.pdf(cvPdfOptions());
   } finally {
     await browser.close();
   }

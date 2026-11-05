@@ -69,7 +69,7 @@ async function renderCvPdf(env: Env, CV: Awaited<ReturnType<typeof readCv>>): Pr
   const html = await renderCvHtml(CV, { renderBody, fontCss: await fontCss(env) });
   const response = await env.BROWSER.quickAction("pdf", {
     html,
-    pdfOptions: cvPdfOptions(CV),
+    pdfOptions: cvPdfOptions(),
     gotoOptions: { waitUntil: "load" },
   });
   if (!response.ok) {

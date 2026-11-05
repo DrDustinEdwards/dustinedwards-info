@@ -177,7 +177,7 @@ PDF is a function of them.
 - **Store.** One object, one key, `derived/dustin-edwards-cv.pdf` in the OG bucket (`OG`), replaced by each render:
   `Content-Type: application/pdf`, the fingerprint of the data it was drawn from (`cvFingerprint`, eight hex
   characters of the twin's source) on the PDF's last line, and in custom metadata that fingerprint joined to the print
-  document's (`cvPdfStamp`: the stylesheet, the page options with the footer, the font files), so a deploy that
+  document's (`cvPdfStamp`: the stylesheet, the footer, the page options, the font files), so a deploy that
   changes only how the PDF is drawn also leaves it stale. OG is the derived-and-regenerable
   bucket; MEDIA is the irreplaceable one, whose every put queues a backup copy. The key is under `derived/` and not
   `og/` because `build:og` prunes every `og/` key no post references.

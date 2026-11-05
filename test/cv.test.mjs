@@ -253,11 +253,11 @@ await test("the print document carries the fingerprint it is stored under, and o
     renderCvHtml(CV, { renderBody: async () => ({ html: "", blockedUrls: [{ url: "javascript:x" }] }), fontCss: "" }),
     /allowlist refused/,
   );
-  const options = cvPdfOptions(CV);
+  const options = cvPdfOptions();
   assert.deepEqual(
-    [options.format, options.tagged, options.outline, options.preferCSSPageSize, options.displayHeaderFooter],
-    ["letter", true, true, true, true],
+    [options.format, options.tagged, options.outline, options.preferCSSPageSize, "displayHeaderFooter" in options],
+    ["letter", true, true, true, false],
   );
-  assert.ok(options.footerTemplate.includes(CV.edition));
+  assert.ok(html.includes(`Curriculum Vitae, ${CV.edition}"`), "the footer, in the page's margin boxes");
 });
 
