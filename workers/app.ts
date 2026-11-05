@@ -41,6 +41,7 @@ import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
 import { countNotFound, pruneNotFound } from "@dustinedwards/site-runtime/not-found";
+import { d1SiteApiStore } from "@dustinedwards/site-api/store";
 import { cronJob } from "~/lib/cron-jobs.mjs";
 import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -276,7 +277,21 @@ export default {
   ),
 } satisfies ExportedHandler<Env>;
 
-async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
+/**
+ * A post Carrel deleted or trashed leaves a tombstone (site-api 0.22.0, gone_paths, drizzle/0042), and its address answers
+ * 410 Gone instead of 404, so a search engine drops it rather than retrying it (RFC 9110, section 15.5.11). The reader sees
+ * the same not-found page as before: only the status changes, it is never stored, and it is kept out of the index. Asked
+ * only on a 404, so a page that answers costs no query; isGone answers false when the store cannot be read.
+ */
+async function tombstoned(response: Response, url: URL, env: Env): Promise<Response> {
+  if (response.status !== 404 || !(await d1SiteApiStore(env.DB).isGone(url.pathname))) return response;
+  const gone = new Response(response.body, { status: 410, statusText: "Gone", headers: response.headers });
+  gone.headers.set("Cache-Control", "no-store");
+  gone.headers.set("X-Robots-Tag", "noindex");
+  return gone;
+}
+
+async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
   // First, so `http://www/x` is one hop to `https://apex/x` and not two, an old WordPress address included.
   const url = new URL(request.url);
   const apex = wwwRedirectTarget(url.hostname, url.pathname, url.search);
@@ -321,5 +336,5 @@ async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
 
   // Tells browsers and proxies not to hold a per-reader document, any cookie but the theme the key holds counting;
   // a reader who already holds the page gets a 304. Not in the Renderer, whose response is the one the platform stores.
-  return forReader(response, request, { publicCookies: [THEME_COOKIE] });
+  return forReader(await tombstoned(response, url, env), request, { publicCookies: [THEME_COOKIE] });
 }

@@ -20,7 +20,7 @@ import {
   NotFoundError,
   RefusedError,
   VersionConflictError,
-  stripLocation,
+  stripMetadata,
   toArrayBuffer,
   transformFocus,
   turnsSize,
@@ -429,8 +429,8 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     },
 
     async replace(id, input) {
-      // Lossless: the location goes and no pixel changes, as at upload.
-      const bytes = stripLocation(input.bytes, input.contentType);
+      // Lossless: the private metadata goes and no pixel changes, as at upload (site-api stripMetadata).
+      const bytes = stripMetadata(input.bytes, input.contentType);
       const dimensions = await measureDimensions(env, toArrayBuffer(bytes));
       // The key carries the picture's size (-<w>x<h>), and every page's srcset and aspect come from it.
       const named = dimensionsFromKey(id);

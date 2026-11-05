@@ -897,6 +897,24 @@ export const mediaUploads = sqliteTable("media_uploads", {
   at: text("at").notNull(),
 });
 
+// site-api 0.22.0 (migration 0042): the public path of each live post deleted or trashed, answered 410, and each
+// publish hook's run. Only d1SiteApiStore reads and writes them.
+export const gonePaths = sqliteTable("gone_paths", {
+  path: text("path").primaryKey(),
+  goneAt: text("gone_at").notNull(),
+});
+
+export const hookRuns = sqliteTable(
+  "hook_runs",
+  {
+    changeId: text("change_id").notNull(),
+    hook: text("hook").notNull(),
+    ok: integer("ok").notNull(),
+    at: text("at").notNull(),
+  },
+  (t) => [index("hook_runs_change").on(t.changeId), index("hook_runs_at").on(t.at)],
+);
+
 // What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,
 // app/lib/carrel/post-state.server.ts): the trash, the redirects a rename leaves, and the first publishes that go live
 // by time. Times are UTC ISO text.
