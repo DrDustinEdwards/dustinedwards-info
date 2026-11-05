@@ -2,7 +2,8 @@
 // and served at /dustin-edwards-cv.pdf by app/routes/cv-pdf.ts (docs/CV.md, "The PDF").
 //
 // THE OBJECT IS DERIVED. The CV rows are the source and the PDF is a function of them, stamped with
-// the fingerprint of the data it was drawn from (cvFingerprint, in custom metadata and on the PDF's last line). A
+// the fingerprint of the data it was drawn from (cvFingerprint, on the PDF's last line) and, in custom metadata,
+// that fingerprint with the print document's (cvPdfStamp), so a change to either leaves it stale. A
 // failed render never reverts a save: the save has already committed and written D1, and the stale or missing
 // object shows as the `cv-pdf-drift` health check, which the watchdog repairs through `sync_cv_pdf`.
 //
@@ -14,7 +15,7 @@
 import { readCv } from "~/db/cv";
 import { purgeCv, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { cvFingerprint, cvPdfOptions, fontFaceRule, PDF_FONTS, renderCvHtml } from "~/lib/cv/pdf-html.mjs";
+import { cvPdfOptions, cvPdfStamp, fontFaceRule, PDF_FONTS, renderCvHtml } from "~/lib/cv/pdf-html.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 import sansNormalUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
 import serifItalicUrl from "~/fonts/source-serif-4-latin-italic.woff2?url";
@@ -23,7 +24,7 @@ import serifNormalUrl from "~/fonts/source-serif-4-latin-normal.woff2?url";
 /** The one key. `dustin-edwards-` is ruling 127's prefix for a file the site serves under a name. */
 export const CV_PDF_KEY = "derived/dustin-edwards-cv.pdf";
 
-/** The custom-metadata field that carries the fingerprint of the CV data the object was drawn from. */
+/** The custom-metadata field that carries the stamp of the CV data and print document the object was drawn from (cvPdfStamp). */
 export const FINGERPRINT_FIELD = "fingerprint";
 
 /** The font URLs the client build emits, by the file name PDF_FONTS names. */
@@ -101,14 +102,14 @@ export type CvPdfOutcome =
 export async function ensureCvPdf(env: Env): Promise<CvPdfOutcome> {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     const cv = await readCv(env);
-    const fingerprint = await cvFingerprint(cv);
+    const fingerprint = await cvPdfStamp(cv);
     const stored = await env.OG.head(CV_PDF_KEY);
     if (stored?.customMetadata?.[FINGERPRINT_FIELD] === fingerprint) return { action: "current", fingerprint };
 
     const bytes = await renderCvPdf(env, cv);
 
     // Compare 1: the data changed under the render.
-    if ((await cvFingerprint(await readCv(env))) !== fingerprint) continue;
+    if ((await cvPdfStamp(await readCv(env))) !== fingerprint) continue;
 
     // Compare 2: a conditional put. An object that was not there must still not be there; one that was must
     // still be the one read above.
@@ -141,7 +142,7 @@ export async function regenerateCvPdfAfterSave(env: Env, why: string): Promise<C
   }
 }
 
-/** The fingerprint the stored object carries, or null when there is no object. For the drift check and the route. */
+/** The stamp the stored object carries, or null when there is no object. For the drift check and the route. */
 export async function storedCvPdfFingerprint(env: Env): Promise<string | null> {
   const stored = await env.OG.head(CV_PDF_KEY);
   return stored ? (stored.customMetadata?.[FINGERPRINT_FIELD] ?? "") : null;

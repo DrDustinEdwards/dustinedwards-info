@@ -175,8 +175,10 @@ PDF is a function of them.
   three fonts are read through the `ASSETS` binding and inlined as base64, as Cloudflare documents for
   `addStyleTag`.
 - **Store.** One object, one key, `derived/dustin-edwards-cv.pdf` in the OG bucket (`OG`), replaced by each render:
-  `Content-Type: application/pdf` and the fingerprint of the data it was drawn from (`cvFingerprint`, eight hex
-  characters of the twin's source) in custom metadata and on the PDF's last line. OG is the derived-and-regenerable
+  `Content-Type: application/pdf`, the fingerprint of the data it was drawn from (`cvFingerprint`, eight hex
+  characters of the twin's source) on the PDF's last line, and in custom metadata that fingerprint joined to the print
+  document's (`cvPdfStamp`: the stylesheet, the page options with the footer, the font files), so a deploy that
+  changes only how the PDF is drawn also leaves it stale. OG is the derived-and-regenerable
   bucket; MEDIA is the irreplaceable one, whose every put queues a backup copy. The key is under `derived/` and not
   `og/` because `build:og` prunes every `og/` key no post references.
 - **Serve.** `app/routes/cv-pdf.ts` answers `/dustin-edwards-cv.pdf` from that object: `application/pdf`, inline, an

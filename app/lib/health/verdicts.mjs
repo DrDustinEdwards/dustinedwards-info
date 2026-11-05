@@ -207,8 +207,8 @@ export function cvDriftVerdict(files, rows) {
 }
 
 /**
- * The CV's PDF against the CV D1 holds now: the stored object's fingerprint (custom metadata) against the
- * fingerprint of the data. `stored` is null when there is no object and "" when there is one that carries no
+ * The CV's PDF against the CV D1 holds now and the deployed print document: the stored object's stamp (custom
+ * metadata, cvPdfStamp) against the stamp of the data and print document. `stored` is null when there is no object and "" when there is one that carries no
  * fingerprint (neither is current). Derived store against its source, as the others, repaired by sync_cv_pdf.
  *
  * @param {{ stored: string | null, expected: string }} sides
@@ -216,17 +216,17 @@ export function cvDriftVerdict(files, rows) {
  */
 export function cvPdfDriftVerdict({ stored, expected }) {
   if (stored === expected) {
-    return { ok: true, detail: `The stored CV PDF was drawn from the CV data D1 holds now (CV data ${expected}).` };
+    return { ok: true, detail: `The stored CV PDF was drawn from the CV data D1 holds now and the deployed print document (${expected}).` };
   }
   const what =
     stored === null
       ? "there is no stored CV PDF"
       : stored === ""
         ? "the stored CV PDF carries no fingerprint"
-        : `the stored CV PDF was drawn from CV data ${stored}`;
+        : `the stored CV PDF was drawn from ${stored}`;
   return {
     ok: false,
-    detail: `CV PDF drift 1: ${what}, and D1's CV is CV data ${expected}. Repair with sync_cv_pdf.`,
+    detail: `CV PDF drift 1: ${what}, and D1's CV with the deployed print document is ${expected}. Repair with sync_cv_pdf.`,
     counts: { expected: 1, present: 0 },
   };
 }

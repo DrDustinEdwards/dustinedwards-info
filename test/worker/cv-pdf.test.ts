@@ -2,7 +2,7 @@ import { env } from "cloudflare:test";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readCv } from "~/db/cv";
-import { cvFingerprint } from "~/lib/cv/pdf-html.mjs";
+import { cvPdfStamp } from "~/lib/cv/pdf-html.mjs";
 import { CV_PDF_KEY, FINGERPRINT_FIELD, ensureCvPdf } from "~/lib/cv/pdf.server";
 import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
@@ -69,7 +69,7 @@ function world(browser: Env["BROWSER"]) {
 }
 
 const stored = () => env.OG.head(CV_PDF_KEY);
-const fingerprintOfD1 = async () => cvFingerprint(await readCv(env as never));
+const fingerprintOfD1 = async () => cvPdfStamp(await readCv(env as never));
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const check = async (w: { env: Env }) => (await runHealthChecks(w.env)).checks.find((c) => c.name === "cv-pdf-drift");
 const grantsRow = () => env.DB.prepare("SELECT record FROM cv WHERE slug = 'grants'").first<{ record: string }>();
@@ -110,7 +110,7 @@ describe("a CV save through the adapter renders the PDF once", () => {
     expect(object?.httpMetadata?.contentType).toBe("application/pdf");
     const fingerprint = await fingerprintOfD1();
     expect(object?.customMetadata?.[FINGERPRINT_FIELD]).toBe(fingerprint);
-    expect(browser.calls[0]?.html).toContain(`CV data ${fingerprint}.`);
+    expect(browser.calls[0]?.html).toContain(`CV data ${fingerprint.split("-")[0]}.`);
     // ONE key, whatever the number of saves.
     expect((await env.OG.list({ prefix: "derived/" })).objects.map((o) => o.key)).toEqual([CV_PDF_KEY]);
 

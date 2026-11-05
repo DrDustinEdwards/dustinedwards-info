@@ -28,7 +28,7 @@ import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePubl
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { readCv } from "~/db/cv";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
-import { cvFingerprint } from "~/lib/cv/pdf-html.mjs";
+import { cvPdfStamp } from "~/lib/cv/pdf-html.mjs";
 import { ensureCvPdf, storedCvPdfFingerprint } from "~/lib/cv/pdf.server";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
@@ -452,7 +452,7 @@ export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
 export async function syncCvPdf(env: OperatorEnv): Promise<ToolResult> {
   const outcome = await ensureCvPdf(env);
   const [stored, cv] = await Promise.all([storedCvPdfFingerprint(env), readCv(env)]);
-  const present = stored === (await cvFingerprint(cv)) ? 1 : 0;
+  const present = stored === (await cvPdfStamp(cv)) ? 1 : 0;
   return {
     ok: true,
     data: {
