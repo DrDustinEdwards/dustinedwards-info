@@ -86,8 +86,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return healthResponse({
     ping: () => env.DB.prepare("SELECT 1").first(),
     backup: () => backupHealth(env.BACKUPS),
-    // The newest dump is nightly and the warning threshold 26 hours: an hour-old read costs nothing and saves a BACKUPS listing per isolate every 5 minutes.
-    backupTtlMs: 60 * 60_000,
+    // The newest dump is nightly and the warning threshold 26 hours; healthResponse keeps the read an hour in the Cache API (site-runtime 0.75.0).
     sha: (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
     checkTimeoutMs: CHECK_TIMEOUT_MS,
     checks: [
