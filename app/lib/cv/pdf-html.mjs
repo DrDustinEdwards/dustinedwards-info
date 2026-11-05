@@ -25,6 +25,20 @@ export async function cvFingerprint(CV) {
   return (await sha256Hex(cvMarkdownDocument(CV))).slice(0, 8);
 }
 
+/**
+ * What the stored PDF is stamped with: the data's fingerprint and eight hex characters of the print document (its
+ * stylesheet, the page options with their footer, and the font files), so a deploy that changes only how the PDF
+ * is drawn leaves the stored one stale, and the drift check and sync_cv_pdf render it again. A font recut under the
+ * same file name is the one change this cannot see; a recut gets a new name.
+ *
+ * @param {import("./entries.mjs").Cv} CV
+ * @returns {Promise<string>}
+ */
+export async function cvPdfStamp(CV) {
+  const print = JSON.stringify([PRINT_CSS, cvPdfOptions(CV), PDF_FONTS]);
+  return `${await cvFingerprint(CV)}-${(await sha256Hex(print)).slice(0, 8)}`;
+}
+
 /** @param {string} family @param {Uint8Array} bytes @param {string} style */
 export function fontFaceRule(family, bytes, style) {
   return `@font-face{font-family:"${family}";src:url(data:font/woff2;base64,${toBase64(bytes)}) format("woff2");font-style:${style};font-weight:100 900;}`;
@@ -111,7 +125,7 @@ export function cvPdfOptions(CV) {
     preferCSSPageSize: true,
     displayHeaderFooter: true,
     headerTemplate: "<span></span>",
-    footerTemplate: `<div style="width:100%;padding:0 0.85in;font-family:Arial,sans-serif;font-size:7.5pt;color:#6a6159;display:flex;justify-content:space-between"><span>${escapeHtml(`${CV.person.name}, Curriculum Vitae, ${CV.edition}`)}</span><span><span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`,
+    footerTemplate: `<div style="width:100%;padding:0 0.85in;font-family:Inter,Arial,sans-serif;font-size:7.5pt;color:#6a6159;display:flex;justify-content:space-between"><span>${escapeHtml(`${CV.person.name}, Curriculum Vitae, ${CV.edition}`)}</span><span><span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`,
     tagged: true,
     outline: true,
   };

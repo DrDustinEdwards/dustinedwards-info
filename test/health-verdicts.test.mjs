@@ -445,7 +445,7 @@ await test("CV PDF drift: the stored fingerprint against the data's, naming sync
   const stale = cvPdfDriftVerdict({ stored: "00000000", expected: "ab12cd34" });
   assert.equal(stale.ok, false);
   assert.match(stale.detail, /^CV PDF drift 1:/);
-  assert.match(stale.detail, /CV data 00000000/);
+  assert.match(stale.detail, /drawn from 00000000/);
   assert.match(stale.detail, /sync_cv_pdf/);
   assert.deepEqual(stale.counts, { expected: 1, present: 0 });
 
