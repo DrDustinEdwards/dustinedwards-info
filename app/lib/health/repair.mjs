@@ -63,8 +63,6 @@ const REPAIRABLE = /** @type {const} */ ({
   "cv-pdf-drift": "sync_cv_pdf",
   "ask-index-drift": "sync_ask",
   "media-index-drift": "sync_media",
-  // Order-independent. backup_media only copies and has no delete branch, which is why it may fire unattended.
-  "media-backup-drift": "backup_media",
 });
 
 /**

@@ -11,7 +11,6 @@ import { deletePostFromD1 } from "~/lib/editor/post-rows.server";
 import { listPostFiles, readFile } from "~/lib/source/store.server";
 import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
-import { copyMissingTwins } from "~/lib/media/backup.server";
 import { dropHealthVerdicts } from "~/lib/health/verdict-cache.server";
 import {
   readContentSides,
@@ -95,26 +94,6 @@ export async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
       present: status.present,
       failed,
     }),
-  };
-}
-
-// Safe unattended: no delete branch in either bucket, and it never writes the primary.
-export async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
-  const { copied, gone, status } = await copyMissingTwins(env);
-  await dropHealthVerdicts(env);
-
-  return {
-    ok: true,
-    data: {
-      copied,
-      // Vanished between the comparison and the copy: not an error, the twin is what the mirror is for.
-      gone,
-      objects: status.objects,
-      twins: status.twins,
-      missing: status.missing.length,
-      mismatched: status.mismatched.length,
-      converged: status.missing.length === 0 && status.mismatched.length === 0,
-    },
   };
 }
 

@@ -129,25 +129,27 @@ empty namespace is a correct starting state.
 ```sh
 npx wrangler r2 bucket create dustinedwards-media
 npx wrangler r2 bucket create dustinedwards-og
-npx wrangler r2 bucket create dustinedwards-media-backup
+npx wrangler r2 bucket create dustinedwards-media-revisions
+npx wrangler r2 bucket create dustinedwards-backups
 ```
 
-Bindings `MEDIA`, `OG` and `MEDIA_BACKUP`. No id is needed; a bucket is
+Bindings `MEDIA`, `OG`, `MEDIA_REVISIONS` and `BACKUPS`. No id is needed; a bucket is
 referenced by name.
 
-**There are THREE buckets and they are split on LIFECYCLE, not on what the UI
-calls them.** `dustinedwards-media` is irreplaceable: it holds uploaded
-originals, and nothing can regenerate them. `dustinedwards-og` holds social
-cards, every one of which `build:og -- --remote` can rebuild from the artifact,
-so it is safe to empty and is deliberately not in the backup path. A missing
-bucket is a Worker that fails to bind at deploy.
+**The buckets are split on LIFECYCLE, not on what the UI calls them.**
+`dustinedwards-media` is irreplaceable: it holds uploaded originals, and nothing
+can regenerate them. `dustinedwards-og` holds social cards, every one of which
+`build:og -- --remote` can rebuild from the artifact, so it is safe to empty and
+is deliberately not in the backup path. A missing bucket is a Worker that fails
+to bind at deploy.
 
-`dustinedwards-media-backup` is the MIRROR of the first. It is
-written only by copy, and **no site code path ever deletes from it**;
-`check:destructive` sweeps `app/`, `workers/` and `scripts/` and fails on a
-delete against the `MEDIA_BACKUP` binding. Restoring it is never necessary to
-bring the site up: it is a source for a hand-copy back into `MEDIA`, not a thing
-the Worker reads.
+`dustinedwards-media-revisions` is the REVISION STORE: every earlier set of a
+file's bytes, kept under `replaced/<time>/<key>` (or `resized/<time>/<key>` for
+an upload the library shrank) before a replace, turn or revert overwrites it, and
+read back by a revert. It is application data, irreplaceable like `MEDIA`, and
+**no site code path ever deletes from it**; `check:destructive` sweeps `app/`,
+`workers/` and `scripts/` and fails on a delete against the `MEDIA_REVISIONS`
+binding.
 
 **Do not enable public access, and do not attach a custom domain.** `r2.dev`
 public access is **disabled** and there are **no custom domains connected**
@@ -159,56 +161,44 @@ read path to the same bytes.
 Live buckets for reference: `dustinedwards-media` is location `ENAM`,
 `dustinedwards-og` is location `WNAM`, both storage class `Standard`.
 
-### Backup posture: the media bucket is mirrored
+### Backup posture: the network's files backup, copied to Amazon
 
-**A mirror, plus a local pull.** The alternatives weighed are in git history for this file.
+**The same backup every site with media has** (d1-dump `backupFiles`).
 
-#### What actually threatens these bytes, in the ruled order
+- **Nightly, in BACKUPS.** The site cron's `media-backup` job, at the 05:00 UTC
+  firing beside the D1 dump (app/lib/backup/d1-backup.server.ts), copies `MEDIA`
+  to `files/media/<key>` and `MEDIA_REVISIONS` to `files/revisions/<key>` in
+  `dustinedwards-backups`. A pass copies only new and changed objects (it
+  compares etags), stops at 1,000 writes or five minutes, and the next night
+  goes on from where it stopped. A copy whose source is gone is kept 30 days,
+  then removed. `backup_media` on the operator API (`dei_backup_media`) runs the
+  same pass by hand.
+- **Off the account, nightly.** capsid-backups' `offaccount.yml` (11:23 UTC)
+  syncs all of `files/` to `files/dustinedwards/` in the Amazon S3 backup
+  bucket. Its writer can add files and place a delete marker but never remove a
+  version, and a removed or replaced file's old version stays 90 days. So a file
+  this site deletes, whether by the OG prune, the media delete action or the
+  R2-wins reconciliation, can be brought back for 90 days.
+- **Watched.** `/health`'s `backup` field carries `files.media` and
+  `files.revisions` beside the dump's age, and warns past 26 hours. Capsid's
+  watcher alerts on a stale Amazon copy. `check:restore` asserts every object in
+  both buckets has an identical copy under `files/` (a file newer than 26 hours
+  is noted, not failed), and devkit's restore drill restores a sample of the
+  copies and checks their bytes.
+- **Never the reverse by code.** Nothing copies the backup back to media. A
+  restore is a deliberate `restoreFiles` (a dry run unless `apply` is set, and it
+  never overwrites a file that differs unless told to), or the wrangler
+  get-and-put in the d1-dump README.
 
-1. **The site's own code.** The OG prune, the media delete action and the
-   R2-wins reconciliation can each remove an object with no undo. This is the
-   realistic loss, and the same-account mirror covers it completely.
-2. **Account loss or compromise.** A second bucket in the same account is worth
-   nothing here. The answer is `check:backup --remote`, which pulls every
-   `MEDIA` object to the local backup root beside the D1 table exports. That is
-   the only copy outside the account.
-3. **Cloudflare losing an object.** Least likely of the three, and covered by
-   the same local pull.
+The `check:backup --remote` local pull stays a third copy, on the seat.
 
-#### How the mirror is kept
-
-- **On write.** R2 emits an object-create notification, the queue consumer
-  derives the D1 row and the TWIN as well, from the
-  object as it is now. This keeps the never-a-dual-write rule: the Worker still
-  writes only to `MEDIA`.
-- **On drift.** `media-backup-drift` in `/health` compares every `MEDIA`
-  object against its twin and reports `objects`, `twins` and `missing`, so zero
-  missing cannot be mistaken for zero examined. The watchdog cron polls that
-  endpoint every fifteen minutes and self-repairs the class through
-  `backup_media` on the operator API, which is why a lost queue message
-  converges instead of leaving a hole nobody sees.
-- **Never the reverse.** Nothing copies backup to media by code. A stale mirror
-  overwriting a live object is the one way a backup can destroy what it exists
-  to protect, so restoring from it is a deliberate hand-copy.
-- **Deleting a media object leaves its twin.** That is the point rather than an
-  oversight, and it is why pruning the mirror is a human act.
-
-### The D1 dump bucket
+### The backups bucket
 
 `dustinedwards-backups` (`BACKUPS`) holds the nightly D1 dumps, created 2026-10-11 with
-`npx wrangler r2 bucket create dustinedwards-backups`. It is not the media mirror: the dumps are
-pruned by retention, the mirror is never deleted from, and `check:destructive` holds both rules.
-The runbook (docs/RUNBOOK.md, 4-pre) has the schedule, the health fields and the restore.
-
-#### Comparison rule
-
-Byte identity is judged by **etag, corroborated by size**. For a single-part R2
-object the etag is the MD5 of the stored bytes, and the upload route caps an
-upload at 10 MB, so nothing here is multipart. Size alone cannot see a
-same-length corruption, which is exactly the case a mirror is for; a full hash
-would mean reading every object body on every health poll. If a multipart etag
-ever appears the comparison degrades to size and says so, so a weaker verdict is
-never mistaken for the strong one.
+`npx wrangler r2 bucket create dustinedwards-backups`, and the files backups above. The dumps
+are pruned by retention and the files copies by backupFiles' 30-day rule; `check:destructive`
+lets only the d1-dump functions touch the bucket. The runbook (docs/RUNBOOK.md, 4-pre) has the
+schedule, the health fields and the restore.
 
 #### The rest of R2
 
@@ -216,7 +206,8 @@ Every class of thing this site stores, and where its second copy is:
 
 | Class | Where it lives | Second copy |
 | --- | --- | --- |
-| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **mirrored**: a twin in `dustinedwards-media-backup`, plus the local pull from `check:backup --remote`. The count lives in `media-backup-drift` |
+| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **backed up nightly**: `files/media/` in `dustinedwards-backups`, then Amazon S3; plus the local pull from `check:backup --remote`. The age lives in `/health` `backup.files.media` |
+| Earlier file versions | `dustinedwards-media-revisions` (`MEDIA_REVISIONS`) | **backed up nightly**: `files/revisions/` in `dustinedwards-backups`, then Amazon S3. The age lives in `/health` `backup.files.revisions` |
 | Social cards | `dustinedwards-og` (`OG`), all under `og/` | **regenerable**: `npm run build:og -- --remote` |
 | Static assets | `public/`, not R2 at all | **git** |
 | Roster photo WebPs | `public/phage-hunters/` | **git** |
@@ -243,8 +234,9 @@ In the order it would be done, and none of it is a restore from a backup:
 3. **The `media` index rows**: rebuilt from R2 and `public/`, then compared by
    the health endpoint's `media-index-drift` check, which would report any of the
    above being incomplete.
-4. **Uploaded originals**: a deliberate hand-copy from `dustinedwards-media-backup`
-   (or the local pull) back into `MEDIA`, then let `media-index-drift` confirm.
+4. **Uploaded originals and earlier versions**: `restoreFiles` from `files/media/` into `MEDIA` and
+   from `files/revisions/` into `MEDIA_REVISIONS` (d1-dump README, Restore files), or, with the
+   account gone, from the Amazon copy's `files/dustinedwards/`; then let `media-index-drift` confirm.
 
 ---
 
@@ -559,7 +551,7 @@ Dustin's inbox by email:
 The checks and their order are owned by `runHealthChecks` in
 `app/lib/health/checks.server.ts`; this paragraph points at it rather than
 restating a list. What is stable enough to state: it covers
-the Ask index, the media index, the media MIRROR (section 3), the corpus against
+the Ask index, the media index, the corpus against
 git, and the FTS docsize equalities a ship asserts after a sync. Each is
 individually timed out, so one wedged binding cannot hang the response. The body carries check NAMES and BOOLEANS
 only; the numbers behind a failure are in Workers Logs, because the endpoint is
@@ -625,8 +617,9 @@ they disagree.
 
 ### Permanently lost
 
-**R2 objects.** An uploaded original is lost only if `MEDIA`, its twin in
-`dustinedwards-media-backup` and the local pull all lose it (section 3). OG cards
+**R2 objects.** An uploaded original is lost only if `MEDIA`, its copy under
+`files/media/` in `dustinedwards-backups`, the Amazon copy and the local pull all lose it
+(section 3); a file deleted on purpose stays in the Amazon copy 90 days. OG cards
 regenerate. An editor upload that is lost would leave a post rendering a broken
 image while the markdown kept the URL.
 
@@ -655,7 +648,7 @@ back to one. The code is in git; the deployment ledger is not.
 Checked against the live account or the installed toolchain, not rehearsed:
 
 - Resource names and existence: D1 `dustinedwards`, KV `dustinedwards-app-kv`,
-  R2 `dustinedwards-media`, `dustinedwards-og`, `dustinedwards-media-backup` and
+  R2 `dustinedwards-media`, `dustinedwards-og`, `dustinedwards-media-revisions` and
   `dustinedwards-backups`, AI Search `dustinedwards`, and the queues
   `dustinedwards-media-events` and `dustinedwards-media-events-dlq` with each
   bucket's event notification rule. Read from `wrangler d1 list`,

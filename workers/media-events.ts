@@ -1,6 +1,5 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
-import { mirrorObject } from "~/lib/media/backup.server";
 import { placeholderAndColor } from "@dustinedwards/site-api";
 import { measureDimensions } from "~/lib/media/core.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -101,17 +100,7 @@ async function indexOne(env: Env, key: string) {
       object.uploaded instanceof Date ? object.uploaded.toISOString() : String(object.uploaded ?? ""),
   });
 
-  // Nothing here deletes a backup twin: the backup is the copy that survives a delete. OG cards are
-  // regenerable, so not mirrored. A failed mirror is swallowed; the health poll sees the drift.
-  if (storageOf(key) === "r2") {
-    try {
-      await mirrorObject(env, key);
-    } catch (error) {
-      // The row stands; media-backup-drift will report it and backup_media repairs it.
-      console.log(JSON.stringify({ event: "media-mirror-failed", key, detail: errorMessage(error) }));
-    }
-  }
-
-  // Last, so the row and the mirror both happened before the retry is asked for.
+  // The backup is not taken here: the nightly files backup copies MEDIA into BACKUPS (d1-backup.server.ts).
+  // Last, so the row is written before the retry is asked for.
   if (measureFailure) throw measureFailure;
 }

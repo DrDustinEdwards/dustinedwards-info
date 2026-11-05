@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { latestDump } from "@dustinedwards/d1-dump";
 
-import { backupD1 } from "~/lib/backup/d1-backup.server";
+import { backupD1, backupStatus } from "~/lib/backup/d1-backup.server";
 import { runTool } from "~/lib/operator/api.server";
 import { REQUIRED_TABLES } from "~/lib/backup/policy.mjs";
 
@@ -47,5 +47,21 @@ describe("the nightly D1 dump", () => {
     } finally {
       await testEnv.DB.exec("DROP TABLE planted_session");
     }
+  });
+});
+
+describe("the nightly files backup", () => {
+  it("copies MEDIA and MEDIA_REVISIONS under files/ in BACKUPS, which /health then reports", async () => {
+    await testEnv.MEDIA.put("files-case.png", "media bytes");
+    await testEnv.MEDIA_REVISIONS.put("replaced/2026-11-05T00:00:00.000Z/files-case.png", "earlier bytes");
+
+    const out = await runTool(testEnv as never, { kind: "operator", id: "test" } as never, "backup_media", {});
+    expect(out).toMatchObject({ ok: true, data: { files: [{ name: "media", complete: true }, { name: "revisions", complete: true }] } });
+
+    expect(await (await testEnv.BACKUPS.get("files/media/files-case.png"))!.text()).toBe("media bytes");
+    expect(await (await testEnv.BACKUPS.get("files/revisions/replaced/2026-11-05T00:00:00.000Z/files-case.png"))!.text()).toBe("earlier bytes");
+    const status = await backupStatus(testEnv);
+    expect(status.files.media?.age_hours).not.toBeNull();
+    expect(status.files.revisions?.age_hours).not.toBeNull();
   });
 });

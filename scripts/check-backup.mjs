@@ -232,8 +232,8 @@ async function exportTables(target, dir, real) {
  * @param {string} target @param {string} dir
  */
 async function mediaCheck(target, dir) {
-  // The mirror bucket covers this site's own code deleting an object, not account loss, so this is the
-  // only copy outside it. Remote only: miniflare holds no objects.
+  // A local pull, beside the nightly files backup in BACKUPS and Capsid's Amazon copy of it. Remote only:
+  // miniflare holds no objects.
   let mediaNote = "media objects NOT pulled (--local reads miniflare, which holds none)";
   if (target === "--remote") {
     const mediaDir = path.join(dir, "media");

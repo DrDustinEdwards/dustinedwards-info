@@ -475,14 +475,14 @@ describe("media: focal point, caption and replace", () => {
       "PUT",
       `${PREFIX}/media/${id}/file?${query}`,
       { body: bytesFor("replace-case-2"), type: "image/png" },
-      { MEDIA_BACKUP: testEnv.BACKUPS },
+      {},
     );
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id, focus: null, sizesNeedPurge: false });
     expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(bytesFor("replace-case-2"));
-    const kept = (await testEnv.BACKUPS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
+    const kept = (await testEnv.MEDIA_REVISIONS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
     expect(kept, "the old bytes were not kept").toBeDefined();
-    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(original);
+    expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(original);
   });
 });
 
@@ -619,7 +619,7 @@ describe("media: the v0.13.0 library", () => {
   });
 
   it("mirrors a picture in place, keeps the old bytes in its history, and a revert puts them back", async () => {
-    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform() };
+    const overrides = { IMAGES: imagesThatTransform() };
     const id = await uploadThroughApi("transform-case");
     const original = await objectBytes(id);
     const { version } = await mediaItem(id);
@@ -639,7 +639,7 @@ describe("media: the v0.13.0 library", () => {
   });
 
   it("turns a picture that is not square into a new file with its alt, leaving the old one as it was", async () => {
-    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
+    const overrides = { IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
     const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: bytesFor("turn-case"), type: "image/png" }, overrides);
     const { id, version } = (await upload.json()) as MediaJson;
     const original = await objectBytes(id);
@@ -682,14 +682,14 @@ describe("media: the v0.13.0 library", () => {
   });
 
   it("shrinks a large picture at upload, unless asked not to, and keeps the original", async () => {
-    const overrides = { MEDIA_BACKUP: testEnv.BACKUPS, IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({ width: 4096, height: 3072 })) };
+    const overrides = { IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({ width: 4096, height: 3072 })) };
     const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-case")}`, { body: bytesFor("resize-case"), type: "image/png" }, overrides);
     expect(response.status, await response.clone().text()).toBe(201);
     const shrunk = (await response.json()) as MediaJson & { width: number; resizedFrom?: Size & { bytes: number } };
     expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length } });
-    const kept = (await testEnv.BACKUPS.list({ prefix: "resized/" })).objects.find((o) => o.key.endsWith(`/${shrunk.id}`));
+    const kept = (await testEnv.MEDIA_REVISIONS.list({ prefix: "resized/" })).objects.find((o) => o.key.endsWith(`/${shrunk.id}`));
     expect(kept, "the original was not kept").toBeDefined();
-    expect(new Uint8Array(await (await testEnv.BACKUPS.get(kept!.key))!.arrayBuffer())).toEqual(bytesFor("resize-case"));
+    expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(bytesFor("resize-case"));
 
     const kept2 = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`, { body: bytesFor("resize-no-case"), type: "image/png" }, overrides);
     expect(await kept2.json()).toMatchObject({ width: 8000, height: 6000 });

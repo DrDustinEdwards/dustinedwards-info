@@ -312,14 +312,20 @@ production. If it has been green, these commands work.
 
 ### 4c. Media
 
-Media is mirrored, not backed up on a schedule. Every object in `MEDIA` has a
-byte-identical twin in `MEDIA_BACKUP`, maintained by the queue consumer and
-repaired by the `media-backup-drift` health check. Nothing in the site's code
-can delete from the mirror.
+Media is backed up nightly like every other site's: the cron's `media-backup` job copies `MEDIA` to
+`files/media/` and `MEDIA_REVISIONS` (earlier file versions) to `files/revisions/` in
+`dustinedwards-backups` with d1-dump's `backupFiles` (by hand, the operator API's `backup_media`), and
+capsid-backups copies `files/` to Amazon S3 nightly. `/health` reports `backup.files.media` and
+`backup.files.revisions` and warns past 26 hours. RECOVERY.md section 3 has the whole posture.
 
-To copy a lost object back, do it by hand from the backup bucket. There is
-deliberately no scripted restore in that direction, because a script that writes
-to `MEDIA` from `MEDIA_BACKUP` is one bug away from writing the other way.
+To put files back, use d1-dump's `restoreFiles` from `files/media/` into `MEDIA` (and `files/revisions/`
+into `MEDIA_REVISIONS`). It is a dry run unless `apply` is set, and it skips a file that differs from
+its copy unless `overwrite` is set, so it only fills in what was lost. One file by hand:
+
+```powershell
+npx wrangler r2 object get dustinedwards-backups/files/media/<key> --file <key> --remote
+npx wrangler r2 object put dustinedwards-media/<key> --file <key> --content-type <type> --remote
+```
 
 ---
 

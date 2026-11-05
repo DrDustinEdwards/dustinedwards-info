@@ -322,9 +322,9 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       }
       const { resizedFrom, original } = stored.prepared;
       if (resizedFrom && original) {
-        // The original in the backup bucket and in the file's history, as the revision the shrink replaced.
+        // The original in the revision store and in the file's history, as the revision the shrink replaced.
         const backupKey = `resized/${new Date().toISOString()}/${stored.key}`;
-        await env.MEDIA_BACKUP.put(backupKey, original, { httpMetadata: { contentType: stored.prepared.contentType } });
+        await env.MEDIA_REVISIONS.put(backupKey, original, { httpMetadata: { contentType: stored.prepared.contentType } });
         const at = new Date().toISOString();
         await addMediaRevision(env, {
           mediaKey: stored.key,
@@ -445,8 +445,8 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       await claim(env, id, input.expectedVersion);
       const current = await mediaRecord(env, id);
       if (!current) throw new NotFoundError("No such media.");
-      // The old bytes are kept in the backup bucket and the file's history before they go: the mirror would
-      // overwrite their twin, and MEDIA is the one copy of an upload (wrangler.jsonc.example). Never deleted.
+      // The old bytes are kept in the revision store and the file's history before they go: MEDIA holds only the
+      // current bytes of an upload (wrangler.jsonc.example). Never deleted.
       await swapBytes(
         env,
         current,
