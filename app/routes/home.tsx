@@ -370,7 +370,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       </Link>
                     </span>
                     {post.description ? (
-                      <span className="home-row-summary home-row-clamp p-summary">
+                      <span className="home-row-summary p-summary">
                         {post.description}
                       </span>
                     ) : null}
