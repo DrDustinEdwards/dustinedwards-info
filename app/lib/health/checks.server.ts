@@ -38,6 +38,7 @@ import { PHAGES_DIR } from "~/lib/phages/compile.mjs";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
+import { cachedVerdict } from "~/lib/health/verdict-cache.server";
 
 /**
  * The two sides the content-drift comparison reads: the repository's post files with their blob
@@ -236,14 +237,16 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
 
   // The INDEX; media-backup-drift below compares BYTES. Easy to confuse.
   pending.push(
-    guard("media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
+    guard("media-index-drift", () =>
+      cachedVerdict(env, "media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
+    ),
   );
 
   pending.push(
-    guard("media-backup-drift", async () => {
+    guard("media-backup-drift", () =>
       // Both buckets listed in full: a truncated read would report a clean sweep of the part it saw.
-      return mediaBackupDriftVerdict(await backupStatus(env));
-    }),
+      cachedVerdict(env, "media-backup-drift", async () => mediaBackupDriftVerdict(await backupStatus(env))),
+    ),
   );
 
   pending.push(
