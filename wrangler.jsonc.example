@@ -187,20 +187,21 @@
 			"binding": "OG",
 			"bucket_name": "dustinedwards-og"
 		},
-		// THE MIRROR. Written by the queue consumer as a derived action of the
-		// object-create event, and by the watchdog cron when a message was lost.
-		// NO SITE CODE PATH EVER DELETES FROM IT: pruning the backup is a human
-		// act, by hand. `check:destructive` fails if a delete against this
-		// binding appears. Ruled 2026-09-01.
+		// THE REVISION STORE. Every earlier set of a file's bytes, kept under
+		// `replaced/<time>/<key>` before a replace, turn or revert overwrites it
+		// (app/lib/media/revisions.server.ts), and read back by a revert. NO SITE
+		// CODE PATH EVER DELETES FROM IT: `check:destructive` fails if a delete
+		// against this binding appears. It is application data, not a backup: the
+		// nightly files backup copies it beside MEDIA into BACKUPS.
 		{
-			"binding": "MEDIA_BACKUP",
-			"bucket_name": "dustinedwards-media-backup"
+			"binding": "MEDIA_REVISIONS",
+			"bucket_name": "dustinedwards-media-revisions"
 		},
-		// THE D1 DUMPS, nightly, under backups/json/ (app/lib/backup/d1-backup.server.ts). A
-		// SEPARATE BUCKET from the media mirror because this one is pruned by retention
-		// (14 daily, 8 weekly, 6 monthly) and that mirror is never deleted from. The watchdog
-		// cron asks the operator API to run it; the site Worker still has no cron. No preview
-		// binding: a preview has no dump to take.
+		// THE BACKUPS, nightly (app/lib/backup/d1-backup.server.ts): the D1 dumps under
+		// backups/json/, pruned by retention (14 daily, 8 weekly, 6 monthly), and the files
+		// backups of MEDIA and MEDIA_REVISIONS under files/media/ and files/revisions/
+		// (d1-dump backupFiles). Capsid's off-account copy takes both to Amazon. No preview
+		// binding: a preview has nothing to back up.
 		{
 			"binding": "BACKUPS",
 			"bucket_name": "dustinedwards-backups"
@@ -436,8 +437,8 @@
 				"bucket_name": "dustinedwards-preview-og"
 			},
 			{
-				"binding": "MEDIA_BACKUP",
-				"bucket_name": "dustinedwards-preview-media-backup"
+				"binding": "MEDIA_REVISIONS",
+				"bucket_name": "dustinedwards-preview-media-revisions"
 			}
 		],
 		"images": { "binding": "IMAGES" },

@@ -16,7 +16,6 @@ import {
   publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
-  mediaBackupDriftVerdict,
   withTimeout,
   CHECK_TIMEOUT_MS,
 } from "../app/lib/health/verdicts.mjs";
@@ -56,50 +55,6 @@ await test("both directions are summed, not maxed", () => {
   const verdict = askDriftVerdict({ expected: 10, present: 10, missing: ["x"], stale: ["y"] });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /drift 2\b/, "one missing plus one stale is two problems");
-});
-
-const mirror = (over = {}) => ({ objects: 0, twins: 0, missing: [], mismatched: [], ...over });
-
-await test("a fully mirrored bucket passes and reports all three counts", () => {
-  const verdict = mediaBackupDriftVerdict(mirror({ objects: 3, twins: 3 }));
-  assert.equal(verdict.ok, true);
-  assert.match(verdict.detail, /3 objects/);
-  assert.match(verdict.detail, /3 twins/);
-  assert.match(verdict.detail, /0 missing/);
-});
-
-await test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
-  // An empty bucket and a perfectly mirrored one both have no missing keys, so "0 missing"
-  // alone is exactly how a vacuous pass reads as a real one.
-  const verdict = mediaBackupDriftVerdict(mirror());
-  assert.equal(verdict.ok, true, "an empty bucket is not a failure");
-  assert.match(verdict.detail, /examined nothing rather than verified anything/);
-});
-
-await test("a missing twin fails, names the key, and names the repair", () => {
-  const verdict = mediaBackupDriftVerdict(
-    mirror({ objects: 2, twins: 1, missing: ["abc123-800x600.webp"] }),
-  );
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /1 missing/);
-  assert.match(verdict.detail, /abc123-800x600\.webp/, "name the object, not just the count");
-  assert.match(verdict.detail, /backup_media/, "a failing check must name its repair");
-});
-
-await test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
-  // A twin that exists but differs is a copy that is WRONG, not one that never ran, and
-  // folding it into `missing` would hide that something rewrote the mirror.
-  const verdict = mediaBackupDriftVerdict(
-    mirror({ objects: 2, twins: 1, mismatched: ["abc123.webp (etag differs: a against b)"] }),
-  );
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /0 missing/);
-  assert.match(verdict.detail, /1 mismatched/);
-});
-
-await test("the failing verdict carries the two counts it compared", () => {
-  const verdict = mediaBackupDriftVerdict(mirror({ objects: 5, twins: 4, missing: ["k"] }));
-  assert.deepEqual(verdict.counts, { expected: 5, present: 4 });
 });
 
 await test("agreeing FTS counts are healthy", () => {

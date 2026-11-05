@@ -415,11 +415,12 @@ export const TOOL_DESCRIPTORS: Readonly<
   backup_media: {
     args: {},
     returns:
-      "Copies every MEDIA object that has no byte-identical twin into " +
-      "MEDIA_BACKUP. COPIES ONLY: it has no delete branch in either bucket, " +
-      "and nothing is ever copied backup to media. Idempotent. A read-back " +
-      "reconciliation: objects, twins, missing and mismatched, counted after " +
-      "the writes rather than from the loop's own counters.",
+      "Runs the nightly files backup now: one d1-dump backupFiles pass each over MEDIA and MEDIA_REVISIONS " +
+      "into BACKUPS under files/media/ and files/revisions/. It copies new and changed objects, and removes a " +
+      "copy only 30 days after its source is gone, under files/ in BACKUPS alone; it never writes or deletes " +
+      "in MEDIA or MEDIA_REVISIONS. A pass stops at 1000 writes or five minutes and the next goes on from " +
+      "there. Returns files: one entry per backup with name, complete, objects, copied, skipped, gone, " +
+      "kept_deleted, removed, locked and reserved. The site's cron runs it nightly at 05:00 UTC.",
   },
   backup_d1: {
     args: {},

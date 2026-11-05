@@ -4,7 +4,6 @@
 export const CHECK_NAMES = [
   "ask-index-drift",
   "media-index-drift",
-  "media-backup-drift",
   "content-drift",
   "procedures-drift",
   "dictionary-drift",

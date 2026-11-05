@@ -1,8 +1,8 @@
 // A file's byte history (site-api v0.13.0, mediaHistory): every set of bytes an upload has had, so a replace, a
 // turn or a mirror can be taken back. The current bytes are the object in MEDIA; each earlier set is copied to
-// MEDIA_BACKUP under `replaced/<time>/<key>` before it is overwritten, and that copy is never deleted
+// MEDIA_REVISIONS under `replaced/<time>/<key>` before it is overwritten, and that copy is never deleted
 // (check:destructive). A revert puts one named copy back: the copy this code wrote, chosen by its revision and
-// at the version the editor loaded, never the mirror's twin of a live key (backup.server.ts).
+// at the version the editor loaded. The nightly files backup copies the store into BACKUPS (d1-backup.server.ts).
 
 import { NotFoundError } from "@dustinedwards/site-api";
 import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
@@ -53,20 +53,20 @@ export async function historyOf(env: Env, row: MediaRow) {
 export async function revisionBytes(env: Env, key: string, rev: string): Promise<{ row: MediaRevisionRow; bytes: Uint8Array } | null> {
   const row = (await mediaRevisionsOf(env, key)).find((r) => String(r.id) === rev);
   if (!row?.backupKey) return null;
-  const kept = await env.MEDIA_BACKUP.get(row.backupKey);
+  const kept = await env.MEDIA_REVISIONS.get(row.backupKey);
   if (!kept) return null;
   return { row, bytes: new Uint8Array(await kept.arrayBuffer()) };
 }
 
 /**
- * Keeps the bytes a file has now as an earlier revision: copied to MEDIA_BACKUP before anything overwrites them,
+ * Keeps the bytes a file has now as an earlier revision: copied to MEDIA_REVISIONS before anything overwrites them,
  * and recorded first if the file had no history. Answers the backup key.
  */
 async function keepCurrentBytes(env: Env, row: MediaRow): Promise<string> {
   const current = await env.MEDIA.get(row.key);
   if (!current) throw new NotFoundError("No such media.");
   const backupKey = `replaced/${new Date().toISOString()}/${row.key}`;
-  await env.MEDIA_BACKUP.put(backupKey, current.body, { httpMetadata: current.httpMetadata, customMetadata: current.customMetadata });
+  await env.MEDIA_REVISIONS.put(backupKey, current.body, { httpMetadata: current.httpMetadata, customMetadata: current.customMetadata });
   const [latest] = await mediaRevisionsOf(env, row.key, 1);
   const id = latest?.id ?? (await addMediaRevision(env, firstOf(row)));
   await keepMediaRevision(env, id, backupKey);

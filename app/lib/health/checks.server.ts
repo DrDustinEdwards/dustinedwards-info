@@ -16,7 +16,6 @@ import {
   registryDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
-  mediaBackupDriftVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
@@ -37,7 +36,6 @@ import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { PHAGES_DIR } from "~/lib/phages/compile.mjs";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
-import { backupStatus } from "~/lib/media/backup.server";
 import { cachedVerdict } from "~/lib/health/verdict-cache.server";
 
 /**
@@ -208,7 +206,6 @@ interface HealthRun {
 export const HEALTH_CHECK_NAMES = [
   "ask-index-drift",
   "media-index-drift",
-  "media-backup-drift",
   "content-drift",
   "procedures-drift",
   "dictionary-drift",
@@ -235,17 +232,9 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
     guard("ask-index-drift", async () => askDriftVerdict(await askStatusOf(env, options))),
   );
 
-  // The INDEX; media-backup-drift below compares BYTES. Easy to confuse.
   pending.push(
     guard("media-index-drift", () =>
       cachedVerdict(env, "media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
-    ),
-  );
-
-  pending.push(
-    guard("media-backup-drift", () =>
-      // Both buckets listed in full: a truncated read would report a clean sweep of the part it saw.
-      cachedVerdict(env, "media-backup-drift", async () => mediaBackupDriftVerdict(await backupStatus(env))),
     ),
   );
 

@@ -212,7 +212,7 @@ const site = {
   },
 
   // The one cron (wrangler.jsonc.example), every minute: every Carrel schedule that is due goes live with the publish
-  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump runs too. runJobs records each job in cron_runs for /health's
+  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump and the media files backup run too. runJobs records each job in cron_runs for /health's
   // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
   // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
   // Every firing of the one key gets the job list: there is no other key this Worker can receive.
@@ -230,7 +230,10 @@ const site = {
           },
         },
         ...(isNightly(at)
-          ? [{ ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) }]
+          ? [
+              { ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) },
+              { ...cronJob("media-backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupMedia(env) },
+            ]
           : []),
       ]),
     );

@@ -8,7 +8,7 @@ import { bytesFor, envWithImages as imagesEnv, pngKey } from "./media-fixtures";
 
 /* An absent placeholder must never be written as NULL over one a bulk pass derived, and nothing
  * in the consumer mentions the column. `IMAGES` has no local emulation, so each case hands it a
- * RECORDED shape; `MEDIA_BACKUP` is absent, so the mirror step fails as it does in production. */
+ * RECORDED shape. */
 
 /* What the recorded transformer's RIFF bytes read as once stored. */
 const PLACEHOLDER_URI = `data:image/webp;base64,${btoa("RIFF")}`;
