@@ -36,6 +36,7 @@ import "capsomer/tokens.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
+import { RENDERED } from "~/lib/content/render-version";
 
 /**
  * Every Research, Teaching and Software page (app/lib/content-pages.mjs): the research/* splat, and
@@ -144,7 +145,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       ) : null}
       {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
-      <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: page.html }} />
       {page.html.includes("data-prelum-chart") ? <template data-island="charts" /> : null}
       {roster ? (
         <div className="prose">
