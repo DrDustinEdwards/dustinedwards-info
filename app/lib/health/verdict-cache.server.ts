@@ -11,7 +11,7 @@
 import { backupHealth, DEFAULT_STALE_HOURS, type BackupHealth } from "@dustinedwards/d1-dump";
 
 /** An hour: drift is repaired within the watchdog's pass, and a verdict this old harms nothing. */
-export const HEALTH_VERDICT_TTL_SECONDS = 60 * 60;
+const HEALTH_VERDICT_TTL_SECONDS = 60 * 60;
 
 const PREFIX = "health:verdict:";
 const BACKUP_KEY = "health:backup-stamp";
