@@ -95,6 +95,14 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
           </div>
           <p className="home-more podcast-links">
             <a href={episode.link}>Episode page</a>
+            {/* An audio file owes a text alternative (WCAG 1.2.1). The feed declares the episode's transcript, and the episode
+                page shows it in its #transcript section, which reads better than the WebVTT file. */}
+            {episode.transcriptUrl ? (
+              <>
+                {" "}
+                <a href={`${episode.link}#transcript`}>Transcript</a>
+              </>
+            ) : null}
           </p>
           <template data-island="podcast" />
         </article>
