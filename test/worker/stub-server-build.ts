@@ -20,6 +20,9 @@ export const STUB_PATHS = {
   silent: "/stub-silent",
   // The real path, not a stub one: the gateway renders "/gone" for a removed WordPress address.
   gone: "/gone",
+  // A page that answers 404, and a preview link that does: the 404 counter's two cases (not-found-count.test.ts).
+  missing: "/stub-missing",
+  preview: "/preview/:token",
 } as const;
 
 export const STUB_PAGE_BODY = "stub page body";
@@ -102,6 +105,18 @@ const routes: Record<string, StubRoute> = {
           headers: { "content-type": "text/html; charset=utf-8" },
         }),
     },
+  },
+  missing: {
+    id: "missing",
+    parentId: "root",
+    path: STUB_PATHS.missing.slice(1),
+    module: { loader: () => new Response("missing", { status: 404, headers: { "content-type": "text/html" } }) },
+  },
+  preview: {
+    id: "preview",
+    parentId: "root",
+    path: STUB_PATHS.preview.slice(1),
+    module: { loader: () => new Response("missing", { status: 404, headers: { "content-type": "text/html" } }) },
   },
   silent: {
     id: "silent",

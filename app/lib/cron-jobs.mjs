@@ -4,11 +4,12 @@
 // runs on the 05:00 UTC firing of it only.
 //
 // Timeouts (site-runtime runJobs, area 8 C3): carrel-schedules gets two minutes; the dump gets ten, its last runs took
-// seconds and a dump that has not finished in ten minutes is hung, not slow. A job past its timeout is recorded failed and the next one starts.
+// seconds and a dump that has not finished in ten minutes is hung, not slow. prune-404 is one DELETE, so one minute. A job past its timeout is recorded failed and the next one starts.
 
 export const CRON_JOBS = Object.freeze([
   Object.freeze({ name: "carrel-schedules", everyMinutes: 1, timeoutMs: 2 * 60_000 }),
   Object.freeze({ name: "backup", everyMinutes: 1440, timeoutMs: 10 * 60_000 }),
+  Object.freeze({ name: "prune-404", everyMinutes: 1440, timeoutMs: 60_000 }),
 ]);
 
 /** @param {string} name */

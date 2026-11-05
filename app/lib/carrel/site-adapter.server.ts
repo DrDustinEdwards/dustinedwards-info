@@ -13,6 +13,7 @@ import { NotFoundError, RefusedError, VersionConflictError, type SiteAdapter } f
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import { SEARCH_FIELDS } from "@dustinedwards/site-api/frontmatter";
 import { d1ScheduledUpdates } from "@dustinedwards/site-api/schedules";
+import { notFoundReport } from "@dustinedwards/site-runtime/not-found";
 import { getTableColumns } from "drizzle-orm";
 import { RouterContextProvider } from "react-router";
 
@@ -428,5 +429,7 @@ export function carrelSiteAdapter(options: {
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
     schedules: postSchedules(env, write),
+    // Carrel's 404 report: the counts workers/app.ts keeps with site-runtime's countNotFound (drizzle/0041).
+    insight: { notFound: (options) => notFoundReport(env.DB, options) },
   };
 }
