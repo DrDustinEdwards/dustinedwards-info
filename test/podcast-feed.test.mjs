@@ -28,6 +28,7 @@ function item(over = {}) {
     <itunes:duration>${f.duration}</itunes:duration>
     <itunes:episode>10</itunes:episode>
     <itunes:season>1</itunes:season>
+    <podcast:transcript url="https://germomics.com/antitoxin-togo-please/transcript.vtt" type="text/vtt"/>
   </item>`;
 }
 
@@ -46,6 +47,7 @@ await test("an episode in the live feed's shape parses whole", () => {
     audioType: "audio/mpeg",
     season: 1,
     episode: 10,
+    transcriptUrl: "https://germomics.com/antitoxin-togo-please/transcript.vtt",
   });
 });
 

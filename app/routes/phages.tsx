@@ -31,6 +31,7 @@ import "capsomer/catalog.css";
 import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/phages.css";
+import { RENDERED } from "~/lib/content/render-version";
 
 /**
  * /research/phages (docs/PHAGES.md): the page's own prose, as the page row holds it, with its table drawn as
@@ -111,7 +112,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
         {page.title}
       </h1>
       {draft ? <p>Draft: only you can see this page.</p> : null}
-      <div className="prose" dangerouslySetInnerHTML={{ __html: before }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: before }} />
       <div className="phage-catalog site-catalog site-catalog-wide">
         <Catalog
           definition={PHAGES}
@@ -128,7 +129,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
           emptyText={{ noMatch: "No phages match this search." }}
         />
       </div>
-      <div className="prose" dangerouslySetInnerHTML={{ __html: after }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: after }} />
       <template data-island="catalog" />
     </PageShell>
   );

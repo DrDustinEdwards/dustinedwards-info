@@ -25,6 +25,7 @@ const EPISODE_PAGE_HOSTS = ["germomics.com", "www.germomics.com"];
  *   audioType: string,
  *   season: number | null,
  *   episode: number | null,
+ *   transcriptUrl: string | null,
  * }} PodcastEpisode
  */
 
@@ -110,6 +111,8 @@ export function parsePodcastFeed(xml) {
       audioType,
       season: positiveInt(textOf(item, "itunes:season")),
       episode: positiveInt(textOf(item, "itunes:episode")),
+      // Podcasting 2.0's <podcast:transcript> (podcastindex.org namespace): Germomics publishes a WebVTT for each episode.
+      transcriptUrl: allowedHttpsUrl(attrOf(item, "podcast:transcript", "url"), EPISODE_PAGE_HOSTS),
     });
   }
   return episodes.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));

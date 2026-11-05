@@ -189,10 +189,11 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         {p.isOpenAccess ? <span className="paper-open">open access</span> : null}
       </p>
       <div className="paper-body">
-        {/* Display only. The stored title stays plain for search and JSON-LD. */}
-        <h3 className="paper-row-title">
+        {/* Display only. The stored title stays plain for search and JSON-LD. An h2: each paper sits straight under the
+            page's h1, and a skipped level breaks a screen reader's heading outline (WCAG 1.3.1, technique H42). */}
+        <h2 className="paper-row-title">
           <Link to={paperPath(slug)}>{italicizeOrganisms(decodeEntities(p.title))}</Link>
-        </h3>
+        </h2>
         <AuthorList authors={p.authors} />
         <p className="paper-row-links">
           {p.access === "self-hosted" && p.pdfPath ? <a href={p.pdfPath}>PDF</a> : null}

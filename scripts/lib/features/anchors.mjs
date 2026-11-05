@@ -155,19 +155,23 @@ export function checkAnchors(ctx) {
           const loaderBody = functionBody(routeSource, /export\s+(?:async\s+)?function\s+loader\b/);
           const loaderRefuses = /status:\s*405/.test(loaderBody);
           const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(loaderBody);
-          const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates);
+          /* A loader that only sends the reader elsewhere (/theme's GET) is a redirect, which a link must not name. */
+          const loaderRedirects = /status:\s*30[1-8]\b|\bredirect\s*\(/.test(loaderBody);
+          const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates && !loaderRedirects);
           const declared = anchor.anonymousGet !== false;
           const why = !hasLoader
             ? "exports neither a component nor a loader"
             : loaderRefuses
               ? "returns 405 from its loader"
-              : "authenticates in its loader";
+              : loaderRedirects
+                ? "redirects from its loader"
+                : "authenticates in its loader";
           ok(
             `${label}: the anonymousGet flag on ${anchor.path} matches the route`,
             declared === derived,
             declared
               ? `the anchor renders as a link, but ${routeFile.slice(root.length + 1)} ` +
-                  `${why}, so a reader following it gets an error rather than a page. ` +
+                  `${why}, so a reader following it never gets a page. ` +
                   `Add "anonymousGet": false.`
               : `the anchor is marked not-followable, but ${routeFile.slice(root.length + 1)} ` +
                   `${isPage ? "exports a component" : "has a loader that neither refuses nor authenticates"}. ` +

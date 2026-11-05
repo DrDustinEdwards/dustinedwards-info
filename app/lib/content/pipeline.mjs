@@ -10,6 +10,9 @@ import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
 import { z } from "zod";
 
+// Each diagram drawing's size, which build:diagrams writes beside the drawings (Prelum's DIAGRAM_SIZES_FILE), so a
+// diagram's <img> carries width and height and nothing shifts as it loads.
+import diagramSizes from "../../../public/diagrams/sizes.json" with { type: "json" };
 import { ASSET_PREFIX, classify, dimensionsFromKey } from "../media/classify.mjs";
 import { makeChartData } from "./chart-data.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
@@ -229,6 +232,7 @@ function packsFor(readChartData, cited) {
     editorialPack({
       assetPrefix: ASSET_PREFIX,
       strictCharts: true,
+      diagramSizes,
       ...(readChartData ? { chartData: makeChartData(readChartData, cited) } : {}),
     }),
   ];

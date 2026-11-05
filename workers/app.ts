@@ -41,6 +41,8 @@ import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
 import { cronJob } from "~/lib/cron-jobs.mjs";
+import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
+import { SITE_ORIGIN } from "~/lib/seo";
 
 export { AskBudget } from "./ask-budget";
 
@@ -238,6 +240,15 @@ const site = {
 
 } satisfies ExportedHandler<Env>;
 
+// Prelum's markdownCopies: every public page has a Markdown copy at its path plus .md and answers Accept: text/markdown,
+// which llms.txt promises. The site's own twins (posts, papers, research, the CV) and its own llms-full.txt win; the
+// wrapper only fills in the pages the site answers 404 or HTML for. The private planes get no copy.
+const withMarkdownCopies = markdownCopies(
+  // The wrapper types the request as a plain Request; it hands on the one the runtime gave it, or a GET it made from it.
+  (request: Request, env: Env, ctx: ExecutionContext) => site.fetch(request as FetchArgs[0], env, ctx),
+  { origin: SITE_ORIGIN, llmsFull: false, skip: isPrivatePath },
+);
+
 // A person idle for an hour on either private plane, /admin or /lab-bench, is signed out of Access (site-runtime ./access).
 // Each plane is its own Access application with its own token, so each keeps its own seen cookie: moving between them
 // never reads the other's cookie as no request. Every request writes one `request` line
@@ -253,7 +264,7 @@ export default {
   fetch: withRequestLog(
     // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
     (request: Request, env: Env, ctx: ExecutionContext) => {
-      const app = () => site.fetch(request as FetchArgs[0], env, ctx);
+      const app = async () => withMarkdownCopies(request, env, ctx);
       const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen" });
       return withAdminIdle(request, lab, { prefixes: ["/admin"] });
     },

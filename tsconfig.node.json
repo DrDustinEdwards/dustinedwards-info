@@ -358,7 +358,9 @@
     "types": ["node"],
     "lib": ["ES2022"],
     "target": "ES2022",
-    "module": "ES2022",
+    // ESNext, not ES2022: the same output, plus import attributes, which Node needs on a JSON import
+    // (app/lib/content/pipeline.mjs reads the diagram sizes file that way, in the build and the Worker alike).
+    "module": "ESNext",
     "moduleResolution": "bundler"
   }
 }
