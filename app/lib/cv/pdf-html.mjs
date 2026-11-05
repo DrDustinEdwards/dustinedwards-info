@@ -35,7 +35,7 @@ export async function cvFingerprint(CV) {
  * @returns {Promise<string>}
  */
 export async function cvPdfStamp(CV) {
-  const print = JSON.stringify([PRINT_CSS, cvFooterCss(CV), cvPdfOptions(CV), PDF_FONTS]);
+  const print = JSON.stringify([PRINT_CSS, cvFooterCss(CV), cvPdfOptions(), PDF_FONTS]);
   return `${await cvFingerprint(CV)}-${(await sha256Hex(print)).slice(0, 8)}`;
 }
 
@@ -129,10 +129,8 @@ ${rendered.html}
 /**
  * The page.pdf() options, in the form puppeteer and Browser Run's quickAction("pdf") both read (every field is in
  * quickAction's documented pdfOptions). `format` is lower case, which both accept.
- *
- * @param {import("./entries.mjs").Cv} CV
  */
-export function cvPdfOptions(CV) {
+export function cvPdfOptions() {
   return {
     format: /** @type {"letter"} */ ("letter"),
     printBackground: true,
