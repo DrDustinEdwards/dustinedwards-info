@@ -37,7 +37,7 @@ jobs:
   # dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`).
   # devkit-ops-audit's R1 reads this job's newest run.
   drill:
-    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@56adc0c3072f0661961ae658bc644da8533b4cb4 # v0.21.2
+    uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@0c1b0a6aa70b7991888cc2d5686af6e8a8e28f3d # v0.21.3
     with:
       bucket: dustinedwards-backups
       d1-dump-ref: v0.8.0
