@@ -25,7 +25,6 @@ import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
-import { cachedBackupHealth } from "~/lib/health/verdict-cache.server";
 import { CHECK_TIMEOUT_MS } from "~/lib/health/verdicts.mjs";
 import { CRON_JOBS } from "~/lib/cron-jobs.mjs";
 
@@ -86,8 +85,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      because a consumer is not a binding this Worker holds. */
   return healthResponse({
     ping: () => env.DB.prepare("SELECT 1").first(),
-    // The newest dump is nightly and the warning threshold 26 hours, so the read is kept in KV for an hour (verdict-cache).
-    backup: () => cachedBackupHealth(env, () => backupHealth(env.BACKUPS)),
+    backup: () => backupHealth(env.BACKUPS),
+    // The newest dump is nightly and the warning threshold 26 hours; healthResponse keeps the read an hour in the Cache API (site-runtime 0.75.0).
     sha: (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
     checkTimeoutMs: CHECK_TIMEOUT_MS,
     checks: [
