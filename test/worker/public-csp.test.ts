@@ -5,6 +5,7 @@ import { expect, it, vi } from "vitest";
 import { NAV } from "~/lib/nav";
 import { SPECULATION_RULES_HEADER, SPECULATION_RULES_PATH } from "@dustinedwards/site-runtime/prefetch";
 import { PRELOADS } from "~/lib/preloads";
+import { SITE_ORIGIN } from "~/lib/seo";
 
 import worker from "../../workers/app";
 
@@ -105,7 +106,9 @@ it("names the prefetch rules and the preloads on a public page, and serves the r
   for (const path of ["/", "/no-such-page"]) {
     const { response } = await render(path);
     expect(response.headers.get(SPECULATION_RULES_HEADER.name), path).toBe(SPECULATION_RULES_HEADER.value);
-    expect(response.headers.get("Link"), path).toBe(PRELOADS.header);
+    // A page also names its Markdown copy (Prelum's markdownCopies); a 404 has none.
+    const copy = path === "/" ? `, <${SITE_ORIGIN}/index.md>; rel="alternate"; type="text/markdown"` : "";
+    expect(response.headers.get("Link"), path).toBe(`${PRELOADS.header}${copy}`);
   }
   const ctx = createExecutionContext();
   const rules = await worker.fetch(new Request(`https://example.com${SPECULATION_RULES_PATH}`) as never, env as never, ctx);
@@ -113,6 +116,26 @@ it("names the prefetch rules and the preloads on a public page, and serves the r
   expect(rules.headers.get("content-type")).toBe("application/speculationrules+json");
   const body = JSON.stringify(await rules.json());
   for (const prefix of ["/lab-bench", "/media", "/search/ask"]) expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
+});
+
+/*
+ * Every public page has a Markdown copy, as llms.txt promises: at its path plus .md (/index.md for home) and by
+ * Accept: text/markdown, made by Prelum's markdownCopies from the page the site renders. Through the real Worker
+ * entry, since the wrapper sits outside the router.
+ */
+it("answers a page's .md and Accept: text/markdown with its Markdown copy, naming the page as canonical", async () => {
+  const twin = await render("/index.md");
+  expect(twin.response.status).toBe(200);
+  expect(twin.response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+  expect(twin.response.headers.get("link")).toBe(`<${SITE_ORIGIN}/>; rel="canonical"`);
+  expect(twin.html).toContain("page");
+  expect(twin.html).not.toContain("<main");
+
+  const ctx = createExecutionContext();
+  const negotiated = await worker.fetch(new Request("https://example.com/", { headers: { accept: "text/markdown" } }) as never, env as never, ctx);
+  await waitOnExecutionContext(ctx);
+  expect(negotiated.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+  expect(negotiated.headers.get("vary")).toContain("Accept");
 });
 
 /*
