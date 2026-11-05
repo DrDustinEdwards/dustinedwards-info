@@ -9,7 +9,9 @@ import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 // has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
 // per interval, not on every render.
 
-const CACHE_KEY = "podcast:germomics:v1";
+// The version names the parsed episode's shape (PodcastEpisode, feed.mjs): a field added to it bumps the key, or the
+// cached episodes keep the old shape until the next refresh, up to REFRESH_AFTER_MS later. v2 added transcriptUrl.
+const CACHE_KEY = "podcast:germomics:v2";
 const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
 
