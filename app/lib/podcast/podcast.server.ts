@@ -9,9 +9,11 @@ import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 // has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
 // per interval, not on every render.
 
-// The version names the parsed episode's shape (PodcastEpisode, feed.mjs): a field added to it bumps the key, or the
-// cached episodes keep the old shape until the next refresh, up to REFRESH_AFTER_MS later. v2 added transcriptUrl.
-const CACHE_KEY = "podcast:germomics:v2";
+const CACHE_KEY = "podcast:germomics:v1";
+// The parsed episode's shape (PodcastEpisode, feed.mjs). A cached feed of another shape is stale at once, so a field
+// added to the parser shows after the next request's refresh, not up to REFRESH_AFTER_MS later, and the page keeps the
+// old episodes meanwhile rather than none. 2 added transcriptUrl (#704).
+const EPISODE_SHAPE = 2;
 const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
 
@@ -25,6 +27,8 @@ type CachedFeed = {
   fetchedAt: string | null;
   checkedAt: string;
   lastError?: string;
+  /** EPISODE_SHAPE when the episodes were parsed; absent before shape 2. */
+  shape?: number;
 };
 
 // A failed refresh never takes the page down, but it is logged under one alert key and kept on the
@@ -68,7 +72,7 @@ async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<Cach
   const fetched = await fetchEpisodes();
   let next: CachedFeed;
   if ("episodes" in fetched) {
-    next = { episodes: fetched.episodes, fetchedAt: now, checkedAt: now };
+    next = { episodes: fetched.episodes, fetchedAt: now, checkedAt: now, shape: EPISODE_SHAPE };
   } else {
     logFailure("fetch", fetched.error);
     // Not stored when nothing was ever read: a cached empty feed would hold off the retry for the
@@ -86,7 +90,7 @@ async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<Cach
 }
 
 const isStale = (cached: CachedFeed) =>
-  Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
+  cached.shape !== EPISODE_SHAPE || Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
 
 // A public render never blocks on the podcast host: a stale or cold cache answers with what it has
 // and the refresh runs in `waitUntil`.
