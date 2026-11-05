@@ -27,7 +27,7 @@ export async function cvFingerprint(CV) {
 
 /**
  * What the stored PDF is stamped with: the data's fingerprint and eight hex characters of the print document (its
- * stylesheet, the page options with their footer, and the font files), so a deploy that changes only how the PDF
+ * stylesheet, its footer, the page options and the font files), so a deploy that changes only how the PDF
  * is drawn leaves the stored one stale, and the drift check and sync_cv_pdf render it again. A font recut under the
  * same file name is the one change this cannot see; a recut gets a new name.
  *
@@ -35,8 +35,22 @@ export async function cvFingerprint(CV) {
  * @returns {Promise<string>}
  */
 export async function cvPdfStamp(CV) {
-  const print = JSON.stringify([PRINT_CSS, cvPdfOptions(CV), PDF_FONTS]);
+  const print = JSON.stringify([PRINT_CSS, cvFooterCss(CV), cvPdfOptions(CV), PDF_FONTS]);
   return `${await cvFingerprint(CV)}-${(await sha256Hex(print)).slice(0, 8)}`;
+}
+
+/**
+ * The running footer, in the page's margin boxes (CSS Paged Media). Not Chrome's footerTemplate: a template is
+ * drawn without the document's web fonts, so it fell back to the system's Arial (Liberation Sans in Browser Run)
+ * whatever face it named. A margin box is drawn with the document's own fonts.
+ *
+ * @param {import("./entries.mjs").Cv} CV
+ */
+export function cvFooterCss(CV) {
+  const footer = `${CV.person.name}, Curriculum Vitae, ${CV.edition}`;
+  const text = `"${footer.replace(/[\\"]/g, "\\$&").replace(/</g, "\\3c ")}"`;
+  const box = 'font-family: "Inter", Arial, sans-serif; font-size: 7.5pt; color: #6a6159;';
+  return `@page { @bottom-left { content: ${text}; ${box} } @bottom-right { content: counter(page) " of " counter(pages); ${box} } }`;
 }
 
 /** @param {string} family @param {Uint8Array} bytes @param {string} style */
@@ -100,7 +114,7 @@ export async function renderCvHtml(CV, { renderBody, fontCss }) {
   const { person } = CV;
   const host = new URL(SITE_ORIGIN).host;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(`${person.name}, Curriculum Vitae`)}</title>
-<style>${fontCss}${PRINT_CSS}</style></head><body>
+<style>${fontCss}${PRINT_CSS}${cvFooterCss(CV)}</style></head><body>
 <header class="letterhead">
 <p class="edition">Curriculum Vitae · ${escapeHtml(CV.edition)}</p>
 <h1>${escapeHtml(`${person.name}, ${person.degree}`)}</h1>
@@ -123,9 +137,6 @@ export function cvPdfOptions(CV) {
     format: /** @type {"letter"} */ ("letter"),
     printBackground: true,
     preferCSSPageSize: true,
-    displayHeaderFooter: true,
-    headerTemplate: "<span></span>",
-    footerTemplate: `<div style="width:100%;padding:0 0.85in;font-family:Inter,Arial,sans-serif;font-size:7.5pt;color:#6a6159;display:flex;justify-content:space-between"><span>${escapeHtml(`${CV.person.name}, Curriculum Vitae, ${CV.edition}`)}</span><span><span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`,
     tagged: true,
     outline: true,
   };
