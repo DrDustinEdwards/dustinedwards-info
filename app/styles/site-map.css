@@ -10,7 +10,7 @@
   margin: 0 0 var(--space-4);
   font-family: var(--font-sans);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: var(--weight-heading);
   color: var(--text-heading);
 }
 

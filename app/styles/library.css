@@ -167,7 +167,7 @@ a.library-stage-name:hover {
 .library-subtitle {
   margin: 0 0 var(--space-3);
   color: var(--text);
-  font: 700 0.6875rem / 1.6 var(--font-mono);
+  font: var(--weight-heading) 0.6875rem / 1.6 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }

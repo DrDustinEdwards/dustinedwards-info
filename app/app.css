@@ -4,6 +4,19 @@
 @layer cap.reset, cap.tokens, cap.base, cap.components, cap.utilities;
 @import "./styles/reset.css" layer(cap.reset);
 
+/* The type plan's weights, as Capsomer's base.css sets them: a page title in Inter Light, a heading in
+   Medium, where the reset leaves a heading at its parent's weight. Any rule of the site's own still wins. */
+@layer cap.base {
+  h1 {
+    font-weight: var(--weight-title);
+  }
+  h2,
+  h3,
+  h4 {
+    font-weight: var(--weight-heading);
+  }
+}
+
 /* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
    paths immutable. */
 /* optional, not swap (Dustin, 2026-11-04, Google's advice: web.dev "Best practices for fonts"): a face that
@@ -225,7 +238,7 @@
   --t-small-size: 0.875rem;
   --t-small-leading: 1.5;
 
-  /* The manual's heads: bold sans, the h2 a part title over a hairline (capsomer/manual.css). */
+  /* The manual's heads: Medium sans, the h2 a part title over a hairline (capsomer/manual.css). */
   --t-h2-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
   --t-h2-leading: 1.15;
 

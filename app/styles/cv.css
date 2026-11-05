@@ -407,7 +407,7 @@
   border-block-start: var(--line-w-thick) solid var(--text);
   font-family: var(--font-sans);
   font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
-  font-weight: 700;
+  font-weight: var(--weight-heading);
   line-height: 1.2;
 }
 
