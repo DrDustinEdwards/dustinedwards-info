@@ -38,7 +38,7 @@
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 
 import { exportAuditLog, recordAudit, type AuditEnv } from "@dustinedwards/site-runtime/audit-log";
-import { logEvent } from "@dustinedwards/site-runtime/log";
+import { logEvent, withRequestLog } from "@dustinedwards/site-runtime/log";
 import { DCR_CALLBACKS, isAdminUser, registrationLimited, registrationRefusal } from "@dustinedwards/site-runtime/mcp-login";
 import {
   audienceRefusal,
@@ -326,9 +326,11 @@ export default {
    * The entry's full set, the consent page's hashed-style policy and the load-nothing policy for the rest, on every
    * response. It also answers security.txt (the site's contact and expiry, app/routes/security-txt.ts; renew both
    * together) and the CSP sink, metered per address because a page tripping ten rules sends ten reports. A throw
-   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page.
+   * becomes a logged 500 that carries the set too, rather than Cloudflare's bare error page. withRequestLog writes one
+   * `request` line per request (site-runtime ./log: path, status, ms and the deployed commit; never a query), as
+   * Foxing Admin's door does.
    */
-  fetch: withMcpHeaders<Env>(
+  fetch: withRequestLog(withMcpHeaders<Env>(
     async (request, env, ctx) => {
       try {
         return await route(request, env, ctx as ExecutionContext);
@@ -345,7 +347,7 @@ export default {
       allowReport: async (request, env) =>
         (await checkRateLimit(env.OPERATOR_RATE_LIMIT, `csp:${request.headers.get("cf-connecting-ip") ?? "unknown"}`, 60)).allowed,
     },
-  ),
+  ), { sha: (env: Env) => env.DEPLOY_SHA }),
   // The daily copy of the tool-call log to R2 and the 90-day prune of copied rows (checklist L6-L7). A failed write
   // throws, so the cron run shows failed, and /health's tool-call-log check alerts once rows go uncopied for two days.
   scheduled: async (_controller, env) => {
