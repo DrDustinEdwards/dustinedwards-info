@@ -52,7 +52,7 @@
   margin: 0;
   font-family: var(--font-serif);
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: var(--weight-heading);
   line-height: 1.35;
 }
 

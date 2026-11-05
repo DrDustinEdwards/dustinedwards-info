@@ -56,7 +56,7 @@
   max-width: 62ch;
   font-family: var(--font-serif);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: var(--weight-heading);
   line-height: 1.35;
 }
 
