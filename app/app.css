@@ -822,9 +822,14 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a)) {
   border: 1px solid var(--border);
 }
 
-:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+/* The site's focus ring, in Capsomer's base layer as capsomer/base.css draws it, so a component that
+   draws its own indicator wins: the header search draws one ring on its box and none on its input, and
+   unlayered, this rule put a second ring inside the first. */
+@layer cap.base {
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
 }
 
 /* Focus is an outline, never a box-shadow: forced-colors strips shadows. Never the inner ring on the
