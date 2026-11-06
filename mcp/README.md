@@ -32,22 +32,25 @@ by default, at most 100, with `has_more` and an opaque `next_cursor`.
 
 ## Security floor (rules 12 and 13)
 
+The door (`src/index.ts`) is site-runtime's `adminMcpWorker`, shared with Foxing, Germomics and Foxhound Admin; its
+guards are tested there (`test/admin-mcp.test.mjs`), and `check:wrapper` asserts this server keeps no door of its own.
+
 - Every tool call goes through site-runtime's `invokeTool`: the caller is re-proved
   to be the administrator (or a configured agent) and to hold the scope the tool
   declares, then an append-only `ToolCallLog` row is written before and after the
   call. A call that cannot be logged does not run. Sign-ins are logged there too.
-- Least scope first: the protected resource metadata and the 401 name only
-  `dei.read`; a write tool called on a read grant answers 403
-  `insufficient_scope` naming `dei.read dei.write`, so the client can step up.
-- A foreign `Origin` on `/mcp` is refused before any token check; no Origin, this
-  origin and `https://claude.ai` pass.
+- Least scope first: every grant holds `dei.read`, and `dei.write` only when the box is ticked; a write tool called on
+  a read grant answers 403 `insufficient_scope` naming `dei.read dei.write`, so the client can step up. The protected
+  resource metadata lists both scopes (RFC 9728), and a grant with no scope list is refused.
+- A foreign `Origin` on `/mcp` is refused before any token check (no Origin, this origin and `https://claude.ai`
+  pass), and so is a Host other than `PUBLIC_ORIGIN`'s. The administrator is re-checked on every request.
 - Access tokens are bound to `PUBLIC_ORIGIN/mcp` (RFC 8707); a token for any
   other resource is refused. The API leg is `OPERATOR_TOKEN`, never the client's token.
 - CIMD for Claude, Claude Code and ChatGPT. DCR at `/register` for Grok and
   Gemini, tightened: site-runtime's `registrationLimited` (5 an hour per address,
   30 a day in all), and every redirect URI must be one of site-runtime's
   `DCR_CALLBACKS` or listed exactly in `DCR_REDIRECT_URIS`. A refused registration's
-  Worker log line `registration-refused` names the URI it asked for; add it to
+  Worker log line `registration_refused` names the URI it asked for; add it to
   `mcp/wrangler.jsonc.example` by PR.
 - Agent keys (`AGENT_KEY_<NAME>`) read only unless `AGENT_WRITE` names them. It names `grok`, whose key is its only door.
 - Sign-in is Cloudflare Access for SaaS (OIDC), the same login as Capsid,
@@ -153,7 +156,7 @@ Rotation is `wrangler secret put` again with the same name. Revocation is
 `npx wrangler secret delete AGENT_KEY_GROK`, effective on the next request.
 
 Every accepted agent request writes one line,
-`{"audit":"agent-key-accepted","principal":"grok","method":"POST","rights":"operator"}`.
+`{"event":"agent_key_accepted","principal":"grok","method":"POST"}`, and its tool calls are `agent:grok` rows in the tool-call log.
 No key, key length or Authorization header reaches a log line, and
 `check:wrapper` asserts that. The operator API downstream records the same
 token label for every agent and for the human operator, so this Worker's log is

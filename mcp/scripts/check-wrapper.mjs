@@ -493,14 +493,14 @@ for (const name of EXPECTED_TOOLS) {
 }
 
 // The API leg's credential is confined to the module that owns it.
-// The log's bucket has one reader: the scheduled export in index.ts, which hands it to site-runtime's
-// exportAuditLog. A tool reaching it would turn the log's copies into a store the server writes at will.
+// The log's bucket has one reader: the scheduled export of site-runtime's adminMcpWorker (index.ts's default export),
+// which hands it to exportAuditLog. Nothing here may reach it: a tool doing so would turn the log's copies into a store
+// the server writes at will.
 const bucketHolders = files.filter((f) => withoutComments(f.text).includes("AUDIT_BUCKET")).map((f) => f.name);
 check(
-  "AUDIT_BUCKET appears only in index.ts, and only for exportAuditLog",
-  JSON.stringify(bucketHolders) === JSON.stringify(["index.ts"]) &&
-    /exportAuditLog\(env, env\.AUDIT_BUCKET\)/.test(withoutComments(files.find((f) => f.name === "index.ts")?.text ?? "")),
-  `Found in: ${bucketHolders.join(", ") || "(nowhere)"}. The bucket holds the log's copies and nothing else.`,
+  "AUDIT_BUCKET appears in no source file: only site-runtime's adminMcpWorker exports the log to it",
+  bucketHolders.length === 0,
+  `Found in: ${bucketHolders.join(", ")}. The bucket holds the log's copies and nothing else.`,
 );
 
 const tokenHolders = files.filter((f) => withoutComments(f.text).includes("OPERATOR_TOKEN")).map((f) => f.name);
@@ -619,131 +619,46 @@ for (const f of files) {
 }
 
 // ---------------------------------------------------------------------------
-// H. The client leg serves BOTH measured identity paths.
+// H. The door is site-runtime's adminMcpWorker, and only that.
 // ---------------------------------------------------------------------------
 
-// Each of these is a measured requirement of a real client, not a preference.
-// Removing either would lock out a client that was watched needing it, so both
-// are asserted to STAY. The dates are the captures to argue with.
+/*
+ * The door's guarantees (CIMD for claude.ai, measured 2026-07-30; DCR at /register for Grok's rmcp client, measured
+ * 2026-09-07, with the exact redirect allowlist and the per-address limit; tokens bound to PUBLIC_ORIGIN + /mcp and the
+ * audience re-checked; the administrator re-checked; agent keys matched by ./agent-keys from the SECRET NAME, limited
+ * under `agent:<name>`, logged by principal with no key material) are site-runtime's adminMcpWorker, each with its
+ * PLANT test in site-runtime's test/admin-mcp.test.mjs. What this server could still get wrong is a door of its own
+ * beside it, or switching off what it needs.
+ */
 const indexText = files.find((f) => f.name === "index.ts")?.text ?? "";
-
-// The option and its boolean are executable code, so codeOnly() applies; this
-// file's own comments discuss the option by name and must not satisfy it.
-check(
-  "CIMD stays enabled (claude.ai, measured 2026-07-30, never calls /register)",
-  /clientIdMetadataDocumentEnabled:\s*true/.test(codeOnly(indexText)),
-  "claude.ai identifies itself by a client metadata URL. Without CIMD it cannot connect.",
-);
-
-// "/register" is a STRING option value, so withoutComments() keeps it while
-// still refusing to let the comment block above the option satisfy the check.
-check(
-  'DCR stays configured at "/register" (Grok Build 1.0.13 rmcp, measured 2026-09-07)',
-  /clientRegistrationEndpoint:\s*"\/register"/.test(withoutComments(indexText)),
-  "Grok's rmcp client cannot do CIMD; without RFC 7591 registration it cannot " +
-    "mint a client identity and stops before opening a browser.",
-);
-
-// RULE 13, TIGHTENED. The registration endpoint stays, and every registration
-// passes the exact redirect allowlist and a per-address rate limit first.
-check(
-  "every registration passes the exact redirect allowlist",
-  /clientRegistrationCallback:[\s\S]*registrationRefusal\(\[\.\.\.DCR_CALLBACKS, env\.DCR_REDIRECT_URIS \?\? ""\]\.join\(""\), clientMetadata\)/.test(codeOnly(indexText)),
-  "Rule 13: redirect URIs allowlisted exactly; an unchecked registration is the deprecated DCR.",
-);
-check(
-  "registration is rate limited per address before the provider sees it",
-  /url\.pathname === "\/register"/.test(withoutComments(indexText)) &&
-    /registrationLimited\(request, env\.OAUTH_KV\)/.test(withoutComments(indexText)),
-  "Rule 13: registration rate limited.",
-);
-
-// RULE 12.2, AUDIENCE. The provider names this server's resource, which pins
-// every grant and token to it (RFC 8707) and refuses a token issued for any other.
-check(
-  "access tokens are bound to PUBLIC_ORIGIN + /mcp",
-  /resourceMetadata: \{\s*resource: `\$\{origin\}\$\{MCP_ROUTE\}`/.test(withoutComments(indexText)),
-  "Rule 12.2: reject any token not issued for this server.",
-);
-check(
-  "the MCP door re-checks the token's audience with site-runtime's shared audienceRefusal",
-  /audienceRefusal\(auth, mcpResource\(env\), \[SCOPE_READ\]\)/.test(withoutComments(indexText)),
-  "Rule 12.2 and checklist A5: the shared check, against the resource this server expects, before anything else.",
-);
-
-// --- the agent key path, ruling 37 -----------------------------------------
-
-/*
- * A SECOND DOOR IS THE MOST DANGEROUS THING IN THIS REPO, so it is asserted
- * harder than the first. The law does not forbid it: an agent key is client-leg
- * IDENTITY, the same category as an OAuth grant, and it changes who may ASK
- * rather than what the answer is. What the law does forbid is a second door
- * that reaches the publish machinery by a different route, or that carries any
- * right the first one does not.
- */
-/*
- * TWO VIEWS OF THE SAME SOURCE, and the choice per assertion is deliberate.
- *
- * `codeOnly` blanks every string and template literal, which is right for
- * STRUCTURE (is the admin check called, is there a second handleMcp) and wrong
- * for anything whose subject IS a string: the audit key, the rate-limit
- * identity, `rights: "operator"`. Those need `withoutComments`, which keeps
- * string values and still refuses to let this file's own prose satisfy a check.
- * That is the same split the `/register` assertion above makes, for the same
- * reason, and getting it backwards cost five failing assertions on the first
- * run of this block.
- */
 const indexCode = codeOnly(indexText);
-const indexStrings = withoutComments(indexText);
 
 check(
-  "the agent key path is scoped to the MCP route",
-  /url\.pathname === MCP_ROUTE/.test(indexCode),
-  "An agent key is an alternative to HOLDING a grant, not to the protocol " +
-    "around one. Widened past /mcp it would sit in front of the consent flow " +
-    "and the token endpoint, which are the provider's.",
+  "index.ts's default export is site-runtime's adminMcpWorker",
+  /export default adminMcpWorker</.test(indexCode) &&
+    /import \{[^}]*\badminMcpWorker\b[^}]*\} from "@dustinedwards\/site-runtime\/admin-mcp"/.test(withoutComments(indexText)),
+  "The door is the shared one, tested once where it lives.",
 );
 
 check(
-  "the agent path reaches the tool surface through the SAME handleMcp",
-  (indexCode.match(/handleMcp\(request, env, ctx, \{ kind:/g) ?? []).length === 2,
-  "Two handlers would be two places the tool surface is defined, and the first " +
-    "time they disagreed one door would offer something the other did not. " +
-    "Expected exactly two call sites: the OAuth one and the agent one.",
+  "no local door: no provider, registration, audience or agent-key code here",
+  files.every((f) => !/new OAuthProvider\(|registrationRefusal\(|registrationLimited\(|audienceRefusal\(|agentPrincipal\(|probeDoor\(|mcpOriginRefusal\(/.test(codeOnly(f.text))),
+  "A second door beside the shared one is a second place for a guard to be missing.",
 );
 
 check(
-  "the agent path is rate limited under its own identity",
-  /checkRateLimit\(env\.OPERATOR_RATE_LIMIT, `agent:\$\{principal\}`\)/.test(indexStrings),
-  "Sharing the operator's bucket would let one agent rate limit Dustin out of " +
-    "his own server. Both doors have locks, and they are different locks.",
+  "agent keys stay on (Grok cannot complete OAuth, measured 2026-09-07)",
+  /agentKeys:\s*true/.test(indexCode),
+  "Without them Grok has no door; its key is read only unless AGENT_WRITE names it.",
 );
 
 check(
-  "the principal comes from the matched SECRET NAME, never from the request",
-  /*
-   * THE CHAIN, not the absence of a word. The first version asserted that
-   * "principal" appeared nowhere before the `agentPrincipal(` call, which is
-   * false for an innocent reason: `agentHandler` declares a `principal`
-   * parameter above the call site, so the assertion failed on correct code.
-   *
-   * What matters is where the value COMES FROM. `agentPrincipal` derives it
-   * from the matched secret's NAME, and index.ts passes that return value
-   * straight through to the handler. Nothing reads it off the request.
-   */
-  /import \{[^}]*\bagentPrincipal\b[^}]*\} from "@dustinedwards\/site-runtime\/agent-keys"/.test(indexStrings) &&
-    /const principal = await agentPrincipal\(/.test(indexCode) &&
-    /agentHandler\(request, env, ctx, principal\)/.test(indexCode),
-  "If a caller could name itself, the audit line would record whatever it " +
-    "typed. The principal must be a property of WHICH configured secret the " +
-    "presented key matched.",
+  "both doors reach the tool surface through the ONE handleMcp",
+  (indexCode.match(/handleMcp\(/g) ?? []).length === 1 && /serve: \(request, env, ctx, caller\) => handleMcp\(request, env, ctx, caller\)/.test(indexCode),
+  "Two handlers would be two places the tool surface is defined, and the first time they disagreed one door would " +
+    "offer something the other did not.",
 );
 
-/*
- * The key comparison itself (constant time, a blank secret never matching, the
- * name from the secret) is site-runtime's ./agent-keys, tested there. What this
- * server could still get wrong is a local copy beside it.
- */
 check(
   "no local agent-key code: the matching is site-runtime's ./agent-keys",
   !files.some((f) => /AGENT_KEY_|safeEqual\(/.test(codeOnly(f.text)) || /"AGENT_KEY_/.test(withoutComments(f.text))),
@@ -751,51 +666,14 @@ check(
 );
 
 /*
- * THE AUDIT LINE, AND WHAT IT MUST NOT CARRY. The principal is the point of the
- * line; the negative half matters more, because a log carrying the key would
- * move a secret into a sink nobody treats as one.
+ * "First publish stays Dustin's" is enforced by the operator API, which grants OPERATOR_TOKEN `{ kind: "operator" }`
+ * and refuses first publication on that actor kind. The door introduces no second credential and no claim to admin.
  */
 check(
-  "the audit line records the principal",
-  /audit: "agent-key-accepted"/.test(indexStrings) && /principal,/.test(indexStrings),
-  "Ruling 37: the call is logged as its own principal. Without it the second " +
-    "door is indistinguishable from the first in the logs.",
-);
-
-check(
-  "the audit line carries no key material",
-  !/authorization/i.test(
-    indexStrings.slice(
-      indexStrings.indexOf('audit: "agent-key-accepted"'),
-      indexStrings.indexOf("checkRateLimit(env.OPERATOR_RATE_LIMIT, `agent:"),
-    ),
-  ),
-  "The Authorization header, the key, or any slice or length of it must never " +
-    "reach a log line.",
-);
-
-/*
- * THE REFUSAL THE RULING NAMES, asserted where this Worker can carry it: it
- * does not implement first-publish policy and must not start.
- *
- * "First publish stays Dustin's" is enforced by the operator API, which grants
- * OPERATOR_TOKEN `{ kind: "operator" }` and refuses first publication on that
- * actor kind. The wrapper's job is to have no opinion, so what is asserted here
- * is that the agent door introduces no second credential and no claim to admin.
- */
-check(
-  "the agent path mints no credential of its own",
-  !/OPERATOR_TOKEN/.test(indexCode),
-  "index.ts must never touch the API credential. If the agent door chose a " +
-    "token, the API's actor kind would become this Worker's decision and " +
-    "first-publish policy would move here with it.",
-);
-
-check(
-  "no admin right is named on the agent path, and operator is",
-  !/isAdminUser\([^)]*principal/.test(indexCode) && /rights: "operator"/.test(indexStrings),
-  "Ruling 37: operator rights only, never admin. The agent path must not " +
-    "consult the admin check at all, because passing it would be the bug.",
+  "the door mints no credential of its own",
+  !/OPERATOR_TOKEN/.test(indexCode) && !/isAdminUser\(/.test(indexCode),
+  "index.ts must never touch the API credential or the admin check. If the agent door chose a token, the API's actor " +
+    "kind would become this Worker's decision and first-publish policy would move here with it.",
 );
 
 // ---------------------------------------------------------------------------

@@ -170,22 +170,19 @@ s=s.replace('\"main\": \"src/index.ts\"','\"main\": \"test/conformance-entry.ts\
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "13. main points at the conformance test entry"
 
-# 14. The DCR registration endpoint removed. Grok's rmcp client (measured
-#     2026-09-07) cannot mint a client identity without it and never opens a
-#     browser, which is exactly the outage this plant simulates.
+# 14. The door built locally beside the shared one: a provider of its own in index.ts.
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('  clientRegistrationEndpoint: \"/register\",\n','',1)
+s=s.replace('export default adminMcpWorker<Env>({','const local = new OAuthProvider({});\n\nexport default adminMcpWorker<Env>({',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "14. clientRegistrationEndpoint removed from the OAuthProvider"
+expect_fail "14. a local OAuthProvider beside site-runtime's door"
 
-# 15. CIMD disabled. claude.ai's measured identity path (2026-07-30); turning it
-#     off locks out the client the wrapper was originally verified against.
+# 15. Agent keys switched off: Grok (measured 2026-09-07) cannot complete OAuth, so its key is its only door.
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('clientIdMetadataDocumentEnabled: true,','clientIdMetadataDocumentEnabled: false,',1)
+s=s.replace('agentKeys: true,','agentKeys: false,',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "15. clientIdMetadataDocumentEnabled switched off"
+expect_fail "15. agent keys switched off"
 
 # 16. A second service binding: a second door into another Worker.
 python3 -c "
@@ -208,19 +205,19 @@ s=s.replace('const SERVER: McpServerInfo = { site: \"dustinedwards.info\", scope
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "18. invokeTool given scopes other than this server's"
 
-# 19. Registration without the redirect allowlist (rule 13).
+# 19. A local registration check beside the shared one (rule 13 lives in site-runtime's door).
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('registrationRefusal([...DCR_CALLBACKS, env.DCR_REDIRECT_URIS ?? \"\"].join(\",\"), clientMetadata)','null',1)
+s=s.replace('  routes: async (request, env) => {','  routes: async (request, env) => {\n    if (registrationRefusal(\"\", {})) return null;',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "19. registration allowlist bypassed"
+expect_fail "19. a local registration check"
 
-# 20. Tokens no longer bound to this server's resource (rule 12.2).
+# 20. The default export is not the shared door (rule 12.2's audience binding and every other guard live there).
 python3 -c "
 p='src/index.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('resource: \`\${origin}\${MCP_ROUTE}\`,\n      authorization_servers','authorization_servers',1)
+s=s.replace('export default adminMcpWorker<Env>({','export const door = adminMcpWorker<Env>({',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "20. audience binding removed"
+expect_fail "20. default export is not adminMcpWorker"
 
 # 21. A post tool called again (rule 11, Carrel owns writing).
 python3 -c "
