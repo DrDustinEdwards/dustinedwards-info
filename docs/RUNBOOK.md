@@ -342,10 +342,10 @@ npx wrangler secret put <NAME>
 
 Where each one lives, and what breaks if you rotate it and stop there:
 
-| Secret | Also lives in | Rotate it alone and... |
-| --- | --- | --- |
-| `OPERATOR_TOKEN` | **four holders, see below** | Silent partial failure. Read the box. |
-| `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
+| Secret             | Also lives in                                                                                                        | Rotate it alone and...                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPERATOR_TOKEN`   | **four holders, see below**                                                                                          | Silent partial failure. Read the box.                                                                                                                                                                                                                                                                                                  |
+| `SMOKE_TOKEN`      | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally                                                              | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades.                                                                                                                                                                                                                                               |
 | `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` Capsid's watcher calls fails with a 502 naming each DOI, and the watcher opens a finding for it. The loudest symptom is the secrets audit. |
 
 Where a new value comes from is RECOVERY.md section 7, which has a column for

@@ -19,7 +19,12 @@ export type ProcedureRow = {
 export async function getProcedureByPath(env: Env, path: string): Promise<ProcedureRow | null> {
   const row = (
     await getDb(env)
-      .select({ slug: procedures.slug, path: procedures.path, status: procedures.status, record: procedures.record })
+      .select({
+        slug: procedures.slug,
+        path: procedures.path,
+        status: procedures.status,
+        record: procedures.record,
+      })
       .from(procedures)
       .where(eq(procedures.path, path))
       .limit(1)
@@ -84,7 +89,10 @@ export async function listProceduresForOperator(env: Env) {
 }
 
 /** A knowledge base's published records, for its library (app/kb/libraries.mjs). */
-export async function listPublishedRecordsOfProfile(env: Env, profile: "protocol" | "recipe" | "computational"): Promise<ProcedureRecord[]> {
+export async function listPublishedRecordsOfProfile(
+  env: Env,
+  profile: "protocol" | "recipe" | "computational",
+): Promise<ProcedureRecord[]> {
   const rows = await getDb(env)
     .select({ record: procedures.record })
     .from(procedures)

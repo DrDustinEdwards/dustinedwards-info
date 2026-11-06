@@ -319,7 +319,10 @@ export function groupEntries(facts, sort) {
         heading: null,
         ids: facts
           .filter((f) => f.year === year)
-          .sort((a, b) => (typeRank.get(a.type) ?? 0) - (typeRank.get(b.type) ?? 0) || a.order - b.order)
+          .sort(
+            (a, b) =>
+              (typeRank.get(a.type) ?? 0) - (typeRank.get(b.type) ?? 0) || a.order - b.order,
+          )
           .map((f) => f.id),
       },
     ],
@@ -344,7 +347,13 @@ export function headline(shown) {
     }
     if (f.type === "mentoring") students += f.students ?? 0;
   }
-  return { papers, grants, dollars: Math.round(dollars * 100) / 100, students, entries: shown.length };
+  return {
+    papers,
+    grants,
+    dollars: Math.round(dollars * 100) / 100,
+    students,
+    entries: shown.length,
+  };
 }
 
 /**
@@ -504,7 +513,9 @@ export function yearOptions(all) {
  * @param {ReturnType<typeof timelineData>} data
  */
 export function timelineLabel(data) {
-  const totals = data.years.map((_, i) => data.series.reduce((sum, s) => sum + (s.values[i] ?? 0), 0));
+  const totals = data.years.map((_, i) =>
+    data.series.reduce((sum, s) => sum + (s.values[i] ?? 0), 0),
+  );
   const peak = Math.max(0, ...totals);
   const first = data.years[0];
   const last = data.years[data.years.length - 1];

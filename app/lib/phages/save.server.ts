@@ -24,7 +24,17 @@ import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
 
-import { PHAGES_PAGE_PATH, PHAGE_FACT_PAGES, compilePhage, phagePath, phageSetErrors, phageSlug, sortPhages, type Phage, type PhageHost } from "./compile.mjs";
+import {
+  PHAGES_PAGE_PATH,
+  PHAGE_FACT_PAGES,
+  compilePhage,
+  phagePath,
+  phageSetErrors,
+  phageSlug,
+  sortPhages,
+  type Phage,
+  type PhageHost,
+} from "./compile.mjs";
 
 type PhageEnv = Env;
 
@@ -34,7 +44,10 @@ export const PHAGE_SLUG = /^[a-z][a-z0-9]*$/;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class PhageInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The phage "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The phage "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "PhageInvalid";
   }
 }
@@ -45,7 +58,9 @@ class PhageInvalid extends ContentInvalid {
  * independent of whether the publications have been synced yet.
  */
 function sourceHost(env: PhageEnv): PhageHost {
-  return { paper: async (slug) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null };
+  return {
+    paper: async (slug) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null,
+  };
 }
 
 /** The one compile door: the save and sync_phages both read a file through it. */
@@ -59,7 +74,9 @@ type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
 /** The slug of an id, or a refusal: nothing but a lower-case name names a phage file. */
 function registered(slug: string) {
   if (!PHAGE_SLUG.test(slug)) {
-    throw new PhageInvalid(slug, [`"${slug}" is not a phage file key; a phage's file is named for its name in lower case, such as acorn15`]);
+    throw new PhageInvalid(slug, [
+      `"${slug}" is not a phage file key; a phage's file is named for its name in lower case, such as acorn15`,
+    ]);
   }
   return { slug, file: phagePath(slug) };
 }
@@ -81,10 +98,15 @@ export async function refreshPage(env: PhageEnv, phages: Phage[]) {
   for (const path of [PHAGES_PAGE_PATH, ...PHAGE_FACT_PAGES]) {
     const slug = pageSlug(path);
     const file = await readFile(env, pageSourcePath(slug));
-    if (!file) throw new Error(`the page ${path} has no file (${pageSourcePath(slug)}), so what it draws from the phages has nowhere to be drawn`);
+    if (!file)
+      throw new Error(
+        `the page ${path} has no file (${pageSourcePath(slug)}), so what it draws from the phages has nowhere to be drawn`,
+      );
     const compiled = await compilePageFile(env, slug, file.content, undefined, sortPhages(phages));
     if (!compiled.ok) {
-      throw new Error(`the page ${path} does not compile with these phages, so its table, twin and search record were not refreshed: ${compiled.errors.join("; ")}`);
+      throw new Error(
+        `the page ${path} does not compile with these phages, so its table, twin and search record were not refreshed: ${compiled.errors.join("; ")}`,
+      );
     }
     await writePageRow(env, compiled);
   }
@@ -100,7 +122,14 @@ export async function writePhageRow(env: PhageEnv, compiled: Compiled) {
        source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
        synced_at = excluded.synced_at`,
   )
-    .bind(phageSlug(phage.name), phage.name, phage.year, compiled.record, compiled.sourcePath, compiled.sourceBlobSha)
+    .bind(
+      phageSlug(phage.name),
+      phage.name,
+      phage.year,
+      compiled.record,
+      compiled.sourcePath,
+      compiled.sourceBlobSha,
+    )
     .run();
 }
 
@@ -142,15 +171,25 @@ export type SavedPhage = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> derived writes (convergeWithRetry) -> purge by tag. */
 export async function savePhage(
   env: PhageEnv,
-  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    slug: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ): Promise<SavedPhage> {
   const { raw, actor } = options;
   const { slug, file } = registered(options.slug);
   const existing = await readFile(env, file);
-  if (options.isNew && existing) throw new PhageInvalid(slug, [`the phage ${slug} already has a file (${file}); pass isNew false to edit it`]);
-  if (!options.isNew && !existing) throw new PhageInvalid(slug, [`the phage ${slug} has no file yet; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new PhageInvalid(slug, [
+      `the phage ${slug} already has a file (${file}); pass isNew false to edit it`,
+    ]);
+  if (!options.isNew && !existing)
+    throw new PhageInvalid(slug, [`the phage ${slug} has no file yet; pass isNew to create it`]);
 
   const compiled = await compile(env, slug, raw);
   if (!compiled.ok) throw new PhageInvalid(slug, compiled.errors);
@@ -158,9 +197,20 @@ export async function savePhage(
   const setErrors = phageSetErrors([...(await otherPhages(env, slug)), compiled.phage]);
   if (setErrors.length > 0) throw new PhageInvalid(slug, setErrors);
   // A phage has no draft state: it is public when it is saved, so the policy reads it as published.
-  decideFileWrite({ actor, noun: "phage", incomingDraft: false, priorRaw: existing?.content ?? null, isDraft: () => false });
+  decideFileWrite({
+    actor,
+    noun: "phage",
+    incomingDraft: false,
+    priorRaw: existing?.content ?? null,
+    isDraft: () => false,
+  });
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -175,7 +225,15 @@ export async function savePhage(
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
+    return {
+      slug,
+      commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
+      unchanged: true,
+      created: false,
+      purged: null,
+      note: UNCHANGED_NOTE,
+    };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
@@ -201,5 +259,12 @@ export async function savePhage(
     commitSha,
   });
 
-  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action === "repair", created: options.isNew, purged };
+  return {
+    slug,
+    commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
+    unchanged: written.action === "repair",
+    created: options.isNew,
+    purged,
+  };
 }

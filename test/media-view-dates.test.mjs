@@ -13,8 +13,18 @@ const MIDMONTH = Array.from(
 );
 
 const FULL = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 await test("every month renders its full name in the heading", () => {
@@ -28,10 +38,23 @@ await test("THE DERIVATION: every abbreviation is the first three letters of its
   // MONTH_ABBR is derived with `.slice(0, 3)`, which is legal only because that holds for all
   // twelve English months.
   const rendered = MIDMONTH.map((iso) => formatAdded(iso).split(" ")[1]);
-  assert.deepEqual(rendered, FULL.map((name) => name.slice(0, 3)));
+  assert.deepEqual(
+    rendered,
+    FULL.map((name) => name.slice(0, 3)),
+  );
   assert.deepEqual(rendered, [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ]);
 });
 
@@ -75,7 +98,11 @@ await test("a real uploaded_at from the deployed table renders in both", () => {
 await test("NO CLOCK IS READ: the same input renders the same string whatever today is", (t) => {
   const iso = "2020-06-15T12:00:00.000Z";
   t.mock.timers.enable({ apis: ["Date"] });
-  for (const today of [Date.UTC(2020, 5, 15, 12), Date.UTC(2031, 0, 1), Date.UTC(1999, 11, 31, 23, 59)]) {
+  for (const today of [
+    Date.UTC(2020, 5, 15, 12),
+    Date.UTC(2031, 0, 1),
+    Date.UTC(1999, 11, 31, 23, 59),
+  ]) {
     t.mock.timers.setTime(today);
     assert.equal(monthOf(iso), "June 2020", `with today at ${new Date(today).toISOString()}`);
     assert.equal(formatAdded(iso), "15 Jun 2020", `with today at ${new Date(today).toISOString()}`);

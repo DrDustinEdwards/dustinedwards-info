@@ -18,7 +18,12 @@ type ContentPage = PageRecord;
 function pageJsonLd(page: ContentPage): object[] {
   if (!page.schemaType) return [];
   const pageUrl = `${SITE_ORIGIN}${page.path}`;
-  const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
+  const person = {
+    "@type": "Person",
+    "@id": personId(SITE_ORIGIN),
+    name: SITE.name,
+    url: SITE_ORIGIN,
+  };
   const isDataset = page.schemaType === "Dataset";
   const node = thing(page.schemaType, {
     "@id": `${pageUrl}#${page.schemaType.toLowerCase()}`,
@@ -43,8 +48,12 @@ function pageJsonLd(page: ContentPage): object[] {
           // Public on this page with no sign-in, which is all the property claims.
           isAccessibleForFree: true,
           variableMeasured: page.dataset.variableMeasured,
-          ...(page.dataset.temporalCoverage ? { temporalCoverage: page.dataset.temporalCoverage } : {}),
-          ...(page.spatialCoverage ? { spatialCoverage: { "@type": "Place", name: page.spatialCoverage } } : {}),
+          ...(page.dataset.temporalCoverage
+            ? { temporalCoverage: page.dataset.temporalCoverage }
+            : {}),
+          ...(page.spatialCoverage
+            ? { spatialCoverage: { "@type": "Place", name: page.spatialCoverage } }
+            : {}),
           // The markdown twin carries the same table, so it is the download.
           distribution: {
             "@type": "DataDownload",
@@ -69,9 +78,5 @@ function pageJsonLd(page: ContentPage): object[] {
 
 /** The page's structured data: its own node or nodes, and its dictionary entry. */
 export function contentPageJsonLd(page: ContentPage, entry: Entry | null) {
-  return [
-    ...pageJsonLd(page),
-    ...(entry ? [definedTermJsonLd(entry, SITE_ORIGIN)] : []),
-  ];
+  return [...pageJsonLd(page), ...(entry ? [definedTermJsonLd(entry, SITE_ORIGIN)] : [])];
 }
-

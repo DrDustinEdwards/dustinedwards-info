@@ -50,16 +50,11 @@ const { eq } = tally;
     false,
   );
 
-
   /* THE ORIGIN GATE, AND ITS POSITION IS THE ASSERTION: a hostile page spends the shared budget. */
   const actionAt = askCode.search(/export\s+async\s+function\s+action\s*\(/);
   eq("ask: the action was located for the order check", actionAt !== -1, true);
   const actionBody = actionAt === -1 ? "" : askCode.slice(actionAt);
-  eq(
-    "ask: the action body is non-empty",
-    actionBody.length > 200,
-    true,
-  );
+  eq("ask: the action body is non-empty", actionBody.length > 200, true);
 
   const originAt = actionBody.indexOf("refuseCrossSite(");
   const rateAt = actionBody.indexOf("checkAskRate(");
@@ -96,7 +91,6 @@ const { eq } = tally;
     true,
   );
 
-
   for (const [label, routePath] of [
     ["ask", "app/routes/search.ask.ts"],
     ["theme", "app/routes/theme.ts"],
@@ -106,7 +100,8 @@ const { eq } = tally;
     const code = stripComments(readFileSync(join(root, routePath), "utf8"));
     eq(
       `origin: ${label} refuses a cross-site request with the shared check`,
-      /from\s+"@dustinedwards\/site-runtime\/origin"/.test(code) && /refuseCrossSite\(\s*request\b/.test(code),
+      /from\s+"@dustinedwards\/site-runtime\/origin"/.test(code) &&
+        /refuseCrossSite\(\s*request\b/.test(code),
       true,
     );
   }
@@ -122,9 +117,7 @@ const { eq } = tally;
   }
 
   {
-    const auth = stripComments(
-      readFileSync(join(root, "app/lib/operator/auth.server.ts"), "utf8"),
-    );
+    const auth = stripComments(readFileSync(join(root, "app/lib/operator/auth.server.ts"), "utf8"));
     const body = auth.slice(auth.indexOf("export async function authenticateOperator"));
     const lengthGate = body.indexOf("presented.length > configured.length");
     const hash = body.indexOf("safeEqual(");
@@ -179,7 +172,8 @@ const { eq } = tally;
   const seo = stripComments(readFileSync(join(root, "app/lib/seo.ts"), "utf8"));
   eq(
     "ask: robots.txt disallows /search/ask",
-    /disallow:\s*ROBOTS_DISALLOW\b/.test(robots) && /ROBOTS_DISALLOW\s*=\s*\[[^\]]*"\/search\/ask"/.test(seo),
+    /disallow:\s*ROBOTS_DISALLOW\b/.test(robots) &&
+      /ROBOTS_DISALLOW\s*=\s*\[[^\]]*"\/search\/ask"/.test(seo),
     true,
   );
 }

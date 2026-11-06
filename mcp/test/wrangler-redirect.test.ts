@@ -6,7 +6,15 @@
  * planted copy can show it. The scripts name their config with -c, which skips the lookup.
  */
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,15 +39,25 @@ before(() => {
   symlinkSync(join(mcp, "..", "app"), join(root, "app"), "junction");
   /* The site build's redirect, one folder above the config, as on Dustin's machine. */
   mkdirSync(join(root, "build", "server"), { recursive: true });
-  writeFileSync(join(root, "build", "server", "wrangler.json"), JSON.stringify({ name: "site", main: "index.js" }));
+  writeFileSync(
+    join(root, "build", "server", "wrangler.json"),
+    JSON.stringify({ name: "site", main: "index.js" }),
+  );
   mkdirSync(join(root, ".wrangler", "deploy"), { recursive: true });
-  writeFileSync(join(root, ".wrangler", "deploy", "config.json"), JSON.stringify({ configPath: "../../build/server/wrangler.json" }));
+  writeFileSync(
+    join(root, ".wrangler", "deploy", "config.json"),
+    JSON.stringify({ configPath: "../../build/server/wrangler.json" }),
+  );
 });
 
 after(() => rmSync(root, { recursive: true, force: true }));
 
 function run(args: string[]) {
-  return spawnSync(process.execPath, [wrangler, ...args], { cwd: folder, encoding: "utf8", timeout: 120_000 });
+  return spawnSync(process.execPath, [wrangler, ...args], {
+    cwd: folder,
+    encoding: "utf8",
+    timeout: 120_000,
+  });
 }
 
 describe("a site build's wrangler redirect", () => {

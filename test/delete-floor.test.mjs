@@ -7,11 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  deleteFloor,
-  requirePosts,
-  syncablePostProblems,
-} from "../scripts/lib/delete-floor.mjs";
+import { deleteFloor, requirePosts, syncablePostProblems } from "../scripts/lib/delete-floor.mjs";
 
 const POST = {
   slug: "a-post",

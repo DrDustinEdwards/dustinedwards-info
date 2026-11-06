@@ -14,13 +14,18 @@ import { seedPublications } from "./seed";
  * uses (the repository is the source). Each case starts from an empty cv table and a repository
  * ahead of it. */
 
-const FILES = import.meta.glob("../../content/cv/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const FILES = import.meta.glob("../../content/cv/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 const rawOf = (slug: string) => {
   const found = FILES[`../../content/cv/${slug}.md`];
   if (found === undefined) throw new Error(`no content/cv/${slug}.md`);
   return found;
 };
-const repository = () => Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
+const repository = () =>
+  Object.fromEntries(CV_FILES.map(({ slug }) => [cvSourcePath(slug), rawOf(slug)]));
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;
@@ -32,11 +37,14 @@ const rowFor = (slug: string) =>
     .first<{ slug: string; source_blob_sha: string }>();
 const searchRows = async (needle?: string) =>
   (
-    await env.DB.prepare("SELECT COUNT(*) AS n FROM search_docs WHERE doc_uid = ?1 AND body LIKE ?2")
+    await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM search_docs WHERE doc_uid = ?1 AND body LIKE ?2",
+    )
       .bind(contentPageSearchUid("/cv"), `%${needle ?? ""}%`)
       .first<{ n: number }>()
   )?.n;
-const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "cv-drift");
+const driftCheck = async () =>
+  (await runHealthChecks(env as never)).checks.find((c) => c.name === "cv-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_cv", {});
 
 let gh: SourceStub;
@@ -47,7 +55,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM cv").run();
-  await env.DB.prepare("DELETE FROM search_docs WHERE doc_uid = ?1").bind(contentPageSearchUid("/cv")).run();
+  await env.DB.prepare("DELETE FROM search_docs WHERE doc_uid = ?1")
+    .bind(contentPageSearchUid("/cv"))
+    .run();
   gh = await stubSources(repository());
 });
 
@@ -56,43 +66,58 @@ afterEach(async () => {
 });
 
 describe("sync_cv and the cv-drift check", () => {
-  it("converges unrowed files, reports them as drift first, writes the search records, and is idempotent", { timeout: 300_000 }, async () => {
-    expect((await driftCheck())?.ok).toBe(false);
+  it(
+    "converges unrowed files, reports them as drift first, writes the search records, and is idempotent",
+    { timeout: 300_000 },
+    async () => {
+      expect((await driftCheck())?.ok).toBe(false);
 
-    const first = await sync();
-    expect(first.ok, JSON.stringify(first)).toBe(true);
-    if (first.ok) {
-      expect(first.data).toMatchObject({ repaired: CV_FILES.length, removed: 0, expected: CV_FILES.length, present: CV_FILES.length, converged: true });
-    }
-    expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(rawOf("grants")));
-    expect(await searchRows()).toBeGreaterThan(0);
-    expect((await driftCheck())?.ok).toBe(true);
+      const first = await sync();
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      if (first.ok) {
+        expect(first.data).toMatchObject({
+          repaired: CV_FILES.length,
+          removed: 0,
+          expected: CV_FILES.length,
+          present: CV_FILES.length,
+          converged: true,
+        });
+      }
+      expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(rawOf("grants")));
+      expect(await searchRows()).toBeGreaterThan(0);
+      expect((await driftCheck())?.ok).toBe(true);
 
-    const again = await sync();
-    expect(again.ok).toBe(true);
-    if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
-  });
+      const again = await sync();
+      expect(again.ok).toBe(true);
+      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+    },
+  );
 
-  it("re-compiles a file edited through git, and carries the edit to the search records", { timeout: 300_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    expect(await searchRows(ADDED)).toBe(0);
+  it(
+    "re-compiles a file edited through git, and carries the edit to the search records",
+    { timeout: 300_000 },
+    async () => {
+      expect((await sync()).ok).toBe(true);
+      expect(await searchRows(ADDED)).toBe(0);
 
-    // An edit committed outside the save path.
-    const edited = rawOf("grants").replace(
-      "entries:\n",
-      `entries:\n  - year: 2026\n    amount: 99\n    title: ${ADDED}\n    areas: []\n    role: recipient\n`,
-    );
-    await putSource(cvSourcePath("grants"), edited);
-    const drifted = await driftCheck();
-    expect(drifted?.ok).toBe(false);
-    expect(drifted?.detail).toContain("1 sha-changed");
+      // An edit committed outside the save path.
+      const edited = rawOf("grants").replace(
+        "entries:\n",
+        `entries:\n  - year: 2026\n    amount: 99\n    title: ${ADDED}\n    areas: []\n    role: recipient\n`,
+      );
+      await putSource(cvSourcePath("grants"), edited);
+      const drifted = await driftCheck();
+      expect(drifted?.ok).toBe(false);
+      expect(drifted?.detail).toContain("1 sha-changed");
 
-    const result = await sync();
-    expect(result.ok, JSON.stringify(result)).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ repaired: 1, removed: 0, converged: true });
-    expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(edited));
-    expect(await searchRows(ADDED)).toBeGreaterThan(0);
-  });
+      const result = await sync();
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (result.ok)
+        expect(result.data).toMatchObject({ repaired: 1, removed: 0, converged: true });
+      expect((await rowFor("grants"))?.source_blob_sha).toBe(await gitBlobSha(edited));
+      expect(await searchRows(ADDED)).toBeGreaterThan(0);
+    },
+  );
 
   it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
@@ -109,16 +134,20 @@ describe("sync_cv and the cv-drift check", () => {
     expect(await rowFor("profile")).not.toBeNull();
   });
 
-  it("makes no row for a file the registry does not name, naming it, and converges the rest", { timeout: 300_000 }, async () => {
-    await putSource("content/cv/not-a-cv-file.md", rawOf("grants"));
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("content/cv/not-a-cv-file.md fails");
-      expect(JSON.stringify(result.detail)).toContain("not a CV file");
-    }
-    expect(await rowFor("not-a-cv-file")).toBeNull();
-    expect(await rowFor("grants")).not.toBeNull();
-  });
+  it(
+    "makes no row for a file the registry does not name, naming it, and converges the rest",
+    { timeout: 300_000 },
+    async () => {
+      await putSource("content/cv/not-a-cv-file.md", rawOf("grants"));
+      const result = await sync();
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(422);
+        expect(result.error).toContain("content/cv/not-a-cv-file.md fails");
+        expect(JSON.stringify(result.detail)).toContain("not a CV file");
+      }
+      expect(await rowFor("not-a-cv-file")).toBeNull();
+      expect(await rowFor("grants")).not.toBeNull();
+    },
+  );
 });

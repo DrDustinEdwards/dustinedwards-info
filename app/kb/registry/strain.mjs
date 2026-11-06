@@ -15,7 +15,9 @@ const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
 const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max ? null : `is one line of at most ${max} characters`;
+  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
+    ? null
+    : `is one line of at most ${max} characters`;
 
 /** @type {import("./kinds.mjs").KindSpec} */
 export const STRAIN = {
@@ -27,11 +29,19 @@ export const STRAIN = {
     strain: { check: (value) => oneLine(value, 60) },
     collection: { required: true, check: (value) => oneLine(value, 60) },
     collection_number: { required: true, check: (value) => oneLine(value, 40) },
-    guide_url: { check: (value) => (typeof value === "string" && /^https:\/\/[^\s]+$/.test(value) ? null : "is an https address") },
+    guide_url: {
+      check: (value) =>
+        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
+          ? null
+          : "is an https address",
+    },
     // Dustin's to set: a gap until the biosafety officer check is done.
     biosafety_level: {
       required: true,
-      check: (value) => (BIOSAFETY_LEVELS.includes(/** @type {any} */ (value)) ? null : `is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`),
+      check: (value) =>
+        BIOSAFETY_LEVELS.includes(/** @type {any} */ (value))
+          ? null
+          : `is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`,
     },
   },
   /** The name is the organism and its designation, so it is stated once and cannot say a different strain than the fields do. */
@@ -42,7 +52,9 @@ export const STRAIN = {
       const organism = stated(fields.organism);
       const designation = designationOf(fields);
       if (organism && designation && name !== `${organism} ${designation}`) {
-        errors.push(`strain/${id} is named "${name}", but its organism and designation make "${organism} ${designation}"; the name is computed from them`);
+        errors.push(
+          `strain/${id} is named "${name}", but its organism and designation make "${organism} ${designation}"; the name is computed from them`,
+        );
       }
     }
     return errors;

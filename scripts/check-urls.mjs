@@ -222,16 +222,28 @@ for (const [label, property] of SCHEMA_FIELDS) {
   const callTo = (name) => (/** @type {ts.Node} */ n) =>
     ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
   const loopbackAt = firstAt(
-    (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
+    (n) =>
+      ts.isPropertyAccessExpression(n) &&
+      n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
   );
   const httpsAt = firstAt(callTo("canonicalRedirect"));
-  assert("redirects: the cache loopback was located", loopbackAt !== -1, "ctx.exports.Renderer not found");
-  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "canonicalRedirect is not called");
+  assert(
+    "redirects: the cache loopback was located",
+    loopbackAt !== -1,
+    "ctx.exports.Renderer not found",
+  );
+  assert(
+    "redirects: the HTTPS redirect was located",
+    httpsAt !== -1,
+    "canonicalRedirect is not called",
+  );
   // The map is read before the canonical redirect (which leaves a mapped path's slash for it), but answered after.
   /** @type {Record<string, number>} */
   const decidedAt = {
     wordpressDisposition: firstAt(
-      (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "wordpress.location",
+      (n) =>
+        ts.isPropertyAccessExpression(n) &&
+        n.getText(workerTree).replace(/\s+/g, "") === "wordpress.location",
     ),
     paperSlashTarget: firstAt(callTo("paperSlashTarget")),
   };
@@ -261,10 +273,19 @@ for (const [label, property] of SCHEMA_FIELDS) {
 {
   const example = parseJsonc(join(root, "wrangler.jsonc.example"));
   assert("cache: Workers Cache is enabled at the top level", example.cache?.enabled === true);
-  assert("cache: the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled === false);
-  assert("cache: the RENDERER entrypoint has cache ENABLED", example.exports?.Renderer?.cache?.enabled === true);
+  assert(
+    "cache: the GATEWAY entrypoint has cache DISABLED",
+    example.exports?.default?.cache?.enabled === false,
+  );
+  assert(
+    "cache: the RENDERER entrypoint has cache ENABLED",
+    example.exports?.Renderer?.cache?.enabled === true,
+  );
   /* ABSENT rather than false: writing it would be a second place to state a safe default. */
-  assert("cache: cross_version_cache is not enabled, so a deploy invalidates the cache", !(example.cache?.cross_version_cache ?? false));
+  assert(
+    "cache: cross_version_cache is not enabled, so a deploy invalidates the cache",
+    !(example.cache?.cross_version_cache ?? false),
+  );
 }
 
 assert(

@@ -18,7 +18,12 @@ import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 const ORCID_ID = OWNER_ORCID.replace(/^https?:\/\/orcid\.org\//, "");
 const NAME_WINDOW_DAYS = 400;
 
-type SourceWork = { doi: string; title: string; year: number | null; sources: Array<"orcid" | "crossref"> };
+type SourceWork = {
+  doi: string;
+  title: string;
+  year: number | null;
+  sources: Array<"orcid" | "crossref">;
+};
 type SourceFailure = { source: "orcid" | "crossref" | "crossref-name"; detail: string };
 
 export type PublicationCheck = {
@@ -51,7 +56,9 @@ async function getJson(url: string, accept = "application/json"): Promise<unknow
 async function readOrcid(): Promise<SourceWork[]> {
   const body = (await getJson(`https://pub.orcid.org/v3.0/${ORCID_ID}/works`)) as {
     group?: Array<{
-      "external-ids"?: { "external-id"?: Array<{ "external-id-type"?: string; "external-id-value"?: string }> };
+      "external-ids"?: {
+        "external-id"?: Array<{ "external-id-type"?: string; "external-id-value"?: string }>;
+      };
       "work-summary"?: Array<{
         title?: { title?: { value?: string } };
         "publication-date"?: { year?: { value?: string } } | null;
@@ -79,7 +86,12 @@ async function readOrcid(): Promise<SourceWork[]> {
 function fromCrossref(item: CrossrefItem): SourceWork | null {
   if (!item.DOI) return null;
   const year = item.issued?.["date-parts"]?.[0]?.[0];
-  return { doi: item.DOI, title: item.title?.[0] ?? "", year: typeof year === "number" ? year : null, sources: ["crossref"] };
+  return {
+    doi: item.DOI,
+    title: item.title?.[0] ?? "",
+    year: typeof year === "number" ? year : null,
+    sources: ["crossref"],
+  };
 }
 
 async function readCrossref(params: Record<string, string>): Promise<CrossrefItem[]> {
@@ -96,9 +108,15 @@ const isOwner = (author: { given?: string; family?: string }) =>
   canonicalAuthor(`${author.given ?? ""} ${author.family ?? ""}`) === SITE.name;
 
 /** Reads every source, keeps what each one failed on, and compares the answers with the publication rows. */
-export async function checkPublicationSources(env: Env, now = Date.now()): Promise<PublicationCheck> {
+export async function checkPublicationSources(
+  env: Env,
+  now = Date.now(),
+): Promise<PublicationCheck> {
   const failures: SourceFailure[] = [];
-  const attempt = async <T>(source: SourceFailure["source"], read: () => Promise<T>): Promise<T | null> => {
+  const attempt = async <T>(
+    source: SourceFailure["source"],
+    read: () => Promise<T>,
+  ): Promise<T | null> => {
     try {
       return await read();
     } catch (error) {
@@ -110,7 +128,9 @@ export async function checkPublicationSources(env: Env, now = Date.now()): Promi
   const [orcid, crossref, byName, rows] = await Promise.all([
     attempt("orcid", readOrcid),
     attempt("crossref", () => readCrossref({ filter: `orcid:${ORCID_ID}` })),
-    attempt("crossref-name", () => readCrossref({ "query.author": SITE.name, filter: `from-created-date:${since}` })),
+    attempt("crossref-name", () =>
+      readCrossref({ "query.author": SITE.name, filter: `from-created-date:${since}` }),
+    ),
     listPublicationIdentities(env),
   ]);
 
@@ -129,11 +149,16 @@ export async function checkPublicationSources(env: Env, now = Date.now()): Promi
   }
 
   const tied = new Map<string, SourceWork>();
-  for (const work of [...(orcid ?? []), ...(crossref ?? []).flatMap((i) => fromCrossref(i) ?? [])]) {
+  for (const work of [
+    ...(orcid ?? []),
+    ...(crossref ?? []).flatMap((i) => fromCrossref(i) ?? []),
+  ]) {
     const key = doiKey(work.doi);
     const seen = tied.get(key);
     if (!seen) tied.set(key, { ...work });
-    else for (const source of work.sources) if (!seen.sources.includes(source)) seen.sources.push(source);
+    else
+      for (const source of work.sources)
+        if (!seen.sources.includes(source)) seen.sources.push(source);
   }
 
   const nameMatches = new Map<string, SourceWork>();

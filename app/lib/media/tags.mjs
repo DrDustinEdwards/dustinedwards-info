@@ -14,18 +14,20 @@ export const MAX_TAGS = 12;
  */
 export function normalizeTag(raw) {
   if (typeof raw !== "string") return "";
-  return raw
-    .toLowerCase()
-    .split(TAG_DELIMITER)
-    .join(" ")
-    .trim()
-    .replace(/\s+/g, "-")
-    // Never a `%` or `_`: they are LIKE wildcards and would turn a stored value into a pattern.
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, MAX_TAG_LENGTH)
-    .replace(/-+$/, "");
+  return (
+    raw
+      .toLowerCase()
+      .split(TAG_DELIMITER)
+      .join(" ")
+      .trim()
+      .replace(/\s+/g, "-")
+      // Never a `%` or `_`: they are LIKE wildcards and would turn a stored value into a pattern.
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, MAX_TAG_LENGTH)
+      .replace(/-+$/, "")
+  );
 }
 
 /**

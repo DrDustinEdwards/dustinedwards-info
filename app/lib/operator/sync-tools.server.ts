@@ -9,7 +9,12 @@ import { listDivergences } from "~/lib/editor/divergence.server";
 import { EditorError, currentHead, renderAndWrite } from "~/lib/editor/publish.server";
 import { deletePostFromD1 } from "~/lib/editor/post-rows.server";
 import { listPostFiles, readFile } from "~/lib/source/store.server";
-import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
+import {
+  askAvailable,
+  askIndexStatus,
+  pruneAskCorpus,
+  syncAskCorpus,
+} from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { dropHealthVerdicts } from "~/lib/health/verdict-cache.server";
 import {
@@ -24,13 +29,27 @@ import {
   readRegistrySides,
   readRosterSides,
 } from "~/lib/health/checks.server";
-import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRegistry, purgeRoster } from "~/lib/cache-purge.server";
+import {
+  purgeCv,
+  purgeLlms,
+  purgePages,
+  purgePhages,
+  purgeProcedures,
+  purgePublications,
+  purgeRegistry,
+  purgeRoster,
+} from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { readCv } from "~/db/cv";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { cvPdfStamp } from "~/lib/cv/pdf-html.mjs";
 import { ensureCvPdf, storedCvPdfFingerprint } from "~/lib/cv/pdf.server";
-import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
+import {
+  compile as compileCvFile,
+  deleteCvRow,
+  refreshCvSearch,
+  writeCvRow,
+} from "~/lib/cv/save.server";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import {
   compile as compileDictionaryFile,
@@ -46,12 +65,25 @@ import {
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { listPhages } from "~/db/phages";
 import { PHAGES_DIR, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
-import { compile as compilePhageFile, deletePhageRow, refreshPage as refreshPhagePage, writePhageRow } from "~/lib/phages/save.server";
+import {
+  compile as compilePhageFile,
+  deletePhageRow,
+  refreshPage as refreshPhagePage,
+  writePhageRow,
+} from "~/lib/phages/save.server";
 import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
 import { refreshProceduresNaming } from "~/kb/procedures/primer-dependents.server";
-import { compile as compileRegistryFile, deleteRegistryRow, writeRegistryRow } from "~/kb/registry/save.server";
+import {
+  compile as compileRegistryFile,
+  deleteRegistryRow,
+  writeRegistryRow,
+} from "~/kb/registry/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
-import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
+import {
+  compile as compileRosterFile,
+  deleteRosterRow,
+  writeRosterRow,
+} from "~/lib/roster/save.server";
 import {
   compilePublicationFor,
   deletePublicationRow,
@@ -161,7 +193,10 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 
 /** A converge's answer, read after its writes: D1 reads its own writes in-request, so drift reported here is real. */
 function convergedResult(
-  after: { files: Array<{ slug: string; sha: string }>; rows: Array<{ slug: string; source_blob_sha: string | null }> },
+  after: {
+    files: Array<{ slug: string; sha: string }>;
+    rows: Array<{ slug: string; source_blob_sha: string | null }>;
+  },
   counts: { repaired: number; removed: number; unpurged: number },
 ): ToolResult {
   const residual = contentDriftCompare(after.files, after.rows);
@@ -187,9 +222,14 @@ type DriftSides<Row extends { slug: string; source_blob_sha: string | null }> = 
  * the two sides, the compile door and the write and removal doors the kind's own save uses. The loop is one.
  */
 type CompileResult = { ok: boolean; errors: string[] };
-type CompiledOk<Result extends CompileResult> = Extract<Result, { ok: true }> & { sourceBlobSha: string };
+type CompiledOk<Result extends CompileResult> = Extract<Result, { ok: true }> & {
+  sourceBlobSha: string;
+};
 
-type KindSync<Row extends { slug: string; source_blob_sha: string | null }, Result extends CompileResult> = {
+type KindSync<
+  Row extends { slug: string; source_blob_sha: string | null },
+  Result extends CompileResult,
+> = {
   tool: string;
   dir: string;
   noun: string;
@@ -203,7 +243,11 @@ type KindSync<Row extends { slug: string; source_blob_sha: string | null }, Resu
    * before any row moves, so that store settles to the final set first and a failure leaves the rows reading
    * drifted, to be retried. Throws to stop the repair.
    */
-  settle?: (plan: { files: DriftSides<Row>["files"]; rows: Row[]; drift: ReturnType<typeof contentDriftCompare> }) => Promise<void>;
+  settle?: (plan: {
+    files: DriftSides<Row>["files"];
+    rows: Row[];
+    drift: ReturnType<typeof contentDriftCompare>;
+  }) => Promise<void>;
   /**
    * For a kind that legitimately has no files yet (the registry, before any kind brings records): no files AND no
    * rows is a converged nothing, not a fault. No files while rows exist is still refused, because that is the
@@ -228,7 +272,10 @@ async function convergeKind<
 >(env: OperatorEnv, spec: KindSync<Row, Result>): Promise<ToolResult> {
   const before = await spec.read();
   if (before.files.length === 0 && before.rows.length === 0 && spec.emptyOk) {
-    return { ok: true, data: { repaired: 0, removed: 0, unpurged: 0, expected: 0, present: 0, converged: true } };
+    return {
+      ok: true,
+      data: { repaired: 0, removed: 0, unpurged: 0, expected: 0, present: 0, converged: true },
+    };
   }
   if (before.files.length === 0) {
     return {
@@ -291,7 +338,9 @@ async function convergeKind<
       status: 422,
       error:
         `${spec.tool} could not apply ${failed.length} file(s): ` +
-        failed.map((f) => `${f.path} fails ${f.errors.length} check(s), first: ${f.errors[0]}`).join("; ") +
+        failed
+          .map((f) => `${f.path} fails ${f.errors.length} check(s), first: ${f.errors[0]}`)
+          .join("; ") +
         `. The other ${repaired} drifted ${spec.noun}(s) were converged.`,
       detail: { failed, repaired, removed },
     };
@@ -418,7 +467,9 @@ export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
     compile: (_slug, raw) => compileLlms(env, raw),
     write: (compiled) => writeLlmsRow(env, compiled.raw),
     remove: async () => {
-      throw new Error("sync_llms never removes the llms.txt row: a source without the file is refused first.");
+      throw new Error(
+        "sync_llms never removes the llms.txt row: a source without the file is refused first.",
+      );
     },
     purge: purgeLlms,
   });
@@ -484,7 +535,9 @@ export async function syncPhages(env: OperatorEnv): Promise<ToolResult> {
     remove: (row) => deletePhageRow(env, row),
     purge: purgePhages,
     settle: async ({ files, drift }) => {
-      const bySlug = new Map<string, Phage>((await listPhages(env)).map((phage) => [phageSlug(phage.name), phage]));
+      const bySlug = new Map<string, Phage>(
+        (await listPhages(env)).map((phage) => [phageSlug(phage.name), phage]),
+      );
       const pathOf = new Map(files.map((f) => [f.slug, f.path]));
       for (const slug of [...drift.changed, ...drift.unrowed]) {
         const path = pathOf.get(slug);
@@ -520,8 +573,15 @@ export async function syncRegistry(env: OperatorEnv): Promise<ToolResult> {
   // The protocols that print a primer carry its facts in their record, so every one that names a primer is recompiled
   // from its file after the primers converge: a primer edited through git reaches them here, and a protocol left reading
   // an old sequence by a failed save is repaired by the same run.
-  const refreshed = await refreshProceduresNaming(env, null, ["primer", "strain", "reagent", "equipment"]);
-  return result.ok ? { ok: true, data: { ...(result.data as object), protocolsRefreshed: refreshed.length } } : result;
+  const refreshed = await refreshProceduresNaming(env, null, [
+    "primer",
+    "strain",
+    "reagent",
+    "equipment",
+  ]);
+  return result.ok
+    ? { ok: true, data: { ...(result.data as object), protocolsRefreshed: refreshed.length } }
+    : result;
 }
 
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
@@ -544,7 +604,8 @@ export async function syncStatus(env: OperatorEnv) {
 
   // A COUNT always returns one row; a missing one is an unreadable answer, never zero posts.
   const counted = (row: { n: number } | null | undefined, what: string) => {
-    if (typeof row?.n !== "number") throw new Error(`syncStatus: the ${what} count returned no row`);
+    if (typeof row?.n !== "number")
+      throw new Error(`syncStatus: the ${what} count returned no row`);
     return row.n;
   };
 

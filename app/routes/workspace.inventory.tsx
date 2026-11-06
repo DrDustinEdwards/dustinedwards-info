@@ -34,7 +34,15 @@ export async function loader({ context }: Route.LoaderArgs) {
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireReader(actor);
-  return data(await inventoryAction(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now()), { headers: PRIVATE });
+  return data(
+    await inventoryAction(
+      getEnv(context),
+      actor,
+      await cappedForm(request, ADMIN_FORM_BYTES),
+      Date.now(),
+    ),
+    { headers: PRIVATE },
+  );
 }
 
 const STATUS_TEXT = { in_stock: "In stock", empty: "Empty", discarded: "Discarded" } as const;
@@ -43,7 +51,10 @@ export default function LabInventory({ loaderData, actionData }: Route.Component
   const { lots, locations, items, canEdit, canUse } = loaderData;
   return (
     <>
-      <PageHead title="Inventory" lead="The lots on the shelf: which lot of each reagent, how much is left, and where it is. Every change is recorded." />
+      <PageHead
+        title="Inventory"
+        lead="The lots on the shelf: which lot of each reagent, how much is left, and where it is. Every change is recorded."
+      />
       <Result result={actionData} />
       {lots.length === 0 ? (
         <p className="cap-muted">No lots recorded yet.</p>

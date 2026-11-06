@@ -45,7 +45,10 @@ if (!existsSync(ENV_TYPES)) {
 
 // A secret nobody declared is a secret nobody reviewed. Read off the syntax tree: a regex stopped at
 // the first line holding a closing brace, so a nested type in Env hid every member after it.
-const envInterface = interfaceMembers(parseSource(ENV_TYPES, readFileSync(ENV_TYPES, "utf8")), "Env");
+const envInterface = interfaceMembers(
+  parseSource(ENV_TYPES, readFileSync(ENV_TYPES, "utf8")),
+  "Env",
+);
 ok(
   "app/env.d.ts declares an Env interface",
   envInterface.found,
@@ -75,7 +78,9 @@ const SCAN_ROOTS = ["app", "workers"];
 
 /** @param {string} dir */
 const walk = (dir) =>
-  walkFiles(dir, { keep: (name) => /\.(ts|tsx|mjs|js|jsx)$/.test(name) && !name.endsWith(".d.ts") });
+  walkFiles(dir, {
+    keep: (name) => /\.(ts|tsx|mjs|js|jsx)$/.test(name) && !name.endsWith(".d.ts"),
+  });
 
 function isServerOnly(/** @type {string} */ path) {
   return path.startsWith("workers/") || /\.server\.(ts|tsx|mjs|js)$/.test(path);
@@ -100,9 +105,9 @@ for (const r of SCAN_ROOTS) {
     floor !== undefined && here.length >= floor,
     floor === undefined
       ? `${r}/ has no floor in ROOT_FLOORS. Add one measured through this walk, or the ` +
-        `root can empty out unnoticed.`
+          `root can empty out unnoticed.`
       : `${here.length} file(s) under ${r}/, expected at least ${floor}. Either the walk ` +
-        `stopped matching this tree, or the root was dropped from SCAN_ROOTS.`,
+          `stopped matching this tree, or the root was dropped from SCAN_ROOTS.`,
   );
 }
 
@@ -137,7 +142,10 @@ let serverReads = 0;
 
 for (const file of files) {
   const path = relative(root, file).split(sep).join("/");
-  for (const { name } of propertyReads(parseSource(file, readFileSync(file, "utf8")), SECRET_NAMES)) {
+  for (const { name } of propertyReads(
+    parseSource(file, readFileSync(file, "utf8")),
+    SECRET_NAMES,
+  )) {
     readsFound += 1;
     if (isServerOnly(path)) {
       serverReads += 1;
@@ -323,8 +331,7 @@ ok(
   ok(
     "no tracked file carries a .dev.vars credential verbatim",
     valueHits.length === 0,
-    `${valueHits.join(", ")}. Replace it with a placeholder and read it through ` +
-      `readDevVar().`,
+    `${valueHits.join(", ")}. Replace it with a placeholder and read it through ` + `readDevVar().`,
   );
 
   console.log(

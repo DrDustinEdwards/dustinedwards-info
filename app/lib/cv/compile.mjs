@@ -52,7 +52,13 @@ export async function compileCvFile({ slug, raw, publications }) {
     const errors = paperRefErrors(record.entries, publicationsByDoi(publications));
     if (errors.length > 0) return { ok: false, errors };
   }
-  return { ok: true, errors: [], record, sourcePath: cvSourcePath(slug), sourceBlobSha: await gitBlobSha(raw) };
+  return {
+    ok: true,
+    errors: [],
+    record,
+    sourcePath: cvSourcePath(slug),
+    sourceBlobSha: await gitBlobSha(raw),
+  };
 }
 
 /**
@@ -77,7 +83,8 @@ export function assembleCvSource(records) {
   }
   if (errors.length > 0) return { ok: false, errors };
   const profile = bySlug.get("profile");
-  if (!profile || profile.type !== "profile") return { ok: false, errors: ["the profile record is not a profile"] };
+  if (!profile || profile.type !== "profile")
+    return { ok: false, errors: ["the profile record is not a profile"] };
   const entries = CV_FILES.flatMap(({ slug }) => {
     const record = bySlug.get(slug);
     return record && record.type !== "profile" ? record.entries : [];

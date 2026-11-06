@@ -2,7 +2,12 @@ import { Link, data } from "react-router";
 
 import { PageShell } from "~/components/page-shell";
 import { getEnv } from "~/lib/context";
-import { EDGE_CACHE_HEADER, publicHtmlHeaders, scheduledEdgeCacheControl, siteHead } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  publicHtmlHeaders,
+  scheduledEdgeCacheControl,
+  siteHead,
+} from "~/lib/seo";
 import { SITE_MAP_PATH, lineText, siteMapSections } from "~/lib/site-map.mjs";
 import { SITE_URLS_CACHE_TAGS, gatherSiteUrls } from "~/lib/site-urls.server";
 
@@ -25,7 +30,9 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   // Every save that changes the list must reach this page, so it carries the sitemap's tags.
-  return new Headers(publicHtmlHeaders(SITE_URLS_CACHE_TAGS, loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined));
+  return new Headers(
+    publicHtmlHeaders(SITE_URLS_CACHE_TAGS, loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
+  );
 }
 
 export function meta() {
@@ -42,14 +49,22 @@ export default function SiteMap({ loaderData }: Route.ComponentProps) {
       <h1 className="page-title cap-layout-grid">Site map</h1>
       <div className="site-map">
         {loaderData.sections.map((section) => (
-          <section key={section.id} className="site-map-section" aria-labelledby={`site-map-${section.id}`}>
+          <section
+            key={section.id}
+            className="site-map-section"
+            aria-labelledby={`site-map-${section.id}`}
+          >
             <h2 className="site-map-heading" id={`site-map-${section.id}`}>
               {section.heading}
             </h2>
             <ul className="site-map-list">
               {section.lines.map((line) => (
                 <li key={`${line.to} ${line.label}`}>
-                  {line.plain ? <span className="site-map-plain">{lineText(line)}</span> : <Link to={line.to}>{lineText(line)}</Link>}
+                  {line.plain ? (
+                    <span className="site-map-plain">{lineText(line)}</span>
+                  ) : (
+                    <Link to={line.to}>{lineText(line)}</Link>
+                  )}
                 </li>
               ))}
             </ul>

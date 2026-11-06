@@ -20,7 +20,12 @@ if (!file || !isSourcePath(file)) {
 }
 
 const address = resolveD1Address("dustinedwards", target);
-const held = jsonRows(runWrangler(`d1 execute ${address} ${target} --json --command "SELECT sha FROM source_files WHERE path = ${sql(file)};"`), "the source read");
+const held = jsonRows(
+  runWrangler(
+    `d1 execute ${address} ${target} --json --command "SELECT sha FROM source_files WHERE path = ${sql(file)};"`,
+  ),
+  "the source read",
+);
 if (held.length === 0) {
   console.error(`remove-source: D1 holds no ${file}; nothing was removed.`);
   process.exit(1);
@@ -40,4 +45,6 @@ if (applied.status !== 0) {
   console.error(applied.output);
   process.exit(1);
 }
-console.log(`remove-source: removed ${file} from ${target.slice(2)} D1. The next deploy removes its row.`);
+console.log(
+  `remove-source: removed ${file} from ${target.slice(2)} D1. The next deploy removes its row.`,
+);

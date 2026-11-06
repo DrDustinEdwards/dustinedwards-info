@@ -1,8 +1,17 @@
 import { UPLOAD_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, data, useRevalidator, type FormProps } from "react-router";
 
-import { loadMedia, loadMediaChanges, readMediaQuery, type IntentResult } from "@dustinedwards/site-api/admin";
-import { mediaDataOfKit, readMediaView, type KitMediaChanges } from "capsomer/behavior/media-library";
+import {
+  loadMedia,
+  loadMediaChanges,
+  readMediaQuery,
+  type IntentResult,
+} from "@dustinedwards/site-api/admin";
+import {
+  mediaDataOfKit,
+  readMediaView,
+  type KitMediaChanges,
+} from "capsomer/behavior/media-library";
 import type { MediaRecord } from "capsomer/behavior/media";
 import { MediaLibrary, type FormComponent } from "capsomer/react/media-library";
 import { PageHead } from "capsomer/react/page-head";
@@ -39,10 +48,15 @@ export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     if (!prefersType(request, "application/json")) return next();
     if (request.method === "POST") {
-      return Response.json(await runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES)));
+      return Response.json(
+        await runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES)),
+      );
     }
     const cursor = new URL(request.url).searchParams.get("changes");
-    const body = cursor === null ? await libraryData(context, request) : await loadMediaChanges(adminMediaSource(context, request), cursor);
+    const body =
+      cursor === null
+        ? await libraryData(context, request)
+        : await loadMediaChanges(adminMediaSource(context, request), cursor);
     return Response.json(body, { headers: { "cache-control": "private, no-store" } });
   },
 ];
@@ -61,7 +75,11 @@ export async function action({ request, context }: Route.ActionArgs): Promise<In
 // this route's action without.
 const LibraryForm: FormComponent = ({ method, action, ...props }) =>
   (method ?? "get").toLowerCase() === "get" ? (
-    <Form {...(props as Omit<FormProps, "method" | "action">)} action={typeof action === "string" ? action : undefined} method="get" />
+    <Form
+      {...(props as Omit<FormProps, "method" | "action">)}
+      action={typeof action === "string" ? action : undefined}
+      method="get"
+    />
   ) : (
     <form {...props} action={action} method={method} />
   );
@@ -81,18 +99,30 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
     return { ok: false, message: `The server answered ${response.status}.` };
   };
   const search = async (q: string, signal: AbortSignal): Promise<MediaRecord[]> => {
-    const response = await fetch(`${BASE}?q=${encodeURIComponent(q)}`, { signal, headers: JSON_HEADERS });
+    const response = await fetch(`${BASE}?q=${encodeURIComponent(q)}`, {
+      signal,
+      headers: JSON_HEADERS,
+    });
     const body = (await response.json().catch(() => null)) as { rows?: MediaRecord[] } | null;
     return body?.rows ?? [];
   };
-  const changes = async (cursor: string, signal: AbortSignal): Promise<KitMediaChanges | { reload: true }> => {
-    const response = await fetch(`${BASE}?changes=${encodeURIComponent(cursor)}`, { signal, headers: JSON_HEADERS });
+  const changes = async (
+    cursor: string,
+    signal: AbortSignal,
+  ): Promise<KitMediaChanges | { reload: true }> => {
+    const response = await fetch(`${BASE}?changes=${encodeURIComponent(cursor)}`, {
+      signal,
+      headers: JSON_HEADERS,
+    });
     if (!response.ok) throw new Error(`The server answered ${response.status}.`);
     return (await response.json()) as KitMediaChanges | { reload: true };
   };
   return (
     <div className="app-page">
-      <PageHead title="Media" lead="The files the site stores and serves, the same library Carrel shows." />
+      <PageHead
+        title="Media"
+        lead="The files the site stores and serves, the same library Carrel shows."
+      />
       <MediaLibrary
         data={loaderData.library}
         action={BASE}

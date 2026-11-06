@@ -36,7 +36,10 @@ await test("a secret that is set reports present", () => {
   const env = Object.fromEntries(REQUIRED_SECRETS.map((n) => [n, SENTINEL]));
   const rows = auditSecrets(env);
   assert.equal(rows.length, REQUIRED_SECRETS.length);
-  assert.ok(rows.every((r) => r.present === true), "a set secret reported absent");
+  assert.ok(
+    rows.every((r) => r.present === true),
+    "a set secret reported absent",
+  );
 });
 
 await test("a MISSING secret cannot report present", () => {

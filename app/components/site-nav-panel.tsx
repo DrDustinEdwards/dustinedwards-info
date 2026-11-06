@@ -65,7 +65,9 @@ const ICON_PATHS: Record<NavIcon, React.ReactNode> = {
       <path d="M4 19V5" />
     </>
   ),
-  collections: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+  collections: (
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  ),
   methods: (
     <>
       <path d="M6 3h12M8 3v14a4 4 0 0 0 8 0V3" />
@@ -225,7 +227,9 @@ function Row({ row, pathname }: { row: MenuRow; pathname: string }) {
           </span>
         )}
         {row.note ? <span className="site-nav-desc">{row.note}</span> : null}
-        {row.links && row.links.length > 0 ? <RowLinks links={row.links} pathname={pathname} /> : null}
+        {row.links && row.links.length > 0 ? (
+          <RowLinks links={row.links} pathname={pathname} />
+        ) : null}
       </div>
     </li>
   );
@@ -234,7 +238,14 @@ function Row({ row, pathname }: { row: MenuRow; pathname: string }) {
 /** The system map, small, as the mock draws it: a hub and its systems, in the panel's own colors. Decorative. */
 function MapDrawing() {
   return (
-    <svg className="site-nav-map" width="120" height="84" viewBox="0 0 120 84" aria-hidden="true" focusable="false">
+    <svg
+      className="site-nav-map"
+      width="120"
+      height="84"
+      viewBox="0 0 120 84"
+      aria-hidden="true"
+      focusable="false"
+    >
       <circle cx="60" cy="42" r="34" className="site-nav-map-ring" strokeDasharray="3 3" />
       <g className="site-nav-map-lines" strokeWidth="1.2">
         <line x1="60" y1="42" x2="34" y2="26" />
@@ -299,7 +310,11 @@ export function SiteNavPanel({
           </ul>
         ) : null}
         {spotlight ? (
-          <Link to={spotlight.to} className="site-nav-spot" aria-current={current(spotlight.to, pathname)}>
+          <Link
+            to={spotlight.to}
+            className="site-nav-spot"
+            aria-current={current(spotlight.to, pathname)}
+          >
             <span className="site-nav-spot-eyebrow">{spotlight.eyebrow}</span>
             {spotlight.kind === "map" ? <MapDrawing /> : null}
             {spotlight.icon ? (
@@ -315,7 +330,11 @@ export function SiteNavPanel({
       <ul className="site-nav-foot" aria-label={`${menu.heading} quick links`}>
         {menu.footer.map((link) => (
           <li key={link.to}>
-            <Link to={link.to} className="site-nav-foot-link" aria-current={current(link.to, pathname)}>
+            <Link
+              to={link.to}
+              className="site-nav-foot-link"
+              aria-current={current(link.to, pathname)}
+            >
               {link.icon ? <Icon name={link.icon} /> : null}
               {link.label}
             </Link>

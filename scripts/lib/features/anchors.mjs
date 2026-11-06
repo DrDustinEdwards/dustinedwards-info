@@ -92,16 +92,10 @@ export function checkAnchors(ctx) {
     "the walk is flattening children to the top level again, so an anchor to a URL that " +
       "does not exist would pass",
   );
-  ok(
-    "package.json declares gates",
-    gates.size > 0,
-    "no check:* scripts found",
-  );
+  ok("package.json declares gates", gates.size > 0, "no check:* scripts found");
   ok(
     "every feature carries a component and a name",
-    features.every(
-      (/** @type {any} */ f) => f.component && f.name && f.what,
-    ),
+    features.every((/** @type {any} */ f) => f.component && f.name && f.what),
     features
       .filter((/** @type {any} */ f) => !f.component || !f.name || !f.what)
       .map((/** @type {any} */ f) => f.name ?? "(unnamed)")
@@ -109,8 +103,7 @@ export function checkAnchors(ctx) {
   );
 
   const anchorCount = features.reduce(
-    (/** @type {number} */ sum, /** @type {any} */ f) =>
-      sum + (f.anchors?.length ?? 0),
+    (/** @type {number} */ sum, /** @type {any} */ f) => sum + (f.anchors?.length ?? 0),
     0,
   );
   ok(
@@ -157,7 +150,8 @@ export function checkAnchors(ctx) {
           const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(loaderBody);
           /* A loader that only sends the reader elsewhere (/theme's GET) is a redirect, which a link must not name. */
           const loaderRedirects = /status:\s*30[1-8]\b|\bredirect\s*\(/.test(loaderBody);
-          const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates && !loaderRedirects);
+          const derived =
+            isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates && !loaderRedirects);
           const declared = anchor.anonymousGet !== false;
           const why = !hasLoader
             ? "exports neither a component nor a loader"
@@ -203,9 +197,7 @@ export function checkAnchors(ctx) {
         verified += 1;
         referencedGates.add(anchor.gate);
         /* `file` names the module or test the gate runs when the text is not in its entry script. */
-        const file = anchor.file
-          ? join(root, String(anchor.file))
-          : (gates.get(anchor.gate) ?? "");
+        const file = anchor.file ? join(root, String(anchor.file)) : (gates.get(anchor.gate) ?? "");
         ok(
           `${label}: ${anchor.gate} is a gate that exists`,
           gates.has(anchor.gate),
@@ -255,10 +247,11 @@ export function checkAnchors(ctx) {
  * @param {import("./shared.mjs").FeaturesContext} ctx
  * @param {{ anchorCount: number, verified: number, referencedGates: Set<string> }} result
  */
-export function reportAnchors({ features, routes, gates }, { anchorCount, verified, referencedGates }) {
-  const unreferenced = [...gates.keys()]
-    .filter((name) => !referencedGates.has(name))
-    .sort();
+export function reportAnchors(
+  { features, routes, gates },
+  { anchorCount, verified, referencedGates },
+) {
+  const unreferenced = [...gates.keys()].filter((name) => !referencedGates.has(name)).sort();
 
   console.log(
     `  ${features.length} feature(s), ${anchorCount} anchor(s), ${verified} verifiable, ` +

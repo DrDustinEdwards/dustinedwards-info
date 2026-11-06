@@ -11,7 +11,11 @@ export function ProtocolProof({ proof }: { proof: ReturnType<typeof resolveProof
     <section aria-labelledby="proof-of-use">
       <h2 id="proof-of-use">
         Proof of use
-        <a className="heading-anchor" aria-label="Link to section: Proof of use" href="#proof-of-use">
+        <a
+          className="heading-anchor"
+          aria-label="Link to section: Proof of use"
+          href="#proof-of-use"
+        >
           #
         </a>
       </h2>

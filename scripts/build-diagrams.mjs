@@ -24,7 +24,11 @@ async function main() {
     dir: DIAGRAM_DIR,
     assetPrefix: ASSET_PREFIX,
     colors: {
-      light: resolveTokens(DIAGRAM_ROLE_TOKENS, tokenBlock("light", THEME_SELECTORS.light), "light"),
+      light: resolveTokens(
+        DIAGRAM_ROLE_TOKENS,
+        tokenBlock("light", THEME_SELECTORS.light),
+        "light",
+      ),
       dark: resolveTokens(DIAGRAM_ROLE_TOKENS, tokenBlock("dark", THEME_SELECTORS.dark), "dark"),
     },
     force: process.argv.includes("--force"),

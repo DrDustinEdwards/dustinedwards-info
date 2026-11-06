@@ -45,7 +45,10 @@ await test("two are allowed and a third is refused", async () => {
 });
 
 await test("two in one paragraph are refused", async () => {
-  await assert.rejects(render("a :pullquote[one] and :pullquote[two] b\n"), /carries 2 pull quotes/);
+  await assert.rejects(
+    render("a :pullquote[one] and :pullquote[two] b\n"),
+    /carries 2 pull quotes/,
+  );
 });
 
 await test("an over-long quote is refused and an at-the-limit one is not", async () => {

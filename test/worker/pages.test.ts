@@ -35,20 +35,34 @@ const headersFor = (key: string) => ({
   "cf-connecting-ip": "203.0.113.9",
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) => loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+const get = (url: string) =>
+  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
   return action(
-    argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
+    argsFor(
+      new Request(url, {
+        method,
+        headers: headersFor(testEnv.CARREL_SITE_KEY),
+        body: JSON.stringify(body),
+      }),
+    ),
   );
 }
 
-
 /** The loader data for the page, or the 404 it throws. */
 async function pageData(path = PATH) {
-  return pageLoader({ request: new Request(`${ORIGIN}${path}`), context: routeContext(), params: {} } as never);
+  return pageLoader({
+    request: new Request(`${ORIGIN}${path}`),
+    context: routeContext(),
+    params: {},
+  } as never);
 }
 async function twin(path = PATH) {
-  return twinLoader({ request: new Request(`${ORIGIN}${path}.md`), context: routeContext(), params: {} } as never);
+  return twinLoader({
+    request: new Request(`${ORIGIN}${path}.md`),
+    context: routeContext(),
+    params: {},
+  } as never);
 }
 async function sitemapPaths() {
   const res = (await sitemapLoader({
@@ -56,7 +70,9 @@ async function sitemapPaths() {
     context: routeContext(),
     params: {},
   } as never)) as Response;
-  return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/");
+  return [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+    (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
+  );
 }
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
@@ -76,42 +92,56 @@ afterEach(async () => {
 
 describe("an edit through the adapter is live at the next request", () => {
   // Cold pipeline (shiki, KaTeX) plus the compile: longer than the default 30 s.
-  it("shows the edit on the page and its markdown twin, with no build or deploy", { timeout: 180_000 }, async () => {
-    expect((await pageData()).page.html).not.toContain(ADDED);
-    expect(await (await twin()).text()).not.toContain(ADDED);
+  it(
+    "shows the edit on the page and its markdown twin, with no build or deploy",
+    { timeout: 180_000 },
+    async () => {
+      expect((await pageData()).page.html).not.toContain(ADDED);
+      expect(await (await twin()).text()).not.toContain(ADDED);
 
-    const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: edited,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-page",
-    });
-    expect(response.status, await response.clone().text()).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-page" });
+      const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
+      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+        source: edited,
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-page",
+      });
+      expect(response.status, await response.clone().text()).toBe(200);
+      expect(await response.json()).toMatchObject({
+        id: ID,
+        status: "published",
+        changeId: "chg-page",
+      });
 
-    // The repository is the source, and it holds the edit.
-    expect((await source(FILE))).toBe(edited);
-    const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
-    expect(message).toContain("[carrel:chg-page]");
+      // The repository is the source, and it holds the edit.
+      expect(await source(FILE)).toBe(edited);
+      const message = ((await commits())[0]?.body as { message?: string } | undefined)?.message;
+      expect(message).toContain("[carrel:chg-page]");
 
-    // The page and its twin carry it.
-    expect((await pageData()).page.html).toContain(ADDED);
-    const res = await twin();
-    expect(res.status).toBe(200);
-    expect(await res.text()).toContain(ADDED);
+      // The page and its twin carry it.
+      expect((await pageData()).page.html).toContain(ADDED);
+      const res = await twin();
+      expect(res.status).toBe(200);
+      expect(await res.text()).toContain(ADDED);
 
-    // Its search record carries it too, so Ask and site search see the edit.
-    const hits = await testEnv.DB.prepare("SELECT count(*) AS n FROM search_docs WHERE url LIKE ?1 AND body LIKE ?2")
-      .bind(`${PATH}%`, `%added through Carrel%`)
-      .first<{ n: number }>();
-    expect(hits?.n).toBeGreaterThan(0);
+      // Its search record carries it too, so Ask and site search see the edit.
+      const hits = await testEnv.DB.prepare(
+        "SELECT count(*) AS n FROM search_docs WHERE url LIKE ?1 AND body LIKE ?2",
+      )
+        .bind(`${PATH}%`, `%added through Carrel%`)
+        .first<{ n: number }>();
+      expect(hits?.n).toBeGreaterThan(0);
 
-    // And the file read back through Carrel is the edit, at the head.
-    const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as { source: string; kind: string; version: string };
-    expect(read.kind).toBe("page");
-    expect(read.version).not.toBe("");
-    expect(read.source).toBe(edited);
-  });
+      // And the file read back through Carrel is the edit, at the head.
+      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+        source: string;
+        kind: string;
+        version: string;
+      };
+      expect(read.kind).toBe("page");
+      expect(read.version).not.toBe("");
+      expect(read.source).toBe(edited);
+    },
+  );
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
     const before = (await commits()).length;
@@ -128,7 +158,9 @@ describe("an edit through the adapter is live at the next request", () => {
 describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
-    const bad = foxhound.replace(/^title: .*$/m, "title: ").concat(`\nA sentence ${wide} with a dash.\n`);
+    const bad = foxhound
+      .replace(/^title: .*$/m, "title: ")
+      .concat(`\nA sentence ${wide} with a dash.\n`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
@@ -137,8 +169,8 @@ describe("a save is held to what CI holds", () => {
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
-    expect((await commits())).toHaveLength(0);
-    expect((await source(FILE))).toBe(foxhound);
+    expect(await commits()).toHaveLength(0);
+    expect(await source(FILE)).toBe(foxhound);
   });
 
   it("REFUSES a page no registered path names, and says a save cannot create one", async () => {
@@ -148,8 +180,10 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-new",
     });
     expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(/cannot create a page/);
-    expect((await commits())).toHaveLength(0);
+    expect(((await response.json()) as { message: string }).message).toMatch(
+      /cannot create a page/,
+    );
+    expect(await commits()).toHaveLength(0);
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
@@ -159,34 +193,51 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
-    expect((await commits())).toHaveLength(0);
+    expect(await response.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: await versionOf(FILE),
+    });
+    expect(await commits()).toHaveLength(0);
   });
 });
 
 describe("a draft is not public", () => {
-  it("unpublish takes the page, its twin and its sitemap entry down, and publish restores them", { timeout: 180_000 }, async () => {
-    expect(await sitemapPaths()).toContain(PATH);
+  it(
+    "unpublish takes the page, its twin and its sitemap entry down, and publish restores them",
+    { timeout: 180_000 },
+    async () => {
+      expect(await sitemapPaths()).toContain(PATH);
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
-    expect(down.status, await down.clone().text()).toBe(200);
-    const downBody = (await down.json()) as { status: string; version: string };
-    expect(downBody.status).toBe("draft");
-    expect((await source(FILE))).toMatch(/^draft: true$/m);
+      const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-down",
+      });
+      expect(down.status, await down.clone().text()).toBe(200);
+      const downBody = (await down.json()) as { status: string; version: string };
+      expect(downBody.status).toBe("draft");
+      expect(await source(FILE)).toMatch(/^draft: true$/m);
 
-    await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
-    expect((await twin()).status).toBe(404);
-    expect(await sitemapPaths()).not.toContain(PATH);
-    const hits = await testEnv.DB.prepare("SELECT count(*) AS n FROM search_docs WHERE url LIKE ?1").bind(`${PATH}%`).first<{ n: number }>();
-    expect(hits?.n).toBe(0);
+      await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
+      expect((await twin()).status).toBe(404);
+      expect(await sitemapPaths()).not.toContain(PATH);
+      const hits = await testEnv.DB.prepare(
+        "SELECT count(*) AS n FROM search_docs WHERE url LIKE ?1",
+      )
+        .bind(`${PATH}%`)
+        .first<{ n: number }>();
+      expect(hits?.n).toBe(0);
 
-    const up = await send("POST", `${PREFIX}/content/${ID}/publish`, { expectedVersion: downBody.version, changeId: "chg-up" });
-    expect(up.status, await up.clone().text()).toBe(200);
-    expect(await up.json()).toMatchObject({ status: "published" });
-    expect((await pageData()).page.path).toBe(PATH);
-    expect((await twin()).status).toBe(200);
-    expect(await sitemapPaths()).toContain(PATH);
-  });
+      const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
+        expectedVersion: downBody.version,
+        changeId: "chg-up",
+      });
+      expect(up.status, await up.clone().text()).toBe(200);
+      expect(await up.json()).toMatchObject({ status: "published" });
+      expect((await pageData()).page.path).toBe(PATH);
+      expect((await twin()).status).toBe(200);
+      expect(await sitemapPaths()).toContain(PATH);
+    },
+  );
 });
 
 describe("the twin answers as the static file it replaced did", () => {
@@ -203,19 +254,23 @@ describe("the twin answers as the static file it replaced did", () => {
 });
 
 describe("a lost row is repaired from the file, never the reverse", () => {
-  it("rewrites the row on an unchanged save and commits nothing", { timeout: 180_000 }, async () => {
-    await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
-    await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
+  it(
+    "rewrites the row on an unchanged save and commits nothing",
+    { timeout: 180_000 },
+    async () => {
+      await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
+      await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: foxhound,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-repair",
-    });
-    expect(response.status, await response.clone().text()).toBe(200);
-    expect((await commits())).toHaveLength(0);
-    expect((await pageData()).page.path).toBe(PATH);
-  });
+      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+        source: foxhound,
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-repair",
+      });
+      expect(response.status, await response.clone().text()).toBe(200);
+      expect(await commits()).toHaveLength(0);
+      expect((await pageData()).page.path).toBe(PATH);
+    },
+  );
 });
 
 describe("Carrel lists pages beside posts", () => {
@@ -223,7 +278,11 @@ describe("Carrel lists pages beside posts", () => {
     const res = (await (await get(`${PREFIX}/content?limit=100&q=foxhound`)).json()) as {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
-    expect(res.items.find((i) => i.id === ID)).toMatchObject({ kind: "page", path: PATH, status: "published" });
+    expect(res.items.find((i) => i.id === ID)).toMatchObject({
+      kind: "page",
+      path: PATH,
+      status: "published",
+    });
   });
 });
 

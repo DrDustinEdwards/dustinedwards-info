@@ -23,10 +23,18 @@ describe("the listing order for posts that share an instant", () => {
 
     const { posts } = await listBlogPosts(db, { perPage: 50 });
     const slugs = posts.map((p) => p.slug).filter((slug) => slug.startsWith("ord-"));
-    expect(slugs).toEqual(["ord-plain", "ord-ai-part3", "ord-one-part2", "ord-a-part1", "ord-older"]);
+    expect(slugs).toEqual([
+      "ord-plain",
+      "ord-ai-part3",
+      "ord-one-part2",
+      "ord-a-part1",
+      "ord-older",
+    ]);
 
     const home = await listHomeStartHere(db, { cards: 50 });
-    const homeSlugs = [...(home.featured ? [home.featured] : []), ...home.recent].map((p) => p.slug).filter((slug) => slug.startsWith("ord-"));
+    const homeSlugs = [...(home.featured ? [home.featured] : []), ...home.recent]
+      .map((p) => p.slug)
+      .filter((slug) => slug.startsWith("ord-"));
     expect(homeSlugs).toEqual(slugs);
   });
 
@@ -61,6 +69,15 @@ describe("the listing order for posts that share an instant", () => {
 
     const { posts } = await listBlogPosts(db, { perPage: 100 });
     const slugs = posts.map((p) => p.slug).filter((slug) => slug.startsWith("g-"));
-    expect(slugs).toEqual(["g-c1", "g-plain-3", "g-b2", "g-b1", "g-plain-2", "g-a2", "g-a1", "g-plain-1"]);
+    expect(slugs).toEqual([
+      "g-c1",
+      "g-plain-3",
+      "g-b2",
+      "g-b1",
+      "g-plain-2",
+      "g-a2",
+      "g-a1",
+      "g-plain-1",
+    ]);
   });
 });

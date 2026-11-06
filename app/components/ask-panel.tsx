@@ -1,4 +1,3 @@
-
 // The button ships hidden and the bundle unhides it, so a reader without script
 // never sees an inert control that looks live.
 export function AskMount({ question }: { question: string }) {

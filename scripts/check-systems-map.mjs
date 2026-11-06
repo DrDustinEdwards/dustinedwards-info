@@ -20,7 +20,15 @@ import puppeteer from "puppeteer";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import { startCompressingProxy } from "./lib/browser/compressing-proxy.mjs";
 import { BASE, DRIVES_PREVIEW, ok, PORT, tally } from "./lib/browser/harness.mjs";
-import { build, cleanupChildren, preflight, registry, serverDiagnosis, startServer, waitForServer } from "./lib/browser/preview-server.mjs";
+import {
+  build,
+  cleanupChildren,
+  preflight,
+  registry,
+  serverDiagnosis,
+  startServer,
+  waitForServer,
+} from "./lib/browser/preview-server.mjs";
 import { median } from "./lib/web-vitals.mjs";
 
 /**
@@ -54,7 +62,8 @@ let browser;
 /** @type {Awaited<ReturnType<typeof startCompressingProxy>> | undefined} */
 let proxy;
 try {
-  if (!(await waitForServer())) throw new Error(`the preview server did not answer. ${serverDiagnosis()}`);
+  if (!(await waitForServer()))
+    throw new Error(`the preview server did not answer. ${serverDiagnosis()}`);
   // The case and Lighthouse each get a browser of their own. Measured 2026-10-11: after the case
   // (throttling, emulated media, a bypassed policy) Lighthouse failed to record its trace on the
   // same browser twice running, and measured cleanly on a fresh one.
@@ -75,24 +84,46 @@ try {
   /** @type {Record<string, number[]>} */
   const values = Object.fromEntries(BUDGETS.map((b) => [b.audit, []]));
   for (let i = 0; i < RUNS; i++) {
-    const lhr = (await lighthouse(`${measured}/systems`, { port, logLevel: "error", output: "json", onlyCategories: ["performance"] }))?.lhr;
-    if (!lhr || lhr.runtimeError) throw new Error(`Lighthouse did not measure /systems: ${lhr?.runtimeError?.message ?? "no result"}`);
-    if (lhr.configSettings.formFactor !== "mobile") throw new Error(`Lighthouse ran as ${lhr.configSettings.formFactor}, not mobile`);
+    const lhr = (
+      await lighthouse(`${measured}/systems`, {
+        port,
+        logLevel: "error",
+        output: "json",
+        onlyCategories: ["performance"],
+      })
+    )?.lhr;
+    if (!lhr || lhr.runtimeError)
+      throw new Error(
+        `Lighthouse did not measure /systems: ${lhr?.runtimeError?.message ?? "no result"}`,
+      );
+    if (lhr.configSettings.formFactor !== "mobile")
+      throw new Error(`Lighthouse ran as ${lhr.configSettings.formFactor}, not mobile`);
     for (const b of BUDGETS) {
       const value = lhr.audits[b.audit]?.numericValue;
-      if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`audit ${b.audit} did not measure`);
+      if (typeof value !== "number" || !Number.isFinite(value))
+        throw new Error(`audit ${b.audit} did not measure`);
       values[b.audit]?.push(value);
     }
   }
   for (const b of BUDGETS) {
     const value = median(values[b.audit] ?? []);
     if (b.audit === "largest-contentful-paint" && value > LCP_DESIGN_MS) {
-      console.log(`  REPORT  /systems Lighthouse LCP median ${Math.round(value)}ms, over the design's ${LCP_DESIGN_MS}ms  WARN`);
+      console.log(
+        `  REPORT  /systems Lighthouse LCP median ${Math.round(value)}ms, over the design's ${LCP_DESIGN_MS}ms  WARN`,
+      );
     }
-    ok(`/systems Lighthouse ${b.label} at most ${b.max}${b.unit}`, value <= b.max, `median ${b.unit === "" ? value.toFixed(3) : Math.round(value)}${b.unit} of ${(values[b.audit] ?? []).map((v) => (b.unit === "" ? v.toFixed(3) : Math.round(v))).join(", ")}`);
+    ok(
+      `/systems Lighthouse ${b.label} at most ${b.max}${b.unit}`,
+      value <= b.max,
+      `median ${b.unit === "" ? value.toFixed(3) : Math.round(value)}${b.unit} of ${(values[b.audit] ?? []).map((v) => (b.unit === "" ? v.toFixed(3) : Math.round(v))).join(", ")}`,
+    );
   }
 } catch (error) {
-  ok("check:systems-map measured /systems", false, error instanceof Error ? error.message : String(error));
+  ok(
+    "check:systems-map measured /systems",
+    false,
+    error instanceof Error ? error.message : String(error),
+  );
 } finally {
   await proxy?.close();
   await cleanupChildren(browser);
@@ -100,7 +131,10 @@ try {
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
 const refused = tally.checks < MINIMUM_CHECKS;
-if (refused) console.error(`check:systems-map REFUSED: ${tally.checks} checks ran, floor ${MINIMUM_CHECKS}. A part was skipped rather than failing.`);
+if (refused)
+  console.error(
+    `check:systems-map REFUSED: ${tally.checks} checks ran, floor ${MINIMUM_CHECKS}. A part was skipped rather than failing.`,
+  );
 // An explicit exit: the children are cleaned up above, and a preview server that outlived its kill
 // (its pipes still open) must not hold the gate open until the job's timeout. The registry names
 // any survivor to the next run's preflight.

@@ -44,7 +44,8 @@ const FRONT_MATTER_KEYS = [
 const PLAIN_KEY = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/;
 
 /** @param {unknown} value */
-const isScalar = (value) => value === null || ["string", "number", "boolean"].includes(typeof value);
+const isScalar = (value) =>
+  value === null || ["string", "number", "boolean"].includes(typeof value);
 
 /** @param {unknown} value */
 function scalar(value) {
@@ -67,7 +68,8 @@ function entry(key, value, indent) {
   if (isScalar(value)) return [`${pad}${k}: ${scalar(value)}`];
   if (Array.isArray(value)) {
     if (value.length === 0) return [`${pad}${k}: []`];
-    if (value.every(isScalar)) return [`${pad}${k}:`, ...value.map((v) => `${pad}  - ${scalar(v)}`)];
+    if (value.every(isScalar))
+      return [`${pad}${k}:`, ...value.map((v) => `${pad}  - ${scalar(v)}`)];
     if (value.every((v) => v && typeof v === "object" && !Array.isArray(v))) {
       return [
         `${pad}${k}:`,
@@ -92,7 +94,9 @@ function entry(key, value, indent) {
  * @returns {string[]}
  */
 function block(object, indent) {
-  return Object.entries(object).flatMap(([key, value]) => (value === undefined ? [] : entry(key, value, indent)));
+  return Object.entries(object).flatMap(([key, value]) =>
+    value === undefined ? [] : entry(key, value, indent),
+  );
 }
 
 /**
@@ -103,7 +107,8 @@ function block(object, indent) {
 export function renderPublicationFile(data, fullText) {
   const known = new Set(FRONT_MATTER_KEYS);
   const unknown = Object.keys(data).filter((key) => !known.has(key));
-  if (unknown.length > 0) throw new Error(`renderPublicationFile: not front matter fields: ${unknown.join(", ")}`);
+  if (unknown.length > 0)
+    throw new Error(`renderPublicationFile: not front matter fields: ${unknown.join(", ")}`);
   const lines = FRONT_MATTER_KEYS.flatMap((key) => {
     const value = data[key];
     return value === null || value === undefined ? [] : entry(key, value, 0);

@@ -24,11 +24,13 @@ export function readIdentity() {
   for (const name of files) {
     const data = matter(readFileSync(path.join(CV_DIR, name), "utf8"), {}).data;
     if (name === "profile.md") person = data.person;
-    if (data.type === "appointment" && Array.isArray(data.entries)) entries.push(...data.entries.map((e) => ({ ...e, type: "appointment" })));
+    if (data.type === "appointment" && Array.isArray(data.entries))
+      entries.push(...data.entries.map((e) => ({ ...e, type: "appointment" })));
   }
   if (!person) throw new Error("content/cv/profile.md has no person");
   const result = deriveIdentity(/** @type {any} */ (person), entries);
-  if (!result.ok) throw new Error(`the CV cannot give the site an identity:\n  ${result.errors.join("\n  ")}`);
+  if (!result.ok)
+    throw new Error(`the CV cannot give the site an identity:\n  ${result.errors.join("\n  ")}`);
   return result.identity;
 }
 

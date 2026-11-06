@@ -13,11 +13,9 @@ export async function measureDimensions(
   try {
     info = await env.IMAGES.info(stream);
   } catch (error) {
-    throw new Error(
-      `Cloudflare Images could not measure the image: ` +
-        `${errorMessage(error)}`,
-      { cause: error },
-    );
+    throw new Error(`Cloudflare Images could not measure the image: ` + `${errorMessage(error)}`, {
+      cause: error,
+    });
   }
   // An SVG has no pixel dimensions: record nothing rather than 0.
   if ("width" in info && "height" in info) {

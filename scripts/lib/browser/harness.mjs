@@ -46,7 +46,9 @@ export async function lane(name, fn) {
   try {
     return await laneLines.run(held, fn);
   } finally {
-    console.log(`  [${name}, run beside the others]${held.length ? `\n${held.join("\n")}` : " nothing to report"}`);
+    console.log(
+      `  [${name}, run beside the others]${held.length ? `\n${held.join("\n")}` : " nothing to report"}`,
+    );
   }
 }
 
@@ -194,7 +196,9 @@ export function overflowScan() {
     if (r.left < -1000) continue;
     if (r.right > doc.clientWidth + 0.5) {
       const cls = typeof el.className === "string" ? el.className : "";
-      over.push(`${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`);
+      over.push(
+        `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
+      );
     }
   }
   return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };

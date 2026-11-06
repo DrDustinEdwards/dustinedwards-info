@@ -36,10 +36,21 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const send = (method: "PUT" | "POST", url: string, body: unknown) =>
-  action(argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })));
+  action(
+    argsFor(
+      new Request(url, {
+        method,
+        headers: headersFor(testEnv.CARREL_SITE_KEY),
+        body: JSON.stringify(body),
+      }),
+    ),
+  );
 const pageData = (path: string) => pageLoader(argsFor(new Request(`${ORIGIN}${path}`)));
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
-const termsRow = () => testEnv.DB.prepare("SELECT status FROM pages WHERE path = ?1").bind(TERMS_PATH).first<{ status: string }>();
+const termsRow = () =>
+  testEnv.DB.prepare("SELECT status FROM pages WHERE path = ?1")
+    .bind(TERMS_PATH)
+    .first<{ status: string }>();
 
 let gh: SourceStub;
 
@@ -94,15 +105,17 @@ describe("the layout draws the banner and the date", () => {
 
 describe("/terms can never be unpublished or deleted", () => {
   it("REFUSES an unpublish through site-api, names the reason, and changes nothing", async () => {
-    const before = (await source(TERMS_FILE));
+    const before = await source(TERMS_FILE);
     const response = await send("POST", `${PREFIX}/content/${TERMS_ID}/unpublish`, {
       expectedVersion: await versionOf(TERMS_FILE),
       changeId: "chg-unpublish-terms",
     });
     expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(/license on every data set/);
-    expect((await source(TERMS_FILE))).toBe(before);
-    expect((await commits())).toHaveLength(0);
+    expect(((await response.json()) as { message: string }).message).toMatch(
+      /license on every data set/,
+    );
+    expect(await source(TERMS_FILE)).toBe(before);
+    expect(await commits()).toHaveLength(0);
     expect((await pageData(TERMS_PATH)).draft).toBe(false);
     expect((await termsRow())?.status).toBe("published");
   });
@@ -114,12 +127,14 @@ describe("/terms can never be unpublished or deleted", () => {
       changeId: "chg-draft-terms",
     });
     expect(response.status, await response.clone().text()).toBe(200);
-    expect((await source(TERMS_FILE))).not.toMatch(/^draft: true$/m);
+    expect(await source(TERMS_FILE)).not.toMatch(/^draft: true$/m);
     expect((await termsRow())?.status).toBe("published");
   });
 
   it("REFUSES the sync that would remove its row, and the row stays", async () => {
-    await expect(deletePageRow(testEnv as never, { slug: "terms", path: TERMS_PATH })).rejects.toMatchObject({
+    await expect(
+      deletePageRow(testEnv as never, { slug: "terms", path: TERMS_PATH }),
+    ).rejects.toMatchObject({
       name: "PolicyError",
       policy: "terms-cannot-be-removed",
     });
@@ -127,10 +142,14 @@ describe("/terms can never be unpublished or deleted", () => {
   });
 
   it("still lets another page go down: the guard is the license page's alone", async () => {
-    const row = await testEnv.DB.prepare("SELECT slug, path FROM pages WHERE path = '/privacy'").first<{ slug: string; path: string }>();
+    const row = await testEnv.DB.prepare(
+      "SELECT slug, path FROM pages WHERE path = '/privacy'",
+    ).first<{ slug: string; path: string }>();
     expect(row).toBeTruthy();
     await deletePageRow(testEnv as never, row as { slug: string; path: string });
-    expect(await testEnv.DB.prepare("SELECT 1 FROM pages WHERE path = '/privacy'").first()).toBeNull();
+    expect(
+      await testEnv.DB.prepare("SELECT 1 FROM pages WHERE path = '/privacy'").first(),
+    ).toBeNull();
     await seedPages();
   });
 });
@@ -152,7 +171,12 @@ describe("the license wiring behind TERMS_PATH", () => {
 
   it("a Dataset's JSON-LD names the license URL, whatever the front matter says", async () => {
     const { page } = await pageData(TERMS_PATH);
-    const dataset = { ...page, schemaType: "Dataset", license: "https://example.com/other", dataset: { variableMeasured: ["Phage"], temporalCoverage: null, rows: 1 } };
+    const dataset = {
+      ...page,
+      schemaType: "Dataset",
+      license: "https://example.com/other",
+      dataset: { variableMeasured: ["Phage"], temporalCoverage: null, rows: 1 },
+    };
     const nodes = contentPageJsonLd(dataset as never, null) as Array<Record<string, unknown>>;
     const node = nodes.find((n) => n["@type"] === "Dataset");
     expect(node?.license).toBe(LICENSE_URL);

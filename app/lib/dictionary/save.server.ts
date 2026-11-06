@@ -30,7 +30,10 @@ type DictionaryEnv = Env;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class DictionaryInvalid extends ContentInvalid {
   constructor(key: string, errors: string[]) {
-    super(`The dictionary entry "${key}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The dictionary entry "${key}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "DictionaryInvalid";
   }
 }
@@ -42,13 +45,21 @@ function assetsHost(env: DictionaryEnv): DictionaryHost {
 
 /** Every other entry's key and path, from D1: CI re-checks the whole set on the commit this makes. */
 async function otherEntries(env: DictionaryEnv, key: string) {
-  return (await listDictionaryRows(env)).filter((row) => row.key !== key).map(({ key: other, path }) => ({ key: other, path }));
+  return (await listDictionaryRows(env))
+    .filter((row) => row.key !== key)
+    .map(({ key: other, path }) => ({ key: other, path }));
 }
 
 /** The one compile door: the save, sync_dictionary and the reads all go through it. */
 export async function compile(env: DictionaryEnv, key: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
-  return compileDictionaryEntry({ key, raw, pipeline: { findWideDashes }, host: assetsHost(env), others: await otherEntries(env, key) });
+  return compileDictionaryEntry({
+    key,
+    raw,
+    pipeline: { findWideDashes },
+    host: assetsHost(env),
+    others: await otherEntries(env, key),
+  });
 }
 
 type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
@@ -70,7 +81,9 @@ async function refreshPage(env: DictionaryEnv, path: string, entry: DictionaryEn
   if (!file) return;
   const compiled = await compilePageFile(env, slug, file.content, entry);
   if (!compiled.ok) {
-    throw new Error(`the page ${path} does not compile, so its twin and search record were not refreshed: ${compiled.errors.join("; ")}`);
+    throw new Error(
+      `the page ${path} does not compile, so its twin and search record were not refreshed: ${compiled.errors.join("; ")}`,
+    );
   }
   await writePageRow(env, compiled);
 }
@@ -134,15 +147,25 @@ export type SavedDictionaryEntry = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> derived writes (convergeWithRetry) -> purge by tag. */
 export async function saveDictionaryEntry(
   env: DictionaryEnv,
-  options: { key: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    key: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ): Promise<SavedDictionaryEntry> {
   const { key, raw, actor } = options;
   const path = dictionaryPath(key);
   const existing = await readFile(env, path);
-  if (options.isNew && existing) throw new DictionaryInvalid(key, [`a dictionary entry named ${key} already exists`]);
-  if (!options.isNew && !existing) throw new DictionaryInvalid(key, [`no dictionary entry named ${key} exists; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new DictionaryInvalid(key, [`a dictionary entry named ${key} already exists`]);
+  if (!options.isNew && !existing)
+    throw new DictionaryInvalid(key, [
+      `no dictionary entry named ${key} exists; pass isNew to create it`,
+    ]);
 
   const compiled = await compile(env, key, raw);
   if (!compiled.ok) throw new DictionaryInvalid(key, compiled.errors);
@@ -154,7 +177,12 @@ export async function saveDictionaryEntry(
     isDraft: fileIsDraft,
   });
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -169,7 +197,16 @@ export async function saveDictionaryEntry(
       }),
   });
   if (written.action === "noop") {
-    return { key, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, draft: compiled.draft, purged: null, note: UNCHANGED_NOTE };
+    return {
+      key,
+      commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
+      unchanged: true,
+      created: false,
+      draft: compiled.draft,
+      purged: null,
+      note: UNCHANGED_NOTE,
+    };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[path];

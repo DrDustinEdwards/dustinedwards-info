@@ -5,11 +5,7 @@ import { join } from "node:path";
 
 import { isAllowedUrl } from "../../../app/lib/content/pipeline.mjs";
 import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
-import {
-  METRIC_DERIVATIONS,
-  PROJECTS_URL,
-  metricValue,
-} from "../../../app/lib/projects-page.mjs";
+import { METRIC_DERIVATIONS, PROJECTS_URL, metricValue } from "../../../app/lib/projects-page.mjs";
 import { assertFloor } from "../floor.mjs";
 import { checkRosterProse } from "./prose-numbers.mjs";
 import { codeOf, pageRecordParity, root } from "./shared.mjs";
@@ -217,10 +213,7 @@ export function checkProjects(ctx) {
         );
       }
     } else {
-      ok(
-        `${id} metric has a value`,
-        typeof metric.value === "string" && metric.value.length > 0,
-      );
+      ok(`${id} metric has a value`, typeof metric.value === "string" && metric.value.length > 0);
       ok(
         `${id} metric carries an ISO asOf date`,
         typeof metric.asOf === "string" && /^\d{4}-\d{2}-\d{2}$/.test(metric.asOf),
@@ -285,10 +278,15 @@ export function checkProjects(ctx) {
       /** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(softwarePath),
       "missing from CONTENT_PAGE_PATHS",
     );
-    ok(`routes declare ${softwarePath}`, routes.has(softwarePath), "the splat did not expand this path");
+    ok(
+      `routes declare ${softwarePath}`,
+      routes.has(softwarePath),
+      "the splat did not expand this path",
+    );
   }
 
-  const readPage = (/** @type {string} */ name) => readFileSync(join(root, "content", "pages", name), "utf8");
+  const readPage = (/** @type {string} */ name) =>
+    readFileSync(join(root, "content", "pages", name), "utf8");
   const hub = readPage("software.md");
   ok(
     "the hub names Products, Sites and Infrastructure",
@@ -313,7 +311,10 @@ export function checkProjects(ctx) {
     "Foxing Edu does not invent a domain",
     !/https?:\/\//.test(readPage("software-foxing-edu.md")),
   );
-  ok("Germomics names its live URL", readPage("software-germomics.md").includes("https://germomics.com"));
+  ok(
+    "Germomics names its live URL",
+    readPage("software-germomics.md").includes("https://germomics.com"),
+  );
   const capsidPage = readPage("software-capsid.md");
   ok(
     "Capsid names the roster repository",
@@ -329,7 +330,10 @@ export function checkProjects(ctx) {
   ]) {
     ok(`Enarratio links ${url}`, enarratioPage.includes(`](${url})`));
   }
-  ok("Enarratio says it is in alpha", /early alpha/.test(enarratioPage) && /active development/.test(enarratioPage));
+  ok(
+    "Enarratio says it is in alpha",
+    /early alpha/.test(enarratioPage) && /active development/.test(enarratioPage),
+  );
 
   // Carrel has a page (Dustin, 2026-09-28) but the app is private: neither the page nor the hub links it.
   const carrelPage = readPage("software-carrel.md");
@@ -337,7 +341,10 @@ export function checkProjects(ctx) {
   ok("the hub does not link the Carrel app", !hub.includes("carrel.dustinedwards.info"));
   ok("the hub links the Carrel page", hub.includes("](/software/carrel)"));
   ok("the hub links the Enarratio page", hub.includes("](/software/enarratio)"));
-  ok("the Capsomer page links its home", readPage("software-capsomer.md").includes("](https://capsomer.dustinedwards.info)"));
+  ok(
+    "the Capsomer page links its home",
+    readPage("software-capsomer.md").includes("](https://capsomer.dustinedwards.info)"),
+  );
   ok("the hub links the Capsomer page", hub.includes("](/software/capsomer)"));
 
   // The page's node is built in the module the content-page route and the phage page share, by Prelum's `thing`.

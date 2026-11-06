@@ -16,7 +16,12 @@ import { mentionRow, resetMentions, TARGET, TARGET_SLUG } from "./webmention-fix
 
 function wm(
   body: string,
-  options: { ip?: string; method?: string; contentType?: string | null; headers?: HeadersInit } = {},
+  options: {
+    ip?: string;
+    method?: string;
+    contentType?: string | null;
+    headers?: HeadersInit;
+  } = {},
 ) {
   const headers = new Headers(options.headers);
   headers.set("cf-connecting-ip", options.ip ?? "203.0.113.1");
@@ -41,32 +46,35 @@ type StubPage =
 /* A URL with no recorded page throws rather than reaching the network. A mock, so a case can
  * count the fetches. */
 function stubSources(pages: Record<string, StubPage>) {
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    // site-api's outbound guard resolves each host over DNS over HTTPS first: one name answers a loopback
-    // address (as nip.io does), every other a public one.
-    if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
-      const name = new URL(url).searchParams.get("name");
-      const v4 = new URL(url).searchParams.get("type") === "A";
-      const data = name === "127.0.0.1.nip.io" ? "127.0.0.1" : "93.184.215.14";
-      return Response.json({ Status: 0, Answer: v4 ? [{ type: 1, data }] : [] });
-    }
-    const page = pages[url];
-    if (!page) {
-      throw new Error(
-        `the webmention source stub refuses ${url}: this layer never reaches the ` +
-          `network. Record the page's shape here if the fetch is legitimate.`,
-      );
-    }
-    if ("networkError" in page) throw new TypeError("network failure");
-    if ("redirect" in page) {
-      return new Response(null, { status: 302, headers: { location: page.redirect } });
-    }
-    return new Response(page.body, {
-      status: page.status ?? 200,
-      headers: { "content-type": page.contentType ?? "text/html; charset=utf-8" },
-    });
-  }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      // site-api's outbound guard resolves each host over DNS over HTTPS first: one name answers a loopback
+      // address (as nip.io does), every other a public one.
+      if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+        const name = new URL(url).searchParams.get("name");
+        const v4 = new URL(url).searchParams.get("type") === "A";
+        const data = name === "127.0.0.1.nip.io" ? "127.0.0.1" : "93.184.215.14";
+        return Response.json({ Status: 0, Answer: v4 ? [{ type: 1, data }] : [] });
+      }
+      const page = pages[url];
+      if (!page) {
+        throw new Error(
+          `the webmention source stub refuses ${url}: this layer never reaches the ` +
+            `network. Record the page's shape here if the fetch is legitimate.`,
+        );
+      }
+      if ("networkError" in page) throw new TypeError("network failure");
+      if ("redirect" in page) {
+        return new Response(null, { status: 302, headers: { location: page.redirect } });
+      }
+      return new Response(page.body, {
+        status: page.status ?? 200,
+        headers: { "content-type": page.contentType ?? "text/html; charset=utf-8" },
+      });
+    }),
+  );
 }
 
 const pageLinkingTo = (href: string, extra = "") =>
@@ -96,7 +104,10 @@ async function deliver(messages: WebmentionVerifyMessage[] = sent.splice(0)) {
       retry: () => settled.push("retry"),
     })),
   } as unknown as Parameters<typeof handleWebmentionVerify>[0];
-  await handleWebmentionVerify(batch, env as unknown as Parameters<typeof handleWebmentionVerify>[1]);
+  await handleWebmentionVerify(
+    batch,
+    env as unknown as Parameters<typeof handleWebmentionVerify>[1],
+  );
   return settled;
 }
 
@@ -162,7 +173,11 @@ describe("/webmention refuses before it reads", () => {
 
   it("answers 400 when source or target is missing", async () => {
     const ctx = createExecutionContext();
-    for (const body of ["", "source=https://elsewhere.example/a", `target=${encodeURIComponent(TARGET)}`]) {
+    for (const body of [
+      "",
+      "source=https://elsewhere.example/a",
+      `target=${encodeURIComponent(TARGET)}`,
+    ]) {
       const response = await webmentionAction({
         request: wm(body, { ip: "203.0.113.13" }),
         context: mentionContext(ctx),
@@ -526,7 +541,10 @@ describe("/webmention accepts and verifies", () => {
   it("FOLLOWS a redirect to another public page and verifies the page it lands on", async () => {
     const source = "https://elsewhere.example/moved";
     const landed = "https://elsewhere.example/moved-here";
-    stubSources({ [source]: { redirect: "/moved-here" }, [landed]: { body: pageLinkingTo(TARGET) } });
+    stubSources({
+      [source]: { redirect: "/moved-here" },
+      [landed]: { body: pageLinkingTo(TARGET) },
+    });
 
     const ctx = createExecutionContext();
     await webmentionAction({
@@ -540,7 +558,11 @@ describe("/webmention accepts and verifies", () => {
   });
 
   it("REFUSES a redirect to a loopback name, a name that resolves to loopback, or an IP literal, which the first URL could not name", async () => {
-    for (const [index, hop] of ["http://localhost/admin", "http://169.254.169.254/latest", "https://127.0.0.1.nip.io/"].entries()) {
+    for (const [index, hop] of [
+      "http://localhost/admin",
+      "http://169.254.169.254/latest",
+      "https://127.0.0.1.nip.io/",
+    ].entries()) {
       const source = `https://elsewhere.example/bounce-${index}`;
       /* The hop has no recorded page, so reaching it would throw inside the stub. */
       stubSources({ [source]: { redirect: hop } });
@@ -631,7 +653,9 @@ describe("/webmention bound 3: one row per source and target", () => {
 
 describe("/webmention on a body stream that breaks", () => {
   it("answers 400, not a 500, and stores nothing", async () => {
-    const before = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    const before = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{
+      n: number;
+    }>();
     const broken = new ReadableStream<Uint8Array>({
       start(controller) {
         controller.enqueue(new TextEncoder().encode("source=https%3A%2F%2Felsewhere"));
@@ -652,7 +676,9 @@ describe("/webmention on a body stream that breaks", () => {
     } as never);
 
     expect(response.status).toBe(400);
-    const after = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    const after = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{
+      n: number;
+    }>();
     expect(after?.n).toBe(before?.n);
   });
 });

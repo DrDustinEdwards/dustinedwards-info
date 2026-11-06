@@ -13,5 +13,7 @@ import { limit } from "@dustinedwards/site-runtime/rate-limit";
  * @returns {ReturnType<typeof limit>}
  */
 export function limitHit(env, key, maxHits, windowSeconds) {
-  return limit(env.ASK_BUDGET, key, [{ limit: maxHits, windowSeconds }], { onUnavailable: "refuse" });
+  return limit(env.ASK_BUDGET, key, [{ limit: maxHits, windowSeconds }], {
+    onUnavailable: "refuse",
+  });
 }

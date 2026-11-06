@@ -57,7 +57,9 @@ async function main() {
   const slugs =
     named.length > 0
       ? named
-      : (await readdir(join(root, "content", "publications"))).filter((n) => n.endsWith(".md")).map((n) => n.slice(0, -3));
+      : (await readdir(join(root, "content", "publications")))
+          .filter((n) => n.endsWith(".md"))
+          .map((n) => n.slice(0, -3));
   let done = 0;
   for (const slug of slugs.sort()) {
     const result = await extractOne(slug);
@@ -65,7 +67,8 @@ async function main() {
     done += 1;
     console.log(`  ${String(result.characters).padStart(7)}ch  ${slug}`);
   }
-  if (done === 0) throw new Error("no self-hosted publication file was named, so nothing was extracted");
+  if (done === 0)
+    throw new Error("no self-hosted publication file was named, so nothing was extracted");
   console.log(`\nwrote the full text and pdfSha256 of ${done} publication file(s)`);
 }
 

@@ -29,7 +29,11 @@ vi.mock("virtual:react-router/server-build", async () => {
 
 async function fetchPath(path: string) {
   const ctx = createExecutionContext();
-  const response = await worker.fetch(new Request(`https://example.com${path}`) as never, env as never, ctx);
+  const response = await worker.fetch(
+    new Request(`https://example.com${path}`) as never,
+    env as never,
+    ctx,
+  );
   const body = await response.arrayBuffer();
   await waitOnExecutionContext(ctx);
   return { response, body };
@@ -39,10 +43,20 @@ const SCRIPTED_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg"><script>fetch("/__svg-script-ran")</script></svg>';
 
 it.each([
-  ["a raster", "dustin-edwards-csp-raster-00000000000000c1-4x4.png", "image/png", "not really png bytes"],
+  [
+    "a raster",
+    "dustin-edwards-csp-raster-00000000000000c1-4x4.png",
+    "image/png",
+    "not really png bytes",
+  ],
   ["a stored SVG", "dustin-edwards-csp-svg-00000000000000c2.svg", "image/svg+xml", SCRIPTED_SVG],
   // The case the sandbox exists for: markup no attachment rule catches, because its type is not SVG.
-  ["an HTML body", "dustin-edwards-csp-html-00000000000000c3.png", "text/html", `<script>alert(1)</script>`],
+  [
+    "an HTML body",
+    "dustin-edwards-csp-html-00000000000000c3.png",
+    "text/html",
+    `<script>alert(1)</script>`,
+  ],
 ])("serves %s from /media", async (_label, key, contentType, body) => {
   await env.MEDIA.put(key, body, { httpMetadata: { contentType } });
 

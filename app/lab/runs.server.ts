@@ -15,7 +15,15 @@
 import { can, type Actor } from "@dustinedwards/site-runtime/members";
 
 import { getLot, listLots, lotChange, type LotRow } from "~/db/inventory";
-import { getRun, listRunnableProcedures, listRuns, runIdByUid, runInsert, runLots, type RunRow } from "~/db/runs";
+import {
+  getRun,
+  listRunnableProcedures,
+  listRuns,
+  runIdByUid,
+  runInsert,
+  runLots,
+  type RunRow,
+} from "~/db/runs";
 
 import { amountOf, amountText, field, idOf, isDate, today } from "./forms.mjs";
 import { itemNames, withItem } from "./inventory.server";
@@ -41,13 +49,21 @@ function canSeeRun(actor: Actor, run: Pick<RunRow, "actor">): boolean {
 function lotLabels(names: Map<string, string>, lots: LotRow[]) {
   return lots.map((l) => {
     const item = withItem(l, names).item;
-    return { value: String(l.id), label: `${item}, lot ${l.lot_number}${l.amount !== null ? ` (${amountText(l.amount, l.unit)} left)` : ""}` };
+    return {
+      value: String(l.id),
+      label: `${item}, lot ${l.lot_number}${l.amount !== null ? ` (${amountText(l.amount, l.unit)} left)` : ""}`,
+    };
   });
 }
 
 export async function runsPage(env: Env, actor: Actor) {
   const all = can(actor, PERMISSION.readAllRuns);
-  const [runs, procedures, lots, names] = await Promise.all([listRuns(env, all ? null : actor.email), listRunnableProcedures(env), listLots(env), itemNames(env)]);
+  const [runs, procedures, lots, names] = await Promise.all([
+    listRuns(env, all ? null : actor.email),
+    listRunnableProcedures(env),
+    listLots(env),
+    itemNames(env),
+  ]);
   const titles = new Map(procedures.map((p) => [p.slug, p.title]));
   return {
     runs: runs.map((r) => ({ ...r, title: titles.get(r.procedure_slug) ?? r.procedure_slug })),
@@ -66,15 +82,23 @@ export async function runsPage(env: Env, actor: Actor) {
 export async function runPage(env: Env, actor: Actor, id: number) {
   const run = await getRun(env, id);
   if (!run || !canSeeRun(actor, run)) return null;
-  const [used, procedures, names, lots] = await Promise.all([runLots(env, id), listRunnableProcedures(env), itemNames(env), listLots(env)]);
+  const [used, procedures, names, lots] = await Promise.all([
+    runLots(env, id),
+    listRunnableProcedures(env),
+    itemNames(env),
+    listLots(env),
+  ]);
   const title = procedures.find((p) => p.slug === run.procedure_slug)?.title ?? run.procedure_slug;
   return {
     run: { ...run, title },
     lots: used.map((l) => ({ ...l, item: names.get(`${l.item_kind}:${l.item_id}`) ?? l.item_id })),
     // The run's own protocol stays a choice even if it is no longer published, so it can still be corrected.
-    procedures: procedures.some((p) => p.slug === run.procedure_slug) ? procedures : [{ slug: run.procedure_slug, title, version: run.procedure_version }, ...procedures],
+    procedures: procedures.some((p) => p.slug === run.procedure_slug)
+      ? procedures
+      : [{ slug: run.procedure_slug, title, version: run.procedure_version }, ...procedures],
     allLots: lotLabels(names, lots),
-    canCorrect: run.replaced_by === null && can(actor, PERMISSION.recordRun) && canSeeRun(actor, run),
+    canCorrect:
+      run.replaced_by === null && can(actor, PERMISSION.recordRun) && canSeeRun(actor, run),
     lotRows: LOT_ROWS,
   };
 }
@@ -82,7 +106,11 @@ export async function runPage(env: Env, actor: Actor, id: number) {
 type LotUse = { lot: LotRow; amount_used: number | null; emptied: boolean };
 
 /** The lots a post names, each checked: it exists, is named once, and (for a new run) is in stock with enough left. */
-async function lotUses(env: Env, form: FormData, correction: boolean): Promise<{ ok: true; uses: LotUse[] } | { ok: false; reason: string }> {
+async function lotUses(
+  env: Env,
+  form: FormData,
+  correction: boolean,
+): Promise<{ ok: true; uses: LotUse[] } | { ok: false; reason: string }> {
   const uses: LotUse[] = [];
   for (let i = 0; i < LOT_ROWS; i += 1) {
     const text = field(form, `lot-${i}`);
@@ -90,14 +118,22 @@ async function lotUses(env: Env, form: FormData, correction: boolean): Promise<{
     const id = idOf(text);
     const lot = id ? await getLot(env, id) : null;
     if (!lot) return { ok: false, reason: "One of those lots does not exist." };
-    if (uses.some((u) => u.lot.id === lot.id)) return { ok: false, reason: `Lot ${lot.lot_number} is named twice.` };
+    if (uses.some((u) => u.lot.id === lot.id))
+      return { ok: false, reason: `Lot ${lot.lot_number} is named twice.` };
     const amount = amountOf(field(form, `amount-${i}`));
     if (!amount.ok) return amount;
     const emptied = field(form, `emptied-${i}`) === "yes";
     if (!correction) {
-      if (lot.status !== "in_stock") return { ok: false, reason: `Lot ${lot.lot_number} is ${lot.status.replace("_", " ")}, so a new run cannot use it.` };
+      if (lot.status !== "in_stock")
+        return {
+          ok: false,
+          reason: `Lot ${lot.lot_number} is ${lot.status.replace("_", " ")}, so a new run cannot use it.`,
+        };
       if (amount.value !== null && lot.amount !== null && amount.value > lot.amount) {
-        return { ok: false, reason: `Lot ${lot.lot_number} has only ${amountText(lot.amount, lot.unit)} left.` };
+        return {
+          ok: false,
+          reason: `Lot ${lot.lot_number} has only ${amountText(lot.amount, lot.unit)} left.`,
+        };
       }
     }
     uses.push({ lot, amount_used: amount.value, emptied });
@@ -114,7 +150,10 @@ export async function recordRun(
   actor: Actor,
   form: FormData,
   nowMs: number,
-  { replacesId = null, uid = crypto.randomUUID() }: { replacesId?: number | null; uid?: string } = {},
+  {
+    replacesId = null,
+    uid = crypto.randomUUID(),
+  }: { replacesId?: number | null; uid?: string } = {},
 ): Promise<RunResult> {
   if (!can(actor, PERMISSION.recordRun)) return refused("You cannot record runs.");
 
@@ -122,7 +161,10 @@ export async function recordRun(
   if (replacesId !== null) {
     replaces = await getRun(env, replacesId);
     if (!replaces || !canSeeRun(actor, replaces)) return refused("That run does not exist.");
-    if (replaces.replaced_by !== null) return refused(`Run ${replaces.id} is already corrected by run ${replaces.replaced_by}: correct that one.`);
+    if (replaces.replaced_by !== null)
+      return refused(
+        `Run ${replaces.id} is already corrected by run ${replaces.replaced_by}: correct that one.`,
+      );
   }
 
   // A correction that keeps the run's protocol keeps the version it followed then, published or not.
@@ -136,28 +178,51 @@ export async function recordRun(
   if (!isDate(runOn)) return refused(`Not a date (YYYY-MM-DD): ${runOn}.`);
   if (runOn > today(nowMs)) return refused("A run is recorded on or after the day it happened.");
   const outcome = field(form, "outcome") || "completed";
-  if (!(OUTCOMES as readonly string[]).includes(outcome)) return refused(`Unknown outcome: ${outcome}.`);
+  if (!(OUTCOMES as readonly string[]).includes(outcome))
+    return refused(`Unknown outcome: ${outcome}.`);
   const note = field(form, "note");
   if (note.length > NOTE_MAX) return refused(`The note is longer than ${NOTE_MAX} characters.`);
 
   const checked = await lotUses(env, form, replaces !== null);
   if (!checked.ok) return refused(checked.reason);
   const uses = checked.uses;
-  if (!replaces && uses.some((u) => u.amount_used !== null || u.emptied || u.lot.opened === null) && !can(actor, PERMISSION.useLot)) {
+  if (
+    !replaces &&
+    uses.some((u) => u.amount_used !== null || u.emptied || u.lot.opened === null) &&
+    !can(actor, PERMISSION.useLot)
+  ) {
     return refused("You cannot change lots, so the run cannot take from them.");
   }
 
   const statements = runInsert(
     env,
-    { uid, procedure_slug: procedure.slug, procedure_version: procedure.version, actor: actor.email, run_on: runOn, outcome: outcome as RunRow["outcome"], note: note || null, replaces_run_id: replaces?.id ?? null },
-    uses.map((u) => ({ lot_id: u.lot.id, amount_used: u.amount_used, unit: u.lot.unit, emptied: u.emptied })),
+    {
+      uid,
+      procedure_slug: procedure.slug,
+      procedure_version: procedure.version,
+      actor: actor.email,
+      run_on: runOn,
+      outcome: outcome as RunRow["outcome"],
+      note: note || null,
+      replaces_run_id: replaces?.id ?? null,
+    },
+    uses.map((u) => ({
+      lot_id: u.lot.id,
+      amount_used: u.amount_used,
+      unit: u.lot.unit,
+      emptied: u.emptied,
+    })),
   );
   if (!replaces) {
     for (const u of uses) {
       const takes = u.amount_used !== null && u.lot.amount !== null;
       // The lot was in stock when it was read. If it left stock since, this sets an impossible amount, which fails
       // kb_lots_amount_check and aborts the whole batch: no run is saved against an emptied or discarded lot.
-      statements.push(env.DB.prepare("UPDATE kb_lots SET amount = -1 WHERE id = ? AND status <> 'in_stock'").bind(u.lot.id));
+      statements.push(
+        env.DB.prepare("UPDATE kb_lots SET amount = -1 WHERE id = ? AND status <> 'in_stock'").bind(
+          u.lot.id,
+        ),
+      );
       if (!takes && !u.emptied && u.lot.opened !== null) continue;
       statements.push(
         ...lotChange(
@@ -176,8 +241,12 @@ export async function recordRun(
     await env.DB.batch(statements);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (/kb_lots_amount_check/.test(message)) return refused("A lot ran short or left stock while the run was saved; nothing was recorded. Check the lots and try again.");
-    if (/UNIQUE constraint failed: kb_runs.replaces_run_id/.test(message)) return refused("That run was corrected a moment ago: correct the newer run.");
+    if (/kb_lots_amount_check/.test(message))
+      return refused(
+        "A lot ran short or left stock while the run was saved; nothing was recorded. Check the lots and try again.",
+      );
+    if (/UNIQUE constraint failed: kb_runs.replaces_run_id/.test(message))
+      return refused("That run was corrected a moment ago: correct the newer run.");
     throw error;
   }
   const runId = (await runIdByUid(env, uid)) ?? undefined;
@@ -185,6 +254,8 @@ export async function recordRun(
   return {
     ok: true,
     runId,
-    text: replaces ? `Recorded run ${runId}, correcting run ${replaces.id}, with ${lots}.` : `Recorded run ${runId} of ${procedure.title}, with ${lots}.`,
+    text: replaces
+      ? `Recorded run ${runId}, correcting run ${replaces.id}, with ${lots}.`
+      : `Recorded run ${runId} of ${procedure.title}, with ${lots}.`,
   };
 }

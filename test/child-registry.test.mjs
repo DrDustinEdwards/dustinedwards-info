@@ -6,14 +6,21 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ChildRegistry, descendantPids, recordedTreeLeftovers } from "../scripts/lib/child-processes.mjs";
+import {
+  ChildRegistry,
+  descendantPids,
+  recordedTreeLeftovers,
+} from "../scripts/lib/child-processes.mjs";
 
 /** @param {string} content */
 function registryWith(content) {
   const dir = mkdtempSync(join(tmpdir(), "child-registry-"));
   const file = join(dir, "registry.jsonl");
   writeFileSync(file, content);
-  return { registry: new ChildRegistry(file), cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+  return {
+    registry: new ChildRegistry(file),
+    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
 await test("THE PLANT: one torn line does not empty the registry", () => {
@@ -30,14 +37,19 @@ await test("THE PLANT: one torn line does not empty the registry", () => {
       "the lines either side of the torn one survive",
     );
     assert.equal(torn, 1, "and the torn line is counted, not silently dropped");
-    assert.deepEqual(registry.read().map((e) => e.pid), [101, 103]);
+    assert.deepEqual(
+      registry.read().map((e) => e.pid),
+      [101, 103],
+    );
   } finally {
     cleanup();
   }
 });
 
 await test("a parseable line with no needles is counted as unreadable, never killed on its pid", () => {
-  const { registry, cleanup } = registryWith(`${JSON.stringify({ pid: 7, kind: "x", needles: [] })}\n`);
+  const { registry, cleanup } = registryWith(
+    `${JSON.stringify({ pid: 7, kind: "x", needles: [] })}\n`,
+  );
   try {
     assert.deepEqual(registry.readAll(), { entries: [], torn: 1 });
   } finally {
@@ -63,7 +75,11 @@ await test("THE PLANT: a recorded pid now owned by something else is not a lefto
 await test("a dead runner's orphans are still found through the runner's recorded pid", () => {
   const table = new Map([[10, { ppid: 5, command: "cmd.exe" }]]);
   assert.deepEqual(recordedTreeLeftovers([10], table, 5), [10]);
-  assert.deepEqual(recordedTreeLeftovers([10], table, null), [], "without the runner, its direct child is unproven");
+  assert.deepEqual(
+    recordedTreeLeftovers([10], table, null),
+    [],
+    "without the runner, its direct child is unproven",
+  );
 });
 
 await test("the runner itself and dead pids are never leftovers", () => {

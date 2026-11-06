@@ -64,7 +64,12 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       imagesCheck("images", env.IMAGES),
       aiCheck("ai", env.AI),
       // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
-      { name: "browser", level: "warn", run: async () => typeof env.BROWSER?.fetch === "function" || { ok: false, detail: "binding missing" } },
+      {
+        name: "browser",
+        level: "warn",
+        run: async () =>
+          typeof env.BROWSER?.fetch === "function" || { ok: false, detail: "binding missing" },
+      },
       queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       cronCheck(env.DB, { jobs: [...CRON_JOBS] }),
@@ -74,7 +79,12 @@ export function siteHealthResponse(env: Env): Promise<Response> {
         run: async () => {
           const check = (await drift).checks.find((c) => c.name === name);
           if (!check) return { ok: false, detail: "not run" };
-          return check.ok || { ok: false, detail: check.counts ? `${check.counts.present} of ${check.counts.expected}` : "" };
+          return (
+            check.ok || {
+              ok: false,
+              detail: check.counts ? `${check.counts.present} of ${check.counts.expected}` : "",
+            }
+          );
         },
       })),
     ],

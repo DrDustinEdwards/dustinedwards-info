@@ -58,7 +58,9 @@ import { islandsPlugin } from "./scripts/lib/islands.mjs";
  * touches it, and one file forgetting is a silent fall-through to a resolver
  * error. One alias covers the graph.
  */
-const SERVER_BUILD_STUB = fileURLToPath(new URL("./test/worker/stub-server-build.ts", import.meta.url));
+const SERVER_BUILD_STUB = fileURLToPath(
+  new URL("./test/worker/stub-server-build.ts", import.meta.url),
+);
 
 /**
  * `~` is `app/`, exactly as `tsconfig.cloudflare.json` declares it.
@@ -97,9 +99,7 @@ const TEST_CARREL_SITE_KEY = "test-carrel-site-key-0123456789abcdef";
  * `test/schema-invariants.test.mjs` already binds those two to the live database; a
  * fixture schema would sit outside that chain entirely.
  */
-const D1_MIGRATIONS = await readD1Migrations(
-  fileURLToPath(new URL("./drizzle", import.meta.url)),
-);
+const D1_MIGRATIONS = await readD1Migrations(fileURLToPath(new URL("./drizzle", import.meta.url)));
 
 export default defineConfig({
   /**

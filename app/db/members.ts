@@ -30,7 +30,13 @@ const ROW = {
   status: members.status,
 };
 
-function asMemberRow(row: { email: string; name: string; title: string; end_date: string | null; status: string }): MemberRow {
+function asMemberRow(row: {
+  email: string;
+  name: string;
+  title: string;
+  end_date: string | null;
+  status: string;
+}): MemberRow {
   return { ...row, status: row.status as MemberRow["status"] };
 }
 
@@ -42,33 +48,51 @@ export async function getMember(env: Env, email: string): Promise<MemberRow | nu
 
 /** Everyone ever added, removed and expired people included, by name. */
 export async function listMembers(env: Env): Promise<MemberRow[]> {
-  const rows = await getDb(env).select(ROW).from(members).orderBy(asc(members.name), asc(members.email));
+  const rows = await getDb(env)
+    .select(ROW)
+    .from(members)
+    .orderBy(asc(members.name), asc(members.email));
   return rows.map(asMemberRow);
 }
 
 /** The semester end dates, earliest first. */
 export async function listTerms(env: Env): Promise<string[]> {
-  const rows = await getDb(env).select({ endDate: memberTerms.endDate }).from(memberTerms).orderBy(asc(memberTerms.endDate));
+  const rows = await getDb(env)
+    .select({ endDate: memberTerms.endDate })
+    .from(memberTerms)
+    .orderBy(asc(memberTerms.endDate));
   return rows.map((r) => r.endDate);
 }
 
 /** Each person's latest change and whether the allow list has caught up with it. */
-export async function latestSyncByEmail(env: Env): Promise<Map<string, { cloudflare: SyncState; error: string | null }>> {
+export async function latestSyncByEmail(
+  env: Env,
+): Promise<Map<string, { cloudflare: SyncState; error: string | null }>> {
   const latest = getDb(env)
     .select({ id: sql<number>`max(${memberAudit.id})`.as("id") })
     .from(memberAudit)
     .where(sql`${memberAudit.memberEmail} IS NOT NULL`)
     .groupBy(memberAudit.memberEmail);
   const rows = await getDb(env)
-    .select({ email: memberAudit.memberEmail, cloudflare: memberAudit.cloudflare, error: memberAudit.cloudflareError })
+    .select({
+      email: memberAudit.memberEmail,
+      cloudflare: memberAudit.cloudflare,
+      error: memberAudit.cloudflareError,
+    })
     .from(memberAudit)
     .where(inArray(memberAudit.id, latest));
-  return new Map(rows.map((r) => [r.email as string, { cloudflare: r.cloudflare as SyncState, error: r.error }]));
+  return new Map(
+    rows.map((r) => [r.email as string, { cloudflare: r.cloudflare as SyncState, error: r.error }]),
+  );
 }
 
 /** One person's changes, newest first. */
 export async function memberHistory(env: Env, email: string) {
-  return getDb(env).select().from(memberAudit).where(eq(memberAudit.memberEmail, email)).orderBy(desc(memberAudit.id));
+  return getDb(env)
+    .select()
+    .from(memberAudit)
+    .where(eq(memberAudit.memberEmail, email))
+    .orderBy(desc(memberAudit.id));
 }
 
 /**
@@ -88,7 +112,10 @@ export async function unsyncedRemovals(env: Env): Promise<string[]> {
 
 /** The newest audit row's id, or 0: a sync settles only the changes that existed when it read the list. */
 export async function latestAuditId(env: Env): Promise<number> {
-  const row = await getDb(env).select({ id: sql<number>`coalesce(max(${memberAudit.id}), 0)` }).from(memberAudit).get();
+  const row = await getDb(env)
+    .select({ id: sql<number>`coalesce(max(${memberAudit.id}), 0)` })
+    .from(memberAudit)
+    .get();
   return row?.id ?? 0;
 }
 
@@ -121,29 +148,55 @@ function auditValues(audit: MemberAuditRow) {
  * A person's new row and its audit row, together or not at all. `addedBy` is kept from the first add: a re-add of a
  * removed person replaces their title and dates, not who first added them.
  */
-export async function writeMemberChange(env: Env, after: MemberRow, actorEmail: string, audit: MemberAuditRow): Promise<void> {
+export async function writeMemberChange(
+  env: Env,
+  after: MemberRow,
+  actorEmail: string,
+  audit: MemberAuditRow,
+): Promise<void> {
   const db = getDb(env);
   await db.batch([
     db
       .insert(members)
-      .values({ email: after.email, name: after.name ?? "", title: after.title, endDate: after.end_date, status: after.status, addedBy: actorEmail })
+      .values({
+        email: after.email,
+        name: after.name ?? "",
+        title: after.title,
+        endDate: after.end_date,
+        status: after.status,
+        addedBy: actorEmail,
+      })
       .onConflictDoUpdate({
         target: members.email,
         // A blank name never overwrites the one kept on the row, so past runs and edits keep it.
-        set: { name: sql`coalesce(nullif(${after.name ?? ""}, ''), ${members.name})`, title: after.title, endDate: after.end_date, status: after.status, updatedAt: sql`(unixepoch())` },
+        set: {
+          name: sql`coalesce(nullif(${after.name ?? ""}, ''), ${members.name})`,
+          title: after.title,
+          endDate: after.end_date,
+          status: after.status,
+          updatedAt: sql`(unixepoch())`,
+        },
       }),
     db.insert(memberAudit).values(auditValues(audit)),
   ]);
 }
 
 /** Several people's changes in one batch, as a term review saves them. */
-export async function writeMemberChanges(env: Env, changes: Array<{ after: MemberRow; audit: MemberAuditRow }>): Promise<void> {
+export async function writeMemberChanges(
+  env: Env,
+  changes: Array<{ after: MemberRow; audit: MemberAuditRow }>,
+): Promise<void> {
   if (changes.length === 0) return;
   const db = getDb(env);
   const statements = changes.flatMap(({ after, audit }) => [
     db
       .update(members)
-      .set({ title: after.title, endDate: after.end_date, status: after.status, updatedAt: sql`(unixepoch())` })
+      .set({
+        title: after.title,
+        endDate: after.end_date,
+        status: after.status,
+        updatedAt: sql`(unixepoch())`,
+      })
       .where(eq(members.email, after.email)),
     db.insert(memberAudit).values(auditValues(audit)),
   ]);
@@ -151,7 +204,12 @@ export async function writeMemberChanges(env: Env, changes: Array<{ after: Membe
 }
 
 /** Replaces the semester end dates with `dates`, with the change's audit row. */
-export async function writeTerms(env: Env, dates: string[], actorEmail: string, audit: MemberAuditRow): Promise<void> {
+export async function writeTerms(
+  env: Env,
+  dates: string[],
+  actorEmail: string,
+  audit: MemberAuditRow,
+): Promise<void> {
   const db = getDb(env);
   await db.batch([
     db.delete(memberTerms),
@@ -164,9 +222,16 @@ export async function writeTerms(env: Env, dates: string[], actorEmail: string, 
  * Records the Access sync's answer on every change up to `uptoId` still waiting on it: one sync carries the whole list
  * as it stood when it was read, so it settles every change before that and none after.
  */
-export async function recordSync(env: Env, state: "accepted" | "failed", error: string | null, uptoId: number): Promise<void> {
+export async function recordSync(
+  env: Env,
+  state: "accepted" | "failed",
+  error: string | null,
+  uptoId: number,
+): Promise<void> {
   await getDb(env)
     .update(memberAudit)
     .set({ cloudflare: state, cloudflareError: error })
-    .where(and(inArray(memberAudit.cloudflare, ["pending", "failed"]), lte(memberAudit.id, uptoId)));
+    .where(
+      and(inArray(memberAudit.cloudflare, ["pending", "failed"]), lte(memberAudit.id, uptoId)),
+    );
 }

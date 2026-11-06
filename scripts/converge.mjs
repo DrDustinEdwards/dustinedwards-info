@@ -16,7 +16,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
-import { DEFERRED_CHECKS, deferredMisses, fetchHealth, readinessLines, readinessVerdict } from "./lib/readiness.mjs";
+import {
+  DEFERRED_CHECKS,
+  deferredMisses,
+  fetchHealth,
+  readinessLines,
+  readinessVerdict,
+} from "./lib/readiness.mjs";
 import { spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import { convergeAsk, convergeCvPdf, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
@@ -32,7 +38,9 @@ const ORIGIN = SITE_ORIGIN;
 const READINESS_PATH = "/health";
 
 /* The commit worker-deploy shipped: the run's own, as /health reports it. */
-const shaFull = process.env.GITHUB_SHA ?? spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+const shaFull =
+  process.env.GITHUB_SHA ??
+  spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
 const sha = shaFull.slice(0, 12);
 
 let step = 0;
@@ -100,9 +108,11 @@ const OPERATOR_TOKEN = operatorToken.token;
 announce(`Readiness: ${READINESS_PATH} reports ok`);
 
 {
-  const { status, text, error: unreachable } = await fetchHealth(
-    `${ORIGIN}${READINESS_PATH}?converge=${sha}-${step}`,
-  );
+  const {
+    status,
+    text,
+    error: unreachable,
+  } = await fetchHealth(`${ORIGIN}${READINESS_PATH}?converge=${sha}-${step}`);
   if (unreachable) {
     refuse(
       `${READINESS_PATH} could not be reached: ${unreachable}`,
@@ -159,14 +169,20 @@ announce("The content's source, from D1");
  * its files are written over the checkout, so the content build below is made from what the site holds, as the
  * deploy's own build was (its pre-deploy guard ran the same two steps).
  */
-for (const step of [["scripts/seed-sources.mjs", "--remote"], ["scripts/pull-sources.mjs", "--remote"]]) {
+for (const step of [
+  ["scripts/seed-sources.mjs", "--remote"],
+  ["scripts/pull-sources.mjs", "--remote"],
+]) {
   if (run("node", step).code !== 0) refuse(`${step[0]} failed`, "Nothing was synced.");
 }
 
 /* Rebuilt so the sync reads this deploy's content, not whatever a previous step left. */
 announce("build:content, the local build product the sync reads");
 /* build:content reads stack.json, a build product, and this job starts from a fresh checkout. */
-if (run("npm", ["run", "build:stack"]).code !== 0 || run("npm", ["run", "build:content"]).code !== 0) {
+if (
+  run("npm", ["run", "build:stack"]).code !== 0 ||
+  run("npm", ["run", "build:content"]).code !== 0
+) {
   refuse("the content build failed", "NOTHING WAS SYNCED.");
 }
 
@@ -212,7 +228,10 @@ if (sync.code !== 0) {
       );
     } else if (confirmDrift === 0) {
       if (confirm.code !== 0) {
-        refuse("the confirming sync failed", "D1 may be partially written. Re-run the deploy's converge job.");
+        refuse(
+          "the confirming sync failed",
+          "D1 may be partially written. Re-run the deploy's converge job.",
+        );
       }
       console.log(
         `  confirmed benign: the second sync reads render-drift=0, so D1 carried a ` +
@@ -252,7 +271,6 @@ if (!(docs === identity && identity === prose)) {
   );
 }
 
-
 /*
  * `sync:content` does not rebuild AI Search. It uploads through the deployed Worker, so a miss
  * leaves the deploy standing.
@@ -284,7 +302,8 @@ let cardsMiss = "";
 {
   const cards = run("npm", ["run", "build:og", "--", "--remote"], { capture: true });
   if (cards.code !== 0) {
-    cardsMiss = "build:og failed, so new or retitled pages have no share card. Run `npm run build:og -- --remote`.";
+    cardsMiss =
+      "build:og failed, so new or retitled pages have no share card. Run `npm run build:og -- --remote`.";
     console.log(`  MISSED: ${cardsMiss}`);
   }
 }
@@ -304,9 +323,11 @@ announce("The drift checks readiness deferred, asserted");
 let deferredMiss = "";
 {
   /* One read for all: more requests risk the per-IP limiter's 429. */
-  const { status, text, error: unreachable } = await fetchHealth(
-    `${ORIGIN}${READINESS_PATH}?converge=${sha}-${step}`,
-  );
+  const {
+    status,
+    text,
+    error: unreachable,
+  } = await fetchHealth(`${ORIGIN}${READINESS_PATH}?converge=${sha}-${step}`);
   if (unreachable) {
     deferredMiss = `${READINESS_PATH} could not be reached after the sync: ${unreachable}`;
   }
@@ -359,7 +380,9 @@ let browserMiss = "";
       "in a browser until the weekly run. Start it with that command";
     console.log(`  MISSED: ${browserMiss}`);
   } else {
-    console.log(`  started browser.yml on ${ref}; a failed run notifies the account that started it`);
+    console.log(
+      `  started browser.yml on ${ref}; a failed run notifies the account that started it`,
+    );
   }
 }
 

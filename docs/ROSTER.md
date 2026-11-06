@@ -60,10 +60,10 @@ the media library reads `content/roster` as a source of references (`SOURCE_DIRE
 
 ## Where it is drawn, and what a save purges
 
-| Reader | Source | Cache tag |
-| --- | --- | --- |
-| The roster section of `/teaching/phage-discovery` | `listRoster` in `app/db/roster.ts`, by the content page route | `pages,content-pages` |
-| The home page's researcher, cohort and since counts | the same rows, counted by `rosterFacts` | `posts` |
+| Reader                                              | Source                                                        | Cache tag             |
+| --------------------------------------------------- | ------------------------------------------------------------- | --------------------- |
+| The roster section of `/teaching/phage-discovery`   | `listRoster` in `app/db/roster.ts`, by the content page route | `pages,content-pages` |
+| The home page's researcher, cohort and since counts | the same rows, counted by `rosterFacts`                       | `posts`               |
 
 Both pages embed the roster, so `purgeRoster` (`app/lib/cache-purge.server.ts`) purges both tags, and
 `test/worker/roster.test.ts` holds each page's tags to what a save sends. The placement is one constant,

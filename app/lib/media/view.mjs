@@ -60,7 +60,6 @@ function oneOf(value, allowed, fallback) {
   return typeof value === "string" && allowed.includes(value) ? value : fallback;
 }
 
-
 /**
  * Total: an unrecognized value falls back to its default, so a hand-edited URL still shows a library.
  *
@@ -76,9 +75,10 @@ export function readView(params) {
     dir: oneOf(params.get("dir"), DIRS, DEFAULTS.dir),
     size: oneOf(params.get("size"), SIZES, DEFAULTS.size),
     // `all` asks for every role; an ABSENT role means the default, `content`.
-    role: typeof params.get("role") === "string" && params.get("role") !== ""
-      ? /** @type {string} */ (params.get("role"))
-      : DEFAULTS.role,
+    role:
+      typeof params.get("role") === "string" && params.get("role") !== ""
+        ? /** @type {string} */ (params.get("role"))
+        : DEFAULTS.role,
     q: (params.get("q") ?? "").trim(),
     tag: (params.get("tag") ?? "").trim().toLowerCase(),
     lens: oneOf(params.get("lens"), LENSES, DEFAULTS.lens),
@@ -207,8 +207,18 @@ function utcDate(uploaded) {
 
 // Abbreviations are derived: all twelve are the first three letters (test/media-view-dates.test.mjs).
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 const MONTH_ABBR = MONTHS.map((m) => m.slice(0, 3));
@@ -241,7 +251,7 @@ export function sortHref(state, key, options = {}) {
       ? state.dir === "asc"
         ? "desc"
         : "asc"
-      : SORT_DEFAULT_DIR[key] ?? DEFAULTS.dir;
+      : (SORT_DEFAULT_DIR[key] ?? DEFAULTS.dir);
   return hrefWith(state, { sort: key, dir, page: 1 });
 }
 

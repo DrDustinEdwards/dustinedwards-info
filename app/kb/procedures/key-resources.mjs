@@ -27,7 +27,9 @@ export function keyResources(record) {
     href: s.path,
     source: s.collection ?? NOT_RECORDED,
     // The registry stores the collection and its number apart ("ATCC", "700084"); a table names the deposit with both.
-    identifier: s.collectionNumber ? [s.collection, s.collectionNumber].filter(Boolean).join(" ") : NONE,
+    identifier: s.collectionNumber
+      ? [s.collection, s.collectionNumber].filter(Boolean).join(" ")
+      : NONE,
   }));
 
   // A reagent once, however many materials name it, in the order the protocol first names it.
@@ -41,7 +43,11 @@ export function keyResources(record) {
       resource: r.name,
       href: null,
       source: r.preparedInLab ? "Prepared in the lab" : (r.supplier ?? NOT_RECORDED),
-      identifier: r.preparedInLab ? NONE : r.catalogNumber ? `Cat# ${r.catalogNumber}` : NOT_RECORDED,
+      identifier: r.preparedInLab
+        ? NONE
+        : r.catalogNumber
+          ? `Cat# ${r.catalogNumber}`
+          : NOT_RECORDED,
     });
   }
 
@@ -56,7 +62,16 @@ export function keyResources(record) {
   }));
 
   const other = record.equipment.flatMap((e) =>
-    e.item ? [{ resource: e.item.name, href: null, source: e.item.manufacturer ?? NOT_RECORDED, identifier: NONE }] : [],
+    e.item
+      ? [
+          {
+            resource: e.item.name,
+            href: null,
+            source: e.item.manufacturer ?? NOT_RECORDED,
+            identifier: NONE,
+          },
+        ]
+      : [],
   );
 
   return [
@@ -78,7 +93,12 @@ const cell = (text) => text.replace(/\|/g, "\\|");
  */
 export function keyResourcesMarkdown(groups) {
   if (groups.length === 0) return [];
-  const out = ["## Key resources", "", "| Reagent or resource | Source | Identifier |", "| --- | --- | --- |"];
+  const out = [
+    "## Key resources",
+    "",
+    "| Reagent or resource | Source | Identifier |",
+    "| --- | --- | --- |",
+  ];
   for (const group of groups) {
     out.push(`| **${cell(group.heading)}** | | |`);
     for (const row of group.rows) {

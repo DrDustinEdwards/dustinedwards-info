@@ -9,10 +9,7 @@ export type MediaCitation = {
 };
 
 // Batched: each resolver reads one corpus and scans it, so a per-key call would be one read per key.
-export type ReferenceResolver = (
-  env: Env,
-  keys: string[],
-) => Promise<Map<string, MediaCitation[]>>;
+export type ReferenceResolver = (env: Env, keys: string[]) => Promise<Map<string, MediaCitation[]>>;
 
 import { postsResolver } from "./resolvers/posts.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -30,10 +27,7 @@ type ResolutionResult = {
 };
 
 // Failure is reported, never swallowed: "we could not check" must not render as "nothing cites it".
-export async function resolveCitations(
-  env: Env,
-  keys: string[],
-): Promise<ResolutionResult> {
+export async function resolveCitations(env: Env, keys: string[]): Promise<ResolutionResult> {
   const citations = new Map<string, MediaCitation[]>(keys.map((key) => [key, []]));
   const failed: string[] = [];
 
@@ -43,7 +37,11 @@ export async function resolveCitations(
         return { name: resolver.name, map: await resolver.resolve(env, keys) };
       } catch (error) {
         console.error(
-          JSON.stringify({ alert: "media-resolver-failed", resolver: resolver.name, detail: errorMessage(error) }),
+          JSON.stringify({
+            alert: "media-resolver-failed",
+            resolver: resolver.name,
+            detail: errorMessage(error),
+          }),
         );
         failed.push(resolver.name);
         return null;

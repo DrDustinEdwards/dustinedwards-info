@@ -40,7 +40,11 @@ import type { Route } from "./+types/lab[.md]";
 export async function loader({ params, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const { kind: segment, id } = params as { kind?: string; id?: string };
-  const notFound = () => new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+  const notFound = () =>
+    new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   const respond = (body: string, canonical: string) =>
     new Response(body, {
       headers: {
@@ -53,7 +57,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     });
 
   if (segment === undefined) {
-    const [items, phages] = await Promise.all([listRegistry(env, { published: true }), listPhages(env)]);
+    const [items, phages] = await Promise.all([
+      listRegistry(env, { published: true }),
+      listPhages(env),
+    ]);
     const rows = inventoryRows(items, phages);
     return respond(
       `# Lab registry\n\nThe lab's reference catalog, with the phages it has isolated. It records what a thing is, never how much of it the lab has or where it sits.\n\n${inventoryMarkdown(rows, SITE_ORIGIN)}\n`,
@@ -62,14 +69,17 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   const kind = kindFromSegment(segment);
-  if (kind !== "primer" && kind !== "strain" && kind !== "reagent" && kind !== "equipment") return notFound();
+  if (kind !== "primer" && kind !== "strain" && kind !== "reagent" && kind !== "equipment")
+    return notFound();
   const published = await listRegistry(env, { kind, published: true });
 
   if (kind === "equipment") {
     const items = equipmentRows(published, await listPublishedLibraryRecords(env));
     if (id !== undefined) {
       const item = items.find((e) => e.id === id);
-      return item ? respond(equipmentItemMarkdown(item, SITE_ORIGIN), itemPath(kind, item.id)) : notFound();
+      return item
+        ? respond(equipmentItemMarkdown(item, SITE_ORIGIN), itemPath(kind, item.id))
+        : notFound();
     }
     return respond(
       `# Equipment\n\nThe instruments and labware the lab's protocols list under Equipment, in one table. Each row lists the protocols that use it.\n\n${equipmentMarkdown(items, SITE_ORIGIN)}\n`,
@@ -81,7 +91,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const reagents = reagentRows(published, await listPublishedLibraryRecords(env));
     if (id !== undefined) {
       const reagent = reagents.find((r) => r.id === id);
-      return reagent ? respond(reagentItemMarkdown(reagent, SITE_ORIGIN), itemPath(kind, reagent.id)) : notFound();
+      return reagent
+        ? respond(reagentItemMarkdown(reagent, SITE_ORIGIN), itemPath(kind, reagent.id))
+        : notFound();
     }
     return respond(
       `# Reagents\n\nThe substances the lab's protocols use, in one table. A reagent is bought (supplier and catalog number) or prepared in the lab (a recipe); each row lists the protocols that use it.\n\n${reagentsMarkdown(reagents, SITE_ORIGIN)}\n`,

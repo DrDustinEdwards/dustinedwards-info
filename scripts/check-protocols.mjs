@@ -11,7 +11,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { lineageErrors } from "../app/kb/procedures/lineage.mjs";
-import { compileDirectory, PROCEDURE_FIXTURES_DIR, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
+import {
+  compileDirectory,
+  PROCEDURE_FIXTURES_DIR,
+  PROCEDURES_SOURCE_DIR,
+} from "./lib/procedures.mjs";
 import { createTally } from "./lib/tally.mjs";
 
 const tally = createTally({ separator: ": " });
@@ -23,7 +27,11 @@ const sources = await compileDirectory(PROCEDURES_SOURCE_DIR);
 // Fixtures name photos that are not in the repository; their sizes are not measured.
 const fixtures = await compileDirectory(PROCEDURE_FIXTURES_DIR, { measureImages: false });
 ok(`${PROCEDURES_SOURCE_DIR} holds procedures`, sources.length > 0, "no procedure files");
-ok(`${PROCEDURE_FIXTURES_DIR} holds the recipe and computational fixtures`, fixtures.length >= 2, "fixtures missing");
+ok(
+  `${PROCEDURE_FIXTURES_DIR} holds the recipe and computational fixtures`,
+  fixtures.length >= 2,
+  "fixtures missing",
+);
 
 const paths = new Map();
 for (const { file, compiled } of [...sources, ...fixtures]) {
@@ -39,7 +47,11 @@ const starts = new Map();
 for (const { file, compiled } of sources) {
   if (!compiled.ok || compiled.record.startHere === null) continue;
   const other = starts.get(compiled.record.startHere);
-  ok(`${file} has its own Start here position`, !other, `start_here ${compiled.record.startHere} is also ${other}`);
+  ok(
+    `${file} has its own Start here position`,
+    !other,
+    `start_here ${compiled.record.startHere} is also ${other}`,
+  );
   starts.set(compiled.record.startHere, file);
 }
 // Proof of use names papers and phages by slug; a name with no file would show on the page as a bare slug.
@@ -47,26 +59,48 @@ for (const { file, compiled } of sources) {
   const proof = compiled.ok ? compiled.record.proofOfUse : null;
   if (!proof) continue;
   const missing = [
-    ...proof.papers.filter((slug) => !existsSync(join("content", "publications", `${slug}.md`))).map((slug) => `paper ${slug}`),
-    ...proof.phages.filter((key) => !existsSync(join("content", "phages", `${key}.md`))).map((key) => `phage ${key}`),
+    ...proof.papers
+      .filter((slug) => !existsSync(join("content", "publications", `${slug}.md`)))
+      .map((slug) => `paper ${slug}`),
+    ...proof.phages
+      .filter((key) => !existsSync(join("content", "phages", `${key}.md`)))
+      .map((key) => `phage ${key}`),
   ];
-  ok(`${file} proof of use names only papers and phages that exist`, missing.length === 0, `no file for: ${missing.join(", ")}`);
+  ok(
+    `${file} proof of use names only papers and phages that exist`,
+    missing.length === 0,
+    `no file for: ${missing.join(", ")}`,
+  );
 }
 // A variant names the procedure it was copied from (P3): a file here, of its profile, at a version it states. Fixtures
 // name fixtures, and the procedures name procedures.
 for (const set of [sources, fixtures]) {
-  const bySlug = new Map(set.flatMap(({ compiled }) => (compiled.ok ? [[compiled.record.slug, compiled.record]] : [])));
+  const bySlug = new Map(
+    set.flatMap(({ compiled }) => (compiled.ok ? [[compiled.record.slug, compiled.record]] : [])),
+  );
   for (const { file, compiled } of set) {
     if (!compiled.ok || !compiled.record.forkedFrom) continue;
     const errors = lineageErrors(compiled.record, bySlug);
-    ok(`${file} is a variant of a procedure it names rightly`, errors.length === 0, errors.join("; "));
+    ok(
+      `${file} is a variant of a procedure it names rightly`,
+      errors.length === 0,
+      errors.join("; "),
+    );
   }
 }
 for (const { file, compiled } of fixtures) {
-  if (compiled.ok) ok(`${file} is a draft`, compiled.record.draft, "a fixture is never published: set draft: true");
+  if (compiled.ok)
+    ok(
+      `${file} is a draft`,
+      compiled.record.draft,
+      "a fixture is never published: set draft: true",
+    );
 }
 const profiles = new Set(fixtures.map((f) => (f.compiled.ok ? f.compiled.record.profile : null)));
-ok("the fixtures cover the recipe and computational profiles", profiles.has("recipe") && profiles.has("computational"));
+ok(
+  "the fixtures cover the recipe and computational profiles",
+  profiles.has("recipe") && profiles.has("computational"),
+);
 
 let recorded = 0;
 for (const { file, compiled } of sources) {
@@ -77,14 +111,21 @@ for (const { file, compiled } of sources) {
     console.log(`    MISSING  ${gap.field}  (${gap.reason})`);
   }
 }
-console.log(`\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); ${recorded} value(s) recorded as missing.`);
+console.log(
+  `\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); ${recorded} value(s) recorded as missing.`,
+);
 
 /* 19 on 2026-09-30, measured by running the gate: two per procedure (five) and per fixture (two), two
    fixture drafts, two on the directories and one on the profiles; 21 on 2026-10-04, one more for each procedure that
    states a Start here position (two); 28 on 2026-10-10, measured by running the gate: the tutorial and variant fixtures
    (two each, and a draft each) and one for the variant's lineage. */
 const MINIMUM_CHECKS = 28;
-tally.floor("check:protocols", "checks", MINIMUM_CHECKS, "A procedure or fixture was skipped rather than failing.");
+tally.floor(
+  "check:protocols",
+  "checks",
+  MINIMUM_CHECKS,
+  "A procedure or fixture was skipped rather than failing.",
+);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
 process.exit(tally.failures > 0 ? 1 : 0);

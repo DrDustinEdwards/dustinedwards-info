@@ -21,7 +21,12 @@ type PhageEnv = Env;
 
 export function phageHandler(env: PhageEnv): ContentKindHandler {
   /** One write through savePhage as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     try {
       const saved = await savePhage(env, {
         slug,
@@ -65,7 +70,9 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
       if (!owns(slug)) return null;
       const file = await readFile(env, phagePath(slug));
       if (!file) return null;
-      const row = await env.DB.prepare(`SELECT name, synced_at FROM phages WHERE slug = ?1`).bind(slug).first<{ name: string; synced_at: number }>();
+      const row = await env.DB.prepare(`SELECT name, synced_at FROM phages WHERE slug = ?1`)
+        .bind(slug)
+        .first<{ name: string; synced_at: number }>();
       return {
         id: slug,
         kind: "phage",
@@ -83,7 +90,10 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
 
     // Creates a phage (no version) or edits one (its version), as every kind does; either way it is public.
     async saveDraft(slug, input) {
-      if (!owns(slug)) throw new RefusedError(`"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`);
+      if (!owns(slug))
+        throw new RefusedError(
+          `"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`,
+        );
       const file = await readFile(env, phagePath(slug));
       if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
@@ -91,7 +101,10 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
     },
 
     async publish(slug, input) {
-      if (!owns(slug)) throw new RefusedError(`"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`);
+      if (!owns(slug))
+        throw new RefusedError(
+          `"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`,
+        );
       // Read even when source is sent: a version for an id that does not exist is a conflict.
       const file = await readFile(env, phagePath(slug));
       if (!file) throw new VersionConflictError(null);

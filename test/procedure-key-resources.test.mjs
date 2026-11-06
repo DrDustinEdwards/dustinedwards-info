@@ -17,8 +17,15 @@ await test("a PCR protocol lists its reagents and its primers, each with the sou
   const groups = keyResources(coi.record);
   const byId = new Map(groups.map((g) => [g.id, g]));
 
-  const gotaq = byId.get("chemicals")?.rows.find((r) => r.resource === "GoTaq® Flexi DNA polymerase");
-  assert.deepEqual(gotaq, { resource: "GoTaq® Flexi DNA polymerase", href: null, source: "Promega", identifier: "Cat# M8296" });
+  const gotaq = byId
+    .get("chemicals")
+    ?.rows.find((r) => r.resource === "GoTaq® Flexi DNA polymerase");
+  assert.deepEqual(gotaq, {
+    resource: "GoTaq® Flexi DNA polymerase",
+    href: null,
+    source: "Promega",
+    identifier: "Cat# M8296",
+  });
 
   const lco = byId.get("oligonucleotides")?.rows.find((r) => r.resource === "LCO1490");
   assert.deepEqual(lco, {
@@ -31,14 +38,22 @@ await test("a PCR protocol lists its reagents and its primers, each with the sou
 
   // The groups come in STAR's order, and a group with nothing in it is left out.
   const order = ["strains", "chemicals", "oligonucleotides", "other"];
-  assert.deepEqual(groups.map((g) => g.id), order.filter((id) => byId.has(id)));
+  assert.deepEqual(
+    groups.map((g) => g.id),
+    order.filter((id) => byId.has(id)),
+  );
   assert.ok(groups.every((g) => g.rows.length > 0));
 
   // The twin carries the same table.
   assert.ok(coi.markdown.includes("## Key resources"), "the twin has the table");
-  assert.ok(coi.markdown.includes("| GoTaq® Flexi DNA polymerase | Promega | Cat# M8296 |"), "the twin row matches");
   assert.ok(
-    coi.markdown.includes("| [LCO1490](/research/lab/primers/lco1490): `5′-GGTCAACAAATCATAAAGATATTGG-3′` | Folmer et al. 1994"),
+    coi.markdown.includes("| GoTaq® Flexi DNA polymerase | Promega | Cat# M8296 |"),
+    "the twin row matches",
+  );
+  assert.ok(
+    coi.markdown.includes(
+      "| [LCO1490](/research/lab/primers/lco1490): `5′-GGTCAACAAATCATAAAGATATTGG-3′` | Folmer et al. 1994",
+    ),
     "a primer's row carries its sequence",
   );
 });
@@ -46,19 +61,65 @@ await test("a PCR protocol lists its reagents and its primers, each with the sou
 await test("a reagent named by two materials is listed once, a lab-prepared reagent has no catalog number, and a gap reads Not recorded", async () => {
   const record = {
     profile: "protocol",
-    hostStrains: [{ id: "smegmatis", name: "Mycobacterium smegmatis mc²155", path: "/research/lab/strains/smegmatis", collection: "ATCC", collectionNumber: "700084" }],
+    hostStrains: [
+      {
+        id: "smegmatis",
+        name: "Mycobacterium smegmatis mc²155",
+        path: "/research/lab/strains/smegmatis",
+        collection: "ATCC",
+        collectionNumber: "700084",
+      },
+    ],
     materials: [
-      { reagent: { id: "pyca", name: "PYCa", preparedInLab: true, supplier: null, catalogNumber: null } },
-      { reagent: { id: "pyca", name: "PYCa", preparedInLab: true, supplier: null, catalogNumber: null } },
-      { reagent: { id: "ethanol", name: "Ethanol", preparedInLab: false, supplier: null, catalogNumber: null } },
+      {
+        reagent: {
+          id: "pyca",
+          name: "PYCa",
+          preparedInLab: true,
+          supplier: null,
+          catalogNumber: null,
+        },
+      },
+      {
+        reagent: {
+          id: "pyca",
+          name: "PYCa",
+          preparedInLab: true,
+          supplier: null,
+          catalogNumber: null,
+        },
+      },
+      {
+        reagent: {
+          id: "ethanol",
+          name: "Ethanol",
+          preparedInLab: false,
+          supplier: null,
+          catalogNumber: null,
+        },
+      },
       { reagent: null },
     ],
     primers: [{ id: "p", name: "P1", sequence: null, publishedIn: null }],
-    equipment: [{ name: "a heat block", item: { name: "Heat block", manufacturer: null } }, { name: "ice", item: null }],
+    equipment: [
+      { name: "a heat block", item: { name: "Heat block", manufacturer: null } },
+      { name: "ice", item: null },
+    ],
   };
   const groups = keyResources(/** @type {any} */ (record));
   assert.deepEqual(groups, [
-    { id: "strains", heading: "Bacterial and virus strains", rows: [{ resource: "Mycobacterium smegmatis mc²155", href: "/research/lab/strains/smegmatis", source: "ATCC", identifier: "ATCC 700084" }] },
+    {
+      id: "strains",
+      heading: "Bacterial and virus strains",
+      rows: [
+        {
+          resource: "Mycobacterium smegmatis mc²155",
+          href: "/research/lab/strains/smegmatis",
+          source: "ATCC",
+          identifier: "ATCC 700084",
+        },
+      ],
+    },
     {
       id: "chemicals",
       heading: "Chemicals, peptides, and recombinant proteins",
@@ -67,8 +128,23 @@ await test("a reagent named by two materials is listed once, a lab-prepared reag
         { resource: "Ethanol", href: null, source: "Not recorded", identifier: "Not recorded" },
       ],
     },
-    { id: "oligonucleotides", heading: "Oligonucleotides", rows: [{ resource: "P1", href: "/research/lab/primers/p", source: "Not recorded", identifier: "N/A" }] },
-    { id: "other", heading: "Other", rows: [{ resource: "Heat block", href: null, source: "Not recorded", identifier: "N/A" }] },
+    {
+      id: "oligonucleotides",
+      heading: "Oligonucleotides",
+      rows: [
+        {
+          resource: "P1",
+          href: "/research/lab/primers/p",
+          source: "Not recorded",
+          identifier: "N/A",
+        },
+      ],
+    },
+    {
+      id: "other",
+      heading: "Other",
+      rows: [{ resource: "Heat block", href: null, source: "Not recorded", identifier: "N/A" }],
+    },
   ]);
 });
 
@@ -79,7 +155,13 @@ await test("a recipe or a computational procedure has no table, and an empty tab
 });
 
 await test("a pipe in a citation cannot split a twin row", () => {
-  const lines = keyResourcesMarkdown([{ id: "other", heading: "Other", rows: [{ resource: "A | B", href: null, source: "S", identifier: "N/A" }] }]);
+  const lines = keyResourcesMarkdown([
+    {
+      id: "other",
+      heading: "Other",
+      rows: [{ resource: "A | B", href: null, source: "S", identifier: "N/A" }],
+    },
+  ]);
   assert.ok(lines.includes("| A \\| B | S | N/A |"));
 });
 
@@ -87,10 +169,13 @@ await test("a protocol's host strains are listed with their collection and numbe
   const isolation = (await compiledProtocols()).get("phage-isolation");
   assert.ok(isolation?.ok, JSON.stringify(isolation?.errors));
   const strains = keyResources(isolation.record).find((g) => g.id === "strains");
-  assert.deepEqual(strains?.rows.find((r) => r.href === "/research/lab/strains/smegmatis"), {
-    resource: "Mycobacterium smegmatis mc²155",
-    href: "/research/lab/strains/smegmatis",
-    source: "ATCC",
-    identifier: "ATCC 700084",
-  });
+  assert.deepEqual(
+    strains?.rows.find((r) => r.href === "/research/lab/strains/smegmatis"),
+    {
+      resource: "Mycobacterium smegmatis mc²155",
+      href: "/research/lab/strains/smegmatis",
+      source: "ATCC",
+      identifier: "ATCC 700084",
+    },
+  );
 });

@@ -17,7 +17,10 @@ const NAV_ID = "site-nav";
  * script; app/enhance/header.ts wires it to answer from the site's /search as the person types. Its own wrapper
  * is taken off so the element below is the one Capsomer's markup names.
  */
-const SEARCH_INNER = searchHtml({ action: "/search", label: "Search dustinedwards.info" }).replace(/^<div[^>]*>|<\/div>$/g, "");
+const SEARCH_INNER = searchHtml({ action: "/search", label: "Search dustinedwards.info" }).replace(
+  /^<div[^>]*>|<\/div>$/g,
+  "",
+);
 
 const CHEVRON = (
   <svg className="cap-site-header-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -25,7 +28,8 @@ const CHEVRON = (
   </svg>
 );
 
-const inside = (item: NavItem, pathname: string) => pathname === item.to || pathname.startsWith(`${item.to}/`);
+const inside = (item: NavItem, pathname: string) =>
+  pathname === item.to || pathname.startsWith(`${item.to}/`);
 
 /**
  * A section and the panel that hangs from it: Capsomer's disclosure button (site-header.md, "Markup"), not a
@@ -98,45 +102,57 @@ export function SiteHeader() {
   const nav = buildNav();
   return (
     <>
-    <header
-      className="cap-site-header"
-      data-cap="site-header"
-      data-variant="letterhead"
-      data-site-header=""
-      data-palette=""
-      data-palette-css={`${paletteDialogCss},${askCss}`}
-    >
-      <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
-        {/* Decorative: the name beside it is the link's name. */}
-        <SiteLogoHeader className="site-header-mark" />
-        <span className="cap-site-header-names" aria-hidden="true">
-          <span className="cap-site-header-agency">{SITE.name}</span>
-        </span>
-      </Link>
-      <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Site" data-site-nav="">
-        <ul>
-          <li>
-            <Link to="/" className="cap-site-header-link" aria-current={pathname === "/" ? "page" : undefined}>
-              Home
-            </Link>
-          </li>
-          {nav.map((item) => (
-            <NavEntry key={item.to} item={item} pathname={pathname} />
-          ))}
-        </ul>
-      </nav>
-      <div className="cap-site-header-tools">
-        <div className="cap-site-header-search" data-cap-part="search" dangerouslySetInnerHTML={{ __html: SEARCH_INNER }} />
-        {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
+      <header
+        className="cap-site-header"
+        data-cap="site-header"
+        data-variant="letterhead"
+        data-site-header=""
+        data-palette=""
+        data-palette-css={`${paletteDialogCss},${askCss}`}
+      >
+        <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
+          {/* Decorative: the name beside it is the link's name. */}
+          <SiteLogoHeader className="site-header-mark" />
+          <span className="cap-site-header-names" aria-hidden="true">
+            <span className="cap-site-header-agency">{SITE.name}</span>
+          </span>
+        </Link>
+        <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Site" data-site-nav="">
+          <ul>
+            <li>
+              <Link
+                to="/"
+                className="cap-site-header-link"
+                aria-current={pathname === "/" ? "page" : undefined}
+              >
+                Home
+              </Link>
+            </li>
+            {nav.map((item) => (
+              <NavEntry key={item.to} item={item} pathname={pathname} />
+            ))}
+          </ul>
+        </nav>
+        <div className="cap-site-header-tools">
+          <div
+            className="cap-site-header-search"
+            data-cap-part="search"
+            dangerouslySetInnerHTML={{ __html: SEARCH_INNER }}
+          />
+          {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
             and with script the theme module switches at once. The admin plane's shell reads the same choice
             from localStorage ("cap-theme"). */}
-        <ThemeForm action="/theme" prefKey="cap-theme" className="cap-site-header-icon cap-site-header-theme" />
-        <template data-island="theme" />
-      </div>
-      {/* Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts. */}
-      <template data-island="header" />
-    </header>
-    <RunningHead pathname={pathname} />
+          <ThemeForm
+            action="/theme"
+            prefKey="cap-theme"
+            className="cap-site-header-icon cap-site-header-theme"
+          />
+          <template data-island="theme" />
+        </div>
+        {/* Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts. */}
+        <template data-island="header" />
+      </header>
+      <RunningHead pathname={pathname} />
     </>
   );
 }

@@ -17,7 +17,12 @@ import { buildRoster, compileAllRoster } from "../scripts/lib/roster.mjs";
  * needs a person's name uses a placeholder: the real names live in content/roster/ and nowhere else. */
 
 const PIPELINE = { findWideDashes };
-const PHOTO = { src: "/media/dustin-edwards-example-0123456789abcdef-1080x720.webp", width: 1080, height: 720, alt: "Group photo of the 2031 cohort" };
+const PHOTO = {
+  src: "/media/dustin-edwards-example-0123456789abcdef-1080x720.webp",
+  width: 1080,
+  height: 720,
+  alt: "Group photo of the 2031 cohort",
+};
 const NAMES = ["Example Person One", "Example Person Two"];
 
 /** @param {Record<string, unknown>} data @param {string} [body] */
@@ -54,32 +59,60 @@ await test("REFUSES any field that is not in the existing shape, so no new perso
 });
 
 await test("REFUSES names that are not plain strings (a person is a name and nothing else)", async () => {
-  const mapped = await compile(file({ ...GOOD, researchers: [{ name: "Example Person", email: "x" }] }));
+  const mapped = await compile(
+    file({ ...GOOD, researchers: [{ name: "Example Person", email: "x" }] }),
+  );
   assert.equal(mapped.ok, false);
   assert.match(mapped.errors.join("\n"), /researchers\[0\] is/);
   const padded = await compile(file({ ...GOOD, researchers: [" Example Person "] }));
   assert.equal(padded.ok, false);
   assert.match(padded.errors.join("\n"), /stray whitespace/);
-  const repeated = await compile(file({ ...GOOD, researchers: ["Example Person", "Example Person"] }));
+  const repeated = await compile(
+    file({ ...GOOD, researchers: ["Example Person", "Example Person"] }),
+  );
   assert.equal(repeated.ok, false);
   assert.match(repeated.errors.join("\n"), /repeats a name/);
 });
 
 await test("REFUSES a body, a missing file, a wrong year and a slug that is not a year, with every message", async () => {
-  assert.match((await compile(file(GOOD, "A paragraph.\n"))).errors.join("\n"), /body must be empty/);
-  assert.match((await compile(file(GOOD), { photo: false })).errors.join("\n"), /is not in the media library/);
-  assert.match((await compile(file({ ...GOOD, year: 2030 }))).errors.join("\n"), /file is named for its year/);
-  assert.match((await compile(file(GOOD), { slug: "notes" })).errors.join("\n"), /not a cohort file key/);
+  assert.match(
+    (await compile(file(GOOD, "A paragraph.\n"))).errors.join("\n"),
+    /body must be empty/,
+  );
+  assert.match(
+    (await compile(file(GOOD), { photo: false })).errors.join("\n"),
+    /is not in the media library/,
+  );
+  assert.match(
+    (await compile(file({ ...GOOD, year: 2030 }))).errors.join("\n"),
+    /file is named for its year/,
+  );
+  assert.match(
+    (await compile(file(GOOD), { slug: "notes" })).errors.join("\n"),
+    /not a cohort file key/,
+  );
   assert.match((await compile("no front matter\n")).errors.join("\n"), /front matter/);
 
-  const many = await compile(file({ year: "2031", photo: { src: "/elsewhere/x.png", width: 0, height: "1", alt: "" }, researchers: "x" }));
+  const many = await compile(
+    file({
+      year: "2031",
+      photo: { src: "/elsewhere/x.png", width: 0, height: "1", alt: "" },
+      researchers: "x",
+    }),
+  );
   assert.equal(many.ok, false);
   assert.ok(many.errors.length >= 5, `every message, got ${many.errors.length}`);
 });
 
 await test("REFUSES a photograph that is not a media library .webp whose address matches its size, and one with no alt text", async () => {
   const key = "dustin-edwards-example-0123456789abcdef-1080x720";
-  for (const src of ["/media/x.webp", "/phage-hunters/x.webp", `/media/${key}.jpg`, `https://example.com/media/${key}.webp`, `/media/../${key}.webp`]) {
+  for (const src of [
+    "/media/x.webp",
+    "/phage-hunters/x.webp",
+    `/media/${key}.jpg`,
+    `https://example.com/media/${key}.webp`,
+    `/media/../${key}.webp`,
+  ]) {
     assert.equal((await compile(file({ ...GOOD, photo: { ...PHOTO, src } }))).ok, false, src);
   }
   const wrongSize = await compile(file({ ...GOOD, photo: { ...PHOTO, width: 540 } }));
@@ -120,16 +153,32 @@ await test("the home page's counts are counted from the cohorts, never typed", (
 
 await test("the committed roster compiles, in the shape the data file had, and every photograph is a media library address", async () => {
   const compiled = await compileAllRoster();
-  assert.ok(compiled.length >= 9, `the roster has ${compiled.length} files; it had nine cohorts when it moved to files`);
-  const failed = compiled.filter((c) => !c.compiled.ok).map((c) => `${c.file}: ${c.compiled.errors.join("; ")}`);
+  assert.ok(
+    compiled.length >= 9,
+    `the roster has ${compiled.length} files; it had nine cohorts when it moved to files`,
+  );
+  const failed = compiled
+    .filter((c) => !c.compiled.ok)
+    .map((c) => `${c.file}: ${c.compiled.errors.join("; ")}`);
   assert.deepEqual(failed, []);
 
   const { rows, cohorts } = await buildRoster();
   assert.equal(rows.length, compiled.length);
-  assert.deepEqual(cohorts.map((c) => c.year), cohorts.map((c) => c.year).sort((a, b) => b - a), "newest first");
+  assert.deepEqual(
+    cohorts.map((c) => c.year),
+    cohorts.map((c) => c.year).sort((a, b) => b - a),
+    "newest first",
+  );
   for (const c of cohorts) {
-    assert.ok(c.photo, `the ${c.year} cohort has its group photograph, as every cohort had when it moved`);
-    assert.match(c.photo.src, /^\/media\/dustin-edwards-/, "a cohort photograph is a media library file");
+    assert.ok(
+      c.photo,
+      `the ${c.year} cohort has its group photograph, as every cohort had when it moved`,
+    );
+    assert.match(
+      c.photo.src,
+      /^\/media\/dustin-edwards-/,
+      "a cohort photograph is a media library file",
+    );
   }
   // The file key is the year, and the file is where rosterPath says.
   for (const row of rows) assert.equal(row.sourcePath, rosterPath(row.slug));

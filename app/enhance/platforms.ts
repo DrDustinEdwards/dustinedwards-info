@@ -14,7 +14,13 @@ export default function start(): void {
 
   const guess = () => {
     const ua = navigator.userAgent;
-    return /Windows/.test(ua) ? "windows" : /Mac OS X|Macintosh/.test(ua) ? "macos" : /Linux|X11/.test(ua) ? "linux" : null;
+    return /Windows/.test(ua)
+      ? "windows"
+      : /Mac OS X|Macintosh/.test(ua)
+        ? "macos"
+        : /Linux|X11/.test(ua)
+          ? "linux"
+          : null;
   };
 
   let chosen: string | null = null;
@@ -29,9 +35,13 @@ export default function start(): void {
 
   function paint() {
     for (const set of sets) {
-      const tabs = [...set.querySelectorAll<HTMLAnchorElement>(".procedure-platform-tabs a[data-platform]")];
+      const tabs = [
+        ...set.querySelectorAll<HTMLAnchorElement>(".procedure-platform-tabs a[data-platform]"),
+      ];
       const panels = [...set.querySelectorAll<HTMLElement>(".procedure-platform[data-platform]")];
-      const shown = panels.some((p) => p.dataset.platform === chosen) ? chosen : (panels[0]?.dataset.platform ?? null);
+      const shown = panels.some((p) => p.dataset.platform === chosen)
+        ? chosen
+        : (panels[0]?.dataset.platform ?? null);
       for (const tab of tabs) {
         const on = tab.dataset.platform === shown;
         tab.setAttribute("aria-selected", String(on));
@@ -59,7 +69,9 @@ export default function start(): void {
     list.setAttribute("aria-label", "Platform");
     const tabs = [...list.querySelectorAll<HTMLAnchorElement>("a[data-platform]")];
     for (const tab of tabs) {
-      const panel = set.querySelector<HTMLElement>(`.procedure-platform[data-platform="${tab.dataset.platform}"]`);
+      const panel = set.querySelector<HTMLElement>(
+        `.procedure-platform[data-platform="${tab.dataset.platform}"]`,
+      );
       if (!panel) continue;
       tab.setAttribute("role", "tab");
       tab.id ||= `${panel.id}-tab`;

@@ -11,7 +11,14 @@ import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml
 import { mediaRecord } from "~/db/media";
 import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
+import {
+  OWNER_PHOTO,
+  SITE,
+  SITE_ORIGIN,
+  pageMeta,
+  profilePageJsonLd,
+  publicHtmlHeaders,
+} from "~/lib/seo";
 
 import type { Route } from "./+types/about";
 
@@ -59,7 +66,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const [row, photo] = await Promise.all([getPageByPath(env, "/about"), portrait(env)]);
   // No row: the content sync has not written it yet. A draft is the signed-in admin's alone, like any page.
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   const { title, seoTitle, description, html } = row.record;
   return { title, seoTitle, description, html, draft: row.status === "draft", photo };
 }
@@ -87,7 +95,9 @@ export default function About({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(profilePageJsonLd(SITE_ORIGIN, { path: "/about", description })),
+            __html: serializeJsonLd(
+              profilePageJsonLd(SITE_ORIGIN, { path: "/about", description }),
+            ),
           }}
         />
       }

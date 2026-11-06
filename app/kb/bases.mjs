@@ -17,7 +17,28 @@
 
 /** @type {readonly KnowledgeBase[]} */
 export const BASES = Object.freeze([
-  { id: "protocols", name: "Protocols", singular: "Protocol", profile: "protocol", entryRoot: "/research/protocols/", library: "/research/protocols" },
-  { id: "how-tos", name: "Software how-tos", singular: "Software how-to", profile: "computational", entryRoot: "/software/how-tos/", library: "/software/how-tos" },
-  { id: "recipes", name: "Recipes", singular: "Recipe", profile: "recipe", entryRoot: "/recipes/", library: "/recipes" },
+  {
+    id: "protocols",
+    name: "Protocols",
+    singular: "Protocol",
+    profile: "protocol",
+    entryRoot: "/research/protocols/",
+    library: "/research/protocols",
+  },
+  {
+    id: "how-tos",
+    name: "Software how-tos",
+    singular: "Software how-to",
+    profile: "computational",
+    entryRoot: "/software/how-tos/",
+    library: "/software/how-tos",
+  },
+  {
+    id: "recipes",
+    name: "Recipes",
+    singular: "Recipe",
+    profile: "recipe",
+    entryRoot: "/recipes/",
+    library: "/recipes",
+  },
 ]);

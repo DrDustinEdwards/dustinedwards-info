@@ -21,11 +21,8 @@ async function fetchThrough(request: Request) {
 let counter = 0;
 const freshPath = (base: string) => `${base}?case=${(counter += 1)}`;
 
-const dimensionsFor = (
-  url: string,
-  theme = "system",
-  init: RequestInit = {},
-) => cacheDimensions(new URL(url), new Request(url, init), theme);
+const dimensionsFor = (url: string, theme = "system", init: RequestInit = {}) =>
+  cacheDimensions(new URL(url), new Request(url, init), theme);
 
 describe("the cache key the gateway builds", () => {
   it("is STABLE for the same path and theme", async () => {

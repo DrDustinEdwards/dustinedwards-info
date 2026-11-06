@@ -8,7 +8,9 @@ export async function run() {
   // Capsomer's search icon: a link to the search page, so it works with no script.
   check(
     "header: the search icon links to /search and has an accessible name",
-    /<a class="cap-site-header-icon cap-site-header-search-button" href="\/search" aria-label="Search [^"]+"/.test(text),
+    /<a class="cap-site-header-icon cap-site-header-search-button" href="\/search" aria-label="Search [^"]+"/.test(
+      text,
+    ),
   );
   check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
   const themeButtons = text.match(/<button[^>]*name="theme"[^>]*>/g) ?? [];

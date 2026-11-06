@@ -54,7 +54,9 @@ const NOTHING_TO_CHART = "There is nothing to chart for these filters.";
 export function timelineSvg(input: TimelineInput): string {
   const { years, series, selected } = input;
   const rows = series.flatMap((s) =>
-    years.flatMap((year, i) => Array.from({ length: s.values[i] ?? 0 }, () => ({ year, type: s.label }))),
+    years.flatMap((year, i) =>
+      Array.from({ length: s.values[i] ?? 0 }, () => ({ year, type: s.label })),
+    ),
   );
   // Enarratio throws "data is empty" for no rows, which would be a 500 for a filter that selects nothing chartable;
   // the frame's no-data state (data-state="nodata") stands in its place, which app/enhance/cv.ts looks for.
@@ -98,7 +100,12 @@ function fadeOutside(markup: string, selected: [number, number] | null) {
  */
 export function sparklineSvg(input: SparklineInput): string {
   const svg = sparkline({ values: input.values, alt: input.label, area: true, inline: true });
-  const table = { columns: ["Year", input.name], rows: input.years.map((year, i) => [String(year), String(input.values[i] ?? 0)]) };
+  const table = {
+    columns: ["Year", input.name],
+    rows: input.years.map((year, i) => [String(year), String(input.values[i] ?? 0)]),
+  };
   // The line in a box of its own, so it has a width to sit in: its parent, .cv-spark, is display: contents.
-  return `<span class="cv-spark-line">${svg}</span>` + dataTableBlock(table, `${input.name} per year`);
+  return (
+    `<span class="cv-spark-line">${svg}</span>` + dataTableBlock(table, `${input.name} per year`)
+  );
 }

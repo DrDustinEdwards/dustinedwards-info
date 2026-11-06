@@ -12,16 +12,25 @@ import type { Route } from "./+types/kb-library[.json]";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const base = baseAtLibrary(url.pathname.replace(/\.json$/, ""));
-  const items = base ? baseItems(base, await listPublishedRecordsOfProfile(getEnv(context), base.profile)) : [];
-  if (!base || items.length === 0) return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+  const items = base
+    ? baseItems(base, await listPublishedRecordsOfProfile(getEnv(context), base.profile))
+    : [];
+  if (!base || items.length === 0)
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   const rows = baseRecords(base, items, url.searchParams, SITE_ORIGIN);
-  return new Response(`${JSON.stringify({ license: LICENSE_URL, count: rows.length, [base.id]: rows }, null, 2)}\n`, {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": SHARED_CACHE_CONTROL,
-      "cache-tag": PROCEDURES_CACHE_TAG,
-      "x-robots-tag": "noindex",
-      link: `${canonicalLink(base.library)}, ${LICENSE_LINK}`,
+  return new Response(
+    `${JSON.stringify({ license: LICENSE_URL, count: rows.length, [base.id]: rows }, null, 2)}\n`,
+    {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": SHARED_CACHE_CONTROL,
+        "cache-tag": PROCEDURES_CACHE_TAG,
+        "x-robots-tag": "noindex",
+        link: `${canonicalLink(base.library)}, ${LICENSE_LINK}`,
+      },
     },
-  });
+  );
 }

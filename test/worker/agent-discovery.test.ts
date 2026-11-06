@@ -57,7 +57,12 @@ const PAPER_SLUG = "10-1128-mra-00888-24";
 
 const publishEnv = () => env as unknown as Parameters<typeof renderAndWrite>[0];
 
-async function get(loader: Loader, path: string, params: Record<string, string> = {}, headers: HeadersInit = {}) {
+async function get(
+  loader: Loader,
+  path: string,
+  params: Record<string, string> = {},
+  headers: HeadersInit = {},
+) {
   return loader({
     request: new Request(`${SITE_ORIGIN}${path}`, { headers }),
     params,
@@ -83,7 +88,9 @@ const canonical = (path: string) => `<${SITE_ORIGIN}${path}>; rel="canonical"`;
 /** Every `<loc>` in the sitemap, as paths. */
 async function sitemapPaths() {
   const body = await (await response(sitemapLoader as Loader, "/sitemap.xml")).text();
-  return [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/");
+  return [...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+    (m) => (m[1] ?? "").slice(SITE_ORIGIN.length) || "/",
+  );
 }
 
 beforeAll(async () => {
@@ -110,7 +117,12 @@ beforeAll(async () => {
   );
   /* The protocol is a procedure (docs/PROCEDURES.md): its row arrives through save_procedure, the
    * same compile and write sync:content and the operator API use, from the repository's file. */
-  const gh = await stubSources({ [procedurePath("phage-isolation")]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  const gh = await stubSources({
+    [procedurePath("phage-isolation")]: isolation,
+    ...strainRepoFiles,
+    ...reagentRepoFiles,
+    ...equipmentRepoFiles,
+  });
   try {
     const saved = await runTool(
       env as unknown as Parameters<typeof runTool>[0],
@@ -133,8 +145,13 @@ describe("discovery an agent starts from", () => {
 
   it("every page's head declares the feeds", () => {
     const feeds = (rootLinks() as unknown as Descriptor[]).filter((d) => d.rel === "alternate");
-    expect(feeds.map((d) => d.type).sort()).toEqual(["application/atom+xml", "application/feed+json", "application/rss+xml"]);
-    for (const feed of feeds) expect(String(feed.href)).toMatch(/^https:\/\/.+\/writing\/(rss\.xml|atom\.xml|feed\.json)$/);
+    expect(feeds.map((d) => d.type).sort()).toEqual([
+      "application/atom+xml",
+      "application/feed+json",
+      "application/rss+xml",
+    ]);
+    for (const feed of feeds)
+      expect(String(feed.href)).toMatch(/^https:\/\/.+\/writing\/(rss\.xml|atom\.xml|feed\.json)$/);
   });
 
   it("llms.txt and llms-full.txt name the home page as canonical", async () => {
@@ -162,7 +179,9 @@ describe("the home page: no twin, so llms.txt and llms-full.txt are its agent pa
 
 describe("an article: head, twin, canonical, full text", () => {
   it("the head and the Link header declare the twin", async () => {
-    const result = (await get(postLoader as Loader, `/writing/${ARTICLE.slug}`, { slug: ARTICLE.slug })) as {
+    const result = (await get(postLoader as Loader, `/writing/${ARTICLE.slug}`, {
+      slug: ARTICLE.slug,
+    })) as {
       data: unknown;
       init: { headers: Record<string, string> };
     };
@@ -174,18 +193,26 @@ describe("an article: head, twin, canonical, full text", () => {
   });
 
   it("the twin is markdown and names the post as canonical, by path and by Accept", async () => {
-    const byPath = await response(twinLoader as Loader, `/writing/${ARTICLE.slug}.md`, { slug: ARTICLE.slug });
+    const byPath = await response(twinLoader as Loader, `/writing/${ARTICLE.slug}.md`, {
+      slug: ARTICLE.slug,
+    });
     expect(byPath.status).toBe(200);
     expect(byPath.headers.get("content-type")).toContain("text/markdown");
     expect(byPath.headers.get("link")).toBe(canonical(`/writing/${ARTICLE.slug}`));
     expect(await byPath.text()).toContain(ARTICLE.term);
 
     const args = {
-      request: new Request(`${SITE_ORIGIN}/writing/${ARTICLE.slug}`, { headers: { accept: "text/markdown" } }),
+      request: new Request(`${SITE_ORIGIN}/writing/${ARTICLE.slug}`, {
+        headers: { accept: "text/markdown" },
+      }),
       params: { slug: ARTICLE.slug },
       context: routeContext(),
     } as never;
-    const negotiated = (await throughMiddleware(postMiddleware, postLoader as never, args)) as Response;
+    const negotiated = (await throughMiddleware(
+      postMiddleware,
+      postLoader as never,
+      args,
+    )) as Response;
     expect(negotiated.headers.get("content-type")).toContain("text/markdown");
     expect(negotiated.headers.get("link")).toBe(canonical(`/writing/${ARTICLE.slug}`));
   });
@@ -199,7 +226,9 @@ describe("an article: head, twin, canonical, full text", () => {
 
 describe("a research page and a protocol: head, twin, and llms.txt", () => {
   it(`${PROTOCOL_PAGE} renders its steps, links its twin, and llms.txt lists the page`, async () => {
-    const loaderData = (await get(procedureLoader as Loader, PROTOCOL_PAGE, { slug: "phage-isolation" })) as {
+    const loaderData = (await get(procedureLoader as Loader, PROTOCOL_PAGE, {
+      slug: "phage-isolation",
+    })) as {
       record: { path: string; sections: unknown[] };
     };
     expect(loaderData.record.path).toBe(PROTOCOL_PAGE);
@@ -207,7 +236,9 @@ describe("a research page and a protocol: head, twin, and llms.txt", () => {
     expect(markdownAlternates(procedureMeta({ loaderData } as never)).map((d) => d.href)).toEqual([
       `${SITE_ORIGIN}${PROTOCOL_PAGE}.md`,
     ]);
-    const twin = await response(procedureTwinLoader as Loader, `${PROTOCOL_PAGE}.md`, { slug: "phage-isolation" });
+    const twin = await response(procedureTwinLoader as Loader, `${PROTOCOL_PAGE}.md`, {
+      slug: "phage-isolation",
+    });
     expect(twin.headers.get("link")).toBe(canonical(PROTOCOL_PAGE));
     expect(await twin.text()).toContain("# ");
 
@@ -215,34 +246,43 @@ describe("a research page and a protocol: head, twin, and llms.txt", () => {
     expect(llms).toContain(`](${SITE_ORIGIN}${PROTOCOL_PAGE}):`);
   });
 
-  it.each([RESEARCH_PAGE])("%s renders its text, links its twin, and llms.txt lists the page", async (path) => {
-    const { page } = (await get(contentPageLoader as Loader, path)) as {
-      page: { path: string; html: string; title: string };
-    };
-    expect(page.path).toBe(path);
-    expect(page.html.length).toBeGreaterThan(200);
-    expect(markdownAlternates(contentPageMeta({ loaderData: { page } } as never)).map((d) => d.href)).toEqual([
-      `${SITE_ORIGIN}${contentPageMarkdownPath(path)}`,
-    ]);
+  it.each([RESEARCH_PAGE])(
+    "%s renders its text, links its twin, and llms.txt lists the page",
+    async (path) => {
+      const { page } = (await get(contentPageLoader as Loader, path)) as {
+        page: { path: string; html: string; title: string };
+      };
+      expect(page.path).toBe(path);
+      expect(page.html.length).toBeGreaterThan(200);
+      expect(
+        markdownAlternates(contentPageMeta({ loaderData: { page } } as never)).map((d) => d.href),
+      ).toEqual([`${SITE_ORIGIN}${contentPageMarkdownPath(path)}`]);
 
-    const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
-    expect(llms).toContain(`](${SITE_ORIGIN}${path})`);
-    expect(llms).toContain("/software/{name}");
-  });
+      const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
+      expect(llms).toContain(`](${SITE_ORIGIN}${path})`);
+      expect(llms).toContain("/software/{name}");
+    },
+  );
 });
 
 describe("a paper: head declares the twin, llms.txt lists it", () => {
   it("the head links the markdown twin and llms.txt lists the same URL", async () => {
-    const loaderData = await get(paperLoader as Loader, paperPath(PAPER_SLUG), { slug: PAPER_SLUG });
+    const loaderData = await get(paperLoader as Loader, paperPath(PAPER_SLUG), {
+      slug: PAPER_SLUG,
+    });
     const alternates = markdownAlternates(paperMeta({ loaderData } as never));
-    expect(alternates.map((d) => d.href)).toEqual([`${SITE_ORIGIN}${paperMarkdownPath(PAPER_SLUG)}`]);
+    expect(alternates.map((d) => d.href)).toEqual([
+      `${SITE_ORIGIN}${paperMarkdownPath(PAPER_SLUG)}`,
+    ]);
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
     expect(llms).toContain(`](${SITE_ORIGIN}${paperMarkdownPath(PAPER_SLUG)}):`);
   });
 
   it("the twin is markdown from D1 and names the paper page as canonical, noindex, tagged for the purge", async () => {
-    const twin = await response(paperTwinLoader as Loader, paperMarkdownPath(PAPER_SLUG), { slug: PAPER_SLUG });
+    const twin = await response(paperTwinLoader as Loader, paperMarkdownPath(PAPER_SLUG), {
+      slug: PAPER_SLUG,
+    });
     expect(twin.status).toBe(200);
     expect(twin.headers.get("content-type")).toContain("text/markdown");
     expect(twin.headers.get("link")).toBe(canonical(paperPath(PAPER_SLUG)));
@@ -252,7 +292,9 @@ describe("a paper: head declares the twin, llms.txt lists it", () => {
   });
 
   it("a slug that is no paper's answers 404", async () => {
-    const res = await response(paperTwinLoader as Loader, "/research/publications/not-a-paper.md", { slug: "not-a-paper" });
+    const res = await response(paperTwinLoader as Loader, "/research/publications/not-a-paper.md", {
+      slug: "not-a-paper",
+    });
     expect(res.status).toBe(404);
   });
 });

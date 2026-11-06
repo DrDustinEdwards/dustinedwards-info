@@ -23,7 +23,9 @@ type AssetsEnv = Pick<Env, "ASSETS">;
 
 /** A revision id, as text: the newest source_revisions row, so any write moves it. "0" before the first. */
 export async function getHead(env: SourceEnv) {
-  const row = await env.DB.prepare(`SELECT COALESCE(MAX(id), 0) AS id FROM source_revisions`).first<{ id: number }>();
+  const row = await env.DB.prepare(
+    `SELECT COALESCE(MAX(id), 0) AS id FROM source_revisions`,
+  ).first<{ id: number }>();
   return { commitSha: String(row?.id ?? 0) };
 }
 
@@ -85,9 +87,12 @@ export async function listPostFiles(env: SourceEnv) {
 /** A static file of this deploy, by its repository path (`public/...`): the response, or null when none is served. */
 async function fetchAsset(env: AssetsEnv, path: string) {
   if (!path.startsWith("public/")) return null;
-  const response = await env.ASSETS.fetch(new Request(`https://assets.invalid/${encodeURI(path.slice("public/".length))}`));
+  const response = await env.ASSETS.fetch(
+    new Request(`https://assets.invalid/${encodeURI(path.slice("public/".length))}`),
+  );
   if (response.status === 404) return null;
-  if (!response.ok) throw new SourceError(`The static file ${path} answered ${response.status}.`, response.status);
+  if (!response.ok)
+    throw new SourceError(`The static file ${path} answered ${response.status}.`, response.status);
   return response;
 }
 
@@ -101,13 +106,18 @@ export async function readBinaryFile(env: AssetsEnv, path: string) {
 export async function publicFileEntry(env: AssetsEnv, sitePath: string) {
   const response = await fetchAsset(env, `public${sitePath}`);
   if (!response) return null;
-  const size = Number(response.headers.get("content-length") ?? (await response.arrayBuffer()).byteLength);
+  const size = Number(
+    response.headers.get("content-length") ?? (await response.arrayBuffer()).byteLength,
+  );
   return { size };
 }
 
 /** The image placeholders the deploy was built with (content/generated/assets.json). */
 export function assetPlaceholders(): Record<string, { sha: string; lqip: string }> {
-  return (assetManifest as { placeholders?: Record<string, { sha: string; lqip: string }> }).placeholders ?? {};
+  return (
+    (assetManifest as { placeholders?: Record<string, { sha: string; lqip: string }> })
+      .placeholders ?? {}
+  );
 }
 
 type FileChange = { path: string; content: string } | { path: string; content: null };
@@ -171,19 +181,27 @@ export async function commitFiles(
   const author = authorOf(options.message);
   const statements = [
     ...(options.expectedHeadSha
-      ? [db.prepare(`INSERT INTO source_guard (ok) SELECT COALESCE(MAX(id), 0) = ?1 FROM source_revisions`).bind(Number(head))]
+      ? [
+          db
+            .prepare(
+              `INSERT INTO source_guard (ok) SELECT COALESCE(MAX(id), 0) = ?1 FROM source_revisions`,
+            )
+            .bind(Number(head)),
+        ]
       : []),
     ...expected.map(([path, sha]) =>
-      db.prepare(`INSERT INTO source_guard (ok) VALUES ((SELECT sha FROM source_files WHERE path = ?1) IS ?2)`).bind(path, sha),
+      db
+        .prepare(
+          `INSERT INTO source_guard (ok) VALUES ((SELECT sha FROM source_files WHERE path = ?1) IS ?2)`,
+        )
+        .bind(path, sha),
     ),
     ...options.changes.flatMap((change) => [
-      db.prepare(`INSERT INTO source_revisions (path, content, sha, message, author) VALUES (?1, ?2, ?3, ?4, ?5)`).bind(
-        change.path,
-        change.content,
-        blobShas[change.path],
-        options.message,
-        author,
-      ),
+      db
+        .prepare(
+          `INSERT INTO source_revisions (path, content, sha, message, author) VALUES (?1, ?2, ?3, ?4, ?5)`,
+        )
+        .bind(change.path, change.content, blobShas[change.path], options.message, author),
       change.content === null
         ? db.prepare(`DELETE FROM source_files WHERE path = ?1`).bind(change.path)
         : db
@@ -201,7 +219,11 @@ export async function commitFiles(
     await db.batch(statements);
   } catch (error) {
     if (/CHECK constraint failed/i.test(String(error))) {
-      throw new SourceError("The content changed while this was being saved. Reload and reapply your edit.", 409, true);
+      throw new SourceError(
+        "The content changed while this was being saved. Reload and reapply your edit.",
+        409,
+        true,
+      );
     }
     throw error;
   }
@@ -243,4 +265,3 @@ export async function fileRevisionSource(env: SourceEnv, path: string | null, ve
   if (!path) return null;
   return (await readFile(env, path, version))?.content ?? null;
 }
-

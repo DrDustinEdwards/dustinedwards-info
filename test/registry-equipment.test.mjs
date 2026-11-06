@@ -48,12 +48,24 @@ await test("the registry holds the equipment the protocols list, each a name and
     "water-bath",
   ]);
   const gaps = built.gaps.filter((gap) => gap.slug.startsWith("equipment/"));
-  assert.equal(gaps.filter((g) => g.field === "manufacturer").length, 11, "no record in the repo says who makes any of it");
-  for (const gap of gaps) assert.ok(["manufacturer", "rotor"].includes(gap.field) && gap.reason.length > 20, `${gap.slug}.${gap.field}`);
+  assert.equal(
+    gaps.filter((g) => g.field === "manufacturer").length,
+    11,
+    "no record in the repo says who makes any of it",
+  );
+  for (const gap of gaps)
+    assert.ok(
+      ["manufacturer", "rotor"].includes(gap.field) && gap.reason.length > 20,
+      `${gap.slug}.${gap.field}`,
+    );
   const centrifuge = equipmentRow(byId.get("microcentrifuge"));
   assert.equal(centrifuge.rotor, null);
   assert.match(centrifuge.rotorMissing ?? "", /Waiting on Dustin: the ZnCl2 rotor \(core\.md\)/);
-  assert.equal(equipmentGapText(centrifuge).length, 2, "the maker and the rotor are both gaps on a centrifuge");
+  assert.equal(
+    equipmentGapText(centrifuge).length,
+    2,
+    "the maker and the rotor are both gaps on a centrifuge",
+  );
   assert.equal(equipmentGapText(equipmentRow(byId.get("water-bath"))).length, 1);
   assert.equal(equipmentRow(byId.get("qubit-3-0")).name, "Qubit 3.0");
 });
@@ -61,39 +73,76 @@ await test("the registry holds the equipment the protocols list, each a name and
 await test("the kind refuses what is wrong, with the field named", async () => {
   const kinds = { equipment: EQUIPMENT };
   const host = { paper: async () => false, recipe: async () => false };
-  const compile = (lines) => compileRegistryItem({ slug: "equipment/x", raw: `---\n${lines.join("\n")}\n---\n`, host, pipeline: { findWideDashes }, kinds });
+  const compile = (lines) =>
+    compileRegistryItem({
+      slug: "equipment/x",
+      raw: `---\n${lines.join("\n")}\n---\n`,
+      host,
+      pipeline: { findWideDashes },
+      kinds,
+    });
   assert.equal((await compile(["name: X", "manufacturer: A maker"])).ok, true);
-  assert.equal((await compile(["name: X", 'manufacturer: "MISSING: no record"', 'rotor: "MISSING: waiting"'])).ok, true);
+  assert.equal(
+    (await compile(["name: X", 'manufacturer: "MISSING: no record"', 'rotor: "MISSING: waiting"']))
+      .ok,
+    true,
+  );
   const bad = await compile(["name: X", "rotor: 12"]);
   assert.equal(bad.ok, false);
-  assert.ok(bad.errors.join("\n").includes("manufacturer") && bad.errors.join("\n").includes("rotor"));
+  assert.ok(
+    bad.errors.join("\n").includes("manufacturer") && bad.errors.join("\n").includes("rotor"),
+  );
 });
 
 await test("an item has a page of its own, found by search and from the inventory (docs/KNOWLEDGE-BASE.md, A1)", () => {
   assert.equal(hasItemPage("equipment"), true);
-  assert.deepEqual(registrySearchInput(byId.get("water-bath")), { uid: "registry:equipment/water-bath", url: "/research/lab/equipment/water-bath", title: "Water bath", body: "Water bath equipment" });
-  assert.ok(inventoryRows(items, []).every((row) => row.path.startsWith(`${kindPath("equipment")}/`)));
+  assert.deepEqual(registrySearchInput(byId.get("water-bath")), {
+    uid: "registry:equipment/water-bath",
+    url: "/research/lab/equipment/water-bath",
+    title: "Water bath",
+    body: "Water bath equipment",
+  });
+  assert.ok(
+    inventoryRows(items, []).every((row) => row.path.startsWith(`${kindPath("equipment")}/`)),
+  );
   assert.equal(kindPath("equipment"), "/research/lab/equipment");
 });
 
 await test("no record stores what is computed: the protocols that use an item, or the setting a protocol gives it", async () => {
-  const names = (await readdir(new URL("content/registry/equipment/", root))).filter((n) => n.endsWith(".md"));
+  const names = (await readdir(new URL("content/registry/equipment/", root))).filter((n) =>
+    n.endsWith(".md"),
+  );
   assert.equal(names.length, 11);
   for (const name of names) {
     const data = matter(await text(`content/registry/equipment/${name}`), {}).data;
-    for (const field of ["protocols", "used_in", "temperature", "speed", "setting", "volume"]) assert.equal(Object.hasOwn(data, field), false, `${name} stores ${field}`);
+    for (const field of ["protocols", "used_in", "temperature", "speed", "setting", "volume"])
+      assert.equal(Object.hasOwn(data, field), false, `${name} stores ${field}`);
   }
 });
 
 await test("the table lists each item's protocols, read from the protocols that name it, and every gap with its reason", () => {
   const protocols = [
-    { path: "/research/protocols/a", title: "A", equipment: [{ name: "55 °C water bath", item: { id: "water-bath" } }, { name: "gel", item: null }] },
+    {
+      path: "/research/protocols/a",
+      title: "A",
+      equipment: [
+        { name: "55 °C water bath", item: { id: "water-bath" } },
+        { name: "gel", item: null },
+      ],
+    },
     { path: "/research/protocols/b", title: "B", equipment: [{ name: "plain", item: null }] },
     { path: "/research/protocols/c" },
   ];
-  assert.deepEqual(equipmentUses("water-bath", protocols), [{ path: "/research/protocols/a", title: "A" }]);
+  assert.deepEqual(equipmentUses("water-bath", protocols), [
+    { path: "/research/protocols/a", title: "A" },
+  ]);
   const rows = equipmentRows(items, protocols);
-  assert.equal(EQUIPMENT_CATALOG.fields.find((f) => f.key === "protocols").value(rows.find((r) => r.id === "water-bath")), "A");
+  assert.equal(
+    EQUIPMENT_CATALOG.fields
+      .find((f) => f.key === "protocols")
+      .value(rows.find((r) => r.id === "water-bath")),
+    "A",
+  );
   const md = equipmentMarkdown(rows, "https://example.com");
   for (const line of [
     "| Equipment | Manufacturer | Rotor | Protocols |",
@@ -113,15 +162,32 @@ await test("a protocol's Equipment table is drawn from the registry beside the p
   const extraction = compiled.find((c) => c.slug === "phage-dna-extraction")?.compiled;
   assert.ok(extraction?.ok, JSON.stringify(extraction?.errors));
   const centrifuge = extraction.record.equipment.find((e) => e.name === "microcentrifuge");
-  assert.deepEqual(centrifuge.item, { id: "microcentrifuge", name: "Microcentrifuge", status: "published", manufacturer: null, rotor: null, rotorGap: true });
+  assert.deepEqual(centrifuge.item, {
+    id: "microcentrifuge",
+    name: "Microcentrifuge",
+    status: "published",
+    manufacturer: null,
+    rotor: null,
+    rotorGap: true,
+  });
   assert.ok(
-    extraction.markdown.includes("- [microcentrifuge](/research/lab/equipment/microcentrifuge) (manufacturer not recorded; rotor not recorded)"),
+    extraction.markdown.includes(
+      "- [microcentrifuge](/research/lab/equipment/microcentrifuge) (manufacturer not recorded; rotor not recorded)",
+    ),
     "the twin carries the same facts, and links the item's page as the table does",
   );
   const isolation = compiled.find((c) => c.slug === "phage-isolation")?.compiled;
-  assert.ok(isolation.record.equipment.some((e) => e.name === "55 °C water bath for molten top agar" && e.item?.id === "water-bath"), "the protocol keeps its own words");
+  assert.ok(
+    isolation.record.equipment.some(
+      (e) => e.name === "55 °C water bath for molten top agar" && e.item?.id === "water-bath",
+    ),
+    "the protocol keeps its own words",
+  );
   const coi = compiled.find((c) => c.slug === "coi-primers")?.compiled;
-  assert.ok(coi.record.equipment.every((e) => e.item === null), "an item no record holds (a gel) stays the protocol's own");
+  assert.ok(
+    coi.record.equipment.every((e) => e.item === null),
+    "an item no record holds (a gel) stays the protocol's own",
+  );
 });
 
 await test("the compile refuses what a protocol may not say about equipment", async () => {
@@ -129,12 +195,21 @@ await test("the compile refuses what a protocol may not say about equipment", as
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const original = await text("content/procedures/phage-dna-extraction.md");
-  const compile = (raw, registry = registryHost()) => compileProcedure({ slug: "phage-dna-extraction", raw, pipeline, registry });
+  const compile = (raw, registry = registryHost()) =>
+    compileProcedure({ slug: "phage-dna-extraction", raw, pipeline, registry });
   assert.equal((await compile(original)).ok, true);
-  const unknown = await compile(original.replace("equipment: heat-block", "equipment: no-such-item"));
-  assert.match(unknown.errors.join("\n"), /equipment\[heat block\]\.equipment names no equipment in the lab registry/);
+  const unknown = await compile(
+    original.replace("equipment: heat-block", "equipment: no-such-item"),
+  );
+  assert.match(
+    unknown.errors.join("\n"),
+    /equipment\[heat block\]\.equipment names no equipment in the lab registry/,
+  );
   const bad = await compile(original.replace("equipment: heat-block", "equipment: Not An Id"));
-  assert.match(bad.errors.join("\n"), /\.equipment is the id of an equipment item in the lab registry/);
+  assert.match(
+    bad.errors.join("\n"),
+    /\.equipment is the id of an equipment item in the lab registry/,
+  );
   const none = await compileProcedure({ slug: "phage-dna-extraction", raw: original, pipeline });
   assert.equal(none.ok, false);
   assert.match(none.errors.join("\n"), /no lab registry/);

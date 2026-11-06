@@ -46,7 +46,9 @@ function derivedProblems(record, built) {
       }
       const authorTags = tags.filter((t) => t.name === "citation_author").length;
       if (authorTags !== record.authors.length) {
-        errors.push(`citation tags: ${authorTags} citation_author tags for ${record.authors.length} authors; one per author, or Scholar reads a single author whose name is the whole list`);
+        errors.push(
+          `citation tags: ${authorTags} citation_author tags for ${record.authors.length} authors; one per author, or Scholar reads a single author whose name is the whole list`,
+        );
       }
       const pdf = tags.find((t) => t.name === "citation_pdf_url");
       if (hosted && !pdf) errors.push("citation tags: hosted but no citation_pdf_url");
@@ -60,29 +62,39 @@ function derivedProblems(record, built) {
 
     const bib = toBibtex(record);
     const ris = toRis(record);
-    if (!bib.includes(record.doi) || !ris.includes(record.doi)) errors.push("exports: the DOI is missing from the BibTeX or RIS entry");
+    if (!bib.includes(record.doi) || !ris.includes(record.doi))
+      errors.push("exports: the DOI is missing from the BibTeX or RIS entry");
     if (record.doi !== record.doi.toLowerCase() && !bib.includes(`doi = {${record.doi}}`)) {
       errors.push("exports: a mixed-case DOI must be exported as deposited");
     }
-    if (REFERENCE.test(bib) || REFERENCE.test(ris)) errors.push("exports: a character reference survives into BibTeX or RIS");
+    if (REFERENCE.test(bib) || REFERENCE.test(ris))
+      errors.push("exports: a character reference survives into BibTeX or RIS");
     const unprotected = organismsIn(record.title).filter((o) => !bib.includes(`{${o}}`));
-    if (unprotected.length > 0) errors.push(`exports: organism name(s) not brace-protected in BibTeX: ${unprotected.join(", ")}`);
+    if (unprotected.length > 0)
+      errors.push(
+        `exports: organism name(s) not brace-protected in BibTeX: ${unprotected.join(", ")}`,
+      );
   }
 
   if (REFERENCE.test(built.twin)) errors.push("twin: carries an undecoded character reference");
-  if (hosted && built.fullText !== null && !built.twin.includes("## Full text")) errors.push("twin: a hosted paper's twin lacks its Full text section");
+  if (hosted && built.fullText !== null && !built.twin.includes("## Full text"))
+    errors.push("twin: a hosted paper's twin lacks its Full text section");
   // Classic search shows the line it matched, so two-column text would snippet a mangled one.
   if (hosted && built.fullText && built.searchBody.length > built.fullText.length / 2) {
-    errors.push("search record: the body carries the PDF text; only the abstract, summary and citation belong in it");
+    errors.push(
+      "search record: the body carries the PDF text; only the abstract, summary and citation belong in it",
+    );
   }
 
   const key = keyForUrl(paperPath(slug));
   if (key !== `research/publications/${slug}.md` || urlForKey(key) !== paperPath(slug)) {
     errors.push(`Ask key: ${key} does not map back to ${paperPath(slug)}`);
   }
-  if (`/${key}` !== paperMarkdownPath(slug)) errors.push(`Ask key: ${key} is not the twin's path ${paperMarkdownPath(slug)}`);
+  if (`/${key}` !== paperMarkdownPath(slug))
+    errors.push(`Ask key: ${key} is not the twin's path ${paperMarkdownPath(slug)}`);
   const askUrl = paperAskUrl(decodeEntities(record.title));
-  if (!askUrl.startsWith("/search?q=") || askUrl.length > ASK_URL_MAX) errors.push("Ask link: the quoted title does not build a /search URL");
+  if (!askUrl.startsWith("/search?q=") || askUrl.length > ASK_URL_MAX)
+    errors.push("Ask link: the quoted title does not build a /search URL");
   return errors;
 }
 
@@ -116,7 +128,9 @@ export async function compilePublication({ slug, raw, host, others, citedByArtif
     pagePath: paperPath(slug),
     pdfPath: hosted ? paperPdfPath(slug) : null,
   });
-  const searchInput = /** @type {NonNullable<ReturnType<typeof paperSearchInputs>[number]>} */ (paperSearchInputs([record])[0]);
+  const searchInput = /** @type {NonNullable<ReturnType<typeof paperSearchInputs>[number]>} */ (
+    paperSearchInputs([record])[0]
+  );
   const derived = derivedProblems(record, {
     twin,
     searchBody: searchInput.body,
@@ -124,7 +138,10 @@ export async function compilePublication({ slug, raw, host, others, citedByArtif
   });
   if (derived.length > 0) return { ok: false, errors: derived };
 
-  const csl = parsed.data.csl && typeof parsed.data.csl === "object" ? /** @type {Record<string, unknown>} */ (parsed.data.csl) : null;
+  const csl =
+    parsed.data.csl && typeof parsed.data.csl === "object"
+      ? /** @type {Record<string, unknown>} */ (parsed.data.csl)
+      : null;
   return {
     ok: true,
     errors: [],

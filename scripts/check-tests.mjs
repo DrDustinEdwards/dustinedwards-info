@@ -2,7 +2,12 @@ import { spawnSync } from "node:child_process";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
-import { descendantPids, killTree, processExists, readProcessTable } from "./lib/child-processes.mjs";
+import {
+  descendantPids,
+  killTree,
+  processExists,
+  readProcessTable,
+} from "./lib/child-processes.mjs";
 import { createTally } from "./lib/tally.mjs";
 import { walkFiles } from "./lib/walk-files.mjs";
 
@@ -27,7 +32,8 @@ const { ok } = tally;
  * @returns {{ killed: number[], failed: number[], unreadable: boolean }}
  */
 function reapTestRunners(rootPid) {
-  if (!Number.isInteger(rootPid) || Number(rootPid) <= 0) return { killed: [], failed: [], unreadable: false };
+  if (!Number.isInteger(rootPid) || Number(rootPid) <= 0)
+    return { killed: [], failed: [], unreadable: false };
   const table = readProcessTable();
   if (table.size === 0) return { killed: [], failed: [], unreadable: true };
   /** @type {number[]} */
@@ -110,30 +116,32 @@ const TEST_TIMEOUT_MS = 60_000;
 
 const RUN_TIMEOUT_MS = 6 * 60_000;
 
-const run = spawnSync(
-  "npm",
-  ["test", "--silent", "--", `--test-timeout=${TEST_TIMEOUT_MS}`],
-  {
-    cwd: root,
-    encoding: "utf8",
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: RUN_TIMEOUT_MS,
-    killSignal: "SIGKILL",
-  },
-);
+const run = spawnSync("npm", ["test", "--silent", "--", `--test-timeout=${TEST_TIMEOUT_MS}`], {
+  cwd: root,
+  encoding: "utf8",
+  shell: true,
+  maxBuffer: 64 * 1024 * 1024,
+  timeout: RUN_TIMEOUT_MS,
+  killSignal: "SIGKILL",
+});
 const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 
 // `spawnSync`'s timeout kills the shell and nothing below it, so reap its descendants on every path.
 const leaked = reapTestRunners(run.pid);
 if (leaked.killed.length > 0) {
-  console.log(`  reaped ${leaked.killed.length} leftover runner process(es): ${leaked.killed.join(", ")}`);
+  console.log(
+    `  reaped ${leaked.killed.length} leftover runner process(es): ${leaked.killed.join(", ")}`,
+  );
 }
 if (leaked.failed.length > 0) {
-  console.log(`  could NOT kill ${leaked.failed.length} leftover runner process(es): ${leaked.failed.join(", ")}`);
+  console.log(
+    `  could NOT kill ${leaked.failed.length} leftover runner process(es): ${leaked.failed.join(", ")}`,
+  );
 }
 if (leaked.unreadable) {
-  console.log("  could not read the process table, so leftover runner processes were not looked for");
+  console.log(
+    "  could not read the process table, so leftover runner processes were not looked for",
+  );
 }
 
 // `ETIMEDOUT` lives on `code`, which only `ErrnoException` declares.
@@ -183,7 +191,11 @@ ok(
 ok(
   "no test failed",
   failed === 0 && run.status === 0,
-  `${failed} failing, runner exit ${run.status}.\n${output.split("\n").filter((l) => /^not ok|✖/.test(l)).slice(0, 10).join("\n        ")}`,
+  `${failed} failing, runner exit ${run.status}.\n${output
+    .split("\n")
+    .filter((l) => /^not ok|✖/.test(l))
+    .slice(0, 10)
+    .join("\n        ")}`,
 );
 const testsFloorBreach = assertFloor(
   "check:tests",

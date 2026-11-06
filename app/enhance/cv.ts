@@ -34,13 +34,17 @@ export default function start(): void {
 
   function must(root: Document | HTMLElement, selector: string): HTMLElement {
     const found = root.querySelector<HTMLElement>(selector);
-    if (!found) throw new Error(`cv: the page has no ${selector}; app/routes/cv.tsx and this module disagree.`);
+    if (!found)
+      throw new Error(
+        `cv: the page has no ${selector}; app/routes/cv.tsx and this module disagree.`,
+      );
     return found;
   }
 
   const root = must(document, "[data-cv]");
   const formElement = must(root, "form[data-cv-form]");
-  if (!(formElement instanceof HTMLFormElement)) throw new Error("cv: [data-cv-form] is not a form.");
+  if (!(formElement instanceof HTMLFormElement))
+    throw new Error("cv: [data-cv-form] is not a form.");
   const form: HTMLFormElement = formElement;
   const results = must(root, "[data-cv-results]");
   const summary = must(root, "[data-cv-summary]");
@@ -142,8 +146,11 @@ export default function start(): void {
    * (app/lib/cv/charts.ts), so the chart is absent then and comes back when a filter selects something.
    */
   const EMPTY = '[data-state="nodata"]';
-  let timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
-  if (!timeline && !timelineHost.querySelector(EMPTY)) throw new Error("cv: the timeline is not an Enarratio figure.");
+  let timeline: EnhancedChart | undefined = enhance().find(
+    (chart) => chart.figure.id === TIMELINE_ID,
+  );
+  if (!timeline && !timelineHost.querySelector(EMPTY))
+    throw new Error("cv: the timeline is not an Enarratio figure.");
 
   const TYPE_BY_LABEL = new Map(CHART_SERIES.map(([id, label]) => [label as string, id as string]));
   const LABEL_BY_TYPE = new Map(CHART_SERIES.map(([id, label]) => [id as string, label as string]));
@@ -154,7 +161,8 @@ export default function start(): void {
    * type as its key's pressed entry. A range, or several types, shows as the faded bars alone.
    */
   function chartFilter(state: CvState): { field: string; value: string } | null {
-    if (state.from !== null && state.from === state.to) return { field: "year", value: String(state.from) };
+    if (state.from !== null && state.from === state.to)
+      return { field: "year", value: String(state.from) };
     if (state.types.length === 1) {
       const label = LABEL_BY_TYPE.get(state.types[0] ?? "");
       if (label) return { field: "type", value: label };
@@ -179,7 +187,9 @@ export default function start(): void {
     fetch(`${PATH}/charts.json?${params}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error(`cv: ${PATH}/charts.json answered ${response.status}.`);
-        return response.json() as Promise<Record<"timeline" | "papers" | "grants" | "students", string>>;
+        return response.json() as Promise<
+          Record<"timeline" | "papers" | "grants" | "students", string>
+        >;
       })
       .then((charts) => {
         if (controller.signal.aborted) return;
@@ -203,7 +213,9 @@ export default function start(): void {
    * made again when the no-data state stood in its place.
    */
   function drawTimeline(markup: string, state: CvState) {
-    const drawn = new DOMParser().parseFromString(markup, "text/html").querySelector("figure.enarratio");
+    const drawn = new DOMParser()
+      .parseFromString(markup, "text/html")
+      .querySelector("figure.enarratio");
     if (!drawn) {
       timeline?.destroy();
       timeline = undefined;
@@ -254,7 +266,8 @@ export default function start(): void {
       const [kind, id] = (node.dataset.cvFacet ?? "").split(":");
       const table = kind === "type" ? facets.types : kind === "area" ? facets.areas : facets.roles;
       const n = table[id ?? ""] ?? 0;
-      if (node instanceof HTMLOptionElement) node.textContent = `${node.dataset.label ?? id} (${n})`;
+      if (node instanceof HTMLOptionElement)
+        node.textContent = `${node.dataset.label ?? id} (${n})`;
       else node.textContent = String(n);
     }
 
@@ -296,7 +309,8 @@ export default function start(): void {
   clear.addEventListener("click", (event) => {
     event.preventDefault();
     form.reset();
-    for (const input of form.querySelectorAll<HTMLInputElement>("input[type=checkbox]")) input.checked = false;
+    for (const input of form.querySelectorAll<HTMLInputElement>("input[type=checkbox]"))
+      input.checked = false;
     for (const select of form.querySelectorAll("select")) {
       select.value = select.name === "sort" ? currentSort : "";
     }
@@ -332,7 +346,9 @@ export default function start(): void {
         input.checked = type !== null && input.value === type;
       }
     } else {
-      throw new Error(`cv: the timeline reported a filter on "${field}", which the CV does not have.`);
+      throw new Error(
+        `cv: the timeline reported a filter on "${field}", which the CV does not have.`,
+      );
     }
     apply(readState(), { announceNow: true });
   });

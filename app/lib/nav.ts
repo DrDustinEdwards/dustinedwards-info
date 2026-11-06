@@ -66,7 +66,13 @@ export type MenuLink = {
  * One grouped row of the left half. `title` is a link when `to` is set; `note` is plain text under it;
  * `links` are links under it, shown on one line separated by middots.
  */
-export type MenuRow = { icon: NavIcon; title: string; to?: string; note?: string; links?: MenuLink[] };
+export type MenuRow = {
+  icon: NavIcon;
+  title: string;
+  to?: string;
+  note?: string;
+  links?: MenuLink[];
+};
 
 /** The one block of the right half. */
 type Spotlight = {
@@ -121,9 +127,24 @@ export const RESEARCH_AREAS: MenuLink[] = [
 
 // The three products only. Germomics, TXASM, Capsid and this site stay off the tiles.
 export const SOFTWARE_PRODUCTS: MenuLink[] = [
-  { to: "/software/foxhound", label: "Foxhound", description: "Failed Stripe payment recovery", icon: "card" },
-  { to: "/software/foxing", label: "Foxing", description: "Public-domain reading", icon: "science-education" },
-  { to: "/software/foxing-edu", label: "Foxing Edu", description: "Foxing, sold to schools", icon: "teaching" },
+  {
+    to: "/software/foxhound",
+    label: "Foxhound",
+    description: "Failed Stripe payment recovery",
+    icon: "card",
+  },
+  {
+    to: "/software/foxing",
+    label: "Foxing",
+    description: "Public-domain reading",
+    icon: "science-education",
+  },
+  {
+    to: "/software/foxing-edu",
+    label: "Foxing Edu",
+    description: "Foxing, sold to schools",
+    icon: "teaching",
+  },
 ];
 
 /** The posts in the build snapshot a reader can see at `now`: past any scheduled time, newest first. Drafts never enter the snapshot. */
@@ -152,7 +173,12 @@ function researchMenu(): Menu {
     blurb: "Retroviruses, bacteriophages and science education",
     tiles: RESEARCH_AREAS,
     rows: [
-      { icon: "publications", title: "Publications", to: "/research/publications", note: "Every paper, with BibTeX and RIS" },
+      {
+        icon: "publications",
+        title: "Publications",
+        to: "/research/publications",
+        note: "Every paper, with BibTeX and RIS",
+      },
       {
         icon: "collections",
         title: "Collections",
@@ -176,7 +202,9 @@ function researchMenu(): Menu {
           kind: "text",
           eyebrow: "Latest paper",
           title: NAV_DATA.latestPaper.title,
-          body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year].filter(Boolean).join(", "),
+          body: [NAV_DATA.latestPaper.journal, NAV_DATA.latestPaper.year]
+            .filter(Boolean)
+            .join(", "),
           to: paperPath(NAV_DATA.latestPaper.slug),
         }
       : undefined,
@@ -214,7 +242,11 @@ function teachingMenu(): Menu {
           { to: "/teaching/study-skills", label: "Study skills" },
         ],
       },
-      { icon: "mail", title: "Questions about a course", links: [{ to: "/contact", label: "Contact" }] },
+      {
+        icon: "mail",
+        title: "Questions about a course",
+        links: [{ to: "/contact", label: "Contact" }],
+      },
     ],
     spotlight: {
       kind: "text",
@@ -250,7 +282,12 @@ function softwareMenu(): Menu {
           { to: "/software/enarratio", label: "Enarratio" },
         ],
       },
-      { icon: "doc", title: "Software how-tos", to: "/software/how-tos", note: "Step-by-step guides" },
+      {
+        icon: "doc",
+        title: "Software how-tos",
+        to: "/software/how-tos",
+        note: "Step-by-step guides",
+      },
     ],
     spotlight: {
       kind: "map",
@@ -271,7 +308,10 @@ function writingMenu(now: number): Menu {
   const posts = visiblePosts(now);
   const newest = posts[0];
   const tags = counted(posts.flatMap((post) => post.tags)).slice(0, TAGS_SHOWN);
-  const series = counted(posts.flatMap((post) => (post.series ? [post.series] : []))).slice(0, SERIES_SHOWN);
+  const series = counted(posts.flatMap((post) => (post.series ? [post.series] : []))).slice(
+    0,
+    SERIES_SHOWN,
+  );
   return {
     id: "writing",
     icon: "writing",
@@ -295,7 +335,13 @@ function writingMenu(now: number): Menu {
       },
     ],
     spotlight: newest
-      ? { kind: "text", eyebrow: "Newest", title: newest.title, body: newest.firstLine, to: `/writing/${newest.slug}` }
+      ? {
+          kind: "text",
+          eyebrow: "Newest",
+          title: newest.title,
+          body: newest.firstLine,
+          to: `/writing/${newest.slug}`,
+        }
       : undefined,
     footer: [
       { to: "/writing", label: "All articles", icon: "arrow" },
@@ -324,7 +370,12 @@ function aboutMenu(): Menu {
     blurb: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.org}`,
     tiles: [
       { to: "/about", label: "About", icon: "about" },
-      { to: "/cv", label: "CV", icon: "publications", also: { to: CV_PDF_PATH, label: "Also as a PDF" } },
+      {
+        to: "/cv",
+        label: "CV",
+        icon: "publications",
+        also: { to: CV_PDF_PATH, label: "Also as a PDF" },
+      },
       { to: "/contact", label: "Contact", icon: "mail" },
     ],
     rows: [
@@ -345,7 +396,6 @@ function aboutMenu(): Menu {
     ],
   };
 }
-
 
 /**
  * The pages outside the markdown set that a panel links to. test/nav.test.mjs holds each against
@@ -394,8 +444,10 @@ function makeLive(now: number = Date.now()): (to: string) => boolean {
     if (ROUTED_PATHS.includes(path)) return true;
     const library = BASES.find((base) => base.library === path && base.profile !== "protocol");
     if (library) return (NAV_DATA.libraries[library.profile] ?? 0) > 0;
-    if (path.startsWith(TAG_PREFIX)) return tags.has(decodeURIComponent(path.slice(TAG_PREFIX.length)));
-    if (path.startsWith(SERIES_PREFIX)) return series.has(decodeURIComponent(path.slice(SERIES_PREFIX.length)));
+    if (path.startsWith(TAG_PREFIX))
+      return tags.has(decodeURIComponent(path.slice(TAG_PREFIX.length)));
+    if (path.startsWith(SERIES_PREFIX))
+      return series.has(decodeURIComponent(path.slice(SERIES_PREFIX.length)));
     if (path.startsWith(PAPER_PREFIX)) return path === paper;
     if (path.startsWith(POST_PREFIX)) return postPaths.has(path);
     return false;
@@ -432,7 +484,10 @@ export function liveMenu(menu: Menu, live: (to: string) => boolean = makeLive())
 export function menuLinks(menu: Menu): string[] {
   return [
     ...menu.tiles.flatMap((tile) => (tile.also ? [tile.to, tile.also.to] : [tile.to])),
-    ...menu.rows.flatMap((row) => [...(row.to ? [row.to] : []), ...(row.links ?? []).map((link) => link.to)]),
+    ...menu.rows.flatMap((row) => [
+      ...(row.to ? [row.to] : []),
+      ...(row.links ?? []).map((link) => link.to),
+    ]),
     ...(menu.spotlight ? [menu.spotlight.to] : []),
     ...menu.footer.map((link) => link.to),
   ];
@@ -477,4 +532,7 @@ export function buildNav(now: number = Date.now()): readonly NavItem[] {
 }
 
 /** The names and hubs of the five, for lists that need no panel (the 404 page). */
-export const NAV: readonly Pick<NavItem, "to" | "label">[] = SECTIONS.map(({ to, label }) => ({ to, label }));
+export const NAV: readonly Pick<NavItem, "to" | "label">[] = SECTIONS.map(({ to, label }) => ({
+  to,
+  label,
+}));

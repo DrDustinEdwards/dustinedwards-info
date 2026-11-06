@@ -42,7 +42,12 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       /* The islands imported, from the resource timeline, past the content hash. */
       loaded: performance
         .getEntriesByType("resource")
-        .map((e) => /\/islands\/([a-z][a-z0-9-]*)-[A-Za-z0-9_-]{8}\.js$/.exec(new URL(e.name).pathname)?.[1] ?? "")
+        .map(
+          (e) =>
+            /\/islands\/([a-z][a-z0-9-]*)-[A-Za-z0-9_-]{8}\.js$/.exec(
+              new URL(e.name).pathname,
+            )?.[1] ?? "",
+        )
         .filter(Boolean),
       /* Executable inline scripts: JSON-LD is data, not script. */
       inline: [...document.querySelectorAll("script:not([src])")]
@@ -63,7 +68,9 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
     );
     ok(
       `${path}: the one same-origin script is /site.js, nothing runs inline, and nothing carries a nonce`,
-      JSON.stringify(shape.srcs) === JSON.stringify(["/site.js"]) && shape.inline.length === 0 && shape.nonced === 0,
+      JSON.stringify(shape.srcs) === JSON.stringify(["/site.js"]) &&
+        shape.inline.length === 0 &&
+        shape.nonced === 0,
       `scripts [${shape.srcs.join(", ")}], ${shape.inline.length} inline script(s), ${shape.nonced} nonced element(s). ` +
         `The public policy allows same-origin files and nothing inline, and a nonce on a cached page is shared ` +
         `by every reader.`,

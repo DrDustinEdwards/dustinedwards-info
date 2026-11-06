@@ -116,7 +116,9 @@ function venueOf(journal, volume, issue, pages) {
 function authorRole(p) {
   const at = p.authors.findIndex((name) => canonicalAuthor(name) === OWNER);
   if (at < 0) {
-    throw new Error(`cv: ${p.doi} does not list ${OWNER} among its authors, so the CV cannot claim it.`);
+    throw new Error(
+      `cv: ${p.doi} does not list ${OWNER} among its authors, so the CV cannot claim it.`,
+    );
   }
   if (at === 0) return "first-author";
   if (at === p.authors.length - 1) return "senior-author";
@@ -156,7 +158,9 @@ function resolveOne(source, byDoi) {
   if (source.type === "publication" && "doi" in source) {
     const p = byDoi.get(source.doi.toLowerCase());
     if (!p) {
-      throw new Error(`cv: no publication record for DOI ${source.doi}; add its file to content/publications/ first.`);
+      throw new Error(
+        `cv: no publication record for DOI ${source.doi}; add its file to content/publications/ first.`,
+      );
     }
     const title = decodeEntities(p.title);
     const venue = venueOf(p.journal, p.volume, p.issue, p.pages);
@@ -295,7 +299,12 @@ function resolveOne(source, byDoi) {
         ...common,
         type: "talk",
         title: source.title,
-        meta: [source.venue, ...(source.presenters.length > 1 ? [`With ${source.presenters.slice(1).join(", ")}`] : [])],
+        meta: [
+          source.venue,
+          ...(source.presenters.length > 1
+            ? [`With ${source.presenters.slice(1).join(", ")}`]
+            : []),
+        ],
       };
     case "course":
       return {
@@ -406,7 +415,12 @@ export function cvFacts(entries) {
     amount: e.amount,
     order,
     search: foldText(
-      [e.search, typeLabel(e.type), e.role ? roleLabel(e.role) : "", ...e.areas.map(areaLabel)].join(" "),
+      [
+        e.search,
+        typeLabel(e.type),
+        e.role ? roleLabel(e.role) : "",
+        ...e.areas.map(areaLabel),
+      ].join(" "),
     ),
   }));
 }

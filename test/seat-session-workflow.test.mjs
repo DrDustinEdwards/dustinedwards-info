@@ -9,7 +9,10 @@ import { join } from "node:path";
 // capsid's test/seat-session-workflow.test.ts (capsid/research/design-seat-session-hardening.md,
 // PR 6), so the two workflows are hardened the same way and refuse the same things.
 
-const TEXT = readFileSync(new URL("../.github/workflows/seat-session.yml", import.meta.url), "utf8");
+const TEXT = readFileSync(
+  new URL("../.github/workflows/seat-session.yml", import.meta.url),
+  "utf8",
+);
 // Comments stripped, so a comment naming a pattern is not the pattern.
 const CODE = TEXT.split("\n")
   .filter((line) => !/^\s*#/.test(line))
@@ -27,7 +30,11 @@ await test("one named bot, never a wildcard, and no API key anywhere", () => {
   assert.match(CODE, /allowed_bots: "capsid-repo-access"/);
   assert.doesNotMatch(CODE, /allowed_bots: "\*"/);
   assert.doesNotMatch(CODE, /allowed_non_write_users/);
-  assert.doesNotMatch(CODE, /anthropic_api_key|ANTHROPIC_API_KEY/, "an API key would outrank the subscription token and bill the API");
+  assert.doesNotMatch(
+    CODE,
+    /anthropic_api_key|ANTHROPIC_API_KEY/,
+    "an API key would outrank the subscription token and bill the API",
+  );
   assert.match(CODE, /claude_code_oauth_token: \$\{\{ secrets\.CLAUDE_CODE_OAUTH_TOKEN \}\}/);
 });
 
@@ -44,13 +51,22 @@ await test("secrets come from the seat environment, the transcript stays out of 
   assert.match(CODE, /show_full_output: false/);
   const refused = list("disallowedTools");
   // Only deploy.yml deploys (.claude/hooks/no-direct-deploy.sh), and a session never does.
-  for (const entry of ["Bash(npm run deploy:*)", "Bash(npx wrangler:*)", "Bash(wrangler:*)", "Bash(gh:*)", "Bash(curl:*)"]) {
+  for (const entry of [
+    "Bash(npm run deploy:*)",
+    "Bash(npx wrangler:*)",
+    "Bash(wrangler:*)",
+    "Bash(gh:*)",
+    "Bash(curl:*)",
+  ]) {
     assert.ok(refused.includes(entry), `${entry} is not refused`);
   }
   assert.doesNotMatch(/--allowedTools "([^"]*)"/.exec(CODE)?.[1] ?? "", /wrangler|deploy|gh:/);
   // Read-nothing at the top; the one job holds the writes (area 12 checklist C3).
   assert.match(CODE, /^permissions: \{\}\n/m);
-  assert.match(CODE, /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: read\n {6}issues: read\n(?: {6}#.*\n)* {6}id-token: write\n {4}runs-on:/m);
+  assert.match(
+    CODE,
+    /^ {4}permissions:\n {6}contents: write\n {6}pull-requests: read\n {6}issues: read\n(?: {6}#.*\n)* {6}id-token: write\n {4}runs-on:/m,
+  );
 });
 
 await test("the Capsid key comes from the OIDC exchange, before checkout, and no long-lived runner key is read", () => {
@@ -60,7 +76,10 @@ await test("the Capsid key comes from the OIDC exchange, before checkout, and no
   const checkout = CODE.indexOf("actions/checkout@");
   const install = CODE.indexOf("run: npm ci");
   assert.ok(exchange > validate && validate >= 0, "the exchange does not follow the job id check");
-  assert.ok(exchange < checkout && exchange < install, "the exchange runs after checkout or npm ci, where a dependency could spend it first");
+  assert.ok(
+    exchange < checkout && exchange < install,
+    "the exchange runs after checkout or npm ci, where a dependency could spend it first",
+  );
   const step = CODE.slice(exchange, checkout);
   assert.match(step, /JOB_ID: \$\{\{ steps\.job\.outputs\.id \}\}/);
   assert.match(step, /"&audience=capsid"/);
@@ -71,7 +90,25 @@ await test("the Capsid key comes from the OIDC exchange, before checkout, and no
 
 // An allowed interpreter runs any program, which reaches the network and the environment, so it
 // would make the --disallowedTools list decorative.
-const INTERPRETERS = ["node", "bash", "sh", "zsh", "dash", "python", "python3", "perl", "ruby", "deno", "bun", "pwsh", "powershell", "env", "xargs", "eval", "exec"];
+const INTERPRETERS = [
+  "node",
+  "bash",
+  "sh",
+  "zsh",
+  "dash",
+  "python",
+  "python3",
+  "perl",
+  "ruby",
+  "deno",
+  "bun",
+  "pwsh",
+  "powershell",
+  "env",
+  "xargs",
+  "eval",
+  "exec",
+];
 
 function list(flag) {
   const m = new RegExp(`--${flag} "([^"]*)"`).exec(CODE);
@@ -82,13 +119,17 @@ function list(flag) {
 await test("no allowed Bash pattern is an unbounded interpreter", () => {
   const bash = list("allowedTools").filter((e) => /^Bash(\(|$)/.test(e));
   // The scan must see the npm entries it sits beside, or it passes on nothing.
-  assert.ok(bash.includes("Bash(npm test:*)") && bash.includes("Bash(npm run check:*)"), `parsed Bash entries: ${bash.join(" ")}`);
+  assert.ok(
+    bash.includes("Bash(npm test:*)") && bash.includes("Bash(npm run check:*)"),
+    `parsed Bash entries: ${bash.join(" ")}`,
+  );
   for (const entry of bash) {
     const command = /^Bash\((.*)\)$/.exec(entry)?.[1];
     assert.ok(command && command !== "*" && command !== ":*", `${entry} allows every command`);
     const [first, second] = command.replace(/:\*$/, "").split(/\s+/);
     assert.ok(!INTERPRETERS.includes(first), `${entry} allows an interpreter`);
-    if (first === "npx") assert.ok(second && /^[a-z@]/.test(second), `${entry} allows npx without a named tool`);
+    if (first === "npx")
+      assert.ok(second && /^[a-z@]/.test(second), `${entry} allows npx without a named tool`);
   }
 });
 
@@ -122,8 +163,14 @@ await test("the repo's git config runs no hooks and no fsmonitor, set after chec
   const fsmonitor = CODE.indexOf("git config core.fsmonitor false");
   const session = CODE.indexOf("anthropics/claude-code-action@");
   assert.ok(checkout >= 0 && session >= 0, "checkout or the Action not found");
-  assert.ok(hooks > checkout && hooks < session, "core.hooksPath is not pinned between checkout and the session");
-  assert.ok(fsmonitor > checkout && fsmonitor < session, "core.fsmonitor is not pinned between checkout and the session");
+  assert.ok(
+    hooks > checkout && hooks < session,
+    "core.hooksPath is not pinned between checkout and the session",
+  );
+  assert.ok(
+    fsmonitor > checkout && fsmonitor < session,
+    "core.fsmonitor is not pinned between checkout and the session",
+  );
 });
 
 const GIT_ALLOWED = new Set([
@@ -141,24 +188,47 @@ const GIT_ALLOWED = new Set([
 await test("git is allowed by named subcommand only, and the config-changing forms are refused", () => {
   const git = list("allowedTools").filter((e) => /^Bash\(git\b/.test(e));
   assert.ok(git.length > 0, "no git entries parsed");
-  for (const entry of git) assert.ok(GIT_ALLOWED.has(entry), `${entry} is not a named git subcommand`);
+  for (const entry of git)
+    assert.ok(GIT_ALLOWED.has(entry), `${entry} is not a named git subcommand`);
   const refused = list("disallowedTools");
-  for (const entry of ["Bash(git -c:*)", "Bash(git config:*)", "Bash(git -C:*)", "Bash(git push * --force*)", "Bash(git push * -f*)", "Bash(git push * +*)", "Bash(git push * --delete*)"]) {
+  for (const entry of [
+    "Bash(git -c:*)",
+    "Bash(git config:*)",
+    "Bash(git -C:*)",
+    "Bash(git push * --force*)",
+    "Bash(git push * -f*)",
+    "Bash(git push * +*)",
+    "Bash(git push * --delete*)",
+  ]) {
     assert.ok(refused.includes(entry), `${entry} is not refused`);
   }
 });
 
 await test("the session cannot read the key file or process environments, or edit git config", () => {
   const deny = settings().permissions?.deny ?? [];
-  for (const rule of ["Read(//proc/**)", "Read(/${{ runner.temp }}/**)", "Edit(**/.git/**)", "Edit(~/.gitconfig)", "Edit(~/.config/git/**)"]) {
+  for (const rule of [
+    "Read(//proc/**)",
+    "Read(/${{ runner.temp }}/**)",
+    "Edit(**/.git/**)",
+    "Edit(~/.gitconfig)",
+    "Edit(~/.config/git/**)",
+  ]) {
     assert.ok(deny.includes(rule), `${rule} is not in permissions.deny`);
   }
 });
 
 await test("the credential variables are named in the sandbox deny list", () => {
   const envVars = settings().sandbox?.credentials?.envVars ?? [];
-  for (const name of ["CLAUDE_CODE_OAUTH_TOKEN", "GITHUB_TOKEN", "GH_TOKEN", "DEFAULT_WORKFLOW_TOKEN"]) {
-    assert.ok(envVars.some((v) => v.name === name && v.mode === "deny"), `${name} is not denied`);
+  for (const name of [
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "GITHUB_TOKEN",
+    "GH_TOKEN",
+    "DEFAULT_WORKFLOW_TOKEN",
+  ]) {
+    assert.ok(
+      envVars.some((v) => v.name === name && v.mode === "deny"),
+      `${name} is not denied`,
+    );
   }
 });
 
@@ -174,7 +244,11 @@ const stepIndex = (marker) => steps().findIndex((s) => marker.test(s));
 await test("harden-runner is the first step, pinned, in block mode, and carries no sudo option", () => {
   const all = steps();
   assert.ok(all.length > 5, `only ${all.length} steps parsed`);
-  assert.match(all[0], /^uses: step-security\/harden-runner@[0-9a-f]{40} # v\d+\.\d+\.\d+/, "harden-runner is not the first step, pinned by sha");
+  assert.match(
+    all[0],
+    /^uses: step-security\/harden-runner@[0-9a-f]{40} # v\d+\.\d+\.\d+/,
+    "harden-runner is not the first step, pinned by sha",
+  );
   // Its pre hook would remove sudo before the sandbox setup could run.
   assert.doesNotMatch(all[0], /disable-sudo/, "harden-runner carries a sudo option");
   assert.match(all[0], /^ {10}egress-policy: block$/m);
@@ -218,7 +292,11 @@ await test("the egress list is capsid's recorded one, folded so the agent reads 
   assert.deepEqual(entries, ALLOWED_ENDPOINTS);
   for (const entry of entries) {
     assert.doesNotMatch(entry, /^\d+\.\d+\.\d+\.\d+:/, `${entry} is an IP address`);
-    assert.doesNotMatch(entry, /datadoghq|googleapis|\*/, `${entry} is a metrics host, a storage bucket host or a wildcard`);
+    assert.doesNotMatch(
+      entry,
+      /datadoghq|googleapis|\*/,
+      `${entry} is a metrics host, a storage bucket host or a wildcard`,
+    );
   }
 });
 
@@ -233,15 +311,26 @@ await test("the steps run in the ruled order: harden-runner, sandbox setup, lock
     /^name: Install dependencies/,
     /^uses: anthropics\/claude-code-action@/,
   ].map(stepIndex);
-  for (const [i, at] of order.entries()) assert.ok(at >= 0, `step ${i} of the ruled order is missing`);
-  for (let i = 1; i < order.length; i++) assert.ok(order[i] > order[i - 1], `step ${i} of the ruled order runs before step ${i - 1}`);
+  for (const [i, at] of order.entries())
+    assert.ok(at >= 0, `step ${i} of the ruled order is missing`);
+  for (let i = 1; i < order.length; i++)
+    assert.ok(order[i] > order[i - 1], `step ${i} of the ruled order runs before step ${i - 1}`);
 });
 
 await test("the sandbox setup installs bubblewrap and socat and writes Anthropic's bwrap profile as published", () => {
   const setup = steps()[stepIndex(/^name: Install the sandbox's prerequisites/)] ?? "";
   assert.match(setup, /apt-get install -y --no-install-recommends bubblewrap socat/);
-  const profile = ["abi <abi/4.0>,", "include <tunables/global>", "", "profile bwrap /usr/bin/bwrap flags=(unconfined) {", "  userns,", "  include if exists <local/bwrap>", "}"];
-  const body = /sudo tee \/etc\/apparmor\.d\/bwrap > \/dev\/null <<'EOF'\n([\s\S]*?)\n {10}EOF\n/.exec(setup);
+  const profile = [
+    "abi <abi/4.0>,",
+    "include <tunables/global>",
+    "",
+    "profile bwrap /usr/bin/bwrap flags=(unconfined) {",
+    "  userns,",
+    "  include if exists <local/bwrap>",
+    "}",
+  ];
+  const body =
+    /sudo tee \/etc\/apparmor\.d\/bwrap > \/dev\/null <<'EOF'\n([\s\S]*?)\n {10}EOF\n/.exec(setup);
   assert.ok(body, "the bwrap profile heredoc is not there");
   assert.deepEqual(
     body[1].split("\n").map((l) => l.replace(/^ {10}/, "")),
@@ -273,12 +362,23 @@ await test("the lockdown mirrors disable-sudo-and-containers, removes every sudo
 await test("the sandbox is required, allows only github.com, and denies writes to the repo's git config and hooks", () => {
   const sandbox = settings().sandbox ?? {};
   assert.equal(sandbox.enabled, true);
-  assert.equal(sandbox.failIfUnavailable, true, "a sandbox that cannot start would fall back to unsandboxed Bash");
-  assert.equal(sandbox.allowUnsandboxedCommands, false, "Claude could retry a command outside the sandbox");
+  assert.equal(
+    sandbox.failIfUnavailable,
+    true,
+    "a sandbox that cannot start would fall back to unsandboxed Bash",
+  );
+  assert.equal(
+    sandbox.allowUnsandboxedCommands,
+    false,
+    "Claude could retry a command outside the sandbox",
+  );
   assert.deepEqual(sandbox.network?.allowedDomains, ["github.com"]);
   assert.equal(sandbox.network?.strictAllowlist, true);
   // Absolute: in user settings a relative sandbox path resolves against ~/.claude.
-  assert.deepEqual(sandbox.filesystem?.denyWrite, ["${{ github.workspace }}/.git/config", "${{ github.workspace }}/.git/hooks"]);
+  assert.deepEqual(sandbox.filesystem?.denyWrite, [
+    "${{ github.workspace }}/.git/config",
+    "${{ github.workspace }}/.git/hooks",
+  ]);
   assert.deepEqual(sandbox.filesystem?.denyRead, ["${{ runner.temp }}"]);
 });
 
@@ -286,13 +386,27 @@ const actionStep = () => steps()[stepIndex(/^uses: anthropics\/claude-code-actio
 
 await test("the session loads its MCP tools at startup and sends no nonessential traffic", () => {
   const step = actionStep();
-  assert.match(step, /^ {8}id: session$/m, "the Action step has no id for the diagnostics step to read");
-  assert.match(step, /^ {8}env:\n {10}ENABLE_TOOL_SEARCH: "false"$/m, "ENABLE_TOOL_SEARCH is not false on the Action step");
-  assert.match(step, /^ {8}env:\n(?: {10}.*\n)*? {10}CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"$/m);
+  assert.match(
+    step,
+    /^ {8}id: session$/m,
+    "the Action step has no id for the diagnostics step to read",
+  );
+  assert.match(
+    step,
+    /^ {8}env:\n {10}ENABLE_TOOL_SEARCH: "false"$/m,
+    "ENABLE_TOOL_SEARCH is not false on the Action step",
+  );
+  assert.match(
+    step,
+    /^ {8}env:\n(?: {10}.*\n)*? {10}CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"$/m,
+  );
 });
 
 await test("the prompt stops the session at once when the Capsid jobs tool is missing, and claims in this namespace", () => {
-  assert.match(actionStep(), /If the capsid `jobs` tool \(mcp__capsid__jobs\) is not available, stop at once/);
+  assert.match(
+    actionStep(),
+    /If the capsid `jobs` tool \(mcp__capsid__jobs\) is not available, stop at once/,
+  );
   assert.match(actionStep(), /action "claim", namespace "dustinedwards"/);
 });
 
@@ -301,7 +415,10 @@ await test("the prompt stops the session at once when the Capsid jobs tool is mi
 // sandbox, one of them running lint on every push.
 
 await test("the prompt tells the session its runner checkout is its own clone", () => {
-  assert.match(actionStep(), /This runner checkout is your own clone\. It is not the main checkout that\n {12}a ruling reserves for another session; work here, on a new branch\./);
+  assert.match(
+    actionStep(),
+    /This runner checkout is your own clone\. It is not the main checkout that\n {12}a ruling reserves for another session; work here, on a new branch\./,
+  );
 });
 
 await test("every hook is off through flag settings, which outrank the repo's own settings", () => {
@@ -310,41 +427,85 @@ await test("every hook is off through flag settings, which outrank the repo's ow
   assert.deepEqual(JSON.parse(m[1]), { disableAllHooks: true });
   // In the Action's settings input it would land in user scope, which the repo's project or
   // local settings outrank.
-  assert.equal("disableAllHooks" in settings(), false, "disableAllHooks is in the user-scope settings input");
+  assert.equal(
+    "disableAllHooks" in settings(),
+    false,
+    "disableAllHooks is in the user-scope settings input",
+  );
 });
 
 const TRIPWIRE_PATH = "${{ runner.temp }}/hook-tripwire";
 
 await test("a local-scope hook tripwire is planted after checkout and before the session, and never overwrites a file", () => {
   const at = stepIndex(/^name: Plant a hook tripwire/);
-  assert.ok(at > stepIndex(/^uses: actions\/checkout@/) && at < stepIndex(/^uses: anthropics\/claude-code-action@/), "the tripwire is not between checkout and the session");
+  assert.ok(
+    at > stepIndex(/^uses: actions\/checkout@/) &&
+      at < stepIndex(/^uses: anthropics\/claude-code-action@/),
+    "the tripwire is not between checkout and the session",
+  );
   const step = steps()[at];
   assert.match(step, /set -euo pipefail/);
-  assert.match(step, /if \[ -e \.claude\/settings\.local\.json \]; then[^\n]*exit 1; fi/, "the tripwire would overwrite an existing local settings file");
+  assert.match(
+    step,
+    /if \[ -e \.claude\/settings\.local\.json \]; then[^\n]*exit 1; fi/,
+    "the tripwire would overwrite an existing local settings file",
+  );
   assert.match(step, /echo "\.claude\/settings\.local\.json" >> \.git\/info\/exclude/);
   const body = /cat > \.claude\/settings\.local\.json <<'EOF'\n {10}(.*)\n {10}EOF\n/.exec(step);
   assert.ok(body, "no tripwire settings heredoc parsed");
   const hooks = JSON.parse(body[1]).hooks;
   assert.deepEqual(Object.keys(hooks).sort(), ["PreToolUse", "SessionStart", "UserPromptSubmit"]);
   for (const [event, groups] of Object.entries(hooks)) {
-    for (const g of groups) for (const h of g.hooks) assert.equal(h.command, `touch ${TRIPWIRE_PATH}`, `${event} does something besides touching the tripwire`);
+    for (const g of groups)
+      for (const h of g.hooks)
+        assert.equal(
+          h.command,
+          `touch ${TRIPWIRE_PATH}`,
+          `${event} does something besides touching the tripwire`,
+        );
   }
   const diag = steps()[stepIndex(/^name: Report the session's MCP servers and denied tools/)] ?? "";
-  assert.ok(diag.includes(`TRIPWIRE: ${TRIPWIRE_PATH}`), "the report step reads a different tripwire path");
+  assert.ok(
+    diag.includes(`TRIPWIRE: ${TRIPWIRE_PATH}`),
+    "the report step reads a different tripwire path",
+  );
 });
 
-const DIAG_KEYS = ["capsid_jobs_loaded", "denied_bash", "denied_tools", "hooks_fired", "init_seen", "mcp_servers", "read_error", "result_seen"];
+const DIAG_KEYS = [
+  "capsid_jobs_loaded",
+  "denied_bash",
+  "denied_tools",
+  "hooks_fired",
+  "init_seen",
+  "mcp_servers",
+  "read_error",
+  "result_seen",
+];
 
-function runDiagnostics(executionFile, tripwire = join(tmpdir(), "no-such-hook-tripwire"), expectStatus = 0) {
+function runDiagnostics(
+  executionFile,
+  tripwire = join(tmpdir(), "no-such-hook-tripwire"),
+  expectStatus = 0,
+) {
   const all = steps();
   const at = stepIndex(/^name: Report the session's MCP servers and denied tools/);
-  assert.ok(at > stepIndex(/^uses: anthropics\/claude-code-action@/), "the diagnostics step does not follow the Action");
+  assert.ok(
+    at > stepIndex(/^uses: anthropics\/claude-code-action@/),
+    "the diagnostics step does not follow the Action",
+  );
   const step = all[at];
-  assert.match(step, /^ {8}if: always\(\)$/m, "the diagnostics step is skipped when the session fails");
+  assert.match(
+    step,
+    /^ {8}if: always\(\)$/m,
+    "the diagnostics step is skipped when the session fails",
+  );
   assert.match(step, /EXECUTION_FILE: \$\{\{ steps\.session\.outputs\.execution_file \}\}/);
   const script = /node -e '\n([\s\S]*?)\n {10}'/.exec(step)?.[1];
   assert.ok(script, "no node script parsed in the diagnostics step");
-  const r = spawnSync(process.execPath, ["-e", script], { env: { ...process.env, EXECUTION_FILE: executionFile, TRIPWIRE: tripwire }, encoding: "utf8" });
+  const r = spawnSync(process.execPath, ["-e", script], {
+    env: { ...process.env, EXECUTION_FILE: executionFile, TRIPWIRE: tripwire },
+    encoding: "utf8",
+  });
   assert.equal(r.status, expectStatus, r.stderr);
   return r.stdout;
 }
@@ -358,7 +519,21 @@ await test("the diagnostics step prints names, statuses and booleans only, from 
   writeFileSync(
     file,
     JSON.stringify([
-      { type: "system", subtype: "init", model: "m", apiKeySource: SECRET, cwd: `/home/${SECRET}`, tools: ["Read", "mcp__capsid__jobs"], mcp_servers: [{ name: "capsid", status: "connected", config: { headers: { Authorization: `Bearer ${SECRET}` } } }] },
+      {
+        type: "system",
+        subtype: "init",
+        model: "m",
+        apiKeySource: SECRET,
+        cwd: `/home/${SECRET}`,
+        tools: ["Read", "mcp__capsid__jobs"],
+        mcp_servers: [
+          {
+            name: "capsid",
+            status: "connected",
+            config: { headers: { Authorization: `Bearer ${SECRET}` } },
+          },
+        ],
+      },
       { type: "assistant", message: { content: [{ type: "text", text: SECRET }] } },
       {
         type: "result",
@@ -366,14 +541,26 @@ await test("the diagnostics step prints names, statuses and booleans only, from 
         result: SECRET,
         permission_denials: [
           { tool_name: "ToolSearch", tool_use_id: "x", tool_input: { query: SECRET } },
-          { tool_name: "Bash", tool_use_id: "y", tool_input: { command: `git worktree add ../wt ${SECRET}` } },
-          { tool_name: "Bash", tool_use_id: "z", tool_input: { command: `${SECRET} curl -H "Authorization: Bearer ${SECRET}"` } },
+          {
+            tool_name: "Bash",
+            tool_use_id: "y",
+            tool_input: { command: `git worktree add ../wt ${SECRET}` },
+          },
+          {
+            tool_name: "Bash",
+            tool_use_id: "z",
+            tool_input: { command: `${SECRET} curl -H "Authorization: Bearer ${SECRET}"` },
+          },
         ],
       },
     ]),
   );
   const out = runDiagnostics(file);
-  assert.doesNotMatch(out, /canary-not-a-real-token/, "the diagnostics step printed a value from the transcript");
+  assert.doesNotMatch(
+    out,
+    /canary-not-a-real-token/,
+    "the diagnostics step printed a value from the transcript",
+  );
   const lines = out.trim().split("\n");
   assert.equal(lines.length, 1, `the diagnostics step printed ${lines.length} lines`);
   assert.match(lines[0], /^SESSION_DIAG \{/);

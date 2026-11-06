@@ -6,7 +6,14 @@ import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 import { RegistryInvalid, saveRegistryItem } from "~/kb/registry/save.server";
 
-import { putSource, removeSource, source, stubSources, writes, type SourceStub } from "./source-stub";
+import {
+  putSource,
+  removeSource,
+  source,
+  stubSources,
+  writes,
+  type SourceStub,
+} from "./source-stub";
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
@@ -20,11 +27,19 @@ vi.mock("~/kb/registry/kinds.mjs", () => ({
       fields: {
         color: {
           required: true,
-          check: (value: unknown) => (["red", "blue"].includes(String(value)) ? null : `${JSON.stringify(value)} is not red or blue`),
+          check: (value: unknown) =>
+            ["red", "blue"].includes(String(value))
+              ? null
+              : `${JSON.stringify(value)} is not red or blue`,
         },
         paper: {
-          check: async (value: unknown, { host }: { host: { paper: (slug: string) => Promise<boolean> } }) =>
-            (await host.paper(String(value))) ? null : `paper ${String(value)} is not a publication of this site`,
+          check: async (
+            value: unknown,
+            { host }: { host: { paper: (slug: string) => Promise<boolean> } },
+          ) =>
+            (await host.paper(String(value)))
+              ? null
+              : `paper ${String(value)} is not a publication of this site`,
         },
       },
     },
@@ -49,14 +64,28 @@ const WIDE = String.fromCharCode(0x2014);
 
 const RED = "---\nname: A red widget\ncolor: red\n---\n";
 const BLUE = "---\nname: A blue widget\ncolor: blue\n---\n";
-const PATHS = { red: "content/registry/widget/a-red.md", blue: "content/registry/widget/a-blue.md" };
+const PATHS = {
+  red: "content/registry/widget/a-red.md",
+  blue: "content/registry/widget/a-blue.md",
+};
 
 const rowFor = (kind: string, id: string) =>
-  env.DB.prepare("SELECT kind, id, name, status, record, source_blob_sha FROM registry WHERE kind = ?1 AND id = ?2")
+  env.DB.prepare(
+    "SELECT kind, id, name, status, record, source_blob_sha FROM registry WHERE kind = ?1 AND id = ?2",
+  )
     .bind(kind, id)
-    .first<{ kind: string; id: string; name: string; status: string; record: string; source_blob_sha: string }>();
-const count = async () => (await env.DB.prepare("SELECT COUNT(*) AS n FROM registry").first<{ n: number }>())?.n ?? -1;
-const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "registry-drift");
+    .first<{
+      kind: string;
+      id: string;
+      name: string;
+      status: string;
+      record: string;
+      source_blob_sha: string;
+    }>();
+const count = async () =>
+  (await env.DB.prepare("SELECT COUNT(*) AS n FROM registry").first<{ n: number }>())?.n ?? -1;
+const driftCheck = async () =>
+  (await runHealthChecks(env as never)).checks.find((c) => c.name === "registry-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_registry", {});
 const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
@@ -74,160 +103,301 @@ afterEach(async () => {
 });
 
 describe("sync_registry and the registry-drift check", () => {
-  it("an empty registry is converged: no files and no rows is nothing to do, and the check agrees", { timeout: 120_000 }, async () => {
-    expect((await driftCheck())?.ok).toBe(true);
-    const result = await sync();
-    expect(result.ok, JSON.stringify(result)).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ repaired: 0, removed: 0, expected: 0, present: 0, converged: true });
-    expect(purge).not.toHaveBeenCalled();
-  });
+  it(
+    "an empty registry is converged: no files and no rows is nothing to do, and the check agrees",
+    { timeout: 120_000 },
+    async () => {
+      expect((await driftCheck())?.ok).toBe(true);
+      const result = await sync();
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (result.ok)
+        expect(result.data).toMatchObject({
+          repaired: 0,
+          removed: 0,
+          expected: 0,
+          present: 0,
+          converged: true,
+        });
+      expect(purge).not.toHaveBeenCalled();
+    },
+  );
 
-  it("converges unrowed files, reports them as drift first, writes the shared columns and the record, purges its tag, and is idempotent", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    await putSource(PATHS.blue, BLUE);
-    expect((await driftCheck())?.ok).toBe(false);
+  it(
+    "converges unrowed files, reports them as drift first, writes the shared columns and the record, purges its tag, and is idempotent",
+    { timeout: 120_000 },
+    async () => {
+      await putSource(PATHS.red, RED);
+      await putSource(PATHS.blue, BLUE);
+      expect((await driftCheck())?.ok).toBe(false);
 
-    const first = await sync();
-    expect(first.ok, JSON.stringify(first)).toBe(true);
-    if (first.ok) expect(first.data).toMatchObject({ repaired: 2, removed: 0, expected: 2, present: 2, converged: true });
-    expect(await count()).toBe(2);
-    const row = await rowFor("widget", "a-red");
-    expect(row).toMatchObject({ kind: "widget", id: "a-red", name: "A red widget", status: "published", source_blob_sha: await gitBlobSha(RED) });
-    // The name and the status are columns; the record holds only the kind's own fields.
-    expect(JSON.parse(row?.record ?? "{}")).toEqual({ color: "red", paper: null });
-    expect(purgedTags()).toEqual(["registry"]);
-    expect((await driftCheck())?.ok).toBe(true);
+      const first = await sync();
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      if (first.ok)
+        expect(first.data).toMatchObject({
+          repaired: 2,
+          removed: 0,
+          expected: 2,
+          present: 2,
+          converged: true,
+        });
+      expect(await count()).toBe(2);
+      const row = await rowFor("widget", "a-red");
+      expect(row).toMatchObject({
+        kind: "widget",
+        id: "a-red",
+        name: "A red widget",
+        status: "published",
+        source_blob_sha: await gitBlobSha(RED),
+      });
+      // The name and the status are columns; the record holds only the kind's own fields.
+      expect(JSON.parse(row?.record ?? "{}")).toEqual({ color: "red", paper: null });
+      expect(purgedTags()).toEqual(["registry"]);
+      expect((await driftCheck())?.ok).toBe(true);
 
-    const again = await sync();
-    expect(again.ok).toBe(true);
-    if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
-  });
+      const again = await sync();
+      expect(again.ok).toBe(true);
+      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+    },
+  );
 
-  it("re-compiles an item edited through git, adds a new one and removes a row whose file is gone", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    await putSource(PATHS.blue, BLUE);
-    expect((await sync()).ok).toBe(true);
+  it(
+    "re-compiles an item edited through git, adds a new one and removes a row whose file is gone",
+    { timeout: 120_000 },
+    async () => {
+      await putSource(PATHS.red, RED);
+      await putSource(PATHS.blue, BLUE);
+      expect((await sync()).ok).toBe(true);
 
-    const edited = RED.replace("color: red", "color: blue");
-    await putSource(PATHS.red, edited);
-    await putSource("content/registry/widget/a-new.md", "---\nname: A new widget\ncolor: red\ndraft: true\n---\n");
-    await removeSource(PATHS.blue);
-    const drifted = await driftCheck();
-    expect(drifted?.ok).toBe(false);
-    expect(drifted?.detail).toContain("1 sha-changed");
-    expect(drifted?.detail).toContain("1 row(s) with no file");
+      const edited = RED.replace("color: red", "color: blue");
+      await putSource(PATHS.red, edited);
+      await putSource(
+        "content/registry/widget/a-new.md",
+        "---\nname: A new widget\ncolor: red\ndraft: true\n---\n",
+      );
+      await removeSource(PATHS.blue);
+      const drifted = await driftCheck();
+      expect(drifted?.ok).toBe(false);
+      expect(drifted?.detail).toContain("1 sha-changed");
+      expect(drifted?.detail).toContain("1 row(s) with no file");
 
-    const result = await sync();
-    expect(result.ok, JSON.stringify(result)).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
-    expect(await count()).toBe(2);
-    expect(JSON.parse((await rowFor("widget", "a-red"))?.record ?? "{}")).toMatchObject({ color: "blue" });
-    expect(await rowFor("widget", "a-blue")).toBeNull();
-    expect(await rowFor("widget", "a-new")).toMatchObject({ status: "draft" });
-  });
+      const result = await sync();
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (result.ok)
+        expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
+      expect(await count()).toBe(2);
+      expect(JSON.parse((await rowFor("widget", "a-red"))?.record ?? "{}")).toMatchObject({
+        color: "blue",
+      });
+      expect(await rowFor("widget", "a-blue")).toBeNull();
+      expect(await rowFor("widget", "a-new")).toMatchObject({ status: "draft" });
+    },
+  );
 
-  it("REFUSES an empty file set while rows exist, instead of deleting every row", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    expect((await sync()).ok).toBe(true);
-    await removeSource(PATHS.red);
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("empty set");
-    }
-    expect(await count()).toBe(1);
-  });
+  it(
+    "REFUSES an empty file set while rows exist, instead of deleting every row",
+    { timeout: 120_000 },
+    async () => {
+      await putSource(PATHS.red, RED);
+      expect((await sync()).ok).toBe(true);
+      await removeSource(PATHS.red);
+      const result = await sync();
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(422);
+        expect(result.error).toContain("empty set");
+      }
+      expect(await count()).toBe(1);
+    },
+  );
 
-  it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    await putSource("content/registry/widget/stray.md", "---\nname: Stray\ncolor: green\nstock: 40\n---\n");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("content/registry/widget/stray.md fails");
-      expect(JSON.stringify(result.detail)).toContain("stock is not a widget field");
-    }
-    expect(await rowFor("widget", "stray")).toBeNull();
-    expect(await count()).toBe(1);
-  });
+  it(
+    "makes no row for a file the validator refuses, naming it, and converges the rest",
+    { timeout: 120_000 },
+    async () => {
+      await putSource(PATHS.red, RED);
+      await putSource(
+        "content/registry/widget/stray.md",
+        "---\nname: Stray\ncolor: green\nstock: 40\n---\n",
+      );
+      const result = await sync();
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(422);
+        expect(result.error).toContain("content/registry/widget/stray.md fails");
+        expect(JSON.stringify(result.detail)).toContain("stock is not a widget field");
+      }
+      expect(await rowFor("widget", "stray")).toBeNull();
+      expect(await count()).toBe(1);
+    },
+  );
 });
 
 describe("a registry save is held to what CI holds", () => {
-  it("creates an item: commits the file, writes the row, purges the registry tag, and says so", { timeout: 120_000 }, async () => {
-    const saved = await saveRegistryItem(gitEnv(), { slug: "widget/a-red", raw: RED, isNew: true, actor: carrel });
-    expect(saved).toMatchObject({ slug: "widget/a-red", created: true, unchanged: false, sourceBlobSha: await gitBlobSha(RED) });
-    expect((await source(PATHS.red))).toBe(RED);
-    expect(await rowFor("widget", "a-red")).toMatchObject({ name: "A red widget", source_blob_sha: await gitBlobSha(RED) });
-    expect(purgedTags()).toEqual(["registry"]);
-    expect((await commits())).toHaveLength(1);
-  });
+  it(
+    "creates an item: commits the file, writes the row, purges the registry tag, and says so",
+    { timeout: 120_000 },
+    async () => {
+      const saved = await saveRegistryItem(gitEnv(), {
+        slug: "widget/a-red",
+        raw: RED,
+        isNew: true,
+        actor: carrel,
+      });
+      expect(saved).toMatchObject({
+        slug: "widget/a-red",
+        created: true,
+        unchanged: false,
+        sourceBlobSha: await gitBlobSha(RED),
+      });
+      expect(await source(PATHS.red)).toBe(RED);
+      expect(await rowFor("widget", "a-red")).toMatchObject({
+        name: "A red widget",
+        source_blob_sha: await gitBlobSha(RED),
+      });
+      expect(purgedTags()).toEqual(["registry"]);
+      expect(await commits()).toHaveLength(1);
+    },
+  );
 
   it("an unchanged save commits nothing and says so", { timeout: 120_000 }, async () => {
-    await saveRegistryItem(gitEnv(), { slug: "widget/a-red", raw: RED, isNew: true, actor: carrel });
+    await saveRegistryItem(gitEnv(), {
+      slug: "widget/a-red",
+      raw: RED,
+      isNew: true,
+      actor: carrel,
+    });
     const before = (await commits()).length;
     purge.mockClear();
-    const again = await saveRegistryItem(gitEnv(), { slug: "widget/a-red", raw: RED, isNew: false, actor: carrel });
+    const again = await saveRegistryItem(gitEnv(), {
+      slug: "widget/a-red",
+      raw: RED,
+      isNew: false,
+      actor: carrel,
+    });
     expect(again.unchanged).toBe(true);
     expect((await commits()).length).toBe(before);
     expect(purge).not.toHaveBeenCalled();
   });
 
-  it("REFUSES a file the validator fails, with every message, and commits nothing", { timeout: 120_000 }, async () => {
-    const bad = `---\nname: A bad widget ${WIDE} here\ncolor: green\npaper: no-such-paper\nstock: 40\n---\nA body.\n`;
-    const error = await saveRegistryItem(gitEnv(), { slug: "widget/a-bad", raw: bad, isNew: true, actor: carrel }).catch((e) => e);
-    expect(error).toBeInstanceOf(RegistryInvalid);
-    const message = [error.message, ...(error.errors ?? [])].join("\n");
-    expect(message).toMatch(/wide dash/);
-    expect(message).toMatch(/color: "green" is not red or blue/);
-    expect(message).toMatch(/paper: paper no-such-paper is not a publication of this site/);
-    expect(message).toMatch(/stock is not a widget field/);
-    expect(message).toMatch(/the body must be empty/);
-    expect((await commits())).toHaveLength(0);
-    expect(await count()).toBe(0);
-  });
+  it(
+    "REFUSES a file the validator fails, with every message, and commits nothing",
+    { timeout: 120_000 },
+    async () => {
+      const bad = `---\nname: A bad widget ${WIDE} here\ncolor: green\npaper: no-such-paper\nstock: 40\n---\nA body.\n`;
+      const error = await saveRegistryItem(gitEnv(), {
+        slug: "widget/a-bad",
+        raw: bad,
+        isNew: true,
+        actor: carrel,
+      }).catch((e) => e);
+      expect(error).toBeInstanceOf(RegistryInvalid);
+      const message = [error.message, ...(error.errors ?? [])].join("\n");
+      expect(message).toMatch(/wide dash/);
+      expect(message).toMatch(/color: "green" is not red or blue/);
+      expect(message).toMatch(/paper: paper no-such-paper is not a publication of this site/);
+      expect(message).toMatch(/stock is not a widget field/);
+      expect(message).toMatch(/the body must be empty/);
+      expect(await commits()).toHaveLength(0);
+      expect(await count()).toBe(0);
+    },
+  );
 
-  it("REFUSES an address that is not <kind>/<id>, a kind that does not exist, and a name two items of a kind share", { timeout: 120_000 }, async () => {
-    for (const slug of ["widget", "widget/Bad Id", "gadget/a-red", "../pages/about"]) {
-      await expect(saveRegistryItem(gitEnv(), { slug, raw: RED, isNew: true, actor: carrel })).rejects.toBeInstanceOf(RegistryInvalid);
-    }
-    await saveRegistryItem(gitEnv(), { slug: "widget/a-red", raw: RED, isNew: true, actor: carrel });
-    const twin = await saveRegistryItem(gitEnv(), { slug: "widget/another", raw: RED, isNew: true, actor: carrel }).catch((e) => e);
-    expect(twin).toBeInstanceOf(RegistryInvalid);
-    expect([twin.message, ...(twin.errors ?? [])].join("\n")).toMatch(/widget\/another and widget\/a-red are both named "A red widget"/);
-  });
+  it(
+    "REFUSES an address that is not <kind>/<id>, a kind that does not exist, and a name two items of a kind share",
+    { timeout: 120_000 },
+    async () => {
+      for (const slug of ["widget", "widget/Bad Id", "gadget/a-red", "../pages/about"]) {
+        await expect(
+          saveRegistryItem(gitEnv(), { slug, raw: RED, isNew: true, actor: carrel }),
+        ).rejects.toBeInstanceOf(RegistryInvalid);
+      }
+      await saveRegistryItem(gitEnv(), {
+        slug: "widget/a-red",
+        raw: RED,
+        isNew: true,
+        actor: carrel,
+      });
+      const twin = await saveRegistryItem(gitEnv(), {
+        slug: "widget/another",
+        raw: RED,
+        isNew: true,
+        actor: carrel,
+      }).catch((e) => e);
+      expect(twin).toBeInstanceOf(RegistryInvalid);
+      expect([twin.message, ...(twin.errors ?? [])].join("\n")).toMatch(
+        /widget\/another and widget\/a-red are both named "A red widget"/,
+      );
+    },
+  );
 
-  it("holds the publish policy: an operator may save a draft but not publish for the first time", { timeout: 120_000 }, async () => {
-    const draft = "---\nname: A draft widget\ncolor: red\ndraft: true\n---\n";
-    await expect(saveRegistryItem(gitEnv(), { slug: "widget/a-draft", raw: draft, isNew: true, actor: operator })).resolves.toMatchObject({ created: true });
-    expect(await rowFor("widget", "a-draft")).toMatchObject({ status: "draft" });
-    await expect(saveRegistryItem(gitEnv(), { slug: "widget/a-red", raw: RED, isNew: true, actor: operator })).rejects.toThrow(/first time/);
-    expect(await rowFor("widget", "a-red")).toBeNull();
-  });
+  it(
+    "holds the publish policy: an operator may save a draft but not publish for the first time",
+    { timeout: 120_000 },
+    async () => {
+      const draft = "---\nname: A draft widget\ncolor: red\ndraft: true\n---\n";
+      await expect(
+        saveRegistryItem(gitEnv(), {
+          slug: "widget/a-draft",
+          raw: draft,
+          isNew: true,
+          actor: operator,
+        }),
+      ).resolves.toMatchObject({ created: true });
+      expect(await rowFor("widget", "a-draft")).toMatchObject({ status: "draft" });
+      await expect(
+        saveRegistryItem(gitEnv(), {
+          slug: "widget/a-red",
+          raw: RED,
+          isNew: true,
+          actor: operator,
+        }),
+      ).rejects.toThrow(/first time/);
+      expect(await rowFor("widget", "a-red")).toBeNull();
+    },
+  );
 });
 
 describe("the operator's reads and Carrel's handler", () => {
-  it("list_registry and get_registry read the rows and the file, and say what is missing", { timeout: 120_000 }, async () => {
-    await putSource(PATHS.red, RED);
-    await putSource("content/registry/widget/a-gap.md", '---\nname: A gap widget\ncolor: red\npaper: "MISSING: Dustin has not named the paper"\n---\n');
-    expect((await sync()).ok).toBe(true);
+  it(
+    "list_registry and get_registry read the rows and the file, and say what is missing",
+    { timeout: 120_000 },
+    async () => {
+      await putSource(PATHS.red, RED);
+      await putSource(
+        "content/registry/widget/a-gap.md",
+        '---\nname: A gap widget\ncolor: red\npaper: "MISSING: Dustin has not named the paper"\n---\n',
+      );
+      expect((await sync()).ok).toBe(true);
 
-    const list = await runTool(operatorEnv(), operator, "list_registry", {});
-    expect(list.ok, JSON.stringify(list)).toBe(true);
-    if (list.ok) {
-      const data = list.data as { count: number; items: Array<{ slug: string; name: string; status: string }> };
-      expect(data.count).toBe(2);
-      expect(data.items.map((i) => i.slug)).toEqual(["widget/a-gap", "widget/a-red"]);
-    }
-    expect((await runTool(operatorEnv(), operator, "list_registry", { kind: "gadget" })).ok).toBe(false);
+      const list = await runTool(operatorEnv(), operator, "list_registry", {});
+      expect(list.ok, JSON.stringify(list)).toBe(true);
+      if (list.ok) {
+        const data = list.data as {
+          count: number;
+          items: Array<{ slug: string; name: string; status: string }>;
+        };
+        expect(data.count).toBe(2);
+        expect(data.items.map((i) => i.slug)).toEqual(["widget/a-gap", "widget/a-red"]);
+      }
+      expect((await runTool(operatorEnv(), operator, "list_registry", { kind: "gadget" })).ok).toBe(
+        false,
+      );
 
-    const one = await runTool(operatorEnv(), operator, "get_registry", { slug: "widget/a-gap" });
-    expect(one.ok, JSON.stringify(one)).toBe(true);
-    if (one.ok) {
-      expect(one.data).toMatchObject({ slug: "widget/a-gap", errors: [], gaps: [{ field: "paper", reason: "Dustin has not named the paper" }] });
-    }
-    expect(await runTool(operatorEnv(), operator, "get_registry", { slug: "widget/nothing" })).toMatchObject({ ok: false, status: 404 });
-    expect(await runTool(operatorEnv(), operator, "get_registry", { slug: "../x" })).toMatchObject({ ok: false, status: 400 });
-  });
+      const one = await runTool(operatorEnv(), operator, "get_registry", { slug: "widget/a-gap" });
+      expect(one.ok, JSON.stringify(one)).toBe(true);
+      if (one.ok) {
+        expect(one.data).toMatchObject({
+          slug: "widget/a-gap",
+          errors: [],
+          gaps: [{ field: "paper", reason: "Dustin has not named the paper" }],
+        });
+      }
+      expect(
+        await runTool(operatorEnv(), operator, "get_registry", { slug: "widget/nothing" }),
+      ).toMatchObject({ ok: false, status: 404 });
+      expect(
+        await runTool(operatorEnv(), operator, "get_registry", { slug: "../x" }),
+      ).toMatchObject({ ok: false, status: 400 });
+    },
+  );
 });

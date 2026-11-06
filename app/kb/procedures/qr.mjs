@@ -10,6 +10,7 @@ import { renderSVG } from "uqr";
  * @param {string} url an absolute http(s) address
  */
 export function sheetQr(url) {
-  if (!/^https?:\/\/\S+$/.test(url)) throw new Error(`A sheet's QR code encodes an absolute address; got ${JSON.stringify(url)}.`);
+  if (!/^https?:\/\/\S+$/.test(url))
+    throw new Error(`A sheet's QR code encodes an absolute address; got ${JSON.stringify(url)}.`);
   return renderSVG(url, { ecc: "M", border: 2, whiteColor: "#ffffff", blackColor: "#000000" });
 }

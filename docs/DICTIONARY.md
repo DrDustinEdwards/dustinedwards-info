@@ -18,24 +18,25 @@ nowhere. The key is the last segment of the page path (`/software/capsid` is `ca
 
 ```markdown
 ---
-path: /software/capsid          # a registered Software page (CONTENT_PAGE_PATHS); one entry per page
+path: /software/capsid # a registered Software page (CONTENT_PAGE_PATHS); one entry per page
 term: Capsid
-syllables: "cap·sid"            # the term in lower case, with dots between syllables
-ipa: "/ˈkæp.sɪd/"               # between slashes
-respelling: KAP-sid             # letters and hyphens
+syllables: "cap·sid" # the term in lower case, with dots between syllables
+ipa: "/ˈkæp.sɪd/" # between slashes
+respelling: KAP-sid # letters and hyphens
 partOfSpeech: noun
-plural: [forms]                 # optional
-etymology:                      # text, and [language, word] pairs for foreign words, set in italics
+plural: [forms] # optional
+etymology: # text, and [language, word] pairs for foreign words, set in italics
   - "From French "
   - [fr, capside]
   - ", from Latin "
-senses:                         # exactly two: what the word means, then the software
+senses: # exactly two: what the word means, then the software
   - "The protein shell of a virus particle."
   - "A system that stores the instructions and decisions of AI agents."
-senseLabels: [null, software]   # sense 2 is the software, labeled "software." in italics
-audio: /audio/capsid.mp3        # a clip that exists in public/audio/
-draft: true                     # optional. true: the page shows no entry, twin and record carry none
+senseLabels: [null, software] # sense 2 is the software, labeled "software." in italics
+audio: /audio/capsid.mp3 # a clip that exists in public/audio/
+draft: true # optional. true: the page shows no entry, twin and record carry none
 ---
+
 Notes for editors: where each sense was verified. Nothing here is shown on the site.
 ```
 
@@ -101,13 +102,13 @@ with the same entry. A draft entry is not read by either.
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| The lead on the page | `app/components/dictionary-entry.tsx`, from the entry the content-page loader reads from D1 |
-| The DefinedTerm | `definedTermJsonLd` in `app/lib/dictionary-entries.mjs`, in the page's structured data |
-| The markdown twin's lead | `dictionaryEntryMarkdown`, in the page's twin, compiled into the `pages` row |
-| Search | `dictionaryEntryText`, leading the page's record in `search_docs`, written by the sync and by the write |
-| The check | `dictionary-drift` on `/health`, repaired by `sync_dictionary`; `test/dictionary.test.mjs` |
+| Output                   | From                                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| The lead on the page     | `app/components/dictionary-entry.tsx`, from the entry the content-page loader reads from D1             |
+| The DefinedTerm          | `definedTermJsonLd` in `app/lib/dictionary-entries.mjs`, in the page's structured data                  |
+| The markdown twin's lead | `dictionaryEntryMarkdown`, in the page's twin, compiled into the `pages` row                            |
+| Search                   | `dictionaryEntryText`, leading the page's record in `search_docs`, written by the sync and by the write |
+| The check                | `dictionary-drift` on `/health`, repaired by `sync_dictionary`; `test/dictionary.test.mjs`              |
 
 ## Known limits
 

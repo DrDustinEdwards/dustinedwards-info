@@ -295,7 +295,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <span className="home-refs-year">{paper.year}</span>
                 <span className="home-refs-body">
                   <Link to={paper.href}>{paper.title}</Link>
-                  {paper.journal ? <span className="home-refs-journal">{paper.journal}</span> : null}
+                  {paper.journal ? (
+                    <span className="home-refs-journal">{paper.journal}</span>
+                  ) : null}
                 </span>
               </li>
             ))}
@@ -348,7 +350,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </Section>
 
         {featured ? (
-          <Section id="writing" no="5" title="Writing" more={<Link to="/writing">All {posts} posts</Link>}>
+          <Section
+            id="writing"
+            no="5"
+            title="Writing"
+            more={<Link to="/writing">All {posts} posts</Link>}
+          >
             {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
@@ -370,9 +377,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       </Link>
                     </span>
                     {post.description ? (
-                      <span className="home-row-summary p-summary">
-                        {post.description}
-                      </span>
+                      <span className="home-row-summary p-summary">{post.description}</span>
                     ) : null}
                   </span>
                 </li>

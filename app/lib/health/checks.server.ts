@@ -89,9 +89,11 @@ export async function readDictionarySides(env: Env) {
 /** The same two sides for pages: `content/pages/*.md` and the pages table's rows. */
 export async function readPageSides(env: Env) {
   const files = await listMarkdownFiles(env, PAGES_DIR);
-  const rows = await env.DB.prepare(
-    "SELECT slug, path, source_blob_sha FROM pages",
-  ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
+  const rows = await env.DB.prepare("SELECT slug, path, source_blob_sha FROM pages").all<{
+    slug: string;
+    path: string;
+    source_blob_sha: string | null;
+  }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -108,18 +110,20 @@ export async function readCvSides(env: Env) {
 /** The same two sides for the roster: `content/roster/*.md` and the roster table's rows. */
 export async function readRosterSides(env: Env) {
   const files = await listMarkdownFiles(env, ROSTER_DIR);
-  const rows = await env.DB.prepare(
-    "SELECT slug, source_blob_sha FROM roster",
-  ).all<{ slug: string; source_blob_sha: string | null }>();
+  const rows = await env.DB.prepare("SELECT slug, source_blob_sha FROM roster").all<{
+    slug: string;
+    source_blob_sha: string | null;
+  }>();
   return { files, rows: rows.results ?? [] };
 }
 
 /** The same two sides for the phages: `content/phages/*.md` and the phages table's rows. */
 export async function readPhageSides(env: Env) {
   const files = await listMarkdownFiles(env, PHAGES_DIR);
-  const rows = await env.DB.prepare(
-    "SELECT slug, source_blob_sha FROM phages",
-  ).all<{ slug: string; source_blob_sha: string | null }>();
+  const rows = await env.DB.prepare("SELECT slug, source_blob_sha FROM phages").all<{
+    slug: string;
+    source_blob_sha: string | null;
+  }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -148,9 +152,11 @@ export async function readRegistrySides(env: Env) {
 /** The same two sides for publications: `content/publications/*.md` and the publications table's rows. */
 export async function readPublicationSides(env: Env) {
   const files = await listMarkdownFiles(env, PUBLICATIONS_DIR);
-  const rows = await env.DB.prepare(
-    "SELECT slug, doi_key, source_blob_sha FROM publications",
-  ).all<{ slug: string; doi_key: string | null; source_blob_sha: string | null }>();
+  const rows = await env.DB.prepare("SELECT slug, doi_key, source_blob_sha FROM publications").all<{
+    slug: string;
+    doi_key: string | null;
+    source_blob_sha: string | null;
+  }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -161,7 +167,9 @@ export async function readPublicationSides(env: Env) {
  */
 export async function readLlmsSides(env: Env) {
   const dir = LLMS_PATH.slice(0, LLMS_PATH.lastIndexOf("/"));
-  const file = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.path === LLMS_PATH);
+  const file = (await listDirectory(env, dir)).find(
+    (e) => e.type === "file" && e.path === LLMS_PATH,
+  );
   const row = await env.DB.prepare("SELECT value FROM settings WHERE key = ?1")
     .bind(LLMS_SETTING_KEY)
     .first<{ value: string }>();
@@ -234,7 +242,9 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
 
   pending.push(
     guard("media-index-drift", () =>
-      cachedVerdict(env, "media-index-drift", async () => mediaDriftVerdict(await mediaIndexStatus(env))),
+      cachedVerdict(env, "media-index-drift", async () =>
+        mediaDriftVerdict(await mediaIndexStatus(env)),
+      ),
     ),
   );
 
@@ -349,11 +359,14 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
 
 async function guardOne(
   name: string,
-  run: () => Promise<{ ok: boolean; detail: string; counts?: { expected: number; present: number } }>,
+  run: () => Promise<{
+    ok: boolean;
+    detail: string;
+    counts?: { expected: number; present: number };
+  }>,
 ): Promise<HealthCheck> {
   // The async wrapper turns a SYNCHRONOUS throw in run into a rejection withTimeout can guard.
   const started = (async () => run())();
   const { ok, detail, counts } = await withTimeout(started, CHECK_TIMEOUT_MS, name);
   return counts ? { name, ok, detail, counts } : { name, ok, detail };
 }
-

@@ -44,13 +44,13 @@ await test("CONTROL: ordinary links still become anchors", async () => {
 });
 
 await test("an executable URL protocol produces no anchor and is recorded", async () => {
-  for (const protocol of ["javascript:alert(1)", "vbscript:msgbox", "data:text/html;base64,PHNjcmlwdD4="]) {
+  for (const protocol of [
+    "javascript:alert(1)",
+    "vbscript:msgbox",
+    "data:text/html;base64,PHNjcmlwdD4=",
+  ]) {
     const { html, blockedUrls } = await render(`[click](${protocol})`);
-    assert.equal(
-      (html.match(/<a /g) ?? []).length,
-      0,
-      `${protocol} produced an anchor`,
-    );
+    assert.equal((html.match(/<a /g) ?? []).length, 0, `${protocol} produced an anchor`);
     assert.ok(
       blockedUrls.some((entry) => entry.url === protocol),
       `${protocol} was not recorded in blockedUrls`,

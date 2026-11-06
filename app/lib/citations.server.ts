@@ -65,7 +65,10 @@ async function fetchOne(
     if (!res.ok) {
       // 401 and 403 are configuration (a revoked or wrong key), and name it so; a 404 is a DOI
       // OpenAlex does not hold.
-      return fail(res.status === 401 || res.status === 403 ? "openalex-key-refused" : "openalex-status", `HTTP ${res.status}`);
+      return fail(
+        res.status === 401 || res.status === 403 ? "openalex-key-refused" : "openalex-status",
+        `HTTP ${res.status}`,
+      );
     }
     const body = (await res.json()) as { cited_by_count?: number; id?: string };
     if (typeof body.cited_by_count !== "number") {
@@ -91,7 +94,8 @@ async function readRows(env: Env, dois: string[]): Promise<Map<string, CitationE
     .select()
     .from(publicationCitations)
     .where(inArray(publicationCitations.doi, keys));
-  for (const row of rows) out.set(row.doi, { count: row.count, fetchedAt: row.fetchedAt, url: row.url });
+  for (const row of rows)
+    out.set(row.doi, { count: row.count, fetchedAt: row.fetchedAt, url: row.url });
   return out;
 }
 
@@ -167,7 +171,11 @@ export async function getCitationCounts(
 
   if (due.length > 0) {
     if (!env.OPENALEX_API_KEY) {
-      logFailure("config", null, `OPENALEX_API_KEY is not set, so ${due.length} stale or missing DOI(s) never refresh`);
+      logFailure(
+        "config",
+        null,
+        `OPENALEX_API_KEY is not set, so ${due.length} stale or missing DOI(s) never refresh`,
+      );
     } else {
       ctx.waitUntil(refreshCitations(env, due).then(() => undefined));
     }

@@ -31,11 +31,20 @@ export default function start(): void {
       const url = new URL(value, location.href);
       if (url.origin === location.origin) urls.add(url.pathname + url.search);
     };
-    for (const link of document.querySelectorAll<HTMLLinkElement>('link[rel~="stylesheet"], link[rel="modulepreload"]')) add(link.getAttribute("href"));
-    for (const script of document.querySelectorAll<HTMLScriptElement>("script[src]")) add(script.getAttribute("src"));
-    for (const img of document.querySelectorAll<HTMLImageElement>("img[src]")) add(img.getAttribute("src"));
+    for (const link of document.querySelectorAll<HTMLLinkElement>(
+      'link[rel~="stylesheet"], link[rel="modulepreload"]',
+    ))
+      add(link.getAttribute("href"));
+    for (const script of document.querySelectorAll<HTMLScriptElement>("script[src]"))
+      add(script.getAttribute("src"));
+    for (const img of document.querySelectorAll<HTMLImageElement>("img[src]"))
+      add(img.getAttribute("src"));
     for (const entry of performance.getEntriesByType("resource")) {
-      if ((entry as PerformanceResourceTiming).initiatorType === "css" || new URL(entry.name).pathname.startsWith("/islands/")) add(entry.name);
+      if (
+        (entry as PerformanceResourceTiming).initiatorType === "css" ||
+        new URL(entry.name).pathname.startsWith("/islands/")
+      )
+        add(entry.name);
     }
     urls.delete(page);
     return [...urls];
@@ -62,11 +71,17 @@ export default function start(): void {
     await cache.delete(page);
     // The files are shared between kept pages, so they go only with the last page. A page's address has no extension; a
     // stylesheet, bundle, font or image has one.
-    const pages = (await cache.keys()).filter((request) => !/\.[a-z0-9]+$/i.test(new URL(request.url).pathname));
+    const pages = (await cache.keys()).filter(
+      (request) => !/\.[a-z0-9]+$/i.test(new URL(request.url).pathname),
+    );
     if (pages.length > 0) return;
     await caches.delete(KEPT);
     for (const registration of await navigator.serviceWorker.getRegistrations()) {
-      if (registration.active?.scriptURL.endsWith(WORKER) || registration.installing?.scriptURL.endsWith(WORKER) || registration.waiting?.scriptURL.endsWith(WORKER)) {
+      if (
+        registration.active?.scriptURL.endsWith(WORKER) ||
+        registration.installing?.scriptURL.endsWith(WORKER) ||
+        registration.waiting?.scriptURL.endsWith(WORKER)
+      ) {
         await registration.unregister();
       }
     }
@@ -83,7 +98,9 @@ export default function start(): void {
     const paint = (kept: boolean) => {
       button.setAttribute("aria-pressed", String(kept));
       button.textContent = kept ? "Kept on this device" : "Keep on this device";
-      button.title = kept ? "Press to remove the copy kept on this device" : "Keep a copy that opens with no connection";
+      button.title = kept
+        ? "Press to remove the copy kept on this device"
+        : "Keep a copy that opens with no connection";
     };
 
     const toggle = async () => {
@@ -100,7 +117,9 @@ export default function start(): void {
           status.textContent = "Kept on this device: it opens with no connection.";
         }
       } catch (error) {
-        status.textContent = kept ? "This copy could not be removed." : "This page could not be kept on this device.";
+        status.textContent = kept
+          ? "This copy could not be removed."
+          : "This page could not be kept on this device.";
         // Reported, not swallowed, and not thrown from an event handler's promise, where it would go unhandled.
         reportError(error);
       } finally {

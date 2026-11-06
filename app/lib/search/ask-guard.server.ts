@@ -45,10 +45,7 @@ function normalizeQuestion(question: string): string {
 
 export async function questionKey(question: string): Promise<string> {
   const normalized = normalizeQuestion(question);
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(normalized),
-  );
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
   return `${ANSWER_CACHE_PREFIX}${toHex(digest)}`;
 }
 
@@ -87,7 +84,9 @@ export async function reserveAskBudget(env: Env): Promise<GuardVerdict> {
   return { ok: true };
 }
 
-export async function readAskBudget(env: Env): Promise<{ day: string; count: number; limit: number }> {
+export async function readAskBudget(
+  env: Env,
+): Promise<{ day: string; count: number; limit: number }> {
   const budget = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("global"));
   const { day, count } = await budget.peekBudget();
   return { day, count, limit: DAILY_ANSWER_BUDGET };
@@ -98,10 +97,7 @@ export async function resetAskBudget(env: Env): Promise<void> {
   await budget.reset();
 }
 
-export async function readCachedAnswer(
-  env: Env,
-  key: string,
-): Promise<CachedAnswer | null> {
+export async function readCachedAnswer(env: Env, key: string): Promise<CachedAnswer | null> {
   const cached = await env.APP_KV.get(key, "json");
   if (!cached || typeof cached !== "object") return null;
   const value = cached as Partial<CachedAnswer>;
@@ -114,11 +110,7 @@ export async function dropCachedAnswer(env: Env, key: string): Promise<void> {
   await env.APP_KV.delete(key);
 }
 
-export async function writeCachedAnswer(
-  env: Env,
-  key: string,
-  value: CachedAnswer,
-): Promise<void> {
+export async function writeCachedAnswer(env: Env, key: string, value: CachedAnswer): Promise<void> {
   // An empty answer is a failed generation; caching it would serve the failure for a week.
   if (value.answer.trim().length === 0) return;
   await env.APP_KV.put(key, JSON.stringify(value), {

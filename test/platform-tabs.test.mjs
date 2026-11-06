@@ -24,7 +24,11 @@ let run = 0;
  *
  * @param {{ userAgent?: string, stored?: string | null, html?: string }} [opts]
  */
-async function load({ userAgent = "Mozilla/5.0 (X11; Linux x86_64)", stored = null, html = set("a") + set("b") } = {}) {
+async function load({
+  userAgent = "Mozilla/5.0 (X11; Linux x86_64)",
+  stored = null,
+  html = set("a") + set("b"),
+} = {}) {
   const { document, window } = parseHTML(`<!doctype html><html><body>${html}</body></html>`);
   /** @type {Map<string, string>} */
   const storage = new Map(stored ? [["dustinedwards.platform", stored]] : []);
@@ -33,26 +37,38 @@ async function load({ userAgent = "Mozilla/5.0 (X11; Linux x86_64)", stored = nu
     document,
     window,
     navigator: { userAgent },
-    localStorage: { getItem: (/** @type {string} */ k) => storage.get(k) ?? null, setItem: (/** @type {string} */ k, /** @type {string} */ v) => void storage.set(k, String(v)) },
+    localStorage: {
+      getItem: (/** @type {string} */ k) => storage.get(k) ?? null,
+      setItem: (/** @type {string} */ k, /** @type {string} */ v) => void storage.set(k, String(v)),
+    },
   };
-  for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+  for (const [name, value] of Object.entries(globals))
+    Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
   // A fresh query each time, so the module runs again on this page rather than coming from the import cache.
   (await import(`../app/enhance/platforms.ts?run=${(run += 1)}`)).default();
   /** @param {string} id */
-  const shown = (id) => [...document.querySelectorAll(`#${id}-linux, #${id}-macos, #${id}-windows`)].filter((p) => !p.hidden).map((p) => p.dataset.platform);
+  const shown = (id) =>
+    [...document.querySelectorAll(`#${id}-linux, #${id}-macos, #${id}-windows`)]
+      .filter((p) => !p.hidden)
+      .map((p) => p.dataset.platform);
   return { document, storage, shown };
 }
 
 /** @param {any} target @param {string} type @param {Record<string, unknown>} [props] */
 function fire(target, type, props = {}) {
-  const event = new target.ownerDocument.defaultView.Event(type, { bubbles: true, cancelable: true });
+  const event = new target.ownerDocument.defaultView.Event(type, {
+    bubbles: true,
+    cancelable: true,
+  });
   Object.assign(event, props);
   target.dispatchEvent(event);
   return event;
 }
 
 await test("the links become tabs and only the reader's platform shows, guessed from the browser when nothing is remembered", async () => {
-  const { document, shown } = await load({ userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" });
+  const { document, shown } = await load({
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  });
   assert.deepEqual([shown("a"), shown("b")], [["windows"], ["windows"]]);
   const list = document.querySelector(".procedure-platform-tabs");
   assert.equal(list.getAttribute("role"), "tablist");
@@ -61,19 +77,32 @@ await test("the links become tabs and only the reader's platform shows, guessed 
   assert.equal(tab.getAttribute("aria-selected"), "true");
   assert.equal(tab.getAttribute("aria-controls"), "a-windows");
   assert.equal(document.querySelector("#a-windows").getAttribute("role"), "tabpanel");
-  assert.equal(document.querySelector('a[data-platform="linux"]').getAttribute("aria-selected"), "false");
-  assert.ok(document.querySelector("[data-platforms]").hasAttribute("data-enhanced"), "the set says it is enhanced, so the CSS drops the labels");
+  assert.equal(
+    document.querySelector('a[data-platform="linux"]').getAttribute("aria-selected"),
+    "false",
+  );
+  assert.ok(
+    document.querySelector("[data-platforms]").hasAttribute("data-enhanced"),
+    "the set says it is enhanced, so the CSS drops the labels",
+  );
 });
 
 await test("a remembered platform wins over the guess; a browser that says nothing starts on the first tab", async () => {
-  assert.deepEqual((await load({ userAgent: "Mozilla/5.0 (Windows NT 10.0)", stored: "macos" })).shown("a"), ["macos"]);
+  assert.deepEqual(
+    (await load({ userAgent: "Mozilla/5.0 (Windows NT 10.0)", stored: "macos" })).shown("a"),
+    ["macos"],
+  );
   assert.deepEqual((await load({ userAgent: "Mozilla/5.0" })).shown("a"), ["linux"]);
 });
 
 await test("choosing a tab shows that platform in every set and remembers it; the arrow keys move along the tabs", async () => {
   const { document, storage, shown } = await load();
   const click = fire(document.querySelector('a[data-platform="macos"]'), "click");
-  assert.equal(click.defaultPrevented, true, "the link does not jump: the tab shows its panel in place");
+  assert.equal(
+    click.defaultPrevented,
+    true,
+    "the link does not jump: the tab shows its panel in place",
+  );
   assert.deepEqual([shown("a"), shown("b")], [["macos"], ["macos"]]);
   assert.equal(storage.get("dustinedwards.platform"), "macos");
   fire(document.querySelector('a[href="#b-macos"]'), "keydown", { key: "ArrowRight" });
@@ -85,7 +114,9 @@ await test("choosing a tab shows that platform in every set and remembers it; th
 });
 
 await test("a set without the reader's platform shows its own first, and leaves the choice alone", async () => {
-  const partial = set("a").replace(/<a href="#a-windows"[^>]*>Windows<\/a>/, "").replace(/<div id="a-windows"[\s\S]*?<\/div>\n/, "");
+  const partial = set("a")
+    .replace(/<a href="#a-windows"[^>]*>Windows<\/a>/, "")
+    .replace(/<div id="a-windows"[\s\S]*?<\/div>\n/, "");
   const { shown, storage } = await load({ stored: "windows", html: partial + set("b") });
   assert.deepEqual([shown("a"), shown("b")], [["linux"], ["windows"]]);
   assert.equal(storage.get("dustinedwards.platform"), "windows");

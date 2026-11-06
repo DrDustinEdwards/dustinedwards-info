@@ -61,27 +61,27 @@ read back as a date, a boolean or a number it was not. `scripts/extract-publicat
 file's `pdfSha256` and its Full text section from the PDF; `app/lib/publications/serialize.mjs` is the one
 writer of the format.
 
-| Field | Meaning |
-| --- | --- |
-| `doi` | As deposited, case kept. Absent only for a manuscript (`status: submitted`). |
-| `slug` | Written only for a manuscript with no DOI to derive it from; it must equal the file's name. |
-| `id` | The curated id, also the BibTeX key. Unique. |
-| `status` | `published` (the default) or `submitted`: a manuscript under review has no DOI, no PDF and no Scholar tags. |
-| `draft` | `true`: never public. Absent from the index, the exports, the sitemap and search; its page and twin answer 404. |
-| `type` | `article`, `review`, `chapter`, `abstract` or `teaching-resource`. |
-| `title` | Decoded, with no quotation mark (the paper's Ask link quotes it) and no `<`. |
-| `authors` | Every author, none blank. A shortened list is a wrong citation. |
-| `publishedDate` | `YYYY-MM-DD`, `YYYY-MM` or `YYYY`, at the deposited precision. The year comes from it (`year:` only for a manuscript with no date). |
-| `topics` | At least one of the ids in `app/lib/publications/topics.mjs`. |
-| `access` | `self-hosted` (the PDF is in the repository) or `external`. |
-| `pdfPath` | Must equal the derived path: the PDF sits in its own page's directory, which Scholar needs. The save checks that the file exists in the repository. |
-| `pdfSha256` | The hash of the PDF the Full text was read from. CI checks it against the file. |
-| `license`, `licenseSource` | A hosted paper needs a redistribution license, or its DOI named in `app/lib/publications/hosting.mjs` (Dustin's call, per DOI). |
-| `summary` | One sentence, under 200 characters, no em or en dash. Optional; absent is a state. |
-| `accessions` | Read from the paper's own data-availability statement and reconciled against the Full text in both directions. |
-| `updateNotice` | A retraction, correction or expression of concern: `{ type, doi, date }`. |
-| `abstract` | As deposited. No `<`. |
-| `csl` | The raw Crossref record, for the `.json` export. |
+| Field                      | Meaning                                                                                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `doi`                      | As deposited, case kept. Absent only for a manuscript (`status: submitted`).                                                                        |
+| `slug`                     | Written only for a manuscript with no DOI to derive it from; it must equal the file's name.                                                         |
+| `id`                       | The curated id, also the BibTeX key. Unique.                                                                                                        |
+| `status`                   | `published` (the default) or `submitted`: a manuscript under review has no DOI, no PDF and no Scholar tags.                                         |
+| `draft`                    | `true`: never public. Absent from the index, the exports, the sitemap and search; its page and twin answer 404.                                     |
+| `type`                     | `article`, `review`, `chapter`, `abstract` or `teaching-resource`.                                                                                  |
+| `title`                    | Decoded, with no quotation mark (the paper's Ask link quotes it) and no `<`.                                                                        |
+| `authors`                  | Every author, none blank. A shortened list is a wrong citation.                                                                                     |
+| `publishedDate`            | `YYYY-MM-DD`, `YYYY-MM` or `YYYY`, at the deposited precision. The year comes from it (`year:` only for a manuscript with no date).                 |
+| `topics`                   | At least one of the ids in `app/lib/publications/topics.mjs`.                                                                                       |
+| `access`                   | `self-hosted` (the PDF is in the repository) or `external`.                                                                                         |
+| `pdfPath`                  | Must equal the derived path: the PDF sits in its own page's directory, which Scholar needs. The save checks that the file exists in the repository. |
+| `pdfSha256`                | The hash of the PDF the Full text was read from. CI checks it against the file.                                                                     |
+| `license`, `licenseSource` | A hosted paper needs a redistribution license, or its DOI named in `app/lib/publications/hosting.mjs` (Dustin's call, per DOI).                     |
+| `summary`                  | One sentence, under 200 characters, no em or en dash. Optional; absent is a state.                                                                  |
+| `accessions`               | Read from the paper's own data-availability statement and reconciled against the Full text in both directions.                                      |
+| `updateNotice`             | A retraction, correction or expression of concern: `{ type, doi, date }`.                                                                           |
+| `abstract`                 | As deposited. No `<`.                                                                                                                               |
+| `csl`                      | The raw Crossref record, for the `.json` export.                                                                                                    |
 
 The PDFs are not uploaded by this tool. They are static assets under
 `public/research/publications/<slug>/`; adding one is a git push, and the save refuses a file whose PDF is not
@@ -124,14 +124,14 @@ artifacts.
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| The index, a paper's page | `app/routes/publications.tsx`, `publications.$slug.tsx`, drawn from the D1 row |
-| `.bib`, `.ris` (all and one), `.json` | the same rows; `.json` is the raw Crossref records, unfiltered |
-| The markdown twin | `/research/publications/<slug>.md`, the row's `markdown`, from `twin.mjs` |
-| Search | `search_docs` `paper:<slug>`, written by the save and by `sync:content` |
-| Ask | each published twin, keyed `research/publications/<slug>.md` |
-| The sitemap, the home page | the same rows |
+| Output                                   | From                                                                                                                                                                                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The index, a paper's page                | `app/routes/publications.tsx`, `publications.$slug.tsx`, drawn from the D1 row                                                                                                                                                      |
+| `.bib`, `.ris` (all and one), `.json`    | the same rows; `.json` is the raw Crossref records, unfiltered                                                                                                                                                                      |
+| The markdown twin                        | `/research/publications/<slug>.md`, the row's `markdown`, from `twin.mjs`                                                                                                                                                           |
+| Search                                   | `search_docs` `paper:<slug>`, written by the save and by `sync:content`                                                                                                                                                             |
+| Ask                                      | each published twin, keyed `research/publications/<slug>.md`                                                                                                                                                                        |
+| The sitemap, the home page               | the same rows                                                                                                                                                                                                                       |
 | The CV page, its charts and its markdown | the `publications` table, read per request and joined to the CV by DOI (docs/CV.md), so a corrected paper reaches the CV with no deploy; the CV's search records are rewritten by the save. Its PDF is still rendered at build time |
 
 ## The index is a catalog

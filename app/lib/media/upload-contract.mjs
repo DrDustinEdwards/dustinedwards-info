@@ -54,7 +54,6 @@ export function uploadErrorBody(message) {
   return { error: message };
 }
 
-
 // A code in the URL, not the message, so the address bar never carries prose someone can edit.
 const UPLOAD_ERRORS = {
   "no-file": "No file was chosen.",

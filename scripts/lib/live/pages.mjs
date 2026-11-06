@@ -10,12 +10,8 @@ import { colophonFacts } from "../colophon-facts.mjs";
 import { check, get, ORIGIN, root, SLUG, strip, unescape } from "./client.mjs";
 
 /* Read, not restated. Not an import attribute: this tsconfig rejects it. */
-const stack = JSON.parse(
-  readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
-);
-const features = JSON.parse(
-  readFileSync(join(root, "content", "features.json"), "utf8"),
-);
+const stack = JSON.parse(readFileSync(join(root, "content", "generated", "stack.json"), "utf8"));
+const features = JSON.parse(readFileSync(join(root, "content", "features.json"), "utf8"));
 
 export async function run() {
   {
@@ -27,7 +23,10 @@ export async function run() {
   {
     // Once retired, now real: the Research and Teaching pages, read off their one list. A draft answers 404
     // to a reader, so only the published ones (their files, as deployed) are held to 200.
-    for (const path of [...publishedContentPagePaths(readPublishedPages()), "/research/publications"]) {
+    for (const path of [
+      ...publishedContentPagePaths(readPublishedPages()),
+      "/research/publications",
+    ]) {
       const { status } = await get(path);
       check(`page: ${path} returns 200`, status === 200, `got ${status}`);
     }
@@ -164,7 +163,11 @@ export async function run() {
     } catch {
       payload = null;
     }
-    check(`colophon search: "${UNIQUE}" returns parseable JSON`, payload !== null, `status ${json.status}`);
+    check(
+      `colophon search: "${UNIQUE}" returns parseable JSON`,
+      payload !== null,
+      `status ${json.status}`,
+    );
 
     /** @type {any[]} */
     const results = payload?.results ?? [];
@@ -183,7 +186,10 @@ export async function run() {
 
     const { text: colophonHtml, status: colophonStatus } = await get("/colophon");
     const colophon = unescape(strip(colophonHtml));
-    check("colophon search: the page fetches for comparison", colophonStatus === 200 && colophon.length > 1000);
+    check(
+      "colophon search: the page fetches for comparison",
+      colophonStatus === 200 && colophon.length > 1000,
+    );
 
     /** A section hit's fragment exists; a dead one fails silently. */
     const deep = results.filter((r) => r.anchor);
@@ -247,6 +253,8 @@ export async function run() {
           : "",
       );
     }
-    console.log(`  colophon: ${sweptFacts} indexed facts swept across ${COLOPHON_SECTIONS.length} sections`);
+    console.log(
+      `  colophon: ${sweptFacts} indexed facts swept across ${COLOPHON_SECTIONS.length} sections`,
+    );
   }
 }

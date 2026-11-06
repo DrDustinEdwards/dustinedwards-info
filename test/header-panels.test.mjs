@@ -42,7 +42,9 @@ await test("the bar has five section buttons, each a disclosure of its own panel
     assert.ok(html.includes(`id="site-nav-${id}"`), `${id}: aria-controls names nothing`);
   }
   // The names, in the bar's order; the old word-and-chevron pair is gone.
-  const labels = [...html.matchAll(/<span class="site-nav-button-label">([^<]*)<\/span>/g)].map((m) => m[1]);
+  const labels = [...html.matchAll(/<span class="site-nav-button-label">([^<]*)<\/span>/g)].map(
+    (m) => m[1],
+  );
   assert.deepEqual(labels, ["Research", "Teaching", "Software", "Writing", "About"]);
   assert.ok(!html.includes("site-nav-word"));
 });
@@ -75,7 +77,10 @@ await test("the panels' links are real anchors in the HTML, so a crawler and a r
   assert.ok(all.some((href) => href.startsWith("https://scholar.google.com/")));
   assert.ok(all.some((href) => href.startsWith("https://orcid.org/")));
   assert.ok(all.some((href) => href.startsWith("https://pubmed.ncbi.nlm.nih.gov/")));
-  assert.ok(all.some((href) => /^\/writing\/[a-z0-9-]+$/.test(href)), "no article tile");
+  assert.ok(
+    all.some((href) => /^\/writing\/[a-z0-9-]+$/.test(href)),
+    "no article tile",
+  );
   assert.ok(all.filter((href) => href !== "/").length >= 40, `only ${all.length} anchors`);
   assert.ok(!all.some((href) => href.startsWith("/interests/")));
   // An empty library answers 404 to the public, so its links are not in the markup until it has an entry.
@@ -89,7 +94,9 @@ await test("a panel names no heading, so the page outline is not opened by the m
 
 await test("inside a section its button is marked as the section, and no other is", () => {
   const onWriting = render("/writing/ten-years-on-cloudflare");
-  const marked = [...onWriting.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)].map((m) => m[0]).filter((b) => b.includes("data-section"));
+  const marked = [...onWriting.matchAll(/<button\b[^>]*data-nav-button[^>]*>/g)]
+    .map((m) => m[0])
+    .filter((b) => b.includes("data-section"));
   assert.equal(marked.length, 1);
   assert.match(marked[0], /aria-controls="site-nav-writing"/);
   // A panel link to the page the reader is on says so; a link to the section hub does not claim to be the page.

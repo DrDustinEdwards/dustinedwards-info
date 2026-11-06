@@ -20,7 +20,8 @@ vi.mock("virtual:react-router/server-build", async () => {
       ),
   );
   const Root = () => h("html", null, h("body", null, h(Outlet)));
-  const Admin = () => h("div", null, h("div", null, "shell"), h(Suspense, { fallback: null }, h(Late)));
+  const Admin = () =>
+    h("div", null, h("div", null, "shell"), h(Suspense, { fallback: null }, h(Late)));
 
   const assetRoute = (id: string, path: string, parentId?: string) => ({
     id,

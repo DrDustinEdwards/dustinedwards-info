@@ -14,14 +14,21 @@ const readCv = (page) =>
     all: document.querySelectorAll("li[data-cv-entry]").length,
     shown: document.querySelectorAll("li[data-cv-entry]:not([hidden])").length,
     shownTypes: [
-      ...new Set([...document.querySelectorAll("li[data-cv-entry]:not([hidden])")].map((li) => li.getAttribute("data-type"))),
+      ...new Set(
+        [...document.querySelectorAll("li[data-cv-entry]:not([hidden])")].map((li) =>
+          li.getAttribute("data-type"),
+        ),
+      ),
     ],
     papers: document.querySelector('[data-cv-count="papers"]')?.textContent ?? "",
     grants: document.querySelector('[data-cv-count="grants"]')?.textContent ?? "",
     bars: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key]").length,
-    barLinks: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key][data-enarratio-href]").length,
+    barLinks: document.querySelectorAll(
+      "[data-cv-timeline] [data-enarratio-key][data-enarratio-href]",
+    ).length,
     years: document.querySelectorAll("[data-cv-timeline] table tbody th").length,
-    yearLinks: document.querySelectorAll('[data-cv-timeline] table tbody th a[href^="/cv?from="]').length,
+    yearLinks: document.querySelectorAll('[data-cv-timeline] table tbody th a[href^="/cv?from="]')
+      .length,
     drawn: document.querySelector("[data-cv-timeline]")?.getAttribute("data-cv-drawn") ?? "",
     enhanced: document.querySelector("[data-cv]")?.hasAttribute("data-cv-enhanced") ?? false,
   }));
@@ -43,7 +50,10 @@ export async function run({ browser }) {
        its year's link in data-enarratio-href for enhance() to follow. */
     ok(
       "cv, script off: the timeline is server-rendered, each year a link in its data table",
-      full.bars > 10 && full.barLinks === full.bars && full.years > 10 && full.yearLinks === full.years,
+      full.bars > 10 &&
+        full.barLinks === full.bars &&
+        full.years > 10 &&
+        full.yearLinks === full.years,
       `${full.barLinks} of ${full.bars} bars carry a link, ${full.yearLinks} of ${full.years} years are links`,
     );
     await off.goto(`${BASE}/cv?type=grant&from=2020`, { waitUntil: "load" });
@@ -83,22 +93,27 @@ export async function run({ browser }) {
     let holding = true;
     await late.setRequestInterception(true);
     late.on("request", (request) => {
-      if (holding && /\/islands\/cv-[^/]*\.js/.test(request.url())) held.push(() => void request.continue());
+      if (holding && /\/islands\/cv-[^/]*\.js/.test(request.url()))
+        held.push(() => void request.continue());
       else void request.continue();
     });
     await late.goto(`${BASE}/cv`, { waitUntil: "load" });
     /* Scrolled to the filters, where a reader who scrolls before the island runs is, and where the fold moved the most. */
     await late.evaluate(async () => {
       await document.fonts.ready;
-      scrollTo(0, (document.querySelector(".cv-filters")?.getBoundingClientRect().top ?? 0) + scrollY - 200);
+      scrollTo(
+        0,
+        (document.querySelector(".cv-filters")?.getBoundingClientRect().top ?? 0) + scrollY - 200,
+      );
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       /** @type {any} */ (window).__cls = 0;
     });
     holding = false;
     for (const release of held.splice(0)) release();
-    const ran = await late
-      .waitForSelector("[data-cv][data-cv-enhanced]", { timeout: 15_000 })
-      .then(() => true, () => false);
+    const ran = await late.waitForSelector("[data-cv][data-cv-enhanced]", { timeout: 15_000 }).then(
+      () => true,
+      () => false,
+    );
     await new Promise((r) => setTimeout(r, 1000));
     const cls = await late.evaluate(() => /** @type {any} */ (window).__cls);
     ok(
@@ -116,15 +131,30 @@ export async function run({ browser }) {
     await page.setViewport({ width: 1280, height: 900 });
     await page.goto(`${BASE}/cv`, { waitUntil: "networkidle0" });
     const start = await readCv(page);
-    ok("cv: the enhancement ran", start.enhanced, "no data-cv-enhanced on [data-cv]: app/enhance/cv.ts did not run");
+    ok(
+      "cv: the enhancement ran",
+      start.enhanced,
+      "no data-cv-enhanced on [data-cv]: app/enhance/cv.ts did not run",
+    );
 
-    if (await clickOrFail(page, 'input[name="type"][value="publication"]', "cv: the Publications type filter is on the page")) {
+    if (
+      await clickOrFail(
+        page,
+        'input[name="type"][value="publication"]',
+        "cv: the Publications type filter is on the page",
+      )
+    ) {
       /* The URL is written before the charts come back from /cv/charts.json and replace the bars, so the
          URL is not what says the timeline is settled: data-cv-drawn is, set once its charts are drawn. */
-      const pubs = await pollUntil(() => readCv(page), (v) => v.search.includes("type=publication") && v.drawn === v.search);
+      const pubs = await pollUntil(
+        () => readCv(page),
+        (v) => v.search.includes("type=publication") && v.drawn === v.search,
+      );
       ok(
         "cv: ticking a type filters in place and writes the URL",
-        pubs.search === "?type=publication" && pubs.shownTypes.join() === "publication" && pubs.shown === Number(pubs.papers),
+        pubs.search === "?type=publication" &&
+          pubs.shownTypes.join() === "publication" &&
+          pubs.shown === Number(pubs.papers),
         JSON.stringify(pubs),
       );
       ok(
@@ -141,7 +171,9 @@ export async function run({ browser }) {
       const year = await page.evaluate(
         () =>
           document
-            .querySelector('[data-cv-timeline] [data-enarratio-key][data-enarratio-series="Publications"]')
+            .querySelector(
+              '[data-cv-timeline] [data-enarratio-key][data-enarratio-series="Publications"]',
+            )
             ?.getAttribute("data-enarratio-x") ?? "",
       );
       /*
@@ -153,7 +185,11 @@ export async function run({ browser }) {
       const bar = `[data-cv-timeline] [data-enarratio-x="${year}"]`;
       let lastHeight = -1;
       await pollUntil(
-        () => page.evaluate((selector) => document.querySelector(selector)?.getBoundingClientRect().height ?? 0, bar),
+        () =>
+          page.evaluate(
+            (selector) => document.querySelector(selector)?.getBoundingClientRect().height ?? 0,
+            bar,
+          ),
         (height) => {
           const still = height > 0 && height === lastHeight;
           lastHeight = height;
@@ -162,14 +198,25 @@ export async function run({ browser }) {
         { everyMs: 100 },
       );
       if (await clickOrFail(page, bar, "cv: the timeline has a year to select")) {
-        const oneYear = await pollUntil(() => readCv(page), (v) => v.search.includes(`from=${year}`));
+        const oneYear = await pollUntil(
+          () => readCv(page),
+          (v) => v.search.includes(`from=${year}`),
+        );
         ok(
           "cv: a year's bar filters to that year and keeps the other filters",
-          oneYear.search === `?type=publication&from=${year}&to=${year}` && oneYear.shown > 0 && oneYear.shown < pubs.shown,
+          oneYear.search === `?type=publication&from=${year}&to=${year}` &&
+            oneYear.shown > 0 &&
+            oneYear.shown < pubs.shown,
           JSON.stringify(oneYear),
         );
-        const faded = await page.evaluate(() => document.querySelectorAll("[data-cv-timeline] [data-enarratio-dimmed]").length);
-        ok("cv: the chart shows the year it filters to, dimming the others", faded > 0, `${faded} dimmed bars`);
+        const faded = await page.evaluate(
+          () => document.querySelectorAll("[data-cv-timeline] [data-enarratio-dimmed]").length,
+        );
+        ok(
+          "cv: the chart shows the year it filters to, dimming the others",
+          faded > 0,
+          `${faded} dimmed bars`,
+        );
       }
 
       /* The URL it wrote is the one a reader shares: loaded fresh, it renders the same view. */

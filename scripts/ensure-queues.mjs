@@ -49,10 +49,7 @@ async function call(token, path, init = {}) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.success === false) {
     const errors = (body.errors ?? [])
-      .map(
-        (/** @type {{ code: number, message: string }} */ e) =>
-          `${e.code} ${e.message}`,
-      )
+      .map((/** @type {{ code: number, message: string }} */ e) => `${e.code} ${e.message}`)
       .join("; ");
     throw new Error(
       `${init.method ?? "GET"} ${path} answered http ${res.status}: ${errors || "no error body"}`,
@@ -65,21 +62,15 @@ async function main() {
   const token = process.env.CLOUDFLARE_API_TOKEN;
   const account = process.env.CLOUDFLARE_ACCOUNT_ID;
   if (!token || !account)
-    throw new Error(
-      "CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required.",
-    );
+    throw new Error("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required.");
   const wanted = queueNames(parseJsonc(process.argv[2] ?? "wrangler.jsonc"));
 
   const existing = new Set();
   for (let page = 1; ; page++) {
-    const body = await call(
-      token,
-      `/accounts/${account}/queues?per_page=100&page=${page}`,
-    );
+    const body = await call(token, `/accounts/${account}/queues?per_page=100&page=${page}`);
     for (const q of body.result ?? []) existing.add(q.queue_name);
     const info = body.result_info;
-    if (!info || page * (info.per_page ?? 100) >= (info.total_count ?? 0))
-      break;
+    if (!info || page * (info.per_page ?? 100) >= (info.total_count ?? 0)) break;
   }
 
   for (const name of wanted) {

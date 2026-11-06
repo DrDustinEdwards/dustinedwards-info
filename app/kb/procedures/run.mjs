@@ -16,10 +16,18 @@ export const RUN_VERSION = 1;
 /** Seconds in each unit a timer mark can use (validate.mjs TIME_UNITS). */
 const UNIT_SECONDS = Object.freeze(
   /** @type {Record<string, number>} */ ({
-    second: 1, seconds: 1, sec: 1, s: 1,
-    minute: 60, minutes: 60, min: 60,
-    hour: 3600, hours: 3600, h: 3600,
-    day: 86400, days: 86400,
+    second: 1,
+    seconds: 1,
+    sec: 1,
+    s: 1,
+    minute: 60,
+    minutes: 60,
+    min: 60,
+    hour: 3600,
+    hours: 3600,
+    h: 3600,
+    day: 86400,
+    days: 86400,
   }),
 );
 
@@ -43,12 +51,14 @@ const UNIT_SECONDS = Object.freeze(
 export function timerMs(timer) {
   const seconds = UNIT_SECONDS[String(timer.unit).toLowerCase()];
   const amount = timer.max ?? timer.min;
-  if (seconds === undefined || amount === null || !Number.isFinite(amount) || amount <= 0) return null;
+  if (seconds === undefined || amount === null || !Number.isFinite(amount) || amount <= 0)
+    return null;
   return Math.round(amount * seconds * 1000);
 }
 
 /** The key a step's nth timer is stored under. */
-export const timerKey = (/** @type {number | string} */ step, /** @type {number} */ index) => `${step}.${index}`;
+export const timerKey = (/** @type {number | string} */ step, /** @type {number} */ index) =>
+  `${step}.${index}`;
 
 /**
  * @param {{ path: string, version: string, title: string, scale: number | null }} procedure
@@ -56,20 +66,41 @@ export const timerKey = (/** @type {number | string} */ step, /** @type {number}
  * @returns {Run}
  */
 export function newRun(procedure, now) {
-  return { v: RUN_VERSION, path: procedure.path, version: procedure.version, title: procedure.title, scale: procedure.scale, startedAt: now, finishedAt: null, note: "", steps: {}, timers: {} };
+  return {
+    v: RUN_VERSION,
+    path: procedure.path,
+    version: procedure.version,
+    title: procedure.title,
+    scale: procedure.scale,
+    startedAt: now,
+    finishedAt: null,
+    note: "",
+    steps: {},
+    timers: {},
+  };
 }
 
-const stepOf = (/** @type {Run} */ run, /** @type {number | string} */ step) => run.steps[String(step)] ?? { done: false, doneAt: null, note: "" };
+const stepOf = (/** @type {Run} */ run, /** @type {number | string} */ step) =>
+  run.steps[String(step)] ?? { done: false, doneAt: null, note: "" };
 
 /** @param {Run} run @param {number | string} step @param {number} now */
 export function toggleDone(run, step, now) {
   const current = stepOf(run, step);
-  return { ...run, steps: { ...run.steps, [String(step)]: { ...current, done: !current.done, doneAt: current.done ? null : now } } };
+  return {
+    ...run,
+    steps: {
+      ...run.steps,
+      [String(step)]: { ...current, done: !current.done, doneAt: current.done ? null : now },
+    },
+  };
 }
 
 /** @param {Run} run @param {number | string} step @param {string} note */
 export function setNote(run, step, note) {
-  return { ...run, steps: { ...run.steps, [String(step)]: { ...stepOf(run, step), note: note.slice(0, 2000) } } };
+  return {
+    ...run,
+    steps: { ...run.steps, [String(step)]: { ...stepOf(run, step), note: note.slice(0, 2000) } },
+  };
 }
 
 /** @param {Run} run @param {string} note */
@@ -91,14 +122,36 @@ export function finishRun(run, now) {
 export function startTimer(run, key, ms, now) {
   const current = run.timers[key];
   const remainingMs = current && current.state === "paused" ? current.remainingMs : ms;
-  return { ...run, timers: { ...run.timers, [key]: { state: /** @type {const} */ ("running"), endsAt: now + remainingMs, remainingMs, totalMs: ms } } };
+  return {
+    ...run,
+    timers: {
+      ...run.timers,
+      [key]: {
+        state: /** @type {const} */ ("running"),
+        endsAt: now + remainingMs,
+        remainingMs,
+        totalMs: ms,
+      },
+    },
+  };
 }
 
 /** @param {Run} run @param {string} key @param {number} now */
 export function pauseTimer(run, key, now) {
   const current = run.timers[key];
   if (!current || current.state !== "running" || current.endsAt === null) return run;
-  return { ...run, timers: { ...run.timers, [key]: { ...current, state: /** @type {const} */ ("paused"), endsAt: null, remainingMs: Math.max(0, current.endsAt - now) } } };
+  return {
+    ...run,
+    timers: {
+      ...run.timers,
+      [key]: {
+        ...current,
+        state: /** @type {const} */ ("paused"),
+        endsAt: null,
+        remainingMs: Math.max(0, current.endsAt - now),
+      },
+    },
+  };
 }
 
 /** @param {Run} run @param {string} key */
@@ -141,7 +194,9 @@ export function clock(ms) {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+    : `${m}:${String(s).padStart(2, "0")}`;
 }
 
 /** How far along a run is, over the steps the procedure has. @param {Run} run @param {Array<number | string>} steps */
@@ -203,11 +258,19 @@ export function runRecord(run, steps, origin = SITE_ORIGIN) {
     ...thing("LabProcess", {
       "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROCESS_PROFILE },
       name: `Run of ${run.title}`,
-      executesLabProtocol: { "@type": "LabProtocol", "@id": `${origin}${page}#procedure`, name: run.title, url: `${origin}${run.path}`, ...(run.version ? { version: run.version } : {}) },
+      executesLabProtocol: {
+        "@type": "LabProtocol",
+        "@id": `${origin}${page}#procedure`,
+        name: run.title,
+        url: `${origin}${run.path}`,
+        ...(run.version ? { version: run.version } : {}),
+      },
       startTime: when(run.startedAt),
       ...(run.finishedAt !== null ? { endTime: when(run.finishedAt) } : {}),
       ...(run.note.trim() ? { description: run.note.trim() } : {}),
-      ...(run.scale !== null ? { parameterValue: [{ "@type": "PropertyValue", name: "Scale", value: run.scale }] } : {}),
+      ...(run.scale !== null
+        ? { parameterValue: [{ "@type": "PropertyValue", name: "Scale", value: run.scale }] }
+        : {}),
     }),
     record: "dustinedwards.info run",
     format: RUN_VERSION,
@@ -218,7 +281,14 @@ export function runRecord(run, steps, origin = SITE_ORIGIN) {
     note: run.note,
     steps: steps.map((s) => {
       const st = stepOf(run, s.key ?? s.number);
-      return { step: s.number, section: s.section ?? "", text: s.text, done: st.done, doneAt: when(st.doneAt), note: st.note };
+      return {
+        step: s.number,
+        section: s.section ?? "",
+        text: s.text,
+        done: st.done,
+        doneAt: when(st.doneAt),
+        note: st.note,
+      };
     }),
   };
 }
@@ -245,7 +315,9 @@ export function runMarkdown(run, steps) {
       if (section) lines.push("", `### ${section}`, "");
     }
     const st = stepOf(run, s.key ?? s.number);
-    lines.push(`- [${st.done ? "x" : " "}] ${s.number}. ${s.text.replace(/\s+/g, " ").trim()}${st.done && st.doneAt ? ` (${when(st.doneAt)})` : ""}`);
+    lines.push(
+      `- [${st.done ? "x" : " "}] ${s.number}. ${s.text.replace(/\s+/g, " ").trim()}${st.done && st.doneAt ? ` (${when(st.doneAt)})` : ""}`,
+    );
     if (st.note.trim()) lines.push(`  - Note: ${st.note.trim().replace(/\n+/g, " ")}`);
   }
   return `${lines.join("\n")}\n`;
@@ -268,8 +340,15 @@ export function parseRun(raw) {
   }
   if (!value || typeof value !== "object" || value.v !== RUN_VERSION) return null;
   // typeof null is "object", so a null `steps` must be refused by name.
-  const plainObject = (/** @type {unknown} */ x) => x !== null && typeof x === "object" && !Array.isArray(x);
-  if (typeof value.path !== "string" || typeof value.startedAt !== "number" || !plainObject(value.steps) || !plainObject(value.timers)) return null;
+  const plainObject = (/** @type {unknown} */ x) =>
+    x !== null && typeof x === "object" && !Array.isArray(x);
+  if (
+    typeof value.path !== "string" ||
+    typeof value.startedAt !== "number" ||
+    !plainObject(value.steps) ||
+    !plainObject(value.timers)
+  )
+    return null;
   return /** @type {Run} */ ({
     v: RUN_VERSION,
     path: value.path,

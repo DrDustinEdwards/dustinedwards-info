@@ -46,9 +46,17 @@ export async function readCv(env: Env) {
  * refuse a change that would leave the CV citing a paper that is gone, and to know when a paper's save changes the CV.
  */
 export async function listCvCitedDois(env: Env): Promise<Set<string>> {
-  const row = (await getDb(env).select({ record: cv.record }).from(cv).where(eq(cv.slug, "publications")).limit(1))[0];
+  const row = (
+    await getDb(env)
+      .select({ record: cv.record })
+      .from(cv)
+      .where(eq(cv.slug, "publications"))
+      .limit(1)
+  )[0];
   if (!row) return new Set();
   const record = JSON.parse(row.record) as CvFileRecord;
   if (record.type === "profile") return new Set();
-  return new Set(record.entries.flatMap((entry) => ("doi" in entry ? [entry.doi.toLowerCase()] : [])));
+  return new Set(
+    record.entries.flatMap((entry) => ("doi" in entry ? [entry.doi.toLowerCase()] : [])),
+  );
 }

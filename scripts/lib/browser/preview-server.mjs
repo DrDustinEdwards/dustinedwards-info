@@ -53,7 +53,11 @@ export async function preflight() {
           continue;
         }
         if (killTree(pid)) killed += 1;
-        else strangers.push({ pid, command: `${live.command} (matched, but the kill reported no success)` });
+        else
+          strangers.push({
+            pid,
+            command: `${live.command} (matched, but the kill reported no success)`,
+          });
       }
 
       if (strangers.length > 0) {
@@ -244,7 +248,10 @@ export async function waitForServer(timeoutMs = 180_000) {
         code === "ECONNREFUSED"
           ? { state: "no-listener", detail: "connection refused: nothing is bound yet" }
           : code === "TimeoutError" || code === "HeadersTimeoutError"
-            ? { state: "bound-silent", detail: "a listener accepted the connection and did not reply" }
+            ? {
+                state: "bound-silent",
+                detail: "a listener accepted the connection and did not reply",
+              }
             : { state: "unreachable", detail: String(code) };
     }
     if (serverExit) {

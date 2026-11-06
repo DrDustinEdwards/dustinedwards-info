@@ -10,9 +10,20 @@ await test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does",
   // What the browser does with the attribute: compile it as ^(?:...)$.
   const asBrowser = new RegExp(`^(?:${SLUG_ATTRIBUTE_PATTERN})$`);
   const cases = [
-    "a-good-slug", "post2", "2026-in-review", "a",
-    "Capital", "trailing-", "-leading", "double--dash", "has space",
-    "has/slash", "..", "with.dot", "", "a-b-c-d-e-f",
+    "a-good-slug",
+    "post2",
+    "2026-in-review",
+    "a",
+    "Capital",
+    "trailing-",
+    "-leading",
+    "double--dash",
+    "has space",
+    "has/slash",
+    "..",
+    "with.dot",
+    "",
+    "a-b-c-d-e-f",
   ];
   for (const value of cases) {
     assert.equal(

@@ -28,7 +28,10 @@ function titleOf(slug: string) {
   return `${CV_PAGE.title}: ${type === "profile" ? "Profile" : (plural ?? slug)}`;
 }
 
-export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">): ContentKindHandler {
+export function cvHandler(
+  env: CvEnv,
+  ctx: Pick<ExecutionContext, "waitUntil">,
+): ContentKindHandler {
   /** The file of a registered slug, or null: an id no file names owns nothing. */
   function registered(slug: string) {
     return cvFileFor(slug) ? cvSourcePath(slug) : null;
@@ -47,7 +50,12 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
   }
 
   /** One write through saveCvFile as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     target(slug);
     try {
       const saved = await saveCvFile(env, {
@@ -97,7 +105,9 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
       if (!found) return null;
       const file = await readFile(env, found);
       if (!file) return null;
-      const row = await env.DB.prepare(`SELECT synced_at FROM cv WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>();
+      const row = await env.DB.prepare(`SELECT synced_at FROM cv WHERE slug = ?1`)
+        .bind(slug)
+        .first<{ synced_at: number }>();
       return {
         id: slug,
         kind: "cv",
@@ -119,7 +129,10 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
       const file = await readFile(env, found);
       if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
-      if (!file) throw new RefusedError(`The file ${found} is missing from the repository, so it cannot be saved.`);
+      if (!file)
+        throw new RefusedError(
+          `The file ${found} is missing from the repository, so it cannot be saved.`,
+        );
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },
 
@@ -129,7 +142,9 @@ export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">):
     },
 
     async unpublish() {
-      throw new RefusedError("The CV has no draft state, so it cannot be unpublished. Edit the file, or remove an entry.");
+      throw new RefusedError(
+        "The CV has no draft state, so it cannot be unpublished. Edit the file, or remove an entry.",
+      );
     },
 
     revisions(slug) {

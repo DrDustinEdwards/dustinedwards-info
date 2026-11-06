@@ -52,9 +52,15 @@ export interface ContentKindHandler {
   preview?(slug: string | null, input: PreviewInput): Promise<string>;
   /** v0.17.0, both or neither: soft delete, taking a live item off the site first, and its undo, always a draft. */
   trash?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
-  restore?(slug: string, input: { expectedVersion: string; changeId: string }): Promise<WriteResult>;
+  restore?(
+    slug: string,
+    input: { expectedVersion: string; changeId: string },
+  ): Promise<WriteResult>;
   /** v0.17.0: moves the item to `newSlug`, its history with it; `previousPath` is the old address, now a 301. */
-  rename?(slug: string, input: Omit<RenameInput, "newId"> & { newSlug: string }): Promise<RenameResult>;
+  rename?(
+    slug: string,
+    input: Omit<RenameInput, "newId"> & { newSlug: string },
+  ): Promise<RenameResult>;
 }
 
 /** The list filters the registry applies (site-api v0.17.0); `trashed` comes with the posts' trash. */
@@ -94,9 +100,14 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     if (!found) throw new NotFoundError(`No content kind owns the id ${id}.`);
     if (!found.handler[op]) {
       if (!(await found.handler.get(found.slug))) throw new NotFoundError();
-      throw new RefusedError(`A ${found.handler.kind} cannot be ${op === "rename" ? "renamed" : op === "trash" ? "trashed" : "restored"} from Carrel.`);
+      throw new RefusedError(
+        `A ${found.handler.kind} cannot be ${op === "rename" ? "renamed" : op === "trash" ? "trashed" : "restored"} from Carrel.`,
+      );
     }
-    return found as { handler: Required<Pick<ContentKindHandler, typeof op>> & ContentKindHandler; slug: string };
+    return found as {
+      handler: Required<Pick<ContentKindHandler, typeof op>> & ContentKindHandler;
+      slug: string;
+    };
   };
 
   const adapter: ContentAdapter = {
@@ -106,10 +117,14 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     async list(query) {
       const after = query.publishedAfter ? Date.parse(query.publishedAfter) : -Infinity;
       const before = query.publishedBefore ? Date.parse(query.publishedBefore) : Infinity;
-      const asked = handlers.filter((h) => (!query.kind || h.kind === query.kind) && (!query.trashed || h.trash));
+      const asked = handlers.filter(
+        (h) => (!query.kind || h.kind === query.kind) && (!query.trashed || h.trash),
+      );
       const lists = await Promise.all(
         asked.map(async (h) =>
-          (await h.list({ q: query.q, status: query.status, trashed: query.trashed })).map((s) => encoded(h.kind, s)),
+          (await h.list({ q: query.q, status: query.status, trashed: query.trashed })).map((s) =>
+            encoded(h.kind, s),
+          ),
         ),
       );
       const matching = lists
@@ -144,14 +159,17 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     async publish(id, input) {
       const { handler, slug } = owner(id);
       if (input.publishedAt !== undefined && !handler.publishedAtSettable) {
-        throw new RefusedError(`A ${handler.kind} has no publication date to set; publish it without publishedAt.`);
+        throw new RefusedError(
+          `A ${handler.kind} has no publication date to set; publish it without publishedAt.`,
+        );
       }
       return encoded(handler.kind, await handler.publish(slug, input));
     },
 
     async schedule(id, input) {
       const { handler, slug } = owner(id);
-      if (!handler.schedule) throw new RefusedError(`A ${handler.kind} cannot be scheduled; publish it now.`);
+      if (!handler.schedule)
+        throw new RefusedError(`A ${handler.kind} cannot be scheduled; publish it now.`);
       return encoded(handler.kind, await handler.schedule(slug, input));
     },
 
@@ -192,7 +210,8 @@ export function contentRegistry(handlers: ContentKindHandler[]): ContentRegistry
     async rename(id, input) {
       const { handler, slug } = await able(id, "rename");
       const target = decodeContentId(input.newId);
-      if (target.kind !== handler.kind) throw new RefusedError(`A ${handler.kind} keeps its kind when renamed.`);
+      if (target.kind !== handler.kind)
+        throw new RefusedError(`A ${handler.kind} keeps its kind when renamed.`);
       const { newId: _newId, ...rest } = input;
       return encoded(handler.kind, await handler.rename(slug, { ...rest, newSlug: target.slug }));
     },

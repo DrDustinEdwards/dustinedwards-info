@@ -18,7 +18,9 @@ await test("paperSlashTarget NEVER claims an asset path", () => {
   // handler; redirecting it would loop, and the loop would only appear for
   // papers whose file had been removed.
   assert.equal(
-    paperSlashTarget("/research/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf"),
+    paperSlashTarget(
+      "/research/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf",
+    ),
     null,
   );
   assert.equal(paperSlashTarget("/research/publications/anything.pdf"), null);

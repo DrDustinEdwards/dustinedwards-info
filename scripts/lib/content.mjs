@@ -4,10 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { imageSize } from "image-size";
 
-import {
-  ContentError,
-  renderPost as renderPostShared,
-} from "../../app/lib/content/pipeline.mjs";
+import { ContentError, renderPost as renderPostShared } from "../../app/lib/content/pipeline.mjs";
 import { dimensionsFromKey, isRaster, roleOf } from "../../app/lib/media/classify.mjs";
 import { ASSET_MANIFEST_PATH } from "../../app/lib/media/manifest.mjs";
 import { SITE_ORIGIN } from "../../app/lib/site-origin.mjs";
@@ -29,7 +26,9 @@ function assetPlaceholders() {
     const { placeholders } = JSON.parse(text);
     // A manifest without the map would strip every placeholder from every post without a word.
     if (!placeholders || typeof placeholders !== "object") {
-      throw new Error(`${ASSET_MANIFEST_PATH} carries no placeholders map. Run npm run build:assets.`);
+      throw new Error(
+        `${ASSET_MANIFEST_PATH} carries no placeholders map. Run npm run build:assets.`,
+      );
     }
     return placeholders;
   });

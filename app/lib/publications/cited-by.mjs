@@ -54,9 +54,14 @@ export function citedByFetchedAt(artifact) {
  * @returns {Array<{ doi: string, count: number, url: string | null, fetchedAt: string }>}
  */
 export function citationSeedsFrom(artifact, source) {
-  const { fetchedAt, works } = /** @type {{ fetchedAt?: unknown, works?: Record<string, { openalexId?: string | null, total?: number }> }} */ (artifact);
+  const { fetchedAt, works } =
+    /** @type {{ fetchedAt?: unknown, works?: Record<string, { openalexId?: string | null, total?: number }> }} */ (
+      artifact
+    );
   if (typeof fetchedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(fetchedAt) || !works) {
-    throw new Error(`${source} carries no fetchedAt date or no works, so the citation counts cannot be seeded.`);
+    throw new Error(
+      `${source} carries no fetchedAt date or no works, so the citation counts cannot be seeded.`,
+    );
   }
   return Object.entries(works).map(([doi, work]) => ({
     doi: doi.trim().toLowerCase(),

@@ -1,4 +1,8 @@
-import { accessKeys, adminEmails, verifyAccessRequest as verifyAccess } from "@dustinedwards/site-runtime/access";
+import {
+  accessKeys,
+  adminEmails,
+  verifyAccessRequest as verifyAccess,
+} from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
 import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runtime/log";
 
@@ -49,11 +53,20 @@ export async function isAdminViewer(env: Env, request: Request): Promise<boolean
 
 const LOCAL_DEV_EMAIL = "dev@localhost";
 
-export async function accessIdentity(env: Env, request: Request, keys: TeamKeys = accessKeys): Promise<AccessIdentity> {
+export async function accessIdentity(
+  env: Env,
+  request: Request,
+  keys: TeamKeys = accessKeys,
+): Promise<AccessIdentity> {
   // The header is added only on paths the Access application covers (/admin). The same token also
   // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
   // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
-  const identity = await verifyAccessRequest(env, request, { audience: env.ACCESS_AUD, cookie: true }, keys);
+  const identity = await verifyAccessRequest(
+    env,
+    request,
+    { audience: env.ACCESS_AUD, cookie: true },
+    keys,
+  );
   if (identity.kind !== "human" || localDevelopment(request)) return identity;
   if (adminEmails(env).includes(identity.email)) return identity;
   return { kind: "refused", reason: "not-admin" };
@@ -81,13 +94,16 @@ export async function verifyAccessRequest(
   const lazyKeys: KeySource = (kid, fresh) => (source ??= keys(teamDomain))(kid, fresh);
   const verdict = await verifyAccess(request, { teamDomain, audience, cookie, keys: lazyKeys });
   if (!verdict.ok) {
-    if (verdict.reason === "not-configured" || verdict.reason === "no-token") return { kind: "absent" };
+    if (verdict.reason === "not-configured" || verdict.reason === "no-token")
+      return { kind: "absent" };
     return { kind: "refused", reason: verdict.reason };
   }
 
   const { email, common_name: commonName } = verdict.claims;
-  if (typeof email === "string" && email !== "") return { kind: "human", email: email.toLowerCase() };
-  if (typeof commonName === "string" && commonName !== "") return { kind: "service", id: commonName };
+  if (typeof email === "string" && email !== "")
+    return { kind: "human", email: email.toLowerCase() };
+  if (typeof commonName === "string" && commonName !== "")
+    return { kind: "service", id: commonName };
   return { kind: "refused", reason: "no-identity" };
 }
 
@@ -116,6 +132,15 @@ export function refusal(
 }
 
 /** The `authz_fail` line alone, for a refusal made elsewhere (site-runtime ./origin's cross-site 403). */
-export function logRefusal(request: Request, plane: "admin" | "lab", reason: string, status: number): void {
-  logEvent(OWASP_EVENTS.authorizationFailure, { ...requestFields(request), plane, reason, status }, { level: "warn" });
+export function logRefusal(
+  request: Request,
+  plane: "admin" | "lab",
+  reason: string,
+  status: number,
+): void {
+  logEvent(
+    OWASP_EVENTS.authorizationFailure,
+    { ...requestFields(request), plane, reason, status },
+    { level: "warn" },
+  );
 }

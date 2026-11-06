@@ -37,7 +37,10 @@ type Kinds = Readonly<Record<string, KindSpec>>;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 export class RegistryInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The registry item "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The registry item "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "RegistryInvalid";
   }
 }
@@ -51,10 +54,14 @@ type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
 function registered(slug: string, kinds: Kinds) {
   const address = parseRegistrySlug(slug);
   if (!address) {
-    throw new RegistryInvalid(slug, [`"${slug}" is not a registry address; it is <kind>/<id>, in lower-case letters, digits and hyphens`]);
+    throw new RegistryInvalid(slug, [
+      `"${slug}" is not a registry address; it is <kind>/<id>, in lower-case letters, digits and hyphens`,
+    ]);
   }
   if (!kinds[address.kind]) {
-    throw new RegistryInvalid(slug, [`"${address.kind}" is not a registry kind; the kinds are ${Object.keys(kinds).join(", ") || "none yet"}`]);
+    throw new RegistryInvalid(slug, [
+      `"${address.kind}" is not a registry kind; the kinds are ${Object.keys(kinds).join(", ") || "none yet"}`,
+    ]);
   }
   return { ...address, slug, file: registryPath(slug) };
 }
@@ -79,7 +86,12 @@ export async function readRegistryItem(env: RegistryEnv, slug: string, kinds: Ki
  * Everything a save checks before it commits, and nothing it writes: the file by its kind's validator, then the set as it
  * will stand, this item against every other, so a name two items of a kind claim is refused. The admin's Check runs it.
  */
-export async function checkRegistryItem(env: RegistryEnv, slug: string, raw: string, kinds: Kinds = KINDS) {
+export async function checkRegistryItem(
+  env: RegistryEnv,
+  slug: string,
+  raw: string,
+  kinds: Kinds = KINDS,
+) {
   const compiled = await compile(env, slug, raw, kinds);
   if (!compiled.ok) return compiled;
   const setErrors = registrySetErrors([...(await otherItems(env, slug)), compiled.item], kinds);
@@ -118,8 +130,18 @@ export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
            source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
            synced_at = excluded.synced_at`,
       )
-      .bind(item.kind, item.id, item.name, item.status, compiled.record, compiled.sourcePath, compiled.sourceBlobSha),
-    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(registrySearchUid(item.kind, item.id)),
+      .bind(
+        item.kind,
+        item.id,
+        item.name,
+        item.status,
+        compiled.record,
+        compiled.sourcePath,
+        compiled.sourceBlobSha,
+      ),
+    db
+      .prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`)
+      .bind(registrySearchUid(item.kind, item.id)),
     ...records.map((r) =>
       db
         .prepare(
@@ -127,7 +149,22 @@ export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
              doc_title, doc_url, anchor, ordinal, status, publish_at)
            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
         )
-        .bind(r.uid, r.url, r.type, r.title, r.body, r.tags, r.docTags, r.docUid, r.docTitle, r.docUrl, r.anchor, r.ordinal, r.status, null),
+        .bind(
+          r.uid,
+          r.url,
+          r.type,
+          r.title,
+          r.body,
+          r.tags,
+          r.docTags,
+          r.docUid,
+          r.docTitle,
+          r.docUrl,
+          r.anchor,
+          r.ordinal,
+          r.status,
+          null,
+        ),
     ),
     ...rebuildStatements(db),
   ]);
@@ -136,17 +173,25 @@ export async function writeRegistryRow(env: RegistryEnv, compiled: Compiled) {
 /** An item whose file is gone: its row and its search record go (the row is the drift marker). */
 export async function deleteRegistryRow(env: RegistryEnv, row: { slug: string }) {
   const address = parseRegistrySlug(row.slug);
-  if (!address) throw new Error(`"${row.slug}" is not a registry address, so its row cannot be named`);
+  if (!address)
+    throw new Error(`"${row.slug}" is not a registry address, so its row cannot be named`);
   await env.DB.batch([
-    env.DB.prepare(`DELETE FROM registry WHERE kind = ?1 AND id = ?2`).bind(address.kind, address.id),
-    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(registrySearchUid(address.kind, address.id)),
+    env.DB.prepare(`DELETE FROM registry WHERE kind = ?1 AND id = ?2`).bind(
+      address.kind,
+      address.id,
+    ),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(
+      registrySearchUid(address.kind, address.id),
+    ),
     ...rebuildStatements(env.DB),
   ]);
 }
 
 /** True when D1's row for the item was compiled from exactly this file (the git blob sha matches). */
 async function rowIsCurrent(env: RegistryEnv, kind: string, id: string, blobSha: string) {
-  const row = await env.DB.prepare("SELECT source_blob_sha FROM registry WHERE kind = ?1 AND id = ?2")
+  const row = await env.DB.prepare(
+    "SELECT source_blob_sha FROM registry WHERE kind = ?1 AND id = ?2",
+  )
     .bind(kind, id)
     .first<{ source_blob_sha: string | null }>();
   return row?.source_blob_sha === blobSha;
@@ -182,15 +227,30 @@ export async function saveRegistryItem(
   const kinds = options.kinds ?? KINDS;
   const { kind, id, slug, file } = registered(options.slug, kinds);
   const existing = await readFile(env, file);
-  if (options.isNew && existing) throw new RegistryInvalid(slug, [`the item ${slug} already has a file (${file}); pass isNew false to edit it`]);
-  if (!options.isNew && !existing) throw new RegistryInvalid(slug, [`the item ${slug} has no file yet; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new RegistryInvalid(slug, [
+      `the item ${slug} already has a file (${file}); pass isNew false to edit it`,
+    ]);
+  if (!options.isNew && !existing)
+    throw new RegistryInvalid(slug, [`the item ${slug} has no file yet; pass isNew to create it`]);
 
   const compiled = await checkRegistryItem(env, slug, raw, kinds);
   if (!compiled.ok) throw new RegistryInvalid(slug, compiled.errors);
   const isDraft = (text: string) => matter(text, {}).data.draft === true;
-  decideFileWrite({ actor, noun: kinds[kind]?.singular ?? "registry item", incomingDraft: compiled.item.status === "draft", priorRaw: existing?.content ?? null, isDraft });
+  decideFileWrite({
+    actor,
+    noun: kinds[kind]?.singular ?? "registry item",
+    incomingDraft: compiled.item.status === "draft",
+    priorRaw: existing?.content ?? null,
+    isDraft,
+  });
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -205,7 +265,15 @@ export async function saveRegistryItem(
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
+    return {
+      slug,
+      commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
+      unchanged: true,
+      created: false,
+      purged: null,
+      note: UNCHANGED_NOTE,
+    };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
@@ -222,7 +290,8 @@ export async function saveRegistryItem(
     write: async () => {
       await writeRegistryRow(env, compiled);
       // The protocols that print this primer carry its facts in their record, so they are recompiled from their files.
-      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment") await refreshProceduresNaming(env, [id], [kind]);
+      if (kind === "primer" || kind === "strain" || kind === "reagent" || kind === "equipment")
+        await refreshProceduresNaming(env, [id], [kind]);
       purged = await purgeRegistry(`save registry item ${slug}`);
     },
     // Nothing kept in KV for an item: the thrown error names the commit and the repair (sync_registry), and the
@@ -232,5 +301,12 @@ export async function saveRegistryItem(
     commitSha,
   });
 
-  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action === "repair", created: options.isNew, purged };
+  return {
+    slug,
+    commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
+    unchanged: written.action === "repair",
+    created: options.isNew,
+    purged,
+  };
 }

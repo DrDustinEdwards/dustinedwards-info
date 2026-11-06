@@ -20,9 +20,10 @@ const ASSETS = [
 ];
 
 await test("a real reference in a string literal is found", () => {
-  assert.deepEqual(referencesIn('const a = { src: "/phage-hunters/dustin-edwards-2019.webp" };', ASSETS), [
-    "/phage-hunters/dustin-edwards-2019.webp",
-  ]);
+  assert.deepEqual(
+    referencesIn('const a = { src: "/phage-hunters/dustin-edwards-2019.webp" };', ASSETS),
+    ["/phage-hunters/dustin-edwards-2019.webp"],
+  );
 });
 
 await test("a PREFIX collision is not a reference", () => {
@@ -44,9 +45,13 @@ await test("the same path in two places is reported once", () => {
 
 await test("a collision followed later by a real hit still finds the real hit", () => {
   // The scanner must keep looking past a rejected match rather than giving up.
-  const text = 'import "/dustin-edwards-logo-header.svg";\nconst real = "/dustin-edwards-logo.svg";';
+  const text =
+    'import "/dustin-edwards-logo-header.svg";\nconst real = "/dustin-edwards-logo.svg";';
   const found = referencesIn(text, ASSETS);
-  assert.ok(found.includes("/dustin-edwards-logo.svg"), "the genuine reference after a collision was missed");
+  assert.ok(
+    found.includes("/dustin-edwards-logo.svg"),
+    "the genuine reference after a collision was missed",
+  );
   assert.ok(found.includes("/dustin-edwards-logo-header.svg"));
 });
 
@@ -55,12 +60,13 @@ await test("nothing is invented from an empty file", () => {
 });
 
 await test("an asset named only in a line comment is NOT a reference", () => {
-  const text = '// generated from /dustin-edwards-logo.svg, do not edit\nconst x = 1;';
+  const text = "// generated from /dustin-edwards-logo.svg, do not edit\nconst x = 1;";
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), []);
 });
 
 await test("an asset named only in a block comment is NOT a reference", () => {
-  const text = "/**\n * Path data copied from /dustin-edwards-logo-header.svg verbatim.\n */\nexport const A = 1;";
+  const text =
+    "/**\n * Path data copied from /dustin-edwards-logo-header.svg verbatim.\n */\nexport const A = 1;";
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), []);
 });
 
@@ -80,7 +86,8 @@ await test("a comment marker inside a string is not a comment", () => {
 await test("a quote inside a comment does not open a string", () => {
   // If the stripper mistook this apostrophe for a string start it would swallow
   // the rest of the file and the real reference below would vanish.
-  const text = "// it is the author's note about /dustin-edwards-logo.svg\nconst a = '/dustin-edwards-favicon.svg';";
+  const text =
+    "// it is the author's note about /dustin-edwards-logo.svg\nconst a = '/dustin-edwards-favicon.svg';";
   assert.deepEqual(referencesIn(stripComments(text), ASSETS), ["/dustin-edwards-favicon.svg"]);
 });
 
@@ -92,7 +99,9 @@ await test("an escaped quote does not end a string early", () => {
 
 await test("a template literal is scanned, because that is where paths live", () => {
   const text = "const a = `/phage-hunters/dustin-edwards-2019.webp`;";
-  assert.deepEqual(referencesIn(stripComments(text), ASSETS), ["/phage-hunters/dustin-edwards-2019.webp"]);
+  assert.deepEqual(referencesIn(stripComments(text), ASSETS), [
+    "/phage-hunters/dustin-edwards-2019.webp",
+  ]);
 });
 
 await test("stripping preserves newlines, so a stripped block cannot join two lines", () => {
@@ -103,7 +112,7 @@ await test("stripping preserves newlines, so a stripped block cannot join two li
 
 await test("css has block comments and no line comments", () => {
   // `//` is not a comment in CSS, and a naive stripper would eat a data URI.
-  const text = '.a { background: url(/dustin-edwards-logo.svg); } /* url(/favicon.ico) */';
+  const text = ".a { background: url(/dustin-edwards-logo.svg); } /* url(/favicon.ico) */";
   const found = referencesIn(stripComments(text, true), ASSETS);
   assert.deepEqual(found, ["/dustin-edwards-logo.svg"], "the commented one must not count");
 });
@@ -139,6 +148,9 @@ await test("results fold to sorted keys and sorted files, so the artifact is sta
 });
 
 await test("one file naming one asset twice is recorded once", () => {
-  const out = foldRefs([{ file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] }, { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] }]);
+  const out = foldRefs([
+    { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] },
+    { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] },
+  ]);
   assert.deepEqual(out.refs["/dustin-edwards-logo.svg"], ["app/a.ts"]);
 });

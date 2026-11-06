@@ -13,7 +13,12 @@
  * capture, never on a release note. Without it this is a modern-only server.
  */
 
-import { mcpCacheHints, registerTools, routeMcpEra, type McpServerInfo } from "@dustinedwards/site-runtime/mcp-server";
+import {
+  mcpCacheHints,
+  registerTools,
+  routeMcpEra,
+  type McpServerInfo,
+} from "@dustinedwards/site-runtime/mcp-server";
 import { isLegacyRequest, McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 
@@ -27,11 +32,18 @@ export const SERVER_INFO = {
   title: "Dustin Edwards Admin",
   version: "0.4.0",
   websiteUrl: "https://dustinedwards.info",
-  icons: [{ src: "https://dustinedwards.info/dustin-edwards-favicon.svg", mimeType: "image/svg+xml" }],
+  icons: [
+    { src: "https://dustinedwards.info/dustin-edwards-favicon.svg", mimeType: "image/svg+xml" },
+  ],
 };
 
 /** This server as refusals, the step-up challenge and the tool-call log name it. */
-export const SERVER: McpServerInfo = { site: "dustinedwards.info", scopes: SCOPES, name: SERVER_INFO.name, version: SERVER_INFO.version };
+export const SERVER: McpServerInfo = {
+  site: "dustinedwards.info",
+  scopes: SCOPES,
+  name: SERVER_INFO.name,
+  version: SERVER_INFO.version,
+};
 
 const INSTRUCTIONS =
   "Runs dustinedwards.info: webmention moderation, media backups, " +

@@ -39,16 +39,27 @@ function inventorySentence(rows: InventoryRow[]) {
   const counts = new Map<string, number>();
   for (const row of rows) counts.set(row.kind, (counts.get(row.kind) ?? 0) + 1);
   // A kind's plural is the registry's own (equipment has none other than itself); a phage's is its name and an s.
-  const parts = [...counts].map(([kind, n]) => `${n} ${n === 1 ? kindLabel(kind).toLowerCase() : (KINDS[kind]?.plural ?? `${kindLabel(kind).toLowerCase()}s`)}`);
+  const parts = [...counts].map(
+    ([kind, n]) =>
+      `${n} ${n === 1 ? kindLabel(kind).toLowerCase() : (KINDS[kind]?.plural ?? `${kindLabel(kind).toLowerCase()}s`)}`,
+  );
   return `${parts.join(", ")}.`;
 }
 
-export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: CatalogResult<InventoryRow> }) {
+export function LabInventory({
+  rows,
+  result,
+}: {
+  rows: InventoryRow[];
+  result: CatalogResult<InventoryRow>;
+}) {
   return (
     <>
       <p className="registry-lede">
-        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on, the reagents and the equipment its protocols use, with the phages it has isolated. It records what a thing is,
-        never how much of it the lab has or where it sits. {inventorySentence(rows)}
+        The lab&rsquo;s reference catalog: its primers, the bacterial strains its phages grow on,
+        the reagents and the equipment its protocols use, with the phages it has isolated. It
+        records what a thing is, never how much of it the lab has or where it sits.{" "}
+        {inventorySentence(rows)}
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -66,15 +77,17 @@ export function LabInventory({ rows, result }: { rows: InventoryRow[]; result: C
   );
 }
 
-const sequenceCell = (p: PrimerListRow) => (p.sequence ? <code className="registry-seq">{p.sequence}</code> : "");
+const sequenceCell = (p: PrimerListRow) =>
+  p.sequence ? <code className="registry-seq">{p.sequence}</code> : "";
 
 export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> }) {
   const note = tmNote();
   return (
     <>
       <p className="registry-lede">
-        The primers the lab&rsquo;s protocols use, with each sequence as stored. Length, GC content and melting temperature are
-        computed from the sequence, and a pair&rsquo;s product is computed from where its primers bind a reference sequence.
+        The primers the lab&rsquo;s protocols use, with each sequence as stored. Length, GC content
+        and melting temperature are computed from the sequence, and a pair&rsquo;s product is
+        computed from where its primers bind a reference sequence.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -90,7 +103,8 @@ export function LabPrimers({ result }: { result: CatalogResult<PrimerListRow> })
         />
       </div>
       <p className="registry-note">
-        {note.statement} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the{" "}
+        {note.statement} The Tm estimate is not an annealing temperature. For the annealing
+        temperature of a particular polymerase, use the{" "}
         <a href={note.calculator.url}>{note.calculator.name}</a>.
       </p>
     </>
@@ -116,7 +130,9 @@ function publishedVersusComputed(published: string, computed: Array<{ length: nu
   const exact = /^([0-9]+) bp$/.exec(published);
   const sizes = [...new Set(computed.map((p) => p.length))];
   if (!exact || sizes.length !== 1) return null;
-  return Number(exact[1]) === sizes[0] ? "equal to the computed size" : `different from the computed size, ${sizes[0]} bp`;
+  return Number(exact[1]) === sizes[0]
+    ? "equal to the computed size"
+    : `different from the computed size, ${sizes[0]} bp`;
 }
 
 export function LabPrimer({
@@ -154,7 +170,9 @@ export function LabPrimer({
         ) : null}
         {primer.length ? <Fact term="Length">{primer.length} nt</Fact> : null}
         {primer.gcPercent !== null ? <Fact term="GC content">{primer.gcPercent}%</Fact> : null}
-        {primer.tm !== null ? <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact> : null}
+        {primer.tm !== null ? (
+          <Fact term="Melting temperature estimate (Tm)">{primer.tm} °C</Fact>
+        ) : null}
         <Fact term="Annealing temperature">
           Depends on the polymerase: <a href={note.calculator.url}>{note.calculator.name}</a>
         </Fact>
@@ -172,7 +190,8 @@ export function LabPrimer({
       </dl>
       {primer.tm !== null ? (
         <p className="registry-note">
-          {note.statement} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase, use the{" "}
+          {note.statement} The Tm estimate is not an annealing temperature. For the annealing
+          temperature of a particular polymerase, use the{" "}
           <a href={note.calculator.url}>{note.calculator.name}</a>.
         </p>
       ) : null}
@@ -192,7 +211,9 @@ export function LabPrimer({
             <NotFound reason={primer.publishedInMissing} />
           )}
         </Fact>
-        <Fact term="Name in the paper">{primer.publishedName ?? <NotFound reason={primer.publishedNameMissing} />}</Fact>
+        <Fact term="Name in the paper">
+          {primer.publishedName ?? <NotFound reason={primer.publishedNameMissing} />}
+        </Fact>
         <Fact term="Sequence in the paper">
           {primer.publishedSequence ? (
             <>
@@ -228,8 +249,12 @@ export function LabPrimer({
         {primer.placement ? (
           <>
             <Fact term="Reference">
-              <a href={`https://www.ncbi.nlm.nih.gov/nuccore/${primer.placement.reference.accession}`}>{primer.placement.reference.id}</a>:{" "}
-              {primer.placement.reference.description}
+              <a
+                href={`https://www.ncbi.nlm.nih.gov/nuccore/${primer.placement.reference.accession}`}
+              >
+                {primer.placement.reference.id}
+              </a>
+              : {primer.placement.reference.description}
             </Fact>
             <Fact term={primer.placement.sites.length === 1 ? "Position" : "Positions"}>
               <ul className="registry-used">
@@ -257,9 +282,10 @@ export function LabPrimer({
         ) : null}
       </dl>
       <p className="registry-note">
-        Positions and product sizes are computed from the sequence and the reference by the site&rsquo;s own tested primer code, in
-        the accession&rsquo;s own coordinates, and are not copied from a paper. A primer is looked for exactly first, then with
-        more mismatches up to {MAX_MISMATCHES}, and any mismatch is shown.
+        Positions and product sizes are computed from the sequence and the reference by the
+        site&rsquo;s own tested primer code, in the accession&rsquo;s own coordinates, and are not
+        copied from a paper. A primer is looked for exactly first, then with more mismatches up to{" "}
+        {MAX_MISMATCHES}, and any mismatch is shown.
       </p>
     </>
   );
@@ -269,8 +295,9 @@ export function LabStrains({ result }: { result: CatalogResult<StrainRow> }) {
   return (
     <>
       <p className="registry-lede">
-        The bacterial hosts the lab&rsquo;s phages are isolated on. Each strain&rsquo;s phages are counted from the phages table,
-        so a phage added there is counted here with no edit to the strain.
+        The bacterial hosts the lab&rsquo;s phages are isolated on. Each strain&rsquo;s phages are
+        counted from the phages table, so a phage added there is counted here with no edit to the
+        strain.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -288,7 +315,13 @@ export function LabStrains({ result }: { result: CatalogResult<StrainRow> }) {
   );
 }
 
-export function LabStrain({ strain, usedBy }: { strain: StrainRow; usedBy: Array<{ path: string; title: string }> }) {
+export function LabStrain({
+  strain,
+  usedBy,
+}: {
+  strain: StrainRow;
+  usedBy: Array<{ path: string; title: string }>;
+}) {
   const years = phageYearsText(strain);
   return (
     <>
@@ -305,7 +338,9 @@ export function LabStrain({ strain, usedBy }: { strain: StrainRow; usedBy: Array
             <a href={strain.guideUrl}>{strain.guideUrl.replace(/^https:\/\//, "")}</a>
           </Fact>
         ) : null}
-        <Fact term="Biosafety level">{strain.biosafetyLevel ?? <NotFound reason={strain.biosafetyLevelMissing} />}</Fact>
+        <Fact term="Biosafety level">
+          {strain.biosafetyLevel ?? <NotFound reason={strain.biosafetyLevelMissing} />}
+        </Fact>
         {usedBy.length > 0 ? (
           <Fact term={usedBy.length === 1 ? "Used in" : "Used in these protocols"}>
             <ul className="registry-used">
@@ -325,7 +360,8 @@ export function LabStrain({ strain, usedBy }: { strain: StrainRow; usedBy: Array
       ) : (
         <>
           <p>
-            {strain.phages.length} phage{strain.phages.length === 1 ? "" : "s"}, found {years}, counted from the phages table.
+            {strain.phages.length} phage{strain.phages.length === 1 ? "" : "s"}, found {years},
+            counted from the phages table.
           </p>
           <ul className="registry-used registry-phages">
             {strain.phages.map((phage) => (
@@ -344,9 +380,11 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
   return (
     <>
       <p className="registry-lede">
-        The substances the lab&rsquo;s protocols use, apart from the samples they work on, in one table. A reagent is bought (a supplier
-        and a catalog number, where a record in the repository states them) or prepared in the lab (a link to its recipe). Each row
-        lists the protocols that use it, and each protocol&rsquo;s own table has its amount, stock and final concentration.
+        The substances the lab&rsquo;s protocols use, apart from the samples they work on, in one
+        table. A reagent is bought (a supplier and a catalog number, where a record in the
+        repository states them) or prepared in the lab (a link to its recipe). Each row lists the
+        protocols that use it, and each protocol&rsquo;s own table has its amount, stock and final
+        concentration.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -359,8 +397,11 @@ export function LabReagents({ result }: { result: CatalogResult<ReagentRow> }) {
             </a>
           )}
           cells={{
-            supplier: (r) => (reagentSource(r) ?? <NotFound reason={r.supplierMissing} />),
-            number: (r) => (r.preparedInLab ? "" : (r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />)),
+            supplier: (r) => reagentSource(r) ?? <NotFound reason={r.supplierMissing} />,
+            number: (r) =>
+              r.preparedInLab
+                ? ""
+                : (r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />),
             link: (r) =>
               r.productUrl ? (
                 <a href={r.productUrl}>Product page</a>
@@ -392,9 +433,10 @@ export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }
   return (
     <>
       <p className="registry-lede">
-        The instruments and labware the lab&rsquo;s protocols list under Equipment, in one table. A manufacturer appears where a record in
-        the repository states it, and a centrifuge&rsquo;s rotor is recorded as a gap until Dustin names it. Each row lists the protocols
-        that use it, and each protocol&rsquo;s own table has its words and settings for the item.
+        The instruments and labware the lab&rsquo;s protocols list under Equipment, in one table. A
+        manufacturer appears where a record in the repository states it, and a centrifuge&rsquo;s
+        rotor is recorded as a gap until Dustin names it. Each row lists the protocols that use it,
+        and each protocol&rsquo;s own table has its words and settings for the item.
       </p>
       <div className="registry site-catalog site-catalog-wide">
         <Catalog
@@ -408,7 +450,7 @@ export function LabEquipment({ result }: { result: CatalogResult<EquipmentRow> }
           )}
           cells={{
             manufacturer: (e) => e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />,
-            rotor: (e) => (e.rotor ?? (e.rotorMissing ? <NotFound reason={e.rotorMissing} /> : "")),
+            rotor: (e) => e.rotor ?? (e.rotorMissing ? <NotFound reason={e.rotorMissing} /> : ""),
             protocols: (e) => (
               <>
                 {e.uses.map((u, i) => (
@@ -453,12 +495,23 @@ export function LabReagent({ reagent: r }: { reagent: ReagentRow }) {
       {r.contents ? <Fact term="Contents">{r.contents}</Fact> : null}
       {r.preparedInLab ? (
         <Fact term="Source">
-          Prepared in the lab{r.recipePath ? <>, from its <a href={r.recipePath}>recipe</a></> : <>; <NotFound reason={r.recipeMissing} /></>}
+          Prepared in the lab
+          {r.recipePath ? (
+            <>
+              , from its <a href={r.recipePath}>recipe</a>
+            </>
+          ) : (
+            <>
+              ; <NotFound reason={r.recipeMissing} />
+            </>
+          )}
         </Fact>
       ) : (
         <>
           <Fact term="Supplier">{r.supplier ?? <NotFound reason={r.supplierMissing} />}</Fact>
-          <Fact term="Catalog number">{r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />}</Fact>
+          <Fact term="Catalog number">
+            {r.catalogNumber ?? <NotFound reason={r.catalogNumberMissing} />}
+          </Fact>
         </>
       )}
       {r.productUrl ? (
@@ -478,8 +531,12 @@ export function LabReagent({ reagent: r }: { reagent: ReagentRow }) {
 export function LabEquipmentItem({ equipment: e }: { equipment: EquipmentRow }) {
   return (
     <dl className="registry-facts">
-      <Fact term="Manufacturer">{e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />}</Fact>
-      {e.rotor || e.rotorMissing ? <Fact term="Rotor">{e.rotor ?? <NotFound reason={e.rotorMissing} />}</Fact> : null}
+      <Fact term="Manufacturer">
+        {e.manufacturer ?? <NotFound reason={e.manufacturerMissing} />}
+      </Fact>
+      {e.rotor || e.rotorMissing ? (
+        <Fact term="Rotor">{e.rotor ?? <NotFound reason={e.rotorMissing} />}</Fact>
+      ) : null}
       <UsedIn uses={e.uses} />
     </dl>
   );

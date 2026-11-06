@@ -92,9 +92,8 @@ eq(
 );
 eq(
   "forceFirstPublished replaces a value already there",
-  readState(
-    forceFirstPublished(file({ draft: false, firstPublished: "2020-01-01" }), "2026-07-28"),
-  ).firstPublished,
+  readState(forceFirstPublished(file({ draft: false, firstPublished: "2020-01-01" }), "2026-07-28"))
+    .firstPublished,
   "2026-07-28",
 );
 eq(
@@ -112,7 +111,12 @@ eq(
 
 refuses(
   "operator cannot publish a post that has never been published",
-  () => decide({ actor: OPERATOR, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) }),
+  () =>
+    decide({
+      actor: OPERATOR,
+      incomingRaw: file({ draft: false }),
+      priorRaw: file({ draft: true }),
+    }),
   "first-publish-requires-admin",
 );
 
@@ -188,8 +192,16 @@ const EVERY_TRANSITION = [
     file({ draft: false, firstPublished: "2026-01-01" }),
     file({ draft: false, firstPublished: "2026-01-01" }),
   ],
-  ["unpublish a live post", file({ draft: true }), file({ draft: false, firstPublished: "2026-01-01" })],
-  ["republish a withdrawn post", file({ draft: false }), file({ draft: true, firstPublished: "2026-01-01" })],
+  [
+    "unpublish a live post",
+    file({ draft: true }),
+    file({ draft: false, firstPublished: "2026-01-01" }),
+  ],
+  [
+    "republish a withdrawn post",
+    file({ draft: false }),
+    file({ draft: true, firstPublished: "2026-01-01" }),
+  ],
   ["publish for the first time", file({ draft: false }), file({ draft: true })],
   ["create an already published post", file({ draft: false }), null],
 ];
@@ -197,7 +209,12 @@ const EVERY_TRANSITION = [
 for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
   refuses(
     `smoke cannot ${what}`,
-    () => decide({ actor: SMOKE, incomingRaw: String(incomingRaw), priorRaw: /** @type {string | null} */ (priorRaw) }),
+    () =>
+      decide({
+        actor: SMOKE,
+        incomingRaw: String(incomingRaw),
+        priorRaw: /** @type {string | null} */ (priorRaw),
+      }),
     SMOKE_READ_ONLY_POLICY,
   );
 }
@@ -244,11 +261,19 @@ refuses(
   const src = stripComments(adminRoute);
 
   const mentions = [];
-  for (let at = src.indexOf("SMOKE_READ_ONLY_POLICY"); at !== -1; at = src.indexOf("SMOKE_READ_ONLY_POLICY", at + 1)) {
+  for (
+    let at = src.indexOf("SMOKE_READ_ONLY_POLICY");
+    at !== -1;
+    at = src.indexOf("SMOKE_READ_ONLY_POLICY", at + 1)
+  ) {
     const lineStart = src.lastIndexOf("\n", at) + 1;
     if (!/^\s*import\b/.test(src.slice(lineStart, at))) mentions.push(at);
   }
-  eq("the smoke refusal exists in admin.tsx, outside comments and imports", mentions.length > 0, true);
+  eq(
+    "the smoke refusal exists in admin.tsx, outside comments and imports",
+    mentions.length > 0,
+    true,
+  );
   const exitAt = mentions[0] ?? -1;
 
   const ifAt = src.lastIndexOf("if (", exitAt);
@@ -270,22 +295,14 @@ refuses(
   eq("the guard expression was extracted", guard.length > 10, true);
   eq("and it is a condition, not a span of the file", guard.length < 200, true);
 
-  eq(
-    "the smoke refusal is conditioned on the request METHOD",
-    /request\.method/.test(guard),
-    true,
-  );
+  eq("the smoke refusal is conditioned on the request METHOD", /request\.method/.test(guard), true);
   eq(
     "the method gate is an ALLOWLIST: it names GET and HEAD and refuses the rest",
     /!==\s*"GET"/.test(guard) && /!==\s*"HEAD"/.test(guard),
     true,
   );
   /* AND NOT A DENYLIST: equality on POST lets PUT, PATCH and DELETE through. */
-  eq(
-    "the gate does not name the methods it refuses",
-    !/request\.method\s*===/.test(guard),
-    true,
-  );
+  eq("the gate does not name the methods it refuses", !/request\.method\s*===/.test(guard), true);
 
   /* REFUSED BEFORE ANYTHING RUNS: a gate after next() is a 403 with the write already done. */
   const nextAt = src.indexOf("return next()");
@@ -294,7 +311,9 @@ refuses(
 
   /** @type {string[]} */
   const constructors = [];
-  for (const full of walkFiles(join(root, "app"), { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) })) {
+  for (const full of walkFiles(join(root, "app"), {
+    keep: (name) => /\.(ts|tsx|mjs)$/.test(name),
+  })) {
     if (/kind:\s*"smoke"/.test(stripComments(readFileSync(full, "utf8")))) {
       constructors.push(relative(root, full).split(sep).join("/"));
     }
@@ -313,9 +332,17 @@ refuses(
 }
 
 {
-  const r = decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) });
+  const r = decide({
+    actor: ADMIN,
+    incomingRaw: file({ draft: false }),
+    priorRaw: file({ draft: true }),
+  });
   const stamped = readState(r.raw).firstPublished;
-  eq("admin first publish stamps a date", typeof stamped === "string" && /^\d{4}-\d{2}-\d{2}$/.test(stamped), true);
+  eq(
+    "admin first publish stamps a date",
+    typeof stamped === "string" && /^\d{4}-\d{2}-\d{2}$/.test(stamped),
+    true,
+  );
   eq("admin first publish reports published", r.published, true);
   eq("the stamped date is echoed back", r.firstPublished, stamped);
 }
@@ -327,7 +354,11 @@ refuses(
     priorRaw: file({ draft: false, firstPublished: "2026-01-01" }),
   });
   eq("a submitted first_published never wins over the file", r.firstPublished, "2026-01-01");
-  eq("and the raw written out carries the file's value", readState(r.raw).firstPublished, "2026-01-01");
+  eq(
+    "and the raw written out carries the file's value",
+    readState(r.raw).firstPublished,
+    "2026-01-01",
+  );
 }
 
 {
@@ -421,9 +452,7 @@ refuses(
     () => decideDelete({ actor: { kind: "operator", id: "mcp" } }),
     "delete-requires-admin",
   );
-  permits("delete: the admin is permitted", () =>
-    decideDelete({ actor: { kind: "admin" } }),
-  );
+  permits("delete: the admin is permitted", () => decideDelete({ actor: { kind: "admin" } }));
 
   const operator = /** @type {const} */ ({ kind: "operator", id: "mcp" });
   let publishRefused = false;
@@ -438,20 +467,29 @@ refuses(
   } catch (error) {
     deleteRefused = error instanceof PolicyError;
   }
-  eq("delete: an actor refused a first publish is refused a delete too",
-    [publishRefused, deleteRefused], [true, true]);
+  eq(
+    "delete: an actor refused a first publish is refused a delete too",
+    [publishRefused, deleteRefused],
+    [true, true],
+  );
 
   const publishSrc = readFileSync(join(root, "app/lib/editor/publish.server.ts"), "utf8");
   const at = publishSrc.indexOf("export async function deletePost(");
   eq("delete: deletePost exists to be checked", at !== -1, true);
   const body = functionBody(publishSrc, /export async function deletePost\(/);
   eq("delete: deletePost's body parses", body.length > 0, true);
-  eq("delete: deletePost calls decideDelete in its own body",
-    /decideDelete\(\s*\{\s*actor\s*\}\s*\)/.test(body), true);
+  eq(
+    "delete: deletePost calls decideDelete in its own body",
+    /decideDelete\(\s*\{\s*actor\s*\}\s*\)/.test(body),
+    true,
+  );
 
   /* BEFORE THE FILE READ, or the difference between two errors tells a caller which slugs exist. */
-  eq("delete: the decision precedes the file read",
-    body.indexOf("decideDelete") < body.indexOf("readFile("), true);
+  eq(
+    "delete: the decision precedes the file read",
+    body.indexOf("decideDelete") < body.indexOf("readFile("),
+    true,
+  );
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */

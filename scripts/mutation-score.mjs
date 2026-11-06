@@ -17,7 +17,14 @@
 // low score, and it exits non-zero only when Stryker itself could not run.
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,7 +59,9 @@ function discover() {
   for (const file of modules.filter((f) => f.endsWith(".mjs") && !f.endsWith(".generated.mjs"))) {
     if (/from\s+["']cloudflare:/.test(readFileSync(join(root, file), "utf8"))) continue;
     const rel = file.slice("app/".length);
-    const importer = new RegExp(`from\\s+["'](?:(?:\\.\\./)+app/|~/)${rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`);
+    const importer = new RegExp(
+      `from\\s+["'](?:(?:\\.\\./)+app/|~/)${rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`,
+    );
     const covering = tests.filter((test) => importer.test(test.source)).map((test) => test.file);
     if (covering.length > 0) map.set(file, covering);
   }
@@ -62,13 +71,21 @@ function discover() {
 /** Killed over everything that could have been killed; a mutant nothing covered counts against the tests. */
 function score(/** @type {any} */ report, /** @type {string} */ file) {
   const counts = { Killed: 0, Timeout: 0, Survived: 0, NoCoverage: 0, Other: 0 };
-  for (const mutant of Object.values(report.files).flatMap((entry) => /** @type {any} */ (entry).mutants)) {
-    const status = /** @type {keyof typeof counts} */ (mutant.status in counts ? mutant.status : "Other");
+  for (const mutant of Object.values(report.files).flatMap(
+    (entry) => /** @type {any} */ (entry).mutants,
+  )) {
+    const status = /** @type {keyof typeof counts} */ (
+      mutant.status in counts ? mutant.status : "Other"
+    );
     counts[status] += 1;
   }
   const detected = counts.Killed + counts.Timeout;
   const total = detected + counts.Survived + counts.NoCoverage;
-  return { file, ...counts, score: total === 0 ? null : Math.round((detected / total) * 1000) / 10 };
+  return {
+    file,
+    ...counts,
+    score: total === 0 ? null : Math.round((detected / total) * 1000) / 10,
+  };
 }
 
 /** @param {string} module @param {string[]} testFiles */
@@ -97,7 +114,11 @@ function mutate(module, testFiles) {
   const configFile = join(work, "stryker.config.json");
   writeFileSync(configFile, JSON.stringify(config));
   const started = Date.now();
-  const run = spawnSync("npx", ["--yes", STRYKER, "run", configFile], { cwd: root, stdio: "inherit", shell: true });
+  const run = spawnSync("npx", ["--yes", STRYKER, "run", configFile], {
+    cwd: root,
+    stdio: "inherit",
+    shell: true,
+  });
   const seconds = Math.round((Date.now() - started) / 1000);
   if (run.status !== 0) return { file: module, failed: `Stryker exited ${run.status}`, seconds };
   // Stryker's own report, kept for devkit's code map (mutation.yml's code-map job), which places each mutant in its function.
@@ -126,7 +147,9 @@ function slice(modules, index, count) {
     slices[least].push(module);
   }
   const mine = new Set(slices[index - 1]);
-  console.log(`slice ${index} of ${count}: ${mine.size} modules, about ${Math.round(totals[index - 1] / 60)} min measured`);
+  console.log(
+    `slice ${index} of ${count}: ${mine.size} modules, about ${Math.round(totals[index - 1] / 60)} min measured`,
+  );
   return modules.filter((module) => mine.has(module));
 }
 
@@ -138,19 +161,31 @@ const argv = process.argv.slice(2);
     console.log(`${modules.size} modules`);
   } else {
     const only = argv.indexOf("--module") >= 0 ? argv[argv.indexOf("--module") + 1] : null;
-    const limit = argv.indexOf("--limit") >= 0 ? Number(argv[argv.indexOf("--limit") + 1]) : Infinity;
-    const shard = argv.indexOf("--shard") >= 0 ? argv[argv.indexOf("--shard") + 1].split("/").map(Number) : [1, 1];
-    if (shard.length !== 2 || !(shard[0] >= 1 && shard[0] <= shard[1])) throw new Error("--shard is I/N with 1 <= I <= N");
+    const limit =
+      argv.indexOf("--limit") >= 0 ? Number(argv[argv.indexOf("--limit") + 1]) : Infinity;
+    const shard =
+      argv.indexOf("--shard") >= 0
+        ? argv[argv.indexOf("--shard") + 1].split("/").map(Number)
+        : [1, 1];
+    if (shard.length !== 2 || !(shard[0] >= 1 && shard[0] <= shard[1]))
+      throw new Error("--shard is I/N with 1 <= I <= N");
     const inSlice = new Set(only ? [only] : slice([...modules.keys()], shard[0], shard[1]));
     const chosen = [...modules].filter(([module]) => inSlice.has(module)).slice(0, limit);
-    if (only && chosen.length === 0) throw new Error(`${only} is not a covered pure module; --list shows the ones that are`);
+    if (only && chosen.length === 0)
+      throw new Error(`${only} is not a covered pure module; --list shows the ones that are`);
     mkdirSync(outDir, { recursive: true });
     // Every module runs even after one fails: stopping at the first lost the rest of the slice's scores.
     const results = chosen.map(([module, tests]) => mutate(module, tests));
     const rows = results.filter((row) => !("failed" in row));
     const failed = results.filter((row) => "failed" in row);
-    writeFileSync(join(outDir, `summary-${shard[0]}-of-${shard[1]}.json`), `${JSON.stringify(rows, null, 2)}\n`);
-    const lines = ["| module | score | killed | timeout | survived | no coverage | seconds |", "| --- | --- | --- | --- | --- | --- | --- |"];
+    writeFileSync(
+      join(outDir, `summary-${shard[0]}-of-${shard[1]}.json`),
+      `${JSON.stringify(rows, null, 2)}\n`,
+    );
+    const lines = [
+      "| module | score | killed | timeout | survived | no coverage | seconds |",
+      "| --- | --- | --- | --- | --- | --- | --- |",
+    ];
     for (const row of results) {
       lines.push(
         "failed" in row
@@ -159,9 +194,12 @@ const argv = process.argv.slice(2);
       );
     }
     console.log(lines.join("\n"));
-    if (process.env.GITHUB_STEP_SUMMARY) writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`, { flag: "a" });
+    if (process.env.GITHUB_STEP_SUMMARY)
+      writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`, { flag: "a" });
     if (failed.length > 0) {
-      console.error(`Stryker failed on ${failed.map((row) => row.file).join(", ")}; this is the tool failing, not a low score`);
+      console.error(
+        `Stryker failed on ${failed.map((row) => row.file).join(", ")}; this is the tool failing, not a low score`,
+      );
       process.exitCode = 1;
     }
   }

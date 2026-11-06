@@ -67,8 +67,8 @@ export function answerDelta(data) {
  * @returns {string | undefined}
  */
 export function finishReason(data) {
-  const reason = /** @type {{ choices?: Array<{ finish_reason?: unknown }> } | null} */ (data)?.choices?.[0]
-    ?.finish_reason;
+  const reason = /** @type {{ choices?: Array<{ finish_reason?: unknown }> } | null} */ (data)
+    ?.choices?.[0]?.finish_reason;
   return typeof reason === "string" && reason.length > 0 ? reason : undefined;
 }
 

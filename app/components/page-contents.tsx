@@ -17,7 +17,10 @@ export function PageContents({
   className?: string;
 }) {
   return (
-    <nav className={className ? `page-contents ${className}` : "page-contents"} aria-labelledby="page-contents-label">
+    <nav
+      className={className ? `page-contents ${className}` : "page-contents"}
+      aria-labelledby="page-contents-label"
+    >
       <p className="page-contents-label" id="page-contents-label">
         {label}
       </p>
@@ -35,7 +38,14 @@ export function PageContents({
   );
 }
 
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", nbsp: " " };
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  "#39": "'",
+  nbsp: " ",
+};
 
 /** The h2s of rendered page HTML, by their ids, with the heading's anchor link left out. */
 export function contentsOf(html: string): ContentsEntry[] {

@@ -22,7 +22,12 @@ function esc(text) {
     .replace(/:(?=[A-Za-z])/g, "\\:");
 }
 
-const OWNER_NAMES = new Set(["Dustin Edwards", "Dustin C. Edwards", "Dustin Cole Edwards", "D. Edwards"]);
+const OWNER_NAMES = new Set([
+  "Dustin Edwards",
+  "Dustin C. Edwards",
+  "Dustin Cole Edwards",
+  "D. Edwards",
+]);
 
 /** @param {string[]} authors */
 function authorLine(authors) {
@@ -71,7 +76,9 @@ export function cvMarkdownBody(CV, options = {}) {
   const out = [];
   // The PDF sets its own letterhead (app/lib/cv/pdf-html.mjs), so it starts at the first section.
   if (!options.pdf) {
-    out.push(`${person.name}, ${person.degree} ${person.title}, ${person.department}, ${esc(person.org)}.`);
+    out.push(
+      `${person.name}, ${person.degree} ${person.title}, ${person.department}, ${esc(person.org)}.`,
+    );
     out.push("");
     out.push(
       `This is the ${CV.edition} CV. The same entries are at [/cv](/cv), where they can be filtered, and as a [PDF](${CV_PDF_PATH}). Each paper also has its own page under [Publications](/research/publications).`,
@@ -93,7 +100,10 @@ export function cvMarkdownBody(CV, options = {}) {
     }
     if (type === "grant") {
       const total = list.reduce((sum, e) => sum + (e.amount ?? 0), 0);
-      out.push("", `${list.length} awards totaling ${formatDollars(total)}, newest first. Where a student shares an award, this says "with a student researcher" instead of a name.`);
+      out.push(
+        "",
+        `${list.length} awards totaling ${formatDollars(total)}, newest first. Where a student shares an award, this says "with a student researcher" instead of a name.`,
+      );
     }
 
     /** @type {Map<string, typeof list>} */
@@ -154,5 +164,9 @@ export function cvMarkdownDocument(CV) {
  * @param {import("./entries.mjs").Cv} CV the resolved CV (buildCv)
  */
 export function cvTwin(CV) {
-  return contentPageMarkdownBody({ path: CV_PAGE.path, title: CV_PAGE.title, markdown: cvMarkdownBody(CV) });
+  return contentPageMarkdownBody({
+    path: CV_PAGE.path,
+    title: CV_PAGE.title,
+    markdown: cvMarkdownBody(CV),
+  });
 }

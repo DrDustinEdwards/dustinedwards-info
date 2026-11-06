@@ -17,7 +17,11 @@ import {
  */
 function titleOfLength(n) {
   const word = "abcd ";
-  return word.repeat(Math.ceil(n / word.length)).slice(0, n).trimEnd().padEnd(n, "z");
+  return word
+    .repeat(Math.ceil(n / word.length))
+    .slice(0, n)
+    .trimEnd()
+    .padEnd(n, "z");
 }
 
 await test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {

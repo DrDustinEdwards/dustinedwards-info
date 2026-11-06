@@ -20,7 +20,12 @@ import {
   timelineData,
   timelineEmptyText,
 } from "../app/lib/cv/view.mjs";
-import { FINGERPRINT_LABEL, cvFingerprint, cvPdfOptions, renderCvHtml } from "../app/lib/cv/pdf-html.mjs";
+import {
+  FINGERPRINT_LABEL,
+  cvFingerprint,
+  cvPdfOptions,
+  renderCvHtml,
+} from "../app/lib/cv/pdf-html.mjs";
 
 // The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The
 // build compiles every file with the validation module the CV save uses (app/lib/cv/validate.mjs), so a file that
@@ -65,10 +70,24 @@ await test("a paper named by DOI takes its facts from the site's Crossref-backed
 
 await test("privacy: mentoring is counts, and no line in the CV data carries an email, a phone or a room", () => {
   const MENTORING_KEYS = new Set([
-    "type", "section", "year", "endYear", "count", "unit", "level", "program", "org", "detail", "cohort", "areas", "role", "links",
+    "type",
+    "section",
+    "year",
+    "endYear",
+    "count",
+    "unit",
+    "level",
+    "program",
+    "org",
+    "detail",
+    "cohort",
+    "areas",
+    "role",
+    "links",
   ]);
   for (const e of SOURCE.filter((x) => x.type === "mentoring")) {
-    for (const key of Object.keys(e)) assert.ok(MENTORING_KEYS.has(key), `mentoring entry carries "${key}"`);
+    for (const key of Object.keys(e))
+      assert.ok(MENTORING_KEYS.has(key), `mentoring entry carries "${key}"`);
     assert.equal(typeof e.count, "number");
   }
   // The values, not the file: its header comment names what it leaves out.
@@ -81,13 +100,21 @@ await test("privacy: mentoring is counts, and no line in the CV data carries an 
 
 await test("the URL state round-trips, drops what it does not know and orders a reversed range", () => {
   const state = parseState(
-    new URLSearchParams("type=grant&type=publication&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest"),
+    new URLSearchParams(
+      "type=grant&type=publication&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest",
+    ),
   );
   assert.deepEqual(state.types, ["grant", "publication"]);
   const search = stateToSearch(state);
-  assert.equal(search, "?type=publication&type=grant&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest");
+  assert.equal(
+    search,
+    "?type=publication&type=grant&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest",
+  );
   assert.equal(stateToSearch(parseState(new URLSearchParams(search.slice(1)))), search);
-  assert.deepEqual(parseState(new URLSearchParams("type=publication,talk")).types, ["publication", "talk"]);
+  assert.deepEqual(parseState(new URLSearchParams("type=publication,talk")).types, [
+    "publication",
+    "talk",
+  ]);
   const junk = parseState(new URLSearchParams("type=nope&area=x&role=boss&sort=up&from=19"));
   assert.equal(stateToSearch(junk), "");
   const reversed = parseState(new URLSearchParams("from=2020&to=2010"));
@@ -140,7 +167,10 @@ await test("the timeline counts each charted type by year", () => {
   const data = timelineData(FACTS, state);
   assert.deepEqual(data.years, chartYears(FACTS));
   const pubs = data.series.find((s) => s.key === "publication");
-  assert.equal(pubs?.values.reduce((a, b) => a + b, 0), 34);
+  assert.equal(
+    pubs?.values.reduce((a, b) => a + b, 0),
+    34,
+  );
 });
 
 await test("a range filter fades exactly the timeline's bars outside it", () => {
@@ -183,12 +213,24 @@ await test("a filter that selects nothing chartable gets a sentence, never an En
   const uncharted = timelineFor("type=service");
   assert.ok(uncharted.data.entries > 0);
   assert.match(uncharted.markup, /data-state="nodata"/);
-  assert.match(uncharted.markup, /publications, grants, invited talks and awards, and none of the entries/);
+  assert.match(
+    uncharted.markup,
+    /publications, grants, invited talks and awards, and none of the entries/,
+  );
   // The innocent cases: anything with a charted entry is still a figure, with no sentence.
-  for (const query of ["", "type=publication", "type=grant&from=2018&to=2022", "role=first-author&sort=newest", "area=bacteriophages&type=talk"]) {
+  for (const query of [
+    "",
+    "type=publication",
+    "type=grant&from=2018&to=2022",
+    "role=first-author&sort=newest",
+    "area=bacteriophages&type=talk",
+  ]) {
     const { markup } = timelineFor(query);
     assert.ok(markup.includes("<svg"), `${query || "no filter"} draws the chart`);
-    assert.ok(!markup.includes('data-state="nodata"'), `${query || "no filter"} has no empty sentence`);
+    assert.ok(
+      !markup.includes('data-state="nodata"'),
+      `${query || "no filter"} has no empty sentence`,
+    );
   }
 });
 
@@ -201,22 +243,37 @@ await test("no combination of the CV's filters throws, and the sentence appears 
   for (const t of ids(TYPES)) for (const r of ids(ROLES)) queries.push(`type=${t}&role=${r}`);
   for (const t of ids(TYPES)) for (const a of ids(AREAS)) queries.push(`type=${t}&area=${a}`);
   for (const r of ids(ROLES)) for (const a of ids(AREAS)) queries.push(`role=${r}&area=${a}`);
-  queries.push("q=zzzznomatch", "from=2099", "to=1900", "from=2099&type=publication", "type=grant&role=senior-author&q=x");
+  queries.push(
+    "q=zzzznomatch",
+    "from=2099",
+    "to=1900",
+    "from=2099&type=publication",
+    "type=grant&role=senior-author&q=x",
+  );
   const charted = new Set(["publication", "grant", "talk", "award"]);
   let empties = 0;
   for (const query of queries) {
     const { data, markup } = timelineFor(query); // a throw here is the 500
     const state = parseState(new URLSearchParams(query));
-    const chartable = FACTS.some((f) => matches(f, state, { ignoreYears: true }) && charted.has(f.type) && f.year !== null);
+    const chartable = FACTS.some(
+      (f) => matches(f, state, { ignoreYears: true }) && charted.has(f.type) && f.year !== null,
+    );
     assert.equal(markup.includes('data-state="nodata"'), !chartable, `?${query}`);
     if (!chartable) empties += 1;
-    assert.equal(data.entries, FACTS.filter((f) => matches(f, state, { ignoreYears: true })).length, `?${query}`);
+    assert.equal(
+      data.entries,
+      FACTS.filter((f) => matches(f, state, { ignoreYears: true })).length,
+      `?${query}`,
+    );
   }
   assert.ok(empties > 20, "the table reaches the empty states");
 });
 
 await test("a value outside the vocabulary is dropped, so it never narrows to nothing", () => {
-  assert.deepEqual(parseState(new URLSearchParams("type=bogus&role=bogus&area=bogus")), parseState(new URLSearchParams("")));
+  assert.deepEqual(
+    parseState(new URLSearchParams("type=bogus&role=bogus&area=bogus")),
+    parseState(new URLSearchParams("")),
+  );
 });
 
 await test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
@@ -235,11 +292,23 @@ await test("the PDF's fingerprint is a deterministic function of the CV data, an
   const fingerprint = await cvFingerprint(CV);
   assert.match(fingerprint, /^[0-9a-f]{8}$/);
   assert.equal(await cvFingerprint(CV), fingerprint, "the same data, the same fingerprint");
-  assert.equal(await cvFingerprint(structuredClone(CV)), fingerprint, "a copy of the data, the same fingerprint");
-  assert.notEqual(await cvFingerprint({ ...CV, edition: `${CV.edition} (revised)` }), fingerprint, "an edition change moves it");
+  assert.equal(
+    await cvFingerprint(structuredClone(CV)),
+    fingerprint,
+    "a copy of the data, the same fingerprint",
+  );
+  assert.notEqual(
+    await cvFingerprint({ ...CV, edition: `${CV.edition} (revised)` }),
+    fingerprint,
+    "an edition change moves it",
+  );
   const [first, ...rest] = CV.entries;
   assert.ok(first, "the CV has entries");
-  assert.notEqual(await cvFingerprint({ ...CV, entries: rest }), fingerprint, "a dropped entry moves it");
+  assert.notEqual(
+    await cvFingerprint({ ...CV, entries: rest }),
+    fingerprint,
+    "a dropped entry moves it",
+  );
 });
 
 await test("the print document carries the fingerprint it is stored under, and one copy of the options serves both renderers", async () => {
@@ -247,17 +316,31 @@ await test("the print document carries the fingerprint it is stored under, and o
     renderBody: async () => ({ html: "<p>body</p>", blockedUrls: [] }),
     fontCss: "/* fonts */",
   });
-  assert.ok(html.includes(`${FINGERPRINT_LABEL} ${await cvFingerprint(CV)}.`), "the last line names the data's fingerprint");
+  assert.ok(
+    html.includes(`${FINGERPRINT_LABEL} ${await cvFingerprint(CV)}.`),
+    "the last line names the data's fingerprint",
+  );
   assert.ok(html.includes("/* fonts */") && html.includes("<p>body</p>"));
   await assert.rejects(
-    renderCvHtml(CV, { renderBody: async () => ({ html: "", blockedUrls: [{ url: "javascript:x" }] }), fontCss: "" }),
+    renderCvHtml(CV, {
+      renderBody: async () => ({ html: "", blockedUrls: [{ url: "javascript:x" }] }),
+      fontCss: "",
+    }),
     /allowlist refused/,
   );
   const options = cvPdfOptions();
   assert.deepEqual(
-    [options.format, options.tagged, options.outline, options.preferCSSPageSize, "displayHeaderFooter" in options],
+    [
+      options.format,
+      options.tagged,
+      options.outline,
+      options.preferCSSPageSize,
+      "displayHeaderFooter" in options,
+    ],
     ["letter", true, true, true, false],
   );
-  assert.ok(html.includes(`Curriculum Vitae, ${CV.edition}"`), "the footer, in the page's margin boxes");
+  assert.ok(
+    html.includes(`Curriculum Vitae, ${CV.edition}"`),
+    "the footer, in the page's margin boxes",
+  );
 });
-

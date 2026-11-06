@@ -70,11 +70,18 @@ function titleOf(id: string): Title | undefined {
 /** The person's row is below the actor's layer, so the actor may manage it, and it is not the actor's own. */
 function manages(actor: Actor, row: MemberRow): boolean {
   const title = titleOf(row.title);
-  return can(actor, MANAGE_MEMBERS) && !!title && title.layer > actor.layer && row.email !== actor.email;
+  return (
+    can(actor, MANAGE_MEMBERS) && !!title && title.layer > actor.layer && row.email !== actor.email
+  );
 }
 
 /** A title's default end date, or null when it does not expire or no term date is entered yet. */
-function safeDefault(title: Title, terms: string[], nowMs: number, after: string | null = null): string | null {
+function safeDefault(
+  title: Title,
+  terms: string[],
+  nowMs: number,
+  after: string | null = null,
+): string | null {
   try {
     return defaultEndDate(title, terms, nowMs, after);
   } catch (error) {
@@ -83,7 +90,8 @@ function safeDefault(title: Title, terms: string[], nowMs: number, after: string
   }
 }
 
-const NO_TERMS = "Enter this year's semester end dates first: a Lab worker's or Lab manager's access ends on one of them.";
+const NO_TERMS =
+  "Enter this year's semester end dates first: a Lab worker's or Lab manager's access ends on one of them.";
 
 /** The titles the actor may give, below their layer and within what they hold; the least first, so it is the default. */
 function grantableTitles(actor: Actor): Title[] {
@@ -92,8 +100,11 @@ function grantableTitles(actor: Actor): Title[] {
     .sort((a, b) => b.layer - a.layer);
 }
 
-function syncOf(state: { cloudflare: SyncState; error: string | null } | undefined): Pick<PersonRow, "sync" | "syncError"> {
-  if (!state || state.cloudflare === "accepted" || state.cloudflare === "not_needed") return { sync: "ready" };
+function syncOf(
+  state: { cloudflare: SyncState; error: string | null } | undefined,
+): Pick<PersonRow, "sync" | "syncError"> {
+  if (!state || state.cloudflare === "accepted" || state.cloudflare === "not_needed")
+    return { sync: "ready" };
   if (state.cloudflare === "pending") return { sync: "waiting" };
   return { sync: "failed", syncError: state.error ?? undefined };
 }
@@ -135,7 +146,8 @@ function parsed(json: string | null): Partial<MemberRow> | null {
 function historyEntry(row: Awaited<ReturnType<typeof memberHistory>>[number]): HistoryEntry {
   const before = parsed(row.beforeRow);
   const after = parsed(row.afterRow);
-  const cloudflare = row.cloudflare === "pending" || row.cloudflare === "failed" ? row.cloudflare : "accepted";
+  const cloudflare =
+    row.cloudflare === "pending" || row.cloudflare === "failed" ? row.cloudflare : "accepted";
   return {
     at: row.at,
     by: row.actor,
@@ -159,11 +171,24 @@ function listText(words: string[]): string {
 }
 
 /** What the members page shows this actor: the people they may manage and themselves, never anyone else. */
-export async function membersPage(env: Env, actor: Actor, url: URL, nowMs: number): Promise<MembersPageData> {
-  const [rows, terms, sync] = await Promise.all([listMembers(env), listTerms(env), latestSyncByEmail(env)]);
+export async function membersPage(
+  env: Env,
+  actor: Actor,
+  url: URL,
+  nowMs: number,
+): Promise<MembersPageData> {
+  const [rows, terms, sync] = await Promise.all([
+    listMembers(env),
+    listTerms(env),
+    latestSyncByEmail(env),
+  ]);
   const visible = rows.filter((row) => row.email === actor.email || manages(actor, row));
   const people = visible.map((row) => personRow(actor, row, terms, nowMs, sync));
-  const titles: TitleOption[] = grantableTitles(actor).map((t) => ({ value: t.id, label: t.label, defaultEnd: safeDefault(t, terms, nowMs) }));
+  const titles: TitleOption[] = grantableTitles(actor).map((t) => ({
+    value: t.id,
+    label: t.label,
+    defaultEnd: safeDefault(t, terms, nowMs),
+  }));
 
   const reviewRows = visible.filter((row) => manages(actor, row) && reviewOpen(row, nowMs));
   const review = reviewRows.length
@@ -177,13 +202,22 @@ export async function membersPage(env: Env, actor: Actor, url: URL, nowMs: numbe
     : undefined;
 
   const personParam = url.searchParams.get("person");
-  const shown = personParam ? visible.find((r) => r.email === personParam.toLowerCase()) : undefined;
+  const shown = personParam
+    ? visible.find((r) => r.email === personParam.toLowerCase())
+    : undefined;
   const history = shown
-    ? { email: shown.email, name: shown.name || shown.email, entries: (await memberHistory(env, shown.email)).map(historyEntry) }
+    ? {
+        email: shown.email,
+        name: shown.name || shown.email,
+        entries: (await memberHistory(env, shown.email)).map(historyEntry),
+      }
     : undefined;
 
   const changeParam = url.searchParams.get("change");
-  const changing = changeParam && visible.some((r) => r.email === changeParam.toLowerCase() && manages(actor, r)) ? changeParam.toLowerCase() : undefined;
+  const changing =
+    changeParam && visible.some((r) => r.email === changeParam.toLowerCase() && manages(actor, r))
+      ? changeParam.toLowerCase()
+      : undefined;
 
   const lead = titles.length
     ? `You manage ${listText([...titles].reverse().map((t) => plural(t.label)))}.${terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? "" : ` ${NO_TERMS}`}`
@@ -211,10 +245,18 @@ function refused(text: string): MembersActionData {
 }
 
 /** The sync's answer appended to a done change, so the result line never says more than Cloudflare has. */
-async function withSync(env: Env, nowMs: number, done: string, fetchImpl?: Fetch): Promise<MembersActionData> {
+async function withSync(
+  env: Env,
+  nowMs: number,
+  done: string,
+  fetchImpl?: Fetch,
+): Promise<MembersActionData> {
   const outcome = await syncAccess(env, nowMs, fetchImpl);
-  if (outcome.ok) return { result: { ok: true, text: `${done} Cloudflare Access matches the list.` } };
-  return { result: { ok: true, text: `${done} Cloudflare Access does not match yet: ${outcome.error}` } };
+  if (outcome.ok)
+    return { result: { ok: true, text: `${done} Cloudflare Access matches the list.` } };
+  return {
+    result: { ok: true, text: `${done} Cloudflare Access does not match yet: ${outcome.error}` },
+  };
 }
 
 function rulesFor(env: Env, terms: string[], nowMs: number) {
@@ -222,13 +264,21 @@ function rulesFor(env: Env, terms: string[], nowMs: number) {
 }
 
 /** Runs one post from the members page as `actor`. Every branch re-checks with `checkChange`. */
-export async function membersAction(env: Env, actor: Actor, form: FormData, nowMs: number, fetchImpl?: Fetch): Promise<MembersActionData> {
+export async function membersAction(
+  env: Env,
+  actor: Actor,
+  form: FormData,
+  nowMs: number,
+  fetchImpl?: Fetch,
+): Promise<MembersActionData> {
   const intent = field(form, "intent");
   if (intent === "set_terms") return setTerms(env, actor, field(form, "terms"), nowMs);
   if (!can(actor, MANAGE_MEMBERS)) return refused("You do not manage people here.");
   if (intent === "retry") {
     const outcome = await syncAccess(env, nowMs, fetchImpl);
-    return outcome.ok ? { result: { ok: true, text: "Cloudflare Access matches the list." } } : refused(outcome.error);
+    return outcome.ok
+      ? { result: { ok: true, text: "Cloudflare Access matches the list." } }
+      : refused(outcome.error);
   }
   if (intent === "review") return review(env, actor, form, nowMs, fetchImpl);
 
@@ -241,16 +291,37 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
     const email = normalizeEmail(typed);
     const titleId = field(form, "title");
     const title = titleOf(titleId);
-    const endDate = title?.expires ? field(form, "end_date") || safeDefault(title, terms, nowMs) : null;
+    const endDate = title?.expires
+      ? field(form, "end_date") || safeDefault(title, terms, nowMs)
+      : null;
     if (title?.expires && !endDate) return refused(NO_TERMS);
     if (endDate && !isDate(endDate)) return refused(`Not a date (YYYY-MM-DD): ${endDate}.`);
     const existing = await getMember(env, email);
-    if (existing && existing.status !== "removed") return refused(`${existing.name || email} is already on the list: renew them or change their title.`);
+    if (existing && existing.status !== "removed")
+      return refused(
+        `${existing.name || email} is already on the list: renew them or change their title.`,
+      );
     const verdict = check(actor, { kind: "add", email, title: titleId, end_date: endDate }, rules);
     if (!verdict.ok) return refused(verdict.reason);
-    const after: MemberRow = { email, name: field(form, "name"), title: titleId, end_date: endDate, status: "active" };
-    await writeMemberChange(env, after, actor.email, audit(actor, "add", email, existing, after, nowMs));
-    return withSync(env, nowMs, `Added ${after.name || email} as ${titleLabel(titleId)}.`, fetchImpl);
+    const after: MemberRow = {
+      email,
+      name: field(form, "name"),
+      title: titleId,
+      end_date: endDate,
+      status: "active",
+    };
+    await writeMemberChange(
+      env,
+      after,
+      actor.email,
+      audit(actor, "add", email, existing, after, nowMs),
+    );
+    return withSync(
+      env,
+      nowMs,
+      `Added ${after.name || email} as ${titleLabel(titleId)}.`,
+      fetchImpl,
+    );
   }
 
   const email = field(form, "email").toLowerCase();
@@ -261,7 +332,8 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
   if (intent === "change_title") {
     const titleId = field(form, "title");
     const reason = field(form, "reason");
-    if (target.status === "removed") return refused("A removed person is added again, not given a new title.");
+    if (target.status === "removed")
+      return refused("A removed person is added again, not given a new title.");
     const verdict = check(actor, { kind: "change_title", target, title: titleId, reason }, rules);
     if (!verdict.ok) return refused(verdict.reason);
     const title = titleOf(titleId) as Title;
@@ -270,7 +342,12 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
     const endDate = title.expires ? (current ?? safeDefault(title, terms, nowMs)) : null;
     if (title.expires && !endDate) return refused(NO_TERMS);
     const after: MemberRow = { ...target, title: titleId, end_date: endDate };
-    await writeMemberChange(env, after, actor.email, audit(actor, "change_title", email, target, after, nowMs, reason));
+    await writeMemberChange(
+      env,
+      after,
+      actor.email,
+      audit(actor, "change_title", email, target, after, nowMs, reason),
+    );
     return withSync(env, nowMs, `${who} is now ${title.label}.`, fetchImpl);
   }
 
@@ -280,7 +357,12 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
     const endDate = safeDefault(titleOf(target.title) as Title, terms, nowMs, target.end_date);
     if (!endDate) return refused(NO_TERMS);
     const after: MemberRow = { ...target, end_date: endDate, status: "active" };
-    await writeMemberChange(env, after, actor.email, audit(actor, "renew", email, target, after, nowMs));
+    await writeMemberChange(
+      env,
+      after,
+      actor.email,
+      audit(actor, "renew", email, target, after, nowMs),
+    );
     return withSync(env, nowMs, `Renewed ${who} until ${endDate}.`, fetchImpl);
   }
 
@@ -289,7 +371,12 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
     if (!verdict.ok) return refused(verdict.reason);
     if (field(form, "confirmed") !== "yes") return { confirm: { email: target.email, name: who } };
     const after: MemberRow = { ...target, status: "removed" };
-    await writeMemberChange(env, after, actor.email, audit(actor, "remove", email, target, after, nowMs));
+    await writeMemberChange(
+      env,
+      after,
+      actor.email,
+      audit(actor, "remove", email, target, after, nowMs),
+    );
     return withSync(env, nowMs, `Removed ${who}.`, fetchImpl);
   }
 
@@ -297,7 +384,11 @@ export async function membersAction(env: Env, actor: Actor, form: FormData, nowM
 }
 
 /** checkChange, with the one throw it can make (no term date entered yet) read as a refusal. */
-function check(actor: Actor, change: Parameters<typeof checkChange>[1], rules: Parameters<typeof checkChange>[2]) {
+function check(
+  actor: Actor,
+  change: Parameters<typeof checkChange>[1],
+  rules: Parameters<typeof checkChange>[2],
+) {
   try {
     return checkChange(actor, change, rules);
   } catch (error) {
@@ -319,7 +410,13 @@ function audit(
 }
 
 /** The term review: Keep renews to the next term end, Remove removes; one batch, one sync. */
-async function review(env: Env, actor: Actor, form: FormData, nowMs: number, fetchImpl?: Fetch): Promise<MembersActionData> {
+async function review(
+  env: Env,
+  actor: Actor,
+  form: FormData,
+  nowMs: number,
+  fetchImpl?: Fetch,
+): Promise<MembersActionData> {
   const terms = await listTerms(env);
   const rules = rulesFor(env, terms, nowMs);
   const changes: Array<{ after: MemberRow; audit: MemberAuditRow }> = [];
@@ -342,13 +439,39 @@ async function review(env: Env, actor: Actor, form: FormData, nowMs: number, fet
         continue;
       }
       const after: MemberRow = { ...target, end_date: endDate, status: "active" };
-      changes.push({ after, audit: { ...auditRow({ actor, action: "renew", email: target.email, before: target, after, nowMs }), action: "review_keep" } });
+      changes.push({
+        after,
+        audit: {
+          ...auditRow({
+            actor,
+            action: "renew",
+            email: target.email,
+            before: target,
+            after,
+            nowMs,
+          }),
+          action: "review_keep",
+        },
+      });
     } else {
       const after: MemberRow = { ...target, status: "removed" };
-      changes.push({ after, audit: auditRow({ actor, action: "remove", email: target.email, before: target, after, nowMs }) });
+      changes.push({
+        after,
+        audit: auditRow({
+          actor,
+          action: "remove",
+          email: target.email,
+          before: target,
+          after,
+          nowMs,
+        }),
+      });
     }
   }
-  if (changes.length === 0) return refused(notDone.length ? notDone.join(" ") : "Nothing was answered, so nothing changed.");
+  if (changes.length === 0)
+    return refused(
+      notDone.length ? notDone.join(" ") : "Nothing was answered, so nothing changed.",
+    );
   await writeMemberChanges(env, changes);
   const kept = changes.filter((c) => c.audit.action === "review_keep").length;
   const done = `Review saved: ${kept} kept, ${changes.length - kept} removed.${notDone.length ? ` Not done: ${notDone.join(" ")}` : ""}`;
@@ -360,7 +483,12 @@ async function review(env: Env, actor: Actor, form: FormData, nowMs: number, fet
  * YYYY-MM-DD; the list replaces the old one, with a member_audit row holding both. No Access sync: a term date
  * changes no one's access today.
  */
-async function setTerms(env: Env, actor: Actor, text: string, nowMs: number): Promise<MembersActionData> {
+async function setTerms(
+  env: Env,
+  actor: Actor,
+  text: string,
+  nowMs: number,
+): Promise<MembersActionData> {
   if (!canEditTerms(actor)) return refused("Only an Owner sets the semester end dates.");
   const dates = [...new Set(text.split(/[\s,;]+/).filter(Boolean))].sort();
   const bad = dates.filter((d) => !isDate(d));
@@ -377,6 +505,12 @@ async function setTerms(env: Env, actor: Actor, text: string, nowMs: number): Pr
     reason: null,
     cloudflare: "not_needed",
   });
-  return { result: { ok: true, text: dates.length ? `Semester end dates: ${dates.join(", ")}.` : "Semester end dates cleared." } };
+  return {
+    result: {
+      ok: true,
+      text: dates.length
+        ? `Semester end dates: ${dates.join(", ")}.`
+        : "Semester end dates cleared.",
+    },
+  };
 }
-

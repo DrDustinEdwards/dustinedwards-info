@@ -23,7 +23,9 @@ async function seedZeroResult(query: string, lastSeen: number) {
 /* Raw D1 for the read too: testEnv's type is not the app's Env (it lacks OPENALEX_API_KEY), so it
    cannot be handed to getDb, and no other worker test does. */
 async function remainingQueries(): Promise<string[]> {
-  const { results } = await testEnv.DB.prepare(`SELECT query FROM zero_result_queries ORDER BY query`).all<{
+  const { results } = await testEnv.DB.prepare(
+    `SELECT query FROM zero_result_queries ORDER BY query`,
+  ).all<{
     query: string;
   }>();
   return results.map((row) => row.query);

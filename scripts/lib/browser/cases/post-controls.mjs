@@ -113,32 +113,34 @@ export async function run({ page, browser }, { codePost, probedPost }) {
       if (!/Execution context was destroyed/i.test(message)) flipReadError = message;
       flipped = null;
     }
-    if (themeClicked) ok(
-      "the theme flip keeps the reader's scroll position",
-      scrolledTo > 0 && flipped !== null && flipped.scrollY === scrolledTo,
-      scrolledTo === 0
-        ? `${postForShape} is too short to scroll, so this case measured nothing.`
-        : `scrolled to ${scrolledTo}, after the flip ${flipped?.scrollY ?? "a new document"}. ` +
-            `The focus hand-off in app/enhance/theme.ts lost preventScroll, or something ` +
-            `else on the flip moves the page.`,
-    );
-    if (themeClicked) ok(
-      "the theme flips in place, without a navigation, and the control turns around",
-      flipped !== null &&
-        flipped.attr === "dark" &&
-        flipped.sameDocument &&
-        flipped.shownValue === "light" &&
-        flipped.shownCount === 1,
-      flipped === null
-        ? flipReadError
-          ? `reading the page after the click failed: ${flipReadError}`
-          : "the click caused a real navigation: the theme bundle did not intercept the " +
-            "submit (the form fallback is what carried the click)"
-        : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
-            `the visible button now posts ${JSON.stringify(flipped.shownValue)} and there ` +
-            `are ${flipped.shownCount} of them. The theme bundle did not run, the submit ` +
-            `interception broke, or the cascade did not turn the control around.`,
-    );
+    if (themeClicked)
+      ok(
+        "the theme flip keeps the reader's scroll position",
+        scrolledTo > 0 && flipped !== null && flipped.scrollY === scrolledTo,
+        scrolledTo === 0
+          ? `${postForShape} is too short to scroll, so this case measured nothing.`
+          : `scrolled to ${scrolledTo}, after the flip ${flipped?.scrollY ?? "a new document"}. ` +
+              `The focus hand-off in app/enhance/theme.ts lost preventScroll, or something ` +
+              `else on the flip moves the page.`,
+      );
+    if (themeClicked)
+      ok(
+        "the theme flips in place, without a navigation, and the control turns around",
+        flipped !== null &&
+          flipped.attr === "dark" &&
+          flipped.sameDocument &&
+          flipped.shownValue === "light" &&
+          flipped.shownCount === 1,
+        flipped === null
+          ? flipReadError
+            ? `reading the page after the click failed: ${flipReadError}`
+            : "the click caused a real navigation: the theme bundle did not intercept the " +
+              "submit (the form fallback is what carried the click)"
+          : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
+              `the visible button now posts ${JSON.stringify(flipped.shownValue)} and there ` +
+              `are ${flipped.shownCount} of them. The theme bundle did not run, the submit ` +
+              `interception broke, or the cascade did not turn the control around.`,
+      );
 
     /* With JavaScript disabled. Only the path is asserted: `Referer` never carries a fragment. */
     {
@@ -237,7 +239,10 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           "the scriptless Writing button is in the phone's links row to click",
         );
         const isOpen = await pollUntil(
-          () => noScript.evaluate(() => Boolean(document.getElementById("site-nav-writing")?.matches(":popover-open"))),
+          () =>
+            noScript.evaluate(() =>
+              Boolean(document.getElementById("site-nav-writing")?.matches(":popover-open")),
+            ),
           Boolean,
           { everyMs: 50, sleepFirst: false },
         );
@@ -259,7 +264,10 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           /* Polled, not waitForNavigation: with script off, a click on a link the hover prefetched commits the
            * navigation but Puppeteer's lifecycle watcher never sees domcontentloaded (measured 2026-10-29). */
           await link.click();
-          await pollUntil(() => Promise.resolve(new URL(noScript.url()).pathname), (path) => path === target);
+          await pollUntil(
+            () => Promise.resolve(new URL(noScript.url()).pathname),
+            (path) => path === target,
+          );
           ok(
             "a header panel link NAVIGATES on a phone with no script",
             new URL(noScript.url()).pathname === target,
@@ -351,28 +359,28 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           "the palette is open and has no .palette-input, so no query could be typed.",
         );
       } else {
-      await resultsField.type("cloudflare");
-      // The debounce and a cold D1 query both outlast a fixed wait; poll instead.
-      let paletteResult = { options: 0, status: "" };
-      paletteResult = await pollUntil(
-        () =>
-          page.evaluate(() => ({
-            options: document.querySelectorAll(".palette-option").length,
-            status: document.querySelector(".palette-status")?.textContent ?? "",
-          })),
-        (r) => r.options > 0 || /result|unavailable/i.test(r.status),
-      );
-      ok(
-        "the palette returns live results",
-        paletteResult.options > 0,
-        `0 options after 5s; status ${JSON.stringify(paletteResult.status)}. The JSON ` +
-          `endpoint or the palette's fetch path broke.`,
-      );
-      /* Emptied, not closed: the query case below types into this same open field. */
-      await resultsField.evaluate((input) => {
-        /** @type {HTMLInputElement} */ (input).value = "";
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      });
+        await resultsField.type("cloudflare");
+        // The debounce and a cold D1 query both outlast a fixed wait; poll instead.
+        let paletteResult = { options: 0, status: "" };
+        paletteResult = await pollUntil(
+          () =>
+            page.evaluate(() => ({
+              options: document.querySelectorAll(".palette-option").length,
+              status: document.querySelector(".palette-status")?.textContent ?? "",
+            })),
+          (r) => r.options > 0 || /result|unavailable/i.test(r.status),
+        );
+        ok(
+          "the palette returns live results",
+          paletteResult.options > 0,
+          `0 options after 5s; status ${JSON.stringify(paletteResult.status)}. The JSON ` +
+            `endpoint or the palette's fetch path broke.`,
+        );
+        /* Emptied, not closed: the query case below types into this same open field. */
+        await resultsField.evaluate((input) => {
+          /** @type {HTMLInputElement} */ (input).value = "";
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        });
       }
     }
 

@@ -40,7 +40,11 @@ const FLAG_KEYS = /** @type {const} */ ({
 });
 
 /** The platforms a fenced block may name (docs/PROCEDURES.md, S4): a how-to's commands where they differ by system. */
-export const PLATFORMS = /** @type {const} */ ({ linux: "Linux", macos: "macOS", windows: "Windows" });
+export const PLATFORMS = /** @type {const} */ ({
+  linux: "Linux",
+  macos: "macOS",
+  windows: "Windows",
+});
 
 /**
  * @typedef {{ critical: string[], pause: string[], why: string[], troubleshooting: string[], expect: string[], spin: string[], calc: string[], challenge: string[], solution: string[] }} Flags
@@ -74,7 +78,17 @@ function readStep(first, rest, line, number) {
   /** @type {string[]} */
   const words = [first];
   /** @type {Flags} */
-  const flags = { critical: [], pause: [], why: [], troubleshooting: [], expect: [], spin: [], calc: [], challenge: [], solution: [] };
+  const flags = {
+    critical: [],
+    pause: [],
+    why: [],
+    troubleshooting: [],
+    expect: [],
+    spin: [],
+    calc: [],
+    challenge: [],
+    solution: [],
+  };
   /** @type {Command[]} */
   const commands = [];
   /** @type {Array<{ alt: string, src: string }>} */
@@ -89,8 +103,14 @@ function readStep(first, rest, line, number) {
     if (fence) {
       openFlag = null;
       const lang = fence[1] ?? "";
-      const attrs = Object.fromEntries([...(fence[2] ?? "").matchAll(/([a-z]+)=(\S+)/g)].map((m) => [m[1], m[2]]));
-      for (const key of Object.keys(attrs)) if (key !== "platform") problems.push(`line ${line}: step ${number} has a code block with "${key}=", and platform= is the only attribute a block takes`);
+      const attrs = Object.fromEntries(
+        [...(fence[2] ?? "").matchAll(/([a-z]+)=(\S+)/g)].map((m) => [m[1], m[2]]),
+      );
+      for (const key of Object.keys(attrs))
+        if (key !== "platform")
+          problems.push(
+            `line ${line}: step ${number} has a code block with "${key}=", and platform= is the only attribute a block takes`,
+          );
       /** @type {string[]} */
       const code = [];
       i += 1;
@@ -98,23 +118,37 @@ function readStep(first, rest, line, number) {
         code.push(rest[i] ?? "");
         i += 1;
       }
-      if (i >= rest.length) problems.push(`line ${line}: step ${number} has a code block that is never closed`);
+      if (i >= rest.length)
+        problems.push(`line ${line}: step ${number} has a code block that is never closed`);
       if (lang === "output") {
         const target = commands[commands.length - 1];
-        if (!target) problems.push(`line ${line}: step ${number} has an output block with no command before it`);
+        if (!target)
+          problems.push(
+            `line ${line}: step ${number} has an output block with no command before it`,
+          );
         else target.output = code.join("\n");
       } else {
-        commands.push({ lang, code: code.join("\n"), output: null, platform: attrs.platform ?? null });
+        commands.push({
+          lang,
+          code: code.join("\n"),
+          output: null,
+          platform: attrs.platform ?? null,
+        });
       }
       continue;
     }
-    const flag = /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s*(.*)$/.exec(text);
+    const flag =
+      /^>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s*(.*)$/.exec(
+        text,
+      );
     if (flag) {
       openFlag = FLAG_KEYS[/** @type {keyof typeof FLAG_KEYS} */ (flag[1])];
       const body = (flag[2] ?? "").trim();
       // A solution answers the challenge before it (the Carpentries challenge with its nested solution), one each.
       if (openFlag === "solution" && flags.solution.length >= flags.challenge.length) {
-        problems.push(`line ${line}: step ${number} has a SOLUTION with no CHALLENGE before it to answer`);
+        problems.push(
+          `line ${line}: step ${number} has a SOLUTION with no CHALLENGE before it to answer`,
+        );
       }
       if (openFlag === "troubleshooting" || openFlag === "calc") {
         flags[openFlag].push(...body.split(/[,\s]+/).filter(Boolean));
@@ -126,10 +160,15 @@ function readStep(first, rest, line, number) {
     const more = /^>\s?(.*)$/.exec(text);
     if (more) {
       if (!openFlag || openFlag === "troubleshooting" || openFlag === "calc") {
-        problems.push(`line ${line}: step ${number} has a quoted line that follows no flag: "${text.trim()}"`);
+        problems.push(
+          `line ${line}: step ${number} has a quoted line that follows no flag: "${text.trim()}"`,
+        );
       } else {
         const list = flags[openFlag];
-        list[list.length - 1] = `${list[list.length - 1] ?? ""}\n${more[1] ?? ""}`.replace(/^\n/, "");
+        list[list.length - 1] = `${list[list.length - 1] ?? ""}\n${more[1] ?? ""}`.replace(
+          /^\n/,
+          "",
+        );
       }
       continue;
     }
@@ -198,7 +237,8 @@ function readBlocks(lines, firstLine) {
       if (steps && (text.trim() === "" || /^\s{2,}/.test(text))) {
         // A blank line inside a list is still the list, unless the margin comes next.
         const next = lines.slice(i + 1).find((l) => l.trim() !== "");
-        if (text.trim() === "" && (next === undefined || !/^(\s{2,}|\d+\.\s)/.test(next))) steps = null;
+        if (text.trim() === "" && (next === undefined || !/^(\s{2,}|\d+\.\s)/.test(next)))
+          steps = null;
         continue;
       }
       steps = null;
@@ -243,7 +283,9 @@ export function parseProcedure({ file, raw }) {
       data: /** @type {Record<string, any>} */ ({}),
       intro: "",
       sections: /** @type {Section[]} */ ([]),
-      problems: [`the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`],
+      problems: [
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
+      ],
     };
   }
   const data = /** @type {Record<string, any>} */ (yamlPlain(parsed.data));
@@ -254,12 +296,21 @@ export function parseProcedure({ file, raw }) {
   const sections = [];
   /** @type {string[]} */
   const intro = [];
-  let current = /** @type {{ title: string, id: string, custom: boolean, line: number, lines: string[] } | null} */ (null);
+  let current =
+    /** @type {{ title: string, id: string, custom: boolean, line: number, lines: string[] } | null} */ (
+      null
+    );
   const close = () => {
     if (!current) return;
     const { blocks, problems: found } = readBlocks(current.lines, current.line + 1);
     problems.push(...found);
-    sections.push({ title: current.title, id: current.id, custom: current.custom, line: current.line, blocks });
+    sections.push({
+      title: current.title,
+      id: current.id,
+      custom: current.custom,
+      line: current.line,
+      blocks,
+    });
   };
 
   let inFence = false;
@@ -269,7 +320,13 @@ export function parseProcedure({ file, raw }) {
     if (heading) {
       close();
       const title = (heading[1] ?? "").trim();
-      current = { title, id: heading[2] ?? headingId(title), custom: Boolean(heading[2]), line: headerLines + index + 1, lines: [] };
+      current = {
+        title,
+        id: heading[2] ?? headingId(title),
+        custom: Boolean(heading[2]),
+        line: headerLines + index + 1,
+        lines: [],
+      };
       return;
     }
     if (current) current.lines.push(text);
@@ -316,7 +373,9 @@ export function readCalcs(tokens) {
       continue;
     }
     if (calcs.length === 0) calcs.push({ id: "", values: {} });
-    /** @type {{ id: string, values: Record<string, string> }} */ (calcs[calcs.length - 1]).values[token.slice(0, eq)] = token.slice(eq + 1);
+    /** @type {{ id: string, values: Record<string, string> }} */ (calcs[calcs.length - 1]).values[
+      token.slice(0, eq)
+    ] = token.slice(eq + 1);
   }
   return calcs;
 }

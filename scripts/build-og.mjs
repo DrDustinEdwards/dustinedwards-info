@@ -84,10 +84,17 @@ function phage(x, y, r) {
   const top = y - 1.6 * r;
   return [
     { type: "polygon", props: { points: head, fill: NIGHT } },
-    { type: "rect", props: { x: x - r * 0.18, y: top, width: r * 0.36, height: 1.2 * r, fill: NIGHT } },
+    {
+      type: "rect",
+      props: { x: x - r * 0.18, y: top, width: r * 0.36, height: 1.2 * r, fill: NIGHT },
+    },
     ...[-1, 0, 1].map((d) => ({
       type: "path",
-      props: { d: `M${x} ${y - 0.4 * r} L${x + d * 1.1 * r} ${y + 0.25 * r}`, stroke: NIGHT, strokeWidth: r * 0.14 },
+      props: {
+        d: `M${x} ${y - 0.4 * r} L${x + d * 1.1 * r} ${y + 0.25 * r}`,
+        stroke: NIGHT,
+        strokeWidth: r * 0.14,
+      },
     })),
   ];
 }
@@ -109,8 +116,20 @@ function scene() {
       children: [
         { type: "rect", props: { width: WIDTH, height: 300, fill: SKY } },
         { type: "circle", props: { cx: 930, cy: 150, r: 110, fill: SUN } },
-        { type: "path", props: { d: "M0 200 L180 160 L360 186 L560 140 L760 180 L960 148 L1200 182 L1200 300 L0 300Z", fill: HILL } },
-        { type: "path", props: { d: "M0 250 L240 226 L470 246 L700 220 L940 240 L1200 226 L1200 300 L0 300Z", fill: PLAIN } },
+        {
+          type: "path",
+          props: {
+            d: "M0 200 L180 160 L360 186 L560 140 L760 180 L960 148 L1200 182 L1200 300 L0 300Z",
+            fill: HILL,
+          },
+        },
+        {
+          type: "path",
+          props: {
+            d: "M0 250 L240 226 L470 246 L700 220 L940 240 L1200 226 L1200 300 L0 300Z",
+            fill: PLAIN,
+          },
+        },
         ...phage(260, 262, 20),
         ...phage(640, 254, 26),
         ...phage(1010, 262, 18),
@@ -169,7 +188,17 @@ function card(post) {
     },
     el(
       "div",
-      { style: { display: "flex", position: "relative", flex: 1, minHeight: 120, overflow: "hidden", padding: `40px ${PAD_X}px`, background: SKY } },
+      {
+        style: {
+          display: "flex",
+          position: "relative",
+          flex: 1,
+          minHeight: 120,
+          overflow: "hidden",
+          padding: `40px ${PAD_X}px`,
+          background: SKY,
+        },
+      },
       scene(),
       el("div", { style: { display: "flex", position: "relative" } }, markElement()),
     ),
@@ -230,7 +259,11 @@ function card(post) {
         },
       },
       el("div", { style: { display: "flex" } }, SITE_NAME.toUpperCase()),
-      el("div", { style: { display: "flex", fontWeight: 400, letterSpacing: "0.04em" } }, date ?? ""),
+      el(
+        "div",
+        { style: { display: "flex", fontWeight: 400, letterSpacing: "0.04em" } },
+        date ?? "",
+      ),
     ),
   );
 }
@@ -298,7 +331,8 @@ function selectCards(posts, pages) {
   // whichever rendered last serving for the other.
   const seen = new Set();
   for (const { key } of cards) {
-    if (seen.has(key)) throw new Error(`build:og: two cards share the key ${key}. Nothing was rendered.`);
+    if (seen.has(key))
+      throw new Error(`build:og: two cards share the key ${key}. Nothing was rendered.`);
     seen.add(key);
   }
   return { cards, skipped };
@@ -415,9 +449,7 @@ async function prune(cards, target, dryRun) {
       );
     }
 
-    console.log(
-      `  coupling check: ${liveKeys.size} card(s) live in D1, none of them orphaned`,
-    );
+    console.log(`  coupling check: ${liveKeys.size} card(s) live in D1, none of them orphaned`);
   }
 
   // A template bump orphans exactly the old half; more than that is an artifact that lost posts.
@@ -501,9 +533,7 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((error) => {
-    console.error(
-      `build:og failed. ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`build:og failed. ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   });
 }

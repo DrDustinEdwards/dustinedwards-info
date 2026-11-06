@@ -116,7 +116,8 @@ function bodyShape(body: unknown): Record<string, unknown> | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
   if ("OVERSIZED" in b || "UNPARSEABLE" in b) return b;
-  const params = b.params && typeof b.params === "object" ? (b.params as Record<string, unknown>) : null;
+  const params =
+    b.params && typeof b.params === "object" ? (b.params as Record<string, unknown>) : null;
   const clientInfo =
     params?.clientInfo && typeof params.clientInfo === "object"
       ? (params.clientInfo as Record<string, unknown>)
@@ -126,7 +127,9 @@ function bodyShape(body: unknown): Record<string, unknown> | null {
     method: text(b.method),
     paramKeys: params ? Object.keys(params).sort() : [],
     protocolVersion: text(params?.protocolVersion),
-    clientInfo: clientInfo ? { name: text(clientInfo.name), version: text(clientInfo.version) } : null,
+    clientInfo: clientInfo
+      ? { name: text(clientInfo.name), version: text(clientInfo.version) }
+      : null,
     metaProtocolVersion: text(meta?.["io.modelcontextprotocol/protocolVersion"]),
   };
 }
@@ -179,7 +182,11 @@ async function record(env: ProbeEnv, request: Request, body: unknown): Promise<v
 /** The largest request body a capture reads (Grok audit 2026-10-21, DE-5). */
 const MAX_CAPTURED_BODY = 16_384;
 
-export async function handleProbe(request: Request, env: ProbeEnv, _origin: string): Promise<Response> {
+export async function handleProbe(
+  request: Request,
+  env: ProbeEnv,
+  _origin: string,
+): Promise<Response> {
   const path = new URL(request.url).pathname.replace(/^\/probe/, "") || "/";
 
   if (path === "/health") return new Response("ok", { headers: { "cache-control": "no-store" } });
@@ -206,7 +213,8 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
 
   // 2026-07-28 removed the GET stream and session deletion. A legacy client
   // opening a GET stream and being refused is itself a useful capture.
-  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405, { allow: "POST" });
+  if (request.method !== "POST")
+    return json({ error: "method_not_allowed" }, 405, { allow: "POST" });
 
   const id = (body as { id?: unknown } | null)?.id ?? null;
   const rpc = (body as { method?: string } | null)?.method;
@@ -236,12 +244,20 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
         // "public" or "private". "session" fails SEP-2549.
         cacheScope: "private",
         _meta: {
-          "io.modelcontextprotocol/serverInfo": { name: "dustinedwards-mcp-probe", version: "0.0.0" },
+          "io.modelcontextprotocol/serverInfo": {
+            name: "dustinedwards-mcp-probe",
+            version: "0.0.0",
+          },
         },
       });
 
     case "tools/list":
-      return ok({ resultType: "complete", tools: [NOOP_TOOL], ttlMs: 60_000, cacheScope: "private" });
+      return ok({
+        resultType: "complete",
+        tools: [NOOP_TOOL],
+        ttlMs: 60_000,
+        cacheScope: "private",
+      });
 
     case "tools/call":
       return ok({
@@ -257,7 +273,11 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
         return new Response(null, { status: 202 });
       }
       return json(
-        { jsonrpc: "2.0", id, error: { code: -32601, message: `Method not found: ${String(rpc)}` } },
+        {
+          jsonrpc: "2.0",
+          id,
+          error: { code: -32601, message: `Method not found: ${String(rpc)}` },
+        },
         404,
       );
   }

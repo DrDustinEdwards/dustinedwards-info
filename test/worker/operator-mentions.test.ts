@@ -77,11 +77,17 @@ describe("decide_mention: who may decide", () => {
     const source = "https://elsewhere.example/operator-reject";
     const id = await seedMention(source);
 
-    const rejected = await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "reject" });
+    const rejected = await runTool(operatorEnv(), OPERATOR, "decide_mention", {
+      id,
+      decision: "reject",
+    });
     expect(await statusOf(source)).toBe("rejected");
     expect(rejected).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
 
-    const approved = await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "approve" });
+    const approved = await runTool(operatorEnv(), OPERATOR, "decide_mention", {
+      id,
+      decision: "approve",
+    });
     expect(await statusOf(source)).toBe("approved");
     expect(approved).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
   });
@@ -154,7 +160,11 @@ describe("list_mentions", () => {
     const result = await runTool(operatorEnv(), OPERATOR, "list_mentions", {});
     expect(result).toMatchObject({ ok: true });
     if (result.ok) {
-      const data = result.data as { count: number; status: string; mentions: Array<{ status: string }> };
+      const data = result.data as {
+        count: number;
+        status: string;
+        mentions: Array<{ status: string }>;
+      };
       expect(data.count).toBe(3);
       expect(data.status).toBe("all");
       expect(data.mentions.map((m) => m.status).sort()).toEqual(["approved", "failed", "pending"]);

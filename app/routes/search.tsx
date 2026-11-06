@@ -126,7 +126,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (asked && result.total === 0 && !result.parsed.isEmpty) {
     getExecutionContext(context).waitUntil(
       recordZeroResult(env, params.q).catch((error: unknown) => {
-        console.error(JSON.stringify({ alert: "zero-result-record-failed", detail: errorMessage(error) }));
+        console.error(
+          JSON.stringify({ alert: "zero-result-record-failed", detail: errorMessage(error) }),
+        );
       }),
     );
   }
@@ -188,7 +190,15 @@ function searchHref(
 }
 
 /** A filter in force, as a chip whose link is the same search without it. */
-function ActiveFilterChip({ params, facet, label }: { params: SearchParams; facet: FacetKey; label: string }) {
+function ActiveFilterChip({
+  params,
+  facet,
+  label,
+}: {
+  params: SearchParams;
+  facet: FacetKey;
+  label: string;
+}) {
   return (
     <li>
       <Link to={searchHref(params, { [facet]: null })} className="search-chip is-active">
@@ -220,7 +230,11 @@ function FacetSection({
         {values.map((entry) => (
           <li key={entry.value}>
             <Link to={searchHref(params, { [facet]: String(entry.value) })} className="search-chip">
-              {entry.label ?? entry.value} <span className="search-chip-count">{entry.count}{floor}</span>
+              {entry.label ?? entry.value}{" "}
+              <span className="search-chip-count">
+                {entry.count}
+                {floor}
+              </span>
             </Link>
           </li>
         ))}
@@ -257,10 +271,7 @@ function Result({ hit }: { hit: SearchHit }) {
 
       {/* Safe as HTML: the snippet was escaped before its <mark> markers were
           substituted in. See renderSnippet in search.server.ts. */}
-      <p
-        className="search-snippet"
-        dangerouslySetInnerHTML={{ __html: hit.snippet }}
-      />
+      <p className="search-snippet" dangerouslySetInnerHTML={{ __html: hit.snippet }} />
 
       <p className="search-why">
         matched on{" "}
@@ -385,8 +396,9 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           {params.year ? <input type="hidden" name="year" value={params.year} /> : null}
           {params.sort === "date" ? <input type="hidden" name="sort" value="date" /> : null}
           <p className="search-hint">
-            Operators: <code>tag:</code>, <code>type:</code>, <code>base:</code> ({SEARCH_BASES.map((b) => b.id).join(", ")}), a bare year, and
-            &quot;quoted phrases&quot;.
+            Operators: <code>tag:</code>, <code>type:</code>, <code>base:</code> (
+            {SEARCH_BASES.map((b) => b.id).join(", ")}), a bare year, and &quot;quoted
+            phrases&quot;.
           </p>
         </SearchForm>
 
@@ -410,12 +422,18 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               <ActiveFilterChip params={params} facet="type" label={`type: ${params.type}`} />
             ) : null}
             {params.base ? (
-              <ActiveFilterChip params={params} facet="base" label={`in: ${baseLabel(params.base.toLowerCase())}`} />
+              <ActiveFilterChip
+                params={params}
+                facet="base"
+                label={`in: ${baseLabel(params.base.toLowerCase())}`}
+              />
             ) : null}
             {params.tag ? (
               <ActiveFilterChip params={params} facet="tag" label={`tag: ${params.tag}`} />
             ) : null}
-            {params.year ? <ActiveFilterChip params={params} facet="year" label={params.year} /> : null}
+            {params.year ? (
+              <ActiveFilterChip params={params} facet="year" label={params.year} />
+            ) : null}
           </ul>
         ) : null}
 
@@ -468,20 +486,44 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           {hasQuery && result.total > 0 ? (
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
-                <FacetSection params={params} facet="type" heading="Type" values={facets.types} floor={floor} />
+                <FacetSection
+                  params={params}
+                  facet="type"
+                  heading="Type"
+                  values={facets.types}
+                  floor={floor}
+                />
               ) : null}
 
               {/* One search across the knowledge bases (docs/KNOWLEDGE-BASE.md, A2); each library keeps its own facets. */}
               {facets.bases.length > 1 ? (
-                <FacetSection params={params} facet="base" heading="Knowledge base" values={facets.bases} floor={floor} />
+                <FacetSection
+                  params={params}
+                  facet="base"
+                  heading="Knowledge base"
+                  values={facets.bases}
+                  floor={floor}
+                />
               ) : null}
 
               {facets.tags.length > 0 ? (
-                <FacetSection params={params} facet="tag" heading="Tag" values={facets.tags} floor={floor} />
+                <FacetSection
+                  params={params}
+                  facet="tag"
+                  heading="Tag"
+                  values={facets.tags}
+                  floor={floor}
+                />
               ) : null}
 
               {facets.years.length > 0 ? (
-                <FacetSection params={params} facet="year" heading="Year" values={facets.years} floor={floor} />
+                <FacetSection
+                  params={params}
+                  facet="year"
+                  heading="Year"
+                  values={facets.years}
+                  floor={floor}
+                />
               ) : null}
             </aside>
           ) : null}

@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import { Form, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import {
+  Form,
+  Outlet,
+  data,
+  isRouteErrorResponse,
+  useLocation,
+  useRouteLoaderData,
+} from "react-router";
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
@@ -15,7 +22,11 @@ import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
-import { isolationVerdict, originRefusal, refuseCrossSite } from "@dustinedwards/site-runtime/origin";
+import {
+  isolationVerdict,
+  originRefusal,
+  refuseCrossSite,
+} from "@dustinedwards/site-runtime/origin";
 import { timed, timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
@@ -79,7 +90,9 @@ export const middleware: Route.MiddlewareFunction[] = [
         "admin",
         access.reason,
         notAdmin ? 403 : 401,
-        notAdmin ? "Refused: this account is not an administrator of this site." : `Refused: the Cloudflare Access token did not verify (${access.reason}).`,
+        notAdmin
+          ? "Refused: this account is not an administrator of this site."
+          : `Refused: the Cloudflare Access token did not verify (${access.reason}).`,
       );
     }
     if (access.kind === "human") {
@@ -103,7 +116,13 @@ export const middleware: Route.MiddlewareFunction[] = [
       if (smoke.kind !== "ok") {
         /* Access vouches for a person only on the apex's /admin; a request that reached here without it
            (workers.dev, a preview, or Access misconfigured) is told where the door is, never signed in. */
-        throw refusal(request, "admin", "no-access-token", 403, `Admin signs in at ${SITE_ORIGIN}/admin, through Cloudflare Access.`);
+        throw refusal(
+          request,
+          "admin",
+          "no-access-token",
+          403,
+          `Admin signs in at ${SITE_ORIGIN}/admin, through Cloudflare Access.`,
+        );
       }
 
       /* An allowlist, not a denylist: a route answering PUT tomorrow is refused the day it is written. */
@@ -129,36 +148,42 @@ export const middleware: Route.MiddlewareFunction[] = [
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  return timedLoader(context, async (timings) => {
-    /*
-     * The badge reads a cached count from KV, never AI Search. /admin/tools calls the reader uncached,
-     * because the page that fixes drift must not act on a stale number.
-     */
-    const [drift, counts] = await Promise.all([
-      /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
-      timed(timings, "layout_ask_drift", () =>
-        askDriftCount(getEnv(context), getExecutionContext(context), timings),
-      ),
-      timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
-    ]);
-    const payload = {
-      email: context.get(adminActorContext).email,
-      counts,
-      /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
-      askDrift: askAvailable(getEnv(context)) ? drift : 0,
-      askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
-    };
+  return timedLoader(
+    context,
+    async (timings) => {
+      /*
+       * The badge reads a cached count from KV, never AI Search. /admin/tools calls the reader uncached,
+       * because the page that fixes drift must not act on a stale number.
+       */
+      const [drift, counts] = await Promise.all([
+        /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
+        timed(timings, "layout_ask_drift", () =>
+          askDriftCount(getEnv(context), getExecutionContext(context), timings),
+        ),
+        timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
+      ]);
+      const payload = {
+        email: context.get(adminActorContext).email,
+        counts,
+        /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
+        askDrift: askAvailable(getEnv(context)) ? drift : 0,
+        askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
+      };
 
-    return data(payload);
-    // The layout's own total: its marks run in parallel and one nests, so summing them overcounts.
-  }, "layout_total");
+      return data(payload);
+      // The layout's own total: its marks run in parallel and one nests, so summing them overcounts.
+    },
+    "layout_total",
+  );
 }
 
 const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
   mentions: <Icon d="M4 5h16v11H11l-5 4v-4H4z" />,
   media: <Icon d="M3 5h18v14H3zM3 17l6-6 4 4 3-3 5 5M16.5 9.5h.01" />,
-  kb: <Icon d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />,
+  kb: (
+    <Icon d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />
+  ),
   tools: <Icon d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h10M18 17h2M16 5v4M9 10v4M16 15v4" />,
 };
 
@@ -171,13 +196,13 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
   }
   if (drift <= 0) return size;
   const minutes = Math.round(maxAgeSeconds / 60);
-  const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
+  const age =
+    minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
   return (
     `${lead}${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
     `This count is up to ${age} old; open Tools for the current figure and the repair.`
   );
 }
-
 
 const RouterLink = shellLink("/admin");
 
@@ -200,7 +225,13 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
   const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
   const nav: AdminEntry[] = [
-    { id: "overview", label: FIRST_PAGE, href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
+    {
+      id: "overview",
+      label: FIRST_PAGE,
+      href: "/admin",
+      icon: ICONS.overview,
+      current: pathname === "/admin",
+    },
     {
       id: "media",
       label: "Media",
@@ -250,7 +281,11 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "[" || event.ctrlKey || event.metaKey || event.altKey) return;
       const target = event.target;
-      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable], .cm-editor")) return;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("input, textarea, select, [contenteditable], .cm-editor")
+      )
+        return;
       document.querySelector<HTMLButtonElement>('[data-cap-part="menu-toggle"]')?.click();
     };
     document.addEventListener("keydown", onKey);
@@ -276,7 +311,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           email: loaderData.email,
           // Access owns the session: the logout route sends the browser to Access's own endpoint, which a
           // fetch cannot follow into a navigation, so a real form post (reloadDocument) does it.
-          onSignOut: () => (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
+          onSignOut: () =>
+            (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
         }}
         prefKey="admin-rail"
       >

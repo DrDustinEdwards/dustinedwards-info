@@ -21,7 +21,7 @@ function buffer(...values) {
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 await test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
-  const body = uploadErrorBody("Unsupported image type \"application/zip\".");
+  const body = uploadErrorBody('Unsupported image type "application/zip".');
 
   assert.deepEqual(Object.keys(body), ["error"]);
   assert.equal(body.error, 'Unsupported image type "application/zip".');
@@ -31,12 +31,19 @@ await test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () =>
   assert.equal(isFormUpload(UPLOAD_FORM_INTENT), true);
 
   for (const value of [undefined, null, "", "1", "true", "upload", "UPLOAD-FORM", " upload-form"]) {
-    assert.equal(isFormUpload(value), false, `${JSON.stringify(value)} must not select the form branch`);
+    assert.equal(
+      isFormUpload(value),
+      false,
+      `${JSON.stringify(value)} must not select the form branch`,
+    );
   }
 });
 
 await test("THE REDIRECTS carry the key on success and a code on failure", () => {
-  assert.equal(uploadRedirectTo({ ok: true, key: "abc123.png" }), `${UPLOAD_RETURN_PATH}?uploaded=abc123.png`);
+  assert.equal(
+    uploadRedirectTo({ ok: true, key: "abc123.png" }),
+    `${UPLOAD_RETURN_PATH}?uploaded=abc123.png`,
+  );
   assert.equal(
     uploadRedirectTo({ ok: false, code: "too-large" }),
     `${UPLOAD_RETURN_PATH}?upload-error=too-large`,
@@ -74,10 +81,7 @@ await test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", ()
 
   // Exactly at the limit is accepted: the rule is `>`, and a refusing-side-only
   // assertion would miss an off-by-one that costs a legitimate 10 MB upload.
-  assert.equal(
-    validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES) }),
-    null,
-  );
+  assert.equal(validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES) }), null);
 });
 
 await test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to do", () => {
@@ -128,7 +132,13 @@ await test("EVERY REFUSAL validateUpload can return is a code the form can rende
 });
 
 await test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
-  for (const code of ["no-file", "unsupported-type", "svg-refused", "too-large", "content-mismatch"]) {
+  for (const code of [
+    "no-file",
+    "unsupported-type",
+    "svg-refused",
+    "too-large",
+    "content-mismatch",
+  ]) {
     const sentence = uploadErrorSentence(code);
     assert.equal(typeof sentence, "string");
     assert.ok(sentence.length > 0, `${code} must say something`);

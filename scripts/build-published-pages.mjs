@@ -3,4 +3,6 @@
 import { writePublishedPages } from "./lib/published-pages.mjs";
 
 const { paths, changed } = writePublishedPages();
-console.log(`build-published-pages: ${changed ? "wrote" : "kept"} app/lib/published-pages.generated.mjs (${paths.length} published pages)`);
+console.log(
+  `build-published-pages: ${changed ? "wrote" : "kept"} app/lib/published-pages.generated.mjs (${paths.length} published pages)`,
+);

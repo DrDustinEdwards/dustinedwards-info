@@ -10,9 +10,11 @@
  * `settings` is not here: its one key, llms.txt, is derived from the repository by sync_llms.
  */
 export const NON_DERIVED_TABLES = Object.freeze({
-  webmentions: "rows came from strangers' POSTs and the moderation decisions on them (migration 0014)",
+  webmentions:
+    "rows came from strangers' POSTs and the moderation decisions on them (migration 0014)",
   zero_result_queries: "search demand signal, swept by retention, converges toward nothing (0015)",
-  procedure_versions: "the sealed frozen copy of every published procedure version, never rewritten (0027)",
+  procedure_versions:
+    "the sealed frozen copy of every published procedure version, never rewritten (0027)",
   kb_locations: "Knowledge Base inventory locations, written through site-api (0029)",
   kb_lots: "Knowledge Base inventory lots, written through site-api (0029)",
   kb_audit: "the audit trail of the two inventory tables (0029)",
@@ -20,12 +22,15 @@ export const NON_DERIVED_TABLES = Object.freeze({
   member_audit: "the audit trail of membership changes (0030)",
   member_terms: "lab term end dates (0030)",
   scheduled_updates: "updates Carrel scheduled on live posts, waiting for their time (0033)",
-  webmention_targets: "the pages each post last sent a webmention to, so a removed link is told too (0037)",
+  webmention_targets:
+    "the pages each post last sent a webmention to, so a removed link is told too (0037)",
   content_trash: "the posts in Carrel's trash and since when (0038)",
   post_redirects: "the old addresses of renamed posts, each answered with a 301 (0038)",
-  scheduled_publishes: "posts scheduled before they were ever live, for the cron to announce (0038)",
+  scheduled_publishes:
+    "posts scheduled before they were ever live, for the cron to announce (0038)",
   gone_paths: "the addresses of deleted or trashed live posts, each answered 410 (0042)",
-  page_404_daily: "missing-path counts per day, pruned after 90 days, converge toward nothing (0041)",
+  page_404_daily:
+    "missing-path counts per day, pruned after 90 days, converge toward nothing (0041)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */

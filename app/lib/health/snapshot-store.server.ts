@@ -13,6 +13,9 @@ export async function storeHealthSnapshot(env: Env, now = new Date()): Promise<v
   const response = await siteHealthResponse(env);
   const body: unknown = await response.json().catch(() => null);
   const snapshot = snapshotFromBody(body, now.toISOString());
-  if (!snapshot) throw new Error(`the health answer (HTTP ${response.status}) named no checks, so no snapshot was stored`);
+  if (!snapshot)
+    throw new Error(
+      `the health answer (HTTP ${response.status}) named no checks, so no snapshot was stored`,
+    );
   await env.APP_KV.put(HEALTH_SNAPSHOT_KEY, JSON.stringify(snapshot));
 }

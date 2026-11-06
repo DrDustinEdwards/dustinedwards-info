@@ -16,7 +16,11 @@ function good() {
     prm: { status: 200, body: { resource: `${ORIGIN}/mcp` } },
     as: {
       status: 200,
-      body: { issuer: ORIGIN, client_id_metadata_document_supported: true, registration_endpoint: `${ORIGIN}/register` },
+      body: {
+        issuer: ORIGIN,
+        client_id_metadata_document_supported: true,
+        registration_endpoint: `${ORIGIN}/register`,
+      },
     },
     discover: {
       status: 401,

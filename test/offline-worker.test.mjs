@@ -31,8 +31,14 @@ class MemoryCache {
     for (const [stored, response] of this.entries) {
       const s = new URL(stored);
       const varies = /\baccept\b/i.test(response.headers.get("vary") ?? "");
-      if (varies && !options.ignoreVary && (this.accepts.get(stored) ?? null) !== MemoryCache.accept(key)) continue;
-      if (s.pathname === url.pathname && (options.ignoreSearch || s.search === url.search)) return response.clone();
+      if (
+        varies &&
+        !options.ignoreVary &&
+        (this.accepts.get(stored) ?? null) !== MemoryCache.accept(key)
+      )
+        continue;
+      if (s.pathname === url.pathname && (options.ignoreSearch || s.search === url.search))
+        return response.clone();
     }
     return undefined;
   }
@@ -44,7 +50,8 @@ class MemoryCache {
 }
 
 /** A page's answer as the site gives it: its Markdown copy is negotiated, so it varies on Accept. */
-const page = (/** @type {string} */ body) => new Response(body, { status: 200, headers: { vary: "Accept" } });
+const page = (/** @type {string} */ body) =>
+  new Response(body, { status: 200, headers: { vary: "Accept" } });
 
 /**
  * The worker, loaded fresh, with `online` deciding whether fetch reaches the network.
@@ -56,15 +63,25 @@ function load({ kept = {}, others = [] } = {}) {
   const caches = new Map();
   const keptCache = new MemoryCache();
   // Stored as keep() stores them, under the bare address; a page with the site's Vary: Accept.
-  for (const [path, body] of Object.entries(kept)) keptCache.entries.set(new URL(path, ORIGIN).href, /\.[a-z0-9]+$/i.test(path) ? new Response(body) : page(body));
+  for (const [path, body] of Object.entries(kept))
+    keptCache.entries.set(
+      new URL(path, ORIGIN).href,
+      /\.[a-z0-9]+$/i.test(path) ? new Response(body) : page(body),
+    );
   caches.set("kept-v1", keptCache);
   for (const name of others) caches.set(name, new MemoryCache());
   /** @type {Record<string, Function>} */
   const listeners = {};
-  const state = { online: true, fetched: /** @type {string[]} */ ([]), claimed: false, skipped: false };
+  const state = {
+    online: true,
+    fetched: /** @type {string[]} */ ([]),
+    claimed: false,
+    skipped: false,
+  };
   const self = {
     location: new URL(`${ORIGIN}/sw.js`),
-    addEventListener: (/** @type {string} */ type, /** @type {Function} */ fn) => (listeners[type] = fn),
+    addEventListener: (/** @type {string} */ type, /** @type {Function} */ fn) =>
+      (listeners[type] = fn),
     skipWaiting: () => (state.skipped = true),
     clients: { claim: async () => (state.claimed = true) },
   };
@@ -97,13 +114,27 @@ function load({ kept = {}, others = [] } = {}) {
    * @param {string} path
    * @param {{ mode?: string, destination?: string, method?: string, origin?: string }} [init]
    */
-  const request = async (path, { mode = "navigate", destination = "document", method = "GET", origin = ORIGIN } = {}) => {
+  const request = async (
+    path,
+    { mode = "navigate", destination = "document", method = "GET", origin = ORIGIN } = {},
+  ) => {
     // Collected rather than assigned, so the checker sees that the listener can set it.
     /** @type {Promise<Response>[]} */
     const answers = [];
     // A navigation sends text/html, as a browser's does.
-    const req = { url: new URL(path, origin).href, method, mode, destination, headers: new Headers(mode === "navigate" ? { accept: "text/html" } : {}) };
-    listeners.fetch?.({ request: req, respondWith: (/** @type {Promise<Response>} */ p) => { answers.push(p); } });
+    const req = {
+      url: new URL(path, origin).href,
+      method,
+      mode,
+      destination,
+      headers: new Headers(mode === "navigate" ? { accept: "text/html" } : {}),
+    };
+    listeners.fetch?.({
+      request: req,
+      respondWith: (/** @type {Promise<Response>} */ p) => {
+        answers.push(p);
+      },
+    });
     const [answer] = answers;
     if (answer === undefined) return null;
     const response = await answer;
@@ -116,33 +147,60 @@ await test("online, the worker answers from the network and stores nothing nobod
   const sw = load();
   assert.equal(await sw.request("/recipes/flatbread"), "fresh /recipes/flatbread");
   assert.equal(sw.keptCache.entries.size, 0, "a page nobody kept is never stored");
-  assert.equal(await sw.request("/assets/app-1.css", { mode: "no-cors", destination: "style" }), "fresh /assets/app-1.css");
+  assert.equal(
+    await sw.request("/assets/app-1.css", { mode: "no-cors", destination: "style" }),
+    "fresh /assets/app-1.css",
+  );
   assert.equal(sw.keptCache.entries.size, 0);
 });
 
 await test("a kept page fetched online is stored again, so the copy follows the page", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "old copy" } });
   assert.equal(await sw.request("/recipes/flatbread"), "fresh /recipes/flatbread");
-  assert.equal(await (await sw.keptCache.match("/recipes/flatbread"))?.text(), "fresh /recipes/flatbread");
+  assert.equal(
+    await (await sw.keptCache.match("/recipes/flatbread"))?.text(),
+    "fresh /recipes/flatbread",
+  );
   // A scaled address is the same kept page, but its scaled words are not stored over the page's own.
   await sw.request("/recipes/flatbread?servings=8");
-  assert.equal(await (await sw.keptCache.match("/recipes/flatbread"))?.text(), "fresh /recipes/flatbread");
+  assert.equal(
+    await (await sw.keptCache.match("/recipes/flatbread"))?.text(),
+    "fresh /recipes/flatbread",
+  );
 });
 
 await test("offline, the kept page and its files open from the device, at any scale; anything else fails as it would", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "kept page", "/assets/app-1.css": "kept css" } });
   sw.state.online = false;
   assert.equal(await sw.request("/recipes/flatbread"), "kept page");
-  assert.equal(await sw.request("/recipes/flatbread?servings=8&units=metric"), "kept page", "a scaled address opens the kept page");
-  assert.equal(await sw.request("/assets/app-1.css", { mode: "no-cors", destination: "style" }), "kept css");
-  await assert.rejects(sw.request("/recipes/soup"), /Failed to fetch/, "a page never kept is not served from anywhere");
-  await assert.rejects(sw.request("/assets/app-1.css?v=2", { mode: "no-cors", destination: "style" }), /Failed to fetch/, "a file is matched exactly");
+  assert.equal(
+    await sw.request("/recipes/flatbread?servings=8&units=metric"),
+    "kept page",
+    "a scaled address opens the kept page",
+  );
+  assert.equal(
+    await sw.request("/assets/app-1.css", { mode: "no-cors", destination: "style" }),
+    "kept css",
+  );
+  await assert.rejects(
+    sw.request("/recipes/soup"),
+    /Failed to fetch/,
+    "a page never kept is not served from anywhere",
+  );
+  await assert.rejects(
+    sw.request("/assets/app-1.css?v=2", { mode: "no-cors", destination: "style" }),
+    /Failed to fetch/,
+    "a file is matched exactly",
+  );
 });
 
 await test("the worker lets everything else pass: other methods, other sites, and data requests", async () => {
   const sw = load({ kept: { "/recipes/flatbread": "kept page" } });
   assert.equal(await sw.request("/recipes/flatbread", { method: "POST" }), null);
-  assert.equal(await sw.request("/recipes/flatbread", { origin: "https://elsewhere.example" }), null);
+  assert.equal(
+    await sw.request("/recipes/flatbread", { origin: "https://elsewhere.example" }),
+    null,
+  );
   assert.equal(await sw.request("/api/search?q=x", { mode: "cors", destination: "" }), null);
   assert.deepEqual(sw.state.fetched, [], "it did not even touch the network for them");
 });

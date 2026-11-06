@@ -8,12 +8,19 @@ const post = (slug, extra = {}) => ({ slug, publishAt: at, series: null, part: n
 const order = (posts) => newestFirst(posts, (p) => p.slug).map((p) => p.slug);
 
 await test("posts sharing an instant and a series come latest part first", () => {
-  const posts = [post("a", { series: "S", part: 1 }), post("b", { series: "S", part: 3 }), post("c", { series: "S", part: 2 })];
+  const posts = [
+    post("a", { series: "S", part: 1 }),
+    post("b", { series: "S", part: 3 }),
+    post("c", { series: "S", part: 2 }),
+  ];
   assert.deepEqual(order(posts), ["b", "c", "a"]);
 });
 
 await test("a later instant still leads, whatever the parts", () => {
-  const posts = [post("old3", { series: "S", part: 3 }), post("new1", { series: "S", part: 1, publishAt: "2026-10-05T00:00:00.000Z" })];
+  const posts = [
+    post("old3", { series: "S", part: 3 }),
+    post("new1", { series: "S", part: 1, publishAt: "2026-10-05T00:00:00.000Z" }),
+  ];
   assert.deepEqual(order(posts), ["new1", "old3"]);
 });
 
@@ -24,8 +31,15 @@ await test("posts with no series, or in different series, keep the tie-break (th
 });
 
 await test("a series keeps together and in part order beside unrelated posts of the same instant, in any input order", () => {
-  const posts = [post("s1", { series: "S", part: 1 }), post("m"), post("s2", { series: "S", part: 2 }), post("z"), post("a")];
+  const posts = [
+    post("s1", { series: "S", part: 1 }),
+    post("m"),
+    post("s2", { series: "S", part: 2 }),
+    post("z"),
+    post("a"),
+  ];
   const expected = order(posts);
   assert.deepEqual(expected, ["z", "s2", "s1", "m", "a"]);
-  for (const shuffled of [[...posts].reverse(), [posts[2], posts[4], posts[0], posts[3], posts[1]]]) assert.deepEqual(order(shuffled), expected);
+  for (const shuffled of [[...posts].reverse(), [posts[2], posts[4], posts[0], posts[3], posts[1]]])
+    assert.deepEqual(order(shuffled), expected);
 });

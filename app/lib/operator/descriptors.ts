@@ -235,7 +235,9 @@ export const TOOL_DESCRIPTORS: Readonly<
       "first-publish-requires-admin.",
   },
   refresh_citations: {
-    args: { dois: "array of strings, optional: the DOIs to refresh; every published paper's when omitted" },
+    args: {
+      dois: "array of strings, optional: the DOIs to refresh; every published paper's when omitted",
+    },
     returns:
       "refreshed (how many counts were replaced) and failures (doi, stage, detail for each count that could " +
       "not be read). A DOI that fails keeps the count it had. A partial failure is a 502 with the same " +

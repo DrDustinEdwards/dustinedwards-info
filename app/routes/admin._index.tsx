@@ -28,7 +28,9 @@ export async function loader({ context }: Route.LoaderArgs) {
 
     const [health, stores] = await Promise.all([
       /* The same memoized Ask listing the layout's badge uses, so the page lists the index once, not twice. */
-      timed(timings, "overview_health", () => runHealthChecks(env, { timings, askStatus: context.get(askStatusContext) })),
+      timed(timings, "overview_health", () =>
+        runHealthChecks(env, { timings, askStatus: context.get(askStatusContext) }),
+      ),
       timed(timings, "overview_stores", () => syncStatus(env)),
     ]);
 
@@ -99,9 +101,15 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
           (Dustin's review, 2026-10-11: a green pill on every row hid the one red one). A repair sits with the
           finding it repairs, so there is no column that is empty whenever nothing fails. */}
       <Panel
-        title={failing.length > 0 ? `Checks: ${failing.length} failing, ${passing.length} passing` : `Checks: all ${checks.length} passing`}
+        title={
+          failing.length > 0
+            ? `Checks: ${failing.length} failing, ${passing.length} passing`
+            : `Checks: all ${checks.length} passing`
+        }
         flush={failing.length > 0}
-        footer={failing.length > 0 && passing.length > 0 ? <PassingChecks checks={passing} /> : undefined}
+        footer={
+          failing.length > 0 && passing.length > 0 ? <PassingChecks checks={passing} /> : undefined
+        }
       >
         {failing.length > 0 ? (
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region takes the keyboard so it can be scrolled (axe scrollable-region-focusable)
@@ -128,7 +136,11 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
                         {copy.repair ? (
                           <Form method="post" action={copy.repair.action}>
                             <input type="hidden" name="intent" value={copy.repair.intent} />
-                            <Button type="submit" size="sm" aria-label={`${copy.repair.label}: ${copy.name}`}>
+                            <Button
+                              type="submit"
+                              size="sm"
+                              aria-label={`${copy.repair.label}: ${copy.name}`}
+                            >
                               {copy.repair.label}
                             </Button>
                           </Form>
@@ -167,20 +179,21 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
           <dt>Search records</dt>
           <dd>{stores.searchIndexDocs} entries.</dd>
           <dt>Connections</dt>
-          <dd>
-            {stores.askConfigured ? "Search is configured." : "Search is NOT configured."}
-          </dd>
+          <dd>{stores.askConfigured ? "Search is configured." : "Search is NOT configured."}</dd>
         </dl>
         <p>
-          Both are read from the same function the operator tool calls. They sit
-          here rather than at the top because neither has ever been the answer to
-          a question this page was opened with.
+          Both are read from the same function the operator tool calls. They sit here rather than at
+          the top because neither has ever been the answer to a question this page was opened with.
         </p>
       </Disclosure>
 
       {/* No block is not evidence of health: `known: false` means unreadable, not empty. */}
       {stores.divergences.known && stores.divergences.entries.length > 0 ? (
-        <Panel title="Changes the site did not pick up" count={stores.divergences.entries.length} flush>
+        <Panel
+          title="Changes the site did not pick up"
+          count={stores.divergences.entries.length}
+          flush
+        >
           <RowList label="Changes the site did not pick up">
             {stores.divergences.entries.map((entry) => (
               <Row

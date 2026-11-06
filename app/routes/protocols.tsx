@@ -16,7 +16,17 @@ import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { thing } from "@drdustinedwards/site-helpers/schema";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryCitation, libraryDownloads, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/kb/procedures/library.mjs";
+import {
+  LIBRARY,
+  LIBRARY_PATH,
+  libraryCitation,
+  libraryDownloads,
+  libraryItems,
+  libraryOverview,
+  libraryRedirect,
+  libraryTabs,
+  type LibraryItem,
+} from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { registryTabs } from "~/kb/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
@@ -47,7 +57,9 @@ import { RENDERED } from "~/lib/content/render-version";
  * keep. The catalog is a GET form: with script off every control still works, and every state is an address.
  */
 export function headers() {
-  return new Headers(publicHtmlHeaders(`${CONTENT_PAGE_HTML_TAGS},${PROCEDURES_CACHE_TAG},${REGISTRY_CACHE_TAG}`));
+  return new Headers(
+    publicHtmlHeaders(`${CONTENT_PAGE_HTML_TAGS},${PROCEDURES_CACHE_TAG},${REGISTRY_CACHE_TAG}`),
+  );
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -55,7 +67,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const row = await getPageByPath(env, LIBRARY_PATH);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   // A state written in another order, or with a default spelled out, goes to its one address.
   const canonical = libraryRedirect(url);
   if (canonical) throw redirect(canonical, 301);
@@ -74,8 +87,19 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { page, draft } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, pageType: "CollectionPage", trail: TRAIL }),
-    { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}` },
+    ...pageMeta({
+      title: page.seoTitle,
+      description: page.description,
+      path: page.path,
+      pageType: "CollectionPage",
+      trail: TRAIL,
+    }),
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "text/markdown",
+      href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
+    },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
 }
@@ -117,7 +141,12 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
   });
   return (
     <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }} />}
+      trail={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }}
+        />
+      }
     >
       <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid" id="library-title">
@@ -149,9 +178,15 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       <LibraryCite
         count={result.count}
         downloads={libraryDownloads(result)}
-        citation={libraryCitation({ name: SITE.name, affiliation: SITE.affiliation, origin: SITE_ORIGIN })}
+        citation={libraryCitation({
+          name: SITE.name,
+          affiliation: SITE.affiliation,
+          origin: SITE_ORIGIN,
+        })}
       />
-      {rest ? <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: rest }} /> : null}
+      {rest ? (
+        <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: rest }} />
+      ) : null}
       <template data-island="catalog" />
     </PageShell>
   );

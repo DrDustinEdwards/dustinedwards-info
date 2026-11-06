@@ -48,7 +48,20 @@ export async function run({ browser }) {
   const hrefs = [...new Set([...navHtml.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]))];
   ok(
     "the header nav is in the server HTML with every panel's links as anchors",
-    ["/research", "/research/publications", "/research/protocols", "/teaching/virus-isolation", "/teaching#join-the-lab", "/software/capsid", "/systems", "/writing", "/writing/rss.xml", "/about", "/cv", "/dustin-edwards-cv.pdf"].every((href) => hrefs.includes(href)) &&
+    [
+      "/research",
+      "/research/publications",
+      "/research/protocols",
+      "/teaching/virus-isolation",
+      "/teaching#join-the-lab",
+      "/software/capsid",
+      "/systems",
+      "/writing",
+      "/writing/rss.xml",
+      "/about",
+      "/cv",
+      "/dustin-edwards-cv.pdf",
+    ].every((href) => hrefs.includes(href)) &&
       !hrefs.some((href) => href.startsWith("/research/protocols/")) &&
       !hrefs.some((href) => href.startsWith("/interests/")) &&
       !navHtml.includes("Protocols: Lab methods and primer library"),
@@ -80,7 +93,10 @@ export async function run({ browser }) {
   for (const href of hrefs) {
     const url = new URL(href, BASE);
     if (url.origin !== new URL(BASE).origin) continue;
-    const res = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    const res = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     /* The CV's PDF is the one R2 object the Worker renders after a CV save (app/routes/cv-pdf.ts), and a
        preview's empty local bucket has none: there it must answer 404 from the route, never an error. On a
        deployed origin it must be a 200 like the rest. */
@@ -103,12 +119,19 @@ export async function run({ browser }) {
   }));
   /** @type {string[]} */
   const unsaid = [];
-  for (const spot of spots.filter((s) => s.href.startsWith("/research/publications/") || s.href.startsWith("/writing/"))) {
-    const page = await (await fetch(new URL(spot.href, BASE), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })).text();
+  for (const spot of spots.filter(
+    (s) => s.href.startsWith("/research/publications/") || s.href.startsWith("/writing/"),
+  )) {
+    const page = await (
+      await fetch(new URL(spot.href, BASE), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    ).text();
     /* The page's own main, never the whole document: the header, spotlight included, is on every page, so
        the whole document would carry the title whatever the page is about. */
-    const main = (page.match(/<main[^>]*>[^]*<\/main>/)?.[0] ?? "").replaceAll("&amp;", "&").replaceAll("&#x27;", "'");
-    if (!main.includes(spot.title)) unsaid.push(`${spot.href} does not carry "${spot.title}" in its main`);
+    const main = (page.match(/<main[^>]*>[^]*<\/main>/)?.[0] ?? "")
+      .replaceAll("&amp;", "&")
+      .replaceAll("&#x27;", "'");
+    if (!main.includes(spot.title))
+      unsaid.push(`${spot.href} does not carry "${spot.title}" in its main`);
   }
   ok(
     "the Latest paper and Newest spotlights point at pages that carry the title they show",
@@ -135,7 +158,9 @@ export async function run({ browser }) {
             letterhead: header.getAttribute("data-variant") === "letterhead",
             /* Search, then the theme: the places the admin gives them. The search wrapper is
                display: contents, so its button is what has a box. */
-            tools: [...header.querySelectorAll(".cap-site-header-search-button, .cap-site-header-theme")]
+            tools: [
+              ...header.querySelectorAll(".cap-site-header-search-button, .cap-site-header-theme"),
+            ]
               .filter((el) => el.getBoundingClientRect().width > 0)
               .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
               .map((el) => (el.matches(".cap-site-header-search-button") ? "search" : "theme"))
@@ -173,7 +198,14 @@ export async function run({ browser }) {
       "the bar has five section buttons, each with aria-expanded, aria-controls naming its panel, a name and a 24px target",
       buttons.length === 5 &&
         buttons.map((b) => b.name).join() === "Research,Teaching,Software,Writing,About" &&
-        buttons.every((c) => c.tag === "BUTTON" && c.expanded === "false" && c.controls && c.size[0] >= 24 && c.size[1] >= 24),
+        buttons.every(
+          (c) =>
+            c.tag === "BUTTON" &&
+            c.expanded === "false" &&
+            c.controls &&
+            c.size[0] >= 24 &&
+            c.size[1] >= 24,
+        ),
       JSON.stringify(buttons),
     );
 
@@ -194,7 +226,9 @@ export async function run({ browser }) {
     );
 
     const lab = await page.evaluate(() => {
-      const link = document.querySelector('[aria-labelledby="cap-family-footer-workspace"] a[href="/lab-bench"]');
+      const link = document.querySelector(
+        '[aria-labelledby="cap-family-footer-workspace"] a[href="/lab-bench"]',
+      );
       const box = link?.getBoundingClientRect();
       return link && box
         ? {
@@ -217,7 +251,10 @@ export async function run({ browser }) {
     const reclicked = await menuState(page);
     ok(
       "a click on the button opens the panel with aria-expanded true, and a second click closes it with aria-expanded false",
-      clicked.open && clicked.expanded === "true" && !reclicked.open && reclicked.expanded === "false",
+      clicked.open &&
+        clicked.expanded === "true" &&
+        !reclicked.open &&
+        reclicked.expanded === "false",
       `after one click ${JSON.stringify(clicked)}, after two ${JSON.stringify(reclicked)}`,
     );
 
@@ -235,7 +272,13 @@ export async function run({ browser }) {
     const escaped = await menuState(page);
     ok(
       "Enter opens the panel with focus on its first link, Down moves to the next, and Escape closes it back to the button",
-      entered.open && entered.expanded === "true" && entered.focusInPanel && stepped === 1 && !escaped.open && escaped.expanded === "false" && escaped.focusOnButton,
+      entered.open &&
+        entered.expanded === "true" &&
+        entered.focusInPanel &&
+        stepped === 1 &&
+        !escaped.open &&
+        escaped.expanded === "false" &&
+        escaped.focusOnButton,
       `after Enter ${JSON.stringify(entered)}, Down at item ${stepped}, after Escape ${JSON.stringify(escaped)}`,
     );
 
@@ -259,7 +302,11 @@ export async function run({ browser }) {
     await page.click(BUTTON);
     ok(
       "the open panel starts under the header, about 640px wide, inside the viewport",
-      card !== null && card.top >= card.headerBottom && card.left >= 0 && card.right <= card.client && Math.abs(card.width - 640) <= 2,
+      card !== null &&
+        card.top >= card.headerBottom &&
+        card.left >= 0 &&
+        card.right <= card.client &&
+        Math.abs(card.width - 640) <= 2,
       JSON.stringify(card),
     );
 
@@ -290,17 +337,32 @@ export async function run({ browser }) {
       const link = box?.querySelector('a[data-cap-part="search-trigger"]');
       const form = box?.querySelector("form");
       return link instanceof HTMLAnchorElement && form instanceof HTMLFormElement
-        ? { href: new URL(link.href).pathname, action: new URL(form.action).pathname, method: form.method, field: form.querySelector('input[name="q"]')?.getAttribute("type") ?? null }
+        ? {
+            href: new URL(link.href).pathname,
+            action: new URL(form.action).pathname,
+            method: form.method,
+            field: form.querySelector('input[name="q"]')?.getAttribute("type") ?? null,
+          }
         : null;
     });
     ok(
       "the header's search icon links to /search over a GET form with a q field",
-      search !== null && search.href === "/search" && search.action === "/search" && search.method === "get" && search.field === "search",
+      search !== null &&
+        search.href === "/search" &&
+        search.action === "/search" &&
+        search.method === "get" &&
+        search.field === "search",
       JSON.stringify(search),
     );
 
-    const roles = await page.evaluate(() => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length);
-    ok("no role=menu, menubar or menuitem after the enhancement ran", roles === 0, `${roles} found`);
+    const roles = await page.evaluate(
+      () => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length,
+    );
+    ok(
+      "no role=menu, menubar or menuitem after the enhancement ran",
+      roles === 0,
+      `${roles} found`,
+    );
 
     /* Phone: the letterhead keeps its links row, which scrolls sideways inside the band; a section button
        opens its panel inside the window, one column. */
@@ -317,7 +379,9 @@ export async function run({ browser }) {
         swipes: nav.scrollWidth > nav.clientWidth && getComputedStyle(nav).overflowX === "auto",
         open: Boolean(panel?.matches(":popover-open")),
         inside: Boolean(box && box.left >= 0 && box.right <= document.documentElement.clientWidth),
-        tiles: getComputedStyle(/** @type {Element} */ (panel?.querySelector(".site-nav-tiles"))).gridTemplateColumns.split(" ").length,
+        tiles: getComputedStyle(
+          /** @type {Element} */ (panel?.querySelector(".site-nav-tiles")),
+        ).gridTemplateColumns.split(" ").length,
       };
     });
     ok(
@@ -334,7 +398,9 @@ export async function run({ browser }) {
       const fit = await page.evaluate(() => {
         const header = document.querySelector("[data-site-header]");
         /* The top row: the mark and the tools; the links row is under them and swipes on its own. */
-        const parts = [...(header?.querySelectorAll(".cap-site-header-logo, .cap-site-header-tools") ?? [])]
+        const parts = [
+          ...(header?.querySelectorAll(".cap-site-header-logo, .cap-site-header-tools") ?? []),
+        ]
           .map((el) => el.getBoundingClientRect())
           .filter((r) => r.width > 0);
         const overlap = parts.some((r, i) => i > 0 && r.left < parts[i - 1].right);
@@ -345,7 +411,8 @@ export async function run({ browser }) {
           overlap,
         };
       });
-      if (fit.scroll > fit.client || fit.height !== 120 || fit.overlap) cramped.push(`${width}: ${JSON.stringify(fit)}`);
+      if (fit.scroll > fit.client || fit.height !== 120 || fit.overlap)
+        cramped.push(`${width}: ${JSON.stringify(fit)}`);
     }
     ok(
       "the letterhead is 120px with no sideways page scroll and nothing overlapping in its top row at 320, 360, 390, 767, 768, 800, 880 and 1024 wide",

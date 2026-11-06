@@ -32,7 +32,8 @@ const rowFor = (slug: string) =>
   env.DB.prepare("SELECT slug, year, source_blob_sha FROM roster WHERE slug = ?1")
     .bind(slug)
     .first<{ slug: string; year: number; source_blob_sha: string }>();
-const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "roster-drift");
+const driftCheck = async () =>
+  (await runHealthChecks(env as never)).checks.find((c) => c.name === "roster-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_roster", {});
 
 let gh: SourceStub;
@@ -43,7 +44,10 @@ beforeEach(async () => {
   await env.DB.prepare("DELETE FROM roster").run();
   current = await cohortFile(CURRENT);
   earlier = await cohortFile(EARLIER);
-  gh = await stubSources({ [rosterPath(CURRENT_SLUG)]: current, [rosterPath(EARLIER_SLUG)]: earlier });
+  gh = await stubSources({
+    [rosterPath(CURRENT_SLUG)]: current,
+    [rosterPath(EARLIER_SLUG)]: earlier,
+  });
   await env.MEDIA.put(PHOTO_KEY, "x");
   purge.mockClear();
 });
@@ -53,47 +57,68 @@ afterEach(async () => {
 });
 
 describe("sync_roster and the roster-drift check", () => {
-  it("converges unrowed files, reports them as drift first, purges the pages that embed the roster, and is idempotent", { timeout: 240_000 }, async () => {
-    expect((await driftCheck())?.ok).toBe(false);
+  it(
+    "converges unrowed files, reports them as drift first, purges the pages that embed the roster, and is idempotent",
+    { timeout: 240_000 },
+    async () => {
+      expect((await driftCheck())?.ok).toBe(false);
 
-    const first = await sync();
-    expect(first.ok, JSON.stringify(first)).toBe(true);
-    if (first.ok) expect(first.data).toMatchObject({ repaired: 2, removed: 0, expected: 2, present: 2, converged: true });
-    expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(current));
-    expect((await rowFor(EARLIER_SLUG))?.year).toBe(EARLIER.year);
-    expect((await driftCheck())?.ok).toBe(true);
+      const first = await sync();
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      if (first.ok)
+        expect(first.data).toMatchObject({
+          repaired: 2,
+          removed: 0,
+          expected: 2,
+          present: 2,
+          converged: true,
+        });
+      expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(current));
+      expect((await rowFor(EARLIER_SLUG))?.year).toBe(EARLIER.year);
+      expect((await driftCheck())?.ok).toBe(true);
 
-    const tags = purge.mock.calls.flatMap(([options]) => options.tags);
-    expect(tags).toContain("content-pages");
-    expect(tags).toContain(cacheTags());
+      const tags = purge.mock.calls.flatMap(([options]) => options.tags);
+      expect(tags).toContain("content-pages");
+      expect(tags).toContain(cacheTags());
 
-    purge.mockClear();
-    const again = await sync();
-    expect(again.ok).toBe(true);
-    if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
-    expect(purge).not.toHaveBeenCalled();
-  });
+      purge.mockClear();
+      const again = await sync();
+      expect(again.ok).toBe(true);
+      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+      expect(purge).not.toHaveBeenCalled();
+    },
+  );
 
-  it("re-compiles a file edited through git, and removes the row of a file that is gone", { timeout: 240_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
+  it(
+    "re-compiles a file edited through git, and removes the row of a file that is gone",
+    { timeout: 240_000 },
+    async () => {
+      expect((await sync()).ok).toBe(true);
 
-    // An edit committed outside the save, and a deletion.
-    const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, "Example Person Eight"] });
-    await putSource(rosterPath(CURRENT_SLUG), edited);
-    await removeSource(rosterPath(EARLIER_SLUG));
-    const drifted = await driftCheck();
-    expect(drifted?.ok).toBe(false);
-    expect(drifted?.detail).toContain("1 sha-changed");
-    expect(drifted?.detail).toContain("1 row(s) with no file");
+      // An edit committed outside the save, and a deletion.
+      const edited = await cohortFile({
+        ...CURRENT,
+        researchers: [...CURRENT.researchers, "Example Person Eight"],
+      });
+      await putSource(rosterPath(CURRENT_SLUG), edited);
+      await removeSource(rosterPath(EARLIER_SLUG));
+      const drifted = await driftCheck();
+      expect(drifted?.ok).toBe(false);
+      expect(drifted?.detail).toContain("1 sha-changed");
+      expect(drifted?.detail).toContain("1 row(s) with no file");
 
-    const result = await sync();
-    expect(result.ok, JSON.stringify(result)).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ repaired: 1, removed: 1, converged: true });
-    expect(await rowFor(EARLIER_SLUG)).toBeNull();
-    expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(edited));
-    const stored = await env.DB.prepare("SELECT record FROM roster WHERE slug = ?1").bind(CURRENT_SLUG).first<{ record: string }>();
-    expect(JSON.parse(stored?.record ?? "{}").researchers).toContain("Example Person Eight");
-  });
+      const result = await sync();
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (result.ok)
+        expect(result.data).toMatchObject({ repaired: 1, removed: 1, converged: true });
+      expect(await rowFor(EARLIER_SLUG)).toBeNull();
+      expect((await rowFor(CURRENT_SLUG))?.source_blob_sha).toBe(await gitBlobSha(edited));
+      const stored = await env.DB.prepare("SELECT record FROM roster WHERE slug = ?1")
+        .bind(CURRENT_SLUG)
+        .first<{ record: string }>();
+      expect(JSON.parse(stored?.record ?? "{}").researchers).toContain("Example Person Eight");
+    },
+  );
 
   it("REFUSES an empty file set instead of deleting every row", { timeout: 240_000 }, async () => {
     expect((await sync()).ok).toBe(true);
@@ -111,20 +136,27 @@ describe("sync_roster and the roster-drift check", () => {
     expect(await rowFor(EARLIER_SLUG)).not.toBeNull();
   });
 
-  it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 240_000 }, async () => {
-    await putSource("content/roster/notes.md", current);
-    await putSource(rosterPath("2029"), (await cohortFile(CURRENT)).replace("year: 2031", "year: 2029\nemail: someone@example.com"));
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("content/roster/notes.md fails");
-      expect(result.error).toContain("content/roster/2029.md fails");
-      expect(JSON.stringify(result.detail)).toContain("is not a roster field");
-    }
-    expect(await rowFor("notes")).toBeNull();
-    expect(await rowFor("2029")).toBeNull();
-    expect(await rowFor(CURRENT_SLUG)).not.toBeNull();
-    expect(await rowFor(EARLIER_SLUG)).not.toBeNull();
-  });
+  it(
+    "makes no row for a file the validator refuses, naming it, and converges the rest",
+    { timeout: 240_000 },
+    async () => {
+      await putSource("content/roster/notes.md", current);
+      await putSource(
+        rosterPath("2029"),
+        (await cohortFile(CURRENT)).replace("year: 2031", "year: 2029\nemail: someone@example.com"),
+      );
+      const result = await sync();
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(422);
+        expect(result.error).toContain("content/roster/notes.md fails");
+        expect(result.error).toContain("content/roster/2029.md fails");
+        expect(JSON.stringify(result.detail)).toContain("is not a roster field");
+      }
+      expect(await rowFor("notes")).toBeNull();
+      expect(await rowFor("2029")).toBeNull();
+      expect(await rowFor(CURRENT_SLUG)).not.toBeNull();
+      expect(await rowFor(EARLIER_SLUG)).not.toBeNull();
+    },
+  );
 });

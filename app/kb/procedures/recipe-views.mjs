@@ -17,9 +17,21 @@ export function readUnits(value) {
 }
 
 /** Grams in one of each mass unit. */
-const GRAMS = /** @type {Record<string, number>} */ ({ g: 1, kg: 1000, oz: 28.349523125, lb: 453.59237 });
+const GRAMS = /** @type {Record<string, number>} */ ({
+  g: 1,
+  kg: 1000,
+  oz: 28.349523125,
+  lb: 453.59237,
+});
 /** Millilitres in one of each volume unit (US customary). */
-const MILLILITRES = /** @type {Record<string, number>} */ ({ ml: 1, l: 1000, tsp: 4.92892159375, tbsp: 14.78676478125, "fl oz": 29.5735295625, cup: 236.5882365 });
+const MILLILITRES = /** @type {Record<string, number>} */ ({
+  ml: 1,
+  l: 1000,
+  tsp: 4.92892159375,
+  tbsp: 14.78676478125,
+  "fl oz": 29.5735295625,
+  cup: 236.5882365,
+});
 /** The spoons a cook uses in either system, kept as written. */
 const SPOONS = new Set(["tsp", "tbsp"]);
 
@@ -27,16 +39,48 @@ const SPOONS = new Set(["tsp", "tbsp"]);
 function canonical(unit) {
   const u = unit.trim().toLowerCase().replace(/\.$/, "");
   const aliases = /** @type {Record<string, string>} */ ({
-    gram: "g", grams: "g", kilogram: "kg", kilograms: "kg", ounce: "oz", ounces: "oz", pound: "lb", pounds: "lb", lbs: "lb",
-    millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml", litre: "l", litres: "l", liter: "l", liters: "l", // codespell:ignore (British input accepted)
-    teaspoon: "tsp", teaspoons: "tsp", tablespoon: "tbsp", tablespoons: "tbsp", cups: "cup", "fluid ounce": "fl oz", "fluid ounces": "fl oz",
+    gram: "g",
+    grams: "g",
+    kilogram: "kg",
+    kilograms: "kg",
+    ounce: "oz",
+    ounces: "oz",
+    pound: "lb",
+    pounds: "lb",
+    lbs: "lb",
+    millilitre: "ml",
+    millilitres: "ml",
+    milliliter: "ml",
+    milliliters: "ml",
+    litre: "l",
+    litres: "l",
+    liter: "l",
+    liters: "l", // codespell:ignore (British input accepted)
+    teaspoon: "tsp",
+    teaspoons: "tsp",
+    tablespoon: "tbsp",
+    tablespoons: "tbsp",
+    cups: "cup",
+    "fluid ounce": "fl oz",
+    "fluid ounces": "fl oz",
   });
   return aliases[u] ?? u;
 }
 
 /** A number rounded as a cook reads it in a unit: whole grams, quarter cups, half ounces. @param {number} n @param {string} unit */
 function round(n, unit) {
-  const step = unit === "cup" ? 0.25 : unit === "lb" ? 0.1 : unit === "oz" ? 0.25 : unit === "tsp" || unit === "tbsp" ? 0.25 : n < 10 ? 0.1 : 1;
+  const step =
+    unit === "cup"
+      ? 0.25
+      : unit === "lb"
+        ? 0.1
+        : unit === "oz"
+          ? 0.25
+          : unit === "tsp" || unit === "tbsp"
+            ? 0.25
+            : n < 10
+              ? 0.1
+              : 1;
   return Math.round(n / step) * step;
 }
 
@@ -55,7 +99,8 @@ function convert(value, unit, system, gramsPerCup) {
   const u = canonical(unit);
   if (u in GRAMS) {
     const g = value * /** @type {number} */ (GRAMS[u]);
-    if (system === "metric") return g >= 1000 ? { value: g / 1000, unit: "kg" } : { value: g, unit: "g" };
+    if (system === "metric")
+      return g >= 1000 ? { value: g / 1000, unit: "kg" } : { value: g, unit: "g" };
     const oz = g / /** @type {number} */ (GRAMS.oz);
     return oz >= 16 ? { value: oz / 16, unit: "lb" } : { value: oz, unit: "oz" };
   }
@@ -63,7 +108,8 @@ function convert(value, unit, system, gramsPerCup) {
     if (SPOONS.has(u)) return null;
     const ml = value * /** @type {number} */ (MILLILITRES[u]);
     if (system === "metric") {
-      if (gramsPerCup) return { value: (ml / /** @type {number} */ (MILLILITRES.cup)) * gramsPerCup, unit: "g" };
+      if (gramsPerCup)
+        return { value: (ml / /** @type {number} */ (MILLILITRES.cup)) * gramsPerCup, unit: "g" };
       return ml >= 1000 ? { value: ml / 1000, unit: "l" } : { value: ml, unit: "ml" };
     }
     if (ml < 15) return { value: ml / /** @type {number} */ (MILLILITRES.tsp), unit: "tsp" };
@@ -86,10 +132,18 @@ export function showQuantity(q, factor, system, gramsPerCup = null) {
   const scale = q.fixed ? 1 : factor;
   const low = convert(q.min * scale, q.unit, system, gramsPerCup);
   if (!low) return formatQuantity({ ...q, raw: "" }, factor);
-  const high = q.max !== null && q.max !== q.min ? convert(q.max * scale, q.unit, system, gramsPerCup) : null;
+  const high =
+    q.max !== null && q.max !== q.min ? convert(q.max * scale, q.unit, system, gramsPerCup) : null;
   // A range is shown in the unit of its low end, so "1 to 2 cups" never reads "1 cup to 0.5 quart".
-  const highValue = high ? (high.unit === low.unit ? high.value : (q.max ?? 0) * scale * (low.value / (q.min * scale))) : null;
-  const amount = highValue !== null ? `${formatNumber(round(low.value, low.unit))} to ${formatNumber(round(highValue, low.unit))}` : formatNumber(round(low.value, low.unit));
+  const highValue = high
+    ? high.unit === low.unit
+      ? high.value
+      : (q.max ?? 0) * scale * (low.value / (q.min * scale))
+    : null;
+  const amount =
+    highValue !== null
+      ? `${formatNumber(round(low.value, low.unit))} to ${formatNumber(round(highValue, low.unit))}`
+      : formatNumber(round(low.value, low.unit));
   return `${amount} ${low.unit}`;
 }
 
@@ -107,8 +161,12 @@ export function showTemperatures(html, system) {
   if (!system) return html;
   const from = system === "imperial" ? "C" : "F";
   const to = system === "imperial" ? "F" : "C";
-  return html.replace(new RegExp(`(-?\\d+(?:\\.\\d+)?)(?:\\s*(?:to|-)\\s*(-?\\d+(?:\\.\\d+)?))?\\s*°${from}`, "g"), (_all, low, high) =>
-    high !== undefined ? `${toScale(Number(low), to)} to ${toScale(Number(high), to)} °${to}` : `${toScale(Number(low), to)} °${to}`,
+  return html.replace(
+    new RegExp(`(-?\\d+(?:\\.\\d+)?)(?:\\s*(?:to|-)\\s*(-?\\d+(?:\\.\\d+)?))?\\s*°${from}`, "g"),
+    (_all, low, high) =>
+      high !== undefined
+        ? `${toScale(Number(low), to)} to ${toScale(Number(high), to)} °${to}`
+        : `${toScale(Number(low), to)} °${to}`,
   );
 }
 
@@ -131,7 +189,12 @@ export function ingredientSteps(record) {
         for (const m of step.materials) {
           const key = m.name.toLowerCase();
           const list = uses.get(key) ?? [];
-          if (!list.some((u) => u.number === step.number && u.id === stepId(`${section.id}-${i}-`, step.number))) {
+          if (
+            !list.some(
+              (u) =>
+                u.number === step.number && u.id === stepId(`${section.id}-${i}-`, step.number),
+            )
+          ) {
             list.push({ number: step.number, id: stepId(`${section.id}-${i}-`, step.number) });
           }
           uses.set(key, list);
@@ -148,7 +211,11 @@ export function ingredientSteps(record) {
  * @param {import("./render.mjs").ProcedureRecord} record
  */
 export function gramsPerCup(record) {
-  return new Map(record.materials.flatMap((m) => (typeof m.gramsPerCup === "number" ? [[m.name.toLowerCase(), m.gramsPerCup]] : [])));
+  return new Map(
+    record.materials.flatMap((m) =>
+      typeof m.gramsPerCup === "number" ? [[m.name.toLowerCase(), m.gramsPerCup]] : [],
+    ),
+  );
 }
 
 /**
@@ -163,7 +230,12 @@ export function gramsPerCup(record) {
 export function stepIngredients(step, factor, system, densities, names = new Map()) {
   return step.materials.map((m) => {
     const q = step.quantities.find((x) => x.name?.toLowerCase() === m.name.toLowerCase());
-    return { name: names.get(m.name.toLowerCase()) ?? m.display, amount: q ? showQuantity(q, factor, system, densities.get(m.name.toLowerCase()) ?? null) : null };
+    return {
+      name: names.get(m.name.toLowerCase()) ?? m.display,
+      amount: q
+        ? showQuantity(q, factor, system, densities.get(m.name.toLowerCase()) ?? null)
+        : null,
+    };
   });
 }
 
@@ -182,8 +254,15 @@ export function ingredientNames(record) {
  */
 export function miseEnPlace(record, factor, system) {
   const items = record.materials.map((m) => {
-    const amount = m.amount ? m.amount : m.quantity ? showQuantity(m.quantity, factor, system, m.gramsPerCup ?? null) : null;
+    const amount = m.amount
+      ? m.amount
+      : m.quantity
+        ? showQuantity(m.quantity, factor, system, m.gramsPerCup ?? null)
+        : null;
     return { name: m.display, amount };
   });
-  return { items, text: items.map((i) => `- ${i.amount ? `${i.amount} ` : ""}${i.name}`).join("\n") };
+  return {
+    items,
+    text: items.map((i) => `- ${i.amount ? `${i.amount} ` : ""}${i.name}`).join("\n"),
+  };
 }

@@ -28,9 +28,15 @@ export function parseDictionaryEntry({ file, raw }) {
     // An options object, even an empty one: gray-matter caches by input when it is omitted, and a cached
     // parse is one object shared by every caller.
     const parsed = matter(raw, {});
-    return { data: /** @type {Record<string, unknown>} */ (parsed.data), body: parsed.content, problems };
+    return {
+      data: /** @type {Record<string, unknown>} */ (parsed.data),
+      body: parsed.content,
+      problems,
+    };
   } catch (error) {
-    problems.push(`${file}: the front matter does not parse: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+    problems.push(
+      `${file}: the front matter does not parse: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+    );
     return { data: {}, body: "", problems };
   }
 }

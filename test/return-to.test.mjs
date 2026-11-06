@@ -12,7 +12,10 @@ const post = (referer) =>
   });
 
 await test("CONTROL: an ordinary same-origin path is returned", () => {
-  assert.equal(safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare`)), "/writing/ten-years-on-cloudflare");
+  assert.equal(
+    safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare`)),
+    "/writing/ten-years-on-cloudflare",
+  );
 });
 
 await test("THE FRAGMENT IS KEPT, which is the defect", () => {

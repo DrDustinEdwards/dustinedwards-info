@@ -68,7 +68,11 @@ export async function retryRead(fn, { label, timeoutMs = DEFAULT_TIMEOUT_MS }) {
  * @param {import("node:child_process").SpawnSyncOptions & { timeoutMs?: number }} [options]
  * @returns {{ stdout: string, stderr: string, status: number | null, signal: string | null, error: string }}
  */
-export function spawnSyncBounded(command, args = [], { timeoutMs = DEFAULT_TIMEOUT_MS, ...options } = {}) {
+export function spawnSyncBounded(
+  command,
+  args = [],
+  { timeoutMs = DEFAULT_TIMEOUT_MS, ...options } = {},
+) {
   const result = spawnSync(command, args, {
     encoding: "utf8",
     ...options,

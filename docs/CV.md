@@ -15,19 +15,19 @@ pages' and publications' do. `sync_cv_pdf` and the `cv-pdf-drift` check keep the
 One markdown file per section, plus the profile. The slug is the file name without `.md`, and the set is
 `CV_FILES` (`app/lib/cv/parse.mjs`), in the order the CV prints them:
 
-| File | Holds |
-| --- | --- |
-| `profile.md` | the edition stamp, the person, the presentation totals |
-| `appointments.md` | positions, and administrative and leadership roles (`section`) |
-| `education.md` | degrees |
+| File              | Holds                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `profile.md`      | the edition stamp, the person, the presentation totals                                 |
+| `appointments.md` | positions, and administrative and leadership roles (`section`)                         |
+| `education.md`    | degrees                                                                                |
 | `publications.md` | papers: a DOI reference, or an inline citation for a paper the site holds no record of |
-| `grants.md` | grants, newest first |
-| `honors.md` | fellowships and awards |
-| `talks.md` | invited talks Dustin leads |
-| `courses.md` | courses taught |
-| `mentoring.md` | counts of students mentored, by cohort, level and program |
-| `service.md` | service, in sections |
-| `development.md` | professional development |
+| `grants.md`       | grants, newest first                                                                   |
+| `honors.md`       | fellowships and awards                                                                 |
+| `talks.md`        | invited talks Dustin leads                                                             |
+| `courses.md`      | courses taught                                                                         |
+| `mentoring.md`    | counts of students mentored, by cohort, level and program                              |
+| `service.md`      | service, in sections                                                                   |
+| `development.md`  | professional development                                                               |
 
 A section file is YAML front matter and nothing after it. The file states its `type` once, and each entry omits it:
 
@@ -56,7 +56,7 @@ come from the publications table at read time:
 ```yaml
 entries:
   - doi: 10.1128/mra.00888-24
-  - year: 2001          # an inline paper the site has no record for carries its whole citation
+  - year: 2001 # an inline paper the site has no record for carries its whole citation
     areas: []
     role: co-author
     title: ...
@@ -147,16 +147,16 @@ a save that would make the search records fail is refused before anything is sav
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| `/cv`, the filters, the counts | `app/routes/cv.tsx`, drawn from the rows joined to the publications (`readCv`, `app/db/cv.ts`) |
-| `/cv/charts.json` | `app/routes/cv.charts[.json].ts`, the same CV; the page script reads the entries back out of the DOM, so the server and the browser never hold two copies |
-| The markdown twin | `app/routes/cv[.md].ts`, `cvTwin` over the same resolved entries; no static file |
-| JSON-LD | `cvJsonLd` in the route: the Person's page and a ScholarlyArticle per paper the CV cites |
-| Search | `search_docs` `page:cv`, written by the sync and by the save, from the same compile |
-| The social card | `build:og`, from `CV_PAGE`'s title and description |
-| The PDF | `/dustin-edwards-cv.pdf`, one R2 object the Worker renders after each CV save (see below) |
-| The check | `build:content` compiles every file with the save's own validator; `check:links` judges every link |
+| Output                         | From                                                                                                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/cv`, the filters, the counts | `app/routes/cv.tsx`, drawn from the rows joined to the publications (`readCv`, `app/db/cv.ts`)                                                            |
+| `/cv/charts.json`              | `app/routes/cv.charts[.json].ts`, the same CV; the page script reads the entries back out of the DOM, so the server and the browser never hold two copies |
+| The markdown twin              | `app/routes/cv[.md].ts`, `cvTwin` over the same resolved entries; no static file                                                                          |
+| JSON-LD                        | `cvJsonLd` in the route: the Person's page and a ScholarlyArticle per paper the CV cites                                                                  |
+| Search                         | `search_docs` `page:cv`, written by the sync and by the save, from the same compile                                                                       |
+| The social card                | `build:og`, from `CV_PAGE`'s title and description                                                                                                        |
+| The PDF                        | `/dustin-edwards-cv.pdf`, one R2 object the Worker renders after each CV save (see below)                                                                 |
+| The check                      | `build:content` compiles every file with the save's own validator; `check:links` judges every link                                                        |
 
 The page, the charts and the twin carry the `cv` cache tag (the HTML keeps its long-standing `pages` tag beside it),
 which `purgeCv` clears.

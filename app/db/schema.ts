@@ -94,10 +94,7 @@ export const postTags = sqliteTable(
       .notNull()
       .references(() => tags.id, { onDelete: "cascade" }),
   },
-  (t) => [
-    primaryKey({ columns: [t.postId, t.tagId] }),
-    index("post_tags_tag_idx").on(t.tagId),
-  ],
+  (t) => [primaryKey({ columns: [t.postId, t.tagId] }), index("post_tags_tag_idx").on(t.tagId)],
 );
 
 export const settings = sqliteTable("settings", {
@@ -152,8 +149,12 @@ export const media = sqliteTable(
     /** LQIP as a base64 data URI, so it renders with no script. */
     placeholder: text("placeholder"),
     uploadedAt: text("uploaded_at"),
-    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
     /**
      * Bumped by every write to alt, caption, tags, focal point, trash state or bytes, and checked in the
      * same UPDATE's WHERE, so a stale write is refused rather than lost. Carrel's media version is "r<rev>".
@@ -218,7 +219,9 @@ export const mediaChanges = sqliteTable(
   {
     seq: integer("seq").primaryKey({ autoIncrement: true }),
     mediaKey: text("media_key").notNull(),
-    at: text("at").notNull().default(sql`(datetime('now'))`),
+    at: text("at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (t) => [index("media_changes_key_idx").on(t.mediaKey, t.seq)],
 );
@@ -422,7 +425,10 @@ export const procedureVersions = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.slug, t.version] }),
-    check("procedure_versions_profile_check", sql`${t.profile} in ('protocol', 'recipe', 'computational')`),
+    check(
+      "procedure_versions_profile_check",
+      sql`${t.profile} in ('protocol', 'recipe', 'computational')`,
+    ),
     check("procedure_versions_sealed_check", sql`${t.sealed} in (0, 1)`),
   ],
 );
@@ -440,7 +446,9 @@ export const publications = sqliteTable(
     doiKey: text("doi_key"),
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     stage: text("stage", { enum: ["published", "submitted"] }).notNull(),
-    type: text("type", { enum: ["article", "review", "chapter", "abstract", "teaching-resource"] }).notNull(),
+    type: text("type", {
+      enum: ["article", "review", "chapter", "abstract", "teaching-resource"],
+    }).notNull(),
     title: text("title").notNull(),
     year: integer("year").notNull(),
     selected: integer("selected").notNull().default(0),
@@ -512,7 +520,19 @@ export const cv = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     slug: text("slug").notNull().unique(),
     type: text("type", {
-      enum: ["profile", "appointment", "education", "publication", "grant", "award", "talk", "course", "mentoring", "service", "development"],
+      enum: [
+        "profile",
+        "appointment",
+        "education",
+        "publication",
+        "grant",
+        "award",
+        "talk",
+        "course",
+        "mentoring",
+        "service",
+        "development",
+      ],
     }).notNull(),
     record: text("record").notNull(),
     sourcePath: text("source_path").notNull().unique(),
@@ -646,7 +666,11 @@ export const kbLots = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (t) => [
-    uniqueIndex("kb_lots_item_kind_item_id_lot_number_unique").on(t.itemKind, t.itemId, t.lotNumber),
+    uniqueIndex("kb_lots_item_kind_item_id_lot_number_unique").on(
+      t.itemKind,
+      t.itemId,
+      t.lotNumber,
+    ),
     index("kb_lots_location_idx").on(t.locationId),
     check("kb_lots_status_check", sql`${t.status} in ('in_stock', 'empty', 'discarded')`),
     check("kb_lots_amount_check", sql`${t.amount} IS NULL OR ${t.amount} >= 0`),
@@ -699,7 +723,10 @@ export const kbRuns = sqliteTable(
   (t) => [
     index("kb_runs_actor_idx").on(t.actor, t.createdAt),
     check("kb_runs_outcome_check", sql`${t.outcome} in ('completed', 'failed', 'abandoned')`),
-    check("kb_runs_run_on_check", sql`${t.runOn} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`),
+    check(
+      "kb_runs_run_on_check",
+      sql`${t.runOn} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`,
+    ),
   ],
 );
 
@@ -746,7 +773,10 @@ export const members = sqliteTable(
   },
   (t) => [
     check("members_status_check", sql`${t.status} in ('active', 'removed', 'expired')`),
-    check("members_email_check", sql`${t.email} = lower(trim(${t.email})) AND instr(${t.email}, '@') > 1`),
+    check(
+      "members_email_check",
+      sql`${t.email} = lower(trim(${t.email})) AND instr(${t.email}, '@') > 1`,
+    ),
   ],
 );
 
@@ -773,7 +803,10 @@ export const memberAudit = sqliteTable(
       "member_audit_action_check",
       sql`${t.action} in ('add', 'change_title', 'renew', 'remove', 'expire', 'review_keep', 'set_terms')`,
     ),
-    check("member_audit_cloudflare_check", sql`${t.cloudflare} in ('pending', 'accepted', 'failed', 'not_needed')`),
+    check(
+      "member_audit_cloudflare_check",
+      sql`${t.cloudflare} in ('pending', 'accepted', 'failed', 'not_needed')`,
+    ),
   ],
 );
 
@@ -787,7 +820,12 @@ export const memberTerms = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (t) => [check("member_terms_date_check", sql`${t.endDate} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`)],
+  (t) => [
+    check(
+      "member_terms_date_check",
+      sql`${t.endDate} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`,
+    ),
+  ],
 );
 
 // The content's source (drizzle/0032_source_files.sql, app/lib/source/store.server.ts): one row per file, keyed by its
@@ -820,11 +858,9 @@ export const sourceRevisions = sqliteTable(
   (t) => [index("source_revisions_path").on(t.path, t.id)],
 );
 
-export const sourceGuard = sqliteTable(
-  "source_guard",
-  { ok: integer("ok").notNull() },
-  (t) => [check("source_guard_ok", sql`${t.ok} = 1`)],
-);
+export const sourceGuard = sqliteTable("source_guard", { ok: integer("ok").notNull() }, (t) => [
+  check("source_guard_ok", sql`${t.ok} = 1`),
+]);
 
 // Scheduled updates to live posts (drizzle/0033_scheduled_updates.sql, the site-api package's SCHEDULED_UPDATES_SQL):
 // one waiting update per post, read and written only through the package's d1ScheduledUpdates helper

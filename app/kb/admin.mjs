@@ -40,7 +40,8 @@ export const NEEDS_INFO = "needs-info";
 
 /** The tab a `?tab=` value names, else the first base. @param {string | null} value */
 export function resolveTab(value) {
-  if (value === NEEDS_INFO || BASES.some((base) => base.id === value)) return /** @type {string} */ (value);
+  if (value === NEEDS_INFO || BASES.some((base) => base.id === value))
+    return /** @type {string} */ (value);
   return /** @type {string} */ (BASES[0]?.id);
 }
 
@@ -59,7 +60,11 @@ export function tabHref(tab, q = "") {
  */
 export function kbTabs(entries, gaps) {
   return [
-    ...BASES.map((base) => ({ id: base.id, label: base.name, count: entries.filter((e) => e.profile === base.profile).length })),
+    ...BASES.map((base) => ({
+      id: base.id,
+      label: base.name,
+      count: entries.filter((e) => e.profile === base.profile).length,
+    })),
     { id: NEEDS_INFO, label: "Needs info", count: gaps.length },
   ];
 }
@@ -77,7 +82,9 @@ export function baseEntries(entries, tab, q = "") {
   const needle = foldText(q);
   return entries
     .filter((e) => e.profile === base.profile)
-    .filter((e) => needle === "" || foldText(`${e.title} ${e.description} ${e.slug}`).includes(needle))
+    .filter(
+      (e) => needle === "" || foldText(`${e.title} ${e.description} ${e.slug}`).includes(needle),
+    )
     .sort((a, b) => foldText(a.title).localeCompare(foldText(b.title), "en", { numeric: true }));
 }
 

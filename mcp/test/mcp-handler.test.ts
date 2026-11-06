@@ -7,7 +7,16 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import { handleMcp } from "../src/mcp-handler.ts";
-import { AUDIT, FIRST_PUBLISH_REFUSAL, READER, TOKEN, WRITER, fakeOperator, freshEnv, type FakeOperator } from "./fake-operator.ts";
+import {
+  AUDIT,
+  FIRST_PUBLISH_REFUSAL,
+  READER,
+  TOKEN,
+  WRITER,
+  fakeOperator,
+  freshEnv,
+  type FakeOperator,
+} from "./fake-operator.ts";
 import type { Caller } from "../src/auth.ts";
 
 let ENV = freshEnv();
@@ -16,7 +25,11 @@ const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as Execut
 const ERA = "2025-11-25";
 
 let nextId = 1;
-async function rpc(method: string, params: Record<string, unknown>, caller: Caller | null = WRITER) {
+async function rpc(
+  method: string,
+  params: Record<string, unknown>,
+  caller: Caller | null = WRITER,
+) {
   const response = await handleMcp(
     new Request("https://wrapper.test/mcp", {
       method: "POST",
@@ -61,24 +74,23 @@ describe("handleMcp", () => {
 
   test("tools/list offers the seven dei_ tools and nothing else", async () => {
     const { message } = await rpc("tools/list", {});
-    assert.deepEqual(
-      message.result.tools.map((t: { name: string }) => t.name).sort(),
-      [
-        "dei_check_publications",
-        "dei_decide_mention",
-        "dei_read_procedure",
-        "dei_read_registry",
-        "dei_refresh_citations",
-        "dei_review_mentions",
-        "dei_save_procedure",
-      ],
-    );
+    assert.deepEqual(message.result.tools.map((t: { name: string }) => t.name).sort(), [
+      "dei_check_publications",
+      "dei_decide_mention",
+      "dei_read_procedure",
+      "dei_read_registry",
+      "dei_refresh_citations",
+      "dei_review_mentions",
+      "dei_save_procedure",
+    ]);
     assert.equal(api.calls.length, 0);
   });
 
   test("tools/list carries each tool's annotations", async () => {
     const { message } = await rpc("tools/list", {});
-    const check = message.result.tools.find((t: { name: string }) => t.name === "dei_review_mentions");
+    const check = message.result.tools.find(
+      (t: { name: string }) => t.name === "dei_review_mentions",
+    );
     assert.equal(check.annotations.readOnlyHint, true);
   });
 
@@ -93,7 +105,10 @@ describe("handleMcp", () => {
 
   test("a 403 first-publish refusal reaches the agent verbatim as a tool error", async () => {
     api.reply(FIRST_PUBLISH_REFUSAL);
-    const { message } = await callTool("dei_save_procedure", { slug: "a", raw: "---\ndraft: false\n---\n" });
+    const { message } = await callTool("dei_save_procedure", {
+      slug: "a",
+      raw: "---\ndraft: false\n---\n",
+    });
     assert.equal(message.error, undefined, "a refusal is a tool result, not a protocol error");
     assert.equal(message.result.isError, true);
     assert.equal(
@@ -170,9 +185,17 @@ describe("handleMcp", () => {
 
   test("a read-only grant is listed no write tool, and a write it names anyway runs nothing", async () => {
     // T7: site-runtime's registerTools lists only what the grant can call, and every tool's scope is fixed.
-    const listed = (await rpc("tools/list", {}, READER)).message.result.tools.map((t: { name: string }) => t.name);
-    assert.ok(!listed.includes("dei_save_procedure") && listed.includes("dei_read_procedure"), listed.join());
-    for (const [name, args] of [["dei_refresh_citations", {}], ["dei_save_procedure", { slug: "p", raw: "r" }]] as const) {
+    const listed = (await rpc("tools/list", {}, READER)).message.result.tools.map(
+      (t: { name: string }) => t.name,
+    );
+    assert.ok(
+      !listed.includes("dei_save_procedure") && listed.includes("dei_read_procedure"),
+      listed.join(),
+    );
+    for (const [name, args] of [
+      ["dei_refresh_citations", {}],
+      ["dei_save_procedure", { slug: "p", raw: "r" }],
+    ] as const) {
       const { message } = await callTool(name, args, READER);
       assert.ok(message.error || message.result?.isError === true, JSON.stringify(message));
     }
@@ -190,6 +213,9 @@ describe("handleMcp", () => {
 
   test("a call over the wire is logged", async () => {
     await callTool("dei_refresh_citations", {});
-    assert.deepEqual(AUDIT.rows.map((r) => r.phase), ["started", "finished"]);
+    assert.deepEqual(
+      AUDIT.rows.map((r) => r.phase),
+      ["started", "finished"],
+    );
   });
 });

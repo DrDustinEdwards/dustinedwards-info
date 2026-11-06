@@ -158,7 +158,13 @@ export function stripCommentsAndStrings(source) {
  */
 export function stripTsxComments(source) {
   const ts = createRequire(import.meta.url)("typescript");
-  const file = ts.createSourceFile("x.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const file = ts.createSourceFile(
+    "x.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
   /** @type {Array<[number, number]>} */
   const ranges = [];
   /** Where JSX text begins: content, not trivia, so never scanned for comments. */

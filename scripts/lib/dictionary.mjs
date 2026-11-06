@@ -42,7 +42,9 @@ export const repoHost = {
  */
 export async function compileAllDictionary(options = {}) {
   const host = options.host ?? repoHost;
-  const names = (await readdir(path.join(ROOT, DICTIONARY_DIR))).filter((n) => n.endsWith(".md")).sort();
+  const names = (await readdir(path.join(ROOT, DICTIONARY_DIR)))
+    .filter((n) => n.endsWith(".md"))
+    .sort();
   const sources = await Promise.all(
     names.map(async (name) => ({
       key: name.slice(0, -3),
@@ -78,7 +80,11 @@ export async function buildDictionary() {
   const compiled = await compileAllDictionary();
   const failed = compiled.filter((c) => !c.compiled.ok);
   if (failed.length > 0) {
-    throw new Error(failed.map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`).join("\n"));
+    throw new Error(
+      failed
+        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
+        .join("\n"),
+    );
   }
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const rows = ok.map((c) => ({

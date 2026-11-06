@@ -27,19 +27,27 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
   const { document, window } = parseHTML(markup);
   /** @type {Map<string, Map<string, string>>} */
   const stores = new Map();
-  const state = { registered: /** @type {Array<{ url: string, scope: string }>} */ ([]), unregistered: 0, fetched: /** @type {string[]} */ ([]), reported: /** @type {unknown[]} */ ([]) };
+  const state = {
+    registered: /** @type {Array<{ url: string, scope: string }>} */ ([]),
+    unregistered: 0,
+    fetched: /** @type {string[]} */ ([]),
+    reported: /** @type {unknown[]} */ ([]),
+  };
   const abs = (/** @type {string} */ u) => new URL(u, `${ORIGIN}${PAGE}`).href;
   const fetchFake = async (/** @type {string} */ url) => {
     state.fetched.push(new URL(url, ORIGIN).pathname);
-    const status = new URL(url, ORIGIN).pathname === PAGE ? pageStatus : url.includes("missing") ? 404 : 200;
+    const status =
+      new URL(url, ORIGIN).pathname === PAGE ? pageStatus : url.includes("missing") ? 404 : 200;
     return new Response(`body of ${url}`, { status });
   };
   const open = async (/** @type {string} */ name) => {
     if (!stores.has(name)) stores.set(name, new Map());
     const store = /** @type {Map<string, string>} */ (stores.get(name));
     return {
-      match: async (/** @type {string} */ key) => (store.has(abs(key)) ? new Response(store.get(abs(key))) : undefined),
-      put: async (/** @type {string} */ key, /** @type {Response} */ res) => void store.set(abs(key), await res.text()),
+      match: async (/** @type {string} */ key) =>
+        store.has(abs(key)) ? new Response(store.get(abs(key))) : undefined,
+      put: async (/** @type {string} */ key, /** @type {Response} */ res) =>
+        void store.set(abs(key), await res.text()),
       add: async (/** @type {string} */ key) => {
         const res = await fetchFake(key);
         if (!res.ok) throw new TypeError("bad status");
@@ -50,7 +58,10 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
     };
   };
   for (const path of kept) await (await open("kept-v1")).put(path, new Response("kept"));
-  const registration = { active: { scriptURL: `${ORIGIN}/sw.js` }, unregister: async () => (state.unregistered += 1) };
+  const registration = {
+    active: { scriptURL: `${ORIGIN}/sw.js` },
+    unregister: async () => (state.unregistered += 1),
+  };
   const globals = {
     document,
     window: supported ? Object.assign(window, { caches: {} }) : window,
@@ -58,8 +69,10 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
     navigator: supported
       ? {
           serviceWorker: {
-            register: async (/** @type {string} */ url, /** @type {{ scope: string }} */ o) => void state.registered.push({ url, scope: o.scope }),
-            getRegistrations: async () => (state.registered.length > 0 || kept.length > 0 ? [registration] : []),
+            register: async (/** @type {string} */ url, /** @type {{ scope: string }} */ o) =>
+              void state.registered.push({ url, scope: o.scope }),
+            getRegistrations: async () =>
+              state.registered.length > 0 || kept.length > 0 ? [registration] : [],
           },
         }
       : {},
@@ -74,18 +87,27 @@ async function load({ supported = true, kept = [], pageStatus = 200 } = {}) {
     },
     fetch: fetchFake,
     reportError: (/** @type {unknown} */ error) => void state.reported.push(error),
-    performance: { getEntriesByType: () => [{ name: `${ORIGIN}/fonts/inter.woff2`, initiatorType: "css" }, { name: `${ORIGIN}/islands/run-1.js`, initiatorType: "script" }, { name: `${ORIGIN}/api/x`, initiatorType: "fetch" }] },
+    performance: {
+      getEntriesByType: () => [
+        { name: `${ORIGIN}/fonts/inter.woff2`, initiatorType: "css" },
+        { name: `${ORIGIN}/islands/run-1.js`, initiatorType: "script" },
+        { name: `${ORIGIN}/api/x`, initiatorType: "fetch" },
+      ],
+    },
   };
-  for (const [name, value] of Object.entries(globals)) Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+  for (const [name, value] of Object.entries(globals))
+    Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
   (await import(`../app/enhance/offline.ts?run=${(run += 1)}`)).default();
   await new Promise((r) => setTimeout(r, 0));
   const button = () => document.querySelector(".offline-keep");
   const press = async () => {
     button().dispatchEvent(new window.Event("click"));
-    for (let i = 0; i < 20 && button().disabled !== false; i += 1) await new Promise((r) => setTimeout(r, 0));
+    for (let i = 0; i < 20 && button().disabled !== false; i += 1)
+      await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
   };
-  const keptPaths = () => [...(stores.get("kept-v1")?.keys() ?? [])].map((u) => new URL(u).pathname).sort();
+  const keptPaths = () =>
+    [...(stores.get("kept-v1")?.keys() ?? [])].map((u) => new URL(u).pathname).sort();
   return { document, state, stores, button, press, keptPaths };
 }
 
@@ -107,10 +129,23 @@ await test("keeping stores the page at its own address and every same-origin fil
   const { button, press, state, keptPaths, document } = await load();
   await press();
   assert.deepEqual(state.registered, [{ url: "/sw.js", scope: "/" }]);
-  assert.deepEqual(keptPaths(), ["/assets/entry-1.js", "/assets/root-1.css", "/fonts/inter.woff2", "/islands/run-1.js", "/media/gel.png", PAGE].sort());
+  assert.deepEqual(
+    keptPaths(),
+    [
+      "/assets/entry-1.js",
+      "/assets/root-1.css",
+      "/fonts/inter.woff2",
+      "/islands/run-1.js",
+      "/media/gel.png",
+      PAGE,
+    ].sort(),
+  );
   assert.equal(button()?.getAttribute("aria-pressed"), "true");
   assert.equal(button()?.textContent, "Kept on this device");
-  assert.match(document.querySelector(".offline-status")?.textContent ?? "", /opens with no connection/);
+  assert.match(
+    document.querySelector(".offline-status")?.textContent ?? "",
+    /opens with no connection/,
+  );
 });
 
 await test("a page already kept says so when it opens", async () => {
@@ -121,7 +156,11 @@ await test("a page already kept says so when it opens", async () => {
 await test("a page that will not load is not kept, and the reader is told", async () => {
   const { button, press, keptPaths, document, state } = await load({ pageStatus: 503 });
   await press();
-  assert.match(String(state.reported[0]), /the page answered 503/, "the failure is reported to the console, not swallowed");
+  assert.match(
+    String(state.reported[0]),
+    /the page answered 503/,
+    "the failure is reported to the console, not swallowed",
+  );
   assert.deepEqual(keptPaths(), []);
   assert.deepEqual(state.registered, [], "nothing is registered for a page that could not be kept");
   assert.equal(button()?.getAttribute("aria-pressed"), "false");

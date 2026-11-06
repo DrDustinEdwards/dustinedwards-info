@@ -14,10 +14,17 @@ type LoaderData = Awaited<ReturnType<typeof loader>>["data"];
 
 const page = async (search = "") => {
   const url = `https://example.com/admin/kb${search}`;
-  const result = await loader({ request: new Request(url), params: {}, context: routeContext() } as never);
+  const result = await loader({
+    request: new Request(url),
+    params: {},
+    context: routeContext(),
+  } as never);
   // The loader answers with data(): the payload is its `data`.
   const loaderData = (result as unknown as { data: LoaderData }).data;
-  return { loaderData, html: renderRoute("/admin/kb", AdminKnowledgeBase, { loaderData }, `/admin/kb${search}`) };
+  return {
+    loaderData,
+    html: renderRoute("/admin/kb", AdminKnowledgeBase, { loaderData }, `/admin/kb${search}`),
+  };
 };
 
 beforeAll(async () => {
@@ -29,9 +36,18 @@ beforeAll(async () => {
 describe("the admin Knowledge Base page", () => {
   it("opens on Protocols, with a counted tab per base and Needs info", async () => {
     const { loaderData, html } = await page();
-    const protocols = (await env.DB.prepare("SELECT COUNT(*) AS n FROM procedures WHERE profile = 'protocol'").first<{ n: number }>())?.n;
+    const protocols = (
+      await env.DB.prepare(
+        "SELECT COUNT(*) AS n FROM procedures WHERE profile = 'protocol'",
+      ).first<{ n: number }>()
+    )?.n;
     expect(loaderData.tab).toBe("protocols");
-    expect(loaderData.tabs.map((t) => t.label)).toEqual(["Protocols", "Software how-tos", "Recipes", "Needs info"]);
+    expect(loaderData.tabs.map((t) => t.label)).toEqual([
+      "Protocols",
+      "Software how-tos",
+      "Recipes",
+      "Needs info",
+    ]);
     expect(loaderData.tabs[0]?.count).toBe(protocols);
     expect(loaderData.rows).toHaveLength(protocols ?? -1);
     expect(html).toContain('href="/research/protocols/phage-dna-extraction"');
@@ -58,7 +74,9 @@ describe("the admin Knowledge Base page", () => {
     expect(kinds.has("Equipment")).toBe(true);
     expect(loaderData.tabs.find((t) => t.id === "needs-info")?.count).toBe(loaderData.gaps.length);
     // Every equipment record's manufacturer is a recorded gap today (docs/REGISTRY.md).
-    expect(loaderData.gaps.filter((g) => g.kindLabel === "Equipment" && g.field === "manufacturer")).toHaveLength(11);
+    expect(
+      loaderData.gaps.filter((g) => g.kindLabel === "Equipment" && g.field === "manufacturer"),
+    ).toHaveLength(11);
     // Each item's "View page" opens its own page (docs/KNOWLEDGE-BASE.md, A1).
     expect(html).toContain('href="/research/lab/equipment/nanodrop"');
   });

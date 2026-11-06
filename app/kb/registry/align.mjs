@@ -45,7 +45,8 @@ function referenceFor(id, references = /** @type {any} */ (REFERENCES)) {
 
 /** The generated module's entries are already parsed; this keeps the type and refuses a malformed one. @param {any} entry @returns {Reference} */
 function parseReferenceShape(entry) {
-  if (typeof entry?.sequence !== "string" || typeof entry?.id !== "string") throw new Error("a reference in references.generated.mjs is malformed");
+  if (typeof entry?.sequence !== "string" || typeof entry?.id !== "string")
+    throw new Error("a reference in references.generated.mjs is malformed");
   return entry;
 }
 
@@ -72,10 +73,16 @@ export function placePrimer(sequence, referenceId, references = /** @type {any} 
   const reference = referenceFor(referenceId, references);
   if (!reference || !/^[ACGT]+$/.test(sequence)) return null;
   for (let mismatches = 0; mismatches <= MAX_MISMATCHES; mismatches += 1) {
-    const sites = findSites(reference.sequence, sequence, { maxMismatches: mismatches }).filter((s) => s.mismatches === mismatches);
+    const sites = findSites(reference.sequence, sequence, { maxMismatches: mismatches }).filter(
+      (s) => s.mismatches === mismatches,
+    );
     if (sites.length > 0) {
       return {
-        reference: { id: reference.id, accession: reference.accession, description: reference.description },
+        reference: {
+          id: reference.id,
+          accession: reference.accession,
+          description: reference.description,
+        },
         sites: sites.map((site) => placed(reference, site)),
         mismatches,
       };
@@ -94,13 +101,21 @@ export function placePrimer(sequence, referenceId, references = /** @type {any} 
  * @param {Record<string, Reference>} [references]
  * @returns {{ reference: Placement["reference"], products: Product[] } | null}
  */
-export function pairProducts(forward, reverse, referenceId, references = /** @type {any} */ (REFERENCES)) {
+export function pairProducts(
+  forward,
+  reverse,
+  referenceId,
+  references = /** @type {any} */ (REFERENCES),
+) {
   const reference = referenceFor(referenceId, references);
   const f = placePrimer(forward, referenceId, references);
   const r = placePrimer(reverse, referenceId, references);
   if (!reference || !f || !r) return null;
   const level = Math.max(f.mismatches, r.mismatches);
-  const found = amplicons(reference.sequence, forward, reverse, { maxMismatches: level, maxLength: MAX_PRODUCT })
+  const found = amplicons(reference.sequence, forward, reverse, {
+    maxMismatches: level,
+    maxLength: MAX_PRODUCT,
+  })
     // Only the sites each primer was placed at: a product that used a worse site than the best is not the pair's.
     .filter((p) => p.forward.mismatches === f.mismatches && p.reverse.mismatches === r.mismatches)
     .map((p) => ({
@@ -113,7 +128,6 @@ export function pairProducts(forward, reverse, referenceId, references = /** @ty
     .sort((a, b) => a.length - b.length || a.start - b.start);
   return found.length === 0 ? null : { reference: f.reference, products: found };
 }
-
 
 /**
  * The products a protocol's primers make, computed, for the primer table of a page, sheet or twin: each set that holds one
@@ -131,7 +145,13 @@ export function productsForRows(rows) {
     const inSet = rows.filter((row) => row.set === set);
     const forward = inSet.find((row) => row.direction === "forward");
     const reverse = inSet.find((row) => row.direction === "reverse");
-    if (!forward?.sequence || !reverse?.sequence || !forward.reference || forward.reference !== reverse.reference) continue;
+    if (
+      !forward?.sequence ||
+      !reverse?.sequence ||
+      !forward.reference ||
+      forward.reference !== reverse.reference
+    )
+      continue;
     const pair = pairProducts(forward.sequence, reverse.sequence, forward.reference);
     if (pair) {
       out.set(forward.id, pair);

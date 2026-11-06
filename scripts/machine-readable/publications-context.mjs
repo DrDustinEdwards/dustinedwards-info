@@ -38,10 +38,14 @@ if (files.length === 0) {
 }
 
 /** The files that compiled, with what they compiled to. */
-export const compiled = files.flatMap((f) => (f.compiled.ok ? [{ file: f.file, slug: f.slug, raw: f.raw, ...f.compiled }] : []));
+export const compiled = files.flatMap((f) =>
+  f.compiled.ok ? [{ file: f.file, slug: f.slug, raw: f.raw, ...f.compiled }] : [],
+);
 
 /** @type {Array<{ file: string, slug: string, errors: string[] }>} */
-export const refused = files.flatMap((f) => (f.compiled.ok ? [] : [{ file: f.file, slug: f.slug, errors: f.compiled.errors }]));
+export const refused = files.flatMap((f) =>
+  f.compiled.ok ? [] : [{ file: f.file, slug: f.slug, errors: f.compiled.errors }],
+);
 
 /** Every record that compiled, drafts included: a draft is a file the corpus rules still hold to. */
 export const records = compiled.map((c) => c.record);
@@ -61,7 +65,11 @@ export const citedBy = /** @type {any} */ (await readCitedBy());
 export function refusalsFor(...fields) {
   return refused.flatMap((r) =>
     r.errors
-      .filter((e) => fields.some((f) => e === f || e.startsWith(`${f}:`) || e.startsWith(`${f}[`) || e.startsWith(`${f}.`)))
+      .filter((e) =>
+        fields.some(
+          (f) => e === f || e.startsWith(`${f}:`) || e.startsWith(`${f}[`) || e.startsWith(`${f}.`),
+        ),
+      )
       .map((e) => `${r.slug}: ${e}`),
   );
 }

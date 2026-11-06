@@ -65,14 +65,26 @@ stays with you.</p>`,
   routes: async (request, env) => {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/probe")) return null;
-    if (!env.PROBE_KV) return refuse("The measurement probe is not configured: PROBE_KV is unbound.", 503);
+    if (!env.PROBE_KV)
+      return refuse("The measurement probe is not configured: PROBE_KV is unbound.", 503);
     // Every capture is a KV write anyone can trigger, so it is metered per address like /register. Its health answer
     // writes nothing and stays open.
     if (url.pathname !== "/probe/health") {
-      const limit = await checkRateLimit(env.MCP_RATE_LIMIT, `probe:${request.headers.get("cf-connecting-ip") ?? "unknown"}`);
-      if (!limit.allowed) return refuse("Rate limited.", 429, { "retry-after": String(limit.retryAfter) });
+      const limit = await checkRateLimit(
+        env.MCP_RATE_LIMIT,
+        `probe:${request.headers.get("cf-connecting-ip") ?? "unknown"}`,
+      );
+      if (!limit.allowed)
+        return refuse("Rate limited.", 429, { "retry-after": String(limit.retryAfter) });
     }
     return handleProbe(request, { PROBE_KV: env.PROBE_KV }, url.origin);
   },
-  checks: (env) => [{ ...(env.PROBE_KV ? kvCheck("probe-kv", env.PROBE_KV) : { name: "probe-kv", run: async () => ({ ok: false, detail: "binding missing" }) }), level: "warn" }],
+  checks: (env) => [
+    {
+      ...(env.PROBE_KV
+        ? kvCheck("probe-kv", env.PROBE_KV)
+        : { name: "probe-kv", run: async () => ({ ok: false, detail: "binding missing" }) }),
+      level: "warn",
+    },
+  ],
 });

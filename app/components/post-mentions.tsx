@@ -7,11 +7,7 @@ import type { Route } from "../routes/+types/blog.$slug";
  * Mention text is third party: rendered as escaped React children, never `dangerouslySetInnerHTML`,
  * and the one `href` is re-parsed by `safeHttpHref`.
  */
-function Mention({
-  mention,
-}: {
-  mention: Route.ComponentProps["loaderData"]["mentions"][number];
-}) {
+function Mention({ mention }: { mention: Route.ComponentProps["loaderData"]["mentions"][number] }) {
   /* A row whose URLs both fail still renders as text: dropping it would hide something the admin approved. */
   const href = safeHttpHref(mention.authorUrl) ?? safeHttpHref(mention.sourceUrl);
 

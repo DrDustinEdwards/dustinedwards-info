@@ -17,14 +17,21 @@ let record: ProcedureRecord;
 
 beforeAll(async () => {
   const { renderBody, findWideDashes } = await loadPipeline();
-  const compiled = await compileProcedure({ slug: "recipe-fixture", raw: fixture, pipeline: { renderBody, findWideDashes } });
+  const compiled = await compileProcedure({
+    slug: "recipe-fixture",
+    raw: fixture,
+    pipeline: { renderBody, findWideDashes },
+  });
   if (!compiled.ok) throw new Error(compiled.errors.join("; "));
   record = compiled.record;
   // The first compile loads the markdown pipeline, which takes a while in the Workers runtime.
 }, 120_000);
 
 const page = (search: string) => {
-  const { count, factor, units } = readScale(record, new URL(`https://example.com/recipes/recipe-fixture${search}`));
+  const { count, factor, units } = readScale(
+    record,
+    new URL(`https://example.com/recipes/recipe-fixture${search}`),
+  );
   return renderToStaticMarkup(createElement(ProcedureView, { record, count, factor, units }));
 };
 
@@ -34,16 +41,25 @@ describe("a recipe's views", () => {
     expect(html).toContain('<th scope="col">Used in steps</th>');
     expect(html).toMatch(/<li value="5" id="cook-\d+-step-5"/);
     expect(html).toMatch(/<a href="#cook-\d+-step-5">5<\/a>/);
-    expect(html).toContain("Ingredients: </span>250 g plain flour, 1 tsp salt, 1 tsp instant yeast");
+    expect(html).toContain(
+      "Ingredients: </span>250 g plain flour, 1 tsp salt, 1 tsp instant yeast",
+    );
   });
 
   it("shows metric or imperial at its own address, scaled, from the same GET form as servings", () => {
     const html = page("?servings=8&units=imperial");
     expect(html).toContain('<select name="units">');
     expect(html).toContain('<option value="imperial" selected="">Imperial (US)</option>');
-    expect(html).toContain("Ingredients: </span>1.1 lb plain flour, 1 tsp salt, 2 tsp instant yeast");
+    expect(html).toContain(
+      "Ingredients: </span>1.1 lb plain flour, 1 tsp salt, 2 tsp instant yeast",
+    );
     // A protocol's page has no units: they are a recipe's.
-    expect(readScale({ ...record, profile: "protocol" } as ProcedureRecord, new URL("https://example.com/x?units=imperial")).units).toBeNull();
+    expect(
+      readScale(
+        { ...record, profile: "protocol" } as ProcedureRecord,
+        new URL("https://example.com/x?units=imperial"),
+      ).units,
+    ).toBeNull();
   });
 
   it("lays out a mise-en-place checklist and a shopping list to copy, at the reader's servings and units", () => {

@@ -16,7 +16,9 @@ export function fakePdf(label: string) {
  * quickAction("pdf", ...) as a mock. `respond` decides each call's answer from its number (1-based); it may await
  * something, which is how a case holds one render open while another save lands.
  */
-export function fakeBrowser(respond: (call: number, options: RenderCall) => Promise<Response> | Response) {
+export function fakeBrowser(
+  respond: (call: number, options: RenderCall) => Promise<Response> | Response,
+) {
   const calls: RenderCall[] = [];
   const quickAction = vi.fn(async (action: string, options: RenderCall) => {
     if (action !== "pdf") throw new Error(`unexpected quickAction ${action}`);
@@ -27,7 +29,11 @@ export function fakeBrowser(respond: (call: number, options: RenderCall) => Prom
 }
 
 /** A browser that always answers with a PDF labeled by its call number. */
-export const workingBrowser = () => fakeBrowser((call) => new Response(fakePdf(`render ${call}`), { headers: { "content-type": "application/pdf" } }));
+export const workingBrowser = () =>
+  fakeBrowser(
+    (call) =>
+      new Response(fakePdf(`render ${call}`), { headers: { "content-type": "application/pdf" } }),
+  );
 
 /** The fonts: any asset URL answers with a few bytes. */
 export const fakeAssets = {

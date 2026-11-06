@@ -94,7 +94,9 @@ describe("savePost", () => {
       actor: { kind: "admin" },
     });
 
-    expect(await writes()).toEqual([expect.objectContaining({ path: postPath("one-file"), content: raw })]);
+    expect(await writes()).toEqual([
+      expect.objectContaining({ path: postPath("one-file"), content: raw }),
+    ]);
   });
 
   it("writes a posts row carrying BOTH provenance hashes", async () => {
@@ -113,7 +115,9 @@ describe("savePost", () => {
 
     expect(row?.slug).toBe("provenance");
     expect(row?.status).toBe("draft");
-    expect(row?.source_blob_sha).toBe(await gitBlobSha((await source(postPath("provenance"))) ?? ""));
+    expect(row?.source_blob_sha).toBe(
+      await gitBlobSha((await source(postPath("provenance"))) ?? ""),
+    );
     expect(row?.render_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(result.record.slug).toBe("provenance");
   });
@@ -129,9 +133,7 @@ describe("savePost", () => {
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:indexed")).toBeGreaterThan(0);
     /* The FTS index is rebuilt rather than left to per-row triggers, so the
      * assertion is that it holds the post, not that a trigger fired. */
-    const fts = await env.DB.prepare(
-      "SELECT COUNT(*) AS n FROM posts_fts WHERE posts_fts MATCH ?1",
-    )
+    const fts = await env.DB.prepare("SELECT COUNT(*) AS n FROM posts_fts WHERE posts_fts MATCH ?1")
       .bind("indexed")
       .first<{ n: number }>();
     expect(fts?.n ?? 0).toBeGreaterThan(0);
@@ -190,7 +192,7 @@ describe("savePost", () => {
 
     /* The guard runs before the write, so a refused save writes nothing anywhere. */
     expect(await writes()).toHaveLength(0);
-    expect(((await source(postPath("stale"))) !== undefined)).toBe(false);
+    expect((await source(postPath("stale"))) !== undefined).toBe(false);
     expect(await countRows("posts", "WHERE slug = ?1", "stale")).toBe(0);
   });
 
@@ -220,7 +222,7 @@ describe("savePost", () => {
     });
 
     expect(result.d1Retried).toBe(true);
-    expect((await source(postPath("retried")))).toBe(raw);
+    expect(await source(postPath("retried"))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "retried")).toBe(1);
   });
 
@@ -237,7 +239,7 @@ describe("savePost", () => {
     expect((error as Error).message).toContain("diverged");
     expect((error as Error).message).toContain("Do NOT save again");
 
-    expect((await source(postPath("diverged")))).toBe(raw);
+    expect(await source(postPath("diverged"))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "diverged")).toBe(0);
 
     /* The record goes to KV, never D1: D1 is the store that just failed. */
@@ -260,20 +262,28 @@ describe("savePost", () => {
       }),
     ).rejects.toThrow("planted D1 batch failure");
 
-    expect(((await source(postPath("never-committed"))) !== undefined)).toBe(false);
+    expect((await source(postPath("never-committed"))) !== undefined).toBe(false);
     expect(await countRows("posts")).toBe(postsBefore);
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:never-committed")).toBe(0);
     expect(await countRows("media_refs", "WHERE source_id = ?1", "never-committed")).toBe(0);
   });
-
 });
 
 describe("savePost refreshes the other posts' derived lists", async () => {
   const admin = { kind: "admin" } as const;
   const live = (slug: string, overrides: Parameters<typeof post>[1] = {}) =>
     post(slug, { draft: false, date: "2026-01-02", ...overrides });
-  const save = async (slug: string, raw: string, target: Parameters<typeof savePost>[0] = publishEnv()) =>
-    savePost(target, { slug, raw, isNew: !((await source(postPath(slug))) !== undefined), actor: admin });
+  const save = async (
+    slug: string,
+    raw: string,
+    target: Parameters<typeof savePost>[0] = publishEnv(),
+  ) =>
+    savePost(target, {
+      slug,
+      raw,
+      isNew: !((await source(postPath(slug))) !== undefined),
+      actor: admin,
+    });
   /* D1 persists across the cases of a file, so earlier posts' lists may also move: assert on the slug that must. */
   const updatedBy = (result: { neighbors: unknown }) =>
     (result.neighbors as { updated: string[] }).updated;
@@ -346,9 +356,12 @@ describe("savePost refreshes the other posts' derived lists", async () => {
     const raw = live("quiet-two", { tags: "[beta]" });
     await save("quiet-two", raw);
     /* An edit that moves no tag and adds no link leaves every list as it was, so no row is written. */
-    const result = await save("quiet-two", `${raw}
+    const result = await save(
+      "quiet-two",
+      `${raw}
 A changed line.
-`);
+`,
+    );
     expect(result.neighbors).toMatchObject({ ok: true, updated: [], purged: null });
   });
 
@@ -373,8 +386,10 @@ A changed line.
     } as unknown as Parameters<typeof savePost>[0]);
 
     expect(result.neighbors).toMatchObject({ ok: false });
-    expect((result.neighbors as { message: string }).message).toContain("planted neighbor batch failure");
-    expect((await source(postPath("report-source")))).toContain("See [it](/writing/report-target).");
+    expect((result.neighbors as { message: string }).message).toContain(
+      "planted neighbor batch failure",
+    );
+    expect(await source(postPath("report-source"))).toContain("See [it](/writing/report-target).");
     expect(await countRows("posts", "WHERE slug = ?1", "report-source")).toBe(1);
     expect((await lists("report-target")).backlinks).toEqual([]);
 
@@ -400,7 +415,12 @@ describe("savePost and the frontmatter `updated` date", () => {
 
     /* A later edit moving the date moves the column with it. */
     const moved = `${raw.replace("2026-03-05", "2026-04-06")}\nA changed line.\n`;
-    await savePost(publishEnv(), { slug: "dated", raw: moved, isNew: false, actor: { kind: "admin" } });
+    await savePost(publishEnv(), {
+      slug: "dated",
+      raw: moved,
+      isNew: false,
+      actor: { kind: "admin" },
+    });
     expect(await updatedAt("dated")).toBe(Date.UTC(2026, 3, 6) / 1000);
   });
 
@@ -446,7 +466,9 @@ describe("the FTS indexes", () => {
 
     /* Rank 1 checks each index against its external content table, not only itself. */
     for (const index of INDEXES) {
-      await env.DB.prepare(`INSERT INTO ${index} (${index}, rank) VALUES ('integrity-check', 1)`).run();
+      await env.DB.prepare(
+        `INSERT INTO ${index} (${index}, rank) VALUES ('integrity-check', 1)`,
+      ).run();
     }
     expect(await ftsEquality()).toMatchObject({ ok: true });
 
@@ -475,8 +497,10 @@ describe("deletePost", () => {
     await deletePost(publishEnv(), { slug: "doomed", actor: { kind: "admin" } });
 
     /* A DELETION IS ONE REVISION WITH NO CONTENT, on the post's path alone. */
-    expect((await writes()).slice(before)).toEqual([expect.objectContaining({ path: postPath("doomed"), content: null })]);
-    expect(((await source(postPath("doomed"))) !== undefined)).toBe(false);
+    expect((await writes()).slice(before)).toEqual([
+      expect.objectContaining({ path: postPath("doomed"), content: null }),
+    ]);
+    expect((await source(postPath("doomed"))) !== undefined).toBe(false);
 
     expect(await countRows("posts", "WHERE slug = ?1", "doomed")).toBe(0);
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:doomed")).toBe(0);

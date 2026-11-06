@@ -45,7 +45,9 @@ export function PostRail({
         )}
       </p>
 
-      {sections.length >= CONTENTS_MIN && <PageContents sections={sections} label="Contents" className="post-toc" />}
+      {sections.length >= CONTENTS_MIN && (
+        <PageContents sections={sections} label="Contents" className="post-toc" />
+      )}
     </div>
   );
 }

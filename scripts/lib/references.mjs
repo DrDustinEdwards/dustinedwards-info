@@ -27,10 +27,14 @@ export function referenceFile(id) {
 export function readReferences() {
   /** @type {Record<string, import("../../app/kb/registry/reference.mjs").Reference>} */
   const out = {};
-  for (const name of readdirSync(REFERENCES_DIR).filter((n) => n.endsWith(".fasta")).sort()) {
+  for (const name of readdirSync(REFERENCES_DIR)
+    .filter((n) => n.endsWith(".fasta"))
+    .sort()) {
     const reference = parseReference(readFileSync(path.join(REFERENCES_DIR, name), "utf8"));
     if (referenceFile(reference.id) !== name) {
-      throw new Error(`data/references/${name} holds ${reference.id}, so it must be named ${referenceFile(reference.id)}`);
+      throw new Error(
+        `data/references/${name} holds ${reference.id}, so it must be named ${referenceFile(reference.id)}`,
+      );
     }
     out[reference.id] = reference;
   }

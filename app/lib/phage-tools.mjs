@@ -39,11 +39,23 @@ const PROTOCOL = "/research/protocols/phage-isolation";
 
 /** @type {Record<string, Source>} */
 const SOURCES = {
-  fullPlate: { href: `${PROTOCOL}#full-plate-titer`, label: "Phage Isolation and Purification Protocol: full plate titer" },
-  spot: { href: `${PROTOCOL}#spot-titer`, label: "Phage Isolation and Purification Protocol: spot titer" },
+  fullPlate: {
+    href: `${PROTOCOL}#full-plate-titer`,
+    label: "Phage Isolation and Purification Protocol: full plate titer",
+  },
+  spot: {
+    href: `${PROTOCOL}#spot-titer`,
+    label: "Phage Isolation and Purification Protocol: spot titer",
+  },
   tenfold: { href: FAQ, label: "Lab Calculations and Common Questions: 10-fold serial dilution" },
-  volumeLimit: { href: `${PROTOCOL}#the-bracketing-shortcut`, label: "Phage Isolation and Purification Protocol: volume limit" },
-  yields: { href: `${PROTOCOL}#yields`, label: "Phage Isolation and Purification Protocol: yields" },
+  volumeLimit: {
+    href: `${PROTOCOL}#the-bracketing-shortcut`,
+    label: "Phage Isolation and Purification Protocol: volume limit",
+  },
+  yields: {
+    href: `${PROTOCOL}#yields`,
+    label: "Phage Isolation and Purification Protocol: yields",
+  },
 };
 
 /** The lab's numbers, each with its page. Nothing here is a value no page states. */
@@ -162,7 +174,19 @@ function must(value) {
   return value;
 }
 
-const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+];
 /** @param {number} n */
 function count(n) {
   return WORDS[n] ?? String(n);
@@ -199,12 +223,18 @@ function readCount(rawPlaques, rawVolume, rawDilution, where = "") {
     return { ok: false, error: `Enter the plaques counted${where} as a whole number, 0 or more.` };
   }
   if (!Number.isFinite(volumeUl) || volumeUl <= 0) {
-    return { ok: false, error: `Enter the volume plated or spotted${where}, in µl, greater than 0.` };
+    return {
+      ok: false,
+      error: `Enter the volume plated or spotted${where}, in µl, greater than 0.`,
+    };
   }
   // A dilution is never more than 1, so 6 and -6 both mean 10^-6.
   const n = Math.abs(rawN);
   if (!Number.isFinite(rawN) || !Number.isInteger(n) || n > 20) {
-    return { ok: false, error: `Enter the dilution's exponent${where} as a whole number from 0 to 20: 6 for 10^-6, 0 if undiluted.` };
+    return {
+      ok: false,
+      error: `Enter the dilution's exponent${where} as a whole number from 0 to 20: 6 for 10^-6, 0 if undiluted.`,
+    };
   }
   return { ok: true, plaques, volumeUl, n };
 }
@@ -221,12 +251,16 @@ function runTiter(values) {
     `Per ml: ${formatNumber(perUl)} x 1,000 = ${formatNumber(perMlDiluted)} pfu/ml ${of}.`,
   ];
   if (n > 0) {
-    steps.push(`Undo the dilution: ${formatNumber(perMlDiluted)} x 10^${n} = ${formatScientific(pfuPerMl)} pfu/ml.`);
+    steps.push(
+      `Undo the dilution: ${formatNumber(perMlDiluted)} x 10^${n} = ${formatScientific(pfuPerMl)} pfu/ml.`,
+    );
   }
   /** @type {string[]} */
   const notes = [];
   if (plaques === 0) {
-    notes.push("No plaques: the titer is below what this plate can measure. Count a less dilute plate.");
+    notes.push(
+      "No plaques: the titer is below what this plate can measure. Count a less dilute plate.",
+    );
   } else {
     const log = Math.log10(perUl);
     const exponent = Math.floor(log + 3 + n + 1e-9);
@@ -261,7 +295,12 @@ function runTiter(values) {
  *
  * @param {{ startPfuPerMl: number, targetPfuPerMl: number, transferUl?: number, neededUl?: number }} input
  */
-export function planDilution({ startPfuPerMl, targetPfuPerMl, transferUl = LAB.transferUl, neededUl = 0 }) {
+export function planDilution({
+  startPfuPerMl,
+  targetPfuPerMl,
+  transferUl = LAB.transferUl,
+  neededUl = 0,
+}) {
   const totalFold = startPfuPerMl / targetPfuPerMl;
   const tenfold = Math.floor(Math.log10(totalFold) + 1e-9);
   const remainder = totalFold / 10 ** tenfold;
@@ -309,7 +348,10 @@ export function planDilution({ startPfuPerMl, targetPfuPerMl, transferUl = LAB.t
 /** @param {DilutionStep} step @param {number} tenfoldCount */
 function stepLine(step, tenfoldCount) {
   const from = step.tube === 1 ? "lysate" : `tube ${step.tube - 1}`;
-  const label = step.tube <= tenfoldCount ? formatDilution(step.tube) : `1/${formatNumber(step.cumulativeFold)}`;
+  const label =
+    step.tube <= tenfoldCount
+      ? formatDilution(step.tube)
+      : `1/${formatNumber(step.cumulativeFold)}`;
   return `Tube ${step.tube}: ${formatNumber(step.transferUl)} µl ${from} + ${formatNumber(step.bufferUl)} µl phage buffer = ${label}, ${formatScientific(step.pfuPerMl)} pfu/ml.`;
 }
 
@@ -340,22 +382,47 @@ function runDilution(values) {
   const start = parseNumber(values.start);
   const target = parseNumber(values.target);
   const transfer = parseNumber(values.transfer);
-  const needed = values.needed === undefined || String(values.needed).trim() === "" ? 0 : parseNumber(values.needed);
-  if (!Number.isFinite(start) || start <= 0) return { ok: false, error: "Enter the starting titer in pfu/ml, greater than 0." };
-  if (!Number.isFinite(target) || target <= 0) return { ok: false, error: "Enter the target concentration in pfu/ml, greater than 0." };
-  if (target >= start) return { ok: false, error: "The target is not below the starting titer, so there is nothing to dilute." };
-  if (start / target > 1e20) return { ok: false, error: "That is more than 20 10-fold steps. Check the exponents." };
-  if (!Number.isFinite(transfer) || transfer <= 0) return { ok: false, error: "Enter the volume carried into each tube, in µl, greater than 0." };
-  if (!Number.isFinite(needed) || needed < 0) return { ok: false, error: "Enter the volume needed from the last tube in µl, or leave it empty." };
-  const plan = planDilution({ startPfuPerMl: start, targetPfuPerMl: target, transferUl: transfer, neededUl: needed });
+  const needed =
+    values.needed === undefined || String(values.needed).trim() === ""
+      ? 0
+      : parseNumber(values.needed);
+  if (!Number.isFinite(start) || start <= 0)
+    return { ok: false, error: "Enter the starting titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(target) || target <= 0)
+    return { ok: false, error: "Enter the target concentration in pfu/ml, greater than 0." };
+  if (target >= start)
+    return {
+      ok: false,
+      error: "The target is not below the starting titer, so there is nothing to dilute.",
+    };
+  if (start / target > 1e20)
+    return { ok: false, error: "That is more than 20 10-fold steps. Check the exponents." };
+  if (!Number.isFinite(transfer) || transfer <= 0)
+    return { ok: false, error: "Enter the volume carried into each tube, in µl, greater than 0." };
+  if (!Number.isFinite(needed) || needed < 0)
+    return {
+      ok: false,
+      error: "Enter the volume needed from the last tube in µl, or leave it empty.",
+    };
+  const plan = planDilution({
+    startPfuPerMl: start,
+    targetPfuPerMl: target,
+    transferUl: transfer,
+    neededUl: needed,
+  });
   const steps = planLines(plan, start, target);
   const last = must(plan.steps.at(-1));
   const lastVolume = last.transferUl + last.bufferUl;
-  if (needed > 0) steps.push(`The last tube holds ${formatNumber(lastVolume)} µl, enough for the ${formatNumber(needed)} µl needed.`);
+  if (needed > 0)
+    steps.push(
+      `The last tube holds ${formatNumber(lastVolume)} µl, enough for the ${formatNumber(needed)} µl needed.`,
+    );
   /** @type {string[]} */
   const notes = [];
   if (plan.steps.some((step) => step.transferUl < 1 || step.bufferUl < 1)) {
-    notes.push("A volume is under 1 µl. Raise the volume carried into each tube so every volume can be pipetted.");
+    notes.push(
+      "A volume is under 1 µl. Raise the volume carried into each tube so every volume can be pipetted.",
+    );
   }
   return {
     ok: true,
@@ -406,9 +473,12 @@ function runWebbedPlate(values) {
   const pfu = parseNumber(values.pfu);
   const volume = parseNumber(values.volume);
   const plates = parseNumber(values.plates);
-  if (!Number.isFinite(titerValue) || titerValue <= 0) return { ok: false, error: "Enter the lysate's titer in pfu/ml, greater than 0." };
-  if (!Number.isFinite(pfu) || pfu <= 0) return { ok: false, error: "Enter the pfu wanted on each plate, greater than 0." };
-  if (!Number.isFinite(volume) || volume <= 0) return { ok: false, error: "Enter the volume plated on each plate, in µl, greater than 0." };
+  if (!Number.isFinite(titerValue) || titerValue <= 0)
+    return { ok: false, error: "Enter the lysate's titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(pfu) || pfu <= 0)
+    return { ok: false, error: "Enter the pfu wanted on each plate, greater than 0." };
+  if (!Number.isFinite(volume) || volume <= 0)
+    return { ok: false, error: "Enter the volume plated on each plate, in µl, greater than 0." };
   if (!Number.isFinite(plates) || plates < 1 || !Number.isInteger(plates) || plates > 100) {
     return { ok: false, error: "Enter the number of plates as a whole number from 1 to 100." };
   }
@@ -422,16 +492,29 @@ function runWebbedPlate(values) {
   let result;
   const targetPfuPerMl = (pfu / volume) * 1000;
   if (targetPfuPerMl >= titerValue) {
-    plate.push(`That is more than ${formatNumber(volume)} µl, so plate undiluted lysate: ${formatNumber(lysateUl)} µl on each plate, ${formatNumber(lysateUl * plates)} µl for ${plates} plates.`);
+    plate.push(
+      `That is more than ${formatNumber(volume)} µl, so plate undiluted lysate: ${formatNumber(lysateUl)} µl on each plate, ${formatNumber(lysateUl * plates)} µl for ${plates} plates.`,
+    );
     result = `${formatNumber(lysateUl)} µl of undiluted lysate per plate`;
     if (lysateUl > LAB.maxLysateUl) {
-      notes.push(`${formatNumber(lysateUl)} µl is over the lab's limit of ${LAB.maxLysateUl} µl on 250 µl of host (10% of the cell volume), which lyses the cells. Plate ${LAB.maxLysateUl} µl, or use a lysate with a higher titer.`);
+      notes.push(
+        `${formatNumber(lysateUl)} µl is over the lab's limit of ${LAB.maxLysateUl} µl on 250 µl of host (10% of the cell volume), which lyses the cells. Plate ${LAB.maxLysateUl} µl, or use a lysate with a higher titer.`,
+      );
     }
   } else {
-    plate.push(`To plate that in ${formatNumber(volume)} µl, the tube must hold ${formatNumber(pfu)} pfu / ${formatNumber(volume)} µl x 1,000 = ${formatScientific(targetPfuPerMl)} pfu/ml.`);
-    const plan = planDilution({ startPfuPerMl: titerValue, targetPfuPerMl, transferUl: LAB.transferUl, neededUl });
+    plate.push(
+      `To plate that in ${formatNumber(volume)} µl, the tube must hold ${formatNumber(pfu)} pfu / ${formatNumber(volume)} µl x 1,000 = ${formatScientific(targetPfuPerMl)} pfu/ml.`,
+    );
+    const plan = planDilution({
+      startPfuPerMl: titerValue,
+      targetPfuPerMl,
+      transferUl: LAB.transferUl,
+      neededUl,
+    });
     plate.push(...planLines(plan, titerValue, targetPfuPerMl));
-    plate.push(`Enough of the last tube: ${plates} plates x ${formatNumber(volume)} µl = ${formatNumber(neededUl)} µl.`);
+    plate.push(
+      `Enough of the last tube: ${plates} plates x ${formatNumber(volume)} µl = ${formatNumber(neededUl)} µl.`,
+    );
     const last = must(plan.steps.at(-1));
     result = `${formatNumber(volume)} µl of tube ${last.tube} (${formatNumber(volume * (last.pfuPerMl / 1000))} pfu) on each of ${plates} plates`;
   }
@@ -457,7 +540,8 @@ function runWebbedPlate(values) {
 /** @param {Record<string, string | undefined>} values @returns {ToolResult} */
 function runFlood(values) {
   const ml = parseNumber(values.ml);
-  if (!Number.isFinite(ml) || ml <= 0 || ml > 10000) return { ok: false, error: "Enter the lysate wanted in ml, greater than 0." };
+  if (!Number.isFinite(ml) || ml <= 0 || ml > 10000)
+    return { ok: false, error: "Enter the lysate wanted in ml, greater than 0." };
   const { fewest, most } = platesForLysate({ mlWanted: ml });
   const range = fewest === most ? `${most}` : `${fewest} to ${most}`;
   return {
@@ -498,10 +582,14 @@ function runMoi(values) {
   const phageUl = parseNumber(values.phage);
   const cellsPerMl = parseNumber(values.cells);
   const hostUl = parseNumber(values.host);
-  if (!Number.isFinite(titerValue) || titerValue <= 0) return { ok: false, error: "Enter the phage titer in pfu/ml, greater than 0." };
-  if (!Number.isFinite(phageUl) || phageUl <= 0) return { ok: false, error: "Enter the volume of phage added, in µl, greater than 0." };
-  if (!Number.isFinite(cellsPerMl) || cellsPerMl <= 0) return { ok: false, error: "Enter the host cells per ml, greater than 0." };
-  if (!Number.isFinite(hostUl) || hostUl <= 0) return { ok: false, error: "Enter the volume of host culture, in µl, greater than 0." };
+  if (!Number.isFinite(titerValue) || titerValue <= 0)
+    return { ok: false, error: "Enter the phage titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(phageUl) || phageUl <= 0)
+    return { ok: false, error: "Enter the volume of phage added, in µl, greater than 0." };
+  if (!Number.isFinite(cellsPerMl) || cellsPerMl <= 0)
+    return { ok: false, error: "Enter the host cells per ml, greater than 0." };
+  if (!Number.isFinite(hostUl) || hostUl <= 0)
+    return { ok: false, error: "Enter the volume of host culture, in µl, greater than 0." };
   const result = moi({ titerPfuPerMl: titerValue, phageUl, cellsPerMl, hostUl });
   return {
     ok: true,
@@ -545,8 +633,13 @@ function eopSection(test, reference, boundPfuPerMl) {
   /** @type {string[]} */
   const notes = [];
   if (test === 0) {
-    const bound = boundPfuPerMl === undefined ? "" : ` It is below ${formatNumber(eop({ testPfuPerMl: boundPfuPerMl, referencePfuPerMl: reference }))}, what one plaque on that plate would give.`;
-    notes.push(`No plaques on the test host: the phage did not plate at this dilution, which is not the same as an EOP of exactly 0.${bound} Plate a less dilute sample to measure it.`);
+    const bound =
+      boundPfuPerMl === undefined
+        ? ""
+        : ` It is below ${formatNumber(eop({ testPfuPerMl: boundPfuPerMl, referencePfuPerMl: reference }))}, what one plaque on that plate would give.`;
+    notes.push(
+      `No plaques on the test host: the phage did not plate at this dilution, which is not the same as an EOP of exactly 0.${bound} Plate a less dilute sample to measure it.`,
+    );
   }
   return {
     heading: "Efficiency of plating",
@@ -563,8 +656,10 @@ function eopSection(test, reference, boundPfuPerMl) {
 function runEop(values) {
   const test = parseNumber(values.test);
   const reference = parseNumber(values.reference);
-  if (!Number.isFinite(test) || test < 0) return { ok: false, error: "Enter the titer on the test host in pfu/ml, 0 or more." };
-  if (!Number.isFinite(reference) || reference <= 0) return { ok: false, error: "Enter the titer on the reference host in pfu/ml, greater than 0." };
+  if (!Number.isFinite(test) || test < 0)
+    return { ok: false, error: "Enter the titer on the test host in pfu/ml, 0 or more." };
+  if (!Number.isFinite(reference) || reference <= 0)
+    return { ok: false, error: "Enter the titer on the reference host in pfu/ml, greater than 0." };
   return { ok: true, sections: [eopSection(test, reference)] };
 }
 
@@ -576,15 +671,37 @@ function countLine(host, { plaques, volumeUl, n }, pfuPerMl) {
 
 /** @param {Record<string, string | undefined>} values @returns {ToolResult} */
 function runEopCounts(values) {
-  const test = readCount(values.testPlaques, values.testVolume, values.testDilution, " on the test host");
+  const test = readCount(
+    values.testPlaques,
+    values.testVolume,
+    values.testDilution,
+    " on the test host",
+  );
   if (!test.ok) return test;
-  const reference = readCount(values.refPlaques, values.refVolume, values.refDilution, " on the reference host");
+  const reference = readCount(
+    values.refPlaques,
+    values.refVolume,
+    values.refDilution,
+    " on the reference host",
+  );
   if (!reference.ok) return reference;
   if (reference.plaques === 0) {
-    return { ok: false, error: "No plaques on the reference host, so there is no titer to divide by. Count a less dilute plate." };
+    return {
+      ok: false,
+      error:
+        "No plaques on the reference host, so there is no titer to divide by. Count a less dilute plate.",
+    };
   }
-  const testTiter = titer({ plaques: test.plaques, volumeUl: test.volumeUl, dilutionExponent: test.n }).pfuPerMl;
-  const refTiter = titer({ plaques: reference.plaques, volumeUl: reference.volumeUl, dilutionExponent: reference.n }).pfuPerMl;
+  const testTiter = titer({
+    plaques: test.plaques,
+    volumeUl: test.volumeUl,
+    dilutionExponent: test.n,
+  }).pfuPerMl;
+  const refTiter = titer({
+    plaques: reference.plaques,
+    volumeUl: reference.volumeUl,
+    dilutionExponent: reference.n,
+  }).pfuPerMl;
   const bound = titer({ plaques: 1, volumeUl: test.volumeUl, dilutionExponent: test.n }).pfuPerMl;
   const section = eopSection(testTiter, refTiter, bound);
   return {
@@ -592,7 +709,11 @@ function runEopCounts(values) {
     sections: [
       {
         ...section,
-        steps: [countLine("test host", test, testTiter), countLine("reference host", reference, refTiter), ...section.steps],
+        steps: [
+          countLine("test host", test, testTiter),
+          countLine("reference host", reference, refTiter),
+          ...section.steps,
+        ],
       },
     ],
   };
@@ -618,13 +739,20 @@ function runLysateVolume(values) {
   const pfu = parseNumber(values.pfu);
   const plates = parseNumber(values.plates);
   const volume = parseNumber(values.volume);
-  if (!Number.isFinite(titerValue) || titerValue <= 0) return { ok: false, error: "Enter the lysate's titer in pfu/ml, greater than 0." };
-  if (!Number.isFinite(pfu) || pfu <= 0) return { ok: false, error: "Enter the pfu wanted on each plate, greater than 0." };
+  if (!Number.isFinite(titerValue) || titerValue <= 0)
+    return { ok: false, error: "Enter the lysate's titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(pfu) || pfu <= 0)
+    return { ok: false, error: "Enter the pfu wanted on each plate, greater than 0." };
   if (!Number.isFinite(plates) || plates < 1 || !Number.isInteger(plates) || plates > 100) {
     return { ok: false, error: "Enter the number of plates as a whole number from 1 to 100." };
   }
-  if (!Number.isFinite(volume) || volume <= 0) return { ok: false, error: "Enter the volume plated on each plate, in µl, greater than 0." };
-  const { totalPfu, totalUl, perPlateUl } = lysateForPlates({ titerPfuPerMl: titerValue, pfuPerPlate: pfu, plates });
+  if (!Number.isFinite(volume) || volume <= 0)
+    return { ok: false, error: "Enter the volume plated on each plate, in µl, greater than 0." };
+  const { totalPfu, totalUl, perPlateUl } = lysateForPlates({
+    titerPfuPerMl: titerValue,
+    pfuPerPlate: pfu,
+    plates,
+  });
   const steps = [
     `pfu for all plates: ${formatNumber(pfu)} x ${plates} = ${formatNumber(totalPfu)} pfu.`,
     `Lysate for all plates: ${formatNumber(totalPfu)} / ${formatScientific(titerValue)} pfu/ml x 1,000 µl/ml = ${formatNumber(totalUl)} µl.`,
@@ -634,10 +762,14 @@ function runLysateVolume(values) {
   const notes = [];
   let result;
   if (perPlateUl >= volume * (1 - 1e-9)) {
-    steps.push(`That is at least the ${formatNumber(volume)} µl plated per plate, so plate the lysate undiluted: ${formatNumber(perPlateUl)} µl on each plate.`);
+    steps.push(
+      `That is at least the ${formatNumber(volume)} µl plated per plate, so plate the lysate undiluted: ${formatNumber(perPlateUl)} µl on each plate.`,
+    );
     result = `${formatNumber(totalUl)} µl of undiluted lysate, ${formatNumber(perPlateUl)} µl on each of ${plates} plates`;
     if (perPlateUl > LAB.maxLysateUl) {
-      notes.push(`${formatNumber(perPlateUl)} µl is over the lab's limit of ${LAB.maxLysateUl} µl on 250 µl of host (10% of the cell volume), which lyses the cells. Use a lysate with a higher titer.`);
+      notes.push(
+        `${formatNumber(perPlateUl)} µl is over the lab's limit of ${LAB.maxLysateUl} µl on 250 µl of host (10% of the cell volume), which lyses the cells. Use a lysate with a higher titer.`,
+      );
     }
   } else {
     const mixUl = plates * volume;
@@ -647,7 +779,9 @@ function runLysateVolume(values) {
       );
       result = `${formatNumber(totalUl)} µl of lysate in ${formatNumber(mixUl)} µl, ${formatNumber(volume)} µl on each of ${plates} plates`;
     } else {
-      steps.push(`${formatNumber(totalUl)} µl is under 1 µl, too little to pipette, so dilute the lysate first and plate ${formatNumber(volume)} µl of the last tube on each plate.`);
+      steps.push(
+        `${formatNumber(totalUl)} µl is under 1 µl, too little to pipette, so dilute the lysate first and plate ${formatNumber(volume)} µl of the last tube on each plate.`,
+      );
       result = `${formatNumber(totalUl)} µl of lysate for ${plates} plates, made by dilution`;
       notes.push("The webbed plate calculator plans the dilution tubes for these numbers.");
     }
@@ -671,7 +805,12 @@ export const TOOLS = {
     path: "/research/tools/titer",
     title: "Titer calculator",
     fields: [
-      { name: "plaques", label: "Plaques counted", value: "111", hint: "On one plate, or in one spot." },
+      {
+        name: "plaques",
+        label: "Plaques counted",
+        value: "111",
+        hint: "On one plate, or in one spot.",
+      },
       {
         name: "volume",
         label: "Volume plated or spotted",
@@ -680,7 +819,12 @@ export const TOOLS = {
         hint: `The lab plates ${LAB.ulPlated} µl for a full plate titer and spots ${LAB.ulSpot} µl for a spot titer; enter 10 for a 10 µl spot.`,
         source: SOURCES.fullPlate,
       },
-      { name: "dilution", label: "Dilution, 10 to the minus", value: "6", hint: "6 for the 10^-6 tube, 0 if undiluted." },
+      {
+        name: "dilution",
+        label: "Dilution, 10 to the minus",
+        value: "6",
+        hint: "6 for the 10^-6 tube, 0 if undiluted.",
+      },
     ],
     run: runTiter,
   },
@@ -688,7 +832,13 @@ export const TOOLS = {
     path: "/research/tools/dilution",
     title: "Serial dilution planner",
     fields: [
-      { name: "start", label: "Starting titer", unit: "pfu/ml", value: "1.11e10", hint: "1.11e10 or 1.11 x 10^10." },
+      {
+        name: "start",
+        label: "Starting titer",
+        unit: "pfu/ml",
+        value: "1.11e10",
+        hint: "1.11e10 or 1.11 x 10^10.",
+      },
       { name: "target", label: "Target concentration", unit: "pfu/ml", value: "1.11e6" },
       {
         name: "transfer",
@@ -698,7 +848,13 @@ export const TOOLS = {
         hint: "Each 10-fold tube gets 9 times this of phage buffer: 10 µl + 90 µl.",
         source: SOURCES.tenfold,
       },
-      { name: "needed", label: "Volume needed from the last tube (optional)", unit: "µl", value: "", hint: "Plates x µl per plate. Earlier tubes are scaled up to supply it." },
+      {
+        name: "needed",
+        label: "Volume needed from the last tube (optional)",
+        unit: "µl",
+        value: "",
+        hint: "Plates x µl per plate. Earlier tubes are scaled up to supply it.",
+      },
     ],
     run: runDilution,
   },
@@ -706,25 +862,67 @@ export const TOOLS = {
     path: "/research/tools/webbed-plate",
     title: "Webbed plate calculator",
     fields: [
-      { name: "titer", label: "Lysate titer", unit: "pfu/ml", value: "1.11e10", hint: "1.11e10 or 1.11 x 10^10." },
-      { name: "pfu", label: "pfu wanted per plate", value: "11100", hint: "What webs depends on plaque size; see the notes below." },
-      { name: "volume", label: "Volume plated per plate", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
-      { name: "plates", label: "Plates to pour", value: String(LAB.plates), source: SOURCES.yields },
+      {
+        name: "titer",
+        label: "Lysate titer",
+        unit: "pfu/ml",
+        value: "1.11e10",
+        hint: "1.11e10 or 1.11 x 10^10.",
+      },
+      {
+        name: "pfu",
+        label: "pfu wanted per plate",
+        value: "11100",
+        hint: "What webs depends on plaque size; see the notes below.",
+      },
+      {
+        name: "volume",
+        label: "Volume plated per plate",
+        unit: "µl",
+        value: String(LAB.ulPlated),
+        source: SOURCES.fullPlate,
+      },
+      {
+        name: "plates",
+        label: "Plates to pour",
+        value: String(LAB.plates),
+        source: SOURCES.yields,
+      },
     ],
     run: runWebbedPlate,
   },
   flood: {
     path: "/research/tools/webbed-plate",
     title: "Plates for a lysate volume",
-    fields: [{ name: "ml", label: "Lysate wanted", unit: "ml", value: "20", hint: "10 ml to archive plus 10 ml for DNA extraction is 20 ml." }],
+    fields: [
+      {
+        name: "ml",
+        label: "Lysate wanted",
+        unit: "ml",
+        value: "20",
+        hint: "10 ml to archive plus 10 ml for DNA extraction is 20 ml.",
+      },
+    ],
     run: runFlood,
   },
   moi: {
     path: "/research/tools/moi",
     title: "MOI calculator",
     fields: [
-      { name: "titer", label: "Phage titer", unit: "pfu/ml", value: "1e9", hint: "1e9 or 1 x 10^9." },
-      { name: "phage", label: "Phage volume added", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+      {
+        name: "titer",
+        label: "Phage titer",
+        unit: "pfu/ml",
+        value: "1e9",
+        hint: "1e9 or 1 x 10^9.",
+      },
+      {
+        name: "phage",
+        label: "Phage volume added",
+        unit: "µl",
+        value: String(LAB.ulPlated),
+        source: SOURCES.fullPlate,
+      },
       {
         name: "cells",
         label: "Host cells",
@@ -732,7 +930,13 @@ export const TOOLS = {
         value: "1e8",
         hint: "Counted, not read off an OD: the site gives no OD-to-cells factor for the lab's hosts. 1e8 is only the worked example's number.",
       },
-      { name: "host", label: "Host culture volume", unit: "µl", value: "250", source: SOURCES.fullPlate },
+      {
+        name: "host",
+        label: "Host culture volume",
+        unit: "µl",
+        value: "250",
+        source: SOURCES.fullPlate,
+      },
     ],
     run: runMoi,
   },
@@ -740,8 +944,20 @@ export const TOOLS = {
     path: "/research/tools/eop",
     title: "EOP from titers",
     fields: [
-      { name: "test", label: "Titer on the test host", unit: "pfu/ml", value: "2e8", hint: "2e8 or 2 x 10^8." },
-      { name: "reference", label: "Titer on the reference host", unit: "pfu/ml", value: "1e10", hint: "Usually the host the phage was isolated on." },
+      {
+        name: "test",
+        label: "Titer on the test host",
+        unit: "pfu/ml",
+        value: "2e8",
+        hint: "2e8 or 2 x 10^8.",
+      },
+      {
+        name: "reference",
+        label: "Titer on the reference host",
+        unit: "pfu/ml",
+        value: "1e10",
+        hint: "Usually the host the phage was isolated on.",
+      },
     ],
     run: runEop,
   },
@@ -750,11 +966,33 @@ export const TOOLS = {
     title: "EOP from plaque counts",
     fields: [
       { name: "testPlaques", label: "Plaques on the test host", value: "20" },
-      { name: "testVolume", label: "Volume plated on the test host", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
-      { name: "testDilution", label: "Test host dilution, 10 to the minus", value: "5", hint: "5 for the 10^-5 tube, 0 if undiluted." },
+      {
+        name: "testVolume",
+        label: "Volume plated on the test host",
+        unit: "µl",
+        value: String(LAB.ulPlated),
+        source: SOURCES.fullPlate,
+      },
+      {
+        name: "testDilution",
+        label: "Test host dilution, 10 to the minus",
+        value: "5",
+        hint: "5 for the 10^-5 tube, 0 if undiluted.",
+      },
       { name: "refPlaques", label: "Plaques on the reference host", value: "100" },
-      { name: "refVolume", label: "Volume plated on the reference host", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
-      { name: "refDilution", label: "Reference host dilution, 10 to the minus", value: "6", hint: "6 for the 10^-6 tube, 0 if undiluted." },
+      {
+        name: "refVolume",
+        label: "Volume plated on the reference host",
+        unit: "µl",
+        value: String(LAB.ulPlated),
+        source: SOURCES.fullPlate,
+      },
+      {
+        name: "refDilution",
+        label: "Reference host dilution, 10 to the minus",
+        value: "6",
+        hint: "6 for the 10^-6 tube, 0 if undiluted.",
+      },
     ],
     run: runEopCounts,
   },
@@ -762,10 +1000,32 @@ export const TOOLS = {
     path: "/research/tools/lysate-volume",
     title: "Lysate volume planner",
     fields: [
-      { name: "titer", label: "Lysate titer", unit: "pfu/ml", value: "1e7", hint: "1e7 or 1 x 10^7." },
-      { name: "pfu", label: "pfu wanted per plate", value: "10000", hint: "What webs depends on plaque size and host; see the notes below." },
-      { name: "plates", label: "Plates to pour", value: String(LAB.plates), source: SOURCES.yields },
-      { name: "volume", label: "Volume plated per plate", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+      {
+        name: "titer",
+        label: "Lysate titer",
+        unit: "pfu/ml",
+        value: "1e7",
+        hint: "1e7 or 1 x 10^7.",
+      },
+      {
+        name: "pfu",
+        label: "pfu wanted per plate",
+        value: "10000",
+        hint: "What webs depends on plaque size and host; see the notes below.",
+      },
+      {
+        name: "plates",
+        label: "Plates to pour",
+        value: String(LAB.plates),
+        source: SOURCES.yields,
+      },
+      {
+        name: "volume",
+        label: "Volume plated per plate",
+        unit: "µl",
+        value: String(LAB.ulPlated),
+        source: SOURCES.fullPlate,
+      },
     ],
     run: runLysateVolume,
   },
@@ -810,7 +1070,9 @@ export function runTool(id, values) {
 
 /** @param {string} line @returns {Array<ViewNode | string>} */
 function lineNodes(line) {
-  return textParts(line).map((part) => (part.sup ? { tag: "sup", children: [part.text] } : part.text));
+  return textParts(line).map((part) =>
+    part.sup ? { tag: "sup", children: [part.text] } : part.text,
+  );
 }
 
 /**
@@ -823,14 +1085,20 @@ function lineNodes(line) {
  */
 export function resultView(result) {
   if (!result.ok) {
-    return { summary: [{ tag: "p", className: "phage-tool-error", children: [result.error] }], detail: [] };
+    return {
+      summary: [{ tag: "p", className: "phage-tool-error", children: [result.error] }],
+      detail: [],
+    };
   }
   const summary = result.sections
     .filter((section) => section.result)
     .map((section) => ({
       tag: /** @type {const} */ ("p"),
       className: "phage-tool-answer",
-      children: [`${section.heading}: `, { tag: /** @type {const} */ ("strong"), children: lineNodes(section.result ?? "") }],
+      children: [
+        `${section.heading}: `,
+        { tag: /** @type {const} */ ("strong"), children: lineNodes(section.result ?? "") },
+      ],
     }));
   const detail = result.sections.map((section) => ({
     tag: /** @type {const} */ ("div"),
@@ -840,7 +1108,10 @@ export function resultView(result) {
       {
         tag: /** @type {const} */ ("ol"),
         className: "phage-tool-steps",
-        children: section.steps.map((step) => ({ tag: /** @type {const} */ ("li"), children: lineNodes(step) })),
+        children: section.steps.map((step) => ({
+          tag: /** @type {const} */ ("li"),
+          children: lineNodes(step),
+        })),
       },
       ...(section.notes ?? []).map((note) => ({
         tag: /** @type {const} */ ("p"),

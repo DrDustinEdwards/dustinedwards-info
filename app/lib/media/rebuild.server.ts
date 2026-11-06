@@ -23,7 +23,8 @@ type Measured = { dimensions: { width: number; height: number } | null; failure:
 // A failed read still writes the row (the upsert leaves stored sizes alone) but is reported as a
 // failure, so the rebuild is never counted converged over sizes it could not measure.
 async function dimensionsFor(env: Env, body: ReadableStream | null): Promise<Measured> {
-  if (!body) return { dimensions: null, failure: "the object vanished before it could be measured" };
+  if (!body)
+    return { dimensions: null, failure: "the object vanished before it could be measured" };
   try {
     return { dimensions: await measureDimensions(env, body), failure: null };
   } catch (error) {
@@ -103,7 +104,14 @@ async function indexObject(env: Env, object: MediaSource): Promise<string | null
       : null;
     const dimensions = measured?.dimensions ?? null;
     const placeholder = measurable
-      ? await bucket.get(object.key).then(async (o) => (o ? (await placeholderAndColor(env.IMAGES, new Uint8Array(await o.arrayBuffer()))).placeholder : null))
+      ? await bucket
+          .get(object.key)
+          .then(async (o) =>
+            o
+              ? (await placeholderAndColor(env.IMAGES, new Uint8Array(await o.arrayBuffer())))
+                  .placeholder
+              : null,
+          )
       : null;
 
     // The filename is re-derived from the object's custom metadata, so `original_name` is truly derived.

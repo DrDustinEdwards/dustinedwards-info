@@ -63,7 +63,7 @@ ok(
   longLiteral === undefined,
   longLiteral
     ? `Found a ${longLiteral.split("\n").length}-line template literal. That is the ` +
-      `hand-maintained duplicate this gate exists to prevent.`
+        `hand-maintained duplicate this gate exists to prevent.`
     : undefined,
 );
 
@@ -99,7 +99,9 @@ if (target) {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.log(`\n  FAIL  query output was not JSON: ${detail}`);
-    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`, { cause: error });
+    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`, {
+      cause: error,
+    });
   }
   const rows = parsed?.[0]?.results ?? [];
   ok(
@@ -122,9 +124,7 @@ if (target) {
   console.log("  pure checks only. Pass --local or --remote to compare the D1 row.");
 }
 
-console.log(
-  `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
-);
+console.log(`  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`);
 
 /* Measured 15 on the pure tier by running this part on 2026-10-01, floor a little under. --local and
    --remote add the D1 comparison on top, so the pure count bounds every mode. */

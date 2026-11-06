@@ -39,10 +39,23 @@ await test("a lot refuses a negative amount and an unknown status", () => {
 
 await test("a lot's location must exist", () => {
   const db = fresh();
-  assert.throws(() => db.prepare("INSERT INTO kb_lots (item_kind, item_id, lot_number, location_id) VALUES ('a','b','c',99)").run(), /FOREIGN KEY/);
+  assert.throws(
+    () =>
+      db
+        .prepare(
+          "INSERT INTO kb_lots (item_kind, item_id, lot_number, location_id) VALUES ('a','b','c',99)",
+        )
+        .run(),
+    /FOREIGN KEY/,
+  );
   db.prepare("INSERT INTO kb_locations (name) VALUES ('Freezer 1')").run();
-  db.prepare("INSERT INTO kb_lots (item_kind, item_id, lot_number, location_id) VALUES ('a','b','c',1)").run();
-  assert.throws(() => db.prepare("INSERT INTO kb_locations (name) VALUES ('Freezer 1')").run(), /UNIQUE/);
+  db.prepare(
+    "INSERT INTO kb_lots (item_kind, item_id, lot_number, location_id) VALUES ('a','b','c',1)",
+  ).run();
+  assert.throws(
+    () => db.prepare("INSERT INTO kb_locations (name) VALUES ('Freezer 1')").run(),
+    /UNIQUE/,
+  );
 });
 
 await test("the audit takes only the actions and tables it names", () => {

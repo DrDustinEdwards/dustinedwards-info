@@ -135,14 +135,17 @@
   }
 
   :where(a, button, input, select, textarea, summary) {
-    transition-property: color, background-color, border-color, text-decoration-color, outline-offset, opacity;
+    transition-property:
+      color, background-color, border-color, text-decoration-color, outline-offset, opacity;
     transition-duration: var(--motion-instant);
     transition-timing-function: var(--ease-state);
   }
 
   /* Transform is not on the rule above: the nav chevron's turn is instant on purpose. */
   :where(main, .gate, dialog) :where(button, [type="submit"]) {
-    transition-property: color, background-color, border-color, text-decoration-color, outline-offset, opacity, transform;
+    transition-property:
+      color, background-color, border-color, text-decoration-color, outline-offset, opacity,
+      transform;
     transition-duration: var(--motion-instant);
     transition-timing-function: var(--ease-state);
   }

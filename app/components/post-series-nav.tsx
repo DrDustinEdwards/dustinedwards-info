@@ -21,15 +21,12 @@ export function SeriesNav({
   const partIndex = seriesParts.findIndex((entry) => entry.slug === post.slug);
   const seriesPrevious = partIndex > 0 ? seriesParts[partIndex - 1] : undefined;
   const seriesNext =
-    partIndex >= 0 && partIndex < seriesParts.length - 1
-      ? seriesParts[partIndex + 1]
-      : undefined;
+    partIndex >= 0 && partIndex < seriesParts.length - 1 ? seriesParts[partIndex + 1] : undefined;
 
   return (
     <nav className="post-series" aria-labelledby="series-heading">
       <h2 id="series-heading">
-        Part {post.part} of {seriesParts.length}:{" "}
-        <Link to={seriesPath(series)}>{series}</Link>
+        Part {post.part} of {seriesParts.length}: <Link to={seriesPath(series)}>{series}</Link>
       </h2>
       <ol>
         {seriesParts.map((entry) => (
@@ -46,8 +43,24 @@ export function SeriesNav({
         <div className="post-series-steps">
           <Signs
             label={`Parts of ${series}`}
-            prev={seriesPrevious ? { href: `/writing/${seriesPrevious.slug}`, title: seriesPrevious.title, label: "Previous part" } : null}
-            next={seriesNext ? { href: `/writing/${seriesNext.slug}`, title: seriesNext.title, label: "Next part" } : null}
+            prev={
+              seriesPrevious
+                ? {
+                    href: `/writing/${seriesPrevious.slug}`,
+                    title: seriesPrevious.title,
+                    label: "Previous part",
+                  }
+                : null
+            }
+            next={
+              seriesNext
+                ? {
+                    href: `/writing/${seriesNext.slug}`,
+                    title: seriesNext.title,
+                    label: "Next part",
+                  }
+                : null
+            }
           />
         </div>
       )}

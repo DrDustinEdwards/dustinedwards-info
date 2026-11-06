@@ -69,7 +69,12 @@ checkProjects(ctx);
  * the measured run, as check:browser's floors do.
  */
 const MINIMUM_CHECKS = 848;
-tally.floor("check:features", "checks", MINIMUM_CHECKS, "A SECTION was skipped rather than failing.");
+tally.floor(
+  "check:features",
+  "checks",
+  MINIMUM_CHECKS,
+  "A SECTION was skipped rather than failing.",
+);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
 process.exit(tally.failures > 0 ? 1 : 0);

@@ -1,6 +1,14 @@
 import { Fragment, type ReactNode } from "react";
 
-import { TOOLS, resultView, runTool, textParts, toolValues, toolsOnPage, type ViewNode } from "~/lib/phage-tools.mjs";
+import {
+  TOOLS,
+  resultView,
+  runTool,
+  textParts,
+  toolValues,
+  toolsOnPage,
+  type ViewNode,
+} from "~/lib/phage-tools.mjs";
 
 import "~/styles/phage-tools.css";
 
@@ -69,7 +77,11 @@ function ToolBody({
                 <p id={hintId} className="phage-tool-hint">
                   {field.hint
                     ? textParts(field.hint).map((part, i) =>
-                        part.sup ? <sup key={i}>{part.text}</sup> : <Fragment key={i}>{part.text}</Fragment>,
+                        part.sup ? (
+                          <sup key={i}>{part.text}</sup>
+                        ) : (
+                          <Fragment key={i}>{part.text}</Fragment>
+                        ),
                       )
                     : null}
                   {field.hint && field.source ? " " : null}
@@ -133,7 +145,13 @@ export function PhageTools({ path, search }: { path: string; search: string }) {
  * with the lab's worked example in its fields, except any value the step itself states. The caller adds the
  * "tools" enhancement once per page.
  */
-export function StepCalculators({ calculators, scope }: { calculators: Array<{ id: string; values: Record<string, string> }>; scope: string }) {
+export function StepCalculators({
+  calculators,
+  scope,
+}: {
+  calculators: Array<{ id: string; values: Record<string, string> }>;
+  scope: string;
+}) {
   return (
     <>
       {calculators.map(({ id, values }) => {
@@ -141,11 +159,18 @@ export function StepCalculators({ calculators, scope }: { calculators: Array<{ i
         if (!tool) throw new Error(`No calculator named ${id}.`);
         return (
           <details key={id} className="phage-tool phage-tool-step">
-            <summary>
-              Calculator: {tool.title}
-            </summary>
-            <p className="phage-tool-hint">The fields start on the lab&apos;s worked example{Object.keys(values).length ? ", except what this step states" : ""}. Enter your own numbers.</p>
-            <ToolBody id={id} instance={`${scope}-${id}`} values={{ ...toolValues(id), ...values }} embedded />
+            <summary>Calculator: {tool.title}</summary>
+            <p className="phage-tool-hint">
+              The fields start on the lab&apos;s worked example
+              {Object.keys(values).length ? ", except what this step states" : ""}. Enter your own
+              numbers.
+            </p>
+            <ToolBody
+              id={id}
+              instance={`${scope}-${id}`}
+              values={{ ...toolValues(id), ...values }}
+              embedded
+            />
             <p className="phage-tool-more">
               <a href={tool.path}>Open the {tool.title.toLowerCase()} on its own page</a>
             </p>

@@ -56,7 +56,10 @@ function compareColumns(a, b, aName, bName, tables, check) {
 
 /** SQLite spells one type several ways; only the affinity is comparable. */
 function normalizeType(/** @type {string} */ type) {
-  const t = String(type).toUpperCase().replace(/\(.*\)/, "").trim();
+  const t = String(type)
+    .toUpperCase()
+    .replace(/\(.*\)/, "")
+    .trim();
   if (t.includes("INT")) return "INTEGER";
   if (["TEXT", "CHAR", "CLOB", "VARCHAR"].some((k) => t.includes(k))) return "TEXT";
   if (t.includes("BLOB") || t === "") return "BLOB";
@@ -104,9 +107,7 @@ async function loadSources() {
   }
   const freshTables = /** @type {{name: string, sql: string | null}[]} */ (
     /** @type {unknown} */ (
-      fresh
-        .prepare("SELECT name, sql FROM sqlite_master WHERE type='table'")
-        .all()
+      fresh.prepare("SELECT name, sql FROM sqlite_master WHERE type='table'").all()
     )
   );
   const { real: migrationTables, virtual } = classifySqliteTables(freshTables);
@@ -114,9 +115,7 @@ async function loadSources() {
   /** @type {Map<string, Map<string, string>>} */
   const fromMigrations = new Map();
   for (const table of migrationTables) {
-    const info = /** @type {any[]} */ (
-      fresh.prepare(`PRAGMA table_info(${table})`).all()
-    );
+    const info = /** @type {any[]} */ (fresh.prepare(`PRAGMA table_info(${table})`).all());
     fromMigrations.set(
       table,
       new Map(info.map((c) => [String(c.name), normalizeType(String(c.type))])),
@@ -130,181 +129,181 @@ async function loadSources() {
 let sources;
 const loaded = () => (sources ??= loadSources());
 
-await test("schema: columns agree across schema.ts, the migrations and the database", { timeout: 180_000 }, async (t) => {
-  const { ok, fail, done } = collector();
+await test(
+  "schema: columns agree across schema.ts, the migrations and the database",
+  { timeout: 180_000 },
+  async (t) => {
+    const { ok, fail, done } = collector();
 
-  try {
-    const { fromSchema, migrations, migrationTables, virtual, fromMigrations } = await loaded();
+    try {
+      const { fromSchema, migrations, migrationTables, virtual, fromMigrations } = await loaded();
 
-    ok(
-      "the migration enumeration is not empty",
-      migrations.length > 0 && migrationTables.length > 0,
-      `${migrations.length} migration(s) produced ${migrationTables.length} table(s)`,
-    );
-    ok(
-      "the schema.ts enumeration is not empty",
-      fromSchema.size > 0,
-      "no drizzle tables were found, so every comparison below would be vacuous",
-    );
-    ok(
-      "virtual tables were identified and excluded by DDL rather than by name",
-      virtual.length > 0,
-      "no CREATE VIRTUAL TABLE found; the fts5 exclusion is not being exercised",
-    );
-
-    const modeled = [...fromSchema.keys()].sort();
-    const unmodelled = migrationTables.filter((t) => !fromSchema.has(t));
-    const phantom = modeled.filter((t) => !fromMigrations.has(t));
-
-    ok(
-      "every table drizzle models is actually created by a migration",
-      phantom.length === 0,
-      `no migration creates ${phantom.join(", ")}`,
-    );
-
-    const compared = compareColumns(
-      fromSchema,
-      fromMigrations,
-      "schema.ts",
-      "migrations",
-      modeled,
-      ok,
-    );
-    ok(
-      "every modeled table was actually compared",
-      compared === modeled.length - phantom.length,
-      `${compared} of ${modeled.length - phantom.length}`,
-    );
-
-    t.diagnostic(
-      `     schema.ts ${fromSchema.size} table(s), migrations ${migrationTables.length}, ` +
-        `${virtual.length} virtual excluded`,
-    );
-
-    if (unmodelled.length > 0) {
-      /* Unmodelled tables have no column check; printed as an exposure. */
-      t.diagnostic(
-        `     not modeled in drizzle, so no column check covers: ${unmodelled.join(", ")}`,
+      ok(
+        "the migration enumeration is not empty",
+        migrations.length > 0 && migrationTables.length > 0,
+        `${migrations.length} migration(s) produced ${migrationTables.length} table(s)`,
       );
-    }
-  } catch (error) {
-    fail("the column comparison could not run", String(error));
-  }
+      ok(
+        "the schema.ts enumeration is not empty",
+        fromSchema.size > 0,
+        "no drizzle tables were found, so every comparison below would be vacuous",
+      );
+      ok(
+        "virtual tables were identified and excluded by DDL rather than by name",
+        virtual.length > 0,
+        "no CREATE VIRTUAL TABLE found; the fts5 exclusion is not being exercised",
+      );
 
-  done();
-});
+      const modeled = [...fromSchema.keys()].sort();
+      const unmodelled = migrationTables.filter((t) => !fromSchema.has(t));
+      const phantom = modeled.filter((t) => !fromMigrations.has(t));
+
+      ok(
+        "every table drizzle models is actually created by a migration",
+        phantom.length === 0,
+        `no migration creates ${phantom.join(", ")}`,
+      );
+
+      const compared = compareColumns(
+        fromSchema,
+        fromMigrations,
+        "schema.ts",
+        "migrations",
+        modeled,
+        ok,
+      );
+      ok(
+        "every modeled table was actually compared",
+        compared === modeled.length - phantom.length,
+        `${compared} of ${modeled.length - phantom.length}`,
+      );
+
+      t.diagnostic(
+        `     schema.ts ${fromSchema.size} table(s), migrations ${migrationTables.length}, ` +
+          `${virtual.length} virtual excluded`,
+      );
+
+      if (unmodelled.length > 0) {
+        /* Unmodelled tables have no column check; printed as an exposure. */
+        t.diagnostic(
+          `     not modeled in drizzle, so no column check covers: ${unmodelled.join(", ")}`,
+        );
+      }
+    } catch (error) {
+      fail("the column comparison could not run", String(error));
+    }
+
+    done();
+  },
+);
 
 /*
  * Names and ordered columns only: drizzle cannot express partial predicates, collations or
  * directions. Implicit indexes go by `origin`.
  */
-await test("schema: indexes agree across schema.ts and the migrations", { timeout: 180_000 }, async (t) => {
-  const { ok, fail, done } = collector();
+await test(
+  "schema: indexes agree across schema.ts and the migrations",
+  { timeout: 180_000 },
+  async (t) => {
+    const { ok, fail, done } = collector();
 
-  try {
-    const { tableConfigs, fresh, migrationTables } = await loaded();
+    try {
+      const { tableConfigs, fresh, migrationTables } = await loaded();
 
-    /** @type {Map<string, string[]>} */
-    const schemaIndexes = new Map();
-    for (const config of tableConfigs) {
-      for (const idx of config.indexes) {
-        const columns = idx.config.columns.map((/** @type {any} */ c) =>
-          String(c.name ?? c),
-        );
-        schemaIndexes.set(idx.config.name, columns);
+      /** @type {Map<string, string[]>} */
+      const schemaIndexes = new Map();
+      for (const config of tableConfigs) {
+        for (const idx of config.indexes) {
+          const columns = idx.config.columns.map((/** @type {any} */ c) => String(c.name ?? c));
+          schemaIndexes.set(idx.config.name, columns);
+        }
       }
-    }
 
-    /** @type {Map<string, string[]>} */
-    const migrationIndexes = new Map();
-    for (const table of migrationTables) {
-      const list = /** @type {any[]} */ (
-        fresh.prepare(`PRAGMA index_list(${table})`).all()
+      /** @type {Map<string, string[]>} */
+      const migrationIndexes = new Map();
+      for (const table of migrationTables) {
+        const list = /** @type {any[]} */ (fresh.prepare(`PRAGMA index_list(${table})`).all());
+        for (const row of list) {
+          // Origin 'c' is CREATE INDEX. 'u' and 'pk' are constraint-implied.
+          if (String(row.origin) !== "c") continue;
+          const info = /** @type {any[]} */ (
+            fresh.prepare(`PRAGMA index_info(${String(row.name)})`).all()
+          );
+          migrationIndexes.set(
+            String(row.name),
+            info
+              .slice()
+              .sort((a, b) => Number(a.seqno) - Number(b.seqno))
+              .map((c) => String(c.name)),
+          );
+        }
+      }
+
+      /* An empty side makes every comparison below pass vacuously. */
+      ok(
+        "indexes were parsed out of schema.ts",
+        schemaIndexes.size > 0,
+        "getTableConfig reported no indexes, so both directions below are vacuous",
       );
-      for (const row of list) {
-        // Origin 'c' is CREATE INDEX. 'u' and 'pk' are constraint-implied.
-        if (String(row.origin) !== "c") continue;
-        const info = /** @type {any[]} */ (
-          fresh.prepare(`PRAGMA index_info(${String(row.name)})`).all()
-        );
-        migrationIndexes.set(
-          String(row.name),
-          info
-            .slice()
-            .sort((a, b) => Number(a.seqno) - Number(b.seqno))
-            .map((c) => String(c.name)),
-        );
+      ok(
+        "indexes were read back out of the applied migrations",
+        migrationIndexes.size > 0,
+        "PRAGMA index_list reported no CREATE INDEX rows, so both directions are vacuous",
+      );
+
+      const missingInMigrations = [...schemaIndexes.keys()].filter((n) => !migrationIndexes.has(n));
+      const missingInSchema = [...migrationIndexes.keys()].filter((n) => !schemaIndexes.has(n));
+
+      ok(
+        "every index schema.ts declares is created by a migration",
+        missingInMigrations.length === 0,
+        `no migration creates ${missingInMigrations.join(", ")}. schema.ts is ` +
+          `describing an index the database will not have.`,
+      );
+      ok(
+        "every index a migration creates is declared in schema.ts",
+        missingInSchema.length === 0,
+        `schema.ts does not declare ${missingInSchema.join(", ")}. The schema-source rule: a ` +
+          `reader of the schema would conclude those queries run unindexed.`,
+      );
+
+      /** @type {string[]} */
+      const columnMismatches = [];
+      let indexesCompared = 0;
+      for (const [name, columns] of schemaIndexes) {
+        const other = migrationIndexes.get(name);
+        if (!other) continue;
+        indexesCompared += 1;
+        if (columns.join(",") !== other.join(",")) {
+          columnMismatches.push(
+            `${name}: schema.ts (${columns.join(", ")}) vs migrations (${other.join(", ")})`,
+          );
+        }
       }
+
+      ok(
+        "every shared index was actually compared",
+        indexesCompared === schemaIndexes.size - missingInMigrations.length,
+        `${indexesCompared} of ${schemaIndexes.size - missingInMigrations.length}`,
+      );
+      ok(
+        "every index covers the same columns, in the same order, on both sides",
+        columnMismatches.length === 0,
+        `${columnMismatches.join("; ")}. A composite index with its columns ` +
+          `reversed is a different index wearing the same name.`,
+      );
+
+      t.diagnostic(
+        `     ${schemaIndexes.size} declared index(es), ${migrationIndexes.size} created, ` +
+          `${indexesCompared} compared by column`,
+      );
+    } catch (error) {
+      fail("the index comparison could not run", String(error));
     }
 
-    /* An empty side makes every comparison below pass vacuously. */
-    ok(
-      "indexes were parsed out of schema.ts",
-      schemaIndexes.size > 0,
-      "getTableConfig reported no indexes, so both directions below are vacuous",
-    );
-    ok(
-      "indexes were read back out of the applied migrations",
-      migrationIndexes.size > 0,
-      "PRAGMA index_list reported no CREATE INDEX rows, so both directions are vacuous",
-    );
-
-    const missingInMigrations = [...schemaIndexes.keys()].filter(
-      (n) => !migrationIndexes.has(n),
-    );
-    const missingInSchema = [...migrationIndexes.keys()].filter(
-      (n) => !schemaIndexes.has(n),
-    );
-
-    ok(
-      "every index schema.ts declares is created by a migration",
-      missingInMigrations.length === 0,
-      `no migration creates ${missingInMigrations.join(", ")}. schema.ts is ` +
-        `describing an index the database will not have.`,
-    );
-    ok(
-      "every index a migration creates is declared in schema.ts",
-      missingInSchema.length === 0,
-      `schema.ts does not declare ${missingInSchema.join(", ")}. The schema-source rule: a ` +
-        `reader of the schema would conclude those queries run unindexed.`,
-    );
-
-    /** @type {string[]} */
-    const columnMismatches = [];
-    let indexesCompared = 0;
-    for (const [name, columns] of schemaIndexes) {
-      const other = migrationIndexes.get(name);
-      if (!other) continue;
-      indexesCompared += 1;
-      if (columns.join(",") !== other.join(",")) {
-        columnMismatches.push(
-          `${name}: schema.ts (${columns.join(", ")}) vs migrations (${other.join(", ")})`,
-        );
-      }
-    }
-
-    ok(
-      "every shared index was actually compared",
-      indexesCompared === schemaIndexes.size - missingInMigrations.length,
-      `${indexesCompared} of ${schemaIndexes.size - missingInMigrations.length}`,
-    );
-    ok(
-      "every index covers the same columns, in the same order, on both sides",
-      columnMismatches.length === 0,
-      `${columnMismatches.join("; ")}. A composite index with its columns ` +
-        `reversed is a different index wearing the same name.`,
-    );
-
-    t.diagnostic(
-      `     ${schemaIndexes.size} declared index(es), ${migrationIndexes.size} created, ` +
-        `${indexesCompared} compared by column`,
-    );
-  } catch (error) {
-    fail("the index comparison could not run", String(error));
-  }
-
-  done();
-});
+    done();
+  },
+);
 
 /*
  * The live database is opt-in because CI holds no Cloudflare credentials, and it is the only
@@ -326,9 +325,7 @@ await test(
        * One quoted `--command`: on Windows args arrays split, `shell: false` cannot run `.cmd`,
        * and `--file` returns one result set under `--json`.
        */
-      const command = migrationTables
-        .map((t) => `PRAGMA table_info(${t});`)
-        .join(" ");
+      const command = migrationTables.map((t) => `PRAGMA table_info(${t});`).join(" ");
       /* `spawnSync` returns on failure, so the status is thrown or `retryRead` never retries. */
       const proc = await retryRead(
         () => {
@@ -364,10 +361,7 @@ await test(
           fromLive.set(
             table,
             new Map(
-              rows.map((/** @type {any} */ c) => [
-                String(c.name),
-                normalizeType(String(c.type)),
-              ]),
+              rows.map((/** @type {any} */ c) => [String(c.name), normalizeType(String(c.type))]),
             ),
           );
         });

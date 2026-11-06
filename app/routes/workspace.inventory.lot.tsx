@@ -43,7 +43,9 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   const form = await cappedForm(request, ADMIN_FORM_BYTES);
   // The lot is the one in the address, whatever the form says.
   form.set("lot", String(id));
-  return data(await inventoryAction(getEnv(context), actor, form, Date.now()), { headers: PRIVATE });
+  return data(await inventoryAction(getEnv(context), actor, form, Date.now()), {
+    headers: PRIVATE,
+  });
 }
 
 /** One audit row in words: what changed, field by field. */
@@ -52,8 +54,14 @@ function changeText(before: string | null, after: string | null): string {
   const a = after ? (JSON.parse(after) as Record<string, unknown>) : null;
   if (!b && a) return "Added";
   if (!a) return "Changed";
-  const changed = Object.keys(a).filter((k) => k !== "id" && JSON.stringify(a[k]) !== JSON.stringify(b?.[k]));
-  return changed.length ? changed.map((k) => `${k.replace("_", " ")}: ${b?.[k] ?? "none"} to ${a[k] ?? "none"}`).join("; ") : "No change";
+  const changed = Object.keys(a).filter(
+    (k) => k !== "id" && JSON.stringify(a[k]) !== JSON.stringify(b?.[k]),
+  );
+  return changed.length
+    ? changed
+        .map((k) => `${k.replace("_", " ")}: ${b?.[k] ?? "none"} to ${a[k] ?? "none"}`)
+        .join("; ")
+    : "No change";
 }
 
 export default function LabLot({ loaderData, actionData }: Route.ComponentProps) {
@@ -62,7 +70,10 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
     <>
       <PageHead
         renderLink={crumbLink}
-        crumbs={[{ label: "Inventory", href: `${LAB_BENCH_PATH}/inventory` }, { label: `Lot ${lot.lot_number}` }]}
+        crumbs={[
+          { label: "Inventory", href: `${LAB_BENCH_PATH}/inventory` },
+          { label: `Lot ${lot.lot_number}` },
+        ]}
         title={`${lot.item}, lot ${lot.lot_number}`}
       />
       <Result result={actionData} />
@@ -97,12 +108,17 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
         {runs.length === 0 ? (
           <p className="cap-muted">No runs yet.</p>
         ) : (
-          <LabTable label="Runs that used this lot" head={["Run", "Protocol", "Day", "Outcome", "By"]}>
+          <LabTable
+            label="Runs that used this lot"
+            head={["Run", "Protocol", "Day", "Outcome", "By"]}
+          >
             {runs.map((r) => (
               <tr key={r.id}>
                 <th scope="row">
                   <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
-                  {r.replaced_by ? <span className="cap-muted">, corrected by run {r.replaced_by}</span> : null}
+                  {r.replaced_by ? (
+                    <span className="cap-muted">, corrected by run {r.replaced_by}</span>
+                  ) : null}
                 </th>
                 <td>{r.title}</td>
                 <td>{r.run_on}</td>
@@ -120,13 +136,23 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
             <input type="hidden" name="intent" value="edit_lot" />
             <div className="lab-fields">
               <Field label="Amount left">
-                <input className="cap-input" name="amount" inputMode="decimal" defaultValue={lot.amount ?? ""} />
+                <input
+                  className="cap-input"
+                  name="amount"
+                  inputMode="decimal"
+                  defaultValue={lot.amount ?? ""}
+                />
               </Field>
               <Field label="Unit">
                 <input className="cap-input" name="unit" defaultValue={lot.unit ?? ""} />
               </Field>
               <Field label="Expires">
-                <input className="cap-input" type="date" name="expiry" defaultValue={lot.expiry ?? ""} />
+                <input
+                  className="cap-input"
+                  type="date"
+                  name="expiry"
+                  defaultValue={lot.expiry ?? ""}
+                />
               </Field>
               <Field label="Where">
                 <select className="cap-input" name="location" defaultValue={lot.location_id ?? ""}>

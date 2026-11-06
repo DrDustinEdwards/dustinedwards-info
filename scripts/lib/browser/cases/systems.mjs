@@ -15,7 +15,9 @@ import { explorerUrl, loadSystemModel, systemPath } from "../../../../app/lib/sy
 import { BASE, FETCH_TIMEOUT_MS, ok, report, root } from "../harness.mjs";
 
 const require = createRequire(import.meta.url);
-const MODEL = loadSystemModel(JSON.parse(readFileSync(join(root, "data", "system-model.json"), "utf8")));
+const MODEL = loadSystemModel(
+  JSON.parse(readFileSync(join(root, "data", "system-model.json"), "utf8")),
+);
 const IDS = MODEL.systems.map((s) => s.id);
 const CORE = MODEL.systems.find((s) => s.ring === "core")?.id ?? "";
 /** The system with the most flows over its parts: where stepping is checked. */
@@ -64,11 +66,26 @@ export async function run({ browser }) {
   await page.setBypassCSP(true);
   try {
     // Each part on its own: one that throws is a failed check, and the parts after it still run.
-    for (const part of [everyCardOpensItsPage, focusLightsTies, everySystemHasAPage, stepsAFlow, wholeWithoutScript, noLayoutShift, inputResponse, axeBothThemes, scriptBudget, explorerLinks]) {
+    for (const part of [
+      everyCardOpensItsPage,
+      focusLightsTies,
+      everySystemHasAPage,
+      stepsAFlow,
+      wholeWithoutScript,
+      noLayoutShift,
+      inputResponse,
+      axeBothThemes,
+      scriptBudget,
+      explorerLinks,
+    ]) {
       try {
         await part(page);
       } catch (error) {
-        ok(`/systems: ${part.name} ran`, false, error instanceof Error ? error.message : String(error));
+        ok(
+          `/systems: ${part.name} ran`,
+          false,
+          error instanceof Error ? error.message : String(error),
+        );
       }
     }
   } finally {
@@ -85,9 +102,20 @@ async function everyCardOpensItsPage(/** @type {import("puppeteer").Page} */ pag
     hex: !root.querySelector(".cap-system-map-hex")?.hasAttribute("hidden"),
     plain: !root.querySelector(".cap-system-map-network")?.hasAttribute("hidden"),
   }));
-  ok("/systems: the hexagons show first, the plain map a tab away", views.hex && !views.plain, `hexagons shown ${views.hex}, plain map shown ${views.plain}`);
-  const links = await page.$$eval("#network a.cap-system-map-cell, #network .cap-system-map-card", (els) =>
-    els.map((el) => ({ id: /** @type {HTMLElement} */ (el).dataset.id, href: el.matches("a") ? el.getAttribute("href") : el.querySelector("a")?.getAttribute("href") })),
+  ok(
+    "/systems: the hexagons show first, the plain map a tab away",
+    views.hex && !views.plain,
+    `hexagons shown ${views.hex}, plain map shown ${views.plain}`,
+  );
+  const links = await page.$$eval(
+    "#network a.cap-system-map-cell, #network .cap-system-map-card",
+    (els) =>
+      els.map((el) => ({
+        id: /** @type {HTMLElement} */ (el).dataset.id,
+        href: el.matches("a")
+          ? el.getAttribute("href")
+          : el.querySelector("a")?.getAttribute("href"),
+      })),
   );
   const ids = links.map((c) => c.id).sort();
   const wrong = links.filter((c) => c.href !== systemPath(c.id ?? ""));
@@ -98,7 +126,11 @@ async function everyCardOpensItsPage(/** @type {import("puppeteer").Page} */ pag
   );
   await page.click(`#network a.cap-system-map-cell[data-id="${SHARED}"]`);
   await page.waitForSelector(`.cap-system-map[data-system="${SHARED}"]`, { timeout: 10_000 });
-  ok("/systems: one tap on a hexagon opens its system", new URL(page.url()).pathname === systemPath(SHARED), page.url());
+  ok(
+    "/systems: one tap on a hexagon opens its system",
+    new URL(page.url()).pathname === systemPath(SHARED),
+    page.url(),
+  );
 }
 
 /** Focusing a hexagon lights its lines; on the plain map, Tab reaches each card's link, and focusing one lights it and the systems tied to it. */
@@ -109,41 +141,76 @@ async function focusLightsTies(/** @type {import("puppeteer").Page} */ page) {
     lit: /** @type {HTMLElement} */ (root).dataset.lit ?? null,
     lines: root.querySelectorAll(".cap-system-map-comb-lines [data-on]").length,
   }));
-  ok("/systems: focusing a hexagon lights its lines", hex.lit === SHARED && hex.lines > 0, `lit ${hex.lit}, ${hex.lines} lines on`);
+  ok(
+    "/systems: focusing a hexagon lights its lines",
+    hex.lit === SHARED && hex.lines > 0,
+    `lit ${hex.lit}, ${hex.lines} lines on`,
+  );
   await plainMap(page);
   await page.focus(`#network .cap-system-map-card[data-id="${SHARED}"] a`);
   const lit = await page.$eval("#network", (root) => ({
     lit: /** @type {HTMLElement} */ (root).dataset.lit ?? null,
     self: root.querySelectorAll(".cap-system-map-card[data-tie='self']").length,
     tied: root.querySelectorAll(".cap-system-map-card[data-tie]:not([data-tie='self'])").length,
-    words: [...root.querySelectorAll(".cap-system-map-card[data-tie]:not([data-tie='self']) .cap-system-map-card-tie")].every((el) => /^(Used by|Uses|Uses and used by) /.test(el.textContent ?? "")),
+    words: [
+      ...root.querySelectorAll(
+        ".cap-system-map-card[data-tie]:not([data-tie='self']) .cap-system-map-card-tie",
+      ),
+    ].every((el) => /^(Used by|Uses|Uses and used by) /.test(el.textContent ?? "")),
   }));
-  const card = await page.$eval(`#network .cap-system-map-card[data-id="${SHARED}"]`, (el) => /** @type {HTMLElement} */ (el).dataset.usedBy?.split(" ").filter(Boolean).length ?? 0);
+  const card = await page.$eval(
+    `#network .cap-system-map-card[data-id="${SHARED}"]`,
+    (el) => /** @type {HTMLElement} */ (el).dataset.usedBy?.split(" ").filter(Boolean).length ?? 0,
+  );
   ok(
     "/systems: focusing a card lights it and every system tied to it, each saying how in words",
     lit.lit === SHARED && lit.self === 1 && lit.tied >= card && lit.tied > 0 && lit.words,
     `lit ${lit.lit}, ${lit.tied} tied (it is used by ${card}), words ${lit.words}`,
   );
   await page.keyboard.press("Tab");
-  const next = await page.$eval("#network", (root) => /** @type {HTMLElement} */ (root).dataset.lit ?? null);
-  ok("/systems: Tab moves the light to the next card", next !== null && next !== SHARED, `lit ${next}`);
+  const next = await page.$eval(
+    "#network",
+    (root) => /** @type {HTMLElement} */ (root).dataset.lit ?? null,
+  );
+  ok(
+    "/systems: Tab moves the light to the next card",
+    next !== null && next !== SHARED,
+    `lit ${next}`,
+  );
 }
 
 /** Every system has a page with its three columns, a private one says so and links no repo, and an unknown id is 404. */
 async function everySystemHasAPage() {
   const bad = [];
   for (const s of MODEL.systems) {
-    const res = await fetch(`${BASE}${systemPath(s.id)}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    const res = await fetch(`${BASE}${systemPath(s.id)}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     const html = res.ok ? await res.text() : "";
     const columns = ["used-by", "inside", "uses"].every((c) => html.includes(`data-column="${c}"`));
-    if (!res.ok || !columns || !html.includes(`data-system="${s.id}"`)) bad.push(`${s.id} (${res.status}${columns ? "" : ", no columns"})`);
+    if (!res.ok || !columns || !html.includes(`data-system="${s.id}"`))
+      bad.push(`${s.id} (${res.status}${columns ? "" : ", no columns"})`);
   }
-  ok("/systems/<id>: every system's page answers with what uses it, its parts and what it uses", bad.length === 0, bad.join(", ") || `${IDS.length} pages`);
+  ok(
+    "/systems/<id>: every system's page answers with what uses it, its parts and what it uses",
+    bad.length === 0,
+    bad.join(", ") || `${IDS.length} pages`,
+  );
   if (PRIVATE) {
-    const html = await (await fetch(`${BASE}${systemPath(PRIVATE.id)}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })).text();
-    ok("/systems/<id>: a private system is shown in full, says its repo is private and links none", html.includes("private repo") && !/href="https:\/\/github\.com\//.test(html), PRIVATE.id);
+    const html = await (
+      await fetch(`${BASE}${systemPath(PRIVATE.id)}`, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      })
+    ).text();
+    ok(
+      "/systems/<id>: a private system is shown in full, says its repo is private and links none",
+      html.includes("private repo") && !/href="https:\/\/github\.com\//.test(html),
+      PRIVATE.id,
+    );
   }
-  const missing = await fetch(`${BASE}/systems/no-such-system`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  const missing = await fetch(`${BASE}/systems/no-such-system`, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
   ok("/systems/<unknown> answers 404", missing.status === 404, `answered ${missing.status}`);
 }
 
@@ -162,12 +229,22 @@ async function stepsAFlow(/** @type {import("puppeteer").Page} */ page) {
     status: root.querySelector(".cap-system-map-flow-status")?.textContent ?? "",
   }));
   await page.keyboard.press("Enter");
-  const second = await page.$eval("#system", (root) => /** @type {HTMLElement} */ (root).dataset.step);
+  const second = await page.$eval(
+    "#system",
+    (root) => /** @type {HTMLElement} */ (root).dataset.step,
+  );
   await page.keyboard.press("Escape");
-  const stopped = await page.$eval("#system", (root) => !root.hasAttribute("data-step") && root.querySelectorAll("[data-lit]").length === 0);
+  const stopped = await page.$eval(
+    "#system",
+    (root) => !root.hasAttribute("data-step") && root.querySelectorAll("[data-lit]").length === 0,
+  );
   ok(
     `/systems/${FLOWED}: Start lights a step's parts and says where it is, Next steps, Escape stops`,
-    first.step === "1" && first.lit > 0 && /^Step 1 of \d+: /.test(first.status) && second === "2" && stopped,
+    first.step === "1" &&
+      first.lit > 0 &&
+      /^Step 1 of \d+: /.test(first.status) &&
+      second === "2" &&
+      stopped,
     `step ${first.step} with ${first.lit} parts lit, "${first.status}", then ${second}, stopped ${stopped}`,
   );
 }
@@ -178,10 +255,19 @@ async function wholeWithoutScript(/** @type {import("puppeteer").Page} */ page) 
   try {
     await page.goto(`${BASE}/systems`, { waitUntil: "networkidle0" });
     const links = await page.$$eval("#network .cap-system-map-card-name a", (els) => els.length);
-    const cells = await page.$$eval("#network a.cap-system-map-cell", (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length);
+    const cells = await page.$$eval(
+      "#network a.cap-system-map-cell",
+      (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length,
+    );
     await page.goto(`${BASE}${systemPath(FLOWED)}`, { waitUntil: "networkidle0" });
-    const steps = await page.$$eval(".cap-system-map-steps li", (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length);
-    const controls = await page.$$eval(".cap-system-map-flow-controls", (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length);
+    const steps = await page.$$eval(
+      ".cap-system-map-steps li",
+      (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length,
+    );
+    const controls = await page.$$eval(
+      ".cap-system-map-flow-controls",
+      (els) => els.filter((el) => el.getBoundingClientRect().height > 0).length,
+    );
     ok(
       "/systems with no script: every hexagon and card is a link, and on a system's page each flow is a list with no dead buttons",
       links === IDS.length && cells === IDS.length && steps > 0 && controls === 0,
@@ -199,7 +285,10 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
     const w = /** @type {Window & { __cls?: number }} */ (window);
     w.__cls = 0;
     new PerformanceObserver((list) => {
-      for (const e of /** @type {Array<PerformanceEntry & { value: number }>} */ (list.getEntries())) w.__cls = (w.__cls ?? 0) + e.value;
+      for (const e of /** @type {Array<PerformanceEntry & { value: number }>} */ (
+        list.getEntries()
+      ))
+        w.__cls = (w.__cls ?? 0) + e.value;
     }).observe({ type: "layout-shift", buffered: false });
   });
   for (const selector of ["a.cap-system-map-cell", ".cap-system-map-card"]) {
@@ -211,20 +300,39 @@ async function noLayoutShift(/** @type {import("puppeteer").Page} */ page) {
   }
   await page.mouse.move(1, 1);
   await new Promise((resolve) => setTimeout(resolve, 300));
-  const cls = await page.evaluate(() => /** @type {Window & { __cls?: number }} */ (window).__cls ?? 0);
-  ok(`/systems: pointing at every hexagon and card in turn shifts nothing (CLS under ${CLS_BUDGET})`, cls < CLS_BUDGET, `CLS ${cls.toFixed(4)}`);
+  const cls = await page.evaluate(
+    () => /** @type {Window & { __cls?: number }} */ (window).__cls ?? 0,
+  );
+  ok(
+    `/systems: pointing at every hexagon and card in turn shifts nothing (CLS under ${CLS_BUDGET})`,
+    cls < CLS_BUDGET,
+    `CLS ${cls.toFixed(4)}`,
+  );
 }
 
 /** Under 4x CPU throttling, each press of a flow's Start, Next and Back is handled within the budget. */
 async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light", systemPath(FLOWED));
   await page.evaluate(() => {
-    /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (window).__events = [];
+    /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (
+      window
+    ).__events = [];
     new PerformanceObserver((list) => {
-      for (const e of /** @type {Array<PerformanceEventTiming & { interactionId?: number }>} */ (list.getEntries())) {
-        if (e.interactionId) /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (window).__events?.push({ duration: e.duration, work: e.processingEnd - e.startTime });
+      for (const e of /** @type {Array<PerformanceEventTiming & { interactionId?: number }>} */ (
+        list.getEntries()
+      )) {
+        if (e.interactionId)
+          /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (
+            window
+          ).__events?.push({ duration: e.duration, work: e.processingEnd - e.startTime });
       }
-    }).observe(/** @type {PerformanceObserverInit} */ ({ type: "event", durationThreshold: 16, buffered: true }));
+    }).observe(
+      /** @type {PerformanceObserverInit} */ ({
+        type: "event",
+        durationThreshold: 16,
+        buffered: true,
+      }),
+    );
   });
   await page.emulateCPUThrottling(4);
   try {
@@ -236,7 +344,11 @@ async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
   } finally {
     await page.emulateCPUThrottling(null);
   }
-  const events = await page.evaluate(() => /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (window).__events ?? []);
+  const events = await page.evaluate(
+    () =>
+      /** @type {Window & { __events?: Array<{ duration: number, work: number }> }} */ (window)
+        .__events ?? [],
+  );
   const worstWork = events.reduce((max, e) => Math.max(max, e.work), 0);
   const worstWhole = events.reduce((max, e) => Math.max(max, e.duration), 0);
   ok(
@@ -244,7 +356,9 @@ async function inputResponse(/** @type {import("puppeteer").Page} */ page) {
     events.length > 0 && worstWork < INPUT_BUDGET_MS,
     `slowest input delay plus handling ${Math.round(worstWork)}ms over ${events.length} interaction entries (Event Timing, a lab proxy for INP)`,
   );
-  report(`/systems/<id> under 4x CPU throttling: slowest interaction to its next paint ${Math.round(worstWhole)}ms (the paint in a GPU-less headless runner is software rendering)`);
+  report(
+    `/systems/<id> under 4x CPU throttling: slowest interaction to its next paint ${Math.round(worstWhole)}ms (the paint in a GPU-less headless runner is software rendering)`,
+  );
 }
 
 /** Color and both themes: axe finds nothing on either view of the network, lit or at rest, or on the core's and a shared system's page. */
@@ -255,8 +369,13 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
     await page.addScriptTag({ content: axeSource });
     return page.evaluate(async () => {
       // @ts-expect-error axe is the injected global
-      const result = await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] } });
-      return result.violations.map((/** @type {{ id: string, nodes: Array<{ target: string[] }> }} */ v) => `${v.id} at ${v.nodes[0]?.target.join(" ")}`);
+      const result = await window.axe.run(document, {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
+      });
+      return result.violations.map(
+        (/** @type {{ id: string, nodes: Array<{ target: string[] }> }} */ v) =>
+          `${v.id} at ${v.nodes[0]?.target.join(" ")}`,
+      );
     });
   };
   for (const theme of /** @type {const} */ (["light", "dark"])) {
@@ -273,7 +392,11 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
       await open(page, theme, systemPath(id));
       found.push(...(await scan()).map((v) => `${id}: ${v}`));
     }
-    ok(`/systems in the ${theme} theme: axe finds nothing on either view of the network, at rest or lit, or on a system's page`, found.length === 0, found.join("; "));
+    ok(
+      `/systems in the ${theme} theme: axe finds nothing on either view of the network, at rest or lit, or on a system's page`,
+      found.length === 0,
+      found.join("; "),
+    );
   }
 }
 
@@ -281,24 +404,49 @@ async function axeBothThemes(/** @type {import("puppeteer").Page} */ page) {
 async function scriptBudget(/** @type {import("puppeteer").Page} */ page) {
   await open(page, "light");
   // The island as the page loaded it, and the shared chunks it imports: what a reader downloads for the map.
-  const src = await page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name).find((n) => /\/islands\/system-map-[^/]*\.js$/.test(n)));
+  const src = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .map((e) => e.name)
+      .find((n) => /\/islands\/system-map-[^/]*\.js$/.test(n)),
+  );
   const fetchCode = async (/** @type {string} */ url) => {
     const response = await fetch(url);
     return response.ok ? { code: Buffer.from(await response.arrayBuffer()) } : null;
   };
   const island = src ? await fetchCode(src) : null;
-  const chunks = island ? [...island.code.toString("utf8").matchAll(/from"(\.\/chunks\/[^"]+)"/g)].map((m) => new URL(m[1], src).href) : [];
+  const chunks = island
+    ? [...island.code.toString("utf8").matchAll(/from"(\.\/chunks\/[^"]+)"/g)].map(
+        (m) => new URL(m[1], src).href,
+      )
+    : [];
   const files = island ? [island, ...(await Promise.all(chunks.map(fetchCode)))] : [];
-  const bytes = files.length > 0 && files.every(Boolean) ? files.reduce((n, f) => n + gzipSync(/** @type {{ code: Buffer }} */ (f).code, { level: 9 }).length, 0) : -1;
-  ok(`/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`, bytes > 0 && bytes < SCRIPT_BUDGET_GZIP, `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`);
+  const bytes =
+    files.length > 0 && files.every(Boolean)
+      ? files.reduce(
+          (n, f) => n + gzipSync(/** @type {{ code: Buffer }} */ (f).code, { level: 9 }).length,
+          0,
+        )
+      : -1;
+  ok(
+    `/systems: the map's script is under ${SCRIPT_BUDGET_GZIP / 1024} KB gzip`,
+    bytes > 0 && bytes < SCRIPT_BUDGET_GZIP,
+    `${src ?? "no system-map module on the page"}: ${bytes} bytes gzip`,
+  );
 }
 
 /** Deep links both ways: each system's page links to the same system in the Capsid explorer, as served. */
 async function explorerLinks() {
   const missing = [];
   for (const s of MODEL.systems) {
-    const res = await fetch(`${BASE}${systemPath(s.id)}`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    const res = await fetch(`${BASE}${systemPath(s.id)}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!res.ok || !(await res.text()).includes(`href="${explorerUrl(s.id)}"`)) missing.push(s.id);
   }
-  ok("/systems/<id> links to the same system in the Capsid explorer", missing.length === 0, missing.length ? `no link on ${missing.join(", ")}` : `${IDS.length} links`);
+  ok(
+    "/systems/<id> links to the same system in the Capsid explorer",
+    missing.length === 0,
+    missing.length ? `no link on ${missing.join(", ")}` : `${IDS.length} links`,
+  );
 }

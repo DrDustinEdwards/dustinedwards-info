@@ -84,7 +84,8 @@ export function contentSecurityPolicy(pathname, adminNonce) {
   // Every /media response, whatever its type: stored bytes are never a page of this site, so they get UPLOAD_HEADERS'
   // sandboxed default-src 'none', which stops an SVG or an HTML body from running as the site. TRAP: `sandbox` breaks
   // Chrome's built-in PDF viewer; no PDF is served from /media, and one must never be.
-  if (isMediaPath(pathname)) return /** @type {string} */ (UPLOAD_HEADERS["Content-Security-Policy"]);
+  if (isMediaPath(pathname))
+    return /** @type {string} */ (UPLOAD_HEADERS["Content-Security-Policy"]);
   return buildContentSecurityPolicy(pagePolicy(adminNonce)).value;
 }
 
@@ -99,7 +100,8 @@ export function contentSecurityPolicy(pathname, adminNonce) {
  */
 export function stagedPolicy(pathname, adminNonce) {
   if (isMediaPath(pathname)) return undefined;
-  return buildStagedPolicy(pagePolicy(adminNonce), { trustedTypes: true, denyUnlisted: true }).value;
+  return buildStagedPolicy(pagePolicy(adminNonce), { trustedTypes: true, denyUnlisted: true })
+    .value;
 }
 
 /**

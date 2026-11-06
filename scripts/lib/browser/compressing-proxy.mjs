@@ -7,7 +7,8 @@ import { createServer, request } from "node:http";
 import { constants, createBrotliCompress } from "node:zlib";
 
 /** Text responses only; fonts and images are compressed already. */
-const COMPRESSIBLE = /^(text\/|application\/(json|javascript|xml|ld\+json|manifest\+json)|image\/svg\+xml)/;
+const COMPRESSIBLE =
+  /^(text\/|application\/(json|javascript|xml|ld\+json|manifest\+json)|image\/svg\+xml)/;
 /** Cloudflare's default brotli level for responses it compresses on the fly. */
 const BROTLI_QUALITY = 4;
 
@@ -21,7 +22,13 @@ export async function startCompressingProxy(target, port) {
   const upstream = new URL(target);
   const server = createServer((req, res) => {
     const forward = request(
-      { hostname: upstream.hostname, port: upstream.port, path: req.url, method: req.method, headers: { ...req.headers, host: upstream.host, "accept-encoding": "identity" } },
+      {
+        hostname: upstream.hostname,
+        port: upstream.port,
+        path: req.url,
+        method: req.method,
+        headers: { ...req.headers, host: upstream.host, "accept-encoding": "identity" },
+      },
       (up) => {
         const type = String(up.headers["content-type"] ?? "");
         const wantsBrotli = /\bbr\b/.test(String(req.headers["accept-encoding"] ?? ""));
@@ -33,7 +40,9 @@ export async function startCompressingProxy(target, port) {
         const headers = { ...up.headers, "content-encoding": "br", vary: "accept-encoding" };
         delete headers["content-length"];
         res.writeHead(up.statusCode ?? 502, headers);
-        up.pipe(createBrotliCompress({ params: { [constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY } })).pipe(res);
+        up.pipe(
+          createBrotliCompress({ params: { [constants.BROTLI_PARAM_QUALITY]: BROTLI_QUALITY } }),
+        ).pipe(res);
       },
     );
     forward.on("error", (error) => res.destroy(error));

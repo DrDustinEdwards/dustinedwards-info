@@ -89,17 +89,23 @@ async function main() {
   // Every cohort file through the roster validator, the code the Carrel save runs (docs/ROSTER.md); it throws
   // on the first file that does not compile, which main's catch reports.
   const roster = await buildRoster();
-  console.log(`check:content ok. ${roster.rows.length} roster cohort(s) compile and their photographs exist.`);
+  console.log(
+    `check:content ok. ${roster.rows.length} roster cohort(s) compile and their photographs exist.`,
+  );
 
   // Every phage file through the phage validator, the code the Carrel save runs (docs/PHAGES.md); it throws on the
   // first file that does not compile, which main's catch reports. The page that draws them compiles in buildArtifact.
   const phages = await buildPhages();
-  console.log(`check:content ok. ${phages.rows.length} phage(s) compile and each paper they link exists.`);
+  console.log(
+    `check:content ok. ${phages.rows.length} phage(s) compile and each paper they link exists.`,
+  );
 
   // Every registry file through the registry validator, the code the Carrel save runs (docs/REGISTRY.md); it throws on
   // the first file that does not compile. An empty registry passes: no kind has brought records yet.
   const registry = await buildRegistry();
-  console.log(`check:content ok. ${registry.rows.length} registry item(s) compile; ${registry.gaps.length} recorded gap(s) waiting for Dustin.`);
+  console.log(
+    `check:content ok. ${registry.rows.length} registry item(s) compile; ${registry.gaps.length} recorded gap(s) waiting for Dustin.`,
+  );
 
   // Where further_reading links land is check:links, with every other internal link on the site.
 
@@ -355,8 +361,6 @@ function swatchProblems(post) {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(
-    `check:content failed. ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.error(`check:content failed. ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 });

@@ -65,7 +65,10 @@ export function askAvailable(env: Env): boolean {
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`AI Search did not answer within ${ASK_TIMEOUT_MS} ms`)), ASK_TIMEOUT_MS);
+    timer = setTimeout(
+      () => reject(new Error(`AI Search did not answer within ${ASK_TIMEOUT_MS} ms`)),
+      ASK_TIMEOUT_MS,
+    );
   });
   const call = env.AI_SEARCH.chatCompletions({
     // The last message is the retrieval query; decorating it costs the whole search.
@@ -129,10 +132,7 @@ async function parseSseAnswer(
   return answer.trim().length > 0 ? { answer, chunks } : null;
 }
 
-export function replayCachedAnswer(cached: {
-  answer: string;
-  chunks: unknown[];
-}): ReadableStream {
+export function replayCachedAnswer(cached: { answer: string; chunks: unknown[] }): ReadableStream {
   const encoder = new TextEncoder();
   return new ReadableStream({
     start(controller) {
@@ -299,7 +299,9 @@ export async function syncAskPost(
     try {
       await withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 });
     } catch (error) {
-      console.error(JSON.stringify({ alert: "ask-upload-failed-twice", key, detail: errorMessage(error) }));
+      console.error(
+        JSON.stringify({ alert: "ask-upload-failed-twice", key, detail: errorMessage(error) }),
+      );
       failed.push(key);
     }
     live.add(key);
@@ -351,7 +353,9 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
       try {
         return await askIndexStatus(env, timings);
       } catch (error) {
-        console.error(JSON.stringify({ alert: "ask-index-status-failed", detail: errorMessage(error) }));
+        console.error(
+          JSON.stringify({ alert: "ask-index-status-failed", detail: errorMessage(error) }),
+        );
         return null;
       }
     })();
@@ -392,7 +396,9 @@ export async function askDriftCount(
           late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
         )
         .catch((error) =>
-          console.error(JSON.stringify({ alert: "ask-drift-cache-write-failed", detail: errorMessage(error) })),
+          console.error(
+            JSON.stringify({ alert: "ask-drift-cache-write-failed", detail: errorMessage(error) }),
+          ),
         ),
     );
     return null;

@@ -25,12 +25,7 @@ import {
   nounOf,
   type BaseItem,
 } from "~/kb/libraries.mjs";
-import {
-  SITE,
-  SITE_ORIGIN,
-  publicHtmlHeaders,
-  siteHead,
-} from "~/lib/seo";
+import { SITE, SITE_ORIGIN, publicHtmlHeaders, siteHead } from "~/lib/seo";
 
 import type { Route } from "./+types/kb-library";
 
@@ -62,23 +57,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const base = baseAtLibrary(url.pathname);
   if (!base) throw data(null, { status: 404 });
-  const items = baseItems(
-    base,
-    await listPublishedRecordsOfProfile(env, base.profile),
-  );
+  const items = baseItems(base, await listPublishedRecordsOfProfile(env, base.profile));
   const empty = items.length === 0;
-  if (empty && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  if (empty && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const canonical = baseRedirect(base, url);
   if (canonical) throw redirect(canonical, 301);
   return { base, items, empty, search: url.search };
 }
 
 /** What the library is, in one line, from its base and its rows. */
-function lead(
-  base: NonNullable<ReturnType<typeof baseAtLibrary>>,
-  items: BaseItem[],
-) {
+function lead(base: NonNullable<ReturnType<typeof baseAtLibrary>>, items: BaseItem[]) {
   const noun = nounOf(base);
   const dates = items
     .map((p) => p.updated)
@@ -118,11 +106,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
   const { base, items, empty, search } = loaderData;
   const catalog = baseCatalog(base);
   const trail = libraryTrail(base);
-  const result = queryCatalog(
-    catalog,
-    items,
-    parseCatalogParams(catalog, search),
-  );
+  const result = queryCatalog(catalog, items, parseCatalogParams(catalog, search));
   // Prelum's page node, by its `@id`, with the list it holds.
   const collection = thing("CollectionPage", {
     "@id": `${SITE_ORIGIN}${base.library}#webpage`,
@@ -155,8 +139,8 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
       </h1>
       {empty ? (
         <p className="procedure-draft">
-          Only you can see this page: no {base.singular.toLowerCase()} is
-          published yet. It goes public with the first one.
+          Only you can see this page: no {base.singular.toLowerCase()} is published yet. It goes
+          public with the first one.
         </p>
       ) : null}
       <p className="library-counts">{lead(base, items)}</p>

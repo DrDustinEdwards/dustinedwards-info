@@ -56,7 +56,10 @@ await test("a post that becomes visible in the past IS included", () => {
     post({ slug: "just-live", publishAt: new Date(Date.now() - 1000).toISOString() }),
   ];
   const out = withRelated(corpus).find((p) => p.slug === "anchor");
-  assert.deepEqual(out.related.map((r) => r.slug), ["just-live"]);
+  assert.deepEqual(
+    out.related.map((r) => r.slug),
+    ["just-live"],
+  );
 });
 
 await test("a post with NO publish date is treated as published, not as hidden", () => {
@@ -64,5 +67,8 @@ await test("a post with NO publish date is treated as published, not as hidden",
    * post that never set one. */
   const corpus = [post({ slug: "anchor" }), post({ slug: "dateless", publishAt: null })];
   const out = withRelated(corpus).find((p) => p.slug === "anchor");
-  assert.deepEqual(out.related.map((r) => r.slug), ["dateless"]);
+  assert.deepEqual(
+    out.related.map((r) => r.slug),
+    ["dateless"],
+  );
 });

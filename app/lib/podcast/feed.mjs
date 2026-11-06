@@ -47,7 +47,9 @@ function textOf(xml, tag) {
   const match = xml.match(new RegExp(`<${escaped}(?:\\s[^>]*)?>([\\s\\S]*?)</${escaped}>`));
   if (!match) return "";
   const raw = (match[1] ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-  return decodeFeedEntities(raw.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return decodeFeedEntities(raw.replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** @param {string} xml @param {string} tag @param {string} attr */

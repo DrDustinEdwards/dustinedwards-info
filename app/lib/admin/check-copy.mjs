@@ -139,7 +139,11 @@ export function humanCheck(check) {
   if (!copy) {
     // A check with no words yet still reads as words: "registry-drift" becomes "Registry drift".
     const words = check.name.replace(/-/g, " ");
-    return { name: words.charAt(0).toUpperCase() + words.slice(1), finding: check.detail, repair: null };
+    return {
+      name: words.charAt(0).toUpperCase() + words.slice(1),
+      finding: check.detail,
+      repair: null,
+    };
   }
   if (check.ok) {
     return { name: copy.name, finding: copy.passing, repair: null };

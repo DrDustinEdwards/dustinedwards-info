@@ -24,8 +24,10 @@ export const CI_EXCLUDED = {
   "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
   /* Needs gitignored local D1 content. Kept off ship: a slow preview boot on a loaded machine would
      fail a ship for a reason that is not the site. */
-  "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
-  "check:systems-map": "boots a preview server and a browser, ruled off the clean checkout with check:browser (2026-09-14); .github/workflows/systems-map.yml runs it on each pull request that touches the map.",
+  "check:browser":
+    "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
+  "check:systems-map":
+    "boots a preview server and a browser, ruled off the clean checkout with check:browser (2026-09-14); .github/workflows/systems-map.yml runs it on each pull request that touches the map.",
 };
 
 /** @type {Record<string, "offline" | "network" | undefined>} */
@@ -80,7 +82,10 @@ const ci = process.argv.includes("--ci");
  * classifyEnvironmentFailure below exists to name.
  */
 const jobsArg = process.argv.indexOf("--jobs");
-const JOBS = Math.max(1, jobsArg >= 0 ? Number(process.argv[jobsArg + 1]) || 1 : ci ? availableParallelism() : 1);
+const JOBS = Math.max(
+  1,
+  jobsArg >= 0 ? Number(process.argv[jobsArg + 1]) || 1 : ci ? availableParallelism() : 1,
+);
 
 /* The slow gates start first, so the short ones fill the cores beside them instead of a slow one starting last. An
    order, not a list of gates: a gate missing here still runs, after these. */
@@ -150,7 +155,11 @@ function runGateAsync(name, args) {
     const err = [];
     /** @type {Error | undefined} */
     let error;
-    const child = spawn(gateCommand(name, args), { cwd: root, shell: true, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(gateCommand(name, args), {
+      cwd: root,
+      shell: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     running.add(child);
     child.stdout.on("data", (chunk) => out.push(chunk));
     child.stderr.on("data", (chunk) => err.push(chunk));
@@ -374,7 +383,8 @@ function runSelected(selected) {
 
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
-  if (JOBS > 1) return runConcurrently(selected).then((done) => ({ results: done, sampler, cleanUp }));
+  if (JOBS > 1)
+    return runConcurrently(selected).then((done) => ({ results: done, sampler, cleanUp }));
   for (const name of selected) {
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
@@ -404,8 +414,13 @@ function runSelected(selected) {
  * @param {string[]} selected
  */
 async function runConcurrently(selected) {
-  const queue = [...SLOW_FIRST.filter((name) => selected.includes(name)), ...selected.filter((name) => !SLOW_FIRST.includes(name))];
-  console.log(`  ${JOBS} at a time (--jobs, or the runner's cores under --ci); each gate's line prints when it finishes\n`);
+  const queue = [
+    ...SLOW_FIRST.filter((name) => selected.includes(name)),
+    ...selected.filter((name) => !SLOW_FIRST.includes(name)),
+  ];
+  console.log(
+    `  ${JOBS} at a time (--jobs, or the runner's cores under --ci); each gate's line prints when it finishes\n`,
+  );
   /** @type {Map<string, ReturnType<typeof runGate>>} */
   const done = new Map();
   const worker = async () => {
@@ -417,7 +432,11 @@ async function runConcurrently(selected) {
       const seconds = (result.ms / 1000).toFixed(1);
       console.log(
         `  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... ` +
-          (result.errored ? `ERRORED (${seconds}s) ${result.reason}` : result.ok ? `ok (${seconds}s)` : `FAILED (${seconds}s)`),
+          (result.errored
+            ? `ERRORED (${seconds}s) ${result.reason}`
+            : result.ok
+              ? `ok (${seconds}s)`
+              : `FAILED (${seconds}s)`),
       );
     }
   };
@@ -530,11 +549,7 @@ async function main() {
   buildPrereqs();
 
   const offline = gates.filter((name) => TIERS[name] === "offline");
-  const selected = all
-    ? gates
-    : ci
-      ? offline.filter((name) => !CI_EXCLUDED[name])
-      : offline;
+  const selected = all ? gates : ci ? offline.filter((name) => !CI_EXCLUDED[name]) : offline;
   const skipped = gates.filter((name) => !selected.includes(name));
 
   if (ci) {
@@ -570,8 +585,7 @@ async function main() {
    */
   cleanUp();
   /* Two is the machine, one is the repo; a real failure outranks an environment event. */
-  process.exitCode =
-    failed.length > 0 ? 1 : environment ? 2 : errored.length > 0 ? 1 : 0;
+  process.exitCode = failed.length > 0 ? 1 : environment ? 2 : errored.length > 0 ? 1 : 0;
 }
 
 /*
@@ -580,7 +594,9 @@ async function main() {
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((error) => {
-    console.error(`\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`);
+    console.error(
+      `\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`,
+    );
     process.exit(1);
   });
 }

@@ -33,7 +33,8 @@ export async function run({ browser }) {
     const candidates = new Set();
     client.on("Preload.ruleSetUpdated", (event) => {
       ruleSets += 1;
-      if (event.ruleSet?.errorType) errors.push(`${event.ruleSet.errorType}: ${event.ruleSet.errorMessage ?? ""}`);
+      if (event.ruleSet?.errorType)
+        errors.push(`${event.ruleSet.errorType}: ${event.ruleSet.errorMessage ?? ""}`);
     });
     client.on("Preload.preloadingAttemptSourcesUpdated", (event) => {
       for (const source of event.preloadingAttemptSources ?? []) {
@@ -48,12 +49,24 @@ export async function run({ browser }) {
     /* The candidate list is computed after the rules file arrives, so it needs a window; a zero read too early is not a zero. */
     await new Promise((r) => setTimeout(r, 1200));
     const hrefs = await probe.evaluate(() =>
-      [...new Set([...document.querySelectorAll("a[href]")].map((a) => /** @type {HTMLAnchorElement} */ (a).href))]
+      [
+        ...new Set(
+          [...document.querySelectorAll("a[href]")].map(
+            (a) => /** @type {HTMLAnchorElement} */ (a).href,
+          ),
+        ),
+      ]
         .filter((href) => href.startsWith(location.origin))
         .map((href) => href.slice(location.origin.length)),
     );
     await context.close();
-    seen.set(path, { header, accepted: ruleSets > 0 && errors.length === 0, errors, candidates: [...candidates], hrefs });
+    seen.set(path, {
+      header,
+      accepted: ruleSets > 0 && errors.length === 0,
+      errors,
+      candidates: [...candidates],
+      hrefs,
+    });
   }
 
   for (const path of PAGES) {

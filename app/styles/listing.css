@@ -81,8 +81,6 @@
   appearance: none;
 }
 
-
-
 .list-search button {
   min-block-size: 2.75rem;
   border: var(--line-w) solid var(--text);
@@ -192,7 +190,6 @@
 .list-feeds a {
   color: var(--brand);
 }
-
 
 .pager a:hover {
   background: var(--brand);

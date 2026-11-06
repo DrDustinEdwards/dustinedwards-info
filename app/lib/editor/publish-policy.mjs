@@ -95,9 +95,7 @@ export function forceFirstPublished(raw, value) {
   const block = match[1];
   if (block === undefined) return raw;
   const rest = raw.slice(match[0].length);
-  const kept = block
-    .split("\n")
-    .filter((line) => !/^first_published\s*:/.test(line));
+  const kept = block.split("\n").filter((line) => !/^first_published\s*:/.test(line));
 
   if (value) kept.push(`first_published: ${value}`);
 
@@ -206,8 +204,7 @@ export function decide(options) {
     );
   }
 
-  const firstPublished =
-    priorFirstPublished ?? (wantsPublished ? today() : null);
+  const firstPublished = priorFirstPublished ?? (wantsPublished ? today() : null);
 
   return {
     raw: forceFirstPublished(options.incomingRaw, firstPublished),
@@ -232,7 +229,10 @@ export function decide(options) {
 export function decideFileWrite({ actor, noun, incomingDraft, priorRaw, isDraft }) {
   const may = WRITE_CAPABILITIES[actor.kind];
   if (!may.write) {
-    throw new PolicyError(`Refused: this credential is READ ONLY and may not save a ${noun}.`, SMOKE_READ_ONLY_POLICY);
+    throw new PolicyError(
+      `Refused: this credential is READ ONLY and may not save a ${noun}.`,
+      SMOKE_READ_ONLY_POLICY,
+    );
   }
   const everPublished = priorRaw !== null && !isDraft(priorRaw);
   if (!may.firstPublish && !incomingDraft && !everPublished) {

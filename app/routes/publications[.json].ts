@@ -13,6 +13,10 @@ import type { Route } from "./+types/publications[.json]";
 export async function loader({ context }: Route.LoaderArgs) {
   return new Response(toCslJson(await listPublishedCslRecords(getEnv(context))), {
     /* The type Crossref content negotiation uses; plain `application/json` says nothing about meaning. */
-    headers: exportHeaders("application/vnd.citationstyles.csl+json", SHARED_CACHE_CONTROL, "publications.json"),
+    headers: exportHeaders(
+      "application/vnd.citationstyles.csl+json",
+      SHARED_CACHE_CONTROL,
+      "publications.json",
+    ),
   });
 }

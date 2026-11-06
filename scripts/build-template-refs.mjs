@@ -75,9 +75,10 @@ async function scanTemplateRefs() {
     const raw = await readFile(path.join(ROOT, file), "utf8");
     // Comments go first: a doc comment naming an asset is prose, not a placement. JSON is passed through,
     // because a tokenizer would treat a `//` inside a URL string as a comment.
-    const text = file.endsWith(".json") || file.endsWith(".webmanifest") || file.endsWith(".md")
-      ? raw
-      : stripComments(raw, file.endsWith(".css"));
+    const text =
+      file.endsWith(".json") || file.endsWith(".webmanifest") || file.endsWith(".md")
+        ? raw
+        : stripComments(raw, file.endsWith(".css"));
     const assets = referencesIn(text, assetPaths);
     if (assets.length > 0) scanned.push({ file, assets });
   }
@@ -91,7 +92,11 @@ async function scanTemplateRefs() {
 
 if (isMain(import.meta.url)) {
   const result = await scanTemplateRefs();
-  await writeFile(path.join(ROOT, TEMPLATE_REFS_PATH), `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  await writeFile(
+    path.join(ROOT, TEMPLATE_REFS_PATH),
+    `${JSON.stringify(result, null, 2)}\n`,
+    "utf8",
+  );
   console.log(
     `build:template-refs ok. ${result.generated} asset(s) referenced by repository code, ` +
       `from ${result.filesRead} source file(s) against ${result.assetsConsidered} known asset(s).`,

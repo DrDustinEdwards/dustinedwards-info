@@ -26,9 +26,15 @@ export function newestFirst(posts, tie) {
     const seen = latest.get(groupOf(p));
     if (seen === undefined || tie(p) > seen) latest.set(groupOf(p), tie(p));
   }
-  const key = (/** @type {P} */ p) => (p.series === null ? tie(p) : /** @type {string | number} */ (latest.get(groupOf(p))));
-  const desc = (/** @type {string | number} */ a, /** @type {string | number} */ b) => (a === b ? 0 : a < b ? 1 : -1);
+  const key = (/** @type {P} */ p) =>
+    p.series === null ? tie(p) : /** @type {string | number} */ (latest.get(groupOf(p)));
+  const desc = (/** @type {string | number} */ a, /** @type {string | number} */ b) =>
+    a === b ? 0 : a < b ? 1 : -1;
   return [...posts].sort(
-    (a, b) => desc(a.publishAt, b.publishAt) || desc(key(a), key(b)) || desc(a.part ?? 0, b.part ?? 0) || desc(tie(a), tie(b)),
+    (a, b) =>
+      desc(a.publishAt, b.publishAt) ||
+      desc(key(a), key(b)) ||
+      desc(a.part ?? 0, b.part ?? 0) ||
+      desc(tie(a), tie(b)),
   );
 }

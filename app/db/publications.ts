@@ -41,7 +41,10 @@ export async function getPublishedPublication(env: Env, slug: string): Promise<P
 }
 
 /** The twin, published rows only: a draft's twin answers 404 like its page. */
-export async function getPublishedPublicationMarkdown(env: Env, slug: string): Promise<string | null> {
+export async function getPublishedPublicationMarkdown(
+  env: Env,
+  slug: string,
+): Promise<string | null> {
   const row = (
     await getDb(env)
       .select({ markdown: publications.markdown })
@@ -53,7 +56,9 @@ export async function getPublishedPublicationMarkdown(env: Env, slug: string): P
 }
 
 /** Each published twin by slug, for the Ask index to upload. */
-export async function listPublishedPublicationTwins(env: Env): Promise<Array<{ slug: string; markdown: string }>> {
+export async function listPublishedPublicationTwins(
+  env: Env,
+): Promise<Array<{ slug: string; markdown: string }>> {
   return getDb(env)
     .select({ slug: publications.slug, markdown: publications.markdown })
     .from(publications)

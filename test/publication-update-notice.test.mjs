@@ -74,10 +74,7 @@ await test("a malformed notice is refused, and the reason names the field", () =
     /doi/,
   );
   assert.match(updateNoticeProblem({ type: "withdrawn", doi: RETRACTED }), /type/);
-  assert.match(
-    updateNoticeProblem({ type: "retraction", doi: RETRACTED, date: "2010" }),
-    /date/,
-  );
+  assert.match(updateNoticeProblem({ type: "retraction", doi: RETRACTED, date: "2010" }), /date/);
   assert.match(updateNoticeProblem("retracted"), /not an object/);
 });
 

@@ -66,7 +66,11 @@ const COMPLEMENT = /** @type {Record<string, string>} */ ({ A: "T", C: "G", G: "
 
 /** @param {string} sequence */
 function reverseComplement(sequence) {
-  return sequence.split("").reverse().map((base) => COMPLEMENT[base]).join("");
+  return sequence
+    .split("")
+    .reverse()
+    .map((base) => COMPLEMENT[base])
+    .join("");
 }
 
 /**
@@ -105,7 +109,10 @@ export function primerTmRounded(sequence) {
 }
 
 /** NEB’s Tm calculator, which gives the annealing temperature for a particular polymerase. */
-export const NEB_TM_CALCULATOR = Object.freeze({ url: "https://tmcalculator.neb.com/", name: "NEB Tm Calculator" });
+export const NEB_TM_CALCULATOR = Object.freeze({
+  url: "https://tmcalculator.neb.com/",
+  name: "NEB Tm Calculator",
+});
 
 /**
  * The sentence every page that shows a Tm carries: what the number is (an estimate, for comparing primers), what was
