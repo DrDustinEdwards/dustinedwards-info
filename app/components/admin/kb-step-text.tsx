@@ -87,6 +87,7 @@ function ChipPopover({
     if (name.trim()) onDone(draft);
   };
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the dialog closes on Escape and submits its input on Enter, as a dialog should
     <div
       ref={box}
       className="kb-popover"
@@ -247,6 +248,7 @@ export function StepText({
         id={id}
         className="cap-input kb-chiptext"
         role="textbox"
+        tabIndex={0}
         aria-label={label}
         aria-describedby={helpId}
         contentEditable

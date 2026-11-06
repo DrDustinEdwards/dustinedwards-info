@@ -8,6 +8,12 @@ export default defineConfig({
     "typescript/no-non-null-assertion": "off",
     // off in devkit 0.24.0
     "react/only-export-components": "off",
+    // off in devkit 0.24.0
+    "jsx-a11y/prefer-tag-over-role": "off",
+    // off in devkit 0.24.0
+    "jsx-a11y/control-has-associated-label": "off",
+    // off in devkit 0.24.0
+    "jsx-a11y/media-has-caption": "off",
   },
   ignorePatterns: [
     // base's own, listed here until devkit 0.24.0 exports them: Oxlint does not carry ignorePatterns through extends.

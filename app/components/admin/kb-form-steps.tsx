@@ -89,6 +89,7 @@ function StepCard({
   const rawLines = step.lines.filter((line) => "raw" in line).map((line) => (line as { raw: string }).raw);
   const label = `Step ${number}`;
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a step card is focused for Alt+Up and Alt+Down, the keyboard twin of dragging it (WCAG 2.5.7)
     <li
       id={anchor}
       className="kb-step"
