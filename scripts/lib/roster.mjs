@@ -1,7 +1,7 @@
 // Every roster file compiled the one way the Carrel adapter's roster save compiles it
 // (app/lib/roster/compile.mjs), for build:content, sync:content, the gates and the tests.
 
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,15 +12,13 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 /** The D1 rows sync:content writes. */
 export const ROSTER_ARTIFACT_PATH = path.join("content", "generated", "roster.json");
 
-/** The repository's photographs, read from public/ as a clone has them. */
-export const repoHost = {
-  /** @param {string} src site-absolute, `/phage-hunters/<file>.webp` */
-  async photo(src) {
-    const info = await stat(path.join(ROOT, "public", src.replace(/^\//, ""))).catch((error) => {
-      if (error?.code === "ENOENT") return null;
-      throw error;
-    });
-    return info !== null && info.isFile();
+/**
+ * The build cannot see the media bucket, so it checks the photograph's address and size (the validator does) and
+ * trusts it exists; the save (app/lib/roster/save.server.ts) and the roster-drift check read the bucket.
+ */
+const repoHost = {
+  async photo() {
+    return true;
   },
 };
 

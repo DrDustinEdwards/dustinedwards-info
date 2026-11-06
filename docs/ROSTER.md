@@ -43,19 +43,21 @@ accepts and the page draws. It refuses:
   no contact detail, location or other personal data can enter the repository or D1;
 - a name that is not a plain, single-line string, one that repeats within its cohort, or one longer than 80
   characters;
-- a photograph that is not a `.webp` under `/phage-hunters/`, one that is not in the repository, one with no alt
-  text, or a width or height that is not a positive integer;
+- a photograph that is not a `.webp` media library address (`/media/<key>`), one the library does not hold (the
+  save checks the bucket; the build cannot), one whose width or height disagrees with the size in its address,
+  one with no alt text, or a width or height that is not a positive integer;
 - a year that is not the file's name, a body, and a wide dash.
 
 The set is judged too: it cannot be empty, and cohorts list newest first.
 
 ## Photographs
 
-The photographs stay where they were, static assets in `public/phage-hunters/`, referenced by path. A save
-checks that the deploy serves the path (through the assets binding, like a paper's PDF) and
-never uploads or moves anything. Each cohort file names its photograph, so the media library reads
-`content/roster` as a source of references (`SOURCE_DIRECTORIES`, `app/lib/media/template-refs.mjs`) and
-`content/generated/template-refs.json` records them.
+The photographs are media library files, like every other picture on the site (2026-11-06; they were static files in
+`public/phage-hunters/` before, which the library never listed). A new cohort's photograph is uploaded to the
+library first (Carrel's media library, with its alt text), and its `/media/<key>` address goes in the cohort file. A
+save checks the object is in the bucket and never uploads anything itself. Each cohort file names its photograph, so
+the media library reads `content/roster` as a source of references (`SOURCE_DIRECTORIES`,
+`app/lib/media/template-refs.mjs`) and `content/generated/template-refs.json` records them.
 
 ## Where it is drawn, and what a save purges
 

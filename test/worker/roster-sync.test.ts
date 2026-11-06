@@ -26,7 +26,7 @@ const operator = { kind: "operator", id: "test" } as const;
 const [CURRENT, EARLIER] = SYNTHETIC_COHORTS;
 const CURRENT_SLUG = String(CURRENT.year);
 const EARLIER_SLUG = String(EARLIER.year);
-const PHOTO_FILE = `public${CURRENT.photo.src}`;
+const PHOTO_KEY = CURRENT.photo.src.slice("/media/".length);
 
 const rowFor = (slug: string) =>
   env.DB.prepare("SELECT slug, year, source_blob_sha FROM roster WHERE slug = ?1")
@@ -43,7 +43,8 @@ beforeEach(async () => {
   await env.DB.prepare("DELETE FROM roster").run();
   current = await cohortFile(CURRENT);
   earlier = await cohortFile(EARLIER);
-  gh = await stubSources({ [rosterPath(CURRENT_SLUG)]: current, [rosterPath(EARLIER_SLUG)]: earlier, [PHOTO_FILE]: "x" });
+  gh = await stubSources({ [rosterPath(CURRENT_SLUG)]: current, [rosterPath(EARLIER_SLUG)]: earlier });
+  await env.MEDIA.put(PHOTO_KEY, "x");
   purge.mockClear();
 });
 

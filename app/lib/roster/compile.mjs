@@ -4,11 +4,12 @@
 // Node scripts import the same module.
 //
 // The shape is the one app/data/phage-hunters.ts had and no wider: a year, a group photo that is a path
-// under /phage-hunters/ with its measured size and its alt text, and the names. The validator REFUSES any
+// in the media library (/media/<key>) with its measured size and its alt text, and the names. The validator REFUSES any
 // other field, so nothing a visitor cannot already see on the roster page can enter the repository or D1.
 
 import matter from "gray-matter";
 
+import { dimensionsFromKey } from "../media/classify.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
 
 export const ROSTER_DIR = "content/roster";
@@ -27,12 +28,9 @@ export function rosterPath(/** @type {string} */ slug) {
 export const ROSTER_PAGE_PATH = "/teaching/phage-discovery";
 export const ROSTER_ANCHOR = "roster";
 
-/** The directory the cohort photographs are served from. They stay static assets, referenced by path. */
-export const ROSTER_PHOTO_DIR = "/phage-hunters/";
-
 const FIELDS = ["year", "photo", "researchers"];
 const PHOTO_FIELDS = ["src", "width", "height", "alt"];
-const PHOTO_SRC = /^\/phage-hunters\/[A-Za-z0-9._-]+\.webp$/;
+const PHOTO_SRC = /^\/media\/[A-Za-z0-9._-]+\.webp$/;
 const NAME_MAX = 80;
 const ALT_MAX = 200;
 
@@ -83,13 +81,17 @@ async function photoErrors(photo, host) {
     if (!PHOTO_FIELDS.includes(key)) errors.push(`photo.${key} is not a roster field; a photo carries ${PHOTO_FIELDS.join(", ")} and nothing else`);
   }
   const { src, width, height, alt } = photo;
-  if (typeof src !== "string" || !PHOTO_SRC.test(src)) {
-    errors.push(`photo.src is ${JSON.stringify(src)}; it is a .webp path under ${ROSTER_PHOTO_DIR}, such as ${ROSTER_PHOTO_DIR}example.webp`);
+  const keyed = typeof src === "string" && PHOTO_SRC.test(src) ? dimensionsFromKey(src) : null;
+  if (typeof src !== "string" || !keyed) {
+    errors.push(`photo.src is ${JSON.stringify(src)}; it is a .webp in the media library, such as /media/dustin-edwards-example-<digest>-1080x720.webp`);
   } else if (!(await host.photo(src))) {
-    errors.push(`photo.src ${src} is not in the repository (public${src}); the photograph is a static asset and is not uploaded here`);
+    errors.push(`photo.src ${src} is not in the media library; upload the photograph there first`);
   }
   if (!isPositiveInteger(width)) errors.push(`photo.width is ${JSON.stringify(width)}; it is the photograph's real width in pixels`);
   if (!isPositiveInteger(height)) errors.push(`photo.height is ${JSON.stringify(height)}; it is the photograph's real height in pixels`);
+  if (keyed && isPositiveInteger(width) && isPositiveInteger(height) && (keyed.width !== width || keyed.height !== height)) {
+    errors.push(`photo is ${width}x${height}, but its address says ${keyed.width}x${keyed.height}`);
+  }
   if (typeof alt !== "string" || alt.trim() === "") {
     errors.push("photo.alt is required: the photographs are content, and alt text that is empty fails WCAG");
   } else if (alt !== alt.trim() || alt.length > ALT_MAX) {

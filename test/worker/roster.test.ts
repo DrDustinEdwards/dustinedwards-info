@@ -33,7 +33,7 @@ const [CURRENT, EARLIER] = SYNTHETIC_COHORTS;
 const SLUG = String(CURRENT.year);
 const ID = `roster.${SLUG}`;
 const FILE = rosterPath(SLUG);
-const PHOTO_FILE = `public${CURRENT.photo.src}`;
+const PHOTO_KEY = CURRENT.photo.src.slice("/media/".length);
 const ADDED = "Example Person Added Through Carrel";
 
 const headersFor = (key: string) => ({
@@ -77,8 +77,8 @@ beforeEach(async () => {
   gh = await stubSources({
     [FILE]: currentFile,
     [rosterPath(String(EARLIER.year))]: await cohortFile(EARLIER),
-    [PHOTO_FILE]: "x",
   });
+  await testEnv.MEDIA.put(PHOTO_KEY, "x");
   purge.mockClear();
 });
 
@@ -182,11 +182,11 @@ describe("a save is held to what CI holds", () => {
     expect((await source(FILE))).toBe(currentFile);
   });
 
-  it("REFUSES a photograph the repository does not hold", async () => {
-    const source = await cohortFile({ ...CURRENT, photo: { ...CURRENT.photo, src: "/phage-hunters/not-there.webp" } });
+  it("REFUSES a photograph the media library does not hold", async () => {
+    const source = await cohortFile({ ...CURRENT, photo: { ...CURRENT.photo, src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp" } });
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: await versionOf(FILE), changeId: "chg-photo" });
     expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(/is not in the repository/);
+    expect(((await response.json()) as { message: string }).message).toMatch(/is not in the media library/);
     expect((await commits())).toHaveLength(0);
   });
 

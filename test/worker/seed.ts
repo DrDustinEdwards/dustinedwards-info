@@ -218,13 +218,13 @@ export async function seedDictionary(only?: readonly string[]) {
 
 /**
  * Synthetic cohorts: NO real name, ever. The year, photo path and names are placeholders, so a test of the roster
- * touches nothing a student gave. The photograph path is a real shape (a .webp under /phage-hunters/) because the
- * validator holds it to one; the stub host below answers that it exists.
+ * touches nothing a student gave. The photograph address is a real shape (a media library key, its size in it) because
+ * the validator holds it to one.
  */
 export const SYNTHETIC_COHORTS = [
   {
     year: 2031,
-    photo: { src: "/phage-hunters/synthetic-2031.webp", width: 1080, height: 720, alt: "Group photo of the 2031 Phage Discovery Program cohort" },
+    photo: { src: "/media/dustin-edwards-synthetic-0123456789abcdef-1080x720.webp", width: 1080, height: 720, alt: "Group photo of the 2031 Phage Discovery Program cohort" },
     researchers: ["Example Person One", "Example Person Two", "Example Person Three"],
   },
   {

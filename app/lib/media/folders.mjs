@@ -6,7 +6,6 @@
  * @type {Array<[string, string, string]>}
  */
 const FOLDERS = [
-  ["/phage-hunters/", "Cohort photographs", "Placed by the roster page template"],
   ["og/", "Social cards", "Generated at build time"],
   ["derived/", "Generated documents", "Rendered by the site from its own data and replaced on each change, never edited"],
   ["/diagrams/", "Diagrams", ""],

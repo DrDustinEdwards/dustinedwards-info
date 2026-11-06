@@ -84,12 +84,6 @@ export async function buildAssetManifest() {
   /** @type {Record<string, { sha: string, lqip: string }>} */
   const placeholders = {};
   const wanted = placeholderPaths(paths);
-  if (wanted.length === 0) {
-    throw new Error(
-      `walked public/ and found no content raster images, so no post can ` +
-        `carry a placeholder. That is a broken classifier, not an empty directory.`,
-    );
-  }
   // JSON.stringify writes keys in insertion order and `walkPublic` sorts, so the artifact is stable.
   for (const p of wanted) placeholders[p] = await placeholderFor(p);
 
