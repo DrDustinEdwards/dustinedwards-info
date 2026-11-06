@@ -153,8 +153,8 @@ the sort menu, the counts and the year headings all come from that declaration.
 `publication_citations` (D1, keyed by the lower-cased DOI, no expiry) holds the last count read from OpenAlex.
 A page shows it whatever its age, and refreshes a row older than seven days after the response; a failed
 refresh keeps the count and logs `citation-count-failed`. It is seeded by `sync:content` from
-`data/publications.cited-by.json` (forward only) and refreshed weekly: the watchdog's `scheduled()` calls the
-operator tool `refresh_citations` in the Sunday 03:00 UTC firing, so the site Worker needs no cron of its own.
+`data/publications.cited-by.json` (forward only) and refreshed weekly: Capsid's watcher calls the operator tool
+`refresh_citations` once a week (its `ops_sites.operator` row lists it under `weekly`).
 A partial failure is a 502 naming each DOI.
 
 ## Adding a paper

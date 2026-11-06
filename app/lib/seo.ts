@@ -113,8 +113,8 @@ export type Trail = Array<[string, string]>;
  * The feeds are root.tsx's `links`, which React Router merges onto every page, where `meta` is not.
  */
 export function siteHead({ trail, ...page }: PageHead & { trail?: Trail }) {
-  // Built inside the call, not at module level: the watchdog Worker imports this module for SITE_ORIGIN, and a
-  // top-level call would put Prelum's head builder in its bundle (.worker-size.watchdog.json).
+  // Built inside the call, not at module level: modules that need only SITE_ORIGIN import this one, and a
+  // top-level call would put Prelum's head builder in their bundle.
   return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE, suffix: SUFFIX, sections: SECTIONS })({
     ...page,
     socialTitle: page.socialTitle ?? (page.fullTitle ? undefined : `${page.title}${SUFFIX}`),
@@ -206,7 +206,7 @@ const edgeCacheControl = (freshSeconds?: number, until: Date | null = null, now?
 /** The Renderer stamps it on a shared response that names no edge lifetime of its own. */
 export const EDGE_CACHE_CONTROL = edgeCacheControl();
 
-/** Short because the colophon's site-health tile age is the watchdog's liveness. */
+/** Short because the colophon's site-health tile age is the health-snapshot job's liveness. */
 export const HEALTH_EDGE_CACHE_CONTROL = edgeCacheControl(600);
 
 /**

@@ -20,8 +20,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "worker-configuration.d.ts",
-    "../app/lib/health/repair.mjs",
-    "../app/lib/health/ask-converge.mjs"
+    "worker-configuration.d.ts"
   ]
 }

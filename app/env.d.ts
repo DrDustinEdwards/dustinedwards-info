@@ -40,6 +40,12 @@ declare global {
      * contract: absent, /lab-bench/members still records every change and says the allow list was not touched.
      */
     CAPSID_ACCESS_SYNC_KEY?: string;
+    /**
+     * Where the daily publication check mails a new DOI (app/lib/publications/notify.server.ts), through the EMAIL
+     * binding. A secret for the same reason as PRIMARY_OWNER_EMAIL; it must be a verified Email Routing destination.
+     * Optional by contract: absent, the check-publications job fails and says so.
+     */
+    ALERT_EMAIL?: string;
   }
 }
 

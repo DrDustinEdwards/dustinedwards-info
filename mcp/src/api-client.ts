@@ -11,7 +11,7 @@
  * (ruling mcp-2026-10-10, design section 6 step 4). The public operator URL was
  * one hop through the internet for a call between two Workers on one account,
  * and on the dustinedwards.info zone it would also be the Worker-to-Worker
- * fetch the watchdog measured answering Cloudflare error 1042 (2026-08-29). A
+ * same-zone fetch measured answering Cloudflare error 1042 (2026-08-29). A
  * service binding is still HTTP: the request carries the same bearer, crosses
  * the same operator authentication and the same rate limiter, and the site
  * cannot tell it from any other operator call. It is not an in-process call.

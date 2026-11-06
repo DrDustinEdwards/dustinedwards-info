@@ -308,8 +308,8 @@ for (const name of FORBIDDEN_NAMES) {
 // ---------------------------------------------------------------------------
 
 /*
- * NO APP MODULE AT ALL. The wrapper once imported the watchdog's repair plan for
- * dei_repair_drift; drift repair now runs from the site's own watchdog and Capsid
+ * NO APP MODULE AT ALL. The wrapper once imported the site's repair plan for
+ * dei_repair_drift; drift repair now runs from Capsid's watcher and Capsid
  * Admin's site repair, so nothing here is shared with the app.
  */
 const APP_IMPORTS = {};
@@ -421,7 +421,7 @@ for (const name of named) {
   check(`operator tool ${name} is one the API offers`, API_TOOLS.includes(name), "A tool the API does not offer would be a policy decision made here.");
 }
 
-// No zero-result purge: the watchdog runs it, and it is not this server's job. Post and page tools cannot
+// No zero-result purge: the site's own cron runs it, and it is not this server's job. Post and page tools cannot
 // come back: the operator API no longer offers them, which the check above enforces.
 for (const name of ["purge_zero_results"]) {
   check(`the wrapper never calls ${name}`, !named.has(name) && !toolStrings.includes(`"${name}"`), "Not this server's job.");

@@ -378,7 +378,7 @@ export const TOOLS: ToolDefinition[] = [
         "published paper's when dois is omitted, or only those named. Returns refreshed (how many counts " +
         "were replaced) and failures (doi, stage, detail for each count that could not be read). A DOI " +
         "that fails keeps the count it had; a partial failure comes back as an error carrying the same " +
-        "detail. The watchdog runs this weekly.",
+        "detail. Capsid's watcher runs this weekly.",
       inputSchema: z.strictObject({
         dois: z
           .array(z.string().min(1).max(200))
@@ -413,7 +413,7 @@ export const TOOLS: ToolDefinition[] = [
         "without the ORCID, which may be someone else's: confirm before acting), notOnOrcid (published " +
         "papers missing from the ORCID record), manuscripts (files with no DOI yet) and failures. Writes " +
         "nothing: a found paper is added through Carrel. A source that could not be read comes back as an " +
-        "error carrying the report from the sources that did. The watchdog runs this daily and mails each " +
+        "error carrying the report from the sources that did. The site's own cron runs this daily and mails each " +
         "new DOI once.",
       inputSchema: z.strictObject({}),
       // Open world: it reads ORCID and Crossref.

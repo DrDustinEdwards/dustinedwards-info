@@ -253,17 +253,12 @@
     // app/lib/health also holds checks.server.ts and snapshot.server.ts, which
     // are Worker-only and take an Env this project cannot resolve.
     "app/lib/health/snapshot.mjs",
-    // Whether a failing health run may repair itself, and what a watchdog
-    // firing DOES about it. Two callers reach this one module and that is why
-    // it is here: the watchdog Worker (tsconfig.cloudflare.json) and test/. A second copy
-    // of REPAIRABLE would be two answers to "may this fire an unattended write
-    // against production", which is the one table where a second copy is expensive.
-    "app/lib/health/repair.mjs",
-    // The Ask settle loop, which repair.mjs imports and ship's two Ask steps call: one cadence and
-    // one window for the watchdog and the deploy.
+    // The cron job list, which snapshot.mjs reads the snapshot's interval from.
+    "app/lib/cron-jobs.mjs",
+    // How every reader of /health turns its checks into rows: ship's readiness, operator-sync and the snapshot.
+    "app/lib/health/rows.mjs",
+    // The Ask settle loop, which the deploy's two Ask steps call: one cadence and one window.
     "app/lib/health/ask-converge.mjs",
-    // How every reader of /health turns its checks into rows: ship's readiness, operator-sync, the
-    // watchdog's repair plan, the snapshot and the admin MCP.
     // Imported by modules listed above, so this project must reach them too:
     // the status rule (pdf-redirect), the thrown-value reader (pipeline,
     // upload-contract), the byte and hash encodings (classify, hashes, diagram,

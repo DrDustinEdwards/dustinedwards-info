@@ -349,7 +349,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    */
   const BACKUP_PASSED_TO = new Map([
     ["app/lib/backup/d1-backup.server.ts:backupFiles", "d1-dump's files backup: it lists and reads its source and writes and deletes only in the backup bucket it is given"],
-    ["app/routes/health.ts:r2Check", "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"],
+    ["app/lib/health/response.server.ts:r2Check", "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"],
   ]);
 
   const sources = [

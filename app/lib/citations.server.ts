@@ -11,7 +11,7 @@ import { SITE_USER_AGENT } from "~/lib/site-origin.mjs";
 //
 // The counts live in D1 with no expiry (drizzle/0020_publications.sql). A row is replaced by a refresh
 // and never deleted, so a page never shows a blank for a paper that once had a count: it serves the last
-// count and refreshes behind the response. The refresh also runs weekly, from the watchdog, through the
+// count and refreshes behind the response. The refresh also runs weekly, from Capsid's watcher, through the
 // operator API's refresh_citations.
 
 /** A row older than this is refreshed after the response that reads it. The count is shown regardless. */
@@ -108,7 +108,7 @@ async function writeCitation(env: Env, doi: string, entry: CitationEntry) {
 
 /**
  * Reads each DOI from OpenAlex and replaces its row. A DOI that fails keeps the count it had, and the
- * failure is returned, so the caller (the operator tool the watchdog calls) can say which and why.
+ * failure is returned, so the caller (the operator tool Capsid's watcher calls) can say which and why.
  */
 export async function refreshCitations(
   env: Env,

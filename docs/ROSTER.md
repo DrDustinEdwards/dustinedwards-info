@@ -78,7 +78,7 @@ before the new Worker serves those two pages.
 
 A save validates, writes the source (`commitUnlessUnchanged`), checks the stored bytes against the bytes compiled,
 then writes the D1 row and purges. A failed row write never reverts the source write: the error names the revision
-and the repair. The `roster-drift` health check compares each file's blob sha with its row, the watchdog repairs through
+and the repair. The `roster-drift` health check compares each file's blob sha with its row, Capsid's watcher repairs through
 `sync_roster`, and `sync_roster` refuses an empty file set rather than delete every row. A cohort is removed with
 `node scripts/remove-source.mjs content/roster/<slug>.md --remote`; the next sync removes its row.
 

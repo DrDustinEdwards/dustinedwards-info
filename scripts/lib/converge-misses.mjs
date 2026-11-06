@@ -35,11 +35,7 @@ export function missReport(misses, sha) {
       `  Either the sync's write is not taking or something else is writing\n` +
       `  render_hash. Read the two hashes the sync named, and start at what\n` +
       `  wrote the D1 one; a re-run is not the repair.\n\n` +
-      `  A WATCHDOG miss is the one line above that is about the WATCHER rather\n` +
-      `  than the site: the previously deployed watchdog keeps firing, so the\n` +
-      `  site is still watched, by older code. Re-run the converge job, or deploy\n` +
-      `  it alone with \`npx wrangler deploy -c wrangler.watchdog.jsonc\`.\n\n` +
-      `  The watchdog reads the same index drift every fifteen minutes and\n` +
+      `  Capsid's watcher reads the same index drift every five minutes and\n` +
       `  attempts the same repair itself before it alerts; the external uptime\n` +
       `  monitors are the off-platform second opinion.`,
     `${"!".repeat(64)}\n`,

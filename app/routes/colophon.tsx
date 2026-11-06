@@ -154,7 +154,7 @@ const LIGHTS = {
 
 /**
  * Every /health check as a tile on a cockpit caution and warning panel (capsomer/manual.css .cap-annunciator), from
- * the snapshot the watchdog stores. A stale snapshot shows every tile dark, since an old light is not a reading;
+ * the snapshot the health-snapshot cron job stores. A stale snapshot shows every tile dark, since an old light is not a reading;
  * with no snapshot there is no panel, and the evidence line above says why.
  */
 function HealthPanel({ health }: { health: Route.ComponentProps["loaderData"]["health"] }) {
