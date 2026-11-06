@@ -123,8 +123,10 @@ export function siteHead({ trail, ...page }: PageHead & { trail?: Trail }) {
 }
 
 /**
- * A page whose `title` is already the whole `<title>`. `summary_large_image` always: the image falls back to the site
- * mark, and a `twitter:card` without an image renders as a bare link.
+ * The head of a page whose `title` is its own, like any other page's: it takes the site's suffix by the same width rule
+ * (`searchTitle`), except a title that already names the site (the home page, About, the CV), which says it once.
+ * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without an image renders as
+ * a bare link.
  */
 export function pageMeta(page: {
   title: string;
@@ -143,7 +145,7 @@ export function pageMeta(page: {
   trail?: Trail;
 }) {
   const { ogType, ...rest } = page;
-  return siteHead({ ...rest, type: ogType, fullTitle: true });
+  return siteHead({ ...rest, type: ogType, ...(page.title.includes(SITE.name) ? { fullTitle: true } : {}) });
 }
 
 export { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
