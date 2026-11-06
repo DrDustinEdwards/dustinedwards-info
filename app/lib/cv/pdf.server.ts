@@ -5,7 +5,7 @@
 // the fingerprint of the data it was drawn from (cvFingerprint, on the PDF's last line) and, in custom metadata,
 // that fingerprint with the print document's (cvPdfStamp), so a change to either leaves it stale. A
 // failed render never reverts a save: the save has already committed and written D1, and the stale or missing
-// object shows as the `cv-pdf-drift` health check, which the watchdog repairs through `sync_cv_pdf`.
+// object shows as the `cv-pdf-drift` health check, which Capsid's watcher repairs through `sync_cv_pdf`.
 //
 // WHY OG, NOT MEDIA. OG is the bucket for derived, regenerable objects, with no backup mirror and no site code
 // that treats it as irreplaceable. MEDIA is the irreplaceable bucket: a put there queues a backup copy and a

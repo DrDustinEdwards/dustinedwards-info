@@ -177,7 +177,7 @@ export default [
   ]),
 
   // The site's one health endpoint, in the network shape: the uptime monitor, Capsid's watcher and the colophon link
-  // read it, and so do the watchdog, ship's readiness, the admin MCP and operator-sync.
+  // read it, and so do ship's readiness, the admin MCP and operator-sync.
   route("health", "routes/health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
   route("csp-report", "routes/csp-report.ts"),

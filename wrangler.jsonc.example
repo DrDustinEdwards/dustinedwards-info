@@ -153,9 +153,17 @@
 	// threw 19 to 44 times a day for fifteen days, unseen, because this file and
 	// `wrangler.jsonc` agreed by saying nothing (FAILURES.md, "a construct the scan
 	// does not reach is not exempt"). Stated here, the live schedules have
-	// something to be compared against in both directions. The watchdog keeps its
-	// own */15 for the health poll and the windowed jobs.
+	// something to be compared against in both directions. The same firing also
+	// runs the jobs the retired watchdog Worker ran (app/lib/cron-jobs.mjs): the
+	// colophon's health snapshot every fifteen minutes, the zero-result purge at
+	// 04:00 UTC and the publication check at 06:00 UTC.
 	"triggers": { "crons": ["* * * * *"] },
+	// THE PUBLICATION CHECK'S MAIL (app/lib/publications/notify.server.ts): a new
+	// DOI is mailed once to the secret ALERT_EMAIL, from alerts@ on this zone,
+	// which has Email Routing on. No `destination_address`: the generated
+	// `SendEmail` type requires `to` anyway, so the secret is the one owner of the
+	// address. Carries no account-scoped id.
+	"send_email": [{ "name": "EMAIL" }],
 	// Static assets, so the Worker can read them through a binding. The Vite
 	// plugin supplies `directory` from the client build output; setting it here
 	// would fight that.
@@ -231,27 +239,6 @@
 	// no id, so this line is complete as written. Not restated under `previews`: a preview has no editor
 	// sign-in, and without the binding a suggestion is refused rather than billed.
 	"ai": { "binding": "AI" },
-	// The account the GraphQL Analytics API is queried against (the watchdog's
-	// error-rate read). No dataset binding: the site keeps no traffic counter of
-	// its own. Visits are Cloudflare Web Analytics, crawlers are AI Crawl Control;
-	// the per-path Analytics Engine write was removed on 2026-10-03.
-	//
-	// A VAR RATHER THAN A SECRET, deliberately. An account id is an identifier, not
-	// a credential: it is already published in the Capsid core doc and it grants
-	// nothing on its own. Putting it in `wrangler secret` would make check:secrets
-	// police a value that is not sensitive, which costs that gate its signal.
-	//
-	// A PLACEHOLDER HERE SINCE 2026-08-28, and the real value lives only in the
-	// gitignored `wrangler.jsonc`. The paragraph above is still true about what
-	// the value IS: an account id is an identifier and not a credential, and it
-	// is published in the Capsid core doc. What changed is the portfolio rule it
-	// was breaking, that account-scoped identifiers stay out of git, which the
-	// database id and the KV id in this file already followed. One file's ids
-	// being placeholders while another value in the same file is real is a rule
-	// somebody has to remember rather than a rule.
-	//
-	// The REAL id stays in the real config and nowhere tracked; nothing checks
-	// that any more, so do not paste it back.
 	// PREVIEW is empty here and "1" in `previews.vars`, so production never
 	// carries it set. workers/app.ts and routes/robots.ts read it for noindex.
 	//
@@ -272,7 +259,6 @@
 	// carries the account id (the real value lives in the gitignored wrangler.jsonc); empty, Workers AI is called
 	// directly. Not a credential: the binding authenticates itself.
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000",
 		"PREVIEW": "",
 		"ACCESS_TEAM_DOMAIN": "dustinedwards.cloudflareaccess.com",
 		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25",
@@ -358,8 +344,8 @@
 	//
 	// And the non-atomic window is the worst one this site has. During it the
 	// binding may not resolve, which means sign-in fails, /health answers
-	// 503, the watchdog wakes on that 503, and the watchdog's own repair call
-	// is metered through the same object and cannot get through either. A
+	// 503, Capsid's watcher wakes on that 503, and its repair call through the
+	// operator API is metered through the same object and cannot get through either. A
 	// cosmetic change whose failure mode is a paging storm with the repair
 	// door shut is not a change to make in the week before a DNS cutover.
 	//

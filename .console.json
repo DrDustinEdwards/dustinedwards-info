@@ -33,7 +33,6 @@
       "app/routes/webmention.ts": 3,
       "mcp/src/index.ts": 3,
       "workers/media-events.ts": 4,
-      "workers/watchdog.ts": 12,
       "workers/webmention-verify.ts": 2
     }
   }

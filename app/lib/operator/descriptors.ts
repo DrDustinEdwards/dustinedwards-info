@@ -238,7 +238,7 @@ export const TOOL_DESCRIPTORS: Readonly<
     returns:
       "refreshed (how many counts were replaced) and failures (doi, stage, detail for each count that could " +
       "not be read). A DOI that fails keeps the count it had. A partial failure is a 502 with the same " +
-      "detail, so the caller sees it. The watchdog calls this weekly.",
+      "detail, so the caller sees it. Capsid's watcher calls this weekly.",
   },
   check_publications: {
     args: {},
@@ -248,7 +248,7 @@ export const TOOL_DESCRIPTORS: Readonly<
       "sources), nameMatches (Crossref works of the last 400 days under the owner's name and on no list, to " +
       "confirm by hand), notOnOrcid (published papers missing from the ORCID record), manuscripts (files " +
       "with no DOI yet) and failures. Writes nothing. A source that could not be read is a 502 whose detail " +
-      "is the same report from the sources that answered. The watchdog calls this daily.",
+      "is the same report from the sources that answered. The site's check-publications cron job runs the same check daily.",
   },
   list_registry: {
     args: { kind: "string, optional: one registry kind, such as primer" },
@@ -268,7 +268,7 @@ export const TOOL_DESCRIPTORS: Readonly<
     args: {},
     returns:
       "purged, the number of zero-result query rows removed: every row whose last_seen is older than " +
-      "ZERO_RESULT_RETENTION_SECONDS. The watchdog calls this daily; there used to be an admin button for it.",
+      "ZERO_RESULT_RETENTION_SECONDS. The site's purge-zero-results cron job runs the same purge daily.",
     policy:
       "Takes no argument that names a row, so there is nothing to target beyond the fixed retention " +
       "cutoff: a caller cannot choose what is removed. The rows have no derivation to rebuild them from, " +
@@ -292,7 +292,7 @@ export const TOOL_DESCRIPTORS: Readonly<
       "the backup policy (the required non-derived tables are present, nothing credential-bearing is in it, " +
       "it is not empty), writes the completion marker only if the check passes, then prunes runs outside " +
       "the retention policy (14 daily, 8 weekly, 6 monthly). Returns run_id, exported_at, tables, rows, " +
-      "kept, pruned and locked (stale runs an R2 bucket lock kept). A failed check answers an error and leaves the run without its marker. The watchdog " +
-      "calls this nightly.",
+      "kept, pruned and locked (stale runs an R2 bucket lock kept). A failed check answers an error and leaves the run without its marker. The site's " +
+      "backup cron job runs the same dump nightly.",
   },
 };

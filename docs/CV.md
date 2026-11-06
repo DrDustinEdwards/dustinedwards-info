@@ -191,11 +191,11 @@ PDF is a function of them.
   read. A render that loses either compare starts over, up to three times.
 - **A failed render never undoes the save.** The source and the D1 row stand. The failure is logged as
   `{"alert":"cv-pdf-render-failed"}` and rethrown into the `waitUntil` task, the stored object is left as it was, and
-  the `cv-pdf-drift` health check (the stored fingerprint against D1's CV) goes red. The watchdog repairs it through
+  the `cv-pdf-drift` health check (the stored fingerprint against D1's CV) goes red. Capsid's watcher repairs it through
   the operator's `sync_cv_pdf`, which renders only when the stored object is not current, then reads back.
 - **What does not trigger a render.** A cited paper changed through the publication save, or a CV file changed through
-  git and `sync:content`, moves the CV's text without a CV save: `cv-pdf-drift` reports it, and `sync_cv_pdf` (the
-  watchdog, or the operator) renders it.
+  git and `sync:content`, moves the CV's text without a CV save: `cv-pdf-drift` reports it, and `sync_cv_pdf` (Capsid's
+  watcher, or the operator) renders it.
 - **The deploy converges it.** A deploy that changes the CV's text or the print document leaves the stored PDF stale until
   the deployed Worker renders it, so `cv-pdf-drift` is a DEFERRED readiness check (`scripts/lib/readiness.mjs`) and
   `scripts/converge.mjs` calls `sync_cv_pdf` after the D1 sync and before the media converge (a first render adds a

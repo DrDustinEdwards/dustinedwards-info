@@ -337,7 +337,7 @@ async function getProcedureTool(env: OperatorEnv, args: Record<string, unknown>)
 }
 
 /**
- * The weekly refresh the watchdog calls. Every failure is returned, never swallowed: a partial refresh is a
+ * The weekly refresh Capsid's watcher calls. Every failure is returned, never swallowed: a partial refresh is a
  * 502 whose detail names each DOI that kept its old count, and the counts that did refresh are stored.
  */
 async function refreshCitationsTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {

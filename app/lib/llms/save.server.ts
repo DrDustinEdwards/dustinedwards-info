@@ -134,7 +134,7 @@ export async function saveLlms(
       purged = await purgeLlms("save llms.txt");
     },
     // Nothing kept in KV for a document: the thrown error names the commit and the repair (sync_llms), and
-    // the watchdog's llms-drift check repairs the row from the repository anyway.
+    // Capsid's watcher repairs the llms-drift check, rebuilding the row from the repository anyway.
     recordDivergence: async () => undefined,
     slug: "llms.txt",
     commitSha,

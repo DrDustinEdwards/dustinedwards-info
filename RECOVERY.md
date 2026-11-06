@@ -515,33 +515,42 @@ Then check by hand:
 
 ---
 
-## 11. Alerting: the watchdog and the uptime monitors email Dustin
+## 11. Alerting: Capsid's watcher and the uptime monitors email Dustin
 
 Ruling 151. A failing check needs a path to a person, or it is found by a badge
 on a page somebody happened to open. Three paths exist, and each reaches
 Dustin's inbox by email:
 
-- **The watchdog Worker** (`workers/watchdog.ts`, every 15 minutes, inside
-  Cloudflare). It reads `/health` through a service binding, runs the
-  repairs `app/lib/health/repair.mjs` allows, re-reads, and also reads the site
-  Worker's error rate. It mails `ALERT_EMAIL` through Cloudflare Email Sending
-  ONCE when health goes red and once when it recovers, never per firing. The
-  mail is sent before the state that suppresses the next one is stored, so a
-  failed send is retried on the next firing, and the firing records as failed.
+- **Capsid's watcher** (capsid `src/site-watch.ts`, every five minutes, inside
+  Cloudflare but in another Worker), the same for every site in the network.
+  It reads `/health`, runs the repairs this site's `ops_sites.operator` row maps
+  (sync_* tools in repair order, posts first and the Ask upload last), re-reads, and opens the
+  finding `site-health-dustinedwards` in the Portal when the site is still
+  unhealthy. It mails Dustin once when health goes red and once when it
+  recovers, never per pass. It also watches the Worker's error rate (more than 1
+  percent of an hour's requests, over at least 100) and runs the weekly
+  `refresh_citations`. The dustinedwards-watchdog Worker that did this here was
+  retired on 2026-11-06.
 - **The external uptime monitors** (UptimeRobot, `scripts/uptime-monitors.json`,
   reconciled by every local ship; a ship on a GitHub runner, which holds no
   `UPTIMEROBOT_API_KEY` by design, records the step as SKIPPED, leaves the
   monitors where they were, and does not end red; they are reconciled at the
   domain move by hand or by a local ship. A local ship missing the key is a
   MISS). Two monitors, the home page and `/health`,
-  from OUTSIDE Cloudflare, which the watchdog cannot be (a Worker cannot make an
-  ordinary request to a Worker on its own zone). `/health` answers 503 only when
+  from OUTSIDE Cloudflare. `/health` answers 503 only when
   D1 does not answer and reports drift as a warning, so the second monitor pages
-  for an outage, not for drift the watchdog repairs; it keys on `"ok":true`. They mail the account's active email contact once on down and once on
+  for an outage, not for drift the watcher repairs; it keys on `"ok":true`. They mail the account's active email contact once on down and once on
   up; `uptime-ensure` refuses to create a monitor with no such contact.
 - **The browser test** (`.github/workflows/browser.yml`), started by ship after
   every deploy and weekly as a backstop. A failed run emails the account that
   started it.
+
+The site's own cron (`workers/app.ts`, `app/lib/cron-jobs.mjs`) runs what is
+the site's alone: the colophon's health snapshot every fifteen minutes, the
+zero-result purge daily and the publication check daily, which mails each new
+DOI once to the `ALERT_EMAIL` secret through the `EMAIL` binding. Each job is
+recorded in `cron_runs`, and `/health`'s cron check warns when one fails or
+stops, which the watcher then reports.
 
 The checks and their order are owned by `runHealthChecks` in
 `app/lib/health/checks.server.ts`; this paragraph points at it rather than
@@ -553,24 +562,24 @@ only; the numbers behind a failure are in Workers Logs, because the endpoint is
 unauthenticated.
 
 **Why a watcher outside the site Worker.** A watcher that runs inside the thing
-it watches dies with it, and its silence then looks exactly like health. The
-watchdog is a separate Worker, and the uptime monitors are outside Cloudflare
+it watches dies with it, and its silence then looks exactly like health. Capsid's
+watcher is a separate Worker, and the uptime monitors are outside Cloudflare
 entirely, so a broken site Worker is still reported.
 
 ### WHAT IT DOES NOT COVER
 
 Read this before treating a quiet inbox as good news.
 
-- **A watchdog that stops firing is silent.** `verify-live` checks the home
-  page's health verdict is under two poll intervals old; nothing checks it
-  between deploys. The uptime monitors still cover an outage in that case.
-- **An email the provider fails to deliver is silent.** The watchdog retries a
-  send that errors, but a message accepted and then lost is not seen.
+- **A watcher that stops firing is silent here.** Capsid's Portal shows when its
+  last pass ran; `verify-live` checks the colophon's health verdict is under two
+  snapshot intervals old. The uptime monitors still cover an outage.
+- **An email the provider fails to deliver is silent.** A send that errors is
+  retried, but a message accepted and then lost is not seen.
 - **The health checks see no reader.** A page that renders wrongly but returns
   200 passes them. That is the browser test and `verify-live`.
 - **Nothing here sees the bill.**
-- **Between polls it sees nothing.** Worst case fifteen minutes for the
-  watchdog, the monitor interval for UptimeRobot.
+- **Between polls it sees nothing.** Worst case five minutes for the watcher,
+  the monitor interval for UptimeRobot.
 
 ### Removed alerting secrets
 
