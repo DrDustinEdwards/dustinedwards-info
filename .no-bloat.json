@@ -16,9 +16,9 @@
     "measured_at": "7131c72",
     "knip": {},
     "jscpd": {
-      "clones": 15,
-      "lines": 230,
-      "percentage": 0.23
+      "clones": 26,
+      "lines": 408,
+      "percentage": 0.38
     },
     "tests": {
       "files": 229,
