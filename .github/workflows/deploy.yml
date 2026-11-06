@@ -160,6 +160,8 @@ jobs:
     uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@4d0c8fdb2f1794272b31d3c4354059eb2f19a26a # v0.22.0
     with:
       worker-name: dustinedwards-admin-mcp
+      # site-runtime audit-log's signing key (0.85), minted once by the deploy and never shown (devkit "generated-secrets").
+      generated-secrets: AUDIT_SIGNING_KEY
       working-directory: mcp
       install: npm ci
       pre-deploy: node ../scripts/apply-mcp-config.mjs
