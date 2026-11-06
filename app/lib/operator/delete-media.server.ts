@@ -8,7 +8,7 @@ import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolResult } from "./descriptors";
 
-export const MAX_DELETE_KEYS = 25;
+const MAX_DELETE_KEYS = 25;
 
 export async function deleteMediaTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
   const asked = args.keys;
