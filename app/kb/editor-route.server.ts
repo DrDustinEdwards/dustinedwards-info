@@ -45,7 +45,10 @@ export async function kbEditorAction({ request, context }: Args, target: KbTarge
       context.get(adminActorContext),
     );
     if (made.outcome === "created") return redirect(`/admin/kb/entry/${made.slug}?created=1`);
-    return data<KbEditorActionData>({ intent: "duplicate", raw: "", refused: made.errors }, { status: 422 });
+    return data<KbEditorActionData>(
+      { intent: "duplicate", raw: "", refused: made.errors },
+      { status: 422 },
+    );
   }
 
   // From the form, the file is written from what it sent over the file it was opened from; from Advanced, it is the text.
@@ -54,7 +57,10 @@ export async function kbEditorAction({ request, context }: Args, target: KbTarge
   if (model !== undefined) {
     const written = rawFromForm(String(form.get("original") ?? "").replace(/\r\n/g, "\n"), model);
     if ("errors" in written) {
-      return data<KbEditorActionData>({ intent: "check", raw: "", model, ok: false, errors: written.errors, gaps: [] }, { status: 422 });
+      return data<KbEditorActionData>(
+        { intent: "check", raw: "", model, ok: false, errors: written.errors, gaps: [] },
+        { status: 422 },
+      );
     }
     raw = written.raw;
   }
@@ -74,9 +80,14 @@ export async function kbEditorAction({ request, context }: Args, target: KbTarge
       return redirect(`${url.pathname}?${params}`);
     }
     return data<KbEditorActionData>(
-      result.outcome === "refused" ? { intent: "save", raw, model, refused: result.errors } : { intent: "save", raw, model, conflict: result.message },
+      result.outcome === "refused"
+        ? { intent: "save", raw, model, refused: result.errors }
+        : { intent: "save", raw, model, conflict: result.message },
       { status: result.outcome === "refused" ? 422 : 409 },
     );
   }
-  return data({ intent: "check" as const, raw, ok: false, errors: ["Unknown action."], gaps: [] }, { status: 400 });
+  return data(
+    { intent: "check" as const, raw, ok: false, errors: ["Unknown action."], gaps: [] },
+    { status: 400 },
+  );
 }

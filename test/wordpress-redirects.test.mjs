@@ -15,13 +15,24 @@ import {
   wordpressDisposition,
 } from "../app/lib/wordpress-redirects.mjs";
 
-const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"));
+const gsc = JSON.parse(
+  readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"),
+);
 
 /** A target's path, without the fragment a phage row carries. */
 const targetPath = (location) => location.split("#")[0];
 
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
-const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/dustin-edwards-cv.pdf", "/research/publications", "/sitemap.xml"]);
+const ANSWERED_NOW = new Set([
+  "/",
+  "/login/",
+  "/about",
+  "/contact",
+  "/cv",
+  "/dustin-edwards-cv.pdf",
+  "/research/publications",
+  "/sitemap.xml",
+]);
 
 await test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
@@ -33,10 +44,22 @@ await test("the apex host is dustinedwards.info and www, and nothing else", () =
 
 await test("www redirects to the apex in one hop, merging the old-address map, and no other host does", () => {
   assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/", ""), "https://dustinedwards.info/");
-  assert.equal(wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"), "https://dustinedwards.info/research/phages?x=1");
-  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"), "https://dustinedwards.info/teaching/virus-isolation");
-  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/user/", ""), "https://dustinedwards.info/user/");
-  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/about/", ""), "https://dustinedwards.info/about");
+  assert.equal(
+    wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"),
+    "https://dustinedwards.info/research/phages?x=1",
+  );
+  assert.equal(
+    wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"),
+    "https://dustinedwards.info/teaching/virus-isolation",
+  );
+  assert.equal(
+    wwwRedirectTarget("www.dustinedwards.info", "/user/", ""),
+    "https://dustinedwards.info/user/",
+  );
+  assert.equal(
+    wwwRedirectTarget("www.dustinedwards.info", "/about/", ""),
+    "https://dustinedwards.info/about",
+  );
   assert.equal(wwwRedirectTarget("dustinedwards.info", "/", ""), null);
   assert.equal(wwwRedirectTarget("dustinedwards.dustin-edwards.workers.dev", "/", ""), null);
 });
@@ -53,7 +76,11 @@ await test("every Search Console URL resolves: 200 kept, one 301, or 410, never 
     if (d === null) {
       // Kept: the page must be one the new site answers, or listed as pending for the switch.
       const kept = url.pathname.replace(/\/$/, "") || "/";
-      if (!ANSWERED_NOW.has(url.pathname) && !ANSWERED_NOW.has(kept) && !PENDING_TARGETS.includes(kept)) {
+      if (
+        !ANSWERED_NOW.has(url.pathname) &&
+        !ANSWERED_NOW.has(kept) &&
+        !PENDING_TARGETS.includes(kept)
+      ) {
         problems.push(`${raw}: kept, but nothing answers it`);
       }
       continue;
@@ -74,8 +101,17 @@ await test("the profile paths the fixture counts all 301 to the roster in one ho
   assert.equal(gsc.profilePaths, 146);
   assert.ok(gsc.paths.includes("/author/dustin/"));
   assert.equal(PROFILE_TARGET, "/teaching/phage-discovery#roster");
-  for (const path of ["/user/a-student/", "/user/a-student/?profiletab=posts", "/author/someone/", "/author/someone"]) {
-    assert.deepEqual(wordpressDisposition(new URL(path, "https://x").pathname), { status: 301, location: PROFILE_TARGET }, path);
+  for (const path of [
+    "/user/a-student/",
+    "/user/a-student/?profiletab=posts",
+    "/author/someone/",
+    "/author/someone",
+  ]) {
+    assert.deepEqual(
+      wordpressDisposition(new URL(path, "https://x").pathname),
+      { status: 301, location: PROFILE_TARGET },
+      path,
+    );
   }
   const to = targetPath(PROFILE_TARGET);
   assert.equal(wordpressDisposition(to), null, "the roster page is not redirected again");
@@ -92,7 +128,11 @@ await test("every explicit row's target is a page or pending, and never chains",
 });
 
 await test("the molarity and metric prefix calculators answer 410: nothing on the new site replaces them", () => {
-  for (const path of ["/molarity-calculator/", "/molarity-calculator", "/knowledge-base/metric-prefix/"]) {
+  for (const path of [
+    "/molarity-calculator/",
+    "/molarity-calculator",
+    "/knowledge-base/metric-prefix/",
+  ]) {
     assert.deepEqual(wordpressDisposition(path), { status: 410 }, path);
   }
   assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/molarity-calculator"), false);
@@ -101,7 +141,11 @@ await test("the molarity and metric prefix calculators answer 410: nothing on th
 
 await test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia page", () => {
   const to = (path) => wordpressDisposition(path)?.location;
-  for (const path of ["/wolbachia-project-genetic-techniques/", "/knowledge-base/pcr-wolbachia-16s-rrna/", "/gentech-2018a/"]) {
+  for (const path of [
+    "/wolbachia-project-genetic-techniques/",
+    "/knowledge-base/pcr-wolbachia-16s-rrna/",
+    "/gentech-2018a/",
+  ]) {
     assert.equal(to(path), "/research/protocols", path);
   }
   assert.equal(to("/phage-discovery/"), "/teaching/phage-discovery");
@@ -132,14 +176,27 @@ await test("the pages written after the map: study skills, Join the lab and Teac
 });
 
 await test("slashed and bare forms match; a row rebuilt in place never loops", () => {
-  assert.deepEqual(wordpressDisposition("/virus-isolation/"), { status: 301, location: "/teaching/virus-isolation" });
-  assert.deepEqual(wordpressDisposition("/virus-isolation"), { status: 301, location: "/teaching/virus-isolation" });
+  assert.deepEqual(wordpressDisposition("/virus-isolation/"), {
+    status: 301,
+    location: "/teaching/virus-isolation",
+  });
+  assert.deepEqual(wordpressDisposition("/virus-isolation"), {
+    status: 301,
+    location: "/teaching/virus-isolation",
+  });
   assert.deepEqual(wordpressDisposition("/research/"), { status: 301, location: "/research" });
   assert.equal(wordpressDisposition("/research"), null);
 });
 
 await test("kept pages and the new site's own paths pass through", () => {
-  for (const path of ["/", "/contact/", "/login/", "/about", "/writing/a-post", "/research/publications"]) {
+  for (const path of [
+    "/",
+    "/contact/",
+    "/login/",
+    "/about",
+    "/writing/a-post",
+    "/research/publications",
+  ]) {
     assert.equal(wordpressDisposition(path), null, path);
   }
 });
@@ -184,12 +241,18 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
   ["/category/uncategorized/", GONE],
   ["/tag/fall-2025/", GONE],
   // the Baylor PDF -> 301 /research/protocols/phage-dna-extraction
-  ["/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf", "/research/protocols/phage-dna-extraction"],
+  [
+    "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf",
+    "/research/protocols/phage-dna-extraction",
+  ],
   // all other /wp-content/uploads/* -> 410
   ["/wp-content/uploads/2023/11/Spot-Titer.png", GONE],
   // the two lab-protocol scans that still earn clicks or impressions
   ["/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols"],
-  ["/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf", "/research/protocols/phage-dna-extraction"],
+  [
+    "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf",
+    "/research/protocols/phage-dna-extraction",
+  ],
   // /publications -> /research/publications. The doc's other new-site rename, /blog/{slug} ->
   // /writing/{slug}, went on 2026-10-20: only the old site redirects to the new one (Dustin).
   ["/publications", "/research/publications"],
@@ -243,7 +306,10 @@ const CUTOVER_EXPLICIT_ROWS = /** @type {Array<[string, string | null]>} */ ([
   ["/rev-lpdv-genetic-studies/", "/research/retroviruses/avian"],
   ["/molarity-calculator/", GONE],
   ["/knowledge-base/metric-prefix/", GONE],
-  ["/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/dustin-edwards-cv.pdf"],
+  [
+    "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf",
+    "/dustin-edwards-cv.pdf",
+  ],
   ["/knowledge-base/", "/research/protocols"],
   ["/virus-isolation-reagent-request/", "/teaching/virus-isolation"],
 ]);
@@ -270,14 +336,22 @@ const STATIC_ROUTES = new Set([
 ]);
 
 /** Anchors a target may carry: the headings the build proves exist, and the roster the program page renders. */
-const rosterSource = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
+const rosterSource = readFileSync(
+  new URL("../app/components/phage-roster.tsx", import.meta.url),
+  "utf8",
+);
 /** The phage headings are drawn from content/phages, one file per phage, named for the heading (docs/PHAGES.md). */
-const phageFiles = new Set(readdirSync(new URL("../content/phages/", import.meta.url)).map((name) => name.replace(/\.md$/, "")));
+const phageFiles = new Set(
+  readdirSync(new URL("../content/phages/", import.meta.url)).map((name) =>
+    name.replace(/\.md$/, ""),
+  ),
+);
 /** @param {string} target */
 function anchorExists(target) {
   const [path, id] = target.split("#");
   if (CONTENT_PAGE_SECTIONS.includes(target)) return true;
-  if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR) return rosterSource.includes(`id="${ROSTER_ANCHOR}"`);
+  if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR)
+    return rosterSource.includes(`id="${ROSTER_ANCHOR}"`);
   if (path === "/research/phages") return phageFiles.has(id);
   return false;
 }
@@ -293,7 +367,10 @@ await test("cutover.md's redirect map: every explicit row and every pattern rule
 
 await test("cutover.md's redirect map: every code row is a row of the doc", () => {
   const docRows = new Set(CUTOVER_EXPLICIT_ROWS.map(([from]) => from.replace(/\/$/, "")));
-  assert.deepEqual(Object.keys(EXPLICIT_ROWS).filter((from) => !docRows.has(from)), []);
+  assert.deepEqual(
+    Object.keys(EXPLICIT_ROWS).filter((from) => !docRows.has(from)),
+    [],
+  );
 });
 
 await test("cutover.md's redirect map: every target is a real page, every anchor is on it, and nothing chains", () => {
@@ -304,14 +381,18 @@ await test("cutover.md's redirect map: every target is a real page, every anchor
     // /writing/:slug is a route; the example slug stands for any post.
     const routed = STATIC_ROUTES.has(path) || /^\/writing\/[^/]+$/.test(path);
     if (!routed) broken.push(`${from}: ${path} is not a route`);
-    if (target.includes("#") && !anchorExists(target)) broken.push(`${from}: ${target} has no such anchor`);
+    if (target.includes("#") && !anchorExists(target))
+      broken.push(`${from}: ${target} has no such anchor`);
     if (apexAnswer(path) !== null) broken.push(`${from}: ${path} redirects again`);
   }
   assert.deepEqual(broken, []);
 });
 
 await test("the Baylor PDF goes to its protocol page, which the switch checklist lists as pending", () => {
-  assert.deepEqual(wordpressDisposition(BAYLOR_PDF), { status: 301, location: "/research/protocols/phage-dna-extraction" });
+  assert.deepEqual(wordpressDisposition(BAYLOR_PDF), {
+    status: 301,
+    location: "/research/protocols/phage-dna-extraction",
+  });
   assert.ok(PENDING_TARGETS.includes("/research/protocols/phage-dna-extraction"));
   assert.ok(PENDING_TARGETS.includes("/research/protocols/coi-primers"));
   assert.ok(PENDING_TARGETS.includes("/teaching"));

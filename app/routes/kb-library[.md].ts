@@ -7,7 +7,11 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/kb-library[.md]";
 
-const notFound = () => new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+const notFound = () =>
+  new Response("Not found\n", {
+    status: 404,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  });
 
 /**
  * A knowledge base's library as markdown: the table of every published entry, drawn from the same rows as the page, and
@@ -18,7 +22,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!base) return notFound();
   const items = baseItems(base, await listPublishedRecordsOfProfile(getEnv(context), base.profile));
   if (items.length === 0) return notFound();
-  const citation = baseCitation(base, { name: SITE.name, affiliation: SITE.affiliation, origin: SITE_ORIGIN });
+  const citation = baseCitation(base, {
+    name: SITE.name,
+    affiliation: SITE.affiliation,
+    origin: SITE_ORIGIN,
+  });
   const body = [
     `# ${base.name}`,
     "",

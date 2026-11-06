@@ -48,18 +48,27 @@ await test("an apostrophe in JSX text does not hide the action's comparisons", (
      export async function action() { if (intent === "delete") { await remove(); } }`,
   );
   const found = intentBranches(/** @type {any} */ (findAction(sf)), P);
-  assert.deepEqual(found.map((b) => b.intent), ["delete"]);
+  assert.deepEqual(
+    found.map((b) => b.intent),
+    ["delete"],
+  );
   assert.equal(found[0].guarded, false);
 });
 
-await test("form.get(\"intent\") compared directly is part of the vocabulary", () => {
+await test('form.get("intent") compared directly is part of the vocabulary', () => {
   const found = branches(`if (form.get("intent") === "podcast-slot") { await write(); }`);
-  assert.deepEqual(found.map((b) => b.intent), ["podcast-slot"]);
+  assert.deepEqual(
+    found.map((b) => b.intent),
+    ["podcast-slot"],
+  );
 });
 
 await test("a property named intent compared directly is part of the vocabulary", () => {
   const found = branches(`if (body.intent === "delete") { await remove(); }`);
-  assert.deepEqual(found.map((b) => [b.intent, b.guarded]), [["delete", false]]);
+  assert.deepEqual(
+    found.map((b) => [b.intent, b.guarded]),
+    [["delete", false]],
+  );
 });
 
 await test("a !== guard that returns selects the statements after it", () => {
@@ -81,7 +90,10 @@ await test("an intent tested twice is held at both sites", () => {
     if (intent === "delete") { await remove(); }`);
   const deletes = found.filter((b) => b.intent === "delete");
   assert.equal(deletes.length, 3);
-  assert.deepEqual(deletes.map((b) => b.guarded), [true, true, false]);
+  assert.deepEqual(
+    deletes.map((b) => b.guarded),
+    [true, true, false],
+  );
 });
 
 await test("a comparison outside an if condition is reported, not read as guarded", () => {
@@ -92,12 +104,18 @@ await test("a comparison outside an if condition is reported, not read as guarde
 
 await test("switch cases are part of the vocabulary", () => {
   const found = branches(`switch (intent) { case "a": await a(); break; case "b": await b(); }`);
-  assert.deepEqual(found.map((b) => b.intent), ["a", "b"]);
+  assert.deepEqual(
+    found.map((b) => b.intent),
+    ["a", "b"],
+  );
 });
 
 await test("a commented-out comparison is not part of the vocabulary", () => {
   const found = branches(`// if (intent === "ghost") {}\nif (intent === "real") {}`);
-  assert.deepEqual(found.map((b) => b.intent), ["real"]);
+  assert.deepEqual(
+    found.map((b) => b.intent),
+    ["real"],
+  );
 });
 
 await test("a policy must be a non-empty string literal in the descriptor object", () => {
@@ -131,9 +149,15 @@ await test("a delete through an alias, a destructure or a bracket is caught", ()
 });
 
 await test("a comment naming the binding is not a use, and a helper it is handed to is reported", () => {
-  const quiet = bindingUses(parseSource("x.ts", "// env.MEDIA_REVISIONS.delete(k)\nconst a = 1;"), "MEDIA_REVISIONS");
+  const quiet = bindingUses(
+    parseSource("x.ts", "// env.MEDIA_REVISIONS.delete(k)\nconst a = 1;"),
+    "MEDIA_REVISIONS",
+  );
   assert.equal(quiet.mentions, 0);
   assert.equal(quiet.deletes.length, 0);
-  const handed = bindingUses(parseSource("x.ts", "await wipe(env.MEDIA_REVISIONS);"), "MEDIA_REVISIONS");
+  const handed = bindingUses(
+    parseSource("x.ts", "await wipe(env.MEDIA_REVISIONS);"),
+    "MEDIA_REVISIONS",
+  );
   assert.deepEqual(handed.passedTo, ["wipe"]);
 });

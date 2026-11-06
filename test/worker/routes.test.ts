@@ -162,17 +162,25 @@ describe("/health", () => {
     const ip = "203.0.113.99";
     const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));
     let lastOk = true;
-    for (let i = 0; i < 20; i += 1) lastOk = (await limiter.hit([{ limit: 20, windowSeconds: 60 }])).ok;
+    for (let i = 0; i < 20; i += 1)
+      lastOk = (await limiter.hit([{ limit: 20, windowSeconds: 60 }])).ok;
     expect(lastOk).toBe(true);
 
     const ctx = createExecutionContext();
-    const refusal = await healthLoader({ request: healthRequest(ip), context: routeContext(ctx), params: {} } as never);
+    const refusal = await healthLoader({
+      request: healthRequest(ip),
+      context: routeContext(ctx),
+      params: {},
+    } as never);
     await waitOnExecutionContext(ctx);
 
     expect(refusal.status).toBe(429);
     expect(refusal.headers.get("retry-after")).toBe("60");
     expect(refusal.headers.get("cache-control")).toBe("no-store");
-    expect(await refusal.json()).toMatchObject({ status: "fail", checks: [{ name: "rate-limited", status: "fail" }] });
+    expect(await refusal.json()).toMatchObject({
+      status: "fail",
+      checks: [{ name: "rate-limited", status: "fail" }],
+    });
   });
 });
 
@@ -198,6 +206,8 @@ describe("the colophon health tile", () => {
     await storeHealthSnapshot(env as never);
     const tile = await readHealthTile(env as never);
     expect(tile.state).toBe("fresh");
-    expect(tile.state === "fresh" && tile.checks.map((c) => c.name)).toEqual(expect.arrayContaining(["db", ...HEALTH_CHECK_NAMES]));
+    expect(tile.state === "fresh" && tile.checks.map((c) => c.name)).toEqual(
+      expect.arrayContaining(["db", ...HEALTH_CHECK_NAMES]),
+    );
   });
 });

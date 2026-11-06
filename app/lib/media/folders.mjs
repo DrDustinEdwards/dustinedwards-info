@@ -7,7 +7,11 @@
  */
 const FOLDERS = [
   ["og/", "Social cards", "Generated at build time"],
-  ["derived/", "Generated documents", "Rendered by the site from its own data and replaced on each change, never edited"],
+  [
+    "derived/",
+    "Generated documents",
+    "Rendered by the site from its own data and replaced on each change, never edited",
+  ],
   ["/diagrams/", "Diagrams", ""],
   ["/research/publications/", "Publications", ""],
   ["/site/", "Site", ""],
@@ -48,7 +52,11 @@ export function folderFor(key) {
  * @returns {string}
  */
 function titleFromPrefix(prefix) {
-  const last = prefix.replace(/^\/+|\/+$/g, "").split("/").pop() ?? "";
+  const last =
+    prefix
+      .replace(/^\/+|\/+$/g, "")
+      .split("/")
+      .pop() ?? "";
   if (!last) return ROOT[1];
   const words = last.replace(/[-_]+/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);

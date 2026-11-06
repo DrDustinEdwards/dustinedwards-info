@@ -58,19 +58,34 @@ const slugOf = (target: Extract<KbTarget, { type: "item" }>) => `${target.kind}/
 
 /** The repository path a target names, or null when it names nothing the Knowledge Base holds. */
 function targetFile(target: KbTarget): string | null {
-  if (target.type === "entry") return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.slug) ? procedurePath(target.slug) : null;
-  return KINDS[target.kind] && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.id) ? registryPath(slugOf(target)) : null;
+  if (target.type === "entry")
+    return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.slug) ? procedurePath(target.slug) : null;
+  return KINDS[target.kind] && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.id)
+    ? registryPath(slugOf(target))
+    : null;
 }
 
 /** What Save's checks say of `raw`, without committing anything. */
-export async function checkFile(env: EditorEnv, target: KbTarget, raw: string): Promise<CheckResult> {
+export async function checkFile(
+  env: EditorEnv,
+  target: KbTarget,
+  raw: string,
+): Promise<CheckResult> {
   if (target.type === "entry") {
     const compiled = await compileProcedure(env, target.slug, raw);
     const profile = /^profile:\s*["']?([a-z]+)/m.exec(raw)?.[1] ?? "protocol";
-    return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: labelGaps(compiled.gaps ?? [], profile) };
+    return {
+      ok: compiled.ok,
+      errors: compiled.ok ? [] : compiled.errors,
+      gaps: labelGaps(compiled.gaps ?? [], profile),
+    };
   }
   const compiled = await checkRegistryItem(env, slugOf(target), raw);
-  return { ok: compiled.ok, errors: compiled.ok ? [] : compiled.errors, gaps: labelGaps(compiled.ok ? compiled.gaps : [], null) };
+  return {
+    ok: compiled.ok,
+    errors: compiled.ok ? [] : compiled.errors,
+    gaps: labelGaps(compiled.ok ? compiled.gaps : [], null),
+  };
 }
 
 /** The file from the repository and its checks, or null when there is no such file. */
@@ -87,7 +102,8 @@ export async function loadFile(env: EditorEnv, target: KbTarget): Promise<KbFile
   } catch {
     data = {};
   }
-  const text = (value: unknown) => (typeof value === "string" && value.trim() !== "" ? value : null);
+  const text = (value: unknown) =>
+    typeof value === "string" && value.trim() !== "" ? value : null;
 
   if (target.type === "entry") {
     const base = BASES.find((b) => b.profile === data.profile);
@@ -118,17 +134,30 @@ export async function loadFile(env: EditorEnv, target: KbTarget): Promise<KbFile
 }
 
 /** Save through the one save for the target's kind, refused if the file moved since `expectedBlobSha` was read. */
-export async function saveFile(env: EditorEnv, target: KbTarget, raw: string, expectedBlobSha: string, actor: Actor): Promise<SaveResult> {
+export async function saveFile(
+  env: EditorEnv,
+  target: KbTarget,
+  raw: string,
+  expectedBlobSha: string,
+  actor: Actor,
+): Promise<SaveResult> {
   try {
     const saved =
       target.type === "entry"
         ? await saveProcedure(env, { slug: target.slug, raw, expectedBlobSha, isNew: false, actor })
-        : await saveRegistryItem(env, { slug: slugOf(target), raw, expectedBlobSha, isNew: false, actor });
+        : await saveRegistryItem(env, {
+            slug: slugOf(target),
+            raw,
+            expectedBlobSha,
+            isNew: false,
+            actor,
+          });
     return { outcome: "saved", commitSha: saved.commitSha, unchanged: saved.unchanged };
   } catch (error) {
     if (error instanceof ContentInvalid) return { outcome: "refused", errors: error.errors };
     if (error instanceof PolicyError) return { outcome: "refused", errors: [error.message] };
-    if (error instanceof SourceError && error.conflict) return { outcome: "conflict", message: error.message };
+    if (error instanceof SourceError && error.conflict)
+      return { outcome: "conflict", message: error.message };
     throw error;
   }
 }

@@ -24,22 +24,34 @@ import { undeclaredParts } from "./lib/system-drift.mjs";
 const root = join(import.meta.dirname, "..");
 // SYSTEM_MODEL_FILE is for the test, which refreshes a copy.
 const FILE = process.env.SYSTEM_MODEL_FILE ?? join(root, "data", "system-model.json");
-const url = process.argv[2] ?? process.env.SYSTEM_MODEL_URL ?? "https://mcp.dustinedwards.info/public/model/v1.json";
+const url =
+  process.argv[2] ??
+  process.env.SYSTEM_MODEL_URL ??
+  "https://mcp.dustinedwards.info/public/model/v1.json";
 
 const response = await fetch(url, { headers: { accept: "application/json" } });
 if (!response.ok) throw new Error(`GET ${url} answered ${response.status}`);
 const fetched = loadSystemModel(await response.json());
 // SYSTEM_REPOS_RAW is for the test, which serves the repos' configs itself.
-const drift = await undeclaredParts(fetched, process.env.SYSTEM_REPOS_RAW ?? "https://raw.githubusercontent.com");
-console.log(`refresh-system-model: checked the Wrangler configs of ${drift.checked.join(", ") || "no system"}; skipped ${drift.skipped.join(", ") || "none"}.`);
+const drift = await undeclaredParts(
+  fetched,
+  process.env.SYSTEM_REPOS_RAW ?? "https://raw.githubusercontent.com",
+);
+console.log(
+  `refresh-system-model: checked the Wrangler configs of ${drift.checked.join(", ") || "no system"}; skipped ${drift.skipped.join(", ") || "none"}.`,
+);
 if (drift.missing.length) {
-  throw new Error(`${url} leaves out parts its systems' Wrangler configs declare:\n  ${drift.missing.join("\n  ")}`);
+  throw new Error(
+    `${url} leaves out parts its systems' Wrangler configs declare:\n  ${drift.missing.join("\n  ")}`,
+  );
 }
 const current = loadSystemModel(JSON.parse(readFileSync(FILE, "utf8")));
 
 const changed = !sameModel(current, fetched);
 const openPath = process.env.OPEN_MODEL;
-const sameAsOpen = openPath ? sameModel(loadSystemModel(JSON.parse(readFileSync(openPath, "utf8"))), fetched) : false;
+const sameAsOpen = openPath
+  ? sameModel(loadSystemModel(JSON.parse(readFileSync(openPath, "utf8"))), fetched)
+  : false;
 if (changed) writeFileSync(FILE, `${JSON.stringify(fetched, null, 2)}\n`);
 console.log(
   changed

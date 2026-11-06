@@ -19,7 +19,9 @@ export default function start(): void {
     for (const [key, els] of byId) for (const el of els) el.classList.toggle(LIT, key === id);
   }
 
-  for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-plaque, .plate-key-entry")) {
+  for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(
+    ".plate-plaque, .plate-key-entry",
+  )) {
     const id = el.getAttribute("data-plaque");
     if (!id) continue;
     /*
@@ -64,7 +66,9 @@ export default function start(): void {
   }
 
   const figure = document.querySelector(".home-plate");
-  const shown = figure && [...figure.querySelectorAll("svg.plate")].find((s) => s.getBoundingClientRect().width > 0);
+  const shown =
+    figure &&
+    [...figure.querySelectorAll("svg.plate")].find((s) => s.getBoundingClientRect().width > 0);
   if (shown && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     const onScreen = (r: DOMRect) => r.top < window.innerHeight && r.bottom > 0;
     if (onScreen(shown.getBoundingClientRect())) {

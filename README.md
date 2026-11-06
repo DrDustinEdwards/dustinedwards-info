@@ -32,16 +32,16 @@ created in, and what is genuinely unrecoverable. Nothing here repeats it.
 
 ## Stack
 
-| Layer | What |
-| --- | --- |
-| Runtime | Cloudflare Workers, Node compatibility on by compatibility date |
-| Framework | React Router 8 (SSR), Vite |
-| Database | D1 (`dustinedwards`), Drizzle, hand-written migrations |
-| Auth | Cloudflare Access in front of `/admin`; the Worker verifies the signed token; the Access policy is the list of administrators |
-| Storage | R2: `dustinedwards-media` (originals), `dustinedwards-og` (derived cards) |
-| Search | SQLite FTS5, two tokenizers fused by reciprocal rank |
-| AI | AI Search instance for the Ask layer, guarded by a Durable Object |
-| Images | Images binding, transforms derived on request |
+| Layer     | What                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Runtime   | Cloudflare Workers, Node compatibility on by compatibility date                                                               |
+| Framework | React Router 8 (SSR), Vite                                                                                                    |
+| Database  | D1 (`dustinedwards`), Drizzle, hand-written migrations                                                                        |
+| Auth      | Cloudflare Access in front of `/admin`; the Worker verifies the signed token; the Access policy is the list of administrators |
+| Storage   | R2: `dustinedwards-media` (originals), `dustinedwards-og` (derived cards)                                                     |
+| Search    | SQLite FTS5, two tokenizers fused by reciprocal rank                                                                          |
+| AI        | AI Search instance for the Ask layer, guarded by a Durable Object                                                             |
+| Images    | Images binding, transforms derived on request                                                                                 |
 
 Node at the version in `.nvmrc`.
 

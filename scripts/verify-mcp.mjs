@@ -32,10 +32,14 @@ export function mcpConfig(root) {
   try {
     config = readJsonc(readFileSync(path, "utf8"));
   } catch (error) {
-    return { ok: false, why: `${rel} does not parse: ${error instanceof Error ? error.message : String(error)}` };
+    return {
+      ok: false,
+      why: `${rel} does not parse: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
   const origin = String(config?.vars?.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
-  if (!origin.startsWith("https://")) return { ok: false, why: `${rel} names no https PUBLIC_ORIGIN` };
+  if (!origin.startsWith("https://"))
+    return { ok: false, why: `${rel} names no https PUBLIC_ORIGIN` };
   return { ok: true, origin };
 }
 
@@ -61,11 +65,15 @@ export function discoveryProblems({ prm, as, discover }, origin) {
   }
   if (as.status !== 200) problems.push(`authorization server metadata answered ${as.status}`);
   else {
-    if (as.body?.issuer !== origin) problems.push(`issuer is ${JSON.stringify(as.body?.issuer)}, not ${origin}`);
-    if (as.body?.client_id_metadata_document_supported !== true) problems.push("CIMD is not advertised");
-    if (as.body?.registration_endpoint !== `${origin}/register`) problems.push("the registration endpoint is not advertised");
+    if (as.body?.issuer !== origin)
+      problems.push(`issuer is ${JSON.stringify(as.body?.issuer)}, not ${origin}`);
+    if (as.body?.client_id_metadata_document_supported !== true)
+      problems.push("CIMD is not advertised");
+    if (as.body?.registration_endpoint !== `${origin}/register`)
+      problems.push("the registration endpoint is not advertised");
   }
-  if (discover.status !== 401) problems.push(`an unauthenticated server/discover answered ${discover.status}, not 401`);
+  if (discover.status !== 401)
+    problems.push(`an unauthenticated server/discover answered ${discover.status}, not 401`);
   else if (!discover.challenge.includes(`${origin}/.well-known/oauth-protected-resource/mcp`)) {
     problems.push("the 401 challenge does not name the path-scoped protected resource document");
   }
@@ -79,7 +87,10 @@ export function discoveryProblems({ prm, as, discover }, origin) {
  */
 async function readJson(url, init) {
   try {
-    const res = await fetch(url, { ...init, headers: { "user-agent": "deploy-verify", ...init?.headers } });
+    const res = await fetch(url, {
+      ...init,
+      headers: { "user-agent": "deploy-verify", ...init?.headers },
+    });
     const text = await res.text();
     let body = null;
     try {
@@ -89,7 +100,12 @@ async function readJson(url, init) {
     }
     return { status: res.status, body, challenge: res.headers.get("www-authenticate") ?? "" };
   } catch (error) {
-    return { status: 0, body: null, challenge: "", error: error instanceof Error ? error.message : String(error) };
+    return {
+      status: 0,
+      body: null,
+      challenge: "",
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -121,5 +137,7 @@ if (import.meta.main) {
     console.log(`REFUSED: discovery is wrong: ${problems.join("; ")}`);
     process.exit(1);
   }
-  console.log(`resource ${prm.body.resource}, issuer ${as.body.issuer}, server/discover asks for a token`);
+  console.log(
+    `resource ${prm.body.resource}, issuer ${as.body.issuer}, server/discover asks for a token`,
+  );
 }

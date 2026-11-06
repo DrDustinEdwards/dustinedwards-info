@@ -78,7 +78,11 @@ export async function run({ page, browser }) {
     );
 
     // The page is already open on imagePost from the walk above.
-    await clickOrFail(page, ".prose a.image-link", `${imagePost}: the image link is there to click`);
+    await clickOrFail(
+      page,
+      ".prose a.image-link",
+      `${imagePost}: the image link is there to click`,
+    );
     await new Promise((r) => setTimeout(r, 250));
     const overlay = await page.evaluate(() => {
       const shown = document.querySelector(".lightbox img");

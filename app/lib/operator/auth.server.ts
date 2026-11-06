@@ -60,11 +60,13 @@ export async function authenticateOperator(
 }
 
 // Separate from authentication so reading the describe call does not spend publish budget.
-export async function meterOperator(
-  env: OperatorEnv,
-  id: string,
-): Promise<AuthResult> {
-  const verdict = await limitHit(env, `op:${id}`, OPERATOR_RATE_LIMIT, OPERATOR_RATE_PERIOD_SECONDS);
+export async function meterOperator(env: OperatorEnv, id: string): Promise<AuthResult> {
+  const verdict = await limitHit(
+    env,
+    `op:${id}`,
+    OPERATOR_RATE_LIMIT,
+    OPERATOR_RATE_PERIOD_SECONDS,
+  );
   if (verdict.status === "unavailable") {
     return {
       ok: false,
@@ -84,4 +86,3 @@ export async function meterOperator(
 
   return { ok: true, id };
 }
-

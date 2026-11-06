@@ -1,4 +1,3 @@
-
 /* --font-prose, not the inherited --font-sans: its fallback is sized to Inter at this 17px, so the swap
    does not re-wrap a paragraph. Posts override it with the serif (post-shell.css). */
 .prose {

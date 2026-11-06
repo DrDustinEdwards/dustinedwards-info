@@ -22,7 +22,14 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
 import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
-import { cacheKey, forReader, forRenderer, purgeTags, settleCacheHeaders, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
+import {
+  cacheKey,
+  forReader,
+  forRenderer,
+  purgeTags,
+  settleCacheHeaders,
+  type PurgeCache,
+} from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
@@ -71,9 +78,7 @@ export function cacheDimensions(
   theme: string,
 ): { cacheKey: string; props: RendererProps } {
   const themed =
-    request.method === "GET" &&
-    !isPrivatePath(url.pathname) &&
-    !negotiatesAwayFromHtml(request);
+    request.method === "GET" && !isPrivatePath(url.pathname) && !negotiatesAwayFromHtml(request);
 
   if (!themed) return { cacheKey: cacheKey(url), props: {} };
   return { cacheKey: cacheKey(url, { dimensions: { theme } }), props: { theme } };
@@ -99,7 +104,12 @@ const PREFETCH_EXCLUDE = [LAB_BENCH_PATH, "/media", "/login", "/theme", "/search
  */
 function applyDocumentHeaders(
   headers: Headers,
-  { reportTo, csp, staged, publicPage }: { reportTo: string; csp: string; staged: string | undefined; publicPage: boolean },
+  {
+    reportTo,
+    csp,
+    staged,
+    publicPage,
+  }: { reportTo: string; csp: string; staged: string | undefined; publicPage: boolean },
 ) {
   applySecurityHeaders(headers);
   headers.set("Cross-Origin-Resource-Policy", corpFor(headers.get("content-type")));
@@ -156,7 +166,12 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     const reportTo = reportingEndpoints(CSP_REPORT_GROUP, new URL(CSP_REPORT_PATH, url.origin));
     const csp = contentSecurityPolicy(url.pathname, adminNonce);
     const staged = stagedPolicy(url.pathname, adminNonce);
-    applyDocumentHeaders(response.headers, { reportTo, csp, staged, publicPage: !isPrivatePath(url.pathname) });
+    applyDocumentHeaders(response.headers, {
+      reportTo,
+      csp,
+      staged,
+      publicPage: !isPrivatePath(url.pathname),
+    });
 
     // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
     // because a post already sends its markdown alternate and webmention endpoint in `Link`.
@@ -206,13 +221,15 @@ const site = {
     const response = await gateway(request, env, ctx);
     // Each 404 a GET gets, stored page or live, counted per path, referring host and UTC day (site-runtime
     // ./not-found, drizzle/0041; the privacy page names it). Never a preview link's, whose path carries its token.
-    if (!new URL(request.url).pathname.startsWith("/preview/")) countNotFound(env.DB, request, response, ctx);
+    if (!new URL(request.url).pathname.startsWith("/preview/"))
+      countNotFound(env.DB, request, response, ctx);
     // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
     // are served before the Worker runs, so robots.txt's Disallow is what covers those.
     // The workers.dev address keeps answering after the cutover (the browser tests and
     // the sign-in fallback use it), so it is kept out of the index here rather than redirected away.
     // robots.txt must not disallow it, or a crawler never reads this header.
-    const unindexed = isWorkerPreview(env) || new URL(request.url).hostname.endsWith(".workers.dev");
+    const unindexed =
+      isWorkerPreview(env) || new URL(request.url).hostname.endsWith(".workers.dev");
     return unindexed ? withHeader(response, "X-Robots-Tag", "noindex") : response;
   },
 
@@ -236,33 +253,61 @@ const site = {
           run: async () => {
             const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
             const run = await runCarrelSchedules(env, ctx, at);
-            if (run.failed > 0) throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
+            if (run.failed > 0)
+              throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
           },
         },
         ...(isNightly(at)
           ? [
-              { ...cronJob("backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env) },
-              { ...cronJob("media-backup"), run: async () => (await import("~/lib/backup/d1-backup.server")).backupMedia(env) },
+              {
+                ...cronJob("backup"),
+                run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env),
+              },
+              {
+                ...cronJob("media-backup"),
+                run: async () => (await import("~/lib/backup/d1-backup.server")).backupMedia(env),
+              },
               // The 404 counts keep 90 days, as the privacy page says.
               { ...cronJob("prune-404"), run: () => pruneNotFound(env.DB, { days: 90 }) },
             ]
           : []),
         // The colophon's health verdict, every fifteen minutes (app/lib/health/snapshot-store.server.ts).
         ...(at.getUTCMinutes() % HEALTH_SNAPSHOT_EVERY_MINUTES === 0
-          ? [{ ...cronJob("health-snapshot"), run: async () => (await import("~/lib/health/snapshot-store.server")).storeHealthSnapshot(env, at) }]
+          ? [
+              {
+                ...cronJob("health-snapshot"),
+                run: async () =>
+                  (await import("~/lib/health/snapshot-store.server")).storeHealthSnapshot(env, at),
+              },
+            ]
           : []),
         // Zero-result queries past their retention cutoff, the cutoff the admin Tools page names.
         ...(isDailyAt(at, 4)
-          ? [{ ...cronJob("purge-zero-results"), run: async () => { await (await import("~/lib/search/zero-result.server")).purgeZeroResults(env, at); } }]
+          ? [
+              {
+                ...cronJob("purge-zero-results"),
+                run: async () => {
+                  await (await import("~/lib/search/zero-result.server")).purgeZeroResults(env, at);
+                },
+              },
+            ]
           : []),
         // New DOIs on ORCID or Crossref, each mailed once (app/lib/publications/notify.server.ts).
         ...(isDailyAt(at, 6)
-          ? [{ ...cronJob("check-publications"), run: async () => { await (await import("~/lib/publications/notify.server")).checkPublicationsDaily(env); } }]
+          ? [
+              {
+                ...cronJob("check-publications"),
+                run: async () => {
+                  await (
+                    await import("~/lib/publications/notify.server")
+                  ).checkPublicationsDaily(env);
+                },
+              },
+            ]
           : []),
       ]),
     );
   },
-
 } satisfies ExportedHandler<Env>;
 
 // Prelum's markdownCopies: every public page has a Markdown copy at its path plus .md and answers Accept: text/markdown,
@@ -270,7 +315,8 @@ const site = {
 // wrapper only fills in the pages the site answers 404 or HTML for. The private planes get no copy.
 const withMarkdownCopies = markdownCopies(
   // The wrapper types the request as a plain Request; it hands on the one the runtime gave it, or a GET it made from it.
-  (request: Request, env: Env, ctx: ExecutionContext) => site.fetch(request as FetchArgs[0], env, ctx),
+  (request: Request, env: Env, ctx: ExecutionContext) =>
+    site.fetch(request as FetchArgs[0], env, ctx),
   { origin: SITE_ORIGIN, llmsFull: false, skip: isPrivatePath },
 );
 
@@ -287,10 +333,18 @@ export default {
     (request: Request, env: Env, ctx: ExecutionContext) => {
       const app = async () => withMarkdownCopies(request, env, ctx);
       const secret = env.ADMIN_IDLE_SECRET;
-      const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen", secret });
+      const lab = () =>
+        withAdminIdle(request, app, {
+          prefixes: [LAB_BENCH_PATH],
+          cookieName: "__Host-lab-seen",
+          secret,
+        });
       return withAdminIdle(request, lab, { prefixes: ["/admin"], secret });
     },
-    { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
+    {
+      sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
+      tokenPath: /\/preview\/[^/?#\s'"]+/g,
+    },
   ),
 } satisfies ExportedHandler<Env>;
 
@@ -305,7 +359,9 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
 
   // One hop to https and the slashless path (site-runtime ./url). A paper keeps its slash (below), and an old
   // WordPress address keeps its own, so the map moves it in the same hop.
-  const canonical = canonicalRedirect(request, { except: wordpress ? [url.pathname] : [`${PUBLICATIONS_PREFIX}*`] });
+  const canonical = canonicalRedirect(request, {
+    except: wordpress ? [url.pathname] : [`${PUBLICATIONS_PREFIX}*`],
+  });
   if (canonical !== null) {
     applySecurityHeaders(canonical.headers);
     return canonical;
@@ -324,7 +380,8 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
 
   // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
   const slashed = paperSlashTarget(url.pathname);
-  if (slashed !== null) return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
+  if (slashed !== null)
+    return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
 
   // A removed WordPress address renders the Gone page in its place: the address bar keeps the old URL
   // and the status is 410. Every redirect above was decided first; none of them names a removed path.
@@ -333,11 +390,15 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
   const theme = themeFromRequest(request);
   const { cacheKey, props } = cacheDimensions(gone ?? url, request, theme);
 
-  const response = await ctx.exports.Renderer({ props }).fetch(forRenderer(gone ? new Request(gone, request) : request), {
-    cf: { cacheKey },
-  });
+  const response = await ctx.exports
+    .Renderer({ props })
+    .fetch(forRenderer(gone ? new Request(gone, request) : request), {
+      cf: { cacheKey },
+    });
 
   // Tells browsers and proxies not to hold a per-reader document, any cookie but the theme the key holds counting;
   // a reader who already holds the page gets a 304. Not in the Renderer, whose response is the one the platform stores.
-  return forReader(await tombstoned(response, url.pathname, d1SiteApiStore(env.DB)), request, { publicCookies: [THEME_COOKIE] });
+  return forReader(await tombstoned(response, url.pathname, d1SiteApiStore(env.DB)), request, {
+    publicCookies: [THEME_COOKIE],
+  });
 }

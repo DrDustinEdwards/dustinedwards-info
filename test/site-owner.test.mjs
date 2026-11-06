@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 import { isSiteOwner, publicationsJsonLd } from "../app/lib/seo.ts";
 
 await test("every spelling of the owner in the corpus is the owner", () => {
-  for (const name of ["Dustin Edwards", "Dustin C. Edwards", "Dustin Cole Edwards", " Dustin  Edwards "]) {
+  for (const name of [
+    "Dustin Edwards",
+    "Dustin C. Edwards",
+    "Dustin Cole Edwards",
+    " Dustin  Edwards ",
+  ]) {
     assert.equal(isSiteOwner(name), true, name);
   }
 });

@@ -96,7 +96,6 @@ export function startHere(featuredRows, others, cards = HOME_CARDS) {
   return { featured: lead, recent };
 }
 
-
 /**
  * The facts describe the FILTERED list, not the corpus: a tag view stating the whole blog's span
  * would be true of something the page does not show. A null is not a zero; the row omits itself.

@@ -49,7 +49,17 @@ function primerBody(item) {
  */
 function strainBody(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  return [item.name, "strain", "host", stated(f.organism), designationOf(f), stated(f.collection), stated(f.collection_number)].filter(Boolean).join(" ");
+  return [
+    item.name,
+    "strain",
+    "host",
+    stated(f.organism),
+    designationOf(f),
+    stated(f.collection),
+    stated(f.collection_number),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /**
@@ -60,7 +70,15 @@ function strainBody(item) {
  */
 function reagentBody(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  return [item.name, "reagent", stated(f.abbreviation), stated(f.contents), f.prepared_in_lab === true ? "prepared in the lab" : null, stated(f.supplier), stated(f.catalog_number)]
+  return [
+    item.name,
+    "reagent",
+    stated(f.abbreviation),
+    stated(f.contents),
+    f.prepared_in_lab === true ? "prepared in the lab" : null,
+    stated(f.supplier),
+    stated(f.catalog_number),
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -68,16 +86,19 @@ function reagentBody(item) {
 /** The words an item of equipment is searched by: its name, who makes it and a centrifuge's rotor. @param {import("./kinds.mjs").RegistryItem} item */
 function equipmentBody(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  return [item.name, "equipment", stated(f.manufacturer), stated(f.rotor)].filter(Boolean).join(" ");
+  return [item.name, "equipment", stated(f.manufacturer), stated(f.rotor)]
+    .filter(Boolean)
+    .join(" ");
 }
 
 /** Each kind's search words. A kind with none is not indexed, so a kind added later is not indexed by accident. */
-const BODIES = /** @type {Record<string, (item: import("./kinds.mjs").RegistryItem) => string>} */ ({
-  primer: primerBody,
-  strain: strainBody,
-  reagent: reagentBody,
-  equipment: equipmentBody,
-});
+const BODIES =
+  /** @type {Record<string, (item: import("./kinds.mjs").RegistryItem) => string>} */ ({
+    primer: primerBody,
+    strain: strainBody,
+    reagent: reagentBody,
+    equipment: equipmentBody,
+  });
 
 /**
  * The record input of one item, or null for a kind with no search body yet (so a kind added later is not indexed by accident).
@@ -88,7 +109,12 @@ const BODIES = /** @type {Record<string, (item: import("./kinds.mjs").RegistryIt
 export function registrySearchInput(item) {
   const body = BODIES[item.kind]?.(item) ?? null;
   if (body === null) return null;
-  return { uid: registrySearchUid(item.kind, item.id), url: itemPath(item.kind, item.id), title: item.name, body };
+  return {
+    uid: registrySearchUid(item.kind, item.id),
+    url: itemPath(item.kind, item.id),
+    title: item.name,
+    body,
+  };
 }
 
 /** The inputs of every published item that has one, for the build's search artifact. @param {import("./kinds.mjs").RegistryItem[]} items */

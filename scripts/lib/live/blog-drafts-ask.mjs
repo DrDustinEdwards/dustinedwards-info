@@ -85,11 +85,12 @@ export async function run() {
     );
 
     if (live.length > POSTS_PER_PAGE) {
-      check("blog: page 2 exists and renders", fetched[1]?.status === 200, `got ${fetched[1]?.status}`);
       check(
-        "blog: page 1 links to page 2",
-        fetched[0].text.includes("page=2"),
+        "blog: page 2 exists and renders",
+        fetched[1]?.status === 200,
+        `got ${fetched[1]?.status}`,
       );
+      check("blog: page 1 links to page 2", fetched[0].text.includes("page=2"));
     }
     for (const [i, page] of fetched.entries()) {
       check(`blog: page ${i + 1} renders`, page.status === 200, `got ${page.status}`);
@@ -144,8 +145,16 @@ export async function run() {
       const twin = await get(`/writing/${slug}.md`);
       check(`draft ${slug}: the markdown twin is 404`, twin.status === 404, `got ${twin.status}`);
 
-      check(`draft ${slug}: absent from rss.xml`, served(rss) && !rss.text.includes(slug), `got ${rss.status}`);
-      check(`draft ${slug}: absent from feed.json`, served(feed) && !feed.text.includes(slug), `got ${feed.status}`);
+      check(
+        `draft ${slug}: absent from rss.xml`,
+        served(rss) && !rss.text.includes(slug),
+        `got ${rss.status}`,
+      );
+      check(
+        `draft ${slug}: absent from feed.json`,
+        served(feed) && !feed.text.includes(slug),
+        `got ${feed.status}`,
+      );
       check(
         `draft ${slug}: absent from sitemap.xml`,
         served(sitemap) && !sitemap.text.includes(slug),
@@ -163,7 +172,8 @@ export async function run() {
       const json = await get(`/search?q=${q}`, { accept: "application/json" });
       check(
         `draft ${slug}: absent from the search JSON`,
-        json.status === 200 && (json.res.headers.get("content-type") ?? "").includes("json") &&
+        json.status === 200 &&
+          (json.res.headers.get("content-type") ?? "").includes("json") &&
           !linksTo(json.text, slug),
         `got ${json.status} ${json.res.headers.get("content-type") ?? "(no type)"}`,
       );

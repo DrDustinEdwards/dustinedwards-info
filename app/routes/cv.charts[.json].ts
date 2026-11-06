@@ -26,7 +26,9 @@ function widthParam(raw: string | null) {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const facts = cvFacts((await readCv(getEnv(context))).entries);
   const url = new URL(request.url);
-  const charts = renderCvCharts(facts, parseState(url.searchParams), { width: widthParam(url.searchParams.get("w")) });
+  const charts = renderCvCharts(facts, parseState(url.searchParams), {
+    width: widthParam(url.searchParams.get("w")),
+  });
   return new Response(JSON.stringify(charts), {
     headers: {
       "content-type": "application/json; charset=utf-8",

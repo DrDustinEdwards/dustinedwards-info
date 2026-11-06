@@ -29,7 +29,10 @@ type CvEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class CvInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The CV file "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The CV file "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "CvInvalid";
   }
 }
@@ -60,7 +63,9 @@ async function judge(env: CvEnv, slug: string, raw: string) {
   const publications = await listPublishedPublications(env);
   const compiled = await compileCvFile({ slug, raw, publications });
   if (!compiled.ok) return compiled;
-  const others = (await listCvRows(env)).filter((row) => row.slug !== slug).map((row) => row.record);
+  const others = (await listCvRows(env))
+    .filter((row) => row.slug !== slug)
+    .map((row) => row.record);
   const whole = compileCv({ records: [...others, compiled.record], publications });
   if (!whole.ok) return whole;
   const { renderBody, findWideDashes } = await loadPipeline();
@@ -71,7 +76,10 @@ async function judge(env: CvEnv, slug: string, raw: string) {
 /** The CV's search records, compiled from D1's rows as they stand. */
 async function searchRecords(env: CvEnv) {
   const { renderBody, findWideDashes } = await loadPipeline();
-  const page = await compileCvPage({ cv: await readCv(env), pipeline: { renderBody, findWideDashes } });
+  const page = await compileCvPage({
+    cv: await readCv(env),
+    pipeline: { renderBody, findWideDashes },
+  });
   if (!page.ok) throw new Error(`The CV page does not compile: ${page.errors.join("; ")}`);
   return recordsForPages([page.searchInput]);
 }
@@ -85,7 +93,10 @@ export async function refreshCvSearch(env: CvEnv) {
   await env.DB.batch(replaceSearchRecords(env.DB, contentPageSearchUid("/cv"), records));
 }
 
-export async function writeCvRow(env: CvEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
+export async function writeCvRow(
+  env: CvEnv,
+  compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>,
+) {
   await env.DB.prepare(
     `INSERT INTO cv (slug, type, record, source_path, source_blob_sha, synced_at)
      VALUES (?1, ?2, ?3, ?4, ?5, unixepoch())
@@ -93,7 +104,13 @@ export async function writeCvRow(env: CvEnv, compiled: Extract<Awaited<ReturnTyp
        source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
        synced_at = excluded.synced_at`,
   )
-    .bind(compiled.record.slug, compiled.record.type, JSON.stringify(compiled.record), compiled.sourcePath, compiled.sourceBlobSha)
+    .bind(
+      compiled.record.slug,
+      compiled.record.type,
+      JSON.stringify(compiled.record),
+      compiled.sourcePath,
+      compiled.sourceBlobSha,
+    )
     .run();
 }
 
@@ -104,14 +121,19 @@ export async function deleteCvRow(env: CvEnv, row: { slug: string }) {
 
 /** True when D1's row for the file was compiled from exactly this file (the git blob sha matches). */
 async function rowIsCurrent(env: CvEnv, slug: string, blobSha: string) {
-  const row = await env.DB.prepare("SELECT source_blob_sha FROM cv WHERE slug = ?1").bind(slug).first<{ source_blob_sha: string | null }>();
+  const row = await env.DB.prepare("SELECT source_blob_sha FROM cv WHERE slug = ?1")
+    .bind(slug)
+    .first<{ source_blob_sha: string | null }>();
   return row?.source_blob_sha === blobSha;
 }
 
 /** A credential that may not write is refused; the CV has no draft state, so there is no first-publication rule. */
 function decide(actor: Actor) {
   if (!WRITE_CAPABILITIES[actor.kind].write) {
-    throw new PolicyError("Refused: this credential is READ ONLY and may not save a CV file.", "smoke-is-read-only");
+    throw new PolicyError(
+      "Refused: this credential is READ ONLY and may not save a CV file.",
+      "smoke-is-read-only",
+    );
   }
 }
 
@@ -121,7 +143,11 @@ function decide(actor: Actor) {
  * Without a `background` the render is awaited here and the outcome (or the failure) is in the result. Either way
  * the commit and the D1 row stand.
  */
-export type CvPdfReport = "scheduled" | "not-needed" | { rendered: CvPdfOutcome } | { failed: string };
+export type CvPdfReport =
+  | "scheduled"
+  | "not-needed"
+  | { rendered: CvPdfOutcome }
+  | { failed: string };
 
 /** The CV save. */
 export async function saveCvFile(
@@ -140,13 +166,21 @@ export async function saveCvFile(
   const { raw, actor } = options;
   const { slug, path } = registeredCvFile(options.slug);
   const existing = await readFile(env, path);
-  if (!existing) throw new CvInvalid(slug, [`${path} is missing from the repository, so the CV file cannot be saved; restore it first`]);
+  if (!existing)
+    throw new CvInvalid(slug, [
+      `${path} is missing from the repository, so the CV file cannot be saved; restore it first`,
+    ]);
 
   const compiled = await judge(env, slug, raw);
   if (!compiled.ok) throw new CvInvalid(slug, compiled.errors);
   decide(actor);
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -208,5 +242,12 @@ export async function saveCvFile(
     );
   }
 
-  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action !== "commit", purged, pdf };
+  return {
+    slug,
+    commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
+    unchanged: written.action !== "commit",
+    purged,
+    pdf,
+  };
 }

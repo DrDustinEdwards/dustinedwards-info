@@ -46,10 +46,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
      * Filtered here so the reported count and the rendered items come from one decision.
      * Known limit: the hero only appears when the featured post falls on page 1.
      */
-    const { featured, posts } = splitFeatured(
-      listing.posts,
-      !tag && !year && page === 1,
-    );
+    const { featured, posts } = splitFeatured(listing.posts, !tag && !year && page === 1);
 
     /*
      * Out of range redirects to the last real page: a 404 would be wrong once posts arrive, and
@@ -94,9 +91,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  const filterLabel = [loaderData?.activeTag, loaderData?.activeYear]
-    .filter(Boolean)
-    .join(", ");
+  const filterLabel = [loaderData?.activeTag, loaderData?.activeYear].filter(Boolean).join(", ");
   const title = filterLabel ? `Writing: ${filterLabel}` : "Writing";
   const description =
     "Writing on building for the web, mostly on Cloudflare: every post on Dustin Edwards's blog, by tag and year, with its feeds.";
@@ -119,7 +114,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
       ? `/writing?${canonicalQuery}`
       : "/writing";
 
-  return siteHead({ title, description, path, pageType: "CollectionPage", trail: [["Writing", "/writing"]] });
+  return siteHead({
+    title,
+    description,
+    path,
+    pageType: "CollectionPage",
+    trail: [["Writing", "/writing"]],
+  });
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {

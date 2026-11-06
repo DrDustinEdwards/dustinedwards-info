@@ -46,9 +46,10 @@ const bytes = (/** @type {string} */ hex) => channels(hex).map((c) => Math.round
  * @returns {string|null}
  */
 function compositeMix(expr) {
-  const m = /^color-mix\(\s*in\s+srgb\s*,\s*(#[0-9a-fA-F]{6})\s+([\d.]+)%\s*,\s*(#[0-9a-fA-F]{6})\s*\)$/.exec(
-    expr.trim(),
-  );
+  const m =
+    /^color-mix\(\s*in\s+srgb\s*,\s*(#[0-9a-fA-F]{6})\s+([\d.]+)%\s*,\s*(#[0-9a-fA-F]{6})\s*\)$/.exec(
+      expr.trim(),
+    );
   if (!m) return null;
   const [, a, pct, b] = m;
   const p = Number(pct) / 100;
@@ -91,7 +92,10 @@ const { ok: assert, fail } = tally;
  */
 function assertPair(head, fg, bg, min, { fgShown = fg, bgShown = bg } = {}) {
   const ratio = contrast(fg, bg);
-  assert(`${head}\n    ${fgShown} on ${bgShown}\n    ${ratio.toFixed(2)}:1, needs ${min}:1`, !(ratio < min));
+  assert(
+    `${head}\n    ${fgShown} on ${bgShown}\n    ${ratio.toFixed(2)}:1, needs ${min}:1`,
+    !(ratio < min),
+  );
   return ratio;
 }
 
@@ -152,10 +156,7 @@ for (const [mode] of MODES) {
   const decls = DECLARATIONS[mode];
   for (const [name, values] of Object.entries(decls)) {
     if (values.length === 1) continue;
-    assert(
-      `${mode} ${name} is declared at most twice, got ${values.length}`,
-      values.length === 2,
-    );
+    assert(`${mode} ${name} is declared at most twice, got ${values.length}`, values.length === 2);
     const [hex, recipe] = values;
     const composite = compositeMix(recipe);
     assert(
@@ -179,10 +180,7 @@ for (const [text, bg, expected] of APCA_KEYSTONE) {
   const got = apca(String(text), String(bg));
   const delta = Math.abs(got - Number(expected));
   if (delta > apcaWorstDelta) apcaWorstDelta = delta;
-  assert(
-    `APCA keystone ${text} on ${bg}: expected ${expected}, got ${got}`,
-    delta < 1e-9,
-  );
+  assert(`APCA keystone ${text} on ${bg}: expected ${expected}, got ${got}`, delta < 1e-9);
   // The sign is half the assertion: a magnitude-only check passes an implementation with backwards polarity.
   assert(
     `APCA keystone ${text} on ${bg}: sign should be ${Number(expected) >= 0 ? "positive" : "negative"}`,
@@ -200,7 +198,10 @@ for (const [mode, block] of MODES) {
     const fg = resolveToken(block, fgName).value;
     const bg = resolveToken(block, bgName).value;
     if (!fg || !bg) {
-      assert(`${mode}: ${note} references a token that does not exist (${fgName} on ${bgName})`, false);
+      assert(
+        `${mode}: ${note} references a token that does not exist (${fgName} on ${bgName})`,
+        false,
+      );
       continue;
     }
     const ratio = assertPair(`${mode}: ${note}`, fg, bg, min, {
@@ -235,7 +236,9 @@ function walkCss(dir) {
     .join("\n")
     .replace(/\/\*[\s\S]*?\*\//g, " ");
   const declaredAnywhere = new Set(
-    [...`${code}\n${capsomerCss}`.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]),
+    [...`${code}\n${capsomerCss}`.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map(
+      (m) => m[1],
+    ),
   );
 
   /* Scope, both sides: an empty set on either side fails for the wrong reason. */
@@ -258,18 +261,13 @@ function walkCss(dir) {
 
   assert(
     `every var(--token) used in app.css resolves to a declaration` +
-      (unresolved.length
-        ? `\n    used but never declared: ${unresolved.join(", ")}`
-        : ""),
+      (unresolved.length ? `\n    used but never declared: ${unresolved.join(", ")}` : ""),
     unresolved.length === 0,
   );
 
   for (const [name, why] of DECLARED_ELSEWHERE) {
     assert(`exemption ${name} names a token app.css still uses (${why})`, used.has(name));
-    assert(
-      `exemption ${name} is still undeclared in app.css`,
-      !declaredAnywhere.has(name),
-    );
+    assert(`exemption ${name} is still undeclared in app.css`, !declaredAnywhere.has(name));
   }
 }
 
@@ -295,9 +293,7 @@ function walkCss(dir) {
   const unproven = declared.filter((n) => !inMatrix.has(n) && !NON_PARTICIPATING.has(n));
   assert(
     `every declared token appears in at least one matrix pair` +
-      (unproven.length
-        ? `\n    declared but never measured: ${unproven.join(", ")}`
-        : ""),
+      (unproven.length ? `\n    declared but never measured: ${unproven.join(", ")}` : ""),
     unproven.length === 0,
   );
 
@@ -398,14 +394,28 @@ function contrastTierBlock(label, query, selector) {
     );
   }
 
-  for (const [mode, tier, base] of /** @type {Array<[string, Record<string,string>, Record<string,string>]>} */ ([
+  for (const [
+    mode,
+    tier,
+    base,
+  ] of /** @type {Array<[string, Record<string,string>, Record<string,string>]>} */ ([
     ["light", tierLight, light],
     ["dark", tierDark, darkAttr],
   ])) {
     for (const surface of ["--paper", "--surface-popover"]) {
-      assertPair(`${mode} prefers-contrast: muted on ${surface}`, tier["--text-secondary"], base[surface], TEXT);
+      assertPair(
+        `${mode} prefers-contrast: muted on ${surface}`,
+        tier["--text-secondary"],
+        base[surface],
+        TEXT,
+      );
     }
-    assertPair(`${mode} prefers-contrast: border on --paper`, tier["--border"], base["--paper"], UI);
+    assertPair(
+      `${mode} prefers-contrast: border on --paper`,
+      tier["--border"],
+      base["--paper"],
+      UI,
+    );
 
     // The tier must be strictly better than the default, or it is a different mode, not a high-contrast one.
     assert(
@@ -462,7 +472,8 @@ function themeRules(theme) {
 }
 
 /** VCS scopes are reported, not counted, only while `diff` is not in LANGUAGES. */
-const VCS_SCOPE = /^(markup\.(deleted|inserted|changed|ignored|untracked)|carriage-return|meta\.diff)/;
+const VCS_SCOPE =
+  /^(markup\.(deleted|inserted|changed|ignored|untracked)|carriage-return|meta\.diff)/;
 const diffReachable = LANGUAGES.includes("diff");
 
 /** @type {Array<[string, any, Record<string, string>]>} */
@@ -552,10 +563,7 @@ let builtNote = "no build present, skipped";
 const cssMtime = Math.max(...stylesheetPaths().map((p) => statSync(p).mtimeMs));
 if (existsSync(assetDir)) {
   const sheets = readdirSync(assetDir).filter((f) => f.endsWith(".css"));
-  const newest = Math.max(
-    0,
-    ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs),
-  );
+  const newest = Math.max(0, ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs));
   /* Stale fails, absent does not: editing a source is what makes the build stale. An asset
      directory with no CSS at all is its own failure, said as itself rather than as "stale". */
   if (sheets.length === 0) {
@@ -580,7 +588,9 @@ if (existsSync(assetDir)) {
 }
 
 console.log("check:contrast");
-console.log(`  tokens        light ${Object.keys(light).length}, dark ${Object.keys(darkAttr).length}`);
+console.log(
+  `  tokens        light ${Object.keys(light).length}, dark ${Object.keys(darkAttr).length}`,
+);
 console.log(`  matrix        ${MATRIX.length} pairs x 2 modes`);
 console.log(
   `  APCA impl     ${APCA_KEYSTONE.length}/${APCA_KEYSTONE.length} keystone vectors, worst delta ${apcaWorstDelta.toExponential(2)}`,
@@ -610,7 +620,6 @@ for (const a of worst) {
   );
 }
 
-
 /**
  * @param {string} selectorGroup
  * @returns {boolean}
@@ -639,7 +648,11 @@ function opacityExempt(selectorGroup) {
     const name = file.split(/[\\/]/).slice(-1)[0];
 
     for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const selector = match[1].trim().split("\n").map((l) => l.trim()).join(" ");
+      const selector = match[1]
+        .trim()
+        .split("\n")
+        .map((l) => l.trim())
+        .join(" ");
       const block = match[2];
       /* Every opacity declaration, whatever its value grammar: one this scan cannot read as a
          number (var(), calc()) is reported, not skipped, or it would escape classification. */
@@ -660,10 +673,7 @@ function opacityExempt(selectorGroup) {
   }
 
   /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(
-    `the opacity scan read declarations at all (${declarations} found)`,
-    declarations >= 8,
-  );
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 8);
 
   assert(
     unparsed.length === 0

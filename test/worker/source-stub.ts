@@ -17,12 +17,9 @@ const bindings = env as typeof env & { ASSETS?: Fetcher };
 export async function putSource(path: string, content: string, message = "Seed") {
   const sha = await gitBlobSha(content);
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO source_revisions (path, content, sha, message, author) VALUES (?1, ?2, ?3, ?4, 'admin')`).bind(
-      path,
-      content,
-      sha,
-      message,
-    ),
+    env.DB.prepare(
+      `INSERT INTO source_revisions (path, content, sha, message, author) VALUES (?1, ?2, ?3, ?4, 'admin')`,
+    ).bind(path, content, sha, message),
     env.DB.prepare(
       `INSERT INTO source_files (path, content, sha, revision) VALUES (?1, ?2, ?3, last_insert_rowid())
        ON CONFLICT (path) DO UPDATE SET content = excluded.content, sha = excluded.sha, revision = excluded.revision`,
@@ -36,7 +33,9 @@ export async function removeSource(path: string) {
 
 /** A file's content now, or undefined when D1 holds none. */
 export async function source(path: string): Promise<string | undefined> {
-  const row = await env.DB.prepare(`SELECT content FROM source_files WHERE path = ?1`).bind(path).first<{ content: string }>();
+  const row = await env.DB.prepare(`SELECT content FROM source_files WHERE path = ?1`)
+    .bind(path)
+    .first<{ content: string }>();
   return row?.content;
 }
 
@@ -49,7 +48,9 @@ export async function versionOf(path: string): Promise<string> {
 
 /** The writes a case made after its seed, oldest first: one row per file written. */
 export async function writes() {
-  const rows = await env.DB.prepare(`SELECT path, content, message, author FROM source_revisions WHERE message != 'Seed' ORDER BY id`).all<{
+  const rows = await env.DB.prepare(
+    `SELECT path, content, message, author FROM source_revisions WHERE message != 'Seed' ORDER BY id`,
+  ).all<{
     path: string;
     content: string | null;
     message: string;
@@ -79,7 +80,10 @@ export async function stubSources(seed: Record<string, string> = {}): Promise<So
     assets,
     async restore() {
       bindings.ASSETS = previous;
-      await env.DB.batch([env.DB.prepare(`DELETE FROM source_files`), env.DB.prepare(`DELETE FROM source_revisions`)]);
+      await env.DB.batch([
+        env.DB.prepare(`DELETE FROM source_files`),
+        env.DB.prepare(`DELETE FROM source_revisions`),
+      ]);
     },
   };
 }

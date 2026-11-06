@@ -74,7 +74,12 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       part: post.part,
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
-      searchFields: parseJson(post.slug, "search_fields", post.searchFields, null) as PostSearchFields | null,
+      searchFields: parseJson(
+        post.slug,
+        "search_fields",
+        post.searchFields,
+        null,
+      ) as PostSearchFields | null,
       backlinks: parseJson(post.slug, "backlinks", post.backlinks, []) as Array<{
         slug: string;
         title: string;
@@ -91,7 +96,9 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       }>,
       writingStatus: post.writingStatus ?? null,
       assumedAudience: post.assumedAudience ?? null,
-      keyTakeaways: parseJson(post.slug, "key_takeaways", post.keyTakeaways, null) as string[] | null,
+      keyTakeaways: parseJson(post.slug, "key_takeaways", post.keyTakeaways, null) as
+        | string[]
+        | null,
       changelog: parseJson(post.slug, "changelog", post.changelog, null) as Array<{
         date: string;
         note: string;

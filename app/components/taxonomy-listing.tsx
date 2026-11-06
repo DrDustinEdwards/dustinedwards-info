@@ -16,7 +16,9 @@ export function listingHref(base: string, n: number) {
 /** A listing's description from its own posts: how many, and the titles on the page. */
 export function listingDescription(what: string, total: number, posts: Array<{ title: string }>) {
   const count = `${total} post${total === 1 ? "" : "s"} on ${SITE.name}'s blog ${what}`;
-  return posts.length > 0 ? `${count}: ${posts.map((post) => post.title).join("; ")}.` : `${count}.`;
+  return posts.length > 0
+    ? `${count}: ${posts.map((post) => post.title).join("; ")}.`
+    : `${count}.`;
 }
 
 /** Out of range redirects to the last real page, so the URL never claims a page that does not exist. */

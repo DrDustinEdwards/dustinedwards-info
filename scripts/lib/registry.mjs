@@ -6,7 +6,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
-import { REGISTRY_DIR, compileRegistryItem, registrySetErrors, registrySlug, sortRegistry } from "../../app/kb/registry/compile.mjs";
+import {
+  REGISTRY_DIR,
+  compileRegistryItem,
+  registrySetErrors,
+  registrySlug,
+  sortRegistry,
+} from "../../app/kb/registry/compile.mjs";
 import { KINDS } from "../../app/kb/registry/kinds.mjs";
 import { storedPrimer } from "../../app/kb/registry/primer.mjs";
 import { storedEquipment } from "../../app/kb/registry/equipment.mjs";
@@ -21,7 +27,10 @@ export const REGISTRY_ARTIFACT_PATH = path.join("content", "generated", "registr
 export const repoHost = {
   /** @param {string} slug a publication's file key */
   async recipe(slug) {
-    const raw = await readFile(path.join(ROOT, "content", "procedures", `${slug}.md`), "utf8").catch((error) => {
+    const raw = await readFile(
+      path.join(ROOT, "content", "procedures", `${slug}.md`),
+      "utf8",
+    ).catch((error) => {
       if (error?.code === "ENOENT") return null;
       throw error;
     });
@@ -29,10 +38,12 @@ export const repoHost = {
   },
   /** @param {string} slug a publication's file key */
   async paper(slug) {
-    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch((error) => {
-      if (error?.code === "ENOENT") return null;
-      throw error;
-    });
+    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch(
+      (error) => {
+        if (error?.code === "ENOENT") return null;
+        throw error;
+      },
+    );
     return info !== null && info.isFile();
   },
 };
@@ -71,7 +82,9 @@ export async function compileAllRegistry(options = {}) {
     if (!Object.hasOwn(kinds, dir)) strays.push(`${REGISTRY_DIR}/${dir}`);
   }
   for (const kind of Object.keys(kinds)) {
-    const names = (await namesIn(path.join(root, REGISTRY_DIR, kind))).filter((n) => n.endsWith(".md")).sort();
+    const names = (await namesIn(path.join(root, REGISTRY_DIR, kind)))
+      .filter((n) => n.endsWith(".md"))
+      .sort();
     for (const name of names) {
       const slug = registrySlug(kind, name.slice(0, -3));
       const raw = await readFile(path.join(root, REGISTRY_DIR, kind, name), "utf8");
@@ -79,7 +92,13 @@ export async function compileAllRegistry(options = {}) {
         file: `${REGISTRY_DIR}/${kind}/${name}`,
         slug,
         raw,
-        compiled: await compileRegistryItem({ slug, raw, host, pipeline: { findWideDashes }, kinds }),
+        compiled: await compileRegistryItem({
+          slug,
+          raw,
+          host,
+          pipeline: { findWideDashes },
+          kinds,
+        }),
       });
     }
   }
@@ -96,16 +115,29 @@ export async function buildRegistry(options = {}) {
   const kinds = options?.kinds ?? KINDS;
   const { compiled, strays } = await compileAllRegistry(options);
   if (strays.length > 0) {
-    throw new Error(`${strays.join(", ")} is not a registry kind directory; the kinds are ${Object.keys(kinds).join(", ") || "none yet"}`);
+    throw new Error(
+      `${strays.join(", ")} is not a registry kind directory; the kinds are ${Object.keys(kinds).join(", ") || "none yet"}`,
+    );
   }
   const failed = compiled.filter((c) => !c.compiled.ok);
   if (failed.length > 0) {
-    throw new Error(failed.map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`).join("\n"));
+    throw new Error(
+      failed
+        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
+        .join("\n"),
+    );
   }
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
-  const setErrors = registrySetErrors(ok.map((c) => c.item), kinds);
-  if (setErrors.length > 0) throw new Error(`${REGISTRY_DIR} is not a registry:\n  ${setErrors.join("\n  ")}`);
-  const items = sortRegistry(ok.map((c) => c.item), kinds);
+  const setErrors = registrySetErrors(
+    ok.map((c) => c.item),
+    kinds,
+  );
+  if (setErrors.length > 0)
+    throw new Error(`${REGISTRY_DIR} is not a registry:\n  ${setErrors.join("\n  ")}`);
+  const items = sortRegistry(
+    ok.map((c) => c.item),
+    kinds,
+  );
   const rows = ok.map((c) => ({
     kind: c.item.kind,
     id: c.item.id,
@@ -115,7 +147,13 @@ export async function buildRegistry(options = {}) {
     sourcePath: c.sourcePath,
     sourceBlobSha: c.sourceBlobSha,
   }));
-  return { rows, items, gaps: ok.flatMap((c) => c.gaps.map((g) => ({ slug: registrySlug(c.item.kind, c.item.id), ...g }))) };
+  return {
+    rows,
+    items,
+    gaps: ok.flatMap((c) =>
+      c.gaps.map((g) => ({ slug: registrySlug(c.item.kind, c.item.id), ...g })),
+    ),
+  };
 }
 
 /**
@@ -137,27 +175,63 @@ export function registryHost(options) {
   return {
     /** @param {string[]} ids */
     async primers(ids) {
-      primers ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "primer").map((item) => [item.id, storedPrimer(item)])));
+      primers ??= buildRegistry(options).then(
+        ({ items }) =>
+          new Map(
+            items
+              .filter((item) => item.kind === "primer")
+              .map((item) => [item.id, storedPrimer(item)]),
+          ),
+      );
       const all = await primers;
-      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+      return new Map(
+        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
+      );
     },
     /** @param {string[]} ids */
     async equipment(ids) {
-      equipment ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "equipment").map((item) => [item.id, storedEquipment(item)])));
+      equipment ??= buildRegistry(options).then(
+        ({ items }) =>
+          new Map(
+            items
+              .filter((item) => item.kind === "equipment")
+              .map((item) => [item.id, storedEquipment(item)]),
+          ),
+      );
       const all = await equipment;
-      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+      return new Map(
+        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
+      );
     },
     /** @param {string[]} ids */
     async reagents(ids) {
-      reagents ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "reagent").map((item) => [item.id, storedReagent(item)])));
+      reagents ??= buildRegistry(options).then(
+        ({ items }) =>
+          new Map(
+            items
+              .filter((item) => item.kind === "reagent")
+              .map((item) => [item.id, storedReagent(item)]),
+          ),
+      );
       const all = await reagents;
-      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+      return new Map(
+        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
+      );
     },
     /** @param {string[]} ids */
     async strains(ids) {
-      strains ??= buildRegistry(options).then(({ items }) => new Map(items.filter((item) => item.kind === "strain").map((item) => [item.id, storedStrain(item)])));
+      strains ??= buildRegistry(options).then(
+        ({ items }) =>
+          new Map(
+            items
+              .filter((item) => item.kind === "strain")
+              .map((item) => [item.id, storedStrain(item)]),
+          ),
+      );
       const all = await strains;
-      return new Map(ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])));
+      return new Map(
+        ids.flatMap((id) => (all.has(id) ? [[id, /** @type {any} */ (all.get(id))]] : [])),
+      );
     },
   };
 }

@@ -42,7 +42,8 @@ export const LLMS_REQUIRED_MENTIONS = [
  */
 const LISTED_PAGE =
   /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/(?:publications|lab)\b)(\/(?:research|teaching|software|cv|privacy|terms|accessibility)(?:\/[a-z0-9-]+)*)\)/gm;
-const LISTED_TWIN = /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
+const LISTED_TWIN =
+  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
 
 /** The page paths the file lists, one per list link. @param {string} text */
 function listedPagePaths(text) {
@@ -82,7 +83,10 @@ export function overAdvertisedTwins(text, twinUrls) {
  *   twin the corpus produces, left out where the corpus is judged elsewhere
  * @returns {LlmsCheck[]} every rule, passed or failed, in the order they read
  */
-export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls, optionalPagePaths = [] }) {
+export function llmsChecks(
+  text,
+  { pagePaths, origin, findWideDashes, twinUrls, optionalPagePaths = [] },
+) {
   /** @type {LlmsCheck[]} */
   const checks = [];
   /** @param {string} name @param {boolean} ok @param {string} [detail] */
@@ -171,7 +175,8 @@ export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls, 
 
   // A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS cutover
   // it goes red until llms.txt follows, which is the point.
-  const contact = (text.match(/## Contact\s*\n\s*\n(?:- \[[^\]]*\]\()?(https?:\/\/[^\s)]+)/) ?? [])[1] ?? "";
+  const contact =
+    (text.match(/## Contact\s*\n\s*\n(?:- \[[^\]]*\]\()?(https?:\/\/[^\s)]+)/) ?? [])[1] ?? "";
   check(
     "llms.txt has a contact URL to compare",
     contact.startsWith("https://"),

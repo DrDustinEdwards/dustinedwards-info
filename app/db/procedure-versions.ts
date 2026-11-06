@@ -19,12 +19,22 @@ export type FrozenVersion = {
 };
 
 /** The sealed copy of a procedure's version, or null. An unsealed row (a sync part way through) is never served. */
-export async function getFrozenVersion(env: Env, path: string, version: string): Promise<FrozenVersion | null> {
+export async function getFrozenVersion(
+  env: Env,
+  path: string,
+  version: string,
+): Promise<FrozenVersion | null> {
   const row = (
     await getDb(env)
       .select()
       .from(procedureVersions)
-      .where(and(eq(procedureVersions.path, path), eq(procedureVersions.version, version), eq(procedureVersions.sealed, 1)))
+      .where(
+        and(
+          eq(procedureVersions.path, path),
+          eq(procedureVersions.version, version),
+          eq(procedureVersions.sealed, 1),
+        ),
+      )
       .limit(1)
   )[0];
   if (!row) return null;
@@ -50,8 +60,14 @@ export async function listFrozenVersions(env: Env, slug: string): Promise<string
 }
 
 /** The blob sha a version was frozen from, or null when it has no sealed copy. */
-export async function frozenBlobSha(env: Env, slug: string, version: string): Promise<string | null> {
-  const row = await env.DB.prepare("SELECT source_blob_sha FROM procedure_versions WHERE slug = ?1 AND version = ?2 AND sealed = 1")
+export async function frozenBlobSha(
+  env: Env,
+  slug: string,
+  version: string,
+): Promise<string | null> {
+  const row = await env.DB.prepare(
+    "SELECT source_blob_sha FROM procedure_versions WHERE slug = ?1 AND version = ?2 AND sealed = 1",
+  )
     .bind(slug, version)
     .first<{ source_blob_sha: string }>();
   return row?.source_blob_sha ?? null;
@@ -64,7 +80,15 @@ export async function frozenBlobSha(env: Env, slug: string, version: string): Pr
  */
 export function freezeStatement(
   db: D1Database,
-  frozen: { slug: string; version: string; path: string; profile: string; record: string; markdown: string; sourceBlobSha: string },
+  frozen: {
+    slug: string;
+    version: string;
+    path: string;
+    profile: string;
+    record: string;
+    markdown: string;
+    sourceBlobSha: string;
+  },
 ) {
   return db
     .prepare(
@@ -74,5 +98,13 @@ export function freezeStatement(
          markdown = excluded.markdown, source_blob_sha = excluded.source_blob_sha, sealed = 1, frozen_at = unixepoch()
        WHERE procedure_versions.sealed = 0`,
     )
-    .bind(frozen.slug, frozen.version, frozen.path, frozen.profile, frozen.record, frozen.markdown, frozen.sourceBlobSha);
+    .bind(
+      frozen.slug,
+      frozen.version,
+      frozen.path,
+      frozen.profile,
+      frozen.record,
+      frozen.markdown,
+      frozen.sourceBlobSha,
+    );
 }

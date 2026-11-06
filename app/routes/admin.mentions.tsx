@@ -18,15 +18,8 @@ import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
-import {
-  countExpiringWebmentions,
-  listWebmentionsForAdmin,
-  sweepWebmentions,
-} from "~/db";
-import {
-  FAILED_RETENTION_DAYS,
-  REJECTED_RETENTION_DAYS,
-} from "~/lib/webmention/retention.mjs";
+import { countExpiringWebmentions, listWebmentionsForAdmin, sweepWebmentions } from "~/db";
+import { FAILED_RETENTION_DAYS, REJECTED_RETENTION_DAYS } from "~/lib/webmention/retention.mjs";
 import type { Webmention } from "~/db/schema";
 
 import type { Route } from "./+types/admin.mentions";
@@ -136,9 +129,18 @@ export async function action({ request, context }: Route.ActionArgs) {
    * Shared with the operator API: `decideMention` keeps the write and the purge together, and the
    * actor runs the same policy checks it does. `changed` false means no row moved, which is not success.
    */
-  const decide = async (decision: "delete" | "approve" | "reject", done: string, unchanged: string) => {
+  const decide = async (
+    decision: "delete" | "approve" | "reject",
+    done: string,
+    unchanged: string,
+  ) => {
     try {
-      const { changed, purged } = await decideMention(env, id, decision, context.get(adminActorContext));
+      const { changed, purged } = await decideMention(
+        env,
+        id,
+        decision,
+        context.get(adminActorContext),
+      );
       if (!changed) return data<ActionResult>({ ok: false, message: unchanged }, { status: 409 });
       // The row moved, so the outcome is ok; a failed purge is said, since the public page keeps the old mentions.
       return data<ActionResult>({
@@ -310,7 +312,11 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
     <div className="app-page">
       <PageHead
         title="Mentions"
-        lead={status === "pending" && rows.length > 0 ? "Approving appears on the post within seconds." : undefined}
+        lead={
+          status === "pending" && rows.length > 0
+            ? "Approving appears on the post within seconds."
+            : undefined
+        }
       />
 
       {/* The status region is always in the DOM, so a result is announced; a refusal is an alert. */}
@@ -336,7 +342,11 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
       {rows.length === 0 ? (
         <Empty kind={status === "all" ? "nothing-yet" : "all-clear"}>{EMPTY_LINE[status]}</Empty>
       ) : (
-        <Panel title={FILTERS.find((f) => f.id === status)?.label ?? "Mentions"} count={rows.length} flush>
+        <Panel
+          title={FILTERS.find((f) => f.id === status)?.label ?? "Mentions"}
+          count={rows.length}
+          flush
+        >
           <RowList label="Mentions">
             {rows.map((mention) => (
               <MentionRow
@@ -378,7 +388,9 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
             <input type="hidden" name="intent" value="sweep" />
             <Button
               type="submit"
-              disabledReason={expired === 0 ? "Nothing has passed its retention window yet." : undefined}
+              disabledReason={
+                expired === 0 ? "Nothing has passed its retention window yet." : undefined
+              }
             >
               {`Remove ${expired} expired`}
             </Button>

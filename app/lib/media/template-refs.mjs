@@ -25,7 +25,8 @@ const SELF_REFERENTIAL = ["content/generated/assets.json"];
 export function isSourceFile(file) {
   if (SELF_REFERENTIAL.includes(file)) return false;
   if (SOURCE_FILES.includes(file)) return true;
-  if (SOURCE_DIRECTORIES.some((dir) => file.startsWith(`${dir}/`) && file.endsWith(".md"))) return true;
+  if (SOURCE_DIRECTORIES.some((dir) => file.startsWith(`${dir}/`) && file.endsWith(".md")))
+    return true;
   const root = file.split("/")[0] ?? "";
   if (!SOURCE_ROOTS.includes(root)) return false;
   return SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext));
@@ -48,24 +49,70 @@ export function stripComments(text, cssOnly = false) {
     const c = text[i];
     const next = text[i + 1];
     if (mode === "code") {
-      if (c === "/" && next === "*") { mode = "block"; out += "  "; i += 2; continue; }
-      if (!cssOnly && c === "/" && next === "/") { mode = "line"; out += "  "; i += 2; continue; }
-      if (!cssOnly && (c === "'" || c === '"' || c === "`")) { mode = c; out += c; i += 1; continue; }
-      if (cssOnly && (c === "'" || c === '"')) { mode = c; out += c; i += 1; continue; }
-      out += c; i += 1; continue;
+      if (c === "/" && next === "*") {
+        mode = "block";
+        out += "  ";
+        i += 2;
+        continue;
+      }
+      if (!cssOnly && c === "/" && next === "/") {
+        mode = "line";
+        out += "  ";
+        i += 2;
+        continue;
+      }
+      if (!cssOnly && (c === "'" || c === '"' || c === "`")) {
+        mode = c;
+        out += c;
+        i += 1;
+        continue;
+      }
+      if (cssOnly && (c === "'" || c === '"')) {
+        mode = c;
+        out += c;
+        i += 1;
+        continue;
+      }
+      out += c;
+      i += 1;
+      continue;
     }
     if (mode === "line") {
-      if (c === "\n") { mode = "code"; out += c; i += 1; continue; }
+      if (c === "\n") {
+        mode = "code";
+        out += c;
+        i += 1;
+        continue;
+      }
       // Blanked rather than deleted, so offsets stay comparable and lines cannot join.
-      out += " "; i += 1; continue;
+      out += " ";
+      i += 1;
+      continue;
     }
     if (mode === "block") {
-      if (c === "*" && next === "/") { mode = "code"; out += "  "; i += 2; continue; }
-      out += c === "\n" ? c : " "; i += 1; continue;
+      if (c === "*" && next === "/") {
+        mode = "code";
+        out += "  ";
+        i += 2;
+        continue;
+      }
+      out += c === "\n" ? c : " ";
+      i += 1;
+      continue;
     }
-    if (c === "\\") { out += text.slice(i, i + 2); i += 2; continue; }
-    if (c === mode) { mode = "code"; out += c; i += 1; continue; }
-    out += c; i += 1;
+    if (c === "\\") {
+      out += text.slice(i, i + 2);
+      i += 2;
+      continue;
+    }
+    if (c === mode) {
+      mode = "code";
+      out += c;
+      i += 1;
+      continue;
+    }
+    out += c;
+    i += 1;
   }
   return out;
 }

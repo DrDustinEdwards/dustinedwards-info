@@ -15,7 +15,8 @@ export function headers() {
 export function meta() {
   return siteHead({
     title: "Contact",
-    description: "How to reach Dustin Edwards: email, and his Tarleton State University faculty page.",
+    description:
+      "How to reach Dustin Edwards: email, and his Tarleton State University faculty page.",
     path: "/contact",
   });
 }
@@ -29,8 +30,8 @@ export default function Contact() {
 
       <div className="prose">
         <p>
-          Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. It reaches me directly, for research, teaching,
-          collaboration or anything on this site.
+          Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. It reaches me directly, for research,
+          teaching, collaboration or anything on this site.
         </p>
         <p>
           My office, phone and department details are on my{" "}

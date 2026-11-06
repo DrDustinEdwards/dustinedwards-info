@@ -23,8 +23,14 @@ export function freezeSql(r) {
     `INSERT INTO procedure_versions (slug, version, path, profile, record, markdown, source_blob_sha, sealed) VALUES ` +
       `(${sql(r.slug)}, ${sql(r.version)}, ${sql(r.path)}, ${sql(r.profile)}, ${sql(firstRecord)}, '', ${sql(r.sourceBlobSha)}, 0) ` +
       `ON CONFLICT(slug, version) DO NOTHING;`,
-    ...moreRecord.map((chunk) => `UPDATE procedure_versions SET record = record || ${sql(chunk)} WHERE ${key} AND sealed = 0;`),
-    ...textChunks(r.markdown).map((chunk) => `UPDATE procedure_versions SET markdown = markdown || ${sql(chunk)} WHERE ${key} AND sealed = 0;`),
+    ...moreRecord.map(
+      (chunk) =>
+        `UPDATE procedure_versions SET record = record || ${sql(chunk)} WHERE ${key} AND sealed = 0;`,
+    ),
+    ...textChunks(r.markdown).map(
+      (chunk) =>
+        `UPDATE procedure_versions SET markdown = markdown || ${sql(chunk)} WHERE ${key} AND sealed = 0;`,
+    ),
     `UPDATE procedure_versions SET sealed = 1 WHERE ${key} AND sealed = 0;`,
   ];
 }

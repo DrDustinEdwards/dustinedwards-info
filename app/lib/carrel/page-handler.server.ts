@@ -44,7 +44,12 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
   }
 
   /** One write through savePage as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     const { path } = target(slug);
     try {
       const saved = await savePage(env, {
@@ -54,7 +59,12 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
         isNew: false,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
+      return {
+        id: slug,
+        version: saved.sourceBlobSha,
+        status: saved.draft ? "draft" : "published",
+        changeId,
+      };
     } catch (error) {
       // A PageInvalid carries every message the validator gave; asSiteApiError passes them on.
       return asSiteApiError(env, error, target(slug).file);
@@ -100,7 +110,9 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
       if (!found) return null;
       const file = await readFile(env, found.file);
       if (!file) return null;
-      const row = await env.DB.prepare(`SELECT synced_at FROM pages WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>();
+      const row = await env.DB.prepare(`SELECT synced_at FROM pages WHERE slug = ?1`)
+        .bind(slug)
+        .first<{ synced_at: number }>();
       const fields = matter(file.content).data;
       return {
         id: slug,
@@ -124,13 +136,26 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
       const file = await readFile(env, found.file);
       if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
-      if (!file) throw new RefusedError(`The file for ${found.path} is missing from the repository, so it cannot be saved.`);
-      return write(slug, input.changeId, withDraft(input.source, isDraft(file.content)), input.expectedVersion);
+      if (!file)
+        throw new RefusedError(
+          `The file for ${found.path} is missing from the repository, so it cannot be saved.`,
+        );
+      return write(
+        slug,
+        input.changeId,
+        withDraft(input.source, isDraft(file.content)),
+        input.expectedVersion,
+      );
     },
 
     async publish(slug, input) {
       const stored = await existing(slug);
-      return write(slug, input.changeId, withDraft(input.source ?? stored, false), input.expectedVersion);
+      return write(
+        slug,
+        input.changeId,
+        withDraft(input.source ?? stored, false),
+        input.expectedVersion,
+      );
     },
 
     async unpublish(slug, input) {

@@ -19,7 +19,10 @@ function snapshotAgedBy(secondsAgo, overrides = {}) {
     ok: true,
     total: 5,
     failed: 0,
-    checks: ["db", "backup", "media", "content-drift", "fts-equality"].map((name) => ({ name, status: "pass" })),
+    checks: ["db", "backup", "media", "content-drift", "fts-equality"].map((name) => ({
+      name,
+      status: "pass",
+    })),
     readAt: new Date(NOW - secondsAgo * 1000).toISOString(),
     ...overrides,
   };
@@ -125,7 +128,10 @@ await test("a body that is not a /health answer is never stored", () => {
 });
 
 await test("body to snapshot to tile round trips what the colophon renders", () => {
-  const body = { status: "pass", checks: ["db", "media", "fts-equality"].map((name) => ({ name, status: "pass" })) };
+  const body = {
+    status: "pass",
+    checks: ["db", "media", "fts-equality"].map((name) => ({ name, status: "pass" })),
+  };
   const tile = healthTile(snapshotFromBody(body, new Date(NOW - 30_000).toISOString()), NOW);
   assert.equal(tile.state, "fresh");
   assert.equal(tile.total, 3);

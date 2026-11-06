@@ -140,7 +140,11 @@ export function procedureDriftVerdict(files, rows) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function dictionaryDriftVerdict(files, rows) {
-  return sourceDriftVerdict(files, rows, { label: "Dictionary", noun: "dictionary entry", tool: "sync_dictionary" });
+  return sourceDriftVerdict(files, rows, {
+    label: "Dictionary",
+    noun: "dictionary entry",
+    tool: "sync_dictionary",
+  });
 }
 
 /**
@@ -175,7 +179,10 @@ export function cvDriftVerdict(files, rows) {
  */
 export function cvPdfDriftVerdict({ stored, expected }) {
   if (stored === expected) {
-    return { ok: true, detail: `The stored CV PDF was drawn from the CV data D1 holds now and the deployed print document (${expected}).` };
+    return {
+      ok: true,
+      detail: `The stored CV PDF was drawn from the CV data D1 holds now and the deployed print document (${expected}).`,
+    };
   }
   const what =
     stored === null
@@ -198,7 +205,11 @@ export function cvPdfDriftVerdict({ stored, expected }) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function publicationDriftVerdict(files, rows) {
-  return sourceDriftVerdict(files, rows, { label: "Publication", noun: "publication", tool: "sync_publications" });
+  return sourceDriftVerdict(files, rows, {
+    label: "Publication",
+    noun: "publication",
+    tool: "sync_publications",
+  });
 }
 
 /**
@@ -231,7 +242,11 @@ export function phageDriftVerdict(files, rows) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function registryDriftVerdict(files, rows) {
-  return sourceDriftVerdict(files, rows, { label: "Registry", noun: "registry item", tool: "sync_registry" });
+  return sourceDriftVerdict(files, rows, {
+    label: "Registry",
+    noun: "registry item",
+    tool: "sync_registry",
+  });
 }
 
 /**
@@ -242,7 +257,11 @@ export function registryDriftVerdict(files, rows) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function llmsDriftVerdict(files, rows) {
-  return sourceDriftVerdict(files, rows, { label: "llms.txt", noun: "llms.txt", tool: "sync_llms" });
+  return sourceDriftVerdict(files, rows, {
+    label: "llms.txt",
+    noun: "llms.txt",
+    tool: "sync_llms",
+  });
 }
 
 /**

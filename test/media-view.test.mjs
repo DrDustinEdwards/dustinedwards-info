@@ -74,15 +74,25 @@ await test("every override still carries all the others", () => {
 await test("a pagination link keeps the whole view", () => {
   const search = new URLSearchParams(hrefWith(FULLY_SET, { page: 4 }).split("?")[1]);
   assert.equal(search.get("page"), "4");
-  for (const name of ["view", "group", "sort", "dir", "size", "role", "q", "tag", "lens", "trash", "key"]) {
+  for (const name of [
+    "view",
+    "group",
+    "sort",
+    "dir",
+    "size",
+    "role",
+    "q",
+    "tag",
+    "lens",
+    "trash",
+    "key",
+  ]) {
     assert.ok(search.has(name), `pagination dropped ${name}`);
   }
 });
 
 await test("a chip link keeps the whole view and resets the page", () => {
-  const search = new URLSearchParams(
-    hrefWith(FULLY_SET, { role: "icon", page: 1 }).split("?")[1],
-  );
+  const search = new URLSearchParams(hrefWith(FULLY_SET, { role: "icon", page: 1 }).split("?")[1]);
   assert.equal(search.get("role"), "icon");
   assert.ok(!search.has("page"), "page 1 is the default and is omitted");
   assert.ok(search.has("view") && search.has("sort") && search.has("q"));
@@ -196,8 +206,16 @@ await test("SORT ORDER SURVIVES GROUPING, within a group", () => {
     { key: "/b/1.png", uploaded: null },
   ];
   const out = groupRows(rows, "folder");
-  assert.deepEqual(out.map((g) => g.label), ["B", "A"], "derived titles, sentence case");
-  assert.deepEqual(out[0].rows.map((r) => r.key), ["/b/3.png", "/b/1.png"], "order within a group");
+  assert.deepEqual(
+    out.map((g) => g.label),
+    ["B", "A"],
+    "derived titles, sentence case",
+  );
+  assert.deepEqual(
+    out[0].rows.map((r) => r.key),
+    ["/b/3.png", "/b/1.png"],
+    "order within a group",
+  );
 });
 
 await test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping", () => {
@@ -221,7 +239,10 @@ await test("folder sections render in TABLE order, social cards before publicati
     ],
     "folder",
   );
-  assert.deepEqual(out.map((g) => g.label), ["Social cards", "Publications"]);
+  assert.deepEqual(
+    out.map((g) => g.label),
+    ["Social cards", "Publications"],
+  );
 });
 
 await test("an unknown folder is titled from its own directory, never mislabelled", () => {
@@ -232,7 +253,11 @@ await test("an unknown folder is titled from its own directory, never mislabelle
 
 await test("folders: a static path has one, a content-addressed key says so", () => {
   assert.equal(folderOf("/research/publications/a-paper.pdf"), "/research/publications");
-  assert.equal(folderOf("/dustin-edwards-logo.svg"), "Uploads", "a root-level path has no meaningful folder");
+  assert.equal(
+    folderOf("/dustin-edwards-logo.svg"),
+    "Uploads",
+    "a root-level path has no meaningful folder",
+  );
   assert.equal(folderOf("1234abcd5678ef90.png"), "Uploads");
   assert.equal(folderOf("/phage-hunters/2019/x.jpg"), "/phage-hunters/2019");
 });
@@ -249,7 +274,10 @@ await test("a row with no upload date gets its own bucket, not the nearest month
   assert.equal(monthOf(undefined), "No upload date");
   assert.equal(monthOf("not a date"), "No upload date");
   const out = groupRows(
-    [{ key: "a.png", uploaded: null }, { key: "b.png", uploaded: "2026-03-02T00:00:00.000Z" }],
+    [
+      { key: "a.png", uploaded: null },
+      { key: "b.png", uploaded: "2026-03-02T00:00:00.000Z" },
+    ],
     "month",
   );
   assert.equal(out.length, 2);

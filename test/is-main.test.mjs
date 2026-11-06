@@ -27,8 +27,9 @@ await test("no started script is not main", () => {
 const windowsOnly = { skip: process.platform !== "win32" };
 
 await test("REPLAY: a drive letter in the other case still matches on Windows", windowsOnly, () => {
-  const flipped = HERE[0] === HERE[0].toUpperCase()
-    ? HERE[0].toLowerCase() + HERE.slice(1)
-    : HERE[0].toUpperCase() + HERE.slice(1);
+  const flipped =
+    HERE[0] === HERE[0].toUpperCase()
+      ? HERE[0].toLowerCase() + HERE.slice(1)
+      : HERE[0].toUpperCase() + HERE.slice(1);
   assert.equal(isMain(import.meta.url, flipped), true);
 });

@@ -12,7 +12,8 @@ function item(over = {}) {
     link: "https://germomics.com/antitoxin-togo-please",
     guid: "https://germomics.com/?p=563",
     pubDate: "Tue, 19 Nov 2019 09:00:30 GMT",
-    description: "<![CDATA[What do blue jeans have to do with diphtheria &amp; the <b>1925</b> Serum Run?]]>",
+    description:
+      "<![CDATA[What do blue jeans have to do with diphtheria &amp; the <b>1925</b> Serum Run?]]>",
     audio: "https://op3.dev/e/media.germomics.com/Podcast_010_Antitoxin_Togo_Please.mp3",
     type: "audio/mpeg",
     duration: "00:21:17",
@@ -32,7 +33,8 @@ function item(over = {}) {
   </item>`;
 }
 
-const feed = (/** @type {string[]} */ ...items) => `<rss><channel><title>Germomics</title>${items.join("")}</channel></rss>`;
+const feed = (/** @type {string[]} */ ...items) =>
+  `<rss><channel><title>Germomics</title>${items.join("")}</channel></rss>`;
 
 await test("an episode in the live feed's shape parses whole", () => {
   const [ep] = parsePodcastFeed(feed(item()));
@@ -81,7 +83,10 @@ await test("episodes come back newest first whatever the feed's order", () => {
       item({ guid: "new", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }),
     ),
   );
-  assert.deepEqual(eps.map((e) => e.guid), ["new", "old"]);
+  assert.deepEqual(
+    eps.map((e) => e.guid),
+    ["new", "old"],
+  );
 });
 
 await test("durations in all three itunes forms, and garbage is null", () => {
@@ -95,7 +100,10 @@ await test("durations in all three itunes forms, and garbage is null", () => {
 
 await test("the home page's episode is episodes[0], which is always the newest: no picker, no stored choice", () => {
   const eps = parsePodcastFeed(
-    feed(item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }), item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" })),
+    feed(
+      item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }),
+      item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" }),
+    ),
   );
   assert.equal(eps[0].guid, "b");
   assert.deepEqual(parsePodcastFeed(feed()), []);

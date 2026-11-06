@@ -35,7 +35,9 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
       message.ack();
     } catch (error) {
       // Never ack a transient failure, or the row silently never appears.
-      console.error(JSON.stringify({ alert: "media-event-failed", key, detail: errorMessage(error) }));
+      console.error(
+        JSON.stringify({ alert: "media-event-failed", key, detail: errorMessage(error) }),
+      );
       message.retry();
     }
   }
@@ -80,7 +82,10 @@ async function indexOne(env: Env, key: string) {
     // Derived here, or the upsert erases the bulk pass's placeholder. A second GET, because `.info()`
     // consumed the first body stream.
     const reread = await bucketFor(env, key).get(key);
-    if (reread) placeholder = (await placeholderAndColor(env.IMAGES, new Uint8Array(await reread.arrayBuffer()))).placeholder;
+    if (reread)
+      placeholder = (
+        await placeholderAndColor(env.IMAGES, new Uint8Array(await reread.arrayBuffer()))
+      ).placeholder;
   }
 
   await upsertDerivedMedia(env, {
@@ -97,7 +102,9 @@ async function indexOne(env: Env, key: string) {
     // Null means "do not touch", not "erase".
     placeholder,
     uploadedAt:
-      object.uploaded instanceof Date ? object.uploaded.toISOString() : String(object.uploaded ?? ""),
+      object.uploaded instanceof Date
+        ? object.uploaded.toISOString()
+        : String(object.uploaded ?? ""),
   });
 
   // The backup is not taken here: the nightly files backup copies MEDIA into BACKUPS (d1-backup.server.ts).

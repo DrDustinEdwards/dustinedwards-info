@@ -36,9 +36,23 @@ export const LAB_CATALOG = defineTitles({
       label: "Lab manager",
       layer: 2,
       expires: true,
-      permissions: [P.read, P.useLot, P.recordRun, P.readAllRuns, P.editInventory, P.draftProcedure, P.manageMembers],
+      permissions: [
+        P.read,
+        P.useLot,
+        P.recordRun,
+        P.readAllRuns,
+        P.editInventory,
+        P.draftProcedure,
+        P.manageMembers,
+      ],
     },
-    { id: "lab_worker", label: "Lab worker", layer: 3, expires: true, permissions: [P.read, P.useLot, P.recordRun] },
+    {
+      id: "lab_worker",
+      label: "Lab worker",
+      layer: 3,
+      expires: true,
+      permissions: [P.read, P.useLot, P.recordRun],
+    },
   ],
 });
 

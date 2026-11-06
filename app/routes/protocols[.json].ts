@@ -12,13 +12,16 @@ import type { Route } from "./+types/protocols[.json]";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const items = libraryItems(await listPublishedLibraryRecords(getEnv(context)));
   const rows = libraryRecords(items, new URL(request.url).searchParams, SITE_ORIGIN);
-  return new Response(`${JSON.stringify({ license: LICENSE_URL, count: rows.length, protocols: rows }, null, 2)}\n`, {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": SHARED_CACHE_CONTROL,
-      "cache-tag": PROCEDURES_CACHE_TAG,
-      "x-robots-tag": "noindex",
-      link: `${canonicalLink(LIBRARY_PATH)}, ${LICENSE_LINK}`,
+  return new Response(
+    `${JSON.stringify({ license: LICENSE_URL, count: rows.length, protocols: rows }, null, 2)}\n`,
+    {
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": SHARED_CACHE_CONTROL,
+        "cache-tag": PROCEDURES_CACHE_TAG,
+        "x-robots-tag": "noindex",
+        link: `${canonicalLink(LIBRARY_PATH)}, ${LICENSE_LINK}`,
+      },
     },
-  });
+  );
 }

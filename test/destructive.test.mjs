@@ -11,7 +11,19 @@ await test("the confirmation passes only on an exact match", () => {
 });
 
 await test("the confirmation rejects everything adjacent to the count", () => {
-  for (const typed of ["", "  ", "03", "3.0", "+3", "3 files", "2", "4", "three", null, undefined]) {
+  for (const typed of [
+    "",
+    "  ",
+    "03",
+    "3.0",
+    "+3",
+    "3 files",
+    "2",
+    "4",
+    "three",
+    null,
+    undefined,
+  ]) {
     assert.equal(
       confirmationSatisfied(typed, 3),
       false,

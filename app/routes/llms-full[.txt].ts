@@ -25,9 +25,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       `# ${post.title}`,
       "",
       `URL: /writing/${post.slug}`,
-      post.publishAt
-        ? `Published: ${new Date(post.publishAt).toISOString().slice(0, 10)}`
-        : null,
+      post.publishAt ? `Published: ${new Date(post.publishAt).toISOString().slice(0, 10)}` : null,
       post.tags.length > 0 ? `Tags: ${post.tags.join(", ")}` : null,
       "",
       post.body.trim(),

@@ -50,26 +50,55 @@ export async function redirectFor(env: DbEnv, slug: string): Promise<string | nu
  */
 export async function movePost(
   env: DbEnv,
-  move: { from: string; to: string; fromPath: string; toPath: string; sha: string; redirect: boolean },
+  move: {
+    from: string;
+    to: string;
+    fromPath: string;
+    toPath: string;
+    sha: string;
+    redirect: boolean;
+  },
 ) {
   const db = env.DB;
   const statements = [
-    db.prepare(`INSERT INTO source_guard (ok) VALUES ((SELECT sha FROM source_files WHERE path = ?1) IS ?2)`).bind(move.fromPath, move.sha),
-    db.prepare(`INSERT INTO source_guard (ok) VALUES ((SELECT COUNT(*) FROM source_files WHERE path = ?1) = 0)`).bind(move.toPath),
-    db.prepare(`UPDATE source_files SET path = ?2 WHERE path = ?1`).bind(move.fromPath, move.toPath),
-    db.prepare(`UPDATE source_revisions SET path = ?2 WHERE path = ?1`).bind(move.fromPath, move.toPath),
-    db.prepare(`UPDATE scheduled_updates SET content_id = ?2 WHERE content_id = ?1`).bind(move.from, move.to),
-    db.prepare(`UPDATE scheduled_publishes SET content_id = ?2 WHERE content_id = ?1`).bind(move.from, move.to),
-    db.prepare(`UPDATE content_trash SET content_id = ?2 WHERE content_id = ?1`).bind(move.from, move.to),
+    db
+      .prepare(
+        `INSERT INTO source_guard (ok) VALUES ((SELECT sha FROM source_files WHERE path = ?1) IS ?2)`,
+      )
+      .bind(move.fromPath, move.sha),
+    db
+      .prepare(
+        `INSERT INTO source_guard (ok) VALUES ((SELECT COUNT(*) FROM source_files WHERE path = ?1) = 0)`,
+      )
+      .bind(move.toPath),
+    db
+      .prepare(`UPDATE source_files SET path = ?2 WHERE path = ?1`)
+      .bind(move.fromPath, move.toPath),
+    db
+      .prepare(`UPDATE source_revisions SET path = ?2 WHERE path = ?1`)
+      .bind(move.fromPath, move.toPath),
+    db
+      .prepare(`UPDATE scheduled_updates SET content_id = ?2 WHERE content_id = ?1`)
+      .bind(move.from, move.to),
+    db
+      .prepare(`UPDATE scheduled_publishes SET content_id = ?2 WHERE content_id = ?1`)
+      .bind(move.from, move.to),
+    db
+      .prepare(`UPDATE content_trash SET content_id = ?2 WHERE content_id = ?1`)
+      .bind(move.from, move.to),
     // The new slug is a page of its own now, so it no longer redirects anywhere.
     db.prepare(`DELETE FROM post_redirects WHERE from_slug = ?1`).bind(move.to),
     ...(move.redirect
       ? [
-          db.prepare(`UPDATE post_redirects SET to_slug = ?2 WHERE to_slug = ?1`).bind(move.from, move.to),
-          db.prepare(
-            `INSERT INTO post_redirects (from_slug, to_slug) VALUES (?1, ?2)
+          db
+            .prepare(`UPDATE post_redirects SET to_slug = ?2 WHERE to_slug = ?1`)
+            .bind(move.from, move.to),
+          db
+            .prepare(
+              `INSERT INTO post_redirects (from_slug, to_slug) VALUES (?1, ?2)
              ON CONFLICT (from_slug) DO UPDATE SET to_slug = excluded.to_slug`,
-          ).bind(move.from, move.to),
+            )
+            .bind(move.from, move.to),
         ]
       : []),
     db.prepare(`DELETE FROM source_guard`),
@@ -96,7 +125,9 @@ export function dropScheduledPublish(env: DbEnv, id: string) {
 }
 
 export async function scheduledPublishOf(env: DbEnv, id: string) {
-  return env.DB.prepare(`SELECT publish_at, change_id FROM scheduled_publishes WHERE content_id = ?1`)
+  return env.DB.prepare(
+    `SELECT publish_at, change_id FROM scheduled_publishes WHERE content_id = ?1`,
+  )
     .bind(id)
     .first<{ publish_at: string; change_id: string }>();
 }

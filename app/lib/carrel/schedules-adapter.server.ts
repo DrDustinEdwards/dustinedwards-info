@@ -16,7 +16,12 @@ import type { SchedulesAdapter, WriteResult } from "@dustinedwards/site-api";
 import { d1ScheduledUpdates, utc } from "@dustinedwards/site-api/schedules";
 
 import { DEFAULT_KIND, decodeContentId } from "~/lib/carrel/content-id.mjs";
-import { effectivePublishAt, frontKey, statusOf, withPublication } from "~/lib/carrel/front-matter-lines";
+import {
+  effectivePublishAt,
+  frontKey,
+  statusOf,
+  withPublication,
+} from "~/lib/carrel/front-matter-lines";
 import {
   dropScheduledPublish,
   dueScheduledPublishes,
@@ -25,7 +30,12 @@ import {
 import { postPath } from "~/lib/content/slug.mjs";
 import { readFile } from "~/lib/source/store.server";
 
-type Write = (id: string, changeId: string, raw: string, expectedVersion: string | null) => Promise<WriteResult>;
+type Write = (
+  id: string,
+  changeId: string,
+  raw: string,
+  expectedVersion: string | null,
+) => Promise<WriteResult>;
 
 /** Two times are the same schedule to the second: a seeded row (drizzle/0038) was read off a whole-second column. */
 const sameSecond = (a: number, b: number) => Math.floor(a / 1000) === Math.floor(b / 1000);
@@ -37,19 +47,33 @@ export function postSchedules(env: Env, write: Write): SchedulesAdapter {
   async function postFile(id: string) {
     // The registry's own words for a kind with no schedule (content-kinds.server.ts).
     const { kind } = decodeContentId(id);
-    if (kind !== DEFAULT_KIND) throw new RefusedError(`A ${kind} cannot be scheduled; publish it now.`);
+    if (kind !== DEFAULT_KIND)
+      throw new RefusedError(`A ${kind} cannot be scheduled; publish it now.`);
     return readFile(env, postPath(id));
   }
 
   /** The first publish the cron announces: still scheduled for exactly that time, and the time has come. */
-  async function applyPublish(id: string, input: { publishAt: string; changeId: string; now: Date }) {
+  async function applyPublish(
+    id: string,
+    input: { publishAt: string; changeId: string; now: Date },
+  ) {
     const marker = await scheduledPublishOf(env, id);
-    if (!marker || marker.publish_at !== utc(input.publishAt) || marker.change_id !== input.changeId) return null;
+    if (
+      !marker ||
+      marker.publish_at !== utc(input.publishAt) ||
+      marker.change_id !== input.changeId
+    )
+      return null;
     await dropScheduledPublish(env, id).run();
     const file = await readFile(env, postPath(id));
     if (!file || statusOf(file.content, input.now.getTime()) !== "published") return null;
     if (!sameSecond(effectivePublishAt(file.content), Date.parse(input.publishAt))) return null;
-    return { id, version: file.sha, status: "published", changeId: input.changeId } satisfies WriteResult;
+    return {
+      id,
+      version: file.sha,
+      status: "published",
+      changeId: input.changeId,
+    } satisfies WriteResult;
   }
 
   return {
@@ -63,10 +87,13 @@ export function postSchedules(env: Env, write: Write): SchedulesAdapter {
       if (!file) throw new NotFoundError(`No post "${id}" exists.`);
       if (file.sha !== input.expectedVersion) throw new VersionConflictError(file.sha);
       if (statusOf(file.content) !== "published") {
-        throw new RefusedError("Only a live post can carry a scheduled update; schedule the post itself instead.");
+        throw new RefusedError(
+          "Only a live post can carry a scheduled update; schedule the post itself instead.",
+        );
       }
       const at = Date.parse(input.publishAt);
-      if (!(at > Date.now())) throw new RefusedError("publishAt is not in the future; publish the change now instead.");
+      if (!(at > Date.now()))
+        throw new RefusedError("publishAt is not in the future; publish the change now instead.");
       const publishAt = utc(new Date(at));
       await stored.put(id, { source: input.source, publishAt, changeId: input.changeId }).run();
       return {
@@ -88,7 +115,12 @@ export function postSchedules(env: Env, write: Write): SchedulesAdapter {
       }
       // A scheduled post that was never live goes back to draft, as the contract says.
       if (statusOf(file.content) === "scheduled") {
-        const result = await write(id, input.changeId, withPublication(file.content, { draft: true }), input.expectedVersion);
+        const result = await write(
+          id,
+          input.changeId,
+          withPublication(file.content, { draft: true }),
+          input.expectedVersion,
+        );
         await dropScheduledPublish(env, id).run();
         return result;
       }
@@ -96,14 +128,20 @@ export function postSchedules(env: Env, write: Write): SchedulesAdapter {
     },
 
     async due({ now, limit }) {
-      const due = [...(await stored.due(now, limit)), ...(await dueScheduledPublishes(env, now, limit))];
-      return due.sort((a, b) => a.publishAt.localeCompare(b.publishAt) || a.id.localeCompare(b.id)).slice(0, limit);
+      const due = [
+        ...(await stored.due(now, limit)),
+        ...(await dueScheduledPublishes(env, now, limit)),
+      ];
+      return due
+        .sort((a, b) => a.publishAt.localeCompare(b.publishAt) || a.id.localeCompare(b.id))
+        .slice(0, limit);
     },
 
     async apply(id, input) {
       if (input.kind === "publish") return applyPublish(id, input);
       const update = await stored.get(id);
-      if (!update || update.publishAt !== input.publishAt || update.changeId !== input.changeId) return null;
+      if (!update || update.publishAt !== input.publishAt || update.changeId !== input.changeId)
+        return null;
       if (Date.parse(update.publishAt) > input.now.getTime()) return null;
       const file = await readFile(env, postPath(id));
       if (!file || statusOf(file.content, input.now.getTime()) !== "published") return null;

@@ -12,7 +12,10 @@ import { ts } from "./syntax.mjs";
  */
 export function parseJsonc(path) {
   // TypeScript asserts its file names are forward-slashed when it attaches a diagnostic.
-  const result = ts.parseConfigFileTextToJson(path.replaceAll("\\", "/"), readFileSync(path, "utf8"));
+  const result = ts.parseConfigFileTextToJson(
+    path.replaceAll("\\", "/"),
+    readFileSync(path, "utf8"),
+  );
   if (result.error) {
     throw new Error(
       `${path} is not valid JSONC: ${ts.flattenDiagnosticMessageText(result.error.messageText, "\n")}`,
@@ -128,16 +131,13 @@ export function unhandledBindingKinds(config) {
   const declaresBinding = (/** @type {any} */ value) => {
     if (!value || typeof value !== "object") return false;
     if (Array.isArray(value)) {
-      return value.some(
-        (v) => v && typeof v === "object" && ("binding" in v || "name" in v),
-      );
+      return value.some((v) => v && typeof v === "object" && ("binding" in v || "name" in v));
     }
     if ("binding" in value) return true;
     return (
       Array.isArray(value.bindings) &&
       value.bindings.some(
-        (/** @type {any} */ v) =>
-          v && typeof v === "object" && ("binding" in v || "name" in v),
+        (/** @type {any} */ v) => v && typeof v === "object" && ("binding" in v || "name" in v),
       )
     );
   };

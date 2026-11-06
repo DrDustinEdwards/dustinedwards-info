@@ -168,10 +168,7 @@ export async function decideWebmention(
     .update(webmentions)
     .set({ status, decidedAt: now })
     .where(
-      and(
-        eq(webmentions.id, id),
-        inArray(webmentions.status, [...DECIDABLE_WEBMENTION_STATUSES]),
-      ),
+      and(eq(webmentions.id, id), inArray(webmentions.status, [...DECIDABLE_WEBMENTION_STATUSES])),
     )
     .returning({ targetSlug: webmentions.targetSlug });
   return rows[0]?.targetSlug ?? null;
@@ -198,14 +195,8 @@ export async function countExpiringWebmentions(
   const db = getDb(env);
   const expired = expiryPredicates(now);
   const [failed, rejected] = await Promise.all([
-    db
-      .select({ n: count() })
-      .from(webmentions)
-      .where(expired.failed),
-    db
-      .select({ n: count() })
-      .from(webmentions)
-      .where(expired.rejected),
+    db.select({ n: count() }).from(webmentions).where(expired.failed),
+    db.select({ n: count() }).from(webmentions).where(expired.rejected),
   ]);
   return { failed: failed[0]?.n ?? 0, rejected: rejected[0]?.n ?? 0 };
 }

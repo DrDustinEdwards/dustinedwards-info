@@ -13,15 +13,15 @@ Ten, each a whole job. Every step of each is an authenticated request to
 `POST /api/operator` over the `SITE` service binding; the API owns every rule.
 Read tools need `dei.read`; the others need `dei.write`, ticked on the consent page.
 
-| Tool | Does | Hints (read, destructive, idempotent, open world) |
-|---|---|---|
-| `dei_review_mentions` | the webmention queue, a page at a time, stranger text marked as data | read, no, yes, no |
-| `dei_decide_mention` | approve or reject one mention (delete stays in the admin screen) | write, no, yes, no |
-| `dei_read_registry` | list or read the Knowledge Base registry | read, no, yes, no |
-| `dei_refresh_citations` | fresh OpenAlex citation counts, all or by DOI | write, no, yes, yes |
-| `dei_check_publications` | DOIs on ORCID or Crossref the site lacks, and papers ORCID lacks | read, no, yes, yes |
-| `dei_read_procedure` | list the lab procedures, or read one whole with its structured record | read, no, yes, no |
-| `dei_save_procedure` | save one lab procedure's whole file; first publication is admin-only | write, no, no, no |
+| Tool                     | Does                                                                  | Hints (read, destructive, idempotent, open world) |
+| ------------------------ | --------------------------------------------------------------------- | ------------------------------------------------- |
+| `dei_review_mentions`    | the webmention queue, a page at a time, stranger text marked as data  | read, no, yes, no                                 |
+| `dei_decide_mention`     | approve or reject one mention (delete stays in the admin screen)      | write, no, yes, no                                |
+| `dei_read_registry`      | list or read the Knowledge Base registry                              | read, no, yes, no                                 |
+| `dei_refresh_citations`  | fresh OpenAlex citation counts, all or by DOI                         | write, no, yes, yes                               |
+| `dei_check_publications` | DOIs on ORCID or Crossref the site lacks, and papers ORCID lacks      | read, no, yes, yes                                |
+| `dei_read_procedure`     | list the lab procedures, or read one whole with its structured record | read, no, yes, no                                 |
+| `dei_save_procedure`     | save one lab procedure's whole file; first publication is admin-only  | write, no, no, no                                 |
 
 No content or media library tools: Carrel owns all writing and every site's media library (rule 11), so posts, pages, the CV and the rest are read there, and photos are imported and deleted there. Lists page at 25
 by default, at most 100, with `has_more` and an opaque `next_cursor`.
@@ -81,7 +81,7 @@ about what is allowed would change.
 ```
 
 It is a **separate Worker** for a structural reason: the only path from here to
-the publish machinery *is* the API. Mounted as a route on the app Worker, the
+the publish machinery _is_ the API. Mounted as a route on the app Worker, the
 cheap path would be an in-process call that skips operator authentication and
 the rate limiter. Here that call is unreachable.
 
@@ -160,14 +160,14 @@ the only place that says WHICH agent acted.
 
 ## Gates
 
-| Gate | Proves |
-|---|---|
-| `npm run typecheck` | `wrangler types -c wrangler.jsonc && tsc -b` |
-| `npm run build` | a dry-run bundle; typecheck is not a build (a missing runtime dependency passes typecheck when `node_modules` still holds it) |
-| `npm test` | the tools, the request layer, ownership, scope and the log against a fake site |
-| `npm run check:wrapper` | the no-policy law and the security floor, mechanically |
-| `npm run check:wrapper:plant` | that `check:wrapper` actually fails, one planted violation at a time |
-| `npm run check:conformance` | the official suite against the real protocol layer, per era, plus the authorization server against the real deploy entry |
+| Gate                          | Proves                                                                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`           | `wrangler types -c wrangler.jsonc && tsc -b`                                                                                  |
+| `npm run build`               | a dry-run bundle; typecheck is not a build (a missing runtime dependency passes typecheck when `node_modules` still holds it) |
+| `npm test`                    | the tools, the request layer, ownership, scope and the log against a fake site                                                |
+| `npm run check:wrapper`       | the no-policy law and the security floor, mechanically                                                                        |
+| `npm run check:wrapper:plant` | that `check:wrapper` actually fails, one planted violation at a time                                                          |
+| `npm run check:conformance`   | the official suite against the real protocol layer, per era, plus the authorization server against the real deploy entry      |
 
 `check:conformance` runs against `test/conformance-entry.ts`, which mounts the
 real handler and tools with only the client leg and the limiter removed. It is a

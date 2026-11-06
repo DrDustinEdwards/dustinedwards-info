@@ -11,7 +11,9 @@ export function requireTarget(argv, script) {
   const remote = argv.includes("--remote");
   const local = argv.includes("--local");
   if (remote && local) {
-    throw new Error(`${script} was given both --remote and --local. Name one; nothing was touched.`);
+    throw new Error(
+      `${script} was given both --remote and --local. Name one; nothing was touched.`,
+    );
   }
   if (!remote && !local) {
     throw new Error(

@@ -29,7 +29,8 @@ export function undescribedImages(html) {
     if (node.tagName !== "img") return;
     images += 1;
     const alt = node.properties?.alt;
-    if (typeof alt !== "string" || alt.trim() === "") undescribed.push(String(node.properties?.src ?? "an image with no src"));
+    if (typeof alt !== "string" || alt.trim() === "")
+      undescribed.push(String(node.properties?.src ?? "an image with no src"));
   });
   return { images, undescribed };
 }
@@ -56,11 +57,13 @@ export function altTextFailures({ posts, pages }) {
     const name = `The post "${post.title}" (/writing/${post.slug})`;
     if (post.cover) {
       images += 1;
-      if (!post.cover.alt.trim()) failures.push(`${name} has the cover image ${post.cover.src} with no alt text; ${fix}`);
+      if (!post.cover.alt.trim())
+        failures.push(`${name} has the cover image ${post.cover.src} with no alt text; ${fix}`);
     }
     const found = undescribedImages(post.html);
     images += found.images;
-    for (const src of found.undescribed) failures.push(`${name} uses the image ${src} with no alt text; ${fix}`);
+    for (const src of found.undescribed)
+      failures.push(`${name} uses the image ${src} with no alt text; ${fix}`);
   }
 
   for (const page of pages) {
@@ -69,7 +72,9 @@ export function altTextFailures({ posts, pages }) {
     const found = undescribedImages(page.html);
     images += found.images;
     for (const src of found.undescribed) {
-      failures.push(`The page "${page.title}" (${page.path}) uses the image ${src} with no alt text; ${fix}`);
+      failures.push(
+        `The page "${page.title}" (${page.path}) uses the image ${src} with no alt text; ${fix}`,
+      );
     }
   }
 
@@ -92,7 +97,9 @@ async function main() {
 
   for (const failure of failures) console.log(`  FAIL  ${failure}`);
   for (const breach of breaches) console.log(`  FAIL  ${breach}`);
-  console.log(`\n  ${images} image(s) in ${documents} published post(s) and page(s), ${failures.length} with no alt text.\n`);
+  console.log(
+    `\n  ${images} image(s) in ${documents} published post(s) and page(s), ${failures.length} with no alt text.\n`,
+  );
   if (failures.length > 0 || breaches.length > 0) process.exit(1);
 }
 

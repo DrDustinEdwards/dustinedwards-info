@@ -39,7 +39,9 @@ export async function run() {
 
   {
     /* The paper twins are assets, so this is the one check that the platform expands `:splat` in public/_headers. */
-    const twin = readdirSync(join(root, "public", "research", "publications")).find((f) => f.endsWith(".md"));
+    const twin = readdirSync(join(root, "public", "research", "publications")).find((f) =>
+      f.endsWith(".md"),
+    );
     check("paper twin: a built twin exists to probe", Boolean(twin));
     if (twin) {
       const slug = twin.slice(0, -".md".length);
@@ -97,14 +99,22 @@ export async function run() {
     // The cohort photographs are media library files, named by each roster file.
     const photos = readdirSync(join(root, "content", "roster"))
       .filter((f) => f.endsWith(".md"))
-      .flatMap((f) => readFileSync(join(root, "content", "roster", f), "utf8").match(/^ {2}src: (\/media\/\S+)$/m)?.[1] ?? []);
+      .flatMap(
+        (f) =>
+          readFileSync(join(root, "content", "roster", f), "utf8").match(
+            /^ {2}src: (\/media\/\S+)$/m,
+          )?.[1] ?? [],
+      );
     let ok = 0;
     for (const f of pdfs) {
-      const r = await fetch(`${ORIGIN}/research/publications/${f.split("/").map(encodeURIComponent).join("/")}`, {
-        method: "HEAD",
-        headers: { "user-agent": UA },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      const r = await fetch(
+        `${ORIGIN}/research/publications/${f.split("/").map(encodeURIComponent).join("/")}`,
+        {
+          method: "HEAD",
+          headers: { "user-agent": UA },
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        },
+      );
       if (r.status === 200) ok += 1;
       else check(`asset 404: /research/publications/${f} (${r.status})`, false);
     }

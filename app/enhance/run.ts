@@ -56,7 +56,8 @@ export default function start(): void {
   if (stepItems.length === 0) throw new Error("run: this procedure has no steps to run");
   // A step is addressed by its section and its number: numbering restarts in a section that starts its own list, so the
   // number alone is not unique ("step 1" is in two places in a procedure with a second method).
-  const sectionOf = (li: HTMLElement) => li.closest("section[aria-labelledby]")?.getAttribute("aria-labelledby") ?? "";
+  const sectionOf = (li: HTMLElement) =>
+    li.closest("section[aria-labelledby]")?.getAttribute("aria-labelledby") ?? "";
   // The step's own id where it has one: a section with two lists of steps numbers both from 1, and section and
   // number alone gave their steps one key, so a Done ticked both and one step at a time showed both.
   const keyOf = (li: HTMLElement) => li.id || `${sectionOf(li)}.${li.dataset.step}`;
@@ -85,7 +86,8 @@ export default function start(): void {
   // appendChild and insertBefore, not append, before and after: this project also compiles against the Worker's
   // own DOM-like types, which type those three for a different purpose.
   const add = (parent: Node, ...kids: Array<Node | string>) => {
-    for (const kid of kids) parent.appendChild(typeof kid === "string" ? document.createTextNode(kid) : kid);
+    for (const kid of kids)
+      parent.appendChild(typeof kid === "string" ? document.createTextNode(kid) : kid);
   };
   const placeBefore = (ref: Node, ...kids: Node[]) => {
     for (const kid of kids) ref.parentNode?.insertBefore(kid, ref);
@@ -97,7 +99,11 @@ export default function start(): void {
       at = kid;
     }
   };
-  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, string> = {}, ...kids: Array<Node | string>) => {
+  const el = <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    props: Record<string, string> = {},
+    ...kids: Array<Node | string>
+  ) => {
     const node = document.createElement(tag);
     for (const [k, v] of Object.entries(props)) node.setAttribute(k, v);
     add(node, ...kids);
@@ -108,12 +114,19 @@ export default function start(): void {
     b.addEventListener("click", onClick);
     return b;
   };
-  const stepText = (li: HTMLElement) => li.querySelector(".procedure-step-text")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  const stepText = (li: HTMLElement) =>
+    li.querySelector(".procedure-step-text")?.textContent?.replace(/\s+/g, " ").trim() ?? "";
   const sectionTitle = (li: HTMLElement) => {
     const id = li.closest("section[aria-labelledby]")?.getAttribute("aria-labelledby");
     return (id ? document.getElementById(id)?.textContent : "")?.replace(/\s+/g, " ").trim() ?? "";
   };
-  const stepRecords = () => stepItems.map((li) => ({ key: keyOf(li), number: Number(li.dataset.step), section: sectionTitle(li), text: stepText(li) }));
+  const stepRecords = () =>
+    stepItems.map((li) => ({
+      key: keyOf(li),
+      number: Number(li.dataset.step),
+      section: sectionTitle(li),
+      text: stepText(li),
+    }));
 
   // ---------------------------------------------------------------- storage
 
@@ -149,7 +162,11 @@ export default function start(): void {
   const alertRegion = el("div", { class: "run-alert", role: "alert" });
   const bar = el("section", { class: "run-bar", "aria-label": "Run", hidden: "" });
   const start = el("button", { type: "button", class: "run-start" }, "Run this procedure");
-  const summary = el("section", { class: "run-summary", "aria-labelledby": "run-summary-h", hidden: "" });
+  const summary = el("section", {
+    class: "run-summary",
+    "aria-labelledby": "run-summary-h",
+    hidden: "",
+  });
 
   function say(message: string) {
     live.textContent = "";
@@ -173,7 +190,9 @@ export default function start(): void {
     if (!run) return;
     const { done, total } = runProgress(run, stepKeys);
     const current = stepItems.find((li) => !run?.steps[keyOf(li)]?.done);
-    const toggle = button(oneAtATime ? "Show every step" : "One step at a time", "run-view", () => setView(!oneAtATime));
+    const toggle = button(oneAtATime ? "Show every step" : "One step at a time", "run-view", () =>
+      setView(!oneAtATime),
+    );
     toggle.setAttribute("aria-pressed", String(oneAtATime));
     if (oneAtATime) {
       shownKey = shownStep(run, stepKeys, shownKey);
@@ -185,7 +204,11 @@ export default function start(): void {
       if (!before) prev.setAttribute("disabled", "");
       if (!after) next.setAttribute("disabled", "");
       bar.replaceChildren(
-        el("p", { class: "run-progress" }, `Step ${shown?.dataset.step ?? ""}, ${stepKeys.indexOf(shownKey ?? "") + 1} of ${total}; ${done} done`),
+        el(
+          "p",
+          { class: "run-progress" },
+          `Step ${shown?.dataset.step ?? ""}, ${stepKeys.indexOf(shownKey ?? "") + 1} of ${total}; ${done} done`,
+        ),
         roll(shown),
         prev,
         next,
@@ -197,7 +220,9 @@ export default function start(): void {
       bar.replaceChildren(
         el("p", { class: "run-progress" }, `${done} of ${total} steps done`),
         roll(current),
-        current ? button(`Go to step ${current.dataset.step}`, "run-next", () => focusStep(current)) : el("span", { class: "run-all" }, "Every step is done."),
+        current
+          ? button(`Go to step ${current.dataset.step}`, "run-next", () => focusStep(current))
+          : el("span", { class: "run-all" }, "Every step is done."),
         toggle,
         button("Finish run", "run-finish", finish),
         button("Stop", "run-stop", stop),
@@ -226,7 +251,16 @@ export default function start(): void {
       li.classList.toggle("cap-cue", shown);
       li.querySelector(":scope > .cap-cue-strip")?.remove();
       if (shown) {
-        const strip = el("p", { class: "cap-cue-strip", "aria-hidden": "true" }, el("span", {}, procedure.title), el("span", {}, `Step ${li.dataset.step}, card ${stepKeys.indexOf(keyOf(li)) + 1} of ${stepKeys.length}`));
+        const strip = el(
+          "p",
+          { class: "cap-cue-strip", "aria-hidden": "true" },
+          el("span", {}, procedure.title),
+          el(
+            "span",
+            {},
+            `Step ${li.dataset.step}, card ${stepKeys.indexOf(keyOf(li)) + 1} of ${stepKeys.length}`,
+          ),
+        );
         li.insertBefore(strip, li.firstChild);
       }
     }
@@ -257,13 +291,21 @@ export default function start(): void {
   }
 
   function focusStep(li: HTMLElement) {
-    li.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    li.scrollIntoView({
+      block: "center",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
     li.querySelector<HTMLElement>(".run-done-check")?.focus({ preventScroll: true });
   }
 
   // ---------------------------------------------------------------- a step's tools
 
-  function timerButton(li: HTMLElement, step: number, index: number, timer: StepTimer): HTMLElement {
+  function timerButton(
+    li: HTMLElement,
+    step: number,
+    index: number,
+    timer: StepTimer,
+  ): HTMLElement {
     const key = timerKey(keyOf(li), index);
     timerStep.set(key, String(step));
     const ms = timerMs(timer);
@@ -282,8 +324,23 @@ export default function start(): void {
       const remaining = timerRemaining(run, key, Date.now());
       box.dataset.state = t?.state ?? "idle";
       clockEl.textContent = remaining === null ? clock(ms) : clock(remaining);
-      act.textContent = !t ? `Start ${label}` : t.state === "running" ? "Pause" : t.state === "paused" ? "Resume" : "Done: start again";
-      act.setAttribute("aria-label", !t ? `Start timer for step ${step}: ${label}` : t.state === "running" ? `Pause the timer for step ${step}` : t.state === "paused" ? `Resume the timer for step ${step}` : `The timer for step ${step} finished; start it again`);
+      act.textContent = !t
+        ? `Start ${label}`
+        : t.state === "running"
+          ? "Pause"
+          : t.state === "paused"
+            ? "Resume"
+            : "Done: start again";
+      act.setAttribute(
+        "aria-label",
+        !t
+          ? `Start timer for step ${step}: ${label}`
+          : t.state === "running"
+            ? `Pause the timer for step ${step}`
+            : t.state === "paused"
+              ? `Resume the timer for step ${step}`
+              : `The timer for step ${step} finished; start it again`,
+      );
       reset.hidden = !t;
     };
     act.addEventListener("click", () => {
@@ -307,21 +364,32 @@ export default function start(): void {
   }
 
   function drawAllTimers() {
-    for (const box of root!.querySelectorAll<HTMLElement & { draw?: () => void }>(".run-timer")) box.draw?.();
+    for (const box of root!.querySelectorAll<HTMLElement & { draw?: () => void }>(".run-timer"))
+      box.draw?.();
   }
 
   function buildTools(li: HTMLElement) {
     const step = Number(li.dataset.step);
     const key = keyOf(li);
     const timers: StepTimer[] = li.dataset.timers ? JSON.parse(li.dataset.timers) : [];
-    const done = el("input", { type: "checkbox", class: "run-done-check", id: `run-done-${key}` }) as HTMLInputElement;
+    const done = el("input", {
+      type: "checkbox",
+      class: "run-done-check",
+      id: `run-done-${key}`,
+    }) as HTMLInputElement;
     done.checked = run?.steps[key]?.done === true;
     done.addEventListener("change", () => {
       if (!run) return;
       update(toggleDone(run, key, Date.now()));
       say(done.checked ? `Step ${step} done.` : `Step ${step} not done.`);
     });
-    const note = el("textarea", { class: "run-note-text", rows: "2", id: `run-note-${key}`, maxlength: "2000", "aria-label": `Note for step ${step}` }) as HTMLTextAreaElement;
+    const note = el("textarea", {
+      class: "run-note-text",
+      rows: "2",
+      id: `run-note-${key}`,
+      maxlength: "2000",
+      "aria-label": `Note for step ${step}`,
+    }) as HTMLTextAreaElement;
     note.value = run?.steps[key]?.note ?? "";
     let pending: number | undefined;
     note.addEventListener("input", () => {
@@ -337,7 +405,12 @@ export default function start(): void {
       { class: "run-tools" },
       el("label", { class: "run-done", for: done.id }, done, el("span", {}, `Step ${step} done`)),
       ...timers.map((t, i) => timerButton(li, step, i, t)),
-      el("details", { class: "run-note" }, el("summary", {}, note.value.trim() ? "Note (written)" : "Add a note"), note),
+      el(
+        "details",
+        { class: "run-note" },
+        el("summary", {}, note.value.trim() ? "Note (written)" : "Add a note"),
+        note,
+      ),
     );
     const text = li.querySelector(".procedure-step-text");
     if (text) placeAfter(text, tools);
@@ -405,7 +478,14 @@ export default function start(): void {
     } catch {
       // Not every browser lets a page hold the screen. Said, not hidden: the bar tells the person.
       wakeLock = null;
-      add(bar, el("p", { class: "run-warning", role: "note" }, "This browser would not keep the screen on; it may sleep between steps."));
+      add(
+        bar,
+        el(
+          "p",
+          { class: "run-warning", role: "note" },
+          "This browser would not keep the screen on; it may sleep between steps.",
+        ),
+      );
     }
   }
 
@@ -429,7 +509,10 @@ export default function start(): void {
 
   async function applyScale(href: string, focus = false) {
     try {
-      const res = await fetch(href, { headers: { Accept: "text/html" }, credentials: "same-origin" });
+      const res = await fetch(href, {
+        headers: { Accept: "text/html" },
+        credentials: "same-origin",
+      });
       if (!res.ok) throw new Error(`run: ${href} answered ${res.status}`);
       const doc = new DOMParser().parseFromString(await res.text(), "text/html");
       const next = doc.querySelector<HTMLElement>(".procedure[data-run-path]");
@@ -439,11 +522,15 @@ export default function start(): void {
       if (table && nextTable) table.innerHTML = nextTable.innerHTML;
       for (const li of stepItems) {
         const mine = li.querySelector('[data-run-swap="step"]');
-        const theirs = next.querySelector(`li[data-step="${li.dataset.step}"] [data-run-swap="step"]`);
+        const theirs = next.querySelector(
+          `li[data-step="${li.dataset.step}"] [data-run-swap="step"]`,
+        );
         if (mine && theirs) mine.innerHTML = theirs.innerHTML;
         // A recipe step's own ingredient line carries the same amounts.
         const mineList = li.querySelector(".procedure-step-ingredients");
-        const theirList = next.querySelector(`li[data-step="${li.dataset.step}"] .procedure-step-ingredients`);
+        const theirList = next.querySelector(
+          `li[data-step="${li.dataset.step}"] .procedure-step-ingredients`,
+        );
         if (mineList && theirList) mineList.innerHTML = theirList.innerHTML;
       }
       // So does a recipe's mise-en-place.
@@ -466,14 +553,17 @@ export default function start(): void {
     e.preventDefault();
     // Every field of the form, as its GET would send them: the scale, and a recipe's units beside it.
     const url = new URL(scaleForm.action, location.href);
-    for (const [name, value] of new FormData(scaleForm)) if (typeof value === "string" && value !== "") url.searchParams.set(name, value);
+    for (const [name, value] of new FormData(scaleForm))
+      if (typeof value === "string" && value !== "") url.searchParams.set(name, value);
     void applyScale(`${url.pathname}${url.search}`, true);
   });
 
   // ---------------------------------------------------------------- start, finish, stop
 
   function begin(existing: Run | null) {
-    run = existing ?? newRun({ ...procedure, scale: scaleField ? Number(scaleField.value) : null }, Date.now());
+    run =
+      existing ??
+      newRun({ ...procedure, scale: scaleField ? Number(scaleField.value) : null }, Date.now());
     root!.dataset.run = "on";
     start.hidden = true;
     bar.hidden = false;
@@ -546,20 +636,46 @@ export default function start(): void {
     const current = run;
     const slug = procedure.path.split("/").pop() ?? "run";
     const stamp = new Date(current.finishedAt ?? Date.now()).toISOString().slice(0, 10);
-    const runNote = el("textarea", { class: "run-note-text", rows: "3", id: "run-summary-note", "aria-label": "Note on the whole run", maxlength: "4000" }) as HTMLTextAreaElement;
+    const runNote = el("textarea", {
+      class: "run-note-text",
+      rows: "3",
+      id: "run-summary-note",
+      "aria-label": "Note on the whole run",
+      maxlength: "4000",
+    }) as HTMLTextAreaElement;
     runNote.value = current.note;
     runNote.addEventListener("input", () => run && update(setRunNote(run, runNote.value)));
     const { done, total } = runProgress(current, stepKeys);
     summary.replaceChildren(
       el("h2", { id: "run-summary-h" }, "Run record"),
-      el("p", {}, `${done} of ${total} steps done${current.scale !== null ? `, at scale ${current.scale}` : ""}. Saved on this device only; nothing was sent anywhere.`),
+      el(
+        "p",
+        {},
+        `${done} of ${total} steps done${current.scale !== null ? `, at scale ${current.scale}` : ""}. Saved on this device only; nothing was sent anywhere.`,
+      ),
       el("label", { for: runNote.id }, "Note on the whole run"),
       runNote,
       el(
         "p",
         { class: "run-actions" },
-        button("Download as text", "run-download", () => run && download(`${slug}-${stamp}.md`, runMarkdown(run, stepRecords()), "text/markdown")),
-        button("Download as JSON", "run-download", () => run && download(`${slug}-${stamp}.json`, `${JSON.stringify(runRecord(run, stepRecords(), location.origin), null, 2)}\n`, "application/json")),
+        button(
+          "Download as text",
+          "run-download",
+          () =>
+            run &&
+            download(`${slug}-${stamp}.md`, runMarkdown(run, stepRecords()), "text/markdown"),
+        ),
+        button(
+          "Download as JSON",
+          "run-download",
+          () =>
+            run &&
+            download(
+              `${slug}-${stamp}.json`,
+              `${JSON.stringify(runRecord(run, stepRecords(), location.origin), null, 2)}\n`,
+              "application/json",
+            ),
+        ),
         button("Print", "run-print", () => window.print()),
         button("Start over", "run-again", () => {
           try {

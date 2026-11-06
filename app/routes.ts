@@ -33,9 +33,15 @@ export default [
     route("blog/feed.json", "routes/blog.feed[.json].ts", { id: "legacy-blog-feed" }),
     route("blog/atom.xml", "routes/blog.atom[.xml].ts", { id: "legacy-blog-atom" }),
     route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts", { id: "legacy-tag-rss" }),
-    route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", { id: "legacy-tag-feed" }),
-    route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", { id: "legacy-series-rss" }),
-    route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", { id: "legacy-series-feed" }),
+    route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", {
+      id: "legacy-tag-feed",
+    }),
+    route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", {
+      id: "legacy-series-rss",
+    }),
+    route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", {
+      id: "legacy-series-feed",
+    }),
     // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
     route("research/publications", "routes/publications.tsx"),
     // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
@@ -75,24 +81,40 @@ export default [
     // The other knowledge bases' libraries (app/kb/libraries.mjs): the page, its twin and its downloads, one module for all.
     ...LIBRARY_BASES.flatMap((base) => [
       route(base.library.slice(1), "routes/kb-library.tsx", { id: `library-${base.id}` }),
-      route(`${base.library.slice(1)}.md`, "routes/kb-library[.md].ts", { id: `library-${base.id}-md` }),
-      route(`${base.library.slice(1)}.json`, "routes/kb-library[.json].ts", { id: `library-${base.id}-json` }),
-      route(`${base.library.slice(1)}.csv`, "routes/kb-library[.csv].ts", { id: `library-${base.id}-csv` }),
+      route(`${base.library.slice(1)}.md`, "routes/kb-library[.md].ts", {
+        id: `library-${base.id}-md`,
+      }),
+      route(`${base.library.slice(1)}.json`, "routes/kb-library[.json].ts", {
+        id: `library-${base.id}-json`,
+      }),
+      route(`${base.library.slice(1)}.csv`, "routes/kb-library[.csv].ts", {
+        id: `library-${base.id}-csv`,
+      }),
     ]),
     // One set per knowledge base (app/kb/bases.mjs), at its entry root.
     ...BASES.map((base) => [base.entryRoot.slice(1, -1), base.profile]).flatMap(([root, id]) => [
       route(`${root}/:slug.md`, "routes/procedure[.md].ts", { id: `procedure-${id}-md` }),
       // A frozen version (drizzle/0027_procedure_versions.sql): its page and its twin, the twin first as above.
-      route(`${root}/:slug/v/:version.md`, "routes/procedure.version[.md].ts", { id: `procedure-${id}-version-md` }),
-      route(`${root}/:slug/v/:version`, "routes/procedure.version.tsx", { id: `procedure-${id}-version` }),
-      route(`${root}/:slug/v/:version/sheet`, "routes/procedure.version.sheet.tsx", { id: `procedure-${id}-version-sheet` }),
+      route(`${root}/:slug/v/:version.md`, "routes/procedure.version[.md].ts", {
+        id: `procedure-${id}-version-md`,
+      }),
+      route(`${root}/:slug/v/:version`, "routes/procedure.version.tsx", {
+        id: `procedure-${id}-version`,
+      }),
+      route(`${root}/:slug/v/:version/sheet`, "routes/procedure.version.sheet.tsx", {
+        id: `procedure-${id}-version-sheet`,
+      }),
       route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
       route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
     ]),
     // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
     // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin has its own route, below.
-    ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path) && path !== LIBRARY_PATH).map((path) =>
-      route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
+    ...CONTENT_PAGE_PATHS.filter(
+      (path) => !CONTENT_PAGES_FROM_DATA.includes(path) && path !== LIBRARY_PATH,
+    ).map((path) =>
+      route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", {
+        id: `page-twin-${path.slice(1).replaceAll("/", "-")}`,
+      }),
     ),
     route("research/*", "routes/content-page.tsx"),
     route("teaching/*", "routes/teaching.tsx"),

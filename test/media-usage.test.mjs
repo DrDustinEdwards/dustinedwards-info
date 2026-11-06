@@ -79,8 +79,14 @@ await test("the usage sort orders most attached first", () => {
 const row = (over = {}) => ({ viewable: true, alt: "", size: 100, twinCount: 0, ...over });
 
 await test("the three flags fire on their own conditions", () => {
-  assert.deepEqual(flagsFor(row({ twinCount: 1 })).map((f) => f.id), ["duplicate", "no-alt"]);
-  assert.deepEqual(flagsFor(row({ alt: "described" })).map((f) => f.id), []);
+  assert.deepEqual(
+    flagsFor(row({ twinCount: 1 })).map((f) => f.id),
+    ["duplicate", "no-alt"],
+  );
+  assert.deepEqual(
+    flagsFor(row({ alt: "described" })).map((f) => f.id),
+    [],
+  );
   assert.deepEqual(
     flagsFor(row({ alt: "x", size: LARGE_FILE_BYTES + 1 })).map((f) => f.id),
     ["large"],
@@ -90,15 +96,24 @@ await test("the three flags fire on their own conditions", () => {
 await test("a document is never flagged for missing alt", () => {
   // 31 of 70 rows are documents. Flagging them would put a permanent warning on
   // nearly half the library for an obligation that does not exist.
-  assert.deepEqual(flagsFor(row({ viewable: false, alt: "" })).map((f) => f.id), []);
+  assert.deepEqual(
+    flagsFor(row({ viewable: false, alt: "" })).map((f) => f.id),
+    [],
+  );
 });
 
 await test("whitespace is not alt text", () => {
-  assert.deepEqual(flagsFor(row({ alt: "   " })).map((f) => f.id), ["no-alt"]);
+  assert.deepEqual(
+    flagsFor(row({ alt: "   " })).map((f) => f.id),
+    ["no-alt"],
+  );
 });
 
 await test("exactly on the boundary is not over it", () => {
-  assert.deepEqual(flagsFor(row({ alt: "x", size: LARGE_FILE_BYTES })).map((f) => f.id), []);
+  assert.deepEqual(
+    flagsFor(row({ alt: "x", size: LARGE_FILE_BYTES })).map((f) => f.id),
+    [],
+  );
 });
 
 await test("all three can hold at once, which is why flags are a list", () => {
@@ -160,7 +175,10 @@ await test("suggested tags are deduplicated and lowercased", () => {
 
 await test("an image offers an img tag and carries its alt into the snippets", () => {
   const out = copySnippetsFor({ url: "/a.png", viewable: true, alt: "A plate", base: "a.png" });
-  assert.deepEqual(out.map((s) => s.label), ["Copy address", "Markdown", "HTML tag"]);
+  assert.deepEqual(
+    out.map((s) => s.label),
+    ["Copy address", "Markdown", "HTML tag"],
+  );
   assert.equal(out[1].value, "![A plate](/a.png)");
   assert.equal(out[2].value, '<img src="/a.png" alt="A plate">');
 });
@@ -174,7 +192,10 @@ await test("a document offers an anchor, and the LABEL says so", () => {
     alt: "",
     base: "edwards-2024-phage-genomics.pdf",
   });
-  assert.deepEqual(out.map((s) => s.label), ["Copy address", "Markdown", "HTML link"]);
+  assert.deepEqual(
+    out.map((s) => s.label),
+    ["Copy address", "Markdown", "HTML link"],
+  );
   assert.equal(out[1].value, "[edwards 2024 phage genomics](/p/edwards-2024-phage-genomics.pdf)");
   assert.ok(out[2].value.startsWith("<a href="), "a document must not get an img tag");
   assert.ok(!out.some((s) => s.value.includes("<img")), "an img tag reached a document");

@@ -20,8 +20,17 @@ import { seedPages } from "./seed";
  * once, from the final set, before any row moves. Each case starts from an empty phages table and a repository
  * ahead of it. */
 
-const PHAGE_FILES = import.meta.glob("../../content/phages/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-const files = Object.fromEntries(Object.entries(PHAGE_FILES).map(([path, raw]) => [`content/phages/${path.split("/").pop()}`, raw]));
+const PHAGE_FILES = import.meta.glob("../../content/phages/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+const files = Object.fromEntries(
+  Object.entries(PHAGE_FILES).map(([path, raw]) => [
+    `content/phages/${path.split("/").pop()}`,
+    raw,
+  ]),
+);
 /* A genome announcement is a paper the repository holds, so the stub holds one for each phage that names one. */
 const PAPERS = Object.fromEntries(
   Object.values(files).flatMap((raw) => {
@@ -43,12 +52,25 @@ const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;
 
 const rowFor = (slug: string) =>
-  env.DB.prepare("SELECT slug, source_blob_sha FROM phages WHERE slug = ?1").bind(slug).first<{ slug: string; source_blob_sha: string }>();
-const count = async () => (await env.DB.prepare("SELECT COUNT(*) AS n FROM phages").first<{ n: number }>())?.n ?? -1;
-const twin = async () => (await env.DB.prepare("SELECT markdown FROM pages WHERE path = ?1").bind(PATH).first<{ markdown: string }>())?.markdown ?? "";
+  env.DB.prepare("SELECT slug, source_blob_sha FROM phages WHERE slug = ?1")
+    .bind(slug)
+    .first<{ slug: string; source_blob_sha: string }>();
+const count = async () =>
+  (await env.DB.prepare("SELECT COUNT(*) AS n FROM phages").first<{ n: number }>())?.n ?? -1;
+const twin = async () =>
+  (
+    await env.DB.prepare("SELECT markdown FROM pages WHERE path = ?1")
+      .bind(PATH)
+      .first<{ markdown: string }>()
+  )?.markdown ?? "";
 const searchRows = async () =>
-  (await env.DB.prepare("SELECT body FROM search_docs WHERE doc_uid = ?1").bind(contentPageSearchUid(PATH)).all<{ body: string }>()).results;
-const driftCheck = async () => (await runHealthChecks(env as never)).checks.find((c) => c.name === "phage-drift");
+  (
+    await env.DB.prepare("SELECT body FROM search_docs WHERE doc_uid = ?1")
+      .bind(contentPageSearchUid(PATH))
+      .all<{ body: string }>()
+  ).results;
+const driftCheck = async () =>
+  (await runHealthChecks(env as never)).checks.find((c) => c.name === "phage-drift");
 const sync = () => runTool(operatorEnv(), operator, "sync_phages", {});
 
 let gh: SourceStub;
@@ -72,52 +94,76 @@ afterEach(async () => {
 });
 
 describe("sync_phages and the phage-drift check", () => {
-  it("converges unrowed files, reports them as drift first, draws the page once, purges its tag, and is idempotent", { timeout: 300_000 }, async () => {
-    expect((await driftCheck())?.ok).toBe(false);
+  it(
+    "converges unrowed files, reports them as drift first, draws the page once, purges its tag, and is idempotent",
+    { timeout: 300_000 },
+    async () => {
+      expect((await driftCheck())?.ok).toBe(false);
 
-    const first = await sync();
-    expect(first.ok, JSON.stringify(first)).toBe(true);
-    if (first.ok) expect(first.data).toMatchObject({ repaired: 75, removed: 0, expected: 75, present: 75, converged: true });
-    expect(await count()).toBe(75);
-    expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(files["content/phages/acorn15.md"] ?? ""));
-    expect((await searchRows()).some((r) => r.body.includes("Acorn15"))).toBe(true);
-    expect(purge.mock.calls.flatMap(([o]) => o.tags)).toEqual(["content-pages"]);
-    expect((await driftCheck())?.ok).toBe(true);
+      const first = await sync();
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      if (first.ok)
+        expect(first.data).toMatchObject({
+          repaired: 75,
+          removed: 0,
+          expected: 75,
+          present: 75,
+          converged: true,
+        });
+      expect(await count()).toBe(75);
+      expect((await rowFor("acorn15"))?.source_blob_sha).toBe(
+        await gitBlobSha(files["content/phages/acorn15.md"] ?? ""),
+      );
+      expect((await searchRows()).some((r) => r.body.includes("Acorn15"))).toBe(true);
+      expect(purge.mock.calls.flatMap(([o]) => o.tags)).toEqual(["content-pages"]);
+      expect((await driftCheck())?.ok).toBe(true);
 
-    const again = await sync();
-    expect(again.ok).toBe(true);
-    if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
-  });
+      const again = await sync();
+      expect(again.ok).toBe(true);
+      if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+    },
+  );
 
-  it("re-compiles a phage edited through git, redraws the page's twin and search record, and removes a row whose file is gone", { timeout: 300_000 }, async () => {
-    expect((await sync()).ok).toBe(true);
-    expect(await twin()).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Hood County |");
+  it(
+    "re-compiles a phage edited through git, redraws the page's twin and search record, and removes a row whose file is gone",
+    { timeout: 300_000 },
+    async () => {
+      expect((await sync()).ok).toBe(true);
+      expect(await twin()).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Hood County |");
 
-    // An edit committed outside the save tool, a new file, and a deletion.
-    const edited = (files["content/phages/acorn15.md"] ?? "").replace("county: Hood County", "county: Parker County");
-    await putSource("content/phages/acorn15.md", edited);
-    await putSource("content/phages/zeta.md", "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n");
-    await removeSource("content/phages/allene.md");
-    const drifted = await driftCheck();
-    expect(drifted?.ok).toBe(false);
-    expect(drifted?.detail).toContain("1 sha-changed");
-    expect(drifted?.detail).toContain("1 row(s) with no file");
+      // An edit committed outside the save tool, a new file, and a deletion.
+      const edited = (files["content/phages/acorn15.md"] ?? "").replace(
+        "county: Hood County",
+        "county: Parker County",
+      );
+      await putSource("content/phages/acorn15.md", edited);
+      await putSource(
+        "content/phages/zeta.md",
+        "---\nname: Zeta\nyear: 2026\nhost: foliorum\ncounty: Erath County\nphagesdb: null\n---\n",
+      );
+      await removeSource("content/phages/allene.md");
+      const drifted = await driftCheck();
+      expect(drifted?.ok).toBe(false);
+      expect(drifted?.detail).toContain("1 sha-changed");
+      expect(drifted?.detail).toContain("1 row(s) with no file");
 
-    const result = await sync();
-    expect(result.ok, JSON.stringify(result)).toBe(true);
-    if (result.ok) expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
-    expect(await count()).toBe(75);
-    expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(edited));
-    expect(await rowFor("allene")).toBeNull();
-    expect((await rowFor("zeta"))?.slug).toBe("zeta");
+      const result = await sync();
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      if (result.ok)
+        expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
+      expect(await count()).toBe(75);
+      expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(edited));
+      expect(await rowFor("allene")).toBeNull();
+      expect((await rowFor("zeta"))?.slug).toBe("zeta");
 
-    // The page is drawn from the final set: the edit, the new phage and the deleted one's absence.
-    const after = await twin();
-    expect(after).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Parker County |");
-    expect(after).toContain("| Zeta | 2026 |");
-    expect(after).not.toContain("| Allene |");
-    expect((await searchRows()).some((r) => r.body.includes("Zeta"))).toBe(true);
-  });
+      // The page is drawn from the final set: the edit, the new phage and the deleted one's absence.
+      const after = await twin();
+      expect(after).toContain("| Acorn15 | 2017 | *M. smegmatis* mc²155 | Parker County |");
+      expect(after).toContain("| Zeta | 2026 |");
+      expect(after).not.toContain("| Allene |");
+      expect((await searchRows()).some((r) => r.body.includes("Zeta"))).toBe(true);
+    },
+  );
 
   it("REFUSES an empty file set instead of deleting every row", { timeout: 300_000 }, async () => {
     expect((await sync()).ok).toBe(true);
@@ -133,30 +179,41 @@ describe("sync_phages and the phage-drift check", () => {
     expect(await count()).toBe(75);
   });
 
-  it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 300_000 }, async () => {
-    await putSource("content/phages/stray.md", "---\nname: Stray\nyear: 2026\nhost: ecoli\ncounty: null\nphagesdb: null\nsample: soil\n---\n");
-    const result = await sync();
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(422);
-      expect(result.error).toContain("content/phages/stray.md fails");
-      expect(JSON.stringify(result.detail)).toContain("sample is not a phage field");
-    }
-    expect(await rowFor("stray")).toBeNull();
-    expect(await count()).toBe(75);
-  });
+  it(
+    "makes no row for a file the validator refuses, naming it, and converges the rest",
+    { timeout: 300_000 },
+    async () => {
+      await putSource(
+        "content/phages/stray.md",
+        "---\nname: Stray\nyear: 2026\nhost: ecoli\ncounty: null\nphagesdb: null\nsample: soil\n---\n",
+      );
+      const result = await sync();
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.status).toBe(422);
+        expect(result.error).toContain("content/phages/stray.md fails");
+        expect(JSON.stringify(result.detail)).toContain("sample is not a phage field");
+      }
+      expect(await rowFor("stray")).toBeNull();
+      expect(await count()).toBe(75);
+    },
+  );
 
-  it("stops before any row moves when the page cannot be drawn, so the next run retries it", { timeout: 300_000 }, async () => {
-    await putSource(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
-    const refused = await sync();
-    expect(refused.ok).toBe(false);
-    expect(JSON.stringify(refused)).toMatch(/does not compile with these phages/);
-    expect(await count()).toBe(0);
-    expect((await driftCheck())?.ok).toBe(false);
+  it(
+    "stops before any row moves when the page cannot be drawn, so the next run retries it",
+    { timeout: 300_000 },
+    async () => {
+      await putSource(PAGE_FILE, phagesPage.replace(/^title: .*$/m, "title: "));
+      const refused = await sync();
+      expect(refused.ok).toBe(false);
+      expect(JSON.stringify(refused)).toMatch(/does not compile with these phages/);
+      expect(await count()).toBe(0);
+      expect((await driftCheck())?.ok).toBe(false);
 
-    await putSource(PAGE_FILE, phagesPage);
-    const retried = await sync();
-    expect(retried.ok, JSON.stringify(retried)).toBe(true);
-    expect(await count()).toBe(75);
-  });
+      await putSource(PAGE_FILE, phagesPage);
+      const retried = await sync();
+      expect(retried.ok, JSON.stringify(retried)).toBe(true);
+      expect(await count()).toBe(75);
+    },
+  );
 });

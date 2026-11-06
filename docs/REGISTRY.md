@@ -16,8 +16,8 @@ how much of it the lab has or where it sits.
 ```markdown
 ---
 name: M13 forward
-draft: true          # optional; absent means published
-sequence: ...        # then the fields the kind declares, and no others
+draft: true # optional; absent means published
+sequence: ... # then the fields the kind declares, and no others
 ---
 ```
 
@@ -194,18 +194,18 @@ changed item (`test/registry-equipment.test.mjs`, `test/worker/lab.test.ts`, `te
 
 ## Where it goes
 
-| Piece | File |
-| --- | --- |
-| The one compile door (parse, validate, hash) | `app/kb/registry/compile.mjs`, with the kinds in `kinds.mjs` |
-| The save: validate, policy, source write, row, purge | `app/kb/registry/save.server.ts` (`saveRegistryItem`) |
-| Reads | `app/db/registry.ts` |
-| Carrel: one handler per kind, id `<kind>.<id>` | `app/lib/carrel/registry-handler.server.ts` |
-| Operator: `sync_registry`, `list_registry`, `get_registry` | `app/lib/operator/` |
-| Drift: the `registry-drift` check, repaired by `sync_registry` | `app/lib/health/` |
-| Build and sync | `scripts/lib/registry.mjs`, `build:content` (writes `content/generated/registry.json`), `sync:content` |
-| The check | `check:content` compiles every file with the save's own validator |
-| Cache tag a write purges | `registry` (`app/kb/registry/route.ts`); the pages also carry the content pages' and procedures' tags |
-| Pages | `app/routes/lab.tsx`, `lab.kind.tsx` and the twin `lab[.md].ts`, drawn by `app/components/lab.tsx` from `app/kb/registry/catalog.mjs` |
+| Piece                                                          | File                                                                                                                                  |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| The one compile door (parse, validate, hash)                   | `app/kb/registry/compile.mjs`, with the kinds in `kinds.mjs`                                                                          |
+| The save: validate, policy, source write, row, purge           | `app/kb/registry/save.server.ts` (`saveRegistryItem`)                                                                                 |
+| Reads                                                          | `app/db/registry.ts`                                                                                                                  |
+| Carrel: one handler per kind, id `<kind>.<id>`                 | `app/lib/carrel/registry-handler.server.ts`                                                                                           |
+| Operator: `sync_registry`, `list_registry`, `get_registry`     | `app/lib/operator/`                                                                                                                   |
+| Drift: the `registry-drift` check, repaired by `sync_registry` | `app/lib/health/`                                                                                                                     |
+| Build and sync                                                 | `scripts/lib/registry.mjs`, `build:content` (writes `content/generated/registry.json`), `sync:content`                                |
+| The check                                                      | `check:content` compiles every file with the save's own validator                                                                     |
+| Cache tag a write purges                                       | `registry` (`app/kb/registry/route.ts`); the pages also carry the content pages' and procedures' tags                                 |
+| Pages                                                          | `app/routes/lab.tsx`, `lab.kind.tsx` and the twin `lab[.md].ts`, drawn by `app/components/lab.tsx` from `app/kb/registry/catalog.mjs` |
 
 ### Syncing an empty registry
 

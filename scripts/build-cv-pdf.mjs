@@ -15,7 +15,14 @@ import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer";
 
 import { renderBody } from "../app/lib/content/pipeline.mjs";
-import { FINGERPRINT_LABEL, PDF_FONTS, cvFingerprint, cvPdfOptions, fontFaceRule, renderCvHtml } from "../app/lib/cv/pdf-html.mjs";
+import {
+  FINGERPRINT_LABEL,
+  PDF_FONTS,
+  cvFingerprint,
+  cvPdfOptions,
+  fontFaceRule,
+  renderCvHtml,
+} from "../app/lib/cv/pdf-html.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadCv } from "./lib/cv.mjs";
 
@@ -26,7 +33,18 @@ export const CV_PDF_DEFAULT_OUT = path.join(ROOT, "build", "dustin-edwards-cv.pd
 async function fontCss() {
   const rules = await Promise.all(
     PDF_FONTS.map(async ({ file, family, style }) =>
-      fontFaceRule(family, await readFile(path.join(ROOT, ...(file.startsWith("inter-") ? ["node_modules", "capsomer"] : ["app"]), "fonts", file)), style),
+      fontFaceRule(
+        family,
+        await readFile(
+          path.join(
+            ROOT,
+            ...(file.startsWith("inter-") ? ["node_modules", "capsomer"] : ["app"]),
+            "fonts",
+            file,
+          ),
+        ),
+        style,
+      ),
     ),
   );
   return rules.join("\n");
@@ -69,7 +87,9 @@ async function main() {
   const pdf = await renderPdf(CV);
   await mkdir(path.dirname(out), { recursive: true });
   await writeFile(out, pdf);
-  console.log(`build:cv-pdf wrote ${path.relative(ROOT, out)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${await cvFingerprint(CV)})`);
+  console.log(
+    `build:cv-pdf wrote ${path.relative(ROOT, out)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${await cvFingerprint(CV)})`,
+  );
 }
 
 if (isMain(import.meta.url)) {

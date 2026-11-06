@@ -54,18 +54,18 @@ The order matters. Each step below names what breaks if it is done early.
 2. **AI Search instance.** Independent of the above, but its corpus cannot be
    populated until D1 has content, so create it here and fill it at step 8.
 3. **`wrangler types`.** Regenerates `worker-configuration.d.ts` from the config.
-   *If skipped:* the typecheck fails against bindings it does not know about, and
+   _If skipped:_ the typecheck fails against bindings it does not know about, and
    the deploy would ship a build that was never type-checked.
-4. **D1 migrations.** *If run before step 1:* there is no database to apply to.
-   *If skipped:* the first request that touches a table 500s.
-5. **Secrets.** *If set after deploy:* the Worker serves, but the editor and the
+4. **D1 migrations.** _If run before step 1:_ there is no database to apply to.
+   _If skipped:_ the first request that touches a table 500s.
+5. **Secrets.** _If set after deploy:_ the Worker serves, but the editor and the
    operator API fail until `OPERATOR_TOKEN` exists, and /admin refuses every person
    until `ADMIN_EMAILS` exists (sign-in itself is the Access application, section 7).
-6. **Deploy.** The Durable Object migration runs as part of this. *If the DO
-   migration block is missing from the config:* the deploy is rejected, because a
+6. **Deploy.** The Durable Object migration runs as part of this. _If the DO
+   migration block is missing from the config:_ the deploy is rejected, because a
    class cannot be bound without having been introduced by a migration.
-7. **Sync content into D1.** *If run before step 4:* the tables do not exist.
-8. **Sync the Ask corpus.** *If run before step 7:* it uploads an empty corpus,
+7. **Sync content into D1.** _If run before step 4:_ the tables do not exist.
+8. **Sync the Ask corpus.** _If run before step 7:_ it uploads an empty corpus,
    reports success, and Ask answers nothing.
 9. **Verify.**
 
@@ -204,13 +204,13 @@ schedule, the health fields and the restore.
 
 Every class of thing this site stores, and where its second copy is:
 
-| Class | Where it lives | Second copy |
-| --- | --- | --- |
-| Uploaded originals | `dustinedwards-media` (`MEDIA`) | **backed up nightly**: `files/media/` in `dustinedwards-backups`, then Amazon S3; plus the local pull from `check:backup --remote`. The age lives in `/health` `backup.files.media` |
-| Earlier file versions | `dustinedwards-media-revisions` (`MEDIA_REVISIONS`) | **backed up nightly**: `files/revisions/` in `dustinedwards-backups`, then Amazon S3. The age lives in `/health` `backup.files.revisions` |
-| Social cards | `dustinedwards-og` (`OG`), all under `og/` | **regenerable**: `npm run build:og -- --remote` |
-| Static assets | `public/`, not R2 at all | **git** |
-| Roster photo WebPs | the media library (`dustinedwards-media`, `MEDIA`) | **backed up nightly** with the other media |
+| Class                 | Where it lives                                      | Second copy                                                                                                                                                                         |
+| --------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Uploaded originals    | `dustinedwards-media` (`MEDIA`)                     | **backed up nightly**: `files/media/` in `dustinedwards-backups`, then Amazon S3; plus the local pull from `check:backup --remote`. The age lives in `/health` `backup.files.media` |
+| Earlier file versions | `dustinedwards-media-revisions` (`MEDIA_REVISIONS`) | **backed up nightly**: `files/revisions/` in `dustinedwards-backups`, then Amazon S3. The age lives in `/health` `backup.files.revisions`                                           |
+| Social cards          | `dustinedwards-og` (`OG`), all under `og/`          | **regenerable**: `npm run build:og -- --remote`                                                                                                                                     |
+| Static assets         | `public/`, not R2 at all                            | **git**                                                                                                                                                                             |
+| Roster photo WebPs    | the media library (`dustinedwards-media`, `MEDIA`)  | **backed up nightly** with the other media                                                                                                                                          |
 
 The OG cards are regenerable in the strong sense: the object key is a hash of the
 template version, slug, title and description, all tracked in `content/`, so a
@@ -404,10 +404,10 @@ npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put SMOKE_TOKEN
 ```
 
-| Secret | What it is for | Where a new one comes from |
-| --- | --- | --- |
-| `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
-| `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases of `check:browser` fail and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
+| Secret           | What it is for                                                                          | Where a new one comes from                                                                                                                                                                                                              |
+| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPERATOR_TOKEN` | Bearer token for `POST /api/operator`                                                   | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak                                                                                                                       |
+| `SMOKE_TOKEN`    | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases of `check:browser` fail and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
 **No secret has ever lived in `wrangler.jsonc`.** Until `SMOKE_TOKEN` is set the
 tools page reports it absent.

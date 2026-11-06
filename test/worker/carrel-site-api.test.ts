@@ -17,7 +17,15 @@ import { loader as postLoader } from "~/routes/blog.$slug";
 import { loader as previewLinkLoader } from "~/routes/preview.$token";
 
 import { post } from "./fixtures";
-import { putSource, removeSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import {
+  putSource,
+  removeSource,
+  source,
+  stubSources,
+  versionOf,
+  writes,
+  type SourceStub,
+} from "./source-stub";
 import { bytesFor, envWithImages } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
 import { seedPost } from "./seed";
@@ -98,7 +106,7 @@ describe("the Carrel key reaches only its prefix", () => {
 describe("every write names the version it was loaded at", () => {
   it("REFUSES a stale expectedVersion, names the current one, and commits nothing", async () => {
     await putSource(postPath("carrel-stale"), post("carrel-stale"));
-    const before = (await source(postPath("carrel-stale")));
+    const before = await source(postPath("carrel-stale"));
 
     const response = await send("PUT", `${PREFIX}/content/carrel-stale/draft`, {
       source: post("carrel-stale", { title: "Changed" }),
@@ -111,7 +119,7 @@ describe("every write names the version it was loaded at", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(before ?? ""),
     });
-    expect((await source(postPath("carrel-stale")))).toBe(before);
+    expect(await source(postPath("carrel-stale"))).toBe(before);
   });
 
   it("REFUSES a version for an id that does not exist, with a null current version", async () => {
@@ -121,8 +129,11 @@ describe("every write names the version it was loaded at", () => {
       source: post("carrel-missing"),
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: null });
-    expect(((await source(postPath("carrel-missing"))) !== undefined)).toBe(false);
+    expect(await response.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: null,
+    });
+    expect((await source(postPath("carrel-missing"))) !== undefined).toBe(false);
   });
 
   it("REFUSES a create over an id that exists", async () => {
@@ -195,7 +206,7 @@ describe("a post's version is its own", () => {
     await putSource(postPath("own-f"), post("own-f"));
     const opened = await readVersion("own-f");
     expect((await save("own-f", "F first", opened)).status).toBe(200);
-    const afterFirst = (await source(postPath("own-f")));
+    const afterFirst = await source(postPath("own-f"));
 
     const stale = await save("own-f", "F second", opened);
 
@@ -204,7 +215,7 @@ describe("a post's version is its own", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(afterFirst ?? ""),
     });
-    expect((await source(postPath("own-f")))).toBe(afterFirst);
+    expect(await source(postPath("own-f"))).toBe(afterFirst);
   });
 
   it("answers the post's own version when a create finds the id taken", async () => {
@@ -235,23 +246,23 @@ describe("commitFiles refuses a file that is not the one the writer loaded", () 
     const loaded = await gitBlobSha("before\n");
     await putSource("content/guarded.md", "changed by someone else\n");
     await expect(commit(loaded)).rejects.toMatchObject({ conflict: true, status: 409 });
-    expect((await commits())).toBe(0);
-    expect((await source("content/guarded.md"))).toBe("changed by someone else\n");
+    expect(await commits()).toBe(0);
+    expect(await source("content/guarded.md")).toBe("changed by someone else\n");
   });
 
   it("REFUSES a write that expects the file absent when it exists", async () => {
     await putSource("content/guarded.md", "there\n");
     await expect(commit(null)).rejects.toMatchObject({ conflict: true });
-    expect((await commits())).toBe(0);
+    expect(await commits()).toBe(0);
   });
 
   it("commits when the file is the one that was loaded, and when an absent one is still absent", async () => {
     await putSource("content/guarded.md", "before\n");
     await commit(await gitBlobSha("before\n"));
-    expect((await source("content/guarded.md"))).toBe("after\n");
+    expect(await source("content/guarded.md")).toBe("after\n");
     await removeSource("content/guarded.md");
     await commit(null);
-    expect((await commits())).toBe(2);
+    expect(await commits()).toBe(2);
   });
 });
 
@@ -274,7 +285,6 @@ describe("the first publication", () => {
     const message = (commit?.body as { message?: string } | undefined)?.message;
     expect(message).toContain("[carrel:chg-first]");
   });
-
 });
 
 describe("status belongs to the site", () => {
@@ -288,7 +298,7 @@ describe("status belongs to the site", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "published" });
-    expect((await source(postPath("carrel-live")))).toMatch(/^draft: false$/m);
+    expect(await source(postPath("carrel-live"))).toMatch(/^draft: false$/m);
   });
 
   it("changes only the draft and publish_at lines, so keys the editor does not know survive", () => {
@@ -302,25 +312,40 @@ describe("status belongs to the site", () => {
 
 describe("a scheduled update to a live post", () => {
   it("keeps the live post served until its time, then the cron puts the update live and drops it", async () => {
-    const live = post("carrel-later", { draft: false, first_published: "2026-07-01", title: "Live" });
+    const live = post("carrel-later", {
+      draft: false,
+      first_published: "2026-07-01",
+      title: "Live",
+    });
     await putSource(postPath("carrel-later"), live);
     const at = new Date(Date.now() + 3_600_000).toISOString();
 
     const response = await send("POST", `${PREFIX}/content/carrel-later/schedule`, {
-      source: post("carrel-later", { draft: false, first_published: "2026-07-01", title: "Updated" }),
+      source: post("carrel-later", {
+        draft: false,
+        first_published: "2026-07-01",
+        title: "Updated",
+      }),
       publishAt: at,
       expectedVersion: await gitBlobSha(live),
       changeId: "chg-later",
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ status: "published", scheduledUpdate: { changeId: "chg-later" } });
+    expect(await response.json()).toMatchObject({
+      status: "published",
+      scheduledUpdate: { changeId: "chg-later" },
+    });
     expect(await source(postPath("carrel-later"))).toBe(live);
 
     const env = siteEnv() as unknown as Env;
     const early = await runCarrelSchedules(env, createExecutionContext(), new Date());
     expect(early.applied).toHaveLength(0);
 
-    const run = await runCarrelSchedules(env, createExecutionContext(), new Date(Date.parse(at) + 1000));
+    const run = await runCarrelSchedules(
+      env,
+      createExecutionContext(),
+      new Date(Date.parse(at) + 1000),
+    );
     expect(run).toMatchObject({ applied: [{ id: "carrel-later", kind: "update" }], failed: 0 });
     const saved = (await source(postPath("carrel-later"))) ?? "";
     expect(saved).toMatch(/^title: "?Updated"?$/m);
@@ -341,21 +366,28 @@ describe("the preview", () => {
       .run();
 
     const published = await getBlogPost(siteEnv(), "carrel-preview-match");
-    const preview = await previewPost(siteEnv(), await renderRecord(siteEnv(), "carrel-preview-match", raw));
+    const preview = await previewPost(
+      siteEnv(),
+      await renderRecord(siteEnv(), "carrel-preview-match", raw),
+    );
 
     expect(published).not.toBeNull();
     expect(preview).toEqual(published);
   });
 
-  it("ALLOWS a draft with no front matter as \"Untitled\", and a save of it is still REFUSED", async () => {
+  it('ALLOWS a draft with no front matter as "Untitled", and a save of it is still REFUSED', async () => {
     const request = new Request(`${PREFIX}/preview`, {
       method: "POST",
       headers: headersFor(testEnv.CARREL_SITE_KEY),
       body: JSON.stringify({ source: "# A heading only\n" }),
     });
     const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
-    args.context.set(documentHandlerContext, async (_request, context) =>
-      new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, { headers: { "content-type": "text/html" } }),
+    args.context.set(
+      documentHandlerContext,
+      async (_request, context) =>
+        new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, {
+          headers: { "content-type": "text/html" },
+        }),
     );
     const preview = await action(args as never);
     expect(preview.status).toBe(200);
@@ -405,7 +437,11 @@ function mediaCall(
 /** Uploads through the API and answers the stored id. */
 async function uploadThroughApi(seed: string, alt = "") {
   // site-api 0.19+ refuses an undescribed upload: no alt is the decorative choice.
-  const query = new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...(alt ? { alt } : { decorative: "yes" }) });
+  const query = new URLSearchParams({
+    filename: `${seed}.png`,
+    changeId: `chg-${seed}`,
+    ...(alt ? { alt } : { decorative: "yes" }),
+  });
   const response = await mediaCall("POST", `${PREFIX}/media?${query}`, {
     body: bytesFor(seed),
     type: "image/png",
@@ -424,9 +460,16 @@ const mediaCount = async () =>
 
 /* The focal point, caption and replace (site-api v0.10.0). */
 
-type MediaJson = { id: string; version: string; focus?: string | null; caption?: string; sizesNeedPurge?: boolean };
+type MediaJson = {
+  id: string;
+  version: string;
+  focus?: string | null;
+  caption?: string;
+  sizesNeedPurge?: boolean;
+};
 
-const mediaItem = async (id: string) => (await (await mediaCall("GET", `${PREFIX}/media/${id}`)).json()) as MediaJson;
+const mediaItem = async (id: string) =>
+  (await (await mediaCall("GET", `${PREFIX}/media/${id}`)).json()) as MediaJson;
 
 function putJson(path: string, body: unknown) {
   return mediaCall("PUT", `${PREFIX}${path}`, { body: JSON.stringify(body) });
@@ -436,7 +479,11 @@ describe("media: focal point, caption and replace", () => {
   it("keeps a focal point on the object, where ./image crops around it, and moves the version", async () => {
     const id = await uploadThroughApi("focus-case");
     const before = await mediaItem(id);
-    const response = await putJson(`/media/${id}/focus`, { focus: "0.25x0.4", expectedVersion: before.version, changeId: "chg-focus" });
+    const response = await putJson(`/media/${id}/focus`, {
+      focus: "0.25x0.4",
+      expectedVersion: before.version,
+      changeId: "chg-focus",
+    });
     expect(response.status, await response.clone().text()).toBe(200);
     expect((await testEnv.MEDIA.head(id))?.customMetadata?.focus).toBe("0.25x0.4");
     const after = await mediaItem(id);
@@ -447,7 +494,11 @@ describe("media: focal point, caption and replace", () => {
   it("keeps a caption in the media index", async () => {
     const id = await uploadThroughApi("caption-case");
     const { version } = await mediaItem(id);
-    const response = await putJson(`/media/${id}/caption`, { caption: "Plaques on a lawn", expectedVersion: version, changeId: "chg-caption" });
+    const response = await putJson(`/media/${id}/caption`, {
+      caption: "Plaques on a lawn",
+      expectedVersion: version,
+      changeId: "chg-caption",
+    });
     expect(response.status, await response.clone().text()).toBe(200);
     expect((await mediaItem(id)).caption).toBe("Plaques on a lawn");
   });
@@ -455,11 +506,19 @@ describe("media: focal point, caption and replace", () => {
   it("replaces the bytes under the same address, clears the focal point and keeps the old bytes in the backup", async () => {
     const id = await uploadThroughApi("replace-case");
     let { version } = await mediaItem(id);
-    const focused = await putJson(`/media/${id}/focus`, { focus: "0.1x0.9", expectedVersion: version, changeId: "chg-rf" });
+    const focused = await putJson(`/media/${id}/focus`, {
+      focus: "0.1x0.9",
+      expectedVersion: version,
+      changeId: "chg-rf",
+    });
     ({ version } = (await focused.json()) as MediaJson);
     const original = new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
 
-    const query = new URLSearchParams({ filename: "replace-case-2.png", changeId: "chg-replace", expectedVersion: version });
+    const query = new URLSearchParams({
+      filename: "replace-case-2.png",
+      changeId: "chg-replace",
+      expectedVersion: version,
+    });
     const response = await mediaCall(
       "PUT",
       `${PREFIX}/media/${id}/file?${query}`,
@@ -468,11 +527,15 @@ describe("media: focal point, caption and replace", () => {
     );
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id, focus: null, sizesNeedPurge: false });
-    expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(bytesFor("replace-case-2"));
+    expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(
+      bytesFor("replace-case-2"),
+    );
     // The library keeps a copy at replaced/<key>/<sha256>; copies from before v0.24.0 are at replaced/<time>/<key>.
     const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${id}/` })).objects;
     expect(kept, "the old bytes were not kept").toBeDefined();
-    expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(original);
+    expect(
+      new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer()),
+    ).toEqual(original);
   });
 });
 
@@ -482,19 +545,29 @@ const sendJson = (method: "PUT" | "POST", path: string, body: unknown) =>
   mediaCall(method, `${PREFIX}${path}`, { body: JSON.stringify(body) });
 
 const listIds = async (query: string) =>
-  ((await (await mediaCall("GET", `${PREFIX}/media?${query}`)).json()) as { items: MediaJson[] }).items.map((i) => i.id);
+  (
+    (await (await mediaCall("GET", `${PREFIX}/media?${query}`)).json()) as { items: MediaJson[] }
+  ).items.map((i) => i.id);
 
 describe("media: alt, tags and the trash", () => {
   it("REFUSES a stale version with 409 even within the same second, and keeps the first write", async () => {
     const id = await uploadThroughApi("alt-race");
     const { version } = await mediaItem(id);
-    const first = await sendJson("PUT", `/media/${id}/alt`, { alt: "First", expectedVersion: version, changeId: "chg-alt-1" });
+    const first = await sendJson("PUT", `/media/${id}/alt`, {
+      alt: "First",
+      expectedVersion: version,
+      changeId: "chg-alt-1",
+    });
     expect(first.status, await first.clone().text()).toBe(200);
     const moved = ((await first.json()) as MediaJson).version;
     expect(moved).not.toBe(version);
 
     // Sent at once, from the same loaded version: updated_at alone could not tell these apart.
-    const second = await sendJson("PUT", `/media/${id}/alt`, { alt: "Second", expectedVersion: version, changeId: "chg-alt-2" });
+    const second = await sendJson("PUT", `/media/${id}/alt`, {
+      alt: "Second",
+      expectedVersion: version,
+      changeId: "chg-alt-2",
+    });
     expect(second.status).toBe(409);
     expect(await second.json()).toMatchObject({ error: "version-conflict", currentVersion: moved });
     expect(await mediaRowOf(id)).toMatchObject({ alt: "First" });
@@ -503,14 +576,27 @@ describe("media: alt, tags and the trash", () => {
   it("filters by tag, and trash hides a file from the library until it is restored", async () => {
     const id = await uploadThroughApi("tag-trash");
     let { version } = await mediaItem(id);
-    const tagged = await sendJson("PUT", `/media/${id}/tags`, { tags: ["field-notes"], expectedVersion: version, changeId: "chg-tag" });
+    const tagged = await sendJson("PUT", `/media/${id}/tags`, {
+      tags: ["field-notes"],
+      expectedVersion: version,
+      changeId: "chg-tag",
+    });
     expect(tagged.status, await tagged.clone().text()).toBe(200);
     ({ version } = (await tagged.json()) as MediaJson);
     expect(await listIds("tag=field-notes")).toEqual([id]);
     // The count is across every page, of the same rows the page lists.
-    expect(((await (await mediaCall("GET", `${PREFIX}/media?tag=field-notes&limit=1`)).json()) as { total?: number }).total).toBe(1);
+    expect(
+      (
+        (await (await mediaCall("GET", `${PREFIX}/media?tag=field-notes&limit=1`)).json()) as {
+          total?: number;
+        }
+      ).total,
+    ).toBe(1);
 
-    const trashed = await sendJson("POST", `/media/${id}/trash`, { expectedVersion: version, changeId: "chg-trash" });
+    const trashed = await sendJson("POST", `/media/${id}/trash`, {
+      expectedVersion: version,
+      changeId: "chg-trash",
+    });
     expect(trashed.status, await trashed.clone().text()).toBe(200);
     ({ version } = (await trashed.json()) as MediaJson);
     expect(await listIds("tag=field-notes")).toEqual([]);
@@ -518,7 +604,10 @@ describe("media: alt, tags and the trash", () => {
     // The object stays, so a page that uses it keeps rendering.
     expect(await testEnv.MEDIA.head(id)).not.toBeNull();
 
-    const restored = await sendJson("POST", `/media/${id}/restore`, { expectedVersion: version, changeId: "chg-restore" });
+    const restored = await sendJson("POST", `/media/${id}/restore`, {
+      expectedVersion: version,
+      changeId: "chg-restore",
+    });
     expect(restored.status, await restored.clone().text()).toBe(200);
     expect(await listIds("tag=field-notes")).toEqual([id]);
   });
@@ -531,7 +620,10 @@ describe("media: alt, tags and the trash", () => {
 type Size = { width: number; height: number };
 
 /** An IMAGES binding that measures by `size` (or `sizeAfter` once a transform has run) and marks what it transformed. */
-function imagesThatTransform(size: Size = { width: 10, height: 10 }, sizeAfter: (steps: string) => Size = () => size) {
+function imagesThatTransform(
+  size: Size = { width: 10, height: 10 },
+  sizeAfter: (steps: string) => Size = () => size,
+) {
   const marker = "|transformed:";
   return {
     info: async (stream: ReadableStream) => {
@@ -548,7 +640,10 @@ function imagesThatTransform(size: Size = { width: 10, height: 10 }, sizeAfter: 
         },
         output: async () => {
           const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-          const marked = new Uint8Array([...bytes, ...new TextEncoder().encode(`${marker}${JSON.stringify(steps)}`)]);
+          const marked = new Uint8Array([
+            ...bytes,
+            ...new TextEncoder().encode(`${marker}${JSON.stringify(steps)}`),
+          ]);
           return { response: () => new Response(marked) };
         },
       };
@@ -576,7 +671,12 @@ function exifJpeg(fields: { artist: string; copyright: string; taken: string; of
   };
   tiff.set([0x4d, 0x4d, 0, 42, 0, 0, 0, 8]);
   view.setUint16(8, 3);
-  const [artist, copyright, taken, offset] = [ascii(fields.artist), ascii(fields.copyright), ascii(fields.taken), ascii(fields.offset)];
+  const [artist, copyright, taken, offset] = [
+    ascii(fields.artist),
+    ascii(fields.copyright),
+    ascii(fields.taken),
+    ascii(fields.offset),
+  ];
   entry(10, 0x013b, 2, artist.length, place(artist));
   entry(22, 0x8298, 2, copyright.length, place(copyright));
   entry(34, 0x8769, 4, 1, 50);
@@ -585,13 +685,35 @@ function exifJpeg(fields: { artist: string; copyright: string; taken: string; of
   entry(64, 0x9011, 2, offset.length, place(offset));
   const body = tiff.subarray(0, dataAt);
   const length = 2 + 6 + body.length;
-  return new Uint8Array([0xff, 0xd8, 0xff, 0xe1, length >> 8, length & 0xff, 0x45, 0x78, 0x69, 0x66, 0, 0, ...body, 0xff, 0xd9]);
+  return new Uint8Array([
+    0xff,
+    0xd8,
+    0xff,
+    0xe1,
+    length >> 8,
+    length & 0xff,
+    0x45,
+    0x78,
+    0x69,
+    0x66,
+    0,
+    0,
+    ...body,
+    0xff,
+    0xd9,
+  ]);
 }
 
 const uploadQuery = (seed: string, extra: Record<string, string> = {}) =>
-  new URLSearchParams({ filename: `${seed}.png`, changeId: `chg-${seed}`, ...("alt" in extra ? {} : { decorative: "yes" }), ...extra });
+  new URLSearchParams({
+    filename: `${seed}.png`,
+    changeId: `chg-${seed}`,
+    ...("alt" in extra ? {} : { decorative: "yes" }),
+    ...extra,
+  });
 
-const objectBytes = async (id: string) => new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
+const objectBytes = async (id: string) =>
+  new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer());
 
 type Revision = { rev: string; reason: string; current: boolean };
 
@@ -599,10 +721,14 @@ describe("media: the v0.13.0 library", () => {
   it("answers an upload of bytes it already holds with that file, under any name, and stores nothing new", async () => {
     const id = await uploadThroughApi("duplicate-case");
     const before = await mediaCount();
-    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("duplicate-case-renamed")}`, {
-      body: bytesFor("duplicate-case"),
-      type: "image/png",
-    });
+    const response = await mediaCall(
+      "POST",
+      `${PREFIX}/media?${uploadQuery("duplicate-case-renamed")}`,
+      {
+        body: bytesFor("duplicate-case"),
+        type: "image/png",
+      },
+    );
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id, duplicateOf: id });
     expect(await mediaCount()).toBe(before);
@@ -614,16 +740,37 @@ describe("media: the v0.13.0 library", () => {
     const original = await objectBytes(id);
     const { version } = await mediaItem(id);
 
-    const turned = await mediaCall("POST", `${PREFIX}/media/${id}/transform`, { body: JSON.stringify({ op: "flip-h", expectedVersion: version, changeId: "chg-flip" }) }, overrides);
+    const turned = await mediaCall(
+      "POST",
+      `${PREFIX}/media/${id}/transform`,
+      { body: JSON.stringify({ op: "flip-h", expectedVersion: version, changeId: "chg-flip" }) },
+      overrides,
+    );
     expect(turned.status, await turned.clone().text()).toBe(200);
     const after = (await turned.json()) as MediaJson & { asNewFile: boolean };
     expect(after).toMatchObject({ id, asNewFile: false });
     expect(await objectBytes(id)).not.toEqual(original);
 
-    const history = (await (await mediaCall("GET", `${PREFIX}/media/${id}/history`, {}, overrides)).json()) as { revisions: Revision[] };
-    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([["transform", true], ["upload", false]]);
+    const history = (await (
+      await mediaCall("GET", `${PREFIX}/media/${id}/history`, {}, overrides)
+    ).json()) as { revisions: Revision[] };
+    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([
+      ["transform", true],
+      ["upload", false],
+    ]);
 
-    const reverted = await mediaCall("POST", `${PREFIX}/media/${id}/revert`, { body: JSON.stringify({ to: history.revisions[1]!.rev, expectedVersion: after.version, changeId: "chg-revert" }) }, overrides);
+    const reverted = await mediaCall(
+      "POST",
+      `${PREFIX}/media/${id}/revert`,
+      {
+        body: JSON.stringify({
+          to: history.revisions[1]!.rev,
+          expectedVersion: after.version,
+          changeId: "chg-revert",
+        }),
+      },
+      overrides,
+    );
     expect(reverted.status, await reverted.clone().text()).toBe(200);
     expect(await objectBytes(id)).toEqual(original);
   });
@@ -635,26 +782,56 @@ describe("media: the v0.13.0 library", () => {
     const copyKey = `replaced/2026-01-02T03:04:05.000Z/${id}`;
     await testEnv.MEDIA_REVISIONS.put(copyKey, bytesFor("legacy-copy-case-before"));
     await testEnv.DB.prepare("DELETE FROM media_revisions WHERE media_key = ?1").bind(id).run();
-    await testEnv.DB.prepare("INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, backup_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', NULL)")
+    await testEnv.DB.prepare(
+      "INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, backup_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', NULL)",
+    )
       .bind(id, copyKey)
       .run();
 
-    const history = (await (await mediaCall("GET", `${PREFIX}/media/${id}/history`)).json()) as { revisions: Revision[] };
-    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([["replace", true], ["upload", false]]);
-    const reverted = await mediaCall("POST", `${PREFIX}/media/${id}/revert`, { body: JSON.stringify({ to: history.revisions[1]!.rev, expectedVersion: version, changeId: "chg-legacy-revert" }) });
+    const history = (await (await mediaCall("GET", `${PREFIX}/media/${id}/history`)).json()) as {
+      revisions: Revision[];
+    };
+    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([
+      ["replace", true],
+      ["upload", false],
+    ]);
+    const reverted = await mediaCall("POST", `${PREFIX}/media/${id}/revert`, {
+      body: JSON.stringify({
+        to: history.revisions[1]!.rev,
+        expectedVersion: version,
+        changeId: "chg-legacy-revert",
+      }),
+    });
     expect(reverted.status, await reverted.clone().text()).toBe(200);
     expect(await objectBytes(id)).toEqual(bytesFor("legacy-copy-case-before"));
   });
 
   it("turns a picture that is not square into a new file with its alt, leaving the old one as it was", async () => {
-    const overrides = { IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
-    const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: bytesFor("turn-case"), type: "image/png" }, overrides);
+    const overrides = {
+      IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })),
+    };
+    const upload = await mediaCall(
+      "POST",
+      `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`,
+      { body: bytesFor("turn-case"), type: "image/png" },
+      overrides,
+    );
     const { id, version } = (await upload.json()) as MediaJson;
     const original = await objectBytes(id);
 
-    const turned = await mediaCall("POST", `${PREFIX}/media/${id}/transform`, { body: JSON.stringify({ op: "rotate-90", expectedVersion: version, changeId: "chg-turn" }) }, overrides);
+    const turned = await mediaCall(
+      "POST",
+      `${PREFIX}/media/${id}/transform`,
+      { body: JSON.stringify({ op: "rotate-90", expectedVersion: version, changeId: "chg-turn" }) },
+      overrides,
+    );
     expect(turned.status, await turned.clone().text()).toBe(200);
-    const made = (await turned.json()) as MediaJson & { asNewFile: boolean; width: number; height: number; alt: string };
+    const made = (await turned.json()) as MediaJson & {
+      asNewFile: boolean;
+      width: number;
+      height: number;
+      alt: string;
+    };
     expect(made).toMatchObject({ asNewFile: true, width: 10, height: 20, alt: "A wide chart" });
     expect(made.id).not.toBe(id);
     expect(made.id).toMatch(/-10x20\.png$/);
@@ -663,23 +840,48 @@ describe("media: the v0.13.0 library", () => {
   });
 
   it("says what changed since a cursor, and names a file deleted for good", async () => {
-    const first = (await (await mediaCall("GET", `${PREFIX}/media?limit=1`)).json()) as { changeCursor: string };
+    const first = (await (await mediaCall("GET", `${PREFIX}/media?limit=1`)).json()) as {
+      changeCursor: string;
+    };
     const id = await uploadThroughApi("changes-case");
-    type Changes = { items: MediaJson[]; removed: string[]; changeCursor: string; moreChanges: boolean };
-    const changed = (await (await mediaCall("GET", `${PREFIX}/media?changedSince=${first.changeCursor}`)).json()) as Changes;
+    type Changes = {
+      items: MediaJson[];
+      removed: string[];
+      changeCursor: string;
+      moreChanges: boolean;
+    };
+    const changed = (await (
+      await mediaCall("GET", `${PREFIX}/media?changedSince=${first.changeCursor}`)
+    ).json()) as Changes;
     expect(changed.items.map((i) => i.id)).toContain(id);
     expect(changed.removed).toEqual([]);
 
-    expect((await mediaCall("DELETE", `${PREFIX}/media/${id}?changeId=chg-changes-delete`)).status).toBe(200);
-    const after = (await (await mediaCall("GET", `${PREFIX}/media?changedSince=${changed.changeCursor}`)).json()) as Changes;
+    expect(
+      (await mediaCall("DELETE", `${PREFIX}/media/${id}?changeId=chg-changes-delete`)).status,
+    ).toBe(200);
+    const after = (await (
+      await mediaCall("GET", `${PREFIX}/media?changedSince=${changed.changeCursor}`)
+    ).json()) as Changes;
     expect(after.removed).toEqual([id]);
     expect(after.items.map((i) => i.id)).not.toContain(id);
   });
 
   it("fills credit, license and the date taken from a JPEG's EXIF, and names what it filled", async () => {
-    const bytes = exifJpeg({ artist: "Example Photographer", copyright: "CC BY 4.0", taken: "2024:05:06 14:30:00", offset: "+01:00" });
-    const query = new URLSearchParams({ filename: "exif-case.jpg", changeId: "chg-exif", decorative: "yes" });
-    const response = await mediaCall("POST", `${PREFIX}/media?${query}`, { body: bytes, type: "image/jpeg" });
+    const bytes = exifJpeg({
+      artist: "Example Photographer",
+      copyright: "CC BY 4.0",
+      taken: "2024:05:06 14:30:00",
+      offset: "+01:00",
+    });
+    const query = new URLSearchParams({
+      filename: "exif-case.jpg",
+      changeId: "chg-exif",
+      decorative: "yes",
+    });
+    const response = await mediaCall("POST", `${PREFIX}/media?${query}`, {
+      body: bytes,
+      type: "image/jpeg",
+    });
     expect(response.status, await response.clone().text()).toBe(201);
     expect(await response.json()).toMatchObject({
       credit: "Example Photographer",
@@ -690,17 +892,41 @@ describe("media: the v0.13.0 library", () => {
   });
 
   it("shrinks a large picture at upload, unless asked not to, and keeps the original", async () => {
-    const overrides = { IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({ width: 4096, height: 3072 })) };
-    const response = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-case")}`, { body: bytesFor("resize-case"), type: "image/png" }, overrides);
+    const overrides = {
+      IMAGES: imagesThatTransform({ width: 8000, height: 6000 }, () => ({
+        width: 4096,
+        height: 3072,
+      })),
+    };
+    const response = await mediaCall(
+      "POST",
+      `${PREFIX}/media?${uploadQuery("resize-case")}`,
+      { body: bytesFor("resize-case"), type: "image/png" },
+      overrides,
+    );
     expect(response.status, await response.clone().text()).toBe(201);
-    const shrunk = (await response.json()) as MediaJson & { width: number; resizedFrom?: Size & { bytes: number } };
-    expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length } });
+    const shrunk = (await response.json()) as MediaJson & {
+      width: number;
+      resizedFrom?: Size & { bytes: number };
+    };
+    expect(shrunk).toMatchObject({
+      width: 4096,
+      resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length },
+    });
     // One history prefix for every earlier set of bytes since v0.24.0; originals before it are at resized/<time>/<key>.
-    const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${shrunk.id}/` })).objects;
+    const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${shrunk.id}/` }))
+      .objects;
     expect(kept, "the original was not kept").toBeDefined();
-    expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(bytesFor("resize-case"));
+    expect(
+      new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer()),
+    ).toEqual(bytesFor("resize-case"));
 
-    const kept2 = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`, { body: bytesFor("resize-no-case"), type: "image/png" }, overrides);
+    const kept2 = await mediaCall(
+      "POST",
+      `${PREFIX}/media?${uploadQuery("resize-no-case", { resize: "no" })}`,
+      { body: bytesFor("resize-no-case"), type: "image/png" },
+      overrides,
+    );
     expect(await kept2.json()).toMatchObject({ width: 8000, height: 6000 });
   });
 
@@ -710,12 +936,26 @@ describe("media: the v0.13.0 library", () => {
     const AI = {
       run: async (model: string, input: unknown) => {
         sent.push({ model, input });
-        return { response: { alt: "Three brass plaques set in a lawn.", tags: ["Plaques", "lawn", "lawn", "not a tag!"] } };
+        return {
+          response: {
+            alt: "Three brass plaques set in a lawn.",
+            tags: ["Plaques", "lawn", "lawn", "not a tag!"],
+          },
+        };
       },
     };
-    const response = await mediaCall("GET", `${PREFIX}/media/${id}/suggestions`, {}, { AI, IMAGES: imagesThatTransform() });
+    const response = await mediaCall(
+      "GET",
+      `${PREFIX}/media/${id}/suggestions`,
+      {},
+      { AI, IMAGES: imagesThatTransform() },
+    );
     expect(response.status, await response.clone().text()).toBe(200);
-    expect(await response.json()).toMatchObject({ id, alt: "Three brass plaques set in a lawn.", tags: ["plaques", "lawn"] });
+    expect(await response.json()).toMatchObject({
+      id,
+      alt: "Three brass plaques set in a lawn.",
+      tags: ["plaques", "lawn"],
+    });
     expect(JSON.stringify(sent)).toContain("data:image/jpeg;base64,");
     expect(await mediaItem(id)).toMatchObject({ alt: "", tags: [] });
   });
@@ -732,8 +972,17 @@ describe("media: meta declares what the site accepts", () => {
     expect(meta.capabilities).toMatchObject({ mediaAlt: true, mediaTags: true, mediaTrash: true });
     // v0.13.0: every idea but the resize pass, which a site whose addresses carry the size never offers.
     expect(meta.capabilities).toMatchObject({
-      mediaDuplicates: true, mediaUsage: true, mediaFilters: true, mediaImport: true, mediaCredit: true, mediaTransform: true,
-      mediaHistory: true, mediaChanges: true, mediaResize: { maxEdge: 4096, quality: 85 }, mediaEmbedded: true, mediaSuggestions: true,
+      mediaDuplicates: true,
+      mediaUsage: true,
+      mediaFilters: true,
+      mediaImport: true,
+      mediaCredit: true,
+      mediaTransform: true,
+      mediaHistory: true,
+      mediaChanges: true,
+      mediaResize: { maxEdge: 4096, quality: 85 },
+      mediaEmbedded: true,
+      mediaSuggestions: true,
     });
     expect(meta.capabilities).not.toHaveProperty("mediaResizePass");
     expect(meta.capabilities.mediaUpload.maxBytes).toBe(MAX_BYTES);
@@ -765,10 +1014,14 @@ describe("media: uploads the site would refuse are refused", () => {
     const before = await mediaCount();
     const bytes = new Uint8Array(MAX_BYTES + 1);
     bytes.set(bytesFor("huge"));
-    const response = await mediaCall("POST", `${PREFIX}/media?filename=huge.png&changeId=chg-huge`, {
-      body: bytes,
-      type: "image/png",
-    });
+    const response = await mediaCall(
+      "POST",
+      `${PREFIX}/media?filename=huge.png&changeId=chg-huge`,
+      {
+        body: bytes,
+        type: "image/png",
+      },
+    );
     expect(response.status).toBe(413);
     expect(await mediaCount()).toBe(before);
   });
@@ -845,7 +1098,9 @@ describe("media: a delete is decided by the site's reference check", () => {
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({
       error: "refused",
-      message: expect.stringMatching(/could not check where its files are used, so nothing was done \(the reference scan failed \(posts\)\)/),
+      message: expect.stringMatching(
+        /could not check where its files are used, so nothing was done \(the reference scan failed \(posts\)\)/,
+      ),
     });
     expect(await testEnv.MEDIA.get(id)).toBeTruthy();
     expect(await mediaRowOf(id)).toBeTruthy();
@@ -901,7 +1156,11 @@ describe("a revision's source", () => {
     await putSource(postPath("rev-open"), post("rev-open", { title: "Retitled" }));
     const found = await get(`${PREFIX}/content/rev-open/revisions/${sha}`);
     expect(found.status).toBe(200);
-    expect(await found.json()).toMatchObject({ id: "rev-open", version: sha, source: post("rev-open") });
+    expect(await found.json()).toMatchObject({
+      id: "rev-open",
+      version: sha,
+      source: post("rev-open"),
+    });
 
     const notAVersion = await get(`${PREFIX}/content/rev-open/revisions/not-a-sha`);
     expect(notAVersion.status).toBe(404);
@@ -918,7 +1177,9 @@ describe("content delete", () => {
   const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 
   it("is declared in meta.capabilities", async () => {
-    const meta = (await (await get(`${PREFIX}/meta`)).json()) as { capabilities: { contentDelete?: boolean } };
+    const meta = (await (await get(`${PREFIX}/meta`)).json()) as {
+      capabilities: { contentDelete?: boolean };
+    };
     expect(meta.capabilities.contentDelete).toBe(true);
   });
 
@@ -931,8 +1192,8 @@ describe("content delete", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ id: "del-ok", deleted: true, changeId: "chg-del-ok" });
-    expect(((await source(postPath("del-ok"))) !== undefined)).toBe(false);
-    expect((await commits())).toHaveLength(1);
+    expect((await source(postPath("del-ok"))) !== undefined).toBe(false);
+    expect(await commits()).toHaveLength(1);
     expect(JSON.stringify((await commits())[0]?.body)).toContain("[carrel:chg-del-ok]");
     expect(await getBlogPost(testEnv as never, "del-ok")).toBeNull();
   });
@@ -948,20 +1209,20 @@ describe("content delete", () => {
       error: "version-conflict",
       currentVersion: await gitBlobSha(raw),
     });
-    expect((await source(postPath("del-stale")))).toBe(raw);
-    expect((await commits())).toHaveLength(0);
+    expect(await source(postPath("del-stale"))).toBe(raw);
+    expect(await commits()).toHaveLength(0);
   });
 
   it("answers 404 for a post the site does not hold", async () => {
     const response = await remove("del-missing", "a".repeat(40), "chg-del-missing");
     expect(response.status).toBe(404);
-    expect((await commits())).toHaveLength(0);
+    expect(await commits()).toHaveLength(0);
   });
 
   it("REFUSES a kind that has no delete, and deletes nothing", async () => {
     const response = await remove("page.privacy", "a".repeat(40), "chg-del-page");
     expect(response.status).toBe(422);
-    expect((await commits())).toHaveLength(0);
+    expect(await commits()).toHaveLength(0);
   });
 
   it("REFUSES without the key", async () => {
@@ -969,9 +1230,8 @@ describe("content delete", () => {
     await putSource(postPath("del-nokey"), raw);
     const response = await remove("del-nokey", await gitBlobSha(raw), "chg-del-nokey", "wrong-key");
     expect(response.status).toBe(401);
-    expect((await source(postPath("del-nokey")))).toBe(raw);
+    expect(await source(postPath("del-nokey"))).toBe(raw);
   });
-
 });
 
 describe("the v0.17.0 contract on posts", () => {
@@ -998,13 +1258,23 @@ describe("the v0.17.0 contract on posts", () => {
     const trash = await list("trashed=true&kind=post&limit=200");
     expect(trash.filtered).toEqual(["kind", "trashed"]);
     expect(trash.items).toEqual([
-      expect.objectContaining({ id: "v17-trash", version: await versionOf(postPath("v17-trash")), trashedAt: expect.any(String) }),
+      expect.objectContaining({
+        id: "v17-trash",
+        version: await versionOf(postPath("v17-trash")),
+        trashedAt: expect.any(String),
+      }),
     ]);
 
     const version = await versionOf(postPath("v17-trash"));
-    const republish = await send("POST", `${PREFIX}/content/v17-trash/publish`, { expectedVersion: version, changeId: "chg-v17-pub" });
+    const republish = await send("POST", `${PREFIX}/content/v17-trash/publish`, {
+      expectedVersion: version,
+      changeId: "chg-v17-pub",
+    });
     expect(republish.status).toBe(422);
-    const restored = await send("POST", `${PREFIX}/content/v17-trash/restore`, { expectedVersion: version, changeId: "chg-v17-restore" });
+    const restored = await send("POST", `${PREFIX}/content/v17-trash/restore`, {
+      expectedVersion: version,
+      changeId: "chg-v17-restore",
+    });
     expect(await restored.json()).toMatchObject({ status: "draft" });
     expect((await list("limit=200")).items.map((i) => i.id)).toContain("v17-trash");
   });
@@ -1017,14 +1287,26 @@ describe("the v0.17.0 contract on posts", () => {
       changeId: "chg-v17-rename",
     });
     expect(renamed.status).toBe(200);
-    expect(await renamed.json()).toMatchObject({ id: "v17-new", status: "published", previousPath: "/writing/v17-old" });
+    expect(await renamed.json()).toMatchObject({
+      id: "v17-new",
+      status: "published",
+      previousPath: "/writing/v17-old",
+    });
     expect(await source(postPath("v17-old"))).toBeUndefined();
     expect(await source(postPath("v17-new"))).toMatch(/^slug: v17-new$/m);
-    const history = (await (await get(`${PREFIX}/content/v17-new/revisions`)).json()) as { items: unknown[] };
+    const history = (await (await get(`${PREFIX}/content/v17-new/revisions`)).json()) as {
+      items: unknown[];
+    };
     expect(history.items).toHaveLength(2);
 
-    const args = { request: new Request(`${ORIGIN}/writing/v17-old`), params: { slug: "v17-old" }, context: routeContext() };
-    const moved = await (postLoader(args as never) as Promise<unknown>).catch((thrown: unknown) => thrown);
+    const args = {
+      request: new Request(`${ORIGIN}/writing/v17-old`),
+      params: { slug: "v17-old" },
+      context: routeContext(),
+    };
+    const moved = await (postLoader(args as never) as Promise<unknown>).catch(
+      (thrown: unknown) => thrown,
+    );
     expect(moved).toBeInstanceOf(Response);
     expect((moved as Response).status).toBe(301);
     expect((moved as Response).headers.get("location")).toBe("/writing/v17-new");
@@ -1057,24 +1339,37 @@ describe("the v0.17.0 contract on posts", () => {
     const env = siteEnv() as unknown as Env;
     const after = new Date(Date.parse(at) + 1000);
     const run = await runCarrelSchedules(env, createExecutionContext(), after);
-    expect(run.applied).toEqual([expect.objectContaining({ id: "v17-later", kind: "publish", version })]);
+    expect(run.applied).toEqual([
+      expect.objectContaining({ id: "v17-later", kind: "publish", version }),
+    ]);
     expect(await versionOf(postPath("v17-later"))).toBe(version);
     expect((await runCarrelSchedules(env, createExecutionContext(), after)).applied).toEqual([]);
   });
 
   it("serves a preview link with no key, noindex and never stored, and refuses an unknown token", async () => {
     await putSource(postPath("v17-share"), post("v17-share", { title: "Shared draft" }));
-    const made = await send("POST", `${PREFIX}/preview-links`, { id: "v17-share", changeId: "chg-v17-share" });
+    const made = await send("POST", `${PREFIX}/preview-links`, {
+      id: "v17-share",
+      changeId: "chg-v17-share",
+    });
     expect(made.status).toBe(201);
     const { url } = (await made.json()) as { url: string };
     const token = new URL(url).pathname.split("/").pop()!;
 
     const open = (path: string) => {
       const context = routeContext();
-      context.set(documentHandlerContext, async (_request, ctx) =>
-        new Response(`<title>${ctx.get(postPreviewContext)?.title}</title>`, { headers: { "content-type": "text/html" } }),
+      context.set(
+        documentHandlerContext,
+        async (_request, ctx) =>
+          new Response(`<title>${ctx.get(postPreviewContext)?.title}</title>`, {
+            headers: { "content-type": "text/html" },
+          }),
       );
-      return previewLinkLoader({ request: new Request(`${ORIGIN}${path}`), params: {}, context } as never);
+      return previewLinkLoader({
+        request: new Request(`${ORIGIN}${path}`),
+        params: {},
+        context,
+      } as never);
     };
     const page = await open(`/preview/${token}`);
     expect(page.status).toBe(200);
@@ -1093,7 +1388,9 @@ describe("the site-api conformance suite", () => {
     // deployed repository has it.
     // Other cases seed posts in D1 with no file, so the first item may be a post: it gets its file too.
     await putSource(LLMS_PATH, "# dustinedwards.info\n");
-    const first = ((await (await get(`${PREFIX}/content?limit=1`)).json()) as { items: Array<{ id: string }> }).items[0];
+    const first = (
+      (await (await get(`${PREFIX}/content?limit=1`)).json()) as { items: Array<{ id: string }> }
+    ).items[0];
     if (first && !first.id.includes(".")) await putSource(postPath(first.id), post(first.id));
     const report = await runConformance({
       baseUrl: ORIGIN,
@@ -1103,17 +1400,25 @@ describe("the site-api conformance suite", () => {
         const request = new Request(input, {
           ...init,
           // Its own address, so the site's limiter (120 a minute per address) counts the suite alone, not the cases before it.
-          headers: { ...Object.fromEntries(new Headers(init?.headers)), "cf-connecting-ip": "203.0.113.10" },
+          headers: {
+            ...Object.fromEntries(new Headers(init?.headers)),
+            "cf-connecting-ip": "203.0.113.10",
+          },
         });
         try {
           if (request.method === "GET") return await loader(argsFor(request));
           // The Worker puts the app's document renderer on the context (workers/app.ts); a test has no app build, so
           // this stand-in renders the post the preview handed it, which is what the preview case reads.
           const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
-          args.context.set(documentHandlerContext, async (_request, context) =>
-            new Response(`<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`, {
-              headers: { "content-type": "text/html; charset=utf-8" },
-            }),
+          args.context.set(
+            documentHandlerContext,
+            async (_request, context) =>
+              new Response(
+                `<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`,
+                {
+                  headers: { "content-type": "text/html; charset=utf-8" },
+                },
+              ),
           );
           return await action(args as never);
         } catch (thrown) {

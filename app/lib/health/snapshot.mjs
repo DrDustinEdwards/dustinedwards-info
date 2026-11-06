@@ -46,7 +46,10 @@ export function healthTile(snapshot, nowMs) {
   if (typeof readAt !== "string") return { state: "missing" };
   if (!Array.isArray(checks) || checks.length !== total) return { state: "missing" };
   const named = checks.filter(
-    (c) => c && typeof c.name === "string" && (c.status === "pass" || c.status === "warn" || c.status === "fail"),
+    (c) =>
+      c &&
+      typeof c.name === "string" &&
+      (c.status === "pass" || c.status === "warn" || c.status === "fail"),
   );
   if (named.length !== checks.length) return { state: "missing" };
   if (typeof ok !== "boolean") return { state: "missing" };

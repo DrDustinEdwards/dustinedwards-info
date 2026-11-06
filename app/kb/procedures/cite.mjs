@@ -97,7 +97,10 @@ const initials = (given) =>
  * @param {CiteFacts} facts
  * @param {string} origin
  */
-const target = (record, facts, origin) => (facts.doi ? `https://doi.org/${facts.doi}` : `${origin}${versionPath(record.path, facts.version)}`);
+const target = (record, facts, origin) =>
+  facts.doi
+    ? `https://doi.org/${facts.doi}`
+    : `${origin}${versionPath(record.path, facts.version)}`;
 
 /**
  * @param {{ title: string, path: string }} record
@@ -118,7 +121,8 @@ export function citationText(record, facts, { origin, creator }) {
 export function bibtex(record, facts, { origin, creator }) {
   const { family, given } = familyGiven(creator.name);
   const year = facts.date.slice(0, 4);
-  const field = (/** @type {string} */ name, /** @type {string} */ value) => `  ${name} = {${value.replace(/[{}]/g, "")}},`;
+  const field = (/** @type {string} */ name, /** @type {string} */ value) =>
+    `  ${name} = {${value.replace(/[{}]/g, "")}},`;
   return [
     `@misc{${family.toLowerCase()}${year}${record.slug}v${facts.version.replace(/[^A-Za-z0-9.]/g, "")},`,
     field("author", `${family}, ${given}`),
@@ -158,9 +162,21 @@ export function zenodoMetadata(record, facts, { origin, creator }) {
     access_right: "open",
     keywords: record.methods.map((id) => /** @type {Record<string, string>} */ (METHODS)[id] ?? id),
     related_identifiers: [
-      { identifier: `${origin}${versionPath(record.path, facts.version)}`, relation: "isAlternateIdentifier", scheme: "url" },
-      ...(previous?.doi ? [{ identifier: previous.doi, relation: "isNewVersionOf", scheme: "doi" }] : []),
-      ...record.basedOn.filter((s) => s.doi).map((s) => ({ identifier: /** @type {string} */ (s.doi), relation: "isDerivedFrom", scheme: "doi" })),
+      {
+        identifier: `${origin}${versionPath(record.path, facts.version)}`,
+        relation: "isAlternateIdentifier",
+        scheme: "url",
+      },
+      ...(previous?.doi
+        ? [{ identifier: previous.doi, relation: "isNewVersionOf", scheme: "doi" }]
+        : []),
+      ...record.basedOn
+        .filter((s) => s.doi)
+        .map((s) => ({
+          identifier: /** @type {string} */ (s.doi),
+          relation: "isDerivedFrom",
+          scheme: "doi",
+        })),
     ],
   };
 }

@@ -20,13 +20,28 @@ export function RunForm({
   lotRows: number;
   /** The run this one corrects, if it is a correction. */
   replaces?: number;
-  defaults?: { procedure?: string; run_on?: string; outcome?: string; note?: string | null; lots?: Array<{ lot_id: number; amount_used: number | null; emptied: number }> };
+  defaults?: {
+    procedure?: string;
+    run_on?: string;
+    outcome?: string;
+    note?: string | null;
+    lots?: Array<{ lot_id: number; amount_used: number | null; emptied: number }>;
+  };
 }) {
   return (
-    <Form method="post" action={replaces ? `${LAB_BENCH_PATH}/runs/${replaces}` : `${LAB_BENCH_PATH}/runs`} className="lab-form">
+    <Form
+      method="post"
+      action={replaces ? `${LAB_BENCH_PATH}/runs/${replaces}` : `${LAB_BENCH_PATH}/runs`}
+      className="lab-form"
+    >
       <div className="lab-fields">
         <Field label="Protocol" required>
-          <select className="cap-input" name="procedure" required defaultValue={defaults?.procedure ?? ""}>
+          <select
+            className="cap-input"
+            name="procedure"
+            required
+            defaultValue={defaults?.procedure ?? ""}
+          >
             <option value="" disabled>
               Choose a protocol
             </option>
@@ -38,10 +53,19 @@ export function RunForm({
           </select>
         </Field>
         <Field label="Day" help="Blank means today">
-          <input className="cap-input" type="date" name="run_on" defaultValue={defaults?.run_on ?? ""} />
+          <input
+            className="cap-input"
+            type="date"
+            name="run_on"
+            defaultValue={defaults?.run_on ?? ""}
+          />
         </Field>
         <Field label="Outcome">
-          <select className="cap-input" name="outcome" defaultValue={defaults?.outcome ?? "completed"}>
+          <select
+            className="cap-input"
+            name="outcome"
+            defaultValue={defaults?.outcome ?? "completed"}
+          >
             <option value="completed">Completed</option>
             <option value="failed">Failed</option>
             <option value="abandoned">Abandoned</option>
@@ -63,7 +87,11 @@ export function RunForm({
           return (
             <div className="lab-fields" key={i}>
               <Field label={`Lot ${i + 1}`}>
-                <select className="cap-input" name={`lot-${i}`} defaultValue={d ? String(d.lot_id) : ""}>
+                <select
+                  className="cap-input"
+                  name={`lot-${i}`}
+                  defaultValue={d ? String(d.lot_id) : ""}
+                >
                   <option value="">None</option>
                   {lots.map((l) => (
                     <option key={l.value} value={l.value}>
@@ -73,10 +101,21 @@ export function RunForm({
                 </select>
               </Field>
               <Field label={`Amount used, lot ${i + 1}`}>
-                <input className="cap-input" name={`amount-${i}`} inputMode="decimal" defaultValue={d?.amount_used ?? ""} />
+                <input
+                  className="cap-input"
+                  name={`amount-${i}`}
+                  inputMode="decimal"
+                  defaultValue={d?.amount_used ?? ""}
+                />
               </Field>
               <label className="cap-check">
-                <input type="checkbox" name={`emptied-${i}`} value="yes" defaultChecked={d?.emptied === 1} /> Emptied it
+                <input
+                  type="checkbox"
+                  name={`emptied-${i}`}
+                  value="yes"
+                  defaultChecked={d?.emptied === 1}
+                />{" "}
+                Emptied it
               </label>
             </div>
           );

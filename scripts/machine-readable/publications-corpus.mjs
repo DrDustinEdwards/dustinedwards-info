@@ -17,7 +17,9 @@ import {
 const { tally, ok } = openPart("corpus");
 
 /** @param {string[]} messages */
-const shown = (messages) => messages.slice(0, 8).join("; ") + (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
+const shown = (messages) =>
+  messages.slice(0, 8).join("; ") +
+  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 ok(
   `every publication file passes the validation module the save uses (${files.length} files)`,
@@ -30,7 +32,11 @@ ok(
     compiled.map((c) => ({ file: c.file, slug: c.slug, id: c.record.id, doi: c.record.doi })),
   );
   const only = (/** @type {string} */ label) => duplicates.filter((d) => d.includes(label));
-  ok(`every record id is unique (${new Set(records.map((r) => r.id)).size} of ${records.length})`, only("id \"").length === 0, shown(only("id \"")));
+  ok(
+    `every record id is unique (${new Set(records.map((r) => r.id)).size} of ${records.length})`,
+    only('id "').length === 0,
+    shown(only('id "')),
+  );
   ok(
     "every DOI is distinct after casefolding",
     only("DOI (case-folded)").length === 0,
@@ -41,10 +47,15 @@ ok(
     only("page slug").length === 0,
     `${shown(only("page slug"))}. doiSlug collapses punctuation, so two DOIs differing only in punctuation collide`,
   );
-  ok("the corpus is not empty", !duplicates.some((d) => d.includes("corpus is empty")), shown(duplicates));
+  ok(
+    "the corpus is not empty",
+    !duplicates.some((d) => d.includes("corpus is empty")),
+    shown(duplicates),
+  );
   ok(
     `the DOI set is as large as the file set, or the rest are manuscripts (${records.filter((r) => r.doi).length} with a DOI)`,
-    new Set(records.flatMap((r) => (r.doi ? [doiKey(r.doi)] : []))).size === records.filter((r) => r.doi).length,
+    new Set(records.flatMap((r) => (r.doi ? [doiKey(r.doi)] : []))).size ===
+      records.filter((r) => r.doi).length,
   );
 }
 
@@ -53,7 +64,11 @@ ok(
   hosted.length > 0,
   "a zero here would make the missing-PDF, hash and text sweeps vacuous",
 );
-ok(`every pdfPath resolves to a file in the repository (${hosted.length} hosted)`, refusalsFor("pdfPath").length === 0, shown(refusalsFor("pdfPath")));
+ok(
+  `every pdfPath resolves to a file in the repository (${hosted.length} hosted)`,
+  refusalsFor("pdfPath").length === 0,
+  shown(refusalsFor("pdfPath")),
+);
 ok(
   "every file records the sha256 of the PDF its text was extracted from, and it matches the PDF",
   refusalsFor("pdfSha256").length === 0,
@@ -76,7 +91,10 @@ ok(
   refusalsFor("pmcUrl", "pmcid").length === 0,
   shown(refusalsFor("pmcUrl", "pmcid")),
 );
-ok("the pmcUrl set is non-empty, so the form assertion above read something", records.some((r) => r.pmcUrl));
+ok(
+  "the pmcUrl set is non-empty, so the form assertion above read something",
+  records.some((r) => r.pmcUrl),
+);
 
 /* These land in a `<script type="application/ld+json">` block, where `<` ends the element early. */
 const withAbstract = records.filter((r) => typeof r.abstract === "string" && r.abstract.length > 0);

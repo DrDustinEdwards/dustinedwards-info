@@ -40,9 +40,7 @@ function attach(parent: HTMLElement, ...children: HTMLElement[]): void {
  * upload path, so a citation cannot disagree with what was indexed.
  */
 function citationsFromChunks(parsed: unknown): AskCitation[] {
-  const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed)
-    ? parsed
-    : [];
+  const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed) ? parsed : [];
   const seen = new Set<string>();
   const out: AskCitation[] = [];
   for (const chunk of chunks) {
@@ -117,7 +115,11 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 
   // Shown only when the server says the model stopped before finishing (a `cut` event), so a cut answer never
   // reads as a whole one.
-  const cutNote = el("p", "ask-cut", "This answer was cut off before it finished. The sources below say more.");
+  const cutNote = el(
+    "p",
+    "ask-cut",
+    "This answer was cut off before it finished. The sources below say more.",
+  );
   cutNote.hidden = true;
 
   attach(panel, header, status, body, cutNote, sources, followUp, announcer);
@@ -146,7 +148,11 @@ export function ask(container: HTMLElement, question: string): AskHandle {
       const item = el("li");
       const link = el("a");
       link.href = citation.url;
-      attach(link, el("span", "ask-source-index", `${index}. `), el("span", undefined, citation.title));
+      attach(
+        link,
+        el("span", "ask-source-index", `${index}. `),
+        el("span", undefined, citation.title),
+      );
       attach(item, link);
       if (citation.isSection) {
         attach(item, el("span", "ask-source-kind", " section"));
@@ -243,7 +249,11 @@ export function ask(container: HTMLElement, question: string): AskHandle {
    * it asked for. Focus the caller still holds on something visible is left where it is.
    */
   const held = document.activeElement;
-  if (!held || held === document.body || (held instanceof HTMLElement && held.closest("[hidden]"))) {
+  if (
+    !held ||
+    held === document.body ||
+    (held instanceof HTMLElement && held.closest("[hidden]"))
+  ) {
     panel.focus();
   }
 

@@ -8,5 +8,8 @@ import assert from "node:assert/strict";
 import { humanCheck } from "../app/lib/admin/check-copy.mjs";
 
 await test("a check with no words yet is still shown as words, never its code name", () => {
-  assert.equal(humanCheck({ name: "some-new-drift", ok: true, detail: "x" }).name, "Some new drift");
+  assert.equal(
+    humanCheck({ name: "some-new-drift", ok: true, detail: "x" }).name,
+    "Some new drift",
+  );
 });

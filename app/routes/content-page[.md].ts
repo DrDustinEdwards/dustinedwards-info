@@ -16,7 +16,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const path = new URL(request.url).pathname.replace(/\.md$/, "");
   const markdown = await getPublishedPageMarkdown(getEnv(context), path);
   if (markdown === null) {
-    return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
   return new Response(markdown, {
     headers: {

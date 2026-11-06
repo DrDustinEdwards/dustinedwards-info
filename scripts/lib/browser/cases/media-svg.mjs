@@ -39,9 +39,13 @@ async function visit(browser, key, strip) {
     cdp.on("Fetch.requestPaused", (event) => {
       void (async () => {
         const headers = event.responseHeaders ?? [];
-        seen.policy = headers.find((h) => h.name.toLowerCase() === "content-security-policy")?.value ?? "";
-        seen.nosniff = headers.find((h) => h.name.toLowerCase() === "x-content-type-options")?.value ?? "";
-        const { body, base64Encoded } = await cdp.send("Fetch.getResponseBody", { requestId: event.requestId });
+        seen.policy =
+          headers.find((h) => h.name.toLowerCase() === "content-security-policy")?.value ?? "";
+        seen.nosniff =
+          headers.find((h) => h.name.toLowerCase() === "x-content-type-options")?.value ?? "";
+        const { body, base64Encoded } = await cdp.send("Fetch.getResponseBody", {
+          requestId: event.requestId,
+        });
         await cdp.send("Fetch.fulfillRequest", {
           requestId: event.requestId,
           responseCode: event.responseStatusCode ?? 200,
@@ -60,9 +64,10 @@ async function visit(browser, key, strip) {
     const state = await tab.evaluate(
       (marker) => ({
         marker: document.documentElement.hasAttribute(marker),
-        rendered: document.documentElement.namespaceURI === "http://www.w3.org/2000/svg"
-          ? "svg"
-          : document.documentElement.localName,
+        rendered:
+          document.documentElement.namespaceURI === "http://www.w3.org/2000/svg"
+            ? "svg"
+            : document.documentElement.localName,
       }),
       MEDIA_SCRIPT_MARKER,
     );

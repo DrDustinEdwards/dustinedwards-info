@@ -1,6 +1,12 @@
 // The media index in D1: the rows the rebuild and the R2 events keep in step with the buckets, and the store site-api's
 // media library (v0.24.0) reads and writes Carrel's and the admin's library through (mediaLibraryStore).
-import { MediaPlaceholder, type MediaLibraryStore, type MediaRecord, type MediaRecordFields, type MediaRevisionRecord } from "@dustinedwards/site-api";
+import {
+  MediaPlaceholder,
+  type MediaLibraryStore,
+  type MediaRecord,
+  type MediaRecordFields,
+  type MediaRevisionRecord,
+} from "@dustinedwards/site-api";
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { classify, digestFromKey, roleOf } from "../lib/media/classify.mjs";
 import { parseTags, serializeTags } from "../lib/media/tags.mjs";
@@ -23,14 +29,15 @@ export async function mediaCounts(env: Env) {
 
 /** By role. Separate from `mediaCounts` so a broken `roleOf()` shows. */
 export async function mediaRoleCounts(env: Env) {
-  return getDb(env)
-    .select({ role: media.role, n: count() })
-    .from(media)
-    // Trashed rows are out, so the role chips add up to the grid.
-    .where(notTrashed())
-    .groupBy(media.role);
+  return (
+    getDb(env)
+      .select({ role: media.role, n: count() })
+      .from(media)
+      // Trashed rows are out, so the role chips add up to the grid.
+      .where(notTrashed())
+      .groupBy(media.role)
+  );
 }
-
 
 /** One row by key, for the detail view, which a URL can reach from any page. */
 export async function mediaRecord(env: Env, key: string) {
@@ -110,7 +117,6 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   return out;
 }
 
-
 // ---------- The media library's store (site-api v0.24.0)
 
 type MediaRow = typeof media.$inferSelect;
@@ -168,7 +174,10 @@ function recordOf(row: MediaRow): MediaRecord {
     licenseExpires: row.licenseExpires,
     takenAt: row.takenAt,
     // An older LQIP the contract cannot carry (not a small raster data: URI) is no placeholder.
-    placeholder: row.placeholder && MediaPlaceholder.safeParse(row.placeholder).success ? row.placeholder : null,
+    placeholder:
+      row.placeholder && MediaPlaceholder.safeParse(row.placeholder).success
+        ? row.placeholder
+        : null,
     // The index keeps no main color.
     color: null,
     // A row the rebuild indexed before uploads were timed takes the time it was indexed.
@@ -201,7 +210,8 @@ function columnsOf(fields: MediaRecordFields) {
   if (fields.takenAt !== undefined) set.takenAt = fields.takenAt;
   if (fields.placeholder !== undefined) set.placeholder = fields.placeholder;
   if (fields.uploadedAt !== undefined) set.uploadedAt = fields.uploadedAt;
-  if (fields.trashedAt !== undefined) set.trashedAt = fields.trashedAt === null ? null : d1Time(fields.trashedAt);
+  if (fields.trashedAt !== undefined)
+    set.trashedAt = fields.trashedAt === null ? null : d1Time(fields.trashedAt);
   return set;
 }
 
@@ -220,13 +230,18 @@ function revisionOf(row: typeof mediaRevisions.$inferSelect): MediaRevisionRecor
 }
 
 /** Recorded citations still name the file: the delete claim's condition, checked in its own statement. */
-const cited = (key: string) => sql`EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${key})`;
+const cited = (key: string) =>
+  sql`EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${key})`;
 
 /** The store site-api's mediaLibrary keeps the site's files in: a mapping onto the `media` table's own columns. */
 export function mediaLibraryStore(env: Env): MediaLibraryStore {
   const db = getDb(env);
   const one = async (key: string) => {
-    const [row] = await db.select().from(media).where(and(eq(media.key, key), isLibraryRow)).limit(1);
+    const [row] = await db
+      .select()
+      .from(media)
+      .where(and(eq(media.key, key), isLibraryRow))
+      .limit(1);
     return row ? recordOf(row) : null;
   };
 
@@ -238,7 +253,12 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
       const rows = await db
         .select()
         .from(media)
-        .where(and(isLibraryRow, sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`));
+        .where(
+          and(
+            isLibraryRow,
+            sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`,
+          ),
+        );
       return rows.map(recordOf);
     },
 
@@ -249,20 +269,32 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
     // By the row's own hash; then, for a row written before the hash was kept, by the digest its content-addressed key
     // carries (the first 16 hex of the same SHA-256); then by the bytes a file was uploaded with before a shrink.
     async byHash(sha256) {
-      const [current] = await db.select().from(media).where(and(eq(media.sha256, sha256), isLibraryRow)).orderBy(asc(media.uploadedAt), asc(media.key)).limit(1);
+      const [current] = await db
+        .select()
+        .from(media)
+        .where(and(eq(media.sha256, sha256), isLibraryRow))
+        .orderBy(asc(media.uploadedAt), asc(media.key))
+        .limit(1);
       if (current) return recordOf(current);
       const prefix = sha256.slice(0, 16);
       const unhashed = await db
         .select()
         .from(media)
-        .where(and(isNull(media.sha256), isLibraryRow, sql`instr(${media.key}, ${`-${prefix}`}) > 0`))
+        .where(
+          and(isNull(media.sha256), isLibraryRow, sql`instr(${media.key}, ${`-${prefix}`}) > 0`),
+        )
         .orderBy(asc(media.uploadedAt), asc(media.key));
       const byKey = unhashed.find((row) => digestFromKey(row.key) === prefix);
       if (byKey) return recordOf(byKey);
       const [original] = await db
         .select({ key: mediaRevisions.mediaKey })
         .from(mediaRevisions)
-        .where(and(eq(mediaRevisions.sha256, sha256), inArray(mediaRevisions.reason, ["upload", "import"])))
+        .where(
+          and(
+            eq(mediaRevisions.sha256, sha256),
+            inArray(mediaRevisions.reason, ["upload", "import"]),
+          ),
+        )
         .orderBy(asc(mediaRevisions.id))
         .limit(1);
       return original ? one(original.key) : null;
@@ -283,7 +315,11 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
     async writeAtRev(key, fields, expectedRev) {
       const [row] = await db
         .update(media)
-        .set({ ...columnsOf(fields), rev: sql`${media.rev} + 1`, updatedAt: sql`(datetime('now'))` })
+        .set({
+          ...columnsOf(fields),
+          rev: sql`${media.rev} + 1`,
+          updatedAt: sql`(datetime('now'))`,
+        })
         .where(and(eq(media.key, key), eq(media.rev, expectedRev), isLibraryRow))
         .returning();
       if (row) return { ok: true, record: recordOf(row) };
@@ -295,8 +331,16 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
       const set = columnsOf(fields);
       const [row] =
         Object.keys(set).length === 0
-          ? await db.select().from(media).where(and(eq(media.key, key), isLibraryRow)).limit(1)
-          : await db.update(media).set(set).where(and(eq(media.key, key), isLibraryRow)).returning();
+          ? await db
+              .select()
+              .from(media)
+              .where(and(eq(media.key, key), isLibraryRow))
+              .limit(1)
+          : await db
+              .update(media)
+              .set(set)
+              .where(and(eq(media.key, key), isLibraryRow))
+              .returning();
       if (!row) throw new Error(`${key} changed its bytes, but its row is gone`);
       return recordOf(row);
     },
@@ -304,19 +348,37 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
     async addRevision(key, revision) {
       const [added] = await db
         .insert(mediaRevisions)
-        .values({ mediaKey: key, at: revision.at, bytes: revision.bytes, width: revision.width, height: revision.height, reason: revision.reason, sha256: revision.sha256, backupKey: revision.copyKey })
+        .values({
+          mediaKey: key,
+          at: revision.at,
+          bytes: revision.bytes,
+          width: revision.width,
+          height: revision.height,
+          reason: revision.reason,
+          sha256: revision.sha256,
+          backupKey: revision.copyKey,
+        })
         .returning({ id: mediaRevisions.id });
       if (!added) throw new Error(`${key}'s revision was not recorded`);
       return added.id;
     },
 
     async revisions(key, limit = 100) {
-      const rows = await db.select().from(mediaRevisions).where(eq(mediaRevisions.mediaKey, key)).orderBy(desc(mediaRevisions.id)).limit(limit);
+      const rows = await db
+        .select()
+        .from(mediaRevisions)
+        .where(eq(mediaRevisions.mediaKey, key))
+        .orderBy(desc(mediaRevisions.id))
+        .limit(limit);
       return rows.map(revisionOf);
     },
 
     async keepCopy(revisionId, copyKey) {
-      await db.update(mediaRevisions).set({ backupKey: copyKey }).where(eq(mediaRevisions.id, revisionId)).run();
+      await db
+        .update(mediaRevisions)
+        .set({ backupKey: copyKey })
+        .where(eq(mediaRevisions.id, revisionId))
+        .run();
     },
 
     // One batch: the row goes only at the version the reference check saw and while no recorded citation names it,
@@ -324,8 +386,18 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
     async remove(key, rev) {
       if (!(await one(key))) return "missing";
       const [deleted] = await db.batch([
-        db.delete(media).where(and(eq(media.key, key), eq(media.rev, rev), isLibraryRow, sql`NOT ${cited(key)}`)).returning({ key: media.key }),
-        db.delete(mediaRevisions).where(and(eq(mediaRevisions.mediaKey, key), sql`NOT EXISTS (SELECT 1 FROM ${media} WHERE ${media.key} = ${key})`)),
+        db
+          .delete(media)
+          .where(and(eq(media.key, key), eq(media.rev, rev), isLibraryRow, sql`NOT ${cited(key)}`))
+          .returning({ key: media.key }),
+        db
+          .delete(mediaRevisions)
+          .where(
+            and(
+              eq(mediaRevisions.mediaKey, key),
+              sql`NOT EXISTS (SELECT 1 FROM ${media} WHERE ${media.key} = ${key})`,
+            ),
+          ),
       ]);
       if (deleted.length > 0) return "removed";
       const now = await one(key);
@@ -334,7 +406,9 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
     },
 
     async changeCursor() {
-      const [row] = await db.select({ seq: sql<number | null>`max(${mediaChanges.seq})` }).from(mediaChanges);
+      const [row] = await db
+        .select({ seq: sql<number | null>`max(${mediaChanges.seq})` })
+        .from(mediaChanges);
       return Number(row?.seq ?? 0);
     },
 
@@ -345,7 +419,9 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
       return db
         .select({ key: mediaChanges.mediaKey, seq: latest })
         .from(mediaChanges)
-        .where(sql`${mediaChanges.seq} > ${from} AND ${mediaChanges.seq} <= ${head} AND ${mediaChanges.mediaKey} NOT LIKE 'og/%' AND ${mediaChanges.mediaKey} NOT LIKE 'derived/%'`)
+        .where(
+          sql`${mediaChanges.seq} > ${from} AND ${mediaChanges.seq} <= ${head} AND ${mediaChanges.mediaKey} NOT LIKE 'og/%' AND ${mediaChanges.mediaKey} NOT LIKE 'derived/%'`,
+        )
         .groupBy(mediaChanges.mediaKey)
         .orderBy(asc(latest))
         .limit(limit + 1);

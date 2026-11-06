@@ -25,7 +25,12 @@ const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
 let gh: SourceStub;
 beforeEach(async () => {
-  gh = await stubSources({ [procedurePath(SLUG)]: isolation, ...strainRepoFiles, ...reagentRepoFiles, ...equipmentRepoFiles });
+  gh = await stubSources({
+    [procedurePath(SLUG)]: isolation,
+    ...strainRepoFiles,
+    ...reagentRepoFiles,
+    ...equipmentRepoFiles,
+  });
 });
 afterEach(async () => {
   await gh.restore();
@@ -34,41 +39,73 @@ afterEach(async () => {
 async function record(raw: string) {
   const saved = await runTool(operatorEnv(), operator, "save_procedure", { slug: SLUG, raw });
   expect(saved.ok).toBe(true);
-  const out = await pageLoader({ request: new Request(PAGE), context: routeContext(), params: { slug: SLUG } } as never);
+  const out = await pageLoader({
+    request: new Request(PAGE),
+    context: routeContext(),
+    params: { slug: SLUG },
+  } as never);
   return out.record;
 }
 
 describe("calculators in a procedure's steps", () => {
-  it("folds each named calculator under its step, with ids of its own and the answer in the HTML", { timeout: 120_000 }, async () => {
-    const html = renderToStaticMarkup(createElement(ProcedureView, { record: await record(isolation), count: 1, factor: 1 }));
-    const folded = [...html.matchAll(/<details class="phage-tool phage-tool-step"><summary>Calculator: ([^<]+)<\/summary>/g)].map((m) => m[1]);
-    expect(folded).toEqual(["Serial dilution planner", "Webbed plate calculator", "Titer calculator"]);
-    // The embedded forms submit to the tool's own page, and no two controls share an id.
-    expect(html).toContain('action="/research/tools/webbed-plate"');
-    expect(html).toContain('data-tool-embedded=""');
-    const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
-    expect(new Set(ids).size).toBe(ids.length);
-    // Computed on the server from the worked example, so a reader without script sees an answer.
-    expect(html).toContain("phage-tool-answer");
-    expect(html).toContain('<template data-island="tools"></template>');
-  });
+  it(
+    "folds each named calculator under its step, with ids of its own and the answer in the HTML",
+    { timeout: 120_000 },
+    async () => {
+      const html = renderToStaticMarkup(
+        createElement(ProcedureView, { record: await record(isolation), count: 1, factor: 1 }),
+      );
+      const folded = [
+        ...html.matchAll(
+          /<details class="phage-tool phage-tool-step"><summary>Calculator: ([^<]+)<\/summary>/g,
+        ),
+      ].map((m) => m[1]);
+      expect(folded).toEqual([
+        "Serial dilution planner",
+        "Webbed plate calculator",
+        "Titer calculator",
+      ]);
+      // The embedded forms submit to the tool's own page, and no two controls share an id.
+      expect(html).toContain('action="/research/tools/webbed-plate"');
+      expect(html).toContain('data-tool-embedded=""');
+      const ids = [...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+      expect(new Set(ids).size).toBe(ids.length);
+      // Computed on the server from the worked example, so a reader without script sees an answer.
+      expect(html).toContain("phage-tool-answer");
+      expect(html).toContain('<template data-island="tools"></template>');
+    },
+  );
 
   it("fills a field from the step's own words and says so", { timeout: 120_000 }, async () => {
     const raw = isolation.replace("   > CALC: webbed-plate", "   > CALC: webbed-plate plates=10");
     expect(raw).not.toBe(isolation);
-    const html = renderToStaticMarkup(createElement(ProcedureView, { record: await record(raw), count: 1, factor: 1 }));
+    const html = renderToStaticMarkup(
+      createElement(ProcedureView, { record: await record(raw), count: 1, factor: 1 }),
+    );
     expect(html).toMatch(/id="[^"]*webbed-plate-plates"[^>]*value="10"/);
     expect(html).toContain("except what this step states");
   });
 
-  it("gives the machine the calculators in the twin, and leaves them off the printed sheet", { timeout: 120_000 }, async () => {
-    const rec = await record(isolation);
-    const twin = await (
-      await twinLoader({ request: new Request(`${PAGE}.md`), context: routeContext(), params: { slug: SLUG } } as never)
-    ).text();
-    expect(twin).toContain("> Calculator: [Webbed plate calculator](/research/tools/webbed-plate)");
-    expect(twin).toContain("> Calculator: [Titer calculator](/research/tools/titer)");
-    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record: rec, count: 1, factor: 1, address: PAGE }));
-    expect(sheet).not.toContain("phage-tool");
-  });
+  it(
+    "gives the machine the calculators in the twin, and leaves them off the printed sheet",
+    { timeout: 120_000 },
+    async () => {
+      const rec = await record(isolation);
+      const twin = await (
+        await twinLoader({
+          request: new Request(`${PAGE}.md`),
+          context: routeContext(),
+          params: { slug: SLUG },
+        } as never)
+      ).text();
+      expect(twin).toContain(
+        "> Calculator: [Webbed plate calculator](/research/tools/webbed-plate)",
+      );
+      expect(twin).toContain("> Calculator: [Titer calculator](/research/tools/titer)");
+      const sheet = renderToStaticMarkup(
+        createElement(ProcedureSheet, { record: rec, count: 1, factor: 1, address: PAGE }),
+      );
+      expect(sheet).not.toContain("phage-tool");
+    },
+  );
 });

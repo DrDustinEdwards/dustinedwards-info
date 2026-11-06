@@ -35,7 +35,12 @@ const CARREL_RATE_PERIOD_SECONDS = 60;
 function carrelLimiter(env: Env): RateLimiter {
   return {
     async limit({ key }) {
-      const verdict = await limitHit(env, `carrel:${key}`, CARREL_RATE_LIMIT, CARREL_RATE_PERIOD_SECONDS);
+      const verdict = await limitHit(
+        env,
+        `carrel:${key}`,
+        CARREL_RATE_LIMIT,
+        CARREL_RATE_PERIOD_SECONDS,
+      );
       if (verdict.status === "unavailable") throw new Error("the rate limiter is unavailable");
       return { success: verdict.status === "ok" };
     },
@@ -48,7 +53,8 @@ function carrelLimiter(env: Env): RateLimiter {
  */
 const fromThisSite = (hook: PublishHook): PublishHook => ({
   ...hook,
-  run: (event) => (event.request && new URL(event.request.url).origin !== SITE_ORIGIN ? true : hook.run(event)),
+  run: (event) =>
+    event.request && new URL(event.request.url).origin !== SITE_ORIGIN ? true : hook.run(event),
 });
 
 /**
@@ -58,7 +64,12 @@ const fromThisSite = (hook: PublishHook): PublishHook => ({
  * schedule has no request, and the cron's entrypoint cannot reach the Renderer's cache, so its change purges the stored
  * pages through the Renderer (workers/app.ts purgePages). A request's save purges inside savePost.
  */
-function carrelApi(env: Env, ctx: ExecutionContext, origin: string, renderDocument: RenderDocument) {
+function carrelApi(
+  env: Env,
+  ctx: ExecutionContext,
+  origin: string,
+  renderDocument: RenderDocument,
+) {
   const store = d1SiteApiStore(env.DB);
   return createSiteApi({
     adapter: carrelSiteAdapter({ env, ctx, origin, renderDocument }),
@@ -75,7 +86,12 @@ function carrelApi(env: Env, ctx: ExecutionContext, origin: string, renderDocume
 }
 
 const forRequest = (request: Request, context: Readonly<RouterContextProvider>) =>
-  carrelApi(getEnv(context), getExecutionContext(context), new URL(request.url).origin, context.get(documentHandlerContext));
+  carrelApi(
+    getEnv(context),
+    getExecutionContext(context),
+    new URL(request.url).origin,
+    context.get(documentHandlerContext),
+  );
 
 /** The package guards in order: prefix, rate limit, key, route. Off the prefix is a 404. */
 export async function handleCarrelRequest(
@@ -105,6 +121,10 @@ export async function handleCarrelPreviewLink(
  * for each, runs again the hooks that failed, and deletes what has been in the trash 30 days. No request, so no
  * preview renderer; nothing it does previews.
  */
-export function runCarrelSchedules(env: Env, ctx: ExecutionContext, now: Date): Promise<ScheduleRun> {
+export function runCarrelSchedules(
+  env: Env,
+  ctx: ExecutionContext,
+  now: Date,
+): Promise<ScheduleRun> {
   return carrelApi(env, ctx, SITE_ORIGIN, null).runSchedules({ now });
 }

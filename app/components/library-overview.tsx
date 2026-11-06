@@ -14,7 +14,9 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
         <h2 className="cap-part-title" id="library-pipeline-title">
           The phage workflow
         </h2>
-        <p className="cap-part-lead">From soil sample to annotated genome. A filled station has a protocol here.</p>
+        <p className="cap-part-lead">
+          From soil sample to annotated genome. A filled station has a protocol here.
+        </p>
         <ol className="library-pipeline">
           {overview.stages.map((stage, i) => (
             <li key={stage.id} className="library-stage" data-empty={stage.href ? undefined : ""}>
@@ -29,7 +31,9 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
                 <span className="library-stage-name">{stage.label}</span>
               )}
               <span className="library-stage-n">
-                {stage.count > 0 ? countOf(stage.count, ["protocol", "protocols"]) : "No protocol yet"}
+                {stage.count > 0
+                  ? countOf(stage.count, ["protocol", "protocols"])
+                  : "No protocol yet"}
               </span>
               {stage.tools.length > 0 ? (
                 <ul className="library-stage-tools" aria-label={`Calculators for ${stage.label}`}>

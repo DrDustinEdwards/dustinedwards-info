@@ -131,7 +131,6 @@
   line-height: 1.45;
 }
 
-
 /* A report's references: number, year, title in the serif, journal in the mono. */
 .home-refs {
   margin: 0;
@@ -403,7 +402,6 @@
 .home-hero .cap-plate-box {
   padding-block-start: var(--space-7);
 }
-
 
 .podcast {
   border-block-start: var(--line-w) solid var(--text);

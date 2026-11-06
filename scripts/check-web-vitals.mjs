@@ -55,7 +55,8 @@ function parseArgs(argv) {
       throw new Error(`unexpected argument ${arg}`);
     }
   }
-  if (!Number.isInteger(runs) || runs < 1) throw new Error("--runs takes a whole number, 1 or more");
+  if (!Number.isInteger(runs) || runs < 1)
+    throw new Error("--runs takes a whole number, 1 or more");
   origin ??= process.env.WEB_VITALS_ORIGIN || SITE_ORIGIN;
   return { origin: new URL(origin).origin, runs };
 }
@@ -115,7 +116,10 @@ async function main() {
   console.log(`${runs} run${runs === 1 ? "" : "s"} per page${runs > 1 ? ", median reported" : ""}`);
   console.log(
     "Thresholds: " +
-      METRICS.map((m) => `${m.label} WARN over ${m.format(m.threshold)}, FAIL over ${m.format(m.threshold * 2)}`).join("; "),
+      METRICS.map(
+        (m) =>
+          `${m.label} WARN over ${m.format(m.threshold)}, FAIL over ${m.format(m.threshold * 2)}`,
+      ).join("; "),
   );
   console.log(
     "INP is NOT measured: it needs real user input, which a lab run has none of. TBT is shown as\n" +
@@ -125,7 +129,10 @@ async function main() {
   /** @type {Array<{ path: string, grades?: ReturnType<typeof gradeRuns>, error?: unknown }>} */
   const pages = [];
   /** Printed as each page finishes, so a slow CI log shows progress rather than silence. */
-  const report = (/** @type {(typeof pages)[number]} */ page, /** @type {number[]} */ benchmarks = []) => {
+  const report = (
+    /** @type {(typeof pages)[number]} */ page,
+    /** @type {number[]} */ benchmarks = [],
+  ) => {
     pages.push(page);
     console.log(page.path);
     if (page.error !== undefined) {
@@ -136,7 +143,8 @@ async function main() {
     for (const { metric, value, grade } of page.grades ?? []) {
       console.log(`  ${grade.padEnd(4)}  ${metric.label.padEnd(24)} ${metric.format(value)}`);
     }
-    if (benchmarks.length) console.log(`        host benchmark index ${benchmarks.map(Math.round).join(", ")}`);
+    if (benchmarks.length)
+      console.log(`        host benchmark index ${benchmarks.map(Math.round).join(", ")}`);
   };
 
   /** @type {string[]} */
@@ -154,7 +162,9 @@ async function main() {
       try {
         const results = [];
         for (let i = 0; i < runs; i++) results.push(await measure(origin + pagePath, port));
-        const benchmarks = results.flatMap((r) => (typeof r.benchmark === "number" ? [r.benchmark] : []));
+        const benchmarks = results.flatMap((r) =>
+          typeof r.benchmark === "number" ? [r.benchmark] : [],
+        );
         report({ path: pagePath, grades: gradeRuns(results) }, benchmarks);
       } catch (error) {
         report({ path: pagePath, error });

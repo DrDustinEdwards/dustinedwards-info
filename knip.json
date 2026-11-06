@@ -17,13 +17,7 @@
     "scripts/**/*.mjs",
     "test/**/*.{ts,mjs}"
   ],
-  "ignore": [
-    "mcp/**"
-  ],
-  "ignoreDependencies": [
-    "cloudflare"
-  ],
-  "ignoreBinaries": [
-    "netstat"
-  ]
+  "ignore": ["mcp/**"],
+  "ignoreDependencies": ["cloudflare"],
+  "ignoreBinaries": ["netstat"]
 }

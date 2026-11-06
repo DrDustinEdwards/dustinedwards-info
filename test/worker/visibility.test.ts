@@ -103,7 +103,10 @@ async function searchPage(query: string) {
     context: routeContext(),
   } as never);
   return page.data as {
-    result: { total: number; hits: Array<{ url: string; title: string; publishAt: number | null }> };
+    result: {
+      total: number;
+      hits: Array<{ url: string; title: string; publishAt: number | null }>;
+    };
   };
 }
 
@@ -216,7 +219,12 @@ describe("the draft and the scheduled post are on no public surface", () => {
       ["tag rss", tagRssLoader as Loader, `${tagPath(TAG)}/rss.xml`, { tag: tagParam }],
       ["tag json feed", tagFeedLoader as Loader, `${tagPath(TAG)}/feed.json`, { tag: tagParam }],
       ["series page", seriesLoader as Loader, seriesPath(SERIES), { series: seriesParam }],
-      ["series rss", seriesRssLoader as Loader, `${seriesPath(SERIES)}/rss.xml`, { series: seriesParam }],
+      [
+        "series rss",
+        seriesRssLoader as Loader,
+        `${seriesPath(SERIES)}/rss.xml`,
+        { series: seriesParam },
+      ],
       [
         "series json feed",
         seriesFeedLoader as Loader,
@@ -254,11 +262,15 @@ describe("the draft and the scheduled post are on no public surface", () => {
 
   it("the hidden posts' own URLs and markdown twins are 404", async () => {
     for (const hidden of HIDDEN) {
-      const page = await read(postLoader as Loader, `/writing/${hidden.slug}`, { slug: hidden.slug });
+      const page = await read(postLoader as Loader, `/writing/${hidden.slug}`, {
+        slug: hidden.slug,
+      });
       expect(page.status, hidden.slug).toBe(404);
       expectNoHidden(page.text, `${hidden.slug} page`);
 
-      const twin = await read(twinLoader as Loader, `/writing/${hidden.slug}.md`, { slug: hidden.slug });
+      const twin = await read(twinLoader as Loader, `/writing/${hidden.slug}.md`, {
+        slug: hidden.slug,
+      });
       expect(twin.status, `${hidden.slug}.md`).toBe(404);
       expect(twin.text).not.toContain(hidden.term);
     }
@@ -316,7 +328,10 @@ describe("the draft and the scheduled post are on no public surface", () => {
     const postKeys = [...items.keys()].filter((key) => key.startsWith("writing/"));
     expect(postKeys.some((key) => key.includes(LIVE.slug))).toBe(true);
     for (const hidden of HIDDEN) {
-      expect(postKeys.filter((key) => key.includes(hidden.slug)), hidden.slug).toEqual([]);
+      expect(
+        postKeys.filter((key) => key.includes(hidden.slug)),
+        hidden.slug,
+      ).toEqual([]);
       expect([...items.values()].join("\n")).not.toContain(hidden.term);
     }
   });
@@ -358,7 +373,13 @@ describe("the home page's post count", () => {
 
     const extra = "crawl-count-extra";
     const raw = (draft: boolean) =>
-      post(extra, { title: "Counted Extra", date: "2026-05-15", draft, tags: "[sorting]", body: "A body.\n" });
+      post(extra, {
+        title: "Counted Extra",
+        date: "2026-05-15",
+        draft,
+        tags: "[sorting]",
+        body: "A body.\n",
+      });
     await write(extra, raw(false));
     expect(await countLink()).toBe(published + 1);
 

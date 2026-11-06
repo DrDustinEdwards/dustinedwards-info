@@ -30,10 +30,7 @@ await test("the day still recovers continuously after such a burst", () => {
 await test("the full ceiling is still the ceiling and is never exceeded", () => {
   for (const seconds of [0, 1, 3600, 43200, 86399]) {
     const allowed = pacedAllowance(DAILY, BURST, at(seconds));
-    assert.ok(
-      allowed <= DAILY,
-      `${allowed} at ${seconds}s exceeds the daily cap of ${DAILY}`,
-    );
+    assert.ok(allowed <= DAILY, `${allowed} at ${seconds}s exceeds the daily cap of ${DAILY}`);
   }
   assert.equal(pacedAllowance(DAILY, BURST, at(86399)), DAILY);
 });
@@ -54,8 +51,14 @@ await test("the first question of the day is not refused, which is the burst's j
 
 await test("midday has released a real share of the day, and not all of it", () => {
   const noon = pacedAllowance(DAILY, BURST, at(43200));
-  assert.ok(noon > pacedAllowance(DAILY, BURST, at(3600)), `${noon} at noon is no more than at 1am`);
-  assert.ok(noon < pacedAllowance(DAILY, BURST, at(82800)), `${noon} at noon is no less than at 11pm`);
+  assert.ok(
+    noon > pacedAllowance(DAILY, BURST, at(3600)),
+    `${noon} at noon is no more than at 1am`,
+  );
+  assert.ok(
+    noon < pacedAllowance(DAILY, BURST, at(82800)),
+    `${noon} at noon is no less than at 11pm`,
+  );
   assert.ok(noon >= DAILY / 3 && noon <= (DAILY * 3) / 4, `${noon} of ${DAILY} at noon`);
 });
 

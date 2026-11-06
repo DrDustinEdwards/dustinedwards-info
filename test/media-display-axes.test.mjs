@@ -4,11 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  DEFAULTS,
-  onlyDisplayChanged,
-  readDisplayAxes,
-} from "../app/lib/media/view.mjs";
+import { DEFAULTS, onlyDisplayChanged, readDisplayAxes } from "../app/lib/media/view.mjs";
 
 const at = (search) => new URL(`https://example.test/admin/media${search}`);
 
@@ -20,7 +16,17 @@ await test("a display axis alone skips the server", () => {
 });
 
 await test("a data axis always reaches the server", () => {
-  for (const search of ["?sort=size", "?dir=asc", "?page=2", "?q=logo", "?tag=roster", "?lens=large", "?trash=1", "?role=brand", "?key=x.png"]) {
+  for (const search of [
+    "?sort=size",
+    "?dir=asc",
+    "?page=2",
+    "?q=logo",
+    "?tag=roster",
+    "?lens=large",
+    "?trash=1",
+    "?role=brand",
+    "?key=x.png",
+  ]) {
     assert.equal(
       onlyDisplayChanged(at(""), at(search)),
       false,
@@ -67,4 +73,3 @@ await test("readDisplayAxes falls back to the default for an unknown value", () 
   assert.equal(got.size, DEFAULTS.size);
   assert.equal(got.group, DEFAULTS.group);
 });
-

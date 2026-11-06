@@ -23,50 +23,58 @@ const CALCULATOR_PATHS = [...new Set(Object.values(TOOLS).map((tool) => tool.pat
  */
 function workedOnPage(markdown, id, values) {
   const result = runTool(id, values);
-  if (!result.ok) return [`the ${id} calculator refuses its own worked example (${result.error}); the page cannot be checked against it`];
+  if (!result.ok)
+    return [
+      `the ${id} calculator refuses its own worked example (${result.error}); the page cannot be checked against it`,
+    ];
   /** @type {string[]} */
   const errors = [];
   for (const section of result.sections) {
     section.steps.forEach((step, i) => {
-      if (!markdown.includes(`${i + 1}. ${step}\n`)) errors.push(`the page lacks step ${i + 1} the ${id} calculator prints: ${step}`);
+      if (!markdown.includes(`${i + 1}. ${step}\n`))
+        errors.push(`the page lacks step ${i + 1} the ${id} calculator prints: ${step}`);
     });
   }
   return errors;
 }
 
 /** The titer page's worked examples, and the example every other calculator page opens on. */
-const WORKED = /** @type {Record<string, { runs: Array<[string, Record<string, string>]>, answers: (result: any) => string[] }>} */ ({
-  "/research/tools/titer": {
-    runs: [
-      ["titer", { plaques: "111", volume: "10", dilution: "6" }],
-      ["titer", { plaques: "6", volume: "3", dilution: "3" }],
-    ],
-    answers: (result) => [`The titer is ${result.sections[0].result}.`],
-  },
-  "/research/tools/dilution": {
-    runs: [
-      ["dilution", { start: "1.11e10", target: "1.11e6", transfer: "10", needed: "" }],
-      ["dilution", { start: "3.0e9", target: "6e5", transfer: "10", needed: "" }],
-    ],
-    answers: () => [],
-  },
-  "/research/tools/webbed-plate": {
-    runs: [
-      ["webbed-plate", toolValues("webbed-plate")],
-      ["flood", toolValues("flood")],
-    ],
-    answers: () => [],
-  },
-  "/research/tools/moi": { runs: [["moi", toolValues("moi")]], answers: () => ["The MOI is 0.4 pfu per cell."] },
-  "/research/tools/eop": {
-    runs: [["eop-counts", toolValues("eop-counts")]],
-    answers: () => ["The EOP is 0.02, or 2% of the reference titer."],
-  },
-  "/research/tools/lysate-volume": {
-    runs: [["lysate-volume", toolValues("lysate-volume")]],
-    answers: () => ["The plan is 6 µl of lysate in 60 µl, 10 µl on each of 6 plates."],
-  },
-});
+const WORKED =
+  /** @type {Record<string, { runs: Array<[string, Record<string, string>]>, answers: (result: any) => string[] }>} */ ({
+    "/research/tools/titer": {
+      runs: [
+        ["titer", { plaques: "111", volume: "10", dilution: "6" }],
+        ["titer", { plaques: "6", volume: "3", dilution: "3" }],
+      ],
+      answers: (result) => [`The titer is ${result.sections[0].result}.`],
+    },
+    "/research/tools/dilution": {
+      runs: [
+        ["dilution", { start: "1.11e10", target: "1.11e6", transfer: "10", needed: "" }],
+        ["dilution", { start: "3.0e9", target: "6e5", transfer: "10", needed: "" }],
+      ],
+      answers: () => [],
+    },
+    "/research/tools/webbed-plate": {
+      runs: [
+        ["webbed-plate", toolValues("webbed-plate")],
+        ["flood", toolValues("flood")],
+      ],
+      answers: () => [],
+    },
+    "/research/tools/moi": {
+      runs: [["moi", toolValues("moi")]],
+      answers: () => ["The MOI is 0.4 pfu per cell."],
+    },
+    "/research/tools/eop": {
+      runs: [["eop-counts", toolValues("eop-counts")]],
+      answers: () => ["The EOP is 0.02, or 2% of the reference titer."],
+    },
+    "/research/tools/lysate-volume": {
+      runs: [["lysate-volume", toolValues("lysate-volume")]],
+      answers: () => ["The plan is 6 µl of lysate in 60 µl, 10 µl on each of 6 plates."],
+    },
+  });
 
 /** @param {InvariantPage} page */
 function calculatorErrors({ path, markdown }) {
@@ -79,7 +87,8 @@ function calculatorErrors({ path, markdown }) {
     const result = runTool(id, values);
     if (result.ok) {
       for (const answer of rule.answers(result)) {
-        if (!markdown.includes(answer)) errors.push(`the page lacks the calculator's answer: ${answer}`);
+        if (!markdown.includes(answer))
+          errors.push(`the page lacks the calculator's answer: ${answer}`);
       }
     }
   }
@@ -93,18 +102,23 @@ function calculatorLinkErrors({ path, markdown }) {
   const errors = [];
   if (path === "/research/tools" || path === "/teaching/virus-isolation/faq") {
     for (const target of CALCULATOR_PATHS) {
-      if (!markdown.includes(`](${target})`)) errors.push(`the page lacks a link to the calculator at ${target}`);
+      if (!markdown.includes(`](${target})`))
+        errors.push(`the page lacks a link to the calculator at ${target}`);
     }
   }
   if (path === "/teaching/virus-isolation/faq") {
     const sum = "11,100 / 1.11 x 10^10 x 1,000 = 1 x 10^-3 µl of lysate per plate.";
-    if (!markdown.includes(sum)) errors.push(`the page lacks the lysate-per-plate sum the protocol and the calculator agree on: ${sum}`);
+    if (!markdown.includes(sum))
+      errors.push(
+        `the page lacks the lysate-per-plate sum the protocol and the calculator agree on: ${sum}`,
+      );
   }
   return errors;
 }
 
 const text = (/** @type {string} */ cell) => cell.replace(/<[^>]+>/g, "").trim();
-const hrefsOf = (/** @type {string} */ cell) => [...cell.matchAll(/href="([^"]+)"/g)].map((m) => m[1] ?? "");
+const hrefsOf = (/** @type {string} */ cell) =>
+  [...cell.matchAll(/href="([^"]+)"/g)].map((m) => m[1] ?? "");
 
 /** The first table in the served HTML, row by row, each cell's raw HTML. */
 function servedRows(/** @type {string} */ html) {
@@ -142,7 +156,9 @@ function phageTableErrors({ path, html }, phages) {
   const head = /<thead>([\s\S]*?)<\/thead>/.exec(html)?.[1] ?? "";
   const columns = [...head.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => text(m[1] ?? ""));
   if (columns.join("|") !== "Phage|Year|Host|County|PhagesDB|Paper") {
-    errors.push(`the table's columns are ${columns.join(", ")}; they must be Phage, Year, Host, County, PhagesDB, Paper`);
+    errors.push(
+      `the table's columns are ${columns.join(", ")}; they must be Phage, Year, Host, County, PhagesDB, Paper`,
+    );
   }
   for (const cells of rows) {
     const name = text(cells[0] ?? "");
@@ -151,11 +167,15 @@ function phageTableErrors({ path, html }, phages) {
     const links = hrefsOf(cells[4] ?? "");
     const want = record ? [phagesDbUrl(record)] : [];
     if (links.join(" ") !== want.join(" ")) {
-      errors.push(`${name} links ${links.join(", ") || "no PhagesDB record"}; it must link ${want.join(", ") || "none, as it has no verified record"}`);
+      errors.push(
+        `${name} links ${links.join(", ") || "no PhagesDB record"}; it must link ${want.join(", ") || "none, as it has no verified record"}`,
+      );
     }
   }
   const verified = new Set(phages.flatMap((p) => (p.phagesdb ? [phagesDbUrl(p.phagesdb)] : [])));
-  for (const href of [...html.matchAll(/href="(https:\/\/phagesdb\.org[^"]*)"/g)].map((m) => m[1] ?? "")) {
+  for (const href of [...html.matchAll(/href="(https:\/\/phagesdb\.org[^"]*)"/g)].map(
+    (m) => m[1] ?? "",
+  )) {
     if (!verified.has(href)) errors.push(`${href} is a PhagesDB link outside the verified records`);
   }
   return errors;
@@ -171,18 +191,31 @@ function phageTableErrors({ path, html }, phages) {
 function softwareNameErrors({ path, markdown }) {
   /** @type {string[]} */
   const errors = [];
-  if (["/software/capsid", "/software/enarratio", "/software/carrel", "/software/capsomer"].includes(path)) {
+  if (
+    ["/software/capsid", "/software/enarratio", "/software/carrel", "/software/capsomer"].includes(
+      path,
+    )
+  ) {
     const headings = [...markdown.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     if (!headings.includes("Why the name")) errors.push('the page has no "Why the name" section');
-    else if (headings[0] === "Why the name") errors.push('the "Why the name" section belongs after what the software does, not first');
+    else if (headings[0] === "Why the name")
+      errors.push('the "Why the name" section belongs after what the software does, not first');
   }
-  if (path === "/software/capsid" && !markdown.includes("Its dashboard, the Capsid Portal, is named for the portal protein")) {
-    errors.push("the Capsid page lacks the sentence naming the Capsid Portal for the portal protein");
+  if (
+    path === "/software/capsid" &&
+    !markdown.includes("Its dashboard, the Capsid Portal, is named for the portal protein")
+  ) {
+    errors.push(
+      "the Capsid page lacks the sentence naming the Capsid Portal for the portal protein",
+    );
   }
   if (path === "/software/carrel") {
-    if (markdown.includes("carrel.dustinedwards.info")) errors.push("the Carrel page names the app by its address; it names it nowhere");
+    if (markdown.includes("carrel.dustinedwards.info"))
+      errors.push("the Carrel page names the app by its address; it names it nowhere");
     if (/github\.com\/DrDustinEdwards\/carrel/i.test(markdown)) {
-      errors.push("the Carrel page links its code repository; the repository is public only for now, so a link would rot");
+      errors.push(
+        "the Carrel page links its code repository; the repository is public only for now, so a link would rot",
+      );
     }
   }
   return errors;
@@ -200,7 +233,9 @@ const ABOUT_HTML_FLOOR = 200;
  */
 function aboutErrors({ path, html }) {
   if (path !== "/about" || html.length >= ABOUT_HTML_FLOOR) return [];
-  return [`the page renders ${html.length} character(s) of HTML, floor ${ABOUT_HTML_FLOOR}; an empty About would ship as a blank page`];
+  return [
+    `the page renders ${html.length} character(s) of HTML, floor ${ABOUT_HTML_FLOOR}; an empty About would ship as a blank page`,
+  ];
 }
 
 /**

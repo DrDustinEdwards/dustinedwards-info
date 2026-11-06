@@ -34,7 +34,8 @@ function textOf(node: Node): string {
   let out = "";
   node.childNodes.forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) out += child.textContent ?? "";
-    else if (child instanceof HTMLElement) out += child.dataset.raw ?? (child.tagName === "BR" ? "" : textOf(child));
+    else if (child instanceof HTMLElement)
+      out += child.dataset.raw ?? (child.tagName === "BR" ? "" : textOf(child));
   });
   // A step is one line; a browser's non-breaking space for a typed trailing space is a space.
   return out.replace(/ /g, " ").replace(/\n/g, " ");
@@ -69,7 +70,8 @@ function ChipPopover({
   useEffect(() => {
     box.current?.querySelector<HTMLInputElement>("input, select")?.focus();
   }, []);
-  const set = (key: string, value: string | boolean) => setDraft((d) => ({ ...d, [key]: value }) as Chip);
+  const set = (key: string, value: string | boolean) =>
+    setDraft((d) => ({ ...d, [key]: value }) as Chip);
   const text = (key: string, label: string, opts: { list?: string; mode?: "decimal" } = {}) => (
     <label className="kb-cell">
       <span className="cap-field-label">{label}</span>
@@ -83,7 +85,12 @@ function ChipPopover({
     </label>
   );
   const done = () => {
-    const name = draft.kind === "reagent" || draft.kind === "equipment" ? draft.name : draft.kind === "temperature" ? draft.low : "ok";
+    const name =
+      draft.kind === "reagent" || draft.kind === "equipment"
+        ? draft.name
+        : draft.kind === "temperature"
+          ? draft.low
+          : "ok";
     if (name.trim()) onDone(draft);
   };
   return (
@@ -98,7 +105,11 @@ function ChipPopover({
         if (e.key === "Escape") {
           e.preventDefault();
           onCancel();
-        } else if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).type !== "checkbox") {
+        } else if (
+          e.key === "Enter" &&
+          (e.target as HTMLElement).tagName === "INPUT" &&
+          (e.target as HTMLInputElement).type !== "checkbox"
+        ) {
           e.preventDefault();
           done();
         }
@@ -123,7 +134,12 @@ function ChipPopover({
               ))}
             </datalist>
             <label className="kb-check">
-              <input type="checkbox" checked={draft.fixed} onChange={(e) => set("fixed", e.target.checked)} /> Fixed: does not scale with the batch
+              <input
+                type="checkbox"
+                checked={draft.fixed}
+                onChange={(e) => set("fixed", e.target.checked)}
+              />{" "}
+              Fixed: does not scale with the batch
             </label>
           </>
         ) : draft.kind === "equipment" ? (
@@ -142,7 +158,11 @@ function ChipPopover({
             {text("amount", "Duration", { mode: "decimal" })}
             <label className="kb-cell">
               <span className="cap-field-label">Unit</span>
-              <select className="cap-input" value={draft.unit} onChange={(e) => set("unit", e.target.value)}>
+              <select
+                className="cap-input"
+                value={draft.unit}
+                onChange={(e) => set("unit", e.target.value)}
+              >
                 {[...new Set([...DURATIONS, draft.unit].filter(Boolean))].map((u) => (
                   <option key={u}>{u}</option>
                 ))}
@@ -196,7 +216,9 @@ export function StepText({
   // One object for the editor's life: React writes the markup again whenever this object changes, which would wipe what
   // is being typed, so after the first paint only redraw() writes it.
   const [initial] = useState(() => ({ __html: chipHtml(text) }));
-  const [open, setOpen] = useState<{ at: number; chip: Chip; top: number; left: number } | null>(null);
+  const [open, setOpen] = useState<{ at: number; chip: Chip; top: number; left: number } | null>(
+    null,
+  );
   const helpId = `${id}-help`;
 
   const redraw = (next: string) => {
@@ -224,14 +246,22 @@ export function StepText({
     }) as Chip | undefined;
     if (!chip) return;
     const width = wrap.current.clientWidth;
-    setOpen({ at, chip, top: el.offsetTop + el.offsetHeight + 6, left: Math.max(0, Math.min(el.offsetLeft, width - 304)) });
+    setOpen({
+      at,
+      chip,
+      top: el.offsetTop + el.offsetHeight + 6,
+      left: Math.max(0, Math.min(el.offsetLeft, width - 304)),
+    });
   };
 
   const replace = (at: number, length: number, words: string) => {
     const before = own.current.slice(0, at);
     const after = own.current.slice(at + length);
     // A chip removed from between two words leaves one space, not two.
-    const next = words === "" && before.endsWith(" ") && after.startsWith(" ") ? `${before}${after.slice(1)}` : `${before}${words}${after}`;
+    const next =
+      words === "" && before.endsWith(" ") && after.startsWith(" ")
+        ? `${before}${after.slice(1)}`
+        : `${before}${words}${after}`;
     redraw(next);
     onChange(next);
   };
@@ -260,10 +290,15 @@ export function StepText({
           const sel = window.getSelection();
           if (sel && sel.rangeCount > 0 && root.current.contains(sel.anchorNode)) {
             const range = sel.getRangeAt(0);
-            caretRef.current = offsetAt(root.current, (r) => r.setEnd(range.endContainer, range.endOffset));
+            caretRef.current = offsetAt(root.current, (r) =>
+              r.setEnd(range.endContainer, range.endOffset),
+            );
           }
           // Marks typed by hand become chips once the text is left; a chip taking the focus is still the text.
-          if (!root.current.contains(e.relatedTarget as Node | null) && !wrap.current?.querySelector(".kb-popover")?.contains(e.relatedTarget as Node | null)) {
+          if (
+            !root.current.contains(e.relatedTarget as Node | null) &&
+            !wrap.current?.querySelector(".kb-popover")?.contains(e.relatedTarget as Node | null)
+          ) {
             redraw(own.current);
           }
         }}
@@ -290,11 +325,16 @@ export function StepText({
         }}
         onPaste={(e) => {
           e.preventDefault();
-          document.execCommand("insertText", false, e.clipboardData.getData("text/plain").replace(/\s*\n\s*/g, " "));
+          document.execCommand(
+            "insertText",
+            false,
+            e.clipboardData.getData("text/plain").replace(/\s*\n\s*/g, " "),
+          );
         }}
       />
       <p id={helpId} className="cap-sr-only">
-        Reagents, equipment, timers and temperatures are buttons in the text: press Enter on one to edit it, or Delete to remove it.
+        Reagents, equipment, timers and temperatures are buttons in the text: press Enter on one to
+        edit it, or Delete to remove it.
       </p>
       {open ? (
         <ChipPopover
@@ -310,7 +350,8 @@ export function StepText({
           onDone={(chip) => {
             const written = writePiece(chip);
             // A chip nobody changed keeps the text it was read from.
-            if (JSON.stringify({ ...chip, raw: "" }) !== JSON.stringify({ ...open.chip, raw: "" })) replace(open.at, open.chip.raw.length, written);
+            if (JSON.stringify({ ...chip, raw: "" }) !== JSON.stringify({ ...open.chip, raw: "" }))
+              replace(open.at, open.chip.raw.length, written);
             close();
           }}
         />

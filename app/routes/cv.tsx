@@ -4,7 +4,14 @@ import { PageShell } from "~/components/page-shell";
 import { readCv } from "~/db/cv";
 import { contentPageCardPath, contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { getEnv } from "~/lib/context";
-import { CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type Cv, type CvEntry } from "~/lib/cv/entries.mjs";
+import {
+  CV_PAGE,
+  CV_PDF_PATH,
+  cvFacts,
+  formatDollars,
+  type Cv,
+  type CvEntry,
+} from "~/lib/cv/entries.mjs";
 import { CV_HTML_TAGS } from "~/lib/cv/route";
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
@@ -88,14 +95,25 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 export function meta() {
   return [
-    ...pageMeta({ title: CV_PAGE.seoTitle, description: CV_PAGE.description, path: PATH, image: CARD, trail: [[CV_PAGE.title, PATH]] }),
+    ...pageMeta({
+      title: CV_PAGE.seoTitle,
+      description: CV_PAGE.description,
+      path: PATH,
+      image: CARD,
+      trail: [[CV_PAGE.title, PATH]],
+    }),
     {
       tagName: "link",
       rel: "alternate",
       type: "text/markdown",
       href: `${SITE_ORIGIN}${contentPageMarkdownPath(PATH)}`,
     },
-    { tagName: "link", rel: "alternate", type: "application/pdf", href: `${SITE_ORIGIN}${CV_PDF_PATH}` },
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "application/pdf",
+      href: `${SITE_ORIGIN}${CV_PDF_PATH}`,
+    },
   ];
 }
 
@@ -160,7 +178,15 @@ function Tags({ entry }: { entry: CvEntry }) {
   return <p className="cv-tags">{parts.join(" · ")}</p>;
 }
 
-function CopyButton({ kind, label, entry }: { kind: "plain" | "bibtex" | "ris"; label: string; entry: CvEntry }) {
+function CopyButton({
+  kind,
+  label,
+  entry,
+}: {
+  kind: "plain" | "bibtex" | "ris";
+  label: string;
+  entry: CvEntry;
+}) {
   const paper = entry.paper;
   if (!paper) return null;
   const src = kind === "bibtex" ? paper.bibtexPath : kind === "ris" ? paper.risPath : null;
@@ -185,7 +211,8 @@ function PaperDetails({ entry }: { entry: CvEntry }) {
   return (
     <details className="cv-paper-more">
       <summary>
-        {paper.hasAbstract ? "Abstract, citation" : "Citation"} and {n === 1 ? "author" : `all ${n} authors`}
+        {paper.hasAbstract ? "Abstract, citation" : "Citation"} and{" "}
+        {n === 1 ? "author" : `all ${n} authors`}
       </summary>
       <div className="cv-paper-panel">
         <ul className="cv-links">
@@ -209,9 +236,7 @@ function PaperDetails({ entry }: { entry: CvEntry }) {
         <p className="cv-cite" id={`${entry.id}-cite`}>
           {paper.citation}
         </p>
-        {paper.bibtex ? (
-          <template id={`${entry.id}-bibtex`}>{paper.bibtex}</template>
-        ) : null}
+        {paper.bibtex ? <template id={`${entry.id}-bibtex`}>{paper.bibtex}</template> : null}
         {paper.ris ? <template id={`${entry.id}-ris`}>{paper.ris}</template> : null}
         <p className="cv-cite-actions">
           <CopyButton kind="plain" label="Copy citation" entry={entry} />
@@ -333,7 +358,11 @@ function Stat({
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
         </span>
-        <div className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={{ __html: spark }} />
+        <div
+          className="cv-spark"
+          data-cv-spark={name}
+          dangerouslySetInnerHTML={{ __html: spark }}
+        />
         {sub ? <span className="cv-stat-sub">{sub}</span> : null}
       </dd>
     </div>
@@ -341,13 +370,25 @@ function Stat({
 }
 
 export default function CvRoute({ loaderData }: Route.ComponentProps) {
-  const { cv: CV, facts: FACTS, jsonLd, state, shownIds, groups, counts, facets, charts } = loaderData;
+  const {
+    cv: CV,
+    facts: FACTS,
+    jsonLd,
+    state,
+    shownIds,
+    groups,
+    counts,
+    facets,
+    charts,
+  } = loaderData;
   const shown = new Set(shownIds);
   const BY_ID = new Map(CV.entries.map((e) => [e.id, e]));
   const ORDER = new Map(CV.entries.map((e, i) => [e.id, i]));
   const YEARS = yearOptions(FACTS);
   return (
-    <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}>
+    <PageShell
+      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}
+    >
       <div className="cv" data-cv="">
         <header className="cv-head">
           <p className="cv-eyebrow">
@@ -380,7 +421,12 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             At a glance
           </h2>
           <dl className="cv-stats">
-            <Stat label="Publications" value={String(counts.papers)} spark={charts.papers} name="papers" />
+            <Stat
+              label="Publications"
+              value={String(counts.papers)}
+              spark={charts.papers}
+              name="papers"
+            />
             <Stat
               label="Grants"
               value={String(counts.grants)}
@@ -397,14 +443,25 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             />
           </dl>
           <div className="cv-timeline">
-            <div className="cv-timeline-plot" data-cv-timeline="" dangerouslySetInnerHTML={{ __html: charts.timeline }} />
+            <div
+              className="cv-timeline-plot"
+              data-cv-timeline=""
+              dangerouslySetInnerHTML={{ __html: charts.timeline }}
+            />
             <p className="cv-timeline-hint" data-cv-hint="">
-              Select a year&rsquo;s bar to show only that year, and select it again for every year. The key filters by type.
+              Select a year&rsquo;s bar to show only that year, and select it again for every year.
+              The key filters by type.
             </p>
           </div>
         </section>
 
-        <form className="cv-filters" method="get" action={PATH} aria-label="Filter the CV" data-cv-form="">
+        <form
+          className="cv-filters"
+          method="get"
+          action={PATH}
+          aria-label="Filter the CV"
+          data-cv-form=""
+        >
           <div className="cv-filter-row cv-filter-top">
             <label className="cv-field cv-search">
               <span className="cv-label">Search</span>
@@ -422,87 +479,110 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               open wider than that and with script off. */}
           <details className="cv-more" open={activeCount(state) > 0} data-cv-more="">
             <summary className="cv-more-summary">
-              Filters and sort <span data-cv-active="">{activeCount(state) > 0 ? `(${activeCount(state)} on)` : ""}</span>
+              Filters and sort{" "}
+              <span data-cv-active="">
+                {activeCount(state) > 0 ? `(${activeCount(state)} on)` : ""}
+              </span>
             </summary>
-          <div className="cv-more-body">
-          <fieldset className="cv-facet">
-            <legend className="cv-label">Type</legend>
-            <div className="cv-chips">
-              {TYPES.map(([id, , plural]) => (
-                <label key={id} className="cv-chip">
-                  <input type="checkbox" name="type" value={id} defaultChecked={state.types.includes(id)} />
-                  <span className="cv-chip-text">
-                    {plural}
-                    <span className="cv-chip-count" data-cv-facet={`type:${id}`}>
-                      {facets.types[id] ?? 0}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <div className="cv-filter-row">
-            <fieldset className="cv-facet">
-              <legend className="cv-label">Research area</legend>
-              <div className="cv-chips">
-                {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(([id, label]) => (
-                  <label key={id} className="cv-chip">
-                    <input type="checkbox" name="area" value={id} defaultChecked={state.areas.includes(id)} />
-                    <span className="cv-chip-text">
-                      {label}
-                      <span className="cv-chip-count" data-cv-facet={`area:${id}`}>
-                        {facets.areas[id] ?? 0}
+            <div className="cv-more-body">
+              <fieldset className="cv-facet">
+                <legend className="cv-label">Type</legend>
+                <div className="cv-chips">
+                  {TYPES.map(([id, , plural]) => (
+                    <label key={id} className="cv-chip">
+                      <input
+                        type="checkbox"
+                        name="type"
+                        value={id}
+                        defaultChecked={state.types.includes(id)}
+                      />
+                      <span className="cv-chip-text">
+                        {plural}
+                        <span className="cv-chip-count" data-cv-facet={`type:${id}`}>
+                          {facets.types[id] ?? 0}
+                        </span>
                       </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className="cv-facet cv-years">
-              <legend className="cv-label">Years</legend>
-              <div className="cv-years-row">
-                <select name="from" defaultValue={state.from === null ? "" : String(state.from)} aria-label="From year">
-                  <option value="">Earliest</option>
-                  {YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
+                    </label>
                   ))}
-                </select>
-                <span aria-hidden="true">to</span>
-                <select name="to" defaultValue={state.to === null ? "" : String(state.to)} aria-label="To year">
-                  <option value="">Latest</option>
-                  {[...YEARS].reverse().map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                </div>
+              </fieldset>
+              <div className="cv-filter-row">
+                <fieldset className="cv-facet">
+                  <legend className="cv-label">Research area</legend>
+                  <div className="cv-chips">
+                    {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
+                      ([id, label]) => (
+                        <label key={id} className="cv-chip">
+                          <input
+                            type="checkbox"
+                            name="area"
+                            value={id}
+                            defaultChecked={state.areas.includes(id)}
+                          />
+                          <span className="cv-chip-text">
+                            {label}
+                            <span className="cv-chip-count" data-cv-facet={`area:${id}`}>
+                              {facets.areas[id] ?? 0}
+                            </span>
+                          </span>
+                        </label>
+                      ),
+                    )}
+                  </div>
+                </fieldset>
+                <fieldset className="cv-facet cv-years">
+                  <legend className="cv-label">Years</legend>
+                  <div className="cv-years-row">
+                    <select
+                      name="from"
+                      defaultValue={state.from === null ? "" : String(state.from)}
+                      aria-label="From year"
+                    >
+                      <option value="">Earliest</option>
+                      {YEARS.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                    <span aria-hidden="true">to</span>
+                    <select
+                      name="to"
+                      defaultValue={state.to === null ? "" : String(state.to)}
+                      aria-label="To year"
+                    >
+                      <option value="">Latest</option>
+                      {[...YEARS].reverse().map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </fieldset>
+                <label className="cv-field">
+                  <span className="cv-label">Role</span>
+                  <select name="role" defaultValue={state.role ?? ""}>
+                    <option value="">Any role</option>
+                    {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
+                      <option key={id} value={id} data-cv-facet={`role:${id}`} data-label={label}>
+                        {label} ({facets.roles[id] ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="cv-field">
+                  <span className="cv-label">Sort</span>
+                  <select name="sort" defaultValue={state.sort}>
+                    {SORTS.map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
-            </fieldset>
-            <label className="cv-field">
-              <span className="cv-label">Role</span>
-              <select name="role" defaultValue={state.role ?? ""}>
-                <option value="">Any role</option>
-                {ROLES.filter(([id]) => FACTS.some((f) => f.role === id)).map(([id, label]) => (
-                  <option key={id} value={id} data-cv-facet={`role:${id}`} data-label={label}>
-                    {label} ({facets.roles[id] ?? 0})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="cv-field">
-              <span className="cv-label">Sort</span>
-              <select name="sort" defaultValue={state.sort}>
-                {SORTS.map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          </div>
+            </div>
           </details>
           <div className="cv-filter-actions">
             <button type="submit" className="cv-apply" data-cv-apply="">
@@ -521,9 +601,17 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
 
         <div className="cv-results" data-cv-results="">
           {groups.map((group) => {
-            const visible = group.parts.reduce((n, part) => n + part.ids.filter((id) => shown.has(id)).length, 0);
+            const visible = group.parts.reduce(
+              (n, part) => n + part.ids.filter((id) => shown.has(id)).length,
+              0,
+            );
             return (
-              <section key={group.key} className="cv-group" data-cv-group={group.key} hidden={visible === 0}>
+              <section
+                key={group.key}
+                className="cv-group"
+                data-cv-group={group.key}
+                hidden={visible === 0}
+              >
                 <h2 className="cv-group-title">
                   {group.heading}{" "}
                   <span className="cv-group-count" data-cv-group-count="">
@@ -532,14 +620,17 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                 </h2>
                 {group.key === "type-talk" ? (
                   <p className="cv-group-note">
-                    The CV lists {CV.presentations.international} international and {CV.presentations.national} national
-                    and regional presentations, {CV.presentations.from}-{CV.presentations.to}, most of them posters and
-                    talks given by students with Dustin as senior author. Listed here: the invited talks, seminars and
-                    roundtables he leads.
+                    The CV lists {CV.presentations.international} international and{" "}
+                    {CV.presentations.national} national and regional presentations,{" "}
+                    {CV.presentations.from}-{CV.presentations.to}, most of them posters and talks
+                    given by students with Dustin as senior author. Listed here: the invited talks,
+                    seminars and roundtables he leads.
                   </p>
                 ) : null}
                 {group.key === "type-mentoring" ? (
-                  <p className="cv-group-note">Counts only: the CV names each student, and this page never does.</p>
+                  <p className="cv-group-note">
+                    Counts only: the CV names each student, and this page never does.
+                  </p>
                 ) : null}
                 {group.parts.map((part) => (
                   <div
@@ -553,7 +644,14 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                       {part.ids.map((id) => {
                         const entry = BY_ID.get(id);
                         if (!entry) throw new Error(`cv: grouping named an unknown entry ${id}`);
-                        return <Entry key={id} entry={entry} hidden={!shown.has(id)} order={ORDER.get(id) ?? 0} />;
+                        return (
+                          <Entry
+                            key={id}
+                            entry={entry}
+                            hidden={!shown.has(id)}
+                            order={ORDER.get(id) ?? 0}
+                          />
+                        );
                       })}
                     </ol>
                   </div>
@@ -563,8 +661,8 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           })}
         </div>
         <p className="cv-foot">
-          {FACTS.length} entries from the {CV.edition} CV. Each paper follows its journal record at Crossref and has its
-          own page under <a href="/research/publications">Publications</a>.
+          {FACTS.length} entries from the {CV.edition} CV. Each paper follows its journal record at
+          Crossref and has its own page under <a href="/research/publications">Publications</a>.
         </p>
       </div>
       <template data-island="cv" />

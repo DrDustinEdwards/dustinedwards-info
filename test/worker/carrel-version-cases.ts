@@ -26,14 +26,17 @@ export function versionCases(options: {
 }) {
   const { name, id, file, get, send } = options;
   const timeout = options.timeout ?? 120_000;
-  const read = async () => ((await (await get(`${PREFIX}/content/${id}`)).json()) as { version: string }).version;
+  const read = async () =>
+    ((await (await get(`${PREFIX}/content/${id}`)).json()) as { version: string }).version;
   const save = async (source: string, expectedVersion: string, changeId: string) =>
     send("PUT", `${PREFIX}/content/${id}/draft`, { source, expectedVersion, changeId });
   /** A write to a file that is not this item's: it moves the store's head and nothing of the item's. */
   const commitElsewhere = () =>
     commitFiles(testEnv as never, {
       message: "Update an unrelated file",
-      changes: [{ path: "content/unrelated-version-case.md", content: `unrelated ${Math.random()}\n` }],
+      changes: [
+        { path: "content/unrelated-version-case.md", content: `unrelated ${Math.random()}\n` },
+      ],
     });
 
   describe(`${name}: its Carrel version is its own file's`, () => {
@@ -41,42 +44,57 @@ export function versionCases(options: {
       expect(await read()).toBe(await versionOf(file));
     });
 
-    it("does not change when something else is committed, and a save made before that still lands", { timeout }, async () => {
-      const before = await read();
-      const head = (await writes()).length;
-      await commitElsewhere();
-      expect((await writes()).length).toBeGreaterThan(head);
+    it(
+      "does not change when something else is committed, and a save made before that still lands",
+      { timeout },
+      async () => {
+        const before = await read();
+        const head = (await writes()).length;
+        await commitElsewhere();
+        expect((await writes()).length).toBeGreaterThan(head);
 
-      expect(await read()).toBe(before);
+        expect(await read()).toBe(before);
 
-      const saved = await save(await options.edit(), before, `chg-${name}-elsewhere`);
-      expect(saved.status, await saved.clone().text()).toBe(200);
-    });
+        const saved = await save(await options.edit(), before, `chg-${name}-elsewhere`);
+        expect(saved.status, await saved.clone().text()).toBe(200);
+      },
+    );
 
-    it("changes when this item is committed, and the save answers the new version", { timeout }, async () => {
-      const before = await read();
-      const saved = await save(await options.edit(), before, `chg-${name}-self`);
-      expect(saved.status, await saved.clone().text()).toBe(200);
-      const answered = ((await saved.json()) as { version: string }).version;
+    it(
+      "changes when this item is committed, and the save answers the new version",
+      { timeout },
+      async () => {
+        const before = await read();
+        const saved = await save(await options.edit(), before, `chg-${name}-self`);
+        expect(saved.status, await saved.clone().text()).toBe(200);
+        const answered = ((await saved.json()) as { version: string }).version;
 
-      expect(answered).not.toBe(before);
-      expect(answered).toBe(await versionOf(file));
-      expect(await read()).toBe(answered);
-    });
+        expect(answered).not.toBe(before);
+        expect(answered).toBe(await versionOf(file));
+        expect(await read()).toBe(answered);
+      },
+    );
 
-    it("REFUSES a save made from a version the item has since moved past, names the current one, commits nothing", { timeout }, async () => {
-      const opened = await read();
-      const first = await save(await options.edit(), opened, `chg-${name}-first`);
-      expect(first.status, await first.clone().text()).toBe(200);
-      const stored = await source(file);
-      const writesBefore = (await writes()).length;
+    it(
+      "REFUSES a save made from a version the item has since moved past, names the current one, commits nothing",
+      { timeout },
+      async () => {
+        const opened = await read();
+        const first = await save(await options.edit(), opened, `chg-${name}-first`);
+        expect(first.status, await first.clone().text()).toBe(200);
+        const stored = await source(file);
+        const writesBefore = (await writes()).length;
 
-      const stale = await save(`${await options.edit()}\n`, opened, `chg-${name}-stale`);
+        const stale = await save(`${await options.edit()}\n`, opened, `chg-${name}-stale`);
 
-      expect(stale.status).toBe(409);
-      expect(await stale.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(file) });
-      expect(await source(file)).toBe(stored);
-      expect((await writes()).length).toBe(writesBefore);
-    });
+        expect(stale.status).toBe(409);
+        expect(await stale.json()).toMatchObject({
+          error: "version-conflict",
+          currentVersion: await versionOf(file),
+        });
+        expect(await source(file)).toBe(stored);
+        expect((await writes()).length).toBe(writesBefore);
+      },
+    );
   });
 }

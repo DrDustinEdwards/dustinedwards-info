@@ -1,0 +1,3 @@
+# Formatting-only commits, which GitHub blame skips.
+# Format dustinedwards.info with the shared Oxfmt config.
+a5ebae5b37f6a0947f5f2531820c8ca8f4edf4fc

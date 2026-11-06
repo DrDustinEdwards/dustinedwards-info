@@ -275,10 +275,7 @@ function colophonPageInput(stack, features) {
     }
     if (id === "bindings") {
       return stack.bindings
-        .map(
-          (/** @type {any} */ b) =>
-            `${b.name} (${b.kind}). ${b.what} ${b.whyLoadBearing}`,
-        )
+        .map((/** @type {any} */ b) => `${b.name} (${b.kind}). ${b.what} ${b.whyLoadBearing}`)
         .join(" ");
     }
     if (id === "schema") {
@@ -288,9 +285,7 @@ function colophonPageInput(stack, features) {
       return stack.gates.join(" ");
     }
     if (id === "dependencies") {
-      return stack.dependencies
-        .map((/** @type {any} */ d) => `${d.name} ${d.range}`)
-        .join(" ");
+      return stack.dependencies.map((/** @type {any} */ d) => `${d.name} ${d.range}`).join(" ");
     }
     if (id === "features") {
       return features.features
@@ -312,10 +307,7 @@ function colophonPageInput(stack, features) {
     if (id === "not-adopted") {
       // The label, never `n.status`: the page shows the label, so the index must.
       return stack.notAdopted
-        .map(
-          (/** @type {any} */ n) =>
-            `${n.name} (${statusLabel(n.status)}). ${n.reason}`,
-        )
+        .map((/** @type {any} */ n) => `${n.name} (${statusLabel(n.status)}). ${n.reason}`)
         .join(" ");
     }
     // Fail closed: otherwise a new section is silently indexed as its lead alone.

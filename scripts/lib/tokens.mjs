@@ -45,7 +45,9 @@ export function stripCss(css) {
  */
 export function cssRelativeImports(css) {
   const code = stripCss(css);
-  return [...code.matchAll(/@import\s+(?:url\(\s*)?(["']?)(\.[^"')\s;]+)\1\s*\)?/g)].map((m) => m[2]);
+  return [...code.matchAll(/@import\s+(?:url\(\s*)?(["']?)(\.[^"')\s;]+)\1\s*\)?/g)].map(
+    (m) => m[2],
+  );
 }
 
 /**
@@ -228,6 +230,12 @@ export function resolveTokens(nameMap, block, label) {
  */
 export function normalizeHex(hex) {
   const h = hex.trim().toLowerCase().replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   return `#${full}`;
 }

@@ -142,6 +142,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Format check
+        run: npm run format:check
+
       # The app build, so a change that typechecks but does not build fails
       # here rather than at deploy. check:ci built its three prereqs a moment
       # ago, so only the app build is left. The build needs no secrets: the

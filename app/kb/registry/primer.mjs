@@ -27,7 +27,9 @@ const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
 const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max ? null : `is one line of at most ${max} characters`;
+  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
+    ? null
+    : `is one line of at most ${max} characters`;
 
 /** @param {unknown} value */
 const sequenceCheck = (value) =>
@@ -45,7 +47,10 @@ export const PRIMER = {
     sequence: { required: true, check: sequenceCheck },
     direction: {
       required: true,
-      check: (value) => (DIRECTIONS.includes(/** @type {any} */ (value)) ? null : `is ${DIRECTIONS.join(", ")} or MISSING`),
+      check: (value) =>
+        DIRECTIONS.includes(/** @type {any} */ (value))
+          ? null
+          : `is ${DIRECTIONS.join(", ")} or MISSING`,
     },
     target: { required: true, check: (value) => oneLine(value, 120) },
     set: { check: (value) => oneLine(value, 120) },
@@ -58,14 +63,27 @@ export const PRIMER = {
     },
     // The literature, as read. Each is the paper's own words or MISSING with the reason it could not be read.
     published_in: { required: true, check: (value) => oneLine(value, 200) },
-    published_doi: { check: (value) => (typeof value === "string" && DOI.test(value) ? null : "is a DOI, such as 10.1371/journal.pone.0099678") },
-    published_url: { check: (value) => (typeof value === "string" && /^https:\/\/[^\s]+$/.test(value) ? null : "is an https address") },
+    published_doi: {
+      check: (value) =>
+        typeof value === "string" && DOI.test(value)
+          ? null
+          : "is a DOI, such as 10.1371/journal.pone.0099678",
+    },
+    published_url: {
+      check: (value) =>
+        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
+          ? null
+          : "is an https address",
+    },
     published_name: { required: true, check: (value) => oneLine(value, 120) },
     published_sequence: { required: true, check: sequenceCheck },
     // The product size the paper states for the pair, on the forward primer only: a size is a pair's, and it is shown beside the
     // computed one, never in its place.
     published_product: {
-      check: (value) => (typeof value === "string" && PRODUCT.test(value) ? null : 'is a size as the paper states it, such as "710 bp" or "about 710 bp"'),
+      check: (value) =>
+        typeof value === "string" && PRODUCT.test(value)
+          ? null
+          : 'is a size as the paper states it, such as "710 bp" or "about 710 bp"',
     },
   },
   /**
@@ -84,7 +102,10 @@ export const PRIMER = {
       const sequence = String(fields.sequence);
       const other = sequences.get(sequence);
       if (!sequence.startsWith("MISSING")) {
-        if (other !== undefined) errors.push(`primer/${id} and primer/${other} hold the same sequence; a sequence is stored once`);
+        if (other !== undefined)
+          errors.push(
+            `primer/${id} and primer/${other} hold the same sequence; a sequence is stored once`,
+          );
         else sequences.set(sequence, id);
       }
       const set = typeof fields.set === "string" ? fields.set : null;
@@ -92,18 +113,34 @@ export const PRIMER = {
         const entry = sets.get(set) ?? { forward: [], reverse: [], references: new Set() };
         if (fields.direction === "forward") entry.forward.push(id);
         if (fields.direction === "reverse") entry.reverse.push(id);
-        if (typeof fields.reference === "string" && !fields.reference.startsWith("MISSING")) entry.references.add(fields.reference);
+        if (typeof fields.reference === "string" && !fields.reference.startsWith("MISSING"))
+          entry.references.add(fields.reference);
         sets.set(set, entry);
       }
       const product = fields.published_product;
-      if (typeof product === "string" && !product.startsWith("MISSING") && fields.direction !== "forward") {
-        errors.push(`primer/${id} states a published product, but a product is a pair's and is stated on its forward primer`);
+      if (
+        typeof product === "string" &&
+        !product.startsWith("MISSING") &&
+        fields.direction !== "forward"
+      ) {
+        errors.push(
+          `primer/${id} states a published product, but a product is a pair's and is stated on its forward primer`,
+        );
       }
     }
     for (const [set, { forward, reverse, references }] of sets) {
-      if (forward.length > 1) errors.push(`the set "${set}" has ${forward.length} forward primers (${forward.join(", ")}); a set has one`);
-      if (reverse.length > 1) errors.push(`the set "${set}" has ${reverse.length} reverse primers (${reverse.join(", ")}); a set has one`);
-      if (references.size > 1) errors.push(`the set "${set}" names ${references.size} references (${[...references].join(", ")}); a pair is placed on one`);
+      if (forward.length > 1)
+        errors.push(
+          `the set "${set}" has ${forward.length} forward primers (${forward.join(", ")}); a set has one`,
+        );
+      if (reverse.length > 1)
+        errors.push(
+          `the set "${set}" has ${reverse.length} reverse primers (${reverse.join(", ")}); a set has one`,
+        );
+      if (references.size > 1)
+        errors.push(
+          `the set "${set}" names ${references.size} references (${[...references].join(", ")}); a pair is placed on one`,
+        );
     }
     return errors;
   },
@@ -116,9 +153,18 @@ export const PRIMER = {
  * @param {string} sequence
  */
 export function primerFacts(sequence) {
-  if (!/^[ACGT]+$/.test(sequence)) return { length: /^[A-Z]+$/.test(sequence) ? sequence.length : null, gcPercent: null, tm: null };
+  if (!/^[ACGT]+$/.test(sequence))
+    return {
+      length: /^[A-Z]+$/.test(sequence) ? sequence.length : null,
+      gcPercent: null,
+      tm: null,
+    };
   const gc = sequence.split("").filter((base) => base === "G" || base === "C").length;
-  return { length: sequence.length, gcPercent: Math.round((gc / sequence.length) * 1000) / 10, tm: primerTmRounded(sequence) };
+  return {
+    length: sequence.length,
+    gcPercent: Math.round((gc / sequence.length) * 1000) / 10,
+    tm: primerTmRounded(sequence),
+  };
 }
 
 /** A field as text: a recorded gap (MISSING: why) and an absent value are both nothing to show. @param {unknown} value */
@@ -128,7 +174,9 @@ export function stated(value) {
 
 /** The reason a field is missing, or null when it is stated or absent. @param {unknown} value */
 export function missingReason(value) {
-  return typeof value === "string" && value.startsWith("MISSING:") ? value.replace(/^MISSING:\s*/, "") : null;
+  return typeof value === "string" && value.startsWith("MISSING:")
+    ? value.replace(/^MISSING:\s*/, "")
+    : null;
 }
 
 /**

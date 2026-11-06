@@ -4,11 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  acceptQValues,
-  negotiatesAwayFromHtml,
-  prefersType,
-} from "../app/lib/negotiate.mjs";
+import { acceptQValues, negotiatesAwayFromHtml, prefersType } from "../app/lib/negotiate.mjs";
 
 /** @param {string} [accept] */
 const req = (accept) =>
@@ -85,7 +81,10 @@ await test("the predicate is wider than prefersType, never narrower", () => {
       }
     }
   }
-  assert.ok(preferred > 0, "no case made prefersType fire, so the implication above was never tested");
+  assert.ok(
+    preferred > 0,
+    "no case made prefersType fire, so the implication above was never tested",
+  );
 });
 
 await test("q-values parse: highest wins on a repeated range, a bare range is 1", () => {

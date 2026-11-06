@@ -24,7 +24,8 @@ const PRIVATE = { "cache-control": "private, no-store" };
 /** Someone else's run is a 404 to a person who reads only their own, the same answer as a run that does not exist. */
 export async function loader({ context, params }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
-  if (!can(actor, PERMISSION.recordRun)) throw data("Not found.", { status: 404, headers: PRIVATE });
+  if (!can(actor, PERMISSION.recordRun))
+    throw data("Not found.", { status: 404, headers: PRIVATE });
   const id = idOf(params.id);
   const page = id ? await runPage(getEnv(context), actor, id) : null;
   if (!page) throw data("Not found.", { status: 404, headers: PRIVATE });
@@ -35,9 +36,17 @@ export async function loader({ context, params }: Route.LoaderArgs) {
 export async function action({ context, request, params }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   const id = idOf(params.id);
-  if (!id || !can(actor, PERMISSION.recordRun)) throw data("Not found.", { status: 404, headers: PRIVATE });
-  const result = await recordRun(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now(), { replacesId: id });
-  if (result.ok && result.runId) throw redirect(`${LAB_BENCH_PATH}/runs/${result.runId}`, { headers: PRIVATE });
+  if (!id || !can(actor, PERMISSION.recordRun))
+    throw data("Not found.", { status: 404, headers: PRIVATE });
+  const result = await recordRun(
+    getEnv(context),
+    actor,
+    await cappedForm(request, ADMIN_FORM_BYTES),
+    Date.now(),
+    { replacesId: id },
+  );
+  if (result.ok && result.runId)
+    throw redirect(`${LAB_BENCH_PATH}/runs/${result.runId}`, { headers: PRIVATE });
   return data(result, { headers: PRIVATE });
 }
 
@@ -45,11 +54,17 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
   const { run, lots, procedures, allLots, canCorrect, lotRows } = loaderData;
   return (
     <>
-      <PageHead renderLink={crumbLink} crumbs={[{ label: "Runs", href: `${LAB_BENCH_PATH}/runs` }, { label: `Run ${run.id}` }]} title={`Run ${run.id}: ${run.title}`} />
+      <PageHead
+        renderLink={crumbLink}
+        crumbs={[{ label: "Runs", href: `${LAB_BENCH_PATH}/runs` }, { label: `Run ${run.id}` }]}
+        title={`Run ${run.id}: ${run.title}`}
+      />
       <Result result={actionData} />
       {run.replaced_by ? (
         <p>
-          Corrected by <Link to={`${LAB_BENCH_PATH}/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>. This record stays as it was saved.
+          Corrected by{" "}
+          <Link to={`${LAB_BENCH_PATH}/runs/${run.replaced_by}`}>run {run.replaced_by}</Link>. This
+          record stays as it was saved.
         </p>
       ) : null}
       <dl className="lab-facts">
@@ -68,7 +83,9 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
           <>
             <dt>Corrects</dt>
             <dd>
-              <Link to={`${LAB_BENCH_PATH}/runs/${run.replaces_run_id}`}>Run {run.replaces_run_id}</Link>
+              <Link to={`${LAB_BENCH_PATH}/runs/${run.replaces_run_id}`}>
+                Run {run.replaces_run_id}
+              </Link>
             </dd>
           </>
         ) : null}
@@ -106,7 +123,13 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
             lots={allLots}
             lotRows={lotRows}
             replaces={run.id}
-            defaults={{ procedure: run.procedure_slug, run_on: run.run_on, outcome: run.outcome, note: run.note, lots }}
+            defaults={{
+              procedure: run.procedure_slug,
+              run_on: run.run_on,
+              outcome: run.outcome,
+              note: run.note,
+              lots,
+            }}
           />
         </Panel>
       ) : null}

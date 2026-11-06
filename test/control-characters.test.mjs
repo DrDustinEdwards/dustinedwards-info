@@ -11,10 +11,16 @@ await test("no tracked text file carries a raw control or invisible character", 
   /* A shell-expanded escape reaches disk as one byte and still looks right. An intended one is
    * written as an escape, so a raw byte is a defect anywhere. */
   {
-    const BINARY = /\.(woff2?|ttf|otf|png|jpe?g|gif|webp|avif|ico|pdf|zip|wasm|mp4|mp3|sqlite|db)$/i;
+    const BINARY =
+      /\.(woff2?|ttf|otf|png|jpe?g|gif|webp|avif|ico|pdf|zip|wasm|mp4|mp3|sqlite|db)$/i;
     const NAMES = new Map([
-      [0x00, "NUL"], [0x07, "BEL"], [0x08, "BACKSPACE"], [0x0b, "VERTICAL TAB"],
-      [0x0c, "FORM FEED"], [0x1b, "ESC"], [0x7f, "DEL"],
+      [0x00, "NUL"],
+      [0x07, "BEL"],
+      [0x08, "BACKSPACE"],
+      [0x0b, "VERTICAL TAB"],
+      [0x0c, "FORM FEED"],
+      [0x1b, "ESC"],
+      [0x7f, "DEL"],
     ]);
     const INVISIBLE = new Map([
       ["\uFEFF", "U+FEFF BYTE ORDER MARK"],
@@ -25,7 +31,11 @@ await test("no tracked text file carries a raw control or invisible character", 
     ]);
 
     /* No `shell: true`: on Windows that joins argv unquoted. */
-    const listed = spawnSync("git", ["ls-files"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    const listed = spawnSync("git", ["ls-files"], {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
     ok(
       "[scope] git ls-files answered",
       listed.status === 0 && typeof listed.stdout === "string",
@@ -59,7 +69,9 @@ await test("no tracked text file carries a raw control or invisible character", 
         const v = buf[i];
         if ((v < 0x20 && v !== 0x09 && v !== 0x0a && v !== 0x0d) || v === 0x7f) {
           const line = buf.subarray(0, i).toString("utf8").split("\n").length;
-          offences.push(`${rel}:${line} 0x${v.toString(16).padStart(2, "0")} ${NAMES.get(v) ?? "control"}`);
+          offences.push(
+            `${rel}:${line} 0x${v.toString(16).padStart(2, "0")} ${NAMES.get(v) ?? "control"}`,
+          );
           break;
         }
       }
@@ -93,9 +105,10 @@ await test("no tracked text file carries a raw control or invisible character", 
         `because that happened three times. Write the escape so the shell cannot expand it, or use ` +
         `the literal character:\n      ${offences.join("\n      ")}`,
     );
-    t.diagnostic(`     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offense(s)`);
+    t.diagnostic(
+      `     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offense(s)`,
+    );
   }
 
   done();
 });
-

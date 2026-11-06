@@ -27,7 +27,8 @@ export function procedureTrail(record: ProcedureRecord): Array<[string, string]>
  * Anything out of range falls back to the file's own count, so a bad link still shows the procedure.
  */
 export function readScale(record: ProcedureRecord, url: URL) {
-  const raw = record.profile === "recipe" ? url.searchParams.get("servings") : url.searchParams.get("n");
+  const raw =
+    record.profile === "recipe" ? url.searchParams.get("servings") : url.searchParams.get("n");
   const asked = raw === null ? null : Number(raw);
   const base = record.profile === "recipe" ? (record.servings ?? 1) : (record.scale?.count ?? 1);
   const valid = asked !== null && Number.isFinite(asked) && asked > 0 && asked <= 1000;

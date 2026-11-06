@@ -35,7 +35,9 @@ await test("nothing in the footer is for machines only (job_5670dd43eef2): agent
 
 await test("rel=me marks exactly the owner's profiles, and never a social link", () => {
   assert.ok(SOCIAL_LINKS.every((link) => !link.me));
-  const me = footerHrefs().filter((link) => link.me).map((link) => link.to);
+  const me = footerHrefs()
+    .filter((link) => link.me)
+    .map((link) => link.to);
   assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
 });
 
@@ -46,8 +48,15 @@ await test("Accessibility is listed only while its page is published; the other 
   assert.deepEqual(without, ["/contact", "/site-map", "/colophon", "/privacy", "/terms"]);
   assert.ok(siteLinks(["/accessibility"]).some((link) => link.to === "/accessibility"));
   // The footer as built agrees with the page files as they are now.
-  assert.deepEqual([...PUBLISHED_PAGES], readPublishedPages(), "published-pages.generated.mjs is stale: run build:content");
-  assert.equal(SITE_LINKS.some((link) => link.to === "/accessibility"), PUBLISHED_PAGES.includes("/accessibility"));
+  assert.deepEqual(
+    [...PUBLISHED_PAGES],
+    readPublishedPages(),
+    "published-pages.generated.mjs is stale: run build:content",
+  );
+  assert.equal(
+    SITE_LINKS.some((link) => link.to === "/accessibility"),
+    PUBLISHED_PAGES.includes("/accessibility"),
+  );
 });
 
 await test("a page file marked draft is not in the published list", () => {

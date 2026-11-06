@@ -53,7 +53,11 @@ await test("the name shape over-matches, and that is the accepted cost", () => {
     null,
     "a lost row in a demand list is cheaper than a name list living in the repo",
   );
-  assert.equal(normalize("cloudflare workers"), "cloudflare workers", "the lower-case form is kept");
+  assert.equal(
+    normalize("cloudflare workers"),
+    "cloudflare workers",
+    "the lower-case form is kept",
+  );
 });
 
 await test("a sentence-case query is NOT caught by the name shape", () => {
@@ -72,7 +76,9 @@ await test("a non-string is refused rather than coerced", () => {
 });
 
 await test("the refusals discriminate: ordinary queries still get through", () => {
-  const kept = ["d1 backups", "how do backups work", "phage cocktail", "workers cache"].map(normalize);
+  const kept = ["d1 backups", "how do backups work", "phage cocktail", "workers cache"].map(
+    normalize,
+  );
   assert.ok(
     kept.every((q) => typeof q === "string" && q.length > 0),
     "a normalizer that refused everything would satisfy every refusal test above",

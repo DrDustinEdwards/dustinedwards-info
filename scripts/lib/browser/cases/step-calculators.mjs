@@ -19,16 +19,19 @@ export async function run({ page }) {
     return;
   }
   await page.evaluate(() => {
-    for (const key of Object.keys(localStorage)) if (key.startsWith("dustinedwards.run:")) localStorage.removeItem(key);
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith("dustinedwards.run:")) localStorage.removeItem(key);
   });
   await page.reload({ waitUntil: "networkidle0" });
 
   const shape = await page.evaluate(() => ({
-    folded: [...document.querySelectorAll("li.procedure-step details.phage-tool-step")].map((d) => ({
-      tool: d.querySelector("form[data-tool]")?.getAttribute("data-tool") ?? "",
-      answered: (d.querySelector(".phage-tool-answer")?.textContent ?? "").trim().length > 0,
-      open: d.hasAttribute("open"),
-    })),
+    folded: [...document.querySelectorAll("li.procedure-step details.phage-tool-step")].map(
+      (d) => ({
+        tool: d.querySelector("form[data-tool]")?.getAttribute("data-tool") ?? "",
+        answered: (d.querySelector(".phage-tool-answer")?.textContent ?? "").trim().length > 0,
+        open: d.hasAttribute("open"),
+      }),
+    ),
   }));
   if (shape.folded.length === 0) {
     skip("step calculators", `${path} has no calculator under a step on this origin`);
@@ -36,7 +39,8 @@ export async function run({ page }) {
   }
   ok(
     "each calculator a step names is folded under that step, closed, and already carries its answer",
-    shape.folded.every((f) => f.answered && !f.open) && shape.folded.some((f) => f.tool === "webbed-plate"),
+    shape.folded.every((f) => f.answered && !f.open) &&
+      shape.folded.some((f) => f.tool === "webbed-plate"),
     JSON.stringify(shape.folded),
   );
 
@@ -93,6 +97,7 @@ export async function run({ page }) {
 
   // Leave no run behind for the cases after this one.
   await page.evaluate(() => {
-    for (const key of Object.keys(localStorage)) if (key.startsWith("dustinedwards.run:")) localStorage.removeItem(key);
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith("dustinedwards.run:")) localStorage.removeItem(key);
   });
 }

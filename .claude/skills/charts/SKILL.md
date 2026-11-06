@@ -45,14 +45,14 @@ followed by caption markdown.
 
 ### Attributes
 
-| Attribute | Required | Meaning |
-|---|---|---|
-| `type` | yes | `bar`, `line`, `dot` or `area`. Anything else fails the build. |
-| `x` | yes | The column for the x axis. Also becomes the x axis label. |
-| `y` | yes | One column, or several comma separated for multi-series. |
-| `alt` | **yes** | Prose describing what the chart shows, including the finding. |
-| `title` | no | Rendered above the chart. Not a heading, so it stays out of the TOC. |
-| `labels` | no | Comma separated display names overriding the y column headers. |
+| Attribute | Required | Meaning                                                              |
+| --------- | -------- | -------------------------------------------------------------------- |
+| `type`    | yes      | `bar`, `line`, `dot` or `area`. Anything else fails the build.       |
+| `x`       | yes      | The column for the x axis. Also becomes the x axis label.            |
+| `y`       | yes      | One column, or several comma separated for multi-series.             |
+| `alt`     | **yes**  | Prose describing what the chart shows, including the finding.        |
+| `title`   | no       | Rendered above the chart. Not a heading, so it stays out of the TOC. |
+| `labels`  | no       | Comma separated display names overriding the y column headers.       |
 
 Captions come from the directive BODY, not an attribute, so they can carry
 markdown.
@@ -173,10 +173,10 @@ optionally followed by caption markdown.
     An optional caption, rendered as markdown.
     :::
 
-| Attribute | Required | Meaning |
-|---|---|---|
-| `alt` | **yes** | Prose describing the structure, including what it shows. |
-| `title` | no | Rendered above the diagram. Not a heading, so it stays out of the TOC. |
+| Attribute | Required | Meaning                                                                |
+| --------- | -------- | ---------------------------------------------------------------------- |
+| `alt`     | **yes**  | Prose describing the structure, including what it shows.               |
+| `title`   | no       | Rendered above the diagram. Not a heading, so it stays out of the TOC. |
 
 The fence language must be `mermaid`. That is checked, and not only for typos:
 the fence is what makes the source render as a diagram in the `.md` twin, on

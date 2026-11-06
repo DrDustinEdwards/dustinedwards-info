@@ -13,7 +13,13 @@ import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { phagesDbUrl } from "~/lib/phage-table.mjs";
-import { HOSTS, PHAGES_PAGE_PATH, formerlyText, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
+import {
+  HOSTS,
+  PHAGES_PAGE_PATH,
+  formerlyText,
+  phageSlug,
+  type Phage,
+} from "~/lib/phages/compile.mjs";
 import { PHAGES, phageListing } from "~/lib/phages/catalog.mjs";
 import { SITE_ORIGIN, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -63,12 +69,21 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const row = await getPageByPath(env, PHAGES_PAGE_PATH);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   const page = row.record;
   const [before, after] = aroundTable(page.html);
   const titles = await getPublishedPageTitles(env, ["/research"]);
   const trail = contentPageTrail(page, (path) => titles.get(path));
-  return { page, before, after, trail, phages: await listPhages(env), search: url.search, draft: row.status === "draft" };
+  return {
+    page,
+    before,
+    after,
+    trail,
+    phages: await listPhages(env),
+    search: url.search,
+    draft: row.status === "draft",
+  };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -76,7 +91,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const { page, trail, draft } = loaderData;
   return [
     ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, trail }),
-    { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}` },
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "text/markdown",
+      href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
+    },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
 }
@@ -102,7 +122,11 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
       trail={
         <>
           {contentPageJsonLd(page, null).map((block, i) => (
-            <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }} />
+            <script
+              key={i}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }}
+            />
           ))}
         </>
       }

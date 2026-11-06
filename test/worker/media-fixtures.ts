@@ -14,7 +14,10 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 /** Distinct bytes per seed, so distinct content-addressed keys; signed as a PNG. */
 export function bytesFor(seed: string) {
-  return new Uint8Array([...PNG_SIGNATURE, ...new TextEncoder().encode(`fake-image-bytes:${seed}`)]);
+  return new Uint8Array([
+    ...PNG_SIGNATURE,
+    ...new TextEncoder().encode(`fake-image-bytes:${seed}`),
+  ]);
 }
 
 /** The content-addressed PNG key `bytesFor(seed)` would be stored under at `dimensions`. */
@@ -63,10 +66,15 @@ export function envWithImages(dimensions: Dimensions, encodes?: boolean) {
  * An upload's index row as the library reads it, written straight to D1 so a case can start from any state. Only the
  * columns a case names besides the key are set; the schema's defaults fill the rest.
  */
-export async function seedMediaRow(key: string, columns: Record<string, string | number | null> = {}) {
+export async function seedMediaRow(
+  key: string,
+  columns: Record<string, string | number | null> = {},
+) {
   const row = { storage: "r2", kind: "image", role: "content", ...columns };
   const names = Object.keys(row);
-  await env.DB.prepare(`INSERT INTO media (key, ${names.join(", ")}) VALUES (?, ${names.map(() => "?").join(", ")})`)
+  await env.DB.prepare(
+    `INSERT INTO media (key, ${names.join(", ")}) VALUES (?, ${names.map(() => "?").join(", ")})`,
+  )
     .bind(key, ...Object.values(row))
     .run();
 }

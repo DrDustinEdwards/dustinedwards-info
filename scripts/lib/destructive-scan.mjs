@@ -71,7 +71,11 @@ function hasGuardCall(node, predicate) {
   /** @param {ts.Node} n */
   const visit = (n) => {
     if (found) return;
-    if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === predicate) {
+    if (
+      ts.isCallExpression(n) &&
+      ts.isIdentifier(n.expression) &&
+      n.expression.text === predicate
+    ) {
       found = true;
       return;
     }
@@ -199,9 +203,14 @@ export function objectConst(sf, constName) {
   for (const stmt of sf.statements) {
     if (!ts.isVariableStatement(stmt)) continue;
     for (const decl of stmt.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name) || decl.name.text !== constName || !decl.initializer) continue;
+      if (!ts.isIdentifier(decl.name) || decl.name.text !== constName || !decl.initializer)
+        continue;
       let init = decl.initializer;
-      while (ts.isAsExpression(init) || ts.isSatisfiesExpression(init) || ts.isParenthesizedExpression(init)) {
+      while (
+        ts.isAsExpression(init) ||
+        ts.isSatisfiesExpression(init) ||
+        ts.isParenthesizedExpression(init)
+      ) {
         init = init.expression;
       }
       return ts.isObjectLiteralExpression(init) ? init : null;
@@ -221,7 +230,8 @@ export function stringArrayConst(sf, constName) {
   for (const stmt of sf.statements) {
     if (!ts.isVariableStatement(stmt)) continue;
     for (const decl of stmt.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name) || decl.name.text !== constName || !decl.initializer) continue;
+      if (!ts.isIdentifier(decl.name) || decl.name.text !== constName || !decl.initializer)
+        continue;
       let init = decl.initializer;
       while (ts.isAsExpression(init) || ts.isParenthesizedExpression(init)) init = init.expression;
       if (!ts.isArrayLiteralExpression(init)) return null;
@@ -303,7 +313,11 @@ export function bindingUses(sf, binding) {
       if (ts.isObjectBindingPattern(n.name)) {
         for (const el of n.name.elements) {
           const key = el.propertyName ?? el.name;
-          if ((ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && key.text === binding && ts.isIdentifier(el.name)) {
+          if (
+            (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) &&
+            key.text === binding &&
+            ts.isIdentifier(el.name)
+          ) {
             aliases.add(el.name.text);
           }
         }
@@ -322,13 +336,17 @@ export function bindingUses(sf, binding) {
     if (
       (ts.isPropertyAccessExpression(n) && n.name.text === binding) ||
       (ts.isElementAccessExpression(n) && refersTo(n)) ||
-      (ts.isBindingElement(n) && ((n.propertyName ?? n.name).getText() === binding))
+      (ts.isBindingElement(n) && (n.propertyName ?? n.name).getText() === binding)
     ) {
       mentions += 1;
     }
     if (ts.isCallExpression(n)) {
       const callee = n.expression;
-      if (ts.isPropertyAccessExpression(callee) && callee.name.text === "delete" && refersTo(callee.expression)) {
+      if (
+        ts.isPropertyAccessExpression(callee) &&
+        callee.name.text === "delete" &&
+        refersTo(callee.expression)
+      ) {
         deletes.push(n.getText().replace(/\s+/g, " ").slice(0, 100));
       }
       if (n.arguments.some((a) => refersTo(a))) {

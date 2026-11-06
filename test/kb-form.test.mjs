@@ -9,10 +9,15 @@ import { entryFields, gapReason, itemFields } from "../app/kb/form-fields.mjs";
  * a changed field written alone, steps renumbered in their new order, and the fields each profile is edited with. */
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const files = (dir) => readdirSync(new URL(`../${dir}`, import.meta.url)).filter((f) => f.endsWith(".md")).map((f) => `${dir}/${f}`);
+const files = (dir) =>
+  readdirSync(new URL(`../${dir}`, import.meta.url))
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => `${dir}/${f}`);
 
 await test("every procedure and every registry item round-trips through the form byte for byte, through JSON as a browser sends it", () => {
-  const registry = readdirSync(new URL("../content/registry", import.meta.url)).flatMap((kind) => files(`content/registry/${kind}`));
+  const registry = readdirSync(new URL("../content/registry", import.meta.url)).flatMap((kind) =>
+    files(`content/registry/${kind}`),
+  );
   for (const path of [...files("content/procedures"), ...registry]) {
     const raw = read(path);
     const model = fileToForm(raw, { body: path.startsWith("content/procedures") });
@@ -39,10 +44,18 @@ await test("a field the form removes is left out, and a new one goes after the r
   const model = fileToForm(raw, { body: false });
   model.data.manufacturer = "Thermo Fisher Scientific";
   model.data.draft = true;
-  assert.equal(formToFile(raw, model), '---\nname: "NanoDrop"\nmanufacturer: Thermo Fisher Scientific\ndraft: true\n---\n');
+  assert.equal(
+    formToFile(raw, model),
+    '---\nname: "NanoDrop"\nmanufacturer: Thermo Fisher Scientific\ndraft: true\n---\n',
+  );
   delete model.data.draft;
   model.data.manufacturer = undefined;
-  assert.equal(splitFile(formToFile(raw, model)).fields.map((f) => f.key).join(","), "name");
+  assert.equal(
+    splitFile(formToFile(raw, model))
+      .fields.map((f) => f.key)
+      .join(","),
+    "name",
+  );
 });
 
 await test("steps moved in the form are renumbered from where their list starts, and their notes move with them", () => {
@@ -57,26 +70,51 @@ await test("steps moved in the form are renumbered from where their list starts,
   assert.match(out, /\n7\. Spin at 12,000 rpm/);
   assert.match(out, /\n8\. Add @potassium acetate/);
   // The potassium acetate step keeps its CRITICAL note, under its new number.
-  assert.match(out, /8\. Add @potassium acetate[^\n]*\n(?: {3}[^\n]*\n)* {3}> CRITICAL: Mix until the precipitate/);
+  assert.match(
+    out,
+    /8\. Add @potassium acetate[^\n]*\n(?: {3}[^\n]*\n)* {3}> CRITICAL: Mix until the precipitate/,
+  );
 });
 
 await test("a protocol is edited with its closed lists, and a field the form has no input for is edited as YAML", () => {
   const model = fileToForm(read("content/procedures/coi-primers.md"));
-  const fields = entryFields("protocol", model.data, [{ value: "smegmatis", label: "M. smegmatis" }]);
+  const fields = entryFields("protocol", model.data, [
+    { value: "smegmatis", label: "M. smegmatis" },
+  ]);
   const byKey = new Map(fields.map((f) => [f.key, f]));
   assert.equal(byKey.get("status")?.kind, "select");
-  assert.deepEqual(byKey.get("status")?.options?.map((o) => o.value), ["in-use", "in-development", "retired"]);
-  assert.deepEqual(byKey.get("biosafety_level")?.options?.map((o) => o.value), ["BSL-1", "BSL-2"]);
+  assert.deepEqual(
+    byKey.get("status")?.options?.map((o) => o.value),
+    ["in-use", "in-development", "retired"],
+  );
+  assert.deepEqual(
+    byKey.get("biosafety_level")?.options?.map((o) => o.value),
+    ["BSL-1", "BSL-2"],
+  );
   assert.equal(byKey.get("updated")?.kind, "date");
   assert.ok(byKey.get("organism")?.options?.some((o) => o.value === "smegmatis"));
   assert.equal(byKey.get("cycling")?.kind, "yaml");
-  assert.equal(gapReason(model.data.status), "No source in the repo states a status for this protocol.");
+  assert.equal(
+    gapReason(model.data.status),
+    "No source in the repo states a status for this protocol.",
+  );
   assert.equal(gapReason("in-use"), null);
 });
 
 await test("a registry item is its name, its draft flag and its kind's fields", () => {
-  const fields = itemFields(["supplier", "catalog_number", "prepared_in_lab"], { prepared_in_lab: true });
-  assert.deepEqual(fields.map((f) => [f.key, f.kind]), [["name", "text"], ["draft", "checkbox"], ["supplier", "text"], ["catalog_number", "text"], ["prepared_in_lab", "checkbox"]]);
+  const fields = itemFields(["supplier", "catalog_number", "prepared_in_lab"], {
+    prepared_in_lab: true,
+  });
+  assert.deepEqual(
+    fields.map((f) => [f.key, f.kind]),
+    [
+      ["name", "text"],
+      ["draft", "checkbox"],
+      ["supplier", "text"],
+      ["catalog_number", "text"],
+      ["prepared_in_lab", "checkbox"],
+    ],
+  );
 });
 
 await test("the compile holds status to its closed list and forked_from to its shape, and the page reads both", async () => {
@@ -84,8 +122,10 @@ await test("the compile holds status to its closed list and forked_from to its s
   const pipeline = await import("../app/lib/content/pipeline.mjs");
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const raw = read("content/procedures/coi-primers.md");
-  const compile = (text) => compileProcedure({ slug: "coi-primers", raw: text, pipeline, registry: registryHost() });
-  const set = (field, value) => raw.replace(new RegExp(`^${field}: .*$`, "m"), `${field}: ${value}`);
+  const compile = (text) =>
+    compileProcedure({ slug: "coi-primers", raw: text, pipeline, registry: registryHost() });
+  const set = (field, value) =>
+    raw.replace(new RegExp(`^${field}: .*$`, "m"), `${field}: ${value}`);
 
   const inUse = await compile(set("status", "in-use"));
   assert.ok(inUse.ok, JSON.stringify(inUse.errors));
@@ -95,14 +135,22 @@ await test("the compile holds status to its closed list and forked_from to its s
   assert.ok(!bogus.ok);
   assert.ok(bogus.errors.some((e) => e.startsWith('status is "sometimes"')));
 
-  const forked = await compile(raw.replace(/^title: /m, "forked_from: { slug: pan-avian-gapdh, version: \"2\" }\ntitle: "));
+  const forked = await compile(
+    raw.replace(/^title: /m, 'forked_from: { slug: pan-avian-gapdh, version: "2" }\ntitle: '),
+  );
   assert.ok(forked.ok, JSON.stringify(forked.errors));
   assert.deepEqual(forked.record.forkedFrom, { slug: "pan-avian-gapdh", version: "2" });
 
-  const self = await compile(raw.replace(/^title: /m, "forked_from: { slug: coi-primers }\ntitle: "));
+  const self = await compile(
+    raw.replace(/^title: /m, "forked_from: { slug: coi-primers }\ntitle: "),
+  );
   assert.ok(!self.ok && self.errors.includes("forked_from names this procedure itself"));
-  const shape = await compile(raw.replace(/^title: /m, "forked_from: { slug: Not A Slug, by: me }\ntitle: "));
-  assert.ok(!shape.ok && shape.errors.some((e) => e.startsWith("forked_from is { slug, version }")));
+  const shape = await compile(
+    raw.replace(/^title: /m, "forked_from: { slug: Not A Slug, by: me }\ntitle: "),
+  );
+  assert.ok(
+    !shape.ok && shape.errors.some((e) => e.startsWith("forked_from is { slug, version }")),
+  );
 });
 
 await test("every step reads as words and chips that join back byte for byte, and a chip nobody changed writes back as it was", async () => {
@@ -127,14 +175,25 @@ await test("every step reads as words and chips that join back byte for byte, an
 
 await test("a chip edited in its popover is written in the format's own spelling", async () => {
   const { stepPieces, writePiece, pieceLabel } = await import("../app/kb/step-marks.mjs");
-  const [, reagent, , timer, , temperature, , equipment] = stepPieces("Add @zinc chloride|ZnCl2{20%µl} for ~{5%minutes} at 55 to 60 °C in the #microcentrifuge.");
+  const [, reagent, , timer, , temperature, , equipment] = stepPieces(
+    "Add @zinc chloride|ZnCl2{20%µl} for ~{5%minutes} at 55 to 60 °C in the #microcentrifuge.",
+  );
   assert.equal(reagent?.kind, "reagent");
   assert.equal(pieceLabel(/** @type {any} */ (reagent)), "20 µl ZnCl2");
-  assert.equal(writePiece({ .../** @type {any} */ (reagent), amount: "25", fixed: true }), "@zinc chloride|ZnCl2{=25%µl}");
-  assert.equal(writePiece({ .../** @type {any} */ (timer), amount: "10", label: "spin" }), "~spin{10%minutes}");
+  assert.equal(
+    writePiece({ .../** @type {any} */ (reagent), amount: "25", fixed: true }),
+    "@zinc chloride|ZnCl2{=25%µl}",
+  );
+  assert.equal(
+    writePiece({ .../** @type {any} */ (timer), amount: "10", label: "spin" }),
+    "~spin{10%minutes}",
+  );
   assert.equal(writePiece({ .../** @type {any} */ (temperature), high: "" }), "55 °C");
   assert.equal(writePiece(/** @type {any} */ (equipment)), "#microcentrifuge");
-  assert.equal(writePiece({ .../** @type {any} */ (equipment), shown: "the centrifuge" }), "#microcentrifuge|the centrifuge{}");
+  assert.equal(
+    writePiece({ .../** @type {any} */ (equipment), shown: "the centrifuge" }),
+    "#microcentrifuge|the centrifuge{}",
+  );
 });
 
 await test("a recorded gap is said in words and points at the input it is filled in at", async () => {
@@ -143,17 +202,29 @@ await test("a recorded gap is said in words and points at the input it is filled
   const { registryHost } = await import("../scripts/lib/registry.mjs");
   const { labelGaps } = await import("../app/kb/gap-labels.mjs");
   const label = async (slug) => {
-    const compiled = await compileProcedure({ slug, raw: read(`content/procedures/${slug}.md`), pipeline, registry: registryHost() });
+    const compiled = await compileProcedure({
+      slug,
+      raw: read(`content/procedures/${slug}.md`),
+      pipeline,
+      registry: registryHost(),
+    });
     return Object.fromEntries(labelGaps(compiled.gaps, "protocol").map((g) => [g.label, g.anchor]));
   };
   const extraction = await label("phage-dna-extraction");
   assert.equal(extraction["TES buffer: storage"], "kb-field-solutions");
   assert.equal(extraction["Biosafety level"], "kb-field-biosafety_level");
   // Two step 4s with a gap, so each says its section; step 8 is the only one and does not.
-  assert.equal(extraction["Step 4 (Part A): rotor"], "kb-step-part-a-collect-the-phage-and-open-the-capsids-4");
+  assert.equal(
+    extraction["Step 4 (Part A): rotor"],
+    "kb-step-part-a-collect-the-phage-and-open-the-capsids-4",
+  );
   assert.equal(extraction["Step 8: rotor"], "kb-step-part-b-remove-the-protein-8");
   const coi = await label("coi-primers");
-  assert.equal(coi["GoTaq Flexi DNA polymerase: amount"], "kb-field-materials-gotaq-flexi-dna-polymerase-amount");
+  assert.equal(
+    coi["GoTaq Flexi DNA polymerase: amount"],
+    "kb-field-materials-gotaq-flexi-dna-polymerase-amount",
+  );
   assert.equal(coi["Cycling, 20 cycles, step 2: touchdown step (°C)"], "kb-field-cycling");
-  for (const text of [...Object.keys(extraction), ...Object.keys(coi)]) assert.doesNotMatch(text, /\[|\(line|_/, text);
+  for (const text of [...Object.keys(extraction), ...Object.keys(coi)])
+    assert.doesNotMatch(text, /\[|\(line|_/, text);
 });

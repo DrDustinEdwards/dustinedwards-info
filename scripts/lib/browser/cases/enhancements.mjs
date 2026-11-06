@@ -44,12 +44,14 @@ export async function run({ page }) {
   /* Found by walking the listing, since a pinned slug goes stale. */
   await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
   const postPaths = await page.evaluate(() =>
-    [...new Set(
-      [...document.querySelectorAll('.entry-list a[href^="/writing/"]')]
-        .map((a) => a.getAttribute("href"))
-        /* A post is one segment: each row also links its tags (/writing/tags/x). */
-        .filter((h) => h && /^\/writing\/[^/.]+$/.test(h)),
-    )].slice(0, 6),
+    [
+      ...new Set(
+        [...document.querySelectorAll('.entry-list a[href^="/writing/"]')]
+          .map((a) => a.getAttribute("href"))
+          /* A post is one segment: each row also links its tags (/writing/tags/x). */
+          .filter((h) => h && /^\/writing\/[^/.]+$/.test(h)),
+      ),
+    ].slice(0, 6),
   );
   ok(
     "the /writing listing yields post links to probe",
@@ -66,7 +68,11 @@ export async function run({ page }) {
       `nothing.`,
   );
 
-  const { found: codePost, last: probedPost } = await firstPathWith(page, postPaths, ".prose pre[data-lang]");
+  const { found: codePost, last: probedPost } = await firstPathWith(
+    page,
+    postPaths,
+    ".prose pre[data-lang]",
+  );
 
   if (probedPost !== null) {
     // The page is sitting on a post, whichever one the loop stopped at.
@@ -100,7 +106,11 @@ export async function run({ page }) {
     );
   }
 
-  const { found: footnotePost } = await firstPathWith(page, postPaths, ".prose a[data-footnote-ref]");
+  const { found: footnotePost } = await firstPathWith(
+    page,
+    postPaths,
+    ".prose a[data-footnote-ref]",
+  );
 
   if (footnotePost === null) {
     skip(
@@ -115,7 +125,12 @@ export async function run({ page }) {
     // The page is already open on footnotePost from the walk above.
     const footnoteRef = await page.$(".prose a[data-footnote-ref]");
     if (footnoteRef) await footnoteRef.hover();
-    else ok(`${footnotePost}: the footnote reference is there to hover`, false, "it vanished after the walk found it");
+    else
+      ok(
+        `${footnotePost}: the footnote reference is there to hover`,
+        false,
+        "it vanished after the walk found it",
+      );
     await new Promise((r) => setTimeout(r, 150));
     ok(
       `${footnotePost}: hovering a footnote reference shows the preview`,

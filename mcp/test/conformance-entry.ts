@@ -30,7 +30,10 @@ type Env = ToolEnv & { STUB_URL?: string };
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const stub = env.STUB_URL ?? "";
-    const site = { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(new Request(stub, new Request(input, init))) };
+    const site = {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(new Request(stub, new Request(input, init))),
+    };
     const email = env.ADMIN_EMAIL ?? "";
     return handleMcp(request, { ...env, SITE: site as unknown as Fetcher }, ctx, {
       kind: "admin",

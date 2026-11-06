@@ -109,9 +109,7 @@ export async function buildAssetManifest() {
 
 if (isMain(import.meta.url)) {
   buildAssetManifest().catch((error) => {
-    console.error(
-      `build:assets failed. ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`build:assets failed. ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   });
 }

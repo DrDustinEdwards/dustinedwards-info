@@ -4,18 +4,76 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { connectionsOf, explorerLabel, explorerUrl, outsideOf, partsOf, loadSystemModel, mapData, parseSystemModel, systemPath, systemSectionMarkdown, sameModel, systemsMarkdown, wiresOf } from "../app/lib/systems.mjs";
+import {
+  connectionsOf,
+  explorerLabel,
+  explorerUrl,
+  outsideOf,
+  partsOf,
+  loadSystemModel,
+  mapData,
+  parseSystemModel,
+  systemPath,
+  systemSectionMarkdown,
+  sameModel,
+  systemsMarkdown,
+  wiresOf,
+} from "../app/lib/systems.mjs";
 
 const fixture = () => ({
   version: 1,
   as_of: "2026-10-11",
   systems: [
-    { id: "core", name: "Core", short: "Core", family: "system", ring: "core", private: false, description: "Runs it all.", domain: "core.example.com", repos: ["https://github.com/example/core"] },
-    { id: "kit", name: "Kit", short: "Kit", family: "plumbing", ring: "shared", private: false, description: "Shared parts." },
-    { id: "app", name: "App", short: "App", family: "product", ring: "used", private: false, description: "What people use.", domain: "app.example.com" },
-    { id: "hidden", name: "Hidden", short: "Hidden", family: "product", ring: "used", private: true, description: "Kept private.", domain: "hidden.example.org" },
+    {
+      id: "core",
+      name: "Core",
+      short: "Core",
+      family: "system",
+      ring: "core",
+      private: false,
+      description: "Runs it all.",
+      domain: "core.example.com",
+      repos: ["https://github.com/example/core"],
+    },
+    {
+      id: "kit",
+      name: "Kit",
+      short: "Kit",
+      family: "plumbing",
+      ring: "shared",
+      private: false,
+      description: "Shared parts.",
+    },
+    {
+      id: "app",
+      name: "App",
+      short: "App",
+      family: "product",
+      ring: "used",
+      private: false,
+      description: "What people use.",
+      domain: "app.example.com",
+    },
+    {
+      id: "hidden",
+      name: "Hidden",
+      short: "Hidden",
+      family: "product",
+      ring: "used",
+      private: true,
+      description: "Kept private.",
+      domain: "hidden.example.org",
+    },
   ],
-  containers: [{ id: "core-worker", system: "core", name: "Worker", kind: "worker", technology: "Cloudflare Worker" }],
+  containers: [
+    {
+      id: "core-worker",
+      system: "core",
+      name: "Worker",
+      kind: "worker",
+      technology: "Cloudflare Worker",
+    },
+  ],
   relationships: [
     { id: "core--installs--kit", from: "core", to: "kit", kind: "installs" },
     { id: "app--installs--kit", from: "app", to: "kit", kind: "installs" },
@@ -31,8 +89,13 @@ const refused = (raw) => {
 };
 
 await test("the committed model passes, and a private system names no repo", () => {
-  const model = loadSystemModel(JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")));
-  assert.ok(model.systems.length >= 10 && model.systems.some((s) => s.private), `read ${model.systems.length} systems`);
+  const model = loadSystemModel(
+    JSON.parse(readFileSync(new URL("../data/system-model.json", import.meta.url), "utf8")),
+  );
+  assert.ok(
+    model.systems.length >= 10 && model.systems.some((s) => s.private),
+    `read ${model.systems.length} systems`,
+  );
   const linked = fixture();
   linked.systems[3].repos = ["https://github.com/example/hidden"];
   assert.match(refused(linked), /systems\.3/);
@@ -66,7 +129,10 @@ await test("lines name things that exist, ids are unique and the counts agree", 
 
 await test("the map draws every system once, each linking to its own page here", () => {
   const data = mapData(loadSystemModel(fixture()));
-  assert.deepEqual(data.systems.map((s) => s.href), ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"]);
+  assert.deepEqual(
+    data.systems.map((s) => s.href),
+    ["/systems/core", "/systems/kit", "/systems/app", "/systems/hidden"],
+  );
   assert.equal(systemPath("a b"), "/systems/a%20b");
 });
 
@@ -81,7 +147,8 @@ await test("a system's connections read from its own end", () => {
 await test("the twin holds every system's facts, a private one without its source", () => {
   const model = loadSystemModel(fixture());
   const all = systemsMarkdown(model, "https://example.com");
-  for (const s of model.systems) assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
+  for (const s of model.systems)
+    assert.ok(all.includes(`### ${s.name}`), `${s.id} missing from /systems.md`);
   assert.match(all, /^### Hidden \(private\)\n\nKept private\. Its repo is private\.\n/m);
   assert.match(all, /^- Its page: https:\/\/example\.com\/systems\/kit$/m);
   const one = systemSectionMarkdown(model, "hidden", "https://example.com");
@@ -95,37 +162,74 @@ await test("the twin holds every system's facts, a private one without its sourc
   // A name that also appears in the verb is linked as the name, not inside the verb.
   const named = fixture();
   named.systems[1].name = "Installs";
-  assert.match(systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"), /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\/kit\)$/m);
+  assert.match(
+    systemSectionMarkdown(loadSystemModel(named), "core", "https://example.com"),
+    /^- Installs \[Installs\]\(https:\/\/example\.com\/systems\/kit\)$/m,
+  );
   assert.doesNotMatch(systemSectionMarkdown(model, "kit", "https://example.com"), /#### Inside/);
 });
 
 await test("every system's section of the twin links to the same system in the Capsid explorer, and the twin to the explorer", () => {
   const model = loadSystemModel(fixture());
   for (const s of model.systems) {
-    assert.match(systemSectionMarkdown(model, s.id, "https://example.com") ?? "", new RegExp(`^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`, "m"));
+    assert.match(
+      systemSectionMarkdown(model, s.id, "https://example.com") ?? "",
+      new RegExp(
+        `^- In the Capsid explorer: https://capsid\\.dustinedwards\\.info/s/${s.id}/$`,
+        "m",
+      ),
+    );
   }
   assert.equal(explorerUrl("hidden"), "https://capsid.dustinedwards.info/s/hidden/");
   assert.equal(explorerLabel("hidden"), "capsid.dustinedwards.info/s/hidden");
-  assert.match(systemsMarkdown(model, "https://example.com"), /^Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m);
+  assert.match(
+    systemsMarkdown(model, "https://example.com"),
+    /^Capsid explorer: https:\/\/capsid\.dustinedwards\.info\/$/m,
+  );
 });
 
 await test("the lines between a system's parts are facts on its page and in its twin", () => {
   const raw = fixture();
-  raw.containers.push({ id: "core-db", system: "core", name: "Store", kind: "database", technology: "D1" });
-  raw.relationships.push({ id: "core-worker--writes--core-db", from: "core-worker", to: "core-db", kind: "writes" });
+  raw.containers.push({
+    id: "core-db",
+    system: "core",
+    name: "Store",
+    kind: "database",
+    technology: "D1",
+  });
+  raw.relationships.push({
+    id: "core-worker--writes--core-db",
+    from: "core-worker",
+    to: "core-db",
+    kind: "writes",
+  });
   raw.counts.containers = 2;
   raw.counts.relationships = 4;
   const model = loadSystemModel(raw);
   assert.deepEqual(wiresOf(model, "core"), ["Worker writes to Store"]);
   assert.deepEqual(wiresOf(model, "kit"), []);
-  assert.match(systemSectionMarkdown(model, "core", "https://example.com"), /How they connect:\n\n- Worker writes to Store\n/);
+  assert.match(
+    systemSectionMarkdown(model, "core", "https://example.com"),
+    /How they connect:\n\n- Worker writes to Store\n/,
+  );
 });
 
 // Capsid's flows (design section 4). Fixture flows ride the fixture's edges.
 const withFlows = () => {
   const raw = fixture();
-  raw.containers.push({ id: "core-agents", system: "core", name: "Agents", kind: "external", technology: "Sample sessions" });
-  raw.relationships.push({ id: "core-worker--serves--core-agents", from: "core-worker", to: "core-agents", kind: "serves" });
+  raw.containers.push({
+    id: "core-agents",
+    system: "core",
+    name: "Agents",
+    kind: "external",
+    technology: "Sample sessions",
+  });
+  raw.relationships.push({
+    id: "core-worker--serves--core-agents",
+    from: "core-worker",
+    to: "core-agents",
+    kind: "serves",
+  });
   raw.counts.containers = 2;
   raw.counts.relationships = 4;
   raw.flows = [
@@ -133,7 +237,12 @@ const withFlows = () => {
       id: "sample-life",
       name: "A sample's life",
       steps: [
-        { relationship: "core-worker--serves--core-agents", toward: "core-worker", text: "Posted.", lights: ["core-worker"] },
+        {
+          relationship: "core-worker--serves--core-agents",
+          toward: "core-worker",
+          text: "Posted.",
+          lights: ["core-worker"],
+        },
         { relationship: "core--installs--kit", toward: "kit", text: "Installed." },
       ],
     },
@@ -144,7 +253,13 @@ const withFlows = () => {
 await test("a model with flows passes, and a flow off the model's edges is refused", () => {
   assert.equal(loadSystemModel(withFlows()).flows?.length, 1);
   const bad = withFlows();
-  bad.containers.push({ id: "app-worker", system: "app", name: "App worker", kind: "worker", technology: "Sample" });
+  bad.containers.push({
+    id: "app-worker",
+    system: "app",
+    name: "App worker",
+    kind: "worker",
+    technology: "Sample",
+  });
   bad.counts.containers = bad.containers.length;
   bad.flows?.push({
     id: "sample-life",
@@ -152,17 +267,37 @@ await test("a model with flows passes, and a flow off the model's edges is refus
     steps: [
       { relationship: "core--reads--app", toward: "app", text: "No such edge." },
       { relationship: "core--installs--kit", toward: "app", text: "Wrong end." },
-      { relationship: "core--coordinates--hidden", toward: "hidden", text: "Not a part.", lights: ["kit"] },
-      { relationship: "core--installs--kit", toward: "kit", text: "Lit elsewhere.", lights: ["core-agents", "app-worker"] },
+      {
+        relationship: "core--coordinates--hidden",
+        toward: "hidden",
+        text: "Not a part.",
+        lights: ["kit"],
+      },
+      {
+        relationship: "core--installs--kit",
+        toward: "kit",
+        text: "Lit elsewhere.",
+        lights: ["core-agents", "app-worker"],
+      },
     ],
   });
   const problems = refused(bad);
   assert.match(problems, /flows\.sample-life: the id is used twice/);
-  assert.match(problems, /steps\.1: rides core--reads--app, which is not a relationship in the model/);
+  assert.match(
+    problems,
+    /steps\.1: rides core--reads--app, which is not a relationship in the model/,
+  );
   assert.match(problems, /steps\.2: goes toward app, which is not an end of core--installs--kit/);
   assert.match(problems, /steps\.3: lights kit, which is not a container/);
-  assert.match(problems, /steps\.4: lights app-worker, a part of app, which the step does not run in/);
-  assert.doesNotMatch(problems, /steps\.4: lights core-agents/, "core-agents is a part of core, which the step runs in");
+  assert.match(
+    problems,
+    /steps\.4: lights app-worker, a part of app, which the step does not run in/,
+  );
+  assert.doesNotMatch(
+    problems,
+    /steps\.4: lights core-agents/,
+    "core-agents is a part of core, which the step runs in",
+  );
   const extra = withFlows();
   extra.flows[0].steps[0].secret = "x";
   assert.match(refused(extra), /flows\.0\.steps\.0/);
@@ -170,16 +305,36 @@ await test("a model with flows passes, and a flow off the model's edges is refus
 
 await test("an external container is outside the system: not a part, but its lines are drawn", () => {
   const model = loadSystemModel(withFlows());
-  assert.deepEqual(partsOf(model, "core").map((c) => c.id), ["core-worker"]);
-  assert.deepEqual(outsideOf(model, "core").map((c) => c.id), ["core-agents"]);
+  assert.deepEqual(
+    partsOf(model, "core").map((c) => c.id),
+    ["core-worker"],
+  );
+  assert.deepEqual(
+    outsideOf(model, "core").map((c) => c.id),
+    ["core-agents"],
+  );
   assert.deepEqual(wiresOf(model, "core"), ["Worker serves Agents"]);
-  assert.match(systemSectionMarkdown(model, "core", "https://example.com") ?? "", /#### Inside\n\n- Worker \(Cloudflare Worker\)\n\n#### Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/);
+  assert.match(
+    systemSectionMarkdown(model, "core", "https://example.com") ?? "",
+    /#### Inside\n\n- Worker \(Cloudflare Worker\)\n\n#### Outside it\n\n- Agents \(Sample sessions\)\n\nHow they connect:\n\n- Worker serves Agents\n/,
+  );
   // A system whose only containers are outside it still lists them and their lines.
   const bare = withFlows();
   bare.containers = bare.containers.filter((c) => c.kind === "external");
-  bare.containers.push({ id: "core-github", system: "core", name: "GitHub", kind: "external", technology: "Sample host" });
+  bare.containers.push({
+    id: "core-github",
+    system: "core",
+    name: "GitHub",
+    kind: "external",
+    technology: "Sample host",
+  });
   bare.relationships = bare.relationships.filter((r) => !r.id.startsWith("core-worker"));
-  bare.relationships.push({ id: "core-agents--reads--core-github", from: "core-agents", to: "core-github", kind: "reads" });
+  bare.relationships.push({
+    id: "core-agents--reads--core-github",
+    from: "core-agents",
+    to: "core-github",
+    kind: "reads",
+  });
   bare.flows = [];
   bare.counts.relationships = bare.relationships.length;
   const twin = systemSectionMarkdown(loadSystemModel(bare), "core", "https://example.com") ?? "";
@@ -222,8 +377,20 @@ await test("the daily refresh writes only a checked model that says something ne
   const script = new URL("../scripts/refresh-system-model.mjs", import.meta.url).pathname;
   const refresh = (/** @type {Record<string, string>} */ extra = {}) =>
     new Promise((resolve) =>
-      execFile(process.execPath, [script, url], { env: { ...process.env, SYSTEM_MODEL_FILE: file, GITHUB_OUTPUT: "", OPEN_MODEL: "", SYSTEM_REPOS_RAW: `${url}raw`, ...extra } }, (error, stdout, stderr) =>
-        resolve({ code: error ? (error.code ?? 1) : 0, stdout, stderr }),
+      execFile(
+        process.execPath,
+        [script, url],
+        {
+          env: {
+            ...process.env,
+            SYSTEM_MODEL_FILE: file,
+            GITHUB_OUTPUT: "",
+            OPEN_MODEL: "",
+            SYSTEM_REPOS_RAW: `${url}raw`,
+            ...extra,
+          },
+        },
+        (error, stdout, stderr) => resolve({ code: error ? (error.code ?? 1) : 0, stdout, stderr }),
       ),
     );
   try {
@@ -260,7 +427,13 @@ await test("the daily refresh writes only a checked model that says something ne
     // the Worker: a second Worker that only runs a cron passes as one cron container.
     served = fixture();
     served.systems[0].description = "Runs it all, on a schedule.";
-    served.containers.push({ id: "core-tick", system: "core", name: "Tick", kind: "cron", technology: "Cron Trigger" });
+    served.containers.push({
+      id: "core-tick",
+      system: "core",
+      name: "Tick",
+      kind: "cron",
+      technology: "Cron Trigger",
+    });
     served.counts = { ...served.counts, containers: served.containers.length };
     wrangler = { ...wrangler, triggers: { crons: ["*/5 * * * *", "0 9 * * *"] } };
     run = await refresh();

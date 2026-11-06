@@ -48,9 +48,33 @@ export function stepPieces(text) {
     if (span.start > last) out.push(...splitTemperatures(text.slice(last, span.start)));
     const raw = text.slice(span.start, span.end);
     const q = parseQuantity(span.braces ?? "");
-    if (span.sign === "~") out.push({ kind: "timer", raw, label: span.name, amount: q?.amount ?? "", unit: q?.unit ?? "" });
-    else if (span.sign === "@") out.push({ kind: "reagent", raw, name: span.name, shown: span.shown, amount: q?.amount ?? "", unit: q?.unit ?? "", fixed: q?.fixed ?? false, braced: span.braces !== null });
-    else out.push({ kind: "equipment", raw, name: span.name, shown: span.shown, braced: span.braces !== null });
+    if (span.sign === "~")
+      out.push({
+        kind: "timer",
+        raw,
+        label: span.name,
+        amount: q?.amount ?? "",
+        unit: q?.unit ?? "",
+      });
+    else if (span.sign === "@")
+      out.push({
+        kind: "reagent",
+        raw,
+        name: span.name,
+        shown: span.shown,
+        amount: q?.amount ?? "",
+        unit: q?.unit ?? "",
+        fixed: q?.fixed ?? false,
+        braced: span.braces !== null,
+      });
+    else
+      out.push({
+        kind: "equipment",
+        raw,
+        name: span.name,
+        shown: span.shown,
+        braced: span.braces !== null,
+      });
     last = span.end;
   }
   if (text.length > last) out.push(...splitTemperatures(text.slice(last)));
@@ -66,9 +90,12 @@ export function stepPieces(text) {
  */
 export function writePiece(piece) {
   const quantity = (/** @type {string} */ amount, /** @type {string} */ unit, fixed = false) =>
-    amount.trim() ? `${fixed ? "=" : ""}${amount.trim()}${unit.trim() ? `%${unit.trim()}` : ""}` : "";
+    amount.trim()
+      ? `${fixed ? "=" : ""}${amount.trim()}${unit.trim() ? `%${unit.trim()}` : ""}`
+      : "";
   // A one-word mark written without braces (`#microcentrifuge`) stays that way while it still is one word.
-  const single = (/** @type {{ name: string, shown: string, braced: boolean }} */ p) => !p.braced && !p.shown.trim() && /^[^\s{}|]+$/.test(p.name.trim());
+  const single = (/** @type {{ name: string, shown: string, braced: boolean }} */ p) =>
+    !p.braced && !p.shown.trim() && /^[^\s{}|]+$/.test(p.name.trim());
   switch (piece.kind) {
     case "text":
       return piece.raw;
@@ -81,7 +108,9 @@ export function writePiece(piece) {
     case "timer":
       return `~${piece.label.trim()}{${quantity(piece.amount, piece.unit)}}`;
     case "temperature":
-      return piece.high.trim() ? `${piece.low.trim()} to ${piece.high.trim()} °C` : `${piece.low.trim()} °C`;
+      return piece.high.trim()
+        ? `${piece.low.trim()} to ${piece.high.trim()} °C`
+        : `${piece.low.trim()} °C`;
   }
 }
 
@@ -91,12 +120,15 @@ export function writePiece(piece) {
  * @param {Piece} piece
  */
 export function pieceLabel(piece) {
-  const amount = (/** @type {string} */ a, /** @type {string} */ u) => [a.trim(), u.trim()].filter(Boolean).join(" ");
+  const amount = (/** @type {string} */ a, /** @type {string} */ u) =>
+    [a.trim(), u.trim()].filter(Boolean).join(" ");
   switch (piece.kind) {
     case "text":
       return piece.raw;
     case "reagent":
-      return [amount(piece.amount, piece.unit), piece.shown || piece.name].filter(Boolean).join(" ");
+      return [amount(piece.amount, piece.unit), piece.shown || piece.name]
+        .filter(Boolean)
+        .join(" ");
     case "equipment":
       return piece.shown || piece.name;
     case "timer":
@@ -107,4 +139,9 @@ export function pieceLabel(piece) {
 }
 
 /** What each kind of chip is called, for its button's name and its popover's title. */
-export const PIECE_NAMES = Object.freeze({ reagent: "Reagent", equipment: "Equipment", timer: "Timer", temperature: "Temperature" });
+export const PIECE_NAMES = Object.freeze({
+  reagent: "Reagent",
+  equipment: "Equipment",
+  timer: "Timer",
+  temperature: "Temperature",
+});

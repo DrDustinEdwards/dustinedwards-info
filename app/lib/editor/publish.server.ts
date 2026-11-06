@@ -25,7 +25,12 @@ import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.
 import { commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
 import { errorMessage } from "~/lib/error-message.mjs";
-import { deletePostFromD1, syncPostToD1, type PostRecord, type PublishEnv } from "./post-rows.server";
+import {
+  deletePostFromD1,
+  syncPostToD1,
+  type PostRecord,
+  type PublishEnv,
+} from "./post-rows.server";
 
 export { SourceError, PolicyError };
 export type { Actor };
@@ -66,9 +71,7 @@ export function makeResolveImage(env: PublishEnv) {
 
     const bytes = await readBinaryFile(env, `public${src}`);
     if (!bytes) {
-      throw new EditorError(
-        `Image "${src}" is not a static file of this deploy (public${src}).`,
-      );
+      throw new EditorError(`Image "${src}" is not a static file of this deploy (public${src}).`);
     }
 
     const size = imageSize(bytes);
@@ -80,11 +83,7 @@ export function makeResolveImage(env: PublishEnv) {
   };
 }
 
-export async function validateAndRender(
-  env: PublishEnv,
-  slug: string,
-  raw: string,
-) {
+export async function validateAndRender(env: PublishEnv, slug: string, raw: string) {
   const { ContentError, findWideDashes, renderPost } = await loadPipeline();
   const dashes = findWideDashes(raw);
   const first = dashes[0];
@@ -250,7 +249,8 @@ async function refreshNeighbors(env: PublishEnv, savedSlug: string) {
     const relatedJson = JSON.stringify(post.related);
     const backlinksJson = JSON.stringify(post.backlinks);
     // The bulk sync stores an empty backlinks list as NULL and a save as "[]": the same answer.
-    if (relatedJson === (row.related ?? "[]") && backlinksJson === (row.backlinks ?? "[]")) return [];
+    if (relatedJson === (row.related ?? "[]") && backlinksJson === (row.backlinks ?? "[]"))
+      return [];
     return [{ slug: post.slug, relatedJson, backlinksJson }];
   });
   if (changed.length === 0) return [];
@@ -329,10 +329,9 @@ export async function savePost(
   const existing = await readFile(env, postPath(options.slug));
 
   if (options.isNew && existing) {
-    throw new EditorError(
-      `A post with the slug "${options.slug}" already exists.`,
-      { field: "slug" },
-    );
+    throw new EditorError(`A post with the slug "${options.slug}" already exists.`, {
+      field: "slug",
+    });
   }
 
   // Throws PolicyError on an operator's first publish, and stamps first_published over what the caller sent.
@@ -397,7 +396,9 @@ export async function savePost(
   try {
     await clearDivergence(env, options.slug);
   } catch (error) {
-    console.error(JSON.stringify({ alert: "divergence-clear-failed", detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({ alert: "divergence-clear-failed", detail: errorMessage(error) }),
+    );
   }
 
   const neighbors = await refreshNeighborsAfterSave(env, record.slug);
@@ -444,14 +445,21 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
     }
     return { ok: true as const, ...result };
   } catch (error) {
-    console.error(JSON.stringify({ alert: "ask-sync-failed-after-save", detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({ alert: "ask-sync-failed-after-save", detail: errorMessage(error) }),
+    );
     return { ok: false as const, message: errorMessage(error) };
   }
 }
 
 export async function deletePost(
   env: PublishEnv,
-  options: { slug: string; expectedHeadSha?: string | null; expectedBlobSha?: string; actor: Actor },
+  options: {
+    slug: string;
+    expectedHeadSha?: string | null;
+    expectedBlobSha?: string;
+    actor: Actor;
+  },
 ) {
   const { actor } = options;
 
@@ -494,7 +502,9 @@ async function removeAskForPost(env: PublishEnv, slug: string) {
   try {
     return { ok: true as const, removed: await removeAskPost(env, slug) };
   } catch (error) {
-    console.error(JSON.stringify({ alert: "ask-removal-failed-after-delete", detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({ alert: "ask-removal-failed-after-delete", detail: errorMessage(error) }),
+    );
     return {
       ok: false as const,
       message:

@@ -7,7 +7,10 @@ import {
   DIAGRAM_THEMES,
   diagramAssetPath,
 } from "@drdustinedwards/site-helpers/render/diagram";
-import { auditDiagramSvg, DIAGRAM_ROLE_NAMES } from "@drdustinedwards/site-helpers/render/diagram-draw";
+import {
+  auditDiagramSvg,
+  DIAGRAM_ROLE_NAMES,
+} from "@drdustinedwards/site-helpers/render/diagram-draw";
 
 import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
@@ -30,7 +33,11 @@ const { ok: assert, failed: failures } = tally;
 // The model and its markup are Prelum's and tested there; this holds the site's configured renderer to the alt rule.
 {
   const body = ':::diagram{title="T"}\n```mermaid\nflowchart LR\n  A --> B\n```\n:::\n';
-  const refused = await renderBody({ file: "gate.md", body, resolveImage: async () => ({ width: 1, height: 1 }) }).then(
+  const refused = await renderBody({
+    file: "gate.md",
+    body,
+    resolveImage: async () => ({ width: 1, height: 1 }),
+  }).then(
     () => false,
     (error) => /requires an alt attribute/.test(String(error?.message)),
   );
@@ -97,10 +104,7 @@ if (!existsSync(ARTIFACT)) {
     for (const theme of DIAGRAM_THEMES) {
       const file = join(DIAGRAM_DIR, fileName(key, theme));
       const present = existsSync(file);
-      assert(
-        `${posts.join(", ")} references ${fileName(key, theme)}, which is on disk`,
-        present,
-      );
+      assert(`${posts.join(", ")} references ${fileName(key, theme)}, which is on disk`, present);
       if (!present) continue;
 
       const svg = readFileSync(file, "utf8");
@@ -137,8 +141,14 @@ if (!existsSync(ARTIFACT)) {
   }
 
   // Not set just under the measurement: these counts are content, and a post may drop a diagram.
-  assert(`the artifact yielded diagrams to check (${referenced.size} referenced)`, referenced.size >= 2);
-  assert(`the diagram directory yielded assets to check (${onDisk.length} on disk)`, onDisk.length >= 4);
+  assert(
+    `the artifact yielded diagrams to check (${referenced.size} referenced)`,
+    referenced.size >= 2,
+  );
+  assert(
+    `the diagram directory yielded assets to check (${onDisk.length} on disk)`,
+    onDisk.length >= 4,
+  );
 
   console.log(
     `check:diagrams ${referenced.size} diagrams referenced, ${onDisk.length} assets on disk`,

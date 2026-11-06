@@ -25,7 +25,8 @@ export const SOURCE_PATHS = [
 ];
 
 /** @param {string} file a repository path */
-export const isSourcePath = (file) => SOURCE_PATHS.some((p) => file === p || file.startsWith(`${p}/`));
+export const isSourcePath = (file) =>
+  SOURCE_PATHS.some((p) => file === p || file.startsWith(`${p}/`));
 
 /** Gitignored: written by the pull, removed when ship restores the checkout. */
 export const PULL_MANIFEST = ".content-pull.json";

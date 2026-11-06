@@ -102,8 +102,7 @@ export async function convergeAsk(target) {
   } else if (!askMiss && report.converged !== true) {
     const driftReading = () => readAskDrift(origin);
 
-    const firstReading =
-      `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
+    const firstReading = `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
     console.log(
       `  not converged on the write-back (${firstReading}). Re-reading /health for up ` +
         `to ${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
@@ -115,7 +114,9 @@ export async function convergeAsk(target) {
       onPoll: ({ poll, reading }) => {
         if (!reading) console.log(`  poll ${poll}: health unreadable`);
         else if (!reading.ok)
-          console.log(`  poll ${poll}: still behind (${reading.expected} expected, ${reading.present} present)`);
+          console.log(
+            `  poll ${poll}: still behind (${reading.expected} expected, ${reading.present} present)`,
+          );
       },
     });
 
@@ -214,7 +215,8 @@ export async function convergeMedia(target) {
     console.log(`  MISSED: ${mediaMiss}`);
     for (const key of (report?.missing ?? []).slice(0, 10)) console.log(`    missing: ${key}`);
     for (const key of (report?.extra ?? []).slice(0, 10)) console.log(`    extra:   ${key}`);
-    for (const failure of (report?.failures ?? []).slice(0, 10)) console.log(`    failed:  ${failure}`);
+    for (const failure of (report?.failures ?? []).slice(0, 10))
+      console.log(`    failed:  ${failure}`);
   } else {
     console.log(
       `  converged: ${report.expected} expected, ${report.present} present, ` +

@@ -30,10 +30,7 @@ import { media, postTags, posts, tags } from "./schema";
 import { getDb, type DB, publiclyVisible, isBlogPost, notTrashed } from "./client";
 
 /** Ask's cache replay re-checks visibility here because KV invalidation lags. */
-export async function publiclyVisibleSlugs(
-  env: Env,
-  slugs: string[],
-): Promise<Set<string>> {
+export async function publiclyVisibleSlugs(env: Env, slugs: string[]): Promise<Set<string>> {
   if (slugs.length === 0) return new Set();
   const rows = await getDb(env)
     .select({ slug: posts.slug })
@@ -94,7 +91,6 @@ const postCard = {
   part: posts.part,
 };
 
-
 /**
  * Composes `isBlogPost()` itself and takes only the extra clauses, so no caller can pass a `where`
  * missing the visibility predicate. Years come from SQLite, as in `listBlogYears`, so two
@@ -117,7 +113,9 @@ function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
 }
 
 /** A NULL is not a zero: an empty list has no span, and the row omits itself. */
-function spanOf(row: { firstYear: string | null; lastYear: string | null; minutes: number | null } | undefined) {
+function spanOf(
+  row: { firstYear: string | null; lastYear: string | null; minutes: number | null } | undefined,
+) {
   return {
     firstYear: row?.firstYear ?? null,
     lastYear: row?.lastYear ?? null,
@@ -171,7 +169,11 @@ async function tagsForPosts(db: DB, postIds: number[]) {
     .where(inArray(postTags.postId, postIds))
     .orderBy(asc(tags.slug));
 
-  return groupValues(rows, (row) => row.postId, (row) => row.slug);
+  return groupValues(
+    rows,
+    (row) => row.postId,
+    (row) => row.slug,
+  );
 }
 
 /** Leaves out a post marked noindex (site-api's search field), for the sitemap and llms-full.txt. */
@@ -287,26 +289,29 @@ export async function listHomeStartHere(
   const cards = Math.max(1, options.cards ?? HOME_CARDS);
 
   /* `cards` others, not `cards - 1`: the extra row leads when nothing is featured. */
-  const [featuredRows, pickedRows, newestRows, countRows] = await timed(options.timings, "d1_batch", () =>
-    db.batch([
-      db
-        .select(postCard)
-        .from(posts)
-        .where(and(isBlogPost(), eq(posts.featured, true)))
-        .orderBy(...newestFirstOrder())
-        .limit(1),
-      db
-        .select(postCard)
-        .from(posts)
-        .where(and(isBlogPost(), eq(posts.featured, false), inArray(posts.slug, HOME_PICKS))),
-      db
-        .select(postCard)
-        .from(posts)
-        .where(and(isBlogPost(), eq(posts.featured, false)))
-        .orderBy(...newestFirstOrder())
-        .limit(cards),
-      db.select({ total: count() }).from(posts).where(isBlogPost()),
-    ]),
+  const [featuredRows, pickedRows, newestRows, countRows] = await timed(
+    options.timings,
+    "d1_batch",
+    () =>
+      db.batch([
+        db
+          .select(postCard)
+          .from(posts)
+          .where(and(isBlogPost(), eq(posts.featured, true)))
+          .orderBy(...newestFirstOrder())
+          .limit(1),
+        db
+          .select(postCard)
+          .from(posts)
+          .where(and(isBlogPost(), eq(posts.featured, false), inArray(posts.slug, HOME_PICKS))),
+        db
+          .select(postCard)
+          .from(posts)
+          .where(and(isBlogPost(), eq(posts.featured, false)))
+          .orderBy(...newestFirstOrder())
+          .limit(cards),
+        db.select({ total: count() }).from(posts).where(isBlogPost()),
+      ]),
   );
 
   /* Which list leads is `startHere`'s rule, shared with `check:machine-readable`. */
@@ -378,7 +383,10 @@ export async function listSeriesPosts(
   ]);
 
   const total = Number(statRows[0]?.total ?? 0);
-  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  const tagMap = await tagsForPosts(
+    db,
+    rows.map((r) => r.id),
+  );
   return {
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
     total,
@@ -390,7 +398,12 @@ export async function listSeriesPosts(
 
 export async function listBlogTags(env: Env) {
   return getDb(env)
-    .select({ slug: tags.slug, name: tags.name, total: count(posts.id), lastmod: max(posts.updatedAt) })
+    .select({
+      slug: tags.slug,
+      name: tags.name,
+      total: count(posts.id),
+      lastmod: max(posts.updatedAt),
+    })
     .from(tags)
     .innerJoin(postTags, eq(postTags.tagId, tags.id))
     .innerJoin(posts, eq(posts.id, postTags.postId))
@@ -510,7 +523,11 @@ export async function listAllPostsForAdmin(env: Env) {
       .orderBy(desc(posts.publishAt)),
     listAllPostTagsForAdmin(env),
   ]);
-  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
+  const tagsBySlug = groupValues(
+    tagRows,
+    (row) => row.slug,
+    (row) => row.tag,
+  );
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
@@ -529,7 +546,11 @@ export async function listPostCorpusForRelated(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
   const tagRows = await listAllPostTagsForAdmin(env);
 
-  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
+  const tagsBySlug = groupValues(
+    tagRows,
+    (row) => row.slug,
+    (row) => row.tag,
+  );
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
@@ -605,14 +626,16 @@ function feedScope(db: DB, options: FeedOptions) {
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
   if (options.indexedOnly) clauses.push(indexable());
-  const order =
-    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : newestFirstOrder();
+  const order = options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : newestFirstOrder();
   return { where: and(...clauses), order };
 }
 
 /** Attaches each row's tags and strips the `id` the join needed. */
 async function withFeedTags<R extends { id: number }>(db: DB, rows: R[]) {
-  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  const tagMap = await tagsForPosts(
+    db,
+    rows.map((r) => r.id),
+  );
   return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
 }
 

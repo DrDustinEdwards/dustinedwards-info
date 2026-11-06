@@ -36,38 +36,91 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
     return { ok: false, errors: [`"${slug}" is not a lowercase kebab-case slug`], gaps: [] };
   }
   const file = procedurePath(slug);
-  const dashes = pipeline.findWideDashes(raw).map(
-    (hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-  );
+  const dashes = pipeline
+    .findWideDashes(raw)
+    .map(
+      (hit) =>
+        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+    );
   const parsed = parseProcedure({ file, raw });
   // A protocol names its primers by their id in the lab registry and stores no sequence (docs/REGISTRY.md); the registry's
   // rows are read here, so the record carries them and a frozen version freezes them. A caller with no registry cannot
   // compile a protocol that names primers: writing a record with no primer table would be silent.
-  const named = Array.isArray(parsed.data.primers) ? parsed.data.primers.flatMap((p) => (typeof p?.primer === "string" ? [p.primer] : [])) : [];
-  const namedStrains = Array.isArray(parsed.data.host_strain) ? parsed.data.host_strain.flatMap((s) => (typeof s?.strain === "string" ? [s.strain] : [])) : [];
+  const named = Array.isArray(parsed.data.primers)
+    ? parsed.data.primers.flatMap((p) => (typeof p?.primer === "string" ? [p.primer] : []))
+    : [];
+  const namedStrains = Array.isArray(parsed.data.host_strain)
+    ? parsed.data.host_strain.flatMap((s) => (typeof s?.strain === "string" ? [s.strain] : []))
+    : [];
   // An organism that is not a non-strain organism is a strain of the registry, so it is read from there too.
-  const organismIds = Array.isArray(parsed.data.organism) ? parsed.data.organism.filter((id) => typeof id === "string" && !Object.hasOwn(NON_STRAIN_ORGANISMS, id)) : [];
+  const organismIds = Array.isArray(parsed.data.organism)
+    ? parsed.data.organism.filter(
+        (id) => typeof id === "string" && !Object.hasOwn(NON_STRAIN_ORGANISMS, id),
+      )
+    : [];
   // A material that is a reagent of the registry names it by id; its facts are the registry's, not typed in the protocol.
-  const namedReagents = Array.isArray(parsed.data.materials) ? parsed.data.materials.flatMap((m) => (typeof m?.reagent === "string" ? [m.reagent] : [])) : [];
+  const namedReagents = Array.isArray(parsed.data.materials)
+    ? parsed.data.materials.flatMap((m) => (typeof m?.reagent === "string" ? [m.reagent] : []))
+    : [];
   // An equipment entry that is an item of the registry names it by id.
-  const namedEquipment = Array.isArray(parsed.data.equipment) ? parsed.data.equipment.flatMap((e) => (typeof e?.equipment === "string" ? [e.equipment] : [])) : [];
-  if ((named.length > 0 || namedStrains.length > 0 || organismIds.length > 0 || namedReagents.length > 0 || namedEquipment.length > 0) && !registry) {
-    return { ok: false, errors: ["this compile was given no lab registry, so the primers, host strains, organisms, reagents and equipment the file names cannot be read"], gaps: [] };
+  const namedEquipment = Array.isArray(parsed.data.equipment)
+    ? parsed.data.equipment.flatMap((e) => (typeof e?.equipment === "string" ? [e.equipment] : []))
+    : [];
+  if (
+    (named.length > 0 ||
+      namedStrains.length > 0 ||
+      organismIds.length > 0 ||
+      namedReagents.length > 0 ||
+      namedEquipment.length > 0) &&
+    !registry
+  ) {
+    return {
+      ok: false,
+      errors: [
+        "this compile was given no lab registry, so the primers, host strains, organisms, reagents and equipment the file names cannot be read",
+      ],
+      gaps: [],
+    };
   }
   const primerRows = named.length > 0 && registry ? await registry.primers(named) : new Map();
   const strainIds = [...new Set([...namedStrains, ...organismIds])];
-  const strainRows = strainIds.length > 0 && registry ? await registry.strains(strainIds) : new Map();
+  const strainRows =
+    strainIds.length > 0 && registry ? await registry.strains(strainIds) : new Map();
   const equipmentIds = [...new Set(namedEquipment)];
-  const equipmentRows = equipmentIds.length > 0 && registry ? await registry.equipment(equipmentIds) : new Map();
+  const equipmentRows =
+    equipmentIds.length > 0 && registry ? await registry.equipment(equipmentIds) : new Map();
   const reagentIds = [...new Set(namedReagents)];
-  const reagentRows = reagentIds.length > 0 && registry ? await registry.reagents(reagentIds) : new Map();
-  const { errors, gaps } = validateProcedure(parsed, { slug, primers: new Set(primerRows.keys()), strains: new Set(strainRows.keys()), reagents: new Set(reagentRows.keys()), equipment: new Set(equipmentRows.keys()) });
+  const reagentRows =
+    reagentIds.length > 0 && registry ? await registry.reagents(reagentIds) : new Map();
+  const { errors, gaps } = validateProcedure(parsed, {
+    slug,
+    primers: new Set(primerRows.keys()),
+    strains: new Set(strainRows.keys()),
+    reagents: new Set(reagentRows.keys()),
+    equipment: new Set(equipmentRows.keys()),
+  });
   // A draft primer is the admin's alone, so a published protocol may not print it.
   if (parsed.data.draft !== true) {
-    for (const [id, row] of primerRows) if (row.status === "draft") errors.push(`primers[${id}] is a draft in the lab registry, so a published protocol cannot print it`);
-    for (const [id, row] of strainRows) if (row.status === "draft") errors.push(`strain ${id} is a draft in the lab registry, so a published protocol cannot name it`);
-    for (const [id, row] of reagentRows) if (row.status === "draft") errors.push(`reagent ${id} is a draft in the lab registry, so a published protocol cannot name it`);
-    for (const [id, row] of equipmentRows) if (row.status === "draft") errors.push(`equipment ${id} is a draft in the lab registry, so a published protocol cannot name it`);
+    for (const [id, row] of primerRows)
+      if (row.status === "draft")
+        errors.push(
+          `primers[${id}] is a draft in the lab registry, so a published protocol cannot print it`,
+        );
+    for (const [id, row] of strainRows)
+      if (row.status === "draft")
+        errors.push(
+          `strain ${id} is a draft in the lab registry, so a published protocol cannot name it`,
+        );
+    for (const [id, row] of reagentRows)
+      if (row.status === "draft")
+        errors.push(
+          `reagent ${id} is a draft in the lab registry, so a published protocol cannot name it`,
+        );
+    for (const [id, row] of equipmentRows)
+      if (row.status === "draft")
+        errors.push(
+          `equipment ${id} is a draft in the lab registry, so a published protocol cannot name it`,
+        );
   }
   errors.unshift(...dashes);
   if (errors.length > 0) return { ok: false, errors, gaps };
@@ -82,15 +135,21 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       resolveImage,
       primerRows: named.flatMap((id) => (primerRows.has(id) ? [primerRows.get(id)] : [])),
       // The strain's page is where the protocol links it, computed from its id here and not typed anywhere.
-      strainRows: namedStrains.flatMap((id) => (strainRows.has(id) ? [{ ...strainRows.get(id), path: itemPath("strain", id) }] : [])),
+      strainRows: namedStrains.flatMap((id) =>
+        strainRows.has(id) ? [{ ...strainRows.get(id), path: itemPath("strain", id) }] : [],
+      ),
       // The reagents the materials name, as the registry states them, so the table shows where each comes from and types none.
       reagentRows: reagentIds.flatMap((id) => (reagentRows.has(id) ? [reagentRows.get(id)] : [])),
       // The equipment the list names, as the registry states it, so the table shows who makes each and types none.
-      equipmentRows: equipmentIds.flatMap((id) => (equipmentRows.has(id) ? [equipmentRows.get(id)] : [])),
+      equipmentRows: equipmentIds.flatMap((id) =>
+        equipmentRows.has(id) ? [equipmentRows.get(id)] : [],
+      ),
       // The words for each organism id the protocol names, from the registry (or the non-strain list), so the library needs no list of its own.
       organismNames: Object.fromEntries(
         (Array.isArray(parsed.data.organism) ? parsed.data.organism : []).flatMap((id) => {
-          const words = Object.hasOwn(NON_STRAIN_ORGANISMS, id) ? /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id] : strainRows.get(id)?.organism;
+          const words = Object.hasOwn(NON_STRAIN_ORGANISMS, id)
+            ? /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id]
+            : strainRows.get(id)?.organism;
           return words ? [[id, words]] : [];
         }),
       ),

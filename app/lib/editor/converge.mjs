@@ -66,7 +66,9 @@ export async function convergeWithRetry({
     });
   } catch (recordError) {
     // Logged, never rethrown: the divergence error must still reach the operator.
-    console.error(JSON.stringify({ alert: "divergence-record-failed", detail: errorMessage(recordError) }));
+    console.error(
+      JSON.stringify({ alert: "divergence-record-failed", detail: errorMessage(recordError) }),
+    );
   }
 
   const error = new Error(message);

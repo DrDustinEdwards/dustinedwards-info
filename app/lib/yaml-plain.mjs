@@ -7,6 +7,7 @@
 export function yamlPlain(value) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (Array.isArray(value)) return value.map(yamlPlain);
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, yamlPlain(v)]));
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, yamlPlain(v)]));
   return value;
 }

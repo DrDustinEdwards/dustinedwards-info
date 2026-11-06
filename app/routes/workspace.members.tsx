@@ -35,7 +35,12 @@ export async function loader({ context, request }: Route.LoaderArgs) {
 export async function action({ context, request }: Route.ActionArgs) {
   const actor = context.get(labActorContext);
   requireManager(actor);
-  const result = await membersAction(getEnv(context), actor, await cappedForm(request, ADMIN_FORM_BYTES), Date.now());
+  const result = await membersAction(
+    getEnv(context),
+    actor,
+    await cappedForm(request, ADMIN_FORM_BYTES),
+    Date.now(),
+  );
   return data(result, { headers: PRIVATE });
 }
 
@@ -56,8 +61,9 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
       {confirm ? (
         <Panel title={`Remove ${confirm.name}?`}>
           <p>
-            They are refused on their next request, taken off the lab&apos;s Cloudflare Access list and their seat is freed. Their
-            row stays, marked removed, so their runs and edits keep their name.
+            They are refused on their next request, taken off the lab&apos;s Cloudflare Access list
+            and their seat is freed. Their row stays, marked removed, so their runs and edits keep
+            their name.
           </p>
           <Form method="post" reloadDocument>
             <input type="hidden" name="intent" value="remove" />
@@ -72,12 +78,19 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
           </Form>
         </Panel>
       ) : null}
-      <PeopleRoles data={{ ...people, ...(actionData?.result ? { result: actionData.result } : {}) }} action={`${LAB_BENCH_PATH}/members`} closeHref={`${LAB_BENCH_PATH}/members`} />
+      <PeopleRoles
+        data={{ ...people, ...(actionData?.result ? { result: actionData.result } : {}) }}
+        action={`${LAB_BENCH_PATH}/members`}
+        closeHref={`${LAB_BENCH_PATH}/members`}
+      />
       {canEditTerms ? (
         <Panel title="Semester end dates">
           <Form method="post" reloadDocument>
             <input type="hidden" name="intent" value="set_terms" />
-            <Field label="End dates" help="YYYY-MM-DD, separated by commas. A Lab worker's or Lab manager's access ends on the first of these after the day they are added or renewed.">
+            <Field
+              label="End dates"
+              help="YYYY-MM-DD, separated by commas. A Lab worker's or Lab manager's access ends on the first of these after the day they are added or renewed."
+            >
               <input className="cap-input" name="terms" defaultValue={terms.join(", ")} />
             </Field>
             <Button type="submit">Save dates</Button>

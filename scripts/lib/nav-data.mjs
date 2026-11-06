@@ -80,7 +80,9 @@ export function readPosts(dir = POSTS_DIR, problems = []) {
       const { data, content } = matter(readFileSync(path.join(dir, name), "utf8"), {});
       const parsed = frontmatterSchema.safeParse(data);
       if (!parsed.success) {
-        problems.push(`${name}: ${parsed.error.issues.map((i) => `${i.path.join(".") || "(root)"} ${i.message}`).join("; ")}`);
+        problems.push(
+          `${name}: ${parsed.error.issues.map((i) => `${i.path.join(".") || "(root)"} ${i.message}`).join("; ")}`,
+        );
         return [];
       }
       const fm = parsed.data;
@@ -118,7 +120,11 @@ export function readLatestPaper(dir = PUBLICATIONS_DIR, problems = []) {
       try {
         const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
         if (data.draft === true) return [];
-        const plain = JSON.parse(JSON.stringify(data, (_key, value) => (value instanceof Date ? value.toISOString().slice(0, 10) : value)));
+        const plain = JSON.parse(
+          JSON.stringify(data, (_key, value) =>
+            value instanceof Date ? value.toISOString().slice(0, 10) : value,
+          ),
+        );
         const record = recordFromData(plain, name.slice(0, -3));
         return SHOWCASE_TYPES.has(record.type) && record.stage === "published" ? [record] : [];
       } catch (error) {
@@ -193,9 +199,16 @@ function readLibraryCounts(dir = PROCEDURES_DIR) {
 function readTeachingDescriptions(dir = PAGES_DIR) {
   /** @type {Record<string, string>} */
   const found = {};
-  for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
+  for (const name of readdirSync(dir)
+    .filter((n) => n.endsWith(".md"))
+    .sort()) {
     const { data } = matter(readFileSync(path.join(dir, name), "utf8"), {});
-    if (typeof data.path === "string" && data.path.startsWith("/teaching/") && typeof data.description === "string" && data.description.trim() !== "") {
+    if (
+      typeof data.path === "string" &&
+      data.path.startsWith("/teaching/") &&
+      typeof data.description === "string" &&
+      data.description.trim() !== ""
+    ) {
       found[data.path] = data.description.trim();
     }
   }
@@ -212,8 +225,14 @@ export function navDataProblems() {
   /** @type {string[]} */
   const problems = [];
   readPosts(POSTS_DIR, problems);
-  if (readLatestPaper(PUBLICATIONS_DIR, problems) === null) problems.push("content/publications has no published paper for the Research panel's Latest paper");
-  if (readLabPlace(readIdentity().affiliation) === null) problems.push("content/cv/appointments.md names no town for the university, so the About spotlight has no place");
+  if (readLatestPaper(PUBLICATIONS_DIR, problems) === null)
+    problems.push(
+      "content/publications has no published paper for the Research panel's Latest paper",
+    );
+  if (readLabPlace(readIdentity().affiliation) === null)
+    problems.push(
+      "content/cv/appointments.md names no town for the university, so the About spotlight has no place",
+    );
   return problems;
 }
 
@@ -224,7 +243,11 @@ export function readNavData() {
     posts: readPosts(),
     libraries: readLibraryCounts(),
     courses: readTeachingDescriptions(),
-    lab: { department: identity.department, university: identity.affiliation, place: readLabPlace(identity.affiliation) },
+    lab: {
+      department: identity.department,
+      university: identity.affiliation,
+      place: readLabPlace(identity.affiliation),
+    },
   };
 }
 

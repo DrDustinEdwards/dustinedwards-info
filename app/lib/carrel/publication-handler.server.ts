@@ -29,7 +29,12 @@ function timestampOf(date: string | null): string | null {
 
 export function publicationHandler(env: PublicationEnv): ContentKindHandler {
   /** One write through savePublication as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     try {
       const saved = await savePublication(env, {
         slug,
@@ -38,7 +43,12 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
+      return {
+        id: slug,
+        version: saved.sourceBlobSha,
+        status: saved.draft ? "draft" : "published",
+        changeId,
+      };
     } catch (error) {
       return asSiteApiError(env, error, publicationPath(slug));
     }
@@ -90,7 +100,9 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
         status: draft ? "draft" : "published",
         path: draft ? null : paperPath(slug),
         publishAt: null,
-        publishedAt: draft ? null : timestampOf(typeof data.publishedDate === "string" ? data.publishedDate : null),
+        publishedAt: draft
+          ? null
+          : timestampOf(typeof data.publishedDate === "string" ? data.publishedDate : null),
         updatedAt: stored?.syncedAt ? stored.syncedAt.toISOString() : null,
         format: "markdown",
         source: file.content,
@@ -111,12 +123,22 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     async publish(slug, input) {
       // Read even when source is sent: a version for an id that does not exist is a conflict.
       const stored = await existing(slug);
-      return write(slug, input.changeId, withPublication(input.source ?? stored, { draft: false }), input.expectedVersion);
+      return write(
+        slug,
+        input.changeId,
+        withPublication(input.source ?? stored, { draft: false }),
+        input.expectedVersion,
+      );
     },
 
     async unpublish(slug, input) {
       const source = await existing(slug);
-      return write(slug, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
+      return write(
+        slug,
+        input.changeId,
+        withPublication(source, { draft: true }),
+        input.expectedVersion,
+      );
     },
 
     revisions(slug) {

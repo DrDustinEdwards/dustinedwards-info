@@ -38,26 +38,49 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const path = url.pathname.replace(/\/+$/, "");
   const row = await getProcedureByPath(env, path);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   const { count, factor, units } = readScale(row.record, url);
   // Where a protocol sits in the phage workflow: its neighbors are the other published protocols, so they are read here.
   const workflow =
-    row.record.profile === "protocol" ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path) : null;
+    row.record.profile === "protocol"
+      ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path)
+      : null;
   // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.
   const proof = await proofFor(env, row.record.proofOfUse);
   // The versions with a frozen copy, which the history links.
   const frozen = await listFrozenVersions(env, row.slug);
   // A variant's parent: its title and the frozen copy it was taken from are the parent's own facts (P3).
   const lineage = await lineageFor(env, row.record);
-  return { record: row.record, draft: row.status === "draft", count, factor, units, workflow, proof, frozen, lineage };
+  return {
+    record: row.record,
+    draft: row.status === "draft",
+    count,
+    factor,
+    units,
+    workflow,
+    proof,
+    frozen,
+    lineage,
+  };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record, draft } = loaderData;
   return [
-    ...pageMeta({ title: record.seoTitle, description: record.description, path: record.path, trail: procedureTrail(record) }),
-    { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${record.path}.md` },
+    ...pageMeta({
+      title: record.seoTitle,
+      description: record.description,
+      path: record.path,
+      trail: procedureTrail(record),
+    }),
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "text/markdown",
+      href: `${SITE_ORIGIN}${record.path}.md`,
+    },
     ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
 }
@@ -65,15 +88,36 @@ export function meta({ loaderData }: Route.MetaArgs) {
 export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
   const { record, draft, count, factor, units, workflow, proof, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
-  const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
+  const person = {
+    "@type": "Person",
+    "@id": personId(SITE_ORIGIN),
+    name: SITE.name,
+    url: SITE_ORIGIN,
+  };
   return (
     <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)) }} />}
+      trail={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
+          }}
+        />
+      }
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>
       {draft ? <p className="procedure-draft">Draft: only you can see this page.</p> : null}
-      <ProcedureView record={record} count={count} factor={factor} units={units} workflow={workflow} proof={proof} frozen={frozen} lineage={lineage} />
+      <ProcedureView
+        record={record}
+        count={count}
+        factor={factor}
+        units={units}
+        workflow={workflow}
+        proof={proof}
+        frozen={frozen}
+        lineage={lineage}
+      />
       {/* Run mode (app/enhance/run.ts): the page is complete as served; this adds the bench checklist. */}
       <template data-island="run" />
       {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}

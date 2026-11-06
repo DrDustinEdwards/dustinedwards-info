@@ -19,11 +19,14 @@ const PAGES = ["/", "/colophon"];
  */
 async function read(path) {
   try {
-    const res = await fetch(`${SITE_ORIGIN}${path}${path.includes("?") ? "&" : "?"}verify=${Date.now()}`, {
-      headers: { "user-agent": "deploy-verify", "cache-control": "no-cache" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(20_000),
-    });
+    const res = await fetch(
+      `${SITE_ORIGIN}${path}${path.includes("?") ? "&" : "?"}verify=${Date.now()}`,
+      {
+        headers: { "user-agent": "deploy-verify", "cache-control": "no-cache" },
+        redirect: "manual",
+        signal: AbortSignal.timeout(20_000),
+      },
+    );
     return { status: res.status, text: await res.text(), error: "" };
   } catch (error) {
     return { status: 0, text: "", error: error instanceof Error ? error.message : String(error) };
@@ -63,6 +66,7 @@ if (import.meta.main) {
   const result = verdict(pages, await read("/health"));
   for (const line of result.lines) console.log(line);
   if (result.code === 1) console.log("REFUSED: the new version does not serve the site.");
-  if (result.code === 3) console.log("COULD NOT RUN: nothing was decided, and production is left as it is.");
+  if (result.code === 3)
+    console.log("COULD NOT RUN: nothing was decided, and production is left as it is.");
   process.exit(result.code);
 }

@@ -42,7 +42,8 @@ for (const sheet of SHEETS) {
   for (const m of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
     const body = m[1];
     /** @param {string} prop @returns {string|null} */
-    const pick = (prop) => body.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i"))?.[1].trim() ?? null;
+    const pick = (prop) =>
+      body.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i"))?.[1].trim() ?? null;
     const family = (pick("font-family") ?? "").replace(/^['"]|['"]$/g, "");
     // The FIRST url() is the file this block is about. A block with none is a
     // local()-only face and is skipped, counted, below.
@@ -77,8 +78,7 @@ for (const sheet of SHEETS) {
     // A variant inherits its level's family: the base is the level name minus its last segment, used only
     // when no exact token exists.
     const base = level.includes("-") ? level.slice(0, level.lastIndexOf("-")) : null;
-    const family =
-      levelFamilies.get(level) ?? (base ? (levelFamilies.get(base) ?? null) : null);
+    const family = levelFamilies.get(level) ?? (base ? (levelFamilies.get(base) ?? null) : null);
     for (const a of value.matchAll(/['"]([a-zA-Z]{4})['"]\s*(-?[\d.]+)/g)) {
       variationRequests.push({ sheet, axis: a[1], value: Number(a[2]), family, level });
     }
@@ -125,11 +125,19 @@ const referenced = new Set(withFile.map((b) => b.file));
 const SPLIT_SCRIPT = join(root, "scripts", "split-latin-fonts.py");
 const splitScript = readFileSync(SPLIT_SCRIPT, "utf8");
 // The latin range the script cuts, which the two halves must cover between them.
-const SPLIT_LATIN = [...(splitScript.match(/^LATIN = \(([^)]*)\)/m)?.[1] ?? "").matchAll(/"([^"]*)"/g)].map((m) => m[1]).join("");
-const splitSources = [...(splitScript.match(/^FACES = \[([^\]]*)\]/m)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
-  (m) => join(root, "app", "fonts", `${m[1]}.woff2`),
+const SPLIT_LATIN = [
+  ...(splitScript.match(/^LATIN = \(([^)]*)\)/m)?.[1] ?? "").matchAll(/"([^"]*)"/g),
+]
+  .map((m) => m[1])
+  .join("");
+const splitSources = [
+  ...(splitScript.match(/^FACES = \[([^\]]*)\]/m)?.[1] ?? "").matchAll(/"([^"]+)"/g),
+].map((m) => join(root, "app", "fonts", `${m[1]}.woff2`));
+ok(
+  "scripts/split-latin-fonts.py names the files it cuts",
+  splitSources.length > 0,
+  "no FACES list was read from it",
 );
-ok("scripts/split-latin-fonts.py names the files it cuts", splitSources.length > 0, "no FACES list was read from it");
 for (const file of shipped) {
   const source = splitSources.includes(file);
   ok(
@@ -175,7 +183,8 @@ for (const b of withFile) {
   // "InterDisplay-Bold" pass for "Inter".
   ok(
     `${rel} is the family the declaration names`,
-    font.familyName === expected || font.postscriptName?.split("-")[0] === expected.replace(/\s+/g, ""),
+    font.familyName === expected ||
+      font.postscriptName?.split("-")[0] === expected.replace(/\s+/g, ""),
     `css says "${b.family}"${
       expected === b.family ? "" : ` (namespaced, and must be "${expected}")`
     }, the file's name table says "${font.familyName}" (${font.postscriptName})`,
@@ -183,7 +192,11 @@ for (const b of withFile) {
 
   // Absent means `normal`, and the two keywords a face descriptor accepts are numbers in disguise; a
   // value in none of these shapes used to fall through every branch unasserted.
-  const WEIGHT_KEYWORDS = /** @type {Record<string, string>} */ ({ "": "400", normal: "400", bold: "700" });
+  const WEIGHT_KEYWORDS = /** @type {Record<string, string>} */ ({
+    "": "400",
+    normal: "400",
+    bold: "700",
+  });
   const declaredWeight = (b.weight ?? "").trim().toLowerCase();
   const weight = WEIGHT_KEYWORDS[declaredWeight] ?? declaredWeight;
   const range = weight.match(/^(\d+)\s+(\d+)$/);
@@ -226,7 +239,8 @@ for (const b of withFile) {
   const style = (b.style ?? "normal").trim().toLowerCase();
   if (style === "italic" || style === "normal" || style.startsWith("oblique")) {
     const italicByAngle = font.italicAngle !== 0;
-    const italicByName = /italic|oblique/i.test(font.subfamilyName ?? "") || /italic/i.test(font.postscriptName ?? "");
+    const italicByName =
+      /italic|oblique/i.test(font.subfamilyName ?? "") || /italic/i.test(font.postscriptName ?? "");
     const isItalic = italicByAngle || italicByName || Boolean(axes.ital) || Boolean(axes.slnt);
     ok(
       `${rel} slant matches the declared font-style`,
@@ -246,7 +260,9 @@ for (const b of withFile) {
   if (stretch) {
     ok(
       `${rel} wdth range matches the declared font-stretch`,
-      axes.wdth !== undefined && axes.wdth.min === Number(stretch[1]) && axes.wdth.max === Number(stretch[2]),
+      axes.wdth !== undefined &&
+        axes.wdth.min === Number(stretch[1]) &&
+        axes.wdth.max === Number(stretch[2]),
       `css declares ${stretch[1]}% ${stretch[2]}%, the file's wdth is ${axes.wdth ? `${axes.wdth.min} to ${axes.wdth.max}` : "absent"}`,
     );
   } else if (declaredStretch !== "" && declaredStretch !== "normal" && declaredStretch !== "100%") {
@@ -301,12 +317,16 @@ function resolveFamily(value) {
     if (!decl) return null;
     v = decl[1].trim();
   }
-  return v.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
+  return v
+    .split(",")[0]
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
 }
 
-const faces = withFile.filter((b) => existsSync(b.file)).map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
+const faces = withFile
+  .filter((b) => existsSync(b.file))
+  .map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
 for (const req of variationRequests) {
-
   const where = req.level ? `--t-${req.level}-vars` : relative(root, req.sheet);
 
   // A level whose family cannot be resolved would be checked against nothing,
@@ -380,38 +400,59 @@ const codepoints = (range) => {
   return out;
 };
 const latin = codepoints(SPLIT_LATIN);
-ok("scripts/split-latin-fonts.py names the latin range it cuts", latin.size > 0, "no LATIN range was read from it");
+ok(
+  "scripts/split-latin-fonts.py names the latin range it cuts",
+  latin.size > 0,
+  "no LATIN range was read from it",
+);
 for (const source of splitSources) {
   const rel = relative(root, source);
   const halves = ["core", "rest"].map((part) => {
     const file = source.replace("-latin-", `-latin-${part}-`);
     const block = withFile.find((b) => b.file === file);
     const range = block?.raw.match(/unicode-range\s*:\s*([^;]+)/i)?.[1];
-    const has = existsSync(file) ? new Set(fontFor(file).characterSet.filter((c) => c !== 0xffff)) : null;
+    const has = existsSync(file)
+      ? new Set(fontFor(file).characterSet.filter((c) => c !== 0xffff))
+      : null;
     return { part, file, declared: range ? codepoints(range) : null, has };
   });
   // 0xFFFF is the cmap's end marker, which fontkit reports as a character.
   const sourceChars = new Set(fontFor(source).characterSet.filter((c) => c !== 0xffff));
   for (const half of halves) {
     const name = relative(root, half.file);
-    ok(`${name} exists and a block declares its unicode-range`, half.has !== null && half.declared !== null, `cut ${rel} with the script and declare the face in app.css`);
+    ok(
+      `${name} exists and a block declares its unicode-range`,
+      half.has !== null && half.declared !== null,
+      `cut ${rel} with the script and declare the face in app.css`,
+    );
     if (half.has === null || half.declared === null) continue;
     const declared = half.declared;
     const unreachable = [...half.has].filter((c) => !declared.has(c) && c >= 0x20);
     const missing = [...declared].filter((c) => sourceChars.has(c) && !half.has?.has(c));
-    ok(`${name} holds exactly the characters its unicode-range declares`, unreachable.length === 0 && missing.length === 0,
-      `in the file but not declared: ${unreachable.map((c) => c.toString(16)).join(" ") || "none"}; declared, in ${rel}, not in the file: ${missing.map((c) => c.toString(16)).join(" ") || "none"}`);
-    ok(`${name} is cut from ${rel} as it is now`, fontFor(half.file).version === fontFor(source).version,
-      `the cut says ${fontFor(half.file).version}, the source ${fontFor(source).version}; re-run scripts/split-latin-fonts.py`);
+    ok(
+      `${name} holds exactly the characters its unicode-range declares`,
+      unreachable.length === 0 && missing.length === 0,
+      `in the file but not declared: ${unreachable.map((c) => c.toString(16)).join(" ") || "none"}; declared, in ${rel}, not in the file: ${missing.map((c) => c.toString(16)).join(" ") || "none"}`,
+    );
+    ok(
+      `${name} is cut from ${rel} as it is now`,
+      fontFor(half.file).version === fontFor(source).version,
+      `the cut says ${fontFor(half.file).version}, the source ${fontFor(source).version}; re-run scripts/split-latin-fonts.py`,
+    );
   }
   const [core, rest] = halves;
   if (core.has && rest.has) {
     const both = [...core.has].filter((c) => rest.has?.has(c) && c >= 0x20);
     // Within the latin range: the source also maps a few combining marks outside it, which no face
     // ever offered.
-    const lost = [...sourceChars].filter((c) => latin.has(c) && !core.has?.has(c) && !rest.has?.has(c));
-    ok(`${rel}'s core and rest share no character and together hold all of it`, both.length === 0 && lost.length === 0,
-      `in both: ${both.map((c) => c.toString(16)).join(" ") || "none"}; in neither: ${lost.map((c) => c.toString(16)).join(" ") || "none"}`);
+    const lost = [...sourceChars].filter(
+      (c) => latin.has(c) && !core.has?.has(c) && !rest.has?.has(c),
+    );
+    ok(
+      `${rel}'s core and rest share no character and together hold all of it`,
+      both.length === 0 && lost.length === 0,
+      `in both: ${both.map((c) => c.toString(16)).join(" ") || "none"}; in neither: ${lost.map((c) => c.toString(16)).join(" ") || "none"}`,
+    );
   }
 }
 
@@ -419,14 +460,20 @@ for (const source of splitSources) {
 /** @param {string} file */
 const digest = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
 const allBinaries = [...shipped, ...OG_FACES.map((f) => f.file)].filter(existsSync).sort();
-const current = Object.fromEntries(allBinaries.map((f) => [relative(root, f).split("\\").join("/"), digest(f)]));
+const current = Object.fromEntries(
+  allBinaries.map((f) => [relative(root, f).split("\\").join("/"), digest(f)]),
+);
 
 if (update) {
   writeFileSync(FIXTURE, `${JSON.stringify(current, null, 2)}\n`);
   console.log(`  --update: rewrote the baseline with ${Object.keys(current).length} digest(s).`);
   console.log("  THIS IS DELIBERATELY LOUD. Commit it only if the font change was intended.\n");
 } else {
-  ok("the font baseline exists", existsSync(FIXTURE), `${relative(root, FIXTURE)} is missing; regenerate with --update`);
+  ok(
+    "the font baseline exists",
+    existsSync(FIXTURE),
+    `${relative(root, FIXTURE)} is missing; regenerate with --update`,
+  );
   if (existsSync(FIXTURE)) {
     /** @type {Record<string, string>} */
     const pinned = JSON.parse(readFileSync(FIXTURE, "utf8"));
@@ -437,7 +484,11 @@ if (update) {
     );
     // Both directions: a count match alone passes when one pinned file is swapped for another.
     for (const name of Object.keys(pinned)) {
-      ok(`${name} is pinned and still on disk`, name in current, "the baseline names a binary that is gone");
+      ok(
+        `${name} is pinned and still on disk`,
+        name in current,
+        "the baseline names a binary that is gone",
+      );
     }
     for (const [name, sha] of Object.entries(current)) {
       ok(
@@ -445,7 +496,7 @@ if (update) {
         pinned[name] === sha,
         pinned[name]
           ? `expected ${pinned[name].slice(0, 16)}, got ${sha.slice(0, 16)}. A re-subset keeps every axis and changes ` +
-            `the glyphs; if the change was intended, re-run with --update.`
+              `the glyphs; if the change was intended, re-run with --update.`
           : `not in the baseline; re-run with --update if the file is new`,
       );
     }

@@ -116,7 +116,8 @@ export async function seedPublications() {
       host: { pdf: async () => ({ size: 1 }) },
       citedByArtifact,
     });
-    if (!compiled.ok) throw new Error(`${file} does not compile:\n  ${compiled.errors.join("\n  ")}`);
+    if (!compiled.ok)
+      throw new Error(`${file} does not compile:\n  ${compiled.errors.join("\n  ")}`);
     await writePublicationRow(env as never, compiled);
   }
   return Object.keys(PUBLICATION_FILES).length;
@@ -125,7 +126,9 @@ export async function seedPublications() {
 /** The citation counts the committed snapshot holds, in the table the pages read. */
 export async function seedCitations() {
   const { default: artifact } = await import("../../data/publications.cited-by.json");
-  const works = (artifact as unknown as { works: Record<string, { openalexId: string; total: number }> }).works;
+  const works = (
+    artifact as unknown as { works: Record<string, { openalexId: string; total: number }> }
+  ).works;
   for (const [doi, work] of Object.entries(works)) {
     await env.DB.prepare(
       `INSERT OR REPLACE INTO publication_citations (doi, count, url, fetched_at) VALUES (?1, ?2, ?3, '2026-09-12')`,
@@ -141,8 +144,11 @@ export async function seedCitations() {
  * the page the site serves. No search records: nothing here reads them.
  */
 export async function seedPages(only?: readonly string[]) {
-  const rows = (pagesArtifact.pages as PageArtifactRow[]).filter((row) => !only || only.includes(row.path));
-  if (rows.length === 0) throw new Error("seedPages found no page rows. Run npm run build:content first.");
+  const rows = (pagesArtifact.pages as PageArtifactRow[]).filter(
+    (row) => !only || only.includes(row.path),
+  );
+  if (rows.length === 0)
+    throw new Error("seedPages found no page rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -151,7 +157,17 @@ export async function seedPages(only?: readonly string[]) {
          ON CONFLICT(slug) DO UPDATE SET title = excluded.title, description = excluded.description,
            status = excluded.status, record = excluded.record, markdown = excluded.markdown,
            source_blob_sha = excluded.source_blob_sha`,
-      ).bind(r.slug, r.path, r.title, r.description, r.status, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
+      ).bind(
+        r.slug,
+        r.path,
+        r.title,
+        r.description,
+        r.status,
+        r.record,
+        r.markdown,
+        r.sourcePath,
+        r.sourceBlobSha,
+      ),
     ),
   );
 }
@@ -163,7 +179,8 @@ export async function seedPages(only?: readonly string[]) {
  */
 export async function seedProcedures() {
   const rows = proceduresArtifact.procedures;
-  if (rows.length === 0) throw new Error("seedProcedures found no procedure rows. Run npm run build:content first.");
+  if (rows.length === 0)
+    throw new Error("seedProcedures found no procedure rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -172,7 +189,20 @@ export async function seedProcedures() {
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
          ON CONFLICT(slug) DO UPDATE SET path = excluded.path, status = excluded.status, record = excluded.record,
            markdown = excluded.markdown, source_blob_sha = excluded.source_blob_sha`,
-      ).bind(r.slug, r.path, r.profile, r.title, r.description, r.status, r.version, r.updated, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
+      ).bind(
+        r.slug,
+        r.path,
+        r.profile,
+        r.title,
+        r.description,
+        r.status,
+        r.version,
+        r.updated,
+        r.record,
+        r.markdown,
+        r.sourcePath,
+        r.sourceBlobSha,
+      ),
     ),
   );
 }
@@ -184,7 +214,8 @@ export async function seedProcedures() {
  */
 export async function seedCv() {
   const rows = cvArtifact.cv;
-  if (rows.length === 0) throw new Error("seedCv found no CV rows. Run npm run build:content first.");
+  if (rows.length === 0)
+    throw new Error("seedCv found no CV rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -203,7 +234,8 @@ export async function seedCv() {
  */
 export async function seedDictionary(only?: readonly string[]) {
   const rows = dictionaryArtifact.dictionary.filter((row) => !only || only.includes(row.path));
-  if (rows.length === 0) throw new Error("seedDictionary found no entry rows. Run npm run build:content first.");
+  if (rows.length === 0)
+    throw new Error("seedDictionary found no entry rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -224,7 +256,12 @@ export async function seedDictionary(only?: readonly string[]) {
 export const SYNTHETIC_COHORTS = [
   {
     year: 2031,
-    photo: { src: "/media/dustin-edwards-synthetic-0123456789abcdef-1080x720.webp", width: 1080, height: 720, alt: "Group photo of the 2031 Phage Discovery Program cohort" },
+    photo: {
+      src: "/media/dustin-edwards-synthetic-0123456789abcdef-1080x720.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2031 Phage Discovery Program cohort",
+    },
     researchers: ["Example Person One", "Example Person Two", "Example Person Three"],
   },
   {
@@ -235,13 +272,25 @@ export const SYNTHETIC_COHORTS = [
 ] as const;
 
 /** A cohort's file, as the repository holds it: front matter and no body. */
-export async function cohortFile(cohort: { year: number; photo: unknown; researchers: readonly string[] }) {
+export async function cohortFile(cohort: {
+  year: number;
+  photo: unknown;
+  researchers: readonly string[];
+}) {
   const { default: matter } = await import("gray-matter");
-  return matter.stringify("", { year: cohort.year, photo: cohort.photo, researchers: [...cohort.researchers] }).replace(/\n+$/, "\n");
+  return matter
+    .stringify("", { year: cohort.year, photo: cohort.photo, researchers: [...cohort.researchers] })
+    .replace(/\n+$/, "\n");
 }
 
 /** The roster table, from the synthetic cohorts (or the ones given), written through the save's own row writer. */
-export async function seedRoster(cohorts: ReadonlyArray<{ year: number; photo: unknown; researchers: readonly string[] }> = SYNTHETIC_COHORTS) {
+export async function seedRoster(
+  cohorts: ReadonlyArray<{
+    year: number;
+    photo: unknown;
+    researchers: readonly string[];
+  }> = SYNTHETIC_COHORTS,
+) {
   const { compileCohort } = await import("~/lib/roster/compile.mjs");
   const { writeRosterRow } = await import("~/lib/roster/save.server");
   for (const cohort of cohorts) {
@@ -251,7 +300,10 @@ export async function seedRoster(cohorts: ReadonlyArray<{ year: number; photo: u
       host: { photo: async () => true },
       pipeline: { findWideDashes: () => [] },
     });
-    if (!compiled.ok) throw new Error(`the ${cohort.year} cohort does not compile:\n  ${compiled.errors.join("\n  ")}`);
+    if (!compiled.ok)
+      throw new Error(
+        `the ${cohort.year} cohort does not compile:\n  ${compiled.errors.join("\n  ")}`,
+      );
     await writeRosterRow(env as never, compiled);
   }
   return cohorts.length;
@@ -264,7 +316,8 @@ export async function seedRoster(cohorts: ReadonlyArray<{ year: number; photo: u
  */
 export async function seedPhages() {
   const rows = phagesArtifact.phages;
-  if (rows.length === 0) throw new Error("seedPhages found no phage rows. Run npm run build:content first.");
+  if (rows.length === 0)
+    throw new Error("seedPhages found no phage rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -284,7 +337,8 @@ export async function seedPhages() {
  */
 export async function seedRegistry() {
   const rows = registryArtifact.registry;
-  if (rows.length === 0) throw new Error("seedRegistry found no registry rows. Run npm run build:content first.");
+  if (rows.length === 0)
+    throw new Error("seedRegistry found no registry rows. Run npm run build:content first.");
   await env.DB.batch(
     rows.map((r) =>
       env.DB.prepare(
@@ -300,21 +354,42 @@ export async function seedRegistry() {
 
 /* The strain records as the repository holds them, by repo path: a protocol that names its host strains by id (docs/REGISTRY.md)
  * compiles only where the repository holds those strains, so a case that saves one adds these to its stubbed GitHub. */
-const STRAIN_FILES = import.meta.glob("../../content/registry/strain/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const STRAIN_FILES = import.meta.glob("../../content/registry/strain/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 export const strainRepoFiles: Record<string, string> = Object.fromEntries(
-  Object.entries(STRAIN_FILES).map(([path, raw]) => [`content/registry/strain/${path.split("/").pop()}`, raw]),
+  Object.entries(STRAIN_FILES).map(([path, raw]) => [
+    `content/registry/strain/${path.split("/").pop()}`,
+    raw,
+  ]),
 );
 
 /* The reagent records as the repository holds them, by repo path: a protocol whose materials name reagents by id compiles only
  * where the repository holds those reagents, so a case that saves one adds these to its stubbed GitHub. */
-const REAGENT_FILES = import.meta.glob("../../content/registry/reagent/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const REAGENT_FILES = import.meta.glob("../../content/registry/reagent/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 export const reagentRepoFiles: Record<string, string> = Object.fromEntries(
-  Object.entries(REAGENT_FILES).map(([path, raw]) => [`content/registry/reagent/${path.split("/").pop()}`, raw]),
+  Object.entries(REAGENT_FILES).map(([path, raw]) => [
+    `content/registry/reagent/${path.split("/").pop()}`,
+    raw,
+  ]),
 );
 
 /* The equipment records as the repository holds them, by repo path: a protocol whose equipment list names registry items by id
  * compiles only where the repository holds those items, so a case that saves one adds these to its stubbed GitHub. */
-const EQUIPMENT_FILES = import.meta.glob("../../content/registry/equipment/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const EQUIPMENT_FILES = import.meta.glob("../../content/registry/equipment/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 export const equipmentRepoFiles: Record<string, string> = Object.fromEntries(
-  Object.entries(EQUIPMENT_FILES).map(([path, raw]) => [`content/registry/equipment/${path.split("/").pop()}`, raw]),
+  Object.entries(EQUIPMENT_FILES).map(([path, raw]) => [
+    `content/registry/equipment/${path.split("/").pop()}`,
+    raw,
+  ]),
 );

@@ -2,7 +2,16 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import { ApiLegError, callOperator } from "../src/api-client.ts";
-import { API_URL, HEALTH_URL, ORIGIN, SITE, FIRST_PUBLISH_REFUSAL, TOKEN, fakeOperator, type FakeOperator } from "./fake-operator.ts";
+import {
+  API_URL,
+  HEALTH_URL,
+  ORIGIN,
+  SITE,
+  FIRST_PUBLISH_REFUSAL,
+  TOKEN,
+  fakeOperator,
+  type FakeOperator,
+} from "./fake-operator.ts";
 
 const ENV = { SITE, SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: TOKEN };
 
@@ -41,7 +50,10 @@ describe("callOperator: the request it sends", () => {
     await callOperator(ENV, "save_procedure", { slug: "a", raw: "x" });
     api.reply({ throws: new Error("socket hang up") });
     await callOperator(ENV, "list_procedures", {}).catch(() => {});
-    assert.ok(api.logs.every((line) => !line.includes(TOKEN)), api.logs.join("\n"));
+    assert.ok(
+      api.logs.every((line) => !line.includes(TOKEN)),
+      api.logs.join("\n"),
+    );
   });
 });
 
@@ -51,7 +63,11 @@ describe("callOperator: what comes back", () => {
   test("returns the API's data unchanged on ok:true", async () => {
     const data = { procedures: [{ slug: "a" }], headSha: "abc1234" };
     api.reply({ body: { ok: true, data } });
-    assert.deepEqual(await callOperator(ENV, "list_procedures", {}), { status: 200, ok: true, data });
+    assert.deepEqual(await callOperator(ENV, "list_procedures", {}), {
+      status: 200,
+      ok: true,
+      data,
+    });
   });
 
   test("relays a 403 first-publish refusal in the API's own words", async () => {
@@ -83,10 +99,12 @@ describe("callOperator: what comes back", () => {
       api.reply({ status: 200, raw });
       await assert.rejects(
         callOperator(ENV, "list_procedures", {}),
-        (e: unknown) => e instanceof ApiLegError && e.kind === "malformed" && /unrecognized payload shape/.test(e.message),
+        (e: unknown) =>
+          e instanceof ApiLegError &&
+          e.kind === "malformed" &&
+          /unrecognized payload shape/.test(e.message),
         `body ${JSON.stringify(raw)}`,
       );
     }
   });
 });
-

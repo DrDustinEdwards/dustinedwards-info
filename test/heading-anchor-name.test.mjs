@@ -8,6 +8,8 @@ import { render } from "./lib/render.mjs";
 
 await test("each heading anchor is named by its own heading, without the # it appends", async () => {
   const { html } = await render("## Measured results\n\nText.\n\n### Why it held\n\nMore.\n");
-  const labels = [...html.matchAll(/class="heading-anchor"[^>]*aria-label="([^"]*)"/g)].map((m) => m[1]);
+  const labels = [...html.matchAll(/class="heading-anchor"[^>]*aria-label="([^"]*)"/g)].map(
+    (m) => m[1],
+  );
   assert.deepEqual(labels, ["Link to section: Measured results", "Link to section: Why it held"]);
 });

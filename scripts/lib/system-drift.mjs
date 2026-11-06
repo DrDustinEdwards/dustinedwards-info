@@ -37,7 +37,10 @@ const partsOf = (config) => [
   ...(config.d1_databases ?? []).map((/** @type {any} */ d) => ["database", d.database_name]),
   ...(config.r2_buckets ?? []).map((/** @type {any} */ b) => ["bucket", b.bucket_name]),
   ...(config.kv_namespaces ?? []).map((/** @type {any} */ k) => ["kv", k.binding]),
-  ...[...(config.queues?.producers ?? []), ...(config.queues?.consumers ?? [])].map((q) => ["queue", q.queue]),
+  ...[...(config.queues?.producers ?? []), ...(config.queues?.consumers ?? [])].map((q) => [
+    "queue",
+    q.queue,
+  ]),
   ...(config.triggers?.crons?.length ? [["cron", config.name]] : []),
 ];
 
@@ -78,11 +81,17 @@ export async function undeclaredParts(model, raw) {
     checked.push(system.id);
     /** @type {Map<string, Set<string>>} */
     const declared = new Map();
-    for (const [kind, name] of configs.flatMap(partsOf)) declared.set(kind, (declared.get(kind) ?? new Set()).add(name));
+    for (const [kind, name] of configs.flatMap(partsOf))
+      declared.set(kind, (declared.get(kind) ?? new Set()).add(name));
     for (const [kind, names] of declared) {
       const kinds = DRAWN_AS[kind] ?? [kind];
-      const listed = model.containers.filter((c) => c.system === system.id && kinds.includes(c.kind)).length;
-      if (names.size > listed) missing.push(`${system.id}: ${names.size} ${kind} in Wrangler (${[...names].join(", ")}), ${listed} in the model`);
+      const listed = model.containers.filter(
+        (c) => c.system === system.id && kinds.includes(c.kind),
+      ).length;
+      if (names.size > listed)
+        missing.push(
+          `${system.id}: ${names.size} ${kind} in Wrangler (${[...names].join(", ")}), ${listed} in the model`,
+        );
     }
   }
   return { missing, checked, skipped };

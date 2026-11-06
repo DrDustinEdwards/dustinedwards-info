@@ -7,7 +7,8 @@ import { agentScopes as sharedAgentScopes } from "@dustinedwards/site-runtime/ag
 import { SCOPES } from "../src/auth.ts";
 
 // The shared rule is tested in site-runtime; what is this server's is the deployed AGENT_WRITE below.
-const agentScopes = (env: { AGENT_WRITE?: string }, principal: string) => sharedAgentScopes(env, principal, SCOPES);
+const agentScopes = (env: { AGENT_WRITE?: string }, principal: string) =>
+  sharedAgentScopes(env, principal, SCOPES);
 
 describe("the deployed AGENT_WRITE", () => {
   // Read from the tracked config, the one the CI build and a fresh deploy start from, through the

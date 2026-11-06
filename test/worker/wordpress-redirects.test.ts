@@ -13,7 +13,11 @@ const APEX = "https://dustinedwards.info";
 
 async function get(url: string) {
   const ctx = createExecutionContext();
-  const response = await worker.fetch(new Request(url, { redirect: "manual" }) as never, env as never, ctx);
+  const response = await worker.fetch(
+    new Request(url, { redirect: "manual" }) as never,
+    env as never,
+    ctx,
+  );
   await waitOnExecutionContext(ctx);
   return response;
 }
@@ -50,7 +54,12 @@ describe("pattern rules, on the apex host", () => {
   });
 
   it("the four phage project pages go to /research/phages", async () => {
-    for (const path of ["/phylogenetics-lysm/", "/arlo-gene-67/", "/arlo-gene-67-cloning/", "/raspberry-pi-plaque-counter/"]) {
+    for (const path of [
+      "/phylogenetics-lysm/",
+      "/arlo-gene-67/",
+      "/arlo-gene-67-cloning/",
+      "/raspberry-pi-plaque-counter/",
+    ]) {
       await expectMoved(path, "/research/phages");
     }
   });
@@ -72,7 +81,14 @@ describe("pattern rules, on the apex host", () => {
   });
 
   it("the membership pages, the bare /user/ directory among them, answer 410", async () => {
-    for (const path of ["/user/", "/register/", "/members/", "/logout/", "/account/", "/password-reset/"]) {
+    for (const path of [
+      "/user/",
+      "/register/",
+      "/members/",
+      "/logout/",
+      "/account/",
+      "/password-reset/",
+    ]) {
       await expectGone(path);
     }
   });
@@ -102,12 +118,18 @@ describe("pattern rules, on the apex host", () => {
   });
 
   it("the 2019 CV PDF goes to the current CV PDF", async () => {
-    await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/dustin-edwards-cv.pdf");
+    await expectMoved(
+      "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf",
+      "/dustin-edwards-cv.pdf",
+    );
   });
 
   it("the two protocol scans that still earn traffic go to their protocol", async () => {
     await expectMoved("/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols");
-    await expectMoved("/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf", "/research/protocols/phage-dna-extraction");
+    await expectMoved(
+      "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf",
+      "/research/protocols/phage-dna-extraction",
+    );
   });
 
   it("every other upload answers 410", async () => {

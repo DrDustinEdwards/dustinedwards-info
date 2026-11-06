@@ -60,7 +60,9 @@ async function main() {
       console.log(`  MISS ${id} (${doi}) HTTP ${single.status}`);
       continue;
     }
-    const openalexId = String(single.body.id ?? "").split("/").pop();
+    const openalexId = String(single.body.id ?? "")
+      .split("/")
+      .pop();
     const total = single.body.cited_by_count;
     if (!Number.isInteger(total) || total < 0) {
       failed.push(`${id} (${doi}): cited_by_count is ${JSON.stringify(total)}, not a count`);

@@ -1,5 +1,10 @@
 import { getEnv } from "~/lib/context";
-import { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL, SITE_ORIGIN, scheduledEdgeCacheControl } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  SITE_ORIGIN,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import { SITE_URLS_CACHE_TAGS, gatherSiteUrls } from "~/lib/site-urls.server";
 import { sitemapDocument } from "@drdustinedwards/site-helpers/sitemap";
 import type { Route } from "./+types/sitemap";
@@ -12,7 +17,11 @@ import type { Route } from "./+types/sitemap";
 export async function loader({ context }: Route.LoaderArgs) {
   const { urls, files, nextPublishAt } = await gatherSiteUrls(getEnv(context));
   const body = sitemapDocument([
-    ...urls.map((url) => ({ loc: SITE_ORIGIN + url.path, lastmod: url.lastmod, images: url.images?.map((src) => SITE_ORIGIN + src) })),
+    ...urls.map((url) => ({
+      loc: SITE_ORIGIN + url.path,
+      lastmod: url.lastmod,
+      images: url.images?.map((src) => SITE_ORIGIN + src),
+    })),
     ...files.map((file) => ({ loc: SITE_ORIGIN + file.path, lastmod: file.lastmod })),
   ]);
 

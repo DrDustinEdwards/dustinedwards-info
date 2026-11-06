@@ -12,5 +12,9 @@ export const SECURITY_CONTACT = "security@dustinedwards.info";
 export const SECURITY_TXT_EXPIRES = "2027-09-28T00:00:00.000Z";
 
 export function loader() {
-  return securityTxtResponse({ origin: SITE_ORIGIN, contact: SECURITY_CONTACT, expires: SECURITY_TXT_EXPIRES });
+  return securityTxtResponse({
+    origin: SITE_ORIGIN,
+    contact: SECURITY_CONTACT,
+    expires: SECURITY_TXT_EXPIRES,
+  });
 }

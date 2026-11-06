@@ -44,7 +44,9 @@ const under = (path, root) => path === root || path.startsWith(`${root}/`);
 
 /** The id of the section a path belongs to. @param {string} path */
 export function sectionOf(path) {
-  const found = SITE_MAP_SECTIONS.find((section) => section.roots.some((root) => under(path, root)));
+  const found = SITE_MAP_SECTIONS.find((section) =>
+    section.roots.some((root) => under(path, root)),
+  );
   return found ? found.id : "site";
 }
 
@@ -70,14 +72,27 @@ export function siteMapSections(urls) {
     lines.push({ to: url.path, label: url.title });
   }
   for (const { tally, count } of tallies.values()) {
-    const index = tally.merge ? lines.find((line) => line.to === tally.to && line.count === undefined && !line.plain) : undefined;
+    const index = tally.merge
+      ? lines.find((line) => line.to === tally.to && line.count === undefined && !line.plain)
+      : undefined;
     if (index) index.count = count;
-    else lines.push({ to: tally.to, label: tally.label, count, ...(tally.merge ? {} : { plain: true }) });
+    else
+      lines.push({
+        to: tally.to,
+        label: tally.label,
+        count,
+        ...(tally.merge ? {} : { plain: true }),
+      });
   }
   return SITE_MAP_SECTIONS.map(({ id, heading, to }) => {
     const own = lines.filter((line) => sectionOf(line.to) === id);
     const isHub = (/** @type {SiteMapLine} */ line) => line.to === to && !line.plain;
-    return { id, heading, to, lines: [...own.filter(isHub), ...own.filter((line) => !isHub(line))] };
+    return {
+      id,
+      heading,
+      to,
+      lines: [...own.filter(isHub), ...own.filter((line) => !isHub(line))],
+    };
   }).filter((section) => section.lines.length > 0);
 }
 

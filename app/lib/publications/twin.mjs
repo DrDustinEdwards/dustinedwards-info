@@ -98,15 +98,13 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
     // repo, and the artifact carries the date it was read.
     // accessions: absent, not empty, when there are none: the journal may simply have required no statement.
     ...(paper.accessions && paper.accessions.length > 0
-      ? [
-          "accessions:",
-          ...paper.accessions.map(
-            (a) => `  - ${yamlString(`${a.kind}:${a.id}`)}`,
-          ),
-        ]
+      ? ["accessions:", ...paper.accessions.map((a) => `  - ${yamlString(`${a.kind}:${a.id}`)}`)]
       : []),
     ...line("citedBy", citedBy ? citedBy.total : null),
-    ...line("citedBySource", citedBy && citedByFetchedAt ? `OpenAlex, read ${citedByFetchedAt}` : null),
+    ...line(
+      "citedBySource",
+      citedBy && citedByFetchedAt ? `OpenAlex, read ${citedByFetchedAt}` : null,
+    ),
     "---",
     "",
   ];

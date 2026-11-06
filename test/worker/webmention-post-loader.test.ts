@@ -104,7 +104,9 @@ describe("the post loader carries approved mentions and advertises the endpoint"
       thrown = error;
     }
     expect(thrown).toBeTruthy();
-    expect((thrown as { init?: { status?: number } })?.init?.status ?? (thrown as Response)?.status).toBe(404);
+    expect(
+      (thrown as { init?: { status?: number } })?.init?.status ?? (thrown as Response)?.status,
+    ).toBe(404);
 
     const row = await env.DB.prepare(
       `SELECT status FROM webmentions WHERE source_url = 'https://elsewhere.example/on-a-draft'`,

@@ -48,13 +48,15 @@ const SECTIONS: Section[] = [
 
 const SITE_SECTION: Section = { prefix: "/", no: "0", trail: ["Site"] };
 
-const under = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+const under = (pathname: string, prefix: string) =>
+  pathname === prefix || pathname.startsWith(`${prefix}/`);
 
 /** The section a path sits in, for the running head and the letterhead's folio. */
 export function sectionOf(pathname: string): Section {
   let best = SITE_SECTION;
   for (const section of SECTIONS) {
-    if (under(pathname, section.prefix) && section.prefix.length > best.prefix.length) best = section;
+    if (under(pathname, section.prefix) && section.prefix.length > best.prefix.length)
+      best = section;
   }
   return best;
 }
@@ -80,11 +82,15 @@ const PATCH_UNITS: Record<string, string> = {
  * Apollo crew wore its mission's number: the page's name round the top, the part's name round the foot, its
  * number within the part on the disc. Null for every other page.
  */
-export function patchOf(pathname: string): { id: string; name: string; foot: string; count: number; unit: string } | null {
+export function patchOf(
+  pathname: string,
+): { id: string; name: string; foot: string; count: number; unit: string } | null {
   const section = SECTIONS.find((s) => s.prefix === pathname);
   const unit = section ? PATCH_UNITS[section.no] : undefined;
   if (!section || !unit) return null;
-  const members = SECTIONS.filter((s) => s.no === section.no && s.trail.length === section.trail.length);
+  const members = SECTIONS.filter(
+    (s) => s.no === section.no && s.trail.length === section.trail.length,
+  );
   const slug = pathname.slice(pathname.lastIndexOf("/") + 1);
   return {
     id: slug,

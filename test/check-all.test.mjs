@@ -11,7 +11,11 @@ await test("importing check-all with --all on the command line does not set SCHE
   process.argv.push("--all");
   try {
     await import("../scripts/check-all.mjs");
-    assert.equal(process.env.SCHEMA_LIVE, undefined, "only running the tier may point the schema test at production");
+    assert.equal(
+      process.env.SCHEMA_LIVE,
+      undefined,
+      "only running the tier may point the schema test at production",
+    );
   } finally {
     process.argv.pop();
     if (before === undefined) delete process.env.SCHEMA_LIVE;

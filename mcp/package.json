@@ -2,8 +2,8 @@
   "name": "dustinedwards-mcp",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "description": "Dustin Edwards Admin: the admin MCP server for dustinedwards.info, a wrapper over its operator API. Contains no policy.",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev -c wrangler.jsonc",
     "typecheck": "wrangler types -c wrangler.jsonc && tsc -b",
@@ -14,22 +14,22 @@
     "check:conformance": "devkit-conformance",
     "build": "wrangler deploy --dry-run -c wrangler.jsonc --outdir=dist"
   },
-  "devDependencies": {
-    "@modelcontextprotocol/conformance": "0.2.0-alpha.10",
-    "typescript": "6.0.3",
-    "wrangler": "4.156.0"
-  },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "1.2.4",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.23.0",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.24.0",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.84.0",
     "@modelcontextprotocol/server": "2.4.0",
     "agents": "0.32.0",
     "zod": "4.6.6"
   },
+  "devDependencies": {
+    "@modelcontextprotocol/conformance": "0.2.0-alpha.10",
+    "typescript": "6.0.3",
+    "wrangler": "4.156.0"
+  },
   "overrides": {
-    "@modelcontextprotocol/sdk": "1.32.1",
-    "@modelcontextprotocol/client": "2.3.1"
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/sdk": "1.32.1"
   },
   "allowScripts": {
     "core-js-pure": false,

@@ -32,7 +32,8 @@ const TRAIL: Trail = [[TITLE, SYSTEMS_PATH]];
 const MAP = systemMapHtml(mapData(MODEL), {
   id: "network",
   label: "The network of systems",
-  caption: "Capsid at the core, the shared packages around it, and what people use, by group, on the outside. Point at a system to light what it uses and what uses it, or open it.",
+  caption:
+    "Capsid at the core, the shared packages around it, and what people use, by group, on the outside. Point at a system to light what it uses and what uses it, or open it.",
   ringNames: { shared: "Shared packages", core: "Core" },
   headingLevel: 2,
 });

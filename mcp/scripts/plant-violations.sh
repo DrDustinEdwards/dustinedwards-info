@@ -201,7 +201,7 @@ expect_fail "17. tool registered around invokeTool"
 # 18. The shared door handed scopes other than this server's (rule 12.1, 12.3).
 python3 -c "
 p='src/mcp-handler.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('const SERVER: McpServerInfo = { site: \"dustinedwards.info\", scopes: SCOPES,','const SERVER: McpServerInfo = { site: \"dustinedwards.info\", scopes: { read: \"\", write: \"\" },',1)
+s=s.replace('site: \"dustinedwards.info\",\n  scopes: SCOPES,','site: \"dustinedwards.info\",\n  scopes: { read: \"\", write: \"\" },',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "18. invokeTool given scopes other than this server's"
 

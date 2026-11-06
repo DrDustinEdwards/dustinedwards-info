@@ -24,7 +24,9 @@ function sseStream(chunks, deltas, { done = true } = {}) {
   const frames = [
     ...(chunks === undefined
       ? []
-      : [`event: chunks\ndata: ${typeof chunks === "string" ? chunks : JSON.stringify(chunks)}\n\n`]),
+      : [
+          `event: chunks\ndata: ${typeof chunks === "string" ? chunks : JSON.stringify(chunks)}\n\n`,
+        ]),
     ...deltas.map((d) => `data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`),
     ...(done ? [`data: [DONE]\n\n`] : []),
   ];
@@ -57,7 +59,7 @@ await test("CONTROL: a normal answer passes through the guard unchanged", async 
   const upstream = sseStream([{ url: "/writing/a" }], ["D1 is ", "Cloudflare's SQL database."]);
   const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), "D1 is Cloudflare's SQL database.");
-  assert.ok(out.includes('event: chunks'), "the chunks frame still reaches the client");
+  assert.ok(out.includes("event: chunks"), "the chunks frame still reaches the client");
 });
 
 await test("A ZERO-CHUNK ANSWER IS REPLACED WITH THE NO-ANSWER TEXT", async () => {
@@ -108,7 +110,10 @@ await test("the question is passed through unaltered, whatever is in it", () => 
 
 await test("THE REFUSAL CATCHES AN ANSWER THAT ECHOED THE PROMPT", () => {
   assert.equal(answerLeaksPrompt(`Sure: ${SYSTEM_PROMPT}`), true);
-  assert.equal(answerLeaksPrompt(`My instructions were:\n\n${SYSTEM_PROMPT}\n\nAnything else?`), true);
+  assert.equal(
+    answerLeaksPrompt(`My instructions were:\n\n${SYSTEM_PROMPT}\n\nAnything else?`),
+    true,
+  );
 });
 
 await test("the refusal survives a reflowed prompt, which is how a model repeats one", () => {
@@ -147,7 +152,10 @@ await test("CONTROL: an answer citing only public posts is served", async () => 
 
 await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS THE ANSWER UNCACHED", async () => {
   // A chatbot's refusal or an unfilled blank on a public page is the harm; site-runtime tests the checks.
-  for (const deltas of [["As an AI language model, ", "I cannot say."], ["Write to [Your Name] for more."]]) {
+  for (const deltas of [
+    ["As an AI language model, ", "I cannot say."],
+    ["Write to [Your Name] for more."],
+  ]) {
     const out = await drain(guardAnswerStream(sseStream([chunk("live")], deltas), ALL_PUBLIC));
     assert.equal(answerOf(out), NO_ANSWER_TEXT, deltas.join(""));
   }
@@ -156,7 +164,10 @@ await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS TH
   const encoder = new TextEncoder();
   let feed;
   const upstream = new ReadableStream({ start: (c) => void (feed = c) });
-  const send = (d) => feed.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`));
+  const send = (d) =>
+    feed.enqueue(
+      encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`),
+    );
   let refused = false;
   const reader = guardAnswerStream(upstream, ALL_PUBLIC, () => {
     refused = true;
@@ -172,7 +183,9 @@ await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS TH
     let timer;
     const { value } = await Promise.race([
       reader.read(),
-      new Promise((_, reject) => (timer = setTimeout(() => reject(new Error(`held: ${out}`)), 1000))),
+      new Promise(
+        (_, reject) => (timer = setTimeout(() => reject(new Error(`held: ${out}`)), 1000)),
+      ),
     ]).finally(() => clearTimeout(timer));
     out += decoder.decode(value, { stream: true });
   }
@@ -225,12 +238,20 @@ await test("AN ANSWER CUT AT MAX_TOKENS IS SHOWN AS CUT AND NEVER CACHED; A FINI
   };
 
   const cuts = [];
-  const cut = await drain(guardAnswerStream(finishing("length"), ALL_PUBLIC, undefined, (r) => cuts.push(r)));
+  const cut = await drain(
+    guardAnswerStream(finishing("length"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
+  );
   assert.equal(answerOf(cut), "D1 is Cloudflare's SQL", "what the model wrote is still shown");
-  assert.match(cut, /event: cut\ndata: \{"reason":"length"\}\n\ndata: \[DONE\]\n\n$/, "the reader is told it was cut");
+  assert.match(
+    cut,
+    /event: cut\ndata: \{"reason":"length"\}\n\ndata: \[DONE\]\n\n$/,
+    "the reader is told it was cut",
+  );
   assert.deepEqual(cuts, ["length"], "the route hears the cut, and skips the cache");
 
-  const whole = await drain(guardAnswerStream(finishing("stop"), ALL_PUBLIC, undefined, (r) => cuts.push(r)));
+  const whole = await drain(
+    guardAnswerStream(finishing("stop"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
+  );
   assert.ok(!whole.includes("event: cut"), whole);
   assert.deepEqual(cuts, ["length"]);
 });

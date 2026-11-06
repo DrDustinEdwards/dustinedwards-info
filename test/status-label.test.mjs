@@ -28,7 +28,11 @@ await test("an unknown status THROWS rather than returning the raw value, and na
     (error) => {
       assert.ok(error instanceof Error, "it threw a non-Error");
       assert.match(error.message, /wibble/, "the error does not name the offending status");
-      assert.match(error.message, /STATUS_LABEL/, "the error does not say where to add the missing label");
+      assert.match(
+        error.message,
+        /STATUS_LABEL/,
+        "the error does not say where to add the missing label",
+      );
       return true;
     },
   );

@@ -8,12 +8,7 @@ import { PUBLICATIONS_CACHE_TAG } from "./paths.mjs";
  *
  * @type {Set<string>}
  */
-export const SHOWCASE_TYPES = new Set([
-  "article",
-  "review",
-  "chapter",
-  "teaching-resource",
-]);
+export const SHOWCASE_TYPES = new Set(["article", "review", "chapter", "teaching-resource"]);
 
 /**
  * noindex: these are alternative representations of indexable pages. charset stated because names

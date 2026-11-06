@@ -10,7 +10,13 @@ import { readFileSync } from "node:fs";
 
 import { slug as githubSlug } from "github-slugger";
 
-import { formatQuantity, parseQuantity, readConditions, segmentText, tokenize } from "../app/kb/procedures/marks.mjs";
+import {
+  formatQuantity,
+  parseQuantity,
+  readConditions,
+  segmentText,
+  tokenize,
+} from "../app/kb/procedures/marks.mjs";
 import { allSteps, headingId, parseProcedure } from "../app/kb/procedures/parse.mjs";
 import { validateProcedure } from "../app/kb/procedures/validate.mjs";
 
@@ -28,7 +34,10 @@ function stepsOf(raw) {
 
 /** @param {string[]} errors @param {RegExp} pattern */
 function assertError(errors, pattern) {
-  assert.ok(errors.some((e) => pattern.test(e)), `expected an error matching ${pattern}, got ${JSON.stringify(errors)}`);
+  assert.ok(
+    errors.some((e) => pattern.test(e)),
+    `expected an error matching ${pattern}, got ${JSON.stringify(errors)}`,
+  );
 }
 
 // ---------------------------------------------------------------- marks.mjs
@@ -45,7 +54,11 @@ await test("a single-word mark ends at the word; a braced mark runs to its brace
   assert.equal(lysate?.type === "material" && lysate.quantity?.unit, "ml");
   const [, bowl] = tokenize("Use #mixing bowl{} and #skillet");
   assert.deepEqual(bowl, { type: "equipment", name: "mixing bowl", display: "mixing bowl" });
-  assert.deepEqual(tokenize("Use #skillet").at(-1), { type: "equipment", name: "skillet", display: "skillet" });
+  assert.deepEqual(tokenize("Use #skillet").at(-1), {
+    type: "equipment",
+    name: "skillet",
+    display: "skillet",
+  });
 });
 
 await test("the alias form keeps the material's name and shows the other words", () => {
@@ -98,7 +111,8 @@ await test("anchors, link targets, inline code and email addresses are not marks
 });
 
 await test("formatQuantity scales amounts and ranges, and leaves fixed amounts alone", () => {
-  const q = (/** @type {string} */ s) => /** @type {NonNullable<ReturnType<typeof parseQuantity>>} */ (parseQuantity(s));
+  const q = (/** @type {string} */ s) =>
+    /** @type {NonNullable<ReturnType<typeof parseQuantity>>} */ (parseQuantity(s));
   assert.equal(formatQuantity(q("250%g")), "250 g");
   assert.equal(formatQuantity(q("250%g"), 2), "500 g");
   assert.equal(formatQuantity(q("=1%tsp"), 3), "1 tsp");
@@ -111,7 +125,9 @@ await test("formatQuantity scales amounts and ranges, and leaves fixed amounts a
 });
 
 await test("readConditions reads temperatures, including below zero and ranges", () => {
-  const { temperatures } = readConditions("Hold at -80 °C, then 55 to 60 °C, then 55-60 °C, then 37 °C.");
+  const { temperatures } = readConditions(
+    "Hold at -80 °C, then 55 to 60 °C, then 55-60 °C, then 37 °C.",
+  );
   assert.deepEqual(
     temperatures.map(({ min, max }) => [min, max]),
     [
@@ -124,7 +140,9 @@ await test("readConditions reads temperatures, including below zero and ranges",
 });
 
 await test("readConditions reads spins in rpm and in x g, including a range", () => {
-  const { spins } = readConditions("Spin at 10,000 rpm, then at 10,000 to 15,000 x g, then 12,000 x g.");
+  const { spins } = readConditions(
+    "Spin at 10,000 rpm, then at 10,000 to 15,000 x g, then 12,000 x g.",
+  );
   assert.deepEqual(
     spins.map(({ speed, unit }) => [speed, unit]),
     [
@@ -195,7 +213,10 @@ await test("the body reads as an intro and sections, each a run of prose and ste
 });
 
 await test("step numbers are the ones written: a list continues or restarts at 1", () => {
-  assert.deepEqual(stepsOf(BODY).map((s) => s.number), [1, 2, 3, 1]);
+  assert.deepEqual(
+    stepsOf(BODY).map((s) => s.number),
+    [1, 2, 3, 1],
+  );
 });
 
 await test("a step's flags are read, and a quoted line continues the flag above it", () => {
@@ -208,8 +229,12 @@ await test("a step's flags are read, and a quoted line continues the flag above 
 
 await test("a fenced block under a step is a command, and an output block after it is its output", () => {
   const step = stepsOf(BODY)[3];
-  assert.deepEqual(step?.commands, [{ lang: "bash", code: "echo hi", output: "hi", platform: null }]);
-  assert.deepEqual(step?.photos, [{ alt: "A pellet at the bottom of a tube.", src: "/media/pellet.jpg" }]);
+  assert.deepEqual(step?.commands, [
+    { lang: "bash", code: "echo hi", output: "hi", platform: null },
+  ]);
+  assert.deepEqual(step?.photos, [
+    { alt: "A pellet at the bottom of a tube.", src: "/media/pellet.jpg" },
+  ]);
   assert.equal(step?.source, "A separate method restarts at 1.");
 });
 
@@ -317,7 +342,10 @@ await test("a bare MISSING is an error", () => {
 });
 
 await test('"MISSING: reason" is a recorded gap, not an error', () => {
-  const { errors, gaps } = check("mini", PROTOCOL.replace('version: "1"', 'version: "MISSING: not assigned yet"'));
+  const { errors, gaps } = check(
+    "mini",
+    PROTOCOL.replace('version: "1"', 'version: "MISSING: not assigned yet"'),
+  );
   assert.deepEqual(errors, []);
   assert.deepEqual(gaps, [{ field: "version", reason: "not assigned yet" }]);
 });
@@ -329,15 +357,43 @@ await test("a required field left out is an error", () => {
 
 await test("the library's facets: method is required, and method, organism and course are ids from the closed lists", () => {
   assertError(check("mini", PROTOCOL.replace("method: [pcr]\n", "")).errors, /^method is required/);
-  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: [PCR]")).errors, /method "PCR" is not one of: pcr, plating/);
-  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: pcr")).errors, /method must be a list of ids/);
-  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: [pcr, pcr]")).errors, /method names one id twice/);
-  const withOthers = PROTOCOL.replace("method: [pcr]\n", "method: [pcr, plating]\norganism: [smegmatis]\ncourse: [virus-isolation]\ntarget: [GAPDH]\n");
+  assertError(
+    check("mini", PROTOCOL.replace("method: [pcr]", "method: [PCR]")).errors,
+    /method "PCR" is not one of: pcr, plating/,
+  );
+  assertError(
+    check("mini", PROTOCOL.replace("method: [pcr]", "method: pcr")).errors,
+    /method must be a list of ids/,
+  );
+  assertError(
+    check("mini", PROTOCOL.replace("method: [pcr]", "method: [pcr, pcr]")).errors,
+    /method names one id twice/,
+  );
+  const withOthers = PROTOCOL.replace(
+    "method: [pcr]\n",
+    "method: [pcr, plating]\norganism: [smegmatis]\ncourse: [virus-isolation]\ntarget: [GAPDH]\n",
+  );
   assert.deepEqual(check("mini", withOthers), { errors: [], gaps: [] });
-  assertError(check("mini", withOthers.replace("organism: [smegmatis]", "organism: [mouse]")).errors, /organism "mouse" is neither one of: avian [^]* nor a strain in the lab registry/);
-  assertError(check("mini", withOthers.replace("course: [virus-isolation]", "course: [chemistry]")).errors, /course "chemistry" is not one of/);
-  assertError(check("mini", withOthers.replace("target: [GAPDH]", "target: [GAPDH, '']")).errors, /target must be a list of the genes, regions or samples/);
-  assert.deepEqual(check("mini", withOthers.replace("organism: [smegmatis]", 'organism: "MISSING: not yet recorded"')).errors, [], "a recorded gap is allowed");
+  assertError(
+    check("mini", withOthers.replace("organism: [smegmatis]", "organism: [mouse]")).errors,
+    /organism "mouse" is neither one of: avian [^]* nor a strain in the lab registry/,
+  );
+  assertError(
+    check("mini", withOthers.replace("course: [virus-isolation]", "course: [chemistry]")).errors,
+    /course "chemistry" is not one of/,
+  );
+  assertError(
+    check("mini", withOthers.replace("target: [GAPDH]", "target: [GAPDH, '']")).errors,
+    /target must be a list of the genes, regions or samples/,
+  );
+  assert.deepEqual(
+    check(
+      "mini",
+      withOthers.replace("organism: [smegmatis]", 'organism: "MISSING: not yet recorded"'),
+    ).errors,
+    [],
+    "a recorded gap is allowed",
+  );
 });
 
 await test("a protocol step that spins in rpm with no SPIN flag is an error", () => {
@@ -358,20 +414,35 @@ await test("an undeclared #equipment in a protocol is an error", () => {
 });
 
 await test("biosafety that names a biosafety level is an error", () => {
-  const raw = PROTOCOL.replace("biosafety: not applicable", "biosafety: { organism: Test organism, strain: BSL-2 }");
+  const raw = PROTOCOL.replace(
+    "biosafety: not applicable",
+    "biosafety: { organism: Test organism, strain: BSL-2 }",
+  );
   assertError(check("mini", raw).errors, /biosafety names a biosafety level/);
 });
 
 await test("biosafety_level is BSL-1, BSL-2 or a recorded gap, and a protocol must have it", () => {
-  assertError(check("mini", PROTOCOL.replace("biosafety_level: BSL-1", "biosafety_level: BSL-3")).errors, /biosafety_level is "BSL-3"; it is one of BSL-1, BSL-2/);
-  assertError(check("mini", PROTOCOL.replace(/biosafety_level: BSL-1\n/, "")).errors, /^biosafety_level is required/);
-  const gap = check("mini", PROTOCOL.replace("biosafety_level: BSL-1", 'biosafety_level: "MISSING: not set yet"'));
+  assertError(
+    check("mini", PROTOCOL.replace("biosafety_level: BSL-1", "biosafety_level: BSL-3")).errors,
+    /biosafety_level is "BSL-3"; it is one of BSL-1, BSL-2/,
+  );
+  assertError(
+    check("mini", PROTOCOL.replace(/biosafety_level: BSL-1\n/, "")).errors,
+    /^biosafety_level is required/,
+  );
+  const gap = check(
+    "mini",
+    PROTOCOL.replace("biosafety_level: BSL-1", 'biosafety_level: "MISSING: not set yet"'),
+  );
   assert.deepEqual(gap.errors, []);
   assert.deepEqual(gap.gaps, [{ field: "biosafety_level", reason: "not set yet" }]);
 });
 
 await test("the biosafety field still lists the agent only, and holds no level", () => {
-  const raw = PROTOCOL.replace("biosafety: not applicable", "biosafety: { organism: Test organism, strain: BSL-2 }");
+  const raw = PROTOCOL.replace(
+    "biosafety: not applicable",
+    "biosafety: { organism: Test organism, strain: BSL-2 }",
+  );
   assertError(check("mini", raw).errors, /biosafety names a biosafety level/);
 });
 
@@ -386,7 +457,10 @@ await test("seo_title over 60 characters is an error", () => {
 });
 
 await test("a path that does not match the file's slug is an error", () => {
-  assertError(check("other", PROTOCOL).errors, /a protocol named other\.md lives at \/research\/protocols\/other/);
+  assertError(
+    check("other", PROTOCOL).errors,
+    /a protocol named other\.md lives at \/research\/protocols\/other/,
+  );
 });
 
 await test("step numbering that skips is an error", () => {
@@ -444,24 +518,55 @@ await test("a computational command without its output is an error", () => {
 });
 
 await test("computational software needs its version", () => {
-  const raw = COMPUTATIONAL.replace("prerequisites: []", "prerequisites:\n  - a shell").replace('    version: "3.11"\n', "");
+  const raw = COMPUTATIONAL.replace("prerequisites: []", "prerequisites:\n  - a shell").replace(
+    '    version: "3.11"\n',
+    "",
+  );
   assertError(check("mini", raw).errors, /materials\[grep\] is software and needs its version/);
 });
 
 await test("start_here is a position in the Start here list: a positive whole number, or absent", () => {
   const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
   assert.deepEqual(check("phage-isolation", base).errors, []);
-  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: 0")).errors, /start_here must be a position/);
-  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: first")).errors, /start_here must be a position/);
-  assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: 1.5")).errors, /start_here must be a position/);
-  assert.deepEqual(check("phage-isolation", base.replace("start_here: 1\n", "")).errors, [], "a procedure with none is simply off the list");
+  assertError(
+    check("phage-isolation", base.replace("start_here: 1", "start_here: 0")).errors,
+    /start_here must be a position/,
+  );
+  assertError(
+    check("phage-isolation", base.replace("start_here: 1", "start_here: first")).errors,
+    /start_here must be a position/,
+  );
+  assertError(
+    check("phage-isolation", base.replace("start_here: 1", "start_here: 1.5")).errors,
+    /start_here must be a position/,
+  );
+  assert.deepEqual(
+    check("phage-isolation", base.replace("start_here: 1\n", "")).errors,
+    [],
+    "a procedure with none is simply off the list",
+  );
 });
 
 await test("proof_of_use is checked by the validator: slugs only, the right shape, never empty", () => {
   const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
   const withProof = (block) => base.replace(/^course: .*$/m, (line) => `${line}\n${block}`);
-  assert.deepEqual(check("phage-isolation", withProof("proof_of_use:\n  papers: [10-1128-mra-01242-18]\n  phages: [arlo]")).errors, []);
-  assertError(check("phage-isolation", withProof("proof_of_use: arlo")).errors, /proof_of_use must be a mapping/);
-  assertError(check("phage-isolation", withProof("proof_of_use:\n  phages: [Arlo]")).errors, /not a phage key/);
-  assertError(check("phage-isolation", withProof("proof_of_use:\n  papers: []")).errors, /non-empty list/);
+  assert.deepEqual(
+    check(
+      "phage-isolation",
+      withProof("proof_of_use:\n  papers: [10-1128-mra-01242-18]\n  phages: [arlo]"),
+    ).errors,
+    [],
+  );
+  assertError(
+    check("phage-isolation", withProof("proof_of_use: arlo")).errors,
+    /proof_of_use must be a mapping/,
+  );
+  assertError(
+    check("phage-isolation", withProof("proof_of_use:\n  phages: [Arlo]")).errors,
+    /not a phage key/,
+  );
+  assertError(
+    check("phage-isolation", withProof("proof_of_use:\n  papers: []")).errors,
+    /non-empty list/,
+  );
 });

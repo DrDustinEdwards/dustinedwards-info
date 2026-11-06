@@ -42,7 +42,5 @@ export function coinsTitle(paper) {
   }
 
   // encodeURIComponent, not URLSearchParams, which encodes a space as +, a literal plus here.
-  return pairs
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-    .join("&");
+  return pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
 }

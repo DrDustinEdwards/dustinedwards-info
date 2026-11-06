@@ -35,7 +35,11 @@ export async function handleWebmentionVerify(batch: MessageBatch<unknown>, env: 
     } catch (error) {
       // D1 or the chunk failed: retried, then the dead-letter queue, and the row stays `unverified`.
       console.error(
-        JSON.stringify({ alert: "webmention-verify-failed", id: mention.id, detail: errorMessage(error) }),
+        JSON.stringify({
+          alert: "webmention-verify-failed",
+          id: mention.id,
+          detail: errorMessage(error),
+        }),
       );
       message.retry();
     }

@@ -1,5 +1,10 @@
 import { LAB_BENCH_PATH } from "../lab/path.mjs";
-import { defineHead, searchTitle as prelumSearchTitle, type HeadImage, type PageHead } from "@drdustinedwards/site-helpers/head";
+import {
+  defineHead,
+  searchTitle as prelumSearchTitle,
+  type HeadImage,
+  type PageHead,
+} from "@drdustinedwards/site-helpers/head";
 import { article, thing, website } from "@drdustinedwards/site-helpers/schema";
 
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
@@ -33,7 +38,10 @@ export function shareCard(url: string, alt: string): HeadImage {
   return { url, ...CARD_SIZE, alt };
 }
 
-const DEFAULT_OG_IMAGE = shareCard(`${SITE_ORIGIN}/dustin-edwards-og-image.png`, "A microscope, the site's mark, on purple");
+const DEFAULT_OG_IMAGE = shareCard(
+  `${SITE_ORIGIN}/dustin-edwards-og-image.png`,
+  "A microscope, the site's mark, on purple",
+);
 
 // The person, the role, the headship, the department and the university are the CV's: derived from
 // content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
@@ -42,7 +50,9 @@ const DEFAULT_OG_IMAGE = shareCard(`${SITE_ORIGIN}/dustin-edwards-og-image.png`,
 // (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal; `org` is the full line for people to read.
 // The description is the name and the role, then what the work is about, so it is 70 to 155 characters, the length search
 // shows (area 1; it was the name and role alone, Dustin 2026-10-15, which was 44). "Dr." is the doctorate the CV states, so it follows the degree rather than being typed.
-const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree) ? "Dr. " : "";
+const HONORIFIC = /^(Ph\.?D|M\.?D|D\.?V\.?M|Ed\.?D|D\.?Sc)\.?$/i.test(IDENTITY.degree)
+  ? "Dr. "
+  : "";
 export const SITE = {
   name: IDENTITY.name,
   role: IDENTITY.role,
@@ -57,7 +67,13 @@ export const SITE = {
 } as const;
 
 /** site-api's search fields beside description, as the posts.search_fields column holds them. */
-export type PostSearchFields = { searchTitle?: string; image?: string; imageAlt?: string; canonical?: string; noindex?: boolean };
+export type PostSearchFields = {
+  searchTitle?: string;
+  image?: string;
+  imageAlt?: string;
+  canonical?: string;
+  noindex?: boolean;
+};
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
 type PostSocialFields = {
@@ -78,12 +94,20 @@ export function postSocial(post: PostSocialFields) {
   const search = post.searchFields ?? {};
   // The post's own share image, then its cover (a size is in its key), then a drawn card that shows the title.
   const image: HeadImage = search.image
-    ? { url: `${SITE_ORIGIN}${search.image}`, ...dimensionsFromKey(search.image), ...(search.imageAlt ? { alt: search.imageAlt } : {}) }
+    ? {
+        url: `${SITE_ORIGIN}${search.image}`,
+        ...dimensionsFromKey(search.image),
+        ...(search.imageAlt ? { alt: search.imageAlt } : {}),
+      }
     : post.coverImage
-    ? { url: `${SITE_ORIGIN}${post.coverImage}`, ...dimensionsFromKey(post.coverImage), ...(post.coverAlt ? { alt: post.coverAlt } : {}) }
-    : post.ogImage
-      ? shareCard(`${SITE_ORIGIN}${post.ogImage}`, post.ogTitle ?? post.title)
-      : DEFAULT_OG_IMAGE;
+      ? {
+          url: `${SITE_ORIGIN}${post.coverImage}`,
+          ...dimensionsFromKey(post.coverImage),
+          ...(post.coverAlt ? { alt: post.coverAlt } : {}),
+        }
+      : post.ogImage
+        ? shareCard(`${SITE_ORIGIN}${post.ogImage}`, post.ogTitle ?? post.title)
+        : DEFAULT_OG_IMAGE;
   return {
     canonical,
     /** The title a search result shows, before the site's suffix: the author's search title, else the post's. */
@@ -101,7 +125,12 @@ export function postSocial(post: PostSocialFields) {
 const SUFFIX = ` | ${SITE.name}`;
 
 /** The sections a breadcrumb trail passes through when a page names none of its own (`trail`). */
-const SECTIONS = { "/writing": "Writing", "/research": "Research", "/teaching": "Teaching", "/software": "Software" };
+const SECTIONS = {
+  "/writing": "Writing",
+  "/research": "Research",
+  "/teaching": "Teaching",
+  "/software": "Software",
+};
 
 /** A visible trail (app/components/breadcrumb.tsx), from its hub down to the page. */
 export type Trail = Array<[string, string]>;
@@ -115,10 +144,23 @@ export type Trail = Array<[string, string]>;
 export function siteHead({ trail, ...page }: PageHead & { trail?: Trail }) {
   // Built inside the call, not at module level: modules that need only SITE_ORIGIN import this one, and a
   // top-level call would put Prelum's head builder in their bundle.
-  return defineHead({ origin: SITE_ORIGIN, siteName: SITE.name, image: DEFAULT_OG_IMAGE, suffix: SUFFIX, sections: SECTIONS })({
+  return defineHead({
+    origin: SITE_ORIGIN,
+    siteName: SITE.name,
+    image: DEFAULT_OG_IMAGE,
+    suffix: SUFFIX,
+    sections: SECTIONS,
+  })({
     ...page,
     socialTitle: page.socialTitle ?? (page.fullTitle ? undefined : `${page.title}${SUFFIX}`),
-    ...(trail ? { breadcrumbs: [{ name: SITE.name, path: "/" }, ...trail.map(([name, path]) => ({ name, path }))] } : {}),
+    ...(trail
+      ? {
+          breadcrumbs: [
+            { name: SITE.name, path: "/" },
+            ...trail.map(([name, path]) => ({ name, path })),
+          ],
+        }
+      : {}),
   });
 }
 
@@ -145,7 +187,11 @@ export function pageMeta(page: {
   trail?: Trail;
 }) {
   const { ogType, ...rest } = page;
-  return siteHead({ ...rest, type: ogType, ...(page.title.includes(SITE.name) ? { fullTitle: true } : {}) });
+  return siteHead({
+    ...rest,
+    type: ogType,
+    ...(page.title.includes(SITE.name) ? { fullTitle: true } : {}),
+  });
 }
 
 export { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
@@ -213,7 +259,11 @@ export const HEALTH_EDGE_CACHE_CONTROL = edgeCacheControl(600);
  * The edge policy for a page that lists posts. A scheduled post goes live with no write to purge on,
  * so the page expires when the next one does (no sooner than a minute); with nothing scheduled it is the plain policy.
  */
-export function scheduledEdgeCacheControl(now: Date, nextPublishAt: Date | null, fresh?: number): string {
+export function scheduledEdgeCacheControl(
+  now: Date,
+  nextPublishAt: Date | null,
+  fresh?: number,
+): string {
   return edgeCacheControl(fresh, nextPublishAt, now);
 }
 
@@ -261,7 +311,12 @@ type ArticleSeo = {
 
 /** The facts Prelum's `headTags` and `article` both read, so the Open Graph tags and the JSON-LD cannot drift apart. */
 export function articleFacts(post: ArticleSeo) {
-  return { published: post.publishAt, modified: post.updatedAt ?? post.publishAt, author: SITE.name, tags: post.tags };
+  return {
+    published: post.publishAt,
+    modified: post.updatedAt ?? post.publishAt,
+    author: SITE.name,
+    tags: post.tags,
+  };
 }
 
 export function articleJsonLd(origin: string, post: ArticleSeo) {
@@ -269,13 +324,15 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     url: `${origin}/writing/${post.slug}`,
     headline: post.title,
     description: post.description,
-    image: post.images?.length ? post.images : postSocial({
-      slug: post.slug,
-      title: post.title,
-      description: post.description,
-      coverImage: post.coverImage,
-      ogImage: post.ogImage ?? null,
-    }).image.url,
+    image: post.images?.length
+      ? post.images
+      : postSocial({
+          slug: post.slug,
+          title: post.title,
+          description: post.description,
+          coverImage: post.coverImage,
+          ogImage: post.ogImage ?? null,
+        }).image.url,
     ...articleFacts(post),
     author: { "@type": "Person", name: SITE.name, url: origin },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
@@ -292,8 +349,7 @@ export const PUBLICATIONS_DESCRIPTION =
   "Peer-reviewed work by Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
 
 export const OWNER_ORCID = "https://orcid.org/0000-0001-6409-8041";
-export const OWNER_SCHOLAR =
-  "https://scholar.google.com/citations?user=lfzCCXwAAAAJ";
+export const OWNER_SCHOLAR = "https://scholar.google.com/citations?user=lfzCCXwAAAAJ";
 export const OWNER_PUBMED =
   "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
@@ -417,33 +473,33 @@ export function publicationsJsonLd(
     personNode(origin),
     ...items.map((p) =>
       thing(p.type ? schemaTypeFor(p.type) : "ScholarlyArticle", {
-      "@id": origin + paperPath(p.slug),
-      // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
-      headline: decodeEntities(p.title),
-      name: decodeEntities(p.title),
-      author: p.authors.map((name) =>
-        isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name: canonicalAuthor(name) },
-      ),
-      datePublished: String(p.year),
-      ...(p.journal
-        ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
-        : {}),
-      ...(p.doi
-        ? {
-            identifier: { "@type": "PropertyValue", propertyID: "DOI", value: p.doi },
-            sameAs: `https://doi.org/${p.doi}`,
-          }
-        : {}),
-      url: origin + paperPath(p.slug),
-      ...(p.pdfPath
-        ? {
-            encoding: {
-              "@type": "MediaObject",
-              encodingFormat: "application/pdf",
-              contentUrl: origin + p.pdfPath,
-            },
-          }
-        : {}),
+        "@id": origin + paperPath(p.slug),
+        // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
+        headline: decodeEntities(p.title),
+        name: decodeEntities(p.title),
+        author: p.authors.map((name) =>
+          isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name: canonicalAuthor(name) },
+        ),
+        datePublished: String(p.year),
+        ...(p.journal
+          ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
+          : {}),
+        ...(p.doi
+          ? {
+              identifier: { "@type": "PropertyValue", propertyID: "DOI", value: p.doi },
+              sameAs: `https://doi.org/${p.doi}`,
+            }
+          : {}),
+        url: origin + paperPath(p.slug),
+        ...(p.pdfPath
+          ? {
+              encoding: {
+                "@type": "MediaObject",
+                encodingFormat: "application/pdf",
+                contentUrl: origin + p.pdfPath,
+              },
+            }
+          : {}),
       }),
     ),
   ];

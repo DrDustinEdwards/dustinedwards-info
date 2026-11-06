@@ -17,9 +17,7 @@ const KATEX_OVERRIDES_PATH = join("app", "styles", "katex-overrides.css");
 const OVERRIDES_MARKER = "/* ---- site overrides ---- */\n";
 
 function installedKatexVersion() {
-  const pkg = JSON.parse(
-    readFileSync(join(root, "node_modules", "katex", "package.json"), "utf8"),
-  );
+  const pkg = JSON.parse(readFileSync(join(root, "node_modules", "katex", "package.json"), "utf8"));
   return String(pkg.version);
 }
 
@@ -142,9 +140,7 @@ if (isMain(import.meta.url)) {
   try {
     main();
   } catch (error) {
-    console.error(
-      `build:katex failed. ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`build:katex failed. ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
 }

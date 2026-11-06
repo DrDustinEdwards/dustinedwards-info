@@ -46,7 +46,12 @@ export default defineConfig({
       config: PREVIEW_LOCAL
         ? (config) => {
             // The customizer's result is merged, so a key can only be removed from the object itself.
-            const bindings: { ai_search?: unknown; ai?: unknown; images?: unknown; browser?: unknown } = config;
+            const bindings: {
+              ai_search?: unknown;
+              ai?: unknown;
+              images?: unknown;
+              browser?: unknown;
+            } = config;
             delete bindings.ai_search;
             // Workers AI, for media suggestions: an editor's call, which a preview has no sign-in for; without it a
             // suggestion is refused (suggest.server.ts).

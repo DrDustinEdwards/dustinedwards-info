@@ -24,7 +24,8 @@ function pageRange(page) {
 }
 
 /** @param {unknown} value @returns {string | null} */
-const text = (value) => (value === null || value === undefined || value === "" ? null : String(value));
+const text = (value) =>
+  value === null || value === undefined || value === "" ? null : String(value);
 
 /**
  * @param {Record<string, any>} data the validated front matter
@@ -64,8 +65,16 @@ export function recordFromData(data, slug) {
     license: text(data.license),
     licenseSource: text(data.licenseSource),
     summary: text(data.summary),
-    updateNotice: data.updateNotice ? { type: data.updateNotice.type, doi: data.updateNotice.doi, date: data.updateNotice.date ?? null } : null,
-    accessions: Array.isArray(data.accessions) ? data.accessions.map((/** @type {any} */ a) => ({ kind: a.kind, id: a.id })) : [],
+    updateNotice: data.updateNotice
+      ? {
+          type: data.updateNotice.type,
+          doi: data.updateNotice.doi,
+          date: data.updateNotice.date ?? null,
+        }
+      : null,
+    accessions: Array.isArray(data.accessions)
+      ? data.accessions.map((/** @type {any} */ a) => ({ kind: a.kind, id: a.id }))
+      : [],
     selected: data.selected === true,
     abstract: text(data.abstract),
     slug,

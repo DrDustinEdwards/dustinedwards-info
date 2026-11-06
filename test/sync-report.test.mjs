@@ -9,7 +9,13 @@ import {
 } from "../app/lib/operator/sync-report.mjs";
 
 await test("a real convergence reports converged and zero drift", () => {
-  const r = askSyncReport({ uploaded: 122, removed: 0, cacheDropped: 3, expected: 122, present: 122 });
+  const r = askSyncReport({
+    uploaded: 122,
+    removed: 0,
+    cacheDropped: 3,
+    expected: 122,
+    present: 122,
+  });
   assert.equal(r.converged, true);
   assert.equal(r.drift, 0);
   assert.equal(r.expected, 122);
@@ -26,7 +32,13 @@ await test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () 
 
 await test("uploading a lot and still being short is NOT converged either", () => {
   // `uploaded` is what the loop THINKS it did; only the read-back can contradict it.
-  const r = askSyncReport({ uploaded: 122, removed: 0, cacheDropped: 0, expected: 122, present: 121 });
+  const r = askSyncReport({
+    uploaded: 122,
+    removed: 0,
+    cacheDropped: 0,
+    expected: 122,
+    present: 121,
+  });
   assert.equal(r.converged, false);
   assert.equal(r.drift, 1);
 });
@@ -43,7 +55,8 @@ await test("AN UNREADABLE COUNT FAILS CLOSED", () => {
   // A count that could not be read must not average out to agreement.
   for (const bad of [null, undefined, Number.NaN, "122", 1.5]) {
     assert.equal(
-      askSyncReport({ uploaded: 1, removed: 0, cacheDropped: 0, expected: bad, present: bad }).converged,
+      askSyncReport({ uploaded: 1, removed: 0, cacheDropped: 0, expected: bad, present: bad })
+        .converged,
       false,
       `expected/present ${String(bad)} must not converge`,
     );
@@ -53,18 +66,28 @@ await test("AN UNREADABLE COUNT FAILS CLOSED", () => {
 await test("converged is never taken from the caller", () => {
   // Passing it in must change nothing: it is derived or it is worthless.
   const r = askSyncReport({
-    uploaded: 0, removed: 0, cacheDropped: 0, expected: 122, present: 90,
-    converged: true, ok: true, drift: 0,
+    uploaded: 0,
+    removed: 0,
+    cacheDropped: 0,
+    expected: 122,
+    present: 90,
+    converged: true,
+    ok: true,
+    drift: 0,
   });
   assert.equal(r.converged, false);
   assert.equal(r.drift, 32);
 });
 
 await test("the summary carries both counts either way, so a log line is diagnosable", () => {
-  const good = askSyncSummary(askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 7, present: 7 }));
+  const good = askSyncSummary(
+    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 7, present: 7 }),
+  );
   assert.match(good, /7 expected/);
   assert.match(good, /7 present/);
-  const bad = askSyncSummary(askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 9, present: 7 }));
+  const bad = askSyncSummary(
+    askSyncReport({ uploaded: 5, removed: 1, cacheDropped: 0, expected: 9, present: 7 }),
+  );
   assert.match(bad, /9 expected/);
   assert.match(bad, /7 present/);
   assert.match(bad, /drift 2/);

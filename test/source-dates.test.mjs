@@ -16,7 +16,15 @@ function repo() {
   const git = (/** @type {string[]} */ args, /** @type {string} */ date = "2026-01-01T12:00:00Z") =>
     execFileSync("git", args, {
       cwd: dir,
-      env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.com", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.com" },
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: date,
+        GIT_COMMITTER_DATE: date,
+        GIT_AUTHOR_NAME: "t",
+        GIT_AUTHOR_EMAIL: "t@example.com",
+        GIT_COMMITTER_NAME: "t",
+        GIT_COMMITTER_EMAIL: "t@example.com",
+      },
       encoding: "utf8",
     });
   const write = (/** @type {string} */ rel, /** @type {string} */ text) => {
@@ -66,5 +74,8 @@ await test("a shallow clone dates nothing", (t) => {
 });
 
 await test("the module is a frozen object of the dates", () => {
-  assert.match(sourceDatesModule({ "content/a.md": "2026-03-01" }), /export const SOURCE_DATES = Object\.freeze\(\{\n  "content\/a\.md": "2026-03-01"\n\}\);\n$/);
+  assert.match(
+    sourceDatesModule({ "content/a.md": "2026-03-01" }),
+    /export const SOURCE_DATES = Object\.freeze\(\{\n  "content\/a\.md": "2026-03-01"\n\}\);\n$/,
+  );
 });

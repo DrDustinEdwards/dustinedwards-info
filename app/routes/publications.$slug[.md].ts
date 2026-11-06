@@ -19,7 +19,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const slug = params.slug;
   const markdown = slug ? await getPublishedPublicationMarkdown(getEnv(context), slug) : null;
   if (markdown === null) {
-    return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
   return new Response(markdown, {
     headers: {

@@ -71,10 +71,14 @@ export function readinessVerdict(status, text, path = "/health", deferred = []) 
     };
   }
 
-  const deferredNames = Array.isArray(deferred) ? deferred.filter((n) => typeof n === "string") : [];
+  const deferredNames = Array.isArray(deferred)
+    ? deferred.filter((n) => typeof n === "string")
+    : [];
   // A warn is a failure here: /health stays 200 while a drift check warns, and converge must not sync over one.
   const failed = checks.filter((c) => c.ok !== true).map((c) => c.name ?? "(unnamed)");
-  const gatingFailed = failed.filter((name) => !deferredNames.includes(name) && !(name in NOT_DEPLOY_CHECKS));
+  const gatingFailed = failed.filter(
+    (name) => !deferredNames.includes(name) && !(name in NOT_DEPLOY_CHECKS),
+  );
 
   // Not the endpoint's own status: that is warn when any check warns, deferred ones included.
   if (gatingFailed.length > 0) {

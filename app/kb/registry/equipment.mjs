@@ -15,7 +15,9 @@ const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
 const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max ? null : `is one line of at most ${max} characters`;
+  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
+    ? null
+    : `is one line of at most ${max} characters`;
 
 /** @type {import("./kinds.mjs").KindSpec} */
 export const EQUIPMENT = {
@@ -38,7 +40,8 @@ export const EQUIPMENT = {
  */
 export function storedEquipment(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  const text = (/** @type {unknown} */ value) => (typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null);
+  const text = (/** @type {unknown} */ value) =>
+    typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null;
   return {
     id: item.id,
     name: item.name,

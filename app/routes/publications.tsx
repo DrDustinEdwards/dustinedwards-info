@@ -10,7 +10,12 @@ import { getEnv } from "~/lib/context";
 import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { PUBLICATIONS, legacyAddress, publicationListing, venue } from "~/lib/publications/listing.mjs";
+import {
+  PUBLICATIONS,
+  legacyAddress,
+  publicationListing,
+  venue,
+} from "~/lib/publications/listing.mjs";
 import { PUBLICATIONS_CACHE_TAG, PUBLICATIONS_PATH, paperPath } from "~/lib/publications/paths.mjs";
 import type { Publication, TopicId } from "~/lib/publications/types";
 import { italicizeOrganisms } from "~/lib/scientific-names";
@@ -99,19 +104,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const { soleTopic, items } = publicationListing(url.searchParams, publications);
 
   /* A path, not an absolute URL: deriving it from `url.origin` is how a preview host becomes canonical. */
-  const canonicalPath = soleTopic
-    ? `${PUBLICATIONS_URL}?topic=${soleTopic}`
-    : PUBLICATIONS_URL;
+  const canonicalPath = soleTopic ? `${PUBLICATIONS_URL}?topic=${soleTopic}` : PUBLICATIONS_URL;
   const pageTitle = soleTopic
     ? `${TOPIC_META[soleTopic].title}, ${SITE.name}`
     : `Publications, ${SITE.name}`;
-  const pageDescription = soleTopic
-    ? TOPIC_META[soleTopic].description
-    : PUBLICATIONS_DESCRIPTION;
+  const pageDescription = soleTopic ? TOPIC_META[soleTopic].description : PUBLICATIONS_DESCRIPTION;
   const noindex = items.length === 0;
 
   // D1 only: a stale count shows and refreshes after the response, so the page never waits on OpenAlex.
-  const citations = await getCitationCounts(context, items.flatMap((p) => (p.doi ? [p.doi] : [])));
+  const citations = await getCitationCounts(
+    context,
+    items.flatMap((p) => (p.doi ? [p.doi] : [])),
+  );
 
   return {
     /* The canonical origin, never the request's: this page is shared-cached, so a preview host's JSON-LD would be served to everyone. */
@@ -202,9 +206,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           {p.externalUrl && (p.type === "teaching-resource" || p.type === "abstract") ? (
             <a href={p.externalUrl}>Resource</a>
           ) : null}
-          {p.preprintDoi ? (
-            <a href={`https://doi.org/${p.preprintDoi}`}>Preprint</a>
-          ) : null}
+          {p.preprintDoi ? <a href={`https://doi.org/${p.preprintDoi}`}>Preprint</a> : null}
           <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
           <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
           {cited && cited.count >= 1 && cited.url ? (
@@ -272,9 +274,9 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
             Publications
           </h1>
           <p className="list-dek">
-            Peer-reviewed work on retroviruses, bacteriophage genomics, and how
-            undergraduate research is taught. Full text is hosted here where I have the
-            publisher version, with links out to the record of version otherwise.
+            Peer-reviewed work on retroviruses, bacteriophage genomics, and how undergraduate
+            research is taught. Full text is hosted here where I have the publisher version, with
+            links out to the record of version otherwise.
           </p>
           <BibliographyReadings
             span={span}
@@ -294,7 +296,8 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
               /* Always the full list: a citation file carrying only the filtered subset is one nobody asked for. */
               <span className="paper-feeds">
                 Export all <a href="/research/publications.bib">BibTeX</a>{" "}
-                <a href="/research/publications.ris">RIS</a> <a href="/research/publications.json">CSL JSON</a>
+                <a href="/research/publications.ris">RIS</a>{" "}
+                <a href="/research/publications.json">CSL JSON</a>
               </span>
             }
           />

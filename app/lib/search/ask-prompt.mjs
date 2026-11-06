@@ -60,7 +60,6 @@ export const SYSTEM_PROMPT = [
   FOLLOW_UP_INSTRUCTION,
 ].join(" ");
 
-
 /**
  * Containment: a tripping answer is never cached, so a leak reaches only the request that caused it.
  * Whitespace is collapsed and case ignored because a model reproducing a prompt reflows it.
@@ -182,7 +181,10 @@ function readBy(reader, deadline) {
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timer;
   const late = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`the answer took longer than ${ASK_TIMEOUT_MS} ms`)), deadline - Date.now());
+    timer = setTimeout(
+      () => reject(new Error(`the answer took longer than ${ASK_TIMEOUT_MS} ms`)),
+      deadline - Date.now(),
+    );
   });
   return Promise.race([reader.read(), late]).finally(() => clearTimeout(timer));
 }
@@ -208,7 +210,12 @@ const DONE_FRAME = "data: [DONE]\n\n";
  * @param {(reason: string) => void} [onCut]
  * @returns {ReadableStream}
  */
-export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}, onCut = () => {}) {
+export function guardAnswerStream(
+  upstream,
+  resolveVisible,
+  onRefused = () => {},
+  onCut = () => {},
+) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 
@@ -244,7 +251,8 @@ export function guardAnswerStream(upstream, resolveVisible, onRefused = () => {}
         }
         if (!shown) send(`${chunksFrame}\n\n`);
         shown = true;
-        if (paragraph) send(`data: ${JSON.stringify({ choices: [{ delta: { content: paragraph } }] })}\n\n`);
+        if (paragraph)
+          send(`data: ${JSON.stringify({ choices: [{ delta: { content: paragraph } }] })}\n\n`);
         return true;
       };
 
@@ -314,4 +322,3 @@ export function replayFrames(cached) {
     `data: [DONE]\n\n`,
   ];
 }
-

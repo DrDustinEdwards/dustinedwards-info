@@ -54,7 +54,9 @@ export async function listMonitors(key) {
   for (let offset = 0, page = 0; page < maxPages; page += 1, offset += pageSize) {
     const res = await call(key, `/monitors?limit=${pageSize}&offset=${offset}`);
     if (!res.ok) {
-      throw new Error(`UptimeRobot GET /monitors answered ${res.status}: ${res.text.slice(0, 300)}`);
+      throw new Error(
+        `UptimeRobot GET /monitors answered ${res.status}: ${res.text.slice(0, 300)}`,
+      );
     }
     // A reshaped body read as "no monitors" would make the writer create every monitor again.
     if (!Array.isArray(res.body?.data)) {

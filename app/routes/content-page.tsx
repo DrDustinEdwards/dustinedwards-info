@@ -58,7 +58,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const row = await getPageByPath(env, pathname);
   // A path with no row: not a page, or a page the content sync has not written yet.
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   const page = row.record;
   // The page it sits under, by title, for the trail above it (the course above its FAQ).
   const parent = page.path.slice(0, page.path.lastIndexOf("/"));
@@ -78,7 +79,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // The program page carries the roster, drawn from D1 beside the page (docs/ROSTER.md); no other page reads it.
   const roster = page.path === ROSTER_PAGE_PATH ? await listRoster(env) : null;
   // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
-  return { page, trail, entry, roster, signs, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
+  return {
+    page,
+    trail,
+    entry,
+    roster,
+    signs,
+    draft: row.status === "draft",
+    search: toolsOnPage(page.path).length > 0 ? url.search : "",
+  };
 }
 
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */

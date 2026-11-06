@@ -14,7 +14,9 @@ export type PostRecord = RenderedPost & { related?: unknown[]; backlinks?: unkno
 
 // One post's derived rows, cleared and rebuilt by the same statements whether it is saved or deleted.
 const clearPostTags = (db: D1Database, slug: string) =>
-  db.prepare(`DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`).bind(slug);
+  db
+    .prepare(`DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`)
+    .bind(slug);
 const clearSearchDocs = (db: D1Database, slug: string) =>
   db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`);
 const clearMediaRefs = (db: D1Database, slug: string) =>
@@ -131,9 +133,7 @@ export async function syncPostToD1(env: PublishEnv, record: PostRecord) {
         v.search_fields,
       ),
     ...record.tags.map((tag: string) =>
-      db
-        .prepare(`INSERT OR IGNORE INTO tags (slug, name) VALUES (?1, ?1)`)
-        .bind(tag),
+      db.prepare(`INSERT OR IGNORE INTO tags (slug, name) VALUES (?1, ?1)`).bind(tag),
     ),
     clearPostTags(db, record.slug),
     ...record.tags.map((tag: string) =>

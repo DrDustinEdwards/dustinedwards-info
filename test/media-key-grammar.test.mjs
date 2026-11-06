@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  contentKey,
-  digestFromKey,
-  isContentKey,
-} from "../app/lib/media/classify.mjs";
+import { contentKey, digestFromKey, isContentKey } from "../app/lib/media/classify.mjs";
 
 const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
 const HEX16 = "0001020304050607";
@@ -33,17 +29,42 @@ await test("an upload's filename becomes the descriptive segment, and the prefix
 const CASES = [
   { name: "raster key with dimensions", input: RASTER_KEY, isContent: true, digest: HEX16 },
   { name: "svg key without dimensions", input: SVG_KEY, isContent: true, digest: HEX16 },
-  { name: "raster key as /media/ path", input: `/media/${RASTER_KEY}`, isContent: false, digest: HEX16 },
+  {
+    name: "raster key as /media/ path",
+    input: `/media/${RASTER_KEY}`,
+    isContent: false,
+    digest: HEX16,
+  },
   { name: "svg key as /media/ path", input: `/media/${SVG_KEY}`, isContent: false, digest: HEX16 },
-  { name: "raster path with transform query", input: `/media/${RASTER_KEY}?w=320`, isContent: false, digest: HEX16 },
+  {
+    name: "raster path with transform query",
+    input: `/media/${RASTER_KEY}?w=320`,
+    isContent: false,
+    digest: HEX16,
+  },
   { name: "og/ derived key", input: `og/some-post-65777080.png`, isContent: false, digest: null },
   { name: "og/ prefix on a real key", input: `og/${RASTER_KEY}`, isContent: false, digest: null },
-  { name: "static asset path", input: "/research/publications/paper.pdf", isContent: false, digest: null },
+  {
+    name: "static asset path",
+    input: "/research/publications/paper.pdf",
+    isContent: false,
+    digest: null,
+  },
   { name: "traversal segment", input: `../${SVG_KEY}`, isContent: false, digest: null },
   { name: "bare hex with no extension", input: HEX16, isContent: false, digest: null },
   { name: "named key with a slug", input: NAMED_KEY, isContent: true, digest: HEX16 },
-  { name: "slug ending in hex, digest is the LAST run", input: `dustin-edwards-a-ffffffffffffffff-${HEX16}.png`, isContent: true, digest: HEX16 },
-  { name: "pre-127 unprefixed key", input: `${HEX16}-1600x900.webp`, isContent: false, digest: null },
+  {
+    name: "slug ending in hex, digest is the LAST run",
+    input: `dustin-edwards-a-ffffffffffffffff-${HEX16}.png`,
+    isContent: true,
+    digest: HEX16,
+  },
+  {
+    name: "pre-127 unprefixed key",
+    input: `${HEX16}-1600x900.webp`,
+    isContent: false,
+    digest: null,
+  },
 ];
 
 await test("isContentKey and digestFromKey agree with the writer on every case", () => {
@@ -52,4 +73,3 @@ await test("isContentKey and digestFromKey agree with the writer on every case",
     assert.equal(digestFromKey(c.input), c.digest, `digestFromKey(${c.name})`);
   }
 });
-

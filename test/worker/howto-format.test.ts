@@ -16,12 +16,17 @@ let record: ProcedureRecord;
 
 beforeAll(async () => {
   const { renderBody, findWideDashes } = await loadPipeline();
-  const compiled = await compileProcedure({ slug: "tutorial-fixture", raw: fixture, pipeline: { renderBody, findWideDashes } });
+  const compiled = await compileProcedure({
+    slug: "tutorial-fixture",
+    raw: fixture,
+    pipeline: { renderBody, findWideDashes },
+  });
   if (!compiled.ok) throw new Error(compiled.errors.join("; "));
   record = compiled.record;
 }, 120_000);
 
-const page = () => renderToStaticMarkup(createElement(ProcedureView, { record, count: 0, factor: 1 }));
+const page = () =>
+  renderToStaticMarkup(createElement(ProcedureView, { record, count: 0, factor: 1 }));
 
 describe("a software how-to's page", () => {
   it("says it is a tutorial, opens with its questions and objectives, and ends with its key points", () => {
@@ -34,14 +39,21 @@ describe("a software how-to's page", () => {
     expect(overview).toBeLessThan(method);
     expect(keyPoints).toBeGreaterThan(method);
     expect(html).toContain('<h3 id="objectives">Objectives</h3>');
-    expect(html).toContain('<a href="https://en.wikipedia.org/wiki/FASTA_format">The FASTA format</a>');
+    expect(html).toContain(
+      '<a href="https://en.wikipedia.org/wiki/FASTA_format">The FASTA format</a>',
+    );
   });
 
   it("shows every platform's command with no script, each under a link the tabs are made from", () => {
     const html = page();
-    const links = [...html.matchAll(/<a href="#(count-the-reads-0-step-2-0-(\w+))" data-platform="\2">/g)].map((m) => m[2]);
+    const links = [
+      ...html.matchAll(/<a href="#(count-the-reads-0-step-2-0-(\w+))" data-platform="\2">/g),
+    ].map((m) => m[2]);
     expect(links).toEqual(["linux", "macos", "windows"]);
-    for (const platform of links) expect(html).toContain(`id="count-the-reads-0-step-2-0-${platform}" class="procedure-platform"`);
+    for (const platform of links)
+      expect(html).toContain(
+        `id="count-the-reads-0-step-2-0-${platform}" class="procedure-platform"`,
+      );
     expect(html).toContain("(Select-String -Pattern &#x27;^&gt;&#x27; -Path reads.fasta).Count");
     // The panels are all there and none is hidden: hiding is the script's, so a page with none shows them all.
     expect(html).not.toMatch(/class="procedure-platform"[^>]*hidden/);
@@ -50,13 +62,26 @@ describe("a software how-to's page", () => {
 
   it("folds a challenge's solution into a <details>, which opens with no script", () => {
     const html = page();
-    expect(html).toMatch(/<strong class="procedure-flag-label">Challenge\.<\/strong><div><p>Add a fourth read/);
-    expect(html).toMatch(/<details class="procedure-solution"><summary>Solution<\/summary><div><p>The count is 4/);
+    expect(html).toMatch(
+      /<strong class="procedure-flag-label">Challenge\.<\/strong><div><p>Add a fourth read/,
+    );
+    expect(html).toMatch(
+      /<details class="procedure-solution"><summary>Solution<\/summary><div><p>The count is 4/,
+    );
   });
 
   it("prints every platform's command on the sheet, with no tabs", () => {
-    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record, count: 0, factor: 1, address: "https://example.com/x" }));
+    const sheet = renderToStaticMarkup(
+      createElement(ProcedureSheet, {
+        record,
+        count: 0,
+        factor: 1,
+        address: "https://example.com/x",
+      }),
+    );
     expect(sheet).not.toContain("procedure-platform-tabs");
-    expect([...sheet.matchAll(/<p class="procedure-platform-label">(\w+)<\/p>/g)].map((m) => m[1])).toEqual(["Linux", "macOS", "Windows", "Linux", "macOS", "Windows"]);
+    expect(
+      [...sheet.matchAll(/<p class="procedure-platform-label">(\w+)<\/p>/g)].map((m) => m[1]),
+    ).toEqual(["Linux", "macOS", "Windows", "Linux", "macOS", "Windows"]);
   });
 });

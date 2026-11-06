@@ -1,6 +1,12 @@
 import { allowList } from "@dustinedwards/site-runtime/members";
 
-import { latestAuditId, listMembers, pendingAfter, recordSync, unsyncedRemovals } from "~/db/members";
+import {
+  latestAuditId,
+  listMembers,
+  pendingAfter,
+  recordSync,
+  unsyncedRemovals,
+} from "~/db/members";
 
 import { LAB_CATALOG } from "./titles.mjs";
 
@@ -25,7 +31,8 @@ export const SYNC_NOT_SET_UP =
   "Access sync is not set up yet: this site has no CAPSID_ACCESS_SYNC_KEY (Dustin's step). The change is recorded here and nothing was changed in Cloudflare Access.";
 
 /** The same, as the reason kept on each audit row and shown beside each person, where a sentence does not fit. */
-export const SYNC_NOT_SET_UP_REASON = "Access sync is not set up yet (no CAPSID_ACCESS_SYNC_KEY). Access is unchanged.";
+export const SYNC_NOT_SET_UP_REASON =
+  "Access sync is not set up yet (no CAPSID_ACCESS_SYNC_KEY). Access is unchanged.";
 
 export type SyncOutcome = { ok: true } | { ok: false; error: string };
 
@@ -36,11 +43,14 @@ async function refusalText(response: Response): Promise<string> {
   const text = (await response.text()).slice(0, 600);
   try {
     const body = JSON.parse(text) as { refusal?: unknown };
-    if (typeof body.refusal === "string" && body.refusal) return `Cloudflare refused: ${body.refusal}`;
+    if (typeof body.refusal === "string" && body.refusal)
+      return `Cloudflare refused: ${body.refusal}`;
   } catch {
     // Plain text: Capsid's own refusals (401, 403, 409 with no pin, 503 with no token) are words already.
   }
-  const notSetUp = /CF_ACCESS_SYNC_TOKEN is not set/.test(text) ? " Access sync is not set up yet at Capsid (Dustin's step), so nothing was changed in Cloudflare Access." : "";
+  const notSetUp = /CF_ACCESS_SYNC_TOKEN is not set/.test(text)
+    ? " Access sync is not set up yet at Capsid (Dustin's step), so nothing was changed in Cloudflare Access."
+    : "";
   return `Capsid answered ${response.status}: ${text.trim() || response.statusText}.${notSetUp}`;
 }
 
@@ -51,12 +61,21 @@ async function refusalText(response: Response): Promise<string> {
  */
 const MAX_ROUNDS = 3;
 
-export async function syncAccess(env: Env, nowMs: number, fetchImpl: FetchLike = (input, init) => fetch(input, init)): Promise<SyncOutcome> {
+export async function syncAccess(
+  env: Env,
+  nowMs: number,
+  fetchImpl: FetchLike = (input, init) => fetch(input, init),
+): Promise<SyncOutcome> {
   let outcome: SyncOutcome = { ok: true };
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     const upto = await latestAuditId(env);
     outcome = await callCapsid(env, nowMs, fetchImpl);
-    await recordSync(env, outcome.ok ? "accepted" : "failed", outcome.ok ? null : outcome.error, upto);
+    await recordSync(
+      env,
+      outcome.ok ? "accepted" : "failed",
+      outcome.ok ? null : outcome.error,
+      upto,
+    );
     if (!outcome.ok || !(await pendingAfter(env, upto))) break;
   }
   return outcome;
@@ -67,7 +86,11 @@ async function callCapsid(env: Env, nowMs: number, fetchImpl: FetchLike): Promis
   if (!key) return { ok: false, error: SYNC_NOT_SET_UP_REASON };
 
   const rows = await listMembers(env);
-  const body = { namespace: ACCESS_SYNC_NAMESPACE, members: allowList(rows, nowMs, LAB_CATALOG), removed: await unsyncedRemovals(env) };
+  const body = {
+    namespace: ACCESS_SYNC_NAMESPACE,
+    members: allowList(rows, nowMs, LAB_CATALOG),
+    removed: await unsyncedRemovals(env),
+  };
   let response: Response;
   try {
     response = await fetchImpl(ACCESS_SYNC_URL, {
@@ -77,7 +100,10 @@ async function callCapsid(env: Env, nowMs: number, fetchImpl: FetchLike): Promis
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
-    return { ok: false, error: `Capsid could not be reached: ${error instanceof Error ? error.message : String(error)}` };
+    return {
+      ok: false,
+      error: `Capsid could not be reached: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
   if (response.ok) return { ok: true };
   return { ok: false, error: await refusalText(response) };

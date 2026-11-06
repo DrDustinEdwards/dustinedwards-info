@@ -8,7 +8,16 @@
 
 import { can, type Actor } from "@dustinedwards/site-runtime/members";
 
-import { getLot, listLocations, listLots, lotAudit, lotChange, lotInsert, locationInsert, type LotRow } from "~/db/inventory";
+import {
+  getLot,
+  listLocations,
+  listLots,
+  lotAudit,
+  lotChange,
+  lotInsert,
+  locationInsert,
+  type LotRow,
+} from "~/db/inventory";
 import { listRegistry } from "~/db/registry";
 import { listRunnableProcedures, runsUsingLot } from "~/db/runs";
 
@@ -28,16 +37,27 @@ export async function itemNames(env: Env): Promise<Map<string, string>> {
 }
 
 export function withItem(lot: LotRow, names: Map<string, string>): LotView {
-  return { ...lot, item: names.get(`${lot.item_kind}:${lot.item_id}`) ?? `${lot.item_kind} ${lot.item_id}` };
+  return {
+    ...lot,
+    item: names.get(`${lot.item_kind}:${lot.item_id}`) ?? `${lot.item_kind} ${lot.item_id}`,
+  };
 }
 
 export async function inventoryPage(env: Env, actor: Actor) {
-  const [lots, locations, names] = await Promise.all([listLots(env), listLocations(env), itemNames(env)]);
+  const [lots, locations, names] = await Promise.all([
+    listLots(env),
+    listLocations(env),
+    itemNames(env),
+  ]);
   const edits = can(actor, PERMISSION.editInventory);
   return {
     lots: lots.map((l) => withItem(l, names)),
     locations,
-    items: edits ? [...names.entries()].map(([value, label]) => ({ value, label: `${label} (${value.split(":")[0]})` })).sort((a, b) => a.label.localeCompare(b.label)) : [],
+    items: edits
+      ? [...names.entries()]
+          .map(([value, label]) => ({ value, label: `${label} (${value.split(":")[0]})` }))
+          .sort((a, b) => a.label.localeCompare(b.label))
+      : [],
     canEdit: edits,
     canUse: can(actor, PERMISSION.useLot),
   };
@@ -60,7 +80,10 @@ export async function lotPage(env: Env, actor: Actor, id: number) {
     lot: withItem(lot, names),
     // The history names who changed the lot, and a run's change names its author: someone who may see only their own
     // runs sees only their own rows, unless they keep the inventory.
-    audit: allRuns || can(actor, PERMISSION.editInventory) ? audit : audit.filter((row) => row.actor === actor.email),
+    audit:
+      allRuns || can(actor, PERMISSION.editInventory)
+        ? audit
+        : audit.filter((row) => row.actor === actor.email),
     runs: runs.map((r) => ({ ...r, title: titles.get(r.procedure_slug) ?? r.procedure_slug })),
     locations,
     allRuns,
@@ -78,11 +101,16 @@ function constraintText(error: unknown): string | null {
   const message = error instanceof Error ? error.message : String(error);
   if (/UNIQUE/.test(message)) return "That is already recorded.";
   if (/kb_lots_amount_check/.test(message)) return "A lot's amount cannot go below zero.";
-  if (/CHECK|FOREIGN KEY/.test(message)) return "That change breaks a rule of the inventory, so nothing was saved.";
+  if (/CHECK|FOREIGN KEY/.test(message))
+    return "That change breaks a rule of the inventory, so nothing was saved.";
   return null;
 }
 
-async function run(env: Env, statements: D1PreparedStatement[], done: string): Promise<InventoryResult> {
+async function run(
+  env: Env,
+  statements: D1PreparedStatement[],
+  done: string,
+): Promise<InventoryResult> {
   try {
     await env.DB.batch(statements);
   } catch (error) {
@@ -93,13 +121,21 @@ async function run(env: Env, statements: D1PreparedStatement[], done: string): P
   return { ok: true, text: done };
 }
 
-function optionalDate(form: FormData, name: string): { ok: true; value: string | null } | { ok: false; reason: string } {
+function optionalDate(
+  form: FormData,
+  name: string,
+): { ok: true; value: string | null } | { ok: false; reason: string } {
   const text = field(form, name);
   if (!text) return { ok: true, value: null };
-  return isDate(text) ? { ok: true, value: text } : { ok: false, reason: `Not a date (YYYY-MM-DD): ${text}.` };
+  return isDate(text)
+    ? { ok: true, value: text }
+    : { ok: false, reason: `Not a date (YYYY-MM-DD): ${text}.` };
 }
 
-async function locationId(env: Env, text: string): Promise<{ ok: true; value: number | null } | { ok: false; reason: string }> {
+async function locationId(
+  env: Env,
+  text: string,
+): Promise<{ ok: true; value: number | null } | { ok: false; reason: string }> {
   if (!text) return { ok: true, value: null };
   const id = idOf(text);
   const known = (await listLocations(env)).some((l) => l.id === id);
@@ -107,7 +143,12 @@ async function locationId(env: Env, text: string): Promise<{ ok: true; value: nu
 }
 
 /** Runs one post from the inventory pages as `actor`, each intent behind its own permission. */
-export async function inventoryAction(env: Env, actor: Actor, form: FormData, nowMs: number): Promise<InventoryResult> {
+export async function inventoryAction(
+  env: Env,
+  actor: Actor,
+  form: FormData,
+  nowMs: number,
+): Promise<InventoryResult> {
   const intent = field(form, "intent");
 
   if (intent === "mark_opened" || intent === "mark_empty") {
@@ -115,12 +156,23 @@ export async function inventoryAction(env: Env, actor: Actor, form: FormData, no
     const lotId = idOf(field(form, "lot"));
     const lot = lotId ? await getLot(env, lotId) : null;
     if (!lot) return refused("That lot does not exist.");
-    if (lot.status !== "in_stock") return refused(`Lot ${lot.lot_number} is ${lot.status.replace("_", " ")}.`);
+    if (lot.status !== "in_stock")
+      return refused(`Lot ${lot.lot_number} is ${lot.status.replace("_", " ")}.`);
     const update =
       intent === "mark_opened"
-        ? env.DB.prepare("UPDATE kb_lots SET opened = coalesce(opened, ?), updated_at = unixepoch() WHERE id = ?").bind(today(nowMs), lot.id)
-        : env.DB.prepare("UPDATE kb_lots SET status = 'empty', updated_at = unixepoch() WHERE id = ?").bind(lot.id);
-    return run(env, lotChange(env, actor.email, lot.id, update), intent === "mark_opened" ? `Lot ${lot.lot_number} marked opened.` : `Lot ${lot.lot_number} marked empty.`);
+        ? env.DB.prepare(
+            "UPDATE kb_lots SET opened = coalesce(opened, ?), updated_at = unixepoch() WHERE id = ?",
+          ).bind(today(nowMs), lot.id)
+        : env.DB.prepare(
+            "UPDATE kb_lots SET status = 'empty', updated_at = unixepoch() WHERE id = ?",
+          ).bind(lot.id);
+    return run(
+      env,
+      lotChange(env, actor.email, lot.id, update),
+      intent === "mark_opened"
+        ? `Lot ${lot.lot_number} marked opened.`
+        : `Lot ${lot.lot_number} marked empty.`,
+    );
   }
 
   if (!can(actor, PERMISSION.editInventory)) return refused("You cannot change the inventory.");
@@ -135,14 +187,16 @@ export async function inventoryAction(env: Env, actor: Actor, form: FormData, no
 
   if (intent === "add_lot") {
     const [kind, id] = field(form, "item").split(":");
-    if (!kind || !id || !(await itemNames(env)).has(`${kind}:${id}`)) return refused("Choose an item from the registry.");
+    if (!kind || !id || !(await itemNames(env)).has(`${kind}:${id}`))
+      return refused("Choose an item from the registry.");
     const lotNumber = field(form, "lot_number");
     if (!lotNumber) return refused("Type the lot number from the label.");
     const expiry = optionalDate(form, "expiry");
     const received = optionalDate(form, "received");
     const amount = amountOf(field(form, "amount"));
     const location = await locationId(env, field(form, "location"));
-    for (const check of [expiry, received, amount, location]) if (!check.ok) return refused(check.reason);
+    for (const check of [expiry, received, amount, location])
+      if (!check.ok) return refused(check.reason);
     return run(
       env,
       lotInsert(env, actor.email, {
@@ -168,10 +222,18 @@ export async function inventoryAction(env: Env, actor: Actor, form: FormData, no
     const location = await locationId(env, field(form, "location"));
     const status = field(form, "status");
     for (const check of [expiry, amount, location]) if (!check.ok) return refused(check.reason);
-    if (!(STATUSES as readonly string[]).includes(status)) return refused(`Unknown status: ${status}.`);
+    if (!(STATUSES as readonly string[]).includes(status))
+      return refused(`Unknown status: ${status}.`);
     const update = env.DB.prepare(
       "UPDATE kb_lots SET expiry = ?, amount = ?, unit = ?, location_id = ?, status = ?, updated_at = unixepoch() WHERE id = ?",
-    ).bind(expiry.ok ? expiry.value : null, amount.ok ? amount.value : null, field(form, "unit") || null, location.ok ? location.value : null, status, lot.id);
+    ).bind(
+      expiry.ok ? expiry.value : null,
+      amount.ok ? amount.value : null,
+      field(form, "unit") || null,
+      location.ok ? location.value : null,
+      status,
+      lot.id,
+    );
     return run(env, lotChange(env, actor.email, lot.id, update), `Lot ${lot.lot_number} saved.`);
   }
 

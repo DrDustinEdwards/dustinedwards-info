@@ -24,7 +24,12 @@ const titleOf = (slug: string) => `${slug} cohort`;
 
 export function rosterHandler(env: RosterEnv): ContentKindHandler {
   /** One write through saveRoster as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     try {
       const saved = await saveRoster(env, {
         slug,
@@ -68,7 +73,9 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
       if (!owns(slug)) return null;
       const file = await readFile(env, rosterPath(slug));
       if (!file) return null;
-      const row = await env.DB.prepare(`SELECT synced_at FROM roster WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>();
+      const row = await env.DB.prepare(`SELECT synced_at FROM roster WHERE slug = ?1`)
+        .bind(slug)
+        .first<{ synced_at: number }>();
       return {
         id: slug,
         kind: "roster",
@@ -86,7 +93,10 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
 
     // Creates a cohort (no version) or edits one (its version), as every kind does; either way it is public.
     async saveDraft(slug, input) {
-      if (!owns(slug)) throw new RefusedError(`"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`);
+      if (!owns(slug))
+        throw new RefusedError(
+          `"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`,
+        );
       const file = await readFile(env, rosterPath(slug));
       if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
@@ -94,7 +104,10 @@ export function rosterHandler(env: RosterEnv): ContentKindHandler {
     },
 
     async publish(slug, input) {
-      if (!owns(slug)) throw new RefusedError(`"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`);
+      if (!owns(slug))
+        throw new RefusedError(
+          `"${slug}" is not a cohort file key; a cohort is named for its year, such as 2025.`,
+        );
       // Read even when source is sent: a version for an id that does not exist is a conflict.
       const file = await readFile(env, rosterPath(slug));
       if (!file) throw new VersionConflictError(null);

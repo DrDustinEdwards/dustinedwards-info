@@ -68,10 +68,8 @@ export function colophonFacts(stack, features, id) {
       el(f.name),
       el(f.what),
     ]);
-  if (id === "security")
-    return SECURITY_TRADEOFF.map(el);
-  if (id === "ai")
-    return AI_DISCLOSURE.map(el);
+  if (id === "security") return SECURITY_TRADEOFF.map(el);
+  if (id === "ai") return AI_DISCLOSURE.map(el);
   if (id === "run")
     return [
       ...SITE_OPERATION.map(el),

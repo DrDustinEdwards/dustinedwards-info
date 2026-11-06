@@ -79,7 +79,8 @@ export function deriveIdentity(person, entries) {
     );
   }
   for (const key of /** @type {const} */ (["name", "degree", "discipline", "department", "org"])) {
-    if (typeof person?.[key] !== "string" || person[key].trim() === "") errors.push(`the profile's person.${key} is missing`);
+    if (typeof person?.[key] !== "string" || person[key].trim() === "")
+      errors.push(`the profile's person.${key} is missing`);
   }
   if (errors.length > 0) return { ok: false, errors };
 

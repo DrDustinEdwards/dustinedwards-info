@@ -1,4 +1,7 @@
-import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "../../app/lib/publications/hosting.mjs";
+import {
+  HOSTED_WITHOUT_LICENSE,
+  permitsRedistribution,
+} from "../../app/lib/publications/hosting.mjs";
 import { paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import { TOPICS } from "../../app/lib/publications/topics.mjs";
 import { closePart, hosted, openPart, records, refusalsFor } from "./publications-context.mjs";
@@ -7,7 +10,9 @@ import { closePart, hosted, openPart, records, refusalsFor } from "./publication
 const { tally, ok } = openPart("paths");
 
 /** @param {string[]} messages */
-const shown = (messages) => messages.slice(0, 8).join("; ") + (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
+const shown = (messages) =>
+  messages.slice(0, 8).join("; ") +
+  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 const declaredTopics = new Set(TOPICS.map((t) => t.id));
 ok(
@@ -24,19 +29,23 @@ ok(
 /* The slug is lossy, so a collision is two papers on one URL; uniqueness is the corpus part's. */
 ok(
   "every slug is a single lower-case path segment, and a DOI's slug is the one doiSlug derives",
-  refusalsFor("slug", "doi").length === 0 && records.every((r) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(r.slug)),
+  refusalsFor("slug", "doi").length === 0 &&
+    records.every((r) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(r.slug)),
   shown(refusalsFor("slug", "doi")),
 );
 
 /* `pdfPath` stays a literal in the file because `build:template-refs` matches asset references as literals. */
 ok(
   `every hosted pdfPath is the path paperPdfPath derives (${hosted.length} checked)`,
-  refusalsFor("pdfPath").length === 0 && hosted.every((c) => c.record.pdfPath === paperPdfPath(c.slug)),
+  refusalsFor("pdfPath").length === 0 &&
+    hosted.every((c) => c.record.pdfPath === paperPdfPath(c.slug)),
   shown(refusalsFor("pdfPath")),
 );
 
 /* What Scholar cares about: `paperPdfPath` can move while the equality above passes. */
-const outsideOwnDirectory = hosted.filter((c) => !c.record.pdfPath?.startsWith(`/research/publications/${c.slug}/`)).map((c) => c.slug);
+const outsideOwnDirectory = hosted
+  .filter((c) => !c.record.pdfPath?.startsWith(`/research/publications/${c.slug}/`))
+  .map((c) => c.slug);
 ok(
   "every hosted PDF is in the same subdirectory as its paper's page",
   outsideOwnDirectory.length === 0,
@@ -61,7 +70,11 @@ ok(
       `${unlicensed.length} hosted without one and named in hosting.mjs)`,
   );
 
-  ok(`the hosted set is non-empty (${hostedRecords.length})`, hostedRecords.length > 0, "every rights assertion below iterates it");
+  ok(
+    `the hosted set is non-empty (${hostedRecords.length})`,
+    hostedRecords.length > 0,
+    "every rights assertion below iterates it",
+  );
   ok(
     `some hosted PDFs carry a redistribution license (${licensed.length})`,
     licensed.length > 0,
@@ -74,7 +87,9 @@ ok(
   );
 
   /* Stale exemptions are how an allowlist stops meaning anything. */
-  const stale = [...HOSTED_WITHOUT_LICENSE.keys()].filter((doi) => !unlicensed.some((r) => r.doi === doi));
+  const stale = [...HOSTED_WITHOUT_LICENSE.keys()].filter(
+    (doi) => !unlicensed.some((r) => r.doi === doi),
+  );
   ok(
     "every DOI in the allowlist is still a PDF hosted without a license",
     stale.length === 0,

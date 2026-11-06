@@ -12,12 +12,12 @@ to this format goes through a build.
 
 ```markdown
 ---
-profile: protocol                 # protocol | recipe | computational
+profile: protocol # protocol | recipe | computational
 path: /research/protocols/phage-dna-extraction
 title: Phage DNA Extraction Protocol
 seo_title: "Phage DNA Extraction Protocol: column-free ZnCl2/TES method"
 description: One sentence, at most 155 characters.
-draft: false                      # true: never public; a signed-in admin sees it
+draft: false # true: never public; a signed-in admin sees it
 version: "MISSING: No version has been assigned."
 updated: 2026-09-30
 based_on:
@@ -49,14 +49,14 @@ The summary: what this is, where it came from, who it is for.
 
 ### Marks (Cooklang, https://cooklang.org/docs/spec/)
 
-| Mark | Means | Renders as |
-| --- | --- | --- |
-| `@name` or `@two words{}` | a material (reagent, ingredient, software, data) | its display name |
-| `@name{20%µl}` | a material with an amount | "20 µl of name" |
-| `@name|shown{20%µl}` | the alias form (cooklang-rs): `name` is the material, `shown` the words on the page | "20 µl of shown" |
-| `@name{=20%µl}` | a fixed amount that scaling leaves alone | as above |
-| `#name` or `#two words{}` | equipment | its name |
-| `~{10%minutes}` or `~label{10%minutes}` | a timer | "10 minutes" |
+| Mark                                    | Means                                            | Renders as                                                                          |
+| --------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `@name` or `@two words{}`               | a material (reagent, ingredient, software, data) | its display name                                                                    |
+| `@name{20%µl}`                          | a material with an amount                        | "20 µl of name"                                                                     |
+| `@name                                  | shown{20%µl}`                                    | the alias form (cooklang-rs): `name` is the material, `shown` the words on the page | "20 µl of shown" |
+| `@name{=20%µl}`                         | a fixed amount that scaling leaves alone         | as above                                                                            |
+| `#name` or `#two words{}`               | equipment                                        | its name                                                                            |
+| `~{10%minutes}` or `~label{10%minutes}` | a timer                                          | "10 minutes"                                                                        |
 
 A mark starts after a space or at the start of a line, so `(#references)` and an email address are never
 marks. Marks inside inline code or a link target are left alone.
@@ -351,11 +351,11 @@ worker with no browser, and the offline case of `check:browser` keeps a protocol
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| The page | `app/routes/procedure.tsx`, drawn from the D1 row |
-| The printable sheet | the page's `/sheet` address |
-| The markdown twin | the page's `.md` address, generated from the same record |
-| JSON-LD | Bioschemas LabProtocol 0.9-DRAFT (with every temperature and g-force its steps state as `parameter`), schema.org Recipe, or HowTo for a computational procedure |
-| Search | `search_docs`, written by the sync and by `save_procedure` |
-| The check | `npm run check:protocols` validates every file with the save tool's own validator |
+| Output              | From                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The page            | `app/routes/procedure.tsx`, drawn from the D1 row                                                                                                               |
+| The printable sheet | the page's `/sheet` address                                                                                                                                     |
+| The markdown twin   | the page's `.md` address, generated from the same record                                                                                                        |
+| JSON-LD             | Bioschemas LabProtocol 0.9-DRAFT (with every temperature and g-force its steps state as `parameter`), schema.org Recipe, or HowTo for a computational procedure |
+| Search              | `search_docs`, written by the sync and by `save_procedure`                                                                                                      |
+| The check           | `npm run check:protocols` validates every file with the save tool's own validator                                                                               |

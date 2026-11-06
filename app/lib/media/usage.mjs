@@ -45,8 +45,10 @@ export function usageStateOf(evidence) {
  * @returns {{ id: string, label: string, title: string, note: string }}
  */
 export function usageDescriptor(state) {
-  return /** @type {Record<string, typeof USAGE_STATES.used>} */ (USAGE_STATES)[state]
-    ?? USAGE_STATES.unattached;
+  return (
+    /** @type {Record<string, typeof USAGE_STATES.used>} */ (USAGE_STATES)[state] ??
+    USAGE_STATES.unattached
+  );
 }
 
 /**
@@ -99,11 +101,9 @@ export const LENS_NOTES = {
     "No reference was found in posts or in repository code. That is not proof a " +
     "file is unused: check before deleting.",
   duplicates:
-    "These files share a content hash with another file. Both addresses serve " +
-    "the same bytes.",
+    "These files share a content hash with another file. Both addresses serve " + "the same bytes.",
   "no-alt":
-    "Images published without alt text. Documents are not listed; they do not " +
-    "take alt text.",
+    "Images published without alt text. Documents are not listed; they do not " + "take alt text.",
   large: "Large files slow the pages that embed them. Consider a smaller derivative.",
 };
 
@@ -114,7 +114,10 @@ export const LENS_NOTES = {
  * @returns {string}
  */
 export function suggestedAlt(base) {
-  return base.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim();
+  return base
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
 }
 
 /**
@@ -151,13 +154,33 @@ export function copySnippetsFor(row) {
   if (row.viewable) {
     return [
       { id: "address", label: "Copy address", name: "Copy the address", value: row.url },
-      { id: "markdown", label: "Markdown", name: "Copy the markdown image", value: `![${alt}](${row.url})` },
-      { id: "html", label: "HTML tag", name: "Copy the HTML image tag", value: `<img src="${row.url}" alt="${alt}">` },
+      {
+        id: "markdown",
+        label: "Markdown",
+        name: "Copy the markdown image",
+        value: `![${alt}](${row.url})`,
+      },
+      {
+        id: "html",
+        label: "HTML tag",
+        name: "Copy the HTML image tag",
+        value: `<img src="${row.url}" alt="${alt}">`,
+      },
     ];
   }
   return [
     { id: "address", label: "Copy address", name: "Copy the address", value: row.url },
-    { id: "markdown", label: "Markdown", name: "Copy the markdown link", value: `[${title}](${row.url})` },
-    { id: "html", label: "HTML link", name: "Copy the HTML link", value: `<a href="${row.url}">${title}</a>` },
+    {
+      id: "markdown",
+      label: "Markdown",
+      name: "Copy the markdown link",
+      value: `[${title}](${row.url})`,
+    },
+    {
+      id: "html",
+      label: "HTML link",
+      name: "Copy the HTML link",
+      value: `<a href="${row.url}">${title}</a>`,
+    },
   ];
 }

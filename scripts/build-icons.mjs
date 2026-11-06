@@ -22,10 +22,19 @@ const ICO_MARK = "#EDE8F5";
 /** The spec's eight paths in paint order, verbatim. */
 const BRAND = "(brand)";
 const PATHS = [
-  [BRAND, "M 271.75 306.65 A 112.5 112.5 0 1 1 167.85 117.27 L 177.21 159.48 A 69.2 69.2 0 1 0 238.83 273.73 L 271.75 306.65 Z"],
+  [
+    BRAND,
+    "M 271.75 306.65 A 112.5 112.5 0 1 1 167.85 117.27 L 177.21 159.48 A 69.2 69.2 0 1 0 238.83 273.73 L 271.75 306.65 Z",
+  ],
   [BRAND, "M 212.00 273.20 L 290.80 273.20 A 39.4 39.4 0 0 1 212.00 273.20 Z"],
-  [BRAND, "M 81.40 341.70 A 44.9 44.9 0 0 1 119.10 312.62 L 271.60 312.62 A 44.9 44.9 0 0 1 309.30 341.70 L 81.40 341.70 Z"],
-  ["#CE7F44", "M 173.37 117.10 A 111.6 111.6 0 0 1 288.36 170.46 L 306.63 201.48 L 275.44 219.85 L 257.17 188.83 A 75.4 75.4 0 0 0 193.75 151.72 Z"],
+  [
+    BRAND,
+    "M 81.40 341.70 A 44.9 44.9 0 0 1 119.10 312.62 L 271.60 312.62 A 44.9 44.9 0 0 1 309.30 341.70 L 81.40 341.70 Z",
+  ],
+  [
+    "#CE7F44",
+    "M 173.37 117.10 A 111.6 111.6 0 0 1 288.36 170.46 L 306.63 201.48 L 275.44 219.85 L 257.17 188.83 A 75.4 75.4 0 0 0 193.75 151.72 Z",
+  ],
   [BRAND, "M 109.47 86.65 L 143.59 66.56 L 217.44 191.92 L 183.32 212.02 Z"],
   ["#E0A428", "M 225.72 207.36 L 257.51 188.63 L 275.78 219.65 L 243.99 238.38 Z"],
   ["#E2BC6B", "M 192.20 227.10 L 226.06 207.15 L 244.33 238.17 L 210.47 258.12 Z"],
@@ -101,7 +110,9 @@ const OUT = outArg === -1 ? PUBLIC : resolve(process.argv[outArg + 1]);
 // Resolved and compared as paths: `--out public` or `--out ./public` wrote into public/ while the
 // string compare below said otherwise and skipped the manifest rebuild.
 const samePath = (/** @type {string} */ a, /** @type {string} */ b) =>
-  process.platform === "win32" ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b);
+  process.platform === "win32"
+    ? resolve(a).toLowerCase() === resolve(b).toLowerCase()
+    : resolve(a) === resolve(b);
 mkdirSync(OUT, { recursive: true });
 
 /** @param {string} name @param {Buffer|string} data */
@@ -115,7 +126,11 @@ console.log(`build:icons -> ${OUT}`);
 
 // The tile Prelum's prelum-icons draws every icon file from, at its shared paths.
 emit("icon.svg", faviconSvg());
-execFileSync(process.execPath, [ICONS_BIN, "--svg", join(OUT, "icon.svg"), "--background", TILE, "--out", OUT], { stdio: "inherit" });
+execFileSync(
+  process.execPath,
+  [ICONS_BIN, "--svg", join(OUT, "icon.svg"), "--background", TILE, "--out", OUT],
+  { stdio: "inherit" },
+);
 
 emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 

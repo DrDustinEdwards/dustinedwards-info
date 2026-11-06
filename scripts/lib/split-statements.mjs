@@ -282,19 +282,25 @@ function splitInsert(statement, options) {
     throw new Error(`an oversize INSERT into ${table} lists no columns and none were given for it`);
   }
   if (columns.length !== values.length) {
-    throw new Error(`an INSERT into ${table} names ${columns.length} columns but has ${values.length} values`);
+    throw new Error(
+      `an INSERT into ${table} names ${columns.length} columns but has ${values.length} values`,
+    );
   }
 
   const conflict = /^ON\s+CONFLICT\s*\(([^)]*)\)/i.exec(tail);
-  const keyColumns = conflict ? conflict[1].split(",").map(unquoteIdentifier) : options.keyOf?.(table);
+  const keyColumns = conflict
+    ? conflict[1].split(",").map(unquoteIdentifier)
+    : options.keyOf?.(table);
   /** @type {string} */
   let where;
   if (keyColumns && keyColumns.length > 0) {
     where = keyColumns
       .map((k) => {
         const at = columns.indexOf(k);
-        if (at === -1) throw new Error(`the key column ${k} of ${table} is not among the INSERT's columns`);
-        if (bytes(values[at]) > PIECE_BYTES) throw new Error(`the key column ${k} of ${table} is itself long`);
+        if (at === -1)
+          throw new Error(`the key column ${k} of ${table} is not among the INSERT's columns`);
+        if (bytes(values[at]) > PIECE_BYTES)
+          throw new Error(`the key column ${k} of ${table} is itself long`);
         return `${quoteIdentifier(k)} = ${values[at]}`;
       })
       .join(" AND ");
@@ -323,16 +329,22 @@ function splitInsert(statement, options) {
     const [head1, ...rest] = pieces(value);
     first.push(head1);
     for (const piece of rest) {
-      appends.push(`UPDATE ${quoteIdentifier(table)} SET ${quoteIdentifier(column)} = ${quoteIdentifier(column)} || ${piece} WHERE ${where}`);
+      appends.push(
+        `UPDATE ${quoteIdentifier(table)} SET ${quoteIdentifier(column)} = ${quoteIdentifier(column)} || ${piece} WHERE ${where}`,
+      );
     }
   });
 
   /* The key was read from the original values above; a late column that is the key would be blanked. */
-  if (keyColumns?.some((k) => late.includes(k))) throw new Error(`${table}: a key column cannot be a late column`);
+  if (keyColumns?.some((k) => late.includes(k)))
+    throw new Error(`${table}: a key column cannot be a late column`);
 
   const insert =
     `INSERT INTO ${head[1]} (${columns.map(quoteIdentifier).join(", ")}) VALUES (${first.join(", ")})` +
     (tail ? ` ${tail}` : "");
-  const finish = later.length > 0 ? [`UPDATE ${quoteIdentifier(table)} SET ${later.join(", ")} WHERE ${where}`] : [];
+  const finish =
+    later.length > 0
+      ? [`UPDATE ${quoteIdentifier(table)} SET ${later.join(", ")} WHERE ${where}`]
+      : [];
   return [insert, ...appends, ...finish];
 }

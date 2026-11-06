@@ -4,7 +4,12 @@
 // edited, as YAML, so nothing in a file is out of the form's reach.
 
 import { BIOSAFETY_LEVELS, HOWTO_TYPES } from "./procedures/validate.mjs";
-import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./procedures/taxonomy.mjs";
+import {
+  COURSES,
+  METHODS,
+  NON_STRAIN_ORGANISMS,
+  PROTOCOL_STATUSES,
+} from "./procedures/taxonomy.mjs";
 
 /**
  * @typedef {"text" | "textarea" | "lines" | "date" | "number" | "checkbox" | "select" | "multi" | "choice" | "materials" | "equipment" | "primers" | "strains" | "readonly" | "yaml"} FieldKind
@@ -19,34 +24,73 @@ export const keyWords = (key) =>
     .replace(/^./, (c) => c.toUpperCase());
 
 /** @param {Record<string, string | { label: string }>} map */
-const options = (map) => Object.entries(map).map(([value, label]) => ({ value, label: typeof label === "string" ? label : label.label }));
+const options = (map) =>
+  Object.entries(map).map(([value, label]) => ({
+    value,
+    label: typeof label === "string" ? label : label.label,
+  }));
 
 /** Every profile's fields first, in the order a person fills them in. @type {FieldSpec[]} */
 const COMMON = [
   { key: "title", label: "Title", kind: "text" },
-  { key: "seo_title", label: "Search title", kind: "text", help: "The title search engines show; at most 60 characters." },
-  { key: "description", label: "Description", kind: "textarea", help: "One sentence, at most 155 characters." },
+  {
+    key: "seo_title",
+    label: "Search title",
+    kind: "text",
+    help: "The title search engines show; at most 60 characters.",
+  },
+  {
+    key: "description",
+    label: "Description",
+    kind: "textarea",
+    help: "One sentence, at most 155 characters.",
+  },
   { key: "draft", label: "Draft (only you can see it)", kind: "checkbox" },
-  { key: "version", label: "Version", kind: "text", help: "Letters, digits, dots and hyphens, such as 2 or 1.1. A version, once published, is frozen." },
+  {
+    key: "version",
+    label: "Version",
+    kind: "text",
+    help: "Letters, digits, dots and hyphens, such as 2 or 1.1. A version, once published, is frozen.",
+  },
   { key: "updated", label: "Updated", kind: "date" },
 ];
 
 /** @type {FieldSpec[]} */
 const PROTOCOL = [
   { key: "status", label: "Status", kind: "select", options: options(PROTOCOL_STATUSES) },
-  { key: "biosafety_level", label: "Biosafety level", kind: "choice", options: BIOSAFETY_LEVELS.map((v) => ({ value: v, label: v })) },
+  {
+    key: "biosafety_level",
+    label: "Biosafety level",
+    kind: "choice",
+    options: BIOSAFETY_LEVELS.map((v) => ({ value: v, label: v })),
+  },
   { key: "method", label: "Method", kind: "multi", options: options(METHODS) },
   { key: "course", label: "Courses", kind: "multi", options: options(COURSES) },
   { key: "organism", label: "Organisms", kind: "multi" },
-  { key: "target", label: "Targets", kind: "lines", help: "One per line: a gene, region or sample." },
+  {
+    key: "target",
+    label: "Targets",
+    kind: "lines",
+    help: "One per line: a gene, region or sample.",
+  },
   { key: "first_used", label: "First used", kind: "text" },
   { key: "last_run", label: "Last run", kind: "date" },
-  { key: "start_here", label: "Start-here position", kind: "number", help: "Its place in the library's Start here list; leave empty for none." },
+  {
+    key: "start_here",
+    label: "Start-here position",
+    kind: "number",
+    help: "Its place in the library's Start here list; leave empty for none.",
+  },
   { key: "host_strain", label: "Host strains", kind: "strains" },
   { key: "primers", label: "Primers", kind: "primers" },
   { key: "materials", label: "Reagents", kind: "materials" },
   { key: "equipment", label: "Equipment", kind: "equipment" },
-  { key: "biosafety", label: "Biosafety agent", kind: "yaml", help: "The agent only: { organism, strain, atcc }, or not applicable." },
+  {
+    key: "biosafety",
+    label: "Biosafety agent",
+    kind: "yaml",
+    help: "The agent only: { organism, strain, atcc }, or not applicable.",
+  },
   { key: "expected_results", label: "Expected results", kind: "textarea" },
   { key: "limitations", label: "Limitations", kind: "textarea" },
 ];
@@ -65,10 +109,31 @@ const RECIPE = [
 
 /** @type {FieldSpec[]} */
 const COMPUTATIONAL = [
-  { key: "type", label: "Type", kind: "select", options: options(HOWTO_TYPES), help: "A tutorial teaches, step by step; a how-to gets one task done." },
-  { key: "questions", label: "Questions", kind: "lines", help: "One per line: what the reader will be able to answer." },
-  { key: "objectives", label: "Objectives", kind: "lines", help: "One per line: what the reader will be able to do. A tutorial needs them." },
-  { key: "key_points", label: "Key points", kind: "lines", help: "One per line, shown at the end." },
+  {
+    key: "type",
+    label: "Type",
+    kind: "select",
+    options: options(HOWTO_TYPES),
+    help: "A tutorial teaches, step by step; a how-to gets one task done.",
+  },
+  {
+    key: "questions",
+    label: "Questions",
+    kind: "lines",
+    help: "One per line: what the reader will be able to answer.",
+  },
+  {
+    key: "objectives",
+    label: "Objectives",
+    kind: "lines",
+    help: "One per line: what the reader will be able to do. A tutorial needs them.",
+  },
+  {
+    key: "key_points",
+    label: "Key points",
+    kind: "lines",
+    help: "One per line, shown at the end.",
+  },
   { key: "method", label: "Method", kind: "multi", options: options(METHODS) },
   { key: "course", label: "Courses", kind: "multi", options: options(COURSES) },
   { key: "environment", label: "Environment", kind: "textarea" },
@@ -95,10 +160,13 @@ const FIXED = [
  * @returns {FieldSpec[]}
  */
 export function entryFields(profile, data, strains) {
-  const own = profile === "recipe" ? RECIPE : profile === "computational" ? COMPUTATIONAL : PROTOCOL;
+  const own =
+    profile === "recipe" ? RECIPE : profile === "computational" ? COMPUTATIONAL : PROTOCOL;
   /** @type {FieldSpec[]} */
   const specs = [...FIXED, ...COMMON, ...own].map((spec) =>
-    spec.key === "organism" ? { ...spec, options: [...strains, ...options(NON_STRAIN_ORGANISMS)] } : spec,
+    spec.key === "organism"
+      ? { ...spec, options: [...strains, ...options(NON_STRAIN_ORGANISMS)] }
+      : spec,
   );
   const named = new Set(specs.map((s) => s.key));
   const rest = Object.keys(data)
@@ -114,7 +182,8 @@ export function entryFields(profile, data, strains) {
  * @param {string} key
  */
 export function fieldLabel(profile, key) {
-  const own = profile === "recipe" ? RECIPE : profile === "computational" ? COMPUTATIONAL : PROTOCOL;
+  const own =
+    profile === "recipe" ? RECIPE : profile === "computational" ? COMPUTATIONAL : PROTOCOL;
   return [...FIXED, ...COMMON, ...own].find((s) => s.key === key)?.label ?? keyWords(key);
 }
 
@@ -133,7 +202,9 @@ export function itemFields(declared, data) {
     ...declared.map((key) => ({
       key,
       label: keyWords(key),
-      kind: /** @type {FieldKind} */ (typeof data[key] === "boolean" || key.startsWith("prepared_") ? "checkbox" : "text"),
+      kind: /** @type {FieldKind} */ (
+        typeof data[key] === "boolean" || key.startsWith("prepared_") ? "checkbox" : "text"
+      ),
     })),
   ];
 }

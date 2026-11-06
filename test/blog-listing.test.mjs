@@ -36,7 +36,10 @@ await test("order is preserved for the posts that remain", () => {
     ],
     true,
   );
-  assert.deepEqual(posts.map((p) => p.slug), ["y", "z"]);
+  assert.deepEqual(
+    posts.map((p) => p.slug),
+    ["y", "z"],
+  );
 });
 
 await test("an ineligible page keeps its list intact and shows no hero", () => {
@@ -56,7 +59,10 @@ await test("no featured post on the page means no hero and no removal", () => {
   ];
   const { featured, posts } = splitFeatured(plain, true);
   assert.equal(featured, null);
-  assert.deepEqual(posts.map((p) => p.slug), ["a", "b"]);
+  assert.deepEqual(
+    posts.map((p) => p.slug),
+    ["a", "b"],
+  );
 });
 
 await test("the first featured post wins when the data carries more than one", () => {

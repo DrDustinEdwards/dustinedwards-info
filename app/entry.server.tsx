@@ -28,7 +28,9 @@ export default async function handleRequest(
         responseStatusCode = 500;
         // Errors before the shell renders reject and are logged in handleDocumentRequest.
         if (shellRendered) {
-          console.error(JSON.stringify({ alert: "render-failed-after-shell", detail: errorMessage(error) }));
+          console.error(
+            JSON.stringify({ alert: "render-failed-after-shell", detail: errorMessage(error) }),
+          );
         }
       },
     },

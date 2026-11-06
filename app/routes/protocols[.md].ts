@@ -3,7 +3,15 @@ import { listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
-import { LIBRARY_PATH, citeMarkdown, libraryCitation, libraryItems, libraryMarkdown, libraryOverview, overviewMarkdown } from "~/kb/procedures/library.mjs";
+import {
+  LIBRARY_PATH,
+  citeMarkdown,
+  libraryCitation,
+  libraryItems,
+  libraryMarkdown,
+  libraryOverview,
+  overviewMarkdown,
+} from "~/kb/procedures/library.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 
@@ -18,10 +26,17 @@ export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const intro = await getPublishedPageMarkdown(env, LIBRARY_PATH);
   if (intro === null) {
-    return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
   const items = libraryItems(await listPublishedLibraryRecords(env));
-  const citation = libraryCitation({ name: SITE.name, affiliation: SITE.affiliation, origin: SITE_ORIGIN });
+  const citation = libraryCitation({
+    name: SITE.name,
+    affiliation: SITE.affiliation,
+    origin: SITE_ORIGIN,
+  });
   const body =
     `${intro.trimEnd()}\n\n${overviewMarkdown(libraryOverview(items), SITE_ORIGIN)}\n\n` +
     `## All protocols\n\n${libraryMarkdown(items, SITE_ORIGIN)}\n\n${citeMarkdown(citation, SITE_ORIGIN)}\n`;

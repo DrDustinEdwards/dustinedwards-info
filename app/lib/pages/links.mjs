@@ -22,7 +22,12 @@ import { wordpressDisposition } from "../wordpress-redirects.mjs";
  */
 
 const decodeEntities = (/** @type {string} */ value) =>
-  value.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 
 const safeDecode = (/** @type {string} */ value) => {
   try {
@@ -45,7 +50,8 @@ const PAGE_TWINS = new Set(CONTENT_PAGE_PATHS.map((p) => contentPageMarkdownPath
 /** The namespaces this module can list completely. */
 const OWNED = /^\/(?:research|teaching|software|recipes|writing)(?:\/|$)/;
 /** Listed elsewhere: papers and citation exports, the lab registry (strains, primers), feeds, tag and series pages. */
-const NOT_LISTED = /^\/(?:research\/publications|research\/lab|writing\/(?:tags|series|rss\.xml|feed\.json|atom\.xml))(?:[/.]|$)/;
+const NOT_LISTED =
+  /^\/(?:research\/publications|research\/lab|writing\/(?:tags|series|rss\.xml|feed\.json|atom\.xml))(?:[/.]|$)/;
 
 /**
  * @param {string} path
@@ -57,7 +63,8 @@ function resolve(path, book, hops = 0) {
   if (hops > 5) return { kind: "missing", path };
   const redirect = wordpressDisposition(path);
   if (redirect?.status === 410) return { kind: "gone", path };
-  if (redirect?.status === 301) return resolve(redirect.location.split("#")[0] ?? "", book, hops + 1);
+  if (redirect?.status === 301)
+    return resolve(redirect.location.split("#")[0] ?? "", book, hops + 1);
   if (!OWNED.test(path) || NOT_LISTED.test(path)) return { kind: "unlisted", path };
   if (PAGE_SET.has(path) || PAGE_TWINS.has(path)) return { kind: "ok", path };
   const procedure = path.replace(/(?:\.md|\/sheet)$/, "");
@@ -76,19 +83,27 @@ export function pageLinkErrors({ html }, book) {
   /** @type {string[]} */
   const errors = [];
   const seen = new Set();
-  for (const raw of [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => decodeEntities(m[1] ?? ""))) {
+  for (const raw of [...html.matchAll(/\shref="([^"]*)"/g)].map((m) =>
+    decodeEntities(m[1] ?? ""),
+  )) {
     const href = SITE_HOST.test(raw) ? raw.replace(SITE_HOST, "") || "/" : raw;
     if (!href.startsWith("/") || href.startsWith("//") || seen.has(href)) continue;
     seen.add(href);
     const [pathAndQuery = "", anchor] = href.split("#");
     const path = (pathAndQuery.split("?")[0] ?? "").replace(/(.)\/+$/, "$1");
     const found = resolve(path, book);
-    if (found.kind === "gone") errors.push(`the link ${href} goes to ${path}, which the site answers 410 Gone`);
-    else if (found.kind === "draft") errors.push(`the link ${href} goes to a draft or scheduled post, which every reader gets a 404 for`);
-    else if (found.kind === "missing") errors.push(`the link ${href} goes to ${found.path}, which this site does not serve`);
+    if (found.kind === "gone")
+      errors.push(`the link ${href} goes to ${path}, which the site answers 410 Gone`);
+    else if (found.kind === "draft")
+      errors.push(
+        `the link ${href} goes to a draft or scheduled post, which every reader gets a 404 for`,
+      );
+    else if (found.kind === "missing")
+      errors.push(`the link ${href} goes to ${found.path}, which this site does not serve`);
     else if (found.kind === "ok" && anchor && found.path === path) {
       const ids = book.idsOf(found.path);
-      if (ids && !ids.has(safeDecode(anchor))) errors.push(`the link ${href} names an anchor that ${found.path} does not have`);
+      if (ids && !ids.has(safeDecode(anchor)))
+        errors.push(`the link ${href} names an anchor that ${found.path} does not have`);
     }
   }
   return errors;

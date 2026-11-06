@@ -17,7 +17,8 @@ export function rovingTarget(key, at, count, axis = "horizontal") {
   const across = axis !== "vertical";
   const down = axis !== "horizontal";
   if ((across && key === "ArrowRight") || (down && key === "ArrowDown")) return (at + 1) % count;
-  if ((across && key === "ArrowLeft") || (down && key === "ArrowUp")) return (at - 1 + count) % count;
+  if ((across && key === "ArrowLeft") || (down && key === "ArrowUp"))
+    return (at - 1 + count) % count;
   if (key === "Home") return 0;
   if (key === "End") return count - 1;
   return null;

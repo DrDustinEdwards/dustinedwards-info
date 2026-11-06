@@ -13,7 +13,11 @@ const yaml = {
   /** @param {string} text */
   load: (text) => /** @type {Record<string, unknown>} */ (matter(`---\n${text}\n---\n`).data),
   /** @param {Record<string, unknown>} value */
-  dump: (value) => matter.stringify("", value).replace(/^---\n/, "").replace(/\n---\n*$/, "\n"),
+  dump: (value) =>
+    matter
+      .stringify("", value)
+      .replace(/^---\n/, "")
+      .replace(/\n---\n*$/, "\n"),
 };
 
 /**
@@ -26,7 +30,17 @@ const yaml = {
  */
 
 /** The step flags the procedure format has (docs/PROCEDURES.md), in the order the form offers them. */
-export const STEP_FLAGS = /** @type {const} */ (["CRITICAL", "PAUSE POINT", "WHY", "EXPECT", "SPIN", "TROUBLESHOOTING", "CALC", "CHALLENGE", "SOLUTION"]);
+export const STEP_FLAGS = /** @type {const} */ ([
+  "CRITICAL",
+  "PAUSE POINT",
+  "WHY",
+  "EXPECT",
+  "SPIN",
+  "TROUBLESHOOTING",
+  "CALC",
+  "CHALLENGE",
+  "SOLUTION",
+]);
 
 const FRONT = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/;
 const KEY = /^([A-Za-z_][\w-]*):(?:\s|$)/;
@@ -35,12 +49,20 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** Equal as data, whatever order an object's keys came in. @param {unknown} a @param {unknown} b @returns {boolean} */
 function sameValue(a, b) {
   if (Array.isArray(a) || Array.isArray(b)) {
-    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => sameValue(x, b[i]));
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((x, i) => sameValue(x, b[i]))
+    );
   }
   if (a && b && typeof a === "object" && typeof b === "object") {
     const ka = Object.keys(a);
     const kb = Object.keys(b);
-    return ka.length === kb.length && ka.every((k) => sameValue(/** @type {any} */ (a)[k], /** @type {any} */ (b)[k]));
+    return (
+      ka.length === kb.length &&
+      ka.every((k) => sameValue(/** @type {any} */ (a)[k], /** @type {any} */ (b)[k]))
+    );
   }
   return a === b;
 }
@@ -62,7 +84,8 @@ export function splitFile(raw) {
   for (const line of lines) {
     const key = KEY.exec(line);
     if (key) fields.push({ key: /** @type {string} */ (key[1]), text: line });
-    else if (fields.length > 0) /** @type {{ text: string }} */ (fields[fields.length - 1]).text += `\n${line}`;
+    else if (fields.length > 0)
+      /** @type {{ text: string }} */ (fields[fields.length - 1]).text += `\n${line}`;
     else prelude.push(line);
   }
   return { prelude, fields, after: match[2] ?? "\n", body: raw.slice(match[0].length) };
@@ -76,7 +99,8 @@ function readField(text) {
 
 /** A plain one-line string YAML reads back as itself, unquoted. @param {string} value */
 function bare(value) {
-  if (value === "" || value !== value.trim() || /[\n:#]|^[-?[\]{},&*!|>'"%@`]/.test(value)) return false;
+  if (value === "" || value !== value.trim() || /[\n:#]|^[-?[\]{},&*!|>'"%@`]/.test(value))
+    return false;
   try {
     return yaml.load(`v: ${value}`)["v"] === value;
   } catch {
@@ -109,9 +133,17 @@ function readStep(lines, i) {
   while (j < lines.length) {
     const next = lines[j] ?? "";
     if (/^\s{2,}\S/.test(next)) {
-      const flag = /^(\s+)>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s?(.*)$/.exec(next);
+      const flag =
+        /^(\s+)>\s*(CRITICAL|PAUSE POINT|WHY|TROUBLESHOOTING|EXPECT|SPIN|CALC|CHALLENGE|SOLUTION)\s*:\s?(.*)$/.exec(
+          next,
+        );
       // A flag is the form's to edit when its line is exactly what the form would write back.
-      if (flag && next === `${flag[1]}> ${flag[2]}: ${flag[3]}`) stepLines.push({ kind: /** @type {string} */ (flag[2]), text: flag[3] ?? "", indent: flag[1] ?? "   " });
+      if (flag && next === `${flag[1]}> ${flag[2]}: ${flag[3]}`)
+        stepLines.push({
+          kind: /** @type {string} */ (flag[2]),
+          text: flag[3] ?? "",
+          indent: flag[1] ?? "   ",
+        });
       else stepLines.push({ raw: next });
       j += 1;
     } else if (next.trim() === "" && /^\s{2,}\S/.test(lines[j + 1] ?? "")) {
@@ -119,7 +151,10 @@ function readStep(lines, i) {
       j += 1;
     } else break;
   }
-  return { step: { number: Number(item?.[1]), text: item?.[2] ?? "", lines: stepLines, blanksBefore: 0 }, next: j };
+  return {
+    step: { number: Number(item?.[1]), text: item?.[2] ?? "", lines: stepLines, blanksBefore: 0 },
+    next: j,
+  };
 }
 
 /** A section's lines as blocks: step lists, and everything else as prose kept line for line. @param {string[]} lines */
@@ -181,10 +216,14 @@ function readBody(body) {
   for (const line of lines) {
     if (line.startsWith("```")) inFence = !inFence;
     if (!inFence && line.startsWith("## ")) raw.push({ heading: line.slice(3), lines: [] });
-    else if (raw.length > 0) /** @type {{ lines: string[] }} */ (raw[raw.length - 1]).lines.push(line);
+    else if (raw.length > 0)
+      /** @type {{ lines: string[] }} */ (raw[raw.length - 1]).lines.push(line);
     else intro.push(line);
   }
-  return { intro: intro.join("\n"), sections: raw.map((s) => ({ heading: s.heading, blocks: readBlocks(s.lines) })) };
+  return {
+    intro: intro.join("\n"),
+    sections: raw.map((s) => ({ heading: s.heading, blocks: readBlocks(s.lines) })),
+  };
 }
 
 /** A step's lines, numbered. @param {FormStep} step @param {number} number */
@@ -223,7 +262,11 @@ export function fileToForm(raw, options = {}) {
   /** @type {Record<string, unknown>} */
   const data = {};
   for (const field of fields) data[field.key] = readField(field.text);
-  return { data, order: fields.map((f) => f.key), body: options.body === false ? null : readBody(body) };
+  return {
+    data,
+    order: fields.map((f) => f.key),
+    body: options.body === false ? null : readBody(body),
+  };
 }
 
 /**
@@ -236,14 +279,19 @@ export function fileToForm(raw, options = {}) {
 export function formToFile(original, model) {
   const { prelude, fields, after, body } = splitFile(original);
   const known = new Map(fields.map((f) => [f.key, f.text]));
-  const keys = [...model.order.filter((k) => known.has(k) || k in model.data), ...Object.keys(model.data).filter((k) => !model.order.includes(k))];
+  const keys = [
+    ...model.order.filter((k) => known.has(k) || k in model.data),
+    ...Object.keys(model.data).filter((k) => !model.order.includes(k)),
+  ];
   /** @type {string[]} */
   const out = [...prelude];
   for (const key of new Set(keys)) {
     const value = model.data[key];
     if (value === undefined) continue;
     const text = known.get(key);
-    out.push(text !== undefined && sameValue(readField(text), value) ? text : writeField(key, value));
+    out.push(
+      text !== undefined && sameValue(readField(text), value) ? text : writeField(key, value),
+    );
   }
   return `---\n${out.join("\n")}\n---${after}${model.body ? writeBody(model.body) : body}`;
 }
