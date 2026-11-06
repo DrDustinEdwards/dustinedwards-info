@@ -271,8 +271,9 @@ export default {
     // The wrapper types the request as a plain Request; it hands on the one the runtime gave it.
     (request: Request, env: Env, ctx: ExecutionContext) => {
       const app = async () => withMarkdownCopies(request, env, ctx);
-      const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen" });
-      return withAdminIdle(request, lab, { prefixes: ["/admin"] });
+      const secret = env.ADMIN_IDLE_SECRET;
+      const lab = () => withAdminIdle(request, app, { prefixes: [LAB_BENCH_PATH], cookieName: "__Host-lab-seen", secret });
+      return withAdminIdle(request, lab, { prefixes: ["/admin"], secret });
     },
     { sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA, tokenPath: /\/preview\/[^/?#\s'"]+/g },
   ),
