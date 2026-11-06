@@ -197,12 +197,13 @@ be reachable from the internet. Read it through the Cloudflare API:
 
 ```sh
 node scripts/probe-report.mjs               # the analyzed report
-node scripts/probe-report.mjs --phase auth  # force the OAuth discovery walk
 node scripts/probe-report.mjs --reset       # clear captures before a real measurement
 ```
 
-Phase `open` captures the protocol opening; phase `auth` returns `401` and
-captures the OAuth discovery walk.
+A capture keeps header names, the protocol header values (user agent, accept,
+content type, the `Mcp-*` fields) and the body's protocol shape (method,
+declared version, client name). It never keeps a cookie, an Authorization or
+Access token, a session id, an IP address, a query value or a tool argument.
 
 ## Not advertised
 

@@ -1,12 +1,16 @@
 import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
 import { storeUpload } from "~/lib/media/upload.server";
 import { applyMediaAlt } from "~/lib/media/actions.server";
-import { altRefusal } from "@dustinedwards/site-api";
+import { altRefusal, guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "@dustinedwards/site-runtime/body";
 import { fromBase64 } from "@dustinedwards/site-runtime/encoding";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolResult } from "./descriptors";
+
+// site-api's own media import uses 15 s and three redirects; the same here.
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_REDIRECTS = 3;
 
 // The bytes and the resolved type, or the refusal to send back as the tool's answer.
 type Sourced = { ok: true; bytes: Uint8Array; type: string } | Extract<ToolResult, { ok: false }>;
@@ -92,34 +96,32 @@ async function bytesFromUrl(url: string, declaredType: string): Promise<Sourced>
     };
   }
 
+  // site-api's one outbound guard: https on the default port, no local name or private address (DNS answers
+  // included), each redirect followed by hand and checked the same way. One signal covers the fetch and the read.
+  const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
   let response: Response;
   try {
-    response = await fetch(parsed, { headers: { accept: "image/*" } });
+    ({ response } = await guardedFetch(
+      fetch,
+      parsed.href,
+      { headers: { accept: "image/*" }, signal },
+      { maxRedirects: MAX_REDIRECTS },
+    ));
   } catch (error) {
+    if (error instanceof OutboundRefusal) {
+      return { ok: false, status: 400, error: `upload_media will not fetch ${parsed.href}: ${error.message}` };
+    }
     return {
       ok: false,
       status: 502,
-      error: `Fetching ${parsed.href} failed: ${errorMessage(error)}`,
-    };
-  }
-  // Checked again where it LANDED: `fetch` follows redirects, and https may redirect to http.
-  let landed = "";
-  try {
-    landed = new URL(response.url || parsed.href).protocol;
-  } catch {
-    landed = "";
-  }
-  if (landed !== "https:") {
-    return {
-      ok: false,
-      status: 400,
-      error:
-        `${parsed.href} redirected to ${response.url || "somewhere unparseable"}, ` +
-        `which is not https. upload_media fetches https only, redirects included.`,
+      error: signal.aborted
+        ? `Fetching ${parsed.href} took over ${FETCH_TIMEOUT_MS / 1000} seconds and was abandoned.`
+        : `Fetching ${parsed.href} failed: ${errorMessage(error)}`,
     };
   }
 
   if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
     return {
       ok: false,
       status: 502,
@@ -130,7 +132,18 @@ async function bytesFromUrl(url: string, declaredType: string): Promise<Sourced>
     return { ok: false, status: 502, error: `${parsed.href} answered with no body.` };
   }
 
-  const read = await readCappedBytes(response, MAX_BYTES);
+  let read: Uint8Array | null;
+  try {
+    read = await readCappedBytes(response, MAX_BYTES);
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      error: signal.aborted
+        ? `Reading ${parsed.href} took over ${FETCH_TIMEOUT_MS / 1000} seconds and was abandoned.`
+        : `Reading ${parsed.href} failed: ${errorMessage(error)}`,
+    };
+  }
   if (!read) {
     return {
       ok: false,
@@ -148,8 +161,8 @@ async function bytesFromUrl(url: string, declaredType: string): Promise<Sourced>
   return { ok: true, bytes: read, type };
 }
 
-// An adapter: `storeUpload` is the write. The token and rate limiter are the primary control; HTTPS only,
-// a capped read and `validateUpload` are secondary. The declared type wins because good PNGs are often
+// An adapter: `storeUpload` is the write. The token and rate limiter are the primary control; the guarded
+// fetch, a timed and capped read and `validateUpload` are secondary. The declared type wins because good PNGs are often
 // served as octet-stream, and it is still checked against the allowlist and the bytes.
 export async function uploadMediaTool(
   env: OperatorEnv,
