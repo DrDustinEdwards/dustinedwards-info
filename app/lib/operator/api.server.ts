@@ -38,6 +38,7 @@ import {
   syncRoster,
   syncStatus,
 } from "./sync-tools.server";
+import { deleteMediaTool } from "./delete-media.server";
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
@@ -242,6 +243,9 @@ export async function runTool(
 
       case "upload_media":
         return await uploadMediaTool(env, args);
+
+      case "delete_media":
+        return await deleteMediaTool(env, args);
 
       case "list_mentions":
         return await listMentionsTool(env, args);

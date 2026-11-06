@@ -27,6 +27,7 @@ const TOOLS = [
   "backup_media",
   "backup_d1",
   "upload_media",
+  "delete_media",
   "list_mentions",
   "decide_mention",
   "list_procedures",
@@ -450,10 +451,16 @@ export const TOOL_DESCRIPTORS: Readonly<
       "the library already holds answer with that file, so the same image uploaded " +
       "twice is one object.",
     policy:
-      "MEDIA is the irreplaceable bucket and there is no delete tool over " +
-      "this token, so an object put here stays until an admin removes it. " +
       "Accepts only the raster image types in ALLOWED (SVG is refused: it " +
       "can carry script), refuses anything over " +
       "MAX_BYTES, and fetches only https URLs.",
+  },
+  delete_media: {
+    args: { keys: "string[], 1 to 25 library keys, such as dustin-edwards-<name>-<digest>-<w>x<h>.webp." },
+    returns: "deleted, refused (each with its reason) and missing, as lists of keys.",
+    policy:
+      "Runs the media library's own delete, the one Carrel runs: a picture a post, a page or repository code uses is refused and named, " +
+      "only an upload's content-addressed key is deletable (a static asset or an older key is refused), and the " +
+      "file's last bytes are kept in MEDIA_REVISIONS, so Carrel can revert it. Never deletes from a bucket directly.",
   },
 };

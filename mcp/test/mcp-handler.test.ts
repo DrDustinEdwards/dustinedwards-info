@@ -59,7 +59,7 @@ describe("handleMcp", () => {
     assert.equal(api.calls.length, 0);
   });
 
-  test("tools/list offers the eleven dei_ tools and nothing else", async () => {
+  test("tools/list offers the twelve dei_ tools and nothing else", async () => {
     const { message } = await rpc("tools/list", {});
     assert.deepEqual(
       message.result.tools.map((t: { name: string }) => t.name).sort(),
@@ -68,6 +68,7 @@ describe("handleMcp", () => {
         "dei_check_publications",
         "dei_check_site",
         "dei_decide_mention",
+        "dei_delete_media",
         "dei_read_procedure",
         "dei_read_registry",
         "dei_refresh_citations",

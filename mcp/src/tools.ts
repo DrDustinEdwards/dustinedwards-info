@@ -482,8 +482,8 @@ export const TOOLS: ToolDefinition[] = [
         "Describe the image: `alt` says what it shows, or `decorative: true` for one that adds nothing a reader would miss. " +
         "An upload with neither, or both, is refused before anything is fetched.\n\n" +
         "POLICY, enforced by the API and not by this wrapper: raster images only (SVG is refused, since " +
-        "it can carry script), a size ceiling, https URLs only. There is NO delete over this credential, " +
-        "so upload the image you mean to use rather than several to choose between.",
+        "it can carry script), a size ceiling, https URLs only. Upload the image you mean to use; " +
+        "dei_delete_media removes one that is not used.",
       inputSchema: z.strictObject({
         data: z
           .string()
@@ -537,6 +537,36 @@ export const TOOLS: ToolDefinition[] = [
         ...(args.alt ? { alt: args.alt } : {}),
         ...(args.decorative ? { decorative: true } : {}),
       }),
+  },
+
+  {
+    name: "dei_delete_media",
+    scope: SCOPE_WRITE,
+    config: {
+      title: "Delete library pictures",
+      description:
+        "Deletes pictures from the media library by key (1 to 25 a call), through the same delete Carrel runs. A picture a " +
+        "post, a page or repository code uses is refused and named; only an upload's content-addressed key is deletable " +
+        "(a static asset or an older key is refused); and a deleted file's last bytes are kept in history, so Carrel can " +
+        "revert it. Answers which keys were deleted, refused (with the reason) or not found. List the keys in Carrel's " +
+        "media library first (its Unattached filter shows pictures nothing uses).",
+      inputSchema: z.strictObject({
+        keys: z
+          .array(z.string().regex(/^[A-Za-z0-9._~/-]{1,200}$/))
+          .min(1)
+          .max(25)
+          .describe("1 to 25 library keys, such as dustin-edwards-<name>-<digest>-<w>x<h>.webp."),
+      }),
+      outputSchema: API_ANSWER,
+      annotations: {
+        readOnlyHint: false,
+        // Destructive: it removes a library file, though its last bytes are kept and a reference check runs first.
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    handler: (env, args) => run(env, "delete_media", { keys: args.keys }),
   },
 
   {
