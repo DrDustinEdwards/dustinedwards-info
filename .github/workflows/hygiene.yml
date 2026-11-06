@@ -27,26 +27,66 @@ jobs:
     continue-on-error: true
 
     steps:
+      # WHAT CHANGED, before anything is installed. "Route weight" is a required status check (the "Protect main"
+      # ruleset), so the workflow cannot take a `paths:` filter: a run that never starts never reports, and the pull
+      # request waits on it forever. So the job always runs and reports, and the build behind it runs only when the
+      # change can move a route's weight. Skipped only when EVERY changed file is one the client build never reads: the
+      # docs, the tests, the admin MCP (its own package), the agent's files, and workflows other than this one. Anything
+      # else, including a path nobody listed, builds. The compare API lists at most 300 files, so a longer list builds too.
+      - name: What changed
+        id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No base to compare with; building."
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$BASE...$HEAD" --jq '.files[].filename') || {
+            echo "The compare failed; building."
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          count=$(printf '%s\n' "$files" | grep -c . || true)
+          relevant=$(printf '%s\n' "$files" | grep -v -E '^(docs/|test/|mcp/|\.claude/|[^/]+\.md$)' | grep -v -E '^\.github/' || true)
+          workflow=$(printf '%s\n' "$files" | grep -x '.github/workflows/hygiene.yml' || true)
+          if [ "$count" -ge 300 ] || [ "$count" -eq 0 ] || [ -n "$relevant" ] || [ -n "$workflow" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "$count changed file(s); the route weight is measured."
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "$count changed file(s), none the client build reads; the route weight is not measured for this change."
+          fi
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: steps.changed.outputs.build == 'true'
         with:
           persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        if: steps.changed.outputs.build == 'true'
         with:
           node-version-file: .nvmrc
           cache: npm
 
       - name: Install
+        if: steps.changed.outputs.build == 'true'
         run: npm ci
 
       # The generated files the app imports (content/generated/*), built as ci.yml builds them, local only. Without them
       # the build cannot start.
       - name: Generate
+        if: steps.changed.outputs.build == 'true'
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:stack
           npm run build:content
 
       - name: Route weight
+        if: steps.changed.outputs.build == 'true'
         continue-on-error: true
         run: npm run build && npx devkit-route-weight
