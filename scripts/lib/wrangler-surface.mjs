@@ -62,6 +62,11 @@ const READERS = {
   browser: (config, out) => {
     if (config.browser?.binding) out.set(`browser:${config.browser.binding}`, "");
   },
+  version_metadata: (config, out) => {
+    if (config.version_metadata?.binding) {
+      out.set(`version_metadata:${config.version_metadata.binding}`, "");
+    }
+  },
   ai: (config, out) => {
     if (config.ai?.binding) out.set(`ai:${config.ai.binding}`, "");
   },
