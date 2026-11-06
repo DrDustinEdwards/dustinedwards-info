@@ -10,18 +10,28 @@ import vm from "node:vm";
 const ORIGIN = "https://example.com";
 const source = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
 
+/* Honors Vary: Accept as the real Cache API does, because every page answers with it and a match that honored it never
+ * found the kept page offline (the deployed browser case, 2026-11-05). */
 class MemoryCache {
   /** @type {Map<string, Response>} */
   entries = new Map();
+  /** The Accept each entry was stored under; a bare address carries none. @type {Map<string, string | null>} */
+  accepts = new Map();
   /** @param {Request | string} key */
   static url(key) {
     return new URL(typeof key === "string" ? key : key.url, ORIGIN);
   }
-  /** @param {Request | string} key @param {{ ignoreSearch?: boolean }} [options] */
+  /** @param {Request | string} key */
+  static accept(key) {
+    return typeof key === "string" ? null : (key.headers?.get("accept") ?? null);
+  }
+  /** @param {Request | string} key @param {{ ignoreSearch?: boolean, ignoreVary?: boolean }} [options] */
   async match(key, options = {}) {
     const url = MemoryCache.url(key);
     for (const [stored, response] of this.entries) {
       const s = new URL(stored);
+      const varies = /\baccept\b/i.test(response.headers.get("vary") ?? "");
+      if (varies && !options.ignoreVary && (this.accepts.get(stored) ?? null) !== MemoryCache.accept(key)) continue;
       if (s.pathname === url.pathname && (options.ignoreSearch || s.search === url.search)) return response.clone();
     }
     return undefined;
@@ -29,8 +39,12 @@ class MemoryCache {
   /** @param {Request | string} key @param {Response} response */
   async put(key, response) {
     this.entries.set(MemoryCache.url(key).href, response);
+    this.accepts.set(MemoryCache.url(key).href, MemoryCache.accept(key));
   }
 }
+
+/** A page's answer as the site gives it: its Markdown copy is negotiated, so it varies on Accept. */
+const page = (/** @type {string} */ body) => new Response(body, { status: 200, headers: { vary: "Accept" } });
 
 /**
  * The worker, loaded fresh, with `online` deciding whether fetch reaches the network.
@@ -41,7 +55,8 @@ function load({ kept = {}, others = [] } = {}) {
   /** @type {Map<string, MemoryCache>} */
   const caches = new Map();
   const keptCache = new MemoryCache();
-  for (const [path, body] of Object.entries(kept)) keptCache.entries.set(new URL(path, ORIGIN).href, new Response(body));
+  // Stored as keep() stores them, under the bare address; a page with the site's Vary: Accept.
+  for (const [path, body] of Object.entries(kept)) keptCache.entries.set(new URL(path, ORIGIN).href, /\.[a-z0-9]+$/i.test(path) ? new Response(body) : page(body));
   caches.set("kept-v1", keptCache);
   for (const name of others) caches.set(name, new MemoryCache());
   /** @type {Record<string, Function>} */
@@ -71,7 +86,8 @@ function load({ kept = {}, others = [] } = {}) {
       if (!state.online) throw new TypeError("Failed to fetch");
       // The address with its query, so a scaled page's words differ from the plain page's.
       const url = new URL(request.url);
-      return new Response(`fresh ${url.pathname}${url.search}`, { status: 200 });
+      const body = `fresh ${url.pathname}${url.search}`;
+      return request.mode === "navigate" ? page(body) : new Response(body, { status: 200 });
     },
   };
   vm.runInNewContext(source, sandbox);
@@ -84,7 +100,8 @@ function load({ kept = {}, others = [] } = {}) {
   const request = async (path, { mode = "navigate", destination = "document", method = "GET", origin = ORIGIN } = {}) => {
     /** @type {Promise<Response> | null} */
     let answer = null;
-    const req = { url: new URL(path, origin).href, method, mode, destination };
+    // A navigation sends text/html, as a browser's does.
+    const req = { url: new URL(path, origin).href, method, mode, destination, headers: new Headers(mode === "navigate" ? { accept: "text/html" } : {}) };
     listeners.fetch?.({ request: req, respondWith: (/** @type {Promise<Response>} */ p) => (answer = p) });
     if (!answer) return null;
     const response = await answer;

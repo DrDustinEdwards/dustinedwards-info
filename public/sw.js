@@ -44,8 +44,11 @@ self.addEventListener("fetch", (event) => {
  */
 async function networkFirst(request, page) {
   const cache = await caches.open(KEPT);
-  // A page is kept by its address alone: the same recipe at another serving size is still the kept page.
-  const options = page ? { ignoreSearch: true } : undefined;
+  // A page is kept by its address alone: the same recipe at another serving size is still the kept page. And whatever
+  // the request's headers: every page answers with `Vary: Accept` (its Markdown copy is negotiated), the copy is stored
+  // under its bare address with no Accept, and a navigation sends text/html, so a match that honored Vary never found
+  // the kept page offline.
+  const options = page ? { ignoreSearch: true, ignoreVary: true } : undefined;
   try {
     const response = await fetch(request);
     if (page && response.ok && !new URL(request.url).search && (await cache.match(request, options))) {
