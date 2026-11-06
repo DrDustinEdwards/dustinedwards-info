@@ -112,7 +112,8 @@ describe("media upload", () => {
       },
     );
 
-    expect(status).toBe(503);
+    // The library refuses a picture the binding cannot read (site-api v0.24.0), before any key or row.
+    expect(status).toBe(415);
     expect(await count()).toBe(before);
   });
 
@@ -173,7 +174,9 @@ describe("the atomic delete claim", () => {
     await seedMediaRow(key);
     await env.DB.prepare("INSERT INTO media_revisions (media_key, at, bytes, reason) VALUES (?1, '2030-01-01T00:00:00.000Z', 1, 'upload')").bind(key).run();
 
-    expect(await mediaLibraryStore(mediaEnv()).remove(key)).toBe("removed");
+    // Only at the version the reference check saw.
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 1)).toBe("stale");
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("removed");
     expect(await rowOf(key)).toBeNull();
     expect(await env.DB.prepare("SELECT id FROM media_revisions WHERE media_key = ?1").bind(key).first()).toBeNull();
   });
@@ -195,7 +198,7 @@ describe("the atomic delete claim", () => {
       .run();
 
     /* Must lose: the check runs inside the statement, not on the caller's stale read. */
-    expect(await mediaLibraryStore(mediaEnv()).remove(key)).toBe("in-use");
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("in-use");
     expect(await rowOf(key)).toBeTruthy();
   });
 });

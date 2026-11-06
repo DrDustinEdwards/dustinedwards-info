@@ -82,7 +82,7 @@
     "@codemirror/view": "6.43.7",
     "@drdustinedwards/site-helpers": "github:DrDustinEdwards/prelum#v0.33.0",
     "@dustinedwards/d1-dump": "github:DrDustinEdwards/d1-dump#v0.13.0",
-    "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#2d28acdcc2f84cbe7b0268cb78dca8b530f8f6a5",
+    "@dustinedwards/site-api": "github:DrDustinEdwards/site-api#0fdd96019f9add99f4bedc3dcf80095729082d7b",
     "@dustinedwards/site-runtime": "github:DrDustinEdwards/site-runtime#v0.77.1",
     "@fontsource-variable/source-serif-4": "5.3.0",
     "@lezer/highlight": "1.2.3",

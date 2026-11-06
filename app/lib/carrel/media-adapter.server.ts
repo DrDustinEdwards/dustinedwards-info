@@ -3,7 +3,7 @@
 // and nowhere else: the content-addressed keys that carry a picture's size, the reference check, which files the
 // library may change, where earlier bytes are kept, and the objects' metadata.
 
-import { RefusedError, mediaLibrary, type MediaAdapter, type MediaBucket, type MediaKeyInput, type MediaResize, type MediaUse } from "@dustinedwards/site-api";
+import { RefusedError, mediaLibrary, type MediaAdapter, type MediaKeyInput, type MediaResize, type MediaUse } from "@dustinedwards/site-api";
 import { fromHex } from "@dustinedwards/site-runtime/encoding";
 
 import { mediaLibraryStore, mediaRefsFor } from "~/db";
@@ -25,27 +25,21 @@ const RESIZE: MediaResize = { maxEdge: 4096, quality: 85 };
 /** Repository code that names a file by its address (build:template-refs), which a post scan cannot see. */
 const TEMPLATE_REFS = (templateRefs as { refs: Record<string, string[]> }).refs;
 
-/** No key for a picture Images could not measure: the operator's upload answers it as 503, as a try-again. */
-export class UnmeasuredError extends RefusedError {}
-
 /**
- * The key for a new file: dustin-edwards-<name>-<16 hex>-<w>x<h>.<ext> (classify.mjs contentKey), the digest the upload's
- * duplicates key, which is the stored bytes' hash unless the picture was converted or shrunk. Every page's srcset and
- * aspect come from the size in it, so a picture Images could not measure gets no key; a data file (CSV) carries none.
- * A taken key, which only the same bytes under the same name can give, takes -2, -3 and on in its name part.
+ * The key for a new file: dustin-edwards-<name>-<16 hex>-<w>x<h>.<ext> (classify.mjs contentKey), the digest the stored
+ * bytes' hash, so the key pins them. Every page's srcset and aspect come from the size in it (the library refuses a
+ * picture Images could not measure); a data file (CSV) carries none. A taken key, which only the same bytes under the
+ * same name can give, takes -2, -3 and on in its name part.
  */
 function keyFor(file: MediaKeyInput, attempt: number): string {
   const extension = ALLOWED.get(file.contentType);
   if (!extension) throw new RefusedError(`This site does not store ${file.contentType} files.`);
   const size = file.width && file.height ? { width: file.width, height: file.height } : null;
-  if (!size && !DATA_TYPES.has(file.contentType)) {
-    console.error(JSON.stringify({ alert: "upload-unmeasurable", name: file.filename }));
-    throw new UnmeasuredError("Cloudflare Images could not measure the image. Nothing was stored; try again.");
-  }
+  if (!size && !DATA_TYPES.has(file.contentType)) throw new RefusedError("A picture with no measured size gets no address on this site.");
   // Short enough that the number survives the key's 48-character name.
   const stem = file.filename.replace(/\.[^.]*$/, "");
   const name = attempt === 1 ? file.filename : `${stem.slice(0, 40)}-${attempt}.${extension}`;
-  return contentKey(fromHex(file.sha256), extension, size, name);
+  return contentKey(fromHex(file.storedSha256), extension, size, name);
 }
 
 /**
@@ -75,7 +69,7 @@ async function usesOf(env: Env, asked?: string[]): Promise<Map<string, MediaUse[
 export function carrelMediaAdapter(env: Env): MediaAdapter {
   return mediaLibrary({
     store: mediaLibraryStore(env),
-    bucket: env.MEDIA as unknown as MediaBucket,
+    bucket: env.MEDIA,
     images: env.IMAGES,
     limits: { maxBytes: MAX_BYTES, types: [...ALLOWED.keys()] },
     url: (key) => `/media/${key}`,
@@ -91,7 +85,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     // MEDIA_REVISIONS, which /media never serves (app/routes/media.$.ts reads MEDIA or OG through bucketFor) and nothing
     // deletes from (check:destructive). Copies before v0.24.0 are at replaced/<time>/<key> and resized/<time>/<key>,
     // and each revision row names its own, so a revert still finds them.
-    history: { bucket: env.MEDIA_REVISIONS as unknown as MediaBucket, prefix: "replaced/" },
+    history: { bucket: env.MEDIA_REVISIONS, prefix: "replaced/" },
     httpMetadata: () => ({ cacheControl: IMMUTABLE_CACHE_CONTROL }),
     // The name is on the object too: a content-addressed key cannot yield it, and the R2 events re-derive the row from it.
     customMetadata: (record): Record<string, string> => (record.filename ? { originalName: record.filename } : {}),

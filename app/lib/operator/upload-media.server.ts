@@ -1,5 +1,5 @@
 import { ALLOWED, MAX_BYTES, uploadSuccessBody, validateUpload } from "~/lib/media/upload-contract.mjs";
-import { UnmeasuredError, carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
+import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { RefusedError, altRefusal, duplicateKey, guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "@dustinedwards/site-runtime/body";
@@ -215,7 +215,6 @@ export async function uploadMediaTool(
     try {
       item = await media.upload({ bytes, contentType: type, filename: name, alt, decorative, changeId: `operator-upload-${crypto.randomUUID()}` });
     } catch (error) {
-      if (error instanceof UnmeasuredError) return { ok: false, status: 503, error: error.message, detail: { code: "images-unavailable" } };
       if (error instanceof RefusedError) return { ok: false, status: 415, error: error.message, detail: { code: "content-mismatch" } };
       throw error;
     }

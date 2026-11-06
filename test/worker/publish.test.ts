@@ -153,16 +153,16 @@ describe("savePost", () => {
       });
 
     await save(`A paragraph.\n\n${image}\n\nAnother paragraph.\n\n${image}\n`, true);
-    expect(await mediaLibraryStore(env as never).remove(key)).toBe("in-use");
+    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     await save(`A paragraph.\n\n${image}\n`, false);
-    expect(await mediaLibraryStore(env as never).remove(key)).toBe("in-use");
+    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     /* The refusals above were the citations, not a missing row. */
     await save("A paragraph with no image.\n", false);
-    expect(await mediaLibraryStore(env as never).remove(key)).toBe("removed");
+    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("removed");
   });
 
   it("records two citations whose parts collide under a space join as two rows", async () => {

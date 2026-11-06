@@ -473,12 +473,12 @@ export const TOOLS: ToolDefinition[] = [
       description:
         "Uploads one image to the site's media bucket and returns the url to use in a post, which is " +
         "then written through Carrel. The url is a content-addressed /media/ path: the key is a digest " +
-        "of the bytes, so the same image twice is one object and one url.\n\n" +
+        "of the bytes, and bytes the site already holds answer with that file, so the same image twice is one object and one url.\n\n" +
         "Supply exactly one of `url` (an https URL the site fetches server side; prefer it, since a " +
         "photograph as base64 is several megabytes carried through the conversation) or `data` (base64, " +
         "or a whole data: URI).\n\n" +
-        "Returns url, key, bytes, width, height and `recorded`. `recorded:false` means the object landed " +
-        "and its annotation row did not; dei_repair_drift's sync_media derives it again.\n\n" +
+        "Returns url, key, bytes, width, height and `recorded`, which is always true: a file whose row " +
+        "cannot be written is not stored at all.\n\n" +
         "Describe the image: `alt` says what it shows, or `decorative: true` for one that adds nothing a reader would miss. " +
         "An upload with neither, or both, is refused before anything is fetched.\n\n" +
         "POLICY, enforced by the API and not by this wrapper: raster images only (SVG is refused, since " +

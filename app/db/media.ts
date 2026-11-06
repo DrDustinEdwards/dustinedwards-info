@@ -319,15 +319,18 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
       await db.update(mediaRevisions).set({ backupKey: copyKey }).where(eq(mediaRevisions.id, revisionId)).run();
     },
 
-    // One batch: the row goes only while no recorded citation names it, checked in the delete itself, so a post saved
-    // between the library's reference check and here keeps its file; the revisions go only if the row did.
-    async remove(key) {
+    // One batch: the row goes only at the version the reference check saw and while no recorded citation names it,
+    // both checked in the delete itself, so a post saved since keeps its file; the revisions go only if the row did.
+    async remove(key, rev) {
       if (!(await one(key))) return "missing";
       const [deleted] = await db.batch([
-        db.delete(media).where(and(eq(media.key, key), isLibraryRow, sql`NOT ${cited(key)}`)).returning({ key: media.key }),
+        db.delete(media).where(and(eq(media.key, key), eq(media.rev, rev), isLibraryRow, sql`NOT ${cited(key)}`)).returning({ key: media.key }),
         db.delete(mediaRevisions).where(and(eq(mediaRevisions.mediaKey, key), sql`NOT EXISTS (SELECT 1 FROM ${media} WHERE ${media.key} = ${key})`)),
       ]);
-      return deleted.length > 0 ? "removed" : "in-use";
+      if (deleted.length > 0) return "removed";
+      const now = await one(key);
+      if (!now) return "missing";
+      return now.rev === rev ? "in-use" : "stale";
     },
 
     async changeCursor() {
