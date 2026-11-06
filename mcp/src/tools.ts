@@ -1,11 +1,11 @@
 /**
- * The ten tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * The seven tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6.
  *
- * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Each finishes a job: check the
- * site, repair drift and read the repair back, review and decide mentions,
- * back up media, read the Knowledge Base registry, refresh citations, check the
- * publications against ORCID and Crossref, and keep a procedure. The orchestration
+ * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Each finishes a job: review and
+ * decide mentions, read the Knowledge Base registry, refresh citations, check the
+ * publications against ORCID and Crossref, and keep a procedure. Backups are
+ * Capsid Admin's, for every site (Dustin, 2026-11-06). The orchestration
  * lives here, in code, and every step of it is still one authenticated request
  * to the operator API, which owns every rule.
  *
@@ -308,24 +308,6 @@ export const TOOLS: ToolDefinition[] = [
       },
     },
     handler: (env, args) => run(env, "decide_mention", { id: args.mention_id, decision: args.decision }),
-  },
-
-  {
-    name: "dei_backup_media",
-    scope: SCOPE_WRITE,
-    config: {
-      title: "Back up the media now",
-      description:
-        "Runs the nightly files backup now: one pass each over the media bucket and the revision store into " +
-        "the backups bucket (files/media/ and files/revisions/), which Capsid copies to Amazon. It copies new " +
-        "and changed files and drops a copy only 30 days after its file is gone; it never writes or deletes in " +
-        "the media bucket or the revision store. A pass stops at 1000 writes or five minutes and the next " +
-        "goes on from there. Reports each backup's counts and whether its pass completed.",
-      inputSchema: z.strictObject({}),
-      outputSchema: API_ANSWER,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    handler: (env) => run(env, "backup_media", {}),
   },
 
   {

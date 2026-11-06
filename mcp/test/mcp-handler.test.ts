@@ -59,12 +59,11 @@ describe("handleMcp", () => {
     assert.equal(api.calls.length, 0);
   });
 
-  test("tools/list offers the eight dei_ tools and nothing else", async () => {
+  test("tools/list offers the seven dei_ tools and nothing else", async () => {
     const { message } = await rpc("tools/list", {});
     assert.deepEqual(
       message.result.tools.map((t: { name: string }) => t.name).sort(),
       [
-        "dei_backup_media",
         "dei_check_publications",
         "dei_decide_mention",
         "dei_read_procedure",
@@ -128,14 +127,14 @@ describe("handleMcp", () => {
           accept: "application/json, text/event-stream",
           "mcp-protocol-version": "2026-07-28",
           "mcp-method": "tools/call",
-          "mcp-name": "dei_backup_media",
+          "mcp-name": "dei_refresh_citations",
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: nextId++,
           method: "tools/call",
           params: {
-            name: "dei_backup_media",
+            name: "dei_refresh_citations",
             arguments: {},
             _meta: {
               "io.modelcontextprotocol/protocolVersion": "2026-07-28",
@@ -153,18 +152,18 @@ describe("handleMcp", () => {
     const message = JSON.parse(await response.text());
     assert.equal(message.result.resultType, "complete");
     assert.deepEqual(message.result.structuredContent, { done: true });
-    assert.deepEqual(api.calls[0].body, { tool: "backup_media", args: {} });
+    assert.deepEqual(api.calls[0].body, { tool: "refresh_citations", args: {} });
   });
 
   test("the token appears in no response and no log", async () => {
     const bodies = [
       (await rpc("tools/list", {})).raw,
-      (await callTool("dei_backup_media", {})).raw,
+      (await callTool("dei_refresh_citations", {})).raw,
     ];
     api.reply(FIRST_PUBLISH_REFUSAL);
     bodies.push((await callTool("dei_save_procedure", { slug: "a", raw: "r" })).raw);
     api.reply({ throws: new Error("down") });
-    bodies.push((await callTool("dei_backup_media", {})).raw);
+    bodies.push((await callTool("dei_refresh_citations", {})).raw);
     for (const body of bodies) assert.ok(!body.includes(TOKEN));
     assert.ok(api.logs.every((line) => !line.includes(TOKEN)));
   });
@@ -173,7 +172,7 @@ describe("handleMcp", () => {
     // T7: site-runtime's registerTools lists only what the grant can call, and every tool's scope is fixed.
     const listed = (await rpc("tools/list", {}, READER)).message.result.tools.map((t: { name: string }) => t.name);
     assert.ok(!listed.includes("dei_save_procedure") && listed.includes("dei_read_procedure"), listed.join());
-    for (const [name, args] of [["dei_backup_media", {}], ["dei_save_procedure", { slug: "p", raw: "r" }]] as const) {
+    for (const [name, args] of [["dei_refresh_citations", {}], ["dei_save_procedure", { slug: "p", raw: "r" }]] as const) {
       const { message } = await callTool(name, args, READER);
       assert.ok(message.error || message.result?.isError === true, JSON.stringify(message));
     }
@@ -190,7 +189,7 @@ describe("handleMcp", () => {
   });
 
   test("a call over the wire is logged", async () => {
-    await callTool("dei_backup_media", {});
+    await callTool("dei_refresh_citations", {});
     assert.deepEqual(AUDIT.rows.map((r) => r.phase), ["started", "finished"]);
   });
 });

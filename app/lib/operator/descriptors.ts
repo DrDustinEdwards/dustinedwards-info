@@ -21,6 +21,7 @@ const TOOLS = [
   "sync_phages",
   "sync_registry",
   "backup_media",
+  "backup_status",
   "backup_d1",
   "list_mentions",
   "decide_mention",
@@ -284,6 +285,13 @@ export const TOOL_DESCRIPTORS: Readonly<
       "in MEDIA or MEDIA_REVISIONS. A pass stops at 1000 writes or five minutes and the next goes on from " +
       "there. Returns files: one entry per backup with name, complete, objects, copied, skipped, gone, " +
       "kept_deleted, removed, locked and reserved. The site's cron runs it nightly at 05:00 UTC.",
+  },
+  backup_status: {
+    args: {},
+    returns:
+      "The backup state now, uncached: the newest complete D1 dump's last_ok and age_hours, and each files " +
+      "backup (media, revisions) under files with its own, and a warning when any is past 26 hours. The same " +
+      "read as /health's backup field. Capsid Admin's backups read it for every site.",
   },
   backup_d1: {
     args: {},

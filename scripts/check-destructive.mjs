@@ -165,6 +165,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([
     ["sync_status", "a read"],
+    ["backup_status", "a read"],
     ["list_mentions", "a read"],
     [
       "sync_ask",
