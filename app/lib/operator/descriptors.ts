@@ -445,9 +445,10 @@ export const TOOL_DESCRIPTORS: Readonly<
     },
     returns:
       "url and key, the same two the editor's upload returns, plus bytes, " +
-      "width, height and `recorded`. The url is what goes in the markdown. " +
-      "Idempotent: the key is a digest of the bytes, so the same image " +
-      "uploaded twice is one object.",
+      "width, height and `recorded` (always true: a row that cannot be written takes " +
+      "its object with it). The url is what goes in the markdown. Idempotent: bytes " +
+      "the library already holds answer with that file, so the same image uploaded " +
+      "twice is one object.",
     policy:
       "MEDIA is the irreplaceable bucket and there is no delete tool over " +
       "this token, so an object put here stays until an admin removes it. " +

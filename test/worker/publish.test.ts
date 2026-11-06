@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 
-import { claimMediaKeyForDelete, upsertMediaRecord } from "~/db";
+import { mediaLibraryStore } from "~/db";
 import {
   EditorError,
   deletePost,
@@ -20,6 +20,7 @@ import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 
 import { post } from "./fixtures";
+import { seedMediaRow } from "./media-fixtures";
 import { removeSource, source, stubSources, writes, type SourceStub } from "./source-stub";
 
 /* Ask and R2 are absent on purpose: `syncAskForPost` returns null with no `AI_SEARCH`
@@ -140,7 +141,7 @@ describe("savePost", () => {
   it("keeps a cited image from being deleted while any citation of it remains", async () => {
     const key = "dustin-edwards-abcd1234abcd1234-800x600.png";
     await env.MEDIA.put(key, "image bytes");
-    await upsertMediaRecord(env as never, { key, alt: "", storage: "r2", kind: "image" });
+    await seedMediaRow(key);
 
     const image = `![alt](/media/${key})`;
     const save = (body: string, isNew: boolean) =>
@@ -152,16 +153,16 @@ describe("savePost", () => {
       });
 
     await save(`A paragraph.\n\n${image}\n\nAnother paragraph.\n\n${image}\n`, true);
-    expect(await claimMediaKeyForDelete(env as never, key)).toBe(false);
+    expect(await mediaLibraryStore(env as never).remove(key)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     await save(`A paragraph.\n\n${image}\n`, false);
-    expect(await claimMediaKeyForDelete(env as never, key)).toBe(false);
+    expect(await mediaLibraryStore(env as never).remove(key)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     /* The refusals above were the citations, not a missing row. */
     await save("A paragraph with no image.\n", false);
-    expect(await claimMediaKeyForDelete(env as never, key)).toBe(true);
+    expect(await mediaLibraryStore(env as never).remove(key)).toBe("removed");
   });
 
   it("records two citations whose parts collide under a space join as two rows", async () => {

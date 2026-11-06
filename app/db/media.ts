@@ -1,185 +1,14 @@
-// The media library's D1 index: listing, counts, trash, tags and the upserts that keep it in step with R2.
-import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql, type SQL } from "drizzle-orm";
-import { digestFromKey } from "../lib/media/classify.mjs";
-import { exactTagNeedle, parseTags, serializeTags } from "../lib/media/tags.mjs";
-import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
-import type { SQLiteUpdateSetSource } from "drizzle-orm/sqlite-core";
+// The media index in D1: the rows the rebuild and the R2 events keep in step with the buckets, and the store site-api's
+// media library (v0.24.0) reads and writes Carrel's and the admin's library through (mediaLibraryStore).
+import { MediaPlaceholder, type MediaLibraryStore, type MediaRecord, type MediaRecordFields, type MediaRevisionRecord } from "@dustinedwards/site-api";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { classify, digestFromKey, roleOf } from "../lib/media/classify.mjs";
+import { parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { media, mediaChanges, mediaRefs, mediaRevisions, type MediaRef } from "./schema";
 import { getDb, notTrashed } from "./client";
 
 export async function listMediaRecords(env: Env) {
   return getDb(env).select().from(media);
-}
-
-/**
- * Unattached: no post or repository code cites it. Shared by the filter and chip count.
- * @param templateKeys keys repository code references, from the build artifact
- */
-function uncited(templateKeys: string[] = []) {
-  const noPost = sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`;
-  // `NOT IN ()` is a syntax error in SQLite, so an empty list omits the clause.
-  if (templateKeys.length === 0) return noPost;
-  return sql`${noPost} AND ${media.key} NOT IN ${templateKeys}`;
-}
-
-/** Free-text filter. `coalesce`: `lower(NULL) LIKE` is NULL and would drop the row. */
-function matchesQuery(q: string) {
-  const needle = `%${q.toLowerCase()}%`;
-  return sql`(lower(coalesce(${media.originalName}, '')) LIKE ${needle}
-    OR lower(${media.key}) LIKE ${needle}
-    OR lower(${media.alt}) LIKE ${needle}
-    OR lower(${media.caption}) LIKE ${needle}
-    OR lower(${media.tags}) LIKE ${needle})`;
-}
-
-/** ORDER BY for a listing; the caller adds the tie-break. */
-function orderFor(options: { sort?: string; dir?: string; trashed?: boolean; storedOnly?: boolean }) {
-  if (options.trashed) return [desc(media.trashedAt)];
-
-  const descending = options.dir !== "asc";
-  const way = <T extends Parameters<typeof desc>[0]>(column: T) =>
-    descending ? desc(column) : asc(column);
-
-  switch (options.sort) {
-    case "name":
-      // Falls back to the key, or the NULL names would sort as one block.
-      return [way(sql`lower(coalesce(${media.originalName}, ${media.key}))`)];
-    case "size":
-      return [way(media.bytes)];
-    case "usage":
-      return [
-        way(
-          sql`(SELECT count(*) FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${media.key})`,
-        ),
-      ];
-    default:
-      // Without static rows (Carrel's library) nothing has a NULL upload time to bury, so newest is the whole order.
-      if (options.storedOnly) return [way(media.uploadedAt)];
-      /*
-       * Role rank, then newest: `uploaded_at DESC` alone sorts static rows (no upload event, so NULL)
-       * last, burying the only insertable images.
-       */
-      return [
-        sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
-        way(media.uploadedAt),
-      ];
-  }
-}
-
-/** What a library listing may filter and sort by: the page, the palette and Carrel's media group ask it. */
-type MediaListOptions = {
-  page?: number;
-  limit?: number;
-  insertableOnly?: boolean;
-  role?: string;
-  unusedOnly?: boolean;
-  q?: string;
-  /** An exact tag, already normalized by the caller. */
-  tag?: string;
-  /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
-  lens?: string;
-  /** Keys repository code references. A parameter: scripts import `app/db` unbundled. */
-  templateKeys?: string[];
-  /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
-  sort?: string;
-  dir?: string;
-  /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
-  trashed?: boolean;
-  /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
-  storedOnly?: boolean;
-  /** site-api v0.13.0: which way a picture lies, by its measured size (orientationOf's rule, in SQL). */
-  orientation?: "landscape" | "portrait" | "square";
-  /** site-api v0.13.0: what a file is by its type (kindOf's rule, in SQL). */
-  fileKind?: "image" | "video" | "audio" | "document";
-  /** The longest edge the `oversized` lens measures against: the site's resize maxEdge. */
-  maxEdge?: number;
-};
-
-/** A picture's edges, for the orientation filter: square when they differ by at most 1% of the longer (orientationOf). */
-function orientationClause(orientation: NonNullable<MediaListOptions["orientation"]>) {
-  const measured = sql`${media.width} > 0 AND ${media.height} > 0`;
-  const square = sql`abs(${media.width} - ${media.height}) * 100 <= max(${media.width}, ${media.height})`;
-  if (orientation === "square") return sql`(${measured} AND ${square})`;
-  const longer = orientation === "landscape" ? sql`${media.width} > ${media.height}` : sql`${media.height} > ${media.width}`;
-  return sql`(${measured} AND NOT (${square}) AND ${longer})`;
-}
-
-/** What a file is by its stored type: image, video and audio by the type's top level, everything else a document (kindOf). */
-function kindClause(kind: NonNullable<MediaListOptions["fileKind"]>) {
-  const top = sql`lower(coalesce(${media.mime}, ''))`;
-  if (kind !== "document") return sql`${top} LIKE ${`${kind}/%`}`;
-  return sql`NOT (${top} LIKE 'image/%' OR ${top} LIKE 'video/%' OR ${top} LIKE 'audio/%')`;
-}
-
-/** The WHERE of a listing, as SQL and never a post-filter, so a page is a full page and a count counts the same rows. */
-async function mediaWhere(env: Env, options: MediaListOptions) {
-  // `role`, not `storage`: logos, favicons and diagram halves must never be inserted.
-  const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
-
-  const clauses = [];
-  /* A branch, never optional, or trashed assets reappear in the picker. */
-  clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
-  if (options.insertableOnly) clauses.push(insertable);
-  if (options.role) clauses.push(eq(media.role, options.role));
-  if (options.storedOnly) clauses.push(ne(media.storage, "static"));
-  // Pipeline citations only; the card's resolver scan stays the authority.
-  if (options.unusedOnly) clauses.push(uncited(options.templateKeys));
-  // In SQL because this listing paginates: a post-filter would search one page.
-  if (options.q) clauses.push(matchesQuery(options.q));
-  /* Needle from `exactTagNeedle`; null means no filter, never a match-all `%,,%`. */
-  if (options.tag) {
-    const needle = exactTagNeedle(options.tag);
-    if (needle) clauses.push(sql`lower(${media.tags}) LIKE ${needle}`);
-  }
-
-  if (options.lens === "unattached") clauses.push(uncited(options.templateKeys));
-  if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
-  if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
-  // The day in UTC, as the contract says: a license whose last day is today has not run out.
-  if (options.lens === "license-expired") clauses.push(sql`${media.licenseExpires} < date('now')`);
-  if (options.lens === "oversized" && options.maxEdge) clauses.push(sql`max(coalesce(${media.width}, 0), coalesce(${media.height}, 0)) > ${options.maxEdge}`);
-  if (options.orientation) clauses.push(orientationClause(options.orientation));
-  if (options.fileKind) clauses.push(kindClause(options.fileKind));
-  /*
-   * Twins are found by the digest inside the key, which SQLite cannot parse, so `mediaTwins` names
-   * them; the filter is still SQL, before LIMIT and OFFSET, or a page of twins would come back short
-   * or empty. One JSON parameter, not an IN list, so the count never meets D1's bound-parameter cap.
-   */
-  if (options.lens === "duplicates") {
-    const twinKeys = JSON.stringify([...(await mediaTwins(env)).keys()]);
-    clauses.push(sql`${media.key} IN (SELECT value FROM json_each(${twinKeys}))`);
-  }
-  return clauses.length > 0 ? and(...clauses) : undefined;
-}
-
-/** One library page, newest first; `key` keeps offset pagination stable. */
-export async function listMediaPage(env: Env, options: MediaListOptions = {}) {
-  const limit = options.limit ?? 24;
-  const page = Math.max(1, options.page ?? 1);
-  const offset = (page - 1) * limit;
-
-  const db = getDb(env);
-  const rows = await db
-    .select()
-    .from(media)
-    .where(await mediaWhere(env, options))
-    /*
-     * The role rank is only the default, never a prefix on an explicit sort. `key ASC` breaks ties,
-     * because an unstable sort makes offset pagination skip and repeat rows.
-     */
-    .orderBy(...orderFor(options), asc(media.key))
-    .limit(limit + 1)
-    .offset(offset);
-
-  // One extra row answers "is there another page" without a COUNT.
-  const hasMore = rows.length > limit;
-  return { rows: rows.slice(0, limit), page, hasMore };
-}
-
-/** How many rows a listing matches across every page. */
-export async function countMediaPage(env: Env, options: MediaListOptions = {}) {
-  const [row] = await getDb(env).select({ n: count() }).from(media).where(await mediaWhere(env, options));
-  return Number(row?.n ?? 0);
 }
 
 export async function mediaCounts(env: Env) {
@@ -202,125 +31,6 @@ export async function mediaRoleCounts(env: Env) {
     .groupBy(media.role);
 }
 
-
-/**
- * Twins by the key's content hash: exact identity only, never perceptual, so any delete decision
- * stays answerable from facts. The hash is read off the content-addressed key, not recomputed from R2.
- * Twins are separate objects at separate URLs, either of which may be cited, so the page offers
- * Trash, not delete. Static rows are excluded: their keys are paths.
- */
-export async function mediaTwins(env: Env) {
-  const rows = await getDb(env)
-    .select({ key: media.key, originalName: media.originalName, storage: media.storage })
-    .from(media)
-    .where(and(notTrashed(), sql`${media.storage} <> 'static'`));
-
-  const byHash = new Map<string, { key: string; originalName: string | null }[]>();
-  for (const row of rows) {
-    const hash = digestFromKey(row.key);
-    if (!hash) continue;
-    const bucket = byHash.get(hash) ?? [];
-    bucket.push({ key: row.key, originalName: row.originalName });
-    byHash.set(hash, bucket);
-  }
-
-  /** key -> the OTHER rows carrying the same bytes. */
-  const twins = new Map<string, { key: string; originalName: string | null }[]>();
-  for (const bucket of byHash.values()) {
-    if (bucket.length < 2) continue;
-    for (const row of bucket) {
-      twins.set(
-        row.key,
-        bucket.filter((other) => other.key !== row.key),
-      );
-    }
-  }
-  return twins;
-}
-
-type MediaRow = typeof media.$inferSelect;
-
-/** What a revision-checked write did: the row's new `rev`, or, when no row changed, the row as it is now. */
-export type MediaWriteOutcome = { written: true; rev: number } | { written: false; row: MediaRow | null };
-
-/**
- * The one way an editable column changes: a single UPDATE that bumps `rev` and, given `expectedRev`, lands only
- * on that revision, so a stale writer is refused in the same statement rather than after a read. `when` narrows it
- * further (a trash lands only on a row not yet trashed); `storedOnly` keeps it off static rows. When no row
- * changed, the row is read again so the caller can tell a missing key, a stale version and a no-op apart.
- */
-export async function writeMediaAtRev(
-  env: Env,
-  key: string,
-  set: Omit<SQLiteUpdateSetSource<typeof media>, "key" | "rev" | "updatedAt">,
-  options: { expectedRev?: number; storedOnly?: boolean; when?: SQL } = {},
-): Promise<MediaWriteOutcome> {
-  const [row] = await getDb(env)
-    .update(media)
-    .set({ ...set, rev: sql`${media.rev} + 1`, updatedAt: sql`(datetime('now'))` })
-    .where(
-      and(
-        eq(media.key, key),
-        options.expectedRev === undefined ? undefined : eq(media.rev, options.expectedRev),
-        options.storedOnly ? ne(media.storage, "static") : undefined,
-        options.when,
-      ),
-    )
-    .returning({ rev: media.rev });
-  if (row) return { written: true, rev: row.rev };
-  return { written: false, row: await mediaRecord(env, key) };
-}
-
-/**
- * Index columns that follow an R2 write the caller has already versioned with writeMediaAtRev (a focal point,
- * a replace's measurements), so `rev` stays where that claim put it.
- */
-export async function followMediaObject(
-  env: Env,
-  key: string,
-  set: Omit<SQLiteUpdateSetSource<typeof media>, "key" | "rev" | "updatedAt">,
-) {
-  await getDb(env).update(media).set(set).where(eq(media.key, key)).run();
-}
-
-/** Trashes an asset; R2 untouched. A repeat keeps the first timestamp and changes nothing. */
-export async function trashMediaRecord(
-  env: Env,
-  key: string,
-  options: { expectedRev?: number; storedOnly?: boolean } = {},
-) {
-  return writeMediaAtRev(env, key, { trashedAt: sql`(datetime('now'))` }, { ...options, when: notTrashed() });
-}
-
-/** Restores a trashed asset. A row not in the trash changes nothing. */
-export async function restoreMediaRecord(
-  env: Env,
-  key: string,
-  options: { expectedRev?: number; storedOnly?: boolean } = {},
-) {
-  return writeMediaAtRev(env, key, { trashedAt: null }, { ...options, when: isNotNull(media.trashedAt) });
-}
-
-export async function trashedMediaKeys(env: Env) {
-  const rows = await getDb(env)
-    .select({ key: media.key })
-    .from(media)
-    .where(isNotNull(media.trashedAt))
-    .orderBy(desc(media.trashedAt), asc(media.key));
-  return rows.map((r) => r.key);
-}
-
-/** The only tag writer; `serializeTags` owns the stored form. Answers the saved tags and what the write did. */
-export async function setMediaTags(
-  env: Env,
-  key: string,
-  input: string[] | string,
-  options: { expectedRev?: number; storedOnly?: boolean } = {},
-) {
-  const stored = serializeTags(input);
-  const outcome = await writeMediaAtRev(env, key, { tags: stored }, options);
-  return { tags: parseTags(stored), outcome };
-}
 
 /** One row by key, for the detail view, which a URL can reach from any page. */
 export async function mediaRecord(env: Env, key: string) {
@@ -383,95 +93,9 @@ export async function upsertDerivedMedia(
     });
 }
 
-/** Creates or updates one object's annotation; the row may not exist yet. */
-export async function upsertMediaRecord(
-  env: Env,
-  record: {
-    key: string;
-    alt?: string;
-    caption?: string;
-    storage?: string;
-    kind?: string;
-    role?: string;
-    mime?: string | null;
-    bytes?: number | null;
-    originalName?: string | null;
-    uploadedAt?: string | null;
-    width?: number | null;
-    height?: number | null;
-    focalX?: number | null;
-    focalY?: number | null;
-    sha256?: string | null;
-    placeholder?: string | null;
-  },
-) {
-  const now = new Date().toISOString();
-  await getDb(env)
-    .insert(media)
-    .values({
-      key: record.key,
-      sha256: record.sha256 ?? null,
-      alt: record.alt ?? "",
-      caption: record.caption ?? "",
-      storage: record.storage ?? "r2",
-      kind: record.kind ?? "image",
-      role: record.role ?? "content",
-      mime: record.mime ?? null,
-      bytes: record.bytes ?? null,
-      originalName: record.originalName ?? null,
-      uploadedAt: record.uploadedAt ?? null,
-      width: record.width ?? null,
-      height: record.height ?? null,
-      placeholder: record.placeholder ?? null,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: media.key,
-      set: {
-        // Only the fields the caller actually supplied. An alt edit must not
-        // blank the dimensions a backfill measured.
-        ...(record.alt !== undefined ? { alt: record.alt } : {}),
-        ...(record.caption !== undefined ? { caption: record.caption } : {}),
-        ...(record.storage !== undefined ? { storage: record.storage } : {}),
-        ...(record.kind !== undefined ? { kind: record.kind } : {}),
-        ...(record.role !== undefined ? { role: record.role } : {}),
-        ...(record.mime !== undefined ? { mime: record.mime } : {}),
-        ...(record.bytes !== undefined ? { bytes: record.bytes } : {}),
-        ...(record.originalName !== undefined ? { originalName: record.originalName } : {}),
-        ...(record.uploadedAt !== undefined ? { uploadedAt: record.uploadedAt } : {}),
-        ...(record.width !== undefined ? { width: record.width } : {}),
-        ...(record.height !== undefined ? { height: record.height } : {}),
-        ...(record.focalX !== undefined ? { focalX: record.focalX } : {}),
-        ...(record.focalY !== undefined ? { focalY: record.focalY } : {}),
-        ...(record.sha256 !== undefined ? { sha256: record.sha256 } : {}),
-        ...(record.placeholder !== undefined ? { placeholder: record.placeholder } : {}),
-        // An annotation writer, so it moves the version Carrel holds (writeMediaAtRev).
-        rev: sql`${media.rev} + 1`,
-        updatedAt: now,
-      },
-    });
-}
-
 /** Drops the row once the object is gone, never to make it go: R2 wins. */
 export async function deleteMediaRecord(env: Env, key: string) {
   await getDb(env).delete(media).where(eq(media.key, key));
-}
-
-/**
- * Claims a key for deletion in one statement, so no citation lands between the `NOT EXISTS`
- * check and the removal. False means refuse. Row before object: R2 wins.
- */
-export async function claimMediaKeyForDelete(env: Env, key: string) {
-  const claimed = await getDb(env)
-    .delete(media)
-    .where(
-      and(
-        eq(media.key, key),
-        sql`NOT EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${key})`,
-      ),
-    )
-    .returning({ key: media.key });
-  return claimed.length > 0;
 }
 
 export async function mediaRefsFor(env: Env, keys: string[]) {
@@ -479,106 +103,249 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   const rows = await getDb(env)
     .select()
     .from(mediaRefs)
-    .where(inArray(mediaRefs.mediaKey, keys));
+    // One JSON parameter, not an IN list: the library asks about every file at once, past D1's bound-parameter cap.
+    .where(sql`${mediaRefs.mediaKey} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`);
   const out = new Map<string, MediaRef[]>(keys.map((key) => [key, []]));
   for (const row of rows) out.get(row.mediaKey)?.push(row);
   return out;
 }
 
-// ---------- site-api v0.13.0: duplicates, byte history and the change log
+
+// ---------- The media library's store (site-api v0.24.0)
+
+type MediaRow = typeof media.$inferSelect;
 
 /**
- * The stored file holding exactly these bytes, trashed or not; null when none. By the row's own hash, then by the
- * digest a content-addressed key carries for a row written before the hash was kept (the key's digest is the
- * first 16 hex of the same SHA-256), then by the original of a picture shrunk at upload, so the same photo sent
- * again finds the file it became.
+ * The library's files are the uploads: rows whose object is in MEDIA. Static assets (repository paths) and the
+ * Worker's derived objects in OG (`og/`, `derived/`) share the table and are never the library's.
  */
-export async function mediaByHash(env: Env, sha256: string) {
+const isLibraryRow = eq(media.storage, "r2");
+
+/** D1's "YYYY-MM-DD HH:MM:SS" (UTC) or an ISO time, as an ISO time; null for none or one that does not parse. */
+function isoOf(value: string | null): string | null {
+  if (!value) return null;
+  const at = Date.parse(value.replace(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/, "$1T$2Z"));
+  return Number.isNaN(at) ? null : new Date(at).toISOString();
+}
+
+/** An ISO time in D1's datetime('now') spelling, the one `trashed_at` has always held, so its order stays one order. */
+const d1Time = (iso: string) => new Date(iso).toISOString().replace("T", " ").slice(0, 19);
+
+/** The two focal columns as site-runtime's "XxY", or null when either is unset. */
+function focusOf(x: number | null, y: number | null): string | null {
+  if (x === null || y === null) return null;
+  const part = (n: number) => String(Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000);
+  return `${part(x)}x${part(y)}`;
+}
+
+/** The type a row was stored as; a row from before `mime` was kept takes its key's. */
+function typeOf(row: MediaRow): string {
+  if (row.mime) return row.mime;
+  try {
+    return classify(row.key).mime;
+  } catch {
+    return "application/octet-stream";
+  }
+}
+
+function recordOf(row: MediaRow): MediaRecord {
+  return {
+    key: row.key,
+    rev: row.rev,
+    filename: row.originalName,
+    contentType: typeOf(row),
+    bytes: row.bytes ?? 0,
+    width: row.width,
+    height: row.height,
+    sha256: row.sha256,
+    alt: row.alt,
+    caption: row.caption,
+    tags: parseTags(row.tags),
+    focus: focusOf(row.focalX, row.focalY),
+    credit: row.credit,
+    license: row.license,
+    sourceUrl: row.sourceUrl,
+    licenseExpires: row.licenseExpires,
+    takenAt: row.takenAt,
+    // An older LQIP the contract cannot carry (not a small raster data: URI) is no placeholder.
+    placeholder: row.placeholder && MediaPlaceholder.safeParse(row.placeholder).success ? row.placeholder : null,
+    // The index keeps no main color.
+    color: null,
+    // A row the rebuild indexed before uploads were timed takes the time it was indexed.
+    uploadedAt: isoOf(row.uploadedAt) ?? isoOf(row.createdAt) ?? new Date(0).toISOString(),
+    trashedAt: isoOf(row.trashedAt),
+  };
+}
+
+/** A write's fields as the index's columns. `color`, and the fields this site does not keep, have none. */
+function columnsOf(fields: MediaRecordFields) {
+  const set: Partial<typeof media.$inferInsert> = {};
+  if (fields.filename !== undefined) set.originalName = fields.filename;
+  if (fields.contentType !== undefined) set.mime = fields.contentType;
+  if (fields.bytes !== undefined) set.bytes = fields.bytes;
+  if (fields.width !== undefined) set.width = fields.width;
+  if (fields.height !== undefined) set.height = fields.height;
+  if (fields.sha256 !== undefined) set.sha256 = fields.sha256;
+  if (fields.alt !== undefined) set.alt = fields.alt;
+  if (fields.caption !== undefined) set.caption = fields.caption;
+  if (fields.tags !== undefined) set.tags = serializeTags(fields.tags);
+  if (fields.focus !== undefined) {
+    const [x, y] = fields.focus === null ? [null, null] : fields.focus.split("x").map(Number);
+    set.focalX = x ?? null;
+    set.focalY = y ?? null;
+  }
+  if (fields.credit !== undefined) set.credit = fields.credit;
+  if (fields.license !== undefined) set.license = fields.license;
+  if (fields.sourceUrl !== undefined) set.sourceUrl = fields.sourceUrl;
+  if (fields.licenseExpires !== undefined) set.licenseExpires = fields.licenseExpires;
+  if (fields.takenAt !== undefined) set.takenAt = fields.takenAt;
+  if (fields.placeholder !== undefined) set.placeholder = fields.placeholder;
+  if (fields.uploadedAt !== undefined) set.uploadedAt = fields.uploadedAt;
+  if (fields.trashedAt !== undefined) set.trashedAt = fields.trashedAt === null ? null : d1Time(fields.trashedAt);
+  return set;
+}
+
+function revisionOf(row: typeof mediaRevisions.$inferSelect): MediaRevisionRecord {
+  return {
+    id: row.id,
+    at: isoOf(row.at) ?? row.at,
+    bytes: row.bytes,
+    width: row.width,
+    height: row.height,
+    reason: row.reason as MediaRevisionRecord["reason"],
+    sha256: row.sha256,
+    // MEDIA_REVISIONS' key for these bytes: `replaced/<time>/<key>` and `resized/<time>/<key>` before v0.24.0.
+    copyKey: row.backupKey,
+  };
+}
+
+/** Recorded citations still name the file: the delete claim's condition, checked in its own statement. */
+const cited = (key: string) => sql`EXISTS (SELECT 1 FROM ${mediaRefs} WHERE ${mediaRefs.mediaKey} = ${key})`;
+
+/** The store site-api's mediaLibrary keeps the site's files in: a mapping onto the `media` table's own columns. */
+export function mediaLibraryStore(env: Env): MediaLibraryStore {
   const db = getDb(env);
-  const stored = ne(media.storage, "static");
-  const [byHash] = await db.select().from(media).where(and(eq(media.sha256, sha256), stored)).orderBy(asc(media.key)).limit(1);
-  if (byHash) return byHash;
+  const one = async (key: string) => {
+    const [row] = await db.select().from(media).where(and(eq(media.key, key), isLibraryRow)).limit(1);
+    return row ? recordOf(row) : null;
+  };
 
-  const prefix = sha256.slice(0, 16);
-  const candidates = await db
-    .select()
-    .from(media)
-    .where(and(sql`${media.sha256} IS NULL`, stored, sql`instr(${media.key}, ${`-${prefix}`}) > 0`))
-    .orderBy(asc(media.key));
-  const byKey = candidates.find((row) => digestFromKey(row.key) === prefix);
-  if (byKey) return byKey;
+  return {
+    record: one,
 
-  const [original] = await db
-    .select({ key: mediaRevisions.mediaKey })
-    .from(mediaRevisions)
-    .where(and(eq(mediaRevisions.sha256, sha256), inArray(mediaRevisions.reason, ["upload", "import"]), sql`${mediaRevisions.backupKey} LIKE 'resized/%'`))
-    .limit(1);
-  return original ? mediaRecord(env, original.key) : null;
-}
+    async records(keys) {
+      if (keys.length === 0) return [];
+      const rows = await db
+        .select()
+        .from(media)
+        .where(and(isLibraryRow, sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`));
+      return rows.map(recordOf);
+    },
 
-export type MediaRevisionRow = typeof mediaRevisions.$inferSelect;
+    async all() {
+      return (await db.select().from(media).where(isLibraryRow)).map(recordOf);
+    },
 
-/** A file's byte history, newest first: the first row is its current bytes. Empty for a file never changed. */
-export async function mediaRevisionsOf(env: Env, key: string, limit = 100) {
-  return getDb(env)
-    .select()
-    .from(mediaRevisions)
-    .where(eq(mediaRevisions.mediaKey, key))
-    .orderBy(desc(mediaRevisions.id))
-    .limit(limit);
-}
+    // By the row's own hash; then, for a row written before the hash was kept, by the digest its content-addressed key
+    // carries (the first 16 hex of the same SHA-256); then by the bytes a file was uploaded with before a shrink.
+    async byHash(sha256) {
+      const [current] = await db.select().from(media).where(and(eq(media.sha256, sha256), isLibraryRow)).orderBy(asc(media.uploadedAt), asc(media.key)).limit(1);
+      if (current) return recordOf(current);
+      const prefix = sha256.slice(0, 16);
+      const unhashed = await db
+        .select()
+        .from(media)
+        .where(and(isNull(media.sha256), isLibraryRow, sql`instr(${media.key}, ${`-${prefix}`}) > 0`))
+        .orderBy(asc(media.uploadedAt), asc(media.key));
+      const byKey = unhashed.find((row) => digestFromKey(row.key) === prefix);
+      if (byKey) return recordOf(byKey);
+      const [original] = await db
+        .select({ key: mediaRevisions.mediaKey })
+        .from(mediaRevisions)
+        .where(and(eq(mediaRevisions.sha256, sha256), inArray(mediaRevisions.reason, ["upload", "import"])))
+        .orderBy(asc(mediaRevisions.id))
+        .limit(1);
+      return original ? one(original.key) : null;
+    },
 
-/** Records one set of a file's bytes; the newest row for a key is its current bytes. Answers the row's id. */
-export async function addMediaRevision(env: Env, row: Omit<typeof mediaRevisions.$inferInsert, "id">) {
-  const [added] = await getDb(env).insert(mediaRevisions).values(row).returning({ id: mediaRevisions.id });
-  return added!.id;
-}
+    async insert(record) {
+      const { kind } = classify(record.key);
+      await db.insert(media).values({
+        ...columnsOf(record),
+        key: record.key,
+        storage: "r2",
+        kind,
+        role: roleOf(record.key),
+        uploadedAt: record.uploadedAt,
+      });
+    },
 
-/** Names where MEDIA_REVISIONS keeps a revision's bytes, once they stop being the current ones. */
-export async function keepMediaRevision(env: Env, id: number, backupKey: string) {
-  await getDb(env).update(mediaRevisions).set({ backupKey }).where(eq(mediaRevisions.id, id)).run();
-}
+    async writeAtRev(key, fields, expectedRev) {
+      const [row] = await db
+        .update(media)
+        .set({ ...columnsOf(fields), rev: sql`${media.rev} + 1`, updatedAt: sql`(datetime('now'))` })
+        .where(and(eq(media.key, key), eq(media.rev, expectedRev), isLibraryRow))
+        .returning();
+      if (row) return { ok: true, record: recordOf(row) };
+      const now = await one(key);
+      return now ? { ok: false, reason: "stale", rev: now.rev } : { ok: false, reason: "missing" };
+    },
 
-/** The newest change's sequence number: where a library screen polls from. 0 before any change. */
-export async function mediaChangeCursor(env: Env) {
-  const [row] = await getDb(env).select({ seq: sql<number | null>`max(${mediaChanges.seq})` }).from(mediaChanges);
-  return Number(row?.seq ?? 0);
-}
+    async follow(key, fields) {
+      const set = columnsOf(fields);
+      const [row] =
+        Object.keys(set).length === 0
+          ? await db.select().from(media).where(and(eq(media.key, key), isLibraryRow)).limit(1)
+          : await db.update(media).set(set).where(and(eq(media.key, key), isLibraryRow)).returning();
+      if (!row) throw new Error(`${key} changed its bytes, but its row is gone`);
+      return recordOf(row);
+    },
 
-/**
- * The keys changed after `since` and up to `upTo` (the cursor read first, so a change landing meanwhile waits for
- * the next poll), each once at its latest change, oldest first: one more than `limit`, so the caller can tell
- * whether more wait.
- */
-export async function mediaChangedSince(env: Env, since: number, upTo: number, limit: number) {
-  const latest = sql<number>`max(${mediaChanges.seq})`;
-  return getDb(env)
-    .select({ key: mediaChanges.mediaKey, seq: latest })
-    .from(mediaChanges)
-    .where(sql`${mediaChanges.seq} > ${since} AND ${mediaChanges.seq} <= ${upTo}`)
-    .groupBy(mediaChanges.mediaKey)
-    .orderBy(asc(latest))
-    .limit(limit + 1);
-}
+    async addRevision(key, revision) {
+      const [added] = await db
+        .insert(mediaRevisions)
+        .values({ mediaKey: key, at: revision.at, bytes: revision.bytes, width: revision.width, height: revision.height, reason: revision.reason, sha256: revision.sha256, backupKey: revision.copyKey })
+        .returning({ id: mediaRevisions.id });
+      if (!added) throw new Error(`${key}'s revision was not recorded`);
+      return added.id;
+    },
 
-/** Rows by key, for the keys a change poll names: one JSON parameter, so up to 200 keys stay under D1's parameter cap. */
-export async function mediaRecords(env: Env, keys: string[]) {
-  if (keys.length === 0) return [];
-  return getDb(env)
-    .select()
-    .from(media)
-    .where(sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`);
-}
+    async revisions(key, limit = 100) {
+      const rows = await db.select().from(mediaRevisions).where(eq(mediaRevisions.mediaKey, key)).orderBy(desc(mediaRevisions.id)).limit(limit);
+      return rows.map(revisionOf);
+    },
 
-/** How many recorded citations each key has (the pipeline's media_refs), for a list page's usage counts. */
-export async function mediaRefCounts(env: Env, keys: string[]) {
-  const out = new Map<string, number>(keys.map((key) => [key, 0]));
-  if (keys.length === 0) return out;
-  const rows = await getDb(env)
-    .select({ key: mediaRefs.mediaKey, n: count() })
-    .from(mediaRefs)
-    .where(sql`${mediaRefs.mediaKey} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`)
-    .groupBy(mediaRefs.mediaKey);
-  for (const row of rows) out.set(row.key, Number(row.n));
-  return out;
+    async keepCopy(revisionId, copyKey) {
+      await db.update(mediaRevisions).set({ backupKey: copyKey }).where(eq(mediaRevisions.id, revisionId)).run();
+    },
+
+    // One batch: the row goes only while no recorded citation names it, checked in the delete itself, so a post saved
+    // between the library's reference check and here keeps its file; the revisions go only if the row did.
+    async remove(key) {
+      if (!(await one(key))) return "missing";
+      const [deleted] = await db.batch([
+        db.delete(media).where(and(eq(media.key, key), isLibraryRow, sql`NOT ${cited(key)}`)).returning({ key: media.key }),
+        db.delete(mediaRevisions).where(and(eq(mediaRevisions.mediaKey, key), sql`NOT EXISTS (SELECT 1 FROM ${media} WHERE ${media.key} = ${key})`)),
+      ]);
+      return deleted.length > 0 ? "removed" : "in-use";
+    },
+
+    async changeCursor() {
+      const [row] = await db.select({ seq: sql<number | null>`max(${mediaChanges.seq})` }).from(mediaChanges);
+      return Number(row?.seq ?? 0);
+    },
+
+    // The triggers log every row but a static one (drizzle/0035_media_library.sql), so the OG bucket's derived keys
+    // (classify.mjs storageOf) are left out here, before the limit, or a page of them would read as removals.
+    async changedSince(from, head, limit) {
+      const latest = sql<number>`max(${mediaChanges.seq})`;
+      return db
+        .select({ key: mediaChanges.mediaKey, seq: latest })
+        .from(mediaChanges)
+        .where(sql`${mediaChanges.seq} > ${from} AND ${mediaChanges.seq} <= ${head} AND ${mediaChanges.mediaKey} NOT LIKE 'og/%' AND ${mediaChanges.mediaKey} NOT LIKE 'derived/%'`)
+        .groupBy(mediaChanges.mediaKey)
+        .orderBy(asc(latest))
+        .limit(limit + 1);
+    },
+  };
 }

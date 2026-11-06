@@ -277,11 +277,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ],
     [
       "upload_media",
-      "ADDS ONLY, and cannot overwrite anything with different bytes: the key is " +
-        "a digest of the content, so the one object a second upload can land on " +
-        "is the byte-identical one it just recomputed. It has no delete branch, " +
-        "it writes to MEDIA alone, and the annotation row goes through " +
-        "upsertMediaRecord the way every other writer's does",
+      "ADDS ONLY, and overwrites nothing: bytes the library already holds answer " +
+        "with that file, and the media library's upload never takes a key a row or " +
+        "an object holds. It has no delete branch of its own (the library removes " +
+        "only the object it just put when its row cannot be written), it writes to " +
+        "MEDIA alone, and the row goes through the same media library Carrel's does",
     ],
   ]);
 

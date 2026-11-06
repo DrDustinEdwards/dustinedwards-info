@@ -1,7 +1,6 @@
-import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
-import { storeUpload } from "~/lib/media/upload.server";
-import { applyMediaAlt } from "~/lib/media/actions.server";
-import { altRefusal, guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
+import { ALLOWED, MAX_BYTES, uploadSuccessBody, validateUpload } from "~/lib/media/upload-contract.mjs";
+import { UnmeasuredError, carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
+import { RefusedError, altRefusal, duplicateKey, guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "@dustinedwards/site-runtime/body";
 import { fromBase64 } from "@dustinedwards/site-runtime/encoding";
@@ -161,9 +160,10 @@ async function bytesFromUrl(url: string, declaredType: string): Promise<Sourced>
   return { ok: true, bytes: read, type };
 }
 
-// An adapter: `storeUpload` is the write. The token and rate limiter are the primary control; the guarded
-// fetch, a timed and capped read and `validateUpload` are secondary. The declared type wins because good PNGs are often
-// served as octet-stream, and it is still checked against the allowlist and the bytes.
+// An adapter: the media library's upload is the write, the same one Carrel's and the admin's reach. The token and rate
+// limiter are the primary control; the guarded fetch, a timed and capped read and `validateUpload` are secondary. The
+// declared type wins because good PNGs are often served as octet-stream, and it is still checked against the allowlist
+// and the bytes.
 export async function uploadMediaTool(
   env: OperatorEnv,
   args: Record<string, unknown>,
@@ -205,17 +205,19 @@ export async function uploadMediaTool(
   const nameRefusal = declaredName ? null : altRefusal(alt, decorative, name);
   if (nameRefusal) return { ok: false, status: 400, error: nameRefusal, detail: { code: "alt-required" } };
 
-  const stored = await storeUpload(env, { bytes, type, name });
+  const refused = validateUpload({ type, bytes });
+  if (refused) return { ok: false, status: refused.status, error: refused.message, detail: { code: refused.code } };
 
-  if (!stored.ok) {
-    return { ok: false, status: stored.status, error: stored.message, detail: { code: stored.code } };
-  }
-  if (alt) {
-    // Without its row the alt has nowhere to land, and an undescribed file is what this refuses. Keys are content-addressed,
-    // so sending it again is the repair.
-    const written = stored.recorded ? await applyMediaAlt(env, stored.key, alt) : { ok: false as const, reason: "unrecorded" };
-    if (!written.ok) {
-      return { ok: false, status: 500, error: `${stored.key} was stored, but its alt text was not saved (${written.reason}). Send the upload again.` };
+  // Idempotent: bytes the library already holds answer with that file, as a Carrel upload of them does.
+  const media = carrelMediaAdapter(env);
+  let item = await media.findByHash?.(await duplicateKey(bytes, type));
+  if (!item) {
+    try {
+      item = await media.upload({ bytes, contentType: type, filename: name, alt, decorative, changeId: `operator-upload-${crypto.randomUUID()}` });
+    } catch (error) {
+      if (error instanceof UnmeasuredError) return { ok: false, status: 503, error: error.message, detail: { code: "images-unavailable" } };
+      if (error instanceof RefusedError) return { ok: false, status: 415, error: error.message, detail: { code: "content-mismatch" } };
+      throw error;
     }
   }
 
@@ -223,12 +225,12 @@ export async function uploadMediaTool(
     ok: true,
     data: {
       // The editor's own builder, so the string an agent puts in markdown is the one the editor inserts.
-      ...uploadSuccessBody(stored.key),
-      bytes: stored.bytes,
-      width: stored.width,
-      height: stored.height,
-      // `false` means the object landed and the row did not; `sync_media` re-derives it.
-      recorded: stored.recorded,
+      ...uploadSuccessBody(item.id),
+      bytes: item.bytes,
+      width: item.width,
+      height: item.height,
+      // Always true: a row that cannot be written takes its object with it, so nothing lands half stored.
+      recorded: true,
     },
   };
 }

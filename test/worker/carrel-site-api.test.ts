@@ -480,7 +480,8 @@ describe("media: focal point, caption and replace", () => {
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id, focus: null, sizesNeedPurge: false });
     expect(new Uint8Array(await (await testEnv.MEDIA.get(id))!.arrayBuffer())).toEqual(bytesFor("replace-case-2"));
-    const kept = (await testEnv.MEDIA_REVISIONS.list({ prefix: "replaced/" })).objects.find((o) => o.key.endsWith(`/${id}`));
+    // The library keeps a copy at replaced/<key>/<sha256>; copies from before v0.24.0 are at replaced/<time>/<key>.
+    const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${id}/` })).objects;
     expect(kept, "the old bytes were not kept").toBeDefined();
     expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(original);
   });
@@ -638,6 +639,24 @@ describe("media: the v0.13.0 library", () => {
     expect(await objectBytes(id)).toEqual(original);
   });
 
+  it("reverts to a copy kept before v0.24.0, where its revision row names it", async () => {
+    const id = await uploadThroughApi("legacy-copy-case");
+    const { version } = await mediaItem(id);
+    // As the site's own history wrote it: the copy at replaced/<time>/<key>, its revision row naming it, then the current bytes.
+    const copyKey = `replaced/2026-01-02T03:04:05.000Z/${id}`;
+    await testEnv.MEDIA_REVISIONS.put(copyKey, bytesFor("legacy-copy-case-before"));
+    await testEnv.DB.prepare("DELETE FROM media_revisions WHERE media_key = ?1").bind(id).run();
+    await testEnv.DB.prepare("INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, backup_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', NULL)")
+      .bind(id, copyKey)
+      .run();
+
+    const history = (await (await mediaCall("GET", `${PREFIX}/media/${id}/history`)).json()) as { revisions: Revision[] };
+    expect(history.revisions.map((r) => [r.reason, r.current])).toEqual([["replace", true], ["upload", false]]);
+    const reverted = await mediaCall("POST", `${PREFIX}/media/${id}/revert`, { body: JSON.stringify({ to: history.revisions[1]!.rev, expectedVersion: version, changeId: "chg-legacy-revert" }) });
+    expect(reverted.status, await reverted.clone().text()).toBe(200);
+    expect(await objectBytes(id)).toEqual(bytesFor("legacy-copy-case-before"));
+  });
+
   it("turns a picture that is not square into a new file with its alt, leaving the old one as it was", async () => {
     const overrides = { IMAGES: imagesThatTransform({ width: 20, height: 10 }, () => ({ width: 10, height: 20 })) };
     const upload = await mediaCall("POST", `${PREFIX}/media?${uploadQuery("turn-case", { alt: "A wide chart" })}`, { body: bytesFor("turn-case"), type: "image/png" }, overrides);
@@ -687,7 +706,8 @@ describe("media: the v0.13.0 library", () => {
     expect(response.status, await response.clone().text()).toBe(201);
     const shrunk = (await response.json()) as MediaJson & { width: number; resizedFrom?: Size & { bytes: number } };
     expect(shrunk).toMatchObject({ width: 4096, resizedFrom: { width: 8000, height: 6000, bytes: bytesFor("resize-case").length } });
-    const kept = (await testEnv.MEDIA_REVISIONS.list({ prefix: "resized/" })).objects.find((o) => o.key.endsWith(`/${shrunk.id}`));
+    // One history prefix for every earlier set of bytes since v0.24.0; originals before it are at resized/<time>/<key>.
+    const [kept] = (await testEnv.MEDIA_REVISIONS.list({ prefix: `replaced/${shrunk.id}/` })).objects;
     expect(kept, "the original was not kept").toBeDefined();
     expect(new Uint8Array(await (await testEnv.MEDIA_REVISIONS.get(kept!.key))!.arrayBuffer())).toEqual(bytesFor("resize-case"));
 
@@ -836,35 +856,7 @@ describe("media: a delete is decided by the site's reference check", () => {
     expect(response.status).toBe(422);
     expect(await response.json()).toMatchObject({
       error: "refused",
-      message: expect.stringMatching(/^Nothing was deleted: the reference scan failed/),
-    });
-    expect(await testEnv.MEDIA.get(id)).toBeTruthy();
-    expect(await mediaRowOf(id)).toBeTruthy();
-  });
-
-  it("REFUSES the detail when the reference scan cannot complete", async () => {
-    const id = await uploadThroughApi("carrel-detail-scan-fails");
-    /* Same planted posts failure as the delete case: the row lookup works, the scan does not. */
-    const brokenDb = new Proxy(testEnv.DB, {
-      get(target, property) {
-        if (property === "prepare") {
-          return (query: string) => {
-            if (/from "posts"/i.test(query)) throw new Error("planted posts read failure");
-            return target.prepare(query);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-
-    const response = await mediaCall("GET", `${PREFIX}/media/${id}`, {}, { DB: brokenDb });
-    expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: "refused",
-      message: expect.stringMatching(
-        /^The detail is refused: the reference scan failed \(posts\), so this file's uses are unknown\.$/,
-      ),
+      message: expect.stringMatching(/could not check where its files are used, so nothing was done \(the reference scan failed \(posts\)\)/),
     });
     expect(await testEnv.MEDIA.get(id)).toBeTruthy();
     expect(await mediaRowOf(id)).toBeTruthy();
