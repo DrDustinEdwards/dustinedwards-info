@@ -304,34 +304,15 @@ for (const name of FORBIDDEN_NAMES) {
 }
 
 // ---------------------------------------------------------------------------
-// C. No shared code with the app, with ONE named exception.
+// C. No shared code with the app.
 // ---------------------------------------------------------------------------
 
 /*
- * THE ONE APP MODULE THE WORKER IMPORTS: the watchdog's repair plan. Since the
- * move the two live in one repository, and the site's first principle is that
- * a fact is stored once. Which failing health check is converged by which
- * operator repair, and in what order, is that kind of fact: dei_repair_drift
- * restating it would be a second copy that drifts from the watchdog's. The
- * module is pure (no binding, no fetch, no import but its pure sibling), it
- * carries no policy about what is ALLOWED, only which repair converges which
- * store, and every repair it names still goes through the operator API.
+ * NO APP MODULE AT ALL. The wrapper once imported the watchdog's repair plan for
+ * dei_repair_drift; drift repair now runs from the site's own watchdog and Capsid
+ * Admin's site repair, so nothing here is shared with the app.
  */
-const APP_IMPORTS = { "tools.ts": ["../../app/lib/health/repair.mjs"] };
-for (const [file, specs] of Object.entries({ "repair.mjs": "app/lib/health/repair.mjs", "ask-converge.mjs": "app/lib/health/ask-converge.mjs" })) {
-  const text = readFileSync(join(SITE_ROOT, specs), "utf8");
-  const imports = [...withoutComments(text).matchAll(/^\s*import[\s\S]*?from\s*["']([^"']+)["']/gm)].map((m) => m[1]);
-  check(
-    `the imported app module ${file} imports nothing but its pure sibling`,
-    imports.every((spec) => spec === "./ask-converge.mjs"),
-    `Found imports: ${imports.join(", ")}. The one shared module must stay pure.`,
-  );
-  check(
-    `the imported app module ${file} touches no binding and fetches nothing`,
-    !/\benv\.|fetch\(/.test(codeOnly(text)),
-    "A binding or a fetch in shared code would be a second route to the app.",
-  );
-}
+const APP_IMPORTS = {};
 
 const IMPORT_RE = /(?:^|\n)\s*(?:import|export)[\s\S]*?from\s*["']([^"']+)["']/g;
 for (const f of files) {
@@ -396,17 +377,14 @@ check(
 
 const toolsText = readFileSync(join(SRC, "tools.ts"), "utf8");
 /*
- * THE NINE TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * THE EIGHT TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6. Whole jobs, each prefixed dei_, regrouped from the eleven one-call
  * tools of the separate repo, with the four post tools removed (Carrel owns
- * writing, rule 11) and the files backup moved to Capsid Admin's backups.
+ * writing, rule 11).
  */
 const EXPECTED_TOOLS = [
-  "dei_check_site",
-  "dei_repair_drift",
   "dei_review_mentions",
   "dei_decide_mention",
-  "dei_upload_media",
   "dei_read_registry",
   "dei_refresh_citations",
   "dei_check_publications",
@@ -416,7 +394,7 @@ const EXPECTED_TOOLS = [
 const declared = [...toolsText.matchAll(/^\s{4}name:\s*"([a-z_]+)",$/gm)].map((m) => m[1]);
 
 check(
-  "The declared tools are exactly the ten dei_ tools",
+  "The declared tools are exactly the seven dei_ tools",
   JSON.stringify(declared) === JSON.stringify(EXPECTED_TOOLS),
   `Expected [${EXPECTED_TOOLS.join(", ")}] but found [${declared.join(", ")}].`,
 );
@@ -437,17 +415,15 @@ const named = new Set([
   ...[...toolStrings.matchAll(/\b(?:run|runPaged|callOperator)\(env,\s*"([a-z_]+)"/g)].map((m) => m[1]),
   ...[...toolStrings.matchAll(/\b(?:list|get):\s*"([a-z_]+)"/g)].map((m) => m[1]),
 ]);
-const repairText = readFileSync(join(SITE_ROOT, "app/lib/health/repair.mjs"), "utf8");
-const repairBlock = repairText.slice(repairText.indexOf("REPAIRABLE"), repairText.indexOf("});"));
-for (const m of withoutComments(repairBlock).matchAll(/:\s*"([a-z_]+)"/g)) named.add(m[1]);
 
 for (const name of named) {
   check(`operator tool ${name} is one the API offers`, API_TOOLS.includes(name), "A tool the API does not offer would be a policy decision made here.");
 }
 
-// NO POST WRITING, and no zero-result purge: neither is this server's job.
-for (const name of ["list_posts", "get_post", "save_post", "delete_post", "purge_zero_results"]) {
-  check(`the wrapper never calls ${name}`, !named.has(name) && !toolStrings.includes(`"${name}"`), "Carrel owns writing (rule 11).");
+// No zero-result purge: the watchdog runs it, and it is not this server's job. Post and page tools cannot
+// come back: the operator API no longer offers them, which the check above enforces.
+for (const name of ["purge_zero_results"]) {
+  check(`the wrapper never calls ${name}`, !named.has(name) && !toolStrings.includes(`"${name}"`), "Not this server's job.");
 }
 
 // Every declared tool reaches the API through the one transport.
@@ -683,7 +659,7 @@ if (failures) {
   process.exit(1);
 }
 console.log(
-  `The no-policy law holds: one pure app import, no app bindings, ${EXPECTED_TOOLS.length} tools, one API seam.`,
+  `The no-policy law holds: no app import, no app bindings, ${EXPECTED_TOOLS.length} tools, one API seam.`,
 );
 
 /*

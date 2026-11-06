@@ -160,21 +160,13 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    * DESTRUCTIVE operator tools. Each removes something no derivation can
    * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
    */
-  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention", "purge_zero_results"]);
+  const OPERATOR_DESTRUCTIVE = new Set(["decide_mention", "purge_zero_results"]);
 
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([
-    ["list_posts", "a read"],
-    ["get_post", "a read"],
     ["sync_status", "a read"],
     ["backup_status", "a read"],
     ["list_mentions", "a read"],
-    [
-      "save_post",
-      "creates or edits a post through the same door the editor uses; the file, " +
-        "its git history and first_published all stand, and unpublish is a field " +
-        "change rather than a removal",
-    ],
     [
       "sync_ask",
       "converges a DERIVED index to the corpus through its own derivation, which " +
@@ -189,25 +181,12 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "file and its git history stand, its D1 row and search records are derived, and " +
         "there is no delete branch",
     ],
-    ["list_publications", "a read"],
-    ["get_publication", "a read"],
     [
       "refresh_citations",
       "replaces rows of a DERIVED table (the citation counts, read from OpenAlex) and has no delete branch: a " +
         "DOI that fails keeps its count. Idempotent, and the failures come back in the response",
     ],
     ["check_publications", "a read of ORCID, Crossref and the publication rows; writes nothing"],
-    ["list_pages", "a read"],
-    ["get_page", "a read"],
-    ["get_llms", "a read"],
-    ["list_cv", "a read"],
-    ["get_cv", "a read"],
-    ["list_dictionary", "a read"],
-    ["get_dictionary", "a read"],
-    ["list_roster", "a read"],
-    ["get_roster", "a read"],
-    ["list_phages", "a read"],
-    ["get_phage", "a read"],
     ["list_registry", "a read"],
     ["get_registry", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
@@ -275,14 +254,6 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "WRITES a new dump run and deletes only dump runs outside the retention policy, on the BACKUPS " +
         "binding alone (the sweep below holds that); the newest complete run is never deleted and nothing " +
         "is pruned while the bucket holds no complete run. The dumps are copies of D1, never the source",
-    ],
-    [
-      "upload_media",
-      "ADDS ONLY, and overwrites nothing: bytes the library already holds answer " +
-        "with that file, and the media library's upload never takes a key a row or " +
-        "an object holds. It has no delete branch of its own (the library removes " +
-        "only the object it just put when its row cannot be written), it writes to " +
-        "MEDIA alone, and the row goes through the same media library Carrel's does",
     ],
   ]);
 

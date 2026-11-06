@@ -1,5 +1,5 @@
 {
-  "generated": 47,
+  "generated": 36,
   "refs": {
     "/audio/capsid.mp3": [
       "content/dictionary/capsid.md"
@@ -13,42 +13,8 @@
     "/audio/enarratio.mp3": [
       "content/dictionary/enarratio.md"
     ],
-    "/dustin-edwards-logo-dark.svg": [
-      "workers/security-headers.mjs"
-    ],
-    "/dustin-edwards-logo.svg": [
-      "workers/security-headers.mjs"
-    ],
     "/dustin-edwards-og-image.png": [
-      "app/lib/seo.ts",
-      "workers/security-headers.mjs"
-    ],
-    "/phage-hunters/dustin-edwards-2017.webp": [
-      "content/roster/2017.md"
-    ],
-    "/phage-hunters/dustin-edwards-2018.webp": [
-      "content/roster/2018.md"
-    ],
-    "/phage-hunters/dustin-edwards-2019.webp": [
-      "content/roster/2019.md"
-    ],
-    "/phage-hunters/dustin-edwards-2020.webp": [
-      "content/roster/2020.md"
-    ],
-    "/phage-hunters/dustin-edwards-2021.webp": [
-      "content/roster/2021.md"
-    ],
-    "/phage-hunters/dustin-edwards-2022.webp": [
-      "content/roster/2022.md"
-    ],
-    "/phage-hunters/dustin-edwards-2023.webp": [
-      "content/roster/2023.md"
-    ],
-    "/phage-hunters/dustin-edwards-2024.webp": [
-      "content/roster/2024.md"
-    ],
-    "/phage-hunters/dustin-edwards-2025.webp": [
-      "content/roster/2025.md"
+      "app/lib/seo.ts"
     ],
     "/research/publications/10-1002-9780470025079-chap06-pub2/dustin-edwards-10-1002-9780470025079-chap06-pub2.pdf": [
       "content/publications/10-1002-9780470025079-chap06-pub2.md"
@@ -144,6 +110,6 @@
       "content/publications/10-7589-jwd-d-22-00023.md"
     ]
   },
-  "filesRead": 565,
-  "assetsConsidered": 64
+  "filesRead": 563,
+  "assetsConsidered": 55
 }

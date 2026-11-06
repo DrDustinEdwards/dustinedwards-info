@@ -81,7 +81,7 @@ export async function listPublishedPageHtml(env: Env) {
   return new Map(rows.map((row) => [row.path, (JSON.parse(row.record) as PageRecord).html]));
 }
 
-/** For list_pages and Carrel's list: every row, drafts included, with when D1 last wrote it. */
+/** For Carrel's list: every row, drafts included, with when D1 last wrote it. */
 export async function listPageRows(env: Env) {
   const rows = await getDb(env)
     .select({ slug: pages.slug, path: pages.path, title: pages.title, status: pages.status, syncedAt: pages.syncedAt })

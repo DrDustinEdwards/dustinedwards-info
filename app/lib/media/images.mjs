@@ -7,25 +7,6 @@ import { digestFromKey, dimensionsFromKey } from "./classify.mjs";
 const CONTENT_SIZES = "(min-width: 46rem) 704px, calc(100vw - 2rem)";
 
 /**
- * The static photographs /media serves from the site's own assets, so they get the sizes and formats an upload gets:
- * the roster's cohort photos (ROSTER_PHOTO_DIR), which stay files in `public/`. The key, without its leading slash.
- */
-const STATIC_MEDIA = /^phage-hunters\/[A-Za-z0-9._-]+\.webp$/;
-
-/** @param {string} key a /media key */
-export function isStaticMedia(key) {
-  return STATIC_MEDIA.test(key);
-}
-
-/**
- * The /media address of an image: a static photograph /media serves moves under it; anything else is unchanged.
- * @param {string} src
- */
-export function mediaSrc(src) {
-  return isStaticMedia(src.slice(1)) ? `/media${src}` : src;
-}
-
-/**
  * Every way the site shows an image from /media, and so the route's closed width set (site-runtime ./image):
  * the set is CLOSED because the Images binding bills each unique transform, and the pipeline and the route
  * share it, so a width the page advertises is never a 400 mid-article. `breakpoints` keeps the widths the

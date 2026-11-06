@@ -1,7 +1,6 @@
 import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isToolName, runTool } from "~/lib/operator/api.server";
 import { saveDictionaryEntry } from "~/lib/dictionary/save.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import ContentPage, { loader as pageLoader } from "~/routes/content-page";
@@ -9,7 +8,6 @@ import { loader as twinLoader } from "~/routes/content-page[.md]";
 
 import capsidEntry from "../../content/dictionary/capsid.md?raw";
 import capsidPage from "../../content/pages/software-capsid.md?raw";
-import dictionaryArtifact from "../../content/generated/dictionary.json";
 
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
@@ -51,7 +49,6 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 
 async function pageData(path = PATH) {
   return pageLoader({ request: new Request(`${ORIGIN}${path}`), context: routeContext(), params: {} } as never);
@@ -254,25 +251,6 @@ describe("a derived write that fails never reverts the commit", () => {
     expect(repaired.unchanged).toBe(true);
     expect((await commits())).toHaveLength(1);
     expect((await pageData()).entry?.senses[1]).toBe(ADDED);
-  });
-});
-
-describe("the operator reads entries and cannot save one", () => {
-  it("list_dictionary and get_dictionary read, and there is no save tool", { timeout: 180_000 }, async () => {
-    const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_dictionary", {});
-    expect(list).toMatchObject({ ok: true });
-    const data = (list as { data: { count: number; entries: Array<{ key: string; path: string; draft: boolean }> } }).data;
-    // One per file in content/dictionary/, counted from the build's own artifact rather than typed.
-    expect(data.count).toBe(dictionaryArtifact.dictionary.length);
-    expect(data.entries.find((e) => e.key === KEY)).toMatchObject({ path: PATH, draft: false });
-
-    const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_dictionary", { key: KEY });
-    expect(one).toMatchObject({ ok: true, data: { key: KEY, raw: capsidEntry, errors: [], entry: { term: "Capsid" } } });
-    expect(await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_dictionary", { key: "nothing" })).toMatchObject({ ok: false, status: 404 });
-    expect(await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_dictionary", { key: "Not A Key" })).toMatchObject({ ok: false, status: 400 });
-
-    // Content is edited through Carrel and nowhere else (docs/DICTIONARY.md), so no save tool exists.
-    expect(isToolName("save_dictionary")).toBe(false);
   });
 });
 

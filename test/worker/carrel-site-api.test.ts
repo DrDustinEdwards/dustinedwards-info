@@ -12,7 +12,6 @@ import { documentHandlerContext, postPreviewContext } from "~/lib/context";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { authenticateOperator } from "~/lib/operator/auth.server";
-import { runTool } from "~/lib/operator/api.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as postLoader } from "~/routes/blog.$slug";
 import { loader as previewLinkLoader } from "~/routes/preview.$token";
@@ -276,16 +275,6 @@ describe("the first publication", () => {
     expect(message).toContain("[carrel:chg-first]");
   });
 
-  it("REFUSES it from any other key: the operator keeps the admin-only rule", async () => {
-    const result = await runTool(
-      testEnv as unknown as Parameters<typeof runTool>[0],
-      { kind: "operator", id: "test" },
-      "save_post",
-      { slug: "carrel-operator-first", raw: post("carrel-operator-first", { draft: false }), isNew: true },
-    );
-    expect(result).toMatchObject({ ok: false, status: 403, detail: { policy: "first-publish-requires-admin" } });
-    expect(((await source(postPath("carrel-operator-first"))) !== undefined)).toBe(false);
-  });
 });
 
 describe("status belongs to the site", () => {

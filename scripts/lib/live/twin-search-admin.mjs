@@ -1,6 +1,6 @@
 // The markdown twin, the search page and its JSON twin, the admin redirects and the static assets.
 
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { readArtifact } from "../artifact.mjs";
@@ -94,10 +94,10 @@ export async function run() {
     const pdfs = readdirSync(join(root, "public", "research", "publications"), { recursive: true })
       .map((f) => String(f).replaceAll("\\", "/"))
       .filter((f) => f.endsWith(".pdf"));
-    // Images only: a desktop.ini or Thumbs.db is not served and is not an asset.
-    const photos = readdirSync(join(root, "public", "phage-hunters")).filter((f) =>
-      /\.(?:jpe?g|png|webp|avif|gif|svg)$/i.test(f),
-    );
+    // The cohort photographs are media library files, named by each roster file.
+    const photos = readdirSync(join(root, "content", "roster"))
+      .filter((f) => f.endsWith(".md"))
+      .flatMap((f) => readFileSync(join(root, "content", "roster", f), "utf8").match(/^ {2}src: (\/media\/\S+)$/m)?.[1] ?? []);
     let ok = 0;
     for (const f of pdfs) {
       const r = await fetch(`${ORIGIN}/research/publications/${f.split("/").map(encodeURIComponent).join("/")}`, {
@@ -109,13 +109,13 @@ export async function run() {
       else check(`asset 404: /research/publications/${f} (${r.status})`, false);
     }
     for (const f of photos) {
-      const r = await fetch(`${ORIGIN}/phage-hunters/${encodeURIComponent(f)}`, {
+      const r = await fetch(`${ORIGIN}${f}`, {
         method: "HEAD",
         headers: { "user-agent": UA },
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (r.status === 200) ok += 1;
-      else check(`asset 404: /phage-hunters/${f} (${r.status})`, false);
+      else check(`asset 404: ${f} (${r.status})`, false);
     }
     const total = pdfs.length + photos.length;
     check(

@@ -87,7 +87,7 @@ python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
 s=s.replace('    name: \"dei_check_publications\",','    name: \"check_publications\",',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "2. tool renamed away from the ten dei_ tools"
+expect_fail "2. tool renamed away from the seven dei_ tools"
 
 # 3. The API-leg credential read from a second module.
 python3 -c "

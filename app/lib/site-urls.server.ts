@@ -13,7 +13,6 @@ import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { mediaSrc } from "~/lib/media/images.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
 import { OWNER_PHOTO, POSTS_AND_PROCEDURES_CACHE_TAGS } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
@@ -182,7 +181,7 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
   /** The pictures a page draws outside its prose, as the image sitemap lists them: About's portrait, the roster's photos. */
   const pageImages: Record<string, string[]> = {
     "/about": [`/media/${OWNER_PHOTO.key}`],
-    [ROSTER_PAGE_PATH]: cohorts.flatMap((cohort) => (cohort.photo ? [mediaSrc(cohort.photo.src)] : [])),
+    [ROSTER_PAGE_PATH]: cohorts.flatMap((cohort) => (cohort.photo ? [cohort.photo.src] : [])),
   };
   const withImages = (path: string) => (pageImages[path]?.length ? { images: pageImages[path] } : {});
 

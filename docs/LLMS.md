@@ -7,8 +7,8 @@ goes live without a build or deploy.
 
 There is ONE write path: Carrel saves the document through site-api's adapter (the id `document.llms` in the
 `/content` group, handler `app/lib/carrel/document-handler.server.ts`, the "document" kind beside post,
-publication and page). There is no admin editor and no operator save tool. The operator can read `get_llms`
-and converge with `sync_llms`.
+publication and page). There is no admin editor and no operator save tool. It is read through Carrel, and the
+operator converges it with `sync_llms`.
 
 ## What the kind does
 

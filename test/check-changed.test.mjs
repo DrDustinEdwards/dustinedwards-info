@@ -106,7 +106,7 @@ await test("a component edit does not pull in the route-only gates", () => {
 });
 
 await test("a hook edit maps to no gate, because no gate or test runs a hook", () => {
-  const { rules, gates } = gatesFor(".claude/hooks/no-em-dash.sh", DECLARED);
+  const { rules, gates } = gatesFor(".claude/hooks/no-direct-deploy.sh", DECLARED);
   assert.deepEqual(gates, []);
   assert.ok(rules.length > 0, "argued safe by a row, not unmapped");
 });

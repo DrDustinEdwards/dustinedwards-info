@@ -55,25 +55,22 @@ describe("handleMcp", () => {
     });
     assert.equal(message.result.serverInfo.name, "dustinedwards-mcp");
     assert.match(message.result.instructions, /first-publish-requires-admin/);
-    assert.match(message.result.instructions, /Carrel owns all writing/);
+    assert.match(message.result.instructions, /Carrel owns all of that/);
     assert.equal(api.calls.length, 0);
   });
 
-  test("tools/list offers the ten dei_ tools and nothing else", async () => {
+  test("tools/list offers the seven dei_ tools and nothing else", async () => {
     const { message } = await rpc("tools/list", {});
     assert.deepEqual(
       message.result.tools.map((t: { name: string }) => t.name).sort(),
       [
         "dei_check_publications",
-        "dei_check_site",
         "dei_decide_mention",
         "dei_read_procedure",
         "dei_read_registry",
         "dei_refresh_citations",
-        "dei_repair_drift",
         "dei_review_mentions",
         "dei_save_procedure",
-        "dei_upload_media",
       ],
     );
     assert.equal(api.calls.length, 0);
@@ -81,7 +78,7 @@ describe("handleMcp", () => {
 
   test("tools/list carries each tool's annotations", async () => {
     const { message } = await rpc("tools/list", {});
-    const check = message.result.tools.find((t: { name: string }) => t.name === "dei_check_site");
+    const check = message.result.tools.find((t: { name: string }) => t.name === "dei_review_mentions");
     assert.equal(check.annotations.readOnlyHint, true);
   });
 
@@ -186,7 +183,7 @@ describe("handleMcp", () => {
     // With no tool registered the server offers no tools at all, so tools/list is an error or an empty list.
     const list = (await rpc("tools/list", {}, null)).message;
     assert.ok(list.error || list.result?.tools?.length === 0, JSON.stringify(list));
-    const { message } = await callTool("dei_check_site", {}, null);
+    const { message } = await callTool("dei_review_mentions", {}, null);
     assert.ok(message.error || message.result?.isError === true, JSON.stringify(message));
     assert.equal(api.calls.length, 0);
   });

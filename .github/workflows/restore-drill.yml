@@ -1,10 +1,7 @@
-# The restore drill: proves the documented backup path reconstructs D1.
-#
-# On its own weekly schedule: a drill that CREATES AND DELETES A REAL D1
-# DATABASE is an expensive rehearsal, run when a rehearsal is worth its cost.
-#
-# Actions are pinned BY COMMIT SHA, not by tag, for the reason ci.yml states: a
-# tag is a moving pointer the upstream owner can repoint.
+# The restore drill: devkit's shared drill restores the newest complete nightly run in
+# dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`),
+# then restores a sample of the files backups and checks their bytes. devkit-ops-audit's R1 reads
+# this workflow's newest run.
 
 name: Restore drill
 
@@ -19,23 +16,14 @@ on:
   # you actually want to know, rather than up to a week later.
   workflow_dispatch:
 
-# Read-only on the repository. The drill needs Cloudflare credentials, not
-# GitHub write scope, and a token that cannot write is one that cannot be
-# turned against the repository if a pinned action is ever compromised.
 permissions:
   contents: read
 
-# A run must never stack on a running one. Two drills at once would each see
-# the other's scratch database, and while the sweep in the drill only removes
-# databases older than two hours, serializing them removes the question.
 concurrency:
   group: restore-drill
   cancel-in-progress: false
 
 jobs:
-  # THE RETAINED DUMP: devkit's shared drill restores the newest complete nightly run in
-  # dustinedwards-backups into a scratch SQLite file and checks the copy (d1-dump's `drill --bucket`).
-  # devkit-ops-audit's R1 reads this job's newest run.
   drill:
     uses: DrDustinEdwards/devkit/.github/workflows/restore-drill.yml@a4c3bbf859fe126913e28c6199ff66fa98e0261d # v0.21.4
     with:
@@ -44,55 +32,3 @@ jobs:
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  # The export path RUNBOOK section 4 documents: production exported and restored into a scratch D1.
-  export-drill:
-    name: Restore into a scratch database
-    runs-on: ubuntu-latest
-    # Measured at about five and a half minutes on the first full run. Twenty
-    # is generous rather than tight: the failure this bounds is a hung wrangler
-    # call, and a drill that gets slower as the corpus grows should fail on an
-    # assertion rather than on the clock.
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version-file: .nvmrc
-
-      # `npm ci` and not `npm install`: it installs from the lockfile exactly
-      # and never re-resolves a range. `postinstall` bootstraps
-      # wrangler.jsonc from the tracked example, which is what makes wrangler
-      # runnable here at all.
-      - name: Install
-        run: npm ci
-
-      - name: Run the drill
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run check:restore
-
-      # ALWAYS, so a failed drill still says what it left behind. The drill
-      # deletes its scratch database in a `finally`, which does not run on a
-      # hard kill or a job cancellation, and its next run sweeps anything older
-      # than two hours. This step makes a leak visible in the run that caused
-      # it rather than a week later.
-      - name: Report any leaked scratch database
-        if: always()
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set -euo pipefail
-          LEAKED=$(npx wrangler d1 list --json | grep -c 'restore-drill-' || true)
-          if [ "$LEAKED" != "0" ]; then
-            echo "::warning::${LEAKED} scratch database(s) still present. The next run sweeps them."
-            npx wrangler d1 list --json | grep 'restore-drill-' || true
-          else
-            echo "No scratch database left behind."
-          fi

@@ -189,7 +189,7 @@ export function intentBranches(action, predicate) {
 }
 
 /**
- * The initializer of a property in an exported object literal, e.g. `TOOL_DESCRIPTORS.delete_post`.
+ * The initializer of a property in an exported object literal, e.g. `TOOL_DESCRIPTORS.decide_mention`.
  *
  * @param {ts.SourceFile} sf
  * @param {string} constName

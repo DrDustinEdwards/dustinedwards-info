@@ -5,7 +5,6 @@ import { getPublicationRow } from "~/db/publications";
 import { getCitationCounts, refreshCitations } from "~/lib/citations.server";
 import { decodeContentId, encodeContentId } from "~/lib/carrel/content-id.mjs";
 import { runTool } from "~/lib/operator/api.server";
-import { isToolName, toolNames } from "~/lib/operator/descriptors";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
@@ -275,35 +274,6 @@ describe("a file the validator refuses", () => {
     });
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(((await storedSource(publicationPath(slug))) !== undefined)).toBe(false);
-  });
-});
-
-describe("the operator reads publications and has no tool to write one", () => {
-  const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
-  const operator = { kind: "operator", id: "test" } as const;
-
-  it("lists every row with a draft flag and a count, and reads one file with its record", async () => {
-    const list = await runTool(operatorEnv(), operator, "list_publications", {});
-    expect(list.ok).toBe(true);
-    const data = (list as { data: { count: number; publications: Array<{ slug: string; draft: boolean }> } }).data;
-    expect(data.count).toBeGreaterThanOrEqual(36);
-    expect(data.publications.find((p) => p.slug === SLUG)).toMatchObject({ draft: false });
-
-    const one = await runTool(operatorEnv(), operator, "get_publication", { slug: SLUG });
-    expect(one).toMatchObject({ ok: true, data: { slug: SLUG, draft: false, errors: [] } });
-    expect((await runTool(operatorEnv(), operator, "get_publication", { slug: "nope" })).ok).toBe(false);
-  });
-
-  it("has no save_publication or save_page: a publication is written through Carrel, never through this surface", () => {
-    expect(isToolName("save_publication")).toBe(false);
-    expect(isToolName("save_page")).toBe(false);
-    // sync_publications writes nothing the repository does not already hold: it converges D1 to the files.
-    expect(toolNames().filter((name) => /publication/.test(name))).toEqual([
-      "sync_publications",
-      "list_publications",
-      "get_publication",
-      "check_publications",
-    ]);
   });
 });
 
