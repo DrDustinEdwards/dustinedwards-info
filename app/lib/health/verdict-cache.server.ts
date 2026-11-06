@@ -1,6 +1,6 @@
 // The media listings behind /health, kept for an hour. Every listing is a Class A operation, billed after the
-// first million a month (developers.cloudflare.com/r2/pricing/), and the watchdog, the live gates and the
-// Capsid watcher read /health all day. The media index check lists MEDIA and OG in full, so an uncached /health made
+// first million a month (developers.cloudflare.com/r2/pricing/), and the live gates, the health-snapshot
+// job and the Capsid watcher read /health all day. The media index check lists MEDIA and OG in full, so an uncached /health made
 // about 324K listings a month. (The BACKUPS read is kept by site-runtime's healthResponse, in the Cache API, see health.ts.)
 //
 // Same pattern as the Ask drift badge (ask-guard.server.ts): a TTL entry in APP_KV. KV refuses a TTL under 60
@@ -8,7 +8,7 @@
 // (developers.cloudflare.com/kv/api/write-key-value-pairs/), both fine for a verdict an hour old. A repair
 // drops its entry (dropHealthVerdicts), so the recheck after it reads the bucket, not the verdict it fixed.
 
-/** An hour: drift is repaired within the watchdog's pass, and a verdict this old harms nothing. */
+/** An hour: drift is repaired within a Capsid watcher pass, and a verdict this old harms nothing. */
 const HEALTH_VERDICT_TTL_SECONDS = 60 * 60;
 
 const PREFIX = "health:verdict:";

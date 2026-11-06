@@ -3,7 +3,7 @@
 // second half of the retired `npm run ship`; the first half (the D1 bookmark, the migrations, the build and the deploy itself,
 // with the live gate and its rollback) is worker-deploy's, called as the network's other Worker sites call it.
 //
-// The order is ship's: readiness, the watchdog, the uptime monitors, the content build and its gate, the D1 sync, the
+// The order is ship's: readiness, the uptime monitors, the content build and its gate, the D1 sync, the
 // Ask index, the CV PDF, the share cards, the media index, the deferred drift checks, then the browser test. Deploy
 // before sync, so `llms.txt` never advertises unserved pages. `check:content` runs before sync because
 // `sync-content.mjs` runs no gate. A refusal stops before the first write it would make unsafe; a miss is a later step
@@ -132,48 +132,7 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
   );
 }
 
-/*
- * After readiness, so the watchdog is never pointed at an unproven build. A failure is a miss,
- * not a refusal: the site deploy has landed, and this exits nonzero at the end.
- */
-announce("Deploy the watchdog Worker");
-
-let watchdogMiss = "";
-
-{
-  const deployed = run(
-    "npx",
-    ["wrangler", "deploy", "-c", "wrangler.watchdog.jsonc"],
-    { capture: true },
-  );
-
-  if (deployed.code !== 0) {
-    watchdogMiss =
-      "the watchdog Worker did not deploy, so the fifteen-minute self-repair poll is " +
-      "still running whatever was deployed before this run";
-  } else {
-    /* No version ID in the output means the deploy is unproven, even on exit 0. */
-    const watchdogVersion =
-      (deployed.text.match(/Current Version ID:\s*([0-9a-f-]{8,})/i) ?? [])[1] ?? "";
-    if (!watchdogVersion) {
-      watchdogMiss =
-        "the watchdog deploy reported no Version ID, so nothing proves which build is " +
-        "now on the cron";
-    } else {
-      console.log(`  watchdog version ${watchdogVersion}`);
-      /* Read back from wrangler: a configured cron is not a registered one. A miss, not a refusal. */
-      if (!/^\s*schedule:\s*\S/m.test(deployed.text)) {
-        watchdogMiss =
-          "the watchdog deployed but wrangler's output named no cron trigger, so the " +
-          "schedule may not be registered and the Worker would never fire";
-      }
-    }
-  }
-
-  if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
-}
-
-/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss; a
+/* After readiness. URLs derive from `SITE_ORIGIN`. A failure is a miss; a
    keyless run on a GitHub runner, and only that, is a skip. A missing key locally is a miss. */
 announce("Point the uptime monitors at this deploy");
 
@@ -418,7 +377,6 @@ const misses = [
   { key: "cards", title: "THE SHARE CARDS", text: cardsMiss },
   { key: "media", title: "THE MEDIA INDEX", text: mediaMiss },
   { key: "render", title: "THE RENDER", text: renderDriftMiss },
-  { key: "watchdog", title: "THE WATCHDOG", text: watchdogMiss },
   { key: "uptime", title: "THE UPTIME MONITORS", text: uptimeMiss },
   { key: "deferred", title: "DEFERRED DRIFT", text: deferredMiss },
   { key: "browser", title: "THE BROWSER TEST", text: browserMiss },

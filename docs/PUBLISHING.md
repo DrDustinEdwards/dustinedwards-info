@@ -43,7 +43,7 @@ Both call the same `savePost`. Gates (zod frontmatter, the wide-dash check) run 
 
 Carrel's v0.17.0 contract on posts (`app/lib/carrel`): a write sent again under its change id answers what the first did (the store, `drizzle/0037`); a trash (a draft listed only with `trashed=true`, emptied for good by the cron after 30 days), a rename (the file and its revisions move, and the old address of a post ever public answers a 301 from `post_redirects`), a publish under a date Carrel names, and preview links at `/preview/<token>`. The per-minute cron (`workers/app.ts`, site-runtime's `runJobs`) puts schedules live and, for a post scheduled before it was ever live, which goes live by its `publish_at` with no write, announces it once from `scheduled_publishes` (`drizzle/0038`), so IndexNow, the page purge (through the Renderer's `purgePages`) and the outgoing webmentions hear it. Receiving and moderating webmentions is unchanged (`/webmention`, `/admin/mentions`).
 
-**The operator API** (`POST /api/operator`, bearer `OPERATOR_TOKEN`) serves the admin MCP in `mcp/`, ship and the watchdog. `GET /api/operator` returns the descriptors from `app/lib/operator/descriptors.ts`, which is the tool list; do not copy it here. The token is compared in constant time after both sides are hashed to 32 bytes; absent or under 32 characters, the endpoint returns 503. Limited 30 per 60 s through the site's Durable Object limiter on an `op:<id>` instance, keyed after authentication. Revisions carry `[operator:<id>]`. `savePost(env, options)` took a plain env rather than a Request, so exposing it needed no refactor: check whether a seam exists before budgeting to cut one.
+**The operator API** (`POST /api/operator`, bearer `OPERATOR_TOKEN`) serves the admin MCP in `mcp/`, ship and Capsid's watcher. `GET /api/operator` returns the descriptors from `app/lib/operator/descriptors.ts`, which is the tool list; do not copy it here. The token is compared in constant time after both sides are hashed to 32 bytes; absent or under 32 characters, the endpoint returns 503. Limited 30 per 60 s through the site's Durable Object limiter on an `op:<id>` instance, keyed after authentication. Revisions carry `[operator:<id>]`. `savePost(env, options)` took a plain env rather than a Request, so exposing it needed no refactor: check whether a seam exists before budgeting to cut one.
 
 There is no post editor in the site's admin (removed 2026-10-29: every post was being written in Carrel, and two editors meant two sets of save and publish rules). The save outcome (saved, published-first, republished, unpublished, failed) is named by `publish-policy.mjs`, because only the policy reads the prior file. The upkeep that page held is on `/admin/tools`: rebuild the answer index, re-render every post and reset the day's answer budget.
 
@@ -57,7 +57,7 @@ The durable fact is `first_published` in frontmatter, not a rows column, because
 
 ## Ask outside a save
 
-`syncAskPost` runs only on saves, and `sync:content --remote` writes D1 and the classic index only. A row written any other way is covered by convergence: ship converges Ask last, the watchdog runs `sync_ask` on schedule, and `sync_ask` is on the operator API for a manual repair.
+`syncAskPost` runs only on saves, and `sync:content --remote` writes D1 and the classic index only. A row written any other way is covered by convergence: ship converges Ask last, Capsid's watcher runs `sync_ask` when the Ask drift check fails, and `sync_ask` is on the operator API for a manual repair.
 
 ## Social cards
 

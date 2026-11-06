@@ -45,6 +45,10 @@
       "what": "A headless browser that prints the CV to PDF. The Worker calls it after each CV save and keeps one PDF in the derived bucket.",
       "whyLoadBearing": "The CV is edited through Carrel and goes live with no deploy, so a PDF committed to the repository went stale on every save and failed CI until someone re-rendered it by hand. The PDF is derived from the CV rows, so it is rendered where the rows live, stamped with a fingerprint of the data it was drawn from, and a health check compares that fingerprint with the CV the site shows. A failed render never undoes a save: the check goes red and the watcher re-renders."
     },
+    "send_email:EMAIL": {
+      "what": "Email Sending from the Worker, used once a day at most: when ORCID or Crossref lists a paper of Dustin's that the publications list does not have yet, the DOI is mailed to him once.",
+      "whyLoadBearing": "A new paper is added through Carrel by hand, so nothing on the site notices one by itself. The mail is what turns a paper published elsewhere into a line on this site, and each DOI is mailed once so a paper waiting to be added is not mailed every day."
+    },
     "assets:ASSETS": {
       "what": "The static files under public/, served without a Worker invocation.",
       "whyLoadBearing": "The binding has exactly one method, fetch(), so a Worker can serve any path it is given and discover none of them. That is why the media rebuild reads a committed manifest: the one thing it cannot do for itself is find out which static files exist."

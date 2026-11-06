@@ -1,4 +1,4 @@
-// Writes the redacted values into wrangler.jsonc and wrangler.watchdog.jsonc for the deploy (deploy.yml's pre-deploy
+// Writes the redacted values into wrangler.jsonc for the deploy (deploy.yml's pre-deploy
 // guard and its converge job): each value is read from what the live Worker is bound to now, through the Cloudflare
 // API, as scripts/apply-mcp-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
 // token and account id that devkit's worker-deploy passes, and a Worker keeps the database, namespace and address it
@@ -29,12 +29,6 @@ function refuse(why) {
 const FIELDS = [
   { config: "wrangler.jsonc", name: "d1_databases[0].database_id", key: "database_id", placeholder: "00000000-0000-0000-0000-000000000000", worker: "dustinedwards", type: "d1", binding: "DB", from: ["id", "database_id"] },
   { config: "wrangler.jsonc", name: "kv_namespaces[0].id", key: "id", placeholder: "00000000000000000000000000000000", worker: "dustinedwards", type: "kv_namespace", binding: "APP_KV", from: ["namespace_id"] },
-  { config: "wrangler.jsonc", name: "vars.CLOUDFLARE_ACCOUNT_ID", key: "CLOUDFLARE_ACCOUNT_ID", placeholder: "00000000000000000000000000000000" },
-  // The watchdog binds the same KV namespace and reads the same account id. Without these two, run 36219656356
-  // deployed the site and then failed the watchdog deploy on a namespace of zeros.
-  { config: "wrangler.watchdog.jsonc", name: "kv_namespaces[0].id", key: "id", placeholder: "00000000000000000000000000000000", worker: "dustinedwards-watchdog", type: "kv_namespace", binding: "APP_KV", from: ["namespace_id"] },
-  { config: "wrangler.watchdog.jsonc", name: "vars.CLOUDFLARE_ACCOUNT_ID", key: "CLOUDFLARE_ACCOUNT_ID", placeholder: "00000000000000000000000000000000" },
-  { config: "wrangler.watchdog.jsonc", name: "vars.ALERT_EMAIL", key: "ALERT_EMAIL", placeholder: "alerts@example.com", worker: "dustinedwards-watchdog", type: "plain_text", binding: "ALERT_EMAIL", from: ["text"] },
 ];
 
 const token = process.env.CLOUDFLARE_API_TOKEN ?? "";
@@ -98,4 +92,4 @@ for (const config of CONFIGS) {
   }
 }
 
-console.log(`  ${CONFIGS.join(" and ")} carry every redacted value.`);
+console.log(`  ${CONFIGS.join(" and ")} carries every redacted value.`);

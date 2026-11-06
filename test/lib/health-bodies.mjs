@@ -1,4 +1,4 @@
-/* /health bodies for the tests that read one: the readiness step and the watchdog's repair planner.
+/* /health bodies for the tests that read one: the readiness step and the repair planner.
  * The drift checks are the ones the endpoint reports, in its order, after the database's. */
 
 export const CHECK_NAMES = [
@@ -43,7 +43,7 @@ export const bodyDrifted = (drift) => ({
 
 /**
  * A passing fts-equality followed by `failing`, each warning, in the order given. Unknown classes are
- * allowed, which is what the watchdog's notify arm needs.
+ * allowed, which is what the repair planner's notify arm needs.
  *
  * @param {string[]} failing
  */

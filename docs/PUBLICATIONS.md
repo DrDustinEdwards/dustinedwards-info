@@ -6,7 +6,7 @@ source with its history. `npm run sync:content` and the Carrel adapter's save wr
 build or deploy. Only a change to the components or to this format goes through a build.
 
 There is no editor for publications in the site's admin and no `save_publication` operator tool. A paper is
-written through Carrel and `@dustinedwards/site-api`, as a post is (D1 is derived). The operator API reads: `list_publications`, `get_publication`. It also has `refresh_citations`.
+written through Carrel and `@dustinedwards/site-api`, as a post is (D1 is derived). Papers are read through Carrel too. The operator API has `refresh_citations` and `check_publications`.
 
 ## The file
 
@@ -153,8 +153,8 @@ the sort menu, the counts and the year headings all come from that declaration.
 `publication_citations` (D1, keyed by the lower-cased DOI, no expiry) holds the last count read from OpenAlex.
 A page shows it whatever its age, and refreshes a row older than seven days after the response; a failed
 refresh keeps the count and logs `citation-count-failed`. It is seeded by `sync:content` from
-`data/publications.cited-by.json` (forward only) and refreshed weekly: the watchdog's `scheduled()` calls the
-operator tool `refresh_citations` in the Sunday 03:00 UTC firing, so the site Worker needs no cron of its own.
+`data/publications.cited-by.json` (forward only) and refreshed weekly: Capsid's watcher calls the operator tool
+`refresh_citations` once a week (its `ops_sites.operator` row lists it under `weekly`).
 A partial failure is a 502 naming each DOI.
 
 ## Adding a paper

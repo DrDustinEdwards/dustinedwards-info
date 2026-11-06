@@ -5,7 +5,6 @@ import { getPublicationRow } from "~/db/publications";
 import { getCitationCounts, refreshCitations } from "~/lib/citations.server";
 import { decodeContentId, encodeContentId } from "~/lib/carrel/content-id.mjs";
 import { runTool } from "~/lib/operator/api.server";
-import { isToolName, toolNames } from "~/lib/operator/descriptors";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
@@ -14,12 +13,7 @@ import Publications, { headers as indexHeaders, loader as indexLoader } from "~/
 import Paper, { headers as paperHeaders, loader as paperLoader } from "~/routes/publications.$slug";
 import { loader as twinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
-import {
-  checkPublicationsDaily,
-  isCitationRefreshWindow,
-  isPublicationCheckWindow,
-  refreshCitationsWeekly,
-} from "../../workers/watchdog";
+import { checkPublicationsDaily, PUBLICATIONS_MAILED_KEY } from "~/lib/publications/notify.server";
 
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
@@ -278,35 +272,6 @@ describe("a file the validator refuses", () => {
   });
 });
 
-describe("the operator reads publications and has no tool to write one", () => {
-  const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
-  const operator = { kind: "operator", id: "test" } as const;
-
-  it("lists every row with a draft flag and a count, and reads one file with its record", async () => {
-    const list = await runTool(operatorEnv(), operator, "list_publications", {});
-    expect(list.ok).toBe(true);
-    const data = (list as { data: { count: number; publications: Array<{ slug: string; draft: boolean }> } }).data;
-    expect(data.count).toBeGreaterThanOrEqual(36);
-    expect(data.publications.find((p) => p.slug === SLUG)).toMatchObject({ draft: false });
-
-    const one = await runTool(operatorEnv(), operator, "get_publication", { slug: SLUG });
-    expect(one).toMatchObject({ ok: true, data: { slug: SLUG, draft: false, errors: [] } });
-    expect((await runTool(operatorEnv(), operator, "get_publication", { slug: "nope" })).ok).toBe(false);
-  });
-
-  it("has no save_publication or save_page: a publication is written through Carrel, never through this surface", () => {
-    expect(isToolName("save_publication")).toBe(false);
-    expect(isToolName("save_page")).toBe(false);
-    // sync_publications writes nothing the repository does not already hold: it converges D1 to the files.
-    expect(toolNames().filter((name) => /publication/.test(name))).toEqual([
-      "sync_publications",
-      "list_publications",
-      "get_publication",
-      "check_publications",
-    ]);
-  });
-});
-
 describe("the citation count is never blank while it refreshes", () => {
   const DOI = "10.1128/mra.00888-24";
   const openAlex = (status: number, count?: number) =>
@@ -388,45 +353,6 @@ describe("the citation count is never blank while it refreshes", () => {
   });
 });
 
-describe("the watchdog's weekly citation refresh", () => {
-  const sunday = Date.UTC(2026, 9, 4, 3, 0);
-
-  it("falls in one firing of the fifteen-minute cron a week", () => {
-    expect(isCitationRefreshWindow(sunday)).toBe(true);
-    expect(isCitationRefreshWindow(sunday + 14 * 60_000)).toBe(true);
-    expect(isCitationRefreshWindow(sunday + 15 * 60_000)).toBe(false);
-    expect(isCitationRefreshWindow(sunday - 15 * 60_000)).toBe(false);
-    expect(isCitationRefreshWindow(sunday + 24 * 60 * 60_000)).toBe(false);
-    expect(isCitationRefreshWindow(Number.NaN)).toBe(false);
-  });
-
-  it("calls refresh_citations through the site binding, and raises what the tool refused", async () => {
-    const calls: unknown[] = [];
-    const site = (status: number, payload: unknown) =>
-      ({
-        SITE: {
-          fetch: async (_url: string, init: RequestInit) => {
-            calls.push(JSON.parse(String(init.body)));
-            return new Response(JSON.stringify(payload), { status });
-          },
-        },
-      }) as never;
-
-    expect(await refreshCitationsWeekly(site(200, { data: { refreshed: 36 } }), "tok", sunday)).toBeNull();
-    expect(calls).toEqual([{ tool: "refresh_citations", args: {} }]);
-    expect(await refreshCitationsWeekly(site(200, {}), "tok", sunday + 3 * 24 * 60 * 60_000)).toBeNull();
-    expect(calls).toHaveLength(1);
-
-    const failed = await refreshCitationsWeekly(
-      site(502, { error: "1 of 36 failed", detail: { failures: [{ doi: "10.1/x", stage: "openalex-status" }] } }),
-      "tok",
-      sunday,
-    );
-    expect(failed).toContain("10.1/x (openalex-status)");
-    expect(await refreshCitationsWeekly(site(200, {}), "", sunday)).toContain("OPERATOR_TOKEN");
-  });
-});
-
 describe("the publications are checked against ORCID and Crossref", () => {
   const KNOWN = "10.1128/MRA.00888-24";
   const NEW = "10.1128/mra.00999-26";
@@ -500,38 +426,31 @@ describe("the publications are checked against ORCID and Crossref", () => {
     });
   });
 
-  it("is mailed by the watchdog once a day, each DOI once", async () => {
-    const six = Date.UTC(2026, 9, 5, 6, 0);
-    expect(isPublicationCheckWindow(six)).toBe(true);
-    expect(isPublicationCheckWindow(six + 15 * 60_000)).toBe(false);
-    expect(isPublicationCheckWindow(six - 60 * 60_000)).toBe(false);
-
+  it("mails each new DOI once, and mails nothing when a source failed", async () => {
     const kv = new Map<string, string>();
-    const mails: Array<{ subject: string; text: string }> = [];
-    const env = (payload: unknown, status = 200) =>
-      ({
-        SITE: { fetch: async () => new Response(JSON.stringify(payload), { status }) },
-        EMAIL: { send: async (m: { subject: string; text: string }) => void mails.push(m) },
-        ALERT_EMAIL: "a@example.test",
-        APP_KV: {
-          get: async (k: string) => (kv.has(k) ? JSON.parse(kv.get(k) as string) : null),
-          put: async (k: string, v: string) => void kv.set(k, v),
-        },
-      }) as never;
-    const found = { data: { notOnSite: [{ doi: NEW, title: "Cryo-EM of a phage", year: 2026 }], nameMatches: [] } };
+    const mails: Array<{ to: string; subject: string; text: string }> = [];
+    const env = {
+      EMAIL: { send: async (m: { to: string; subject: string; text: string }) => void mails.push(m) },
+      ALERT_EMAIL: "a@example.test",
+      APP_KV: {
+        get: async (k: string) => (kv.has(k) ? JSON.parse(kv.get(k) as string) : null),
+        put: async (k: string, v: string) => void kv.set(k, v),
+      },
+    } as never;
+    const report = (failures: Array<{ source: "orcid"; detail: string }> = []) => async () =>
+      ({ orcid: "", notOnSite: [{ doi: NEW, title: "Cryo-EM of a phage", year: 2026, sources: ["orcid" as const] }], nameMatches: [], notOnOrcid: [], manuscripts: [], failures });
 
-    expect(await checkPublicationsDaily(env(found), "tok", six + 24 * 60 * 60_000 + 60 * 60_000)).toBeNull();
-    expect(mails).toHaveLength(0);
-    expect(await checkPublicationsDaily(env(found), "tok", six)).toBeNull();
+    expect(await checkPublicationsDaily(env, report())).toEqual({ mailed: 1 });
     expect(mails).toHaveLength(1);
+    expect(mails[0]).toMatchObject({ to: "a@example.test" });
     expect(mails[0]?.text).toContain(`https://doi.org/${NEW}`);
-    expect(await checkPublicationsDaily(env(found), "tok", six + 24 * 60 * 60_000)).toBeNull();
+    expect(JSON.parse(kv.get(PUBLICATIONS_MAILED_KEY) as string)).toEqual([NEW.toLowerCase()]);
+    // The next day, the same DOI is not mailed again.
+    expect(await checkPublicationsDaily(env, report())).toEqual({ mailed: 0 });
     expect(mails).toHaveLength(1);
 
-    expect(await checkPublicationsDaily(env({ error: "Not every source could be read" }, 502), "tok", six)).toContain(
-      "502: Not every source could be read",
-    );
-    expect(await checkPublicationsDaily(env(found), "", six)).toContain("OPERATOR_TOKEN");
+    await expect(checkPublicationsDaily(env, report([{ source: "orcid", detail: "HTTP 503" }]))).rejects.toThrow("orcid (HTTP 503)");
+    expect(mails).toHaveLength(1);
   });
 });
 

@@ -1,4 +1,3 @@
-import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
@@ -237,15 +236,6 @@ describe("a save is held to what CI holds", () => {
 });
 
 describe("get_llms, sync_llms and the llms-drift check", () => {
-  it("get_llms reads the file, its rule failures and whether the row serves it", async () => {
-    const same = await runTool(operatorEnv(), operator, "get_llms", {});
-    expect(same.ok, JSON.stringify(same)).toBe(true);
-    if (same.ok) expect(same.data).toMatchObject({ path: LLMS_PATH, raw: llmsFile, errors: [], servedFromRepository: true, headSha: (await getHead(testEnv)).commitSha });
-
-    await setRow("an older llms.txt");
-    const stale = await runTool(operatorEnv(), operator, "get_llms", {});
-    if (stale.ok) expect(stale.data).toMatchObject({ servedFromRepository: false });
-  });
 
   it("reports a row older than the file as drift, converges it, and is idempotent", { timeout: 120_000 }, async () => {
     expect((await driftCheck())?.ok).toBe(true);

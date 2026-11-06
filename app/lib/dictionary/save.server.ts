@@ -58,20 +58,6 @@ export function fileIsDraft(raw: string) {
   return parseDictionaryEntry({ file: "", raw }).data.draft === true;
 }
 
-/** The file, as the operator's get_dictionary reads it: raw, the entry when it compiles, every error when not. */
-export async function readDictionary(env: DictionaryEnv, key: string) {
-  const file = await readFile(env, dictionaryPath(key));
-  if (!file) return null;
-  const compiled = await compile(env, key, file.content);
-  return {
-    key,
-    raw: file.content,
-    draft: compiled.ok ? compiled.draft : fileIsDraft(file.content),
-    entry: compiled.ok ? compiled.entry : null,
-    errors: compiled.ok ? [] : compiled.errors,
-  };
-}
-
 /**
  * Re-derives the page an entry opens: its twin and its search records, compiled from the page's file with
  * `entry` (null for none) in place of whatever D1 holds. A page with no file has nothing derived to refresh. A

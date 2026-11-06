@@ -3,7 +3,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { publicationPath } from "~/lib/publications/parse.mjs";
-import { isToolName, runTool } from "~/lib/operator/api.server";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { action, loader } from "~/routes/api.carrel.v1.$";
@@ -62,7 +61,6 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 
 /** The page as /cv renders it, from the loader the route runs. */
 async function cvPage(query = "") {
@@ -314,22 +312,6 @@ describe("Carrel lists the CV beside the other kinds", () => {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
     expect(res.items.find((i) => i.id === "cv.grants")).toMatchObject({ kind: "cv", path: CV_PAGE.path, status: "published" });
-  });
-});
-
-describe("the operator reads the CV and cannot save it", () => {
-  it("list_cv and get_cv read, and there is no save tool", { timeout: 240_000 }, async () => {
-    const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_cv", {});
-    expect(list).toMatchObject({ ok: true });
-    const data = (list as { data: { count: number; files: Array<{ slug: string }> } }).data;
-    expect(data.count).toBe(CV_FILES.length);
-    expect(data.files.map((f) => f.slug)).toContain("grants");
-
-    const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_cv", { slug: "grants" });
-    expect(one).toMatchObject({ ok: true, data: { slug: "grants", raw: grants, errors: [] } });
-
-    // Content is edited through Carrel and nowhere else (docs/CV.md), so no save tool exists.
-    expect(isToolName("save_cv")).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 name: worker-size
 
-# The bundle size budget of each Worker this repository deploys: the site, the watchdog and the admin MCP. A dry run's Total
+# The bundle size budget of each Worker this repository deploys: the site and the admin MCP. A dry run's Total
 # Upload over the budget in its .worker-size*.json fails. The workflow is devkit's, pinned by full sha; no secret is needed.
 
 on:
@@ -25,11 +25,6 @@ jobs:
         npm run build:stack
         npm run build:content
         npm run build
-
-  watchdog:
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@a4c3bbf859fe126913e28c6199ff66fa98e0261d # v0.21.4
-    with:
-      config: .worker-size.watchdog.json
 
   mcp:
     uses: DrDustinEdwards/devkit/.github/workflows/worker-size.yml@a4c3bbf859fe126913e28c6199ff66fa98e0261d # v0.21.4

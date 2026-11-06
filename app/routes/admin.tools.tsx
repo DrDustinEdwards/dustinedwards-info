@@ -263,8 +263,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
         flush={misses.length > 0}
         footer={
           <p className="cap-muted">
-            {"Queries nobody has repeated recently are removed on a schedule, by the watchdog's daily " +
-              "purge_zero_results call; there is no button here for it any more."}
+            {"Queries nobody has repeated recently are removed on a schedule, by the site's daily " +
+              "purge-zero-results job; there is no button here for it any more."}
           </p>
         }
       >

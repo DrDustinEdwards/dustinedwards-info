@@ -18,7 +18,7 @@ export async function listPhages(env: Env): Promise<Phage[]> {
   return sortPhages(rows.map((row) => JSON.parse(row.record) as Phage));
 }
 
-/** For list_phages and Carrel's list: every row, with when D1 last wrote it. */
+/** For Carrel's list: every row, with when D1 last wrote it. */
 export async function listPhageRows(env: Env) {
   const rows = await getDb(env)
     .select({ slug: phages.slug, name: phages.name, year: phages.year, record: phages.record, syncedAt: phages.syncedAt })

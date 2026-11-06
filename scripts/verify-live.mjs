@@ -11,11 +11,11 @@ import { ASK_PROBE_LIMIT } from "./lib/live/blog-drafts-ask.mjs";
 import * as cache from "./lib/live/cache.mjs";
 import { ORIGIN, failures, tally } from "./lib/live/client.mjs";
 import * as header from "./lib/live/header.mjs";
+import * as healthSnapshot from "./lib/live/health-snapshot.mjs";
 import * as imageLink from "./lib/live/image-link.mjs";
 import * as pages from "./lib/live/pages.mjs";
 import * as themeCss from "./lib/live/theme-css.mjs";
 import * as twinSearchAdmin from "./lib/live/twin-search-admin.mjs";
-import * as watchdog from "./lib/live/watchdog.mjs";
 
 console.log(`Verifying ${ORIGIN}\n`);
 
@@ -26,7 +26,7 @@ const corpus = await blogDraftsAsk.run();
 await pages.run();
 await cache.run();
 await imageLink.run();
-await watchdog.run();
+await healthSnapshot.run();
 
 console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed`);
 
