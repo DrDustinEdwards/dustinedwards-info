@@ -3,7 +3,7 @@
 // file carries is mailed to ALERT_EMAIL once, so a paper waiting to be added through Carrel is not mailed daily.
 
 import { checkPublicationSources, type PublicationCheck } from "./sources.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { sendEmail } from "@dustinedwards/site-runtime/email";
 
 /** The DOIs already mailed about. */
 export const PUBLICATIONS_MAILED_KEY = "publications:mailed";
@@ -31,9 +31,7 @@ export async function checkPublicationsDaily(env: Env, check = checkPublicationS
   const byName = fresh(report.nameMatches);
   if (tied.length + byName.length === 0) return { mailed: 0 };
 
-  if (!env.EMAIL || !env.ALERT_EMAIL) {
-    throw new Error(`${tied.length + byName.length} new DOI(s) found and not mailed: the EMAIL binding or the ALERT_EMAIL secret is not set`);
-  }
+  if (!env.ALERT_EMAIL) throw new Error(`${tied.length + byName.length} new DOI(s) found and not mailed: the ALERT_EMAIL secret is not set`);
   const text = [
     ...(tied.length > 0 ? ["ORCID or Crossref lists these under your ORCID, and the site does not:", ...tied.map(line)] : []),
     ...(tied.length > 0 && byName.length > 0 ? [""] : []),
@@ -41,11 +39,9 @@ export async function checkPublicationsDaily(env: Env, check = checkPublicationS
     "",
     "Add a paper through Carrel. Each DOI is mailed once.",
   ].join("\n");
-  try {
-    await env.EMAIL.send({ from: FROM, to: env.ALERT_EMAIL, subject: "New publication found for dustinedwards.info", text });
-  } catch (error) {
-    throw new Error(`new DOIs were found and the mail did not send, so tomorrow tries again: ${errorMessage(error)}`);
-  }
+  // site-runtime's one mail send, which never throws and keeps the address out of its error.
+  const sent = await sendEmail(env.EMAIL, { from: FROM, to: env.ALERT_EMAIL, subject: "New publication found for dustinedwards.info", text });
+  if (!sent.sent) throw new Error(`new DOIs were found and the mail did not send, so tomorrow tries again: ${sent.error}`);
   for (const w of [...tied, ...byName]) mailed.add(w.doi.toLowerCase());
   await env.APP_KV.put(PUBLICATIONS_MAILED_KEY, JSON.stringify([...mailed]));
   return { mailed: tied.length + byName.length };
