@@ -4,6 +4,12 @@
 // This file is the orchestrator and the floor. The credential, the preview server, the seeds and
 // the shared helpers live in scripts/lib/browser/, and each case group in scripts/lib/browser/cases/.
 // The cases share ONE page and run in this order, so a case that navigates voids the ones after it.
+// Two groups run beside that sequence, in a second browser, because they share nothing with it: theme-cache (which ran
+// first, before any console listener, and sets its cookies in contexts of its own) and the admin plane (another origin,
+// its credential on its own page, and run after the public console tally closed). Each was about a minute of a
+// five-minute run; their lines print together when each ends. A second browser and not a second page: MEASURED
+// 2026-11-06, a page opened beside the shared one took the window's focus, and the copy control's clipboard write,
+// which needs a focused document, then wrote no status.
 
 import puppeteer from "puppeteer";
 
@@ -25,7 +31,7 @@ import * as sitemapFeeds from "./lib/browser/cases/sitemap-feeds.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
-import { BASE, DRIVES_PREVIEW, countCssRules, ok, skipped, tally } from "./lib/browser/harness.mjs";
+import { BASE, DRIVES_PREVIEW, countCssRules, lane, ok, skipped, tally } from "./lib/browser/harness.mjs";
 import {
   build,
   cleanupChildren,
@@ -58,6 +64,8 @@ startServer();
  * @type {import("puppeteer").Browser | undefined}
  */
 let browser;
+/** The second browser the side groups run in. @type {import("puppeteer").Browser | undefined} */
+let sideBrowser;
 
 /*
  * `taskkill /F` delivers no signal; the registry covers it. `process.exit`, because
@@ -72,6 +80,7 @@ for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIG
       process.exit(1);
     }
     console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
+    killChildren(sideBrowser);
     killChildren(browser);
     process.exit(1);
   });
@@ -95,6 +104,9 @@ try {
   /* The Puppeteer cache path, not "chrome", so cleanup never reaches a user's browser. */
   registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   const page = await browser.newPage();
+  sideBrowser = await puppeteer.launch({ headless: true });
+  registry.record(sideBrowser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
+  const side = sideBrowser;
 
   console.log(
     DRIVES_PREVIEW
@@ -115,7 +127,13 @@ try {
   );
 
   const ctx = { page, browser };
-  await themeCache.run(ctx);
+  const themeLane = lane("theme-cache", async () => {
+    const own = await side.newPage();
+    /* The shared page's viewport, which theme-cache ran on when it ran first. */
+    await own.setViewport({ width: 1280, height: 900 });
+    await themeCache.run({ page: own, browser: side });
+  });
+  const adminLane = lane("admin", () => admin.run({ page, browser: side }));
   await navigation.run(ctx);
   await headerMenus.run(ctx);
   await speculation.run(ctx);
@@ -132,13 +150,15 @@ try {
   await cv.run(ctx);
   await systems.run(ctx);
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });
-  adminCasesRan = await admin.run(ctx);
+  await themeLane;
+  adminCasesRan = await adminLane;
 
 } catch (error) {
   // Only the sentinel is swallowed: a harness that eats unknown errors reports a clean failure
   // for a broken instrument.
   if (!(error instanceof Error) || error.message !== "SUBJECT_UNREACHABLE") throw error;
 } finally {
+  await sideBrowser?.close().catch(() => {});
   await cleanupChildren(browser);
 }
 

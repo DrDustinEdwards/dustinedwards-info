@@ -3,6 +3,7 @@
 // What every check:browser case shares: the origin under test, the counter, and the helpers that
 // drive a page. The cases share ONE page, so a case that navigates voids the ones after it.
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,8 +23,39 @@ export const BASE = PUBLIC_ORIGIN || `http://localhost:${PORT}`;
  * @typedef {{ page: import("puppeteer").Page, browser: import("puppeteer").Browser }} CaseContext
  */
 
-export const tally = createTally();
-export const { ok } = tally;
+/* Printed through `say`, so a case group running beside the main sequence keeps its lines together. */
+export const tally = createTally({ print: false });
+
+/** A lane's lines, held while it runs beside the main sequence and printed whole when it ends. @type {AsyncLocalStorage<string[]>} */
+const laneLines = new AsyncLocalStorage();
+
+/** @param {string} text */
+export function say(text) {
+  const held = laneLines.getStore();
+  if (held) held.push(text);
+  else console.log(text);
+}
+
+/**
+ * Runs a case group beside the main sequence; its lines print together, under its name, when it ends.
+ * @template T @param {string} name @param {() => Promise<T>} fn @returns {Promise<T>}
+ */
+export async function lane(name, fn) {
+  /** @type {string[]} */
+  const held = [];
+  try {
+    return await laneLines.run(held, fn);
+  } finally {
+    console.log(`  [${name}, run beside the others]${held.length ? `\n${held.join("\n")}` : " nothing to report"}`);
+  }
+}
+
+/** @param {string} label @param {boolean} condition @param {string} [detail] */
+export function ok(label, condition, detail = "") {
+  const before = tally.failed.length;
+  tally.ok(label, condition, detail);
+  if (tally.failed.length > before) say(`  FAIL  ${tally.failed[tally.failed.length - 1]}`);
+}
 /** @type {string[]} */
 export const skipped = [];
 
@@ -69,12 +101,12 @@ export async function clickOrFail(target, selector, label) {
 /** @param {string} label @param {string} why */
 export function skip(label, why) {
   skipped.push(label);
-  console.log(`  SKIP  ${label}\n        ${why}`);
+  say(`  SKIP  ${label}\n        ${why}`);
 }
 
 /** @param {string} what */
 export function report(what) {
-  console.log(`  REPORT  ${what}`);
+  say(`  REPORT  ${what}`);
 }
 
 /** @param {number} ms */
