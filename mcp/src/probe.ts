@@ -92,24 +92,69 @@ function json(body: unknown, status = 200, headers: HeadersInit = {}): Response 
   });
 }
 
+/** The only header VALUES a capture keeps: protocol fields that name no person and carry no credential. */
+const KEPT_HEADER_VALUES = new Set([
+  "accept",
+  "content-type",
+  "mcp-method",
+  "mcp-name",
+  "mcp-protocol-version",
+  "user-agent",
+]);
+
+/** A kept value is a client's self-description; a longer one is cut, not stored whole. */
+const MAX_KEPT_VALUE = 200;
+
+const text = (value: unknown): string | null =>
+  typeof value === "string" ? value.slice(0, MAX_KEPT_VALUE) : null;
+
 /**
- * Records one request.
+ * The protocol shape of a JSON-RPC body: what the report reads (method, declared version, client name), never the
+ * arguments, which a stranger fills and which could hold anything.
+ */
+function bodyShape(body: unknown): Record<string, unknown> | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  if ("OVERSIZED" in b || "UNPARSEABLE" in b) return b;
+  const params = b.params && typeof b.params === "object" ? (b.params as Record<string, unknown>) : null;
+  const clientInfo =
+    params?.clientInfo && typeof params.clientInfo === "object"
+      ? (params.clientInfo as Record<string, unknown>)
+      : null;
+  const meta = b._meta && typeof b._meta === "object" ? (b._meta as Record<string, unknown>) : null;
+  return {
+    method: text(b.method),
+    paramKeys: params ? Object.keys(params).sort() : [],
+    protocolVersion: text(params?.protocolVersion),
+    clientInfo: clientInfo ? { name: text(clientInfo.name), version: text(clientInfo.version) } : null,
+    metaProtocolVersion: text(meta?.["io.modelcontextprotocol/protocolVersion"]),
+  };
+}
+
+/**
+ * Records one request, as a shape and never a credential or an address.
  *
- * Header capture is COMPLETE rather than an allowlist, because the point is to
- * discover what a client sends and an allowlist can only confirm what was already
- * suspected. Authorization values are recorded as a shape and never a value: a
- * probe that logged bearer tokens would be a probe that leaked them.
+ * Header NAMES are captured complete rather than an allowlist, because the point is to discover what a client sends
+ * and an allowlist can only confirm what was already suspected. Header VALUES are kept only for the protocol fields in
+ * KEPT_HEADER_VALUES: a cookie, an Access token, an Authorization value, a session id or a connecting IP is recorded
+ * as present by its name alone (the probe is public, and a log of strangers' credentials and addresses would be a
+ * leak waiting to happen; dustinedwards.info stores no visitor data). Query values and RPC arguments are dropped
+ * for the same reason; the query keeps its parameter names.
  */
 async function record(env: ProbeEnv, request: Request, body: unknown): Promise<void> {
   const url = new URL(request.url);
+  const headerNames: string[] = [];
   const headers: Record<string, string> = {};
   for (const [k, v] of request.headers) {
-    headers[k] = k.toLowerCase() === "authorization" ? `<${v.split(" ")[0] ?? "opaque"} redacted>` : v;
+    const name = k.toLowerCase();
+    headerNames.push(name);
+    if (KEPT_HEADER_VALUES.has(name)) headers[name] = v.slice(0, MAX_KEPT_VALUE);
   }
 
   const seq = Number((await env.PROBE_KV.get(SEQ_KEY)) ?? "0") + 1;
   await env.PROBE_KV.put(SEQ_KEY, String(seq));
 
+  const shape = bodyShape(body);
   const entry = {
     seq,
     at: new Date().toISOString(),
@@ -117,11 +162,11 @@ async function record(env: ProbeEnv, request: Request, body: unknown): Promise<v
     // Recorded without the /probe prefix so a capture reads like the real
     // endpoint's traffic, which is what it is standing in for.
     path: url.pathname.replace(/^\/probe/, "") || "/",
-    query: Object.fromEntries(url.searchParams),
+    queryKeys: [...new Set(url.searchParams.keys())].sort(),
+    headerNames: headerNames.sort(),
     headers,
-    rpcMethod:
-      body && typeof body === "object" && "method" in body ? (body as { method?: unknown }).method : null,
-    body,
+    rpcMethod: shape?.method ?? null,
+    body: shape,
   };
 
   // Zero padded so a plain key list sorts chronologically. Two week TTL: a
@@ -151,7 +196,8 @@ export async function handleProbe(request: Request, env: ProbeEnv, _origin: stri
       try {
         body = raw ? JSON.parse(raw) : null;
       } catch {
-        body = { UNPARSEABLE: raw.slice(0, 500) };
+        // Only the fact: the text is a stranger's and could hold anything.
+        body = { UNPARSEABLE: `${raw.length} characters` };
       }
     }
   }
