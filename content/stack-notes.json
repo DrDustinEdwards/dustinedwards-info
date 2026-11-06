@@ -45,6 +45,10 @@
       "what": "A headless browser that prints the CV to PDF. The Worker calls it after each CV save and keeps one PDF in the derived bucket.",
       "whyLoadBearing": "The CV is edited through Carrel and goes live with no deploy, so a PDF committed to the repository went stale on every save and failed CI until someone re-rendered it by hand. The PDF is derived from the CV rows, so it is rendered where the rows live, stamped with a fingerprint of the data it was drawn from, and a health check compares that fingerprint with the CV the site shows. A failed render never undoes a save: the check goes red and the watcher re-renders."
     },
+    "version_metadata:CF_VERSION_METADATA": {
+      "what": "The time the running version was uploaded. /health's cron check reads it and nothing else does.",
+      "whyLoadBearing": "A scheduled job added after its hour has not been due yet, and without the deploy time /health warned that it never ran. With it, a job is expected only once its first window since the deploy has passed, so the warning means a trigger really is missing."
+    },
     "send_email:EMAIL": {
       "what": "Email Sending from the Worker, used once a day at most: when ORCID or Crossref lists a paper of Dustin's that the publications list does not have yet, the DOI is mailed to him once.",
       "whyLoadBearing": "A new paper is added through Carrel by hand, so nothing on the site notices one by itself. The mail is what turns a paper published elsewhere into a line on this site, and each DOI is mailed once so a paper waiting to be added is not mailed every day."
