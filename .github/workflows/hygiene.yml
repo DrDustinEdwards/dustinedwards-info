@@ -1,14 +1,13 @@
-# The route weight, run on every pull request and every push to main, and NEVER a gate.
+# The route weight, run on every pull request, and NEVER a gate. Not on a push to main: the merge was measured as a pull
+# request and nothing reads a run on main (devkit README, "No second run on main").
 #
 # The gzip weight of every route (devkit-route-weight, set by .route-weight.json) writes its numbers to the run's
 # summary. Every step is `continue-on-error`, so a finding or a crashed tool is reported and never turns a pull request
-# red: a number that has never been acted on is information, not a rule. Knip and jscpd are no-bloat.yml.
+# red: a number that has never been acted on is information, not a rule. Knip and jscpd are in checks.yml (devkit's pr.yml).
 
 name: Hygiene
 
 on:
-  push:
-    branches: [main]
   pull_request:
 
 concurrency:

@@ -28,6 +28,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -55,14 +57,14 @@ jobs:
 
   # The Capsid explorer's code map with this run's scores (capsid/research/design-system-explorer.md, slice 10). devkit's
   # code-map reads every slice's Stryker reports from this run's artifacts and keeps them on the code-map branch, so the
-  # map code-map.yml publishes after each push carries these numbers forward until next week's run.
+  # map code-map.yml publishes each night carries these numbers forward until next week's run.
   code-map:
     name: Publish the code map
     needs: score
     if: ${{ !cancelled() }}
     permissions:
       contents: write
-    # Shared with code-map.yml, so a push's map never lands over this one mid-run.
+    # Shared with code-map.yml, so a nightly map never lands over this one mid-run.
     concurrency:
       group: code-map
       cancel-in-progress: false
