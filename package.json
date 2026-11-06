@@ -63,7 +63,6 @@
     "check:features": "node scripts/check-features.mjs",
     "check:protocols": "node scripts/check-protocols.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "check:restore": "node scripts/restore-drill.mjs",
     "check:migrations": "devkit-migrations drizzle --min 25",
     "check:console": "devkit-console",
     "check:tests": "node scripts/check-tests.mjs",
