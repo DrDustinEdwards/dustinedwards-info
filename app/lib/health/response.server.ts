@@ -72,7 +72,14 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       },
       queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
-      cronCheck(env.DB, { jobs: [...CRON_JOBS] }),
+      // The deploy's time holds a job back until its first window since the deploy has passed: a job added
+      // after its hour today (purge-zero-results, check-publications) has not been due yet.
+      cronCheck(env.DB, {
+        jobs: [...CRON_JOBS],
+        deployedAt: env.CF_VERSION_METADATA?.timestamp
+          ? new Date(env.CF_VERSION_METADATA.timestamp)
+          : undefined,
+      }),
       ...HEALTH_CHECK_NAMES.map((name) => ({
         name,
         level: "warn" as const,
