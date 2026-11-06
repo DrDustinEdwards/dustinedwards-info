@@ -4,7 +4,8 @@
     "port": 8789,
     "vars": {
       "STUB_URL": "http://localhost:8790/",
-      "OPERATOR_TOKEN": "conformance-stub-token-000000000000"
+      "OPERATOR_TOKEN": "conformance-stub-token-000000000000",
+      "AUDIT_SIGNING_KEY": "conformance-signing-key-not-a-real-one-0123456789"
     }
   },
   "stub": 8790,
