@@ -146,7 +146,7 @@ export function pageMeta(page: {
   return siteHead({ ...rest, type: ogType, fullTitle: true });
 }
 
-export { SERP_DESCRIPTION_LIMIT, truncateForSerp } from "@drdustinedwards/site-helpers/head";
+export { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 
 /**
  * The `<title>` a search result shows (Prelum's `searchTitle`), with this site's name as the default suffix. Only this

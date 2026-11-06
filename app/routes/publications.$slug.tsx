@@ -29,7 +29,7 @@ import {
   personId,
   personNode,
   publicHtmlHeaders,
-  SERP_DESCRIPTION_LIMIT,
+  SERP_DESCRIPTION,
   SITE,
   SITE_ORIGIN,
   siteHead,
@@ -90,7 +90,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [
     ...siteHead({
       title,
-      description: truncateForSerp(summary, SERP_DESCRIPTION_LIMIT),
+      description: truncateForSerp(summary, SERP_DESCRIPTION),
       path: pagePath,
       type: "article",
       trail: paperTrail(title, pagePath),
