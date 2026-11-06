@@ -16,7 +16,7 @@ export const ROSTER_ARTIFACT_PATH = path.join("content", "generated", "roster.js
  * The build cannot see the media bucket, so it checks the photograph's address and size (the validator does) and
  * trusts it exists; the save (app/lib/roster/save.server.ts) and the roster-drift check read the bucket.
  */
-export const repoHost = {
+const repoHost = {
   async photo() {
     return true;
   },
