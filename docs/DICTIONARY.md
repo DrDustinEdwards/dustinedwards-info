@@ -9,7 +9,7 @@ record carry the entry too, so a write re-derives them (see "What a write change
 
 There is ONE write path: Carrel saves an entry through site-api's adapter (`dictionary.<key>` in the `/content`
 group, handler `app/lib/carrel/dictionary-handler.server.ts`). There is no admin editor and no operator save
-tool. The operator can read: `list_dictionary` and `get_dictionary`, and `sync_dictionary` repairs drift.
+tool, and it is read through Carrel too. `sync_dictionary` repairs drift.
 
 ## The file
 

@@ -6,8 +6,8 @@ twin at `/cv.md` and its search records are drawn from those rows at request tim
 a build or deploy. Only a change to the components, the registry or this format goes through a build.
 
 There is ONE write path: Carrel saves a file through site-api's adapter (`cv.<slug>` in the `/content` group,
-handler `app/lib/carrel/cv-handler.server.ts`). There is no admin editor and no operator save tool. The operator
-can read: `list_cv` and `get_cv`. `sync_cv` and the `cv-drift` health check keep D1 converged to the files, as the
+handler `app/lib/carrel/cv-handler.server.ts`). There is no admin editor and no operator save tool. The CV is read
+through Carrel too. `sync_cv` and the `cv-drift` health check keep D1 converged to the files, as the
 pages' and publications' do. `sync_cv_pdf` and the `cv-pdf-drift` check keep the PDF converged to D1.
 
 ## The files

@@ -1,4 +1,5 @@
 import { createExecutionContext, env } from "cloudflare:test";
+import { RefusedError } from "@dustinedwards/site-api";
 import type { IntentResult } from "@dustinedwards/site-api/admin";
 import { describe, expect, it } from "vitest";
 
@@ -6,8 +7,7 @@ import { mediaLibraryStore, mediaRefsFor } from "~/db";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
-import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
-import { uploadMediaTool } from "~/lib/operator/upload-media.server";
+import { ALLOWED, uploadErrorSentence, validateUpload } from "~/lib/media/upload-contract.mjs";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 
 import { bytesFor, envWithImages, pngKey, seedMediaRow } from "./media-fixtures";
@@ -28,18 +28,23 @@ async function uploadKey(seed: string, dimensions: { width: number; height: numb
 
 type Dimensions = { width: number; height: number } | null;
 
-/** Through the operator's upload_media, the site's own upload path outside Carrel, into the same media library. */
+/** Through the library's own upload, the one Carrel's and the admin's uploads reach: the site's checks, then the adapter. */
 async function upload(
   file: { name: string; type: string; body: string },
   dimensions: Dimensions,
   overrides: Record<string, unknown> = {},
 ) {
-  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof uploadMediaTool>[0];
-  const data = btoa(String.fromCharCode(...bytesFor(file.body)));
-  const result = await uploadMediaTool(uploadEnv, { data, type: file.type, name: file.name, decorative: true });
-  if (!result.ok) return { status: result.status, url: undefined, key: "", error: result.error };
-  const { url, key } = result.data as { url: string; key: string };
-  return { status: 200, url, key, error: undefined };
+  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof carrelMediaAdapter>[0];
+  const bytes = bytesFor(file.body);
+  const refused = validateUpload({ type: file.type, bytes });
+  if (refused) return { status: refused.status, url: undefined, key: "", error: refused.message };
+  try {
+    const item = await carrelMediaAdapter(uploadEnv).upload({ bytes, contentType: file.type, filename: file.name, alt: "", decorative: true, changeId: `test-upload-${crypto.randomUUID()}` });
+    return { status: 200, url: `/media/${item.id}`, key: item.id, error: undefined };
+  } catch (error) {
+    if (error instanceof RefusedError) return { status: 415, url: undefined, key: "", error: error.message };
+    throw error;
+  }
 }
 
 async function adminMediaAction(fields: Record<string, string>, routeEnv: object = env) {

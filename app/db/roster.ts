@@ -21,7 +21,7 @@ export async function listRoster(env: Env): Promise<Cohort[]> {
   return sortCohorts(rows.map((row) => JSON.parse(row.record) as Cohort));
 }
 
-/** For list_roster and Carrel's list: every row, with when D1 last wrote it. */
+/** For Carrel's list: every row, with when D1 last wrote it. */
 export async function listRosterRows(env: Env) {
   const rows = await getDb(env)
     .select({ slug: roster.slug, year: roster.year, record: roster.record, syncedAt: roster.syncedAt })

@@ -204,24 +204,24 @@ await test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grou
   const out = groupRows(
     [
       { key: "/research/publications/a.pdf", uploaded: null },
-      { key: "/phage-hunters/x.jpg", uploaded: null },
+      { key: "og/x.png", uploaded: null },
     ],
     "folder",
   );
-  const roster = out.find((g) => g.label === "Cohort photographs");
-  assert.ok(roster, "the roster section is titled from the table");
-  assert.equal(roster.note, "Placed by the roster page template");
+  const cards = out.find((g) => g.label === "Social cards");
+  assert.ok(cards, "the social cards section is titled from the table");
+  assert.equal(cards.note, "Generated at build time");
 });
 
-await test("folder sections render in TABLE order, roster before publications", () => {
+await test("folder sections render in TABLE order, social cards before publications", () => {
   const out = groupRows(
     [
       { key: "/research/publications/a.pdf", uploaded: null },
-      { key: "/phage-hunters/x.jpg", uploaded: null },
+      { key: "og/x.png", uploaded: null },
     ],
     "folder",
   );
-  assert.deepEqual(out.map((g) => g.label), ["Cohort photographs", "Publications"]);
+  assert.deepEqual(out.map((g) => g.label), ["Social cards", "Publications"]);
 });
 
 await test("an unknown folder is titled from its own directory, never mislabelled", () => {

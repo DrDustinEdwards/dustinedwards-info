@@ -181,10 +181,9 @@ Live buckets for reference: `dustinedwards-media` is location `ENAM`,
   R2-wins reconciliation, can be brought back for 90 days.
 - **Watched.** `/health`'s `backup` field carries `files.media` and
   `files.revisions` beside the dump's age, and warns past 26 hours. Capsid's
-  watcher alerts on a stale Amazon copy. `check:restore` asserts every object in
-  both buckets has an identical copy under `files/` (a file newer than 26 hours
-  is noted, not failed), and devkit's restore drill restores a sample of the
-  copies and checks their bytes.
+  watcher alerts on a stale Amazon copy. A complete pass compared every object
+  in the bucket with its copy, and devkit's weekly restore drill restores a
+  sample of the copies and checks their bytes.
 - **Never the reverse by code.** Nothing copies the backup back to media. A
   restore is a deliberate `restoreFiles` (a dry run unless `apply` is set, and it
   never overwrites a file that differs unless told to), or the wrangler
@@ -210,11 +209,7 @@ Every class of thing this site stores, and where its second copy is:
 | Earlier file versions | `dustinedwards-media-revisions` (`MEDIA_REVISIONS`) | **backed up nightly**: `files/revisions/` in `dustinedwards-backups`, then Amazon S3. The age lives in `/health` `backup.files.revisions` |
 | Social cards | `dustinedwards-og` (`OG`), all under `og/` | **regenerable**: `npm run build:og -- --remote` |
 | Static assets | `public/`, not R2 at all | **git** |
-| Roster photo WebPs | `public/phage-hunters/` | **git** |
-| Roster photo JPG SOURCES | gitignored, would be `public/phage-hunters/*.jpg` | **nowhere, if any existed** |
-
-The last row is the one to watch: `.gitignore` excludes those sources, so a JPG
-dropped there would exist on one machine and in no clone.
+| Roster photo WebPs | the media library (`dustinedwards-media`, `MEDIA`) | **backed up nightly** with the other media |
 
 The OG cards are regenerable in the strong sense: the object key is a hash of the
 template version, slug, title and description, all tracked in `content/`, so a

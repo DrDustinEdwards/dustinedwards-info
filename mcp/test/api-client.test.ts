@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { ApiLegError, callOperator, readHealth } from "../src/api-client.ts";
+import { ApiLegError, callOperator } from "../src/api-client.ts";
 import { API_URL, HEALTH_URL, ORIGIN, SITE, FIRST_PUBLISH_REFUSAL, TOKEN, fakeOperator, type FakeOperator } from "./fake-operator.ts";
 
 const ENV = { SITE, SITE_ORIGIN: ORIGIN, OPERATOR_TOKEN: TOKEN };
@@ -90,28 +90,3 @@ describe("callOperator: what comes back", () => {
   });
 });
 
-describe("readHealth", () => {
-  test("GETs SITE_ORIGIN/health with no bearer", async () => {
-    api.health({ status: 503, body: { status: "fail", ok: false, checks: [{ name: "db", status: "fail" }] } });
-    assert.deepEqual(await readHealth(ENV), { status: 503, body: { status: "fail", ok: false, checks: [{ name: "db", status: "fail" }] } });
-    assert.equal(api.healthCalls[0].url, HEALTH_URL);
-    assert.equal(api.healthCalls[0].method, "GET");
-    assert.equal(api.healthCalls[0].headers.get("authorization"), null);
-  });
-
-  test("never throws: an unreachable site is status 0 with the cause", async () => {
-    api.health({ throws: new TypeError("1042") });
-    assert.deepEqual(await readHealth(ENV), { status: 0, body: null, error: "The site could not be reached: 1042" });
-  });
-
-  test("an answer that is not JSON keeps its status", async () => {
-    api.health({ status: 502, raw: "<html>bad gateway</html>" });
-    assert.deepEqual(await readHealth(ENV), { status: 502, body: null });
-  });
-
-  test("an unbound wrapper reads as unreachable, not as healthy", async () => {
-    const reading = await readHealth({ SITE_ORIGIN: ORIGIN });
-    assert.equal(reading.status, 0);
-    assert.match(reading.error ?? "", /SITE service binding/);
-  });
-});
