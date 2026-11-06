@@ -85,9 +85,9 @@ expect_fail "1. d1_databases binding added"
 # 2. Tool surface drift. A renamed tool no longer mirrors the API.
 python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('    name: \"dei_backup_media\",','    name: \"backup_media\",',1)
+s=s.replace('    name: \"dei_check_publications\",','    name: \"check_publications\",',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
-expect_fail "2. tool renamed away from the ten dei_ tools"
+expect_fail "2. tool renamed away from the seven dei_ tools"
 
 # 3. The API-leg credential read from a second module.
 python3 -c "
@@ -222,7 +222,7 @@ expect_fail "20. default export is not adminMcpWorker"
 # 21. A post tool called again (rule 11, Carrel owns writing).
 python3 -c "
 p='src/tools.ts'; s=open(p,encoding='utf-8').read()
-s=s.replace('handler: (env) => run(env, \"backup_media\", {}),','handler: (env) => run(env, \"save_post\", {}),',1)
+s=s.replace('handler: (env) => run(env, \"check_publications\", {}),','handler: (env) => run(env, \"save_post\", {}),',1)
 open(p,'w',encoding='utf-8',newline='').write(s)"
 expect_fail "21. a post tool called"
 

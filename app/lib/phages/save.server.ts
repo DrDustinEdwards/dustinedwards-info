@@ -1,5 +1,5 @@
 // The one phage save, called by the site-api adapter for Carrel (app/lib/carrel/phage-handler.server.ts), and
-// the read the operator's get_phage tool answers. The phage table is edited through Carrel and nothing else:
+// the reads sync_phages and its drift check use. The phage table is edited through Carrel and nothing else:
 // there is no save tool and no admin editor. A save compiles the file the way CI does (compile.mjs), refuses
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row and re-derives the page that is drawn from the rows, so the
@@ -48,7 +48,7 @@ function sourceHost(env: PhageEnv): PhageHost {
   return { paper: async (slug) => (await readFile(env, `${PUBLICATIONS_DIR}/${slug}.md`)) !== null };
 }
 
-/** The one compile door: the save, get_phage and sync_phages all read a file through it. */
+/** The one compile door: the save and sync_phages both read a file through it. */
 export async function compile(env: PhageEnv, slug: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
   return compilePhage({ slug, raw, host: sourceHost(env), pipeline: { findWideDashes } });
@@ -62,15 +62,6 @@ function registered(slug: string) {
     throw new PhageInvalid(slug, [`"${slug}" is not a phage file key; a phage's file is named for its name in lower case, such as acorn15`]);
   }
   return { slug, file: phagePath(slug) };
-}
-
-/** The phage the stored file holds, judged by the same validator, for get_phage. */
-export async function readPhage(env: PhageEnv, slug: string) {
-  const { file } = registered(slug);
-  const existing = await readFile(env, file);
-  if (!existing) return null;
-  const compiled = await compile(env, slug, existing.content);
-  return { slug, path: file, raw: existing.content, phage: compiled.ok ? compiled.phage : null, errors: compiled.ok ? [] : compiled.errors };
 }
 
 /** Every other phage's row, from D1: CI re-checks the whole set on the commit a save makes. */

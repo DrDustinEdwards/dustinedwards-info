@@ -11,7 +11,7 @@
  * (ruling mcp-2026-10-10, design section 6 step 4). The public operator URL was
  * one hop through the internet for a call between two Workers on one account,
  * and on the dustinedwards.info zone it would also be the Worker-to-Worker
- * fetch the watchdog measured answering Cloudflare error 1042 (2026-08-29). A
+ * same-zone fetch measured answering Cloudflare error 1042 (2026-08-29). A
  * service binding is still HTTP: the request carries the same bearer, crosses
  * the same operator authentication and the same rate limiter, and the site
  * cannot tell it from any other operator call. It is not an in-process call.
@@ -98,29 +98,3 @@ export async function callOperator(
   };
 }
 
-/** One reading of the site's public health endpoint, in the shape the watchdog's repair plan reads. */
-export interface HealthReading {
-  status: number;
-  body: unknown;
-  error?: string;
-}
-
-/**
- * Reads `/health` over the same binding. Public and unauthenticated on the
- * site, so no bearer is sent: the operator token goes only where it is needed.
- * Never throws, and keeps the cause, exactly as the watchdog's reader does: a
- * reading that never happened must not be mistaken for a healthy or failing one.
- */
-export async function readHealth(env: Partial<ApiEnv>): Promise<HealthReading> {
-  try {
-    const { status, body } = await callApi(env, { ...LEG, api: "The site" }, "/health", {
-      anonymous: true,
-      headers: { "cache-control": "no-cache" },
-    });
-    return { status, body };
-  } catch (cause) {
-    // An answer that came back but is not JSON is still a reading of that status.
-    if (cause instanceof ApiLegError && cause.status !== undefined) return { status: cause.status, body: null };
-    return { status: 0, body: null, error: cause instanceof Error ? cause.message : String(cause) };
-  }
-}

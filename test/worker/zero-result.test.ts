@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import { runTool } from "~/lib/operator/api.server";
 import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
-import { isZeroResultPurgeWindow, purgeZeroResultsDaily } from "../../workers/watchdog";
 
 import { testEnv } from "./test-env";
 
@@ -46,42 +45,5 @@ describe("the purge_zero_results operator tool", () => {
     await seedZeroResult("a live question", Math.floor(Date.now() / 1000));
     const result = await runTool(operatorEnv(), OPERATOR, "purge_zero_results", {});
     expect(result).toMatchObject({ ok: true, data: { purged: 0 } });
-  });
-});
-
-describe("the watchdog's daily zero-result purge", () => {
-  const day = Date.UTC(2026, 9, 4, 4, 0);
-
-  it("falls in one firing of the fifteen-minute cron a day, every day", () => {
-    expect(isZeroResultPurgeWindow(day)).toBe(true);
-    expect(isZeroResultPurgeWindow(day + 14 * 60_000)).toBe(true);
-    expect(isZeroResultPurgeWindow(day + 15 * 60_000)).toBe(false);
-    expect(isZeroResultPurgeWindow(day - 15 * 60_000)).toBe(false);
-    /* Daily, unlike the weekly citation refresh: the same window the next day is also a hit. */
-    expect(isZeroResultPurgeWindow(day + 24 * 60 * 60_000)).toBe(true);
-    expect(isZeroResultPurgeWindow(Number.NaN)).toBe(false);
-  });
-
-  it("calls purge_zero_results through the site binding, and raises what the tool refused", async () => {
-    const calls: unknown[] = [];
-    const site = (status: number, payload: unknown) =>
-      ({
-        SITE: {
-          fetch: async (_url: string, init: RequestInit) => {
-            calls.push(JSON.parse(String(init.body)));
-            return new Response(JSON.stringify(payload), { status });
-          },
-        },
-      }) as never;
-
-    expect(await purgeZeroResultsDaily(site(200, { data: { purged: 3 } }), "tok", day)).toBeNull();
-    expect(calls).toEqual([{ tool: "purge_zero_results", args: {} }]);
-    /* Outside the window, no call at all. */
-    expect(await purgeZeroResultsDaily(site(200, {}), "tok", day + 60 * 60_000)).toBeNull();
-    expect(calls).toHaveLength(1);
-
-    const failed = await purgeZeroResultsDaily(site(500, { error: "D1 is unavailable" }), "tok", day);
-    expect(failed).toContain("D1 is unavailable");
-    expect(await purgeZeroResultsDaily(site(200, {}), "", day)).toContain("OPERATOR_TOKEN");
   });
 });

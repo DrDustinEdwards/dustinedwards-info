@@ -60,7 +60,7 @@
 	},
 
 	// THE ONLY ROUTE TO THE SITE: a service binding to the dustinedwards
-	// Worker, the same transport the watchdog uses. Still HTTP, still the
+	// Worker (a same-zone fetch answers error 1042). Still HTTP, still the
 	// operator bearer, still the operator API's authentication and limiter.
 	// Carries no account-scoped id, so this block is complete as written.
 	"services": [{ "binding": "SITE", "service": "dustinedwards" }],

@@ -1,7 +1,6 @@
 import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isToolName, runTool } from "~/lib/operator/api.server";
 import { savePhage } from "~/lib/phages/save.server";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import Phages, { headers as pageHeaders, loader as pageLoader } from "~/routes/phages";
@@ -58,7 +57,6 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 
 async function pageData() {
   return pageLoader({ request: new Request(`${ORIGIN}${PATH}`), context: routeContext(), params: {} } as never);
@@ -271,27 +269,6 @@ describe("a derived write that fails never reverts the commit", () => {
     expect(repaired.unchanged).toBe(true);
     expect((await commits())).toHaveLength(1);
     expect(await (await twin()).text()).toContain(EDITED_ROW);
-  });
-});
-
-describe("the operator reads phages and cannot save one", () => {
-  it("list_phages and get_phage read, and there is no save tool", { timeout: 240_000 }, async () => {
-    const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_phages", {});
-    expect(list).toMatchObject({ ok: true });
-    const data = (list as { data: { count: number; phages: Array<{ slug: string; name: string; year: number; county: string | null }> } }).data;
-    expect(data.count).toBe(75);
-    expect(data.phages[0]).toMatchObject({ slug: "acorn15", name: "Acorn15", year: 2017, county: "Hood County" });
-    // Only the table's own fields: nothing beyond the public shape reaches the operator.
-    // The genome size and gene count are the genome announcement's own public numbers, which the pages state.
-    expect(Object.keys(data.phages[0] ?? {}).sort()).toEqual(["county", "formerly", "genes", "genomeBp", "host", "name", "note", "paper", "phagesdb", "slug", "year"]);
-
-    const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_phage", { slug: SLUG });
-    expect(one).toMatchObject({ ok: true, data: { slug: SLUG, raw: acornPhage, errors: [], phage: { name: "Acorn15" } } });
-    expect(await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_phage", { slug: "nothing" })).toMatchObject({ ok: false, status: 404 });
-    expect(await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_phage", { slug: "Not A Slug" })).toMatchObject({ ok: false, status: 400 });
-
-    // Content is edited through Carrel and nowhere else (docs/PHAGES.md), so no save tool exists.
-    expect(isToolName("save_phage")).toBe(false);
   });
 });
 

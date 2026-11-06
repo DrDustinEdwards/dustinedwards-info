@@ -346,7 +346,7 @@ Where each one lives, and what breaks if you rotate it and stop there:
 | --- | --- | --- |
 | `OPERATOR_TOKEN` | **four holders, see below** | Silent partial failure. Read the box. |
 | `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
-| `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` the watchdog calls fails with a 502 naming each DOI, and the watchdog invocation is recorded as failed. The loudest symptom is the secrets audit. |
+| `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` Capsid's watcher calls fails with a 502 naming each DOI, and the watcher opens a finding for it. The loudest symptom is the secrets audit. |
 
 Where a new value comes from is RECOVERY.md section 7, which has a column for
 exactly that.
@@ -354,14 +354,14 @@ exactly that.
 ### `OPERATOR_TOKEN` has FOUR holders. Rotate all four or none.
 
 1. The site Worker: `npx wrangler secret put OPERATOR_TOKEN`
-2. The watchdog Worker: `npx wrangler secret put OPERATOR_TOKEN --config wrangler.watchdog.jsonc`
+2. Capsid's Worker, as `DUSTINEDWARDS_OPERATOR_TOKEN` (the seat sets it on `capsid-mcp`; its `ops_sites.operator` row names it)
 3. The admin MCP Worker, from `mcp/`: `npx wrangler secret put OPERATOR_TOKEN -c wrangler.jsonc`
 4. The GitHub repository secret: `gh secret set OPERATOR_TOKEN`
 
 And your local file, wherever `$env:OPERATOR_TOKEN_FILE` points, or `npm run
 ship` refuses.
 
-**Rotating only the site is the worst outcome, not the safest.** The watchdog
+**Rotating only the site is the worst outcome, not the safest.** Capsid's watcher
 keeps polling health, keeps alerting, and can no longer repair anything it
 finds, so you get a watcher that reports problems and silently stops fixing
 them. No gate can see this: nothing can read a secret's value to compare two
@@ -373,7 +373,7 @@ Do them in one sitting, then prove it:
 curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
-and confirm the next scheduled watchdog run repairs rather than reports.
+and confirm the next Capsid watcher pass repairs rather than reports.
 
 ---
 
@@ -445,7 +445,6 @@ Set it up once, in the Cloudflare dashboard (Zero Trust):
 
 ```powershell
 npx wrangler tail
-npx wrangler tail --config wrangler.watchdog.jsonc
 ```
 
 Add `--status error` to see only throws. This is a live stream, so it shows
@@ -465,7 +464,7 @@ the home page and `/health`. If UptimeRobot says up and you say down, the
 problem is between you and the site rather than in it.
 
 **The health snapshot** is what the colophon tile reads, and its AGE is the
-watchdog's liveness. A tile saying "stale" means the poller stopped, which is a
+health-snapshot cron job's liveness. A tile saying "stale" means the job stopped, which is a
 different problem from a check failing.
 
 ---

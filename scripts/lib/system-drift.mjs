@@ -6,16 +6,16 @@
 // Worker's schedule: the binding kinds the model has a container kind for. Containers carry display
 // names, not resource names, so a system passes when the model lists at least as many containers
 // of each kind as its configs declare parts. The model draws a Worker as the service it is, the
-// site it serves or the schedule it runs (the site's watchdog is a cron container), so a Worker
+// site it serves or the schedule it runs, so a Worker
 // counts against any of those three; and a Worker's cron expressions are one schedule. A private system, one without a repo, and a repo with
 // no config the raw host serves (a private repo answers 404 too) are skipped, not failed.
 import { ts } from "./syntax.mjs";
 
 // Where a system's configs live in its repo, when not one at the root. The site's repo holds two
-// systems: the site with its watchdog Worker, and the admin MCP (mcp/); so do Foxing's and Foxhound's.
+// systems: the site and the admin MCP (mcp/); so do Foxing's and Foxhound's.
 /** @type {Record<string, string[]>} */
 const CONFIGS = {
-  "dustinedwards-info": ["wrangler.jsonc.example", "wrangler.watchdog.jsonc.example"],
+  "dustinedwards-info": ["wrangler.jsonc.example"],
   "dustinedwards-mcp": ["mcp/wrangler.jsonc.example"],
   foxing: ["apps/web/wrangler.jsonc.example"],
   "foxing-mcp": ["mcp/wrangler.jsonc.example"],
@@ -26,8 +26,8 @@ const CONFIGS = {
 const ROOT_CONFIGS = ["wrangler.jsonc", "wrangler.jsonc.example", "wrangler.json"];
 
 /**
- * Each part once per system, keyed by what names the resource: the site's watchdog binds the
- * site's APP_KV, which is one namespace. A dead-letter queue counts with the queue it serves.
+ * Each part once per system, keyed by what names the resource: two Workers binding one APP_KV
+ * bind one namespace. A dead-letter queue counts with the queue it serves.
  *
  * @param {any} config
  * @returns {[string, string][]} [kind, name]

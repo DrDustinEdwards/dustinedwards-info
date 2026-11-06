@@ -151,8 +151,7 @@ jobs:
   # and OAuth versions, its own Worker. Run on every push rather than on a path filter, so CI's
   # verdict for a sha always covers mcp/ before deploy.yml's `mcp` job deploys it.
   #
-  #   typecheck            wrangler types plus tsc -b, the folder's src and the one app module
-  #                        it imports (app/lib/health/repair.mjs)
+  #   typecheck            wrangler types plus tsc -b, the folder's src
   #   check:wrapper        the no-policy law and the security floor, read off the real source,
   #                        the config, and the site's operator tool list
   #   check:wrapper:plant  that the gate above actually fails, one planted violation at a time

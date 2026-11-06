@@ -5,7 +5,7 @@
 # scripts/verify-deploy.mjs, and rolls the Worker back when it refuses. Its limits are devkit's README, "The shared
 # deploy": a rollback swaps code and bindings, never a migration; that is the bookmark's restore command, in the summary.
 #
-# Then `converge` (scripts/converge.mjs) brings the deployed site's data and helpers into step: the watchdog, the
+# Then `converge` (scripts/converge.mjs) brings the deployed site's data and helpers into step: the
 # uptime monitors, the D1 sync, the Ask index, the CV PDF, the share cards and the media index, then the browser test.
 # A converge miss leaves the deploy standing and fails the run. `mcp` ships the admin MCP the same way as the site.
 #

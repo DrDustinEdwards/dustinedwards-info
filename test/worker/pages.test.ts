@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { pageSourcePath } from "~/lib/pages/compile.mjs";
-import { isToolName, runTool } from "~/lib/operator/api.server";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 import { action, loader } from "~/routes/api.carrel.v1.$";
@@ -43,7 +42,6 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
   );
 }
 
-const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
 
 /** The loader data for the page, or the 404 it throws. */
 async function pageData(path = PATH) {
@@ -226,22 +224,6 @@ describe("Carrel lists pages beside posts", () => {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
     expect(res.items.find((i) => i.id === ID)).toMatchObject({ kind: "page", path: PATH, status: "published" });
-  });
-});
-
-describe("the operator reads pages and cannot save one", () => {
-  it("list_pages and get_page read, and there is no save tool", { timeout: 180_000 }, async () => {
-    const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_pages", {});
-    expect(list).toMatchObject({ ok: true });
-    const data = (list as { data: { count: number; pages: Array<{ path: string; draft: boolean }> } }).data;
-    expect(data.count).toBeGreaterThanOrEqual(30);
-    expect(data.pages.find((p) => p.path === PATH)).toMatchObject({ draft: false });
-
-    const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_page", { path: PATH });
-    expect(one).toMatchObject({ ok: true, data: { slug: SLUG, raw: foxhound, errors: [] } });
-
-    // Content is edited through Carrel and nowhere else (docs/PAGES.md), so no save tool exists.
-    expect(isToolName("save_page")).toBe(false);
   });
 });
 

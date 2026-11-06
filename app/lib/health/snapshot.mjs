@@ -1,15 +1,16 @@
-// /health's verdict, written only by the watchdog Worker after each read of /health, so the tile's AGE is
-// the watchdog's liveness: nothing else may stamp this key, /health included (UptimeRobot, Capsid's watcher
-// and Capsomer's network board read it every few minutes and would keep a dead watchdog looking alive).
+// /health's verdict, written only by the site Worker's health-snapshot cron job (snapshot-store.server.ts), so the
+// tile's AGE is that job's liveness: nothing else may stamp this key, /health included (UptimeRobot, Capsid's watcher
+// and Capsomer's network board read it every few minutes and would keep a stopped job looking alive).
 // Measured: running the suite in a page loader cost about 1.2 s, so the colophon reads this instead.
 
-import { healthChecks } from "./repair.mjs";
+import { healthChecks } from "./rows.mjs";
+import { HEALTH_SNAPSHOT_EVERY_MINUTES } from "../cron-jobs.mjs";
 
 /** One key, not a prefix: a prefix would invite a second writer. */
 export const HEALTH_SNAPSHOT_KEY = "health:snapshot";
 
-/** Restates the watchdog cron in wrangler.watchdog.jsonc, which a Worker cannot read. Change both together. */
-export const HEALTH_POLL_INTERVAL_SECONDS = 15 * 60;
+/** The health-snapshot job's interval in app/lib/cron-jobs.mjs, in seconds. */
+export const HEALTH_POLL_INTERVAL_SECONDS = HEALTH_SNAPSHOT_EVERY_MINUTES * 60;
 
 /** Three intervals: a Cron Trigger is best effort, and a tile that flaps on one missed poll gets muted. */
 export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECONDS;

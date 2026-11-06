@@ -14,11 +14,11 @@
 //   because a revert reads it back and MEDIA's listing is the media index's truth (media-index-drift).
 // Not backed up, because each is derived or transient:
 // - OG (R2): share cards and the CV PDF, rebuilt by build:og and the next CV save.
-// - APP_KV: caches (Ask answers, drift, the health snapshot) and the watchdog's alert state, each
+// - APP_KV: caches (Ask answers, drift, the health snapshot) and the publication check's mailed DOIs, each
 //   rewritten by its next read or firing.
 // - ASK_BUDGET (Durable Object): rate-limit counters, which reset by design.
 // - AI_SEARCH: the Ask index, rebuilt from the published pages by ship's sync_ask.
-// - The queues: messages in flight; a lost media event is caught by the watchdog's sync_media pass, and a
+// - The queues: messages in flight; a lost media event is caught by Capsid's watcher's sync_media repair, and a
 //   webmention row waiting on verification stays in D1 (dumped) as `unverified`.
 
 import { backupFiles, backupHealth, filesHealth, runCheckedBackup, type BackupHealth } from "@dustinedwards/d1-dump";

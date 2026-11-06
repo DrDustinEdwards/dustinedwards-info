@@ -6,7 +6,7 @@ import {
   deferredMisses,
   readinessVerdict,
 } from "../scripts/lib/readiness.mjs";
-import { healthChecks } from "../app/lib/health/repair.mjs";
+import { healthChecks } from "../app/lib/health/rows.mjs";
 import { bodyDrifted, HEALTHY as HEALTHY_BODY } from "./lib/health-bodies.mjs";
 
 const HEALTHY = JSON.stringify(HEALTHY_BODY);

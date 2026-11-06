@@ -15,7 +15,7 @@ Current state is `dustinedwards/core.md`. Procedure is `.claude/skills/`. Histor
 
 ## Bindings
 
-`wrangler.jsonc.example` declares every binding and says what each is (`wrangler.jsonc` is gitignored). `ASK_BUDGET` is the whole site's rate limiter. `workers/watchdog.ts` is a second Worker, deployed by a `ship` step.
+`wrangler.jsonc.example` declares every binding and says what each is (`wrangler.jsonc` is gitignored). `ASK_BUDGET` is the whole site's rate limiter. Capsid's watcher reads `/health` and repairs drift; the site's own cron (`app/lib/cron-jobs.mjs`) runs its scheduled jobs.
 
 ## Where everything else lives
 

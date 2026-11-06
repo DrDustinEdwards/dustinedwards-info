@@ -11,7 +11,6 @@ import {
   uploadErrorBody,
   uploadErrorSentence,
   uploadRedirectTo,
-  uploadSuccessBody,
   validateUpload,
 } from "../app/lib/media/upload-contract.mjs";
 
@@ -20,14 +19,6 @@ function buffer(...values) {
 }
 
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
-await test("THE SUCCESS BODY: exactly url and key, and url is the public path", () => {
-  const body = uploadSuccessBody("abc123.png");
-
-  assert.deepEqual(Object.keys(body).sort(), ["key", "url"]);
-  assert.equal(body.url, "/media/abc123.png");
-  assert.equal(body.key, "abc123.png");
-});
 
 await test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
   const body = uploadErrorBody("Unsupported image type \"application/zip\".");

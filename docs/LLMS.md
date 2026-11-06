@@ -7,8 +7,8 @@ goes live without a build or deploy.
 
 There is ONE write path: Carrel saves the document through site-api's adapter (the id `document.llms` in the
 `/content` group, handler `app/lib/carrel/document-handler.server.ts`, the "document" kind beside post,
-publication and page). There is no admin editor and no operator save tool. The operator can read `get_llms`
-and converge with `sync_llms`.
+publication and page). There is no admin editor and no operator save tool. It is read through Carrel, and the
+operator converges it with `sync_llms`.
 
 ## What the kind does
 
@@ -67,7 +67,7 @@ read back, then a cache purge by the tag `llms` (the route carries it as its `Ca
 
 `llms-drift` (`/health`) compares the file's git blob sha, read from the stored source,
 with the blob sha of the bytes in the settings row. A missing row counts as drift, because `/llms.txt` would
-then serve the bundled copy. The watchdog repairs it through `sync_llms`, the same loop the other kinds use
+then serve the bundled copy. Capsid's watcher repairs it through `sync_llms`, the same loop the other kinds use
 (`convergeKind`): re-judge the file, write the row, read it back, purge. It refuses a source with no
 `llms.txt` rather than deleting the row, and it answers 422 naming the rules a file fails without touching the
 row. The ship defers the check until the D1 sync, as it does the others.

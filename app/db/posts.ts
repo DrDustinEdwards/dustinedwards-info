@@ -568,42 +568,6 @@ export async function listPostSourcesForCitations(env: Env) {
     .where(eq(posts.kind, "post"));
 }
 
-/** Operator list_posts projection, drafts included. */
-export async function listPostsForOperator(env: Env) {
-  const rows = await getDb(env)
-    .select({
-      slug: posts.slug,
-      title: posts.title,
-      description: posts.description,
-      status: posts.status,
-      publishAt: posts.publishAt,
-      updatedAt: posts.updatedAt,
-      series: posts.series,
-      part: posts.part,
-      sourcePath: posts.sourcePath,
-    })
-    .from(posts)
-    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)))
-    .orderBy(asc(posts.slug));
-  const tagRows = await listAllPostTagsForAdmin(env);
-
-  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
-  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
-}
-
-export async function getAdminPostRow(env: Env, slug: string) {
-  return (
-    (await getDb(env)
-      .select({
-        html: posts.html,
-        readingTimeMinutes: posts.readingTimeMinutes,
-      })
-      .from(posts)
-      .where(and(eq(posts.kind, "post"), eq(posts.slug, slug)))
-      .get()) ?? null
-  );
-}
-
 /** All post tags, drafts included, for the related and backlinks corpora; `listBlogTags` hides drafts. */
 async function listAllPostTagsForAdmin(env: Env) {
   return getDb(env)
