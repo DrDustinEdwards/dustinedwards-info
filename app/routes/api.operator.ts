@@ -10,8 +10,8 @@ import type { Route } from "./+types/api.operator";
  * MCP front end maps onto it: `tools/call` carries a name and an argument object.
  */
 
-// upload_media may carry a picture as base64 (descriptors.ts): its 10 MB, a third larger, and the rest of the call.
-const OPERATOR_BODY_BYTES = 15 * 1024 * 1024;
+// The largest call is save_procedure's whole file, which is text: a megabyte is far above any procedure.
+const OPERATOR_BODY_BYTES = 1024 * 1024;
 
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(body, null, 2), {

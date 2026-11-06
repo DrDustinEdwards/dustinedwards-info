@@ -8,7 +8,7 @@ build.
 
 There is ONE write path: Carrel saves a page through site-api's adapter (`page.<slug>` in the `/content`
 group, handler `app/lib/carrel/page-handler.server.ts`). There is no admin editor and no operator save tool.
-The operator can read: `list_pages` and `get_page`.
+Pages are read through Carrel too.
 
 ## The file
 

@@ -17,7 +17,6 @@ import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
-import { runTool } from "~/lib/operator/api.server";
 
 import { post } from "./fixtures";
 import { seedMediaRow } from "./media-fixtures";
@@ -267,18 +266,6 @@ describe("savePost", () => {
     expect(await countRows("media_refs", "WHERE source_id = ?1", "never-committed")).toBe(0);
   });
 
-  it("answers the operator with a 500 that says the commit landed when D1 fails twice", async () => {
-    const raw = post("committed-anyway");
-    const result = await runTool(
-      flakyD1(2) as never,
-      { kind: "operator", id: "test" },
-      "save_post",
-      { slug: "committed-anyway", raw, isNew: true },
-    );
-
-    expect(result).toMatchObject({ ok: false, status: 500, detail: { committed: true } });
-    expect((await source(postPath("committed-anyway")))).toBe(raw);
-  });
 });
 
 describe("savePost refreshes the other posts' derived lists", async () => {

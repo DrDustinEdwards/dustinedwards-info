@@ -1,19 +1,19 @@
 /**
- * The eleven tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * The ten tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6.
  *
- * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Eleven one-call tools became nine
- * that each finish a job: check the site, repair drift and read the repair
- * back, review and decide mentions, put media in the bucket and back it up,
- * read any registry, refresh citations, and keep a procedure. A tenth checks
- * the publications against ORCID and Crossref. The orchestration
+ * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Each finishes a job: check the
+ * site, repair drift and read the repair back, review and decide mentions,
+ * back up media, read the Knowledge Base registry, refresh citations, check the
+ * publications against ORCID and Crossref, and keep a procedure. The orchestration
  * lives here, in code, and every step of it is still one authenticated request
  * to the operator API, which owns every rule.
  *
- * NO POST TOOLS (rule 11). Carrel owns all writing on every site; this server
- * runs the site and does not edit posts. list_posts, get_post, save_post and
- * delete_post are gone, and so is anything that writes a page, a CV file or a
- * publication: the registry tool reads them, Carrel writes them.
+ * NO CONTENT OR MEDIA TOOLS (rule 11, and one place per job). Carrel owns all
+ * writing and every site's media library, so posts, pages, the CV, the
+ * dictionary, the roster, the phages, publications and llms.txt are read and
+ * written there, and photos are imported and deleted there (carrel_import_media,
+ * carrel_delete_media). This server runs the site.
  *
  * NAMES (rule 5) are `dei_{action}_{resource}`. ANNOTATIONS (rule 6) are set
  * honestly per tool, with the reasoning beside each one that is not obvious.
@@ -31,9 +31,7 @@ import { logEvent } from "@dustinedwards/site-runtime/log";
 import { outsideResult } from "@dustinedwards/site-runtime/mcp-server";
 import { z } from "zod";
 
-import { failingCheckNames, healthChecks, watchdogActions, watchdogOutcome } from "../../app/lib/health/repair.mjs";
-
-import { callOperator, readHealth, ApiLegError, type ApiEnv } from "./api-client";
+import { callOperator, ApiLegError, type ApiEnv } from "./api-client";
 import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
 
 export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
@@ -251,161 +249,8 @@ const PAGED_ANSWER = z.looseObject({
     .object({ limit: z.number(), total: z.number(), has_more: z.boolean(), next_cursor: z.string().nullable() })
     .optional(),
 });
-const SITE_CHECK = z.object({
-  pipeline: z.unknown(),
-  health: z.object({
-    status: z.number(),
-    ok: z.boolean(),
-    failing: z.array(z.string()),
-    checks: z.array(z.unknown()),
-    unreachable: z.string().optional(),
-  }),
-});
-const REPAIR_REPORT = z.object({
-  healthy: z.boolean(),
-  repaired: z.array(z.record(z.string(), z.unknown())),
-  note: z.string().optional(),
-  failing: z.array(z.string()).optional(),
-  stopped: z.string().optional(),
-  still_failing: z.array(z.string()).optional(),
-  verdict: z.string().optional(),
-});
-
-/**
- * Which operator tools each registry kind reads through. The keys are the
- * public names an agent passes; the values are the API's own tool names.
- */
-const REGISTRY_READS = {
-  pages: { list: "list_pages", get: "get_page", key: "path" },
-  llms: { list: null, get: "get_llms", key: null },
-  cv: { list: "list_cv", get: "get_cv", key: "slug" },
-  dictionary: { list: "list_dictionary", get: "get_dictionary", key: "key" },
-  roster: { list: "list_roster", get: "get_roster", key: "slug" },
-  phages: { list: "list_phages", get: "get_phage", key: "slug" },
-  registry: { list: "list_registry", get: "get_registry", key: "slug" },
-  publications: { list: "list_publications", get: "get_publication", key: "slug" },
-} as const;
-
-type RegistryName = keyof typeof REGISTRY_READS;
-
-/** The names of the checks a /health reading does not pass, read as the watchdog reads them. */
-const failing = (body: unknown): string[] => failingCheckNames(body);
-
-/** Every check passes: /health's own `ok` stays true while a drift check warns. */
-function allPass(body: unknown): boolean {
-  const checks = healthChecks(body);
-  return checks.length > 0 && checks.every((c) => c.ok);
-}
 
 export const TOOLS: ToolDefinition[] = [
-  {
-    name: "dei_check_site",
-    scope: SCOPE_READ,
-    config: {
-      title: "Check the site",
-      description:
-        "One look at whether dustinedwards.info is well: the publishing pipeline's stores reported " +
-        "SEPARATELY (the head sha, the counts in the repository, in D1 and in the search index, and " +
-        "whether the AI index and GitHub are configured), because they can disagree and fail " +
-        "independently, and the site's own health endpoint, /health, with every check it ran and " +
-        "the names of any failing. A failing check whose name ends in -drift is a derived store behind " +
-        "its source, which dei_repair_drift converges. Read only.",
-      inputSchema: z.strictObject({}),
-      outputSchema: SITE_CHECK,
-      annotations: READ_ONLY,
-    },
-    handler: async (env) => {
-      try {
-        const pipeline = await callOperator(env, "sync_status", {});
-        if (!pipeline.ok) return refusal(pipeline);
-        const health = await readHealth(env);
-        return ok({
-          pipeline: pipeline.data,
-          health: {
-            status: health.status,
-            ok: allPass(health.body),
-            failing: failing(health.body),
-            checks: healthChecks(health.body),
-            ...(health.error ? { unreachable: health.error } : {}),
-          },
-        });
-      } catch (cause) {
-        return wrapperFailure(cause);
-      }
-    },
-  },
-
-  {
-    name: "dei_repair_drift",
-    scope: SCOPE_WRITE,
-    config: {
-      title: "Repair drift and read it back",
-      description:
-        "Reads /health, and for every failing check that is a known drift class runs the operator " +
-        "repair that converges it (sync_posts, sync_procedures, sync_dictionary, sync_roster, " +
-        "sync_phages, sync_registry, sync_pages, sync_publications, sync_llms, sync_cv, sync_cv_pdf, " +
-        "sync_ask, sync_media), in the watchdog's order, then reads /health again and " +
-        "reports each repair's own read-back verdict and what is still failing. It is the plan the " +
-        "fifteen-minute watchdog runs, the same code, so it repairs nothing the watchdog would not.\n\n" +
-        "It REPAIRS NOTHING when any failing check is not a known drift class, because a compound failure " +
-        "may share a root cause; it says which check stopped it. A healthy site is a no-op. Every repair " +
-        "derives its store from the repository or the bucket again, so it converges toward the source " +
-        "and never edits one. The Ask index can list short for about a minute after " +
-        "a full upload, so an ask-index-drift still failing straight after sync_ask is worth one more " +
-        "dei_check_site before calling it a miss.",
-      inputSchema: z.strictObject({}),
-      outputSchema: REPAIR_REPORT,
-      annotations: {
-        readOnlyHint: false,
-        // Not destructive: a sync removes a derived row only when its source
-        // file is gone, and rebuilds every other one from the source, so no
-        // repair can lose anything the repository or the bucket does not hold.
-        destructiveHint: false,
-        // Idempotent: each repair is (the API's own descriptors say so), and a
-        // converged site makes the whole call a read.
-        idempotentHint: true,
-        openWorldHint: false,
-      },
-    },
-    handler: async (env) => {
-      try {
-        const before = await readHealth(env);
-        const actions = watchdogActions(before, { hasToken: true });
-        if (actions.length === 0) {
-          return ok({ healthy: true, repaired: [], note: "Every check is ok. Nothing to repair." });
-        }
-        const notify = actions.find((a) => a.type === "notify");
-        if (notify && notify.type === "notify") {
-          return ok({ healthy: false, failing: failing(before.body), repaired: [], stopped: notify.reason });
-        }
-        const repaired: Array<Record<string, unknown>> = [];
-        const misses: string[] = [];
-        for (const action of actions) {
-          if (action.type !== "repair") continue;
-          const result = await callOperator(env, action.tool, {});
-          const report = (result.data ?? null) as { converged?: unknown } | null;
-          if (!result.ok) {
-            misses.push(`${action.tool} was refused (${result.status}): ${result.error ?? ""}`.trim());
-            repaired.push({ tool: action.tool, ok: false, status: result.status, error: result.error, detail: result.detail ?? null });
-          } else {
-            if (report?.converged !== true) misses.push(`${action.tool} did not report converged`);
-            repaired.push({ tool: action.tool, ok: true, report });
-          }
-        }
-        const after = await readHealth(env);
-        const outcome = watchdogOutcome({ misses, recheck: after });
-        return ok({
-          healthy: allPass(after.body),
-          repaired,
-          still_failing: failing(after.body),
-          verdict: outcome.length === 0 ? "converged" : outcome.map((a) => (a.type === "notify" ? a.reason : "")).join(" "),
-        });
-      } catch (cause) {
-        return wrapperFailure(cause);
-      }
-    },
-  },
-
   {
     name: "dei_review_mentions",
     scope: SCOPE_READ,
@@ -466,80 +311,6 @@ export const TOOLS: ToolDefinition[] = [
   },
 
   {
-    name: "dei_upload_media",
-    scope: SCOPE_WRITE,
-    config: {
-      title: "Upload an image",
-      description:
-        "Uploads one image to the site's media bucket and returns the url to use in a post, which is " +
-        "then written through Carrel. The url is a content-addressed /media/ path: the key is a digest " +
-        "of the bytes, and bytes the site already holds answer with that file, so the same image twice is one object and one url.\n\n" +
-        "Supply exactly one of `url` (an https URL the site fetches server side; prefer it, since a " +
-        "photograph as base64 is several megabytes carried through the conversation) or `data` (base64, " +
-        "or a whole data: URI).\n\n" +
-        "Returns url, key, bytes, width, height and `recorded`, which is always true: a file whose row " +
-        "cannot be written is not stored at all.\n\n" +
-        "Describe the image: `alt` says what it shows, or `decorative: true` for one that adds nothing a reader would miss. " +
-        "An upload with neither, or both, is refused before anything is fetched.\n\n" +
-        "POLICY, enforced by the API and not by this wrapper: raster images only (SVG is refused, since " +
-        "it can carry script), a size ceiling, https URLs only. There is NO delete over this credential, " +
-        "so upload the image you mean to use rather than several to choose between.",
-      inputSchema: z.strictObject({
-        data: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("Optional. The image as base64, or a full data:<type>;base64,<payload> URI. This OR url."),
-        url: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("Optional. An https URL the site fetches server side. This OR data. Preferred."),
-        type: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("Optional. The image MIME type, e.g. image/png, when the source serves application/octet-stream."),
-        name: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("Optional. The filename to record as the image's original name. Defaults to the URL's last segment."),
-        alt: z
-          .string()
-          .min(1)
-          .optional()
-          .describe("What the picture shows, for a reader who cannot see it. Required unless decorative is true."),
-        decorative: z
-          .boolean()
-          .optional()
-          .describe("Optional. true for a picture that adds nothing a reader would miss; it is stored with empty alt. Never with alt."),
-      }),
-      outputSchema: API_ANSWER,
-      annotations: {
-        readOnlyHint: false,
-        // Not destructive: the key is a digest of the bytes, so the only object
-        // an upload can land on is the byte-identical one. Idempotent for the
-        // same reason. Open world: with `url` the site fetches the internet.
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      },
-    },
-    handler: (env, args) =>
-      run(env, "upload_media", {
-        // Only what was supplied. The API refuses "both" and "neither" by name,
-        // and forwarding an empty string would turn "neither" into "both".
-        ...(args.data ? { data: args.data } : {}),
-        ...(args.url ? { url: args.url } : {}),
-        ...(args.type ? { type: args.type } : {}),
-        ...(args.name ? { name: args.name } : {}),
-        ...(args.alt ? { alt: args.alt } : {}),
-        ...(args.decorative ? { decorative: true } : {}),
-      }),
-  },
-
-  {
     name: "dei_backup_media",
     scope: SCOPE_WRITE,
     config: {
@@ -561,32 +332,27 @@ export const TOOLS: ToolDefinition[] = [
     name: "dei_read_registry",
     scope: SCOPE_READ,
     config: {
-      title: "Read a site registry",
+      title: "Read the Knowledge Base registry",
       description:
-        "Reads the site's structured records, drafts included, from D1 and the repository. Name the " +
-        "registry; omit record_key to list it a page at a time, or pass record_key for one record's " +
-        "complete committed file (raw), its structured form and any validation errors it has now.\n\n" +
-        "Registries and their record_key: pages (a page path such as /research/phages), llms (none: " +
-        "the one llms.txt), cv (a CV file such as grants), dictionary (an entry key such as capsid), " +
-        "roster (a cohort year such as 2025), phages (a phage slug such as acorn15), registry (an item " +
-        "address kind/id such as primer/m13-forward; registry_kind narrows the list), publications (a " +
-        "publication slug). Read only: these are written through Carrel, not here.",
+        "Reads the Knowledge Base registry (reagents, primers, equipment and the like), drafts included, from D1 " +
+        "and the repository. Omit record_key to list it a page at a time (kind narrows the list to one kind, such " +
+        "as primer), or pass record_key, an item address kind/id such as primer/m13-forward, for one item's " +
+        "complete committed file (raw), its structured form and any validation errors it has now. Read only. " +
+        "Posts, pages, the CV, the dictionary, the roster, the phages, publications and llms.txt are read and " +
+        "written through Carrel (carrel_read_item, carrel_search_items), not here.",
       inputSchema: z.strictObject({
-        registry: z
-          .enum(Object.keys(REGISTRY_READS) as [RegistryName, ...RegistryName[]])
-          .describe("Which registry to read."),
         record_key: z
           .string()
           .min(1)
           .max(200)
           .optional()
-          .describe("Optional. One record's key, in the registry's own form (see the description). Omit to list."),
-        registry_kind: z
+          .describe("Optional. One item's address kind/id, such as primer/m13-forward. Omit to list."),
+        kind: z
           .string()
           .min(1)
           .max(60)
           .optional()
-          .describe("Optional, for registry 'registry' only: narrow the list to one kind, such as primer."),
+          .describe("Optional, when listing: narrow the list to one kind, such as primer."),
         limit: limitSchema,
         cursor: cursorSchema,
       }),
@@ -594,19 +360,11 @@ export const TOOLS: ToolDefinition[] = [
       annotations: READ_ONLY,
     },
     handler: async (env, args) => {
-      const name = args.registry as RegistryName;
-      const reads = REGISTRY_READS[name];
-      if (args.registry_kind !== undefined && name !== "registry") {
-        return inputError(`registry_kind narrows the registry 'registry' only. Remove it, or set registry to 'registry'.`);
-      }
       if (args.record_key !== undefined) {
-        if (!reads.key) {
-          return inputError(`The registry '${name}' has one record and takes no record_key. Call again without it.`);
-        }
-        return run(env, reads.get, { [reads.key]: args.record_key });
+        if (args.kind !== undefined) return inputError("kind narrows a list only. Remove it, or remove record_key to list.");
+        return run(env, "get_registry", { slug: args.record_key });
       }
-      if (!reads.list) return run(env, reads.get, {});
-      return runPaged(env, reads.list, args.registry_kind ? { kind: args.registry_kind } : {}, args);
+      return runPaged(env, "list_registry", args.kind ? { kind: args.kind } : {}, args);
     },
   },
 

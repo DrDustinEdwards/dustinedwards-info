@@ -1,14 +1,10 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
-import { runTool } from "~/lib/operator/api.server";
-import { postPath } from "~/lib/content/pipeline.mjs";
 
-import { post } from "./fixtures";
 import { WINDOW_START, freezeAtWindowStart, untilRefused } from "./route-helpers";
 import { testEnv } from "./test-env";
-import { putSource, source, stubSources, type SourceStub } from "./source-stub";
 
 /* The token fixture is long enough to clear the 32-character minimum, so these cases exercise
  * authentication rather than the not-configured branch. */
@@ -21,14 +17,7 @@ const bearer = (token: string) =>
     headers: { authorization: `Bearer ${token}` },
   });
 
-let gh: SourceStub;
-
-beforeEach(async () => {
-  gh = await stubSources();
-});
-
-afterEach(async () => {
-  await gh.restore();
+afterEach(() => {
   /* Restored here, not per case: a case that fails mid-assertion never reaches its own cleanup,
    * and a frozen clock would leak into the next case. */
   vi.useRealTimers();
@@ -126,73 +115,5 @@ describe("operator metering", () => {
       "no-limiter",
     );
     expect(result).toMatchObject({ ok: false, status: 503 });
-  });
-});
-
-describe("operator tools", () => {
-  const operator = { kind: "operator", id: "test" } as const;
-
-  it("REFUSES a first publication with the policy string a client branches on", async () => {
-    const result = await runTool(operatorEnv(), operator, "save_post", {
-      slug: "operator-first-publish",
-      raw: post("operator-first-publish", { draft: false }),
-      isNew: true,
-    });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(403);
-      /* THE MACHINE-READABLE HALF. A client is told to branch on this rather
-       * than string-match the prose, so the prose may change and this may not. */
-      expect(result.detail).toMatchObject({ policy: "first-publish-requires-admin" });
-    }
-    expect(((await source(postPath("operator-first-publish"))) !== undefined)).toBe(false);
-  });
-
-  it("ALLOWS an operator to save a draft, and to republish one already published", async () => {
-    const drafted = await runTool(operatorEnv(), operator, "save_post", {
-      slug: "operator-draft",
-      raw: post("operator-draft", { draft: true }),
-      isNew: true,
-    });
-    expect(drafted.ok).toBe(true);
-
-    /* Seeded with `first_published` in the repository, the only authority `decide()` consults,
-     * so this is the real transition rather than a flag the caller asserted. */
-    await putSource(
-      postPath("was-public"),
-      post("was-public", { draft: true, first_published: "2026-07-01" }),
-    );
-    const republished = await runTool(operatorEnv(), operator, "save_post", {
-      slug: "was-public",
-      raw: post("was-public", { draft: false, first_published: "2026-07-01" }),
-      isNew: false,
-    });
-    expect(republished.ok).toBe(true);
-  });
-
-  it("REFUSES an operator delete, and the refusal names the reversible alternative", async () => {
-    await putSource(postPath("keep-me"), post("keep-me"));
-    const result = await runTool(operatorEnv(), operator, "delete_post", { slug: "keep-me" });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.status).toBe(403);
-      expect(result.detail).toMatchObject({ policy: "delete-requires-admin" });
-      expect(result.error).toContain("draft: true");
-    }
-    expect(((await source(postPath("keep-me"))) !== undefined)).toBe(true);
-  });
-
-  it("REFUSES a read-only smoke actor for every save, before any transition is computed", async () => {
-    const result = await runTool(
-      operatorEnv(),
-      { kind: "smoke", id: "smoke-actor" },
-      "save_post",
-      { slug: "smoke-cannot-write", raw: post("smoke-cannot-write"), isNew: true },
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.detail).toMatchObject({ policy: "smoke-is-read-only" });
-    expect(((await source(postPath("smoke-cannot-write"))) !== undefined)).toBe(false);
   });
 });

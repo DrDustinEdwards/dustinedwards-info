@@ -48,16 +48,6 @@ export function isFormUpload(intent) {
 }
 
 /**
- * Both editors destructure `url`, and one inserts it into the markdown: a rename breaks inserts with no
- * type error.
- *
- * @param {string} key
- */
-export function uploadSuccessBody(key) {
-  return { url: `/media/${key}`, key };
-}
-
-/**
  * @param {string} message
  */
 export function uploadErrorBody(message) {

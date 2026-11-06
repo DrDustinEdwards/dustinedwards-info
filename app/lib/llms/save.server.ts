@@ -1,5 +1,5 @@
 // The one llms.txt save, called by the site-api adapter for Carrel (app/lib/carrel/document-handler.server.ts),
-// and the reads the operator's get_llms tool and the llms-drift check answer (docs/LLMS.md). The document is
+// and the reads sync_llms and the llms-drift check use (docs/LLMS.md). The document is
 // content/llms.txt, the source; /llms.txt is served from the `settings` row derived from it. A save judges the
 // file with the rules CI runs (validate.mjs), refuses it with every message if it fails, commits it to the
 // repository (unless it is byte-identical, commitUnlessUnchanged), then writes the row and purges /llms.txt,
@@ -65,20 +65,6 @@ export async function compileLlms(env: LlmsEnv, raw: string) {
   const errors = llmsErrors(await judgeLlms(env, raw));
   if (errors.length > 0) return { ok: false as const, errors };
   return { ok: true as const, errors: [] as string[], raw, sourceBlobSha: await gitBlobSha(raw) };
-}
-
-/** get_llms: the file, the head it was read at, the rules it fails now, and whether the row serves it. */
-export async function readLlms(env: LlmsEnv) {
-  const file = await readFile(env, LLMS_PATH);
-  if (!file) return null;
-  const row = await getSetting(env, LLMS_SETTING_KEY);
-  return {
-    path: LLMS_PATH,
-    raw: file.content,
-    bytes: new TextEncoder().encode(file.content).length,
-    errors: llmsErrors(await judgeLlms(env, file.content)),
-    servedFromRepository: row === file.content,
-  };
 }
 
 /** The one write door for the row /llms.txt is served from: a save and sync_llms both end here, read back. */
