@@ -1,3 +1,4 @@
+import { sendEmail } from "@dustinedwards/site-runtime/email";
 // Relative imports on purpose: this Worker's esbuild bundle does not read the `~/` tsconfig mapping,
 // so `~/` here would typecheck and then fail at deploy.
 import {
@@ -329,23 +330,7 @@ export async function checkPublicationsDaily(
 }
 
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
-  try {
-    await env.EMAIL.send({
-      to: env.ALERT_EMAIL,
-      from: ALERT_FROM,
-      subject,
-      text: lines.join("\n"),
-    });
-    return true;
-  } catch (error) {
-    console.error(
-      JSON.stringify({
-        alert: "watchdog-notify-failed",
-        error: errorMessage(error),
-      }),
-    );
-    return false;
-  }
+  return (await sendEmail(env.EMAIL, { to: env.ALERT_EMAIL, from: ALERT_FROM, subject, text: lines.join("\n") })).sent;
 }
 
 /**
