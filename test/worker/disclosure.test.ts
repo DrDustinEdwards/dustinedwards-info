@@ -1,4 +1,7 @@
 import { createElement } from "react";
+// jsx(), what `<OverflowMenu label="More">...</OverflowMenu>` compiles to, so the menu's children are nested as JSX nests
+// them; createElement's typing would demand them as a prop as well. A .ts file, as the worker suite's pattern is.
+import { jsx } from "react/jsx-runtime";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -9,7 +12,7 @@ const render = (node: React.ReactElement) => renderToStaticMarkup(node);
 describe("the overflow menu", () => {
   it("open without script: a button names its panel by popovertarget and the panel is a popover", () => {
     const html = render(
-      createElement(OverflowMenu, { label: "More", children: createElement("a", { href: "/x" }, "Edit") }),
+      jsx(OverflowMenu, { label: "More", children: createElement("a", { href: "/x" }, "Edit") }),
     );
     const target = html.match(/<button[^>]*popovertarget="([^"]+)"/i)?.[1];
     expect(target).toBeTruthy();
@@ -22,8 +25,8 @@ describe("the overflow menu", () => {
       createElement(
         "div",
         null,
-        createElement(OverflowMenu, { label: "More", children: "one" }),
-        createElement(OverflowMenu, { label: "Maintenance", children: "two" }),
+        jsx(OverflowMenu, { label: "More", children: "one" }),
+        jsx(OverflowMenu, { label: "Maintenance", children: "two" }),
       ),
     );
     const targets = [...html.matchAll(/popovertarget="([^"]+)"/gi)].map((m) => m[1]);

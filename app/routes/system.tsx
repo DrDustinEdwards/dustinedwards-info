@@ -56,10 +56,10 @@ export default function SystemRoute({ loaderData }: Route.ComponentProps) {
   const s = systemOf(loaderData.id);
   const repo = repoOf(s);
   const facts = [
-    s.domain ? <a href={`https://${s.domain}`}>{s.domain}</a> : null,
-    repo ? <a href={repo}>{repo.replace(/^https:\/\//, "")}</a> : null,
+    s.domain ? <a key="domain" href={`https://${s.domain}`}>{s.domain}</a> : null,
+    repo ? <a key="repo" href={repo}>{repo.replace(/^https:\/\//, "")}</a> : null,
     s.private ? "private repo" : null,
-    <a href={explorerUrl(s.id)}>{explorerLabel(s.id)}</a>,
+    <a key="explorer" href={explorerUrl(s.id)}>{explorerLabel(s.id)}</a>,
   ].filter((f) => f !== null);
   const map = systemMapHtml(DATA, { id: "system", system: s.id, label: `How ${s.name} connects`, headingLevel: 2 });
   return (

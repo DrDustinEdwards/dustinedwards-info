@@ -28,50 +28,57 @@ const PREVIEW_DELAY_MS = 900;
 /** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
 const SIDE_BY_SIDE = "(min-width: 72rem)";
 
+/** The preview's frame document: the page's own stylesheets, the admin's theme, links opening outside the frame. */
+function previewDocument(result: { html: string; styles: string[] }) {
+  const styles = result.styles.map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`).join("");
+  const theme = document.documentElement.getAttribute("data-theme");
+  return `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${result.html}</body></html>`;
+}
+
 /**
  * The entry the form describes, rendered as its public page by the server a beat after the form stops changing. A
- * sequence number keeps a slow answer from landing over a newer one.
+ * sequence number keeps a slow answer from landing over a newer one. Busy is derived: the form's current request is
+ * not yet the one an answer settled. The frame's document is built when a drawable answer lands, so a failed one
+ * keeps the last good page in view.
  */
 function useEntryPreview(slug: string | null, original: string, model: string, active: boolean) {
   const [result, setResult] = useState<PreviewResult | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [doc, setDoc] = useState("");
+  const [settled, setSettled] = useState<string | null>(null);
   const seq = useRef(0);
+  const request = slug && active ? JSON.stringify([slug, original, model]) : null;
   useEffect(() => {
-    if (!slug || !active) return;
+    if (!slug || !request) return;
     const mine = (seq.current += 1);
-    setBusy(true);
-    const timer = window.setTimeout(async () => {
+    async function draw(path: string, asked: string) {
       const body = new FormData();
       body.set("original", original);
       body.set("model", model);
       try {
-        const response = await fetch(`/admin/kb/preview/${slug}`, { method: "POST", body });
+        const response = await fetch(`/admin/kb/preview/${path}`, { method: "POST", body });
         const json = (await response.json().catch(() => null)) as PreviewResult | null;
         if (mine !== seq.current) return;
-        setResult(json ?? { error: `The preview request failed with HTTP ${response.status}.` });
+        const answer = json ?? { error: `The preview request failed with HTTP ${response.status}.` };
+        setResult(answer);
+        if ("html" in answer) setDoc(previewDocument(answer));
       } catch (error) {
         if (mine === seq.current) setResult({ error: error instanceof Error ? error.message : String(error) });
       } finally {
-        if (mine === seq.current) setBusy(false);
+        if (mine === seq.current) setSettled(asked);
       }
-    }, PREVIEW_DELAY_MS);
+    }
+    // draw catches its own failures, so the promise it returns has nothing left to report.
+    const timer = window.setTimeout(() => void draw(slug, request), PREVIEW_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [slug, original, model, active]);
-  return { result, busy };
+  }, [slug, original, model, request]);
+  return { result, doc, busy: request !== null && request !== settled };
 }
 
 /**
  * The public page in a sandboxed frame: no script runs in it, and it links the public page's own stylesheets, so it
  * looks as the page will. A frame, because the page's styles are the public site's and the admin's are its own.
  */
-function PreviewPane({ result, busy, publicHref }: { result: PreviewResult | null; busy: boolean; publicHref: string | null }) {
-  const [doc, setDoc] = useState("");
-  useEffect(() => {
-    if (!result || !("html" in result)) return;
-    const styles = result.styles.map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`).join("");
-    const theme = document.documentElement.getAttribute("data-theme");
-    setDoc(`<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${result.html}</body></html>`);
-  }, [result]);
+function PreviewPane({ result, doc, busy, publicHref }: { result: PreviewResult | null; doc: string; busy: boolean; publicHref: string | null }) {
   const failed = result && "errors" in result ? result.errors : result && "error" in result ? [result.error] : null;
   return (
     <Panel title="Preview" src={busy ? "Updating" : failed ? "Not drawn" : "As the page will look"} flush>
@@ -354,7 +361,7 @@ export function KbFormEditor({
       </Form>
       {isEntry ? (
         <aside className="kb-pane-preview" id="kb-pane-preview" role={wide ? undefined : "tabpanel"} aria-labelledby={wide ? undefined : "kb-tab-preview"} aria-label={wide ? "Preview" : undefined}>
-          <PreviewPane result={preview.result} busy={preview.busy} publicHref={file.publicHref} />
+          <PreviewPane result={preview.result} doc={preview.doc} busy={preview.busy} publicHref={file.publicHref} />
         </aside>
       ) : null}
       </div>

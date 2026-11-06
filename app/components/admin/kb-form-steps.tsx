@@ -122,7 +122,7 @@ function StepCard({
       <p className="cap-field-label" id={`${anchor}-label`}>
         What to do
       </p>
-      <StepText id={`${anchor}-text`} label={`${label}: what to do`} text={step.text} names={inserts.names} caret={caret} onChange={(next) => onChange({ ...step, text: next })} />
+      <StepText id={`${anchor}-text`} label={`${label}: what to do`} text={step.text} names={inserts.names} caretRef={caret} onChange={(next) => onChange({ ...step, text: next })} />
 
       <details className="kb-insert">
         <summary>Insert into this step: a reagent, equipment, a primer, a strain, a timer or a temperature</summary>

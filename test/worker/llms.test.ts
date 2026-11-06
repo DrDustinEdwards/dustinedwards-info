@@ -49,7 +49,7 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const put = async (source: string, expectedVersion: string | null | undefined = undefined, changeId = `chg-llms-${crypto.randomUUID()}`) =>
+const put = async (source: string, expectedVersion?: string | null, changeId = `chg-llms-${crypto.randomUUID()}`) =>
   send("PUT", `${PREFIX}/content/${ID}/draft`, {
     source,
     expectedVersion: expectedVersion === undefined ? await versionOf(LLMS_PATH) : expectedVersion,

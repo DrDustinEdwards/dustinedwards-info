@@ -194,11 +194,11 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
       <div className="colophon-evidence">
         <EvidenceRow
           facts={[
-            <a href="#bindings">{stack.bindings.length} resources</a>,
-            <a href="#gates">
+            <a key="bindings" href="#bindings">{stack.bindings.length} resources</a>,
+            <a key="gates" href="#gates">
               {gates} {gates === 1 ? "check" : "checks"}
             </a>,
-            <span className="evidence-health" data-health-age={healthAge}>
+            <span key="health" className="evidence-health" data-health-age={healthAge}>
               <Link to="/health">
                 {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
                 {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}

@@ -98,12 +98,14 @@ function load({ kept = {}, others = [] } = {}) {
    * @param {{ mode?: string, destination?: string, method?: string, origin?: string }} [init]
    */
   const request = async (path, { mode = "navigate", destination = "document", method = "GET", origin = ORIGIN } = {}) => {
-    /** @type {Promise<Response> | null} */
-    let answer = null;
+    // Collected rather than assigned, so the checker sees that the listener can set it.
+    /** @type {Promise<Response>[]} */
+    const answers = [];
     // A navigation sends text/html, as a browser's does.
     const req = { url: new URL(path, origin).href, method, mode, destination, headers: new Headers(mode === "navigate" ? { accept: "text/html" } : {}) };
-    listeners.fetch?.({ request: req, respondWith: (/** @type {Promise<Response>} */ p) => (answer = p) });
-    if (!answer) return null;
+    listeners.fetch?.({ request: req, respondWith: (/** @type {Promise<Response>} */ p) => { answers.push(p); } });
+    const [answer] = answers;
+    if (answer === undefined) return null;
     const response = await answer;
     return response.text();
   };

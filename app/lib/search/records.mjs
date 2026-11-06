@@ -102,6 +102,12 @@ export function splitSections(markdown, toc) {
 }
 
 /**
+ * @typedef {{ uid: string, url: string, type: "post" | "page", title: string, body: string, tags: string,
+ *             docTags: string, docUid: string, docTitle: string, docUrl: string, anchor: string | null,
+ *             ordinal: number, status: string, publishAt: any }} SearchRecord
+ */
+
+/**
  * One index record. A document's own record has no anchor and ordinal 0; a section's record takes
  * the document's uid and url with its anchor appended. Key order is fixed: the output is compared
  * across runs.
@@ -110,7 +116,7 @@ export function splitSections(markdown, toc) {
  *           status: string, publishAt: any }} doc
  * @param {{ title: string, body: string, tags?: string,
  *           section?: { anchor: string, ordinal: number } }} part
- * @returns {Record<string, any>}
+ * @returns {SearchRecord}
  */
 function record(doc, { title, body, tags = "", section }) {
   return {
@@ -133,7 +139,7 @@ function record(doc, { title, body, tags = "", section }) {
 
 /**
  * @param {any} post a rendered post record from the shared pipeline
- * @returns {Array<Record<string, any>>}
+ * @returns {SearchRecord[]}
  */
 export function recordsForPost(post) {
   const tags = post.tags.join(" ");
@@ -151,7 +157,7 @@ export function recordsForPost(post) {
     publishAt: post.publishAt,
   };
 
-  /** @type {Array<Record<string, any>>} */
+  /** @type {SearchRecord[]} */
   const records = [
     record(doc, {
       title: post.title,
@@ -178,7 +184,7 @@ export function recordsForPost(post) {
 
 /**
  * @param {any[]} posts
- * @returns {Array<Record<string, any>>}
+ * @returns {SearchRecord[]}
  */
 export function recordsForPosts(posts) {
   return [...posts]
@@ -193,7 +199,7 @@ export function recordsForPosts(posts) {
  * @param {{ url: string, uid: string, title: string, description: string,
  *           intro: string,
  *           sections: Array<{ anchor: string, title: string, body: string }> }} page
- * @returns {Array<Record<string, any>>}
+ * @returns {SearchRecord[]}
  */
 function recordsForPage(page) {
   // Fail closed: no sections loses every deep link, and a duplicate anchor collides on uid.
@@ -223,7 +229,7 @@ function recordsForPage(page) {
     publishAt: null,
   };
 
-  /** @type {Array<Record<string, any>>} */
+  /** @type {SearchRecord[]} */
   const records = [
     record(doc, { title: page.title, body: [page.description, page.intro].filter(Boolean).join(" ") }),
   ];
@@ -246,7 +252,7 @@ function recordsForPage(page) {
  * Sorted by uid: the output is compared across runs, so call order must not leak into it.
  *
  * @param {any[]} pages page inputs, as `recordsForPage` takes them
- * @returns {Array<Record<string, any>>}
+ * @returns {SearchRecord[]}
  */
 export function recordsForPages(pages) {
   return [...pages]
@@ -259,7 +265,7 @@ export function recordsForPages(pages) {
  * type "page" because a CHECK constraint allows only post or page, and a facet label is not worth a migration.
  *
  * @param {Array<{ uid: string, url: string, title: string, body: string }>} papers
- * @returns {Array<Record<string, any>>}
+ * @returns {SearchRecord[]}
  */
 export function recordsForPapers(papers) {
   for (const paper of papers) {

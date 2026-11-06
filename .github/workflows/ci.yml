@@ -120,6 +120,9 @@ jobs:
       #
       # The typecheck is inside this tier as check:types since 2026-08-20, so a
       # build that does not compile fails CI without a separate step.
+      - name: Gates
+        run: npm run check:ci
+
       # LINT, and it is deliberately NOT a `check:` script.
       #
       # `check-all.mjs` derives the gate list from package.json and refuses to
@@ -132,11 +135,12 @@ jobs:
       # `--deny-warnings`, so the clean state stays clean: everything it found
       # on the day it landed was fixed rather than allowlisted, and a warning
       # tolerated once is a warning nobody reads again.
+      #
+      # AFTER Gates, not before: the rules are devkit's shared Oxlint config (oxlint.config.ts), run
+      # type-aware, and tsgolint reads the route types `react-router typegen` writes, which check:types
+      # (inside Gates) generates. Before it, every route's `./+types/...` import would be unresolved.
       - name: Lint
         run: npm run lint
-
-      - name: Gates
-        run: npm run check:ci
 
       # The app build, so a change that typechecks but does not build fails
       # here rather than at deploy. check:ci built its three prereqs a moment

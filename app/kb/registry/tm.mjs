@@ -66,7 +66,7 @@ const COMPLEMENT = /** @type {Record<string, string>} */ ({ A: "T", C: "G", G: "
 
 /** @param {string} sequence */
 function reverseComplement(sequence) {
-  return [...sequence].reverse().map((base) => COMPLEMENT[base]).join("");
+  return sequence.split("").reverse().map((base) => COMPLEMENT[base]).join("");
 }
 
 /**

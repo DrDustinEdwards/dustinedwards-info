@@ -171,21 +171,21 @@ function ChipPopover({
 }
 
 /**
- * The step text editor. `caret` holds where in the text the cursor last was, so an insert from the card lands there.
+ * The step text editor. `caretRef` holds where in the text the cursor last was, so an insert from the card lands there.
  */
 export function StepText({
   id,
   label,
   text,
   names,
-  caret,
+  caretRef,
   onChange,
 }: {
   id: string;
   label: string;
   text: string;
   names: { reagent: string[]; equipment: string[] };
-  caret: MutableRefObject<number | null>;
+  caretRef: MutableRefObject<number | null>;
   onChange: (text: string) => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -258,7 +258,7 @@ export function StepText({
           const sel = window.getSelection();
           if (sel && sel.rangeCount > 0 && root.current.contains(sel.anchorNode)) {
             const range = sel.getRangeAt(0);
-            caret.current = offsetAt(root.current, (r) => r.setEnd(range.endContainer, range.endOffset));
+            caretRef.current = offsetAt(root.current, (r) => r.setEnd(range.endContainer, range.endOffset));
           }
           // Marks typed by hand become chips once the text is left; a chip taking the focus is still the text.
           if (!root.current.contains(e.relatedTarget as Node | null) && !wrap.current?.querySelector(".kb-popover")?.contains(e.relatedTarget as Node | null)) {

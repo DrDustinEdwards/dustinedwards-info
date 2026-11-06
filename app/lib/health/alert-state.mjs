@@ -73,7 +73,7 @@ export async function deliverTransition(transition, { send, write }) {
 /**
  * @param {object} input
  * @param {unknown} input.stored       what KV held, or null when the key is absent
- * @param {boolean} input.storedReadable  false when the read itself FAILED
+ * @param {boolean} [input.storedReadable=true]  false when the read itself FAILED; absent reads as true
  * @param {boolean} input.alerting     this firing ended in an alert condition
  * @param {string[]} input.failing     check names failing now
  * @param {string} input.now           ISO timestamp, supplied so tests can hold time

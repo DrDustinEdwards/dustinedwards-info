@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import * as fontkit from "fontkit";
+import { openSync } from "fontkit";
 
 import { createTally } from "./lib/tally.mjs";
 
@@ -145,7 +145,7 @@ const parsed = new Map();
 function fontFor(file) {
   const hit = parsed.get(file);
   if (hit) return hit;
-  const font = /** @type {import("fontkit").Font} */ (fontkit.openSync(file));
+  const font = /** @type {import("fontkit").Font} */ (openSync(file));
   parsed.set(file, font);
   return font;
 }

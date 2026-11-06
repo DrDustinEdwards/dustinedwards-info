@@ -74,7 +74,7 @@ export function discoveryProblems({ prm, as, discover }, origin) {
 
 /**
  * @param {string} url
- * @param {RequestInit & { headers?: Record<string, string> }} [init]
+ * @param {Omit<RequestInit, "headers"> & { headers?: Record<string, string> }} [init]
  * @returns {Promise<{ status: number, body: any, challenge: string, error?: string }>}
  */
 async function readJson(url, init) {
