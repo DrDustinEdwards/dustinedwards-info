@@ -46,9 +46,7 @@ export interface ApiEnv {
  * a documented payload shape rather than shared code, validated at the edge
  * like the outside caller this Worker is.
  */
-type ApiResponse =
-  | { ok: true; data: unknown }
-  | { ok: false; error: string; detail?: unknown };
+type ApiResponse = { ok: true; data: unknown } | { ok: false; error: string; detail?: unknown };
 
 export interface ApiCallResult {
   /** HTTP status the API returned. 200 means the tool succeeded. */
@@ -86,15 +84,20 @@ export async function callOperator(
 ): Promise<ApiCallResult> {
   const { status, body } = await callApi(env, LEG, "/api/operator", { json: { tool, args } });
   if (!body || typeof body !== "object" || typeof (body as { ok?: unknown }).ok !== "boolean") {
-    throw new ApiLegError(`The operator API returned status ${status} with an unrecognized payload shape.`, "malformed");
+    throw new ApiLegError(
+      `The operator API returned status ${status} with an unrecognized payload shape.`,
+      "malformed",
+    );
   }
   const answer = body as ApiResponse;
   if (answer.ok) return { status, ok: true, data: answer.data };
   return {
     status,
     ok: false,
-    error: typeof answer.error === "string" ? answer.error : `The operator API refused with status ${status}.`,
+    error:
+      typeof answer.error === "string"
+        ? answer.error
+        : `The operator API refused with status ${status}.`,
     detail: answer.detail,
   };
 }
-

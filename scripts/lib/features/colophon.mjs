@@ -12,9 +12,7 @@ import { normalizeEol, root } from "./shared.mjs";
 export function checkColophon({ ok, artifactRecords, routes, stack }) {
   console.log("\n  page records for /colophon");
 
-  const pageRecords = artifactRecords.filter(
-    (/** @type {any} */ r) => r.type === "page",
-  );
+  const pageRecords = artifactRecords.filter((/** @type {any} */ r) => r.type === "page");
   const colophonRecords = pageRecords.filter(
     (/** @type {any} */ r) => r.docUid === "page:colophon",
   );
@@ -55,7 +53,9 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
     `a paper record whose URL is not /research/publications/<slug>/ is not served by ` +
       `${PAPER_ROUTE}: ` +
       paperRecords
-        .filter((/** @type {any} */ r) => !/^\/research\/publications\/[a-z0-9-]+\/$/.test(String(r.url)))
+        .filter(
+          (/** @type {any} */ r) => !/^\/research\/publications\/[a-z0-9-]+\/$/.test(String(r.url)),
+        )
         .map((/** @type {any} */ r) => r.url)
         .join(", "),
   );
@@ -79,9 +79,7 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
   }
 
   /* Section anchors both ways: an unrendered anchor is a hit that scrolls nowhere. */
-  const sectionRecords = colophonRecords.filter(
-    (/** @type {any} */ r) => r.anchor !== null,
-  );
+  const sectionRecords = colophonRecords.filter((/** @type {any} */ r) => r.anchor !== null);
   ok(
     "the colophon has section records, not just a document record",
     sectionRecords.length > 0,
@@ -104,22 +102,15 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
   );
 
   /* The only `<h2 id=` is in `SectionHead`, so any literal id is a second list. */
-  const pageSource = readFileSync(
-    join(root, "app", "routes", "colophon.tsx"),
-    "utf8",
-  );
-  const literalHeadings = [
-    ...pageSource.matchAll(/<h2\s+id="([^"]+)"/g),
-  ].map((m) => m[1]);
+  const pageSource = readFileSync(join(root, "app", "routes", "colophon.tsx"), "utf8");
+  const literalHeadings = [...pageSource.matchAll(/<h2\s+id="([^"]+)"/g)].map((m) => m[1]);
   ok(
     "colophon.tsx declares no literal section id",
     literalHeadings.length === 0,
     `found ${literalHeadings.join(", ")}. Those ids exist in the descriptor too, ` +
       `so they are a second list and will drift.`,
   );
-  const rendered = [...pageSource.matchAll(/<SectionHead\s+id="([^"]+)"/g)].map(
-    (m) => m[1],
-  );
+  const rendered = [...pageSource.matchAll(/<SectionHead\s+id="([^"]+)"/g)].map((m) => m[1]);
   ok(
     "the page renders one section per descriptor entry, in order",
     rendered.length === COLOPHON_ANCHORS.length &&

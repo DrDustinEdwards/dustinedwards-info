@@ -19,7 +19,9 @@ function headerRules() {
     if (!line.trim() || line.trim().startsWith("#")) continue;
     if (/^\s/.test(line)) {
       const at = line.indexOf(":");
-      rules.at(-1)?.headers.push([line.slice(0, at).trim().toLowerCase(), line.slice(at + 1).trim()]);
+      rules
+        .at(-1)
+        ?.headers.push([line.slice(0, at).trim().toLowerCase(), line.slice(at + 1).trim()]);
     } else {
       rules.push({ path: line.trim(), headers: [] });
     }
@@ -42,7 +44,12 @@ function headersFor(path) {
     if (after === null) {
       if (path !== before) continue;
     } else {
-      if (!path.startsWith(before) || !path.endsWith(after) || path.length < before.length + after.length) continue;
+      if (
+        !path.startsWith(before) ||
+        !path.endsWith(after) ||
+        path.length < before.length + after.length
+      )
+        continue;
       splat = path.slice(before.length, path.length - after.length);
     }
     for (const [name, value] of rule.headers) out.set(name, value.replaceAll(":splat", splat));
@@ -66,13 +73,26 @@ await test("no page twin is a static file or a header rule: each is a route that
   assert.ok(CONTENT_PAGES_FROM_DATA.length > 0);
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     const twin = contentPageMarkdownPath(pagePath);
-    assert.equal(headersFor(twin).size, 0, `a rule for ${twin} is a stale copy of what its route sets`);
-    assert.equal(existsSync(join(root, "public", twin.slice(1))), false, `public${twin} would win over its route`);
+    assert.equal(
+      headersFor(twin).size,
+      0,
+      `a rule for ${twin} is a stale copy of what its route sets`,
+    );
+    assert.equal(
+      existsSync(join(root, "public", twin.slice(1))),
+      false,
+      `public${twin} would win over its route`,
+    );
   }
 });
 
 await test("the canonical rule reaches no path it was not written for", () => {
-  for (const path of ["/research/publications/", "/research/publications.json", "/writing/a-post.md", "/llms.txt"]) {
+  for (const path of [
+    "/research/publications/",
+    "/research/publications.json",
+    "/writing/a-post.md",
+    "/llms.txt",
+  ]) {
     assert.equal(headersFor(path).get("link"), undefined, path);
   }
 });

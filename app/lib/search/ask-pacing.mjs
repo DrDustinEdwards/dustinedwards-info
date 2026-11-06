@@ -12,8 +12,7 @@
 export function pacedAllowance(dailyLimit, burst, now) {
   const SECONDS_PER_DAY = 86400;
 
-  const elapsed =
-    now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
+  const elapsed = now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
 
   // floor, not ceil: at 00:00:00 the allowance must be exactly burst.
   const paced = Math.floor((dailyLimit * elapsed) / SECONDS_PER_DAY);

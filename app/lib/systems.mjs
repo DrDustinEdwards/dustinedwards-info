@@ -18,8 +18,27 @@ const Text = (max) => z.string().min(1).max(max);
 // The enums are capsid's (src/system-model.ts), so a value it publishes is never refused here.
 const FAMILIES = /** @type {const} */ (["system", "writing", "product", "plumbing", "site"]);
 const RINGS = /** @type {const} */ (["core", "shared", "used"]);
-const RELATIONSHIP_KINDS = /** @type {const} */ (["installs", "publishes-to", "coordinates", "watches", "reads", "writes", "deploys", "serves"]);
-const CONTAINER_KINDS = /** @type {const} */ (["worker", "database", "bucket", "kv", "queue", "cron", "package", "site", "external"]);
+const RELATIONSHIP_KINDS = /** @type {const} */ ([
+  "installs",
+  "publishes-to",
+  "coordinates",
+  "watches",
+  "reads",
+  "writes",
+  "deploys",
+  "serves",
+]);
+const CONTAINER_KINDS = /** @type {const} */ ([
+  "worker",
+  "database",
+  "bucket",
+  "kv",
+  "queue",
+  "cron",
+  "package",
+  "site",
+  "external",
+]);
 
 const OpenSystem = z.strictObject({
   id: Id,
@@ -48,7 +67,7 @@ const PublicModel = z.strictObject({
       kind: z.enum(CONTAINER_KINDS),
       technology: Text(60),
       description: Text(280).optional(),
-    })
+    }),
   ),
   relationships: z.array(
     z.strictObject({
@@ -57,7 +76,7 @@ const PublicModel = z.strictObject({
       to: Id,
       kind: z.enum(RELATIONSHIP_KINDS),
       title: Text(280).optional(),
-    })
+    }),
   ),
   // Capsid's flows (design section 4): walks the explorer animates. Optional, as Capsid's own
   // schema has it, so a model written before flows existed still parses. Not drawn here.
@@ -74,11 +93,11 @@ const PublicModel = z.strictObject({
               toward: Id,
               text: Text(280),
               lights: z.array(Id).max(8).optional(),
-            })
+            }),
           )
           .min(2)
           .max(20),
-      })
+      }),
     )
     .optional(),
   counts: z.strictObject({
@@ -102,7 +121,11 @@ const PublicModel = z.strictObject({
  */
 export function parseSystemModel(raw) {
   const parsed = PublicModel.safeParse(raw);
-  if (!parsed.success) return { ok: false, problems: parsed.error.issues.map((i) => `${i.path.join(".") || "(model)"}: ${i.message}`) };
+  if (!parsed.success)
+    return {
+      ok: false,
+      problems: parsed.error.issues.map((i) => `${i.path.join(".") || "(model)"}: ${i.message}`),
+    };
   const model = parsed.data;
   const problems = [];
   const systems = new Map(model.systems.map((s) => [s.id, s]));
@@ -114,7 +137,8 @@ export function parseSystemModel(raw) {
   }
   for (const r of model.relationships) {
     for (const end of [r.from, r.to]) {
-      if (!systems.has(end) && !containers.has(end)) problems.push(`relationships.${r.id}: no element ${end}`);
+      if (!systems.has(end) && !containers.has(end))
+        problems.push(`relationships.${r.id}: no element ${end}`);
     }
   }
   const edges = new Map(model.relationships.map((r) => [r.id, r]));
@@ -126,16 +150,22 @@ export function parseSystemModel(raw) {
       const where = `flows.${f.id}.steps.${i + 1}`;
       const edge = edges.get(step.relationship);
       if (!edge) {
-        problems.push(`${where}: rides ${step.relationship}, which is not a relationship in the model`);
+        problems.push(
+          `${where}: rides ${step.relationship}, which is not a relationship in the model`,
+        );
         return;
       }
-      if (step.toward !== edge.from && step.toward !== edge.to) problems.push(`${where}: goes toward ${step.toward}, which is not an end of ${edge.id}`);
+      if (step.toward !== edge.from && step.toward !== edge.to)
+        problems.push(`${where}: goes toward ${step.toward}, which is not an end of ${edge.id}`);
       // A light is a part the step touches, in a system one of its ends belongs to (Capsid's rule).
       const within = new Set([edge.from, edge.to].map((end) => containers.get(end)?.system ?? end));
       for (const l of step.lights ?? []) {
         const part = containers.get(l);
         if (!part) problems.push(`${where}: lights ${l}, which is not a container`);
-        else if (!within.has(part.system)) problems.push(`${where}: lights ${l}, a part of ${part.system}, which the step does not run in`);
+        else if (!within.has(part.system))
+          problems.push(
+            `${where}: lights ${l}, a part of ${part.system}, which the step does not run in`,
+          );
       }
     });
   }
@@ -159,7 +189,8 @@ export function parseSystemModel(raw) {
  */
 export function loadSystemModel(raw) {
   const result = parseSystemModel(raw);
-  if (!result.ok) throw new Error(`data/system-model.json is refused:\n  ${result.problems.join("\n  ")}`);
+  if (!result.ok)
+    throw new Error(`data/system-model.json is refused:\n  ${result.problems.join("\n  ")}`);
   return result.model;
 }
 
@@ -206,12 +237,19 @@ const VERB = {
 export function connectionsOf(model, id) {
   const byId = new Map(model.systems.map((s) => [s.id, s]));
   return model.relationships
-    .filter((r) => (r.from === id || r.to === id) && byId.has(r.from) && byId.has(r.to) && r.from !== r.to)
+    .filter(
+      (r) =>
+        (r.from === id || r.to === id) && byId.has(r.from) && byId.has(r.to) && r.from !== r.to,
+    )
     .map((r) => {
       const out = r.from === id;
       const other = /** @type {ModelSystem} */ (byId.get(out ? r.to : r.from));
       const verb = VERB[r.kind][out ? 0 : 1];
-      return { verb: `${verb.charAt(0).toUpperCase()}${verb.slice(1)}`, other: other.id, name: other.name };
+      return {
+        verb: `${verb.charAt(0).toUpperCase()}${verb.slice(1)}`,
+        other: other.id,
+        name: other.name,
+      };
     });
 }
 
@@ -223,14 +261,16 @@ const RING_HEADINGS = { core: "Runs everything", shared: "Shared parts", used: "
  * @param {SystemModel} model
  * @param {string} id
  */
-export const partsOf = (model, id) => model.containers.filter((c) => c.system === id && c.kind !== "external");
+export const partsOf = (model, id) =>
+  model.containers.filter((c) => c.system === id && c.kind !== "external");
 /**
  * What a system works with outside its boundary: its `external` containers, such as Capsid's
  * Agents and GitHub (Dustin, 2026-10-11), never counted among its own parts.
  * @param {SystemModel} model
  * @param {string} id
  */
-export const outsideOf = (model, id) => model.containers.filter((c) => c.system === id && c.kind === "external");
+export const outsideOf = (model, id) =>
+  model.containers.filter((c) => c.system === id && c.kind === "external");
 
 /**
  * The lines touching a system's parts, to each other or to what is outside it, as sentences
@@ -252,13 +292,15 @@ export function wiresOf(model, id) {
  * One container as the twin and the page write it: name, what it runs on, what it does.
  * @param {SystemModel["containers"][number]} c
  */
-const containerLine = (c) => `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
+const containerLine = (c) =>
+  `${c.name} (${c.technology})${c.description ? `: ${c.description}` : ""}`;
 
 /**
  * What a system's page says about it: its sentence, and that its repo is private when it is.
  * @param {{ description?: string, private?: boolean }} s a system in the model or on the map
  */
-const summaryOf = (s) => [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
+const summaryOf = (s) =>
+  [s.description, s.private ? "Its repo is private." : undefined].filter(Boolean).join(" ");
 
 /**
  * The repo link a public system shows: its first repo, unless it has none.
@@ -308,7 +350,8 @@ export function systemSectionMarkdown(model, id, origin) {
   const parts = partsOf(model, id);
   const outside = outsideOf(model, id);
   if (parts.length) lines.push("", "#### Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
-  if (outside.length) lines.push("", "#### Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
+  if (outside.length)
+    lines.push("", "#### Outside it", "", ...outside.map((c) => `- ${containerLine(c)}`));
   const wires = wiresOf(model, id);
   if (wires.length) lines.push("", "How they connect:", "", ...wires.map((w) => `- ${w}`));
   const links = connectionsOf(model, id);

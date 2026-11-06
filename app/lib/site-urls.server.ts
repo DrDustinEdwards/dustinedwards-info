@@ -10,7 +10,11 @@ import { LIBRARY_BASES } from "~/kb/libraries.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";
 import { LAB_PATH, hasItemPage, itemPath, kindPath } from "~/kb/registry/catalog.mjs";
 import { REGISTRY_CACHE_TAG } from "~/kb/registry/route";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
+import {
+  CONTENT_PAGE_PATHS,
+  CONTENT_PAGES_FROM_DATA,
+  CONTENT_PAGES_OWN_ROUTE,
+} from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
@@ -35,12 +39,24 @@ export const STATIC_PAGES = [
   { path: "/", title: "Home", sources: ["app/routes/home.tsx"] },
   { path: "/about", title: "About", sources: ["app/routes/about.tsx"] },
   { path: "/writing", title: "Articles", sources: ["app/routes/blog._index.tsx"] },
-  { path: "/research/publications", title: "Publications", sources: ["app/routes/publications.tsx"] },
+  {
+    path: "/research/publications",
+    title: "Publications",
+    sources: ["app/routes/publications.tsx"],
+  },
   { path: "/contact", title: "Contact", sources: ["app/routes/contact.tsx"] },
   // SITE_MAP_PATH, written out so check:links can read it off the syntax; test/site-map.test.mjs holds the two equal.
   { path: "/site-map", title: "Site map", sources: ["app/routes/site-map.tsx"] },
-  { path: "/colophon", title: "Colophon", sources: ["app/routes/colophon.tsx", "content/stack-notes.json"] },
-  { path: "/systems", title: "System map", sources: ["app/routes/systems.tsx", "data/system-model.json"] },
+  {
+    path: "/colophon",
+    title: "Colophon",
+    sources: ["app/routes/colophon.tsx", "content/stack-notes.json"],
+  },
+  {
+    path: "/systems",
+    title: "System map",
+    sources: ["app/routes/systems.tsx", "data/system-model.json"],
+  },
 ] as const;
 
 /** The CV, page and PDF, is made from its files and the papers it lists. */
@@ -58,13 +74,20 @@ export const SITE_URLS_CACHE_TAGS = `${POSTS_AND_PROCEDURES_CACHE_TAGS},${CONTEN
 const POSTS: Tally = { key: "posts", label: "Articles", to: "/writing", merge: true };
 // No tag index page and no stable anchor on /writing's tag list, so the count is plain text (site-map.mjs).
 const TAGS: Tally = { key: "tags", label: "Tags", to: "/writing", merge: false };
-const PAPERS: Tally = { key: "papers", label: "Publications", to: "/research/publications", merge: true };
+const PAPERS: Tally = {
+  key: "papers",
+  label: "Publications",
+  to: "/research/publications",
+  merge: true,
+};
 const REGISTRY_ITEMS: Tally = { key: "registry", label: "Lab registry", to: LAB_PATH, merge: true };
 
 /** A procedure is counted under its base's library: Protocols, Software how-tos or Recipes. */
 function procedureTally(path: string): Tally | undefined {
   const base = BASES.find((b) => path.startsWith(b.entryRoot));
-  return base ? { key: `procedures:${base.id}`, label: base.name, to: base.library, merge: true } : undefined;
+  return base
+    ? { key: `procedures:${base.id}`, label: base.name, to: base.library, merge: true }
+    : undefined;
 }
 
 /** Each tracked file's last commit day (scripts/lib/source-dates.mjs). Empty when the build had no history. */
@@ -84,7 +107,8 @@ function sourceDate(files: Iterable<string | null | undefined>): Date | null {
 }
 
 /** The day the newest file under any of these directories last changed. */
-const treeDate = (prefixes: readonly string[]) => sourceDate(Object.keys(DATES).filter((file) => prefixes.some((p) => file.startsWith(p))));
+const treeDate = (prefixes: readonly string[]) =>
+  sourceDate(Object.keys(DATES).filter((file) => prefixes.some((p) => file.startsWith(p))));
 
 /** The images a page's HTML shows, as site paths. A diagram's dark twin is the same picture, so only its light one is listed. */
 function imagesIn(html: string | null): string[] {
@@ -114,7 +138,9 @@ const kindTitle = (kind: string) => {
  * its author wrote; any other page uses its source file's last commit (scripts/lib/source-dates.mjs); an index,
  * tag or series is as new as the newest page it lists. With no dated source, `lastmod` is left out.
  */
-export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files: SiteFile[]; nextPublishAt: Date | null }> {
+export async function gatherSiteUrls(
+  env: Env,
+): Promise<{ urls: SiteUrl[]; files: SiteFile[]; nextPublishAt: Date | null }> {
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   const [
     blog,
@@ -153,21 +179,35 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
   ]);
   const titleOf = (path: string) => pageTitles.get(path) ?? DATA_PAGE_TITLES[path];
   const cvDate = treeDate(CV_SOURCE_TREES);
-  const pageDate = (path: string) => (CONTENT_PAGES_FROM_DATA.includes(path) ? cvDate : sourceDate([pageSources.get(path)]));
+  const pageDate = (path: string) =>
+    CONTENT_PAGES_FROM_DATA.includes(path) ? cvDate : sourceDate([pageSources.get(path)]);
   const postImages = new Map(postsWithImages.map((p) => [p.slug, imagesIn(p.html)]));
-  const itemSource = (item: { kind: string; id: string }) => registrySources.get(`${item.kind}/${item.id}`);
+  const itemSource = (item: { kind: string; id: string }) =>
+    registrySources.get(`${item.kind}/${item.id}`);
 
-  const paperUrls = papers.map((p) => ({ path: paperPath(p.slug), lastmod: sourceDate([paperSources.get(p.slug)]), title: p.title, tally: PAPERS }));
+  const paperUrls = papers.map((p) => ({
+    path: paperPath(p.slug),
+    lastmod: sourceDate([paperSources.get(p.slug)]),
+    title: p.title,
+    tally: PAPERS,
+  }));
   const procedureUrls = procedureRows.map((p) => ({
     path: p.path,
     lastmod: p.updated ? new Date(`${p.updated}T00:00:00.000Z`) : sourceDate([p.sourcePath]),
     title: p.title,
     tally: procedureTally(p.path),
   }));
-  const itemDate = (kind?: string) => sourceDate(registryItems.filter((item) => !kind || item.kind === kind).map(itemSource));
+  const itemDate = (kind?: string) =>
+    sourceDate(registryItems.filter((item) => !kind || item.kind === kind).map(itemSource));
   const postUrls = blog.posts.map((p) => {
     const images = postImages.get(p.slug) ?? [];
-    return { path: `/writing/${p.slug}`, lastmod: p.updatedAt, title: p.title, tally: POSTS, ...(images.length > 0 ? { images } : {}) };
+    return {
+      path: `/writing/${p.slug}`,
+      lastmod: p.updatedAt,
+      title: p.title,
+      tally: POSTS,
+      ...(images.length > 0 ? { images } : {}),
+    };
   });
   const newestPost = latest(postUrls.map((u) => u.lastmod));
   const newestPaper = latest(paperUrls.map((u) => u.lastmod));
@@ -183,18 +223,23 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     "/about": [`/media/${OWNER_PHOTO.key}`],
     [ROSTER_PAGE_PATH]: cohorts.flatMap((cohort) => (cohort.photo ? [cohort.photo.src] : [])),
   };
-  const withImages = (path: string) => (pageImages[path]?.length ? { images: pageImages[path] } : {});
+  const withImages = (path: string) =>
+    pageImages[path]?.length ? { images: pageImages[path] } : {};
 
   const urls: SiteUrl[] = [
     // A page with a route of its own (About) is listed in its place, and only while its row is published.
-    ...STATIC_PAGES.filter(({ path }) => !CONTENT_PAGES_OWN_ROUTE.includes(path) || pageTitles.has(path)).map(({ path, title, sources }) => ({
+    ...STATIC_PAGES.filter(
+      ({ path }) => !CONTENT_PAGES_OWN_ROUTE.includes(path) || pageTitles.has(path),
+    ).map(({ path, title, sources }) => ({
       path,
       lastmod: latest([sourceDate(sources), pageDate(path), listed[path]]),
       title: pageTitles.get(path) ?? title,
       ...withImages(path),
     })),
     // In the registry's order, which is the order the sitemap has always listed them in.
-    ...CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || pageTitles.has(path)).map((path) => ({
+    ...CONTENT_PAGE_PATHS.filter(
+      (path) => CONTENT_PAGES_FROM_DATA.includes(path) || pageTitles.has(path),
+    ).map((path) => ({
       path,
       lastmod: pageDate(path),
       title: titleOf(path) ?? path,
@@ -203,24 +248,50 @@ export async function gatherSiteUrls(env: Env): Promise<{ urls: SiteUrl[]; files
     // No showcase filter: a crawler has no double-counting problem.
     ...paperUrls,
     // A knowledge base's library is listed once it has a published entry; until then it is not a page (kb-library.tsx).
-    ...LIBRARY_BASES.filter((base) => procedureRows.some((p) => p.path.startsWith(base.entryRoot))).map((base) => ({
+    ...LIBRARY_BASES.filter((base) =>
+      procedureRows.some((p) => p.path.startsWith(base.entryRoot)),
+    ).map((base) => ({
       path: base.library,
-      lastmod: latest(procedureUrls.filter((u) => u.path.startsWith(base.entryRoot)).map((u) => u.lastmod)),
+      lastmod: latest(
+        procedureUrls.filter((u) => u.path.startsWith(base.entryRoot)).map((u) => u.lastmod),
+      ),
       title: base.name,
     })),
     ...procedureUrls,
     // The registry's inventory, each kind that has an item, and each item.
     { path: LAB_PATH, lastmod: itemDate(), title: "Lab registry" },
-    ...[...new Set(registryItems.map((item) => item.kind))].map((kind) => ({ path: kindPath(kind), lastmod: itemDate(kind), title: kindTitle(kind) })),
+    ...[...new Set(registryItems.map((item) => item.kind))].map((kind) => ({
+      path: kindPath(kind),
+      lastmod: itemDate(kind),
+      title: kindTitle(kind),
+    })),
     ...registryItems
       .filter((item) => hasItemPage(item.kind))
-      .map((item) => ({ path: itemPath(item.kind, item.id), lastmod: sourceDate([itemSource(item)]), title: item.name, tally: REGISTRY_ITEMS })),
+      .map((item) => ({
+        path: itemPath(item.kind, item.id),
+        lastmod: sourceDate([itemSource(item)]),
+        title: item.name,
+        tally: REGISTRY_ITEMS,
+      })),
     // Each system's page, as new as the model it is drawn from.
-    ...loadSystemModel(rawSystemModel).systems.map((s) => ({ path: systemPath(s.id), lastmod: sourceDate(["app/routes/system.tsx", "data/system-model.json"]), title: s.name })),
+    ...loadSystemModel(rawSystemModel).systems.map((s) => ({
+      path: systemPath(s.id),
+      lastmod: sourceDate(["app/routes/system.tsx", "data/system-model.json"]),
+      title: s.name,
+    })),
     ...postUrls,
     // A tag or series is as new as its newest post.
-    ...tagList.map((t) => ({ path: tagPath(t.slug), lastmod: t.lastmod, title: t.name, tally: TAGS })),
-    ...seriesList.flatMap((row) => (row.name === null ? [] : [{ path: seriesPath(row.name), lastmod: row.lastmod, title: row.name }])),
+    ...tagList.map((t) => ({
+      path: tagPath(t.slug),
+      lastmod: t.lastmod,
+      title: t.name,
+      tally: TAGS,
+    })),
+    ...seriesList.flatMap((row) =>
+      row.name === null
+        ? []
+        : [{ path: seriesPath(row.name), lastmod: row.lastmod, title: row.name }],
+    ),
   ];
   // The site map page lists every page, so it is as new as the newest of them.
   const siteMap = urls.find((url) => url.path === "/site-map");

@@ -115,7 +115,9 @@ export function seedPreview() {
       "utf8",
     );
 
-    const seeded = runWrangler(`d1 execute dustinedwards --local --file "${mentionFile}"`, { cwd: root });
+    const seeded = runWrangler(`d1 execute dustinedwards --local --file "${mentionFile}"`, {
+      cwd: root,
+    });
     refuseUnlessRan(seeded, seeded.output, [
       "check:browser failed. the mention seed did not apply, so the byte-identity",
       "case below would compare two renders of a page with no Mentions section.",
@@ -136,7 +138,9 @@ export function seedPreview() {
         "the media-svg case below would open a 404 and prove nothing about the /media policy.",
       ]);
     }
-    console.log(`  seeded ${Object.keys(MEDIA_SEEDS).length} object(s) into the local MEDIA bucket`);
+    console.log(
+      `  seeded ${Object.keys(MEDIA_SEEDS).length} object(s) into the local MEDIA bucket`,
+    );
   }
 
   let mathPreviewSeeded = false;

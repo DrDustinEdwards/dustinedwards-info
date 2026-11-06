@@ -32,13 +32,19 @@ const pages = await renderContentPages();
 const { entryFor } = await buildDictionary();
 /** The pages this week added, and any page added under their roots later. */
 const ROOTS = ["/software", "/research/tools", "/cv"];
-const added = pages.filter((page) => ROOTS.some((root) => page.path === root || page.path.startsWith(`${root}/`)));
+const added = pages.filter((page) =>
+  ROOTS.some((root) => page.path === root || page.path.startsWith(`${root}/`)),
+);
 const records = recordsForPages(contentPageSearchInputs(pages, entryFor));
 
 await test("the pages under test are the software pages, the calculators and the CV", () => {
   // Scope, so an empty list cannot pass every case below: the eight software pages, four tool pages, the CV.
   assert.ok(added.length >= 13, `only ${added.length} pages`);
-  for (const root of ROOTS) assert.ok(added.some((page) => page.path === root), `${root} has no page`);
+  for (const root of ROOTS)
+    assert.ok(
+      added.some((page) => page.path === root),
+      `${root} has no page`,
+    );
   assert.ok(added.every((page) => CONTENT_PAGE_PATHS.includes(/** @type {any} */ (page.path))));
 });
 
@@ -49,16 +55,26 @@ await test("each page is in the search index: a page record with text, and a rec
     assert.equal(own.type, "page", page.path);
     assert.equal(own.status, "published", page.path);
     assert.equal(own.title, page.title, page.path);
-    assert.ok(own.body.includes(page.description), `${page.path}: the record's text leaves out its description`);
+    assert.ok(
+      own.body.includes(page.description),
+      `${page.path}: the record's text leaves out its description`,
+    );
     const sections = records.filter((record) => record.docUrl === page.path && record.anchor);
     const headings = page.toc.filter((heading) => heading.depth <= 3).length;
-    assert.ok(headings === 0 || sections.length > 0, `${page.path} has ${headings} headings and no section records`);
+    assert.ok(
+      headings === 0 || sections.length > 0,
+      `${page.path} has ${headings} headings and no section records`,
+    );
   }
 });
 
 await test("a term only a page says finds it: the CV, a calculator and a software page", () => {
   const find = (/** @type {string} */ term) =>
-    new Set(records.filter((record) => record.body.toLowerCase().includes(term)).map((record) => record.docUrl));
+    new Set(
+      records
+        .filter((record) => record.body.toLowerCase().includes(term))
+        .map((record) => record.docUrl),
+    );
   assert.ok(find("pfu/ml").has("/research/tools/titer"));
   assert.ok(find("observable plot").has("/software/enarratio"));
   assert.ok(find("tarleton").has("/cv"));
@@ -69,8 +85,15 @@ await test("each page has its markdown twin, led by its title, and is listed in 
   for (const page of added) {
     const twin = contentPageMarkdownBody(page, entryFor(page.path));
     assert.ok(twin.startsWith(`# ${page.title}\n\n`), page.path);
-    assert.ok(twin.length > page.title.length + 200, `${page.path}: a twin of ${twin.length} characters`);
-    assert.match(llms, new RegExp(`^- \\[[^\\]]+\\]\\(https://dustinedwards\\.info${page.path}\\)`, "m"), `${page.path} is not in llms.txt`);
+    assert.ok(
+      twin.length > page.title.length + 200,
+      `${page.path}: a twin of ${twin.length} characters`,
+    );
+    assert.match(
+      llms,
+      new RegExp(`^- \\[[^\\]]+\\]\\(https://dustinedwards\\.info${page.path}\\)`, "m"),
+      `${page.path} is not in llms.txt`,
+    );
   }
 });
 
@@ -86,21 +109,44 @@ await test("each page names its own card, keyed on what the card draws, and a re
   for (const page of added) {
     const card = contentPageCardPath(page);
     assert.equal(card, `/media/${ogImageKey(contentPageCardInput(page))}`, page.path);
-    assert.match(card ?? "", /^\/media\/og\/dustin-edwards-page-[a-z0-9-]+-[0-9a-f]{8}\.png$/, page.path);
+    assert.match(
+      card ?? "",
+      /^\/media\/og\/dustin-edwards-page-[a-z0-9-]+-[0-9a-f]{8}\.png$/,
+      page.path,
+    );
     keys.add(card);
-    assert.notEqual(contentPageCardPath({ ...page, seoTitle: `${page.seoTitle} (revised)` }), card, page.path);
+    assert.notEqual(
+      contentPageCardPath({ ...page, seoTitle: `${page.seoTitle} (revised)` }),
+      card,
+      page.path,
+    );
   }
   assert.equal(keys.size, added.length, "two pages share a card");
-  assert.equal(contentPageCardPath({ path: "/research/phages", seoTitle: "t", description: "d" }), null);
+  assert.equal(
+    contentPageCardPath({ path: "/research/phages", seoTitle: "t", description: "d" }),
+    null,
+  );
 });
 
 await test("the phage table's Dataset facts come from the table itself", () => {
   const phages = pages.find((page) => page.path === "/research/phages");
   assert.ok(phages);
   const facts = markdownTableFacts(phages.markdown);
-  assert.deepEqual(facts?.variableMeasured, ["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
+  assert.deepEqual(facts?.variableMeasured, [
+    "Phage",
+    "Year",
+    "Host",
+    "County",
+    "PhagesDB",
+    "Paper",
+  ]);
   assert.equal(facts?.temporalCoverage, "2017/2025");
   // One row per phage file.
-  assert.equal(facts?.rows, readdirSync(new URL("../content/phages/", import.meta.url)).filter((name) => name.endsWith(".md")).length);
+  assert.equal(
+    facts?.rows,
+    readdirSync(new URL("../content/phages/", import.meta.url)).filter((name) =>
+      name.endsWith(".md"),
+    ).length,
+  );
   assert.equal(markdownTableFacts("No table here.\n"), null);
 });

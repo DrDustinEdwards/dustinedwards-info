@@ -21,7 +21,8 @@ const SOURCE_DATES_PATH = path.join(ROOT, "app", "lib", "source-dates.generated.
 /** The trees a public page is made from: the content, the data files, and the route modules of the coded pages. */
 const SOURCE_TREES = ["content", "data", "app/routes"];
 
-const git = (/** @type {string[]} */ args, cwd = ROOT) => execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+const git = (/** @type {string[]} */ args, cwd = ROOT) =>
+  execFileSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 
 /**
  * Each file's last commit day (`YYYY-MM-DD`, the committer's date in UTC), keyed by its repository path. One `git log`
@@ -35,11 +36,29 @@ export function readSourceDates(cwd = ROOT) {
   let log;
   try {
     if (git(["rev-parse", "--is-shallow-repository"], cwd).trim() !== "false") return {};
-    log = git(["-c", "log.showSignature=false", "-c", "core.quotePath=false", "log", "--no-renames", "--format=%x00%ct", "--name-only", "--", ...SOURCE_TREES], cwd);
+    log = git(
+      [
+        "-c",
+        "log.showSignature=false",
+        "-c",
+        "core.quotePath=false",
+        "log",
+        "--no-renames",
+        "--format=%x00%ct",
+        "--name-only",
+        "--",
+        ...SOURCE_TREES,
+      ],
+      cwd,
+    );
   } catch {
     return {};
   }
-  const tracked = new Set(git(["ls-files", "--", ...SOURCE_TREES], cwd).split("\n").filter(Boolean));
+  const tracked = new Set(
+    git(["ls-files", "--", ...SOURCE_TREES], cwd)
+      .split("\n")
+      .filter(Boolean),
+  );
   /** @type {Record<string, string>} */
   const dates = {};
   for (const block of log.split("\0").slice(1)) {

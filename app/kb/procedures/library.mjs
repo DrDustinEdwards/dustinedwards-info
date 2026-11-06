@@ -3,10 +3,27 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
-import { catalogRedirect, defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogRedirect,
+  defineCatalog,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
-import { CALCULATORS_PATH, COURSES, LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, NON_STRAIN_ORGANISMS, organismLabel, rememberOrganisms } from "./taxonomy.mjs";
+import {
+  CALCULATORS_PATH,
+  COURSES,
+  LIBRARY_PATH,
+  LIBRARY_TABS,
+  METHODS,
+  PHAGE_PIPELINE,
+  courseLabel,
+  methodLabel,
+  NON_STRAIN_ORGANISMS,
+  organismLabel,
+  rememberOrganisms,
+} from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -81,7 +98,14 @@ export const LIBRARY = defineCatalog(
     defaultSort: "title",
     pageSize: 25,
     fields: [
-      { key: "title", label: "Protocol", value: (p) => p.title, search: 3, column: { header: "Protocol" }, sort: true },
+      {
+        key: "title",
+        label: "Protocol",
+        value: (p) => p.title,
+        search: 3,
+        column: { header: "Protocol" },
+        sort: true,
+      },
       { key: "description", label: "Description", value: (p) => p.description, search: 1 },
       {
         key: "method",
@@ -111,10 +135,33 @@ export const LIBRARY = defineCatalog(
         value: (p) => p.courses,
         facet: { kind: "many", label: courseLabel },
       },
-      { key: "fact", label: "Key fact", value: (p) => p.keyFact, column: { header: "Key fact", drop: 2 } },
-      { key: "steps", label: "Steps", value: (p) => p.steps, type: "number", sort: true, column: { header: "Steps", align: "end", drop: 2 } },
-      { key: "links", label: "Quick links", value: () => "", column: { header: "Quick links", drop: 2 } },
-      { key: "updated", label: "Updated", value: (p) => p.updated, type: "date", sort: { labels: { asc: "Updated, oldest first", desc: "Updated, newest first" } } },
+      {
+        key: "fact",
+        label: "Key fact",
+        value: (p) => p.keyFact,
+        column: { header: "Key fact", drop: 2 },
+      },
+      {
+        key: "steps",
+        label: "Steps",
+        value: (p) => p.steps,
+        type: "number",
+        sort: true,
+        column: { header: "Steps", align: "end", drop: 2 },
+      },
+      {
+        key: "links",
+        label: "Quick links",
+        value: () => "",
+        column: { header: "Quick links", drop: 2 },
+      },
+      {
+        key: "updated",
+        label: "Updated",
+        value: (p) => p.updated,
+        type: "date",
+        sort: { labels: { asc: "Updated, oldest first", desc: "Updated, newest first" } },
+      },
     ],
   }),
 );
@@ -129,21 +176,23 @@ export const LIBRARY = defineCatalog(
  */
 export function libraryRecords(items, params, origin) {
   const state = parseCatalogParams(LIBRARY, params);
-  return queryCatalog({ ...LIBRARY, pageSize: undefined }, items, { ...state, page: 1 }).rows.map((p) => ({
-    id: p.slug,
-    title: p.title,
-    url: `${origin}${p.path}`,
-    kind: kindLabel(p.kind),
-    methods: p.methods.map(methodLabel),
-    organisms: p.organisms.map(organismLabel),
-    targets: p.targets,
-    courses: p.courses.map(courseLabel),
-    steps: p.steps,
-    time: p.time,
-    version: p.version,
-    updated: p.updated,
-    description: p.description,
-  }));
+  return queryCatalog({ ...LIBRARY, pageSize: undefined }, items, { ...state, page: 1 }).rows.map(
+    (p) => ({
+      id: p.slug,
+      title: p.title,
+      url: `${origin}${p.path}`,
+      kind: kindLabel(p.kind),
+      methods: p.methods.map(methodLabel),
+      organisms: p.organisms.map(organismLabel),
+      targets: p.targets,
+      courses: p.courses.map(courseLabel),
+      steps: p.steps,
+      time: p.time,
+      version: p.version,
+      updated: p.updated,
+      description: p.description,
+    }),
+  );
 }
 
 /**
@@ -225,7 +274,14 @@ export function overviewMarkdown(overview, origin) {
     "",
     overviewSentence(overview),
     ...(overview.start.length > 0
-      ? ["", "### Start here", "", ...overview.start.map((p, i) => `${i + 1}. [${p.title}](${origin}${p.href}): ${p.description}`)]
+      ? [
+          "",
+          "### Start here",
+          "",
+          ...overview.start.map(
+            (p, i) => `${i + 1}. [${p.title}](${origin}${p.href}): ${p.description}`,
+          ),
+        ]
       : []),
     "",
     "### The phage workflow",
@@ -236,7 +292,10 @@ export function overviewMarkdown(overview, origin) {
       `### ${group.title}`,
       "",
       ...group.tiles.map((t) => {
-        const about = "about" in t && typeof t.about === "string" ? ` ([about the course](${origin}${t.about}))` : "";
+        const about =
+          "about" in t && typeof t.about === "string"
+            ? ` ([about the course](${origin}${t.about}))`
+            : "";
         return `- [${t.label}](${origin}${t.href}): ${countOf(t.count, noun)}${about}`;
       }),
     ]),
@@ -270,7 +329,10 @@ export function methodHref(methods) {
  */
 export function toolLink(id) {
   const tool = TOOLS[id];
-  if (!tool) throw new Error(`the phage workflow names a calculator "${id}" that phage-tools.mjs does not define`);
+  if (!tool)
+    throw new Error(
+      `the phage workflow names a calculator "${id}" that phage-tools.mjs does not define`,
+    );
   return { id, label: tool.title, href: tool.path };
 }
 
@@ -283,9 +345,19 @@ export function toolLink(id) {
  */
 export function libraryOverview(items) {
   /** A tile for each id of a closed list that has a protocol: its words, its count and the library narrowed to it. */
-  const tilesOf = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ list, /** @type {(item: LibraryItem) => readonly string[]} */ valuesOf, /** @type {(id: string) => string} */ label) =>
+  const tilesOf = (
+    /** @type {string} */ key,
+    /** @type {Record<string, unknown>} */ list,
+    /** @type {(item: LibraryItem) => readonly string[]} */ valuesOf,
+    /** @type {(id: string) => string} */ label,
+  ) =>
     Object.keys(list)
-      .map((id) => ({ id, label: label(id), count: items.filter((p) => valuesOf(p).includes(id)).length, href: facetHref(key, [id]) }))
+      .map((id) => ({
+        id,
+        label: label(id),
+        count: items.filter((p) => valuesOf(p).includes(id)).length,
+        href: facetHref(key, [id]),
+      }))
       .filter((tile) => tile.count > 0);
   const tiles = tilesOf("method", METHODS, (p) => p.methods, methodLabel);
   const browse = [
@@ -294,21 +366,51 @@ export function libraryOverview(items) {
       id: "course",
       title: "Browse by course",
       // A course's tile also names the page that describes it, so the course is one click from its protocols.
-      tiles: tilesOf("course", COURSES, (p) => p.courses, courseLabel).map((tile) => ({ ...tile, about: COURSES[/** @type {keyof typeof COURSES} */ (tile.id)].path })),
+      tiles: tilesOf("course", COURSES, (p) => p.courses, courseLabel).map((tile) => ({
+        ...tile,
+        about: COURSES[/** @type {keyof typeof COURSES} */ (tile.id)].path,
+      })),
     },
-    { id: "organism", title: "Browse by organism", tiles: tilesOf("organism", Object.fromEntries([...new Set(items.flatMap((p) => p.organisms))].sort((a, b) => Number(Object.hasOwn(NON_STRAIN_ORGANISMS, a)) - Number(Object.hasOwn(NON_STRAIN_ORGANISMS, b)) || organismLabel(a).localeCompare(organismLabel(b), "en")).map((id) => [id, true])), (p) => p.organisms, organismLabel) },
+    {
+      id: "organism",
+      title: "Browse by organism",
+      tiles: tilesOf(
+        "organism",
+        Object.fromEntries(
+          [...new Set(items.flatMap((p) => p.organisms))]
+            .sort(
+              (a, b) =>
+                Number(Object.hasOwn(NON_STRAIN_ORGANISMS, a)) -
+                  Number(Object.hasOwn(NON_STRAIN_ORGANISMS, b)) ||
+                organismLabel(a).localeCompare(organismLabel(b), "en"),
+            )
+            .map((id) => [id, true]),
+        ),
+        (p) => p.organisms,
+        organismLabel,
+      ),
+    },
   ].filter((group) => group.tiles.length > 0);
   const stages = PHAGE_PIPELINE.map((stage) => {
     const count = items.filter((p) => p.methods.some((m) => stage.methods.includes(m))).length;
     const tools = stage.tools.map((id) => toolLink(id));
-    return { id: stage.id, label: stage.label, count, href: count > 0 ? methodHref(stage.methods) : null, tools };
+    return {
+      id: stage.id,
+      label: stage.label,
+      count,
+      href: count > 0 ? methodHref(stage.methods) : null,
+      tools,
+    };
   });
   // The protocols that say where to begin, in the position each states (never inferred from anything else).
   const start = items
     .filter((p) => p.startHere !== null)
     .sort((a, b) => /** @type {number} */ (a.startHere) - /** @type {number} */ (b.startHere))
     .map((p) => ({ slug: p.slug, title: p.title, href: p.path, description: p.description }));
-  const dates = items.map((p) => p.updated).filter(Boolean).sort();
+  const dates = items
+    .map((p) => p.updated)
+    .filter(Boolean)
+    .sort();
   return {
     total: items.length,
     methods: tiles.length,
@@ -335,7 +437,13 @@ export function libraryTabs(items, chosen, registry = []) {
   const same = (/** @type {readonly string[]} */ methods) =>
     chosen.length === methods.length && methods.every((m) => chosen.includes(m));
   return [
-    { id: "all", label: "All", count: items.length, href: LIBRARY_PATH, current: chosen.length === 0 },
+    {
+      id: "all",
+      label: "All",
+      count: items.length,
+      href: LIBRARY_PATH,
+      current: chosen.length === 0,
+    },
     ...LIBRARY_TABS.map((tab) => ({
       id: tab.id,
       label: tab.label,
@@ -345,7 +453,13 @@ export function libraryTabs(items, chosen, registry = []) {
     })),
     // The calculators are not protocols, so they are not rows of this catalog: their tab is a link to their own page,
     // counted from the registry that holds them, and never the current one here.
-    { id: "calculators", label: "Calculators", count: calculatorCount(), href: CALCULATORS_PATH, current: false },
+    {
+      id: "calculators",
+      label: "Calculators",
+      count: calculatorCount(),
+      href: CALCULATORS_PATH,
+      current: false,
+    },
     ...registry.map((tab) => ({ ...tab, current: false })),
   ];
 }
@@ -364,7 +478,12 @@ function calculatorCount() {
  * @param {URL} url
  */
 export function libraryRedirect(url) {
-  const known = new Set(["q", "sort", "page", ...LIBRARY.fields.filter((f) => f.facet).map((f) => f.key)]);
+  const known = new Set([
+    "q",
+    "sort",
+    "page",
+    ...LIBRARY.fields.filter((f) => f.facet).map((f) => f.key),
+  ]);
   const kept = new URLSearchParams();
   for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
   const only = new URL(url);
@@ -398,7 +517,11 @@ export function libraryCitation({ name, affiliation, origin }) {
 export function libraryDownloads(result) {
   const href = result.href();
   const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
-  return { csv: `${LIBRARY_PATH}.csv${query}`, json: `${LIBRARY_PATH}.json${query}`, markdown: `${LIBRARY_PATH}.md` };
+  return {
+    csv: `${LIBRARY_PATH}.csv${query}`,
+    json: `${LIBRARY_PATH}.json${query}`,
+    markdown: `${LIBRARY_PATH}.md`,
+  };
 }
 
 /**
@@ -437,7 +560,8 @@ export function citeMarkdown(citation, origin) {
 export function workflowContext(items, path) {
   const self = items.find((p) => p.path === path);
   if (!self) return null;
-  const stageOf = (/** @type {LibraryItem} */ p) => PHAGE_PIPELINE.findIndex((stage) => p.methods.some((m) => stage.methods.includes(m)));
+  const stageOf = (/** @type {LibraryItem} */ p) =>
+    PHAGE_PIPELINE.findIndex((stage) => p.methods.some((m) => stage.methods.includes(m)));
   const at = stageOf(self);
   if (at === -1) return null;
   const link = (/** @type {LibraryItem} */ p) => ({ title: p.title, href: p.path });
@@ -450,7 +574,12 @@ export function workflowContext(items, path) {
     return [];
   };
   const stage = /** @type {(typeof PHAGE_PIPELINE)[number]} */ (PHAGE_PIPELINE[at]);
-  return { stage: stage.label, before: nearest(-1), after: nearest(1), tools: stage.tools.map(toolLink) };
+  return {
+    stage: stage.label,
+    before: nearest(-1),
+    after: nearest(1),
+    tools: stage.tools.map(toolLink),
+  };
 }
 
 /**
@@ -461,13 +590,16 @@ export function workflowContext(items, path) {
  */
 export function workflowMarkdown(context, origin) {
   if (!context) return "";
-  const links = (/** @type {Array<{ title: string, href: string }>} */ list) => list.map((p) => `[${p.title}](${origin}${p.href})`).join(", ");
+  const links = (/** @type {Array<{ title: string, href: string }>} */ list) =>
+    list.map((p) => `[${p.title}](${origin}${p.href})`).join(", ");
   return [
     "## In the phage workflow",
     "",
     `Stage: ${context.stage}.`,
     ...(context.before.length > 0 ? ["", `Before this: ${links(context.before)}.`] : []),
     ...(context.after.length > 0 ? ["", `After this: ${links(context.after)}.`] : []),
-    ...(context.tools.length > 0 ? ["", `Calculators: ${links(context.tools.map((t) => ({ title: t.label, href: t.href })))}.`] : []),
+    ...(context.tools.length > 0
+      ? ["", `Calculators: ${links(context.tools.map((t) => ({ title: t.label, href: t.href })))}.`]
+      : []),
   ].join("\n");
 }

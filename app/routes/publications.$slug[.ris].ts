@@ -8,6 +8,10 @@ import type { Route } from "./+types/publications.$slug[.ris]";
 export async function loader({ params, context }: Route.LoaderArgs) {
   const paper = await publicationBySlug(getEnv(context), params.slug);
   return new Response(`${toRis(paper)}\n`, {
-    headers: exportHeaders("application/x-research-info-systems", SHARED_CACHE_CONTROL, `${params.slug}.ris`),
+    headers: exportHeaders(
+      "application/x-research-info-systems",
+      SHARED_CACHE_CONTROL,
+      `${params.slug}.ris`,
+    ),
   });
 }

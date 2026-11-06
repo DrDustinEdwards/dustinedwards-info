@@ -72,7 +72,10 @@ export async function bundleRoutes(entries) {
       // The app build's own islands module, from a real islands build, so the "kB gzipped" line is real.
       // Every URL is the same sentinel as above, so the rendered HTML does not change each time an island's
       // hash does.
-      b.onResolve({ filter: /^virtual:islands$/ }, (args) => ({ path: args.path, namespace: "islands" }));
+      b.onResolve({ filter: /^virtual:islands$/ }, (args) => ({
+        path: args.path,
+        namespace: "islands",
+      }));
       b.onLoad({ filter: /.*/, namespace: "islands" }, async () => ({
         contents: await islandsModuleSource(URL_ASSET),
         loader: "js",
@@ -165,7 +168,5 @@ export async function renderRoute(mod, options) {
 
 /** @param {string} file @returns {Promise<{ default: unknown }>} */
 export async function importBundled(file) {
-  return /** @type {Promise<{ default: unknown }>} */ (
-    import(pathToFileURL(file).href)
-  );
+  return /** @type {Promise<{ default: unknown }>} */ (import(pathToFileURL(file).href));
 }

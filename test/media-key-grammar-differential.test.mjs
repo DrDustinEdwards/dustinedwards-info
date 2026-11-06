@@ -18,8 +18,17 @@ const P = "dustin-edwards-";
 
 await test("classify() accepts every served extension and refuses executable ones", () => {
   const accepted = [
-    "png", "jpg", "jpeg", "webp", "avif", "gif", "svg", "ico",
-    "pdf", "webmanifest", "txt",
+    "png",
+    "jpg",
+    "jpeg",
+    "webp",
+    "avif",
+    "gif",
+    "svg",
+    "ico",
+    "pdf",
+    "webmanifest",
+    "txt",
   ];
   for (const extension of accepted) {
     assert.equal(classify(`/media/${P}${HEX16}.${extension}`).extension, extension);
@@ -38,7 +47,10 @@ const DIMENSION_CASES = [
   [`${P}${HEX16}-1600x900.webp?w=1024#frag`, { width: 1600, height: 900 }],
   [contentKey(DIGEST, "png", { width: 1, height: 1 }), { width: 1, height: 1 }],
   [contentKey(DIGEST, "avif", { width: 99999, height: 99999 }), { width: 99999, height: 99999 }],
-  [contentKey(DIGEST, "webp", { width: 1600, height: 900 }, "Cohort Photo.WEBP"), { width: 1600, height: 900 }],
+  [
+    contentKey(DIGEST, "webp", { width: 1600, height: 900 }, "Cohort Photo.WEBP"),
+    { width: 1600, height: 900 },
+  ],
   [contentKey(DIGEST, "svg", null), null],
   [`og/${RASTER_KEY}`, null],
   [`../${RASTER_KEY}`, null],

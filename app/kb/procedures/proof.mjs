@@ -16,25 +16,37 @@ const PHAGE_KEY = /^[a-z][a-z0-9]*$/;
 export function proofErrors(value) {
   if (value === undefined) return [];
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return ["proof_of_use must be a mapping with `papers` (publication slugs) and/or `phages` (phage keys)"];
+    return [
+      "proof_of_use must be a mapping with `papers` (publication slugs) and/or `phages` (phage keys)",
+    ];
   }
   const errors = [];
   const record = /** @type {Record<string, unknown>} */ (value);
   for (const key of Object.keys(record)) {
-    if (key !== "papers" && key !== "phages") errors.push(`proof_of_use has no field "${key}"; it has papers and phages`);
+    if (key !== "papers" && key !== "phages")
+      errors.push(`proof_of_use has no field "${key}"; it has papers and phages`);
   }
-  for (const [key, pattern] of /** @type {const} */ ([["papers", PAPER_SLUG], ["phages", PHAGE_KEY]])) {
+  for (const [key, pattern] of /** @type {const} */ ([
+    ["papers", PAPER_SLUG],
+    ["phages", PHAGE_KEY],
+  ])) {
     const list = record[key];
     if (list === undefined) continue;
-    if (!Array.isArray(list) || list.length === 0) errors.push(`proof_of_use.${key} must be a non-empty list`);
+    if (!Array.isArray(list) || list.length === 0)
+      errors.push(`proof_of_use.${key} must be a non-empty list`);
     else {
       for (const item of list) {
-        if (typeof item !== "string" || !pattern.test(item)) errors.push(`proof_of_use.${key} has ${JSON.stringify(item)}, which is not a ${key === "papers" ? "publication slug" : "phage key (lower case letters and digits)"}`);
+        if (typeof item !== "string" || !pattern.test(item))
+          errors.push(
+            `proof_of_use.${key} has ${JSON.stringify(item)}, which is not a ${key === "papers" ? "publication slug" : "phage key (lower case letters and digits)"}`,
+          );
       }
-      if (new Set(list).size !== list.length) errors.push(`proof_of_use.${key} names one entry twice`);
+      if (new Set(list).size !== list.length)
+        errors.push(`proof_of_use.${key} names one entry twice`);
     }
   }
-  if (record.papers === undefined && record.phages === undefined) errors.push("proof_of_use is empty: leave it out until there is something to state");
+  if (record.papers === undefined && record.phages === undefined)
+    errors.push("proof_of_use is empty: leave it out until there is something to state");
   return errors;
 }
 
@@ -65,7 +77,12 @@ export function resolveProof(proof, rows) {
   return {
     papers: proof.papers.map((slug) => {
       const paper = rows.papers.get(slug);
-      return { slug, title: paper?.title ?? slug, year: paper?.year ?? null, href: paper ? `/research/publications/${slug}/` : null };
+      return {
+        slug,
+        title: paper?.title ?? slug,
+        year: paper?.year ?? null,
+        href: paper ? `/research/publications/${slug}/` : null,
+      };
     }),
     phages: proof.phages.map((key) => {
       const name = rows.phages.get(key);
@@ -82,11 +99,17 @@ export function resolveProof(proof, rows) {
  */
 export function proofMarkdown(proof, origin) {
   if (!proof) return "";
-  const link = (/** @type {string} */ text, /** @type {string | null} */ href) => (href ? `[${text}](${origin}${href})` : text);
+  const link = (/** @type {string} */ text, /** @type {string | null} */ href) =>
+    href ? `[${text}](${origin}${href})` : text;
   return [
     "## Proof of use",
     ...(proof.papers.length > 0
-      ? ["", "Papers that used this method:", "", ...proof.papers.map((p) => `- ${link(p.title, p.href)}${p.year ? ` (${p.year})` : ""}`)]
+      ? [
+          "",
+          "Papers that used this method:",
+          "",
+          ...proof.papers.map((p) => `- ${link(p.title, p.href)}${p.year ? ` (${p.year})` : ""}`),
+        ]
       : []),
     ...(proof.phages.length > 0
       ? ["", "Phages it produced:", "", ...proof.phages.map((p) => `- ${link(p.name, p.href)}`)]

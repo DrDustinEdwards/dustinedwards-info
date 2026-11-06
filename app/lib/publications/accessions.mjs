@@ -15,7 +15,11 @@ const MAX_SECTION = 900;
 // Per registry because the URL differs: one builder would link an SRA run to nuccore, a 404. The version
 // suffix is dropped: NCBI resolves to the current one and the statement does not pin a revision.
 const GRAMMARS = [
-  { kind: "bioproject", re: /\bPRJ[A-Z]{2}\d{4,}\b/g, url: "https://www.ncbi.nlm.nih.gov/bioproject/" },
+  {
+    kind: "bioproject",
+    re: /\bPRJ[A-Z]{2}\d{4,}\b/g,
+    url: "https://www.ncbi.nlm.nih.gov/bioproject/",
+  },
   { kind: "biosample", re: /\bSAM[A-Z]\d{4,}\b/g, url: "https://www.ncbi.nlm.nih.gov/biosample/" },
   { kind: "sra", re: /\bSR[XRPS]\d{5,}\b/g, url: "https://www.ncbi.nlm.nih.gov/sra/" },
   {
@@ -40,7 +44,10 @@ export function accessionsInText(pages) {
   const start = SECTION_START.exec(flat);
   if (!start) return [];
 
-  const after = flat.slice(start.index + start[0].length, start.index + start[0].length + MAX_SECTION);
+  const after = flat.slice(
+    start.index + start[0].length,
+    start.index + start[0].length + MAX_SECTION,
+  );
   const end = SECTION_END.exec(after);
   const section = end ? after.slice(0, end.index) : after;
 

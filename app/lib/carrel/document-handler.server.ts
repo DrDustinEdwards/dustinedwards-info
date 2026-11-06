@@ -28,14 +28,25 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
   /** A write names the one document, or is refused with the reason. */
   function target(slug: string) {
     if (slug !== LLMS_SLUG) {
-      throw new RefusedError(`"${slug}" names no document. The only document is "${LLMS_SLUG}" (${LLMS_PATH}); a save cannot create another.`);
+      throw new RefusedError(
+        `"${slug}" names no document. The only document is "${LLMS_SLUG}" (${LLMS_PATH}); a save cannot create another.`,
+      );
     }
   }
 
   /** One write through saveLlms as the Carrel actor, answered in the package's terms. */
-  async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    slug: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     try {
-      const saved = await saveLlms(env, { raw, expectedBlobSha: expectedVersion ?? undefined, actor: { kind: "carrel", changeId } });
+      const saved = await saveLlms(env, {
+        raw,
+        expectedBlobSha: expectedVersion ?? undefined,
+        actor: { kind: "carrel", changeId },
+      });
       return { id: slug, version: saved.sourceBlobSha, status: "published", changeId };
     } catch (error) {
       return asSiteApiError(env, error, LLMS_PATH);
@@ -50,13 +61,17 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
   }
 
   /** A save, which is also the publish: the document has no state to change. */
-  async function save(slug: string, input: { changeId: string; source?: string; expectedVersion: string | null }) {
+  async function save(
+    slug: string,
+    input: { changeId: string; source?: string; expectedVersion: string | null },
+  ) {
     target(slug);
     const stored = await readFile(env, LLMS_PATH);
     // The file always exists, so a save that names no version is a conflict, as a page's is.
     if (input.expectedVersion === null && stored) throw new VersionConflictError(stored.sha);
     if (input.expectedVersion !== null && !stored) throw new VersionConflictError(null);
-    if (!stored) throw new RefusedError(`${LLMS_PATH} is missing from the repository, so it cannot be saved.`);
+    if (!stored)
+      throw new RefusedError(`${LLMS_PATH} is missing from the repository, so it cannot be saved.`);
     return write(slug, input.changeId, input.source ?? stored.content, input.expectedVersion);
   }
 
@@ -76,7 +91,9 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
         // The settings row carries no timestamp, and the file's last change is the revision list.
         updatedAt: null,
       };
-      const matches = (!query.status || query.status === "published") && (!needle || TITLE.includes(needle) || LLMS_SLUG.includes(needle));
+      const matches =
+        (!query.status || query.status === "published") &&
+        (!needle || TITLE.includes(needle) || LLMS_SLUG.includes(needle));
       return matches ? [summary] : [];
     },
 
@@ -109,7 +126,9 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
     },
 
     async unpublish() {
-      throw new RefusedError(`${TITLE} cannot be unpublished: it is the document agents read first, and it has no draft state.`);
+      throw new RefusedError(
+        `${TITLE} cannot be unpublished: it is the document agents read first, and it has no draft state.`,
+      );
     },
 
     revisions(slug) {

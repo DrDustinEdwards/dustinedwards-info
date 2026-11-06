@@ -30,7 +30,10 @@ type LlmsEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 class LlmsInvalid extends ContentInvalid {
   constructor(errors: string[]) {
-    super(`${LLMS_PATH} was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `${LLMS_PATH} was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "LlmsInvalid";
   }
 }
@@ -87,21 +90,38 @@ async function rowIsCurrent(env: LlmsEnv, raw: string) {
 /** The llms.txt save. */
 export async function saveLlms(
   env: LlmsEnv,
-  options: { raw: string; expectedHeadSha?: string | null;
+  options: {
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; actor: Actor },
+    expectedBlobSha?: string | null;
+    actor: Actor;
+  },
 ) {
   const { raw, actor } = options;
   const existing = await readFile(env, LLMS_PATH);
   if (!existing) {
-    throw new LlmsInvalid([`${LLMS_PATH} is missing from the repository, so there is nothing to edit. A save does not create it.`]);
+    throw new LlmsInvalid([
+      `${LLMS_PATH} is missing from the repository, so there is nothing to edit. A save does not create it.`,
+    ]);
   }
 
   const compiled = await compileLlms(env, raw);
   if (!compiled.ok) throw new LlmsInvalid(compiled.errors);
-  decideFileWrite({ actor, noun: "llms.txt", incomingDraft: false, priorRaw: existing.content, isDraft: () => false });
+  decideFileWrite({
+    actor,
+    noun: "llms.txt",
+    incomingDraft: false,
+    priorRaw: existing.content,
+    isDraft: () => false,
+  });
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -116,10 +136,20 @@ export async function saveLlms(
       }),
   });
   if (written.action === "noop") {
-    return { commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, note: UNCHANGED_NOTE, purged: null as PurgeOutcome };
+    return {
+      commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
+      unchanged: true,
+      note: UNCHANGED_NOTE,
+      purged: null as PurgeOutcome,
+    };
   }
   const { commitSha, blobShas } = written;
-  if (written.action === "commit" && blobShas[LLMS_PATH] && blobShas[LLMS_PATH] !== compiled.sourceBlobSha) {
+  if (
+    written.action === "commit" &&
+    blobShas[LLMS_PATH] &&
+    blobShas[LLMS_PATH] !== compiled.sourceBlobSha
+  ) {
     throw new Error(
       `${LLMS_PATH} WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[LLMS_PATH]}) are not ` +
         `the bytes judged (${compiled.sourceBlobSha}), so the row was not updated. Run sync_llms to rebuild it ` +
@@ -140,5 +170,10 @@ export async function saveLlms(
     commitSha,
   });
 
-  return { commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action !== "commit", purged };
+  return {
+    commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
+    unchanged: written.action !== "commit",
+    purged,
+  };
 }

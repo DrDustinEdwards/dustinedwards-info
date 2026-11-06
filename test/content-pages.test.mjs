@@ -17,22 +17,33 @@ const pagesDir = new URL("../content/pages/", import.meta.url);
 await test("every listed page has its markdown file, unless its markdown is generated from data", () => {
   for (const path of CONTENT_PAGE_PATHS) {
     if (CONTENT_PAGES_FROM_DATA.includes(path)) {
-      assert.ok(!existsSync(new URL(contentPageFile(path), pagesDir)), `${path}: a stale ${contentPageFile(path)}`);
+      assert.ok(
+        !existsSync(new URL(contentPageFile(path), pagesDir)),
+        `${path}: a stale ${contentPageFile(path)}`,
+      );
       continue;
     }
-    assert.ok(existsSync(new URL(contentPageFile(path), pagesDir)), `${path}: ${contentPageFile(path)}`);
+    assert.ok(
+      existsSync(new URL(contentPageFile(path), pagesDir)),
+      `${path}: ${contentPageFile(path)}`,
+    );
   }
 });
 
 await test("a page's file is its path with slashes as hyphens", () => {
-  assert.equal(contentPageFile("/research/protocols/coi-primers"), "research-protocols-coi-primers.md");
+  assert.equal(
+    contentPageFile("/research/protocols/coi-primers"),
+    "research-protocols-coi-primers.md",
+  );
   assert.equal(contentPageFile("/teaching"), "teaching.md");
 });
 
 await test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
   // The protocols are procedures, drawn from D1 (docs/PROCEDURES.md), so their files say they exist.
   const procedures = publishedProcedurePaths();
-  const notHere = PENDING_TARGETS.filter((p) => !CONTENT_PAGE_PATHS.includes(p) && !procedures.includes(p));
+  const notHere = PENDING_TARGETS.filter(
+    (p) => !CONTENT_PAGE_PATHS.includes(p) && !procedures.includes(p),
+  );
   assert.deepEqual(notHere, []);
 });
 
@@ -40,8 +51,14 @@ await test("every old phage address Google knows lands on a heading of /research
   // /discovery-of-{name}/ 301s to /research/phages#{name}; rehype-slug gives a plain-name heading that id. The
   // headings are drawn from the phage files (docs/PHAGES.md), one per file, named for it, and the page compile
   // holds each to its ### section (app/lib/pages/invariants.mjs), so the file names are the ids.
-  const ids = new Set(readdirSync(new URL("../content/phages/", import.meta.url)).filter((n) => n.endsWith(".md")).map((n) => n.slice(0, -3)));
-  const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"));
+  const ids = new Set(
+    readdirSync(new URL("../content/phages/", import.meta.url))
+      .filter((n) => n.endsWith(".md"))
+      .map((n) => n.slice(0, -3)),
+  );
+  const gsc = JSON.parse(
+    readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"),
+  );
   const names = gsc.paths
     .map((p) => /^\/(?:discovery|annotation)-of-([a-z0-9-]+)\/$/.exec(p)?.[1])
     .filter((n) => n !== undefined);
@@ -49,8 +66,15 @@ await test("every old phage address Google knows lands on a heading of /research
   // Dustin's ruling (#291) removed these four from the table. Their old addresses still 301 to the page, which
   // opens at the top, so they are named here and not silently allowed; a fifth removal is a new decision.
   const removed = new Set(["tarleton", "astrid", "jaykay", "muskman"]);
-  assert.deepEqual(names.filter((n) => !ids.has(n) && !removed.has(n)), []);
-  assert.deepEqual([...removed].filter((n) => ids.has(n)), [], "a phage back in the table needs no exception");
+  assert.deepEqual(
+    names.filter((n) => !ids.has(n) && !removed.has(n)),
+    [],
+  );
+  assert.deepEqual(
+    [...removed].filter((n) => ids.has(n)),
+    [],
+    "a phage back in the table needs no exception",
+  );
 });
 
 await test("a page trails back to its hub, through the page it sits under; a hub stands alone", () => {
@@ -60,21 +84,29 @@ await test("a page trails back to its hub, through the page it sits under; a hub
   ]);
   const titles = new Map([["/teaching/virus-isolation", "Virus Isolation Course"]]);
   assert.deepEqual(
-    contentPageTrail({ path: "/teaching/virus-isolation/faq", title: "Lab Calculations" }, (p) => titles.get(p)),
+    contentPageTrail({ path: "/teaching/virus-isolation/faq", title: "Lab Calculations" }, (p) =>
+      titles.get(p),
+    ),
     [
       ["Teaching", "/teaching"],
       ["Virus Isolation Course", "/teaching/virus-isolation"],
       ["Lab Calculations", "/teaching/virus-isolation/faq"],
     ],
   );
-  assert.deepEqual(contentPageTrail({ path: "/research", title: "Research" }), [["Research", "/research"]]);
-  assert.deepEqual(contentPageTrail({ path: "/teaching", title: "Teaching" }), [["Teaching", "/teaching"]]);
+  assert.deepEqual(contentPageTrail({ path: "/research", title: "Research" }), [
+    ["Research", "/research"],
+  ]);
+  assert.deepEqual(contentPageTrail({ path: "/teaching", title: "Teaching" }), [
+    ["Teaching", "/teaching"],
+  ]);
 });
 
 await test("a draft page is left out of the pages a reader can open; the CV, generated from data, never is", () => {
   const all = CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path));
   assert.deepEqual(publishedContentPagePaths(all), [...CONTENT_PAGE_PATHS]);
-  const withoutAccessibility = publishedContentPagePaths(all.filter((path) => path !== "/accessibility"));
+  const withoutAccessibility = publishedContentPagePaths(
+    all.filter((path) => path !== "/accessibility"),
+  );
   assert.ok(!withoutAccessibility.includes("/accessibility"));
   assert.ok(withoutAccessibility.includes("/cv"));
   assert.deepEqual(publishedContentPagePaths([]), [...CONTENT_PAGES_FROM_DATA]);

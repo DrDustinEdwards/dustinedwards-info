@@ -72,13 +72,13 @@ export async function run({ browser }) {
          judged, so neither repair below applies, and the cause is the error itself. */
       AUTH_RESULT.status === 0
         ? `GET /admin never got an answer: ${AUTH_RESULT.error ?? "no error was recorded"}. ` +
-          `No credential was judged, so this is ${ADMIN_ORIGIN} being unreachable from here, ` +
-          `not an expired session or a drifted token.\n` +
-          `        The admin cases below did not run.`
+            `No credential was judged, so this is ${ADMIN_ORIGIN} being unreachable from here, ` +
+            `not an expired session or a drifted token.\n` +
+            `        The admin cases below did not run.`
         : `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
-          `the smoke path reports one rather than guessing:\n` +
-          `        ${smokeRepair(AUTH_RESULT.status)}\n` +
-          `        The admin cases below did not run.`,
+            `the smoke path reports one rather than guessing:\n` +
+            `        ${smokeRepair(AUTH_RESULT.status)}\n` +
+            `        The admin cases below did not run.`,
     );
   } else {
     /* State which credential ran: the smoke token is read-only, so its green says nothing about writes. */
@@ -155,7 +155,11 @@ export async function run({ browser }) {
       await admin.goto(`${ADMIN_ORIGIN}${slug}`, { waitUntil: "networkidle0" });
       await new Promise((r) => setTimeout(r, 2500));
       const mounted = await admin.evaluate(() => !!document.querySelector(".cm-editor"));
-      ok("the CodeMirror chunk was fetched", fetched.length > 0, "no markdown-editor chunk request");
+      ok(
+        "the CodeMirror chunk was fetched",
+        fetched.length > 0,
+        "no markdown-editor chunk request",
+      );
       ok(
         "the chunk was served, not refused",
         fetched.every((s) => s === 200),
@@ -178,7 +182,10 @@ export async function run({ browser }) {
     const library = await admin.evaluate(() => {
       const root = document.querySelector(".cap-media-lib");
       return root
-        ? { display: getComputedStyle(root).display, files: root.querySelectorAll(".cap-media-tile").length }
+        ? {
+            display: getComputedStyle(root).display,
+            files: root.querySelectorAll(".cap-media-tile").length,
+          }
         : null;
     });
     ok(
@@ -241,8 +248,11 @@ export async function run({ browser }) {
           `${path}: ${what} does not scroll sideways at ${width}px`,
           o.scrollW <= o.clientW,
           `scrollWidth ${o.scrollW} exceeds clientWidth ${o.clientW} by ` +
-            `${o.scrollW - o.clientW}px. Widest: ${o.over.join(", ") || "(nothing measured wider " +
-              "than the viewport, so the overflow is on an element this scan skipped)"}`,
+            `${o.scrollW - o.clientW}px. Widest: ${
+              o.over.join(", ") ||
+              "(nothing measured wider " +
+                "than the viewport, so the overflow is on an element this scan skipped)"
+            }`,
         );
       }
     }
@@ -282,7 +292,7 @@ export async function run({ browser }) {
         : `bar ends at ${bar.right} and ${bar.out
             .map((k) => `${k.sel}@${k.right}`)
             .join(", ")} extend past it. The document may not scroll, but the ` +
-          `controls are being clipped.`,
+            `controls are being clipped.`,
     );
 
     /*
@@ -321,7 +331,8 @@ export async function run({ browser }) {
             if (control.matches("[aria-controls], [popovertarget], [aria-haspopup]")) continue;
             const href = control instanceof HTMLAnchorElement ? new URL(control.href) : null;
             const words = control.cloneNode(true);
-            if (words instanceof Element) for (const mark of words.querySelectorAll('[aria-hidden="true"]')) mark.remove();
+            if (words instanceof Element)
+              for (const mark of words.querySelectorAll('[aria-hidden="true"]')) mark.remove();
             const name = (control.getAttribute("aria-label") || words.textContent || "")
               .replace(/\s*\([^)]*\)\s*$/, "")
               .replace(/\s+/g, " ")

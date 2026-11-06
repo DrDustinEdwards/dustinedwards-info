@@ -16,7 +16,9 @@ export default function start(): void {
     if (!audio || !controls || !play || !seek || !elapsed || !total) continue;
 
     const duration = () =>
-      Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(seek.max) || 0;
+      Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : Number(seek.max) || 0;
 
     let dragging = false;
     /**

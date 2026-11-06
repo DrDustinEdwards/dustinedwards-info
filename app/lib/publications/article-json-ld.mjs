@@ -86,7 +86,12 @@ export function paperJsonLd(paper, context) {
                     "@type": "PublicationVolume",
                     volumeNumber: String(paper.volume),
                     ...(paper.issue
-                      ? { hasPart: { "@type": "PublicationIssue", issueNumber: String(paper.issue) } }
+                      ? {
+                          hasPart: {
+                            "@type": "PublicationIssue",
+                            issueNumber: String(paper.issue),
+                          },
+                        }
                       : {}),
                   },
                 }

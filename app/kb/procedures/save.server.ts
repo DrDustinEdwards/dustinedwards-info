@@ -27,7 +27,10 @@ type ProcedureEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class ProcedureInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "ProcedureInvalid";
   }
 }
@@ -45,15 +48,26 @@ export async function compile(env: ProcedureEnv, slug: string, raw: string) {
     pipeline: { renderBody, findWideDashes },
     resolveImage: makeResolveImage(env),
     // The primers and host strains a protocol names are the lab registry's, read from the repository as CI reads them (docs/REGISTRY.md).
-    registry: { primers: (ids) => readPrimers(env, ids), strains: (ids) => readStrains(env, ids), reagents: (ids) => readReagents(env, ids), equipment: (ids) => readEquipment(env, ids) },
+    registry: {
+      primers: (ids) => readPrimers(env, ids),
+      strains: (ids) => readStrains(env, ids),
+      reagents: (ids) => readReagents(env, ids),
+      equipment: (ids) => readEquipment(env, ids),
+    },
   });
   if (!compiled.ok) return compiled;
   // A published variant points at words that are frozen (P3): the version of its parent it was copied at has its copy.
   const from = compiled.record.forkedFrom;
-  if (from?.version && !compiled.record.draft && (await frozenBlobSha(env, from.slug, from.version)) === null) {
+  if (
+    from?.version &&
+    !compiled.record.draft &&
+    (await frozenBlobSha(env, from.slug, from.version)) === null
+  ) {
     return {
       ok: false as const,
-      errors: [`forked_from names version ${from.version} of ${from.slug}, which has no frozen copy: publish that version of ${from.slug} first, or keep this variant a draft`],
+      errors: [
+        `forked_from names version ${from.version} of ${from.slug}, which has no frozen copy: publish that version of ${from.slug} first, or keep this variant a draft`,
+      ],
       gaps: compiled.gaps,
     };
   }
@@ -111,7 +125,10 @@ function frozenEditMessage(record: { version: string | null; path: string }) {
  * change it. `compile` has already refused a file that would change a frozen version, so the check after the batch
  * is the last line of defense: it fails loudly if the sealed copy is not made from this file.
  */
-export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
+export async function writeRow(
+  env: ProcedureEnv,
+  compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>,
+) {
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
@@ -182,33 +199,51 @@ export async function deleteProcedureRow(env: ProcedureEnv, row: { slug: string;
 
 /** True when D1's row for the procedure was compiled from exactly this file (the git blob sha matches). */
 async function rowIsCurrent(env: ProcedureEnv, slug: string, blobSha: string) {
-  const row = await env.DB.prepare("SELECT status, version, source_blob_sha FROM procedures WHERE slug = ?1")
+  const row = await env.DB.prepare(
+    "SELECT status, version, source_blob_sha FROM procedures WHERE slug = ?1",
+  )
     .bind(slug)
     .first<{ status: string; version: string | null; source_blob_sha: string | null }>();
   if (row?.source_blob_sha !== blobSha) return false;
   // A published version with no frozen copy yet is not current: the save that writes the row freezes it.
-  if (row.status === "published" && row.version) return (await frozenBlobSha(env, slug, row.version)) !== null;
+  if (row.status === "published" && row.version)
+    return (await frozenBlobSha(env, slug, row.version)) !== null;
   return true;
 }
 
 /** save_procedure. */
 export async function saveProcedure(
   env: ProcedureEnv,
-  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    slug: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ) {
   const { slug, raw, actor } = options;
   const path = procedurePath(slug);
   const existing = await readFile(env, path);
-  if (options.isNew && existing) throw new ProcedureInvalid(slug, [`a procedure named ${slug} already exists`]);
-  if (!options.isNew && !existing) throw new ProcedureInvalid(slug, [`no procedure named ${slug} exists; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new ProcedureInvalid(slug, [`a procedure named ${slug} already exists`]);
+  if (!options.isNew && !existing)
+    throw new ProcedureInvalid(slug, [
+      `no procedure named ${slug} exists; pass isNew to create it`,
+    ]);
 
   const compiled = await compile(env, slug, raw);
   if (!compiled.ok) throw new ProcedureInvalid(slug, compiled.errors);
   decideProcedure(actor, compiled.record.draft, existing?.content ?? null);
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,

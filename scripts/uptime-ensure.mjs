@@ -38,7 +38,9 @@ if (!key) {
 
 const contactsRes = await call(key, "/alert-contacts");
 if (!contactsRes.ok) {
-  console.error(`GET /alert-contacts answered ${contactsRes.status}: ${contactsRes.text.slice(0, 300)}`);
+  console.error(
+    `GET /alert-contacts answered ${contactsRes.status}: ${contactsRes.text.slice(0, 300)}`,
+  );
   process.exit(1);
 }
 const contacts = Array.isArray(contactsRes.body?.data) ? contactsRes.body.data : [];
@@ -80,7 +82,9 @@ let changed = 0;
  */
 function manifestEntry(name, body) {
   if (!Number.isInteger(body?.id) || body.id <= 0 || typeof body.url !== "string") {
-    console.error(`  ${name}: UptimeRobot answered without a monitor id and url: ${JSON.stringify(body)}`);
+    console.error(
+      `  ${name}: UptimeRobot answered without a monitor id and url: ${JSON.stringify(body)}`,
+    );
     process.exit(1);
   }
   return { id: body.id, url: body.url };
@@ -147,7 +151,9 @@ for (const want of desired) {
   if (isPaused) {
     const started = await call(key, `/monitors/${match.id}/start`, { method: "POST", body: {} });
     if (!started.ok) {
-      console.error(`  resume ${want.key} answered ${started.status}: ${started.text.slice(0, 300)}`);
+      console.error(
+        `  resume ${want.key} answered ${started.status}: ${started.text.slice(0, 300)}`,
+      );
       process.exit(1);
     }
   }
@@ -175,7 +181,11 @@ if (Object.keys(manifest).length !== desired.length) {
 }
 
 // Sorted and newline-terminated so a run that changed nothing is byte-identical and shows no diff.
-const ordered = Object.fromEntries(Object.keys(manifest).sort().map((k) => [k, manifest[k]]));
+const ordered = Object.fromEntries(
+  Object.keys(manifest)
+    .sort()
+    .map((k) => [k, manifest[k]]),
+);
 writeFileSync(MANIFEST_PATH, `${JSON.stringify(ordered, null, 2)}\n`, "utf8");
 
 console.log(`\n  manifest: scripts/uptime-monitors.json`);

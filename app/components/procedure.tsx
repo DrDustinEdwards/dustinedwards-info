@@ -13,7 +13,18 @@ import { cueStages, splitCyclingTables } from "~/kb/procedures/cycling.mjs";
 import { miseEnPlace, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
 import { contentPicture } from "~/lib/media/images.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
-import { type Block, EquipmentTable, Heading, KeyResourcesTable, MaterialsTable, ProcedureFacts, ScaleForm, Solutions, html, materialsHeading } from "~/components/procedure-materials";
+import {
+  type Block,
+  EquipmentTable,
+  Heading,
+  KeyResourcesTable,
+  MaterialsTable,
+  ProcedureFacts,
+  ScaleForm,
+  Solutions,
+  html,
+  materialsHeading,
+} from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
 import { RENDERED } from "~/lib/content/render-version";
 
@@ -74,9 +85,15 @@ function proseWithPrograms(record: ProcedureRecord) {
  */
 function CyclingProgram({ program }: { program: unknown }) {
   const stages = cueStages(program);
-  const set = typeof (program as { set?: unknown })?.set === "string" ? (program as { set: string }).set : null;
+  const set =
+    typeof (program as { set?: unknown })?.set === "string"
+      ? (program as { set: string }).set
+      : null;
   return (
-    <ol className="procedure-program" aria-label={set ? `Cycling program: ${set}` : "Cycling program"}>
+    <ol
+      className="procedure-program"
+      aria-label={set ? `Cycling program: ${set}` : "Cycling program"}
+    >
       {stages.map((stage, n) => (
         <li key={n} className="cap-cue">
           <p className="cap-cue-strip">
@@ -110,16 +127,31 @@ function CyclingProgram({ program }: { program: unknown }) {
  * the procedure's live page, with its version (null when none is assigned); null when the procedure is no longer
  * published.
  */
-export function VersionNotice({ record, current }: { record: ProcedureRecord; current: { path: string; version: string | null } | null }) {
+export function VersionNotice({
+  record,
+  current,
+}: {
+  record: ProcedureRecord;
+  current: { path: string; version: string | null } | null;
+}) {
   if (current && current.version === record.version) return null;
   const date = citeFacts(record)?.date;
   return (
     <p className="procedure-version-notice" role="note">
       This is version {record.version}
-      {date ? <>, dated <time dateTime={date}>{date}</time></> : null}, kept as it was published.{" "}
+      {date ? (
+        <>
+          , dated <time dateTime={date}>{date}</time>
+        </>
+      ) : null}
+      , kept as it was published.{" "}
       {current ? (
         <>
-          {current.version ? <>The current version is version {current.version}: </> : <>The procedure has since moved on: </>}
+          {current.version ? (
+            <>The current version is version {current.version}: </>
+          ) : (
+            <>The procedure has since moved on: </>
+          )}
           <a href={current.path}>read the current page</a>.
         </>
       ) : (
@@ -130,7 +162,15 @@ export function VersionNotice({ record, current }: { record: ProcedureRecord; cu
 }
 
 /** What changed in each version, newest first. Nothing is drawn until the file writes a history. */
-function VersionHistory({ record, basePath, frozen }: { record: ProcedureRecord; basePath: string; frozen: string[] }) {
+function VersionHistory({
+  record,
+  basePath,
+  frozen,
+}: {
+  record: ProcedureRecord;
+  basePath: string;
+  frozen: string[];
+}) {
   // A row compiled before histories existed has no `history` until the next sync rewrites it.
   if (!record.history?.length) return null;
   return (
@@ -139,8 +179,15 @@ function VersionHistory({ record, basePath, frozen }: { record: ProcedureRecord;
       <ol className="procedure-history" reversed>
         {record.history.map((h) => (
           <li key={h.version}>
-            <strong>{frozen.includes(h.version) ? <a href={versionPath(basePath, h.version)}>Version {h.version}</a> : <>Version {h.version}</>}</strong>,{" "}
-            <time dateTime={h.date}>{h.date}</time>: <span dangerouslySetInnerHTML={html(h.summaryHtml)} />
+            <strong>
+              {frozen.includes(h.version) ? (
+                <a href={versionPath(basePath, h.version)}>Version {h.version}</a>
+              ) : (
+                <>Version {h.version}</>
+              )}
+            </strong>
+            , <time dateTime={h.date}>{h.date}</time>:{" "}
+            <span dangerouslySetInnerHTML={html(h.summaryHtml)} />
             {h.doi ? (
               <>
                 {" "}
@@ -163,7 +210,10 @@ function VersionHistory({ record, basePath, frozen }: { record: ProcedureRecord;
 function CiteBlock({ record }: { record: ProcedureRecord }) {
   const facts = citeFacts(record);
   if (!facts) return null;
-  const where = { origin: SITE_ORIGIN, creator: { name: SITE.name, affiliation: SITE.affiliation } };
+  const where = {
+    origin: SITE_ORIGIN,
+    creator: { name: SITE.name, affiliation: SITE.affiliation },
+  };
   return (
     <section aria-labelledby="cite-this-procedure">
       <Heading id="cite-this-procedure">Cite this procedure</Heading>
@@ -179,12 +229,16 @@ function CiteBlock({ record }: { record: ProcedureRecord }) {
 }
 
 function commandsOf(record: ProcedureRecord) {
-  return record.sections.flatMap((s) => s.blocks.flatMap((b) => (b.type === "steps" ? b.steps.flatMap((st) => st.commands) : [])));
+  return record.sections.flatMap((s) =>
+    s.blocks.flatMap((b) => (b.type === "steps" ? b.steps.flatMap((st) => st.commands) : [])),
+  );
 }
 
 function hasCalculators(record: ProcedureRecord) {
   return record.sections.some((section) =>
-    section.blocks.some((block) => block.type === "steps" && block.steps.some((step) => step.calculators?.length)),
+    section.blocks.some(
+      (block) => block.type === "steps" && block.steps.some((step) => step.calculators?.length),
+    ),
   );
 }
 
@@ -192,7 +246,15 @@ function hasCalculators(record: ProcedureRecord) {
  * A recipe's mise-en-place (R5): every ingredient once, at the reader's servings and units, as a checklist that works with no
  * script, and the same as a plain shopping list to copy. Computed from the ingredient list, so it never says another amount.
  */
-function MiseEnPlace({ record, factor, units }: { record: ProcedureRecord; factor: number; units: UnitSystem | null }) {
+function MiseEnPlace({
+  record,
+  factor,
+  units,
+}: {
+  record: ProcedureRecord;
+  factor: number;
+  units: UnitSystem | null;
+}) {
   const { items, text } = miseEnPlace(record, factor, units);
   if (items.length === 0) return null;
   return (
@@ -247,14 +309,24 @@ export function ProcedureView({
   /** A recipe's units as the reader asked for them: null is the recipe's own (recipe-views.mjs). */
   units?: UnitSystem | null;
 }) {
-  const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
+  const [materialsId, equipmentId, primersId, troubleId, expectedId, limitsId, referencesId] =
+    fixedSectionIds(record.profile);
   const keyGroups = keyResources(record);
   return (
-    <div className="prose procedure" {...RENDERED} data-profile={record.profile} data-run-path={basePath} data-run-version={record.version ?? ""} data-run-title={record.title}>
+    <div
+      className="prose procedure"
+      {...RENDERED}
+      data-profile={record.profile}
+      data-run-path={basePath}
+      data-run-version={record.version ?? ""}
+      data-run-title={record.title}
+    >
       <ProcedureFacts record={record} lineage={lineage} />
       <p className="procedure-links">
         {sheetPath ? (
-          <a href={`${sheetPath}${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}>
+          <a
+            href={`${sheetPath}${count && record.scale && count !== record.scale.count ? `?n=${count}` : ""}`}
+          >
             Printable sheet
           </a>
         ) : null}
@@ -264,7 +336,12 @@ export function ProcedureView({
       </p>
       <ProtocolWorkflow context={workflow} />
       {record.image ? (
-        <Picture picture={contentPicture(record.image.src, { ...record.image, className: "procedure-image" })} />
+        <Picture
+          picture={contentPicture(record.image.src, {
+            ...record.image,
+            className: "procedure-image",
+          })}
+        />
       ) : null}
       {(record.questions?.length ?? 0) + (record.objectives?.length ?? 0) > 0 ? (
         <section className="procedure-overview" aria-labelledby="overview">
@@ -279,7 +356,9 @@ export function ProcedureView({
         <Heading id={materialsId!}>{materialsHeading(record)}</Heading>
         <ScaleForm record={record} count={count} action={basePath} units={units} />
         <MaterialsTable record={record} count={count} factor={factor} units={units} />
-        {record.profile === "recipe" ? <MiseEnPlace record={record} factor={factor} units={units} /> : null}
+        {record.profile === "recipe" ? (
+          <MiseEnPlace record={record} factor={factor} units={units} />
+        ) : null}
         <Solutions record={record} />
         {record.substitutions.length ? (
           <>
@@ -348,7 +427,14 @@ export function ProcedureView({
                 ),
               )
             ) : (
-              <Steps key={i} steps={block.steps} factor={factor} record={record} scope={`${section.id}-${i}-`} units={units} />
+              <Steps
+                key={i}
+                steps={block.steps}
+                factor={factor}
+                record={record}
+                scope={`${section.id}-${i}-`}
+                units={units}
+              />
             ),
           )}
         </section>
@@ -414,7 +500,13 @@ export function ProcedureView({
             <ul className="procedure-credits">
               {record.basedOn.map((s) => (
                 <li key={s.citation}>
-                  {s.doi ? <a href={`https://doi.org/${s.doi}`}>{s.citation}</a> : s.url ? <a href={s.url}>{s.citation}</a> : s.citation}
+                  {s.doi ? (
+                    <a href={`https://doi.org/${s.doi}`}>{s.citation}</a>
+                  ) : s.url ? (
+                    <a href={s.url}>{s.citation}</a>
+                  ) : (
+                    s.citation
+                  )}
                   : {s.for}
                 </li>
               ))}
@@ -453,7 +545,10 @@ export function ProcedureSheet({
   const facts = citeFacts(record);
   const stamp = facts
     ? `Version ${facts.version}, ${facts.date}`
-    : [record.version ? `Version ${record.version}` : "Version not yet assigned", record.updated ? `updated ${record.updated}` : null]
+    : [
+        record.version ? `Version ${record.version}` : "Version not yet assigned",
+        record.updated ? `updated ${record.updated}` : null,
+      ]
         .filter(Boolean)
         .join(", ");
   return (
@@ -464,7 +559,11 @@ export function ProcedureSheet({
           {stamp}. {address}
         </p>
         <figure className="procedure-sheet-qr">
-          <div role="img" aria-label={`QR code for ${address}`} dangerouslySetInnerHTML={html(sheetQr(address))} />
+          <div
+            role="img"
+            aria-label={`QR code for ${address}`}
+            dangerouslySetInnerHTML={html(sheetQr(address))}
+          />
           <figcaption>Scan to open this version online.</figcaption>
         </figure>
       </header>
@@ -485,7 +584,9 @@ export function ProcedureSheet({
         </>
       ) : null}
       {record.sections.map((section) => {
-        const lists = section.blocks.filter((b): b is Extract<Block, { type: "steps" }> => b.type === "steps");
+        const lists = section.blocks.filter(
+          (b): b is Extract<Block, { type: "steps" }> => b.type === "steps",
+        );
         if (lists.length === 0) return null;
         return (
           <section key={section.id}>
@@ -493,7 +594,13 @@ export function ProcedureSheet({
             {lists.map((block, i) => (
               <ol key={i} className="procedure-steps" start={block.steps[0]?.number ?? 1}>
                 {block.steps.map((step) => (
-                  <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} brief />
+                  <StepItem
+                    key={step.number}
+                    step={step}
+                    factor={factor}
+                    troubleshooting={record.troubleshooting}
+                    brief
+                  />
                 ))}
               </ol>
             ))}

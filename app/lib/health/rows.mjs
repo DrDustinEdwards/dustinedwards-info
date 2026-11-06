@@ -22,8 +22,10 @@ export function healthChecks(body) {
   return checks
     .filter((c) => c && typeof c === "object" && typeof c.name === "string")
     .map((c) => {
-      const status = c.status === "pass" || c.status === "warn" || c.status === "fail" ? c.status : "fail";
-      const counts = status !== "pass" && typeof c.detail === "string" ? COUNTS.exec(c.detail) : null;
+      const status =
+        c.status === "pass" || c.status === "warn" || c.status === "fail" ? c.status : "fail";
+      const counts =
+        status !== "pass" && typeof c.detail === "string" ? COUNTS.exec(c.detail) : null;
       return {
         name: c.name,
         status,

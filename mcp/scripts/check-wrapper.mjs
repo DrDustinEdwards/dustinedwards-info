@@ -111,7 +111,9 @@ function resolveConfig() {
   if (existsSync(real)) return { path: real, which: "wrangler.jsonc" };
   if (existsSync(example)) return { path: example, which: "wrangler.jsonc.example" };
   // Fails CLOSED. No config means nothing can be proven, which is not a pass.
-  console.error("FAIL  no wrangler config found (neither wrangler.jsonc nor wrangler.jsonc.example)");
+  console.error(
+    "FAIL  no wrangler config found (neither wrangler.jsonc nor wrangler.jsonc.example)",
+  );
   process.exit(1);
 }
 
@@ -130,7 +132,10 @@ if (configSource.which === "wrangler.jsonc" && existsSync(join(ROOT, "wrangler.j
       services: (c.services ?? []).map((b) => `${b.binding}:${b.service}`).sort(),
       r2: (c.r2_buckets ?? []).map((b) => `${b.binding}:${b.bucket_name}`).sort(),
       routes: JSON.stringify(c.routes ?? []),
-      migrations: (c.migrations ?? []).map((m) => m.new_sqlite_classes ?? []).flat().sort(),
+      migrations: (c.migrations ?? [])
+        .map((m) => m.new_sqlite_classes ?? [])
+        .flat()
+        .sort(),
       flags: (c.compatibility_flags ?? []).slice().sort(),
       main: c.main,
       vars: Object.keys(c.vars ?? {}).sort(),
@@ -345,8 +350,13 @@ const ALLOWED_HOSTS = ["tool-call-log.invalid"];
 // Addresses this Worker names and never fetches, matched as whole literals so the
 // host stays unallowed anywhere else: the Origin it admits, and the serverInfo
 // website and icon, which a client fetches.
-const NAMED_NOT_FETCHED = ['"https://claude.ai"', '"https://dustinedwards.info"', '"https://dustinedwards.info/dustin-edwards-favicon.svg"'];
-const unnamed = (text) => NAMED_NOT_FETCHED.reduce((t, literal) => t.replaceAll(literal, '""'), text);
+const NAMED_NOT_FETCHED = [
+  '"https://claude.ai"',
+  '"https://dustinedwards.info"',
+  '"https://dustinedwards.info/dustin-edwards-favicon.svg"',
+];
+const unnamed = (text) =>
+  NAMED_NOT_FETCHED.reduce((t, literal) => t.replaceAll(literal, '""'), text);
 const URL_RE = /https?:\/\/([a-z0-9.-]+)/gi;
 for (const f of files) {
   for (const m of unnamed(readFileSync(join(SRC, f.name), "utf8")).matchAll(URL_RE)) {
@@ -365,9 +375,15 @@ for (const f of files) {
 
 check(
   "The operator API is addressed only as SITE_ORIGIN + /api/operator, over SITE, in api-client.ts",
-  files.every((f) => f.name === "api-client.ts" || !withoutComments(f.text).includes("/api/operator")) &&
-    /binding: "SITE"/.test(withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? "")) &&
-    /callApi\(env, LEG, "\/api\/operator"/.test(withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? "")),
+  files.every(
+    (f) => f.name === "api-client.ts" || !withoutComments(f.text).includes("/api/operator"),
+  ) &&
+    /binding: "SITE"/.test(
+      withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? ""),
+    ) &&
+    /callApi\(env, LEG, "\/api\/operator"/.test(
+      withoutComments(files.find((f) => f.name === "api-client.ts")?.text ?? ""),
+    ),
   "A literal host would survive a config change and reach the wrong environment.",
 );
 
@@ -406,24 +422,41 @@ check(
  * so the mirror is gone and a tool the API does not offer fails on the next run.
  */
 const descriptors = readFileSync(join(SITE_ROOT, "app/lib/operator/descriptors.ts"), "utf8");
-const apiList = descriptors.slice(descriptors.indexOf("const TOOLS = ["), descriptors.indexOf("] as const;"));
+const apiList = descriptors.slice(
+  descriptors.indexOf("const TOOLS = ["),
+  descriptors.indexOf("] as const;"),
+);
 const API_TOOLS = [...apiList.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
-check("the operator API's tool list was read", API_TOOLS.length > 10, `Read ${API_TOOLS.length} names.`);
+check(
+  "the operator API's tool list was read",
+  API_TOOLS.length > 10,
+  `Read ${API_TOOLS.length} names.`,
+);
 
 const toolStrings = withoutComments(toolsText);
 const named = new Set([
-  ...[...toolStrings.matchAll(/\b(?:run|runPaged|callOperator)\(env,\s*"([a-z_]+)"/g)].map((m) => m[1]),
+  ...[...toolStrings.matchAll(/\b(?:run|runPaged|callOperator)\(env,\s*"([a-z_]+)"/g)].map(
+    (m) => m[1],
+  ),
   ...[...toolStrings.matchAll(/\b(?:list|get):\s*"([a-z_]+)"/g)].map((m) => m[1]),
 ]);
 
 for (const name of named) {
-  check(`operator tool ${name} is one the API offers`, API_TOOLS.includes(name), "A tool the API does not offer would be a policy decision made here.");
+  check(
+    `operator tool ${name} is one the API offers`,
+    API_TOOLS.includes(name),
+    "A tool the API does not offer would be a policy decision made here.",
+  );
 }
 
 // No zero-result purge: the site's own cron runs it, and it is not this server's job. Post and page tools cannot
 // come back: the operator API no longer offers them, which the check above enforces.
 for (const name of ["purge_zero_results"]) {
-  check(`the wrapper never calls ${name}`, !named.has(name) && !toolStrings.includes(`"${name}"`), "Not this server's job.");
+  check(
+    `the wrapper never calls ${name}`,
+    !named.has(name) && !toolStrings.includes(`"${name}"`),
+    "Not this server's job.",
+  );
 }
 
 // Every declared tool reaches the API through the one transport.
@@ -454,7 +487,9 @@ for (const name of EXPECTED_TOOLS) {
   // registers a tool around it.
   check(
     "every tool is registered through site-runtime's registerTools, which wraps each in invokeTool",
-    /import \{[^}]*\bregisterTools\b[^}]*\} from "@dustinedwards\/site-runtime\/mcp-server"/.test(withoutComments(handlerText)) &&
+    /import \{[^}]*\bregisterTools\b[^}]*\} from "@dustinedwards\/site-runtime\/mcp-server"/.test(
+      withoutComments(handlerText),
+    ) &&
       /registerTools\([^,]+, TOOLS, \{\s*env,\s*server: SERVER,\s*caller,/.test(handlerCode) &&
       !/\.handler\(|\.registerTool\(/.test(handlerCode) &&
       !/function invokeTool|appendAudit/.test(codeOnly(toolsText)),
@@ -462,7 +497,7 @@ for (const name of EXPECTED_TOOLS) {
   );
   check(
     "invokeTool names this server's scopes, so a tool's declared scope is checked against dei.read and dei.write",
-    /const SERVER: McpServerInfo = \{ site: "", scopes: SCOPES,/.test(handlerCode),
+    /const SERVER: McpServerInfo = \{\s*site: "",\s*scopes: SCOPES,/.test(handlerCode),
     "Rule 12.1 and 12.3: the per-call ownership proof and the scope check.",
   );
 }
@@ -471,14 +506,18 @@ for (const name of EXPECTED_TOOLS) {
 // The log's bucket has one reader: the scheduled export of site-runtime's adminMcpWorker (index.ts's default export),
 // which hands it to exportAuditLog. Nothing here may reach it: a tool doing so would turn the log's copies into a store
 // the server writes at will.
-const bucketHolders = files.filter((f) => withoutComments(f.text).includes("AUDIT_BUCKET")).map((f) => f.name);
+const bucketHolders = files
+  .filter((f) => withoutComments(f.text).includes("AUDIT_BUCKET"))
+  .map((f) => f.name);
 check(
   "AUDIT_BUCKET appears in no source file: only site-runtime's adminMcpWorker exports the log to it",
   bucketHolders.length === 0,
   `Found in: ${bucketHolders.join(", ")}. The bucket holds the log's copies and nothing else.`,
 );
 
-const tokenHolders = files.filter((f) => withoutComments(f.text).includes("OPERATOR_TOKEN")).map((f) => f.name);
+const tokenHolders = files
+  .filter((f) => withoutComments(f.text).includes("OPERATOR_TOKEN"))
+  .map((f) => f.name);
 check(
   "OPERATOR_TOKEN appears only in api-client.ts",
   JSON.stringify(tokenHolders) === JSON.stringify(["api-client.ts"]),
@@ -554,7 +593,13 @@ for (const f of files) {
 
 // The gates belong to the app. If any of these appeared here it would mean the
 // wrapper had started validating content, and two validators drift.
-const FORBIDDEN_GATE_MARKERS = ["frontmatterSchema", "wideDash", "publiclyVisible", "renderPost", "savePost("];
+const FORBIDDEN_GATE_MARKERS = [
+  "frontmatterSchema",
+  "wideDash",
+  "publiclyVisible",
+  "renderPost",
+  "savePost(",
+];
 for (const f of files) {
   for (const marker of FORBIDDEN_GATE_MARKERS) {
     check(
@@ -579,7 +624,9 @@ for (const f of files) {
     "A shim without a stated removal condition becomes permanent by default.",
   );
   // Count the calls themselves, not the files: two calls in one file is two seams.
-  const eraCalls = files.flatMap((f) => [...codeOnly(f.text).matchAll(/routeMcpEra\s*\(/g)].map(() => f.name));
+  const eraCalls = files.flatMap((f) =>
+    [...codeOnly(f.text).matchAll(/routeMcpEra\s*\(/g)].map(() => f.name),
+  );
   check(
     "The era router has exactly one call site, in mcp-handler.ts",
     JSON.stringify(eraCalls) === JSON.stringify(["mcp-handler.ts"]),
@@ -588,8 +635,12 @@ for (const f of files) {
   // STRING option values: comments stripped, literals kept, so header prose cannot satisfy it.
   check(
     'No handler is built here, and none in compatibility mode (no createMcpHandler call, no legacy: "stateless")',
-    files.every((f) => !/legacy:\s*"stateless"/.test(withoutComments(f.text)) && !/createMcpHandler\s*\(/.test(codeOnly(f.text))),
-    'Only routeMcpEra builds the handlers, so dropping isLegacyRequest leaves a modern-only server.',
+    files.every(
+      (f) =>
+        !/legacy:\s*"stateless"/.test(withoutComments(f.text)) &&
+        !/createMcpHandler\s*\(/.test(codeOnly(f.text)),
+    ),
+    "Only routeMcpEra builds the handlers, so dropping isLegacyRequest leaves a modern-only server.",
   );
 }
 
@@ -611,13 +662,20 @@ const indexCode = codeOnly(indexText);
 check(
   "index.ts's default export is site-runtime's adminMcpWorker",
   /export default adminMcpWorker</.test(indexCode) &&
-    /import \{[^}]*\badminMcpWorker\b[^}]*\} from "@dustinedwards\/site-runtime\/admin-mcp"/.test(withoutComments(indexText)),
+    /import \{[^}]*\badminMcpWorker\b[^}]*\} from "@dustinedwards\/site-runtime\/admin-mcp"/.test(
+      withoutComments(indexText),
+    ),
   "The door is the shared one, tested once where it lives.",
 );
 
 check(
   "no local door: no provider, registration, audience or agent-key code here",
-  files.every((f) => !/new OAuthProvider\(|registrationRefusal\(|registrationLimited\(|audienceRefusal\(|agentPrincipal\(|probeDoor\(|mcpOriginRefusal\(/.test(codeOnly(f.text))),
+  files.every(
+    (f) =>
+      !/new OAuthProvider\(|registrationRefusal\(|registrationLimited\(|audienceRefusal\(|agentPrincipal\(|probeDoor\(|mcpOriginRefusal\(/.test(
+        codeOnly(f.text),
+      ),
+  ),
   "A second door beside the shared one is a second place for a guard to be missing.",
 );
 
@@ -629,14 +687,21 @@ check(
 
 check(
   "both doors reach the tool surface through the ONE handleMcp",
-  (indexCode.match(/handleMcp\(/g) ?? []).length === 1 && /serve: \(request, env, ctx, caller\) => handleMcp\(request, env, ctx, caller\)/.test(indexCode),
+  (indexCode.match(/handleMcp\(/g) ?? []).length === 1 &&
+    /serve: \(request, env, ctx, caller\) => handleMcp\(request, env, ctx, caller\)/.test(
+      indexCode,
+    ),
   "Two handlers would be two places the tool surface is defined, and the first time they disagreed one door would " +
     "offer something the other did not.",
 );
 
 check(
   "no local agent-key code: the matching is site-runtime's ./agent-keys",
-  !files.some((f) => /AGENT_KEY_|safeEqual\(/.test(codeOnly(f.text)) || /"AGENT_KEY_/.test(withoutComments(f.text))),
+  !files.some(
+    (f) =>
+      /AGENT_KEY_|safeEqual\(/.test(codeOnly(f.text)) ||
+      /"AGENT_KEY_/.test(withoutComments(f.text)),
+  ),
   "A second copy of the key comparison is a second place for it to be wrong (checklist S6).",
 );
 

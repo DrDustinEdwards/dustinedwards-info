@@ -73,7 +73,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   const ip = clientIp(request);
   const rate = await limitHit(env, `wm:${ip}`, RATE_LIMIT, RATE_PERIOD_SECONDS);
   if (rate.status === "unavailable") {
-    return answer("Webmentions unavailable", 503, { "retry-after": String(rate.retryAfterSeconds) });
+    return answer("Webmentions unavailable", 503, {
+      "retry-after": String(rate.retryAfterSeconds),
+    });
   }
   if (rate.status === "limited") {
     return answer("Too Many Requests", 429, { "retry-after": String(rate.retryAfterSeconds) });
@@ -90,7 +92,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     body = await readCapped(request, MAX_BODY_BYTES);
   } catch (error) {
     // The sender's body broke mid-read: its request is malformed, not this site down, so 400, logged.
-    console.error(JSON.stringify({ alert: "webmention-body-unreadable", detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({ alert: "webmention-body-unreadable", detail: errorMessage(error) }),
+    );
     return answer(BAD_FORM, 400);
   }
   if (body === null) {
@@ -125,7 +129,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   const open = await countOpenWebmentions(env);
   if (open >= OPEN_QUEUE_CAP) {
     // Moderating /admin/mentions reopens the endpoint.
-    console.log(JSON.stringify({ event: "webmention-open-cap-refused", open, cap: OPEN_QUEUE_CAP }));
+    console.log(
+      JSON.stringify({ event: "webmention-open-cap-refused", open, cap: OPEN_QUEUE_CAP }),
+    );
     return answer("Webmention queue is full, please retry later", 503);
   }
 

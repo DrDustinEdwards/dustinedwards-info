@@ -40,4 +40,3 @@ await test("a difference in ANY component produces a different key", () => {
   assert.notEqual(base, mediaRefKey(ref("m", "F", "d")));
   assert.notEqual(base, mediaRefKey(ref("m", "f", "D")));
 });
-

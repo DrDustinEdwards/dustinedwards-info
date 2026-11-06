@@ -25,7 +25,6 @@ export function checkFeatureProse({ ok, features }) {
 
   const PROSE_FIELDS = ["component", "name", "what"];
 
-
   const REMOVED_VOCABULARY = [
     "committed artifact",
     "byte-comparison gate",

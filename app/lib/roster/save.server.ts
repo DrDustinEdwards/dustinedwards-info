@@ -24,7 +24,10 @@ export const COHORT_SLUG = /^\d{4}$/;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class RosterInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The ${slug} cohort was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The ${slug} cohort was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "RosterInvalid";
   }
 }
@@ -45,7 +48,9 @@ type Compiled = Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>;
 /** The slug of an id, or a refusal: nothing but a year names a cohort file. */
 function registered(slug: string) {
   if (!COHORT_SLUG.test(slug)) {
-    throw new RosterInvalid(slug, [`"${slug}" is not a cohort file key; a cohort's file is named for its year, such as 2025`]);
+    throw new RosterInvalid(slug, [
+      `"${slug}" is not a cohort file key; a cohort's file is named for its year, such as 2025`,
+    ]);
   }
   return { slug, file: rosterPath(slug) };
 }
@@ -60,7 +65,13 @@ export async function writeRosterRow(env: RosterEnv, compiled: Compiled) {
        source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha,
        synced_at = excluded.synced_at`,
   )
-    .bind(String(cohort.year), cohort.year, compiled.record, compiled.sourcePath, compiled.sourceBlobSha)
+    .bind(
+      String(cohort.year),
+      cohort.year,
+      compiled.record,
+      compiled.sourcePath,
+      compiled.sourceBlobSha,
+    )
     .run();
 }
 
@@ -91,22 +102,43 @@ export type SavedCohort = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> D1 write (convergeWithRetry) -> purge by tag. */
 export async function saveRoster(
   env: RosterEnv,
-  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    slug: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ): Promise<SavedCohort> {
   const { raw, actor } = options;
   const { slug, file } = registered(options.slug);
   const existing = await readFile(env, file);
-  if (options.isNew && existing) throw new RosterInvalid(slug, [`the ${slug} cohort already has a file (${file}); pass isNew false to edit it`]);
-  if (!options.isNew && !existing) throw new RosterInvalid(slug, [`the ${slug} cohort has no file yet; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new RosterInvalid(slug, [
+      `the ${slug} cohort already has a file (${file}); pass isNew false to edit it`,
+    ]);
+  if (!options.isNew && !existing)
+    throw new RosterInvalid(slug, [`the ${slug} cohort has no file yet; pass isNew to create it`]);
 
   const compiled = await compile(env, slug, raw);
   if (!compiled.ok) throw new RosterInvalid(slug, compiled.errors);
   // A cohort has no draft state: it is public when it is saved, so the policy reads it as published.
-  decideFileWrite({ actor, noun: "roster cohort", incomingDraft: false, priorRaw: existing?.content ?? null, isDraft: () => false });
+  decideFileWrite({
+    actor,
+    noun: "roster cohort",
+    incomingDraft: false,
+    priorRaw: existing?.content ?? null,
+    isDraft: () => false,
+  });
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
@@ -121,7 +153,15 @@ export async function saveRoster(
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
+    return {
+      slug,
+      commitSha: written.commitSha,
+      sourceBlobSha: compiled.sourceBlobSha,
+      unchanged: true,
+      created: false,
+      purged: null,
+      note: UNCHANGED_NOTE,
+    };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
@@ -146,5 +186,12 @@ export async function saveRoster(
     commitSha,
   });
 
-  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action === "repair", created: options.isNew, purged };
+  return {
+    slug,
+    commitSha,
+    sourceBlobSha: compiled.sourceBlobSha,
+    unchanged: written.action === "repair",
+    created: options.isNew,
+    purged,
+  };
 }

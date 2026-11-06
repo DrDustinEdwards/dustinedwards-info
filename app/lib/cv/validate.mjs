@@ -54,13 +54,29 @@ const PRIVACY = /** @type {const} */ ([
  * a trailing `?` makes it optional. The shared fields (year, endYear, areas, role, links) are checked apart.
  */
 const SHAPES = /** @type {const} */ ({
-  appointment: { section: "s", title: "s", org: "s", detail: "s?", duties: "duties?", headline: "b?" },
+  appointment: {
+    section: "s",
+    title: "s",
+    org: "s",
+    detail: "s?",
+    duties: "duties?",
+    headline: "b?",
+  },
   education: { title: "s", org: "s", detail: "s?" },
   grant: { amount: "money", title: "s", funder: "s?", note: "s?" },
   award: { title: "s", org: "s?", place: "s?" },
   talk: { title: "s", presenters: "strings", venue: "s" },
   course: { code: "s", title: "s", org: "s", term: "s" },
-  mentoring: { section: "s", count: "n", unit: "unit", level: "s", program: "s", org: "s", detail: "s?", cohort: "b" },
+  mentoring: {
+    section: "s",
+    count: "n",
+    unit: "unit",
+    level: "s",
+    program: "s",
+    org: "s",
+    detail: "s?",
+    cohort: "b",
+  },
   service: { section: "s", title: "s", org: "s?", place: "s?" },
   development: { title: "s", org: "s?", place: "s?" },
 });
@@ -101,13 +117,18 @@ function misfit(value, kind) {
     case "n":
       return isCount(value) ? null : "must be a whole number, zero or more";
     case "money":
-      return typeof value === "number" && Number.isFinite(value) && value >= 0 && Math.round(value * 100) === value * 100
+      return typeof value === "number" &&
+        Number.isFinite(value) &&
+        value >= 0 &&
+        Math.round(value * 100) === value * 100
         ? null
         : "must be dollars, zero or more, to the cent";
     case "b":
       return typeof value === "boolean" ? null : "must be true or false";
     case "strings":
-      return Array.isArray(value) && value.length > 0 && value.every(isText) ? null : "must be a non-empty list of text";
+      return Array.isArray(value) && value.length > 0 && value.every(isText)
+        ? null
+        : "must be a non-empty list of text";
     case "unit":
       return value === "students" || value === "awards" ? null : 'must be "students" or "awards"';
     case "duties":
@@ -151,11 +172,19 @@ function checkShape(entry, shape, where, errors) {
  */
 function checkShared(entry, where, errors) {
   const { year, endYear, areas, role, links } = entry;
-  const yearOk = year === null || (typeof year === "number" && Number.isInteger(year) && year >= YEAR_MIN && year <= YEAR_MAX);
-  if (!yearOk) errors.push(`${where}: year must be a whole year from ${YEAR_MIN} to ${YEAR_MAX}, or null for an undated line`);
+  const yearOk =
+    year === null ||
+    (typeof year === "number" && Number.isInteger(year) && year >= YEAR_MIN && year <= YEAR_MAX);
+  if (!yearOk)
+    errors.push(
+      `${where}: year must be a whole year from ${YEAR_MIN} to ${YEAR_MAX}, or null for an undated line`,
+    );
   if (endYear !== undefined) {
     if (year === null) errors.push(`${where}: an undated line (year: null) has no endYear`);
-    else if (endYear !== "present" && !(typeof endYear === "number" && Number.isInteger(endYear) && endYear <= YEAR_MAX)) {
+    else if (
+      endYear !== "present" &&
+      !(typeof endYear === "number" && Number.isInteger(endYear) && endYear <= YEAR_MAX)
+    ) {
       errors.push(`${where}: endYear must be a whole year or "present"`);
     } else if (typeof endYear === "number" && typeof year === "number" && endYear < year) {
       errors.push(`${where}: endYear ${endYear} is before year ${year}`);
@@ -173,8 +202,16 @@ function checkShared(entry, where, errors) {
     const linksOk =
       Array.isArray(links) &&
       links.length > 0 &&
-      links.every((l) => isRecord(l) && Object.keys(l).length === 2 && isText(l.label) && typeof l.href === "string" && HTTPS.test(l.href));
-    if (!linksOk) errors.push(`${where}: links must be a non-empty list of { label, href } with an https href`);
+      links.every(
+        (l) =>
+          isRecord(l) &&
+          Object.keys(l).length === 2 &&
+          isText(l.label) &&
+          typeof l.href === "string" &&
+          HTTPS.test(l.href),
+      );
+    if (!linksOk)
+      errors.push(`${where}: links must be a non-empty list of { label, href } with an https href`);
   }
 }
 
@@ -191,27 +228,37 @@ function checkEntry(type, entry, where, errors) {
     errors.push(`${where}: an entry is a mapping of fields`);
     return;
   }
-  if ("type" in entry) errors.push(`${where}: an entry does not state its type; the file's front matter does`);
+  if ("type" in entry)
+    errors.push(`${where}: an entry does not state its type; the file's front matter does`);
 
   if (type === "publication" && "doi" in entry) {
     for (const key of Object.keys(entry)) {
       if (key !== "doi") {
-        errors.push(`${where}: a paper named by DOI states nothing else (${key}); its facts come from content/publications/`);
+        errors.push(
+          `${where}: a paper named by DOI states nothing else (${key}); its facts come from content/publications/`,
+        );
       }
     }
-    if (typeof entry.doi !== "string" || !DOI_PATTERN.test(entry.doi)) errors.push(`${where}: doi is not a DOI`);
+    if (typeof entry.doi !== "string" || !DOI_PATTERN.test(entry.doi))
+      errors.push(`${where}: doi is not a DOI`);
     return;
   }
 
   /** @type {Record<string, string>} */
-  const shape = type === "publication" ? INLINE_PAPER : SHAPES[/** @type {Exclude<typeof type, "publication">} */ (type)];
+  const shape =
+    type === "publication"
+      ? INLINE_PAPER
+      : SHAPES[/** @type {Exclude<typeof type, "publication">} */ (type)];
   checkShape(entry, shape, where, errors);
   checkShared(entry, where, errors);
   const known = new Set([...Object.keys(shape), ...SHARED_KEYS]);
   for (const key of Object.keys(entry)) {
     if (!known.has(key)) errors.push(`${where}: "${key}" is not a field of a ${type} entry`);
   }
-  if (type === "appointment" && !APPOINTMENT_SECTIONS.includes(/** @type {string} */ (entry.section))) {
+  if (
+    type === "appointment" &&
+    !APPOINTMENT_SECTIONS.includes(/** @type {string} */ (entry.section))
+  ) {
     errors.push(`${where}: section must be one of ${APPOINTMENT_SECTIONS.join(", ")}`);
   }
   if (type === "service" && !SERVICE_SECTIONS.includes(/** @type {string} */ (entry.section))) {
@@ -228,7 +275,8 @@ function checkEntry(type, entry, where, errors) {
 function checkProfile(data, errors) {
   const { edition, person, presentations } = data;
   for (const key of Object.keys(data)) {
-    if (!["edition", "person", "presentations"].includes(key)) errors.push(`profile: "${key}" is not a field of the profile`);
+    if (!["edition", "person", "presentations"].includes(key))
+      errors.push(`profile: "${key}" is not a field of the profile`);
   }
   if (typeof edition !== "string" || !EDITION_PATTERN.test(edition)) {
     errors.push('edition must be a season and a year, such as "Fall 2026"');
@@ -237,35 +285,52 @@ function checkProfile(data, errors) {
     errors.push("person must be a mapping of name, degree, discipline, department and org");
   } else {
     for (const key of ["name", "degree", "discipline", "department", "org"]) {
-      if (!isText(person[key])) errors.push(`person.${key} must be non-empty text with no space at either end`);
+      if (!isText(person[key]))
+        errors.push(`person.${key} must be non-empty text with no space at either end`);
     }
     for (const key of Object.keys(person)) {
       if (!["name", "degree", "discipline", "department", "org"].includes(key)) {
         errors.push(
           key === "title"
-            ? 'person.title is not a field of the person: the title is derived from the current appointment and the discipline (app/lib/identity.mjs)'
+            ? "person.title is not a field of the person: the title is derived from the current appointment and the discipline (app/lib/identity.mjs)"
             : `person.${key} is not a field of the person`,
         );
       }
     }
-    if (person.name !== OWNER) errors.push(`person.name is "${String(person.name)}", the site's one name for him is "${OWNER}"`);
+    if (person.name !== OWNER)
+      errors.push(
+        `person.name is "${String(person.name)}", the site's one name for him is "${OWNER}"`,
+      );
   }
   if (!isRecord(presentations)) {
     errors.push("presentations must be a mapping of international, national, from and to");
   } else {
     for (const key of ["international", "national"]) {
-      if (!isCount(presentations[key])) errors.push(`presentations.${key} must be a whole number, zero or more`);
+      if (!isCount(presentations[key]))
+        errors.push(`presentations.${key} must be a whole number, zero or more`);
     }
     for (const key of ["from", "to"]) {
       const value = presentations[key];
-      if (!(typeof value === "number" && Number.isInteger(value) && value >= YEAR_MIN && value <= YEAR_MAX)) {
+      if (
+        !(
+          typeof value === "number" &&
+          Number.isInteger(value) &&
+          value >= YEAR_MIN &&
+          value <= YEAR_MAX
+        )
+      ) {
         errors.push(`presentations.${key} must be a whole year from ${YEAR_MIN} to ${YEAR_MAX}`);
       }
     }
     for (const key of Object.keys(presentations)) {
-      if (!["international", "national", "from", "to"].includes(key)) errors.push(`presentations.${key} is not a field of the presentations`);
+      if (!["international", "national", "from", "to"].includes(key))
+        errors.push(`presentations.${key} is not a field of the presentations`);
     }
-    if (typeof presentations.from === "number" && typeof presentations.to === "number" && presentations.from > presentations.to) {
+    if (
+      typeof presentations.from === "number" &&
+      typeof presentations.to === "number" &&
+      presentations.from > presentations.to
+    ) {
       errors.push("presentations.from is after presentations.to");
     }
   }
@@ -282,25 +347,38 @@ export function parseCvFile(file, raw) {
   /** @type {string[]} */
   const errors = [];
   for (const hit of findWideDashes(raw)) {
-    errors.push(`line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`);
+    errors.push(
+      `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+    );
   }
   let parsed;
   try {
     parsed = matter(raw);
   } catch (error) {
-    return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
   }
   const data = /** @type {Record<string, unknown>} */ (parsed.data);
-  if (parsed.content.trim() !== "") errors.push("the file has text after its front matter, which no page shows; the CV is the front matter alone");
+  if (parsed.content.trim() !== "")
+    errors.push(
+      "the file has text after its front matter, which no page shows; the CV is the front matter alone",
+    );
 
   const { slug, type } = file;
   if (type === "profile") {
     checkProfile(data, errors);
   } else {
     for (const key of Object.keys(data)) {
-      if (key !== "type" && key !== "entries") errors.push(`"${key}" is not a field of a section file (type, entries)`);
+      if (key !== "type" && key !== "entries")
+        errors.push(`"${key}" is not a field of a section file (type, entries)`);
     }
-    if (data.type !== type) errors.push(`type is ${JSON.stringify(data.type)}, but ${slug} holds ${type} entries`);
+    if (data.type !== type)
+      errors.push(`type is ${JSON.stringify(data.type)}, but ${slug} holds ${type} entries`);
     if (!Array.isArray(data.entries) || data.entries.length === 0) {
       errors.push("entries must be a non-empty list");
     } else {
@@ -355,9 +433,13 @@ export function paperRefErrors(entries, byDoi) {
     seen.add(key);
     const paper = byDoi.get(key);
     if (!paper) {
-      errors.push(`no published publication has DOI ${entry.doi}; add its file to content/publications/ first, and publish it`);
+      errors.push(
+        `no published publication has DOI ${entry.doi}; add its file to content/publications/ first, and publish it`,
+      );
     } else if (!paper.authors.some((name) => canonicalAuthor(name) === OWNER)) {
-      errors.push(`DOI ${entry.doi} does not list ${OWNER} among its authors, so the CV cannot claim it`);
+      errors.push(
+        `DOI ${entry.doi} does not list ${OWNER} among its authors, so the CV cannot claim it`,
+      );
     }
   }
   return errors;
@@ -396,9 +478,13 @@ export function orderErrors(entries) {
     const before = last.get(key);
     if (before) {
       if (before.year === null && e.year !== null) {
-        errors.push(`${e.id} is dated ${e.year} but follows the undated ${before.id}; undated lines come last in their section`);
+        errors.push(
+          `${e.id} is dated ${e.year} but follows the undated ${before.id}; undated lines come last in their section`,
+        );
       } else if (before.year !== null && e.year !== null && e.year > before.year) {
-        errors.push(`${e.id} (${e.year}) follows ${before.id} (${before.year}); each section reads newest first`);
+        errors.push(
+          `${e.id} (${e.year}) follows ${before.id} (${before.year}); each section reads newest first`,
+        );
       }
     }
     last.set(key, { year: e.year, id: e.id });

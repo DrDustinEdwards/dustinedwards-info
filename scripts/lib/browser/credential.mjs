@@ -15,7 +15,9 @@ export const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? "").replace(/\/+$/, "")
 
 const SMOKE_TOKEN_ENV = process.env.SMOKE_TOKEN_FILE;
 const SMOKE_TOKEN_PATH = SMOKE_TOKEN_ENV ?? join(root, ".smoke-token");
-export const SMOKE_SOURCE = SMOKE_TOKEN_ENV ? `SMOKE_TOKEN_FILE (${SMOKE_TOKEN_ENV})` : ".smoke-token";
+export const SMOKE_SOURCE = SMOKE_TOKEN_ENV
+  ? `SMOKE_TOKEN_FILE (${SMOKE_TOKEN_ENV})`
+  : ".smoke-token";
 /** The Worker's own floor, restated here so a short token fails before a request. */
 const SMOKE_MIN_LENGTH = 32;
 

@@ -96,7 +96,11 @@ await test("a recorder that throws does not swallow the divergence error", async
     (error) => {
       assert.equal(error.name, DIVERGENCE_ERROR_NAME);
       assert.match(error.message, new RegExp(SLUG));
-      assert.doesNotMatch(error.message, /KV is also down/, "the recorder's fault must not replace it");
+      assert.doesNotMatch(
+        error.message,
+        /KV is also down/,
+        "the recorder's fault must not replace it",
+      );
       return true;
     },
   );

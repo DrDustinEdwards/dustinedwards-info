@@ -5,10 +5,31 @@ import "~/styles/dictionary-entry.css";
 /** A speaker with two sound waves; the waves carry the playing state in CSS. */
 function SpeakerIcon() {
   return (
-    <svg className="term-speaker" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+    <svg
+      className="term-speaker"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
-      <path className="term-wave term-wave-1" d="M15 9.2a4 4 0 0 1 0 5.6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path className="term-wave term-wave-2" d="M17.6 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        className="term-wave term-wave-1"
+        d="M15 9.2a4 4 0 0 1 0 5.6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        className="term-wave term-wave-2"
+        d="M17.6 6.6a7.6 7.6 0 0 1 0 10.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -31,7 +52,12 @@ export function DictionaryEntry({ entry }: { entry: Entry }) {
           <span className="term-ipa">{entry.ipa}</span>
           <span className="term-respell">{entry.respelling}</span>
           {/* Inside the pronunciation, so on a narrow screen the speaker wraps with it, never alone. */}
-          <a className="term-listen term-listen-link" href={entry.audio} data-term-audio-link aria-label={label}>
+          <a
+            className="term-listen term-listen-link"
+            href={entry.audio}
+            data-term-audio-link
+            aria-label={label}
+          >
             <SpeakerIcon />
           </a>
           <button

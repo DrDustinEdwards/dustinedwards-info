@@ -16,11 +16,20 @@ export type CvCharts = { timeline: string; papers: string; grants: string; stude
  * Every chart on the CV for one filter state, as markup. The route and app/enhance/cv.ts both call
  * it, so a shared URL and a live filter draw the same.
  */
-export function renderCvCharts(all: Facts[], state: CvState, options: { width?: number } = {}): CvCharts {
+export function renderCvCharts(
+  all: Facts[],
+  state: CvState,
+  options: { width?: number } = {},
+): CvCharts {
   const timeline = timelineData(all, state);
   const spark = sparkData(all, state);
   const line = (name: string, what: string, values: number[]) =>
-    sparklineSvg({ years: spark.years, values, name, label: sparkLabel(what, spark.years, values) });
+    sparklineSvg({
+      years: spark.years,
+      values,
+      name,
+      label: sparkLabel(what, spark.years, values),
+    });
   return {
     timeline: timelineSvg({
       years: timeline.years,

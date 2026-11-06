@@ -173,16 +173,22 @@ function verifyFrozenVersions(target, rows) {
   const byKey = new Map(stored.map((s) => [`${s.slug} ${s.version}`, s]));
   const missing = wanted.filter((r) => !byKey.has(`${r.slug} ${r.version}`));
   if (missing.length > 0) {
-    throw new Error(`published versions have no sealed frozen copy after the write: ${missing.map((r) => `${r.slug} ${r.version}`).join(", ")}`);
+    throw new Error(
+      `published versions have no sealed frozen copy after the write: ${missing.map((r) => `${r.slug} ${r.version}`).join(", ")}`,
+    );
   }
-  const changed = wanted.filter((r) => byKey.get(`${r.slug} ${r.version}`)?.source_blob_sha !== r.sourceBlobSha);
+  const changed = wanted.filter(
+    (r) => byKey.get(`${r.slug} ${r.version}`)?.source_blob_sha !== r.sourceBlobSha,
+  );
   if (changed.length > 0) {
     throw new Error(
       `a file was edited after its version was published: ${changed.map((r) => `${r.slug} ${r.version}`).join(", ")}. ` +
         `The frozen copy kept the published words and the live page follows the file. Set a new version in the file and add a history entry that says what changed.`,
     );
   }
-  console.log(`sync:content procedure versions=${stored.length} sealed, each made from the file it is a copy of`);
+  console.log(
+    `sync:content procedure versions=${stored.length} sealed, each made from the file it is a copy of`,
+  );
 }
 
 /**
@@ -223,7 +229,8 @@ function buildProceduresSql(rows) {
  * @param {Array<{ doi: string, count: number, url: string | null, fetchedAt: string }>} seeds
  */
 function buildPublicationsSql(rows, seeds) {
-  if (rows.length === 0) throw new Error("buildPublicationsSql refuses to delete every publication");
+  if (rows.length === 0)
+    throw new Error("buildPublicationsSql refuses to delete every publication");
   const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
   const out = [`DELETE FROM publications WHERE source_path NOT IN (${keep});`];
   for (const r of rows) {
@@ -244,9 +251,13 @@ function buildPublicationsSql(rows, seeds) {
         `synced_at = excluded.synced_at;`,
     );
     for (const chunk of rest) {
-      out.push(`UPDATE publications SET markdown = markdown || ${sql(chunk)} WHERE slug = ${sql(r.slug)};`);
+      out.push(
+        `UPDATE publications SET markdown = markdown || ${sql(chunk)} WHERE slug = ${sql(r.slug)};`,
+      );
     }
-    out.push(`UPDATE publications SET source_blob_sha = ${sql(r.sourceBlobSha)} WHERE slug = ${sql(r.slug)};`);
+    out.push(
+      `UPDATE publications SET source_blob_sha = ${sql(r.sourceBlobSha)} WHERE slug = ${sql(r.slug)};`,
+    );
   }
   for (const s of seeds) {
     out.push(
@@ -281,14 +292,20 @@ function verifyPublications(target, rows) {
   const bySlug = new Map(stored.map((r) => [r.slug, r]));
   const wrong = rows.filter((r) => {
     const row = bySlug.get(r.slug);
-    return !row || row.source_blob_sha !== r.sourceBlobSha || row.twin_bytes !== Buffer.byteLength(r.markdown);
+    return (
+      !row ||
+      row.source_blob_sha !== r.sourceBlobSha ||
+      row.twin_bytes !== Buffer.byteLength(r.markdown)
+    );
   });
   if (wrong.length > 0) {
     throw new Error(
       `the publications table does not match the files after the write: ${wrong.map((r) => r.slug).join(", ")}`,
     );
   }
-  console.log(`sync:content publications=${stored.length}, every row carries its file's blob sha and its twin's bytes`);
+  console.log(
+    `sync:content publications=${stored.length}, every row carries its file's blob sha and its twin's bytes`,
+  );
 }
 
 /**
@@ -303,7 +320,9 @@ function buildPagesSql(rows) {
   // A protected page (/terms, the dataset license) with no published file would be deleted by the line below.
   for (const protectedPath of PROTECTED_PAGE_PATHS) {
     if (!rows.some((r) => r.path === protectedPath && r.status === "published")) {
-      throw new Error(`buildPagesSql refuses: no published file for ${protectedPath}, and ${protectedPageReason(protectedPath)}`);
+      throw new Error(
+        `buildPagesSql refuses: no published file for ${protectedPath}, and ${protectedPageReason(protectedPath)}`,
+      );
     }
   }
   const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
@@ -354,7 +373,8 @@ function buildCvSql(rows) {
  * @param {any[]} rows content/generated/dictionary.json's rows
  */
 function buildDictionarySql(rows) {
-  if (rows.length === 0) throw new Error("buildDictionarySql refuses to delete every dictionary entry");
+  if (rows.length === 0)
+    throw new Error("buildDictionarySql refuses to delete every dictionary entry");
   const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
   const out = [`DELETE FROM dictionary_entries WHERE source_path NOT IN (${keep});`];
   for (const r of rows) {
@@ -453,9 +473,7 @@ function buildSearchSql(records) {
   const out = [`DELETE FROM search_docs;`];
 
   for (const record of records) {
-    const publishAt = record.publishAt
-      ? Math.floor(Date.parse(record.publishAt) / 1000)
-      : null;
+    const publishAt = record.publishAt ? Math.floor(Date.parse(record.publishAt) / 1000) : null;
     out.push(
       `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid, doc_title, ` +
         `doc_url, anchor, ordinal, status, publish_at) VALUES (` +
@@ -599,7 +617,11 @@ async function applySql(target, file, body, label, failure) {
   // D1 refuses a statement over 100 KB and these are literal rows, so a long procedure, paper or post is cut
   // into an INSERT and appended pieces (scripts/lib/split-statements.mjs). A cut row is written with a blank
   // blob sha and render hash and given the real ones last, so a run that stops half way reads as not current.
-  await writeFile(file, splitOversizeStatements(body, { lateColumns: ["source_blob_sha", "render_hash"] }), "utf8");
+  await writeFile(
+    file,
+    splitOversizeStatements(body, { lateColumns: ["source_blob_sha", "render_hash"] }),
+    "utf8",
+  );
   const applied = await wranglerImport(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${file}" --yes`,
     label,
@@ -619,10 +641,10 @@ function verify(target, posts, records) {
   const verify = runWrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
-      '(SELECT COUNT(*) FROM posts WHERE source_path IS NOT NULL) AS file_posts, ' +
-      '(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, ' +
-      '(SELECT COUNT(*) FROM search_docs) AS docs, ' +
-      '(SELECT COUNT(*) FROM search_identity_docsize) AS identity, ' +
+      "(SELECT COUNT(*) FROM posts WHERE source_path IS NOT NULL) AS file_posts, " +
+      "(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, " +
+      "(SELECT COUNT(*) FROM search_docs) AS docs, " +
+      "(SELECT COUNT(*) FROM search_identity_docsize) AS identity, " +
       '(SELECT COUNT(*) FROM search_prose_docsize) AS prose;"',
   );
   if (verify.status !== 0) {
@@ -637,9 +659,7 @@ function verify(target, posts, records) {
   console.log(
     `sync:content posts=${row.posts} posts_fts=${row.fts} tags=${row.tags} post_tags=${row.post_tags}`,
   );
-  console.log(
-    `sync:content search_docs=${row.docs} identity=${row.identity} prose=${row.prose}`,
-  );
+  console.log(`sync:content search_docs=${row.docs} identity=${row.identity} prose=${row.prose}`);
 
   if (row.posts !== row.fts) {
     throw new Error(
@@ -655,9 +675,7 @@ function verify(target, posts, records) {
   // Same trap as the post index: a count on either search index reads through to its content table.
   // These count the docsize shadows, which go to zero on a failed rebuild.
   if (row.docs !== records.length) {
-    throw new Error(
-      `search_docs=${row.docs} but the artifact carries ${records.length} records.`,
-    );
+    throw new Error(`search_docs=${row.docs} but the artifact carries ${records.length} records.`);
   }
   if (row.identity !== row.docs || row.prose !== row.docs) {
     throw new Error(
@@ -672,7 +690,11 @@ async function main() {
   const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
 
   // The content's source first: a path D1 has never held is copied in from the repository (scripts/seed-sources.mjs).
-  const seeded = spawnSync(process.execPath, [path.join("scripts", "seed-sources.mjs"), PREVIEW ? "--preview" : target], { stdio: "inherit" });
+  const seeded = spawnSync(
+    process.execPath,
+    [path.join("scripts", "seed-sources.mjs"), PREVIEW ? "--preview" : target],
+    { stdio: "inherit" },
+  );
   if (seeded.status !== 0) throw new Error("the source seed failed; nothing else was written.");
 
   const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
@@ -736,7 +758,9 @@ async function main() {
   // the procedure records the table now matches.
   const procedureRows = JSON.parse(await readFile(PROCEDURES_ARTIFACT_PATH, "utf8")).procedures;
   if (!Array.isArray(procedureRows) || procedureRows.length === 0) {
-    throw new Error(`${PROCEDURES_ARTIFACT_PATH} carries no procedures. Run npm run build:content first.`);
+    throw new Error(
+      `${PROCEDURES_ARTIFACT_PATH} carries no procedures. Run npm run build:content first.`,
+    );
   }
   console.log(`sync:content applying ${procedureRows.length} procedures`);
   await applySql(
@@ -749,9 +773,13 @@ async function main() {
   verifyFrozenVersions(target, procedureRows);
 
   // Publications before the search index too: the index then carries the paper records the table matches.
-  const publicationRows = JSON.parse(await readFile(PUBLICATIONS_ARTIFACT_PATH, "utf8")).publications;
+  const publicationRows = JSON.parse(
+    await readFile(PUBLICATIONS_ARTIFACT_PATH, "utf8"),
+  ).publications;
   if (!Array.isArray(publicationRows) || publicationRows.length === 0) {
-    throw new Error(`${PUBLICATIONS_ARTIFACT_PATH} carries no publications. Run npm run build:content first.`);
+    throw new Error(
+      `${PUBLICATIONS_ARTIFACT_PATH} carries no publications. Run npm run build:content first.`,
+    );
   }
   console.log(`sync:content applying ${publicationRows.length} publications`);
   await applySql(
@@ -767,7 +795,9 @@ async function main() {
   // records below were compiled with these same entries.
   const dictionaryRows = JSON.parse(await readFile(DICTIONARY_ARTIFACT_PATH, "utf8")).dictionary;
   if (!Array.isArray(dictionaryRows) || dictionaryRows.length === 0) {
-    throw new Error(`${DICTIONARY_ARTIFACT_PATH} carries no dictionary entries. Run npm run build:content first.`);
+    throw new Error(
+      `${DICTIONARY_ARTIFACT_PATH} carries no dictionary entries. Run npm run build:content first.`,
+    );
   }
   console.log(`sync:content applying ${dictionaryRows.length} dictionary entries`);
   await applySql(
@@ -841,7 +871,9 @@ async function main() {
   // that artifact was not built by this checkout's build:content.
   const registryRows = JSON.parse(await readFile(REGISTRY_ARTIFACT_PATH, "utf8")).registry;
   if (!Array.isArray(registryRows)) {
-    throw new Error(`${REGISTRY_ARTIFACT_PATH} has no registry list. Run npm run build:content first.`);
+    throw new Error(
+      `${REGISTRY_ARTIFACT_PATH} has no registry list. Run npm run build:content first.`,
+    );
   }
   console.log(`sync:content applying ${registryRows.length} registry items`);
   await applySql(
@@ -881,8 +913,6 @@ async function main() {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(
-    `sync:content failed. ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.error(`sync:content failed. ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

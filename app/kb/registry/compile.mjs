@@ -72,20 +72,42 @@ export function registryPath(/** @type {string} */ slug) {
  *   | { ok: true, errors: [], item: RegistryItem, record: string, gaps: Array<{ field: string, reason: string }>, sourcePath: string, sourceBlobSha: string }
  * >}
  */
-export async function compileRegistryItem({ slug, raw, host, pipeline, kinds = KINDS, sourcePath }) {
+export async function compileRegistryItem({
+  slug,
+  raw,
+  host,
+  pipeline,
+  kinds = KINDS,
+  sourcePath,
+}) {
   /** @type {string[]} */
   const errors = pipeline
     .findWideDashes(raw)
-    .map((hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`);
+    .map(
+      (hit) =>
+        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+    );
 
   const address = parseRegistrySlug(slug);
   if (!address) {
-    return { ok: false, errors: [...errors, `"${slug}" is not a registry address; it is <kind>/<id>, such as ${kindKeys(kinds)[0] ?? "primer"}/m13-forward (lower-case letters, digits and hyphens)`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `"${slug}" is not a registry address; it is <kind>/<id>, such as ${kindKeys(kinds)[0] ?? "primer"}/m13-forward (lower-case letters, digits and hyphens)`,
+      ],
+    };
   }
   const { kind, id } = address;
   const spec = kinds[kind];
   if (!spec) {
-    return { ok: false, errors: [...errors, `"${kind}" is not a registry kind; the kinds are ${kindKeys(kinds).join(", ") || "none yet"}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `"${kind}" is not a registry kind; the kinds are ${kindKeys(kinds).join(", ") || "none yet"}`,
+      ],
+    };
   }
   if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
 
@@ -94,22 +116,42 @@ export async function compileRegistryItem({ slug, raw, host, pipeline, kinds = K
     // An options object, even an empty one: gray-matter caches by input when it is omitted.
     parsed = matter(raw, {});
   } catch (error) {
-    return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+      ],
+    };
   }
   const data = /** @type {Record<string, unknown>} */ (parsed.data);
-  if (parsed.content.trim() !== "") errors.push(`the body must be empty: a ${spec.singular} is its front matter and nothing else`);
+  if (parsed.content.trim() !== "")
+    errors.push(`the body must be empty: a ${spec.singular} is its front matter and nothing else`);
 
   const allowed = ["name", "draft", ...Object.keys(spec.fields)];
   for (const key of Object.keys(data)) {
-    if (!allowed.includes(key)) errors.push(`${key} is not a ${spec.singular} field; a ${spec.singular} carries ${allowed.join(", ")} and nothing else`);
+    if (!allowed.includes(key))
+      errors.push(
+        `${key} is not a ${spec.singular} field; a ${spec.singular} carries ${allowed.join(", ")} and nothing else`,
+      );
   }
 
   const { name, draft } = data;
-  if (typeof name !== "string" || name.trim() === "" || name !== name.trim() || /[\r\n]/.test(name) || name.length > NAME_MAX) {
-    errors.push(`name is ${JSON.stringify(name)}; it is the ${spec.singular}'s name on one line, at most ${NAME_MAX} characters`);
+  if (
+    typeof name !== "string" ||
+    name.trim() === "" ||
+    name !== name.trim() ||
+    /[\r\n]/.test(name) ||
+    name.length > NAME_MAX
+  ) {
+    errors.push(
+      `name is ${JSON.stringify(name)}; it is the ${spec.singular}'s name on one line, at most ${NAME_MAX} characters`,
+    );
   }
   if (draft !== undefined && typeof draft !== "boolean") {
-    errors.push(`draft is ${JSON.stringify(draft)}; it is true or false, or absent for a published item`);
+    errors.push(
+      `draft is ${JSON.stringify(draft)}; it is true or false, or absent for a published item`,
+    );
   }
 
   /** @type {Record<string, unknown>} */
@@ -119,12 +161,17 @@ export async function compileRegistryItem({ slug, raw, host, pipeline, kinds = K
   for (const [field, fieldSpec] of Object.entries(spec.fields)) {
     const value = data[field];
     if (value === undefined || value === null) {
-      if (fieldSpec.required) errors.push(`${field} is required for a ${spec.singular}; write the value, or "MISSING: <why>" if nobody has it yet`);
+      if (fieldSpec.required)
+        errors.push(
+          `${field} is required for a ${spec.singular}; write the value, or "MISSING: <why>" if nobody has it yet`,
+        );
       fields[field] = null;
       continue;
     }
     if (typeof value === "string" && /^MISSING\b/.test(value) && !isGap(value)) {
-      errors.push(`${field} is ${JSON.stringify(value)}; write MISSING: and the reason it is missing`);
+      errors.push(
+        `${field} is ${JSON.stringify(value)}; write MISSING: and the reason it is missing`,
+      );
       continue;
     }
     if (isGap(value)) {
@@ -175,7 +222,8 @@ export function registrySetErrors(items, kinds = KINDS) {
   for (const { kind, id, name } of items) {
     const key = `${kind}\u0000${foldText(name)}`;
     const other = names.get(key);
-    if (other !== undefined) errors.push(`${kind}/${id} and ${kind}/${other} are both named "${name}"`);
+    if (other !== undefined)
+      errors.push(`${kind}/${id} and ${kind}/${other} are both named "${name}"`);
     else names.set(key, id);
   }
   for (const [kind, spec] of Object.entries(kinds)) {

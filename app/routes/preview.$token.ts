@@ -7,4 +7,5 @@ import type { Route } from "./+types/preview.$token";
  * own route is, so the post renders through the blog route; the package's answer is private, no-store and noindex, so
  * nothing stores it.
  */
-export const loader = ({ request, context }: Route.LoaderArgs) => handleCarrelPreviewLink(request, context);
+export const loader = ({ request, context }: Route.LoaderArgs) =>
+  handleCarrelPreviewLink(request, context);

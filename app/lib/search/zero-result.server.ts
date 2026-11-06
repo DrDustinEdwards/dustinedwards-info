@@ -2,10 +2,7 @@ import { desc, sql } from "drizzle-orm";
 
 import { getDb } from "~/db";
 import { zeroResultQueries } from "~/db/schema";
-import {
-  normalizeZeroResultQuery,
-  ZERO_RESULT_RETENTION_SECONDS,
-} from "./zero-result.mjs";
+import { normalizeZeroResultQuery, ZERO_RESULT_RETENTION_SECONDS } from "./zero-result.mjs";
 
 // Stores the query and counters only, never an IP, user agent or session. The write never fails a search.
 
@@ -30,8 +27,9 @@ export async function recordZeroResult(env: Env, raw: string): Promise<void> {
 /** On last_seen, not first_seen: a long-running gap asked about last week is live demand. */
 export async function purgeZeroResults(env: Env, now = new Date()): Promise<number> {
   const cutoff = Math.floor(now.getTime() / 1000) - ZERO_RESULT_RETENTION_SECONDS;
-  const result = await getDb(env)
-    .run(sql`DELETE FROM zero_result_queries WHERE last_seen < ${cutoff}`);
+  const result = await getDb(env).run(
+    sql`DELETE FROM zero_result_queries WHERE last_seen < ${cutoff}`,
+  );
   return result.meta?.changes ?? 0;
 }
 

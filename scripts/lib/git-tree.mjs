@@ -12,7 +12,11 @@ import { matchesPull, readPullManifest } from "./content-source.mjs";
  * @returns {{ ok: boolean, dirty: string, error: string }}
  */
 export function dirtyTree(root) {
-  const status = spawnSync("git", ["-c", "core.quotePath=false", "status", "--porcelain", "--untracked-files=all"], { cwd: root, encoding: "utf8" });
+  const status = spawnSync(
+    "git",
+    ["-c", "core.quotePath=false", "status", "--porcelain", "--untracked-files=all"],
+    { cwd: root, encoding: "utf8" },
+  );
   const pulled = readPullManifest(root) ?? {};
   const dirty = (status.stdout ?? "")
     .split("\n")

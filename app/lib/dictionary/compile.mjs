@@ -6,15 +6,29 @@
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { CONTENT_PAGE_PATHS } from "../content-pages.mjs";
-import { SOFTWARE_LABEL, dictionaryEntryMarkdown, definedTermJsonLd } from "../dictionary-entries.mjs";
+import {
+  SOFTWARE_LABEL,
+  dictionaryEntryMarkdown,
+  definedTermJsonLd,
+} from "../dictionary-entries.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
 
 const DICTIONARY_KIND = "dictionary";
 
 /** Every key a file may carry. Anything else is a typo that would be silently ignored. */
 const FRONT_MATTER_FIELDS = new Set([
-  "path", "term", "syllables", "ipa", "respelling", "partOfSpeech", "plural", "etymology", "senses",
-  "senseLabels", "audio", "draft",
+  "path",
+  "term",
+  "syllables",
+  "ipa",
+  "respelling",
+  "partOfSpeech",
+  "plural",
+  "etymology",
+  "senses",
+  "senseLabels",
+  "audio",
+  "draft",
 ]);
 
 const KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -43,18 +57,29 @@ const isFilled = (value) => typeof value === "string" && value.trim() !== "";
 function shapeProblems(data) {
   /** @type {string[]} */
   const errors = [];
-  const bad = (/** @type {string} */ field, /** @type {string} */ message) => errors.push(`${field}: ${message}`);
+  const bad = (/** @type {string} */ field, /** @type {string} */ message) =>
+    errors.push(`${field}: ${message}`);
 
   for (const field of Object.keys(data)) {
-    if (!FRONT_MATTER_FIELDS.has(field)) bad(field, `is not a field of a dictionary entry (${[...FRONT_MATTER_FIELDS].join(", ")})`);
+    if (!FRONT_MATTER_FIELDS.has(field))
+      bad(field, `is not a field of a dictionary entry (${[...FRONT_MATTER_FIELDS].join(", ")})`);
   }
   for (const field of ["term", "syllables", "ipa", "respelling", "partOfSpeech"]) {
     if (!isFilled(data[field])) bad(field, "is required text");
   }
-  if (isFilled(data.ipa) && !/^\/.+\/$/.test(String(data.ipa))) bad("ipa", "sits between slashes, as /ˈkæp.sɪd/");
-  if (isFilled(data.respelling) && !/^[A-Za-z-]+$/.test(String(data.respelling))) bad("respelling", "is letters and hyphens only, as KAP-sid");
-  if (isFilled(data.term) && isFilled(data.syllables) && String(data.syllables).replaceAll("·", "") !== String(data.term).toLowerCase()) {
-    bad("syllables", `joined without its dots it is "${String(data.syllables).replaceAll("·", "")}", not the term "${String(data.term).toLowerCase()}" in lower case`);
+  if (isFilled(data.ipa) && !/^\/.+\/$/.test(String(data.ipa)))
+    bad("ipa", "sits between slashes, as /ˈkæp.sɪd/");
+  if (isFilled(data.respelling) && !/^[A-Za-z-]+$/.test(String(data.respelling)))
+    bad("respelling", "is letters and hyphens only, as KAP-sid");
+  if (
+    isFilled(data.term) &&
+    isFilled(data.syllables) &&
+    String(data.syllables).replaceAll("·", "") !== String(data.term).toLowerCase()
+  ) {
+    bad(
+      "syllables",
+      `joined without its dots it is "${String(data.syllables).replaceAll("·", "")}", not the term "${String(data.term).toLowerCase()}" in lower case`,
+    );
   }
   if (data.plural !== undefined && data.plural !== null) {
     if (!Array.isArray(data.plural) || data.plural.length === 0 || !data.plural.every(isFilled)) {
@@ -65,9 +90,16 @@ function shapeProblems(data) {
     bad("etymology", "is a list: text, and [language, word] pairs for foreign words");
   } else {
     data.etymology.forEach((part, i) => {
-      const pair = Array.isArray(part) && part.length === 2 && LANGUAGE_PATTERN.test(String(part[0])) && isFilled(part[1]);
+      const pair =
+        Array.isArray(part) &&
+        part.length === 2 &&
+        LANGUAGE_PATTERN.test(String(part[0])) &&
+        isFilled(part[1]);
       if (!(typeof part === "string" && part !== "") && !pair) {
-        bad(`etymology[${i}]`, "is text, or a [language, word] pair with a language code such as la");
+        bad(
+          `etymology[${i}]`,
+          "is text, or a [language, word] pair with a language code such as la",
+        );
       }
     });
   }
@@ -75,12 +107,22 @@ function shapeProblems(data) {
     bad("senses", "is exactly two senses: the word's meaning, then the software");
   }
   const labels = data.senseLabels;
-  if (!Array.isArray(labels) || labels.length !== 2 || labels[0] !== null || labels[1] !== SOFTWARE_LABEL) {
-    bad("senseLabels", `is [null, ${SOFTWARE_LABEL}]: sense 1 carries no label, and sense 2 is the software`);
+  if (
+    !Array.isArray(labels) ||
+    labels.length !== 2 ||
+    labels[0] !== null ||
+    labels[1] !== SOFTWARE_LABEL
+  ) {
+    bad(
+      "senseLabels",
+      `is [null, ${SOFTWARE_LABEL}]: sense 1 carries no label, and sense 2 is the software`,
+    );
   }
-  if (data.draft !== undefined && typeof data.draft !== "boolean") bad("draft", `is ${JSON.stringify(data.draft)}; it is true or false`);
+  if (data.draft !== undefined && typeof data.draft !== "boolean")
+    bad("draft", `is ${JSON.stringify(data.draft)}; it is true or false`);
   // The entries describe the words and the software, and say nothing possessive about the site's owner.
-  if (/Dustin/.test(JSON.stringify(data))) bad("front matter", "names the site's owner; an entry says nothing possessive about him");
+  if (/Dustin/.test(JSON.stringify(data)))
+    bad("front matter", "names the site's owner; an entry says nothing possessive about him");
   return errors;
 }
 
@@ -100,7 +142,9 @@ function entryFromData(data) {
     partOfSpeech: String(data.partOfSpeech),
     plural: Array.isArray(data.plural) ? data.plural.map(String) : null,
     etymology: /** @type {import("../dictionary-entries.mjs").EtymologyPart[]} */ (
-      /** @type {unknown[]} */ (data.etymology).map((part) => (Array.isArray(part) ? [String(part[0]), String(part[1])] : String(part)))
+      /** @type {unknown[]} */ (data.etymology).map((part) =>
+        Array.isArray(part) ? [String(part[0]), String(part[1])] : String(part),
+      )
     ),
     senses: /** @type {[string, string]} */ (/** @type {unknown[]} */ (data.senses).map(String)),
     senseLabels: [null, SOFTWARE_LABEL],
@@ -126,33 +170,54 @@ export async function compileDictionaryEntry({ key, raw, pipeline, host, others 
   const parsed = parseDictionaryEntry({ file, raw });
   const errors = [
     ...parsed.problems,
-    ...pipeline.findWideDashes(raw).map(
-      (hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
-    ),
+    ...pipeline
+      .findWideDashes(raw)
+      .map(
+        (hit) =>
+          `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+      ),
   ];
   if (parsed.problems.length > 0) return { ok: false, errors };
 
-  if (!KEY_PATTERN.test(key)) errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
-  else if (!contentIdFits(DICTIONARY_KIND, key)) errors.push(`the key "${key}" is too long for a Carrel id`);
+  if (!KEY_PATTERN.test(key))
+    errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
+  else if (!contentIdFits(DICTIONARY_KIND, key))
+    errors.push(`the key "${key}" is too long for a Carrel id`);
   errors.push(...shapeProblems(parsed.data));
 
   const path = typeof parsed.data.path === "string" ? parsed.data.path : "";
-  if (!path.startsWith("/software/") || !(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(path))) {
-    errors.push(`path: "${path}" is not a registered Software page (CONTENT_PAGE_PATHS in app/lib/content-pages.mjs); an entry opens a named software page`);
+  if (
+    !path.startsWith("/software/") ||
+    !(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(path))
+  ) {
+    errors.push(
+      `path: "${path}" is not a registered Software page (CONTENT_PAGE_PATHS in app/lib/content-pages.mjs); an entry opens a named software page`,
+    );
   } else if (path !== `/software/${key}`) {
-    errors.push(`path: ${path} belongs in ${dictionaryPath(path.slice("/software/".length))}; the file name is the entry's key`);
+    errors.push(
+      `path: ${path} belongs in ${dictionaryPath(path.slice("/software/".length))}; the file name is the entry's key`,
+    );
   }
   const taken = others.find((other) => other.path === path);
-  if (path && taken) errors.push(`path: ${path} already has an entry (${taken.key}); a page opens with one entry`);
+  if (path && taken)
+    errors.push(`path: ${path} already has an entry (${taken.key}); a page opens with one entry`);
 
   const audio = typeof parsed.data.audio === "string" ? parsed.data.audio : "";
   if (!AUDIO_PATTERN.test(audio)) {
-    errors.push(`audio: "${audio}" is not a clip under /audio/ named in lower-case letters, as /audio/name.mp3`);
+    errors.push(
+      `audio: "${audio}" is not a clip under /audio/ named in lower-case letters, as /audio/name.mp3`,
+    );
   } else {
     const clip = await host.audio(audio);
-    if (!clip) errors.push(`audio: ${audio} is not in the repository (public${audio}); a referenced clip must exist, and uploading one is a code change`);
+    if (!clip)
+      errors.push(
+        `audio: ${audio} is not in the repository (public${audio}); a referenced clip must exist, and uploading one is a code change`,
+      );
     else {
-      if (clip.size >= AUDIO_MAX_BYTES) errors.push(`audio: ${audio} is ${clip.size} bytes; a pronunciation clip is under ${AUDIO_MAX_BYTES}`);
+      if (clip.size >= AUDIO_MAX_BYTES)
+        errors.push(
+          `audio: ${audio} is ${clip.size} bytes; a pronunciation clip is under ${AUDIO_MAX_BYTES}`,
+        );
       // An MPEG audio frame sync, not an HTML error page saved under an .mp3 name.
       if (clip.head && (clip.head[0] !== 0xff || ((clip.head[1] ?? 0) & 0xe0) !== 0xe0)) {
         errors.push(`audio: ${audio} does not start with an MPEG audio frame`);
@@ -164,8 +229,10 @@ export async function compileDictionaryEntry({ key, raw, pipeline, host, others 
   const entry = entryFromData(parsed.data);
   // What the twin and the JSON-LD say, each a function of the entry alone: a file that passes cannot fail the page.
   const twin = dictionaryEntryMarkdown(entry).split("\n");
-  if (!twin.includes(`2. *${SOFTWARE_LABEL}.* ${entry.senses[1]}`)) errors.push("twin: sense 2 does not carry the software label in its own line");
-  if (definedTermJsonLd(entry, "https://example.invalid").description !== entry.senses[1]) errors.push("JSON-LD: the DefinedTerm does not describe the software (sense 2)");
+  if (!twin.includes(`2. *${SOFTWARE_LABEL}.* ${entry.senses[1]}`))
+    errors.push("twin: sense 2 does not carry the software label in its own line");
+  if (definedTermJsonLd(entry, "https://example.invalid").description !== entry.senses[1])
+    errors.push("JSON-LD: the DefinedTerm does not describe the software (sense 2)");
   if (errors.length > 0) return { ok: false, errors };
 
   return {

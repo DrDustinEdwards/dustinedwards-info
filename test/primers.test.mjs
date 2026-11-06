@@ -2,10 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { amplicon, amplicons, findSites, normalize, parseFasta, reverseComplement } from "../app/lib/primers.mjs";
+import {
+  amplicon,
+  amplicons,
+  findSites,
+  normalize,
+  parseFasta,
+  reverseComplement,
+} from "../app/lib/primers.mjs";
 
 const reference = (/** @type {string} */ accession) =>
-  parseFasta(readFileSync(new URL(`./fixtures/references/${accession}.fasta`, import.meta.url), "utf8")).sequence;
+  parseFasta(
+    readFileSync(new URL(`./fixtures/references/${accession}.fasta`, import.meta.url), "utf8"),
+  ).sequence;
 
 await test("normalize upper-cases, maps U to T, drops whitespace, and refuses anything not a nucleotide code", () => {
   assert.equal(normalize(" acgu\n ACGT "), "ACGTACGT");
@@ -48,7 +57,14 @@ await test("findSites finds a primer on each strand, 1-based and inclusive", () 
 await test("the synthetic product is 30 bases, 5 to 34, with no edits", () => {
   const product = amplicon(TEMPLATE, F, R);
   assert.deepEqual(
-    [product.start, product.end, product.length, product.templateLength, product.forwardMismatches, product.reverseMismatches],
+    [
+      product.start,
+      product.end,
+      product.length,
+      product.templateLength,
+      product.forwardMismatches,
+      product.reverseMismatches,
+    ],
     [5, 34, 30, 30, 0, 0],
   );
 });
@@ -87,7 +103,11 @@ await test("the fixture is the whole DQ387450 genome", () => {
 });
 
 await test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with no indel and the reverse one mismatch", () => {
-  const all = amplicons(REV, "CATACTGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", { maxMismatches: 1, maxIndels: 1, maxLength: 1000 });
+  const all = amplicons(REV, "CATACTGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", {
+    maxMismatches: 1,
+    maxIndels: 1,
+    maxLength: 1000,
+  });
   assert.deepEqual(
     all.map((p) => [p.start, p.end, p.length]),
     [
@@ -107,8 +127,13 @@ await test("REV pol 2500-3075: 574 bp at 2492-3065, both primers exact", () => {
 });
 
 await test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () => {
-  const product = amplicon(REV, "CGAGAAGTAGCTATACGTCCTTTG", "ACATCGTGCCCGGAGC", { maxMismatches: 1 });
-  assert.deepEqual([product.start, product.end, product.length, product.reverseMismatches], [4766, 5566, 801, 1]);
+  const product = amplicon(REV, "CGAGAAGTAGCTATACGTCCTTTG", "ACATCGTGCCCGGAGC", {
+    maxMismatches: 1,
+  });
+  assert.deepEqual(
+    [product.start, product.end, product.length, product.reverseMismatches],
+    [4766, 5566, 801, 1],
+  );
 });
 
 /*
@@ -125,7 +150,15 @@ await test("the U09568 fixture is the whole 7,143 nt sequence", () => {
 
 await test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp between them", () => {
   const product = amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTATTTG");
-  assert.deepEqual([product.start, product.end, product.length, product.forwardMismatches, product.reverseMismatches], [1041, 1498, 458, 0, 0]);
+  assert.deepEqual(
+    [
+      product.start,
+      product.end,
+      product.length,
+      product.forwardMismatches,
+      product.reverseMismatches,
+    ],
+    [1041, 1498, 458, 0, 0],
+  );
   assert.equal(product.length - LPDV_FORWARD.length - "TGATGGCGTCAGGGCTATTTG".length, 413);
 });
-

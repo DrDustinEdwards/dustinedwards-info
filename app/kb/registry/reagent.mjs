@@ -17,7 +17,9 @@ const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
 const oneLine = (value, max) =>
-  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max ? null : `is one line of at most ${max} characters`;
+  typeof value === "string" && LINE.test(value) && value === value.trim() && value.length <= max
+    ? null
+    : `is one line of at most ${max} characters`;
 
 /** A field the file does not carry reads as null (compile.mjs). @param {unknown} value */
 const absent = (value) => value === undefined || value === null;
@@ -37,12 +39,21 @@ export const REAGENT = {
     // Bought (a supplier and a catalog number) or prepared in the lab (a recipe): setErrors holds each item to one of the two.
     supplier: { check: (value) => oneLine(value, 80) },
     catalog_number: { check: (value) => oneLine(value, 40) },
-    product_url: { check: (value) => (typeof value === "string" && /^https:\/\/[^\s]+$/.test(value) ? null : "is an https address") },
-    prepared_in_lab: { check: (value) => (value === true ? null : "is true, or absent for a reagent that is bought") },
+    product_url: {
+      check: (value) =>
+        typeof value === "string" && /^https:\/\/[^\s]+$/.test(value)
+          ? null
+          : "is an https address",
+    },
+    prepared_in_lab: {
+      check: (value) => (value === true ? null : "is true, or absent for a reagent that is bought"),
+    },
     // The recipe of a reagent prepared in the lab: the file key of a procedure with the recipe profile, or MISSING.
     recipe: {
       check: async (value, { host }) =>
-        typeof value === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && (await host.recipe(value))
+        typeof value === "string" &&
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
+        (await host.recipe(value))
           ? null
           : "is the file key of a procedure with the recipe profile (content/procedures/<key>.md, profile: recipe), or MISSING: <why>",
     },
@@ -56,15 +67,21 @@ export const REAGENT = {
     const errors = [];
     for (const { id, fields } of items) {
       if (fields.prepared_in_lab === true) {
-        if (absent(fields.recipe)) errors.push(`reagent/${id} is prepared in the lab, so it states its recipe, or MISSING: <why>`);
+        if (absent(fields.recipe))
+          errors.push(
+            `reagent/${id} is prepared in the lab, so it states its recipe, or MISSING: <why>`,
+          );
         for (const field of ["supplier", "catalog_number", "product_url"]) {
-          if (!absent(fields[field])) errors.push(`reagent/${id} is prepared in the lab, so it has no ${field}`);
+          if (!absent(fields[field]))
+            errors.push(`reagent/${id} is prepared in the lab, so it has no ${field}`);
         }
       } else {
         for (const field of ["supplier", "catalog_number"]) {
-          if (absent(fields[field])) errors.push(`reagent/${id} is bought, so it states its ${field}, or MISSING: <why>`);
+          if (absent(fields[field]))
+            errors.push(`reagent/${id} is bought, so it states its ${field}, or MISSING: <why>`);
         }
-        if (!absent(fields.recipe) && !isGap(fields.recipe)) errors.push(`reagent/${id} is not prepared in the lab, so it has no recipe`);
+        if (!absent(fields.recipe) && !isGap(fields.recipe))
+          errors.push(`reagent/${id} is not prepared in the lab, so it has no recipe`);
       }
     }
     return errors;
@@ -80,7 +97,8 @@ export const REAGENT = {
  */
 export function storedReagent(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  const text = (/** @type {unknown} */ value) => (typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null);
+  const text = (/** @type {unknown} */ value) =>
+    typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null;
   return {
     id: item.id,
     name: item.name,

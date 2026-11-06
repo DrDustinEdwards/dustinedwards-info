@@ -89,7 +89,11 @@ describe("operator metering", () => {
     freezeAtWindowStart();
 
     const id = "rate-limit-case";
-    const { refusal } = await untilRefused(() => meterOperator(operatorEnv(), id), (r) => !r.ok, 40);
+    const { refusal } = await untilRefused(
+      () => meterOperator(operatorEnv(), id),
+      (r) => !r.ok,
+      40,
+    );
     expect(refusal).toMatchObject({ ok: false, status: 429 });
     if (refusal && !refusal.ok) expect(refusal.retryAfter).toBeGreaterThan(0);
   });
@@ -98,7 +102,11 @@ describe("operator metering", () => {
     freezeAtWindowStart();
 
     const id = "retry-after-case";
-    const { refusal } = await untilRefused(() => meterOperator(operatorEnv(), id), (r) => !r.ok, 40);
+    const { refusal } = await untilRefused(
+      () => meterOperator(operatorEnv(), id),
+      (r) => !r.ok,
+      40,
+    );
     expect(refusal).toMatchObject({ ok: false, status: 429 });
     const retryAfter = refusal && !refusal.ok ? (refusal.retryAfter ?? 0) : 0;
     expect(retryAfter).toBeGreaterThan(0);

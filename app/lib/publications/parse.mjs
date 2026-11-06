@@ -39,7 +39,9 @@ export function parsePublication({ file, raw }) {
     data = /** @type {Record<string, unknown>} */ (yamlPlain(parsed.data));
     content = parsed.content;
   } catch (error) {
-    problems.push(`${file}: the front matter does not parse: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+    problems.push(
+      `${file}: the front matter does not parse: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+    );
     return { data, fullText: null, problems };
   }
   if (!raw.startsWith("---")) {

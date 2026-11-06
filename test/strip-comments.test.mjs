@@ -29,7 +29,11 @@ await test("preserveLines keeps the line count, so reported lines do not shift",
   const collapsed = stripComments(src);
   const preserved = stripComments(src, { preserveLines: true });
   assert.equal(preserved.split("\n").length, src.split("\n").length);
-  assert.notEqual(collapsed.split("\n").length, src.split("\n").length, "the default does collapse");
+  assert.notEqual(
+    collapsed.split("\n").length,
+    src.split("\n").length,
+    "the default does collapse",
+  );
   assert.equal(preserved.includes("two"), false, "still actually stripped");
 });
 
@@ -41,7 +45,11 @@ await test("stripCommentsAndStrings blanks literals but keeps the code around th
 });
 
 await test("comments are stripped BEFORE strings, or an apostrophe eats the file", () => {
-  const src = ["/* the editor's own copy */", "const real = process.argv;", "// doesn't matter"].join("\n");
+  const src = [
+    "/* the editor's own copy */",
+    "const real = process.argv;",
+    "// doesn't matter",
+  ].join("\n");
   const out = stripCommentsAndStrings(src);
   assert.equal(out.includes("process.argv"), true, "code between two apostrophes must survive");
 });
@@ -164,7 +172,9 @@ await test("TWO possessive labels do not swallow the code between them", () => {
 await test("THE DISCRIMINATING CONTROL: one possessive label was always fine", () => {
   // Without this control the test above could pass against a stripper that simply
   // deleted every apostrophe.
-  const one = ["ok(", `  "the page${APOSTROPHE}s verdict",`, "  someNumber < LIMIT,", ");"].join("\n");
+  const one = ["ok(", `  "the page${APOSTROPHE}s verdict",`, "  someNumber < LIMIT,", ");"].join(
+    "\n",
+  );
   const out = stripCommentsAndStrings(one);
   assert.match(out, /someNumber < LIMIT/);
   assert.equal((out.match(/ok\(/g) ?? []).length, 1);

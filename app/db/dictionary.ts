@@ -10,7 +10,10 @@ import { getDb } from "./client";
 import { dictionaryEntries } from "./schema";
 
 /** The published entry that opens a page, or null: a page with none shows no lead, and a draft shows none either. */
-export async function getPublishedEntryByPath(env: Env, path: string): Promise<DictionaryEntry | null> {
+export async function getPublishedEntryByPath(
+  env: Env,
+  path: string,
+): Promise<DictionaryEntry | null> {
   const row = (
     await getDb(env)
       .select({ record: dictionaryEntries.record })

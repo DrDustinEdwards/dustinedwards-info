@@ -37,7 +37,11 @@ export const TABLE_MARKER = "<!-- phages:table -->";
  * (app/lib/phages/save.server.ts), so this list and the pages must agree: test/phages.test.mjs fails when a page
  * file uses a token and is not here, or is here and uses none.
  */
-export const PHAGE_FACT_PAGES = /** @type {const} */ (["/research", "/research/bacteriophages", "/research/science-education"]);
+export const PHAGE_FACT_PAGES = /** @type {const} */ ([
+  "/research",
+  "/research/bacteriophages",
+  "/research/science-education",
+]);
 
 /** The two hosts the table names, as the table's cell and the facet write them. A new host is code. */
 export const HOSTS = Object.freeze({
@@ -46,10 +50,22 @@ export const HOSTS = Object.freeze({
 });
 
 /** The table's columns, in order: the header the page has always had. */
-const TABLE_HEADER = "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
+const TABLE_HEADER =
+  "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
 
 const STATE = "Texas";
-const FIELDS = ["name", "year", "host", "county", "phagesdb", "paper", "formerly", "note", "genome_bp", "genes"];
+const FIELDS = [
+  "name",
+  "year",
+  "host",
+  "county",
+  "phagesdb",
+  "paper",
+  "formerly",
+  "note",
+  "genome_bp",
+  "genes",
+];
 const REQUIRED = ["name", "year", "host", "county", "phagesdb"];
 
 /** A phage's name: letters and digits, so its lower-case form is the file key, the heading id and the old address. */
@@ -83,7 +99,8 @@ export function phageSlug(/** @type {string} */ name) {
 /** The page's own order: year, then name, folded so case and accents do not matter. */
 export function sortPhages(/** @type {Phage[]} */ phages) {
   return [...phages].sort(
-    (a, b) => a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true }),
+    (a, b) =>
+      a.year - b.year || foldText(a.name).localeCompare(foldText(b.name), "en", { numeric: true }),
   );
 }
 
@@ -104,7 +121,10 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
   /** @type {string[]} */
   const errors = pipeline
     .findWideDashes(raw)
-    .map((hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`);
+    .map(
+      (hit) =>
+        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+    );
   if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
 
   let parsed;
@@ -112,55 +132,114 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
     // An options object, even an empty one: gray-matter caches by input when it is omitted.
     parsed = matter(raw, {});
   } catch (error) {
-    return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+      ],
+    };
   }
   const data = parsed.data;
-  if (parsed.content.trim() !== "") errors.push("the body must be empty: a phage is its front matter and nothing else");
+  if (parsed.content.trim() !== "")
+    errors.push("the body must be empty: a phage is its front matter and nothing else");
   for (const key of Object.keys(data)) {
     if (!FIELDS.includes(key)) {
-      errors.push(`${key} is not a phage field; a phage carries ${FIELDS.join(", ")} and nothing else (no samples, locations beyond the county, or other personal data)`);
+      errors.push(
+        `${key} is not a phage field; a phage carries ${FIELDS.join(", ")} and nothing else (no samples, locations beyond the county, or other personal data)`,
+      );
     }
   }
   for (const key of REQUIRED) {
-    if (data[key] === undefined) errors.push(`${key} is required${key === "name" || key === "year" ? "" : " (null where there is none)"}`);
+    if (data[key] === undefined)
+      errors.push(
+        `${key} is required${key === "name" || key === "year" ? "" : " (null where there is none)"}`,
+      );
   }
 
-  const { name, year, host: hostKey, county, phagesdb, paper, formerly, note, genome_bp: genomeBp, genes } = data;
-  if (!matches(name, NAME_PATTERN)) errors.push(`name is ${JSON.stringify(name)}; it is the phage's name: letters and digits, starting with a letter`);
-  else if (slug !== phageSlug(name)) errors.push(`name is ${name}, but the file is ${phagePath(slug)}: a phage's file is named for its name in lower case (${phageSlug(name)}.md)`);
-  if (!SLUG_PATTERN.test(slug)) errors.push(`"${slug}" is not a phage file key; the file is the name in lower case, such as acorn15.md`);
+  const {
+    name,
+    year,
+    host: hostKey,
+    county,
+    phagesdb,
+    paper,
+    formerly,
+    note,
+    genome_bp: genomeBp,
+    genes,
+  } = data;
+  if (!matches(name, NAME_PATTERN))
+    errors.push(
+      `name is ${JSON.stringify(name)}; it is the phage's name: letters and digits, starting with a letter`,
+    );
+  else if (slug !== phageSlug(name))
+    errors.push(
+      `name is ${name}, but the file is ${phagePath(slug)}: a phage's file is named for its name in lower case (${phageSlug(name)}.md)`,
+    );
+  if (!SLUG_PATTERN.test(slug))
+    errors.push(
+      `"${slug}" is not a phage file key; the file is the name in lower case, such as acorn15.md`,
+    );
   if (typeof year !== "number" || !Number.isInteger(year) || year < 2000 || year > 2099) {
     errors.push(`year is ${JSON.stringify(year)}; it is the year the phage was found, four digits`);
   }
   if (hostKey !== undefined && hostKey !== null && !Object.hasOwn(HOSTS, String(hostKey))) {
-    errors.push(`host is ${JSON.stringify(hostKey)}; it is ${Object.keys(HOSTS).join(" or ")}, or null where no host is on record`);
+    errors.push(
+      `host is ${JSON.stringify(hostKey)}; it is ${Object.keys(HOSTS).join(" or ")}, or null where no host is on record`,
+    );
   }
   if (county !== undefined && county !== null && !matches(county, COUNTY_PATTERN)) {
-    errors.push(`county is ${JSON.stringify(county)}; it is a Texas county written "Erath County" (or "${STATE}" where only the state is on record), or null`);
+    errors.push(
+      `county is ${JSON.stringify(county)}; it is a Texas county written "Erath County" (or "${STATE}" where only the state is on record), or null`,
+    );
   }
   if (phagesdb !== undefined && phagesdb !== null) {
     if (!matches(phagesdb, PHAGESDB_PATTERN)) {
-      errors.push(`phagesdb is ${JSON.stringify(phagesdb)}; it is the PhagesDB record's name as PhagesDB spells it, or null where this phage has no verified record`);
+      errors.push(
+        `phagesdb is ${JSON.stringify(phagesdb)}; it is the PhagesDB record's name as PhagesDB spells it, or null where this phage has no verified record`,
+      );
     } else if (typeof name === "string" && phagesdb.toLowerCase() !== name.toLowerCase()) {
-      errors.push(`phagesdb is ${phagesdb}, which is not ${name}'s record: a record is this phage's own, and a same-named phage of another lab is not it (set null)`);
+      errors.push(
+        `phagesdb is ${phagesdb}, which is not ${name}'s record: a record is this phage's own, and a same-named phage of another lab is not it (set null)`,
+      );
     }
   }
   if (paper !== undefined && paper !== null) {
-    if (!matches(paper, PAPER_PATTERN)) errors.push(`paper is ${JSON.stringify(paper)}; it is a publication's slug, such as 10-1128-mra-01242-18, or absent`);
-    else if (!(await host.paper(paper))) errors.push(`paper ${paper} is not a publication of this site (/research/publications/${paper}/); the genome announcement is a paper the site holds`);
+    if (!matches(paper, PAPER_PATTERN))
+      errors.push(
+        `paper is ${JSON.stringify(paper)}; it is a publication's slug, such as 10-1128-mra-01242-18, or absent`,
+      );
+    else if (!(await host.paper(paper)))
+      errors.push(
+        `paper ${paper} is not a publication of this site (/research/publications/${paper}/); the genome announcement is a paper the site holds`,
+      );
   }
   if (formerly !== undefined && formerly !== null && !matches(formerly, NAME_PATTERN)) {
-    errors.push(`formerly is ${JSON.stringify(formerly)}; it is the phage's earlier name, letters and digits, or absent`);
+    errors.push(
+      `formerly is ${JSON.stringify(formerly)}; it is the phage's earlier name, letters and digits, or absent`,
+    );
   }
   if (note !== undefined && note !== null) {
     if (!matches(note, NOTE_PATTERN) || note.length > NOTE_MAX) {
-      errors.push(`note is ${JSON.stringify(note)}; it is one plain sentence of at most ${NOTE_MAX} characters, starting with a capital and ending with a period, with no links or markdown`);
+      errors.push(
+        `note is ${JSON.stringify(note)}; it is one plain sentence of at most ${NOTE_MAX} characters, starting with a capital and ending with a period, with no links or markdown`,
+      );
     }
   }
   // The genome announcement's own numbers, so a page states them from the record instead of typing them.
-  for (const [field, value, low, high] of /** @type {const} */ ([["genome_bp", genomeBp, 1_000, 10_000_000], ["genes", genes, 1, 5_000]])) {
-    if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isInteger(value) || value < low || value > high)) {
-      errors.push(`${field} is ${JSON.stringify(value)}; it is a whole number from ${low} to ${high}, or absent`);
+  for (const [field, value, low, high] of /** @type {const} */ ([
+    ["genome_bp", genomeBp, 1_000, 10_000_000],
+    ["genes", genes, 1, 5_000],
+  ])) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      (typeof value !== "number" || !Number.isInteger(value) || value < low || value > high)
+    ) {
+      errors.push(
+        `${field} is ${JSON.stringify(value)}; it is a whole number from ${low} to ${high}, or absent`,
+      );
     }
   }
   if (errors.length > 0) return { ok: false, errors };
@@ -198,7 +277,8 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
 export function phageSetErrors(phages) {
   /** @type {string[]} */
   const errors = [];
-  if (phages.length === 0) errors.push(`${PHAGES_DIR} holds no phage files; the table cannot be empty`);
+  if (phages.length === 0)
+    errors.push(`${PHAGES_DIR} holds no phage files; the table cannot be empty`);
   const names = new Set();
   const records = new Map();
   for (const { name, phagesdb } of phages) {
@@ -206,7 +286,8 @@ export function phageSetErrors(phages) {
     names.add(phageSlug(name));
     if (phagesdb !== null) {
       const key = phagesdb.toLowerCase();
-      if (records.has(key)) errors.push(`${name} and ${records.get(key)} claim the same PhagesDB record, ${phagesdb}`);
+      if (records.has(key))
+        errors.push(`${name} and ${records.get(key)} claim the same PhagesDB record, ${phagesdb}`);
       records.set(key, name);
     }
   }
@@ -226,7 +307,9 @@ export function phageTableRow(/** @type {Phage} */ phage) {
     phage.host ? HOSTS[phage.host].short : "",
     phage.county ?? "",
     phage.phagesdb ? `[PhagesDB](${phagesDbUrl(phage.phagesdb)})` : "",
-    [phage.paper ? `[Paper](/research/publications/${phage.paper}/)` : "", phage.note ?? ""].filter(Boolean).join(" "),
+    [phage.paper ? `[Paper](/research/publications/${phage.paper}/)` : "", phage.note ?? ""]
+      .filter(Boolean)
+      .join(" "),
   ];
   return `| ${cells.join(" | ")} |`;
 }
@@ -241,7 +324,9 @@ export function phageTableRow(/** @type {Phage} */ phage) {
 export function withPhageRowIds(path, html, phages) {
   if (path !== PHAGES_PAGE_PATH || !phages) return html;
   const ids = new Map(phages.map((p) => [`${p.name}${formerlyText(p)}`, phageSlug(p.name)]));
-  return html.replace(/<tr>\n<td>([^<]*)<\/td>/g, (row, label) => (ids.has(label) ? `<tr>\n<td id="${ids.get(label)}">${label}</td>` : row));
+  return html.replace(/<tr>\n<td>([^<]*)<\/td>/g, (row, label) =>
+    ids.has(label) ? `<tr>\n<td id="${ids.get(label)}">${label}</td>` : row,
+  );
 }
 
 /** The table's text: its header and one row per phage, in the page's order, no trailing newline. */
@@ -273,7 +358,12 @@ function phageFacts(phages) {
     const mine = phages.filter((p) => p.host === key);
     if (mine.length > 0) {
       const own = mine.map((p) => p.year);
-      host[key] = { count: mine.length, firstYear: Math.min(...own), lastYear: Math.max(...own), years: yearsText(own) };
+      host[key] = {
+        count: mine.length,
+        firstYear: Math.min(...own),
+        lastYear: Math.max(...own),
+        years: yearsText(own),
+      };
     }
   }
   return {
@@ -304,7 +394,12 @@ const COMMON_COUNTY = /^phages\.commonCounty\(([a-z0-9,\s]+)\)$/;
 export function expandPhageTokens(text, phages) {
   if (!text.includes("{{")) return { ok: true, text };
   if (!phages || phages.length === 0) {
-    return { ok: false, errors: ["the page uses {{phage...}} tokens and the phage rows are not loaded: run the content sync (npm run sync:content -- --remote), or sync_phages"] };
+    return {
+      ok: false,
+      errors: [
+        "the page uses {{phage...}} tokens and the phage rows are not loaded: run the content sync (npm run sync:content -- --remote), or sync_phages",
+      ],
+    };
   }
   const facts = phageFacts(phages);
   const bySlug = new Map(phages.map((p) => [phageSlug(p.name), p]));
@@ -314,7 +409,9 @@ export function expandPhageTokens(text, phages) {
   const read = (token) => {
     const common = COMMON_COUNTY.exec(token);
     if (common) {
-      const counties = new Set((common[1] ?? "").split(",").map((k) => bySlug.get(k.trim())?.county ?? null));
+      const counties = new Set(
+        (common[1] ?? "").split(",").map((k) => bySlug.get(k.trim())?.county ?? null),
+      );
       const only = [...counties];
       return only.length === 1 && only[0] !== null && only[0] !== undefined ? only[0] : null;
     }
@@ -325,13 +422,20 @@ export function expandPhageTokens(text, phages) {
     }
     if (parts[0] === "phages" && parts[1] === "host" && parts.length === 4) {
       const entry = facts.host[parts[2] ?? ""];
-      const value = entry ? /** @type {Record<string, unknown>} */ (entry)[parts[3] ?? ""] : undefined;
+      const value = entry
+        ? /** @type {Record<string, unknown>} */ (entry)[parts[3] ?? ""]
+        : undefined;
       return typeof value === "number" || typeof value === "string" ? value : null;
     }
     if (parts[0] === "phage" && parts.length === 3) {
       const phage = bySlug.get(parts[1] ?? "");
       if (!phage) return null;
-      const value = /** @type {Record<string, number | string | null>} */ ({ bp: phage.genomeBp ?? null, genes: phage.genes ?? null, county: phage.county, year: phage.year })[parts[2] ?? ""];
+      const value = /** @type {Record<string, number | string | null>} */ ({
+        bp: phage.genomeBp ?? null,
+        genes: phage.genes ?? null,
+        county: phage.county,
+        year: phage.year,
+      })[parts[2] ?? ""];
       if (value === null || value === undefined) return null;
       return parts[2] === "bp" && typeof value === "number" ? countFormat.format(value) : value;
     }
@@ -340,7 +444,9 @@ export function expandPhageTokens(text, phages) {
   const out = text.replace(TOKEN, (whole, inner) => {
     const value = read(String(inner).trim());
     if (value === null) {
-      errors.push(`${whole} names no phage fact (check the token, the phage's file key, and that its record carries the field)`);
+      errors.push(
+        `${whole} names no phage fact (check the token, the phage's file key, and that its record carries the field)`,
+      );
       return whole;
     }
     return String(value);
@@ -362,13 +468,25 @@ const MARKER_LINE = new RegExp(`^${TABLE_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "
 export function expandPhagePage(path, body, phages) {
   const anywhere = body.split(TABLE_MARKER).length - 1;
   if (path !== PHAGES_PAGE_PATH) {
-    return anywhere > 0 ? { ok: false, errors: [`${TABLE_MARKER} belongs on ${PHAGES_PAGE_PATH} only`] } : { ok: true, markdown: body };
+    return anywhere > 0
+      ? { ok: false, errors: [`${TABLE_MARKER} belongs on ${PHAGES_PAGE_PATH} only`] }
+      : { ok: true, markdown: body };
   }
   if (!phages || phages.length === 0) {
-    return { ok: false, errors: ["the phage table has no rows to draw: the phages table is empty. Run the content sync (npm run sync:content -- --remote), or sync_phages."] };
+    return {
+      ok: false,
+      errors: [
+        "the phage table has no rows to draw: the phages table is empty. Run the content sync (npm run sync:content -- --remote), or sync_phages.",
+      ],
+    };
   }
   if ((body.match(MARKER_LINE) ?? []).length !== 1 || anywhere !== 1) {
-    return { ok: false, errors: [`the page must carry ${TABLE_MARKER} exactly once, alone on its line (it has ${anywhere}); the phage rows are drawn there`] };
+    return {
+      ok: false,
+      errors: [
+        `the page must carry ${TABLE_MARKER} exactly once, alone on its line (it has ${anywhere}); the phage rows are drawn there`,
+      ],
+    };
   }
   return { ok: true, markdown: body.replace(MARKER_LINE, () => phageTableMarkdown(phages)) };
 }

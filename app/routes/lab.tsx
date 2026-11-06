@@ -45,7 +45,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // A state written in another order, or with a default spelled out, goes to its one address.
   const canonical = catalogRedirect(INVENTORY, url);
   if (canonical) throw redirect(canonical, 301);
-  const [items, phages] = await Promise.all([listRegistry(env, { published: true }), listPhages(env)]);
+  const [items, phages] = await Promise.all([
+    listRegistry(env, { published: true }),
+    listPhages(env),
+  ]);
   return { rows: inventoryRows(items, phages), search: url.search };
 }
 
@@ -56,7 +59,9 @@ const TRAIL: Trail = [
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
-  const kinds = [...new Set(loaderData.rows.map((row) => row.kind))].map((kind) => `${kindLabel(kind).toLowerCase()}s`);
+  const kinds = [...new Set(loaderData.rows.map((row) => row.kind))].map(
+    (kind) => `${kindLabel(kind).toLowerCase()}s`,
+  );
   return pageMeta({
     title: `${TITLE}: ${kinds.join(", ")}`,
     description: `The lab's reference catalog: ${kinds.join(" and ")}, each with its own facts.`,

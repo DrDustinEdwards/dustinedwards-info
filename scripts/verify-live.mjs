@@ -38,7 +38,8 @@ console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed
    skipped section; the corpus part of the floor is derived instead. */
 const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
   live + pageCount(live) + drafts * 8 + Math.min(drafts, ASK_PROBE_LIMIT);
-const MINIMUM_CHECKS = 189 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
+const MINIMUM_CHECKS =
+  189 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
 const breach = assertFloor("verify-live", "checks", tally.checks, MINIMUM_CHECKS);
 const short = breach !== null;
 

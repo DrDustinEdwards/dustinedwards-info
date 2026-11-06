@@ -26,7 +26,12 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath, publishedContentPagePaths } from "../app/lib/content-pages.mjs";
+import {
+  CONTENT_PAGE_PATHS,
+  contentPageMarkdownBody,
+  contentPageMarkdownPath,
+  publishedContentPagePaths,
+} from "../app/lib/content-pages.mjs";
 // The one reader of the ids a rendered page carries: the page save judges anchors with it too.
 import { idsIn } from "../app/lib/pages/links.mjs";
 import { buildNav, menuLinks } from "../app/lib/nav.ts";
@@ -36,7 +41,11 @@ import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.
 import { seriesPath } from "../app/lib/series-path.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { loadSystemModel, systemPath } from "../app/lib/systems.mjs";
-import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
+import {
+  EXPLICIT_ROWS,
+  PROFILE_TARGET,
+  wordpressDisposition,
+} from "../app/lib/wordpress-redirects.mjs";
 import { renderContentPages, renderOwnRoutePages } from "./build-content.mjs";
 import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
@@ -80,7 +89,9 @@ for (const [path, file] of routes) {
 
 /** Every file under public/ is served at its own path by the asset handler. */
 const PUBLIC = join(root, "public");
-const publicFiles = walkFiles(PUBLIC).map((file) => `/${relative(PUBLIC, file).split(sep).join("/")}`);
+const publicFiles = walkFiles(PUBLIC).map(
+  (file) => `/${relative(PUBLIC, file).split(sep).join("/")}`,
+);
 for (const path of publicFiles) served.add(path);
 
 // The page twins are written by build:content and gitignored, so they are named from the page list. A draft page
@@ -117,7 +128,9 @@ for (const item of registryItems.filter((i) => hasItemPage(i.kind))) {
 }
 
 // The network of systems (app/lib/systems.mjs): each system's page and its twin, from the committed model.
-const systemModel = loadSystemModel(JSON.parse(readFileSync(join(root, "data/system-model.json"), "utf8")));
+const systemModel = loadSystemModel(
+  JSON.parse(readFileSync(join(root, "data/system-model.json"), "utf8")),
+);
 for (const { id } of systemModel.systems) {
   served.add(systemPath(id));
   served.add(`${systemPath(id)}.md`);
@@ -126,7 +139,9 @@ for (const { id } of systemModel.systems) {
 
 // The papers (docs/PUBLICATIONS.md): each page, its twin and its exports, drawn from D1 by routes, compiled
 // here the way sync:content writes them.
-const publicationRows = (await buildPublications()).rows.filter((row) => row.status === "published");
+const publicationRows = (await buildPublications()).rows.filter(
+  (row) => row.status === "published",
+);
 for (const { slug } of publicationRows) {
   const page = paperPath(slug);
   served.add(page);
@@ -172,7 +187,8 @@ for (const { post } of posts) {
     for (const suffix of ["", "/rss.xml", "/feed.json"]) served.add(`${tagPath(tag)}${suffix}`);
   }
   if (post.series) {
-    for (const suffix of ["", "/rss.xml", "/feed.json"]) served.add(`${seriesPath(post.series)}${suffix}`);
+    for (const suffix of ["", "/rss.xml", "/feed.json"])
+      served.add(`${seriesPath(post.series)}${suffix}`);
   }
 }
 
@@ -385,32 +401,54 @@ for (const { file, post } of posts) {
   const pub = isPublic(post);
   for (const href of hrefsIn(post.html)) add("posts", { where: file, href, page, isPublic: pub });
   for (const item of post.furtherReading ?? []) {
-    add("further_reading", { where: `${file} further_reading`, href: item.url, page, isPublic: pub });
+    add("further_reading", {
+      where: `${file} further_reading`,
+      href: item.url,
+      page,
+      isPublic: pub,
+    });
   }
 }
 for (const page of pages) {
-  const where = page.path === "/cv" ? "content/cv/ (/cv)" : `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
-  for (const href of hrefsIn(page.html)) add("pages", { where, href, page: page.path, isPublic: true });
+  const where =
+    page.path === "/cv"
+      ? "content/cv/ (/cv)"
+      : `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
+  for (const href of hrefsIn(page.html))
+    add("pages", { where, href, page: page.path, isPublic: true });
   for (const href of markdownLinks(contentPageMarkdownBody(page, dictionaryEntryFor(page.path)))) {
-    add("page twins", { where: `${contentPageMarkdownPath(page.path)} (twin)`, href, page: page.path, isPublic: true });
+    add("page twins", {
+      where: `${contentPageMarkdownPath(page.path)} (twin)`,
+      href,
+      page: page.path,
+      isPublic: true,
+    });
   }
 }
 for (const row of procedureRows) {
   const where = row.sourcePath;
-  for (const href of hrefsIn(stringsIn(JSON.parse(row.record)))) add("procedures", { where, href, page: row.path, isPublic: true });
+  for (const href of hrefsIn(stringsIn(JSON.parse(row.record))))
+    add("procedures", { where, href, page: row.path, isPublic: true });
   for (const href of markdownLinks(row.markdown)) {
-    add("procedure twins", { where: `${row.path}.md (twin)`, href, page: row.path, isPublic: true });
+    add("procedure twins", {
+      where: `${row.path}.md (twin)`,
+      href,
+      page: row.path,
+      isPublic: true,
+    });
   }
 }
 for (const page of ownRoutePages) {
   const where = `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
-  for (const href of hrefsIn(page.html)) add("about", { where, href, page: page.path, isPublic: true });
+  for (const href of hrefsIn(page.html))
+    add("about", { where, href, page: page.path, isPublic: true });
 }
 
 // The app: route components, menus, footer and data, off the syntax tree.
 const LINK_PROPS = new Set(["href", "to", "url"]);
 const appFiles = walkFiles(join(root, "app"), {
-  keep: (name) => /\.(ts|tsx|mjs)$/.test(name) && !name.endsWith(".d.ts") && !name.endsWith(".generated.ts"),
+  keep: (name) =>
+    /\.(ts|tsx|mjs)$/.test(name) && !name.endsWith(".d.ts") && !name.endsWith(".generated.ts"),
 }).sort();
 
 /** @param {ts.Node} n */
@@ -447,7 +485,10 @@ for (const file of appFiles) {
         ts.isPropertyAssignment(n) &&
         ts.isObjectLiteralExpression(n.parent) &&
         n.parent.properties.some(
-          (p) => ts.isPropertyAssignment(p) && p.name.getText(sf) === "page" && p.initializer.kind === ts.SyntaxKind.TrueKeyword,
+          (p) =>
+            ts.isPropertyAssignment(p) &&
+            p.name.getText(sf) === "page" &&
+            p.initializer.kind === ts.SyntaxKind.TrueKeyword,
         );
       add("app", { where, href: candidate, page: null, isPublic: !whilePublished });
     }
@@ -461,7 +502,13 @@ for (const file of appFiles) {
       ["SITE_ORIGIN", "origin"].includes(n.templateSpans[0].expression.text) &&
       n.templateSpans[0].literal.text.startsWith("/")
     ) {
-      add("app", { where, href: n.templateSpans[0].literal.text, page: null, isPublic: true, pathOnly: true });
+      add("app", {
+        where,
+        href: n.templateSpans[0].literal.text,
+        page: null,
+        isPublic: true,
+        pathOnly: true,
+      });
     }
 
     // https://dustinedwards.info/... written out in any string.
@@ -472,7 +519,9 @@ for (const file of appFiles) {
       ts.isTemplateMiddle(n) ||
       ts.isTemplateTail(n)
     ) {
-      for (const m of n.text.matchAll(/https?:\/\/(?:www\.)?dustinedwards\.info(?:\/[^\s"'`<>)]*)?/gi)) {
+      for (const m of n.text.matchAll(
+        /https?:\/\/(?:www\.)?dustinedwards\.info(?:\/[^\s"'`<>)]*)?/gi,
+      )) {
         add("app", { where, href: m[0], page: null, isPublic: true });
       }
     }
@@ -506,7 +555,12 @@ for (const file of appFiles) {
 // The header: each item and every link its live panel renders.
 for (const item of buildNav()) {
   for (const href of [item.to, ...menuLinks(item.menu)]) {
-    add("header menus", { where: `app/lib/nav.ts ${item.label}`, href, page: null, isPublic: true });
+    add("header menus", {
+      where: `app/lib/nav.ts ${item.label}`,
+      href,
+      page: null,
+      isPublic: true,
+    });
   }
 }
 
@@ -520,7 +574,10 @@ for (const item of buildNav()) {
   }
   const tokens = text.split(/\s+/);
   tokens.forEach((raw, i) => {
-    const token = raw.replace(/^[("'`]+/, "").replace(/[)"'`,;:]+$/, "").replace(/\.$/, "");
+    const token = raw
+      .replace(/^[("'`]+/, "")
+      .replace(/[)"'`,;:]+$/, "")
+      .replace(/\.$/, "");
     const internal = token.startsWith("/") ? token : SITE_HOST.test(token) ? token : null;
     if (!internal || internal.startsWith("//")) return;
     if (/[<{]/.test(internal)) return;
@@ -535,15 +592,30 @@ for (const { slug, markdown: body } of publicationRows) {
   // The page and the PDF are frontmatter fields (`url:`, `pdf:`), the rest are markdown links.
   const fields = [...body.matchAll(/^(?:url|pdf):\s*"?(\/[^"\s]*)"?\s*$/gm)].map((m) => m[1]);
   for (const href of [...fields, ...markdownLinks(body)]) {
-    add("paper twins", { where: `content/publications/${slug}.md (twin ${name})`, href, page: null, isPublic: true });
+    add("paper twins", {
+      where: `content/publications/${slug}.md (twin ${name})`,
+      href,
+      page: null,
+      isPublic: true,
+    });
   }
 }
 
 // The redirect map's targets: a 301 into a 404 is a broken link the gateway publishes.
 for (const [from, to] of Object.entries(EXPLICIT_ROWS)) {
-  add("redirect targets", { where: `app/lib/wordpress-redirects.mjs ${from}`, href: to, page: null, isPublic: true });
+  add("redirect targets", {
+    where: `app/lib/wordpress-redirects.mjs ${from}`,
+    href: to,
+    page: null,
+    isPublic: true,
+  });
 }
-add("redirect targets", { where: "app/lib/wordpress-redirects.mjs PROFILE_TARGET", href: PROFILE_TARGET, page: null, isPublic: true });
+add("redirect targets", {
+  where: "app/lib/wordpress-redirects.mjs PROFILE_TARGET",
+  href: PROFILE_TARGET,
+  page: null,
+  isPublic: true,
+});
 
 /* ---------------------------------------------------------------------------------------------------
  * Judge each link.
@@ -593,7 +665,11 @@ for (const link of links) {
   }
   if (!path.startsWith("/")) {
     checked += 1;
-    ok(label, false, "a relative link resolves against whatever page it lands on; write it site-absolute");
+    ok(
+      label,
+      false,
+      "a relative link resolves against whatever page it lands on; write it site-absolute",
+    );
     continue;
   }
 
@@ -656,14 +732,23 @@ const SCOPES = [
   "redirect targets",
 ];
 for (const scope of SCOPES) {
-  ok(`scope: ${scope} contributed links`, (perClass.get(scope) ?? 0) > 0, "0 links read, so this source was not examined");
+  ok(
+    `scope: ${scope} contributed links`,
+    (perClass.get(scope) ?? 0) > 0,
+    "0 links read, so this source was not examined",
+  );
 }
 ok("scope: the sitemap's STATIC_PAGES were located", sitemapPaths >= 5, `read ${sitemapPaths}`);
-ok("scope: anchors were checked", anchorsChecked > 0, "0 anchors resolved, so the anchor check examined nothing");
+ok(
+  "scope: anchors were checked",
+  anchorsChecked > 0,
+  "0 anchors resolved, so the anchor check examined nothing",
+);
 ok("scope: posts were rendered", posts.length > 0, "content/posts produced no posts");
 ok("scope: public/ was read", publicFiles.length > 0, "no static files found under public/");
 
-for (const scope of SCOPES) console.log(`  ${String(perClass.get(scope) ?? 0).padStart(5)}  ${scope}`);
+for (const scope of SCOPES)
+  console.log(`  ${String(perClass.get(scope) ?? 0).padStart(5)}  ${scope}`);
 console.log(
   `\n  ${checked} internal link(s) checked, ${anchorsChecked} anchor(s) resolved, ` +
     `${anchorsUnverifiable} anchor(s) on generated ids not verifiable, ${media} /media link(s) in R2 ` +

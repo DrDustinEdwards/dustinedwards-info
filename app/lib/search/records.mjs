@@ -213,8 +213,7 @@ function recordsForPage(page) {
   const anchors = new Set(page.sections.map((s) => s.anchor));
   if (anchors.size !== page.sections.length) {
     throw new Error(
-      `page ${page.url} has duplicate section anchors, so two records would ` +
-        `share a uid.`,
+      `page ${page.url} has duplicate section anchors, so two records would ` + `share a uid.`,
     );
   }
 
@@ -231,7 +230,10 @@ function recordsForPage(page) {
 
   /** @type {SearchRecord[]} */
   const records = [
-    record(doc, { title: page.title, body: [page.description, page.intro].filter(Boolean).join(" ") }),
+    record(doc, {
+      title: page.title,
+      body: [page.description, page.intro].filter(Boolean).join(" "),
+    }),
   ];
 
   page.sections.forEach((section, i) => {

@@ -63,10 +63,7 @@ const NOT_ASSETS = new Map([
     "Cloudflare static-asset header rules. Consumed by the uploader at deploy " +
       "time and never served, so it has no URL to index. Written by site-runtime-headers.",
   ],
-  [
-    "/_redirects",
-    "Cloudflare static-asset redirect rules. Same deploy-time contract as _headers.",
-  ],
+  ["/_redirects", "Cloudflare static-asset redirect rules. Same deploy-time contract as _headers."],
   [
     "/sw.js",
     "The offline service worker (app/enhance/offline.ts). Code the browser registers, not media.",

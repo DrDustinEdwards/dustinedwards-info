@@ -13,16 +13,27 @@ const read = (/** @type {string} */ rel) => readFileSync(new URL(rel, import.met
 /** STATIC_PAGES' paths, read off the source: the module imports through the app's `~` alias, which plain node cannot. */
 function staticPaths() {
   const source = read("../app/lib/site-urls.server.ts");
-  const block = source.slice(source.indexOf("export const STATIC_PAGES"), source.indexOf("] as const;"));
+  const block = source.slice(
+    source.indexOf("export const STATIC_PAGES"),
+    source.indexOf("] as const;"),
+  );
   return [...block.matchAll(/path: "([^"]+)"/g)].map((m) => m[1]);
 }
 
-const tally = (/** @type {string} */ key, /** @type {string} */ label, /** @type {string} */ to, merge = true) => ({ key, label, to, merge });
+const tally = (
+  /** @type {string} */ key,
+  /** @type {string} */ label,
+  /** @type {string} */ to,
+  merge = true,
+) => ({ key, label, to, merge });
 
 await test("both the XML sitemap and the site map page are drawn from the one shared list", () => {
   const xml = read("../app/routes/sitemap.ts");
   const page = read("../app/routes/site-map.tsx");
-  for (const [name, source] of [["sitemap.ts", xml], ["site-map.tsx", page]]) {
+  for (const [name, source] of [
+    ["sitemap.ts", xml],
+    ["site-map.tsx", page],
+  ]) {
     assert.match(source, /gatherSiteUrls\(getEnv\(context\)\)/, `${name} calls gatherSiteUrls`);
     // No second list: neither route reads the tables itself.
     assert.doesNotMatch(source, /from "~\/db/, `${name} reads D1 only through gatherSiteUrls`);
@@ -59,10 +70,15 @@ await test("every public page route is in the sitemap's list or exempted by name
     LAB_PATH,
   ]);
   const routes = [...(await declaredRouteModules()).keys()].filter(
-    (path) => !/[:*]/.test(path) && !/\.[a-z]+$/.test(path) && !/^\/(admin|lab-bench|api)(\/|$)/.test(path),
+    (path) =>
+      !/[:*]/.test(path) && !/\.[a-z]+$/.test(path) && !/^\/(admin|lab-bench|api)(\/|$)/.test(path),
   );
   const missing = routes.filter((path) => !listed.has(path) && !EXEMPT.has(path));
-  assert.deepEqual(missing, [], "a page route neither listed by app/lib/site-urls.server.ts nor exempted here");
+  assert.deepEqual(
+    missing,
+    [],
+    "a page route neither listed by app/lib/site-urls.server.ts nor exempted here",
+  );
   const stale = [...EXEMPT.keys()].filter((path) => !routes.includes(path));
   assert.deepEqual(stale, [], "an exemption for a route routes.ts no longer declares");
 });
@@ -102,7 +118,12 @@ await test("papers, registry items, procedures, posts and tags collapse to one c
     { path: "/writing/series/s", lastmod: none, title: "A series" },
     { path: "/privacy", lastmod: none, title: "Privacy" },
   ]);
-  const shown = Object.fromEntries(sections.map((s) => [s.id, s.lines.map((line) => [lineText(line), line.plain ? "(text)" : line.to])]));
+  const shown = Object.fromEntries(
+    sections.map((s) => [
+      s.id,
+      s.lines.map((line) => [lineText(line), line.plain ? "(text)" : line.to]),
+    ]),
+  );
   assert.deepEqual(shown, {
     // The hub first, then the list's order (a count with no index of its own last); the counts sit on the index's own line.
     research: [
@@ -125,7 +146,19 @@ await test("papers, registry items, procedures, posts and tags collapse to one c
 
 await test("a counted kind whose index is not listed still gets its line", () => {
   const sections = siteMapSections([
-    { path: "/recipes/bread", lastmod: null, title: "Bread", tally: tally("procedures:recipes", "Recipes", "/recipes") },
+    {
+      path: "/recipes/bread",
+      lastmod: null,
+      title: "Bread",
+      tally: tally("procedures:recipes", "Recipes", "/recipes"),
+    },
   ]);
-  assert.deepEqual(sections, [{ id: "about", heading: "About", to: "/about", lines: [{ to: "/recipes", label: "Recipes", count: 1 }] }]);
+  assert.deepEqual(sections, [
+    {
+      id: "about",
+      heading: "About",
+      to: "/about",
+      lines: [{ to: "/recipes", label: "Recipes", count: 1 }],
+    },
+  ]);
 });

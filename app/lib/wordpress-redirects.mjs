@@ -40,7 +40,9 @@ export function wwwRedirectTarget(hostname, pathname, search) {
   // The apex drops a trailing slash (canonicalRedirect), except on a paper and an old WordPress address, so it goes in
   // this same hop: `http://www/about/` is one redirect, not two.
   const path =
-    disposition === null && !pathname.startsWith(PUBLICATIONS_PREFIX) ? pathname.replace(/(.)\/+$/, "$1") : pathname;
+    disposition === null && !pathname.startsWith(PUBLICATIONS_PREFIX)
+      ? pathname.replace(/(.)\/+$/, "$1")
+      : pathname;
   const target = disposition?.status === 301 ? disposition.location : `${path}${search}`;
   return new URL(target, SITE_ORIGIN).toString();
 }
@@ -100,7 +102,12 @@ const PATTERNS = [
     return name ? moved(`/research/phages#${name.toLowerCase()}`) : null;
   },
   (p) =>
-    ["/phylogenetics-lysm", "/arlo-gene-67", "/arlo-gene-67-cloning", "/raspberry-pi-plaque-counter"].includes(p)
+    [
+      "/phylogenetics-lysm",
+      "/arlo-gene-67",
+      "/arlo-gene-67-cloning",
+      "/raspberry-pi-plaque-counter",
+    ].includes(p)
       ? moved("/research/phages")
       : null,
   // The lab's own directory answered "how do I join", so it goes to Join the lab, ahead of the rule below.
@@ -109,7 +116,10 @@ const PATTERNS = [
   // Dustin's own author page ranks for his name, so it goes to the About page, ahead of the rule below.
   (p) => (p === "/author/dustin" ? moved("/about") : null),
   // The bare /user/ was the membership directory, so it is gone with the membership pages.
-  (p) => (["/user", "/register", "/members", "/logout", "/account", "/password-reset"].includes(p) ? GONE : null),
+  (p) =>
+    ["/user", "/register", "/members", "/logout", "/account", "/password-reset"].includes(p)
+      ? GONE
+      : null,
   // Every other student and author profile (146 in Search Console, 147 with Dustin's own) goes to the
   // roster at the bottom of the Phage Discovery Program page, as on the old site (Dustin, 2026-09-27).
   (p) => (/^\/(?:user|author)(?:\/.*)?$/.test(p) ? moved(PROFILE_TARGET) : null),
@@ -122,8 +132,12 @@ const PATTERNS = [
   (p) => (p === BAYLOR_PDF ? moved("/research/protocols/phage-dna-extraction") : null),
   (p) => (p === CV_PDF ? moved("/dustin-edwards-cv.pdf") : null),
   // Both still earn clicks or impressions: a lab protocol goes to the page that carries it.
-  (p) => (p === "/wp-content/uploads/2023/11/Electrophoresis.pdf" ? moved("/research/protocols") : null),
-  (p) => (p === "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf" ? moved("/research/protocols/phage-dna-extraction") : null),
+  (p) =>
+    p === "/wp-content/uploads/2023/11/Electrophoresis.pdf" ? moved("/research/protocols") : null,
+  (p) =>
+    p === "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf"
+      ? moved("/research/protocols/phage-dna-extraction")
+      : null,
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
   // Nothing on the new site does these calculations (Dustin, 2026-09-27).
   (p) => (["/molarity-calculator", "/knowledge-base/metric-prefix"].includes(p) ? GONE : null),

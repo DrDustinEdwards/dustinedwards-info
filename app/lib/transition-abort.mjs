@@ -10,5 +10,9 @@
  * @param {unknown} reason
  */
 export function isAbandonedTransition(reason) {
-  return reason instanceof DOMException && reason.name === "InvalidStateError" && reason.message.startsWith("Transition was aborted");
+  return (
+    reason instanceof DOMException &&
+    reason.name === "InvalidStateError" &&
+    reason.message.startsWith("Transition was aborted")
+  );
 }

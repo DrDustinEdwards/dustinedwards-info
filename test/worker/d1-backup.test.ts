@@ -23,19 +23,28 @@ describe("the nightly D1 dump", () => {
 
     const latest = await latestDump(testEnv.BACKUPS);
     expect(latest?.run_id).toBe(result.run_id);
-    const marker = JSON.parse(await (await testEnv.BACKUPS.get(`${latest!.prefix}_complete.json`))!.text());
+    const marker = JSON.parse(
+      await (await testEnv.BACKUPS.get(`${latest!.prefix}_complete.json`))!.text(),
+    );
     const dumped = marker.tables.map((t: { name: string }) => t.name);
     for (const name of REQUIRED_TABLES) expect(dumped).toContain(name);
   });
 
   it("is reachable as the operator tool", async () => {
-    const out = await runTool(testEnv as never, { kind: "operator", id: "test" } as never, "backup_d1", {});
+    const out = await runTool(
+      testEnv as never,
+      { kind: "operator", id: "test" } as never,
+      "backup_d1",
+      {},
+    );
     expect(out).toMatchObject({ ok: true, data: { tables: expect.any(Number) } });
   });
 
   it("PLANTED: a credential table left in refuses the marker, so the run is never the restore point", async () => {
     const before = await latestDump(testEnv.BACKUPS);
-    await testEnv.DB.exec("CREATE TABLE planted_session (id integer PRIMARY KEY, token text NOT NULL)");
+    await testEnv.DB.exec(
+      "CREATE TABLE planted_session (id integer PRIMARY KEY, token text NOT NULL)",
+    );
     await testEnv.DB.exec("INSERT INTO planted_session (token) VALUES ('live-credential')");
     try {
       await expect(backupD1(backupEnv())).rejects.toThrow(/planted_session.*token/);
@@ -53,13 +62,35 @@ describe("the nightly D1 dump", () => {
 describe("the nightly files backup", () => {
   it("copies MEDIA and MEDIA_REVISIONS under files/ in BACKUPS, which /health then reports", async () => {
     await testEnv.MEDIA.put("files-case.png", "media bytes");
-    await testEnv.MEDIA_REVISIONS.put("replaced/2026-11-05T00:00:00.000Z/files-case.png", "earlier bytes");
+    await testEnv.MEDIA_REVISIONS.put(
+      "replaced/2026-11-05T00:00:00.000Z/files-case.png",
+      "earlier bytes",
+    );
 
-    const out = await runTool(testEnv as never, { kind: "operator", id: "test" } as never, "backup_media", {});
-    expect(out).toMatchObject({ ok: true, data: { files: [{ name: "media", complete: true }, { name: "revisions", complete: true }] } });
+    const out = await runTool(
+      testEnv as never,
+      { kind: "operator", id: "test" } as never,
+      "backup_media",
+      {},
+    );
+    expect(out).toMatchObject({
+      ok: true,
+      data: {
+        files: [
+          { name: "media", complete: true },
+          { name: "revisions", complete: true },
+        ],
+      },
+    });
 
-    expect(await (await testEnv.BACKUPS.get("files/media/files-case.png"))!.text()).toBe("media bytes");
-    expect(await (await testEnv.BACKUPS.get("files/revisions/replaced/2026-11-05T00:00:00.000Z/files-case.png"))!.text()).toBe("earlier bytes");
+    expect(await (await testEnv.BACKUPS.get("files/media/files-case.png"))!.text()).toBe(
+      "media bytes",
+    );
+    expect(
+      await (await testEnv.BACKUPS.get(
+        "files/revisions/replaced/2026-11-05T00:00:00.000Z/files-case.png",
+      ))!.text(),
+    ).toBe("earlier bytes");
     const status = await backupStatus(testEnv);
     expect(status.files.media?.age_hours).not.toBeNull();
     expect(status.files.revisions?.age_hours).not.toBeNull();

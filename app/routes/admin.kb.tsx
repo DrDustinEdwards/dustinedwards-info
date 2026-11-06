@@ -10,7 +10,16 @@ import { PageHead } from "capsomer/react/page-head";
 import { TabLink } from "~/components/admin/tab-link";
 import { listProceduresForAdmin } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
-import { KB_ADMIN_PATH, NEEDS_INFO, baseEntries, entryEditHref, kbTabs, needsInfo, resolveTab, tabHref } from "~/kb/admin.mjs";
+import {
+  KB_ADMIN_PATH,
+  NEEDS_INFO,
+  baseEntries,
+  entryEditHref,
+  kbTabs,
+  needsInfo,
+  resolveTab,
+  tabHref,
+} from "~/kb/admin.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
@@ -60,7 +69,14 @@ function AdminLink({ href, children, ...rest }: RowLinkProps) {
 /** The public page, a document navigation since the public pages bring their own stylesheets; named for its row. */
 function ViewLink({ href, what }: { href: string; what: string }) {
   return (
-    <Link to={href} reloadDocument className="cap-btn" data-variant="quiet" data-size="sm" aria-label={`View the page for ${what}`}>
+    <Link
+      to={href}
+      reloadDocument
+      className="cap-btn"
+      data-variant="quiet"
+      data-size="sm"
+      aria-label={`View the page for ${what}`}
+    >
       View page
     </Link>
   );
@@ -121,7 +137,9 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
 
           {rows.length === 0 ? (
             <Empty kind={total === 0 ? "nothing-yet" : "no-match"}>
-              {total === 0 ? `No ${base.name.toLowerCase()} yet.` : `Nothing in ${base.name.toLowerCase()} matches "${q}".`}
+              {total === 0
+                ? `No ${base.name.toLowerCase()} yet.`
+                : `Nothing in ${base.name.toLowerCase()} matches "${q}".`}
             </Empty>
           ) : (
             <Panel title={base.name} count={rows.length} flush>
@@ -133,7 +151,11 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
                     href={entryEditHref(entry.slug)}
                     renderLink={AdminLink}
                     actions={<ViewLink href={entry.path} what={entry.title} />}
-                    status={<Status tone={entry.draft ? "nodata" : "ok"}>{entry.draft ? "draft" : "published"}</Status>}
+                    status={
+                      <Status tone={entry.draft ? "nodata" : "ok"}>
+                        {entry.draft ? "draft" : "published"}
+                      </Status>
+                    }
                     detail={entry.description}
                     meta={
                       <span>

@@ -83,9 +83,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw data("Not found", { status: 404 });
   }
 
-  const seriesParts = post.series
-    ? await listSeriesParts(getEnv(context), post.series)
-    : [];
+  const seriesParts = post.series ? await listSeriesParts(getEnv(context), post.series) : [];
 
   const view = blogPostView(post, seriesParts);
 
@@ -154,8 +152,16 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  const { canonical, canonicalHref, noindex, title, description, socialTitle, socialDescription, image } =
-    postSocial(post);
+  const {
+    canonical,
+    canonicalHref,
+    noindex,
+    title,
+    description,
+    socialTitle,
+    socialDescription,
+    image,
+  } = postSocial(post);
 
   return [
     ...siteHead({
@@ -259,7 +265,12 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           {/* Eager and high priority: this is the LCP element when present, and the body's first image gives way. */}
           {post.coverImage && (
             <figure className="post-cover">
-              <Picture picture={contentPicture(post.coverImage, { alt: post.coverAlt ?? "", priority: true })} />
+              <Picture
+                picture={contentPicture(post.coverImage, {
+                  alt: post.coverAlt ?? "",
+                  priority: true,
+                })}
+              />
             </figure>
           )}
 
@@ -347,8 +358,24 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           <div className="post-nav">
             <Signs
               label="More posts"
-              prev={post.previous ? { href: `/writing/${post.previous.slug}`, title: post.previous.title, label: "Previous post" } : null}
-              next={post.next ? { href: `/writing/${post.next.slug}`, title: post.next.title, label: "Next post" } : null}
+              prev={
+                post.previous
+                  ? {
+                      href: `/writing/${post.previous.slug}`,
+                      title: post.previous.title,
+                      label: "Previous post",
+                    }
+                  : null
+              }
+              next={
+                post.next
+                  ? {
+                      href: `/writing/${post.next.slug}`,
+                      title: post.next.title,
+                      label: "Next post",
+                    }
+                  : null
+              }
             />
           </div>
         </article>

@@ -23,9 +23,9 @@ function readMark() {
     const source = readFileSync(join(ROOT, "public", file), "utf8");
     const viewBox = source.match(/viewBox="([^"]+)"/)?.[1];
     if (!viewBox) throw new Error(`mark: ${file} has no viewBox`);
-    const paths = [
-      ...source.matchAll(/<path fill="(#[0-9A-Fa-f]{6})" d="([^"]+)"\s*\/>/g),
-    ].map((m) => ({ fill: m[1].toUpperCase(), d: m[2] }));
+    const paths = [...source.matchAll(/<path fill="(#[0-9A-Fa-f]{6})" d="([^"]+)"\s*\/>/g)].map(
+      (m) => ({ fill: m[1].toUpperCase(), d: m[2] }),
+    );
     if (paths.length === 0) throw new Error(`mark: ${file} has no paths`);
     // A path in any other shape (another attribute, another order) would be dropped from the mark, and
     // so would any non-path shape (a <rect>, a <circle>), which the parser does not read at all.
@@ -51,12 +51,9 @@ function readMark() {
     boxWidth / boxHeight > want
       ? { dx: 0, dy: boxWidth / want - boxHeight }
       : { dx: boxHeight * want - boxWidth, dy: 0 };
-  const viewBox = [
-    x - grow.dx / 2,
-    y - grow.dy / 2,
-    boxWidth + grow.dx,
-    boxHeight + grow.dy,
-  ].join(" ");
+  const viewBox = [x - grow.dx / 2, y - grow.dy / 2, boxWidth + grow.dx, boxHeight + grow.dy].join(
+    " ",
+  );
 
   return { viewBox, width, height: HEIGHT, paths };
 }

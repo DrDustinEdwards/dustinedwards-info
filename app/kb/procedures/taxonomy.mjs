@@ -32,7 +32,10 @@ export const NON_STRAIN_ORGANISMS = Object.freeze({
 export const COURSES = Object.freeze({
   "phage-discovery": { label: "Phage Discovery Program", path: "/teaching/phage-discovery" },
   "virus-isolation": { label: "Virus Isolation Course", path: "/teaching/virus-isolation" },
-  "phage-bioinformatics": { label: "Phage Bioinformatics Course", path: "/teaching/phage-bioinformatics" },
+  "phage-bioinformatics": {
+    label: "Phage Bioinformatics Course",
+    path: "/teaching/phage-bioinformatics",
+  },
 });
 
 /**
@@ -57,7 +60,12 @@ export function statusLabel(id) {
  * (TOOLS in phage-tools.mjs) a person uses at that stage, so the strip links them from the one place that says so.
  */
 export const PHAGE_PIPELINE = Object.freeze([
-  { id: "isolate", label: "Isolate and purify", methods: ["plating", "culture"], tools: ["titer", "dilution", "webbed-plate", "lysate-volume"] },
+  {
+    id: "isolate",
+    label: "Isolate and purify",
+    methods: ["plating", "culture"],
+    tools: ["titer", "dilution", "webbed-plate", "lysate-volume"],
+  },
   { id: "extract", label: "Extract DNA", methods: ["extraction"], tools: [] },
   { id: "sequence", label: "Sequence", methods: ["sequencing"], tools: [] },
   { id: "annotate", label: "Annotate", methods: ["annotation"], tools: [] },
@@ -89,7 +97,9 @@ export function rememberOrganisms(/** @type {Record<string, string>} */ names) {
   for (const [id, words] of Object.entries(names)) organismWords.set(id, words);
 }
 export function organismLabel(/** @type {string} */ id) {
-  return /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id] ?? organismWords.get(id) ?? id;
+  return (
+    /** @type {Record<string, string>} */ (NON_STRAIN_ORGANISMS)[id] ?? organismWords.get(id) ?? id
+  );
 }
 export function courseLabel(/** @type {string} */ id) {
   return /** @type {Record<string, { label: string }>} */ (COURSES)[id]?.label ?? id;

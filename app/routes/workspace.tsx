@@ -55,16 +55,40 @@ export const middleware: Route.MiddlewareFunction[] = [
 
     const identity = await labIdentity(env, request);
     if (identity.kind === "refused") {
-      throw refusal(request, "lab", identity.reason, 401, `Refused: the Cloudflare Access token did not verify (${identity.reason}).`);
+      throw refusal(
+        request,
+        "lab",
+        identity.reason,
+        401,
+        `Refused: the Cloudflare Access token did not verify (${identity.reason}).`,
+      );
     }
     if (identity.kind !== "human") {
       if (!env.ACCESS_LAB_AUD) {
-        throw refusal(request, "lab", "not-configured", 403, "The lab workspace is not set up yet: its Cloudflare Access application (ACCESS_LAB_AUD) is not configured.");
+        throw refusal(
+          request,
+          "lab",
+          "not-configured",
+          403,
+          "The lab workspace is not set up yet: its Cloudflare Access application (ACCESS_LAB_AUD) is not configured.",
+        );
       }
-      throw refusal(request, "lab", identity.kind === "service" ? "service-token" : "no-access-token", 403, `The lab signs in at ${SITE_ORIGIN}${LAB_BENCH_PATH}, through Cloudflare Access.`);
+      throw refusal(
+        request,
+        "lab",
+        identity.kind === "service" ? "service-token" : "no-access-token",
+        403,
+        `The lab signs in at ${SITE_ORIGIN}${LAB_BENCH_PATH}, through Cloudflare Access.`,
+      );
     }
     if (!primaryOwnerSet(env)) {
-      throw refusal(request, "lab", "no-primary-owner", 403, "The lab workspace is not set up yet: PRIMARY_OWNER_EMAIL is not set.");
+      throw refusal(
+        request,
+        "lab",
+        "no-primary-owner",
+        403,
+        "The lab workspace is not set up yet: PRIMARY_OWNER_EMAIL is not set.",
+      );
     }
 
     const actor = await loadLabActor(env, identity.email, Date.now());
@@ -92,7 +116,9 @@ const ICONS = {
   overview: <Icon d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
   inventory: <Icon d="M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10" />,
   runs: <Icon d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3M7.5 14h9" />,
-  members: <Icon d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7M18 14a6 6 0 0 1 4 6v1" />,
+  members: (
+    <Icon d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1M16 3.5a4 4 0 0 1 0 7M18 14a6 6 0 0 1 4 6v1" />
+  ),
 };
 
 const RouterLink = shellLink(LAB_BENCH_PATH);
@@ -104,15 +130,48 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
   const { pathname } = useLocation();
   const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
   const nav: AdminEntry[] = [
-    { id: "overview", label: "Overview", href: LAB_BENCH_PATH, icon: ICONS.overview, current: pathname === LAB_BENCH_PATH || pathname === `${LAB_BENCH_PATH}/` },
+    {
+      id: "overview",
+      label: "Overview",
+      href: LAB_BENCH_PATH,
+      icon: ICONS.overview,
+      current: pathname === LAB_BENCH_PATH || pathname === `${LAB_BENCH_PATH}/`,
+    },
     ...(loaderData.reads
-      ? [{ id: "inventory", label: "Inventory", href: `${LAB_BENCH_PATH}/inventory`, group: "Bench", icon: ICONS.inventory, current: at(`${LAB_BENCH_PATH}/inventory`) }]
+      ? [
+          {
+            id: "inventory",
+            label: "Inventory",
+            href: `${LAB_BENCH_PATH}/inventory`,
+            group: "Bench",
+            icon: ICONS.inventory,
+            current: at(`${LAB_BENCH_PATH}/inventory`),
+          },
+        ]
       : []),
     ...(loaderData.records
-      ? [{ id: "runs", label: "Runs", href: `${LAB_BENCH_PATH}/runs`, group: "Bench", icon: ICONS.runs, current: at(`${LAB_BENCH_PATH}/runs`) }]
+      ? [
+          {
+            id: "runs",
+            label: "Runs",
+            href: `${LAB_BENCH_PATH}/runs`,
+            group: "Bench",
+            icon: ICONS.runs,
+            current: at(`${LAB_BENCH_PATH}/runs`),
+          },
+        ]
       : []),
     ...(loaderData.manages
-      ? [{ id: "members", label: "Members", href: `${LAB_BENCH_PATH}/members`, group: "People", icon: ICONS.members, current: at(`${LAB_BENCH_PATH}/members`) }]
+      ? [
+          {
+            id: "members",
+            label: "Members",
+            href: `${LAB_BENCH_PATH}/members`,
+            group: "People",
+            icon: ICONS.members,
+            current: at(`${LAB_BENCH_PATH}/members`),
+          },
+        ]
       : []),
   ];
   const initials = loaderData.email.slice(0, 2).toUpperCase();
@@ -123,7 +182,12 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
       <AdminShell
         title="Lab bench"
         letterhead
-        logo={{ href: LAB_BENCH_PATH, label: SITE.name, app: "Lab bench", mark: FAMILY_APPS.find((a) => a.id === "info")?.logo }}
+        logo={{
+          href: LAB_BENCH_PATH,
+          label: SITE.name,
+          app: "Lab bench",
+          mark: FAMILY_APPS.find((a) => a.id === "info")?.logo,
+        }}
         viewSite="/"
         search={{ action: "/search", label: "Search dustinedwards.info", suggest }}
         apps={[{ id: "lab", label: "Lab bench", href: LAB_BENCH_PATH, mono: "L", current: true }]}
@@ -153,7 +217,11 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
 /** The lab's own error page, in Capsomer: a refusal's words are the answer, never a login page. */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   const known = isRouteErrorResponse(error);
-  const title = known ? (error.status === 403 ? "No access" : `${error.status} ${error.statusText}`) : "Something went wrong";
+  const title = known
+    ? error.status === 403
+      ? "No access"
+      : `${error.status} ${error.statusText}`
+    : "Something went wrong";
   return (
     <main className="app-page">
       <Empty kind={known && error.status === 404 ? "no-match" : "failed"} title={title}>

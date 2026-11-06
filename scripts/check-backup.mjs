@@ -5,7 +5,11 @@ import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler, wranglerTail as tail } from "./lib/wrangler-run.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
 import { migrationSchema } from "./lib/dump-schema.mjs";
-import { D1_STATEMENT_LIMIT, splitOversizeStatements, splitStatements } from "./lib/split-statements.mjs";
+import {
+  D1_STATEMENT_LIMIT,
+  splitOversizeStatements,
+  splitStatements,
+} from "./lib/split-statements.mjs";
 import path from "node:path";
 import os from "node:os";
 
@@ -117,7 +121,11 @@ async function schemaCoverage(target) {
   const problems = [];
 
   // Both directions are satisfied by the two sources shrinking together, so the structure gets floors.
-  const floor = (/** @type {string} */ label, /** @type {number} */ actual, /** @type {number} */ min) => {
+  const floor = (
+    /** @type {string} */ label,
+    /** @type {number} */ actual,
+    /** @type {number} */ min,
+  ) => {
     if (actual < min) {
       problems.push(
         `${label}: ${actual}, expected at least ${min}. Both sources shrinking together is the ` +
@@ -134,10 +142,12 @@ async function schemaCoverage(target) {
   // data; an unexpected one means something reached the database outside a
   // migration and nothing is backing it up.
   for (const name of sorted(expected)) {
-    if (!real.has(name)) problems.push(`declared by a migration but absent from the database: ${name}`);
+    if (!real.has(name))
+      problems.push(`declared by a migration but absent from the database: ${name}`);
   }
   for (const name of sorted(real)) {
-    if (!expected.has(name)) problems.push(`present in the database but declared by no migration: ${name}`);
+    if (!expected.has(name))
+      problems.push(`present in the database but declared by no migration: ${name}`);
   }
 
   if (problems.length > 0) {
@@ -186,7 +196,9 @@ async function exportTables(target, dir, real) {
       Math.max(0, ...splitStatements(text).map((st) => Buffer.byteLength(st) + 1));
     const loadable = widest(splitOversizeStatements(body, migrationSchema(MIGRATIONS_DIR)));
     if (loadable >= D1_STATEMENT_LIMIT) {
-      throw new Error(`${name}: a restored statement is ${loadable} bytes, over D1's ${D1_STATEMENT_LIMIT}`);
+      throw new Error(
+        `${name}: a restored statement is ${loadable} bytes, over D1's ${D1_STATEMENT_LIMIT}`,
+      );
     }
     return { name, bytes, inserts, rawWidest: widest(body) };
   }
@@ -199,8 +211,12 @@ async function exportTables(target, dir, real) {
 
   for (const result of results) {
     totalBytes += result.bytes;
-    console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)` +
-        (result.rawWidest >= D1_STATEMENT_LIMIT ? `, widest ${result.rawWidest} bytes (split on restore)` : ""));
+    console.log(
+      `  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)` +
+        (result.rawWidest >= D1_STATEMENT_LIMIT
+          ? `, widest ${result.rawWidest} bytes (split on restore)`
+          : ""),
+    );
     if (result.inserts === 0) empty.push(result.name);
   }
 
@@ -238,10 +254,9 @@ async function mediaCheck(target, dir) {
   if (target === "--remote") {
     const mediaDir = path.join(dir, "media");
     await mkdir(mediaDir, { recursive: true });
-    const listed = await retryRead(
-      () => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }),
-      { label: "check:backup MEDIA list" },
-    );
+    const listed = await retryRead(() => listAllObjects({ bucket: MEDIA_BUCKET, remote: true }), {
+      label: "check:backup MEDIA list",
+    });
     const pulled = await downloadAllObjects({
       bucket: MEDIA_BUCKET,
       destDir: mediaDir,

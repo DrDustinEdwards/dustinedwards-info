@@ -30,7 +30,14 @@ export const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx|mjs)$/,
-    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", "check:console", RELATED],
+    gates: [
+      "check:features",
+      "check:machine-readable",
+      "check:urls",
+      "check:links",
+      "check:console",
+      RELATED,
+    ],
   },
   {
     /* check-policy and check-ask-guards read route files by name and scan app/routes. */
@@ -77,7 +84,14 @@ export const MAP = [
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features", "check:links", "check:alt-text"],
+    gates: [
+      "check:content",
+      "check:diagrams",
+      "check:machine-readable",
+      "check:features",
+      "check:links",
+      "check:alt-text",
+    ],
   },
   {
     /* check-protocols compiles every procedure and fixture with the save tool's own validator. */
@@ -227,7 +241,14 @@ export function reachedModules(entry, appDir, read) {
 
 /** @param {string} path @param {(path: string) => string | null} read */
 function resolveModule(path, read) {
-  const candidates = [path, `${path}.ts`, `${path}.tsx`, `${path}.mjs`, join(path, "index.ts"), join(path, "index.tsx")];
+  const candidates = [
+    path,
+    `${path}.ts`,
+    `${path}.tsx`,
+    `${path}.mjs`,
+    join(path, "index.ts"),
+    join(path, "index.tsx"),
+  ];
   for (const candidate of candidates) {
     const source = read(candidate);
     if (source !== null) return { path: candidate, source };
@@ -265,7 +286,11 @@ export function changedFiles(base, git = realGit) {
   const lines = (args) => {
     const r = git(args);
     if (r.error || r.status !== 0) {
-      const why = r.error ? r.error.message : `exit ${r.status}: ${String(r.stderr ?? "").trim().slice(0, 300)}`;
+      const why = r.error
+        ? r.error.message
+        : `exit ${r.status}: ${String(r.stderr ?? "")
+            .trim()
+            .slice(0, 300)}`;
       throw new Error(`git ${args.join(" ")} failed (${why})`);
     }
     return String(r.stdout ?? "");
@@ -299,7 +324,9 @@ function main() {
   const named = new Set(MAP.flatMap((r) => r.gates).filter((g) => g !== RELATED));
   const unknown = [...named].filter((g) => !declared.has(g));
   if (unknown.length) {
-    console.error(`check:changed maps to gate(s) package.json does not declare: ${unknown.join(", ")}`);
+    console.error(
+      `check:changed maps to gate(s) package.json does not declare: ${unknown.join(", ")}`,
+    );
     process.exit(2);
   }
 
@@ -336,7 +363,9 @@ function main() {
   }
 
   if (files.length === 0) {
-    console.log("  nothing changed against the base, in the index, the working tree or untracked files.");
+    console.log(
+      "  nothing changed against the base, in the index, the working tree or untracked files.",
+    );
     console.log("  0 gates run, because there is nothing to check.");
     process.exit(0);
   }
@@ -437,12 +466,16 @@ function main() {
   if (wanted.has(RELATED)) {
     console.log(
       `  related tests: ${nodeTests.length} node test file(s)` +
-        (workerSources.length ? `, and worker tests related to ${workerSources.length} file(s)` : ""),
+        (workerSources.length
+          ? `, and worker tests related to ${workerSources.length} file(s)`
+          : ""),
     );
     for (const t of nodeTests) console.log(`    ${t.slice(root.length + 1).replace(/\\/g, "/")}`);
   }
-  if (onlyHere.length) console.log(`  CI cannot run these, so this is their only run: ${onlyHere.join(", ")}`);
-  if (deferred.length) console.log(`  needs a deployed resource, not run here: ${deferred.join(", ")}`);
+  if (onlyHere.length)
+    console.log(`  CI cannot run these, so this is their only run: ${onlyHere.join(", ")}`);
+  if (deferred.length)
+    console.log(`  needs a deployed resource, not run here: ${deferred.join(", ")}`);
   console.log("");
 
   if (dry) process.exit(0);
@@ -462,15 +495,27 @@ function main() {
   /** @param {string} label @param {string} command @param {string[]} args */
   function runTests(label, command, args) {
     const started = Date.now();
-    const r = spawnSync(command, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+    const r = spawnSync(command, args, {
+      cwd: root,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
     const ok = r.status === 0;
-    console.log(`  ${ok ? "ok  " : "FAIL"} ${label} (${Math.round((Date.now() - started) / 1000)}s)`);
+    console.log(
+      `  ${ok ? "ok  " : "FAIL"} ${label} (${Math.round((Date.now() - started) / 1000)}s)`,
+    );
     if (!ok) failed += 1;
   }
 
   if (nodeTests.length) runTests("related node tests", "node", ["--test", ...nodeTests]);
   if (workerSources.length) {
-    runTests("related worker tests", "npx", ["vitest", "related", "--run", "--passWithNoTests", ...workerSources]);
+    runTests("related worker tests", "npx", [
+      "vitest",
+      "related",
+      "--run",
+      "--passWithNoTests",
+      ...workerSources,
+    ]);
   }
 
   console.log(`\n${ran} gate(s) and test run(s), ${failed} failed`);

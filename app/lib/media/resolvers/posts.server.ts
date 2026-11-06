@@ -23,7 +23,13 @@ export const postsResolver: ReferenceResolver = async (env, keys) => {
       if (!found) continue;
 
       if (coverSrc === url || coverSrc === key) {
-        found.push({ type: "post", id: slug, title, form: "frontmatter-cover", detail: "cover image" });
+        found.push({
+          type: "post",
+          id: slug,
+          title,
+          form: "frontmatter-cover",
+          detail: "cover image",
+        });
       }
 
       let at = markdown.indexOf(url);

@@ -27,7 +27,12 @@ export const repoHost = {
       throw error;
     });
     if (!info) return null;
-    return { size: info.size, sha256: createHash("sha256").update(await readFile(file)).digest("hex") };
+    return {
+      size: info.size,
+      sha256: createHash("sha256")
+        .update(await readFile(file))
+        .digest("hex"),
+    };
   },
 };
 
@@ -35,7 +40,9 @@ export const repoHost = {
 let citedByArtifact;
 /** The OpenAlex snapshot the twins' citedBy line is a pure function of. */
 export function readCitedBy() {
-  citedByArtifact ??= readFile(path.join(ROOT, CITED_BY_PATH), "utf8").then((text) => JSON.parse(text));
+  citedByArtifact ??= readFile(path.join(ROOT, CITED_BY_PATH), "utf8").then((text) =>
+    JSON.parse(text),
+  );
   return citedByArtifact;
 }
 
@@ -47,7 +54,9 @@ export function readCitedBy() {
  */
 export async function compileAllPublications(options = {}) {
   const host = options.host ?? repoHost;
-  const names = (await readdir(path.join(ROOT, PUBLICATIONS_SOURCE_DIR))).filter((n) => n.endsWith(".md")).sort();
+  const names = (await readdir(path.join(ROOT, PUBLICATIONS_SOURCE_DIR)))
+    .filter((n) => n.endsWith(".md"))
+    .sort();
   const sources = await Promise.all(
     names.map(async (name) => ({
       name,
@@ -90,7 +99,9 @@ export async function buildPublications() {
   const failed = compiled.filter((c) => !c.compiled.ok);
   if (failed.length > 0) {
     throw new Error(
-      failed.map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`).join("\n"),
+      failed
+        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
+        .join("\n"),
     );
   }
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [{ file: c.file, ...c.compiled }] : []));

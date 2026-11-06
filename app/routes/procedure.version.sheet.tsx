@@ -25,7 +25,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const found = /^(.*)\/v\/([^/]+)\/sheet\/?$/.exec(url.pathname);
   if (!found) throw data(null, { status: 404 });
-  const frozen = await getFrozenVersion(getEnv(context), found[1] ?? "", decodeURIComponent(found[2] ?? ""));
+  const frozen = await getFrozenVersion(
+    getEnv(context),
+    found[1] ?? "",
+    decodeURIComponent(found[2] ?? ""),
+  );
   if (!frozen) throw data(null, { status: 404 });
   const { count, factor } = readScale(frozen.record, url);
   return { record: frozen.record, count, factor };
@@ -35,14 +39,24 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record } = loaderData;
   // Prelum's head (pageMeta): not indexed, and canonical to the procedure's page, the copy that is.
-  return pageMeta({ title: `${record.title} (version ${record.version}): printable sheet`, description: record.description, path: record.path, noindex: true });
+  return pageMeta({
+    title: `${record.title} (version ${record.version}): printable sheet`,
+    description: record.description,
+    path: record.path,
+    noindex: true,
+  });
 }
 
 export default function ProcedureVersionSheetRoute({ loaderData }: Route.ComponentProps) {
   const { record, count, factor } = loaderData;
   return (
     <main className="procedure-sheet-page" id="main">
-      <ProcedureSheet record={record} count={count} factor={factor} address={sheetAddress(record, SITE_ORIGIN)} />
+      <ProcedureSheet
+        record={record}
+        count={count}
+        factor={factor}
+        address={sheetAddress(record, SITE_ORIGIN)}
+      />
     </main>
   );
 }

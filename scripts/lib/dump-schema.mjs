@@ -13,7 +13,9 @@ import { DatabaseSync } from "node:sqlite";
 export function migrationSchema(dir = "drizzle") {
   const db = new DatabaseSync(":memory:");
   try {
-    for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+    for (const file of readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort()) {
       db.exec(readFileSync(path.join(dir, file), "utf8"));
     }
     const rows = /** @type {Array<{ t: string, c: string, pk: number }>} */ (
@@ -34,7 +36,11 @@ export function migrationSchema(dir = "drizzle") {
     }
     return {
       columnsOf: (table) => columns.get(table),
-      keyOf: (table) => keys.get(table)?.sort((a, b) => a.pk - b.pk).map((k) => k.c),
+      keyOf: (table) =>
+        keys
+          .get(table)
+          ?.sort((a, b) => a.pk - b.pk)
+          .map((k) => k.c),
     };
   } finally {
     db.close();

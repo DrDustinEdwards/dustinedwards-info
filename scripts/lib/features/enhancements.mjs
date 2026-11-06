@@ -87,9 +87,7 @@ export async function checkEnhancements({ ok, routes }) {
       `below that the per-entry assertions stop examining anything`,
   );
 
-  const inventoryModules = new Set(
-    inventory.map((/** @type {any} */ e) => String(e.module ?? "")),
-  );
+  const inventoryModules = new Set(inventory.map((/** @type {any} */ e) => String(e.module ?? "")));
 
   for (const name of enhanceFiles) {
     const relPath = `app/enhance/${name}`;

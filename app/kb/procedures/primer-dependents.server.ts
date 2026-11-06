@@ -29,7 +29,11 @@ const NAMED_IN = {
 export type NamedKind = keyof typeof NAMED_IN;
 
 /** The slugs of the procedures whose stored record names one of these items (of these kinds), or any item of the kinds when `ids` is null. */
-async function procedureSlugsNaming(env: ProcedureEnv, ids: string[] | null, kinds: NamedKind[] = ["primer"]): Promise<string[]> {
+async function procedureSlugsNaming(
+  env: ProcedureEnv,
+  ids: string[] | null,
+  kinds: NamedKind[] = ["primer"],
+): Promise<string[]> {
   const wanted = ids === null ? null : new Set(ids);
   const slugs = new Set<string>();
   for (const kind of kinds) {
@@ -41,18 +45,26 @@ async function procedureSlugsNaming(env: ProcedureEnv, ids: string[] | null, kin
       )
         .bind(field, id)
         .all<{ slug: string; item: string }>();
-      for (const row of rows.results ?? []) if (wanted === null || wanted.has(row.item)) slugs.add(row.slug);
+      for (const row of rows.results ?? [])
+        if (wanted === null || wanted.has(row.item)) slugs.add(row.slug);
     }
   }
   return [...slugs];
 }
 
 /** Recompiles and rewrites every protocol that names one of these items (null: every protocol that names any item of the kinds). */
-export async function refreshProceduresNaming(env: ProcedureEnv, ids: string[] | null, kinds: NamedKind[] = ["primer"]): Promise<string[]> {
+export async function refreshProceduresNaming(
+  env: ProcedureEnv,
+  ids: string[] | null,
+  kinds: NamedKind[] = ["primer"],
+): Promise<string[]> {
   const slugs = await procedureSlugsNaming(env, ids, kinds);
   for (const slug of slugs) {
     const file = await readFile(env, procedurePath(slug));
-    if (!file) throw new Error(`the protocol ${slug} names a registry item but has no file (${procedurePath(slug)}), so it was not refreshed`);
+    if (!file)
+      throw new Error(
+        `the protocol ${slug} names a registry item but has no file (${procedurePath(slug)}), so it was not refreshed`,
+      );
     const compiled = await compile(env, slug, file.content);
     if (!compiled.ok) {
       throw new Error(

@@ -13,7 +13,13 @@ import { SiteHeader } from "~/components/site-header";
 export function SiteErrorPage({ error }: { error: unknown }) {
   const notFound = isRouteErrorResponse(error) && error.status === 404;
   return (
-    <ErrorPage error={error} home="/" siteHeader={<SiteHeader />} siteFooter={<ShellFooter />} dev={import.meta.env.DEV}>
+    <ErrorPage
+      error={error}
+      home="/"
+      siteHeader={<SiteHeader />}
+      siteFooter={<ShellFooter />}
+      dev={import.meta.env.DEV}
+    >
       {notFound ? <NotFoundHelp /> : null}
     </ErrorPage>
   );

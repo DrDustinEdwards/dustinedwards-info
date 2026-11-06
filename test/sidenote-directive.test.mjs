@@ -33,7 +33,7 @@ await test("an `aside`, so a screen reader can skip what is tangential", async (
 
 await test("the note stays between the paragraph it follows and the one after it", async () => {
   const { html } = await render(
-    "First paragraph.\n\n:::sidenote{kind=\"Caveat\"}\nThe note.\n:::\n\nSecond paragraph.\n",
+    'First paragraph.\n\n:::sidenote{kind="Caveat"}\nThe note.\n:::\n\nSecond paragraph.\n',
   );
   const first = html.indexOf("First paragraph");
   const note = html.indexOf("post-note");
@@ -44,10 +44,7 @@ await test("the note stays between the paragraph it follows and the one after it
 });
 
 await test("a note without a kind is a named build error, not an unlabelled box", async () => {
-  await assert.rejects(
-    () => render(":::sidenote\nNo label.\n:::\n"),
-    /requires a kind attribute/,
-  );
+  await assert.rejects(() => render(":::sidenote\nNo label.\n:::\n"), /requires a kind attribute/);
 });
 
 await test("a heading inside a note is refused: the rail is not where a section goes", async () => {

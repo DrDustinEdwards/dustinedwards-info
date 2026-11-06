@@ -14,10 +14,7 @@ export function loader() {
 }
 
 export function meta() {
-  return [
-    { title: `Page removed | ${SITE.name}` },
-    { name: "robots", content: "noindex" },
-  ];
+  return [{ title: `Page removed | ${SITE.name}` }, { name: "robots", content: "noindex" }];
 }
 
 export default function Gone() {
@@ -32,8 +29,8 @@ export default function Gone() {
       </header>
       <ul>
         <li>
-          <Link to="/research">Research</Link>: every area, protocol and publication, with a sentence
-          on each.
+          <Link to="/research">Research</Link>: every area, protocol and publication, with a
+          sentence on each.
         </li>
         <li>
           <Link to="/search">Search the site</Link> for what you were looking for.

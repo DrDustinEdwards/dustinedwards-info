@@ -22,16 +22,24 @@ export function resolveLineage(forkedFrom, profile, parent) {
   if (!forkedFrom) return null;
   const root = BASES.find((b) => b.profile === profile)?.entryRoot ?? "/research/protocols/";
   const path = `${root}${forkedFrom.slug}`;
-  if (forkedFrom.version && parent.frozen) return { title: parent.frozen.title, href: versionPath(path, forkedFrom.version), version: forkedFrom.version };
-  if (parent.live) return { title: parent.live.title, href: parent.live.path, version: forkedFrom.version };
+  if (forkedFrom.version && parent.frozen)
+    return {
+      title: parent.frozen.title,
+      href: versionPath(path, forkedFrom.version),
+      version: forkedFrom.version,
+    };
+  if (parent.live)
+    return { title: parent.live.title, href: parent.live.path, version: forkedFrom.version };
   return { title: forkedFrom.slug, href: null, version: forkedFrom.version };
 }
 
 /** "Phage DNA extraction, version 2": the words the lineage is shown in. @param {Lineage} lineage */
-export const lineageText = (lineage) => `${lineage.title}${lineage.version ? `, version ${lineage.version}` : ""}`;
+export const lineageText = (lineage) =>
+  `${lineage.title}${lineage.version ? `, version ${lineage.version}` : ""}`;
 
 /** The twin's fact line for a lineage, as the page's fact reads. @param {Lineage} lineage @param {string} origin */
-const lineageMarkdown = (lineage, origin) => `- Based on: ${lineage.href ? `[${lineageText(lineage)}](${origin}${lineage.href})` : lineageText(lineage)}`;
+const lineageMarkdown = (lineage, origin) =>
+  `- Based on: ${lineage.href ? `[${lineageText(lineage)}](${origin}${lineage.href})` : lineageText(lineage)}`;
 
 /**
  * The fact the stored twin carries for a variant: the parent's file name and version, all the compile knows. The twin's
@@ -39,7 +47,8 @@ const lineageMarkdown = (lineage, origin) => `- Based on: ${lineage.href ? `[${l
  *
  * @param {{ slug: string, version: string | null }} forkedFrom
  */
-export const storedLineage = (forkedFrom) => `${forkedFrom.slug}${forkedFrom.version ? `, version ${forkedFrom.version}` : ""}`;
+export const storedLineage = (forkedFrom) =>
+  `${forkedFrom.slug}${forkedFrom.version ? `, version ${forkedFrom.version}` : ""}`;
 
 /**
  * A twin with its stored lineage fact read out in full: the parent's title, linked to the copy it was taken from.
@@ -51,7 +60,10 @@ export const storedLineage = (forkedFrom) => `${forkedFrom.slug}${forkedFrom.ver
  */
 export function withLineage(markdown, record, lineage, origin) {
   if (!record.forkedFrom || !lineage) return markdown;
-  return markdown.replace(`- Based on: ${storedLineage(record.forkedFrom)}\n`, `${lineageMarkdown(lineage, origin)}\n`);
+  return markdown.replace(
+    `- Based on: ${storedLineage(record.forkedFrom)}\n`,
+    `${lineageMarkdown(lineage, origin)}\n`,
+  );
 }
 
 /**
@@ -68,8 +80,15 @@ export function lineageErrors(record, procedures) {
   if (!from) return [];
   const parent = procedures.get(from.slug);
   if (!parent) return [`forked_from names ${from.slug}, which is not a procedure here`];
-  if (parent.profile !== record.profile) return [`forked_from names ${from.slug}, a ${parent.profile}; a variant keeps its parent's profile (${record.profile})`];
+  if (parent.profile !== record.profile)
+    return [
+      `forked_from names ${from.slug}, a ${parent.profile}; a variant keeps its parent's profile (${record.profile})`,
+    ];
   if (!from.version) return [];
   const stated = new Set([parent.version, ...parent.history.map((h) => h.version)].filter(Boolean));
-  return stated.has(from.version) ? [] : [`forked_from names version ${from.version} of ${from.slug}, which states ${[...stated].join(", ") || "no version"}`];
+  return stated.has(from.version)
+    ? []
+    : [
+        `forked_from names version ${from.version} of ${from.slug}, which states ${[...stated].join(", ") || "no version"}`,
+      ];
 }

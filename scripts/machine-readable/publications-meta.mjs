@@ -1,15 +1,34 @@
 import { doiSlug, paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
-import { buildCitationTags, REQUIRED_CITATION_TAGS } from "../../app/lib/publications/citation-tags.mjs";
+import {
+  buildCitationTags,
+  REQUIRED_CITATION_TAGS,
+} from "../../app/lib/publications/citation-tags.mjs";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
 import { SHOWCASE_TYPES as PAGE_SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
-import { organismsIn, toBibtex, toBibtexAll, toCslJson, toRisAll } from "../../app/lib/publications/exports.mjs";
-import { citedBy, closePart, compiled, openPart, records, refusalsFor, SLUG_ROUTE } from "./publications-context.mjs";
+import {
+  organismsIn,
+  toBibtex,
+  toBibtexAll,
+  toCslJson,
+  toRisAll,
+} from "../../app/lib/publications/exports.mjs";
+import {
+  citedBy,
+  closePart,
+  compiled,
+  openPart,
+  records,
+  refusalsFor,
+  SLUG_ROUTE,
+} from "./publications-context.mjs";
 
 /* Citation tags, plain-language lines, the cited-by artifact, the showcase set, the exports and preprints. */
 const { tally, ok } = openPart("meta");
 
 /** @param {string[]} messages */
-const shown = (messages) => messages.slice(0, 8).join("; ") + (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
+const shown = (messages) =>
+  messages.slice(0, 8).join("; ") +
+  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 /** The papers every public surface lists: a draft is a file, not yet a paper. */
 const published = compiled.filter((c) => !c.draft).map((c) => c.record);
@@ -50,7 +69,9 @@ const cited = published.filter((p) => p.doi !== null);
     authorTags += authors.length;
     /* One tag per author: otherwise Scholar reads a single author whose name is the whole list. */
     if (authors.length !== paper.authors.length) {
-      tagFailures.push(`${paper.id}: ${authors.length} citation_author tags for ${paper.authors.length} authors`);
+      tagFailures.push(
+        `${paper.id}: ${authors.length} citation_author tags for ${paper.authors.length} authors`,
+      );
     }
     const pdf = tags.find((t) => t.name === "citation_pdf_url");
     if (isHosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
@@ -58,7 +79,8 @@ const cited = published.filter((p) => p.doi !== null);
     if (pdf) {
       pdfTags += 1;
       const dir = `${ORIGIN}${paperPath(slug)}`;
-      if (!pdf.content.startsWith(dir)) tagFailures.push(`${paper.id}: citation_pdf_url is not under ${dir}`);
+      if (!pdf.content.startsWith(dir))
+        tagFailures.push(`${paper.id}: citation_pdf_url is not under ${dir}`);
     }
   }
 
@@ -86,7 +108,9 @@ const cited = published.filter((p) => p.doi !== null);
   );
   ok(
     "the paper route imports buildCitationTags from the gated module",
-    /import\s*\{[^}]*buildCitationTags[^}]*\}\s*from\s*"~\/lib\/publications\/citation-tags\.mjs"/.test(routeSource),
+    /import\s*\{[^}]*buildCitationTags[^}]*\}\s*from\s*"~\/lib\/publications\/citation-tags\.mjs"/.test(
+      routeSource,
+    ),
     "a locally defined builder would satisfy the call check above and be unchecked",
   );
 }
@@ -111,7 +135,11 @@ const cited = published.filter((p) => p.doi !== null);
   const keys = Object.keys(works);
   const corpusDois = new Set(cited.map((p) => p.doi));
 
-  ok(`the cited-by artifact carries records (${keys.length})`, keys.length > 0, "every assertion below iterates it");
+  ok(
+    `the cited-by artifact carries records (${keys.length})`,
+    keys.length > 0,
+    "every assertion below iterates it",
+  );
   ok(
     `the artifact records the date it was read (${citedBy.fetchedAt})`,
     /^\d{4}-\d{2}-\d{2}$/.test(String(citedBy.fetchedAt ?? "")),
@@ -122,13 +150,17 @@ const cited = published.filter((p) => p.doi !== null);
   ok("every cited-by key is a DOI this corpus carries", strays.length === 0, strays.join(", "));
   /* A paper added after the snapshot has no entry yet, and the page then shows no list rather than a zero. */
   const uncovered = cited.filter((p) => !Object.hasOwn(works, /** @type {string} */ (p.doi)));
-  console.log(`        (${cited.length - uncovered.length} of ${cited.length} papers are in the snapshot; node scripts/fetch-cited-by.mjs --write adds the rest)`);
+  console.log(
+    `        (${cited.length - uncovered.length} of ${cited.length} papers are in the snapshot; node scripts/fetch-cited-by.mjs --write adds the rest)`,
+  );
 
   const cap = Number(citedBy.maxCiting ?? 0);
   ok(`the artifact records its own cap (${cap})`, cap > 0);
   const overCap = keys.filter((d) => (works[d].citing?.length ?? 0) > cap);
   ok(`no entry exceeds the cap (${cap})`, overCap.length === 0, overCap.join(", "));
-  const totalBelowList = keys.filter((d) => Number(works[d].total ?? 0) < (works[d].citing?.length ?? 0));
+  const totalBelowList = keys.filter(
+    (d) => Number(works[d].total ?? 0) < (works[d].citing?.length ?? 0),
+  );
   ok(
     "no entry's total is below the number of works listed under it",
     totalBelowList.length === 0,
@@ -136,13 +168,22 @@ const cited = published.filter((p) => p.doi !== null);
   );
 
   const citingCount = keys.reduce((n, d) => n + (works[d].citing?.length ?? 0), 0);
-  ok(`the artifact lists citing works (${citingCount})`, citingCount > 0, "a zero would make the shape assertions below vacuous");
+  ok(
+    `the artifact lists citing works (${citingCount})`,
+    citingCount > 0,
+    "a zero would make the shape assertions below vacuous",
+  );
   /* A bare name: the page builds its own link, so a URL renders a doubled `https://doi.org/`. */
-  const urlShaped = keys.flatMap((d) => (works[d].citing ?? []).filter((/** @type {any} */ w) => w.doi?.startsWith("http")));
+  const urlShaped = keys.flatMap((d) =>
+    (works[d].citing ?? []).filter((/** @type {any} */ w) => w.doi?.startsWith("http")),
+  );
   ok(
     "every citing DOI is a bare name rather than a URL",
     urlShaped.length === 0,
-    urlShaped.slice(0, 3).map((/** @type {any} */ w) => w.doi).join(", "),
+    urlShaped
+      .slice(0, 3)
+      .map((/** @type {any} */ w) => w.doi)
+      .join(", "),
   );
 }
 
@@ -157,7 +198,11 @@ ok(
 /* Stated twice, the page's in its pure listing module, so it is imported rather than parsed out of the route. */
 {
   const routeTypes = new Set(/** @type {Set<string>} */ (PAGE_SHOWCASE_TYPES));
-  ok(`the page's SHOWCASE_TYPES set is non-empty (${routeTypes.size} types)`, routeTypes.size > 0, "an empty set would make the comparison below vacuous");
+  ok(
+    `the page's SHOWCASE_TYPES set is non-empty (${routeTypes.size} types)`,
+    routeTypes.size > 0,
+    "an empty set would make the comparison below vacuous",
+  );
   const onlyRoute = [...routeTypes].filter((t) => !SHOWCASE_TYPES.has(t));
   const onlyExport = [...SHOWCASE_TYPES].filter((t) => !routeTypes.has(t));
   ok(
@@ -180,7 +225,11 @@ ok(
   );
 
   const bibEntries = (bib.match(/^@/gm) ?? []).length;
-  ok(`the BibTeX export carries one entry per shown record (${bibEntries})`, bibEntries === papers.length, `${papers.length} records, ${bibEntries} entries`);
+  ok(
+    `the BibTeX export carries one entry per shown record (${bibEntries})`,
+    bibEntries === papers.length,
+    `${papers.length} records, ${bibEntries} entries`,
+  );
   const risRecords = (ris.match(/^TY {2}- /gm) ?? []).length;
   const risTerminators = (ris.match(/^ER {2}- $/gm) ?? []).length;
   ok(
@@ -190,24 +239,46 @@ ok(
   );
 
   const missingDoi = papers.filter((p) => p.doi && (!bib.includes(p.doi) || !ris.includes(p.doi)));
-  ok("every shown record's DOI appears in both text exports", missingDoi.length === 0, missingDoi.map((p) => p.id).join(", "));
+  ok(
+    "every shown record's DOI appears in both text exports",
+    missingDoi.length === 0,
+    missingDoi.map((p) => p.id).join(", "),
+  );
 
   /* The stored corpus keeps them escaped, and a reference manager would show `p &lt; 0.05`. */
   const leaked = /&(amp|lt|gt|quot|apos|#\d+);/.exec(bib + ris + csl);
-  ok("no character reference survives into any export", leaked === null, leaked ? `found ${leaked[0]}` : "");
+  ok(
+    "no character reference survives into any export",
+    leaked === null,
+    leaked ? `found ${leaked[0]}` : "",
+  );
 
   /* A lowercased genus is wrong under the nomenclature codes. */
   const withOrganism = papers.filter((p) => organismsIn(p.title).length > 0);
-  ok(`some shown titles carry an organism name (${withOrganism.length})`, withOrganism.length > 0, "a zero would make the brace assertion below vacuous");
+  ok(
+    `some shown titles carry an organism name (${withOrganism.length})`,
+    withOrganism.length > 0,
+    "a zero would make the brace assertion below vacuous",
+  );
   const unprotected = withOrganism.filter((p) => {
     const entry = toBibtex(p);
     return organismsIn(p.title).some((o) => !entry.includes(`{${o}}`));
   });
-  ok("every organism name in a title is brace-protected in BibTeX", unprotected.length === 0, unprotected.map((p) => p.id).join(", "));
+  ok(
+    "every organism name in a title is brace-protected in BibTeX",
+    unprotected.length === 0,
+    unprotected.map((p) => p.id).join(", "),
+  );
 
   /* As deposited: a lowercasing export would disagree with the registry it came from. */
-  const folded = papers.filter((p) => p.doi && p.doi !== p.doi.toLowerCase() && !bib.includes(`doi = {${p.doi}}`));
-  ok("mixed-case DOIs are exported as deposited", folded.length === 0, folded.map((p) => p.id).join(", "));
+  const folded = papers.filter(
+    (p) => p.doi && p.doi !== p.doi.toLowerCase() && !bib.includes(`doi = {${p.doi}}`),
+  );
+  ok(
+    "mixed-case DOIs are exported as deposited",
+    folded.length === 0,
+    folded.map((p) => p.id).join(", "),
+  );
 
   ok(
     "the derived checks the save runs (tags, exports, twin, search record, Ask key) pass for every file",
@@ -230,7 +301,10 @@ ok(
 ok(
   "every record's slug is the one its DOI derives, where it has one",
   records.every((r) => r.doi === null || doiSlug(r.doi) === r.slug),
-  records.filter((r) => r.doi !== null && doiSlug(r.doi) !== r.slug).map((r) => r.id).join(", "),
+  records
+    .filter((r) => r.doi !== null && doiSlug(r.doi) !== r.slug)
+    .map((r) => r.id)
+    .join(", "),
 );
 
 /* Measured by running this part on 2026-09-30; the floor sits a little under it. */

@@ -45,7 +45,12 @@ await test("an index in step is not a breach", () => {
 await test("STALE counts as drift too, in the other direction", () => {
   // A record the corpus no longer knows about is a wrong answer too: a verdict that only
   // counted `missing` would pass while Ask cited a deleted post.
-  const verdict = askDriftVerdict({ expected: 12, present: 15, missing: [], stale: ["a", "b", "c"] });
+  const verdict = askDriftVerdict({
+    expected: 12,
+    present: 15,
+    missing: [],
+    stale: ["a", "b", "c"],
+  });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /drift 3\b/);
   assert.match(verdict.detail, /3 stale/);
@@ -250,10 +255,7 @@ await test("content drift: a NULL source_blob_sha is drift, not agreement", () =
 });
 
 await test("content drift: equal totals with one sha changed is still drift", () => {
-  const v = contentDriftVerdict(
-    [{ slug: "a", sha: "x" }],
-    [{ slug: "a", source_blob_sha: "y" }],
-  );
+  const v = contentDriftVerdict([{ slug: "a", sha: "x" }], [{ slug: "a", source_blob_sha: "y" }]);
   assert.equal(v.ok, false);
   assert.deepEqual(v.counts, { expected: 1, present: 0 });
 });
@@ -298,7 +300,10 @@ await test("dictionary drift: the same comparison, naming dictionary entries and
   assert.match(drifted.detail, /1 dictionary entry file\(s\)/);
   assert.match(drifted.detail, /sync_dictionary/);
   assert.deepEqual(drifted.counts, { expected: 1, present: 0 });
-  assert.equal(dictionaryDriftVerdict([{ slug: "a", sha: "s" }], [{ slug: "a", source_blob_sha: "s" }]).ok, true);
+  assert.equal(
+    dictionaryDriftVerdict([{ slug: "a", sha: "s" }], [{ slug: "a", source_blob_sha: "s" }]).ok,
+    true,
+  );
 });
 
 await test("page and publication drift: the same comparison, each naming its own noun and repair", () => {
@@ -340,16 +345,26 @@ await test("page and publication drift: the same comparison, each naming its own
 });
 
 await test("llms.txt drift: one file against one row, naming its own repair", () => {
-  const stale = llmsDriftVerdict([{ slug: "llms", sha: "new" }], [{ slug: "llms", source_blob_sha: "old" }]);
+  const stale = llmsDriftVerdict(
+    [{ slug: "llms", sha: "new" }],
+    [{ slug: "llms", source_blob_sha: "old" }],
+  );
   assert.equal(stale.ok, false);
   assert.match(stale.detail, /^llms.txt drift 1: 1 sha-changed/);
   assert.match(stale.detail, /sync_llms/);
   assert.deepEqual(stale.counts, { expected: 1, present: 0 });
 
   const unrowed = llmsDriftVerdict([{ slug: "llms", sha: "s" }], []);
-  assert.equal(unrowed.ok, false, "no row means /llms.txt serves the bundled copy, which may be older");
+  assert.equal(
+    unrowed.ok,
+    false,
+    "no row means /llms.txt serves the bundled copy, which may be older",
+  );
 
-  assert.equal(llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok, true);
+  assert.equal(
+    llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok,
+    true,
+  );
 });
 
 await test("roster drift: the same comparison, naming cohorts and sync_roster", () => {
@@ -370,7 +385,10 @@ await test("roster drift: the same comparison, naming cohorts and sync_roster", 
   assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
   assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
 
-  assert.equal(rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok, true);
+  assert.equal(
+    rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok,
+    true,
+  );
 });
 
 await test("phage drift: the same comparison, naming phages and sync_phages", () => {
@@ -391,7 +409,10 @@ await test("phage drift: the same comparison, naming phages and sync_phages", ()
   assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
   assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
 
-  assert.equal(phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok, true);
+  assert.equal(
+    phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok,
+    true,
+  );
 });
 
 await test("CV PDF drift: the stored fingerprint against the data's, naming sync_cv_pdf", () => {

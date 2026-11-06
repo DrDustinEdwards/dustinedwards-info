@@ -19,11 +19,11 @@ other files (`content/phages/`, `docs/PHAGES.md`) at the two markers it carries.
 
 ```markdown
 ---
-path: /software/foxhound         # must be the registered path for this file's key
+path: /software/foxhound # must be the registered path for this file's key
 title: "Foxhound"
-seo_title: "Foxhound: failed Stripe payment recovery"   # at most SEO_TITLE_MAX characters
+seo_title: "Foxhound: failed Stripe payment recovery" # at most SEO_TITLE_MAX characters
 description: "One sentence, at most DESCRIPTION_MAX characters."
-draft: true                      # optional. true: never public; a signed-in admin sees it
+draft: true # optional. true: never public; a signed-in admin sees it
 schema_type: SoftwareApplication # optional: SoftwareApplication | SoftwareSourceCode | WebSite | WebPage | Dataset
 product_url: https://foxhoundapp.com
 application_category: WebApplication
@@ -140,14 +140,14 @@ cache purge by tag (`content-pages`).
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| The page | `app/routes/content-page.tsx` (and `teaching.tsx`, `software.tsx`), drawn from the D1 row; About is `app/routes/about.tsx`, drawn from its row |
-| The markdown twin | `app/routes/content-page[.md].ts`, one route per listed path; the CV's twin is `app/routes/cv[.md].ts` (docs/CV.md) |
+| Output            | From                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The page          | `app/routes/content-page.tsx` (and `teaching.tsx`, `software.tsx`), drawn from the D1 row; About is `app/routes/about.tsx`, drawn from its row               |
+| The markdown twin | `app/routes/content-page[.md].ts`, one route per listed path; the CV's twin is `app/routes/cv[.md].ts` (docs/CV.md)                                          |
 | The sitemap entry | `app/routes/sitemap.ts`, published rows only, in the registry's order (About keeps its place among the static paths, listed only while its row is published) |
-| JSON-LD | `contentPageJsonLd`, from the record |
-| Search | `search_docs`, written by the sync and by the page save, from the same compile |
-| The check | `build:content` compiles every file with the save's own validator; `check:links` judges every link |
+| JSON-LD           | `contentPageJsonLd`, from the record                                                                                                                         |
+| Search            | `search_docs`, written by the sync and by the page save, from the same compile                                                                               |
+| The check         | `build:content` compiles every file with the save's own validator; `check:links` judges every link                                                           |
 
 A static file at a twin's address would win over the route, so `build:content` deletes any left from an
 earlier build.

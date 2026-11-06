@@ -45,7 +45,8 @@ export function propertyReads(sf, names) {
     }
     if (ts.isBindingElement(n) && ts.isObjectBindingPattern(n.parent)) {
       const key = n.propertyName ?? n.name;
-      if ((ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && names.has(key.text)) hit(n, key.text);
+      if ((ts.isIdentifier(key) || ts.isStringLiteralLike(key)) && names.has(key.text))
+        hit(n, key.text);
     }
     ts.forEachChild(n, visit);
   };
@@ -69,7 +70,8 @@ export function interfaceMembers(sf, interfaceName) {
     if (ts.isInterfaceDeclaration(n) && n.name.text === interfaceName) {
       found = true;
       for (const m of n.members) {
-        if (m.name && (ts.isIdentifier(m.name) || ts.isStringLiteralLike(m.name))) members.add(m.name.text);
+        if (m.name && (ts.isIdentifier(m.name) || ts.isStringLiteralLike(m.name)))
+          members.add(m.name.text);
       }
     }
     ts.forEachChild(n, visit);

@@ -5,9 +5,18 @@ import { TWIN_ATTEMPTS, uploadTwins, withRetry } from "../app/lib/search/ask-twi
 import { askSyncReport, askSyncSummary } from "../app/lib/operator/sync-report.mjs";
 
 const TWINS = [
-  { key: "research/publications/10-1128-jvi-02150-14.md", path: "/research/publications/10-1128-jvi-02150-14.md" },
-  { key: "research/publications/10-1128-mra-01077-21.md", path: "/research/publications/10-1128-mra-01077-21.md" },
-  { key: "research/publications/10-3389-feduc-2024-1442306.md", path: "/research/publications/10-3389-feduc-2024-1442306.md" },
+  {
+    key: "research/publications/10-1128-jvi-02150-14.md",
+    path: "/research/publications/10-1128-jvi-02150-14.md",
+  },
+  {
+    key: "research/publications/10-1128-mra-01077-21.md",
+    path: "/research/publications/10-1128-mra-01077-21.md",
+  },
+  {
+    key: "research/publications/10-3389-feduc-2024-1442306.md",
+    path: "/research/publications/10-3389-feduc-2024-1442306.md",
+  },
 ];
 const FAILING = "research/publications/10-1128-mra-01077-21.md";
 
@@ -49,7 +58,10 @@ await test("a transient failure is retried and the twin lands", async () => {
   assert.deepEqual(failed, []);
   assert.ok(fake.uploads.has(FAILING), "the retried twin was written");
   assert.equal(fake.uploads.size, TWINS.length);
-  assert.deepEqual(keys, TWINS.map((t) => t.key));
+  assert.deepEqual(
+    keys,
+    TWINS.map((t) => t.key),
+  );
   assert.equal(fake.slept.length, 1, "exactly one pause, before the one retry");
 });
 
@@ -57,27 +69,59 @@ await test("a failure that outlives its retries is reported, not swallowed", asy
   const fake = io(Infinity);
   const { keys, failed } = await uploadTwins(TWINS, fake);
   assert.equal(fake.thrown(), TWIN_ATTEMPTS, "every attempt was made before giving up");
-  assert.deepEqual(failed, [{ key: FAILING, error: "AiSearchInternalError: unable_to_connect_to_ai_search" }]);
+  assert.deepEqual(failed, [
+    { key: FAILING, error: "AiSearchInternalError: unable_to_connect_to_ai_search" },
+  ]);
   assert.equal(fake.uploads.size, TWINS.length - 1, "the other twins still landed");
-  assert.ok(keys.includes(FAILING), "a failed key stays in keys, so the prune never deletes the indexed copy");
+  assert.ok(
+    keys.includes(FAILING),
+    "a failed key stays in keys, so the prune never deletes the indexed copy",
+  );
   assert.equal(fake.logged.length, 1);
 });
 
 await test("the converge report refuses convergence on a failed key, even when the counts agree", async () => {
   const { failed } = await uploadTwins(TWINS, io(Infinity));
   // The counts agreeing is the dangerous case: the old copy is still listed, so nothing else would notice.
-  const report = askSyncReport({ uploaded: 156, removed: 0, cacheDropped: 0, expected: 157, present: 157, failed });
+  const report = askSyncReport({
+    uploaded: 156,
+    removed: 0,
+    cacheDropped: 0,
+    expected: 157,
+    present: 157,
+    failed,
+  });
   assert.equal(report.converged, false);
-  assert.deepEqual(report.failed.map((f) => f.key), [FAILING]);
+  assert.deepEqual(
+    report.failed.map((f) => f.key),
+    [FAILING],
+  );
   assert.match(askSyncSummary(report), /ASK UPLOAD FAILED for 1 key/);
   assert.match(askSyncSummary(report), /10-1128-mra-01077-21/);
 });
 
 await test("with nothing failed, the report converges exactly as before", () => {
-  const report = askSyncReport({ uploaded: 157, removed: 0, cacheDropped: 0, expected: 157, present: 157, failed: [] });
+  const report = askSyncReport({
+    uploaded: 157,
+    removed: 0,
+    cacheDropped: 0,
+    expected: 157,
+    present: 157,
+    failed: [],
+  });
   assert.equal(report.converged, true);
-  const legacy = askSyncReport({ uploaded: 157, removed: 0, cacheDropped: 0, expected: 157, present: 157 });
-  assert.equal(legacy.converged, true, "a caller that passes no failed list still converges on agreeing counts");
+  const legacy = askSyncReport({
+    uploaded: 157,
+    removed: 0,
+    cacheDropped: 0,
+    expected: 157,
+    present: 157,
+  });
+  assert.equal(
+    legacy.converged,
+    true,
+    "a caller that passes no failed list still converges on agreeing counts",
+  );
 });
 
 await test("a twin that cannot be fetched is retried, then reported", async () => {

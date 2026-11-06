@@ -24,20 +24,29 @@ import {
 } from "../app/lib/phage-tools.mjs";
 
 /** @param {string} slug */
-const procedure = (slug) => readFileSync(new URL(`../content/procedures/${slug}.md`, import.meta.url), "utf8");
+const procedure = (slug) =>
+  readFileSync(new URL(`../content/procedures/${slug}.md`, import.meta.url), "utf8");
 
 /** Equal at the precision the page states: 1.1 x 10^10 is two significant figures. */
 function sameAsStated(actual, mantissa, exponent) {
   const digits = mantissa.replace(".", "").replace(/^0+/, "").length;
   const stated = Number(mantissa) * 10 ** exponent;
-  assert.equal(Number(actual.toPrecision(digits)), Number(stated.toPrecision(digits)), `${actual} is not ${mantissa} x 10^${exponent}`);
+  assert.equal(
+    Number(actual.toPrecision(digits)),
+    Number(stated.toPrecision(digits)),
+    `${actual} is not ${mantissa} x 10^${exponent}`,
+  );
 }
 
 /* ------------------------------------------------------------ titer, by hand */
 
 await test("titer: hand arithmetic, 111 plaques in 10 µl of 10^-6", () => {
   // 111 / 10 = 11.1 pfu/µl; x 1,000 = 11,100 pfu/ml; x 10^6 = 1.11 x 10^10.
-  const { perUl, perMlDiluted, pfuPerMl } = titer({ plaques: 111, volumeUl: 10, dilutionExponent: 6 });
+  const { perUl, perMlDiluted, pfuPerMl } = titer({
+    plaques: 111,
+    volumeUl: 10,
+    dilutionExponent: 6,
+  });
   assert.equal(perUl, 11.1);
   assert.equal(Math.round(perMlDiluted), 11100);
   assert.equal(Math.round(pfuPerMl / 1e6), 11100);
@@ -52,11 +61,19 @@ await test("titer: a spot titer divides by the spot volume, 6 plaques in 3 µl o
 
 await test("titer: every row of the protocol's worked-numbers table", () => {
   const md = procedure("phage-isolation");
-  const rows = [...md.matchAll(/^\| (\d+) \| (\d+) µl(?: \(spot\))? \| (10\^-(\d+)|undiluted) \| ([\d.]+) x 10\^(\d+) pfu\/ml \|$/gm)];
+  const rows = [
+    ...md.matchAll(
+      /^\| (\d+) \| (\d+) µl(?: \(spot\))? \| (10\^-(\d+)|undiluted) \| ([\d.]+) x 10\^(\d+) pfu\/ml \|$/gm,
+    ),
+  ];
   // The table has ten rows; a count this low means the table moved and nothing was checked.
   assert.ok(rows.length >= 10, `read ${rows.length} rows from the protocol's titer table`);
   for (const [, plaques, volume, , n, mantissa, exponent] of rows) {
-    const { pfuPerMl } = titer({ plaques: Number(plaques), volumeUl: Number(volume), dilutionExponent: n ? Number(n) : 0 });
+    const { pfuPerMl } = titer({
+      plaques: Number(plaques),
+      volumeUl: Number(volume),
+      dilutionExponent: n ? Number(n) : 0,
+    });
     sameAsStated(pfuPerMl, mantissa, Number(exponent));
   }
 });
@@ -72,16 +89,29 @@ await test("titer: the FAQ's worked numbers, all from 10 µl plated", () => {
     [376, 0, "3.76", 4],
   ];
   for (const [plaques, n, mantissa, exponent] of faq) {
-    sameAsStated(titer({ plaques, volumeUl: 10, dilutionExponent: n }).pfuPerMl, mantissa, exponent);
+    sameAsStated(
+      titer({ plaques, volumeUl: 10, dilutionExponent: n }).pfuPerMl,
+      mantissa,
+      exponent,
+    );
   }
 });
 
 await test("titer: the notebooks' recorded mistakes come out right", () => {
   // Protocol, titer arithmetic: 40 at 10^-4 written 4 x 10^-7, 74 at 10^-5 written 7.4 x 10^11,
   // 376 undiluted written 3.76 x 10^5. The calculator gives the corrected values.
-  assert.equal(runTool("titer", { plaques: "40", volume: "10", dilution: "4" }).sections[0].result, "4 x 10^7 pfu/ml");
-  assert.equal(runTool("titer", { plaques: "74", volume: "10", dilution: "5" }).sections[0].result, "7.4 x 10^8 pfu/ml");
-  assert.equal(runTool("titer", { plaques: "376", volume: "10", dilution: "0" }).sections[0].result, "3.76 x 10^4 pfu/ml");
+  assert.equal(
+    runTool("titer", { plaques: "40", volume: "10", dilution: "4" }).sections[0].result,
+    "4 x 10^7 pfu/ml",
+  );
+  assert.equal(
+    runTool("titer", { plaques: "74", volume: "10", dilution: "5" }).sections[0].result,
+    "7.4 x 10^8 pfu/ml",
+  );
+  assert.equal(
+    runTool("titer", { plaques: "376", volume: "10", dilution: "0" }).sections[0].result,
+    "3.76 x 10^4 pfu/ml",
+  );
 });
 
 await test("titer: a minus sign on the dilution means the same dilution", () => {
@@ -139,7 +169,12 @@ await test("dilution: a total that is not a power of ten ends in one smaller ste
   assert.equal(plan.tenfold, 3);
   assert.deepEqual(
     plan.steps.map(({ transferUl, bufferUl }) => [transferUl, bufferUl]),
-    [[10, 90], [10, 90], [10, 90], [10, 40]],
+    [
+      [10, 90],
+      [10, 90],
+      [10, 90],
+      [10, 40],
+    ],
   );
   sameAsStated(plan.finalPfuPerMl, "6", 5);
 });
@@ -159,7 +194,10 @@ await test("dilution: the last tube is made large enough for every plate, and th
 await test("dilution: no step asks for less than 1 µl", () => {
   // 1.05-fold at 10 µl would be 10 µl + 0.5 µl. The planner scales the step up instead.
   const plan = planDilution({ startPfuPerMl: 1.05e8, targetPfuPerMl: 1e8 });
-  assert.ok(plan.steps.every((step) => step.transferUl >= 1 && step.bufferUl >= 1), JSON.stringify(plan.steps));
+  assert.ok(
+    plan.steps.every((step) => step.transferUl >= 1 && step.bufferUl >= 1),
+    JSON.stringify(plan.steps),
+  );
   sameAsStated(plan.finalPfuPerMl, "1.00", 8);
 });
 
@@ -175,16 +213,26 @@ await test("webbed plate: the FAQ's example, 11,100 pfu from a 1.11 x 10^10 lysa
   // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate per plate.
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.11e10, pfuPerPlate: 11100 }), "1.00", -3);
   const isolation = procedure("phage-isolation");
-  assert.ok(isolation.includes("is a titer of 1.11 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1 x 10^-3 µl of lysate per plate."));
+  assert.ok(
+    isolation.includes(
+      "is a titer of 1.11 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1 x 10^-3 µl of lysate per plate.",
+    ),
+  );
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
 });
 
 await test("the 111-plaque lysate is 1.11 x 10^10 on every page and procedure, never rounded to 1.1", () => {
-  const dirs = ["pages", "procedures"].map((name) => new URL(`../content/${name}/`, import.meta.url));
+  const dirs = ["pages", "procedures"].map(
+    (name) => new URL(`../content/${name}/`, import.meta.url),
+  );
   for (const dir of dirs) {
     for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
       const text = readFileSync(new URL(file, dir), "utf8");
-      assert.doesNotMatch(text, /\b1\.1 x 10\^10\b/, `${file} writes the lysate as 1.1 x 10^10; it is 1.11 x 10^10 (titer(111, 10, 6))`);
+      assert.doesNotMatch(
+        text,
+        /\b1\.1 x 10\^10\b/,
+        `${file} writes the lysate as 1.1 x 10^10; it is 1.11 x 10^10 (titer(111, 10, 6))`,
+      );
     }
   }
   assert.equal(titer({ plaques: 111, volumeUl: 10, dilutionExponent: 6 }).pfuPerMl, 1.11e10);
@@ -203,13 +251,24 @@ await test("webbed plate: the protocol's bracketing and pfu-per-web numbers", ()
   // 8 µl of 10^-2 of a 2.5 x 10^8 lysate is about 20,000 pfu.
   assert.equal((8 * (2.5e8 / 100)) / 1000, 20000);
   // 20 to 30 µl of 10^-3 of a 4 x 10^8 lysate is 8,000 to 12,000 pfu.
-  assert.deepEqual([20, 30].map((ul) => (ul * (4e8 / 1000)) / 1000), [8000, 12000]);
+  assert.deepEqual(
+    [20, 30].map((ul) => (ul * (4e8 / 1000)) / 1000),
+    [8000, 12000],
+  );
 });
 
 await test("webbed plate: the calculator plates 10 µl of the 10^-4 tube for the worked example", () => {
-  const result = runTool("webbed-plate", { titer: "1.11e10", pfu: "11100", volume: "10", plates: "6" });
+  const result = runTool("webbed-plate", {
+    titer: "1.11e10",
+    pfu: "11100",
+    volume: "10",
+    plates: "6",
+  });
   assert.equal(result.ok, true);
-  assert.equal(result.ok && result.sections[0].result, "10 µl of tube 4 (11,100 pfu) on each of 6 plates");
+  assert.equal(
+    result.ok && result.sections[0].result,
+    "10 µl of tube 4 (11,100 pfu) on each of 6 plates",
+  );
 });
 
 await test("webbed plate: warns above the lab's 25 µl limit on 250 µl of host", () => {
@@ -225,9 +284,16 @@ await test("webbed plate: warns above the lab's 25 µl limit on 250 µl of host"
 
 await test("flooding: the notebooks' yields fall inside 5 to 7 ml per plate", () => {
   // FAQ: 4 plates gave about 27 ml, 7 plates 40 ml, 8 plates over 50 ml.
-  for (const [plates, ml] of [[4, 27], [7, 40], [8, 51]]) {
+  for (const [plates, ml] of [
+    [4, 27],
+    [7, 40],
+    [8, 51],
+  ]) {
     const { lowMl, highMl } = floodYield({ plates });
-    assert.ok(lowMl <= ml && ml <= highMl, `${plates} plates: ${ml} ml outside ${lowMl} to ${highMl}`);
+    assert.ok(
+      lowMl <= ml && ml <= highMl,
+      `${plates} plates: ${ml} ml outside ${lowMl} to ${highMl}`,
+    );
   }
   assert.deepEqual(floodYield({ plates: 6 }), { lowMl: 30, highMl: 42 });
 });
@@ -241,7 +307,10 @@ await test("flooding: 20 ml at 5 ml per plate is 4 plates, as the FAQ works it",
 
 /** Equal to a relative 1e-9: floating point, not rounding, is all this allows. */
 function close(actual, expected) {
-  assert.ok(Math.abs(actual - expected) <= Math.abs(expected) * 1e-9, `${actual} is not ${expected}`);
+  assert.ok(
+    Math.abs(actual - expected) <= Math.abs(expected) * 1e-9,
+    `${actual} is not ${expected}`,
+  );
 }
 
 await test("MOI: the page's worked example, 10 µl of 1 x 10^9 on 250 µl of 1 x 10^8 cells/ml", () => {
@@ -278,7 +347,8 @@ await test("MOI: volumes are µl and titers per ml, however the number is writte
     { titer: "1 x 10^9", phage: "10", cells: "1×10^8", host: "250" },
     { titer: "1,000,000,000", phage: "10", cells: "100,000,000", host: "250" },
   ];
-  for (const values of written) assert.deepEqual(runTool("moi", values), runTool("moi", toolValues("moi")));
+  for (const values of written)
+    assert.deepEqual(runTool("moi", values), runTool("moi", toolValues("moi")));
 });
 
 await test("MOI: refuses zero, empty and non-numeric inputs, naming the field", () => {
@@ -319,9 +389,19 @@ await test("EOP from counts: the titer calculator's arithmetic on each host, the
   const counts = runTool("eop-counts", toolValues("eop-counts"));
   assert.ok(counts.ok);
   assert.equal(counts.sections[0].result, "0.02 (2% of the reference titer)");
-  assert.equal(counts.sections[0].steps[0], "Titer on the test host: 20 / 10 µl x 1,000 x 10^5 = 2 x 10^8 pfu/ml.");
+  assert.equal(
+    counts.sections[0].steps[0],
+    "Titer on the test host: 20 / 10 µl x 1,000 x 10^5 = 2 x 10^8 pfu/ml.",
+  );
   // A 3 µl spot, undiluted, on the test host: 6 / 3 x 1,000 = 2,000 pfu/ml; over 1 x 10^10 = 2 x 10^-7.
-  const spot = runTool("eop-counts", { testPlaques: "6", testVolume: "3", testDilution: "0", refPlaques: "100", refVolume: "10", refDilution: "6" });
+  const spot = runTool("eop-counts", {
+    testPlaques: "6",
+    testVolume: "3",
+    testDilution: "0",
+    refPlaques: "100",
+    refVolume: "10",
+    refDilution: "6",
+  });
   assert.ok(spot.ok);
   assert.equal(spot.sections[0].result, "2 x 10^-7 (2 x 10^-5% of the reference titer)");
 });
@@ -329,7 +409,14 @@ await test("EOP from counts: the titer calculator's arithmetic on each host, the
 await test("EOP: no plaques on the test host is a limit, not an EOP of 0", () => {
   // 0 plaques in 10 µl of 10^-1: one plaque would have been 1 / 10 x 1,000 x 10 = 1,000 pfu/ml,
   // and 1,000 / 1 x 10^10 = 1 x 10^-7, so the EOP is below 1 x 10^-7.
-  const result = runTool("eop-counts", { testPlaques: "0", testVolume: "10", testDilution: "1", refPlaques: "100", refVolume: "10", refDilution: "6" });
+  const result = runTool("eop-counts", {
+    testPlaques: "0",
+    testVolume: "10",
+    testDilution: "1",
+    refPlaques: "100",
+    refVolume: "10",
+    refDilution: "6",
+  });
   assert.ok(result.ok);
   assert.match(result.sections[0].notes.join(" "), /below 1 x 10\^-7/);
   const fromTiters = runTool("eop", { test: "0", reference: "1e10" });
@@ -338,7 +425,14 @@ await test("EOP: no plaques on the test host is a limit, not an EOP of 0", () =>
 });
 
 await test("EOP: refuses a reference with nothing to divide by, and bad counts, naming the host", () => {
-  const counts = { testPlaques: "20", testVolume: "10", testDilution: "5", refPlaques: "100", refVolume: "10", refDilution: "6" };
+  const counts = {
+    testPlaques: "20",
+    testVolume: "10",
+    testDilution: "5",
+    refPlaques: "100",
+    refVolume: "10",
+    refDilution: "6",
+  };
   const cases = [
     ["eop", { test: "2e8", reference: "0" }, /reference host/],
     ["eop", { test: "", reference: "1e10" }, /test host/],
@@ -387,7 +481,12 @@ await test("lysate volume: under 1 µl in all means dilute first; at or above th
 
 await test("lysate volume: warns above the lab's 25 µl on 250 µl of host", () => {
   // 10,000 x 2 = 20,000 pfu; 20,000 / 1 x 10^5 x 1,000 = 200 µl, 100 µl per plate, over 25 µl.
-  const result = runTool("lysate-volume", { titer: "1e5", pfu: "10000", plates: "2", volume: "10" });
+  const result = runTool("lysate-volume", {
+    titer: "1e5",
+    pfu: "10000",
+    plates: "2",
+    volume: "10",
+  });
   assert.ok(result.ok);
   assert.match(result.sections[0].notes.join(" "), /over the lab's limit of 25 µl/);
 });
@@ -423,12 +522,19 @@ await test("llms.txt links every calculator page", () => {
 
 await test("every calculator opens on its page's worked example, and computes", () => {
   assert.deepEqual(toolValues("titer"), { plaques: "111", volume: "10", dilution: "6" });
-  assert.deepEqual(toolValues("dilution"), { start: "1.11e10", target: "1.11e6", transfer: "10", needed: "" });
+  assert.deepEqual(toolValues("dilution"), {
+    start: "1.11e10",
+    target: "1.11e6",
+    transfer: "10",
+    needed: "",
+  });
   for (const id of Object.keys(TOOLS)) assert.equal(runTool(id, toolValues(id)).ok, true, id);
 });
 
 await test("every lab default names a source page, and the value matches the lab's number", () => {
-  const withSource = Object.values(TOOLS).flatMap((tool) => tool.fields.filter((field) => field.source));
+  const withSource = Object.values(TOOLS).flatMap((tool) =>
+    tool.fields.filter((field) => field.source),
+  );
   assert.ok(withSource.length >= 4);
   for (const field of withSource) assert.match(field.source.href, /^\/(research|teaching)\//);
   assert.equal(LAB.ulSpot, 3);
@@ -447,7 +553,10 @@ await test("every lab default names a source page, and the value matches the lab
 await test("the query string sets a calculator's values, and nothing else does", () => {
   const params = new URLSearchParams("plaques=42&volume=10&dilution=6&other=1");
   assert.deepEqual(toolValues("titer", params), { plaques: "42", volume: "10", dilution: "6" });
-  assert.equal(runTool("titer", toolValues("titer", params)).sections[0].result, "4.2 x 10^9 pfu/ml");
+  assert.equal(
+    runTool("titer", toolValues("titer", params)).sections[0].result,
+    "4.2 x 10^9 pfu/ml",
+  );
   assert.deepEqual(toolsOnPage("/research/tools/webbed-plate"), ["webbed-plate", "flood"]);
   assert.deepEqual(toolsOnPage("/research/tools/eop"), ["eop", "eop-counts"]);
   assert.deepEqual(toolsOnPage("/research/tools"), []);

@@ -11,7 +11,9 @@ const isWindows = process.platform === "win32";
  * @returns {string}
  */
 export function normalizeCommand(command) {
-  return String(command ?? "").replace(/\\/g, "/").toLowerCase();
+  return String(command ?? "")
+    .replace(/\\/g, "/")
+    .toLowerCase();
 }
 
 /**
@@ -129,7 +131,10 @@ export function portListeners(port) {
   const pids = new Set();
 
   if (isWindows) {
-    const listed = spawnSync("netstat", ["-ano"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+    const listed = spawnSync("netstat", ["-ano"], {
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+    });
     if (listed.status !== 0 || !listed.stdout) return null;
     for (const line of listed.stdout.split("\n")) {
       // "  TCP    [::1]:4173    [::]:0    LISTENING    21108"
@@ -169,7 +174,9 @@ export function killTree(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
     if (isWindows) {
-      return spawnSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore" }).status === 0;
+      return (
+        spawnSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore" }).status === 0
+      );
     }
     // Needs the child spawned into its own process group, which a negative pid addresses.
     process.kill(-pid, "SIGKILL");
@@ -226,7 +233,12 @@ export class ChildRegistry {
         torn += 1;
         continue;
       }
-      if (entry && Number.isInteger(entry.pid) && Array.isArray(entry.needles) && entry.needles.length > 0) {
+      if (
+        entry &&
+        Number.isInteger(entry.pid) &&
+        Array.isArray(entry.needles) &&
+        entry.needles.length > 0
+      ) {
         entries.push(entry);
       } else {
         torn += 1;
@@ -299,7 +311,9 @@ export class ChildRegistry {
         result.stale += 1;
         continue;
       }
-      const matches = entry.needles.every((needle) => live.command.includes(normalizeCommand(needle)));
+      const matches = entry.needles.every((needle) =>
+        live.command.includes(normalizeCommand(needle)),
+      );
       if (!matches) {
         result.reused += 1;
         result.notes.push(
@@ -311,7 +325,9 @@ export class ChildRegistry {
         result.cleared += 1;
       } else {
         result.failed += 1;
-        result.notes.push(`pid ${entry.pid} (${entry.kind}) matched but the kill reported no success`);
+        result.notes.push(
+          `pid ${entry.pid} (${entry.kind}) matched but the kill reported no success`,
+        );
       }
     }
 

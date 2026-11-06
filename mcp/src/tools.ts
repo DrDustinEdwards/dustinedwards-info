@@ -92,9 +92,14 @@ export function decodeCursor(cursor: string): number | null {
 
 const cursorSchema = z
   .string()
-  .refine((cursor) => decodeCursor(cursor) !== null, "cursor is not one this tool gave. Leave it out to start from the first page.")
+  .refine(
+    (cursor) => decodeCursor(cursor) !== null,
+    "cursor is not one this tool gave. Leave it out to start from the first page.",
+  )
   .optional()
-  .describe("Optional. Leave it out for the first page; to read on, pass next_cursor from the previous page.");
+  .describe(
+    "Optional. Leave it out for the first page; to read on, pass next_cursor from the previous page.",
+  );
 
 const PROCEDURE_FORMAT =
   "THE FILE FORMAT is documented in the site repository's docs/PROCEDURES.md. " +
@@ -124,7 +129,10 @@ export type ToolOutput = {
  */
 function ok(data: Record<string, unknown>, outside?: string): ToolOutput {
   if (outside) return outsideResult(outside, data);
-  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: data };
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    structuredContent: data,
+  };
 }
 
 function inputError(message: string): ToolOutput {
@@ -137,7 +145,9 @@ function inputError(message: string): ToolOutput {
  * messages) travels alongside, so neither is lost and neither is invented.
  */
 function refusal(result: { status: number; error?: string; detail?: unknown }): ToolOutput {
-  const detail = result.detail as { policy?: string; field?: string | null; line?: number | null } | undefined;
+  const detail = result.detail as
+    | { policy?: string; field?: string | null; line?: number | null }
+    | undefined;
   const parts = [result.error ?? "The operator API refused the request."];
   if (detail?.policy) parts.push(`policy: ${detail.policy}`);
   if (detail?.field) parts.push(`field: ${detail.field}`);
@@ -151,7 +161,11 @@ function refusal(result: { status: number; error?: string; detail?: unknown }): 
   return {
     isError: true,
     content: [{ type: "text", text: parts.join("\n") }],
-    structuredContent: { status: result.status, error: result.error, detail: result.detail ?? null },
+    structuredContent: {
+      status: result.status,
+      error: result.error,
+      detail: result.detail ?? null,
+    },
   };
 }
 
@@ -164,7 +178,11 @@ function wrapperFailure(cause: unknown): ToolOutput {
   // The detail goes to the Worker log only (checklist S4): the client hears what kind of failure it was, never the
   // error's own text, which can name a binding, an address or an upstream answer.
   const detail = cause instanceof Error ? cause.message : String(cause);
-  logEvent("wrapper_failure", { kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail }, { level: "error" });
+  logEvent(
+    "wrapper_failure",
+    { kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail },
+    { level: "error" },
+  );
   const message =
     cause instanceof ApiLegError
       ? `The wrapper could not complete its request to the operator API (${cause.kind}). The detail is in the server's log.`
@@ -207,7 +225,12 @@ async function runPaged(
     const offset = typeof page.cursor === "string" ? (decodeCursor(page.cursor) ?? 0) : 0;
     data[key] = all.slice(offset, offset + limit);
     const hasMore = offset + limit < all.length;
-    data.page = { limit, total: all.length, has_more: hasMore, next_cursor: hasMore ? encodeCursor(offset + limit) : null };
+    data.page = {
+      limit,
+      total: all.length,
+      has_more: hasMore,
+      next_cursor: hasMore ? encodeCursor(offset + limit) : null,
+    };
     return ok(data, outside);
   } catch (cause) {
     return wrapperFailure(cause);
@@ -236,7 +259,12 @@ export interface ToolDefinition {
   handler: (env: ToolEnv, args: Record<string, unknown>) => Promise<ToolOutput>;
 }
 
-const READ_ONLY: Annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const READ_ONLY: Annotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
 
 /**
  * OUTPUT SCHEMAS. Most tools pass the operator API's answer on as the API wrote
@@ -246,7 +274,12 @@ const READ_ONLY: Annotations = { readOnlyHint: true, destructiveHint: false, ide
 const API_ANSWER = z.looseObject({});
 const PAGED_ANSWER = z.looseObject({
   page: z
-    .object({ limit: z.number(), total: z.number(), has_more: z.boolean(), next_cursor: z.string().nullable() })
+    .object({
+      limit: z.number(),
+      total: z.number(),
+      has_more: z.boolean(),
+      next_cursor: z.string().nullable(),
+    })
     .optional(),
 });
 
@@ -295,7 +328,11 @@ export const TOOLS: ToolDefinition[] = [
         "is the administrator's, in the site's admin screen (the API refuses an operator delete with 403 " +
         "mention-delete-requires-admin). Reject instead; it can be undone.",
       inputSchema: z.strictObject({
-        mention_id: z.number().int().positive().describe("The mention's id, from dei_review_mentions."),
+        mention_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The mention's id, from dei_review_mentions."),
         decision: z.enum(["approve", "reject"]).describe("approve or reject."),
       }),
       outputSchema: API_ANSWER,
@@ -307,7 +344,8 @@ export const TOOLS: ToolDefinition[] = [
         openWorldHint: false,
       },
     },
-    handler: (env, args) => run(env, "decide_mention", { id: args.mention_id, decision: args.decision }),
+    handler: (env, args) =>
+      run(env, "decide_mention", { id: args.mention_id, decision: args.decision }),
   },
 
   {
@@ -328,7 +366,9 @@ export const TOOLS: ToolDefinition[] = [
           .min(1)
           .max(200)
           .optional()
-          .describe("Optional. One item's address kind/id, such as primer/m13-forward. Omit to list."),
+          .describe(
+            "Optional. One item's address kind/id, such as primer/m13-forward. Omit to list.",
+          ),
         kind: z
           .string()
           .min(1)
@@ -343,7 +383,8 @@ export const TOOLS: ToolDefinition[] = [
     },
     handler: async (env, args) => {
       if (args.record_key !== undefined) {
-        if (args.kind !== undefined) return inputError("kind narrows a list only. Remove it, or remove record_key to list.");
+        if (args.kind !== undefined)
+          return inputError("kind narrows a list only. Remove it, or remove record_key to list.");
         return run(env, "get_registry", { slug: args.record_key });
       }
       return runPaged(env, "list_registry", args.kind ? { kind: args.kind } : {}, args);
@@ -452,7 +493,10 @@ export const TOOLS: ToolDefinition[] = [
         "not an error to retry: leave draft true and tell the human the procedure is staged.",
       inputSchema: z.strictObject({
         slug: procedureSlugSchema,
-        raw: z.string().min(1).describe("The complete procedure file including its YAML front matter block."),
+        raw: z
+          .string()
+          .min(1)
+          .describe("The complete procedure file including its YAML front matter block."),
         expected_head_sha: headShaSchema,
         is_new: z
           .boolean()

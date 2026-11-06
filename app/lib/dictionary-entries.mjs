@@ -70,8 +70,12 @@ export function dictionaryEntryText(entry) {
  * @param {string} origin absolute origin for the audio link, so the twin read alone still resolves
  */
 export function dictionaryEntryMarkdown(entry, origin = "") {
-  const plural = entry.plural ? `; plural ${entry.plural.map((form) => `*${form}*`).join(" or ")}` : "";
-  const etymology = entry.etymology.map((part) => (typeof part === "string" ? part : `*${part[1]}*`)).join("");
+  const plural = entry.plural
+    ? `; plural ${entry.plural.map((form) => `*${form}*`).join(" or ")}`
+    : "";
+  const etymology = entry.etymology
+    .map((part) => (typeof part === "string" ? part : `*${part[1]}*`))
+    .join("");
   return [
     `**${entry.syllables}** ${entry.ipa} (${entry.respelling}), *${entry.partOfSpeech}*${plural}. [Pronunciation audio](${origin}${entry.audio})`,
     "",

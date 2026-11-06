@@ -4,7 +4,12 @@ import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
 import type { KeyResourceGroup } from "~/kb/procedures/key-resources.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { itemPath } from "~/kb/registry/catalog.mjs";
-import { UNIT_SYSTEMS, ingredientSteps, showQuantity, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
+import {
+  UNIT_SYSTEMS,
+  ingredientSteps,
+  showQuantity,
+  type UnitSystem,
+} from "~/kb/procedures/recipe-views.mjs";
 import { formatNumber, parseNumber } from "~/kb/procedures/marks.mjs";
 
 /* The procedure page's parts above the method (procedure.tsx): its facts, the scale form, and the materials, key resources, equipment and solutions tables. */
@@ -23,7 +28,15 @@ export function materialsHeading(record: ProcedureRecord) {
 }
 
 /** A heading with the same autolink markup the pipeline gives prose headings. */
-export function Heading({ id, level = 2, children }: { id: string; level?: 2 | 3; children: string }) {
+export function Heading({
+  id,
+  level = 2,
+  children,
+}: {
+  id: string;
+  level?: 2 | 3;
+  children: string;
+}) {
   const Tag = level === 2 ? "h2" : "h3";
   return (
     <Tag id={id}>
@@ -46,11 +59,20 @@ function total(amount: string | null, per: string | null, record: ProcedureRecor
   const min = parseNumber(m[1] ?? "");
   const max = m[2] ? parseNumber(m[2]) : null;
   if (min === null) return null;
-  const range = max !== null ? `${formatNumber(min * count)} to ${formatNumber(max * count)}` : formatNumber(min * count);
+  const range =
+    max !== null
+      ? `${formatNumber(min * count)} to ${formatNumber(max * count)}`
+      : formatNumber(min * count);
   return m[3] ? `${range} ${m[3]}` : range;
 }
 
-export function ProcedureFacts({ record, lineage = null }: { record: ProcedureRecord; lineage?: Lineage | null }) {
+export function ProcedureFacts({
+  record,
+  lineage = null,
+}: {
+  record: ProcedureRecord;
+  lineage?: Lineage | null;
+}) {
   const facts: Array<[string, React.ReactNode]> = [];
   const add = (label: string, value: string | number | null | undefined) => {
     if (value !== null && value !== undefined && value !== "") facts.push([label, String(value)]);
@@ -87,14 +109,32 @@ export function ProcedureFacts({ record, lineage = null }: { record: ProcedureRe
   // parent (P3): by its title, linked to the frozen copy of the version copied. Where the page is drawn without the
   // parent's row (the sheet, the admin preview), the parent's address stands in for its title.
   if (record.forkedFrom) {
-    const root = BASES.find((b) => b.profile === record.profile)?.entryRoot ?? "/research/protocols/";
-    const shown = lineage ?? { title: record.forkedFrom.slug, href: `${root}${record.forkedFrom.slug}`, version: record.forkedFrom.version };
-    facts.push(["Based on", shown.href ? <a key="forked" href={shown.href}>{lineageText(shown)}</a> : lineageText(shown)]);
+    const root =
+      BASES.find((b) => b.profile === record.profile)?.entryRoot ?? "/research/protocols/";
+    const shown = lineage ?? {
+      title: record.forkedFrom.slug,
+      href: `${root}${record.forkedFrom.slug}`,
+      version: record.forkedFrom.version,
+    };
+    facts.push([
+      "Based on",
+      shown.href ? (
+        <a key="forked" href={shown.href}>
+          {lineageText(shown)}
+        </a>
+      ) : (
+        lineageText(shown)
+      ),
+    ]);
   }
   if (record.biosafety) {
     add(
       "Agent",
-      [record.biosafety.organism, record.biosafety.strain, record.biosafety.atcc ? `ATCC ${record.biosafety.atcc}` : null]
+      [
+        record.biosafety.organism,
+        record.biosafety.strain,
+        record.biosafety.atcc ? `ATCC ${record.biosafety.atcc}` : null,
+      ]
         .filter(Boolean)
         .join(", "),
     );
@@ -116,12 +156,23 @@ export function ProcedureFacts({ record, lineage = null }: { record: ProcedureRe
  * The scaling form: a plain GET, so it works with script off and the state lives in the URL, where an
  * agent reading the page sees the same numbers as a person.
  */
-export function ScaleForm({ record, count, action, units = null }: { record: ProcedureRecord; count: number; action: string; units?: UnitSystem | null }) {
+export function ScaleForm({
+  record,
+  count,
+  action,
+  units = null,
+}: {
+  record: ProcedureRecord;
+  count: number;
+  action: string;
+  units?: UnitSystem | null;
+}) {
   if (record.profile === "recipe" && record.servings) {
     return (
       <form className="procedure-scale" method="get" action={action}>
         <label>
-          Servings <input name="servings" type="number" min={1} max={1000} step="any" defaultValue={count} />
+          Servings{" "}
+          <input name="servings" type="number" min={1} max={1000} step="any" defaultValue={count} />
         </label>
         {/* Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script. */}
         <label>
@@ -154,7 +205,11 @@ export function ScaleForm({ record, count, action, units = null }: { record: Pro
 }
 
 /** Where a registry reagent comes from: its supplier and catalog number linked to the product, or the lab's recipe for it. */
-function ReagentSource({ reagent }: { reagent: NonNullable<ProcedureRecord["materials"][number]["reagent"]> }) {
+function ReagentSource({
+  reagent,
+}: {
+  reagent: NonNullable<ProcedureRecord["materials"][number]["reagent"]>;
+}) {
   const source = reagentSource(reagent);
   return source.href ? <a href={source.href}>{source.text}</a> : <>{source.text}</>;
 }
@@ -223,10 +278,20 @@ export function EquipmentTable({ record }: { record: ProcedureRecord }) {
         <tbody>
           {record.equipment.map((e) => (
             <tr key={e.name}>
-              <th scope="row">{e.item?.status === "published" ? <a href={itemPath("equipment", e.item.id)}>{e.name}</a> : e.name}</th>
+              <th scope="row">
+                {e.item?.status === "published" ? (
+                  <a href={itemPath("equipment", e.item.id)}>{e.name}</a>
+                ) : (
+                  e.name
+                )}
+              </th>
               {hasMaker ? <td>{e.item ? (e.item.manufacturer ?? "Not recorded") : ""}</td> : null}
-              {hasRotor ? <td>{e.item?.rotor ?? (e.item?.rotorGap ? "Not recorded" : "")}</td> : null}
-              {hasNote ? <td>{e.noteHtml ? <span dangerouslySetInnerHTML={html(e.noteHtml)} /> : null}</td> : null}
+              {hasRotor ? (
+                <td>{e.item?.rotor ?? (e.item?.rotorGap ? "Not recorded" : "")}</td>
+              ) : null}
+              {hasNote ? (
+                <td>{e.noteHtml ? <span dangerouslySetInnerHTML={html(e.noteHtml)} /> : null}</td>
+              ) : null}
             </tr>
           ))}
         </tbody>
@@ -235,10 +300,23 @@ export function EquipmentTable({ record }: { record: ProcedureRecord }) {
   );
 }
 
-export function MaterialsTable({ record, count, factor, units = null }: { record: ProcedureRecord; count: number; factor: number; units?: UnitSystem | null }) {
+export function MaterialsTable({
+  record,
+  count,
+  factor,
+  units = null,
+}: {
+  record: ProcedureRecord;
+  count: number;
+  factor: number;
+  units?: UnitSystem | null;
+}) {
   // A recipe's ingredients say every step they are used in (R2), linked, computed from the steps' marks.
   const usedIn = record.profile === "recipe" ? ingredientSteps(record) : null;
-  const showTotal = record.profile === "protocol" && record.scale !== null && record.materials.some((m) => m.per === record.scale?.unit);
+  const showTotal =
+    record.profile === "protocol" &&
+    record.scale !== null &&
+    record.materials.some((m) => m.per === record.scale?.unit);
   const hasStock = record.materials.some((m) => m.stock.length > 0);
   const hasFinal = record.materials.some((m) => m.final);
   const hasVersion = record.materials.some((m) => m.version);
@@ -251,7 +329,13 @@ export function MaterialsTable({ record, count, factor, units = null }: { record
       <table className="procedure-materials">
         <thead>
           <tr>
-            <th scope="col">{record.profile === "recipe" ? "Ingredient" : record.profile === "computational" ? "Item" : "Reagent"}</th>
+            <th scope="col">
+              {record.profile === "recipe"
+                ? "Ingredient"
+                : record.profile === "computational"
+                  ? "Item"
+                  : "Reagent"}
+            </th>
             {hasKind ? <th scope="col">Kind</th> : null}
             {hasVersion ? <th scope="col">Version</th> : null}
             {hasStock ? <th scope="col">Stock</th> : null}
@@ -268,7 +352,11 @@ export function MaterialsTable({ record, count, factor, units = null }: { record
             <tr key={m.name} id={`material-${m.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
               <th scope="row">
                 {/* A published reagent of the lab registry links its page, which lists every protocol that uses it. */}
-                {m.reagent?.status === "published" ? <a href={itemPath("reagent", m.reagent.id)}>{m.display}</a> : m.display}
+                {m.reagent?.status === "published" ? (
+                  <a href={itemPath("reagent", m.reagent.id)}>{m.display}</a>
+                ) : (
+                  m.display
+                )}
                 {m.group ? <span className="procedure-group"> ({m.group})</span> : null}
               </th>
               {hasKind ? <td>{m.kind}</td> : null}
@@ -293,7 +381,9 @@ export function MaterialsTable({ record, count, factor, units = null }: { record
                 </td>
               ) : null}
               {showTotal ? <td>{total(m.amount, m.per, record, count) ?? ""}</td> : null}
-              {hasSource ? <td>{m.reagent ? <ReagentSource reagent={m.reagent} /> : null}</td> : null}
+              {hasSource ? (
+                <td>{m.reagent ? <ReagentSource reagent={m.reagent} /> : null}</td>
+              ) : null}
               <td>
                 {m.noteHtml ? <span dangerouslySetInnerHTML={html(m.noteHtml)} /> : null}
                 {m.solution ? (
@@ -329,7 +419,8 @@ export function Solutions({ record }: { record: ProcedureRecord }) {
           </ul>
           {s.storage || s.shelfLife ? (
             <p className="procedure-solution-keep">
-              {s.storage ? `Storage: ${s.storage}.` : null} {s.shelfLife ? `Shelf life: ${s.shelfLife}.` : null}
+              {s.storage ? `Storage: ${s.storage}.` : null}{" "}
+              {s.shelfLife ? `Shelf life: ${s.shelfLife}.` : null}
             </p>
           ) : null}
         </div>

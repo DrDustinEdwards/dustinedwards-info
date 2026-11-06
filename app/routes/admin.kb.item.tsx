@@ -7,7 +7,10 @@ import type { Route } from "./+types/admin.kb.item";
 /* One lab registry item's file, edited and saved through the registry save (docs/KNOWLEDGE-BASE.md, step 3). */
 
 export function meta({ params }: Route.MetaArgs) {
-  return [{ title: `Edit ${params.kind}/${params.id} · Knowledge Base · Admin` }, { name: "robots", content: "noindex" }];
+  return [
+    { title: `Edit ${params.kind}/${params.id} · Knowledge Base · Admin` },
+    { name: "robots", content: "noindex" },
+  ];
 }
 
 export function loader(args: Route.LoaderArgs) {
@@ -22,7 +25,16 @@ export default function EditItem({ loaderData, actionData }: Route.ComponentProp
   const { file, form, view, saved, created } = loaderData;
   // The form is the editor; the file itself is behind Advanced (?view=file).
   if (view === "form" && form) {
-    return <KbFormEditor key={file.sha} file={file} form={form} saved={saved} created={created} actionData={actionData} />;
+    return (
+      <KbFormEditor
+        key={file.sha}
+        file={file}
+        form={form}
+        saved={saved}
+        created={created}
+        actionData={actionData}
+      />
+    );
   }
   return <KbFileEditor key={file.sha} file={file} saved={saved} actionData={actionData} />;
 }

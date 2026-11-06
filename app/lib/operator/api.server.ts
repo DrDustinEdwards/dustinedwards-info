@@ -126,7 +126,8 @@ async function decideMentionTool(
     return {
       ok: false,
       status: 400,
-      error: `decide_mention needs a positive integer id, got ${JSON.stringify(args.id)}. ` +
+      error:
+        `decide_mention needs a positive integer id, got ${JSON.stringify(args.id)}. ` +
         `Call list_mentions for the ids.`,
     };
   }
@@ -136,7 +137,8 @@ async function decideMentionTool(
     return {
       ok: false,
       status: 400,
-      error: `decide_mention needs a decision of approve, reject or delete, got ` +
+      error:
+        `decide_mention needs a decision of approve, reject or delete, got ` +
         `${JSON.stringify(args.decision)}.`,
     };
   }
@@ -227,7 +229,10 @@ export async function runTool(
 
       case "list_procedures": {
         const procedures = await listProceduresForOperator(env);
-        return { ok: true, data: { headSha: await currentHead(env), count: procedures.length, procedures } };
+        return {
+          ok: true,
+          data: { headSha: await currentHead(env), count: procedures.length, procedures },
+        };
       }
 
       case "get_procedure":
@@ -243,7 +248,12 @@ export async function runTool(
         const report = await checkPublicationSources(env);
         if (report.failures.length > 0) {
           const names = report.failures.map((f) => `${f.source} (${f.detail})`).join(", ");
-          return { ok: false, status: 502, error: `Not every source could be read: ${names}.`, detail: report };
+          return {
+            ok: false,
+            status: 502,
+            error: `Not every source could be read: ${names}.`,
+            detail: report,
+          };
         }
         return { ok: true, data: report };
       }
@@ -251,7 +261,11 @@ export async function runTool(
       case "list_registry": {
         const kind = String(args.kind ?? "").trim();
         if (kind && !Object.hasOwn(KINDS, kind)) {
-          return { ok: false, status: 400, error: `"${kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.` };
+          return {
+            ok: false,
+            status: 400,
+            error: `"${kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.`,
+          };
         }
         const rows = (await listRegistryRows(env)).filter((row) => !kind || row.kind === kind);
         return {
@@ -259,7 +273,10 @@ export async function runTool(
           data: {
             headSha: await currentHead(env),
             count: rows.length,
-            items: rows.map(({ syncedAt: _syncedAt, ...item }) => ({ slug: `${item.kind}/${item.id}`, ...item })),
+            items: rows.map(({ syncedAt: _syncedAt, ...item }) => ({
+              slug: `${item.kind}/${item.id}`,
+              ...item,
+            })),
           },
         };
       }
@@ -279,7 +296,11 @@ export async function runTool(
 
 function translate(error: unknown): ToolResult {
   // Every message the validator gave, so an agent can fix its own edit; nothing was committed.
-  if (error instanceof ProcedureInvalid || error instanceof PageInvalid || error instanceof CvInvalid) {
+  if (
+    error instanceof ProcedureInvalid ||
+    error instanceof PageInvalid ||
+    error instanceof CvInvalid
+  ) {
     return { ok: false, status: 422, error: error.message, detail: { errors: error.errors } };
   }
 
@@ -323,7 +344,9 @@ function translate(error: unknown): ToolResult {
   }
 
   // Not a recognized failure: logged with its stack, since the caller receives only the message.
-  console.error(JSON.stringify({ alert: "operator-tool-unrecognized-error", detail: errorMessage(error) }));
+  console.error(
+    JSON.stringify({ alert: "operator-tool-unrecognized-error", detail: errorMessage(error) }),
+  );
   return {
     ok: false,
     status: 500,
@@ -331,11 +354,15 @@ function translate(error: unknown): ToolResult {
   };
 }
 
-async function getProcedureTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+async function getProcedureTool(
+  env: OperatorEnv,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
   const parsed = readSlug(args, "get_procedure");
   if (parsed.error) return { ok: false, status: 400, error: parsed.error };
   const procedure = await readProcedure(env, parsed.slug);
-  if (!procedure) return { ok: false, status: 404, error: `No procedure exists with slug "${parsed.slug}".` };
+  if (!procedure)
+    return { ok: false, status: 404, error: `No procedure exists with slug "${parsed.slug}".` };
   return { ok: true, data: { ...procedure, headSha: await currentHead(env) } };
 }
 
@@ -343,12 +370,18 @@ async function getProcedureTool(env: OperatorEnv, args: Record<string, unknown>)
  * The weekly refresh Capsid's watcher calls. Every failure is returned, never swallowed: a partial refresh is a
  * 502 whose detail names each DOI that kept its old count, and the counts that did refresh are stored.
  */
-async function refreshCitationsTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+async function refreshCitationsTool(
+  env: OperatorEnv,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
   const published = (await listPublishedPublications(env)).flatMap((p) => (p.doi ? [p.doi] : []));
   let dois: string[];
   if (args.dois === undefined) {
     dois = published;
-  } else if (Array.isArray(args.dois) && args.dois.every((d) => typeof d === "string" && d.trim() !== "")) {
+  } else if (
+    Array.isArray(args.dois) &&
+    args.dois.every((d) => typeof d === "string" && d.trim() !== "")
+  ) {
     // Only a paper the site lists has a count to show, so any other DOI would store an orphan row and
     // spend an outbound call (Grok audit 2026-10-21, DE-7).
     const key = (doi: string) => doi.trim().toLowerCase();
@@ -363,7 +396,11 @@ async function refreshCitationsTool(env: OperatorEnv, args: Record<string, unkno
     }
     dois = [...new Set((args.dois as string[]).map(key))];
   } else {
-    return { ok: false, status: 400, error: "refresh_citations takes dois as a list of DOI strings, or none." };
+    return {
+      ok: false,
+      status: 400,
+      error: "refresh_citations takes dois as a list of DOI strings, or none.",
+    };
   }
   const result = await refreshCitations(env, dois);
   if (result.failures.length > 0) {
@@ -386,25 +423,47 @@ async function saveProcedureTool(
   if (parsed.error) return { ok: false, status: 400, error: parsed.error };
   const raw = typeof args.raw === "string" ? args.raw : "";
   if (!raw.trim()) {
-    return { ok: false, status: 400, error: "save_procedure requires `raw`: the complete procedure file." };
+    return {
+      ok: false,
+      status: 400,
+      error: "save_procedure requires `raw`: the complete procedure file.",
+    };
   }
   const expectedHeadSha =
     typeof args.expectedHeadSha === "string" && args.expectedHeadSha ? args.expectedHeadSha : null;
   const isNew =
-    args.isNew === undefined ? (await readFile(env, procedurePath(parsed.slug))) === null : args.isNew === true;
-  return { ok: true, data: await saveProcedure(env, { slug: parsed.slug, raw, expectedHeadSha, isNew, actor }) };
+    args.isNew === undefined
+      ? (await readFile(env, procedurePath(parsed.slug))) === null
+      : args.isNew === true;
+  return {
+    ok: true,
+    data: await saveProcedure(env, { slug: parsed.slug, raw, expectedHeadSha, isNew, actor }),
+  };
 }
 
-async function getRegistryTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+async function getRegistryTool(
+  env: OperatorEnv,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
   const slug = String(args.slug ?? "").trim();
   const address = parseRegistrySlug(slug);
   if (!address) {
-    return { ok: false, status: 400, error: "get_registry requires a slug <kind>/<id> in lower-case letters, digits and hyphens, such as primer/m13-forward." };
+    return {
+      ok: false,
+      status: 400,
+      error:
+        "get_registry requires a slug <kind>/<id> in lower-case letters, digits and hyphens, such as primer/m13-forward.",
+    };
   }
   if (!Object.hasOwn(KINDS, address.kind)) {
-    return { ok: false, status: 400, error: `"${address.kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.` };
+    return {
+      ok: false,
+      status: 400,
+      error: `"${address.kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.`,
+    };
   }
   const item = await readRegistryItem(env, slug);
-  if (!item) return { ok: false, status: 404, error: `No file exists for the registry item ${slug}.` };
+  if (!item)
+    return { ok: false, status: 404, error: `No file exists for the registry item ${slug}.` };
   return { ok: true, data: { ...item, headSha: await currentHead(env) } };
 }

@@ -11,7 +11,8 @@ import { PUBLISHED_PAGES } from "./published-pages.generated.mjs";
 export { SOCIAL_LINKS } from "capsomer/behavior/family-footer";
 
 /** The Site group: Accessibility only while its page is published. */
-export const siteLinks = (published: readonly string[] = PUBLISHED_PAGES) => familySiteLinks(published);
+export const siteLinks = (published: readonly string[] = PUBLISHED_PAGES) =>
+  familySiteLinks(published);
 
 export const SITE_LINKS = siteLinks();
 

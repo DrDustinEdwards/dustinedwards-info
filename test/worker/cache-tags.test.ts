@@ -51,7 +51,12 @@ async function purgedBy(run: () => Promise<unknown>): Promise<string[]> {
 describe("the cache tags of the machine documents", () => {
   it("the sitemap carries posts, procedures, pages and the registry, and each purge reaches it", async () => {
     const tags = tagsOf(await sitemap());
-    expect(tags).toEqual([cacheTags(), PROCEDURES_CACHE_TAG, CONTENT_PAGES_CACHE_TAG, REGISTRY_CACHE_TAG]);
+    expect(tags).toEqual([
+      cacheTags(),
+      PROCEDURES_CACHE_TAG,
+      CONTENT_PAGES_CACHE_TAG,
+      REGISTRY_CACHE_TAG,
+    ]);
 
     const postsPurge = await purgedBy(() => purgePosts("test"));
     const proceduresPurge = await purgedBy(() => purgeProcedures("test"));
@@ -72,7 +77,11 @@ describe("the cache tags of the machine documents", () => {
   });
 
   it("every feed format, for the blog, a tag and a series, carries posts", async () => {
-    const scopes = [blogFeed, tagFeed({ slug: "d1", name: "D1" }), seriesFeed({ name: "A series" })];
+    const scopes = [
+      blogFeed,
+      tagFeed({ slug: "d1", name: "D1" }),
+      seriesFeed({ name: "A series" }),
+    ];
     const postsPurge = await purgedBy(() => purgePosts("test"));
     for (const scope of scopes) {
       for (const format of ["json", "rss", "atom"] as FeedFormat[]) {

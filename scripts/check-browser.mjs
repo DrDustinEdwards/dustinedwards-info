@@ -31,7 +31,15 @@ import * as sitemapFeeds from "./lib/browser/cases/sitemap-feeds.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
-import { BASE, DRIVES_PREVIEW, countCssRules, lane, ok, skipped, tally } from "./lib/browser/harness.mjs";
+import {
+  BASE,
+  DRIVES_PREVIEW,
+  countCssRules,
+  lane,
+  ok,
+  skipped,
+  tally,
+} from "./lib/browser/harness.mjs";
 import {
   build,
   cleanupChildren,
@@ -71,12 +79,19 @@ let sideBrowser;
  * `taskkill /F` delivers no signal; the registry covers it. `process.exit`, because
  * returning resumes a gate whose children are gone.
  */
-for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"])) {
+for (const signal of /** @type {NodeJS.Signals[]} */ ([
+  "SIGINT",
+  "SIGTERM",
+  "SIGHUP",
+  "SIGBREAK",
+])) {
   process.on(signal, () => {
     /* --keep holds here too: an interrupted --keep run keeps what the flag asked to keep, and its
        registry entries, which the next preflight needs to free the port. */
     if (process.argv.includes("--keep")) {
-      console.error(`\ncheck:browser interrupted by ${signal}. --keep: its children are left running.`);
+      console.error(
+        `\ncheck:browser interrupted by ${signal}. --keep: its children are left running.`,
+      );
       process.exit(1);
     }
     console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
@@ -152,7 +167,6 @@ try {
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });
   await themeLane;
   adminCasesRan = await adminLane;
-
 } catch (error) {
   // Only the sentinel is swallowed: a harness that eats unknown errors reports a clean failure
   // for a broken instrument.
@@ -245,5 +259,4 @@ if (subjectReachable) {
     tally.fail(floorBreach);
   }
   process.exitCode = tally.failures > 0 ? 1 : 0;
-
 }

@@ -17,7 +17,7 @@ await test("the body text is in the HTML whether or not anything runs", async ()
    * printer and a crawler each get. */
   const { html } = await render(':::details{summary="Methods"}\nThe sample was 400 rows.\n:::\n');
   assert.ok(html.includes("The sample was 400 rows."));
-  assert.ok(!html.includes("<details class=\"post-details\" open"));
+  assert.ok(!html.includes('<details class="post-details" open'));
 });
 
 await test("a summary is required", async () => {

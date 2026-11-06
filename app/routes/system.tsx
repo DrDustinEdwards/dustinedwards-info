@@ -4,7 +4,15 @@ import { data } from "react-router";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
-import { SYSTEMS_PATH, explorerLabel, explorerUrl, loadSystemModel, mapData, repoOf, systemPath } from "~/lib/systems.mjs";
+import {
+  SYSTEMS_PATH,
+  explorerLabel,
+  explorerUrl,
+  loadSystemModel,
+  mapData,
+  repoOf,
+  systemPath,
+} from "~/lib/systems.mjs";
 
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/system";
@@ -56,12 +64,27 @@ export default function SystemRoute({ loaderData }: Route.ComponentProps) {
   const s = systemOf(loaderData.id);
   const repo = repoOf(s);
   const facts = [
-    s.domain ? <a key="domain" href={`https://${s.domain}`}>{s.domain}</a> : null,
-    repo ? <a key="repo" href={repo}>{repo.replace(/^https:\/\//, "")}</a> : null,
+    s.domain ? (
+      <a key="domain" href={`https://${s.domain}`}>
+        {s.domain}
+      </a>
+    ) : null,
+    repo ? (
+      <a key="repo" href={repo}>
+        {repo.replace(/^https:\/\//, "")}
+      </a>
+    ) : null,
     s.private ? "private repo" : null,
-    <a key="explorer" href={explorerUrl(s.id)}>{explorerLabel(s.id)}</a>,
+    <a key="explorer" href={explorerUrl(s.id)}>
+      {explorerLabel(s.id)}
+    </a>,
   ].filter((f) => f !== null);
-  const map = systemMapHtml(DATA, { id: "system", system: s.id, label: `How ${s.name} connects`, headingLevel: 2 });
+  const map = systemMapHtml(DATA, {
+    id: "system",
+    system: s.id,
+    label: `How ${s.name} connects`,
+    headingLevel: 2,
+  });
   return (
     <PageShell>
       <Breadcrumb trail={trailOf(s.id)} />

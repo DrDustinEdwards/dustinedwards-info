@@ -3,7 +3,10 @@ import { createElement as h } from "react";
 import { expect, it, vi } from "vitest";
 
 import { NAV } from "~/lib/nav";
-import { SPECULATION_RULES_HEADER, SPECULATION_RULES_PATH } from "@dustinedwards/site-runtime/prefetch";
+import {
+  SPECULATION_RULES_HEADER,
+  SPECULATION_RULES_PATH,
+} from "@dustinedwards/site-runtime/prefetch";
 import { PRELOADS } from "~/lib/preloads";
 import { SITE_ORIGIN } from "~/lib/seo";
 
@@ -33,7 +36,12 @@ vi.mock("virtual:react-router/server-build", async () => {
       h("script", { type: "application/ld+json", dangerouslySetInnerHTML: { __html: "{}" } }),
     );
 
-  const assetRoute = (id: string, path: string | undefined, hasLoader: boolean, parentId?: string) => ({
+  const assetRoute = (
+    id: string,
+    path: string | undefined,
+    hasLoader: boolean,
+    parentId?: string,
+  ) => ({
     id,
     parentId,
     path,
@@ -54,7 +62,10 @@ vi.mock("virtual:react-router/server-build", async () => {
       root: {
         id: "root",
         path: "",
-        module: { ...rootModule, ErrorBoundary: UNSAFE_withErrorBoundaryProps(rootModule.ErrorBoundary) },
+        module: {
+          ...rootModule,
+          ErrorBoundary: UNSAFE_withErrorBoundaryProps(rootModule.ErrorBoundary),
+        },
       },
       home: { id: "home", parentId: "root", index: true, module: { default: Page } },
     },
@@ -68,13 +79,19 @@ vi.mock("virtual:react-router/server-build", async () => {
 
 async function render(path: string) {
   const ctx = createExecutionContext();
-  const response = await worker.fetch(new Request(`https://example.com${path}`) as never, env as never, ctx);
+  const response = await worker.fetch(
+    new Request(`https://example.com${path}`) as never,
+    env as never,
+    ctx,
+  );
   const html = await response.text();
   await waitOnExecutionContext(ctx);
-  const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(([, attrs, text]) => ({
-    type: /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "",
-    text: text ?? "",
-  }));
+  const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(
+    ([, attrs, text]) => ({
+      type: /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "",
+      text: text ?? "",
+    }),
+  );
   return { response, html, scripts, policy: response.headers.get("content-security-policy") ?? "" };
 }
 
@@ -88,13 +105,17 @@ it("renders a public page with no inline script, no hash and no nonce, and /site
 
   /* The document: no nonce anywhere, and one script, /site.js, deferred. */
   expect(html).not.toMatch(/\snonce=/);
-  expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual(["/site.js"]);
+  expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual([
+    "/site.js",
+  ]);
   expect(html).toMatch(/<script src="\/site\.js" defer="">/);
   expect(scripts.filter((s) => s.type !== "application/ld+json").map((s) => s.text)).toEqual([""]);
   expect(scripts.filter((s) => s.type === "application/ld+json")).toHaveLength(1);
 
   /* The markers /site.js starts: the header's two and the page's own. */
-  const markers = [...html.matchAll(/<template data-island="([a-z-]+)"><\/template>/g)].map((m) => m[1]);
+  const markers = [...html.matchAll(/<template data-island="([a-z-]+)"><\/template>/g)].map(
+    (m) => m[1],
+  );
   expect(markers).toEqual(["theme", "header", "blog"]);
 });
 
@@ -105,17 +126,25 @@ it("renders a public page with no inline script, no hash and no nonce, and /site
 it("names the prefetch rules and the preloads on a public page, and serves the rules", async () => {
   for (const path of ["/", "/no-such-page"]) {
     const { response } = await render(path);
-    expect(response.headers.get(SPECULATION_RULES_HEADER.name), path).toBe(SPECULATION_RULES_HEADER.value);
+    expect(response.headers.get(SPECULATION_RULES_HEADER.name), path).toBe(
+      SPECULATION_RULES_HEADER.value,
+    );
     // A page also names its Markdown copy (Prelum's markdownCopies); a 404 has none.
-    const copy = path === "/" ? `, <${SITE_ORIGIN}/index.md>; rel="alternate"; type="text/markdown"` : "";
+    const copy =
+      path === "/" ? `, <${SITE_ORIGIN}/index.md>; rel="alternate"; type="text/markdown"` : "";
     expect(response.headers.get("Link"), path).toBe(`${PRELOADS.header}${copy}`);
   }
   const ctx = createExecutionContext();
-  const rules = await worker.fetch(new Request(`https://example.com${SPECULATION_RULES_PATH}`) as never, env as never, ctx);
+  const rules = await worker.fetch(
+    new Request(`https://example.com${SPECULATION_RULES_PATH}`) as never,
+    env as never,
+    ctx,
+  );
   await waitOnExecutionContext(ctx);
   expect(rules.headers.get("content-type")).toBe("application/speculationrules+json");
   const body = JSON.stringify(await rules.json());
-  for (const prefix of ["/lab-bench", "/media", "/search/ask"]) expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
+  for (const prefix of ["/lab-bench", "/media", "/search/ask"])
+    expect(body, prefix).toContain(`"href_matches":"${prefix}"`);
 });
 
 /*
@@ -132,7 +161,11 @@ it("answers a page's .md and Accept: text/markdown with its Markdown copy, namin
   expect(twin.html).not.toContain("<main");
 
   const ctx = createExecutionContext();
-  const negotiated = await worker.fetch(new Request("https://example.com/", { headers: { accept: "text/markdown" } }) as never, env as never, ctx);
+  const negotiated = await worker.fetch(
+    new Request("https://example.com/", { headers: { accept: "text/markdown" } }) as never,
+    env as never,
+    ctx,
+  );
   await waitOnExecutionContext(ctx);
   expect(negotiated.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
   expect(negotiated.headers.get("vary")).toContain("Accept");

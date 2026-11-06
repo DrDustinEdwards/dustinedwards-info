@@ -18,7 +18,9 @@ function readMathColors() {
 
 /** Every linked stylesheet's href, in document order. */
 function stylesheetHrefs() {
-  return [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute("href") ?? "");
+  return [...document.querySelectorAll('link[rel="stylesheet"]')].map(
+    (l) => l.getAttribute("href") ?? "",
+  );
 }
 
 /**
@@ -131,8 +133,11 @@ export async function run({ page }, mathPreviewSeeded) {
       `${MATH_PATH}: no horizontal scroll at ${NARROW_MATH}px`,
       math.scrollW <= math.clientW,
       `scrollWidth ${math.scrollW} exceeds clientWidth ${math.clientW} by ` +
-        `${math.scrollW - math.clientW}px. Widest: ${math.over.join(", ") || "(nothing " +
-          "measured wider than the viewport, so it is on an element this scan skipped)"}`,
+        `${math.scrollW - math.clientW}px. Widest: ${
+          math.over.join(", ") ||
+          "(nothing " +
+            "measured wider than the viewport, so it is on an element this scan skipped)"
+        }`,
     );
 
     /* KaTeX declares no color, so it must compute to the `.prose` color. */

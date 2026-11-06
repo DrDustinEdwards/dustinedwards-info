@@ -22,7 +22,9 @@ export const CV_ARTIFACT_PATH = path.join("content", "generated", "cv.json");
  * @param {import("../../app/lib/publications/types.ts").Publication[]} publications the published records
  */
 export async function buildCvFrom(publications) {
-  const names = (await readdir(path.join(ROOT, CV_DIR))).filter((name) => name.endsWith(".md")).sort();
+  const names = (await readdir(path.join(ROOT, CV_DIR)))
+    .filter((name) => name.endsWith(".md"))
+    .sort();
   const expected = CV_FILES.map((f) => `${f.slug}.md`).sort();
   if (names.join() !== expected.join()) {
     throw new Error(
@@ -34,7 +36,8 @@ export async function buildCvFrom(publications) {
   for (const { slug } of CV_FILES) {
     const raw = await readFile(path.join(ROOT, cvSourcePath(slug)), "utf8");
     const compiled = await compileCvFile({ slug, raw, publications });
-    if (!compiled.ok) throw new Error(`${cvSourcePath(slug)} does not compile:\n  ${compiled.errors.join("\n  ")}`);
+    if (!compiled.ok)
+      throw new Error(`${cvSourcePath(slug)} does not compile:\n  ${compiled.errors.join("\n  ")}`);
     rows.push({
       slug,
       type: compiled.record.type,
@@ -54,6 +57,8 @@ let cv;
 
 /** The CV resolved against the published records, the way the page resolves it (app/db/cv.ts, readCv). */
 export function loadCv() {
-  cv ??= buildPublications().then(({ records }) => buildCvFrom(records)).then((built) => built.cv);
+  cv ??= buildPublications()
+    .then(({ records }) => buildCvFrom(records))
+    .then((built) => built.cv);
   return cv;
 }

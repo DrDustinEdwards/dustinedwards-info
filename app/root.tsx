@@ -81,7 +81,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     (match) => (match.handle as { hydrate?: boolean } | undefined)?.hydrate === true,
   );
   // The admin and lab planes are Capsomer's shell, which brings its own skip link and none of the public CSS.
-  const adminPlane = matches.some((match) => match.id === "routes/admin" || match.id === "routes/workspace");
+  const adminPlane = matches.some(
+    (match) => match.id === "routes/admin" || match.id === "routes/workspace",
+  );
 
   // Not React's `precedence` hoisting: it lifts the sheet above the color-scheme meta, which must
   // arrive before the first stylesheet request.

@@ -39,7 +39,6 @@ export function kindFromSegment(segment, kinds = KINDS) {
   return Object.keys(kinds).find((kind) => kinds[kind]?.plural === segment) ?? null;
 }
 
-
 /**
  * The library's tabs for the registry: one for each kind that has a published item, linking to the kind's page, in the
  * order the kinds are defined. A kind with no item has no tab, so none points at an empty page.
@@ -51,7 +50,16 @@ export function registryTabs(items, kinds = KINDS) {
   return Object.keys(kinds).flatMap((kind) => {
     const count = items.filter((item) => item.kind === kind).length;
     const plural = kinds[kind]?.plural ?? kind;
-    return count === 0 ? [] : [{ id: plural, label: plural.charAt(0).toUpperCase() + plural.slice(1), count, href: kindPath(kind, kinds) }];
+    return count === 0
+      ? []
+      : [
+          {
+            id: plural,
+            label: plural.charAt(0).toUpperCase() + plural.slice(1),
+            count,
+            href: kindPath(kind, kinds),
+          },
+        ];
   });
 }
 
@@ -117,7 +125,11 @@ export function primerRows(items) {
 
 /** @typedef {ReturnType<typeof primerRows>[number]} PrimerListRow */
 
-const DIRECTION_LABELS = /** @type {Record<string, string>} */ ({ forward: "Forward", reverse: "Reverse", probe: "Probe" });
+const DIRECTION_LABELS = /** @type {Record<string, string>} */ ({
+  forward: "Forward",
+  reverse: "Reverse",
+  probe: "Probe",
+});
 
 /**
  * One line of a pair's product as the catalog and the twin show it: "281 bp", and "at 2 sites" when the pair binds twice (the
@@ -129,7 +141,9 @@ export function productText(pair) {
   if (!pair) return null;
   const sizes = [...new Set(pair.products.map((p) => p.length))];
   const text = sizes.map((s) => `${s} bp`).join(" or ");
-  return pair.products.length > 1 && sizes.length === 1 ? `${text} at ${pair.products.length} sites` : text;
+  return pair.products.length > 1 && sizes.length === 1
+    ? `${text} at ${pair.products.length} sites`
+    : text;
 }
 
 /** The primers catalog: the columns a primer is read by, which are its own and not a protocol's. */
@@ -142,8 +156,21 @@ export const PRIMERS = defineCatalog(
     defaultSort: "name",
     pageSize: 25,
     fields: [
-      { key: "name", label: "Primer", value: (p) => p.name, search: 3, column: { header: "Primer" }, sort: true },
-      { key: "sequence", label: "Sequence (5′ to 3′)", value: (p) => p.sequence ?? "", search: 2, column: { header: "Sequence (5′ to 3′)", drop: 1 } },
+      {
+        key: "name",
+        label: "Primer",
+        value: (p) => p.name,
+        search: 3,
+        column: { header: "Primer" },
+        sort: true,
+      },
+      {
+        key: "sequence",
+        label: "Sequence (5′ to 3′)",
+        value: (p) => p.sequence ?? "",
+        search: 2,
+        column: { header: "Sequence (5′ to 3′)", drop: 1 },
+      },
       {
         key: "direction",
         label: "Direction",
@@ -151,11 +178,37 @@ export const PRIMERS = defineCatalog(
         facet: { kind: "many", general: true, label: (value) => DIRECTION_LABELS[value] ?? value },
         column: { header: "Direction", drop: 2 },
       },
-      { key: "target", label: "Target", value: (p) => p.target, facet: { kind: "many", order: "alpha" }, search: 2, column: { header: "Target", drop: 1 } },
+      {
+        key: "target",
+        label: "Target",
+        value: (p) => p.target,
+        facet: { kind: "many", order: "alpha" },
+        search: 2,
+        column: { header: "Target", drop: 1 },
+      },
       { key: "set", label: "Set", value: (p) => p.set, search: 1 },
-      { key: "length", label: "Length (nt)", value: (p) => p.length, type: "number", sort: true, column: { header: "Length (nt)", align: "end", drop: 2 } },
-      { key: "tm", label: "Tm estimate (°C)", value: (p) => p.tm, type: "number", sort: true, column: { header: "Tm estimate (°C)", align: "end", drop: 2 } },
-      { key: "product", label: "Product (computed)", value: (p) => productText(p.product), column: { header: "Product (computed)", drop: 2 } },
+      {
+        key: "length",
+        label: "Length (nt)",
+        value: (p) => p.length,
+        type: "number",
+        sort: true,
+        column: { header: "Length (nt)", align: "end", drop: 2 },
+      },
+      {
+        key: "tm",
+        label: "Tm estimate (°C)",
+        value: (p) => p.tm,
+        type: "number",
+        sort: true,
+        column: { header: "Tm estimate (°C)", align: "end", drop: 2 },
+      },
+      {
+        key: "product",
+        label: "Product (computed)",
+        value: (p) => productText(p.product),
+        column: { header: "Product (computed)", drop: 2 },
+      },
     ],
   }),
 );
@@ -169,7 +222,11 @@ export const PRIMERS = defineCatalog(
  */
 export function mateOf(primer, primers) {
   if (!primer.set) return null;
-  return primers.find((p) => p.id !== primer.id && p.set === primer.set && p.direction !== primer.direction) ?? null;
+  return (
+    primers.find(
+      (p) => p.id !== primer.id && p.set === primer.set && p.direction !== primer.direction,
+    ) ?? null
+  );
 }
 
 /**
@@ -182,10 +239,23 @@ export function mateOf(primer, primers) {
  */
 export function pairProduct(primer, primers) {
   const mate = mateOf(primer, primers);
-  if (!mate || !primer.sequence || !mate.sequence || !primer.reference || primer.reference !== mate.reference) return null;
+  if (
+    !mate ||
+    !primer.sequence ||
+    !mate.sequence ||
+    !primer.reference ||
+    primer.reference !== mate.reference
+  )
+    return null;
   const forward = primer.direction === "forward" ? primer : mate;
   const reverse = primer.direction === "forward" ? mate : primer;
-  if (forward.direction !== "forward" || reverse.direction !== "reverse" || !forward.sequence || !reverse.sequence) return null;
+  if (
+    forward.direction !== "forward" ||
+    reverse.direction !== "reverse" ||
+    !forward.sequence ||
+    !reverse.sequence
+  )
+    return null;
   return pairProducts(forward.sequence, reverse.sequence, primer.reference);
 }
 
@@ -214,7 +284,9 @@ export function protocolsUsing(primer, protocols) {
  */
 export function strainRow(item, phages = []) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  const isolated = phages.filter((phage) => phage.host === item.id).sort((a, b) => a.year - b.year || a.name.localeCompare(b.name, "en", { numeric: true }));
+  const isolated = phages
+    .filter((phage) => phage.host === item.id)
+    .sort((a, b) => a.year - b.year || a.name.localeCompare(b.name, "en", { numeric: true }));
   const years = isolated.map((phage) => phage.year);
   return {
     id: item.id,
@@ -228,7 +300,11 @@ export function strainRow(item, phages = []) {
     guideUrl: stated(f.guide_url),
     biosafetyLevel: stated(f.biosafety_level),
     biosafetyLevelMissing: missingReason(f.biosafety_level),
-    phages: isolated.map((phage) => ({ name: phage.name, year: phage.year, path: `/research/phages#${phage.name.toLowerCase()}` })),
+    phages: isolated.map((phage) => ({
+      name: phage.name,
+      year: phage.year,
+      path: `/research/phages#${phage.name.toLowerCase()}`,
+    })),
     firstYear: years.length ? Math.min(...years) : null,
     lastYear: years.length ? Math.max(...years) : null,
     draft: item.status === "draft",
@@ -252,11 +328,45 @@ export const STRAINS = defineCatalog(
     defaultSort: "name",
     pageSize: 25,
     fields: [
-      { key: "name", label: "Strain", value: (s) => s.name, search: 3, column: { header: "Strain" }, sort: true },
-      { key: "organism", label: "Organism", value: (s) => s.organism, facet: { kind: "many", order: "alpha" }, search: 2, column: { header: "Organism", drop: 1 } },
-      { key: "collection", label: "Collection", value: (s) => s.collection, facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Collection", drop: 2 } },
-      { key: "number", label: "Collection number", value: (s) => s.collectionNumber, search: 2, column: { header: "Collection number", drop: 2 } },
-      { key: "phages", label: "Phages isolated", value: (s) => s.phages.length, type: "number", sort: true, column: { header: "Phages isolated", align: "end", drop: 1 } },
+      {
+        key: "name",
+        label: "Strain",
+        value: (s) => s.name,
+        search: 3,
+        column: { header: "Strain" },
+        sort: true,
+      },
+      {
+        key: "organism",
+        label: "Organism",
+        value: (s) => s.organism,
+        facet: { kind: "many", order: "alpha" },
+        search: 2,
+        column: { header: "Organism", drop: 1 },
+      },
+      {
+        key: "collection",
+        label: "Collection",
+        value: (s) => s.collection,
+        facet: { kind: "many", order: "alpha" },
+        search: 1,
+        column: { header: "Collection", drop: 2 },
+      },
+      {
+        key: "number",
+        label: "Collection number",
+        value: (s) => s.collectionNumber,
+        search: 2,
+        column: { header: "Collection number", drop: 2 },
+      },
+      {
+        key: "phages",
+        label: "Phages isolated",
+        value: (s) => s.phages.length,
+        type: "number",
+        sort: true,
+        column: { header: "Phages isolated", align: "end", drop: 1 },
+      },
     ],
   }),
 );
@@ -277,13 +387,16 @@ export function protocolsUsingStrain(strain, protocols) {
 /** The span of years the phages on a strain were isolated in, in words: "2018", or "2018 to 2025". @param {StrainRow} strain */
 export function phageYearsText(strain) {
   if (strain.firstYear === null) return null;
-  return strain.firstYear === strain.lastYear ? String(strain.firstYear) : `${strain.firstYear} to ${strain.lastYear}`;
+  return strain.firstYear === strain.lastYear
+    ? String(strain.firstYear)
+    : `${strain.firstYear} to ${strain.lastYear}`;
 }
 
 /** The strains as a markdown table for the twin. @param {StrainRow[]} strains @param {string} origin */
 export function strainsMarkdown(strains, origin) {
   const lines = strains.map(
-    (s) => `| [${cell(s.name)}](${origin}${s.path}) | ${cell(s.organism)} | ${cell(s.collection)} | ${cell(s.collectionNumber)} | ${s.phages.length} |`,
+    (s) =>
+      `| [${cell(s.name)}](${origin}${s.path}) | ${cell(s.organism)} | ${cell(s.collection)} | ${cell(s.collectionNumber)} | ${s.phages.length} |`,
   );
   return [
     "| Strain | Organism | Collection | Collection number | Phages isolated |",
@@ -304,7 +417,9 @@ export function strainMarkdown(strain, usedBy, origin) {
   const lines = [
     strain.organism ? `- Organism: ${strain.organism}` : "",
     strain.strain ? `- Strain: ${strain.strain}` : "",
-    strain.collection && strain.collectionNumber ? `- Collection: ${strain.collection} ${strain.collectionNumber}` : "",
+    strain.collection && strain.collectionNumber
+      ? `- Collection: ${strain.collection} ${strain.collectionNumber}`
+      : "",
     strain.guideUrl ? `- SEA-PHAGES Guide page: ${strain.guideUrl}` : "",
     `- Biosafety level: ${strain.biosafetyLevel ?? `not found (${strain.biosafetyLevelMissing ?? "not recorded"})`}`,
     "",
@@ -318,7 +433,10 @@ export function strainMarkdown(strain, usedBy, origin) {
     "",
     ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
   ];
-  return `# ${strain.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `# ${strain.name}\n\n${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }
 
 /* ------------------------------------------------------------------------------------------------ reagents */
@@ -417,11 +535,42 @@ export const REAGENTS = defineCatalog(
     defaultSort: "name",
     pageSize: 50,
     fields: [
-      { key: "name", label: "Reagent", value: (r) => reagentLabel(r), search: 3, column: { header: "Reagent" }, sort: true },
-      { key: "supplier", label: "Supplier", value: (r) => reagentSource(r), facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Supplier", drop: 1 } },
-      { key: "number", label: "Catalog number", value: (r) => r.catalogNumber, search: 2, column: { header: "Catalog number", drop: 1 } },
-      { key: "link", label: "Link", value: (r) => r.productUrl ?? r.recipePath, column: { header: "Link", drop: 2 } },
-      { key: "protocols", label: "Protocols", value: (r) => r.uses.map((u) => u.title).join("; "), search: 1, column: { header: "Protocols", drop: 2 } },
+      {
+        key: "name",
+        label: "Reagent",
+        value: (r) => reagentLabel(r),
+        search: 3,
+        column: { header: "Reagent" },
+        sort: true,
+      },
+      {
+        key: "supplier",
+        label: "Supplier",
+        value: (r) => reagentSource(r),
+        facet: { kind: "many", order: "alpha" },
+        search: 1,
+        column: { header: "Supplier", drop: 1 },
+      },
+      {
+        key: "number",
+        label: "Catalog number",
+        value: (r) => r.catalogNumber,
+        search: 2,
+        column: { header: "Catalog number", drop: 1 },
+      },
+      {
+        key: "link",
+        label: "Link",
+        value: (r) => r.productUrl ?? r.recipePath,
+        column: { header: "Link", drop: 2 },
+      },
+      {
+        key: "protocols",
+        label: "Protocols",
+        value: (r) => r.uses.map((u) => u.title).join("; "),
+        search: 1,
+        column: { header: "Protocols", drop: 2 },
+      },
     ],
   }),
 );
@@ -429,8 +578,10 @@ export const REAGENTS = defineCatalog(
 /** What a reagent's cells say where the record states nothing, with the reason, so a gap is listed and not left blank. @param {ReagentRow} r */
 export function reagentGapText(r) {
   const parts = [];
-  if (!r.preparedInLab && !r.supplier) parts.push(`supplier: ${r.supplierMissing ?? "not recorded"}`);
-  if (!r.preparedInLab && !r.catalogNumber) parts.push(`catalog number: ${r.catalogNumberMissing ?? "not recorded"}`);
+  if (!r.preparedInLab && !r.supplier)
+    parts.push(`supplier: ${r.supplierMissing ?? "not recorded"}`);
+  if (!r.preparedInLab && !r.catalogNumber)
+    parts.push(`catalog number: ${r.catalogNumberMissing ?? "not recorded"}`);
   if (r.preparedInLab && !r.recipe) parts.push(`recipe: ${r.recipeMissing ?? "not recorded"}`);
   return parts;
 }
@@ -443,9 +594,18 @@ export function reagentGapText(r) {
  * @param {string} origin
  */
 export function reagentsMarkdown(reagents, origin) {
-  const link = (/** @type {ReagentRow} */ r) => (r.productUrl ? `[product](${r.productUrl})` : r.recipePath ? `[recipe](${origin}${r.recipePath})` : "");
-  const uses = (/** @type {ReagentRow} */ r) => r.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
-  const lines = reagents.map((r) => `| ${cell(reagentLabel(r))} | ${cell(reagentSource(r))} | ${cell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`);
+  const link = (/** @type {ReagentRow} */ r) =>
+    r.productUrl
+      ? `[product](${r.productUrl})`
+      : r.recipePath
+        ? `[recipe](${origin}${r.recipePath})`
+        : "";
+  const uses = (/** @type {ReagentRow} */ r) =>
+    r.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+  const lines = reagents.map(
+    (r) =>
+      `| ${cell(reagentLabel(r))} | ${cell(reagentSource(r))} | ${cell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`,
+  );
   const gaps = reagents.flatMap((r) => reagentGapText(r).map((text) => `- ${r.name}, ${text}`));
   return [
     "| Reagent | Supplier | Catalog number | Link | Protocols |",
@@ -468,12 +628,17 @@ export function reagentItemMarkdown(r, origin) {
     r.preparedInLab
       ? `- Source: prepared in the lab${r.recipePath ? `, [recipe](${origin}${r.recipePath})` : `; recipe not found (${r.recipeMissing ?? "not recorded"})`}`
       : `- Supplier: ${r.supplier ?? `not found (${r.supplierMissing ?? "not recorded"})`}`,
-    r.preparedInLab ? "" : `- Catalog number: ${r.catalogNumber ?? `not found (${r.catalogNumberMissing ?? "not recorded"})`}`,
+    r.preparedInLab
+      ? ""
+      : `- Catalog number: ${r.catalogNumber ?? `not found (${r.catalogNumberMissing ?? "not recorded"})`}`,
     r.productUrl ? `- Product page: ${r.productUrl}` : "",
     "",
     ...r.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
   ];
-  return `# ${r.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `# ${r.name}\n\n${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }
 
 /* ------------------------------------------------------------------------------------------------ equipment */
@@ -517,7 +682,9 @@ export function equipmentRow(item, protocols = []) {
 
 /** The equipment as rows, each with the protocols that use it. @param {import("./kinds.mjs").RegistryItem[]} items @param {Parameters<typeof equipmentUses>[1]} protocols */
 export function equipmentRows(items, protocols) {
-  return items.filter((item) => item.kind === "equipment").map((item) => equipmentRow(item, protocols));
+  return items
+    .filter((item) => item.kind === "equipment")
+    .map((item) => equipmentRow(item, protocols));
 }
 
 /** The equipment catalog: the one table, with the columns an item is read by. */
@@ -530,10 +697,36 @@ export const EQUIPMENT_CATALOG = defineCatalog(
     defaultSort: "name",
     pageSize: 50,
     fields: [
-      { key: "name", label: "Equipment", value: (e) => e.name, search: 3, column: { header: "Equipment" }, sort: true },
-      { key: "manufacturer", label: "Manufacturer", value: (e) => e.manufacturer, facet: { kind: "many", order: "alpha" }, search: 1, column: { header: "Manufacturer", drop: 1 } },
-      { key: "rotor", label: "Rotor", value: (e) => e.rotor, search: 1, column: { header: "Rotor", drop: 2 } },
-      { key: "protocols", label: "Protocols", value: (e) => e.uses.map((u) => u.title).join("; "), search: 1, column: { header: "Protocols", drop: 1 } },
+      {
+        key: "name",
+        label: "Equipment",
+        value: (e) => e.name,
+        search: 3,
+        column: { header: "Equipment" },
+        sort: true,
+      },
+      {
+        key: "manufacturer",
+        label: "Manufacturer",
+        value: (e) => e.manufacturer,
+        facet: { kind: "many", order: "alpha" },
+        search: 1,
+        column: { header: "Manufacturer", drop: 1 },
+      },
+      {
+        key: "rotor",
+        label: "Rotor",
+        value: (e) => e.rotor,
+        search: 1,
+        column: { header: "Rotor", drop: 2 },
+      },
+      {
+        key: "protocols",
+        label: "Protocols",
+        value: (e) => e.uses.map((u) => u.title).join("; "),
+        search: 1,
+        column: { header: "Protocols", drop: 1 },
+      },
     ],
   }),
 );
@@ -554,8 +747,11 @@ export function equipmentGapText(e) {
  * @param {string} origin
  */
 export function equipmentMarkdown(items, origin) {
-  const uses = (/** @type {EquipmentRow} */ e) => e.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
-  const lines = items.map((e) => `| ${cell(e.name)} | ${cell(e.manufacturer)} | ${cell(e.rotor)} | ${uses(e)} |`);
+  const uses = (/** @type {EquipmentRow} */ e) =>
+    e.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+  const lines = items.map(
+    (e) => `| ${cell(e.name)} | ${cell(e.manufacturer)} | ${cell(e.rotor)} | ${uses(e)} |`,
+  );
   const gaps = items.flatMap((e) => equipmentGapText(e).map((text) => `- ${e.name}, ${text}`));
   return [
     "| Equipment | Manufacturer | Rotor | Protocols |",
@@ -575,11 +771,18 @@ export function equipmentMarkdown(items, origin) {
 export function equipmentItemMarkdown(e, origin) {
   const lines = [
     `- Manufacturer: ${e.manufacturer ?? `not found (${e.manufacturerMissing ?? "not recorded"})`}`,
-    e.rotor ? `- Rotor: ${e.rotor}` : e.rotorMissing ? `- Rotor: not found (${e.rotorMissing})` : "",
+    e.rotor
+      ? `- Rotor: ${e.rotor}`
+      : e.rotorMissing
+        ? `- Rotor: not found (${e.rotorMissing})`
+        : "",
     "",
     ...e.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
   ];
-  return `# ${e.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `# ${e.name}\n\n${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }
 
 /* ------------------------------------------------------------------------------------------------ inventory */
@@ -605,20 +808,41 @@ export function kindLabel(kind) {
 function summaryOf(item) {
   if (item.kind === "primer") {
     const row = primerRow(item);
-    return [row.direction ? `${DIRECTION_LABELS[row.direction]?.toLowerCase() ?? row.direction} primer` : "primer", row.target, row.length ? `${row.length} nt` : null]
+    return [
+      row.direction
+        ? `${DIRECTION_LABELS[row.direction]?.toLowerCase() ?? row.direction} primer`
+        : "primer",
+      row.target,
+      row.length ? `${row.length} nt` : null,
+    ]
       .filter(Boolean)
       .join(", ");
   }
   if (item.kind === "strain") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);
-    return [stated(f.organism), stated(f.collection) && stated(f.collection_number) ? `${stated(f.collection)} ${stated(f.collection_number)}` : null].filter(Boolean).join(", ");
+    return [
+      stated(f.organism),
+      stated(f.collection) && stated(f.collection_number)
+        ? `${stated(f.collection)} ${stated(f.collection_number)}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
   }
   if (item.kind === "equipment") {
-    return [stated(/** @type {Record<string, unknown>} */ (item.fields).manufacturer)].filter(Boolean).join(", ");
+    return [stated(/** @type {Record<string, unknown>} */ (item.fields).manufacturer)]
+      .filter(Boolean)
+      .join(", ");
   }
   if (item.kind === "reagent") {
     const f = /** @type {Record<string, unknown>} */ (item.fields);
-    return [stated(f.abbreviation), stated(f.contents), f.prepared_in_lab === true ? "prepared in lab" : stated(f.supplier)].filter(Boolean).join(", ");
+    return [
+      stated(f.abbreviation),
+      stated(f.contents),
+      f.prepared_in_lab === true ? "prepared in lab" : stated(f.supplier),
+    ]
+      .filter(Boolean)
+      .join(", ");
   }
   return "";
 }
@@ -646,7 +870,9 @@ export function inventoryRows(items, phages) {
       kind: "phage",
       kindLabel: kindLabel("phage"),
       name: phage.name,
-      summary: [`found in ${phage.year}`, hostWords(phage.host), phage.county].filter(Boolean).join(", "),
+      summary: [`found in ${phage.year}`, hostWords(phage.host), phage.county]
+        .filter(Boolean)
+        .join(", "),
       path: `/research/phages#${phage.name.toLowerCase()}`,
     })),
   ];
@@ -670,7 +896,14 @@ export const INVENTORY = defineCatalog(
     defaultSort: "kind",
     pageSize: 50,
     fields: [
-      { key: "name", label: "Name", value: (row) => row.name, search: 3, column: { header: "Name" }, sort: true },
+      {
+        key: "name",
+        label: "Name",
+        value: (row) => row.name,
+        search: 3,
+        column: { header: "Name" },
+        sort: true,
+      },
       {
         key: "kind",
         label: "Kind",
@@ -679,17 +912,28 @@ export const INVENTORY = defineCatalog(
         column: { header: "Kind", drop: 2 },
         // The registry's kinds in the order they are defined, the phages after them, then by name: the default order
         // reads the lab's own records first and never buries them behind seventy-five phages.
-        sort: { compare: (a, b) => kindRank(a.kind) - kindRank(b.kind) || a.name.localeCompare(b.name, "en", { numeric: true }) },
+        sort: {
+          compare: (a, b) =>
+            kindRank(a.kind) - kindRank(b.kind) ||
+            a.name.localeCompare(b.name, "en", { numeric: true }),
+        },
         search: 1,
       },
-      { key: "summary", label: "About", value: (row) => row.summary, search: 2, column: { header: "About", drop: 1 } },
+      {
+        key: "summary",
+        label: "About",
+        value: (row) => row.summary,
+        search: 2,
+        column: { header: "About", drop: 1 },
+      },
     ],
   }),
 );
 
 /* ------------------------------------------------------------------------------------------------ markdown twins */
 
-const cell = (/** @type {string | number | null} */ value) => String(value ?? "").replaceAll("|", "\\|");
+const cell = (/** @type {string | number | null} */ value) =>
+  String(value ?? "").replaceAll("|", "\\|");
 
 /**
  * The inventory as a markdown table, for the twin: the facts a person sees.
@@ -698,7 +942,10 @@ const cell = (/** @type {string | number | null} */ value) => String(value ?? ""
  * @param {string} origin
  */
 export function inventoryMarkdown(rows, origin) {
-  const lines = rows.map((row) => `| [${cell(row.name)}](${origin}${row.path}) | ${cell(row.kindLabel)} | ${cell(row.summary)} |`);
+  const lines = rows.map(
+    (row) =>
+      `| [${cell(row.name)}](${origin}${row.path}) | ${cell(row.kindLabel)} | ${cell(row.summary)} |`,
+  );
   return ["| Name | Kind | About |", "| --- | --- | --- |", ...lines].join("\n");
 }
 
@@ -749,7 +996,12 @@ export function primersMarkdown(primers, origin) {
  * place for the page and the twin (test/registry-tm.test.mjs: no page presents a computed Tm as the annealing temperature).
  */
 export function tmNote() {
-  return { statement: tmStatement(), annealing: annealingSentence(), calculator: NEB_TM_CALCULATOR, conditions: TM_CONDITIONS };
+  return {
+    statement: tmStatement(),
+    annealing: annealingSentence(),
+    calculator: NEB_TM_CALCULATOR,
+    conditions: TM_CONDITIONS,
+  };
 }
 
 /**
@@ -769,7 +1021,9 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
     : null;
   const lines = [
     primer.sequence ? `- Sequence (5′ to 3′): \`${primer.sequence}\`` : "",
-    primer.reverseComplement ? `- Reverse complement (5′ to 3′): \`${primer.reverseComplement}\`` : "",
+    primer.reverseComplement
+      ? `- Reverse complement (5′ to 3′): \`${primer.reverseComplement}\``
+      : "",
     primer.direction ? `- Direction: ${primer.direction}` : "",
     primer.target ? `- Target: ${primer.target}` : "",
     primer.set ? `- Set: ${primer.set}` : "",
@@ -799,10 +1053,20 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
       : primer.reference
         ? `- Reference: ${primer.reference}; the primer binds it nowhere within ${MAX_MISMATCHES} mismatches`
         : "- Reference: none recorded",
-    ...(primer.placement ? primer.placement.sites.map((site) => `- Position: ${siteText(site)}`) : []),
-    ...(pair ? pair.products.map((product) => `- Product (computed, with ${mate?.name ?? "its pair"}): ${productSpanText(product)}`) : []),
+    ...(primer.placement
+      ? primer.placement.sites.map((site) => `- Position: ${siteText(site)}`)
+      : []),
+    ...(pair
+      ? pair.products.map(
+          (product) =>
+            `- Product (computed, with ${mate?.name ?? "its pair"}): ${productSpanText(product)}`,
+        )
+      : []),
     "",
     ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
   ];
-  return `# ${primer.name}\n\n${lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
+  return `# ${primer.name}\n\n${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
 }

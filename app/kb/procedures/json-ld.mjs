@@ -31,13 +31,27 @@ export function protocolParameters(record) {
       for (const step of block.steps) {
         // A row compiled before the conditions were stored has none until the next sync rewrites it.
         for (const t of step.temperatures ?? []) {
-          seen.set(`t:${t.min}:${t.max}`, { "@type": "PropertyValue", name: "Temperature", ...(t.min === t.max ? { value: t.min } : { minValue: t.min, maxValue: t.max }), unitCode: "CEL", unitText: "°C" });
+          seen.set(`t:${t.min}:${t.max}`, {
+            "@type": "PropertyValue",
+            name: "Temperature",
+            ...(t.min === t.max ? { value: t.min } : { minValue: t.min, maxValue: t.max }),
+            unitCode: "CEL",
+            unitText: "°C",
+          });
         }
         const flagged = (step.spin ?? []).flatMap((s) => readConditions(s).spins);
         for (const spin of [...(step.spins ?? []), ...flagged]) {
           const [low = "", high] = spin.speed.split(/\s*to\s*/);
-          const range = high === undefined ? { value: numeral(low) } : { minValue: numeral(low), maxValue: numeral(high) };
-          seen.set(`s:${spin.speed}:${spin.unit}`, { "@type": "PropertyValue", name: spin.unit === "rpm" ? "Rotor speed" : "Relative centrifugal force", ...range, unitText: spin.unit === "rpm" ? "rpm" : "x g" });
+          const range =
+            high === undefined
+              ? { value: numeral(low) }
+              : { minValue: numeral(low), maxValue: numeral(high) };
+          seen.set(`s:${spin.speed}:${spin.unit}`, {
+            "@type": "PropertyValue",
+            name: spin.unit === "rpm" ? "Rotor speed" : "Relative centrifugal force",
+            ...range,
+            unitText: spin.unit === "rpm" ? "rpm" : "x g",
+          });
         }
       }
     }
@@ -54,7 +68,14 @@ export function protocolParameters(record) {
  */
 function lineageWork(lineage, origin) {
   if (!lineage?.href) return [];
-  return [{ "@type": "CreativeWork", name: lineage.title, url: `${origin}${lineage.href}`, ...(lineage.version ? { version: lineage.version } : {}) }];
+  return [
+    {
+      "@type": "CreativeWork",
+      name: lineage.title,
+      url: `${origin}${lineage.href}`,
+      ...(lineage.version ? { version: lineage.version } : {}),
+    },
+  ];
 }
 
 /** @param {string | null | undefined} html */
@@ -109,11 +130,18 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       },
     ];
   });
-  const basedOn = [...lineageWork(lineage, origin), ...record.basedOn.map((s) => ({
-    "@type": "CreativeWork",
-    name: s.citation,
-    ...(s.doi ? { identifier: `https://doi.org/${s.doi}`, url: `https://doi.org/${s.doi}` } : s.url ? { url: s.url } : {}),
-  }))];
+  const basedOn = [
+    ...lineageWork(lineage, origin),
+    ...record.basedOn.map((s) => ({
+      "@type": "CreativeWork",
+      name: s.citation,
+      ...(s.doi
+        ? { identifier: `https://doi.org/${s.doi}`, url: `https://doi.org/${s.doi}` }
+        : s.url
+          ? { url: s.url }
+          : {}),
+    })),
+  ];
   const cite = citeFacts(record);
   // Prelum's `thing` writes the context and the type, then these, and drops an empty field.
   const common = {
@@ -135,8 +163,22 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       "http://purl.org/dc/terms/conformsTo": { "@id": LAB_PROTOCOL_PROFILE },
       reagent: record.materials.map((m) => m.display),
       labEquipment: record.equipment.map((e) => e.name),
-      ...(record.biosafetyLevel ? { additionalProperty: { "@type": "PropertyValue", name: "Biosafety level", value: record.biosafetyLevel } } : {}),
-      ...(record.biosafety ? { bioSample: [record.biosafety.organism, record.biosafety.strain].filter(Boolean).join(" ") } : {}),
+      ...(record.biosafetyLevel
+        ? {
+            additionalProperty: {
+              "@type": "PropertyValue",
+              name: "Biosafety level",
+              value: record.biosafetyLevel,
+            },
+          }
+        : {}),
+      ...(record.biosafety
+        ? {
+            bioSample: [record.biosafety.organism, record.biosafety.strain]
+              .filter(Boolean)
+              .join(" "),
+          }
+        : {}),
       ...(record.expectedResultsHtml ? { protocolOutcome: text(record.expectedResultsHtml) } : {}),
       ...(record.limitationsHtml ? { protocolLimitation: text(record.limitationsHtml) } : {}),
       ...(isoDuration(record.time.total) ? { totalTime: isoDuration(record.time.total) } : {}),
@@ -152,7 +194,8 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       const m = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(d ?? "");
       return m ? Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0) : null;
     };
-    const total = prep && cook ? isoDuration(`${(minutes(prep) ?? 0) + (minutes(cook) ?? 0)} minutes`) : null;
+    const total =
+      prep && cook ? isoDuration(`${(minutes(prep) ?? 0) + (minutes(cook) ?? 0)} minutes`) : null;
     return thing("Recipe", {
       ...common,
       ...(record.image ? { image: [`${origin}${record.image.src}`] } : {}),
@@ -162,7 +205,9 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
       ...(prep ? { prepTime: prep } : {}),
       ...(cook ? { cookTime: cook } : {}),
       ...(total ? { totalTime: total } : {}),
-      recipeIngredient: record.materials.map((m) => (m.amount ? `${m.amount} ${m.display}` : m.display)),
+      recipeIngredient: record.materials.map((m) =>
+        m.amount ? `${m.amount} ${m.display}` : m.display,
+      ),
       recipeInstructions: steps,
     });
   }
@@ -171,7 +216,10 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
     ...common,
     tool: record.materials
       .filter((m) => m.kind === "software")
-      .map((m) => ({ "@type": "HowToTool", name: m.version ? `${m.display} ${m.version}` : m.display })),
+      .map((m) => ({
+        "@type": "HowToTool",
+        name: m.version ? `${m.display} ${m.version}` : m.display,
+      })),
     supply: record.materials
       .filter((m) => m.kind !== "software")
       .map((m) => ({ "@type": "HowToSupply", name: m.display })),

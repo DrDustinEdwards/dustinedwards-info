@@ -22,12 +22,7 @@ import { TOPICS, TOPIC_IDS } from "./topics.mjs";
  *
  * @type {Set<PublicationType>}
  */
-export const SHOWCASE_TYPES = new Set([
-  "article",
-  "review",
-  "chapter",
-  "teaching-resource",
-]);
+export const SHOWCASE_TYPES = new Set(["article", "review", "chapter", "teaching-resource"]);
 
 const PUBLICATIONS_BASE = "/research/publications";
 
@@ -53,9 +48,22 @@ export const PUBLICATIONS = defineCatalog(
     defaultSort: "-year",
     group: { field: "year" },
     fields: [
-      { key: "title", label: "Title", value: (p) => decodeEntities(p.title), search: 3, sort: true, column: { header: "Paper" } },
+      {
+        key: "title",
+        label: "Title",
+        value: (p) => decodeEntities(p.title),
+        search: 3,
+        sort: true,
+        column: { header: "Paper" },
+      },
       { key: "authors", label: "Authors", value: (p) => p.authors.map(decodeEntities), search: 1 },
-      { key: "journal", label: "Journal", value: (p) => venue(p), search: 2, column: { header: "Journal", drop: 1 } },
+      {
+        key: "journal",
+        label: "Journal",
+        value: (p) => venue(p),
+        search: 2,
+        column: { header: "Journal", drop: 1 },
+      },
       {
         key: "year",
         label: "Year",
@@ -68,12 +76,32 @@ export const PUBLICATIONS = defineCatalog(
         key: "topic",
         label: "Topic",
         value: (p) => p.topics,
-        facet: { kind: "many", general: true, order: TOPICS.map((t) => t.id), label: (v) => TOPICS.find((t) => t.id === v)?.label ?? v },
+        facet: {
+          kind: "many",
+          general: true,
+          order: TOPICS.map((t) => t.id),
+          label: (v) => TOPICS.find((t) => t.id === v)?.label ?? v,
+        },
       },
-      { key: "type", label: "Type", value: (p) => p.type, facet: { kind: "many", label: (v) => TYPE_LABELS[v] ?? v } },
+      {
+        key: "type",
+        label: "Type",
+        value: (p) => p.type,
+        facet: { kind: "many", label: (v) => TYPE_LABELS[v] ?? v },
+      },
       // Chosen with `?selected=1`, as the page's "Selected" filter always was.
-      { key: "selected", label: "Selected", value: (p) => (p.selected ? "1" : null), facet: { kind: "one", label: () => "Selected papers" } },
-      { key: "access", label: "Access", value: (p) => (p.isOpenAccess ? "open" : null), facet: { kind: "one", label: () => "Open access" } },
+      {
+        key: "selected",
+        label: "Selected",
+        value: (p) => (p.selected ? "1" : null),
+        facet: { kind: "one", label: () => "Selected papers" },
+      },
+      {
+        key: "access",
+        label: "Access",
+        value: (p) => (p.isOpenAccess ? "open" : null),
+        facet: { kind: "one", label: () => "Open access" },
+      },
     ],
   }),
 );

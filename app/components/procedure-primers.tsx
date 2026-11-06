@@ -12,16 +12,29 @@ import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
  * The Tm is an estimate for comparing primers, never an annealing temperature, and the note
  * says where an annealing temperature for a polymerase comes from.
  */
-export function ProcedurePrimers({ record, brief = false }: { record: ProcedureRecord; brief?: boolean }) {
+export function ProcedurePrimers({
+  record,
+  brief = false,
+}: {
+  record: ProcedureRecord;
+  brief?: boolean;
+}) {
   if (record.primers.length === 0) return null;
-  const rows = record.primers.map((p) => ({ ...p, facts: p.sequence ? primerFacts(p.sequence) : null }));
+  const rows = record.primers.map((p) => ({
+    ...p,
+    facts: p.sequence ? primerFacts(p.sequence) : null,
+  }));
   // A pair's product is computed from where its primers bind the reference they share (docs/REGISTRY.md), never typed.
   const products = productsForRows(record.primers);
   const productOf = (id: string) => {
     const pair = products.get(id);
     if (!pair) return "";
-    const sizes = [...new Set(pair.products.map((p) => p.length))].map((n) => `${n} bp`).join(" or ");
-    return pair.products.length > 1 && new Set(pair.products.map((p) => p.length)).size === 1 ? `${sizes} at ${pair.products.length} sites` : sizes;
+    const sizes = [...new Set(pair.products.map((p) => p.length))]
+      .map((n) => `${n} bp`)
+      .join(" or ");
+    return pair.products.length > 1 && new Set(pair.products.map((p) => p.length)).size === 1
+      ? `${sizes} at ${pair.products.length} sites`
+      : sizes;
   };
   const references = [...new Set([...products.values()].map((pair) => pair.reference))];
   const showProduct = products.size > 0;
@@ -45,7 +58,9 @@ export function ProcedurePrimers({ record, brief = false }: { record: ProcedureR
           <tbody>
             {rows.map((p) => (
               <tr key={p.id}>
-                <th scope="row">{brief ? p.name : <a href={`/research/lab/primers/${p.id}`}>{p.name}</a>}</th>
+                <th scope="row">
+                  {brief ? p.name : <a href={`/research/lab/primers/${p.id}`}>{p.name}</a>}
+                </th>
                 {showSet ? <td>{p.set ?? ""}</td> : null}
                 <td>{p.direction ?? ""}</td>
                 <td>{p.sequence ? <code className="registry-seq">{p.sequence}</code> : ""}</td>
@@ -63,16 +78,20 @@ export function ProcedurePrimers({ record, brief = false }: { record: ProcedureR
           {references.map((reference, i) => (
             <span key={reference.id}>
               {i > 0 ? ", " : ""}
-              <a href={`https://www.ncbi.nlm.nih.gov/nuccore/${reference.accession}`}>{reference.id}</a>
+              <a href={`https://www.ncbi.nlm.nih.gov/nuccore/${reference.accession}`}>
+                {reference.id}
+              </a>
             </span>
           ))}{" "}
-          ({references.map((reference) => reference.description).join("; ")}), in the accession&rsquo;s own coordinates.
+          ({references.map((reference) => reference.description).join("; ")}), in the
+          accession&rsquo;s own coordinates.
         </p>
       ) : null}
       {brief ? null : (
         <p className="procedure-primers-note">
-          {tmStatement()} The Tm estimate is not an annealing temperature. For the annealing temperature of a particular polymerase,
-          use the <a href={NEB_TM_CALCULATOR.url}>{NEB_TM_CALCULATOR.name}</a>.
+          {tmStatement()} The Tm estimate is not an annealing temperature. For the annealing
+          temperature of a particular polymerase, use the{" "}
+          <a href={NEB_TM_CALCULATOR.url}>{NEB_TM_CALCULATOR.name}</a>.
         </p>
       )}
     </>

@@ -61,7 +61,11 @@ export async function run({ page, browser }) {
     /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
     { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
     /* The bench sheet is a print page with no site shell, so it has no footer to compare. */
-    { path: "/research/protocols/phage-isolation/sheet", module: "procedure.sheet.tsx", noFooter: true },
+    {
+      path: "/research/protocols/phage-isolation/sheet",
+      module: "procedure.sheet.tsx",
+      noFooter: true,
+    },
   ];
 
   /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
@@ -138,7 +142,9 @@ export async function run({ page, browser }) {
   const docStatuses = new Map();
 
   /** The paths fetched with no cache-buster (see `bare` above). */
-  const bare = new Set(THEME_CACHED.filter((entry) => "bare" in entry && entry.bare).map((entry) => entry.path));
+  const bare = new Set(
+    THEME_CACHED.filter((entry) => "bare" in entry && entry.bare).map((entry) => entry.path),
+  );
 
   /** @param {string} path @param {Record<string,string>} headers */
   const fetchDoc = async (path, headers) => {
@@ -158,7 +164,11 @@ export async function run({ page, browser }) {
     let i = 0;
     while (i < n && a[i] === b[i]) i += 1;
     if (i === n && a.length === b.length) return null;
-    return { at: i, a: a.slice(Math.max(0, i - 60), i + 80), b: b.slice(Math.max(0, i - 60), i + 80) };
+    return {
+      at: i,
+      a: a.slice(Math.max(0, i - 60), i + 80),
+      b: b.slice(Math.max(0, i - 60), i + 80),
+    };
   };
 
   /* The mask set only ever shrinks: a wider mask hides a control that has started varying by theme. */
@@ -271,8 +281,7 @@ export async function run({ page, browser }) {
       } else {
         ok(
           `${path}: the seeded approved mentions render`,
-          stranger.includes('class="post-mentions"') &&
-            stranger.includes('id="mentions-heading"'),
+          stranger.includes('class="post-mentions"') && stranger.includes('id="mentions-heading"'),
           `no Mentions section in the served document, so the seed did not reach the ` +
             `render and every assertion below it, INCLUDING the byte-identity pair, is ` +
             `about a page without the feature on it.`,

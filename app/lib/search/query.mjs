@@ -103,5 +103,10 @@ export function parseQuery(input, options = {}) {
  * @returns {boolean}
  */
 export function hasFilters(parsed) {
-  return parsed.tags.length > 0 || parsed.types.length > 0 || parsed.bases.length > 0 || parsed.year !== null;
+  return (
+    parsed.tags.length > 0 ||
+    parsed.types.length > 0 ||
+    parsed.bases.length > 0 ||
+    parsed.year !== null
+  );
 }

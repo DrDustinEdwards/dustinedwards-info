@@ -6,7 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
-import { PHAGES_DIR, compilePhage, phageSetErrors, sortPhages } from "../../app/lib/phages/compile.mjs";
+import {
+  PHAGES_DIR,
+  compilePhage,
+  phageSetErrors,
+  sortPhages,
+} from "../../app/lib/phages/compile.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -16,10 +21,12 @@ export const PHAGES_ARTIFACT_PATH = path.join("content", "generated", "phages.js
 export const repoHost = {
   /** @param {string} slug a publication's file key */
   async paper(slug) {
-    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch((error) => {
-      if (error?.code === "ENOENT") return null;
-      throw error;
-    });
+    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch(
+      (error) => {
+        if (error?.code === "ENOENT") return null;
+        throw error;
+      },
+    );
     return info !== null && info.isFile();
   },
 };
@@ -32,7 +39,9 @@ export const repoHost = {
  */
 export async function compileAllPhages(options = {}) {
   const host = options.host ?? repoHost;
-  const names = (await readdir(path.join(ROOT, PHAGES_DIR))).filter((n) => n.endsWith(".md")).sort();
+  const names = (await readdir(path.join(ROOT, PHAGES_DIR)))
+    .filter((n) => n.endsWith(".md"))
+    .sort();
   return Promise.all(
     names.map(async (name) => {
       const slug = name.slice(0, -3);
@@ -55,11 +64,16 @@ export async function buildPhages() {
   const compiled = await compileAllPhages();
   const failed = compiled.filter((c) => !c.compiled.ok);
   if (failed.length > 0) {
-    throw new Error(failed.map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`).join("\n"));
+    throw new Error(
+      failed
+        .map((c) => `${c.file} does not compile:\n  ${c.compiled.errors.join("\n  ")}`)
+        .join("\n"),
+    );
   }
   const ok = compiled.flatMap((c) => (c.compiled.ok ? [c.compiled] : []));
   const setErrors = phageSetErrors(ok.map((c) => c.phage));
-  if (setErrors.length > 0) throw new Error(`${PHAGES_DIR} is not a phage table:\n  ${setErrors.join("\n  ")}`);
+  if (setErrors.length > 0)
+    throw new Error(`${PHAGES_DIR} is not a phage table:\n  ${setErrors.join("\n  ")}`);
   const phages = sortPhages(ok.map((c) => c.phage));
   const order = new Map(phages.map((p, i) => [p.name, i]));
   const rows = ok

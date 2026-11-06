@@ -92,7 +92,9 @@ export const CONTENT_PAGES_FROM_DATA = ["/cv"];
  * @returns {string[]}
  */
 export function publishedContentPagePaths(published) {
-  return CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.includes(path));
+  return CONTENT_PAGE_PATHS.filter(
+    (path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.includes(path),
+  );
 }
 
 /**
@@ -118,7 +120,10 @@ export function draftContentPagePaths(published) {
 export const CONTENT_PAGES_OWN_ROUTE = ["/about"];
 
 /** Every path a file in content/pages/ may name: the listed pages and the ones with a route of their own. */
-export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([...CONTENT_PAGE_PATHS, ...CONTENT_PAGES_OWN_ROUTE]);
+export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([
+  ...CONTENT_PAGE_PATHS,
+  ...CONTENT_PAGES_OWN_ROUTE,
+]);
 
 /**
  * Pages read one after another, each a way on to the next with signs at its foot (content-page.tsx, Capsomer's
@@ -192,7 +197,10 @@ export function contentPageMarkdownBody(page, entry) {
   const body = String(page.markdown ?? "").replace(/^\n+/, "");
   const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
   // A legal page's banner and date are facts a reader sees under the title, so the twin states them too.
-  const stated = [page.banner, page.lastUpdated ? `Last updated: ${longDateUTC(page.lastUpdated)}` : ""].filter(Boolean);
+  const stated = [
+    page.banner,
+    page.lastUpdated ? `Last updated: ${longDateUTC(page.lastUpdated)}` : "",
+  ].filter(Boolean);
   const legal = stated.length > 0 ? `${stated.join("\n\n")}\n\n` : "";
   return `# ${page.title}\n\n${legal}${lead}${body}`;
 }
@@ -249,7 +257,9 @@ export function contentPageCardPath(page) {
 export function markdownTableFacts(markdown) {
   const lines = String(markdown ?? "").split("\n");
   const rule = /^\|(\s*:?-+:?\s*\|)+\s*$/;
-  const at = lines.findIndex((line, i) => /^\|.*\|\s*$/.test(line) && rule.test(lines[i + 1] ?? ""));
+  const at = lines.findIndex(
+    (line, i) => /^\|.*\|\s*$/.test(line) && rule.test(lines[i + 1] ?? ""),
+  );
   if (at < 0) return null;
   const cells = (/** @type {string} */ line) =>
     line
@@ -260,15 +270,19 @@ export function markdownTableFacts(markdown) {
   const headings = cells(lines[at] ?? "");
   /** @type {string[][]} */
   const rows = [];
-  for (let i = at + 2; i < lines.length && (lines[i] ?? "").startsWith("|"); i += 1) rows.push(cells(lines[i] ?? ""));
+  for (let i = at + 2; i < lines.length && (lines[i] ?? "").startsWith("|"); i += 1)
+    rows.push(cells(lines[i] ?? ""));
   const yearColumn = headings.findIndex((heading) => /^year$/i.test(heading));
   const years =
     yearColumn < 0
       ? []
-      : rows.map((row) => Number(row[yearColumn])).filter((year) => Number.isInteger(year) && year > 0);
+      : rows
+          .map((row) => Number(row[yearColumn]))
+          .filter((year) => Number.isInteger(year) && year > 0);
   const first = Math.min(...years);
   const last = Math.max(...years);
-  const temporalCoverage = years.length === 0 ? null : first === last ? String(first) : `${first}/${last}`;
+  const temporalCoverage =
+    years.length === 0 ? null : first === last ? String(first) : `${first}/${last}`;
   return { variableMeasured: headings, temporalCoverage, rows: rows.length };
 }
 

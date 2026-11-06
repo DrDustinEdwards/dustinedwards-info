@@ -1,12 +1,7 @@
 {
   "name": "dustinedwards-info",
   "private": true,
-  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. katex is pinned on a DIFFERENT ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so the pin also has to stay inside that range or npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it.",
   "type": "module",
-  "engines": {
-    "node": ">=26.11.1",
-    "npm": "12.2.0"
-  },
   "scripts": {
     "build": "npm run build:headers && react-router build",
     "dev": "npm run build:headers && npm run build:stack && npm run build:content && react-router dev",
@@ -30,6 +25,8 @@
     "check:ci": "node scripts/check-all.mjs --ci",
     "check:changed": "node scripts/check-changed.mjs",
     "lint": "oxlint --type-aware --deny-warnings --report-unused-disable-directives-severity=error",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "check:content": "node scripts/check-content.mjs",
     "check:machine-readable": "node scripts/check-machine-readable.mjs",
     "sync:content": "node scripts/sync-content.mjs",
@@ -124,7 +121,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.66.0",
     "@cloudflare/vitest-plugin": "1.4.11",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.23.0",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.24.0",
     "@mermaid-js/mermaid-cli": "11.17.0",
     "@react-router/dev": "8.5.1",
     "@resvg/resvg-js": "2.6.2",
@@ -137,6 +134,7 @@
     "fontkit": "2.0.4",
     "lighthouse": "13.5.0",
     "microformats-parser": "2.0.6",
+    "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
     "oxlint-tsgolint": "7.0.2006",
     "puppeteer": "25.16.0",
@@ -148,9 +146,14 @@
     "vitest": "4.1.11",
     "wrangler": "4.156.0"
   },
+  "engines": {
+    "node": ">=26.11.1",
+    "npm": "12.2.0"
+  },
   "allowScripts": {
     "esbuild": false,
     "puppeteer": true,
     "workerd": false
-  }
+  },
+  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. katex is pinned on a DIFFERENT ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so the pin also has to stay inside that range or npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it."
 }

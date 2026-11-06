@@ -49,9 +49,18 @@ export const codeOf = (file) => {
  * @param {Array<{ slug: string, anchor: string }>} items
  * @returns {any[]} the page's records
  */
-export function pageRecordParity({ ok, artifactRecords }, docUid, { kind, page, item, list }, items) {
+export function pageRecordParity(
+  { ok, artifactRecords },
+  docUid,
+  { kind, page, item, list },
+  items,
+) {
   const records = artifactRecords.filter((/** @type {any} */ r) => r.docUid === docUid);
-  ok(`the artifact carries ${kind} page records`, records.length > 0, "none found. Run build:content.");
+  ok(
+    `the artifact carries ${kind} page records`,
+    records.length > 0,
+    "none found. Run build:content.",
+  );
   ok(
     `the ${page} page has exactly one document record`,
     records.filter((/** @type {any} */ r) => r.anchor === null).length === 1,

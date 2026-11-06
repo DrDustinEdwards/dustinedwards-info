@@ -23,11 +23,19 @@ const DB_NAME = PREVIEW ? "dustinedwards-preview" : "dustinedwards";
 const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
 
 const git = (/** @type {string[]} */ args) =>
-  execFileSync("git", ["-c", "core.quotePath=false", ...args], { cwd: ROOT, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+  execFileSync("git", ["-c", "core.quotePath=false", ...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+  });
 
 /** A path's versions, oldest first: each commit that touched it, and the file as that commit left it (null: deleted). */
 function history(/** @type {string} */ file) {
-  const log = git(["log", "--no-renames", "--format=%H%x09%an%x09%ct%x09%s", "--", file]).trim().split("\n").filter(Boolean).reverse();
+  const log = git(["log", "--no-renames", "--format=%H%x09%an%x09%ct%x09%s", "--", file])
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .reverse();
   return log.map((line) => {
     const [sha, author, seconds, ...subject] = line.split("\t");
     let content = null;
@@ -41,7 +49,12 @@ function history(/** @type {string} */ file) {
 }
 
 const read = (/** @type {string} */ query, /** @type {string} */ what) =>
-  jsonRows(runWrangler(`d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command "${query}"`), what);
+  jsonRows(
+    runWrangler(
+      `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command "${query}"`,
+    ),
+    what,
+  );
 
 const held = new Set(
   read(
@@ -50,11 +63,15 @@ const held = new Set(
   ).map((/** @type {{ path: string }} */ r) => r.path),
 );
 
-const tracked = git(["ls-files", "--", ...SOURCE_PATHS]).split("\n").filter(Boolean);
+const tracked = git(["ls-files", "--", ...SOURCE_PATHS])
+  .split("\n")
+  .filter(Boolean);
 const fresh = tracked.filter((file) => !held.has(file));
 
 if (fresh.length === 0) {
-  console.log(`seed-sources: D1 holds all ${tracked.length} source file(s) already; nothing seeded.`);
+  console.log(
+    `seed-sources: D1 holds all ${tracked.length} source file(s) already; nothing seeded.`,
+  );
   process.exit(0);
 }
 
@@ -65,7 +82,8 @@ for (const file of fresh) {
   const now = git(["show", `HEAD:${file}`]);
   const past = history(file);
   // The last version must be the committed file, whatever the log said.
-  if (past.length === 0 || past[past.length - 1]?.content !== now) past.push({ author: "seed", at: Math.floor(Date.now() / 1000), message: "Seed", content: now });
+  if (past.length === 0 || past[past.length - 1]?.content !== now)
+    past.push({ author: "seed", at: Math.floor(Date.now() / 1000), message: "Seed", content: now });
   for (const version of past) {
     versions += 1;
     const sha = version.content === null ? null : blobSha(version.content);
@@ -84,11 +102,17 @@ const dir = path.join(os.tmpdir(), "dustinedwards-seed");
 await mkdir(dir, { recursive: true });
 const sqlFile = path.join(dir, `seed-sources-${target.slice(2)}.sql`);
 await writeFile(sqlFile, splitOversizeStatements(statements.join("\n")), "utf8");
-const applied = runWrangler(`d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${sqlFile}" --yes`);
+const applied = runWrangler(
+  `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${sqlFile}" --yes`,
+);
 if (applied.status !== 0) {
   console.error(applied.output);
-  throw new Error("seed-sources: the seed did not apply. Run it again: a path left half seeded is seeded again.");
+  throw new Error(
+    "seed-sources: the seed did not apply. Run it again: a path left half seeded is seeded again.",
+  );
 }
 
 const holding = read("SELECT COUNT(*) AS n FROM source_files;", "the seed read-back")[0].n;
-console.log(`seed-sources: seeded ${fresh.length} file(s) with ${versions} version(s); D1 holds ${holding} source file(s).`);
+console.log(
+  `seed-sources: seeded ${fresh.length} file(s) with ${versions} version(s); D1 holds ${holding} source file(s).`,
+);

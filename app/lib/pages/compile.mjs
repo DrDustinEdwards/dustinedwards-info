@@ -26,7 +26,18 @@ export const PAGES_DIR = "content/pages";
 
 /** The identity facts a page may state by token ({{identity.role}}): text, from the CV (app/lib/identity.mjs). */
 export const IDENTITY_TOKEN_KEYS = /** @type {const} */ ([
-  "name", "degree", "discipline", "disciplineLower", "rank", "role", "adminTitle", "jobTitle", "cvTitle", "department", "departmentSubject", "affiliation",
+  "name",
+  "degree",
+  "discipline",
+  "disciplineLower",
+  "rank",
+  "role",
+  "adminTitle",
+  "jobTitle",
+  "cvTitle",
+  "department",
+  "departmentSubject",
+  "affiliation",
 ]);
 const IDENTITY_TOKEN = /\{\{\s*identity\.([A-Za-z]+)\s*\}\}/g;
 
@@ -110,14 +121,17 @@ const SCHEMA_TYPES = ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "W
  * @returns {PageSchema}
  */
 function pageSchema(fm, markdown, errors) {
-  const text = (/** @type {unknown} */ value) => (value == null || value === "" ? "" : String(value));
+  const text = (/** @type {unknown} */ value) =>
+    value == null || value === "" ? "" : String(value);
   const schemaType = text(fm.schema_type);
   if (schemaType && !SCHEMA_TYPES.includes(schemaType)) {
     errors.push(`schema_type "${schemaType}" is not one of ${SCHEMA_TYPES.join(", ")}`);
   }
   const codeRepository = text(fm.code_repository);
   if (codeRepository && !["SoftwareApplication", "SoftwareSourceCode"].includes(schemaType)) {
-    errors.push("code_repository is only stated for software (schema_type SoftwareApplication or SoftwareSourceCode)");
+    errors.push(
+      "code_repository is only stated for software (schema_type SoftwareApplication or SoftwareSourceCode)",
+    );
   }
   const dataset = schemaType === "Dataset" ? markdownTableFacts(markdown) : null;
   if (schemaType === "Dataset" && !dataset) {
@@ -158,19 +172,31 @@ function pageLegal(fm, frontMatter, path, errors) {
   const legal = {};
   const banner = fm.banner == null ? "" : String(fm.banner).trim();
   if (banner !== "") {
-    if (banner !== LEGAL_BANNER) errors.push(`banner is ${JSON.stringify(banner)}; the one word it may say is "${LEGAL_BANNER}"`);
+    if (banner !== LEGAL_BANNER)
+      errors.push(
+        `banner is ${JSON.stringify(banner)}; the one word it may say is "${LEGAL_BANNER}"`,
+      );
     else legal.banner = banner;
   }
-  const written = /^last_updated:[ \t]*["']?([^"'#\r\n]*?)["']?[ \t]*(?:#.*)?$/m.exec(frontMatter)?.[1];
+  const written = /^last_updated:[ \t]*["']?([^"'#\r\n]*?)["']?[ \t]*(?:#.*)?$/m.exec(
+    frontMatter,
+  )?.[1];
   const raw = written ?? fm.last_updated;
   if (raw != null && raw !== "") {
     const day = raw instanceof Date ? raw.toISOString().slice(0, 10) : String(raw).trim();
-    const real = /^\d{4}-\d{2}-\d{2}$/.test(day) && new Date(`${day}T00:00:00.000Z`).toISOString().slice(0, 10) === day;
+    const real =
+      /^\d{4}-\d{2}-\d{2}$/.test(day) &&
+      new Date(`${day}T00:00:00.000Z`).toISOString().slice(0, 10) === day;
     if (real) legal.lastUpdated = day;
     else errors.push(`last_updated is ${JSON.stringify(day)}; it is a real day written YYYY-MM-DD`);
   }
-  if ((legal.banner || legal.lastUpdated || fm.banner != null || fm.last_updated != null) && !LEGAL_PAGE_PATHS.includes(path)) {
-    errors.push(`banner and last_updated belong to the legal pages (${LEGAL_PAGE_PATHS.join(", ")}), not to ${path}`);
+  if (
+    (legal.banner || legal.lastUpdated || fm.banner != null || fm.last_updated != null) &&
+    !LEGAL_PAGE_PATHS.includes(path)
+  ) {
+    errors.push(
+      `banner and last_updated belong to the legal pages (${LEGAL_PAGE_PATHS.join(", ")}), not to ${path}`,
+    );
   }
   return legal;
 }
@@ -195,7 +221,15 @@ function pageLegal(fm, frontMatter, path, errors) {
  *       searchInput: ReturnType<typeof contentPageSearchInputs>[number], sourcePath: string, sourceBlobSha: string }
  * >}
  */
-export async function compilePage({ slug, raw, pipeline, sourcePath, generated = false, entry, phages }) {
+export async function compilePage({
+  slug,
+  raw,
+  pipeline,
+  sourcePath,
+  generated = false,
+  entry,
+  phages,
+}) {
   const expectedPath = pagePathForSlug(slug);
   if (!expectedPath) {
     return {
@@ -208,13 +242,22 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   }
   const file = sourcePath ?? pageSourcePath(slug);
   /** @type {string[]} */
-  const errors = (generated ? [] : pipeline.findWideDashes(raw)).map((hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`);
+  const errors = (generated ? [] : pipeline.findWideDashes(raw)).map(
+    (hit) =>
+      `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+  );
 
   let parsed;
   try {
     parsed = matter(raw);
   } catch (error) {
-    return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
   }
   const fm = /** @type {Record<string, unknown>} */ (parsed.data);
   // A phage fact a page states (the count, the span, a genome's size) is read from the phage rows by a token,
@@ -240,14 +283,22 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
         "must be listed in CONTENT_PAGE_PATHS (app/lib/content-pages.mjs) and its file must say so",
     );
   }
-  for (const [field, value] of [["title", page.title], ["seo_title", page.seoTitle], ["description", page.description]]) {
+  for (const [field, value] of [
+    ["title", page.title],
+    ["seo_title", page.seoTitle],
+    ["description", page.description],
+  ]) {
     if (!value) errors.push(`${field} is required`);
   }
   if (page.seoTitle.length > SEO_TITLE_MAX) {
-    errors.push(`seo_title is ${page.seoTitle.length} characters (at most ${SEO_TITLE_MAX}); Google would clip it`);
+    errors.push(
+      `seo_title is ${page.seoTitle.length} characters (at most ${SEO_TITLE_MAX}); Google would clip it`,
+    );
   }
   if (page.description.length > DESCRIPTION_MAX) {
-    errors.push(`description is ${page.description.length} characters (at most ${DESCRIPTION_MAX}); Google would clip it`);
+    errors.push(
+      `description is ${page.description.length} characters (at most ${DESCRIPTION_MAX}); Google would clip it`,
+    );
   }
   if (fm.draft !== undefined && typeof fm.draft !== "boolean") {
     errors.push(`draft is ${JSON.stringify(fm.draft)}; it is true or false`);
@@ -257,7 +308,9 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   // other page passes through unchanged.
   const drawn = expandPhagePage(page.path, parsed.content, phages);
   if (!drawn.ok) errors.push(...drawn.errors);
-  const drawnBody = drawn.ok ? expandPageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
+  const drawnBody = drawn.ok
+    ? expandPageTokens(drawn.markdown, phages)
+    : /** @type {const} */ ({ ok: true, text: parsed.content });
   if (!drawnBody.ok) errors.push(...drawnBody.errors);
   const body = drawnBody.ok ? drawnBody.text : parsed.content;
   const schema = pageSchema(fm, body, errors);
@@ -272,24 +325,37 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
       file,
       body,
       resolveImage: async (src) => {
-        throw new Error(`the page references an image ("${src}") and these pages have no image pipeline`);
+        throw new Error(
+          `the page references an image ("${src}") and these pages have no image pipeline`,
+        );
       },
     });
   } catch (error) {
     return { ok: false, errors: [error instanceof Error ? error.message : String(error)] };
   }
   if (rendered.blockedUrls.length > 0) {
-    errors.push(`links the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`);
+    errors.push(
+      `links the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
+    );
   }
   for (const section of CONTENT_PAGE_SECTIONS) {
     const [sectionPath, id] = section.split("#");
     if (sectionPath === page.path && !rendered.toc.some((heading) => heading.id === id)) {
-      errors.push(`no heading has the id "${id}", which CONTENT_PAGE_SECTIONS (app/lib/content-pages.mjs) lists for the header menu`);
+      errors.push(
+        `no heading has the id "${id}", which CONTENT_PAGE_SECTIONS (app/lib/content-pages.mjs) lists for the header menu`,
+      );
     }
   }
 
   /** @type {CompiledPage} */
-  const compiled = { ...page, html: withPhageRowIds(page.path, rendered.html, phages), markdown: body, toc: rendered.toc, ...schema, ...legal };
+  const compiled = {
+    ...page,
+    html: withPhageRowIds(page.path, rendered.html, phages),
+    markdown: body,
+    toc: rendered.toc,
+    ...schema,
+    ...legal,
+  };
   errors.push(...pageInvariantErrors(compiled, { phages }));
   if (errors.length > 0) return { ok: false, errors };
 

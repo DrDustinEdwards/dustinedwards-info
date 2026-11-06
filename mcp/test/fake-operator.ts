@@ -15,7 +15,9 @@ export const HEALTH_URL = `${ORIGIN}/health`;
 export const ADMIN = "admin@example.com";
 
 /** A SITE binding whose fetch is whatever globalThis.fetch is at call time. */
-export const SITE = { fetch: (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init) } as unknown as Fetcher;
+export const SITE = {
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init),
+} as unknown as Fetcher;
 
 export interface AuditFake {
   namespace: DurableObjectNamespace;
@@ -42,7 +44,10 @@ export function auditLog(): AuditFake {
     failNext() {
       fail = true;
     },
-    namespace: { idFromName: (name: string) => name, get: () => stub } as unknown as DurableObjectNamespace,
+    namespace: {
+      idFromName: (name: string) => name,
+      get: () => stub,
+    } as unknown as DurableObjectNamespace,
   };
 }
 
@@ -80,7 +85,10 @@ export interface Recorded {
   body: { tool: string; args: Record<string, unknown> } | null;
 }
 
-type Reply = { status?: number; body: unknown } | { raw: string; status?: number } | { throws: Error };
+type Reply =
+  | { status?: number; body: unknown }
+  | { raw: string; status?: number }
+  | { throws: Error };
 
 export interface FakeOperator {
   /** Requests to /api/operator. */
@@ -109,7 +117,9 @@ export function fakeOperator(initial: Reply = { body: { ok: true, data: {} } }):
   const consoleMethods = ["log", "info", "warn", "error", "debug", "trace"] as const;
   const realConsole = consoleMethods.map((m) => [m, console[m]] as const);
   let next: Reply | ((tool: string) => Reply) = initial;
-  let readings: Reply[] = [{ body: { status: "pass", ok: true, checks: [{ name: "db", status: "pass" }] } }];
+  let readings: Reply[] = [
+    { body: { status: "pass", ok: true, checks: [{ name: "db", status: "pass" }] } },
+  ];
 
   const fake: FakeOperator = {
     calls: [],
@@ -136,7 +146,12 @@ export function fakeOperator(initial: Reply = { body: { ok: true, data: {} } }):
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const text = await request.text();
-    const recorded = { url: request.url, method: request.method, headers: request.headers, body: text ? JSON.parse(text) : null };
+    const recorded = {
+      url: request.url,
+      method: request.method,
+      headers: request.headers,
+      body: text ? JSON.parse(text) : null,
+    };
     if (new URL(request.url).pathname === "/health") {
       fake.healthCalls.push(recorded);
       const reading = readings.length > 1 ? readings.shift()! : readings[0]!;

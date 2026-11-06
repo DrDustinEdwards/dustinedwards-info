@@ -44,7 +44,9 @@ export async function loader({ context }: Route.LoaderArgs) {
       ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
           (budget) => ({ budget, budgetError: null }),
           (error: unknown) => {
-            console.error(JSON.stringify({ alert: "ask-budget-read-failed", detail: errorMessage(error) }));
+            console.error(
+              JSON.stringify({ alert: "ask-budget-read-failed", detail: errorMessage(error) }),
+            );
             return { budget: null, budgetError: errorMessage(error) };
           },
         )
@@ -138,9 +140,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           title="Rebuild the search answer index?"
           body={
             <p>
-              Every record not in this run is removed from the index, and saved answers are dropped. The
-              site currently has <strong>{confirmSyncAsk}</strong> post(s), so that is what the index will
-              hold afterwards.
+              Every record not in this run is removed from the index, and saved answers are dropped.
+              The site currently has <strong>{confirmSyncAsk}</strong> post(s), so that is what the
+              index will hold afterwards.
             </p>
           }
           requireTyped="1"
@@ -167,7 +169,12 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
         footer={
           <Form method="post" className="cap-cluster">
             {askOn ? (
-              <Button type="submit" name="intent" value="sync-ask" variant={askDrifted ? "primary" : undefined}>
+              <Button
+                type="submit"
+                name="intent"
+                value="sync-ask"
+                variant={askDrifted ? "primary" : undefined}
+              >
                 Rebuild the answer index
               </Button>
             ) : null}
@@ -203,9 +210,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           title="Rebuild the media index?"
           body={
             <p>
-              Every row is derived again from R2 and the repository, and a row whose file is gone is removed.
-              Alt text, captions and focal points are kept. The index holds <strong>{confirmRebuild}</strong>{" "}
-              row(s) now.
+              Every row is derived again from R2 and the repository, and a row whose file is gone is
+              removed. Alt text, captions and focal points are kept. The index holds{" "}
+              <strong>{confirmRebuild}</strong> row(s) now.
             </p>
           }
           requireTyped="1"
@@ -227,8 +234,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
         }
       >
         <p>
-          The media library reads an index of every file in R2 and every static asset in the repository. A
-          rebuild derives it again from both, for when the health check reports drift.
+          The media library reads an index of every file in R2 and every static asset in the
+          repository. A rebuild derives it again from both, for when the health check reports drift.
         </p>
       </Panel>
 
@@ -249,7 +256,11 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
               key={secret.name}
               title={secret.name}
               status={
-                secret.present ? <Status tone="ok">set</Status> : <Status tone="crit">NOT SET</Status>
+                secret.present ? (
+                  <Status tone="ok">set</Status>
+                ) : (
+                  <Status tone="crit">NOT SET</Status>
+                )
               }
               tone={secret.present ? undefined : "crit"}
             />
@@ -259,7 +270,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
 
       <Panel
         title="Searches that found nothing"
-        src={<Pill variant="outline">{misses.length === 0 ? "none" : `${misses.length} shown`}</Pill>}
+        src={
+          <Pill variant="outline">{misses.length === 0 ? "none" : `${misses.length} shown`}</Pill>
+        }
         flush={misses.length > 0}
         footer={
           <p className="cap-muted">
@@ -276,7 +289,9 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
               <Row
                 key={miss.query}
                 title={miss.query}
-                status={<Pill variant="outline">{`${miss.count} time${miss.count === 1 ? "" : "s"}`}</Pill>}
+                status={
+                  <Pill variant="outline">{`${miss.count} time${miss.count === 1 ? "" : "s"}`}</Pill>
+                }
               />
             ))}
           </RowList>

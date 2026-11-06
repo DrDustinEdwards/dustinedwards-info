@@ -30,15 +30,58 @@ const HOWTO_WHY_SENTENCES = 3;
 
 /** The sentences in some markdown: each run of words ended by ., ! or ? before a capital or the end, so "e.g. this" is one. @param {string} text */
 export function sentenceCount(text) {
-  return (text.replace(/`[^`]*`/g, "x").match(/[^.!?]*[A-Za-z0-9][^.!?]*[.!?]+(?=[*_]*(?:\s+[*_]*[A-Z0-9]|\s*$))/g) ?? []).length;
+  return (
+    text
+      .replace(/`[^`]*`/g, "x")
+      .match(/[^.!?]*[A-Za-z0-9][^.!?]*[.!?]+(?=[*_]*(?:\s+[*_]*[A-Z0-9]|\s*$))/g) ?? []
+  ).length;
 }
 
 /** Units are a closed list. A unit outside it fails until it is added here on purpose. */
 const PROTOCOL_UNITS = [
-  "µl", "µL", "ml", "mL", "l", "L", "M", "mM", "µM", "nM", "mg/ml", "µg/ml", "ng/µl", "%", "U", "g", "mg", "µg", "ng",
-  "volume", "volumes", "tube", "tubes", "reaction", "reactions", "plate", "plates", "x",
+  "µl",
+  "µL",
+  "ml",
+  "mL",
+  "l",
+  "L",
+  "M",
+  "mM",
+  "µM",
+  "nM",
+  "mg/ml",
+  "µg/ml",
+  "ng/µl",
+  "%",
+  "U",
+  "g",
+  "mg",
+  "µg",
+  "ng",
+  "volume",
+  "volumes",
+  "tube",
+  "tubes",
+  "reaction",
+  "reactions",
+  "plate",
+  "plates",
+  "x",
 ];
-const TIME_UNITS = ["second", "seconds", "sec", "s", "minute", "minutes", "min", "hour", "hours", "h", "day", "days"];
+const TIME_UNITS = [
+  "second",
+  "seconds",
+  "sec",
+  "s",
+  "minute",
+  "minutes",
+  "min",
+  "hour",
+  "hours",
+  "h",
+  "day",
+  "days",
+];
 
 /** A recorded gap: the marker and the reason, never the marker alone. */
 const GAP = /^MISSING:\s*(\S.*)$/s;
@@ -96,20 +139,38 @@ function itemName(item) {
 function collectGaps(value, path, gaps, errors, where = [], key = "") {
   if (typeof value === "string") {
     const m = GAP.exec(value);
-    if (m) gaps.push({ field: path, reason: (m[1] ?? "").trim(), ...(where.length > 0 ? { where } : {}) });
-    else if (/^MISSING\b/.test(value)) errors.push(`${path} is "${value}": write MISSING: and the reason it is missing`);
+    if (m)
+      gaps.push({
+        field: path,
+        reason: (m[1] ?? "").trim(),
+        ...(where.length > 0 ? { where } : {}),
+      });
+    else if (/^MISSING\b/.test(value))
+      errors.push(`${path} is "${value}": write MISSING: and the reason it is missing`);
   } else if (Array.isArray(value)) {
     value.forEach((item, i) => {
-      const object = item && typeof item === "object" ? /** @type {Record<string, unknown>} */ (item) : null;
+      const object =
+        item && typeof item === "object" ? /** @type {Record<string, unknown>} */ (item) : null;
       const name = object ? itemName(object) : null;
-      const words = name ? [...where, name] : value.length > 1 ? [...where, `${key.replace(/s$/, "")} ${i + 1}`] : where;
+      const words = name
+        ? [...where, name]
+        : value.length > 1
+          ? [...where, `${key.replace(/s$/, "")} ${i + 1}`]
+          : where;
       collectGaps(item, `${path}[${object ? label(object, i) : i}]`, gaps, errors, words, key);
     });
   } else if (value && typeof value === "object") {
     for (const [k, v] of Object.entries(value)) {
       // A list or a group under a key is named by its items; a value is named by its key.
       const leaf = path && !(v && typeof v === "object");
-      collectGaps(v, path ? `${path}.${k}` : k, gaps, errors, leaf ? [...where, k.replace(/_c$/, " (°C)").replaceAll("_", " ")] : where, k);
+      collectGaps(
+        v,
+        path ? `${path}.${k}` : k,
+        gaps,
+        errors,
+        leaf ? [...where, k.replace(/_c$/, " (°C)").replaceAll("_", " ")] : where,
+        k,
+      );
     }
   }
 }
@@ -153,20 +214,34 @@ function validateHistory(d, errors) {
   d.history.forEach((/** @type {any} */ h, /** @type {number} */ i) => {
     const at = `history[${h?.version ?? i}]`;
     if (!h || typeof h !== "object") return errors.push(`${at} must be a version`);
-    for (const k of Object.keys(h)) if (!["version", "date", "summary", "doi"].includes(k)) errors.push(`${at}.${k} is not a history field (version, date, summary, doi)`);
-    if (!VERSION_PATTERN.test(String(h.version ?? ""))) errors.push(`${at} needs a version of letters, digits, dots, hyphens and underscores`);
+    for (const k of Object.keys(h))
+      if (!["version", "date", "summary", "doi"].includes(k))
+        errors.push(`${at}.${k} is not a history field (version, date, summary, doi)`);
+    if (!VERSION_PATTERN.test(String(h.version ?? "")))
+      errors.push(`${at} needs a version of letters, digits, dots, hyphens and underscores`);
     if (seen.has(String(h.version))) errors.push(`${at}: the version is listed twice`);
     seen.add(String(h.version));
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(h.date ?? ""))) errors.push(`${at}.date is ${JSON.stringify(h.date)}; write the date as YYYY-MM-DD`);
-    else if (String(h.date) > newer) errors.push(`${at}.date ${h.date} is later than the entry above it; the history is newest first`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(h.date ?? "")))
+      errors.push(`${at}.date is ${JSON.stringify(h.date)}; write the date as YYYY-MM-DD`);
+    else if (String(h.date) > newer)
+      errors.push(
+        `${at}.date ${h.date} is later than the entry above it; the history is newest first`,
+      );
     else newer = String(h.date);
     if (!nonEmptyString(h.summary)) errors.push(`${at} needs a summary of what changed`);
-    if (h.doi !== undefined && !DOI_PATTERN.test(String(h.doi))) errors.push(`${at}.doi is ${JSON.stringify(h.doi)}; write the DOI as 10.xxxx/suffix, without the https://doi.org/ address`);
+    if (h.doi !== undefined && !DOI_PATTERN.test(String(h.doi)))
+      errors.push(
+        `${at}.doi is ${JSON.stringify(h.doi)}; write the DOI as 10.xxxx/suffix, without the https://doi.org/ address`,
+      );
   });
   if (d.version === undefined || d.version === null || isGap(d.version)) {
-    errors.push("history needs a version: the first entry is the version the page is at, so set version to it");
+    errors.push(
+      "history needs a version: the first entry is the version the page is at, so set version to it",
+    );
   } else if (String(d.history[0]?.version) !== String(d.version)) {
-    errors.push(`version is ${JSON.stringify(d.version)} but the first history entry is ${JSON.stringify(String(d.history[0]?.version))}; the newest entry is the current version`);
+    errors.push(
+      `version is ${JSON.stringify(d.version)} but the first history entry is ${JSON.stringify(String(d.history[0]?.version))}; the newest entry is the current version`,
+    );
   }
 }
 
@@ -187,15 +262,24 @@ export function validateProcedure(parsed, expect) {
   const profile = /** @type {typeof PROFILES[number]} */ (d.profile);
 
   if (!PROFILES.includes(profile)) {
-    errors.push(`profile is ${JSON.stringify(d.profile)}; it must be one of ${PROFILES.join(", ")}`);
+    errors.push(
+      `profile is ${JSON.stringify(d.profile)}; it must be one of ${PROFILES.join(", ")}`,
+    );
     return { errors, gaps };
   }
 
   /** @param {string} field */
   const required = (field) => {
     const value = d[field];
-    if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) {
-      errors.push(`${field} is required for a ${profile}; write the value, or "MISSING: <why>" if nobody has it yet`);
+    if (
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      errors.push(
+        `${field} is required for a ${profile}; write the value, or "MISSING: <why>" if nobody has it yet`,
+      );
       return false;
     }
     return true;
@@ -207,26 +291,42 @@ export function validateProcedure(parsed, expect) {
   const root = PROFILE_ROOTS[profile];
   if (required("path")) {
     if (typeof d.path !== "string" || d.path !== `${root}${expect.slug}`) {
-      errors.push(`path is ${JSON.stringify(d.path)}; a ${profile} named ${expect.slug}.md lives at ${root}${expect.slug}`);
+      errors.push(
+        `path is ${JSON.stringify(d.path)}; a ${profile} named ${expect.slug}.md lives at ${root}${expect.slug}`,
+      );
     }
   }
   for (const field of ["title", "seo_title", "description"]) {
     if (required(field) && !nonEmptyString(d[field])) errors.push(`${field} must be text`);
   }
   if (typeof d.seo_title === "string" && d.seo_title.length > SEO_TITLE_MAX) {
-    errors.push(`seo_title is ${d.seo_title.length} characters; Google clips near ${SEO_TITLE_MAX}`);
+    errors.push(
+      `seo_title is ${d.seo_title.length} characters; Google clips near ${SEO_TITLE_MAX}`,
+    );
   }
   if (typeof d.description === "string" && d.description.length > DESCRIPTION_MAX) {
-    errors.push(`description is ${d.description.length} characters; Google clips near ${DESCRIPTION_MAX}`);
+    errors.push(
+      `description is ${d.description.length} characters; Google clips near ${DESCRIPTION_MAX}`,
+    );
   }
-  if (d.draft !== undefined && typeof d.draft !== "boolean") errors.push("draft must be true or false");
+  if (d.draft !== undefined && typeof d.draft !== "boolean")
+    errors.push("draft must be true or false");
   // A variant made with the editor's Duplicate names the procedure it was copied from, and the version it was copied at.
   if (d.forked_from !== undefined) {
     const f = d.forked_from;
-    if (!f || typeof f !== "object" || Array.isArray(f) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(f.slug ?? ""))) {
-      errors.push("forked_from is { slug, version }: the file name of the procedure this one was copied from, and its version if it had one");
+    if (
+      !f ||
+      typeof f !== "object" ||
+      Array.isArray(f) ||
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(f.slug ?? ""))
+    ) {
+      errors.push(
+        "forked_from is { slug, version }: the file name of the procedure this one was copied from, and its version if it had one",
+      );
     } else {
-      for (const key of Object.keys(f)) if (!["slug", "version"].includes(key)) errors.push(`forked_from.${key} is not a forked_from field (slug, version)`);
+      for (const key of Object.keys(f))
+        if (!["slug", "version"].includes(key))
+          errors.push(`forked_from.${key} is not a forked_from field (slug, version)`);
       if (f.slug === expect.slug) errors.push("forked_from names this procedure itself");
     }
   }
@@ -234,15 +334,22 @@ export function validateProcedure(parsed, expect) {
   // What the library filters by. method, organism and course are ids from the closed lists in taxonomy.mjs; target
   // is the gene, region or sample, in words. Every procedure is some method, so method is required.
   // An organism is a non-strain organism or a strain of the lab registry (docs/REGISTRY.md), read from it as the host strains are.
-  const organisms = expect.strains ? [...Object.keys(NON_STRAIN_ORGANISMS), ...expect.strains] : null;
-  for (const [field, vocabulary] of /** @type {const} */ ([["method", METHODS], ["organism", null], ["course", COURSES]])) {
+  const organisms = expect.strains
+    ? [...Object.keys(NON_STRAIN_ORGANISMS), ...expect.strains]
+    : null;
+  for (const [field, vocabulary] of /** @type {const} */ ([
+    ["method", METHODS],
+    ["organism", null],
+    ["course", COURSES],
+  ])) {
     if (field === "method") required(field);
     const value = d[field];
     if (value === undefined || isGap(value)) continue;
     const allowed = vocabulary ? Object.keys(vocabulary) : organisms;
     // With no registry at hand an organism cannot be judged, and compileProcedure refuses a file that names one.
     if (!allowed) continue;
-    if (!Array.isArray(value)) errors.push(`${field} must be a list of ids from: ${allowed.join(", ")}`);
+    if (!Array.isArray(value))
+      errors.push(`${field} must be a list of ids from: ${allowed.join(", ")}`);
     else {
       for (const id of value) {
         if (allowed.includes(id)) continue;
@@ -256,13 +363,17 @@ export function validateProcedure(parsed, expect) {
     }
   }
   if (d.target !== undefined && !isGap(d.target)) {
-    if (!Array.isArray(d.target) || d.target.some((t) => !nonEmptyString(t))) errors.push("target must be a list of the genes, regions or samples it works on, each in words");
+    if (!Array.isArray(d.target) || d.target.some((t) => !nonEmptyString(t)))
+      errors.push(
+        "target must be a list of the genes, regions or samples it works on, each in words",
+      );
   }
 
   // Where it stands in the library's "Start here" list: a position (1, 2, ...), stored, never inferred. A position
   // two procedures share would make the order a guess, so the corpus check refuses it (checkStartHere).
   if (d.start_here !== undefined && !isGap(d.start_here)) {
-    if (!Number.isInteger(d.start_here) || d.start_here < 1) errors.push("start_here must be a position in the Start here list: 1, 2, 3 ...");
+    if (!Number.isInteger(d.start_here) || d.start_here < 1)
+      errors.push("start_here must be a position in the Start here list: 1, 2, 3 ...");
   }
 
   // Proof of use: the papers that used the method and the phages it produced, as slugs. Stated, never inferred.
@@ -270,7 +381,9 @@ export function validateProcedure(parsed, expect) {
 
   // The shared core.
   if (required("version") && !isGap(d.version) && !VERSION_PATTERN.test(String(d.version))) {
-    errors.push(`version is ${JSON.stringify(d.version)}; it sits in a URL, so use letters, digits, dots, hyphens and underscores, such as "2" or "1.1"`);
+    errors.push(
+      `version is ${JSON.stringify(d.version)}; it sits in a URL, so use letters, digits, dots, hyphens and underscores, such as "2" or "1.1"`,
+    );
   }
   validateHistory(d, errors);
   if (required("updated") && !isGap(d.updated) && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.updated))) {
@@ -280,8 +393,10 @@ export function validateProcedure(parsed, expect) {
     if (!Array.isArray(d.based_on)) errors.push("based_on must be a list of sources");
     else {
       d.based_on.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
-        if (!s || typeof s !== "object" || !nonEmptyString(s.citation)) errors.push(`based_on[${i}] needs a citation`);
-        else if (!nonEmptyString(s.for)) errors.push(`based_on[${s.citation}] needs a "for": what it is the source of`);
+        if (!s || typeof s !== "object" || !nonEmptyString(s.citation))
+          errors.push(`based_on[${i}] needs a citation`);
+        else if (!nonEmptyString(s.for))
+          errors.push(`based_on[${s.citation}] needs a "for": what it is the source of`);
       });
     }
   }
@@ -295,7 +410,9 @@ export function validateProcedure(parsed, expect) {
   }
   if (d.time !== undefined) {
     if (!d.time || typeof d.time !== "object") errors.push("time must hold total and hands_on");
-    else for (const k of Object.keys(d.time)) if (!["total", "hands_on"].includes(k)) errors.push(`time.${k} is not a time field`);
+    else
+      for (const k of Object.keys(d.time))
+        if (!["total", "hands_on"].includes(k)) errors.push(`time.${k} is not a time field`);
   }
 
   // Materials and equipment.
@@ -317,7 +434,8 @@ export function validateProcedure(parsed, expect) {
       }
     }
   }
-  if (d.equipment !== undefined && !Array.isArray(d.equipment)) errors.push("equipment must be a list");
+  if (d.equipment !== undefined && !Array.isArray(d.equipment))
+    errors.push("equipment must be a list");
   // An item that is lab-registry equipment names it with `equipment: <id>` (docs/REGISTRY.md): the protocol keeps its own phrase for
   // it (the setting is the protocol's), and who makes it is stored there once.
   if (Array.isArray(d.equipment)) {
@@ -325,15 +443,19 @@ export function validateProcedure(parsed, expect) {
       if (typeof e !== "object" || e === null || e.equipment === undefined) continue;
       const at = `equipment[${String(e.name)}]`;
       if (typeof e.equipment !== "string" || !PRIMER_ID.test(e.equipment)) {
-        errors.push(`${at}.equipment is the id of an equipment item in the lab registry (content/registry/equipment/), such as water-bath`);
+        errors.push(
+          `${at}.equipment is the id of an equipment item in the lab registry (content/registry/equipment/), such as water-bath`,
+        );
       } else if (expect.equipment && !expect.equipment.has(e.equipment)) {
-        errors.push(`${at}.equipment names no equipment in the lab registry (there is no content/registry/equipment/${e.equipment}.md)`);
+        errors.push(
+          `${at}.equipment names no equipment in the lab registry (there is no content/registry/equipment/${e.equipment}.md)`,
+        );
       }
     }
   }
   const equipmentNames = new Set(
     (Array.isArray(d.equipment) ? d.equipment : []).map((/** @type {any} */ e) =>
-      String(typeof e === "string" ? e : e?.name ?? "").toLowerCase(),
+      String(typeof e === "string" ? e : (e?.name ?? "")).toLowerCase(),
     ),
   );
 
@@ -345,14 +467,19 @@ export function validateProcedure(parsed, expect) {
       d.troubleshooting.forEach((/** @type {any} */ row, /** @type {number} */ i) => {
         const at = `troubleshooting[${row?.id ?? i}]`;
         if (!row || typeof row !== "object") return errors.push(`${at} must be a row`);
-        if (!/^[a-z0-9-]+$/.test(String(row.id ?? ""))) errors.push(`${at} needs an id in lowercase-with-hyphens`);
+        if (!/^[a-z0-9-]+$/.test(String(row.id ?? "")))
+          errors.push(`${at} needs an id in lowercase-with-hyphens`);
         if (troubleIds.has(row.id)) errors.push(`${at}: the id is used twice`);
         troubleIds.add(row.id);
         for (const col of ["step", "problem", "reason", "solution"]) {
-          if (!nonEmptyString(row[col])) errors.push(`${at} needs ${col}: the table's columns are step, problem, possible reason, solution`);
+          if (!nonEmptyString(row[col]))
+            errors.push(
+              `${at} needs ${col}: the table's columns are step, problem, possible reason, solution`,
+            );
         }
         for (const k of Object.keys(row)) {
-          if (!["id", "step", "problem", "reason", "solution"].includes(k)) errors.push(`${at}.${k} is not a column`);
+          if (!["id", "step", "problem", "reason", "solution"].includes(k))
+            errors.push(`${at}.${k} is not a column`);
         }
       });
     }
@@ -360,18 +487,23 @@ export function validateProcedure(parsed, expect) {
 
   // The method.
   const steps = allSteps(parsed);
-  if (steps.length === 0) errors.push("the procedure has no steps: a method section holds a numbered list");
+  if (steps.length === 0)
+    errors.push("the procedure has no steps: a method section holds a numbered list");
   let previous = 0;
   for (const section of parsed.sections) {
     for (const block of section.blocks) {
       if (block.type !== "steps") continue;
       const first = block.steps[0];
       if (first && first.number !== 1 && first.number !== previous + 1) {
-        errors.push(`line ${first.line}: step ${first.number} neither restarts at 1 nor follows step ${previous}`);
+        errors.push(
+          `line ${first.line}: step ${first.number} neither restarts at 1 nor follows step ${previous}`,
+        );
       }
       block.steps.forEach((step, i) => {
         if (i > 0 && step.number !== (block.steps[i - 1]?.number ?? 0) + 1) {
-          errors.push(`line ${step.line}: step ${step.number} follows step ${block.steps[i - 1]?.number}`);
+          errors.push(
+            `line ${step.line}: step ${step.number} follows step ${block.steps[i - 1]?.number}`,
+          );
         }
       });
       previous = block.steps[block.steps.length - 1]?.number ?? previous;
@@ -379,76 +511,130 @@ export function validateProcedure(parsed, expect) {
   }
 
   // A step's section, so a gap in it can say where it is (app/kb/gap-labels.mjs).
-  const sectionOf = new Map(parsed.sections.flatMap((section) => section.blocks.flatMap((block) => (block.type === "steps" ? block.steps.map((s) => [s, section.title]) : []))));
+  const sectionOf = new Map(
+    parsed.sections.flatMap((section) =>
+      section.blocks.flatMap((block) =>
+        block.type === "steps" ? block.steps.map((s) => [s, section.title]) : [],
+      ),
+    ),
+  );
   for (const step of steps) {
     const at = `line ${step.line}, step ${step.number}`;
     if (!step.source.trim()) errors.push(`${at} has no words`);
-    for (const reason of step.flags.critical) if (!reason) errors.push(`${at}: CRITICAL needs its reason`);
+    for (const reason of step.flags.critical)
+      if (!reason) errors.push(`${at}: CRITICAL needs its reason`);
     for (const kind of /** @type {const} */ (["pause", "why", "expect", "challenge", "solution"])) {
-      for (const text of step.flags[kind]) if (!text) errors.push(`${at}: an empty ${kind.toUpperCase()} flag`);
+      for (const text of step.flags[kind])
+        if (!text) errors.push(`${at}: an empty ${kind.toUpperCase()} flag`);
     }
     for (const id of step.flags.troubleshooting) {
-      if (!troubleIds.has(id)) errors.push(`${at}: TROUBLESHOOTING names "${id}", which is not a row id in troubleshooting`);
+      if (!troubleIds.has(id))
+        errors.push(
+          `${at}: TROUBLESHOOTING names "${id}", which is not a row id in troubleshooting`,
+        );
     }
-    if (step.flags.calc.length > 0 && profile !== "protocol") errors.push(`${at}: CALC belongs to the protocol profile`);
+    if (step.flags.calc.length > 0 && profile !== "protocol")
+      errors.push(`${at}: CALC belongs to the protocol profile`);
     const calcs = readCalcs(step.flags.calc);
-    if (new Set(calcs.map((c) => c.id)).size !== calcs.length) errors.push(`${at}: CALC names a calculator twice`);
+    if (new Set(calcs.map((c) => c.id)).size !== calcs.length)
+      errors.push(`${at}: CALC names a calculator twice`);
     for (const { id, values } of calcs) {
       const tool = Object.hasOwn(TOOLS, id) ? TOOLS[id] : undefined;
       if (!tool) {
-        errors.push(id ? `${at}: CALC names "${id}", which is not a calculator (${Object.keys(TOOLS).join(", ")})` : `${at}: CALC gives a value before it names a calculator`);
+        errors.push(
+          id
+            ? `${at}: CALC names "${id}", which is not a calculator (${Object.keys(TOOLS).join(", ")})`
+            : `${at}: CALC gives a value before it names a calculator`,
+        );
         continue;
       }
       for (const [name, value] of Object.entries(values)) {
-        if (!tool.fields.some((f) => f.name === name)) errors.push(`${at}: CALC ${id} has no field "${name}" (${tool.fields.map((f) => f.name).join(", ")})`);
+        if (!tool.fields.some((f) => f.name === name))
+          errors.push(
+            `${at}: CALC ${id} has no field "${name}" (${tool.fields.map((f) => f.name).join(", ")})`,
+          );
         // Every value is the step's own: a number that is not in the step's words is not from the record.
-        else if (!step.source.includes(value)) errors.push(`${at}: CALC ${id} ${name}=${value}, but the step does not state ${value}; a value is filled in only from the step's own words`);
+        else if (!step.source.includes(value))
+          errors.push(
+            `${at}: CALC ${id} ${name}=${value}, but the step does not state ${value}; a value is filled in only from the step's own words`,
+          );
       }
     }
     for (const seg of step.segments) {
       if (seg.type === "material") {
         const declared = materials.get(seg.name.toLowerCase());
         if (!declared && profile !== "recipe") {
-          errors.push(`${at}: @${seg.name} is not in materials; declare it there with its stock and amount`);
+          errors.push(
+            `${at}: @${seg.name} is not in materials; declare it there with its stock and amount`,
+          );
         }
-        if (seg.quantity && profile === "protocol" && !PROTOCOL_QUANTITY.test(`${seg.quantity.amount} ${seg.quantity.unit}`.trim())) {
-          errors.push(`${at}: @${seg.name}'s amount "${seg.quantity.raw}" is not a number and a unit from the closed list (${PROTOCOL_UNITS.join(", ")})`);
+        if (
+          seg.quantity &&
+          profile === "protocol" &&
+          !PROTOCOL_QUANTITY.test(`${seg.quantity.amount} ${seg.quantity.unit}`.trim())
+        ) {
+          errors.push(
+            `${at}: @${seg.name}'s amount "${seg.quantity.raw}" is not a number and a unit from the closed list (${PROTOCOL_UNITS.join(", ")})`,
+          );
         }
       }
-      if (seg.type === "equipment" && profile !== "recipe" && !equipmentNames.has(seg.name.toLowerCase())) {
+      if (
+        seg.type === "equipment" &&
+        profile !== "recipe" &&
+        !equipmentNames.has(seg.name.toLowerCase())
+      ) {
         errors.push(`${at}: #${seg.name} is not in equipment`);
       }
       if (seg.type === "timer") {
         if (!seg.quantity || seg.quantity.min === null || !TIME_UNITS.includes(seg.quantity.unit)) {
-          errors.push(`${at}: the timer ~{${seg.quantity?.raw ?? ""}} needs a number and a unit of time (${TIME_UNITS.join(", ")})`);
+          errors.push(
+            `${at}: the timer ~{${seg.quantity?.raw ?? ""}} needs a number and a unit of time (${TIME_UNITS.join(", ")})`,
+          );
         }
       }
     }
     if (profile === "protocol") {
       const { spins } = stepConditions(step);
       const words = step.segments.map((s) => (s.type === "text" ? s.value : "")).join("");
-      const spinsHere = /\bspin\b|\bspun\b|\bcentrifuge\b/i.test(words.replace(/pulse[- ]spin/gi, ""));
+      const spinsHere = /\bspin\b|\bspun\b|\bcentrifuge\b/i.test(
+        words.replace(/pulse[- ]spin/gi, ""),
+      );
       const hasG = spins.some((s) => s.unit === "x g");
       if (spinsHere && !hasG && step.flags.spin.length === 0) {
-        errors.push(`${at} spins with no g-force: add "> SPIN: <n> x g", or "> SPIN: MISSING: <why>" (a speed in rpm needs the rotor)`);
+        errors.push(
+          `${at} spins with no g-force: add "> SPIN: <n> x g", or "> SPIN: MISSING: <why>" (a speed in rpm needs the rotor)`,
+        );
       }
       for (const spin of step.flags.spin) {
-        if (isGap(spin)) gaps.push({ field: `step ${step.number} (line ${step.line}).spin`, reason: spin.replace(/^MISSING:\s*/, ""), section: sectionOf.get(step) ?? "" });
+        if (isGap(spin))
+          gaps.push({
+            field: `step ${step.number} (line ${step.line}).spin`,
+            reason: spin.replace(/^MISSING:\s*/, ""),
+            section: sectionOf.get(step) ?? "",
+          });
         else if (!/x g\b/.test(spin)) errors.push(`${at}: SPIN "${spin}" is not in x g`);
       }
     } else if (step.flags.spin.length > 0) {
       errors.push(`${at}: SPIN belongs to the protocol profile`);
     }
     // A tutorial teaches with challenges; a how-to links its reasoning out (S1, S5).
-    if (step.flags.challenge.length > 0 && !(profile === "computational" && d.type === "tutorial")) {
-      errors.push(`${at}: CHALLENGE belongs to a tutorial (a computational procedure with type: tutorial)`);
+    if (
+      step.flags.challenge.length > 0 &&
+      !(profile === "computational" && d.type === "tutorial")
+    ) {
+      errors.push(
+        `${at}: CHALLENGE belongs to a tutorial (a computational procedure with type: tutorial)`,
+      );
     }
-    if (step.flags.solution.length < step.flags.challenge.length) errors.push(`${at}: each CHALLENGE needs its SOLUTION after it`);
+    if (step.flags.solution.length < step.flags.challenge.length)
+      errors.push(`${at}: each CHALLENGE needs its SOLUTION after it`);
     if (profile === "computational" && d.type === "how-to") {
       for (const why of step.flags.why) {
         const n = sentenceCount(why);
         if (n > HOWTO_WHY_SENTENCES) {
-          errors.push(`${at}: WHY runs to ${n} sentences; a how-to keeps a reason to ${HOWTO_WHY_SENTENCES} at most, so put the rest on a page and link it under explanation`);
+          errors.push(
+            `${at}: WHY runs to ${n} sentences; a how-to keeps a reason to ${HOWTO_WHY_SENTENCES} at most, so put the rest on a page and link it under explanation`,
+          );
         }
       }
     }
@@ -456,23 +642,37 @@ export function validateProcedure(parsed, expect) {
     const platforms = new Set();
     for (const cmd of step.commands) {
       if (cmd.platform === null) continue;
-      if (profile !== "computational") errors.push(`${at}: platform= belongs to the computational profile`);
-      else if (!Object.hasOwn(PLATFORMS, cmd.platform)) errors.push(`${at}: platform=${cmd.platform} is not a platform (${Object.keys(PLATFORMS).join(", ")})`);
-      else if (platforms.has(cmd.platform)) errors.push(`${at}: two blocks for platform=${cmd.platform}; a step gives each platform one block`);
+      if (profile !== "computational")
+        errors.push(`${at}: platform= belongs to the computational profile`);
+      else if (!Object.hasOwn(PLATFORMS, cmd.platform))
+        errors.push(
+          `${at}: platform=${cmd.platform} is not a platform (${Object.keys(PLATFORMS).join(", ")})`,
+        );
+      else if (platforms.has(cmd.platform))
+        errors.push(
+          `${at}: two blocks for platform=${cmd.platform}; a step gives each platform one block`,
+        );
       platforms.add(cmd.platform);
     }
-    if (platforms.size === 1) errors.push(`${at}: a block names one platform alone; give each platform its block, or name none`);
+    if (platforms.size === 1)
+      errors.push(
+        `${at}: a block names one platform alone; give each platform its block, or name none`,
+      );
     if (profile === "computational") {
       for (const cmd of step.commands) {
         if (cmd.output === null && step.flags.expect.length === 0) {
-          errors.push(`${at}: a command needs its expected output: a \`\`\`output block after it, or an EXPECT flag`);
+          errors.push(
+            `${at}: a command needs its expected output: a \`\`\`output block after it, or an EXPECT flag`,
+          );
         }
       }
     } else if (step.commands.length > 0 && profile === "recipe") {
       errors.push(`${at}: a recipe step carries no commands`);
     }
-    if (step.photos.length > 0 && profile !== "recipe") errors.push(`${at}: step photos belong to the recipe profile`);
-    for (const photo of step.photos) if (!photo.alt.trim()) errors.push(`${at}: a step photo needs its alt text`);
+    if (step.photos.length > 0 && profile !== "recipe")
+      errors.push(`${at}: step photos belong to the recipe profile`);
+    for (const photo of step.photos)
+      if (!photo.alt.trim()) errors.push(`${at}: a step photo needs its alt text`);
   }
 
   // The profiles.
@@ -481,9 +681,19 @@ export function validateProcedure(parsed, expect) {
     if (m?.grams_per_cup === undefined) continue;
     const at = `materials[${String(m.name)}].grams_per_cup`;
     if (profile !== "recipe") errors.push(`${at} belongs to the recipe profile`);
-    else if (typeof m.grams_per_cup !== "number" || !(m.grams_per_cup > 0)) errors.push(`${at} is the grams in one US cup of it, a number above 0`);
+    else if (typeof m.grams_per_cup !== "number" || !(m.grams_per_cup > 0))
+      errors.push(`${at} is the grams in one US cup of it, a number above 0`);
   }
-  if (profile === "protocol") protocolRules(d, errors, required, materials, expect.primers ?? null, expect.strains ?? null, expect.reagents ?? null);
+  if (profile === "protocol")
+    protocolRules(
+      d,
+      errors,
+      required,
+      materials,
+      expect.primers ?? null,
+      expect.strains ?? null,
+      expect.reagents ?? null,
+    );
   if (profile === "recipe") recipeRules(d, errors, required);
   if (profile === "computational") computationalRules(d, errors, required, materials);
   else {
@@ -505,11 +715,22 @@ export function validateProcedure(parsed, expect) {
  * @param {ReadonlySet<string> | null} reagentIds the reagents the lab registry holds
  */
 function protocolRules(d, errors, required, materials, primerIds, strainIds, reagentIds) {
-  for (const field of ["host_strain", "status", "last_run", "biosafety", "biosafety_level", "scale"]) required(field);
+  for (const field of [
+    "host_strain",
+    "status",
+    "last_run",
+    "biosafety",
+    "biosafety_level",
+    "scale",
+  ])
+    required(field);
   // A host strain is the lab registry's, named by id and never typed (docs/REGISTRY.md): its organism, designation and
   // collection number are stored once, on its record.
   if (d.host_strain !== undefined && d.host_strain !== NOT_APPLICABLE && !isGap(d.host_strain)) {
-    if (!Array.isArray(d.host_strain)) errors.push(`host_strain must be a list of { strain: <id> }, "${NOT_APPLICABLE}" or "MISSING: <why>"`);
+    if (!Array.isArray(d.host_strain))
+      errors.push(
+        `host_strain must be a list of { strain: <id> }, "${NOT_APPLICABLE}" or "MISSING: <why>"`,
+      );
     else {
       /** @type {Set<string>} */
       const seenStrains = new Set();
@@ -517,39 +738,68 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
         const id = s?.strain;
         const at = `host_strain[${typeof id === "string" ? id : "?"}]`;
         if (typeof id !== "string" || !PRIMER_ID.test(id)) {
-          errors.push(`${at} is { strain: <id> }: the id of a strain in the lab registry (content/registry/strain/), such as foliorum. A protocol names its host strains and types none`);
+          errors.push(
+            `${at} is { strain: <id> }: the id of a strain in the lab registry (content/registry/strain/), such as foliorum. A protocol names its host strains and types none`,
+          );
         } else if (seenStrains.has(id)) {
           errors.push(`${at} is listed twice`);
         } else {
           seenStrains.add(id);
-          if (strainIds && !strainIds.has(id)) errors.push(`${at} names no strain in the lab registry (there is no content/registry/strain/${id}.md)`);
+          if (strainIds && !strainIds.has(id))
+            errors.push(
+              `${at} names no strain in the lab registry (there is no content/registry/strain/${id}.md)`,
+            );
         }
         for (const key of Object.keys(s ?? {})) {
-          if (key !== "strain") errors.push(`${at}.${key} is not a protocol field: a strain's organism and collection number are stored once, in the lab registry`);
+          if (key !== "strain")
+            errors.push(
+              `${at}.${key} is not a protocol field: a strain's organism and collection number are stored once, in the lab registry`,
+            );
         }
       }
     }
   }
-  if (d.status !== undefined && !isGap(d.status) && !Object.keys(PROTOCOL_STATUSES).includes(d.status)) {
-    errors.push(`status is ${JSON.stringify(d.status)}; it is one of ${Object.keys(PROTOCOL_STATUSES).join(", ")} (taxonomy.mjs), or "MISSING: <why>"`);
+  if (
+    d.status !== undefined &&
+    !isGap(d.status) &&
+    !Object.keys(PROTOCOL_STATUSES).includes(d.status)
+  ) {
+    errors.push(
+      `status is ${JSON.stringify(d.status)}; it is one of ${Object.keys(PROTOCOL_STATUSES).join(", ")} (taxonomy.mjs), or "MISSING: <why>"`,
+    );
   }
-  if (d.biosafety_level !== undefined && !isGap(d.biosafety_level) && !BIOSAFETY_LEVELS.includes(d.biosafety_level)) {
-    errors.push(`biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`);
+  if (
+    d.biosafety_level !== undefined &&
+    !isGap(d.biosafety_level) &&
+    !BIOSAFETY_LEVELS.includes(d.biosafety_level)
+  ) {
+    errors.push(
+      `biosafety_level is ${JSON.stringify(d.biosafety_level)}; it is one of ${BIOSAFETY_LEVELS.join(", ")}, or "MISSING: <why>" until Dustin sets it`,
+    );
   }
   if (d.biosafety && !isGap(d.biosafety) && d.biosafety !== NOT_APPLICABLE) {
     if (typeof d.biosafety !== "object" || !nonEmptyString(d.biosafety.organism)) {
-      errors.push('biosafety lists the agent only: { organism, strain, atcc }, or "not applicable"');
+      errors.push(
+        'biosafety lists the agent only: { organism, strain, atcc }, or "not applicable"',
+      );
     } else {
       for (const k of Object.keys(d.biosafety)) {
-        if (!["organism", "strain", "atcc"].includes(k)) errors.push(`biosafety.${k}: the agent only (organism, strain, ATCC number)`);
+        if (!["organism", "strain", "atcc"].includes(k))
+          errors.push(`biosafety.${k}: the agent only (organism, strain, ATCC number)`);
       }
     }
   }
   if (BIOSAFETY_BANNED.test(JSON.stringify(d.biosafety ?? ""))) {
-    errors.push("biosafety names a biosafety level, an IBC or the NIH Guidelines; it lists the agent only");
+    errors.push(
+      "biosafety names a biosafety level, an IBC or the NIH Guidelines; it lists the agent only",
+    );
   }
   if (d.scale && !isGap(d.scale)) {
-    if (typeof d.scale !== "object" || !(Number(d.scale.count) > 0) || !nonEmptyString(d.scale.unit)) {
+    if (
+      typeof d.scale !== "object" ||
+      !(Number(d.scale.count) > 0) ||
+      !nonEmptyString(d.scale.unit)
+    ) {
       errors.push("scale needs a count and a unit, such as { count: 5, unit: tube }");
     }
   }
@@ -559,10 +809,12 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
     else {
       for (const s of d.solutions) {
         const at = `solutions[${s?.id ?? "?"}]`;
-        if (!s || !/^[a-z0-9-]+$/.test(String(s.id ?? ""))) errors.push(`${at} needs an id in lowercase-with-hyphens`);
+        if (!s || !/^[a-z0-9-]+$/.test(String(s.id ?? "")))
+          errors.push(`${at} needs an id in lowercase-with-hyphens`);
         solutionIds.add(s?.id);
         if (!nonEmptyString(s?.name)) errors.push(`${at} needs a name`);
-        if (!Array.isArray(s?.components) || s.components.length === 0) errors.push(`${at} needs its components`);
+        if (!Array.isArray(s?.components) || s.components.length === 0)
+          errors.push(`${at} needs its components`);
         for (const field of ["storage", "shelf_life"]) {
           if (!nonEmptyString(s?.[field])) errors.push(`${at} needs ${field}, or "MISSING: <why>"`);
         }
@@ -570,7 +822,9 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
           if (!nonEmptyString(c?.name)) errors.push(`${at} has a component with no name`);
           for (const q of ["final", "amount"]) {
             if (c?.[q] !== undefined && !isGap(c[q]) && !PROTOCOL_QUANTITY.test(String(c[q]))) {
-              errors.push(`${at}.${c.name}.${q} is "${c[q]}", not a number and a unit from the closed list`);
+              errors.push(
+                `${at}.${c.name}.${q} is "${c[q]}", not a number and a unit from the closed list`,
+              );
             }
           }
         }
@@ -583,9 +837,13 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
     // are stored there once, and the protocol keeps its own amount, stock and final.
     if (m.reagent !== undefined) {
       if (typeof m.reagent !== "string" || !PRIMER_ID.test(m.reagent)) {
-        errors.push(`${at}.reagent is the id of a reagent in the lab registry (content/registry/reagent/), such as zinc-chloride`);
+        errors.push(
+          `${at}.reagent is the id of a reagent in the lab registry (content/registry/reagent/), such as zinc-chloride`,
+        );
       } else if (reagentIds && !reagentIds.has(m.reagent)) {
-        errors.push(`${at}.reagent names no reagent in the lab registry (there is no content/registry/reagent/${m.reagent}.md)`);
+        errors.push(
+          `${at}.reagent names no reagent in the lab registry (there is no content/registry/reagent/${m.reagent}.md)`,
+        );
       }
     }
     for (const key of ["amount", "final", "per"]) {
@@ -593,16 +851,20 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
       if (q === undefined || isGap(q)) continue;
       if (key === "per" && typeof q === "string" && !/^\d/.test(q)) continue;
       if (typeof q !== "string" || !PROTOCOL_QUANTITY.test(q)) {
-        errors.push(`${at}.${key} is "${String(q)}", not a number and a unit from the closed list (${PROTOCOL_UNITS.join(", ")})`);
+        errors.push(
+          `${at}.${key} is "${String(q)}", not a number and a unit from the closed list (${PROTOCOL_UNITS.join(", ")})`,
+        );
       }
     }
     if (m.stock !== undefined) {
       const stocks = Array.isArray(m.stock) ? m.stock : [m.stock];
       for (const s of stocks) {
-        if (!isGap(s) && !PROTOCOL_QUANTITY.test(String(s))) errors.push(`${at}.stock "${s}" is not a number and a unit from the closed list`);
+        if (!isGap(s) && !PROTOCOL_QUANTITY.test(String(s)))
+          errors.push(`${at}.stock "${s}" is not a number and a unit from the closed list`);
       }
     }
-    if (m.solution !== undefined && !solutionIds.has(m.solution)) errors.push(`${at}.solution names "${m.solution}", which is not in solutions`);
+    if (m.solution !== undefined && !solutionIds.has(m.solution))
+      errors.push(`${at}.solution names "${m.solution}", which is not in solutions`);
   }
   if (d.primers !== undefined && d.primers !== NOT_APPLICABLE && !isGap(d.primers)) {
     if (!Array.isArray(d.primers)) errors.push(`primers must be a list, or "${NOT_APPLICABLE}"`);
@@ -613,15 +875,23 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
         const id = p?.primer;
         const at = `primers[${typeof id === "string" ? id : "?"}]`;
         if (typeof id !== "string" || !PRIMER_ID.test(id)) {
-          errors.push(`${at} is { primer: <id> }: the id of a primer in the lab registry (content/registry/primer/), such as lco1490. A protocol names its primers and stores no sequence`);
+          errors.push(
+            `${at} is { primer: <id> }: the id of a primer in the lab registry (content/registry/primer/), such as lco1490. A protocol names its primers and stores no sequence`,
+          );
         } else if (seen.has(id)) {
           errors.push(`${at} is listed twice`);
         } else {
           seen.add(id);
-          if (primerIds && !primerIds.has(id)) errors.push(`${at} names no primer in the lab registry (there is no content/registry/primer/${id}.md)`);
+          if (primerIds && !primerIds.has(id))
+            errors.push(
+              `${at} names no primer in the lab registry (there is no content/registry/primer/${id}.md)`,
+            );
         }
         for (const key of Object.keys(p ?? {})) {
-          if (key !== "primer") errors.push(`${at}.${key} is not a protocol field: a primer's sequence, direction and set are stored once, in the lab registry`);
+          if (key !== "primer")
+            errors.push(
+              `${at}.${key} is not a protocol field: a primer's sequence, direction and set are stored once, in the lab registry`,
+            );
         }
       }
     }
@@ -630,15 +900,28 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
     if (!Array.isArray(d.cycling)) errors.push("cycling must be a list of programs");
     else {
       const walk = (/** @type {any} */ stage, /** @type {string} */ at) => {
-        if (Array.isArray(stage?.steps)) stage.steps.forEach((/** @type {any} */ s, /** @type {number} */ i) => walk(s, `${at}.steps[${i}]`));
-        if (typeof stage?.temperature_c === "string" && /^\d+ to \d+$/.test(stage.temperature_c) && stage.touchdown_step_c === undefined) {
-          errors.push(`${at} is a touchdown (${stage.temperature_c} °C) with no touchdown_step_c; write it, or "MISSING: <why>"`);
+        if (Array.isArray(stage?.steps))
+          stage.steps.forEach((/** @type {any} */ s, /** @type {number} */ i) =>
+            walk(s, `${at}.steps[${i}]`),
+          );
+        if (
+          typeof stage?.temperature_c === "string" &&
+          /^\d+ to \d+$/.test(stage.temperature_c) &&
+          stage.touchdown_step_c === undefined
+        ) {
+          errors.push(
+            `${at} is a touchdown (${stage.temperature_c} °C) with no touchdown_step_c; write it, or "MISSING: <why>"`,
+          );
         }
       };
       d.cycling.forEach((/** @type {any} */ program, /** @type {number} */ i) => {
         const at = `cycling[${program?.set ?? i}]`;
-        if (!Array.isArray(program?.program)) errors.push(`${at} needs its program: a list of stages`);
-        else program.program.forEach((/** @type {any} */ stage, /** @type {number} */ j) => walk(stage, `${at}.program[${stage?.stage ?? j}]`));
+        if (!Array.isArray(program?.program))
+          errors.push(`${at} needs its program: a list of stages`);
+        else
+          program.program.forEach((/** @type {any} */ stage, /** @type {number} */ j) =>
+            walk(stage, `${at}.program[${stage?.stage ?? j}]`),
+          );
       });
     }
   }
@@ -650,19 +933,32 @@ function protocolRules(d, errors, required, materials, primerIds, strainIds, rea
  * @param {(field: string) => boolean} required
  */
 function recipeRules(d, errors, required) {
-  for (const field of ["servings", "cuisine", "category", "prep_time", "cook_time", "image"]) required(field);
-  if (d.servings !== undefined && !isGap(d.servings) && !(Number(d.servings) > 0)) errors.push("servings must be a number");
+  for (const field of ["servings", "cuisine", "category", "prep_time", "cook_time", "image"])
+    required(field);
+  if (d.servings !== undefined && !isGap(d.servings) && !(Number(d.servings) > 0))
+    errors.push("servings must be a number");
   for (const field of ["prep_time", "cook_time"]) {
-    if (d[field] !== undefined && !isGap(d[field]) && !/^\d+(?:\.\d+)? (minutes?|hours?)$/.test(String(d[field]))) {
+    if (
+      d[field] !== undefined &&
+      !isGap(d[field]) &&
+      !/^\d+(?:\.\d+)? (minutes?|hours?)$/.test(String(d[field]))
+    ) {
       errors.push(`${field} is "${d[field]}"; write it as "20 minutes" or "1.5 hours"`);
     }
   }
-  if (d.image !== undefined && !isGap(d.image) && (!nonEmptyString(d.image?.src) || !nonEmptyString(d.image?.alt))) {
+  if (
+    d.image !== undefined &&
+    !isGap(d.image) &&
+    (!nonEmptyString(d.image?.src) || !nonEmptyString(d.image?.alt))
+  ) {
     errors.push("image needs src and alt");
   }
   if (d.substitutions !== undefined) {
     if (!Array.isArray(d.substitutions)) errors.push("substitutions must be a list");
-    else for (const s of d.substitutions) if (!nonEmptyString(s?.for) || !nonEmptyString(s?.use)) errors.push("each substitution needs for and use");
+    else
+      for (const s of d.substitutions)
+        if (!nonEmptyString(s?.for) || !nonEmptyString(s?.use))
+          errors.push("each substitution needs for and use");
   }
   if (d.scale !== undefined) errors.push("a recipe scales by servings, not scale");
 }
@@ -676,32 +972,44 @@ function recipeRules(d, errors, required) {
 function computationalRules(d, errors, required, materials) {
   required("environment");
   if (required("type") && !Object.hasOwn(HOWTO_TYPES, d.type)) {
-    errors.push(`type is ${JSON.stringify(d.type)}; it is one of ${Object.keys(HOWTO_TYPES).join(", ")}`);
+    errors.push(
+      `type is ${JSON.stringify(d.type)}; it is one of ${Object.keys(HOWTO_TYPES).join(", ")}`,
+    );
   }
   // A tutorial opens as a Carpentries episode does: what it answers, what the reader will be able to do, and how long (S2).
   for (const field of ["questions", "objectives", "key_points"]) {
     if (d[field] === undefined || isGap(d[field])) continue;
-    if (!Array.isArray(d[field]) || d[field].some((/** @type {unknown} */ x) => !nonEmptyString(x))) errors.push(`${field} must be a list of lines`);
+    if (!Array.isArray(d[field]) || d[field].some((/** @type {unknown} */ x) => !nonEmptyString(x)))
+      errors.push(`${field} must be a list of lines`);
   }
   if (d.type === "tutorial") {
     required("objectives");
-    if (!d.time || !nonEmptyString(d.time.total)) errors.push("a tutorial states its time: time.total, such as 30 minutes");
+    if (!d.time || !nonEmptyString(d.time.total))
+      errors.push("a tutorial states its time: time.total, such as 30 minutes");
   }
   if (d.explanation !== undefined && !isGap(d.explanation)) {
-    if (!Array.isArray(d.explanation)) errors.push("explanation must be a list of pages, each with a title and a url");
+    if (!Array.isArray(d.explanation))
+      errors.push("explanation must be a list of pages, each with a title and a url");
     else {
       d.explanation.forEach((/** @type {any} */ e, /** @type {number} */ i) => {
-        if (!e || typeof e !== "object" || !nonEmptyString(e.title)) errors.push(`explanation[${i}] needs a title`);
-        else if (typeof e.url !== "string" || !/^(\/[^/\s]|https:\/\/\S)/.test(e.url)) errors.push(`explanation[${e.title}].url is a page on this site (/...) or an https address`);
+        if (!e || typeof e !== "object" || !nonEmptyString(e.title))
+          errors.push(`explanation[${i}] needs a title`);
+        else if (typeof e.url !== "string" || !/^(\/[^/\s]|https:\/\/\S)/.test(e.url))
+          errors.push(
+            `explanation[${e.title}].url is a page on this site (/...) or an https address`,
+          );
       });
     }
   }
   if (required("prerequisites") && !isGap(d.prerequisites) && !Array.isArray(d.prerequisites)) {
     errors.push("prerequisites must be a list");
   }
-  if (d.scale !== undefined || d.servings !== undefined) errors.push("a computational procedure does not scale");
+  if (d.scale !== undefined || d.servings !== undefined)
+    errors.push("a computational procedure does not scale");
   for (const m of materials.values()) {
-    if (!["software", "data", "file"].includes(m.kind)) errors.push(`materials[${m.name}].kind must be software, data or file`);
-    if (m.kind === "software" && !nonEmptyString(m.version)) errors.push(`materials[${m.name}] is software and needs its version`);
+    if (!["software", "data", "file"].includes(m.kind))
+      errors.push(`materials[${m.name}].kind must be software, data or file`);
+    if (m.kind === "software" && !nonEmptyString(m.version))
+      errors.push(`materials[${m.name}] is software and needs its version`);
   }
 }

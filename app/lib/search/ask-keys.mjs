@@ -73,10 +73,7 @@ export function labelForUrl(url) {
     return `Paper ${(path ?? "").replace(/^\/research\/publications\//, "").replace(/\/$/, "")}`;
   }
   const target = anchor ?? (path ?? "").replace(/^\/writing\//, "");
-  const words = target
-    .replace(/^\d+-/, "")
-    .split("-")
-    .filter(Boolean);
+  const words = target.replace(/^\d+-/, "").split("-").filter(Boolean);
   if (words.length === 0) return "Untitled";
   return words.join(" ").replace(/^./, (c) => c.toUpperCase());
 }

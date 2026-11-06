@@ -1,13 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { proofErrors, proofFromFile, proofMarkdown, resolveProof } from "../app/kb/procedures/proof.mjs";
+import {
+  proofErrors,
+  proofFromFile,
+  proofMarkdown,
+  resolveProof,
+} from "../app/kb/procedures/proof.mjs";
 
 /* Proof of use (app/kb/procedures/proof.mjs): stored slugs, resolved to words and addresses from rows, never inferred. */
 
 await test("a proof of papers and phages is valid; every malformed shape is refused with a message that says which", () => {
   assert.deepEqual(proofErrors(undefined), []);
-  assert.deepEqual(proofErrors({ papers: ["10-1128-mra-01242-18"], phages: ["arlo", "finny"] }), []);
+  assert.deepEqual(
+    proofErrors({ papers: ["10-1128-mra-01242-18"], phages: ["arlo", "finny"] }),
+    [],
+  );
   assert.deepEqual(proofErrors({ phages: ["arlo"] }), []);
   assert.match(proofErrors("arlo")[0], /must be a mapping/);
   assert.match(proofErrors([])[0], /must be a mapping/);
@@ -20,7 +28,10 @@ await test("a proof of papers and phages is valid; every malformed shape is refu
 });
 
 await test("the record keeps slugs only, and null when nothing is stated", () => {
-  assert.deepEqual(proofFromFile({ papers: ["p"], phages: ["arlo"] }), { papers: ["p"], phages: ["arlo"] });
+  assert.deepEqual(proofFromFile({ papers: ["p"], phages: ["arlo"] }), {
+    papers: ["p"],
+    phages: ["arlo"],
+  });
   assert.deepEqual(proofFromFile({ phages: ["arlo"] }), { papers: [], phages: ["arlo"] });
   assert.equal(proofFromFile(null), null);
   assert.equal(proofFromFile(undefined), null);
@@ -46,10 +57,22 @@ await test("the words and addresses come from the rows; a slug the rows lack sta
 });
 
 await test("the twin lists the same papers and phages with absolute links, and nothing when there is no proof", () => {
-  const md = proofMarkdown(resolveProof({ papers: ["p1"], phages: ["arlo"] }, ROWS), "https://example.test");
+  const md = proofMarkdown(
+    resolveProof({ papers: ["p1"], phages: ["arlo"] }, ROWS),
+    "https://example.test",
+  );
   assert.ok(md.startsWith("## Proof of use\n\nPapers that used this method:"));
-  assert.ok(md.includes("- [A genome announcement](https://example.test/research/publications/p1/) (2018)"));
-  assert.ok(md.includes("Phages it produced:\n\n- [Arlo](https://example.test/research/phages#arlo)"));
+  assert.ok(
+    md.includes("- [A genome announcement](https://example.test/research/publications/p1/) (2018)"),
+  );
+  assert.ok(
+    md.includes("Phages it produced:\n\n- [Arlo](https://example.test/research/phages#arlo)"),
+  );
   assert.equal(proofMarkdown(null, "https://example.test"), "");
-  assert.ok(!proofMarkdown(resolveProof(proofFromFile({ phages: ["arlo"] }), ROWS), "https://example.test").includes("Papers that used"));
+  assert.ok(
+    !proofMarkdown(
+      resolveProof(proofFromFile({ phages: ["arlo"] }), ROWS),
+      "https://example.test",
+    ).includes("Papers that used"),
+  );
 });

@@ -14,9 +14,14 @@ import { roster } from "./schema";
  * written yet must not quietly render a page with no roster on it.
  */
 export async function listRoster(env: Env): Promise<Cohort[]> {
-  const rows = await getDb(env).select({ record: roster.record }).from(roster).orderBy(desc(roster.year));
+  const rows = await getDb(env)
+    .select({ record: roster.record })
+    .from(roster)
+    .orderBy(desc(roster.year));
   if (rows.length === 0) {
-    throw new Error("the roster table is empty, so there is no roster to draw. Run the content sync (npm run sync:content -- --remote), or sync_roster.");
+    throw new Error(
+      "the roster table is empty, so there is no roster to draw. Run the content sync (npm run sync:content -- --remote), or sync_roster.",
+    );
   }
   return sortCohorts(rows.map((row) => JSON.parse(row.record) as Cohort));
 }
@@ -24,7 +29,12 @@ export async function listRoster(env: Env): Promise<Cohort[]> {
 /** For Carrel's list: every row, with when D1 last wrote it. */
 export async function listRosterRows(env: Env) {
   const rows = await getDb(env)
-    .select({ slug: roster.slug, year: roster.year, record: roster.record, syncedAt: roster.syncedAt })
+    .select({
+      slug: roster.slug,
+      year: roster.year,
+      record: roster.record,
+      syncedAt: roster.syncedAt,
+    })
     .from(roster)
     .orderBy(desc(roster.year));
   return rows.map(({ record, ...row }) => ({ ...row, cohort: JSON.parse(record) as Cohort }));

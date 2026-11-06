@@ -29,7 +29,9 @@ export default function start(): void {
     const status = document.querySelector(`[data-tool-status="${instance}"]`);
     const detail = document.querySelector(`[data-tool-detail="${instance}"]`);
     if (!tool || !status || !detail) {
-      throw new Error(`tools: the calculator "${id}" has no definition, status region or detail region.`);
+      throw new Error(
+        `tools: the calculator "${id}" has no definition, status region or detail region.`,
+      );
     }
 
     const update = () => {

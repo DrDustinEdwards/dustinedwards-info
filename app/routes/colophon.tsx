@@ -28,9 +28,7 @@ import {
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
 import { PageShell } from "~/components/page-shell";
-import { HEALTH_EDGE_CACHE_CONTROL, publicHtmlHeaders, SITE,
-  pageMeta,
-} from "~/lib/seo";
+import { HEALTH_EDGE_CACHE_CONTROL, publicHtmlHeaders, SITE, pageMeta } from "~/lib/seo";
 
 import "~/styles/evidence-row.css";
 import "~/styles/prose.css";
@@ -103,9 +101,7 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   if (anchor.kind === "route" && anchor.path) {
     /* A link a reader cannot follow reads as evidence until clicked, so such a path is named, not linked. */
     const followable =
-      !anchor.path.includes(":") &&
-      !anchor.path.includes("*") &&
-      anchor.anonymousGet !== false;
+      !anchor.path.includes(":") && !anchor.path.includes("*") && anchor.anonymousGet !== false;
     return (
       <li>
         <span className="muted">route </span>
@@ -161,7 +157,10 @@ function HealthPanel({ health }: { health: Route.ComponentProps["loaderData"]["h
   if (health.state !== "fresh" && health.state !== "stale") return null;
   const fresh = health.state === "fresh";
   return (
-    <ul className="cap-annunciator colophon-annunciator" aria-label={fresh ? "Health checks" : "Health checks, last read too long ago"}>
+    <ul
+      className="cap-annunciator colophon-annunciator"
+      aria-label={fresh ? "Health checks" : "Health checks, last read too long ago"}
+    >
       {health.checks.map((check) => {
         const light = fresh ? LIGHTS[check.status] : { state: "off", word: "No reading" };
         return (
@@ -194,14 +193,18 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
       <div className="colophon-evidence">
         <EvidenceRow
           facts={[
-            <a key="bindings" href="#bindings">{stack.bindings.length} resources</a>,
+            <a key="bindings" href="#bindings">
+              {stack.bindings.length} resources
+            </a>,
             <a key="gates" href="#gates">
               {gates} {gates === 1 ? "check" : "checks"}
             </a>,
             <span key="health" className="evidence-health" data-health-age={healthAge}>
               <Link to="/health">
                 {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
-                {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
+                {health.state === "unreadable"
+                  ? "health status unreadable"
+                  : `${healthValue} passing`}
               </Link>
             </span>,
           ]}
@@ -237,8 +240,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         {stack.bindings.map((binding) => (
           <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
             <h3 id={`binding-${binding.name}`}>
-              <code>{binding.name}</code>{" "}
-              <span className="muted">({binding.kind})</span>
+              <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
             </h3>
             <p>{binding.what}</p>
             <p>
@@ -337,8 +339,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           {stack.notAdopted.map((entry) => (
             <div key={entry.name}>
               <dt>
-                {entry.name}{" "}
-                <span className="muted">({statusLabel(entry.status)})</span>
+                {entry.name} <span className="muted">({statusLabel(entry.status)})</span>
               </dt>
               <dd>{entry.reason}</dd>
             </div>
@@ -347,8 +348,8 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
       </div>
 
       <p className="muted">
-        For what the site records about a visit, and where each of those facts lives in
-        the code, see <Link to="/privacy">privacy</Link>.
+        For what the site records about a visit, and where each of those facts lives in the code,
+        see <Link to="/privacy">privacy</Link>.
       </p>
     </PageShell>
   );

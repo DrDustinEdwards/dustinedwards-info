@@ -14,7 +14,10 @@ await test("REPLAY: no target is refused, not defaulted to production", () => {
 });
 
 await test("both targets at once are refused", () => {
-  assert.throws(() => requireTarget(["--remote", "--local"], "build:og"), /both --remote and --local/);
+  assert.throws(
+    () => requireTarget(["--remote", "--local"], "build:og"),
+    /both --remote and --local/,
+  );
 });
 
 await test("a named target is returned as given", () => {

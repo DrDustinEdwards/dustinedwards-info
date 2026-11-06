@@ -24,10 +24,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const NS = JSON.parse(
-  readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8").replace(
-    /^\s*\/\/.*$/gm,
-    "",
-  ),
+  readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, ""),
 ).kv_namespaces.find((n) => n.binding === "PROBE_KV").id;
 
 // Run wrangler's JS entry point with this node binary. Not `npx` (needs a shell,
@@ -84,7 +81,9 @@ if (!agents.size) console.log("  (none reported a user-agent)");
 
 // ---- Question 1: era -----------------------------------------------------
 console.log("\nERA");
-const opened = rows.filter((r) => r.rpcMethod === "initialize" || r.rpcMethod === "server/discover");
+const opened = rows.filter(
+  (r) => r.rpcMethod === "initialize" || r.rpcMethod === "server/discover",
+);
 if (!opened.length) {
   console.log("  UNDETERMINED: neither initialize nor server/discover captured.");
 } else {
@@ -100,7 +99,9 @@ if (!opened.length) {
 const posts = rows.filter((r) => r.method === "POST" && r.path === "/mcp");
 console.log(`\n2026-07-28 REQUIRED FIELDS (over ${posts.length} POSTs to /mcp)`);
 for (const key of ["mcp-protocol-version", "mcp-method", "mcp-name"]) {
-  console.log(`  ${key}: ${posts.filter((r) => r.headerNames?.includes(key)).length}/${posts.length}`);
+  console.log(
+    `  ${key}: ${posts.filter((r) => r.headerNames?.includes(key)).length}/${posts.length}`,
+  );
 }
 console.log(
   `  _meta protocolVersion: ${posts.filter((r) => r.body?.metaProtocolVersion).length}/${posts.length}`,

@@ -5,7 +5,10 @@
 const GAP = /^MISSING:/;
 
 /** @param {unknown} v */
-const known = (v) => (v === undefined || v === null || v === "" || (typeof v === "string" && GAP.test(v)) ? null : String(v));
+const known = (v) =>
+  v === undefined || v === null || v === "" || (typeof v === "string" && GAP.test(v))
+    ? null
+    : String(v);
 
 /**
  * One line of a card: the temperature as its name and the time as its value. A temperature the file has not
@@ -16,7 +19,10 @@ const known = (v) => (v === undefined || v === null || v === "" || (typeof v ===
  */
 function line(step) {
   const temperature = known(step?.temperature_c);
-  return { name: temperature === null ? "--" : `${temperature} °C`, value: known(step?.time) ?? "--" };
+  return {
+    name: temperature === null ? "--" : `${temperature} °C`,
+    value: known(step?.time) ?? "--",
+  };
 }
 
 /**

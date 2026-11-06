@@ -10,7 +10,8 @@ export const TOPICS = [
   {
     id: "human-simian-retroviruses",
     label: "Human and simian retroviruses",
-    description: "HTLV-1 accessory proteins and how related retroviruses establish infection and persistence",
+    description:
+      "HTLV-1 accessory proteins and how related retroviruses establish infection and persistence",
   },
   {
     id: "avian-retroviruses",

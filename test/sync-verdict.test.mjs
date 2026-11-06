@@ -39,5 +39,9 @@ await test("ship reads the counts from the run that wrote last, not the first", 
   const first = { code: 1, text: FIRST };
   const confirm = { code: 0, text: CONFIRM };
   assert.deepEqual(searchCounts(standingRun(first, confirm).text), ["200", "200", "200"]);
-  assert.equal(searchCounts(standingRun(first, null).text), null, "with no confirming run, the first stands");
+  assert.equal(
+    searchCounts(standingRun(first, null).text),
+    null,
+    "with no confirming run, the first stands",
+  );
 });

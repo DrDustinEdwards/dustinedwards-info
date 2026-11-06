@@ -10,9 +10,11 @@
  * put the assertion in the test.
  */
 
-const ASSERTING = /\b(?:assert|expect|check|verify|ensure|validate|must|fail|should|done)\w*\s*[.(]|\.(?:rejects|resolves)\b|\bt\.assert\b/i;
+const ASSERTING =
+  /\b(?:assert|expect|check|verify|ensure|validate|must|fail|should|done)\w*\s*[.(]|\.(?:rejects|resolves)\b|\bt\.assert\b/i;
 const CALL = /(?<![\w.$])(?:test|it)\s*\(/g;
-const REGEX_CAN_START_AFTER = /[(,=:!&|?{};[+\-*%<>~^]$|(?:^|[^\w$.])(?:return|typeof|case|void|delete|in|of|await|yield)$/;
+const REGEX_CAN_START_AFTER =
+  /[(,=:!&|?{};[+\-*%<>~^]$|(?:^|[^\w$.])(?:return|typeof|case|void|delete|in|of|await|yield)$/;
 
 /**
  * The index just past the bracket that closes the one at `open`.
@@ -36,7 +38,10 @@ function closeOf(source, open) {
       for (i += 1; i < source.length && source[i] !== ch; i += 1) if (source[i] === "\\") i += 1;
     } else if (ch === "`") {
       i = endOfTemplate(source, i);
-    } else if (ch === "/" && REGEX_CAN_START_AFTER.test(source.slice(Math.max(0, i - 12), i).trimEnd())) {
+    } else if (
+      ch === "/" &&
+      REGEX_CAN_START_AFTER.test(source.slice(Math.max(0, i - 12), i).trimEnd())
+    ) {
       let inClass = false;
       for (i += 1; i < source.length; i += 1) {
         if (source[i] === "\\") i += 1;
@@ -74,7 +79,8 @@ function endOfTemplate(source, start) {
 function assertingHelpers(source) {
   /** @type {string[]} */
   const names = [];
-  const declaration = /(?:^|\n)\s*(?:async\s+)?function\s+(\w+)\s*\(|(?:^|\n)\s*const\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>)/g;
+  const declaration =
+    /(?:^|\n)\s*(?:async\s+)?function\s+(\w+)\s*\(|(?:^|\n)\s*const\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>)/g;
   for (const match of source.matchAll(declaration)) {
     const name = match[1] ?? match[2];
     const open = source.indexOf("{", (match.index ?? 0) + match[0].length);
@@ -98,7 +104,11 @@ export function testsWithoutAssertions(source) {
     const call = source.slice(open, end);
     // `test.skip`, `test.todo` and `test.each` are not matched by CALL; a call with no function in it is not a test.
     if (!/=>|\bfunction\b/.test(call)) continue;
-    if (ASSERTING.test(call) || helpers.some((helper) => new RegExp(`(?<![\\w.$])${helper}\\s*\\(`).test(call))) continue;
+    if (
+      ASSERTING.test(call) ||
+      helpers.some((helper) => new RegExp(`(?<![\\w.$])${helper}\\s*\\(`).test(call))
+    )
+      continue;
     const name = /^\(\s*(["'`])([^]*?)\1/.exec(call)?.[2] ?? "(unnamed)";
     found.push({ line: source.slice(0, open).split("\n").length, name });
   }

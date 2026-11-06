@@ -97,11 +97,19 @@ export function DisclosureMenu({
         <PopoverTrigger
           aria-label={summaryLabel}
           title={summaryLabel}
-          {...(iconOnly ? { "data-icon-only": "", "data-variant": "quiet", "data-size": "sm" } : {})}
+          {...(iconOnly
+            ? { "data-icon-only": "", "data-variant": "quiet", "data-size": "sm" }
+            : {})}
         >
           {summary}
         </PopoverTrigger>
-        <PopoverContent side="bottom" align="end" size="auto" data-flush="" aria-label={summaryLabel ?? "Actions"}>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          size="auto"
+          data-flush=""
+          aria-label={summaryLabel ?? "Actions"}
+        >
           <div className="cap-listbox">{children}</div>
         </PopoverContent>
       </Popover>

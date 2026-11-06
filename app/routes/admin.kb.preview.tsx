@@ -26,9 +26,11 @@ const STYLES = [appCss, pageShellCss, shellCss, proseCss, procedureCss];
  * messages, as a 200, since a half-made edit is ordinary.
  */
 export async function action({ request, params, context }: Route.ActionArgs) {
-  if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
+  if (request.method !== "POST")
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
   const slug = params.slug;
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return Response.json({ error: "No such entry." }, { status: 404 });
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
+    return Response.json({ error: "No such entry." }, { status: 404 });
   const form = await cappedForm(request, ADMIN_FORM_BYTES);
   const written = rawFromForm(String(form.get("original") ?? ""), String(form.get("model") ?? ""));
   if ("errors" in written) return Response.json({ errors: written.errors });

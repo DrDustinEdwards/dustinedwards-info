@@ -9,7 +9,10 @@ import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as bibAllLoader } from "~/routes/publications[.bib]";
-import Publications, { headers as indexHeaders, loader as indexLoader } from "~/routes/publications";
+import Publications, {
+  headers as indexHeaders,
+  loader as indexLoader,
+} from "~/routes/publications";
 import Paper, { headers as paperHeaders, loader as paperLoader } from "~/routes/publications.$slug";
 import { loader as twinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
@@ -18,7 +21,13 @@ import { checkPublicationsDaily, PUBLICATIONS_MAILED_KEY } from "~/lib/publicati
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
-import { source as storedSource, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
+import {
+  source as storedSource,
+  stubSources,
+  versionOf,
+  writes,
+  type SourceStub,
+} from "./source-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCitations, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -51,7 +60,9 @@ function get(url: string): Promise<Response> {
 }
 
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(argsFor(new Request(url, { method, headers: headersFor(), body: JSON.stringify(body) })));
+  return action(
+    argsFor(new Request(url, { method, headers: headersFor(), body: JSON.stringify(body) })),
+  );
 }
 
 /** A manuscript with no DOI yet: the kind of record the tool exists to add. */
@@ -117,7 +128,9 @@ async function twin(slug: string) {
 describe("the registry's ids", () => {
   it("keeps a bare slug for a post and prefixes every other kind with a dot, which a slug may itself contain", () => {
     expect(encodeContentId("post", "a-post")).toBe("a-post");
-    expect(encodeContentId("publication", "10-1128-mra-00888-24")).toBe("publication.10-1128-mra-00888-24");
+    expect(encodeContentId("publication", "10-1128-mra-00888-24")).toBe(
+      "publication.10-1128-mra-00888-24",
+    );
     expect(decodeContentId("a-post")).toEqual({ kind: "post", slug: "a-post" });
     expect(decodeContentId("publication.a.b")).toEqual({ kind: "publication", slug: "a.b" });
   });
@@ -126,7 +139,10 @@ describe("the registry's ids", () => {
 describe("an edit through the Carrel adapter reaches the page on the next request", () => {
   it("changes the page, the twin and the stored row with no build and no deploy", async () => {
     const before = (await pageData(SLUG)) as { paper: { summary: string } };
-    const edited = godfather.replace(/^summary: .*$/m, 'summary: "A sentence an edit through Carrel put on the paper."');
+    const edited = godfather.replace(
+      /^summary: .*$/m,
+      'summary: "A sentence an edit through Carrel put on the paper."',
+    );
     expect(edited).not.toBe(godfather);
     expect(before.paper.summary).not.toContain("an edit through Carrel");
 
@@ -137,10 +153,16 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
     });
     expect(response.status).toBe(200);
     // Saved through saveDraft, a live paper stays live, and the answer carries the contract's id.
-    expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-live-edit" });
-    expect((await storedSource(publicationPath(SLUG)))).toBe(edited);
+    expect(await response.json()).toMatchObject({
+      id: ID,
+      status: "published",
+      changeId: "chg-live-edit",
+    });
+    expect(await storedSource(publicationPath(SLUG))).toBe(edited);
     const commit = (await writes()).map((w) => ({ body: { message: w.message } }))[0];
-    expect((commit?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-live-edit]");
+    expect((commit?.body as { message?: string } | undefined)?.message).toContain(
+      "[carrel:chg-live-edit]",
+    );
 
     const after = (await pageData(SLUG)) as { paper: { summary: string } };
     expect(after.paper.summary).toBe("A sentence an edit through Carrel put on the paper.");
@@ -158,7 +180,10 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
       changeId: "chg-unchanged",
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, version: await versionOf(publicationPath(SLUG)) });
+    expect(await response.json()).toMatchObject({
+      id: ID,
+      version: await versionOf(publicationPath(SLUG)),
+    });
     expect((await writes()).length > 0).toBe(false);
   });
 });
@@ -166,39 +191,72 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
 describe("a new record", () => {
   it("is a draft until it is published, and then it is on the page, the twin and the sitemap", async () => {
     const source = manuscript();
-    const created = await send("PUT", `${PREFIX}/content/publication.cryo-em-example-manuscript/draft`, {
-      source,
-      expectedVersion: null,
-      changeId: "chg-new",
-    });
+    const created = await send(
+      "PUT",
+      `${PREFIX}/content/publication.cryo-em-example-manuscript/draft`,
+      {
+        source,
+        expectedVersion: null,
+        changeId: "chg-new",
+      },
+    );
     expect(created.status).toBe(200);
-    expect(await created.json()).toMatchObject({ id: "publication.cryo-em-example-manuscript", status: "draft" });
-    expect((await storedSource(publicationPath("cryo-em-example-manuscript")))).toBe(source);
+    expect(await created.json()).toMatchObject({
+      id: "publication.cryo-em-example-manuscript",
+      status: "draft",
+    });
+    expect(await storedSource(publicationPath("cryo-em-example-manuscript"))).toBe(source);
 
     // A draft is not public: its page and twin answer as absent.
     await expect(pageData("cryo-em-example-manuscript")).rejects.toMatchObject({ status: 404 });
     expect((await twin("cryo-em-example-manuscript")).status).toBe(404);
 
-    const listed = (await (await get(`${PREFIX}/content?q=cryo-em`)).json()) as { items: Array<{ id: string; kind: string; status: string }> };
-    expect(listed.items).toEqual([expect.objectContaining({ id: "publication.cryo-em-example-manuscript", kind: "publication", status: "draft" })]);
+    const listed = (await (await get(`${PREFIX}/content?q=cryo-em`)).json()) as {
+      items: Array<{ id: string; kind: string; status: string }>;
+    };
+    expect(listed.items).toEqual([
+      expect.objectContaining({
+        id: "publication.cryo-em-example-manuscript",
+        kind: "publication",
+        status: "draft",
+      }),
+    ]);
 
-    const published = await send("POST", `${PREFIX}/content/publication.cryo-em-example-manuscript/publish`, {
-      expectedVersion: (await (await get(`${PREFIX}/content/publication.cryo-em-example-manuscript`)).json() as { version: string }).version,
-      changeId: "chg-publish",
-    });
+    const published = await send(
+      "POST",
+      `${PREFIX}/content/publication.cryo-em-example-manuscript/publish`,
+      {
+        expectedVersion: (
+          (await (
+            await get(`${PREFIX}/content/publication.cryo-em-example-manuscript`)
+          ).json()) as { version: string }
+        ).version,
+        changeId: "chg-publish",
+      },
+    );
     expect(published.status).toBe(200);
     expect(await published.json()).toMatchObject({ status: "published" });
 
     // A manuscript has no DOI: the page says so by leaving it out, and carries no Scholar tags.
-    const page = (await pageData("cryo-em-example-manuscript")) as { paper: { doi: string | null; stage: string } };
+    const page = (await pageData("cryo-em-example-manuscript")) as {
+      paper: { doi: string | null; stage: string };
+    };
     expect(page.paper).toMatchObject({ doi: null, stage: "submitted" });
-    const html = renderRoute("/research/publications/cryo-em-example-manuscript/", Paper, { loaderData: page });
+    const html = renderRoute("/research/publications/cryo-em-example-manuscript/", Paper, {
+      loaderData: page,
+    });
     expect(html).toContain("submitted");
     expect(html).not.toContain("doi.org/null");
     const body = await (await twin("cryo-em-example-manuscript")).text();
     expect(body).toContain("# An example cryo-EM manuscript under review");
 
-    const sitemap = await ((await sitemapLoader({ request: new Request(`${ORIGIN}/sitemap.xml`), params: {}, context: routeContext() } as never)) as Response).text();
+    const sitemap = await (
+      (await sitemapLoader({
+        request: new Request(`${ORIGIN}/sitemap.xml`),
+        params: {},
+        context: routeContext(),
+      } as never)) as Response
+    ).text();
     expect(sitemap).toContain("/research/publications/cryo-em-example-manuscript/");
   });
 });
@@ -207,23 +265,37 @@ describe("everything a save changes carries the tag it purges", () => {
   it("tags the index, a page, the exports and the twin with one tag, which a save purges with the home and search pages' tag", async () => {
     expect(new Headers(indexHeaders()).get("Cache-Tag")).toBe("publications");
     expect(new Headers(paperHeaders()).get("Cache-Tag")).toBe("publications");
-    const bib = (await bibAllLoader({ request: new Request(`${ORIGIN}/research/publications.bib`), params: {}, context: routeContext() } as never)) as Response;
+    const bib = (await bibAllLoader({
+      request: new Request(`${ORIGIN}/research/publications.bib`),
+      params: {},
+      context: routeContext(),
+    } as never)) as Response;
     expect(bib.headers.get("cache-tag")).toBe("publications");
     expect((await twin(SLUG)).headers.get("cache-tag")).toBe("publications");
   });
 
   it("lists only the published papers on the index and keeps a draft out of it", async () => {
-    await testEnv.DB.prepare("UPDATE publications SET status = 'draft' WHERE slug = ?1").bind(SLUG).run();
+    await testEnv.DB.prepare("UPDATE publications SET status = 'draft' WHERE slug = ?1")
+      .bind(SLUG)
+      .run();
     try {
-      const data = (await indexLoader({ request: new Request(`${ORIGIN}/research/publications`), params: {}, context: routeContext() } as never)) as {
+      const data = (await indexLoader({
+        request: new Request(`${ORIGIN}/research/publications`),
+        params: {},
+        context: routeContext(),
+      } as never)) as {
         publications: Array<{ slug: string }>;
       };
       expect(data.publications.some((p) => p.slug === SLUG)).toBe(false);
       expect(data.publications.length).toBeGreaterThan(30);
-      expect(renderRoute("/research/publications", Publications, { loaderData: data })).not.toContain(SLUG);
+      expect(
+        renderRoute("/research/publications", Publications, { loaderData: data }),
+      ).not.toContain(SLUG);
       await expect(pageData(SLUG)).rejects.toMatchObject({ status: 404 });
     } finally {
-      await testEnv.DB.prepare("UPDATE publications SET status = 'published' WHERE slug = ?1").bind(SLUG).run();
+      await testEnv.DB.prepare("UPDATE publications SET status = 'published' WHERE slug = ?1")
+        .bind(SLUG)
+        .run();
     }
   });
 });
@@ -236,15 +308,22 @@ describe("a file the validator refuses", () => {
       topics: ["not-a-topic"],
       summary: "One sentence. And a second one.",
     });
-    const response = await send("PUT", `${PREFIX}/content/publication.cryo-em-example-manuscript/draft`, {
-      source,
-      expectedVersion: null,
-      changeId: "chg-bad",
-    });
+    const response = await send(
+      "PUT",
+      `${PREFIX}/content/publication.cryo-em-example-manuscript/draft`,
+      {
+        source,
+        expectedVersion: null,
+        changeId: "chg-bad",
+      },
+    );
     expect(response.status).toBe(422);
     const text = JSON.stringify(await response.json());
-    for (const field of ["title:", "authors[1]:", "topics[0]:", "summary:"]) expect(text).toContain(field);
-    expect(((await storedSource(publicationPath("cryo-em-example-manuscript"))) !== undefined)).toBe(false);
+    for (const field of ["title:", "authors[1]:", "topics[0]:", "summary:"])
+      expect(text).toContain(field);
+    expect((await storedSource(publicationPath("cryo-em-example-manuscript"))) !== undefined).toBe(
+      false,
+    );
     expect((await writes()).length > 0).toBe(false);
   });
 
@@ -257,7 +336,7 @@ describe("a file the validator refuses", () => {
     });
     expect(response.status).toBe(422);
     expect(JSON.stringify(await response.json())).toContain("is not in the repository");
-    expect((await storedSource(publicationPath(SLUG)))).toBe(godfather);
+    expect(await storedSource(publicationPath(SLUG))).toBe(godfather);
   });
 
   it("REFUSES a slug that would not fit a Carrel content id", async () => {
@@ -268,7 +347,7 @@ describe("a file the validator refuses", () => {
       changeId: "chg-long",
     });
     expect(response.status).toBeGreaterThanOrEqual(400);
-    expect(((await storedSource(publicationPath(slug))) !== undefined)).toBe(false);
+    expect((await storedSource(publicationPath(slug))) !== undefined).toBe(false);
   });
 });
 
@@ -279,7 +358,9 @@ describe("the citation count is never blank while it refreshes", () => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (!url.startsWith("https://api.openalex.org/")) throw new Error(`unexpected fetch ${url}`);
       return status === 200
-        ? new Response(JSON.stringify({ cited_by_count: count, id: "https://openalex.org/W1" }), { status })
+        ? new Response(JSON.stringify({ cited_by_count: count, id: "https://openalex.org/W1" }), {
+            status,
+          })
         : new Response("no", { status });
     });
 
@@ -312,7 +393,9 @@ describe("the citation count is never blank while it refreshes", () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect((await read({ OPENALEX_API_KEY: "k" }))?.count).toBe(5);
     expect((await read({ OPENALEX_API_KEY: "k" }))?.count).toBe(5);
-    expect(errors.mock.calls.some(([line]) => String(line).includes("citation-count-failed"))).toBe(true);
+    expect(errors.mock.calls.some(([line]) => String(line).includes("citation-count-failed"))).toBe(
+      true,
+    );
     errors.mockRestore();
   });
 
@@ -323,7 +406,9 @@ describe("the citation count is never blank while it refreshes", () => {
     const result = await refreshCitations({ ...testEnv, OPENALEX_API_KEY: "k" } as never, [DOI]);
     errors.mockRestore();
     expect(result.refreshed).toBe(0);
-    expect(result.failures).toEqual([expect.objectContaining({ doi: DOI, stage: "openalex-status" })]);
+    expect(result.failures).toEqual([
+      expect.objectContaining({ doi: DOI, stage: "openalex-status" }),
+    ]);
     expect((await read())?.count).toBe(5);
   });
 
@@ -360,12 +445,23 @@ describe("the publications are checked against ORCID and Crossref", () => {
   const orcidBody = {
     group: [
       {
-        "external-ids": { "external-id": [{ "external-id-type": "doi", "external-id-value": KNOWN }] },
-        "work-summary": [{ title: { title: { value: "Known" } }, "publication-date": { year: { value: "2024" } } }],
+        "external-ids": {
+          "external-id": [{ "external-id-type": "doi", "external-id-value": KNOWN }],
+        },
+        "work-summary": [
+          { title: { title: { value: "Known" } }, "publication-date": { year: { value: "2024" } } },
+        ],
       },
       {
-        "external-ids": { "external-id": [{ "external-id-type": "doi", "external-id-value": NEW }] },
-        "work-summary": [{ title: { title: { value: "Cryo-EM of a phage" } }, "publication-date": { year: { value: "2026" } } }],
+        "external-ids": {
+          "external-id": [{ "external-id-type": "doi", "external-id-value": NEW }],
+        },
+        "work-summary": [
+          {
+            title: { title: { value: "Cryo-EM of a phage" } },
+            "publication-date": { year: { value: "2026" } },
+          },
+        ],
       },
     ],
   };
@@ -381,13 +477,29 @@ describe("the publications are checked against ORCID and Crossref", () => {
       if (url.startsWith("https://api.crossref.org/works")) {
         const q = new URL(url).searchParams;
         if (q.get("filter")?.startsWith("orcid:")) {
-          return Response.json(crossrefBody([{ DOI: NEW, title: ["Cryo-EM of a phage"], issued: { "date-parts": [[2026]] } }]));
+          return Response.json(
+            crossrefBody([
+              { DOI: NEW, title: ["Cryo-EM of a phage"], issued: { "date-parts": [[2026]] } },
+            ]),
+          );
         }
         return Response.json(
           crossrefBody([
-            { DOI: NAMED, title: ["A preprint"], author: [{ given: "Dustin C.", family: "Edwards" }] },
-            { DOI: "10.1/someone-else", title: ["Other"], author: [{ given: "Dana", family: "Edwards" }] },
-            { DOI: NEW, title: ["Cryo-EM of a phage"], author: [{ given: "Dustin", family: "Edwards" }] },
+            {
+              DOI: NAMED,
+              title: ["A preprint"],
+              author: [{ given: "Dustin C.", family: "Edwards" }],
+            },
+            {
+              DOI: "10.1/someone-else",
+              title: ["Other"],
+              author: [{ given: "Dana", family: "Edwards" }],
+            },
+            {
+              DOI: NEW,
+              title: ["Cryo-EM of a phage"],
+              author: [{ given: "Dustin", family: "Edwards" }],
+            },
           ]),
         );
       }
@@ -408,7 +520,9 @@ describe("the publications are checked against ORCID and Crossref", () => {
       notOnOrcid: Array<{ doi: string }>;
       failures: unknown[];
     };
-    expect(data.notOnSite).toEqual([expect.objectContaining({ doi: NEW, year: 2026, sources: ["orcid", "crossref"] })]);
+    expect(data.notOnSite).toEqual([
+      expect.objectContaining({ doi: NEW, year: 2026, sources: ["orcid", "crossref"] }),
+    ]);
     // Only the owner's name, and nothing already on a list or on the site.
     expect(data.nameMatches.map((w) => w.doi)).toEqual([NAMED]);
     expect(data.notOnOrcid.map((p) => p.doi.toLowerCase())).not.toContain(KNOWN.toLowerCase());
@@ -422,7 +536,11 @@ describe("the publications are checked against ORCID and Crossref", () => {
     expect(result).toMatchObject({
       ok: false,
       status: 502,
-      detail: { failures: [{ source: "orcid", detail: "HTTP 503" }], notOnOrcid: [], notOnSite: [{ doi: NEW, sources: ["crossref"] }] },
+      detail: {
+        failures: [{ source: "orcid", detail: "HTTP 503" }],
+        notOnOrcid: [],
+        notOnSite: [{ doi: NEW, sources: ["crossref"] }],
+      },
     });
   });
 
@@ -430,15 +548,27 @@ describe("the publications are checked against ORCID and Crossref", () => {
     const kv = new Map<string, string>();
     const mails: Array<{ to: string; subject: string; text: string }> = [];
     const env = {
-      EMAIL: { send: async (m: { to: string; subject: string; text: string }) => void mails.push(m) },
+      EMAIL: {
+        send: async (m: { to: string; subject: string; text: string }) => void mails.push(m),
+      },
       ALERT_EMAIL: "a@example.test",
       APP_KV: {
         get: async (k: string) => (kv.has(k) ? JSON.parse(kv.get(k) as string) : null),
         put: async (k: string, v: string) => void kv.set(k, v),
       },
     } as never;
-    const report = (failures: Array<{ source: "orcid"; detail: string }> = []) => async () =>
-      ({ orcid: "", notOnSite: [{ doi: NEW, title: "Cryo-EM of a phage", year: 2026, sources: ["orcid" as const] }], nameMatches: [], notOnOrcid: [], manuscripts: [], failures });
+    const report =
+      (failures: Array<{ source: "orcid"; detail: string }> = []) =>
+      async () => ({
+        orcid: "",
+        notOnSite: [
+          { doi: NEW, title: "Cryo-EM of a phage", year: 2026, sources: ["orcid" as const] },
+        ],
+        nameMatches: [],
+        notOnOrcid: [],
+        manuscripts: [],
+        failures,
+      });
 
     expect(await checkPublicationsDaily(env, report())).toEqual({ mailed: 1 });
     expect(mails).toHaveLength(1);
@@ -449,7 +579,9 @@ describe("the publications are checked against ORCID and Crossref", () => {
     expect(await checkPublicationsDaily(env, report())).toEqual({ mailed: 0 });
     expect(mails).toHaveLength(1);
 
-    await expect(checkPublicationsDaily(env, report([{ source: "orcid", detail: "HTTP 503" }]))).rejects.toThrow("orcid (HTTP 503)");
+    await expect(
+      checkPublicationsDaily(env, report([{ source: "orcid", detail: "HTTP 503" }])),
+    ).rejects.toThrow("orcid (HTTP 503)");
     expect(mails).toHaveLength(1);
   });
 });
@@ -458,7 +590,11 @@ versionCases({
   name: "publication",
   id: ID,
   file: publicationPath(SLUG),
-  edit: () => godfather.replace(/^summary: .*$/m, 'summary: "A sentence an edit through Carrel put on the paper."'),
+  edit: () =>
+    godfather.replace(
+      /^summary: .*$/m,
+      'summary: "A sentence an edit through Carrel put on the paper."',
+    ),
   get,
   send,
   timeout: 240000,

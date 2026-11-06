@@ -4,13 +4,7 @@ import type { ReactNode } from "react";
 // loads stays visible in the route's own imports.
 const EVIDENCE_FACTS = 3;
 
-export function EvidenceRow({
-  facts,
-  detail,
-}: {
-  facts: ReactNode[];
-  detail?: ReactNode;
-}) {
+export function EvidenceRow({ facts, detail }: { facts: ReactNode[]; detail?: ReactNode }) {
   const present = facts.filter((fact) => fact !== null && fact !== undefined && fact !== false);
   if (present.length < EVIDENCE_FACTS) return null;
 

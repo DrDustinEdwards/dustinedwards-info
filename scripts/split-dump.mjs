@@ -15,4 +15,6 @@ if (!input) {
 const before = await readFile(input, "utf8");
 const after = splitOversizeStatements(before, migrationSchema());
 await writeFile(output, after, "utf8");
-console.log(`split-dump: ${input} -> ${output} (${Buffer.byteLength(before)} -> ${Buffer.byteLength(after)} bytes)`);
+console.log(
+  `split-dump: ${input} -> ${output} (${Buffer.byteLength(before)} -> ${Buffer.byteLength(after)} bytes)`,
+);

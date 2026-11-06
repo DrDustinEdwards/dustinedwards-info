@@ -119,16 +119,22 @@ await test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync
 
 await test("THE PLANT: a hung child spawned synchronously fails at its bound instead of hanging", () => {
   const started = Date.now();
-  const r = spawnSyncBounded(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], { timeoutMs: 1000 });
+  const r = spawnSyncBounded(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], {
+    timeoutMs: 1000,
+  });
   assert.ok(Date.now() - started < 30_000, "the bound fired, rather than the child's own minute");
   assert.equal(r.status, null, "a timeout is never a clean exit");
   assert.match(r.error, /timed out after 1000ms/);
 });
 
 await test("a bounded spawn that finishes reports its status and output with no error", () => {
-  const r = spawnSyncBounded(process.execPath, ["-e", "process.stdout.write('hi'); process.exit(3)"], {
-    timeoutMs: 30_000,
-  });
+  const r = spawnSyncBounded(
+    process.execPath,
+    ["-e", "process.stdout.write('hi'); process.exit(3)"],
+    {
+      timeoutMs: 30_000,
+    },
+  );
   assert.equal(r.status, 3);
   assert.equal(r.stdout, "hi");
   assert.equal(r.error, "");

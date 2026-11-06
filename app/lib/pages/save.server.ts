@@ -41,7 +41,10 @@ type PageEnv = Env;
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class PageInvalid extends ContentInvalid {
   constructor(path: string, errors: string[]) {
-    super(`The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "PageInvalid";
   }
 }
@@ -60,7 +63,9 @@ function registeredPage(path: string) {
     ]);
   }
   if (CONTENT_PAGES_FROM_DATA.includes(clean)) {
-    throw new PageInvalid(clean, [`${clean} is generated from structured data (CONTENT_PAGES_FROM_DATA); edit the data, not a markdown copy`]);
+    throw new PageInvalid(clean, [
+      `${clean} is generated from structured data (CONTENT_PAGES_FROM_DATA); edit the data, not a markdown copy`,
+    ]);
   }
   const slug = pageSlug(clean);
   return { path: clean, slug, file: pageSourcePath(slug) };
@@ -74,18 +79,33 @@ function registeredPage(path: string) {
  * phage rows (docs/PHAGES.md), so the compile reads them from D1; a phage save passes the set it is about to
  * write instead, for the same reason.
  */
-export async function compile(env: PageEnv, slug: string, raw: string, entry?: DictionaryEntry | null, phages?: Phage[]) {
+export async function compile(
+  env: PageEnv,
+  slug: string,
+  raw: string,
+  entry?: DictionaryEntry | null,
+  phages?: Phage[],
+) {
   const { renderBody, findWideDashes } = await loadPipeline();
   const path = pagePathForSlug(slug);
   const lead = entry !== undefined ? entry : path ? await getPublishedEntryByPath(env, path) : null;
   // A page that states a phage fact by token ({{phages.count}}) reads the rows too, whichever page it is.
   const needsPhages = path === PHAGES_PAGE_PATH || raw.includes("{{phage");
   const rows = phages ?? (needsPhages ? await listPhages(env) : undefined);
-  return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes }, entry: lead ?? undefined, phages: rows });
+  return compilePage({
+    slug,
+    raw,
+    pipeline: { renderBody, findWideDashes },
+    entry: lead ?? undefined,
+    phages: rows,
+  });
 }
 
 /** The address book the links are judged against: what D1 holds now, with this page's own HTML in place. */
-async function addressBook(env: PageEnv, own: { path: string; html: string }): Promise<AddressBook> {
+async function addressBook(
+  env: PageEnv,
+  own: { path: string; html: string },
+): Promise<AddressBook> {
   const [procedures, posts, pageHtml] = await Promise.all([
     listPublishedProcedures(env),
     listBlogPosts(env, { perPage: 1000 }),
@@ -121,7 +141,10 @@ async function judge(env: PageEnv, slug: string, raw: string) {
 function decidePage(actor: Actor, incomingDraft: boolean, prior: string | null) {
   const may = WRITE_CAPABILITIES[actor.kind];
   if (!may.write) {
-    throw new PolicyError("Refused: this credential is READ ONLY and may not save a page.", "smoke-is-read-only");
+    throw new PolicyError(
+      "Refused: this credential is READ ONLY and may not save a page.",
+      "smoke-is-read-only",
+    );
   }
   const everPublished = prior !== null && matter(prior).data.draft !== true;
   if (!may.firstPublish && !incomingDraft && !everPublished) {
@@ -133,12 +156,18 @@ function decidePage(actor: Actor, incomingDraft: boolean, prior: string | null) 
   }
 }
 
-export async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
+export async function writeRow(
+  env: PageEnv,
+  compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>,
+) {
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
   // A page with a route of its own (About) has never been in the search index, so it gets no record.
-  const records = compiled.draft || CONTENT_PAGES_OWN_ROUTE.includes(r.path) ? [] : recordsForPages([compiled.searchInput]);
+  const records =
+    compiled.draft || CONTENT_PAGES_OWN_ROUTE.includes(r.path)
+      ? []
+      : recordsForPages([compiled.searchInput]);
   await db.batch([
     db
       .prepare(
@@ -172,7 +201,9 @@ export async function deletePageRow(env: PageEnv, row: { slug: string; path: str
   if (keep) throw new PolicyError(`Refused: ${keep}.`, "terms-cannot-be-removed");
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM pages WHERE slug = ?1`).bind(row.slug),
-    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(contentPageSearchUid(row.path)),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(
+      contentPageSearchUid(row.path),
+    ),
     env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
@@ -189,21 +220,36 @@ async function rowIsCurrent(env: PageEnv, slug: string, blobSha: string) {
 /** The page save. */
 export async function savePage(
   env: PageEnv,
-  options: { path: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    path: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ) {
   const { raw, actor } = options;
   const { path, slug, file } = registeredPage(options.path);
   const existing = await readFile(env, file);
-  if (options.isNew && existing) throw new PageInvalid(path, [`the page ${path} already has a file (${file}); pass isNew false to edit it`]);
-  if (!options.isNew && !existing) throw new PageInvalid(path, [`the page ${path} has no file yet; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new PageInvalid(path, [
+      `the page ${path} already has a file (${file}); pass isNew false to edit it`,
+    ]);
+  if (!options.isNew && !existing)
+    throw new PageInvalid(path, [`the page ${path} has no file yet; pass isNew to create it`]);
 
   const compiled = await judge(env, slug, raw);
   if (!compiled.ok) throw new PageInvalid(path, compiled.errors);
   decidePage(actor, compiled.draft, existing?.content ?? null);
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,

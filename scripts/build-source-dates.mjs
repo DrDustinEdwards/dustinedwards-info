@@ -3,4 +3,6 @@
 import { writeSourceDates } from "./lib/source-dates.mjs";
 
 const { dates, changed } = writeSourceDates();
-console.log(`build-source-dates: ${changed ? "wrote" : "kept"} app/lib/source-dates.generated.mjs (${Object.keys(dates).length} files dated)`);
+console.log(
+  `build-source-dates: ${changed ? "wrote" : "kept"} app/lib/source-dates.generated.mjs (${Object.keys(dates).length} files dated)`,
+);

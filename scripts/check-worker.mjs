@@ -85,12 +85,19 @@ console.log(`  vitest reported: cases ${total}, failed ${failed}, exit ${run?.st
  *
  * @param {string | undefined} text
  */
-const firstLines = (text) => String(text ?? "").split("\n").slice(0, 6).join("\n          ");
+const firstLines = (text) =>
+  String(text ?? "")
+    .split("\n")
+    .slice(0, 6)
+    .join("\n          ");
 const failures = (report?.testResults ?? []).flatMap((file) => {
   const where = relative(root, file.name ?? "");
   const cases = (file.assertionResults ?? [])
     .filter((result) => result.status === "failed")
-    .map((result) => `${where} > ${result.fullName}\n          ${firstLines(result.failureMessages?.[0])}`);
+    .map(
+      (result) =>
+        `${where} > ${result.fullName}\n          ${firstLines(result.failureMessages?.[0])}`,
+    );
   // A file that failed to load has no cases, only its message.
   if (cases.length > 0) return cases;
   return file.message ? [`${where}: ${firstLines(file.message)}`] : [];

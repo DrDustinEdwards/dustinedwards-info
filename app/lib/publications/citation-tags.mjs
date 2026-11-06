@@ -43,9 +43,7 @@ function scholarDate(isoish, year) {
  */
 export function buildCitationTags(paper, urls) {
   const title = decodeEntities(paper.title).trim();
-  const authors = (paper.authors ?? [])
-    .map((name) => decodeEntities(name).trim())
-    .filter(Boolean);
+  const authors = (paper.authors ?? []).map((name) => decodeEntities(name).trim()).filter(Boolean);
   const date = scholarDate(paper.publishedDate, paper.year);
 
   const missing = [];

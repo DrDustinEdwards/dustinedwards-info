@@ -43,7 +43,9 @@ export async function cachedVerdict(
   }
   const verdict = await run();
   try {
-    await env.APP_KV.put(key, JSON.stringify(verdict), { expirationTtl: HEALTH_VERDICT_TTL_SECONDS });
+    await env.APP_KV.put(key, JSON.stringify(verdict), {
+      expirationTtl: HEALTH_VERDICT_TTL_SECONDS,
+    });
   } catch {
     // A failed write costs one more listing, never the answer.
   }

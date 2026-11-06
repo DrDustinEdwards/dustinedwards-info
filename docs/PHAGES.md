@@ -22,14 +22,14 @@ its identity and two files cannot be one phage; it is also the id of the phage's
 ---
 name: Acorn15
 year: 2017
-host: smegmatis                       # smegmatis, foliorum, or null where no host is on record
-county: Hood County                   # a Texas county, "Texas" where only the state is on record, or null
-phagesdb: Acorn15                     # the PhagesDB record's name as PhagesDB spells it, or null (no verified record)
-paper: 10-1128-mra-01242-18           # optional: the slug of the genome announcement, a paper this site holds
-formerly: Jentrie                     # optional: an earlier name
-note: A manuscript is submitted.      # optional: one plain sentence, shown after the links
-genome_bp: 52960                      # optional: the genome announcement's genome size, a whole number of bases
-genes: 96                             # optional: the genome announcement's gene count
+host: smegmatis # smegmatis, foliorum, or null where no host is on record
+county: Hood County # a Texas county, "Texas" where only the state is on record, or null
+phagesdb: Acorn15 # the PhagesDB record's name as PhagesDB spells it, or null (no verified record)
+paper: 10-1128-mra-01242-18 # optional: the slug of the genome announcement, a paper this site holds
+formerly: Jentrie # optional: an earlier name
+note: A manuscript is submitted. # optional: one plain sentence, shown after the links
+genome_bp: 52960 # optional: the genome announcement's genome size, a whole number of bases
+genes: 96 # optional: the genome announcement's gene count
 ---
 ```
 
@@ -102,12 +102,12 @@ A fact the records hold is stated on a page by a token, and the page compile fil
 from `content/phages`, a page save and `sync_pages` from D1), in the body and in `title`, `seo_title` and
 `description`. Nothing types a count: the "80 phages" that once sat on two pages while the records held 75 is why.
 
-| Token | Reads |
-| --- | --- |
-| `{{phages.count}}`, `{{phages.firstYear}}`, `{{phages.lastYear}}` | the whole set |
-| `{{phages.host.smegmatis.count}}`, `.firstYear`, `.lastYear`, `.years` | one host (`years` is "2017" or "2018 to 2025") |
-| `{{phage.loca.bp}}`, `.genes`, `.county`, `.year` | one phage, by file key; `bp` takes thousands separators |
-| `{{phages.commonCounty(godfather,fizzles)}}` | the county they share; an error if they differ |
+| Token                                                                  | Reads                                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| `{{phages.count}}`, `{{phages.firstYear}}`, `{{phages.lastYear}}`      | the whole set                                           |
+| `{{phages.host.smegmatis.count}}`, `.firstYear`, `.lastYear`, `.years` | one host (`years` is "2017" or "2018 to 2025")          |
+| `{{phage.loca.bp}}`, `.genes`, `.county`, `.year`                      | one phage, by file key; `bp` takes thousands separators |
+| `{{phages.commonCounty(godfather,fizzles)}}`                           | the county they share; an error if they differ          |
 
 A token that names nothing (a misspelt key, a phage with no `genome_bp`) fails the compile, never prints blank.
 Prose around the facts stays prose, and the facts about phages with no record of their own (the partner schools'
@@ -153,15 +153,15 @@ that names the sync, never a page with no phages.
 
 ## Where it goes
 
-| Output | From |
-| --- | --- |
-| The table on the page | `phageTableMarkdown`, in `compilePage`, compiled into the `pages` row |
-| The markdown twin | the same text, in the `pages` row's `markdown` |
-| The Dataset JSON-LD | `markdownTableFacts` over that text (rows, year span), in the page's structured data |
-| Search | the page's record in `search_docs`, written by the sync and by the write |
-| Search, facets, sort and the count | `PHAGES` in `app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx` over the phage rows; `app/enhance/catalog.ts` updates it in place |
-| The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the table row each file's name gives |
-| The check | `phage-drift` on `/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs` |
+| Output                                   | From                                                                                                                                         |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| The table on the page                    | `phageTableMarkdown`, in `compilePage`, compiled into the `pages` row                                                                        |
+| The markdown twin                        | the same text, in the `pages` row's `markdown`                                                                                               |
+| The Dataset JSON-LD                      | `markdownTableFacts` over that text (rows, year span), in the page's structured data                                                         |
+| Search                                   | the page's record in `search_docs`, written by the sync and by the write                                                                     |
+| Search, facets, sort and the count       | `PHAGES` in `app/lib/phages/catalog.mjs`, drawn by `app/routes/phages.tsx` over the phage rows; `app/enhance/catalog.ts` updates it in place |
+| The old `/discovery-of-{name}` addresses | `app/lib/wordpress-redirects.mjs`, to the table row each file's name gives                                                                   |
+| The check                                | `phage-drift` on `/health`, repaired by `sync_phages` (before `sync_pages`); `test/phages.test.mjs`                                          |
 
 ## Known limits
 

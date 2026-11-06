@@ -145,7 +145,8 @@ type CvService = Dated &
     place?: string;
   };
 
-type CvDevelopment = Dated & Tagged & { type: "development"; title: string; org?: string; place?: string };
+type CvDevelopment = Dated &
+  Tagged & { type: "development"; title: string; org?: string; place?: string };
 
 export type CvSourceEntry =
   | CvPaperRef
@@ -187,5 +188,11 @@ export type CvSource = {
  * the profile's facts, or a section's entries with their type stated.
  */
 export type CvFileRecord =
-  | { slug: "profile"; type: "profile"; edition: string; person: CvPerson; presentations: CvPresentations }
+  | {
+      slug: "profile";
+      type: "profile";
+      edition: string;
+      person: CvPerson;
+      presentations: CvPresentations;
+    }
   | { slug: string; type: CvType; entries: CvSourceEntry[] };

@@ -41,9 +41,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!frozen) throw data(null, { status: 404 });
   // The live page tells this one what is current. A draft or a removed procedure has no current version.
   const live = await getProcedureByPath(env, path);
-  const current = live && live.status === "published" ? { path, version: live.record.version } : null;
+  const current =
+    live && live.status === "published" ? { path, version: live.record.version } : null;
   const { count, factor, units } = readScale(frozen.record, url);
-  return { record: frozen.record, current, count, factor, units, frozen: await listFrozenVersions(env, frozen.slug), lineage: await lineageFor(env, frozen.record) };
+  return {
+    record: frozen.record,
+    current,
+    count,
+    factor,
+    units,
+    frozen: await listFrozenVersions(env, frozen.slug),
+    lineage: await lineageFor(env, frozen.record),
+  };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -51,24 +60,55 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const { record } = loaderData;
   return [
     // The canonical is the plain page, so the copies are never competing results for the same words.
-    ...pageMeta({ title: `${record.seoTitle} (version ${record.version})`, description: record.description, path: record.path, trail: procedureTrail(record) }),
-    { tagName: "link", rel: "alternate", type: "text/markdown", href: `${SITE_ORIGIN}${versionPath(record.path, String(record.version))}.md` },
+    ...pageMeta({
+      title: `${record.seoTitle} (version ${record.version})`,
+      description: record.description,
+      path: record.path,
+      trail: procedureTrail(record),
+    }),
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "text/markdown",
+      href: `${SITE_ORIGIN}${versionPath(record.path, String(record.version))}.md`,
+    },
   ];
 }
 
 export default function ProcedureVersionRoute({ loaderData }: Route.ComponentProps) {
   const { record, current, count, factor, units, frozen, lineage } = loaderData;
   const trail = procedureTrail(record);
-  const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
+  const person = {
+    "@type": "Person",
+    "@id": personId(SITE_ORIGIN),
+    name: SITE.name,
+    url: SITE_ORIGIN,
+  };
   const basePath = versionPath(record.path, String(record.version));
   return (
     <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)) }} />}
+      trail={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
+          }}
+        />
+      }
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>
       <VersionNotice record={record} current={current} />
-      <ProcedureView record={record} count={count} factor={factor} units={units} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} lineage={lineage} />
+      <ProcedureView
+        record={record}
+        count={count}
+        factor={factor}
+        units={units}
+        basePath={basePath}
+        sheetPath={`${basePath}/sheet`}
+        frozen={frozen}
+        lineage={lineage}
+      />
       <template data-island="run" />
       {/* Keep on this device (app/enhance/offline.ts): a copy that opens with no connection, only when the reader asks. */}
       <template data-island="offline" />

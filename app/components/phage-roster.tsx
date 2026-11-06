@@ -22,7 +22,12 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
               <Picture
                 picture={pictureProps(
                   images.attributes(
-                    { src: entry.photo.src, width: entry.photo.width, height: entry.photo.height, version: mediaContentVersion(entry.photo.src) },
+                    {
+                      src: entry.photo.src,
+                      width: entry.photo.width,
+                      height: entry.photo.height,
+                      version: mediaContentVersion(entry.photo.src),
+                    },
                     "content",
                   ),
                   { alt: entry.photo.alt },

@@ -10,7 +10,12 @@ import { listCvCitedDois } from "~/db/cv";
 import { getPublicationRow, listPublicationIdentities } from "~/db/publications";
 import { textChunks } from "~/lib/content/chunks.mjs";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { combinePurges, purgeCv, purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
+import {
+  combinePurges,
+  purgeCv,
+  purgePublications,
+  type PurgeOutcome,
+} from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
@@ -32,7 +37,10 @@ type PublicationEnv = Env;
 /** A file the validator refused: carries every message, so the caller can fix its own edit. */
 class PublicationInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The publication "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`, errors);
+    super(
+      `The publication "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was saved.`,
+      errors,
+    );
     this.name = "PublicationInvalid";
   }
 }
@@ -111,9 +119,13 @@ export async function writePublicationRow(env: PublicationEnv, compiled: Compile
         "",
       ),
     ...laterChunks.map((chunk) =>
-      db.prepare(`UPDATE publications SET markdown = markdown || ?1 WHERE slug = ?2`).bind(chunk, r.slug),
+      db
+        .prepare(`UPDATE publications SET markdown = markdown || ?1 WHERE slug = ?2`)
+        .bind(chunk, r.slug),
     ),
-    db.prepare(`UPDATE publications SET source_blob_sha = ?1 WHERE slug = ?2`).bind(compiled.sourceBlobSha, r.slug),
+    db
+      .prepare(`UPDATE publications SET source_blob_sha = ?1 WHERE slug = ?2`)
+      .bind(compiled.sourceBlobSha, r.slug),
     ...replaceSearchRecords(db, uid, records),
   ]);
 }
@@ -122,7 +134,10 @@ export async function writePublicationRow(env: PublicationEnv, compiled: Compile
  * The row of a paper whose file is gone, its search record, and its citation row when no remaining paper
  * carries that DOI. A paper that still has a file is never passed here.
  */
-export async function deletePublicationRow(env: PublicationEnv, row: { slug: string; doi_key: string | null }) {
+export async function deletePublicationRow(
+  env: PublicationEnv,
+  row: { slug: string; doi_key: string | null },
+) {
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM publications WHERE slug = ?1`).bind(row.slug),
     env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(paperSearchUid(row.slug)),
@@ -140,16 +155,16 @@ export async function deletePublicationRow(env: PublicationEnv, row: { slug: str
  */
 export async function seedMissingCitations(env: PublicationEnv, dois: Array<string | null>) {
   const wanted = new Set(dois.filter((d): d is string => !!d).map((d) => d.trim().toLowerCase()));
-  const seeds = citationSeedsFrom(citedByArtifact, "data/publications.cited-by.json").filter((s) => wanted.has(s.doi));
+  const seeds = citationSeedsFrom(citedByArtifact, "data/publications.cited-by.json").filter((s) =>
+    wanted.has(s.doi),
+  );
   if (seeds.length === 0) return;
   await env.DB.batch(
     seeds.map((s) =>
-      env.DB
-        .prepare(
-          `INSERT INTO publication_citations (doi, count, url, fetched_at) VALUES (?1, ?2, ?3, ?4)
+      env.DB.prepare(
+        `INSERT INTO publication_citations (doi, count, url, fetched_at) VALUES (?1, ?2, ?3, ?4)
            ON CONFLICT(doi) DO NOTHING`,
-        )
-        .bind(s.doi, s.count, s.url, s.fetchedAt),
+      ).bind(s.doi, s.count, s.url, s.fetchedAt),
     ),
   );
 }
@@ -166,10 +181,19 @@ async function rowIsCurrent(env: PublicationEnv, slug: string, blobSha: string) 
 async function syncAsk(env: PublicationEnv, compiled: Compiled) {
   if (!askAvailable(env)) return null;
   try {
-    const result = await syncAskPaper(env, compiled.record.slug, compiled.draft ? null : compiled.twin);
+    const result = await syncAskPaper(
+      env,
+      compiled.record.slug,
+      compiled.draft ? null : compiled.twin,
+    );
     return { ok: true as const, ...result };
   } catch (error) {
-    console.error(JSON.stringify({ alert: "ask-sync-failed-after-publication-save", detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({
+        alert: "ask-sync-failed-after-publication-save",
+        detail: errorMessage(error),
+      }),
+    );
     return {
       ok: false as const,
       message:
@@ -188,7 +212,9 @@ async function syncAsk(env: PublicationEnv, compiled: Compiled) {
 async function cvCitation(env: PublicationEnv, slug: string, compiled: Compiled) {
   const cited = await listCvCitedDois(env);
   const stored = cited.size === 0 ? null : await getPublicationRow(env, slug);
-  const storedKey = stored ? ((JSON.parse(stored.record) as { doi: string | null }).doi?.trim().toLowerCase() ?? null) : null;
+  const storedKey = stored
+    ? ((JSON.parse(stored.record) as { doi: string | null }).doi?.trim().toLowerCase() ?? null)
+    : null;
   if (!storedKey || !cited.has(storedKey)) return { cited: false, refusal: null };
   const newKey = compiled.record.doi?.trim().toLowerCase() ?? null;
   const refusal =
@@ -223,15 +249,25 @@ export type SavedPublication = {
  */
 export async function savePublication(
   env: PublicationEnv,
-  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+  options: {
+    slug: string;
+    raw: string;
+    expectedHeadSha?: string | null;
     /** The blob sha of this file as Carrel loaded it; undefined means no check. */
-    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
+    expectedBlobSha?: string | null;
+    isNew: boolean;
+    actor: Actor;
+  },
 ): Promise<SavedPublication> {
   const { slug, raw, actor } = options;
   const path = publicationPath(slug);
   const existing = await readFile(env, path);
-  if (options.isNew && existing) throw new PublicationInvalid(slug, [`a publication named ${slug} already exists`]);
-  if (!options.isNew && !existing) throw new PublicationInvalid(slug, [`no publication named ${slug} exists; pass isNew to create it`]);
+  if (options.isNew && existing)
+    throw new PublicationInvalid(slug, [`a publication named ${slug} already exists`]);
+  if (!options.isNew && !existing)
+    throw new PublicationInvalid(slug, [
+      `no publication named ${slug} exists; pass isNew to create it`,
+    ]);
 
   const compiled = await compile(env, slug, raw);
   if (!compiled.ok) throw new PublicationInvalid(slug, compiled.errors);
@@ -246,7 +282,12 @@ export async function savePublication(
   const cv = await cvCitation(env, slug, compiled);
   if (cv.refusal) throw new PublicationInvalid(slug, [cv.refusal]);
 
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  const tag =
+    actor.kind === "operator"
+      ? ` [operator:${actor.id}]`
+      : actor.kind === "carrel"
+        ? ` [carrel:${actor.changeId}]`
+        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,

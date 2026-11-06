@@ -10,10 +10,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const settings = JSON.parse(readFileSync(new URL("../.claude/settings.json", import.meta.url), "utf8"));
+const settings = JSON.parse(
+  readFileSync(new URL("../.claude/settings.json", import.meta.url), "utf8"),
+);
 const denied = (settings.deniedMcpServers ?? []).map((entry) => entry.serverUrl);
 
-for (const url of ["https://admin-mcp.dustinedwards.info/mcp", "https://admin-mcp.foxing.app/mcp"]) {
+for (const url of [
+  "https://admin-mcp.dustinedwards.info/mcp",
+  "https://admin-mcp.foxing.app/mcp",
+]) {
   await test(`${url} is denied to coding sessions`, () => {
     assert.ok(denied.includes(url), `.claude/settings.json deniedMcpServers does not list ${url}`);
   });

@@ -3,12 +3,10 @@
 // refuses a procedure with no assigned version, because a DOI is minted only for a version being cited.
 // The DOI Zenodo mints goes on that version's `history` entry in the file, not here.
 
-
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { citeFacts, zenodoMetadata } from "../app/kb/procedures/cite.mjs";
 import { compileDirectory, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
 import { SITE_ORIGIN as origin } from "../app/lib/site-origin.mjs";
-
 
 const slug = process.argv[2];
 if (!slug) {
@@ -28,7 +26,9 @@ if (!found.compiled.ok) {
 const { record } = found.compiled;
 const facts = citeFacts(record);
 if (!facts) {
-  console.error(`${slug} has no assigned version, so there is nothing to cite or deposit yet. Set its version and a history entry first.`);
+  console.error(
+    `${slug} has no assigned version, so there is nothing to cite or deposit yet. Set its version and a history entry first.`,
+  );
   process.exit(1);
 }
 const creator = { name: IDENTITY.name, affiliation: IDENTITY.affiliation };

@@ -25,14 +25,23 @@ const CLEAN = {
 };
 
 await test("THE PLANT: a failed git diff throws instead of reading as nothing changed", () => {
-  const git = fakeGit({ ...CLEAN, "diff --name-only": { status: 128, stderr: "fatal: index file corrupt" } });
-  assert.throws(() => changedFiles("origin/main", git), /git diff --name-only failed.*index file corrupt/);
+  const git = fakeGit({
+    ...CLEAN,
+    "diff --name-only": { status: 128, stderr: "fatal: index file corrupt" },
+  });
+  assert.throws(
+    () => changedFiles("origin/main", git),
+    /git diff --name-only failed.*index file corrupt/,
+  );
 });
 
 await test("a git that cannot be spawned throws, even on the base probe", () => {
   const git = fakeGit({
     ...CLEAN,
-    "rev-parse --verify --quiet origin/main": { status: null, error: new Error("spawn git ENOENT") },
+    "rev-parse --verify --quiet origin/main": {
+      status: null,
+      error: new Error("spawn git ENOENT"),
+    },
   });
   assert.throws(() => changedFiles("origin/main", git), /ENOENT/);
 });
@@ -91,7 +100,9 @@ await test("the related-test walk follows ~/ and relative imports, is cycle-safe
     "/app/lib/helper.ts": "export const helper = 1;",
   };
   const read = (/** @type {string} */ path) => files[path.split("\\").join("/")] ?? null;
-  const seen = [...reachedModules("/test/x.test.mjs", "/app", read)].map((p) => p.split("\\").join("/"));
+  const seen = [...reachedModules("/test/x.test.mjs", "/app", read)].map((p) =>
+    p.split("\\").join("/"),
+  );
   assert.deepEqual(seen.sort(), [
     "/app/components/body.tsx",
     "/app/components/loop.tsx",

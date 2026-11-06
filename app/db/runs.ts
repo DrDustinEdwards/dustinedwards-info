@@ -52,10 +52,17 @@ export async function runLots(env: Env, runId: number): Promise<RunLotRow[]> {
 }
 
 /** Every run that used a lot, newest first: the trace from a bad lot to its runs. Narrowed to one person's when given. */
-export async function runsUsingLot(env: Env, lotId: number, actor: string | null): Promise<RunRow[]> {
+export async function runsUsingLot(
+  env: Env,
+  lotId: number,
+  actor: string | null,
+): Promise<RunRow[]> {
   const where = actor ? "AND r.actor = ?" : "";
-  const statement = env.DB.prepare(`${RUN_SELECT} WHERE r.id IN (SELECT run_id FROM kb_run_lots WHERE lot_id = ?) ${where} ORDER BY r.id DESC`);
-  return (await (actor ? statement.bind(lotId, actor) : statement.bind(lotId)).all<RunRow>()).results;
+  const statement = env.DB.prepare(
+    `${RUN_SELECT} WHERE r.id IN (SELECT run_id FROM kb_run_lots WHERE lot_id = ?) ${where} ORDER BY r.id DESC`,
+  );
+  return (await (actor ? statement.bind(lotId, actor) : statement.bind(lotId)).all<RunRow>())
+    .results;
 }
 
 export type NewRun = {
@@ -70,30 +77,48 @@ export type NewRun = {
 };
 
 /** The run's own row and one row per lot it used, the lots naming the run by its uid in the same batch. */
-export function runInsert(env: Env, run: NewRun, lots: Array<{ lot_id: number; amount_used: number | null; unit: string | null; emptied: boolean }>): D1PreparedStatement[] {
+export function runInsert(
+  env: Env,
+  run: NewRun,
+  lots: Array<{
+    lot_id: number;
+    amount_used: number | null;
+    unit: string | null;
+    emptied: boolean;
+  }>,
+): D1PreparedStatement[] {
   return [
     env.DB.prepare(
       "INSERT INTO kb_runs (uid, procedure_slug, procedure_version, actor, run_on, outcome, note, replaces_run_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    ).bind(run.uid, run.procedure_slug, run.procedure_version, run.actor, run.run_on, run.outcome, run.note, run.replaces_run_id),
+    ).bind(
+      run.uid,
+      run.procedure_slug,
+      run.procedure_version,
+      run.actor,
+      run.run_on,
+      run.outcome,
+      run.note,
+      run.replaces_run_id,
+    ),
     ...lots.map((l) =>
-      env.DB.prepare("INSERT INTO kb_run_lots (run_id, lot_id, amount_used, unit, emptied) SELECT id, ?, ?, ?, ? FROM kb_runs WHERE uid = ?").bind(
-        l.lot_id,
-        l.amount_used,
-        l.unit,
-        l.emptied ? 1 : 0,
-        run.uid,
-      ),
+      env.DB.prepare(
+        "INSERT INTO kb_run_lots (run_id, lot_id, amount_used, unit, emptied) SELECT id, ?, ?, ?, ? FROM kb_runs WHERE uid = ?",
+      ).bind(l.lot_id, l.amount_used, l.unit, l.emptied ? 1 : 0, run.uid),
     ),
   ];
 }
 
 export async function runIdByUid(env: Env, uid: string): Promise<number | null> {
-  const row = await env.DB.prepare("SELECT id FROM kb_runs WHERE uid = ?").bind(uid).first<{ id: number }>();
+  const row = await env.DB.prepare("SELECT id FROM kb_runs WHERE uid = ?")
+    .bind(uid)
+    .first<{ id: number }>();
   return row?.id ?? null;
 }
 
 /** The protocols a run can follow: the published ones, by title. */
-export async function listRunnableProcedures(env: Env): Promise<Array<{ slug: string; title: string; version: string | null }>> {
+export async function listRunnableProcedures(
+  env: Env,
+): Promise<Array<{ slug: string; title: string; version: string | null }>> {
   const { results } = await env.DB.prepare(
     "SELECT slug, title, version FROM procedures WHERE status = 'published' AND profile = 'protocol' ORDER BY title",
   ).all<{ slug: string; title: string; version: string | null }>();

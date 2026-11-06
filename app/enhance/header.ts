@@ -35,7 +35,8 @@ export default function start(): void {
     for (const panel of header.querySelectorAll<HTMLElement>("[data-nav-panel]")) {
       let unfocused = false;
       panel.addEventListener("beforetoggle", (event) => {
-        if ((event as ToggleEvent).newState === "closed") unfocused = !document.activeElement || document.activeElement === document.body;
+        if ((event as ToggleEvent).newState === "closed")
+          unfocused = !document.activeElement || document.activeElement === document.body;
       });
       panel.addEventListener("toggle", (event) => {
         if ((event as ToggleEvent).newState !== "closed" || !unfocused) return;

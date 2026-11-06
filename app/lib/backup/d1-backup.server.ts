@@ -21,7 +21,13 @@
 // - The queues: messages in flight; a lost media event is caught by Capsid's watcher's sync_media repair, and a
 //   webmention row waiting on verification stays in D1 (dumped) as `unverified`.
 
-import { backupFiles, backupHealth, filesHealth, runCheckedBackup, type BackupHealth } from "@dustinedwards/d1-dump";
+import {
+  backupFiles,
+  backupHealth,
+  filesHealth,
+  runCheckedBackup,
+  type BackupHealth,
+} from "@dustinedwards/d1-dump";
 import { EXCLUDED_TABLES, REQUIRED_TABLES } from "~/lib/backup/policy.mjs";
 
 type BackupEnv = Pick<Env, "DB" | "BACKUPS">;
@@ -64,7 +70,9 @@ export async function backupMedia(env: FilesEnv) {
     backupFiles(env.MEDIA, env.BACKUPS, { name: "media" }),
     backupFiles(env.MEDIA_REVISIONS, env.BACKUPS, { name: "revisions" }),
   ]);
-  const failed = results.flatMap((r, i) => (r.status === "rejected" ? [`${FILES_NAMES[i]}: ${String(r.reason)}`] : []));
+  const failed = results.flatMap((r, i) =>
+    r.status === "rejected" ? [`${FILES_NAMES[i]}: ${String(r.reason)}`] : [],
+  );
   if (failed.length > 0) throw new Error(`files backup failed: ${failed.join("; ")}`);
   return results.map((r) => {
     const run = (r as PromiseFulfilledResult<Awaited<ReturnType<typeof backupFiles>>>).value;
@@ -73,13 +81,18 @@ export async function backupMedia(env: FilesEnv) {
 }
 
 /** /health's backup field: the newest dump's age with each files backup's, and any one's warning warns. */
-export async function backupStatus(env: Pick<Env, "BACKUPS">): Promise<BackupHealth & { files: Record<string, BackupHealth> }> {
+export async function backupStatus(
+  env: Pick<Env, "BACKUPS">,
+): Promise<BackupHealth & { files: Record<string, BackupHealth> }> {
   const [dump, ...files] = await Promise.all([
     backupHealth(env.BACKUPS),
     ...FILES_NAMES.map((name) => filesHealth(env.BACKUPS, { name })),
   ]);
   const byName = Object.fromEntries(FILES_NAMES.map((name, i) => [name, files[i]!]));
-  const warnings = [dump!.warning, ...files.map((f, i) => (f.warning ? `${FILES_NAMES[i]} files: ${f.warning}` : undefined))];
+  const warnings = [
+    dump!.warning,
+    ...files.map((f, i) => (f.warning ? `${FILES_NAMES[i]} files: ${f.warning}` : undefined)),
+  ];
   const warning = warnings.filter(Boolean).join("; ");
   return { ...dump!, files: byName, ...(warning ? { warning } : {}) };
 }

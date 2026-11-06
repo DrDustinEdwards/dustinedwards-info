@@ -54,7 +54,8 @@ export function sortCohorts(/** @type {Cohort[]} */ cohorts) {
  * @returns {{ researchers: number, cohorts: number, since: number }}
  */
 export function rosterFacts(cohorts) {
-  if (cohorts.length === 0) throw new Error("the roster has no cohorts, so there is nothing to count");
+  if (cohorts.length === 0)
+    throw new Error("the roster has no cohorts, so there is nothing to count");
   return {
     researchers: cohorts.reduce((n, c) => n + c.researchers.length, 0),
     cohorts: cohorts.length,
@@ -66,7 +67,8 @@ export function rosterFacts(cohorts) {
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** @param {unknown} value */
-const isPositiveInteger = (value) => typeof value === "number" && Number.isInteger(value) && value > 0;
+const isPositiveInteger = (value) =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
 
 /**
  * @param {unknown} photo
@@ -78,22 +80,40 @@ async function photoErrors(photo, host) {
   /** @type {string[]} */
   const errors = [];
   for (const key of Object.keys(photo)) {
-    if (!PHOTO_FIELDS.includes(key)) errors.push(`photo.${key} is not a roster field; a photo carries ${PHOTO_FIELDS.join(", ")} and nothing else`);
+    if (!PHOTO_FIELDS.includes(key))
+      errors.push(
+        `photo.${key} is not a roster field; a photo carries ${PHOTO_FIELDS.join(", ")} and nothing else`,
+      );
   }
   const { src, width, height, alt } = photo;
   const keyed = typeof src === "string" && PHOTO_SRC.test(src) ? dimensionsFromKey(src) : null;
   if (typeof src !== "string" || !keyed) {
-    errors.push(`photo.src is ${JSON.stringify(src)}; it is a .webp in the media library, such as /media/dustin-edwards-example-<digest>-1080x720.webp`);
+    errors.push(
+      `photo.src is ${JSON.stringify(src)}; it is a .webp in the media library, such as /media/dustin-edwards-example-<digest>-1080x720.webp`,
+    );
   } else if (!(await host.photo(src))) {
     errors.push(`photo.src ${src} is not in the media library; upload the photograph there first`);
   }
-  if (!isPositiveInteger(width)) errors.push(`photo.width is ${JSON.stringify(width)}; it is the photograph's real width in pixels`);
-  if (!isPositiveInteger(height)) errors.push(`photo.height is ${JSON.stringify(height)}; it is the photograph's real height in pixels`);
-  if (keyed && isPositiveInteger(width) && isPositiveInteger(height) && (keyed.width !== width || keyed.height !== height)) {
+  if (!isPositiveInteger(width))
+    errors.push(
+      `photo.width is ${JSON.stringify(width)}; it is the photograph's real width in pixels`,
+    );
+  if (!isPositiveInteger(height))
+    errors.push(
+      `photo.height is ${JSON.stringify(height)}; it is the photograph's real height in pixels`,
+    );
+  if (
+    keyed &&
+    isPositiveInteger(width) &&
+    isPositiveInteger(height) &&
+    (keyed.width !== width || keyed.height !== height)
+  ) {
     errors.push(`photo is ${width}x${height}, but its address says ${keyed.width}x${keyed.height}`);
   }
   if (typeof alt !== "string" || alt.trim() === "") {
-    errors.push("photo.alt is required: the photographs are content, and alt text that is empty fails WCAG");
+    errors.push(
+      "photo.alt is required: the photographs are content, and alt text that is empty fails WCAG",
+    );
   } else if (alt !== alt.trim() || alt.length > ALT_MAX) {
     errors.push(`photo.alt is padded or longer than ${ALT_MAX} characters`);
   }
@@ -105,7 +125,8 @@ async function photoErrors(photo, host) {
  * @returns {string[]}
  */
 function researcherErrors(researchers) {
-  if (!Array.isArray(researchers)) return ["researchers is a list of names (an empty list renders as 'Roster to be added')"];
+  if (!Array.isArray(researchers))
+    return ["researchers is a list of names (an empty list renders as 'Roster to be added')"];
   /** @type {string[]} */
   const errors = [];
   const seen = new Set();
@@ -115,7 +136,8 @@ function researcherErrors(researchers) {
       errors.push(`${at} is ${JSON.stringify(name)}; a name is a non-empty string`);
       return;
     }
-    if (name !== name.trim() || /\s{2}|[\r\n\t]/.test(name)) errors.push(`${at} has stray whitespace; names are kept as given, on one line`);
+    if (name !== name.trim() || /\s{2}|[\r\n\t]/.test(name))
+      errors.push(`${at} has stray whitespace; names are kept as given, on one line`);
     if (name.length > NAME_MAX) errors.push(`${at} is longer than ${NAME_MAX} characters`);
     if (seen.has(name)) errors.push(`${at} repeats a name already in this cohort`);
     seen.add(name);
@@ -137,7 +159,10 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
   /** @type {string[]} */
   const errors = pipeline
     .findWideDashes(raw)
-    .map((hit) => `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`);
+    .map(
+      (hit) =>
+        `line ${hit.line}, column ${hit.column}: wide dash ${hit.char}; house style uses commas, periods, parentheses or colons ("${hit.excerpt}")`,
+    );
   if (!raw.startsWith("---")) errors.push("the file must start with a --- front matter block");
 
   let parsed;
@@ -145,13 +170,22 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
     // An options object, even an empty one: gray-matter caches by input when it is omitted.
     parsed = matter(raw, {});
   } catch (error) {
-    return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`] };
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        `the front matter is not valid YAML: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`,
+      ],
+    };
   }
   const data = parsed.data;
-  if (parsed.content.trim() !== "") errors.push("the body must be empty: a cohort is its front matter and nothing else");
+  if (parsed.content.trim() !== "")
+    errors.push("the body must be empty: a cohort is its front matter and nothing else");
   for (const key of Object.keys(data)) {
     if (!FIELDS.includes(key)) {
-      errors.push(`${key} is not a roster field; a cohort carries ${FIELDS.join(", ")} and nothing else (no contact details, locations or other personal data)`);
+      errors.push(
+        `${key} is not a roster field; a cohort carries ${FIELDS.join(", ")} and nothing else (no contact details, locations or other personal data)`,
+      );
     }
   }
 
@@ -159,11 +193,17 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
   if (typeof year !== "number" || !Number.isInteger(year) || year < 2000 || year > 2099) {
     errors.push(`year is ${JSON.stringify(year)}; it is the cohort's four-digit year`);
   } else if (slug !== String(year)) {
-    errors.push(`year is ${year}, but the file is ${rosterPath(slug)}: a cohort's file is named for its year (${year}.md)`);
+    errors.push(
+      `year is ${year}, but the file is ${rosterPath(slug)}: a cohort's file is named for its year (${year}.md)`,
+    );
   }
-  if (!/^\d{4}$/.test(slug)) errors.push(`"${slug}" is not a cohort file key; the file is named for the year, such as 2025.md`);
+  if (!/^\d{4}$/.test(slug))
+    errors.push(
+      `"${slug}" is not a cohort file key; the file is named for the year, such as 2025.md`,
+    );
 
-  if (photo === undefined) errors.push("photo is required (a mapping, or null for a cohort with no photograph)");
+  if (photo === undefined)
+    errors.push("photo is required (a mapping, or null for a cohort with no photograph)");
   else if (photo !== null) errors.push(...(await photoErrors(photo, host)));
   errors.push(...researcherErrors(researchers));
   if (errors.length > 0) return { ok: false, errors };
@@ -171,7 +211,12 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
   /** @type {Cohort} */
   const cohort = {
     year: /** @type {number} */ (year),
-    photo: photo === null ? null : (({ src, width, height, alt }) => ({ src, width, height, alt }))(/** @type {CohortPhoto} */ (photo)),
+    photo:
+      photo === null
+        ? null
+        : (({ src, width, height, alt }) => ({ src, width, height, alt }))(
+            /** @type {CohortPhoto} */ (photo),
+          ),
     researchers: /** @type {string[]} */ (researchers),
   };
   return {
@@ -194,7 +239,8 @@ export async function compileCohort({ slug, raw, host, pipeline, sourcePath }) {
 export function rosterSetErrors(cohorts) {
   /** @type {string[]} */
   const errors = [];
-  if (cohorts.length === 0) errors.push(`${ROSTER_DIR} holds no cohort files; the roster cannot be empty`);
+  if (cohorts.length === 0)
+    errors.push(`${ROSTER_DIR} holds no cohort files; the roster cannot be empty`);
   const years = new Set();
   for (const { year } of cohorts) {
     if (years.has(year)) errors.push(`two files are the ${year} cohort`);

@@ -33,14 +33,22 @@ const HEADER = /^>?\s*([A-Z]{1,2}_?[0-9]+\.[0-9]+)(?::([0-9]+)-([0-9]+))?\s+(.*)
 export function parseReference(text) {
   const { header, sequence } = parseFasta(text);
   const match = HEADER.exec(header);
-  if (!match) throw new Error(`"${header}" is not an NCBI FASTA header: >accession.version[:from-to] description`);
+  if (!match)
+    throw new Error(
+      `"${header}" is not an NCBI FASTA header: >accession.version[:from-to] description`,
+    );
   const [, accession = "", fromText, toText, description = ""] = match;
   const from = fromText === undefined ? 1 : Number(fromText);
   const to = toText === undefined ? sequence.length : Number(toText);
   if (to - from + 1 !== sequence.length) {
-    throw new Error(`${accession}: the header spans ${from}-${to} (${to - from + 1} bases) but the sequence is ${sequence.length}`);
+    throw new Error(
+      `${accession}: the header spans ${from}-${to} (${to - from + 1} bases) but the sequence is ${sequence.length}`,
+    );
   }
-  if (!/^[ACGT]+$/.test(sequence)) throw new Error(`${accession}: the sequence has a base other than A, C, G and T, so it cannot be a placement reference`);
+  if (!/^[ACGT]+$/.test(sequence))
+    throw new Error(
+      `${accession}: the sequence has a base other than A, C, G and T, so it cannot be a placement reference`,
+    );
   const id = fromText === undefined ? accession : `${accession}:${from}-${to}`;
   return { id, accession, from, to, description, sequence };
 }

@@ -10,21 +10,33 @@ import { STUB_PATHS } from "./stub-server-build";
 async function get(path: string, referer?: string) {
   const ctx = createExecutionContext();
   const headers = referer ? { referer } : undefined;
-  const response = await worker.fetch(new Request(`https://dustinedwards.info${path}`, { headers }) as never, env as never, ctx);
+  const response = await worker.fetch(
+    new Request(`https://dustinedwards.info${path}`, { headers }) as never,
+    env as never,
+    ctx,
+  );
   await waitOnExecutionContext(ctx);
   return response;
 }
 
 it("counts a 404 by path and referring host, never its query or a preview link", async () => {
-  expect((await get(`${STUB_PATHS.missing}?utm=x`, "https://example.com/some/post")).status).toBe(404);
+  expect((await get(`${STUB_PATHS.missing}?utm=x`, "https://example.com/some/post")).status).toBe(
+    404,
+  );
   expect((await get("/preview/secret-token")).status).toBe(404);
-  const { results } = await env.DB.prepare("SELECT path, referrer_host, hit_count FROM page_404_daily ORDER BY path").all();
-  expect(results).toEqual([{ path: STUB_PATHS.missing, referrer_host: "example.com", hit_count: 1 }]);
+  const { results } = await env.DB.prepare(
+    "SELECT path, referrer_host, hit_count FROM page_404_daily ORDER BY path",
+  ).all();
+  expect(results).toEqual([
+    { path: STUB_PATHS.missing, referrer_host: "example.com", hit_count: 1 },
+  ]);
 });
 
 it("answers 410 for the address of a post Carrel deleted, uncached and unindexed", async () => {
   // The tombstone site-api 0.22.0 keeps for a deleted or trashed post (drizzle/0042), slashless as gonePath keys it.
-  await env.DB.prepare("INSERT INTO gone_paths (path, gone_at) VALUES (?, ?)").bind(STUB_PATHS.missing, "2026-11-05T00:00:00Z").run();
+  await env.DB.prepare("INSERT INTO gone_paths (path, gone_at) VALUES (?, ?)")
+    .bind(STUB_PATHS.missing, "2026-11-05T00:00:00Z")
+    .run();
   const response = await get(`${STUB_PATHS.missing}?utm=x`);
   expect(response.status).toBe(410);
   expect(response.headers.get("cache-control")).toBe("no-store");

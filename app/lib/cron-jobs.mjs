@@ -22,7 +22,11 @@ export const CRON_JOBS = Object.freeze([
   Object.freeze({ name: "backup", everyMinutes: 1440, timeoutMs: 10 * 60_000 }),
   Object.freeze({ name: "media-backup", everyMinutes: 1440, timeoutMs: 10 * 60_000 }),
   Object.freeze({ name: "prune-404", everyMinutes: 1440, timeoutMs: 60_000 }),
-  Object.freeze({ name: "health-snapshot", everyMinutes: HEALTH_SNAPSHOT_EVERY_MINUTES, timeoutMs: 2 * 60_000 }),
+  Object.freeze({
+    name: "health-snapshot",
+    everyMinutes: HEALTH_SNAPSHOT_EVERY_MINUTES,
+    timeoutMs: 2 * 60_000,
+  }),
   Object.freeze({ name: "purge-zero-results", everyMinutes: 1440, timeoutMs: 60_000 }),
   Object.freeze({ name: "check-publications", everyMinutes: 1440, timeoutMs: 5 * 60_000 }),
 ]);

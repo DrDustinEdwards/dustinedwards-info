@@ -30,10 +30,13 @@ export async function islandsModuleSource(url) {
   const plugin = /** @type {any} */ (islandsPlugin());
   plugin.configResolved({ command: "build" });
   const source = await plugin.load.call({ addWatchFile() {} }, "\0virtual:islands");
-  return source.replace(/^export const ISLAND_URLS = (.*);$/m, (/** @type {string} */ _, /** @type {string} */ json) => {
-    const urls = Object.fromEntries(Object.keys(JSON.parse(json)).map((name) => [name, url]));
-    return `export const ISLAND_URLS = ${JSON.stringify(urls)};`;
-  });
+  return source.replace(
+    /^export const ISLAND_URLS = (.*);$/m,
+    (/** @type {string} */ _, /** @type {string} */ json) => {
+      const urls = Object.fromEntries(Object.keys(JSON.parse(json)).map((name) => [name, url]));
+      return `export const ISLAND_URLS = ${JSON.stringify(urls)};`;
+    },
+  );
 }
 
 /**
@@ -47,6 +50,9 @@ export async function builtIslandFiles() {
   plugin.configResolved({ command: "build" });
   /** @type {Array<{ fileName: string, source: string }>} */
   const files = [];
-  await plugin.generateBundle.call({ environment: { name: "client" }, emitFile: (/** @type {any} */ file) => files.push(file) });
+  await plugin.generateBundle.call({
+    environment: { name: "client" },
+    emitFile: (/** @type {any} */ file) => files.push(file),
+  });
   return files;
 }

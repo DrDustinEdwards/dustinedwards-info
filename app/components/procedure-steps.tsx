@@ -2,13 +2,29 @@ import { Picture } from "~/components/picture";
 import { StepCalculators } from "~/components/phage-tool";
 import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";
-import { gramsPerCup, ingredientNames, showQuantity, showTemperatures, stepId, stepIngredients, type UnitSystem } from "~/kb/procedures/recipe-views.mjs";
+import {
+  gramsPerCup,
+  ingredientNames,
+  showQuantity,
+  showTemperatures,
+  stepId,
+  stepIngredients,
+  type UnitSystem,
+} from "~/kb/procedures/recipe-views.mjs";
 import { type Step, html } from "~/components/procedure-materials";
 import { contentPicture } from "~/lib/media/images.mjs";
 
 /* The procedure page's method (procedure.tsx): its steps, their flags and the commands they run. */
 
-function Flag({ kind, label, children }: { kind: string; label: string; children: React.ReactNode }) {
+function Flag({
+  kind,
+  label,
+  children,
+}: {
+  kind: string;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className={`procedure-flag procedure-flag-${kind}`} role="note">
       <strong className="procedure-flag-label">{label}</strong> {children}
@@ -39,10 +55,12 @@ export function StepItem({
   /** A recipe's words for each ingredient, as its ingredient list gives them. */
   names?: Map<string, string>;
 }) {
-  const show = (q: Parameters<NonNullable<Parameters<typeof fillQuantities>[2]>>[0]) => showQuantity(q, factor, units, densities?.get(q.name?.toLowerCase() ?? "") ?? null);
+  const show = (q: Parameters<NonNullable<Parameters<typeof fillQuantities>[2]>>[0]) =>
+    showQuantity(q, factor, units, densities?.get(q.name?.toLowerCase() ?? "") ?? null);
   const text = showTemperatures(fillQuantities(step, factor, densities ? show : undefined), units);
   // A recipe step lists what goes into it (R2), with the amounts the reader asked for.
-  const ingredients = densities && !brief ? stepIngredients(step, factor, units, densities, names) : [];
+  const ingredients =
+    densities && !brief ? stepIngredients(step, factor, units, densities, names) : [];
   return (
     <li
       value={step.number}
@@ -51,7 +69,11 @@ export function StepItem({
       data-step={step.number}
       data-timers={step.timers.length > 0 ? JSON.stringify(step.timers) : undefined}
     >
-      <p className="procedure-step-text" data-run-swap="step" dangerouslySetInnerHTML={html(text)} />
+      <p
+        className="procedure-step-text"
+        data-run-swap="step"
+        dangerouslySetInnerHTML={html(text)}
+      />
       {ingredients.length > 0 ? (
         <p className="procedure-step-ingredients">
           <span className="procedure-step-ingredients-label">Ingredients: </span>
@@ -82,11 +104,19 @@ export function StepItem({
         group.length === 1 && !group[0]!.platform ? (
           <Command key={`cmd${g}`} cmd={group[0]!} />
         ) : (
-          <Platforms key={`cmd${g}`} group={group} id={`${scope ? stepId(scope, step.number) : `step-${step.number}`}-${g}`} brief={brief} />
+          <Platforms
+            key={`cmd${g}`}
+            group={group}
+            id={`${scope ? stepId(scope, step.number) : `step-${step.number}`}-${g}`}
+            brief={brief}
+          />
         ),
       )}
       {step.photos.map((p) => (
-        <Picture key={p.src} picture={contentPicture(p.src, { ...p, className: "procedure-photo" })} />
+        <Picture
+          key={p.src}
+          picture={contentPicture(p.src, { ...p, className: "procedure-photo" })}
+        />
       ))}
       {brief
         ? null
@@ -103,10 +133,14 @@ export function StepItem({
             </div>
           ))}
       {/* A row compiled before calculators existed has no `calculators` until the next sync rewrites it. */}
-      {brief || !step.calculators?.length ? null : <StepCalculators calculators={step.calculators} scope={`${scope}s${step.number}`} />}
+      {brief || !step.calculators?.length ? null : (
+        <StepCalculators calculators={step.calculators} scope={`${scope}s${step.number}`} />
+      )}
       {brief
         ? null
-        : step.why.map((w, i) => <div key={`w${i}`} className="procedure-why" dangerouslySetInnerHTML={html(w)} />)}
+        : step.why.map((w, i) => (
+            <div key={`w${i}`} className="procedure-why" dangerouslySetInnerHTML={html(w)} />
+          ))}
       {step.troubleshooting.length > 0 ? (
         <p className="procedure-step-trouble">
           Troubleshooting:{" "}
@@ -168,14 +202,23 @@ function Platforms({ group, id, brief }: { group: Cmd[]; id: string; brief: bool
       {brief ? null : (
         <p className="procedure-platform-tabs">
           {group.map((cmd) => (
-            <a key={cmd.platform} href={`#${id}-${cmd.platform}`} data-platform={cmd.platform ?? ""}>
+            <a
+              key={cmd.platform}
+              href={`#${id}-${cmd.platform}`}
+              data-platform={cmd.platform ?? ""}
+            >
               {platformName(cmd.platform)}
             </a>
           ))}
         </p>
       )}
       {group.map((cmd) => (
-        <div key={cmd.platform} id={`${id}-${cmd.platform}`} className="procedure-platform" data-platform={cmd.platform ?? ""}>
+        <div
+          key={cmd.platform}
+          id={`${id}-${cmd.platform}`}
+          className="procedure-platform"
+          data-platform={cmd.platform ?? ""}
+        >
           <p className="procedure-platform-label">{platformName(cmd.platform)}</p>
           <Command cmd={cmd} />
         </div>
@@ -199,13 +242,34 @@ export function Bullets({ id, title, items }: { id: string; title: string; items
   );
 }
 
-export function Steps({ steps, factor, record, scope, units = null }: { steps: Step[]; factor: number; record: ProcedureRecord; scope: string; units?: UnitSystem | null }) {
+export function Steps({
+  steps,
+  factor,
+  record,
+  scope,
+  units = null,
+}: {
+  steps: Step[];
+  factor: number;
+  record: ProcedureRecord;
+  scope: string;
+  units?: UnitSystem | null;
+}) {
   const densities = record.profile === "recipe" ? gramsPerCup(record) : null;
   const names = record.profile === "recipe" ? ingredientNames(record) : undefined;
   return (
     <ol className="procedure-steps" start={steps[0]?.number ?? 1}>
       {steps.map((step) => (
-        <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} scope={scope} units={units} densities={densities} names={names} />
+        <StepItem
+          key={step.number}
+          step={step}
+          factor={factor}
+          troubleshooting={record.troubleshooting}
+          scope={scope}
+          units={units}
+          densities={densities}
+          names={names}
+        />
       ))}
     </ol>
   );

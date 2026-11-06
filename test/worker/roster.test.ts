@@ -3,7 +3,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { cacheTags } from "~/lib/seo";
 import { rosterPath } from "~/lib/roster/compile.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
-import ContentPage, { headers as contentPageHeaders, loader as pageLoader } from "~/routes/content-page";
+import ContentPage, {
+  headers as contentPageHeaders,
+  loader as pageLoader,
+} from "~/routes/content-page";
 import { headers as homeHeaders, loader as homeLoader } from "~/routes/home";
 
 import { versionCases } from "./carrel-version-cases";
@@ -41,22 +44,41 @@ const headersFor = (key: string) => ({
   "cf-connecting-ip": "203.0.113.9",
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) => loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+const get = (url: string) =>
+  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
   return action(
-    argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
+    argsFor(
+      new Request(url, {
+        method,
+        headers: headersFor(testEnv.CARREL_SITE_KEY),
+        body: JSON.stringify(body),
+      }),
+    ),
   );
 }
 
 /** The rendered roster section of the program page, and the loader data behind it. */
 async function programPage() {
-  const data = await pageLoader({ request: new Request(`${ORIGIN}${PAGE}`), context: routeContext(), params: {} } as never);
+  const data = await pageLoader({
+    request: new Request(`${ORIGIN}${PAGE}`),
+    context: routeContext(),
+    params: {},
+  } as never);
   const html = renderRoute(PAGE, ContentPage, { loaderData: data });
   return { data, html, names: await textsOf(html, "section[aria-labelledby=roster] li") };
 }
 async function homeFacts() {
-  const result = await homeLoader({ request: new Request(`${ORIGIN}/`), params: {}, context: routeContext() } as never);
-  return (result as unknown as { data: { discovery: { researchers: number; cohorts: number; since: number } } }).data.discovery;
+  const result = await homeLoader({
+    request: new Request(`${ORIGIN}/`),
+    params: {},
+    context: routeContext(),
+  } as never);
+  return (
+    result as unknown as {
+      data: { discovery: { researchers: number; cohorts: number; since: number } };
+    }
+  ).data.discovery;
 }
 const commits = async () => (await writes()).map((w) => ({ body: { message: w.message } }));
 const purgedTags = () => purge.mock.calls.flatMap(([options]) => options.tags);
@@ -90,51 +112,73 @@ async function resetRoster() {
 }
 
 describe("an edit through the adapter is live at the next request", () => {
-  it("shows a new name on the program page and in the home page's count, with no build or deploy", { timeout: 180_000 }, async () => {
-    const before = await programPage();
-    expect(before.names).not.toContain(ADDED);
-    const countBefore = (await homeFacts()).researchers;
+  it(
+    "shows a new name on the program page and in the home page's count, with no build or deploy",
+    { timeout: 180_000 },
+    async () => {
+      const before = await programPage();
+      expect(before.names).not.toContain(ADDED);
+      const countBefore = (await homeFacts()).researchers;
 
-    const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] });
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: edited,
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-roster",
-    });
-    expect(response.status, await response.clone().text()).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-roster" });
+      const edited = await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] });
+      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+        source: edited,
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-roster",
+      });
+      expect(response.status, await response.clone().text()).toBe(200);
+      expect(await response.json()).toMatchObject({
+        id: ID,
+        status: "published",
+        changeId: "chg-roster",
+      });
 
-    // The repository is the source, and it holds the edit.
-    expect((await source(FILE))).toBe(edited);
-    expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain("[carrel:chg-roster]");
+      // The repository is the source, and it holds the edit.
+      expect(await source(FILE)).toBe(edited);
+      expect(((await commits())[0]?.body as { message?: string } | undefined)?.message).toContain(
+        "[carrel:chg-roster]",
+      );
 
-    // The very next request carries it: the page's roster and the home page's count.
-    const after = await programPage();
-    expect(after.names).toContain(ADDED);
-    expect(after.names).toHaveLength(before.names.length + 1);
-    expect((await homeFacts()).researchers).toBe(countBefore + 1);
+      // The very next request carries it: the page's roster and the home page's count.
+      const after = await programPage();
+      expect(after.names).toContain(ADDED);
+      expect(after.names).toHaveLength(before.names.length + 1);
+      expect((await homeFacts()).researchers).toBe(countBefore + 1);
 
-    // The file read back through Carrel is the edit, at the head.
-    const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as { source: string; kind: string; version: string };
-    expect(read.kind).toBe("roster");
-    expect(read.source).toBe(edited);
-  });
+      // The file read back through Carrel is the edit, at the head.
+      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+        source: string;
+        kind: string;
+        version: string;
+      };
+      expect(read.kind).toBe("roster");
+      expect(read.source).toBe(edited);
+    },
+  );
 
-  it("a new cohort is a new file, and a cohort listed newest first changes the home page's counts", { timeout: 180_000 }, async () => {
-    const before = await homeFacts();
-    const year = CURRENT.year + 1;
-    const created = await send("PUT", `${PREFIX}/content/roster.${year}/draft`, {
-      source: await cohortFile({ year, photo: null, researchers: ["Example Person Seven"] }),
-      expectedVersion: null,
-      changeId: "chg-new-cohort",
-    });
-    expect(created.status, await created.clone().text()).toBe(200);
-    expect(((await source(rosterPath(String(year)))) !== undefined)).toBe(true);
+  it(
+    "a new cohort is a new file, and a cohort listed newest first changes the home page's counts",
+    { timeout: 180_000 },
+    async () => {
+      const before = await homeFacts();
+      const year = CURRENT.year + 1;
+      const created = await send("PUT", `${PREFIX}/content/roster.${year}/draft`, {
+        source: await cohortFile({ year, photo: null, researchers: ["Example Person Seven"] }),
+        expectedVersion: null,
+        changeId: "chg-new-cohort",
+      });
+      expect(created.status, await created.clone().text()).toBe(200);
+      expect((await source(rosterPath(String(year)))) !== undefined).toBe(true);
 
-    expect(await homeFacts()).toEqual({ ...before, researchers: before.researchers + 1, cohorts: before.cohorts + 1 });
-    const { data } = await programPage();
-    expect((data as { roster: Array<{ year: number }> }).roster.map((c) => c.year)[0]).toBe(year);
-  });
+      expect(await homeFacts()).toEqual({
+        ...before,
+        researchers: before.researchers + 1,
+        cohorts: before.cohorts + 1,
+      });
+      const { data } = await programPage();
+      expect((data as { roster: Array<{ year: number }> }).roster.map((c) => c.year)[0]).toBe(year);
+    },
+  );
 
   it("an unchanged save commits nothing and purges nothing", { timeout: 180_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
@@ -143,54 +187,85 @@ describe("an edit through the adapter is live at the next request", () => {
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
-    expect((await commits())).toHaveLength(0);
+    expect(await commits()).toHaveLength(0);
     expect(purge).not.toHaveBeenCalled();
   });
 });
 
 describe("a save purges every page that embeds the roster", () => {
-  it("sends the content pages' tag and the home page's, and the pages carry exactly those tags", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
-      source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
-      expectedVersion: await versionOf(FILE),
-      changeId: "chg-purge",
-    });
-    expect(response.status, await response.clone().text()).toBe(200);
+  it(
+    "sends the content pages' tag and the home page's, and the pages carry exactly those tags",
+    { timeout: 180_000 },
+    async () => {
+      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+        source: await cohortFile({ ...CURRENT, researchers: [...CURRENT.researchers, ADDED] }),
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-purge",
+      });
+      expect(response.status, await response.clone().text()).toBe(200);
 
-    const purged = purgedTags();
-    expect(purged).toContain("content-pages");
-    expect(purged).toContain(cacheTags());
+      const purged = purgedTags();
+      expect(purged).toContain("content-pages");
+      expect(purged).toContain(cacheTags());
 
-    // The tags a purge sends are the tags the two pages are served with, so neither can be left stale.
-    const pageTags = (new Headers(contentPageHeaders()).get("cache-tag") ?? "").split(",");
-    const homeTags = (new Headers(homeHeaders({ loaderHeaders: new Headers() } as never)).get("cache-tag") ?? "").split(",");
-    expect(pageTags.some((tag) => purged.includes(tag))).toBe(true);
-    expect(homeTags.some((tag) => purged.includes(tag))).toBe(true);
-  });
+      // The tags a purge sends are the tags the two pages are served with, so neither can be left stale.
+      const pageTags = (new Headers(contentPageHeaders()).get("cache-tag") ?? "").split(",");
+      const homeTags = (
+        new Headers(homeHeaders({ loaderHeaders: new Headers() } as never)).get("cache-tag") ?? ""
+      ).split(",");
+      expect(pageTags.some((tag) => purged.includes(tag))).toBe(true);
+      expect(homeTags.some((tag) => purged.includes(tag))).toBe(true);
+    },
+  );
 });
 
 describe("a save is held to what CI holds", () => {
   it("REFUSES a field the roster never had, with the message, and commits nothing", async () => {
-    const bad = (await cohortFile(CURRENT)).replace("year: 2031", "year: 2031\nemail: someone@example.com");
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(FILE), changeId: "chg-bad" });
+    const bad = (await cohortFile(CURRENT)).replace(
+      "year: 2031",
+      "year: 2031\nemail: someone@example.com",
+    );
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      source: bad,
+      expectedVersion: await versionOf(FILE),
+      changeId: "chg-bad",
+    });
     expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(/email is not a roster field/);
-    expect((await commits())).toHaveLength(0);
-    expect((await source(FILE))).toBe(currentFile);
+    expect(((await response.json()) as { message: string }).message).toMatch(
+      /email is not a roster field/,
+    );
+    expect(await commits()).toHaveLength(0);
+    expect(await source(FILE)).toBe(currentFile);
   });
 
   it("REFUSES a photograph the media library does not hold", async () => {
-    const source = await cohortFile({ ...CURRENT, photo: { ...CURRENT.photo, src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp" } });
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source, expectedVersion: await versionOf(FILE), changeId: "chg-photo" });
+    const source = await cohortFile({
+      ...CURRENT,
+      photo: {
+        ...CURRENT.photo,
+        src: "/media/dustin-edwards-not-there-fedcba9876543210-1080x720.webp",
+      },
+    });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      source,
+      expectedVersion: await versionOf(FILE),
+      changeId: "chg-photo",
+    });
     expect(response.status).toBe(422);
-    expect(((await response.json()) as { message: string }).message).toMatch(/is not in the media library/);
-    expect((await commits())).toHaveLength(0);
+    expect(((await response.json()) as { message: string }).message).toMatch(
+      /is not in the media library/,
+    );
+    expect(await commits()).toHaveLength(0);
   });
 
   it("REFUSES an id that is not a year, so no other path can be read or written through it", async () => {
-    const response = await send("PUT", `${PREFIX}/content/roster.notes/draft`, { source: currentFile, expectedVersion: null, changeId: "chg-slug" });
+    const response = await send("PUT", `${PREFIX}/content/roster.notes/draft`, {
+      source: currentFile,
+      expectedVersion: null,
+      changeId: "chg-slug",
+    });
     expect(response.status).toBe(422);
-    expect((await commits())).toHaveLength(0);
+    expect(await commits()).toHaveLength(0);
     expect((await get(`${PREFIX}/content/roster.notes`)).status).toBe(404);
   });
 
@@ -201,29 +276,43 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(FILE) });
-    expect((await commits())).toHaveLength(0);
+    expect(await response.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: await versionOf(FILE),
+    });
+    expect(await commits()).toHaveLength(0);
   });
 
   it("has no draft state: a cohort cannot be unpublished, and the answer says how to remove one", async () => {
-    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(FILE), changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+      expectedVersion: await versionOf(FILE),
+      changeId: "chg-down",
+    });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/no draft state/);
-    expect((await commits())).toHaveLength(0);
+    expect(await commits()).toHaveLength(0);
     expect((await programPage()).names.length).toBeGreaterThan(0);
   });
 });
 
 describe("a lost row is repaired from the file, never the reverse", () => {
-  it("rewrites the row on an unchanged save and commits nothing", { timeout: 180_000 }, async () => {
-    await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
-    expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
+  it(
+    "rewrites the row on an unchanged save and commits nothing",
+    { timeout: 180_000 },
+    async () => {
+      await testEnv.DB.prepare("DELETE FROM roster WHERE slug = ?1").bind(SLUG).run();
+      expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length - 1);
 
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: currentFile, expectedVersion: await versionOf(FILE), changeId: "chg-repair" });
-    expect(response.status, await response.clone().text()).toBe(200);
-    expect((await commits())).toHaveLength(0);
-    expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length);
-  });
+      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+        source: currentFile,
+        expectedVersion: await versionOf(FILE),
+        changeId: "chg-repair",
+      });
+      expect(response.status, await response.clone().text()).toBe(200);
+      expect(await commits()).toHaveLength(0);
+      expect((await homeFacts()).cohorts).toBe(SYNTHETIC_COHORTS.length);
+    },
+  );
 });
 
 describe("an empty table is a fault, never an empty roster", () => {
@@ -239,9 +328,12 @@ describe("Carrel lists cohorts beside posts, and the operator reads them and can
     const res = (await (await get(`${PREFIX}/content?limit=100&q=${SLUG}`)).json()) as {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
-    expect(res.items.find((i) => i.id === ID)).toMatchObject({ kind: "roster", path: `${PAGE}#year-${SLUG}`, status: "published" });
+    expect(res.items.find((i) => i.id === ID)).toMatchObject({
+      kind: "roster",
+      path: `${PAGE}#year-${SLUG}`,
+      status: "published",
+    });
   });
-
 });
 
 versionCases({

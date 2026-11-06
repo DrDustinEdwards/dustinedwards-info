@@ -15,7 +15,13 @@
 import { readCv } from "~/db/cv";
 import { purgeCv, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { cvPdfOptions, cvPdfStamp, fontFaceRule, PDF_FONTS, renderCvHtml } from "~/lib/cv/pdf-html.mjs";
+import {
+  cvPdfOptions,
+  cvPdfStamp,
+  fontFaceRule,
+  PDF_FONTS,
+  renderCvHtml,
+} from "~/lib/cv/pdf-html.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 import sansNormalUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
 import serifItalicUrl from "~/fonts/source-serif-4-latin-italic.woff2?url";
@@ -48,7 +54,10 @@ function fontCss(env: Env): Promise<string> {
       const url = FONT_URLS[file];
       // The ASSETS binding ignores the hostname and matches only the pathname.
       const response = await env.ASSETS.fetch(new Request(`https://assets.local${url}`));
-      if (!response.ok) throw new Error(`The font ${file} is not in the assets (${url} answered ${response.status}).`);
+      if (!response.ok)
+        throw new Error(
+          `The font ${file} is not in the assets (${url} answered ${response.status}).`,
+        );
       return fontFaceRule(family, new Uint8Array(await response.arrayBuffer()), style);
     }),
   )
@@ -63,7 +72,9 @@ function fontCss(env: Env): Promise<string> {
 /** The PDF bytes for a resolved CV, through Browser Run. Throws, naming what failed. */
 async function renderCvPdf(env: Env, CV: Awaited<ReturnType<typeof readCv>>): Promise<Uint8Array> {
   if (!env.BROWSER) {
-    throw new Error("The BROWSER binding is not configured on this Worker, so the CV PDF cannot be rendered (wrangler.jsonc.example).");
+    throw new Error(
+      "The BROWSER binding is not configured on this Worker, so the CV PDF cannot be rendered (wrangler.jsonc.example).",
+    );
   }
   const { renderBody } = await loadPipeline();
   const html = await renderCvHtml(CV, { renderBody, fontCss: await fontCss(env) });
@@ -73,19 +84,29 @@ async function renderCvPdf(env: Env, CV: Awaited<ReturnType<typeof readCv>>): Pr
     gotoOptions: { waitUntil: "load" },
   });
   if (!response.ok) {
-    throw new Error(`Browser Run answered ${response.status} for the CV PDF: ${(await response.text()).slice(0, 300)}`);
+    throw new Error(
+      `Browser Run answered ${response.status} for the CV PDF: ${(await response.text()).slice(0, 300)}`,
+    );
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   // A 200 that is not a PDF must never replace the one that is.
   if (bytes.length < 1024 || String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") {
-    throw new Error(`Browser Run answered 200 for the CV PDF with ${bytes.length} bytes that are not a PDF.`);
+    throw new Error(
+      `Browser Run answered 200 for the CV PDF with ${bytes.length} bytes that are not a PDF.`,
+    );
   }
   return bytes;
 }
 
 export type CvPdfOutcome =
   | { action: "current"; fingerprint: string }
-  | { action: "stored"; fingerprint: string; bytes: number; purged: PurgeOutcome; attempts: number };
+  | {
+      action: "stored";
+      fingerprint: string;
+      bytes: number;
+      purged: PurgeOutcome;
+      attempts: number;
+    };
 
 /**
  * Makes the stored PDF the one for the CV D1 holds NOW, and returns what it did. Reads D1 itself, so it renders
@@ -104,7 +125,8 @@ export async function ensureCvPdf(env: Env): Promise<CvPdfOutcome> {
     const cv = await readCv(env);
     const fingerprint = await cvPdfStamp(cv);
     const stored = await env.OG.head(CV_PDF_KEY);
-    if (stored?.customMetadata?.[FINGERPRINT_FIELD] === fingerprint) return { action: "current", fingerprint };
+    if (stored?.customMetadata?.[FINGERPRINT_FIELD] === fingerprint)
+      return { action: "current", fingerprint };
 
     const bytes = await renderCvPdf(env, cv);
 
@@ -120,7 +142,13 @@ export async function ensureCvPdf(env: Env): Promise<CvPdfOutcome> {
     });
     if (put === null) continue;
 
-    return { action: "stored", fingerprint, bytes: bytes.length, purged: await purgeCv("regenerate CV PDF"), attempts: attempt };
+    return {
+      action: "stored",
+      fingerprint,
+      bytes: bytes.length,
+      purged: await purgeCv("regenerate CV PDF"),
+      attempts: attempt,
+    };
   }
   throw new Error(
     `The CV changed (or the stored PDF did) during each of ${MAX_ATTEMPTS} renders, so the PDF was not replaced. ` +
@@ -137,7 +165,9 @@ export async function regenerateCvPdfAfterSave(env: Env, why: string): Promise<C
   try {
     return await ensureCvPdf(env);
   } catch (error) {
-    console.error(JSON.stringify({ alert: "cv-pdf-render-failed", why, detail: errorMessage(error) }));
+    console.error(
+      JSON.stringify({ alert: "cv-pdf-render-failed", why, detail: errorMessage(error) }),
+    );
     throw error;
   }
 }

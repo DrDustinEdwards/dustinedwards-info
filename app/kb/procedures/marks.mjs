@@ -25,7 +25,8 @@ function protectedRanges(text) {
   /** @type {Array<[number, number]>} */
   const ranges = [];
   for (const pattern of [/`[^`\n]*`/g, /\]\([^)\n]*\)/g, /<[a-z]+:[^>\n]*>/gi]) {
-    for (const match of text.matchAll(pattern)) ranges.push([match.index, match.index + match[0].length]);
+    for (const match of text.matchAll(pattern))
+      ranges.push([match.index, match.index + match[0].length]);
   }
   return ranges;
 }
@@ -60,7 +61,7 @@ export function parseQuantity(inner) {
   const amount = (at < 0 ? body : body.slice(0, at)).trim();
   const unit = at < 0 ? "" : body.slice(at + 1).trim();
   const range = /^(.+?)\s*(?:-|to)\s*(.+)$/.exec(amount);
-  const min = parseNumber(range ? range[1] ?? "" : amount);
+  const min = parseNumber(range ? (range[1] ?? "") : amount);
   const max = range ? parseNumber(range[2] ?? "") : min;
   return { raw: inner, amount, unit, fixed, min, max: min === null ? null : max };
 }
@@ -96,14 +97,28 @@ export function markSpans(text) {
     if (rest[0] === "~") {
       const m = TIMER.exec(rest);
       if (!m) continue;
-      out.push({ start: i, end: i + m[0].length, sign: "~", name: (m[1] ?? "").trim(), shown: "", braces: m[2] ?? "" });
+      out.push({
+        start: i,
+        end: i + m[0].length,
+        sign: "~",
+        name: (m[1] ?? "").trim(),
+        shown: "",
+        braces: m[2] ?? "",
+      });
       last = i + m[0].length;
       continue;
     }
     const m = BRACED.exec(rest) ?? SINGLE.exec(rest);
     if (!m) continue;
     const [name, shown] = (m[2] ?? "").split("|").map((part) => part.trim());
-    out.push({ start: i, end: i + m[0].length, sign: /** @type {"@" | "#"} */ (m[1]), name: name ?? "", shown: shown ?? "", braces: m[3] === undefined ? null : m[3] });
+    out.push({
+      start: i,
+      end: i + m[0].length,
+      sign: /** @type {"@" | "#"} */ (m[1]),
+      name: name ?? "",
+      shown: shown ?? "",
+      braces: m[3] === undefined ? null : m[3],
+    });
     last = i + m[0].length;
   }
   return out;
@@ -121,9 +136,15 @@ export function tokenize(text) {
   let last = 0;
   for (const span of markSpans(text)) {
     if (span.start > last) out.push({ type: "text", value: text.slice(last, span.start) });
-    if (span.sign === "~") out.push({ type: "timer", label: span.name, quantity: parseQuantity(span.braces ?? "") });
+    if (span.sign === "~")
+      out.push({ type: "timer", label: span.name, quantity: parseQuantity(span.braces ?? "") });
     else if (span.sign === "@") {
-      out.push({ type: "material", name: span.name, display: span.shown || span.name, quantity: span.braces === null ? null : parseQuantity(span.braces) });
+      out.push({
+        type: "material",
+        name: span.name,
+        display: span.shown || span.name,
+        quantity: span.braces === null ? null : parseQuantity(span.braces),
+      });
     } else out.push({ type: "equipment", name: span.name, display: span.shown || span.name });
     last = span.end;
   }
@@ -169,7 +190,9 @@ export function segmentText(segment, factor = 1) {
     case "text":
       return segment.value;
     case "material":
-      return segment.quantity ? `${formatQuantity(segment.quantity, factor)} of ${segment.display}` : segment.display;
+      return segment.quantity
+        ? `${formatQuantity(segment.quantity, factor)} of ${segment.display}`
+        : segment.display;
     case "equipment":
       return segment.display;
     case "timer":

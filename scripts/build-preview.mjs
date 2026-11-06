@@ -32,7 +32,8 @@ function refuse(why) {
 function step(what, command) {
   console.log(`\nbuild:preview: ${what}`);
   const result = spawnSync(command, { cwd: root, shell: true, stdio: "inherit" });
-  if (result.status !== 0) refuse(`${what} failed (${command} exited ${result.status ?? "on a signal"}).`);
+  if (result.status !== 0)
+    refuse(`${what} failed (${command} exited ${result.status ?? "on a signal"}).`);
 }
 
 function previewD1Id() {
@@ -55,7 +56,9 @@ function previewKvId() {
   try {
     namespaces = JSON.parse(listed.stdout.slice(start));
   } catch (error) {
-    refuse(`kv namespace list did not parse: ${error instanceof Error ? error.message : String(error)}`);
+    refuse(
+      `kv namespace list did not parse: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
   const found = namespaces.find((n) => n.title === PREVIEW_KV);
   if (typeof found?.id !== "string" || found.id.length === 0) {
@@ -74,7 +77,8 @@ function patchOnce(text, key, value) {
   const needle = `"${key}": "${PLACEHOLDER}"`;
   const count = text.split(needle).length - 1;
   if (count !== 1) refuse(`expected ${needle} once in wrangler.jsonc, found it ${count} times.`);
-  if (text.indexOf(needle) < text.indexOf(`"previews"`)) refuse(`${needle} sits outside the previews block.`);
+  if (text.indexOf(needle) < text.indexOf(`"previews"`))
+    refuse(`${needle} sits outside the previews block.`);
   return text.replace(needle, `"${key}": "${value}"`);
 }
 
@@ -115,7 +119,11 @@ step("content check", "npm run check:content");
  * @returns {{ code: number | null, text: string }}
  */
 function syncPreview() {
-  const result = spawnSync("npm run sync:content -- --preview", { cwd: root, shell: true, encoding: "utf8" });
+  const result = spawnSync("npm run sync:content -- --preview", {
+    cwd: root,
+    shell: true,
+    encoding: "utf8",
+  });
   const text = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   process.stdout.write(text);
   return { code: result.status, text };
@@ -131,8 +139,11 @@ console.log(`\nbuild:preview: content sync to ${PREVIEW_D1}`);
 const first = syncPreview();
 if (first.code !== 0) {
   const drift = driftCount(first.text);
-  if (drift === null || drift === 0) refuse(`content sync to ${PREVIEW_D1} failed (exited ${first.code ?? "on a signal"}).`);
-  console.log("\nbuild:preview: render drift on the first sync, converged; confirming with a second sync");
+  if (drift === null || drift === 0)
+    refuse(`content sync to ${PREVIEW_D1} failed (exited ${first.code ?? "on a signal"}).`);
+  console.log(
+    "\nbuild:preview: render drift on the first sync, converged; confirming with a second sync",
+  );
   const confirm = syncPreview();
   const after = driftCount(confirm.text);
   if (confirm.code !== 0 || after !== 0) {

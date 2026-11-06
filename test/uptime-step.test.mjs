@@ -53,7 +53,10 @@ await test("the absent-key line under any other exit code is a miss", () => {
 });
 
 await test("the absent-key code without its line is a miss", () => {
-  assert.equal(uptimeStepOutcome(KEY_ABSENT_EXIT, "GET /alert-contacts answered 401").state, "missed");
+  assert.equal(
+    uptimeStepOutcome(KEY_ABSENT_EXIT, "GET /alert-contacts answered 401").state,
+    "missed",
+  );
 });
 
 await test("any other failure is a miss", () => {
@@ -65,5 +68,8 @@ await test("exit 0 without a change count is a miss", () => {
 });
 
 await test("exit 0 with a change count is applied, with the count read off the output", () => {
-  assert.deepEqual(uptimeStepOutcome(0, "  2 change(s) applied.\n"), { state: "applied", changes: 2 });
+  assert.deepEqual(uptimeStepOutcome(0, "  2 change(s) applied.\n"), {
+    state: "applied",
+    changes: 2,
+  });
 });

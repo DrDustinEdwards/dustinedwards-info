@@ -23,7 +23,12 @@ const HEADERS = {
 };
 
 function refusal(name: string, status: number, extra: Record<string, string> = {}): Response {
-  const body = { status: "fail", ok: false, time: new Date().toISOString(), checks: [{ name, status: "fail" }] };
+  const body = {
+    status: "fail",
+    ok: false,
+    time: new Date().toISOString(),
+    checks: [{ name, status: "fail" }],
+  };
   return new Response(JSON.stringify(body), { status, headers: { ...HEADERS, ...extra } });
 }
 

@@ -28,7 +28,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const path = url.pathname.replace(/\/sheet\/?$/, "");
   const row = await getProcedureByPath(env, path);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request)))
+    throw data(null, { status: 404 });
   const { count, factor } = readScale(row.record, url);
   return { record: row.record, count, factor };
 }
@@ -37,14 +38,24 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { record } = loaderData;
   // Prelum's head (pageMeta): not indexed, and canonical to the procedure's page, the copy that is.
-  return pageMeta({ title: `${record.title}: printable sheet`, description: record.description, path: record.path, noindex: true });
+  return pageMeta({
+    title: `${record.title}: printable sheet`,
+    description: record.description,
+    path: record.path,
+    noindex: true,
+  });
 }
 
 export default function ProcedureSheetRoute({ loaderData }: Route.ComponentProps) {
   const { record, count, factor } = loaderData;
   return (
     <main className="procedure-sheet-page" id="main">
-      <ProcedureSheet record={record} count={count} factor={factor} address={sheetAddress(record, SITE_ORIGIN)} />
+      <ProcedureSheet
+        record={record}
+        count={count}
+        factor={factor}
+        address={sheetAddress(record, SITE_ORIGIN)}
+      />
     </main>
   );
 }

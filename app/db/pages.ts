@@ -84,7 +84,13 @@ export async function listPublishedPageHtml(env: Env) {
 /** For Carrel's list: every row, drafts included, with when D1 last wrote it. */
 export async function listPageRows(env: Env) {
   const rows = await getDb(env)
-    .select({ slug: pages.slug, path: pages.path, title: pages.title, status: pages.status, syncedAt: pages.syncedAt })
+    .select({
+      slug: pages.slug,
+      path: pages.path,
+      title: pages.title,
+      status: pages.status,
+      syncedAt: pages.syncedAt,
+    })
     .from(pages)
     .orderBy(asc(pages.path));
   return rows.map(({ status, ...row }) => ({ ...row, draft: status === "draft" }));

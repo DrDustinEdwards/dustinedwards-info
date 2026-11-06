@@ -120,14 +120,14 @@ const cleanup = async () => {
   await routes.cleanup();
   await identity.cleanup();
 };
-const [postModule, indexModule, homeModule] = await Promise.all(
-  routes.files.map(importBundled),
-);
+const [postModule, indexModule, homeModule] = await Promise.all(routes.files.map(importBundled));
 const seo = await importBundled(identity.files[0]);
 
 const SITE = /** @type {any} */ (seo).SITE;
 const SITE_ORIGIN = /** @type {any} */ (seo).SITE_ORIGIN;
-const OWNER_PROFILES = /** @type {string[]} */ ([...(/** @type {any} */ (seo).OWNER_PROFILES ?? [])]);
+const OWNER_PROFILES = /** @type {string[]} */ ([
+  ...(/** @type {any} */ (seo).OWNER_PROFILES ?? []),
+]);
 
 assert(
   "the site identity module loaded",
@@ -299,8 +299,7 @@ function indexLoaderData(page) {
     span: {
       firstYear: year(ordered.at(-1)?.publishAt),
       lastYear: year(ordered[0]?.publishAt),
-      minutes:
-        ordered.reduce((n, p) => n + (p.readingTimeMinutes ?? 0), 0) || null,
+      minutes: ordered.reduce((n, p) => n + (p.readingTimeMinutes ?? 0), 0) || null,
     },
     expectedEntries: split.posts.length + (split.featured ? 1 : 0),
   };
@@ -420,10 +419,7 @@ assert(
 
 const homeFeaturedRows = ordered.filter((/** @type {any} */ p) => p.featured);
 const homeOtherRows = picksFirst(ordered.filter((/** @type {any} */ p) => !p.featured));
-const { featured: homeFeatured, recent: homeRecent } = startHere(
-  homeFeaturedRows,
-  homeOtherRows,
-);
+const { featured: homeFeatured, recent: homeRecent } = startHere(homeFeaturedRows, homeOtherRows);
 
 assert(
   "the home Start here section has a lead to render",
@@ -463,8 +459,7 @@ if (cards.length === 1) {
   assert(
     "/: the h-card u-url is the home page",
     prop(cards[0], "url") === EXPECTED_AUTHOR_URL,
-    `h-card url is ${JSON.stringify(prop(cards[0], "url"))}, expected ` +
-      `${EXPECTED_AUTHOR_URL}.`,
+    `h-card url is ${JSON.stringify(prop(cards[0], "url"))}, expected ` + `${EXPECTED_AUTHOR_URL}.`,
   );
   assert(
     "/: the h-card claims no u-photo, because the site publishes none",

@@ -157,111 +157,32 @@
   "obfuscationCases": [
     {
       "label": "tab inside the scheme",
-      "codes": [
-        106,
-        97,
-        118,
-        97,
-        9,
-        115,
-        99,
-        114,
-        105,
-        112,
-        116,
-        58,
-        120
-      ],
+      "codes": [106, 97, 118, 97, 9, 115, 99, 114, 105, 112, 116, 58, 120],
       "allowed": false
     },
     {
       "label": "newline inside the scheme",
-      "codes": [
-        106,
-        97,
-        118,
-        97,
-        10,
-        115,
-        99,
-        114,
-        105,
-        112,
-        116,
-        58,
-        120
-      ],
+      "codes": [106, 97, 118, 97, 10, 115, 99, 114, 105, 112, 116, 58, 120],
       "allowed": false
     },
     {
       "label": "NUL inside the scheme",
-      "codes": [
-        106,
-        97,
-        118,
-        97,
-        0,
-        115,
-        99,
-        114,
-        105,
-        112,
-        116,
-        58,
-        120
-      ],
+      "codes": [106, 97, 118, 97, 0, 115, 99, 114, 105, 112, 116, 58, 120],
       "allowed": false
     },
     {
       "label": "replacement character inside the scheme",
-      "codes": [
-        106,
-        97,
-        118,
-        97,
-        65533,
-        115,
-        99,
-        114,
-        105,
-        112,
-        116,
-        58,
-        120
-      ],
+      "codes": [106, 97, 118, 97, 65533, 115, 99, 114, 105, 112, 116, 58, 120],
       "allowed": false
     },
     {
       "label": "leading control characters",
-      "codes": [
-        1,
-        2,
-        106,
-        97,
-        118,
-        97,
-        115,
-        99,
-        114,
-        105,
-        112,
-        116,
-        58,
-        120
-      ],
+      "codes": [1, 2, 106, 97, 118, 97, 115, 99, 114, 105, 112, 116, 58, 120],
       "allowed": false
     },
     {
       "label": "a real relative path is untouched by normalization",
-      "codes": [
-        47,
-        98,
-        108,
-        111,
-        103,
-        47,
-        120
-      ],
+      "codes": [47, 98, 108, 111, 103, 47, 120],
       "allowed": true
     }
   ],

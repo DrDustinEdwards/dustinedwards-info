@@ -81,8 +81,7 @@ const BIBTEX_TYPE = {
  */
 export function toBibtex(paper) {
   const type = BIBTEX_TYPE[/** @type {keyof typeof BIBTEX_TYPE} */ (paper.type)] ?? "article";
-  const field = (/** @type {string} */ k, /** @type {string} */ v) =>
-    `  ${k} = {${v}},`;
+  const field = (/** @type {string} */ k, /** @type {string} */ v) => `  ${k} = {${v}},`;
 
   const lines = [`@${type}{${paper.id},`];
   lines.push(field("title", protectOrganisms(escapeBibtex(paper.title))));

@@ -1,13 +1,7 @@
 // Raw D1 rather than drizzle: bm25(), snippet() and MATCH have no drizzle surface. Nothing here
 // awaits a third party, so the AI layer cannot slow or break classic search.
 
-import {
-  RRF_K,
-  fuse,
-  hasFilters,
-  parseQuery,
-  toMatchExpression,
-} from "./query.mjs";
+import { RRF_K, fuse, hasFilters, parseQuery, toMatchExpression } from "./query.mjs";
 import { applySort, parseSort, type SearchSort } from "./sort.mjs";
 import { PUBLISHED_STATUS } from "./visibility.mjs";
 import { clampWords } from "~/lib/content/og-card-text.mjs";
@@ -107,11 +101,7 @@ interface RawRow {
 }
 
 function renderSnippet(raw: string): string {
-  return escapeXml(raw)
-    .split(MARK_START)
-    .join("<mark>")
-    .split(MARK_END)
-    .join("</mark>");
+  return escapeXml(raw).split(MARK_START).join("<mark>").split(MARK_END).join("</mark>");
 }
 
 /** The pipe-delimited `doc_tags` column as a list. */
@@ -243,7 +233,10 @@ async function runBrowse(db: D1Database, filters: FilterSql): Promise<RawRow[]> 
     ORDER BY ${NEWEST_ORDER}
     LIMIT ${CANDIDATE_LIMIT}
   `;
-  const result = await db.prepare(sql).bind(...filters.params).all<RawRow>();
+  const result = await db
+    .prepare(sql)
+    .bind(...filters.params)
+    .all<RawRow>();
   return result.results ?? [];
 }
 
@@ -328,8 +321,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   ]);
 
   const tookMs = Date.now() - started;
-  const truncated =
-    identityRows.length >= CANDIDATE_LIMIT || proseRows.length >= CANDIDATE_LIMIT;
+  const truncated = identityRows.length >= CANDIDATE_LIMIT || proseRows.length >= CANDIDATE_LIMIT;
 
   const proseUids = new Set(proseRows.map((r) => r.uid));
   const fused = fuse<RawRow & { uid: string }>([identityRows, proseRows]);
@@ -406,8 +398,7 @@ function explainFor(
       const i = at(0);
       const p = at(1);
       const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
-      const contribution = (n: number) =>
-        n === -1 ? null : (contributions[n] ?? null);
+      const contribution = (n: number) => (n === -1 ? null : (contributions[n] ?? null));
       return {
         uid: item.uid,
         title: item.title,
@@ -444,7 +435,11 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
   return {
     types: [...types].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
     // In the bases' own order, not by count, so the list reads the same from one search to the next.
-    bases: SEARCH_BASES.filter((b) => bases.has(b.id)).map((b) => ({ value: b.id, label: b.label, count: bases.get(b.id) ?? 0 })),
+    bases: SEARCH_BASES.filter((b) => bases.has(b.id)).map((b) => ({
+      value: b.id,
+      label: b.label,
+      count: bases.get(b.id) ?? 0,
+    })),
     tags: [...tags].map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
     years: [...years].map(([value, count]) => ({ value, count })).sort((a, b) => b.value - a.value),
   };

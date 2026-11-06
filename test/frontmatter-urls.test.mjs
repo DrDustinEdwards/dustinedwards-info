@@ -26,7 +26,12 @@ const CASES = [
   ["cover: protocol-relative host (finding B008)", cover, "//evil.com/x.png", false],
   ["cover: javascript scheme", cover, "javascript:alert(1)", false],
   ["cover: a full absolute url", cover, "https://evil.com/x.png", false],
-  ["further_reading: javascript scheme (finding B001)", furtherReading, "javascript:alert(1)", false],
+  [
+    "further_reading: javascript scheme (finding B001)",
+    furtherReading,
+    "javascript:alert(1)",
+    false,
+  ],
   ["further_reading: data url", furtherReading, "data:text/html,x", false],
   // Further reading is things to READ: http(s) or a `/writing/` path only, though `isAllowedUrl` permits mailto.
   ["further_reading: mailto", furtherReading, "mailto:a@b.c", false],

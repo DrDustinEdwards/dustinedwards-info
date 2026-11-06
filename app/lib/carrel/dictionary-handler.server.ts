@@ -21,11 +21,17 @@ type DictionaryEnv = Env;
 /** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 
 /** The source with its draft flag set to `draft`, touching no line when it already says so. */
-const withDraft = (raw: string, draft: boolean) => (fileIsDraft(raw) === draft ? raw : withPublication(raw, { draft }));
+const withDraft = (raw: string, draft: boolean) =>
+  fileIsDraft(raw) === draft ? raw : withPublication(raw, { draft });
 
 export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
   /** One write through saveDictionaryEntry as the Carrel actor, answered in the package's terms. */
-  async function write(key: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
+  async function write(
+    key: string,
+    changeId: string,
+    raw: string,
+    expectedVersion: string | null,
+  ): Promise<WriteResult> {
     try {
       const saved = await saveDictionaryEntry(env, {
         key,
@@ -34,7 +40,12 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id: key, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
+      return {
+        id: key,
+        version: saved.sourceBlobSha,
+        status: saved.draft ? "draft" : "published",
+        changeId,
+      };
     } catch (error) {
       // A DictionaryInvalid carries every message the validator gave; asSiteApiError passes them on.
       return asSiteApiError(env, error, dictionaryPath(key));
@@ -74,7 +85,9 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
     async get(key) {
       const file = await readFile(env, dictionaryPath(key));
       if (!file) return null;
-      const row = await env.DB.prepare(`SELECT synced_at FROM dictionary_entries WHERE key = ?1`).bind(key).first<{ synced_at: number }>();
+      const row = await env.DB.prepare(`SELECT synced_at FROM dictionary_entries WHERE key = ?1`)
+        .bind(key)
+        .first<{ synced_at: number }>();
       const { data } = parseDictionaryEntry({ file: dictionaryPath(key), raw: file.content });
       const draft = data.draft === true;
       return {
@@ -105,7 +118,12 @@ export function dictionaryHandler(env: DictionaryEnv): ContentKindHandler {
     async publish(key, input) {
       // Read even when source is sent: a version for an id that does not exist is a conflict.
       const stored = await existing(key);
-      return write(key, input.changeId, withDraft(input.source ?? stored, false), input.expectedVersion);
+      return write(
+        key,
+        input.changeId,
+        withDraft(input.source ?? stored, false),
+        input.expectedVersion,
+      );
     },
 
     async unpublish(key, input) {

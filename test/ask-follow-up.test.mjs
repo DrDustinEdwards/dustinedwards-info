@@ -41,7 +41,10 @@ await test("the last marker wins, so an earlier mention cannot steal the split",
 });
 
 await test("an answer written the way the prompt asks splits into the right follow-up", () => {
-  assert.ok(SYSTEM_PROMPT.includes(FOLLOW_UP_INSTRUCTION), "the model must be sent the instruction");
+  assert.ok(
+    SYSTEM_PROMPT.includes(FOLLOW_UP_INSTRUCTION),
+    "the model must be sent the instruction",
+  );
   // The prefix the model is told to write, read off the instruction rather than the splitter.
   const prefix = FOLLOW_UP_INSTRUCTION.trim().split(/\s+/).at(-1);
   const raw = `Phages are viruses that infect bacteria.\n${prefix} How are phages found?`;

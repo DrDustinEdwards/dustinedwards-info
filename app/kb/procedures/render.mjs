@@ -37,10 +37,29 @@ const HEADING = /<h([1-6]) id="([^"]+)">([\s\S]*?)<\/h\1>/g;
  * @param {unknown} profile
  */
 export function fixedSectionIds(profile) {
-  const materials = profile === "recipe" ? "ingredients" : profile === "computational" ? "software-and-data" : "reagents";
-  const fixed = [materials, "equipment", "primers", "troubleshooting", "expected-results", "limitations", "references", "proof-of-use", "version-history", "cite-this-procedure", "key-resources"];
+  const materials =
+    profile === "recipe"
+      ? "ingredients"
+      : profile === "computational"
+        ? "software-and-data"
+        : "reagents";
+  const fixed = [
+    materials,
+    "equipment",
+    "primers",
+    "troubleshooting",
+    "expected-results",
+    "limitations",
+    "references",
+    "proof-of-use",
+    "version-history",
+    "cite-this-procedure",
+    "key-resources",
+  ];
   // A how-to's own sections (S2, S1), after the shared ones so no protocol's prose heading changes its id.
-  return profile === "computational" ? [...fixed, "overview", "questions", "objectives", "key-points", "explanation"] : fixed;
+  return profile === "computational"
+    ? [...fixed, "overview", "questions", "objectives", "key-points", "explanation"]
+    : fixed;
 }
 
 /**
@@ -98,7 +117,10 @@ const list = (v) => (Array.isArray(v) ? v : v === undefined || v === null ? [] :
  */
 export function reagentSource(reagent) {
   if (reagent.preparedInLab) {
-    return { text: reagent.recipe ? "Prepared in the lab (recipe)" : "Prepared in the lab", href: reagent.recipe ? `/recipes/${reagent.recipe}` : null };
+    return {
+      text: reagent.recipe ? "Prepared in the lab (recipe)" : "Prepared in the lab",
+      href: reagent.recipe ? `/recipes/${reagent.recipe}` : null,
+    };
   }
   const text = [reagent.supplier, reagent.catalogNumber].filter(Boolean).join(", ");
   return { text: text || "Not recorded", href: reagent.productUrl };
@@ -118,11 +140,24 @@ export function reagentSource(reagent) {
  *   equipmentRows?: StoredEquipment[],
  * }} input
  */
-export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveImage, primerRows, strainRows, organismNames, reagentRows, equipmentRows }) {
+export async function renderProcedure({
+  slug,
+  parsed,
+  gaps,
+  renderBody,
+  resolveImage,
+  primerRows,
+  strainRows,
+  organismNames,
+  reagentRows,
+  equipmentRows,
+}) {
   const file = procedurePath(slug);
   const d = parsed.data;
   const refuseImage = async (/** @type {string} */ src) => {
-    throw new Error(`${file}: an image in prose ("${src}") is not supported; recipes carry photos on a step's own line`);
+    throw new Error(
+      `${file}: an image in prose ("${src}") is not supported; recipes carry photos on a step's own line`,
+    );
   };
 
   /**
@@ -133,7 +168,9 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     if (typeof markdown !== "string" || !markdown.trim() || GAP.test(markdown)) return null;
     const out = await renderBody({ file, body: markdown, resolveImage: refuseImage });
     if (out.blockedUrls.length > 0) {
-      throw new Error(`${file}: the URL allowlist refused ${out.blockedUrls.map((b) => b.url).join(", ")}`);
+      throw new Error(
+        `${file}: the URL allowlist refused ${out.blockedUrls.map((b) => b.url).join(", ")}`,
+      );
     }
     const html = out.html.trim();
     if (!opts.inline) return html;
@@ -150,9 +187,17 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
 
   /** @param {unknown} value */
   const inlineList = async (value) =>
-    /** @type {string[]} */ ((await Promise.all(list(known(value)).map((/** @type {string} */ x) => md(x, { inline: true })))).filter(Boolean));
+    /** @type {string[]} */ (
+      (
+        await Promise.all(
+          list(known(value)).map((/** @type {string} */ x) => md(x, { inline: true })),
+        )
+      ).filter(Boolean)
+    );
 
-  const materialsByName = new Map(list(d.materials).map((/** @type {any} */ m) => [String(m.name).toLowerCase(), m]));
+  const materialsByName = new Map(
+    list(d.materials).map((/** @type {any} */ m) => [String(m.name).toLowerCase(), m]),
+  );
 
   /** @param {import("./parse.mjs").Step} step */
   const renderStep = async (step) => {
@@ -221,7 +266,10 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       calculators: readCalcs(step.flags.calc),
       // A tutorial's challenges, each with the solution the parse paired with it (S5).
       challenges: await Promise.all(
-        step.flags.challenge.map(async (c, i) => ({ html: await md(c), solutionHtml: await md(step.flags.solution[i] ?? "") })),
+        step.flags.challenge.map(async (c, i) => ({
+          html: await md(c),
+          solutionHtml: await md(step.flags.solution[i] ?? ""),
+        })),
       ),
       commands: step.commands,
       photos: await Promise.all(step.photos.map(photo)),
@@ -246,10 +294,15 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       if (block.type === "prose") {
         const out = await renderBody({ file, body: block.markdown, resolveImage: refuseImage });
         if (out.blockedUrls.length > 0) {
-          throw new Error(`${file}: the URL allowlist refused ${out.blockedUrls.map((b) => b.url).join(", ")}`);
+          throw new Error(
+            `${file}: the URL allowlist refused ${out.blockedUrls.map((b) => b.url).join(", ")}`,
+          );
         }
         const html = out.html.replace(HEADING, (_all, level, id, inner) => {
-          const text = String(inner).replace(/<[^>]+>/g, "").replace(/#$/, "").trim();
+          const text = String(inner)
+            .replace(/<[^>]+>/g, "")
+            .replace(/#$/, "")
+            .trim();
           const unique = slugger.slug(text);
           if (Number(level) === 3) toc.push({ depth: 3, id: unique, text });
           return `<h${level} id="${unique}">${String(inner).replace(`href="#${id}"`, `href="#${unique}"`)}</h${level}>`;
@@ -273,14 +326,17 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       group: m.group ?? null,
       kind: m.kind ?? null,
       version: known(m.version),
-      stock: list(m.stock).filter((s) => known(s) !== null).map(String),
+      stock: list(m.stock)
+        .filter((s) => known(s) !== null)
+        .map(String),
       final: known(m.final),
       amount: known(m.amount),
       per: known(m.per),
       solution: m.solution ?? null,
       noteHtml: await md(m.note, { inline: true }),
       // A recipe's grams in one cup of it, where the recipe states it: the only way its volume is shown as weight (DECIDE 7).
-      gramsPerCup: typeof m.grams_per_cup === "number" && m.grams_per_cup > 0 ? m.grams_per_cup : null,
+      gramsPerCup:
+        typeof m.grams_per_cup === "number" && m.grams_per_cup > 0 ? m.grams_per_cup : null,
       /** @type {{ amount: string, unit: string, fixed: boolean, min: number | null, max: number | null } | null} */
       quantity: null,
     })),
@@ -291,12 +347,23 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
   /** @param {string} name */
   const markedTotal = (name) => {
     const qs = allSteps(parsed).flatMap((s) =>
-      s.segments.flatMap((seg) => (seg.type === "material" && seg.name.toLowerCase() === name.toLowerCase() && seg.quantity ? [seg.quantity] : [])),
+      s.segments.flatMap((seg) =>
+        seg.type === "material" && seg.name.toLowerCase() === name.toLowerCase() && seg.quantity
+          ? [seg.quantity]
+          : [],
+      ),
     );
     const unit = qs[0]?.unit;
-    if (qs.length === 0 || qs.some((q) => q.min === null || q.max !== q.min || q.unit !== unit)) return null;
+    if (qs.length === 0 || qs.some((q) => q.min === null || q.max !== q.min || q.unit !== unit))
+      return null;
     const sum = qs.reduce((n, q) => n + (q.min ?? 0), 0);
-    return { amount: String(sum), unit: unit ?? "", fixed: qs.every((q) => q.fixed), min: sum, max: sum };
+    return {
+      amount: String(sum),
+      unit: unit ?? "",
+      fixed: qs.every((q) => q.fixed),
+      min: sum,
+      max: sum,
+    };
   };
   for (const m of materials) {
     if (m.amount === null) m.quantity = markedTotal(m.name);
@@ -375,7 +442,10 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     // The procedure this one was copied from with the editor's Duplicate (validate.mjs checks the shape), or null.
     forkedFrom:
       d.forked_from && typeof d.forked_from === "object"
-        ? { slug: String(d.forked_from.slug), version: d.forked_from.version ? String(d.forked_from.version) : null }
+        ? {
+            slug: String(d.forked_from.slug),
+            version: d.forked_from.version ? String(d.forked_from.version) : null,
+          }
         : null,
     time: {
       total: known(d.time?.total),
@@ -389,13 +459,22 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       url: s.url ? String(s.url) : null,
     })),
     references: /** @type {string[]} */ (
-      (await Promise.all(list(known(d.references)).map((/** @type {string} */ r) => md(r, { inline: true })))).filter(Boolean)
+      (
+        await Promise.all(
+          list(known(d.references)).map((/** @type {string} */ r) => md(r, { inline: true })),
+        )
+      ).filter(Boolean)
     ),
     materials,
     equipment: await Promise.all(
       list(d.equipment).map(async (/** @type {any} */ e) => {
-        const item = typeof e === "object" && e !== null ? ((equipmentRows ?? []).find((r) => r.id === e.equipment) ?? null) : null;
-        return typeof e === "string" ? { name: e, noteHtml: null, item } : { name: String(e.name), noteHtml: await md(e.note, { inline: true }), item };
+        const item =
+          typeof e === "object" && e !== null
+            ? ((equipmentRows ?? []).find((r) => r.id === e.equipment) ?? null)
+            : null;
+        return typeof e === "string"
+          ? { name: e, noteHtml: null, item }
+          : { name: String(e.name), noteHtml: await md(e.note, { inline: true }), item };
       }),
     ),
     troubleshooting,
@@ -409,8 +488,17 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     // Dustin's to set per protocol. A gap reads as null, so no page, twin or structured data ever carries "MISSING".
     biosafetyLevel: /** @type {string | null} */ (known(d.biosafety_level)),
     // The strains are the registry's: the names are computed from them, never typed in the protocol.
-    hostStrains: (strainRows ?? []).map((s) => ({ id: s.id, name: s.name, path: s.path, organism: s.organism, strain: s.strain, collection: s.collection, collectionNumber: s.collectionNumber })),
-    hostStrain: (strainRows ?? []).length > 0 ? (strainRows ?? []).map((s) => s.name).join("; ") : null,
+    hostStrains: (strainRows ?? []).map((s) => ({
+      id: s.id,
+      name: s.name,
+      path: s.path,
+      organism: s.organism,
+      strain: s.strain,
+      collection: s.collection,
+      collectionNumber: s.collectionNumber,
+    })),
+    hostStrain:
+      (strainRows ?? []).length > 0 ? (strainRows ?? []).map((s) => s.name).join("; ") : null,
     solutions: list(d.solutions).map((/** @type {any} */ s) => ({
       id: s.id,
       name: s.name,
@@ -423,7 +511,15 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
       shelfLife: known(s.shelf_life),
     })),
     // The registry's rows for the primers the file names, in the file's order (compile.mjs resolves them).
-    primers: (primerRows ?? []).map((p) => ({ id: p.id, name: p.name, set: p.set, direction: p.direction, sequence: p.sequence, reference: p.reference, publishedIn: p.publishedIn ?? null })),
+    primers: (primerRows ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      set: p.set,
+      direction: p.direction,
+      sequence: p.sequence,
+      reference: p.reference,
+      publishedIn: p.publishedIn ?? null,
+    })),
     cycling: Array.isArray(d.cycling) ? d.cycling : [],
     // Recipe.
     servings: known(d.servings) === null ? null : Number(d.servings),
@@ -442,14 +538,23 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     ),
     // Computational.
     // Tutorial or how-to (S1), and a tutorial's questions, objectives and key points (S2), as the file states them.
-    howtoType: /** @type {keyof typeof HOWTO_TYPES | null} */ (d.profile === "computational" && Object.hasOwn(HOWTO_TYPES, d.type) ? d.type : null),
+    howtoType: /** @type {keyof typeof HOWTO_TYPES | null} */ (
+      d.profile === "computational" && Object.hasOwn(HOWTO_TYPES, d.type) ? d.type : null
+    ),
     questions: await inlineList(d.questions),
     objectives: await inlineList(d.objectives),
     keyPoints: await inlineList(d.key_points),
-    explanation: list(known(d.explanation)).map((/** @type {any} */ e) => ({ title: String(e.title), url: String(e.url) })),
+    explanation: list(known(d.explanation)).map((/** @type {any} */ e) => ({
+      title: String(e.title),
+      url: String(e.url),
+    })),
     environmentHtml: await md(d.environment),
     prerequisites: /** @type {string[]} */ (
-      (await Promise.all(list(known(d.prerequisites)).map((/** @type {string} */ p) => md(p, { inline: true })))).filter(Boolean)
+      (
+        await Promise.all(
+          list(known(d.prerequisites)).map((/** @type {string} */ p) => md(p, { inline: true })),
+        )
+      ).filter(Boolean)
     ),
     gaps,
   };
@@ -504,7 +609,12 @@ export function procedureMarkdown(record, parsed) {
     ["First used", record.firstUsed],
     ["Last run", record.lastRun],
     ["Status", record.status],
-    ["Scale", record.scale ? `${record.scale.count} ${record.scale.unit}${record.scale.count === 1 ? "" : "s"}` : null],
+    [
+      "Scale",
+      record.scale
+        ? `${record.scale.count} ${record.scale.unit}${record.scale.count === 1 ? "" : "s"}`
+        : null,
+    ],
     ["Servings", record.servings],
     ["Prep time", record.prepTime],
     ["Cook time", record.cookTime],
@@ -512,12 +622,21 @@ export function procedureMarkdown(record, parsed) {
     ["Hands-on time", record.time.handsOn],
     // The parent's file name and version; the twin's route reads it out as the parent's title and address (lineage.mjs).
     ["Based on", record.forkedFrom ? storedLineage(record.forkedFrom) : null],
-    ["Host strain", record.hostStrains.length > 0 ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ") : null],
+    [
+      "Host strain",
+      record.hostStrains.length > 0
+        ? record.hostStrains.map((s) => `[${s.name}](${s.path})`).join("; ")
+        : null,
+    ],
     ["Biosafety level", record.biosafetyLevel],
     [
       "Biosafety",
       record.biosafety
-        ? [record.biosafety.organism, record.biosafety.strain, record.biosafety.atcc ? `ATCC ${record.biosafety.atcc}` : null]
+        ? [
+            record.biosafety.organism,
+            record.biosafety.strain,
+            record.biosafety.atcc ? `ATCC ${record.biosafety.atcc}` : null,
+          ]
             .filter(Boolean)
             .join(", ")
         : null,
@@ -543,14 +662,23 @@ export function procedureMarkdown(record, parsed) {
     out.push("");
   }
 
-  const heading = record.profile === "recipe" ? "Ingredients" : record.profile === "computational" ? "Software and data" : "Reagents";
+  const heading =
+    record.profile === "recipe"
+      ? "Ingredients"
+      : record.profile === "computational"
+        ? "Software and data"
+        : "Reagents";
   out.push(`## ${heading}`, "");
   // The registry reagents the materials name, as the record baked them (the file holds only their ids).
   const reagentOf = new Map(record.materials.map((m) => [m.name, m.reagent]));
   for (const m of list(d.materials).length ? list(d.materials) : record.materials) {
     const parts = [
       known(m.amount) ? `${m.amount}${known(m.per) ? ` per ${m.per}` : ""}` : null,
-      list(m.stock).filter((s) => known(s) !== null).length ? `stock ${list(m.stock).filter((s) => known(s) !== null).join(" or ")}` : null,
+      list(m.stock).filter((s) => known(s) !== null).length
+        ? `stock ${list(m.stock)
+            .filter((s) => known(s) !== null)
+            .join(" or ")}`
+        : null,
       known(m.final) ? `final ${m.final}` : null,
       known(m.version) ? `version ${m.version}` : null,
     ].filter(Boolean);
@@ -562,13 +690,19 @@ export function procedureMarkdown(record, parsed) {
       parts.push(source.href ? `source [${source.text}](${source.href})` : `source ${source.text}`);
     }
     // A published reagent links its page, as the page's table does.
-    const named = reagent?.status === "published" ? `[${shown}](${itemPath("reagent", reagent.id)})` : shown;
-    out.push(`- ${named}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`);
+    const named =
+      reagent?.status === "published" ? `[${shown}](${itemPath("reagent", reagent.id)})` : shown;
+    out.push(
+      `- ${named}${m.group ? ` (${m.group})` : ""}${parts.length ? `: ${parts.join("; ")}.` : ""}${note}`,
+    );
   }
   out.push("");
   for (const s of record.solutions) {
     out.push(`### ${s.name}`, "");
-    for (const c of s.components) out.push(`- ${c.name}${c.final ? `, ${c.final} final` : ""}${c.amount ? `, ${c.amount}` : ""}`);
+    for (const c of s.components)
+      out.push(
+        `- ${c.name}${c.final ? `, ${c.final} final` : ""}${c.amount ? `, ${c.amount}` : ""}`,
+      );
     if (s.storage) out.push(`- Storage: ${s.storage}`);
     if (s.shelfLife) out.push(`- Shelf life: ${s.shelfLife}`);
     out.push("");
@@ -580,27 +714,54 @@ export function procedureMarkdown(record, parsed) {
     for (const e of list(d.equipment)) {
       const name = typeof e === "string" ? e : String(e.name);
       const item = itemOf.get(name) ?? null;
-      const facts = item ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})` : "";
-      const named = item?.status === "published" ? `[${name}](${itemPath("equipment", item.id)})` : name;
+      const facts = item
+        ? ` (${[`manufacturer ${item.manufacturer ?? "not recorded"}`, item.rotor ? `rotor ${item.rotor}` : item.rotorGap ? "rotor not recorded" : null].filter(Boolean).join("; ")})`
+        : "";
+      const named =
+        item?.status === "published" ? `[${name}](${itemPath("equipment", item.id)})` : name;
       out.push(`- ${named}${facts}${typeof e === "string" || !e.note ? "" : `: ${e.note}`}`);
     }
     out.push("");
   }
   if (record.primers.length) {
     const products = productsForRows(record.primers);
-    out.push("## Primers", "", "| Primer | Direction | Sequence (5′ to 3′) | Product (computed) |", "| --- | --- | --- | --- |");
+    out.push(
+      "## Primers",
+      "",
+      "| Primer | Direction | Sequence (5′ to 3′) | Product (computed) |",
+      "| --- | --- | --- | --- |",
+    );
     for (const p of record.primers) {
       const pair = products.get(p.id);
-      const sizes = pair ? [...new Set(pair.products.map((x) => x.length))].map((n) => `${n} bp`).join(" or ") : "";
-      out.push("| [" + p.name + "](/research/lab/primers/" + p.id + ") | " + (p.direction ?? "") + " | " + (p.sequence ? "`" + p.sequence + "`" : "") + " | " + sizes + " |");
+      const sizes = pair
+        ? [...new Set(pair.products.map((x) => x.length))].map((n) => `${n} bp`).join(" or ")
+        : "";
+      out.push(
+        "| [" +
+          p.name +
+          "](/research/lab/primers/" +
+          p.id +
+          ") | " +
+          (p.direction ?? "") +
+          " | " +
+          (p.sequence ? "`" + p.sequence + "`" : "") +
+          " | " +
+          sizes +
+          " |",
+      );
     }
     out.push("");
     const references = [...new Set([...products.values()].map((pair) => pair.reference.id))];
-    if (references.length > 0) out.push(`Product sizes are computed from where the primers bind ${references.join(", ")}, in that accession's coordinates.`, "");
+    if (references.length > 0)
+      out.push(
+        `Product sizes are computed from where the primers bind ${references.join(", ")}, in that accession's coordinates.`,
+        "",
+      );
   }
   out.push(...keyResourcesMarkdown(keyResources(record)));
   if (known(d.environment)) out.push("## Environment", "", String(d.environment), "");
-  if (record.prerequisites.length) out.push("## Prerequisites", "", ...list(d.prerequisites).map((p) => `- ${p}`), "");
+  if (record.prerequisites.length)
+    out.push("## Prerequisites", "", ...list(d.prerequisites).map((p) => `- ${p}`), "");
 
   for (const section of parsed.sections) {
     out.push(`## ${section.title}`, "");
@@ -612,21 +773,48 @@ export function procedureMarkdown(record, parsed) {
       for (const step of block.steps) {
         out.push(`${step.number}. ${step.segments.map((s) => segmentText(s)).join("")}`);
         const flag = (/** @type {string} */ name, /** @type {string[]} */ items) => {
-          for (const item of items) if (!GAP.test(item)) out.push(`   > ${name}: ${item.replace(/\n/g, "\n   > ")}`);
+          for (const item of items)
+            if (!GAP.test(item)) out.push(`   > ${name}: ${item.replace(/\n/g, "\n   > ")}`);
         };
         flag("Critical", step.flags.critical);
         flag("Pause point", step.flags.pause);
         flag("Spin", step.flags.spin);
         flag("Why", step.flags.why);
         flag("Expected", step.flags.expect);
-        for (const id of step.flags.troubleshooting) out.push(`   > Troubleshooting: see "${id}" below.`);
-        for (const c of readCalcs(step.flags.calc)) out.push(`   > Calculator: [${TOOLS[c.id]?.title}](${TOOLS[c.id]?.path})${Object.keys(c.values).length ? ` with ${Object.entries(c.values).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`);
+        for (const id of step.flags.troubleshooting)
+          out.push(`   > Troubleshooting: see "${id}" below.`);
+        for (const c of readCalcs(step.flags.calc))
+          out.push(
+            `   > Calculator: [${TOOLS[c.id]?.title}](${TOOLS[c.id]?.path})${
+              Object.keys(c.values).length
+                ? ` with ${Object.entries(c.values)
+                    .map(([k, v]) => `${k} ${v}`)
+                    .join(", ")}`
+                : ""
+            }`,
+          );
         // Every platform's block, each under its name (S4): the page's tabs are a view of these.
         for (const cmd of step.commands) {
-          if (cmd.platform) out.push("", `   ${PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (cmd.platform)] ?? cmd.platform}:`);
-          out.push("", `   \`\`\`${cmd.lang}`, ...cmd.code.split("\n").map((l) => `   ${l}`), "   ```");
+          if (cmd.platform)
+            out.push(
+              "",
+              `   ${PLATFORMS[/** @type {keyof typeof PLATFORMS} */ (cmd.platform)] ?? cmd.platform}:`,
+            );
+          out.push(
+            "",
+            `   \`\`\`${cmd.lang}`,
+            ...cmd.code.split("\n").map((l) => `   ${l}`),
+            "   ```",
+          );
           if (cmd.output !== null) {
-            out.push("", "   Expected output:", "", "   ```", ...cmd.output.split("\n").map((l) => `   ${l}`), "   ```");
+            out.push(
+              "",
+              "   Expected output:",
+              "",
+              "   ```",
+              ...cmd.output.split("\n").map((l) => `   ${l}`),
+              "   ```",
+            );
           }
         }
         for (const p of step.photos) out.push(`   ![${p.alt}](${p.src})`);
@@ -642,31 +830,51 @@ export function procedureMarkdown(record, parsed) {
   }
 
   bullets("Key points", d.key_points);
-  if (record.explanation.length) out.push("## Explanation", "", ...record.explanation.map((e) => `- [${e.title}](${e.url})`), "");
+  if (record.explanation.length)
+    out.push(
+      "## Explanation",
+      "",
+      ...record.explanation.map((e) => `- [${e.title}](${e.url})`),
+      "",
+    );
 
   if (list(d.troubleshooting).length) {
-    out.push("## Troubleshooting", "", "| Step | Problem | Possible reason | Solution |", "| --- | --- | --- | --- |");
+    out.push(
+      "## Troubleshooting",
+      "",
+      "| Step | Problem | Possible reason | Solution |",
+      "| --- | --- | --- | --- |",
+    );
     for (const r of list(d.troubleshooting)) {
-      const cell = (/** @type {unknown} */ v) => String(v).replace(/\|/g, "\\|").replace(/\n/g, " ");
-      out.push(`| ${cell(r.step)} | ${cell(r.problem)} | ${cell(r.reason)} | ${cell(r.solution)} |`);
+      const cell = (/** @type {unknown} */ v) =>
+        String(v).replace(/\|/g, "\\|").replace(/\n/g, " ");
+      out.push(
+        `| ${cell(r.step)} | ${cell(r.problem)} | ${cell(r.reason)} | ${cell(r.solution)} |`,
+      );
     }
     out.push("");
   }
-  if (known(d.expected_results)) out.push("## Expected results", "", String(d.expected_results), "");
+  if (known(d.expected_results))
+    out.push("## Expected results", "", String(d.expected_results), "");
   if (known(d.limitations)) out.push("## Limitations", "", String(d.limitations), "");
   if (list(d.substitutions).length) {
     out.push("## Substitutions", "");
-    for (const s of list(d.substitutions)) out.push(`- For ${s.for}, use ${s.use}${s.note ? `: ${s.note}` : ""}`);
+    for (const s of list(d.substitutions))
+      out.push(`- For ${s.for}, use ${s.use}${s.note ? `: ${s.note}` : ""}`);
     out.push("");
   }
   if (record.history.length) {
     out.push("## Version history", "");
-    for (const h of list(d.history)) out.push(`- Version ${h.version}, ${h.date}: ${h.summary}${h.doi ? ` (doi:${h.doi})` : ""}`);
+    for (const h of list(d.history))
+      out.push(`- Version ${h.version}, ${h.date}: ${h.summary}${h.doi ? ` (doi:${h.doi})` : ""}`);
     out.push("");
   }
   const refs = list(known(d.references));
   if (refs.length) out.push("## References", "", ...refs.map((r) => `- ${r}`), "");
-  return `${out.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
+  return `${out
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
 }
 
 /**
@@ -694,7 +902,13 @@ export function procedureSearchInput(record, parsed) {
         block.type === "prose"
           ? block.markdown
           : block.steps
-              .map((s) => [s.segments.map((x) => segmentText(x)).join(""), ...s.flags.why, ...s.flags.critical].join(" "))
+              .map((s) =>
+                [
+                  s.segments.map((x) => segmentText(x)).join(""),
+                  ...s.flags.why,
+                  ...s.flags.critical,
+                ].join(" "),
+              )
               .join(" "),
       )
       .join(" ");

@@ -110,13 +110,19 @@ const routes: Record<string, StubRoute> = {
     id: "missing",
     parentId: "root",
     path: STUB_PATHS.missing.slice(1),
-    module: { loader: () => new Response("missing", { status: 404, headers: { "content-type": "text/html" } }) },
+    module: {
+      loader: () =>
+        new Response("missing", { status: 404, headers: { "content-type": "text/html" } }),
+    },
   },
   preview: {
     id: "preview",
     parentId: "root",
     path: STUB_PATHS.preview.slice(1),
-    module: { loader: () => new Response("missing", { status: 404, headers: { "content-type": "text/html" } }) },
+    module: {
+      loader: () =>
+        new Response("missing", { status: 404, headers: { "content-type": "text/html" } }),
+    },
   },
   silent: {
     id: "silent",
@@ -147,7 +153,19 @@ const build = stubServerBuild({
 export default build;
 /* `createRequestHandler` takes the module namespace, not its default, so the fields are
  * reachable both ways. */
-export const { entry, assets, basename, publicPath, assetsBuildDirectory, ssr, isSpaMode, prerender, routeDiscovery, unstable_apiOnly, unstable_apiServerOrigin } = build;
+export const {
+  entry,
+  assets,
+  basename,
+  publicPath,
+  assetsBuildDirectory,
+  ssr,
+  isSpaMode,
+  prerender,
+  routeDiscovery,
+  unstable_apiOnly,
+  unstable_apiServerOrigin,
+} = build;
 /* `future` is annotated rather than destructured with the rest: its inferred
  * type names a path inside react-router's dist, which tsc refuses to emit as
  * non-portable. The value is the empty object the real build ships. */

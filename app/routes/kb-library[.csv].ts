@@ -13,8 +13,14 @@ import type { Route } from "./+types/kb-library[.csv]";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const base = baseAtLibrary(url.pathname.replace(/\.csv$/, ""));
-  const items = base ? baseItems(base, await listPublishedRecordsOfProfile(getEnv(context), base.profile)) : [];
-  if (!base || items.length === 0) return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+  const items = base
+    ? baseItems(base, await listPublishedRecordsOfProfile(getEnv(context), base.profile))
+    : [];
+  if (!base || items.length === 0)
+    return new Response("Not found\n", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   const rows = baseRecords(base, items, url.searchParams, SITE_ORIGIN);
   return new Response(libraryCsv(rows), {
     headers: {

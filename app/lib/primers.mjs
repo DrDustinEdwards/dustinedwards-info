@@ -61,7 +61,9 @@ export function normalize(seq) {
   const out = seq.replace(/\s+/g, "").toUpperCase().replace(/U/g, "T");
   for (let i = 0; i < out.length; i += 1) {
     if (!(out.charAt(i) in IUPAC)) {
-      throw new Error(`not an IUPAC nucleotide code: ${JSON.stringify(out.charAt(i))} at position ${i + 1}`);
+      throw new Error(
+        `not an IUPAC nucleotide code: ${JSON.stringify(out.charAt(i))} at position ${i + 1}`,
+      );
     }
   }
   return out;
@@ -214,7 +216,10 @@ export function findSites(template, primer, options = {}) {
         if (!miss) continue;
         // Indices past the dropped base belong one further along in the full primer.
         const full = miss.map((i) => (i >= drop ? i + 1 : i));
-        record(at, probe.length, full, { type: "extra-primer-base", primerPosition: primerPos(drop) });
+        record(at, probe.length, full, {
+          type: "extra-primer-base",
+          primerPosition: primerPos(drop),
+        });
       }
     }
     // One base missing from the primer: the template carries one more base than the primer does.
@@ -255,7 +260,9 @@ function keepBest(sites) {
   /** @type {Site[]} */
   const kept = [];
   for (const s of [...sites].sort(better)) {
-    const overlaps = kept.some((k) => k.strand === s.strand && k.start <= s.end && s.start <= k.end);
+    const overlaps = kept.some(
+      (k) => k.strand === s.strand && k.start <= s.end && s.start <= k.end,
+    );
     if (!overlaps) kept.push(s);
   }
   return kept.sort((a, b) => a.start - b.start || (a.strand < b.strand ? -1 : 1));

@@ -16,7 +16,7 @@ const SCHEMA = `
 
 /** A text over 100 KB with the characters that make escaping and cutting go wrong. */
 function longText(bytesWanted) {
-  const unit = "It's a \"quoted\" line; ünïcödé 日本語 😀 -- not a comment /* nor this */\n\tend. ";
+  const unit = 'It\'s a "quoted" line; ünïcödé 日本語 😀 -- not a comment /* nor this */\n\tend. ';
   let text = "";
   while (Buffer.byteLength(text) < bytesWanted) text += unit;
   return text;
@@ -41,7 +41,10 @@ const DUMP =
   `VALUES('small','Short',${literal("tiny")},'{"a":1}','def456');\n`;
 
 await test("the raw dump has a statement over D1's cap, and the split one has none", () => {
-  assert.ok(biggest(DUMP) > D1_STATEMENT_LIMIT, "the fixture must reproduce the failure: one row over 100 KB");
+  assert.ok(
+    biggest(DUMP) > D1_STATEMENT_LIMIT,
+    "the fixture must reproduce the failure: one row over 100 KB",
+  );
   const split = splitOversizeStatements(DUMP);
   assert.ok(biggest(split) < D1_STATEMENT_LIMIT, `largest statement is ${biggest(split)} bytes`);
 });
@@ -59,7 +62,10 @@ await test("a row over the cap restores to exactly the bytes it had, and its nei
 
 await test("a statement under the line passes through byte for byte", () => {
   const small = `INSERT INTO "publications" ("slug","title","markdown","record","source_blob_sha") VALUES('s','t','m',NULL,'x');`;
-  assert.equal(splitOversizeStatements(`${small}\nPRAGMA foreign_keys=ON;\n`), `${small}\nPRAGMA foreign_keys=ON;\n`);
+  assert.equal(
+    splitOversizeStatements(`${small}\nPRAGMA foreign_keys=ON;\n`),
+    `${small}\nPRAGMA foreign_keys=ON;\n`,
+  );
 });
 
 await test("newlines written as char(10) joins split between terms and join back", () => {
@@ -80,7 +86,10 @@ await test("an INSERT that lists no columns takes them from the schema; no key a
   assert.throws(() => splitOversizeStatements(dump), /lists no columns/);
   db.exec(splitOversizeStatements(dump, { columnsOf: () => ["id", "body"] }));
   const rows = db.prepare("SELECT id, body FROM notes ORDER BY id").all();
-  assert.deepEqual(rows.map((r) => r.id), [1, 2, 3]);
+  assert.deepEqual(
+    rows.map((r) => r.id),
+    [1, 2, 3],
+  );
   assert.equal(rows[2].body, TEXT);
   assert.equal(rows[0].body, "one");
 });
@@ -97,7 +106,9 @@ await test("an upsert over the cap lands on the row it conflicts with, and a hal
 
   // Over an existing row (the update path), and over an empty table (the insert path).
   for (const existing of [true, false]) {
-    const db = load(existing ? `INSERT INTO publications VALUES ('big','Old','old text',NULL,'oldsha');` : "");
+    const db = load(
+      existing ? `INSERT INTO publications VALUES ('big','Old','old text',NULL,'oldsha');` : "",
+    );
     db.exec(split);
     const row = db.prepare("SELECT * FROM publications WHERE slug = 'big'").get();
     assert.equal(row.title, "New title");
@@ -120,7 +131,8 @@ await test("what cannot be cut stops the run and says so", () => {
     /not a plain INSERT/,
   );
   assert.throws(
-    () => splitOversizeStatements(`INSERT INTO notes (id, body) VALUES (1, upper(${literal(TEXT)}));`),
+    () =>
+      splitOversizeStatements(`INSERT INTO notes (id, body) VALUES (1, upper(${literal(TEXT)}));`),
     /cannot be cut|still over/,
   );
 });
@@ -139,7 +151,9 @@ import { migrationSchema } from "../scripts/lib/dump-schema.mjs";
 
 function migrated() {
   const db = new DatabaseSync(":memory:");
-  for (const f of readdirSync("drizzle").filter((n) => n.endsWith(".sql")).sort()) {
+  for (const f of readdirSync("drizzle")
+    .filter((n) => n.endsWith(".sql"))
+    .sort()) {
     db.exec(readFileSync(`drizzle/${f}`, "utf8"));
   }
   return db;
@@ -167,7 +181,11 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
     const columns = schema.columnsOf(table);
     assert.ok(columns, `${table} is in the migrations`);
     const source = migrated();
-    const info = source.prepare(`SELECT name, type, "notnull" AS nn, dflt_value AS d FROM pragma_table_info('${table}')`).all();
+    const info = source
+      .prepare(
+        `SELECT name, type, "notnull" AS nn, dflt_value AS d FROM pragma_table_info('${table}')`,
+      )
+      .all();
     const row = {};
     for (const c of info) {
       if (c.name === "id") continue;
@@ -178,7 +196,9 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
     }
     const names = Object.keys(row);
     source
-      .prepare(`INSERT INTO ${table} (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`)
+      .prepare(
+        `INSERT INTO ${table} (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`,
+      )
       .run(...Object.values(row));
     const truth = source.prepare(`SELECT * FROM ${table}`).get();
 
@@ -200,12 +220,17 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
 // wrangler d1 export writes a string holding a newline as replace('a\nb','\n',char(10)), CR as a second replace
 // around it. The first real drill (run 37221582504) died on exactly this in phage-isolation.
 await test("a value the export wrote with replace(..., '\\n', char(10)) is cut, and means what the original meant", () => {
-  const prose = Array.from({ length: 4000 }, (_, i) => `Step ${i}: C:\\lab\\ 5 µL at 37 °C, it's "done"; \\ trailing\\`).join("\n");
+  const prose = Array.from(
+    { length: 4000 },
+    (_, i) => `Step ${i}: C:\\lab\\ 5 µL at 37 °C, it's "done"; \\ trailing\\`,
+  ).join("\n");
   const body = prose.replace(/\n/g, "\\n");
   /** @param {string} value */
   const exported = (value) => `INSERT INTO "notes" ("id","body") VALUES(5,${value});\n`;
   const single = exported(`replace(${literal(body)},'\\n',char(10))`);
-  const nested = exported(`replace(replace(${literal(body.replace(/\\n/g, "\\n\\r"))},'\\n',char(10)),'\\r',char(13))`);
+  const nested = exported(
+    `replace(replace(${literal(body.replace(/\\n/g, "\\n\\r"))},'\\n',char(10)),'\\r',char(13))`,
+  );
   for (const dump of [single, nested]) {
     assert.ok(biggest(dump) > D1_STATEMENT_LIMIT);
     const truth = load(dump).prepare("SELECT body FROM notes").get().body;

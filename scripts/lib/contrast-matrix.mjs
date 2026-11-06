@@ -67,7 +67,12 @@ export const MATRIX = [
   ["--on-fill-danger", "--fill-danger", TEXT, "text on danger fill"],
   ["--on-fill-danger", "--fill-danger-hover", TEXT, "text on danger hover fill"],
 
-  ["--text-warning", "--paper", TEXT, "warning text on paper, including the command bar dirty state"],
+  [
+    "--text-warning",
+    "--paper",
+    TEXT,
+    "warning text on paper, including the command bar dirty state",
+  ],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
   ["--border-warning", "--paper", UI, "a warning border on paper, including the dirty dot ring"],
   ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
@@ -126,10 +131,7 @@ export const MATRIX = [
 
 /** @type {Map<string, string>} token -> why it is declared outside app.css */
 export const DECLARED_ELSEWHERE = new Map([
-  [
-    "--shiki-light",
-    "written inline by Shiki on each highlighted span, per token, per code block",
-  ],
+  ["--shiki-light", "written inline by Shiki on each highlighted span, per token, per code block"],
   ["--shiki-dark", "the dark half of the same inline pair"],
   [
     "--shiki-light-bg",
@@ -174,13 +176,13 @@ export const NON_PARTICIPATING = new Map([
     "texture: the halo's dashed ring on Plate I, below the stroke floor because it identifies nothing",
   ],
   // The lamp's catch hue in each theme reads these two purple steps, and nothing else does.
-  ...(/** @type {Array<[string, string]>} */ (
+  .../** @type {Array<[string, string]>} */ (
     ["--fig-purple-100", "--fig-purple-400"].map((t) => [
       t,
       "the lamp catch hue behind the glass, which --lamp-chroma-on-paper resolves through; light is " +
         "atmosphere and never meaning, so no pair can be required of it",
     ])
-  )),
+  ),
 ]);
 
 /*

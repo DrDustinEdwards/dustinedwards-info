@@ -70,7 +70,7 @@ export async function run({ page, browser }) {
       s.link && s.target,
       s.link
         ? `href is ${JSON.stringify(s.href)} and no element carries that id, so the link ` +
-          `moves focus nowhere`
+            `moves focus nowhere`
         : "there is no .skip-link at all",
     );
   }
@@ -92,11 +92,13 @@ export async function run({ page, browser }) {
     await page.goto(`${BASE}${firstPost}`, { waitUntil: "networkidle0" });
     /* A panel link to this very post (a Writing tile) is rightly the current page; any other marked link, the
        Writing hub included, is a link claiming a page the reader is not on. */
-    const marked = await page.evaluate((path) =>
-      [...document.querySelectorAll("[data-site-nav] a")]
-        .filter((a) => a.getAttribute("aria-current") && a.getAttribute("href") !== path)
-        .map((a) => `${(a.textContent || "").trim()} -> ${a.getAttribute("href")}`),
-    firstPost);
+    const marked = await page.evaluate(
+      (path) =>
+        [...document.querySelectorAll("[data-site-nav] a")]
+          .filter((a) => a.getAttribute("aria-current") && a.getAttribute("href") !== path)
+          .map((a) => `${(a.textContent || "").trim()} -> ${a.getAttribute("href")}`),
+      firstPost,
+    );
     ok(
       "no header nav link claims to be the current page on a post page unless it is the link to that page",
       marked.length === 0,
@@ -107,13 +109,7 @@ export async function run({ page, browser }) {
 
   /* Code and table boxes scroll by design; the page must not. */
   await page.setViewport({ width: 320, height: 800 });
-  for (const path of [
-    "/",
-    "/writing",
-    "/search?q=workers",
-    "/colophon",
-    "/software",
-  ]) {
+  for (const path of ["/", "/writing", "/search?q=workers", "/colophon", "/software"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const o = await page.evaluate(overflowScan);
     ok(

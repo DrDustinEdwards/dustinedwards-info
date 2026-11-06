@@ -8,7 +8,10 @@ import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
 import { ALLOWED, uploadErrorSentence, validateUpload } from "~/lib/media/upload-contract.mjs";
-import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
+import {
+  action as adminAction,
+  middleware as adminMediaMiddleware,
+} from "~/routes/admin.media._index";
 
 import { bytesFor, envWithImages, pngKey, seedMediaRow } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
@@ -34,15 +37,25 @@ async function upload(
   dimensions: Dimensions,
   overrides: Record<string, unknown> = {},
 ) {
-  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof carrelMediaAdapter>[0];
+  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<
+    typeof carrelMediaAdapter
+  >[0];
   const bytes = bytesFor(file.body);
   const refused = validateUpload({ type: file.type, bytes });
   if (refused) return { status: refused.status, url: undefined, key: "", error: refused.message };
   try {
-    const item = await carrelMediaAdapter(uploadEnv).upload({ bytes, contentType: file.type, filename: file.name, alt: "", decorative: true, changeId: `test-upload-${crypto.randomUUID()}` });
+    const item = await carrelMediaAdapter(uploadEnv).upload({
+      bytes,
+      contentType: file.type,
+      filename: file.name,
+      alt: "",
+      decorative: true,
+      changeId: `test-upload-${crypto.randomUUID()}`,
+    });
     return { status: 200, url: `/media/${item.id}`, key: item.id, error: undefined };
   } catch (error) {
-    if (error instanceof RefusedError) return { status: 415, url: undefined, key: "", error: error.message };
+    if (error instanceof RefusedError)
+      return { status: 415, url: undefined, key: "", error: error.message };
     throw error;
   }
 }
@@ -57,7 +70,8 @@ async function adminMediaAction(fields: Record<string, string>, routeEnv: object
 }
 
 /** The version the library would post for a file: the site's own, read the way the kit reads it. */
-const versionOf = async (key: string) => (await carrelMediaAdapter(mediaEnv()).get(key))?.version ?? "";
+const versionOf = async (key: string) =>
+  (await carrelMediaAdapter(mediaEnv()).get(key))?.version ?? "";
 
 const mediaRow = (key: string) =>
   env.DB.prepare("SELECT width, height, original_name, alt FROM media WHERE key = ?1")
@@ -93,7 +107,10 @@ describe("media upload", () => {
     const before = await count();
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><script>alert(1)</script></svg>';
-    const { status, key, error } = await upload({ name: "vector.svg", type: "image/svg+xml", body: svg }, null);
+    const { status, key, error } = await upload(
+      { name: "vector.svg", type: "image/svg+xml", body: svg },
+      null,
+    );
 
     expect(status).toBe(415);
     expect(key).toBe("");
@@ -141,16 +158,38 @@ describe("media upload", () => {
       { width: 640, height: 480 },
     );
 
-    const alt = (await adminMediaAction({ intent: "alt", ids: key, versions: await versionOf(key), alt: "a wheat field at dusk" })) as IntentResult;
+    const alt = (await adminMediaAction({
+      intent: "alt",
+      ids: key,
+      versions: await versionOf(key),
+      alt: "a wheat field at dusk",
+    })) as IntentResult;
     expect(alt.ok, alt.message).toBe(true);
     expect((await mediaRow(key))?.alt).toBe("a wheat field at dusk");
 
     // A site with a trash deletes only from it, and the kit asks for the count first.
-    expect(((await adminMediaAction({ intent: "trash", ids: key, versions: await versionOf(key) })) as IntentResult).ok).toBe(true);
-    const asked = (await adminMediaAction({ intent: "delete", ids: key, versions: await versionOf(key) })) as IntentResult;
+    expect(
+      (
+        (await adminMediaAction({
+          intent: "trash",
+          ids: key,
+          versions: await versionOf(key),
+        })) as IntentResult
+      ).ok,
+    ).toBe(true);
+    const asked = (await adminMediaAction({
+      intent: "delete",
+      ids: key,
+      versions: await versionOf(key),
+    })) as IntentResult;
     expect(asked.confirm?.typeToConfirm).toBe("1");
     expect(await env.MEDIA.get(key)).toBeTruthy();
-    await adminMediaAction({ intent: "delete", ids: key, versions: await versionOf(key), confirm: "1" });
+    await adminMediaAction({
+      intent: "delete",
+      ids: key,
+      versions: await versionOf(key),
+      confirm: "1",
+    });
     expect(await env.MEDIA.get(key)).toBeNull();
     expect(await mediaRow(key)).toBeNull();
   });
@@ -172,18 +211,25 @@ describe("a stored object that can carry script", () => {
 
 describe("the atomic delete claim", () => {
   /* The library's delete ends in the store's remove: the row goes only while no recorded citation names it. */
-  const rowOf = (key: string) => env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first();
+  const rowOf = (key: string) =>
+    env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first();
 
   it("REMOVES an uncited key with its revisions", async () => {
     const { key } = await uploadKey("uncited", { width: 20, height: 20 });
     await seedMediaRow(key);
-    await env.DB.prepare("INSERT INTO media_revisions (media_key, at, bytes, reason) VALUES (?1, '2030-01-01T00:00:00.000Z', 1, 'upload')").bind(key).run();
+    await env.DB.prepare(
+      "INSERT INTO media_revisions (media_key, at, bytes, reason) VALUES (?1, '2030-01-01T00:00:00.000Z', 1, 'upload')",
+    )
+      .bind(key)
+      .run();
 
     // Only at the version the reference check saw.
     expect(await mediaLibraryStore(mediaEnv()).remove(key, 1)).toBe("stale");
     expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("removed");
     expect(await rowOf(key)).toBeNull();
-    expect(await env.DB.prepare("SELECT id FROM media_revisions WHERE media_key = ?1").bind(key).first()).toBeNull();
+    expect(
+      await env.DB.prepare("SELECT id FROM media_revisions WHERE media_key = ?1").bind(key).first(),
+    ).toBeNull();
   });
 
   it("OBSERVES THE `NOT EXISTS` THROUGH A PLANTED CONCURRENT CITATION (finding B009)", async () => {
@@ -217,7 +263,11 @@ describe("emptying the trash", () => {
   }
 
   const trashedCount = async () =>
-    (await env.DB.prepare("SELECT count(*) AS n FROM media WHERE storage = 'r2' AND trashed_at IS NOT NULL").first<{ n: number }>())?.n ?? 0;
+    (
+      await env.DB.prepare(
+        "SELECT count(*) AS n FROM media WHERE storage = 'r2' AND trashed_at IS NOT NULL",
+      ).first<{ n: number }>()
+    )?.n ?? 0;
 
   it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
     const cited = await trashedUpload("trash-cited");
@@ -237,7 +287,10 @@ describe("emptying the trash", () => {
 
     expect(await env.MEDIA.get(cited)).toBeTruthy();
     expect(await mediaRow(cited)).toBeTruthy();
-    expect(result.outcomes?.find((o) => o.id === cited)).toMatchObject({ ok: false, usedBy: [expect.objectContaining({ id: "cites-a-trashed-file" })] });
+    expect(result.outcomes?.find((o) => o.id === cited)).toMatchObject({
+      ok: false,
+      usedBy: [expect.objectContaining({ id: "cites-a-trashed-file" })],
+    });
     expect(await env.MEDIA.get(uncited)).toBeNull();
   });
 });

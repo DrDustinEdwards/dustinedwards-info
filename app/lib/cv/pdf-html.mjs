@@ -109,7 +109,9 @@ export async function renderCvHtml(CV, { renderBody, fontCss }) {
     },
   });
   if (rendered.blockedUrls.length > 0) {
-    throw new Error(`the CV carries link(s) the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`);
+    throw new Error(
+      `the CV carries link(s) the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
+    );
   }
   const { person } = CV;
   const host = new URL(SITE_ORIGIN).host;

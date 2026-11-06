@@ -133,7 +133,9 @@ for (const id of [...DESTRUCTIVE, ...REVERSIBLE.keys()]) {
   );
 }
 
-console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTRUCTIVE.size} destructive`);
+console.log(
+  `  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTRUCTIVE.size} destructive`,
+);
 
 // The operator API is a bearer-token POST dispatched on a tool name, which the intent vocabulary cannot
 // see. For a machine caller the credential is the ceremony, so each tool declares a policy instead.
@@ -300,7 +302,6 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   }
 }
 
-
 // Whole-source, not routes: any line anywhere that deletes from the binding is the danger. It reads the
 // syntax tree because every file touching this binding has a comment naming both.
 {
@@ -340,7 +341,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   );
   ok(
     "the backup-delete scan does not fire on a delete from MEDIA",
-    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_REVISIONS;").deletes.length === 0,
+    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_REVISIONS;").deletes
+      .length === 0,
     "deleting a media object is legitimate; only the revision store is protected",
   );
 
@@ -349,8 +351,14 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    * delete from what it is given, so a new call site fails by name until someone has read it.
    */
   const BACKUP_PASSED_TO = new Map([
-    ["app/lib/backup/d1-backup.server.ts:backupFiles", "d1-dump's files backup: it lists and reads its source and writes and deletes only in the backup bucket it is given"],
-    ["app/lib/health/response.server.ts:r2Check", "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"],
+    [
+      "app/lib/backup/d1-backup.server.ts:backupFiles",
+      "d1-dump's files backup: it lists and reads its source and writes and deletes only in the backup bucket it is given",
+    ],
+    [
+      "app/lib/health/response.server.ts:r2Check",
+      "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else",
+    ],
   ]);
 
   const sources = [
@@ -430,7 +438,15 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   // only after the marker, so it deletes nothing pruneDumps would not.
   // backupFiles (d1-dump 0.7.0) writes under files/<name>/ and removes a copy there only 30 days after its source is
   // gone; filesHealth reads that backup's _complete.json and nothing else.
-  const DUMP_FUNCTIONS = new Set(["dumpDatabase", "writeCompleteMarker", "pruneDumps", "backupHealth", "runCheckedBackup", "backupFiles", "filesHealth"]);
+  const DUMP_FUNCTIONS = new Set([
+    "dumpDatabase",
+    "writeCompleteMarker",
+    "pruneDumps",
+    "backupHealth",
+    "runCheckedBackup",
+    "backupFiles",
+    "filesHealth",
+  ]);
   /** @param {string} text */
   const dumpUses = (text) => bindingUses(parseSource("c.ts", text), "BACKUPS");
 
@@ -450,7 +466,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     "the two bindings must stay distinguishable, or this rule and the media rule collapse into one",
   );
 
-  const sources = [...walk(join(root, "app")), ...walk(join(root, "workers")), ...walk(join(root, "scripts"))];
+  const sources = [
+    ...walk(join(root, "app")),
+    ...walk(join(root, "workers")),
+    ...walk(join(root, "scripts")),
+  ];
   let reaching = 0;
   /** @type {string[]} */
   const stray = [];
@@ -459,7 +479,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   for (const file of sources) {
     const text = readFileSync(file, "utf8");
     const rel = file.slice(root.length + 1).replaceAll("\\", "/");
-    if (rel !== "scripts/check-destructive.mjs" && /pruneDumps\s*\(\s*[^)]*MEDIA_REVISIONS/.test(text.replace(/\/\/.*$/gm, ""))) mediaPruned.push(rel);
+    if (
+      rel !== "scripts/check-destructive.mjs" &&
+      /pruneDumps\s*\(\s*[^)]*MEDIA_REVISIONS/.test(text.replace(/\/\/.*$/gm, ""))
+    )
+      mediaPruned.push(rel);
     if (!text.includes("BACKUPS")) continue;
     const uses = dumpUses(text);
     if (uses.mentions === 0) continue;
@@ -490,5 +514,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 const MINIMUM_CHECKS = 99;
 tally.floor("check:destructive", "checks", MINIMUM_CHECKS);
 
-console.log(`\n${tally.checks} checks, ${tally.failures} failure${tally.failures === 1 ? "" : "s"}\n`);
+console.log(
+  `\n${tally.checks} checks, ${tally.failures} failure${tally.failures === 1 ? "" : "s"}\n`,
+);
 process.exit(tally.failures > 0 ? 1 : 0);

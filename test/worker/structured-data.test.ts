@@ -13,9 +13,15 @@ import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { PUBLISHED_PAGES } from "~/lib/published-pages.generated.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import ContentPage, { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
+import ContentPage, {
+  loader as contentPageLoader,
+  meta as contentPageMeta,
+} from "~/routes/content-page";
 import Cv, { loader as cvLoader, meta as cvMeta } from "~/routes/cv";
-import Publications, { loader as publicationsLoader, meta as publicationsMeta } from "~/routes/publications";
+import Publications, {
+  loader as publicationsLoader,
+  meta as publicationsMeta,
+} from "~/routes/publications";
 import Paper, { loader as paperLoader, meta as paperMeta } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
@@ -71,7 +77,14 @@ const RULES: Record<string, Rule> = {
   // Google Software App: name, offers and a rating or review are required for the rich result.
   SoftwareApplication: {
     required: ["name"],
-    recommended: ["offers", "aggregateRating|review", "applicationCategory", "operatingSystem", "description", "url"],
+    recommended: [
+      "offers",
+      "aggregateRating|review",
+      "applicationCategory",
+      "operatingSystem",
+      "description",
+      "url",
+    ],
   },
   SoftwareSourceCode: {
     required: ["name", "codeRepository"],
@@ -89,15 +102,32 @@ type Missing = { type: string; property: string; page?: RegExp; reason: string }
 
 /** The recommended facts the repo does not hold. Each is a question for Dustin, not a gap to fill. */
 const MISSING: Missing[] = [
-  { type: "ScholarlyArticle|Chapter|LearningResource", property: "image", reason: "no figure or cover image is held for any paper" },
-  { type: "ScholarlyArticle|Chapter|LearningResource", property: "dateModified", reason: "the corpus records the publication date only" },
+  {
+    type: "ScholarlyArticle|Chapter|LearningResource",
+    property: "image",
+    reason: "no figure or cover image is held for any paper",
+  },
+  {
+    type: "ScholarlyArticle|Chapter|LearningResource",
+    property: "dateModified",
+    reason: "the corpus records the publication date only",
+  },
   {
     type: "SoftwareApplication",
     property: "offers",
-    reason: "no price is recorded for any product, so no page is eligible for Google's software rich result",
+    reason:
+      "no price is recorded for any product, so no page is eligible for Google's software rich result",
   },
-  { type: "SoftwareApplication", property: "aggregateRating|review", reason: "no rating or review is recorded" },
-  { type: "SoftwareApplication", property: "operatingSystem", reason: "no platform is recorded for any product" },
+  {
+    type: "SoftwareApplication",
+    property: "aggregateRating|review",
+    reason: "no rating or review is recorded",
+  },
+  {
+    type: "SoftwareApplication",
+    property: "operatingSystem",
+    reason: "no platform is recorded for any product",
+  },
   {
     type: "SoftwareApplication",
     property: "applicationCategory",
@@ -110,16 +140,37 @@ const MISSING: Missing[] = [
     page: /^\/software\/capsid$/,
     reason: "the Capsid page names its repository but not its language",
   },
-  { type: "SoftwareSourceCode", property: "license", page: /^\/software\/capsid$/, reason: "no license is recorded for Capsid" },
+  {
+    type: "SoftwareSourceCode",
+    property: "license",
+    page: /^\/software\/capsid$/,
+    reason: "no license is recorded for Capsid",
+  },
   {
     type: "SoftwareSourceCode",
     property: "description",
     page: /^\/software\/capsid$/,
-    reason: "the source node describes the repository, and the page describes the application, not its code",
+    reason:
+      "the source node describes the repository, and the page describes the application, not its code",
   },
-  { type: "SoftwareSourceCode", property: "url", page: /^\/software\/capsid$/, reason: "its address is codeRepository" },
-  { type: "Dataset", property: "keywords", page: /^\/research\/phages$/, reason: "no keywords are recorded" },
-  { type: "Dataset", property: "identifier", page: /^\/research\/phages$/, reason: "the table has no DOI or other identifier" },
+  {
+    type: "SoftwareSourceCode",
+    property: "url",
+    page: /^\/software\/capsid$/,
+    reason: "its address is codeRepository",
+  },
+  {
+    type: "Dataset",
+    property: "keywords",
+    page: /^\/research\/phages$/,
+    reason: "no keywords are recorded",
+  },
+  {
+    type: "Dataset",
+    property: "identifier",
+    page: /^\/research\/phages$/,
+    reason: "the table has no DOI or other identifier",
+  },
 ];
 
 type Page = { path: string; html: string };
@@ -131,13 +182,22 @@ const READABLE_PAGE_PATHS = publishedContentPagePaths(PUBLISHED_PAGES);
 /** The JSON-LD in a route's `meta`, as the script elements the document head carries. */
 const head = (tags: unknown) =>
   (tags as Array<Record<string, unknown>>)
-    .flatMap((tag) => ("script:ld+json" in tag ? [`<script type="application/ld+json">${JSON.stringify(tag["script:ld+json"])}</script>`] : []))
+    .flatMap((tag) =>
+      "script:ld+json" in tag
+        ? [`<script type="application/ld+json">${JSON.stringify(tag["script:ld+json"])}</script>`]
+        : [],
+    )
     .join("");
 
 async function contentPage(path: string): Promise<Page> {
   const request = new Request(`${SITE_ORIGIN}${path}`);
   const loaderData = await contentPageLoader({ request, params: {}, context: context() } as never);
-  return { path, html: renderRoute(path, ContentPage, { loaderData }) + head(contentPageMeta({ loaderData } as never)) };
+  return {
+    path,
+    html:
+      renderRoute(path, ContentPage, { loaderData }) +
+      head(contentPageMeta({ loaderData } as never)),
+  };
 }
 
 async function pages(): Promise<Page[]> {
@@ -154,15 +214,31 @@ async function pages(): Promise<Page[]> {
   {
     const path = "/research/publications";
     const request = new Request(`${SITE_ORIGIN}${path}`);
-    const loaderData = await publicationsLoader({ request, params: {}, context: context() } as never);
-    out.push({ path, html: renderRoute(path, Publications, { loaderData }) + head(publicationsMeta({ loaderData } as never)) });
+    const loaderData = await publicationsLoader({
+      request,
+      params: {},
+      context: context(),
+    } as never);
+    out.push({
+      path,
+      html:
+        renderRoute(path, Publications, { loaderData }) +
+        head(publicationsMeta({ loaderData } as never)),
+    });
   }
   for (const paper of await listPublishedPublications(env as never)) {
     const { slug } = paper;
     const path = paperPath(slug);
     const request = new Request(`${SITE_ORIGIN}${path}`);
-    const loaderData = await paperLoader({ request, params: { slug }, context: context() } as never);
-    out.push({ path, html: renderRoute(path, Paper, { loaderData }) + head(paperMeta({ loaderData } as never)) });
+    const loaderData = await paperLoader({
+      request,
+      params: { slug },
+      context: context(),
+    } as never);
+    out.push({
+      path,
+      html: renderRoute(path, Paper, { loaderData }) + head(paperMeta({ loaderData } as never)),
+    });
   }
   return out;
 }
@@ -198,21 +274,33 @@ function nodes(value: unknown, out: Node[] = [], top = true): Node[] {
 const present = (node: Node, property: string) =>
   property.split("|").some((name) => {
     const value = node[name];
-    return value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
+    return (
+      value !== undefined &&
+      value !== null &&
+      value !== "" &&
+      !(Array.isArray(value) && value.length === 0)
+    );
   });
 
 /** The visible trail: each step's name, and its link, which the current step has none of. */
 function visibleTrail(html: string): Array<{ name: string; href: string | null }> {
-  const nav = html.match(/<nav class="cap-direction page-breadcrumb" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/)?.[1];
+  const nav = html.match(
+    /<nav class="cap-direction page-breadcrumb" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/,
+  )?.[1];
   if (!nav) return [];
-  return [...nav.matchAll(/<li>(?:<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>|<span aria-current="page">([\s\S]*?)<\/span>)/g)].map(
-    (m) => ({ name: decode(m[2] ?? m[3] ?? ""), href: m[1] ?? null }),
-  );
+  return [
+    ...nav.matchAll(
+      /<li>(?:<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>|<span aria-current="page">([\s\S]*?)<\/span>)/g,
+    ),
+  ].map((m) => ({ name: decode(m[2] ?? m[3] ?? ""), href: m[1] ?? null }));
 }
 
 // The papers are D1 rows now, so the schema and the rows exist before the cases below are collected (setup.ts
 // applies the same migrations again, which is a no-op).
-await applyD1Migrations(env.DB, (env as unknown as { TEST_D1_MIGRATIONS: never }).TEST_D1_MIGRATIONS);
+await applyD1Migrations(
+  env.DB,
+  (env as unknown as { TEST_D1_MIGRATIONS: never }).TEST_D1_MIGRATIONS,
+);
 const PAPER_COUNT = await seedPublications();
 await seedPages();
 await seedCv();
@@ -225,21 +313,30 @@ describe("every JSON-LD block on the pages", () => {
   it("covers every content page, the CV, the publications list and every paper", () => {
     expect(rendered.length).toBe(READABLE_PAGE_PATHS.length + 1 + PAPER_COUNT);
     // Scope, so a pattern that matched no script element cannot pass every case below.
-    expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([]);
+    expect(
+      rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path),
+    ).toEqual([]);
   });
 
-  it.each(rendered.map((page) => [page.path, page] as const))("%s: every block parses and every node has its required properties", (_path, page) => {
-    const found = blocks(page.html).flatMap((block) => nodes(block));
-    for (const node of found) {
-      const type = String(node["@type"]);
-      const rule = RULES[type];
-      expect(rule, `${page.path}: no rule for @type ${type}`).toBeDefined();
-      expect(node["@context"] ?? "https://schema.org", `${page.path} ${type}`).toBe("https://schema.org");
-      for (const property of rule?.required ?? []) {
-        expect(present(node, property), `${page.path} ${type} lacks required ${property}`).toBe(true);
+  it.each(rendered.map((page) => [page.path, page] as const))(
+    "%s: every block parses and every node has its required properties",
+    (_path, page) => {
+      const found = blocks(page.html).flatMap((block) => nodes(block));
+      for (const node of found) {
+        const type = String(node["@type"]);
+        const rule = RULES[type];
+        expect(rule, `${page.path}: no rule for @type ${type}`).toBeDefined();
+        expect(node["@context"] ?? "https://schema.org", `${page.path} ${type}`).toBe(
+          "https://schema.org",
+        );
+        for (const property of rule?.required ?? []) {
+          expect(present(node, property), `${page.path} ${type} lacks required ${property}`).toBe(
+            true,
+          );
+        }
       }
-    }
-  });
+    },
+  );
 
   it("every missing recommended property is one the ledger names, and every ledger entry is still missing", () => {
     const used = new Set<Missing>();
@@ -250,7 +347,10 @@ describe("every JSON-LD block on the pages", () => {
         for (const property of RULES[type]?.recommended ?? []) {
           if (present(node, property)) continue;
           const entry = MISSING.find(
-            (m) => m.type.split("|").includes(type) && m.property === property && (!m.page || m.page.test(page.path)),
+            (m) =>
+              m.type.split("|").includes(type) &&
+              m.property === property &&
+              (!m.page || m.page.test(page.path)),
           );
           if (entry) used.add(entry);
           else unexplained.push(`${page.path} ${type}.${property}`);
@@ -258,29 +358,36 @@ describe("every JSON-LD block on the pages", () => {
       }
     }
     expect(unexplained, "recommended properties missing with no reason in MISSING").toEqual([]);
-    expect(MISSING.filter((m) => !used.has(m)).map((m) => `${m.type}.${m.property}`), "stale MISSING entries").toEqual([]);
+    expect(
+      MISSING.filter((m) => !used.has(m)).map((m) => `${m.type}.${m.property}`),
+      "stale MISSING entries",
+    ).toEqual([]);
   });
 
-  it.each(rendered.map((page) => [page.path, page] as const))("%s: a breadcrumb list exactly when a trail is shown, from the home page down", (_path, page) => {
-    const lists = blocks(page.html)
-      .flatMap((block) => nodes(block))
-      .filter((node) => node["@type"] === "BreadcrumbList");
-    const visible = visibleTrail(page.html);
-    // A top-level page shows no trail, so its markup carries none (Prelum 0.28+); a page inside a section has one, and a
-    // hub inside a section (/research/publications) still shows none.
-    const insideSection = page.path.split("/").filter(Boolean).length >= 2;
-    expect(lists).toHaveLength(visible.length > 0 || insideSection ? 1 : 0);
-    if (lists.length === 0) return;
-    const items = (lists[0]?.itemListElement ?? []) as Node[];
-    expect(items.map((item) => item.position)).toEqual(items.map((_, i) => i + 1));
-    expect(items[0]?.item).toBe(`${SITE_ORIGIN}/`);
-    if (visible.length > 0) expect(items.slice(1).map((item) => item.name)).toEqual(visible.map((step) => step.name));
-    visible.forEach((step, i) => {
-      if (step.href) expect(items[i + 1]?.item).toBe(`${SITE_ORIGIN}${step.href}`);
-    });
-    // The last step is this page, which the visible trail shows unlinked.
-    expect(items.at(-1)?.item).toBe(`${SITE_ORIGIN}${page.path}`);
-  });
+  it.each(rendered.map((page) => [page.path, page] as const))(
+    "%s: a breadcrumb list exactly when a trail is shown, from the home page down",
+    (_path, page) => {
+      const lists = blocks(page.html)
+        .flatMap((block) => nodes(block))
+        .filter((node) => node["@type"] === "BreadcrumbList");
+      const visible = visibleTrail(page.html);
+      // A top-level page shows no trail, so its markup carries none (Prelum 0.28+); a page inside a section has one, and a
+      // hub inside a section (/research/publications) still shows none.
+      const insideSection = page.path.split("/").filter(Boolean).length >= 2;
+      expect(lists).toHaveLength(visible.length > 0 || insideSection ? 1 : 0);
+      if (lists.length === 0) return;
+      const items = (lists[0]?.itemListElement ?? []) as Node[];
+      expect(items.map((item) => item.position)).toEqual(items.map((_, i) => i + 1));
+      expect(items[0]?.item).toBe(`${SITE_ORIGIN}/`);
+      if (visible.length > 0)
+        expect(items.slice(1).map((item) => item.name)).toEqual(visible.map((step) => step.name));
+      visible.forEach((step, i) => {
+        if (step.href) expect(items[i + 1]?.item).toBe(`${SITE_ORIGIN}${step.href}`);
+      });
+      // The last step is this page, which the visible trail shows unlinked.
+      expect(items.at(-1)?.item).toBe(`${SITE_ORIGIN}${page.path}`);
+    },
+  );
 });
 
 describe("the types each page states", () => {
@@ -289,13 +396,23 @@ describe("the types each page states", () => {
     expect(page, path).toBeDefined();
     return blocks(page?.html ?? "").flatMap((block) => nodes(block));
   };
-  const ofType = (path: string, type: string) => onPage(path).filter((node) => node["@type"] === type);
+  const ofType = (path: string, type: string) =>
+    onPage(path).filter((node) => node["@type"] === type);
 
   it("the phage table is a Dataset whose facts come from the table", () => {
     const [dataset] = ofType("/research/phages", "Dataset");
     expect(dataset?.temporalCoverage).toBe("2017/2025");
-    expect(dataset?.variableMeasured).toEqual(["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
-    expect((dataset?.distribution as Node | undefined)?.contentUrl).toBe(`${SITE_ORIGIN}/research/phages.md`);
+    expect(dataset?.variableMeasured).toEqual([
+      "Phage",
+      "Year",
+      "Host",
+      "County",
+      "PhagesDB",
+      "Paper",
+    ]);
+    expect((dataset?.distribution as Node | undefined)?.contentUrl).toBe(
+      `${SITE_ORIGIN}/research/phages.md`,
+    );
     // Google reads a Dataset description of 50 to 5000 characters.
     const length = String(dataset?.description).length;
     expect(length).toBeGreaterThanOrEqual(50);
@@ -320,7 +437,9 @@ describe("the types each page states", () => {
     expect(ofType("/software/capsid", "SoftwareApplication")[0]?.codeRepository).toBeUndefined();
     const [source] = ofType("/software/capsid", "SoftwareSourceCode");
     expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid");
-    expect((source?.targetProduct as Node | undefined)?.["@id"]).toBe(ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"]);
+    expect((source?.targetProduct as Node | undefined)?.["@id"]).toBe(
+      ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"],
+    );
   });
 
   it("CARREL CARRIES NO CODE REPOSITORY AND NO LINK TO ITS CODE (#255)", () => {
@@ -335,15 +454,19 @@ describe("the types each page states", () => {
     for (const path of CONTENT_PAGE_PATHS.filter((p) => p.startsWith("/software"))) {
       const types = onPage(path).map((node) => node["@type"]);
       expect(
-        types.some((t) => ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "WebPage"].includes(String(t))),
+        types.some((t) =>
+          ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "WebPage"].includes(String(t)),
+        ),
         `${path}: ${types.join(", ")}`,
       ).toBe(true);
     }
   });
 
   it("each paper in the list is the node its own page describes", () => {
-    const listed = ofType("/research/publications", "ScholarlyArticle")
-      .concat(ofType("/research/publications", "Chapter"), ofType("/research/publications", "LearningResource"));
+    const listed = ofType("/research/publications", "ScholarlyArticle").concat(
+      ofType("/research/publications", "Chapter"),
+      ofType("/research/publications", "LearningResource"),
+    );
     expect(listed.length).toBeGreaterThan(0);
     for (const article of listed) {
       const path = String(article["@id"]).slice(SITE_ORIGIN.length);
@@ -357,27 +480,32 @@ describe("the types each page states", () => {
 
 describe("each carded page's og:image is its own card", () => {
   const image = (descriptors: unknown[], property: string) =>
-    (descriptors as Array<Record<string, unknown>>).find((d) => d.property === property || d.name === property)?.content;
+    (descriptors as Array<Record<string, unknown>>).find(
+      (d) => d.property === property || d.name === property,
+    )?.content;
 
-  it.each(CONTENT_PAGE_PATHS.filter((path) => hasPageCard(path)).map((path) => [path]))("%s", async (path) => {
-    let descriptors: unknown[];
-    let card: string | null;
-    if (path === "/cv") {
-      descriptors = cvMeta() as unknown[];
-      card = contentPageCardPath(CV_PAGE);
-    } else {
-      const loaderData = await contentPageLoader({
-        request: new Request(`${SITE_ORIGIN}${path}`),
-        params: {},
-        context: context(),
-      } as never);
-      descriptors = contentPageMeta({ loaderData } as never) as unknown[];
-      card = contentPageCardPath(loaderData.page);
-    }
-    expect(card, path).toMatch(/^\/media\/og\//);
-    expect(image(descriptors, "og:image")).toBe(`${SITE_ORIGIN}${card}`);
-    expect(image(descriptors, "twitter:image")).toBe(`${SITE_ORIGIN}${card}`);
-  });
+  it.each(CONTENT_PAGE_PATHS.filter((path) => hasPageCard(path)).map((path) => [path]))(
+    "%s",
+    async (path) => {
+      let descriptors: unknown[];
+      let card: string | null;
+      if (path === "/cv") {
+        descriptors = cvMeta() as unknown[];
+        card = contentPageCardPath(CV_PAGE);
+      } else {
+        const loaderData = await contentPageLoader({
+          request: new Request(`${SITE_ORIGIN}${path}`),
+          params: {},
+          context: context(),
+        } as never);
+        descriptors = contentPageMeta({ loaderData } as never) as unknown[];
+        card = contentPageCardPath(loaderData.page);
+      }
+      expect(card, path).toMatch(/^\/media\/og\//);
+      expect(image(descriptors, "og:image")).toBe(`${SITE_ORIGIN}${card}`);
+      expect(image(descriptors, "twitter:image")).toBe(`${SITE_ORIGIN}${card}`);
+    },
+  );
 
   it("a page outside the carded roots keeps the site card", async () => {
     const loaderData = await contentPageLoader({

@@ -257,8 +257,8 @@ export default function start(): void {
       .map(
         (query) =>
           `<li class="palette-recent"><button type="button" data-recent="${escapeHtml(
-          query,
-        )}">${escapeHtml(query)}</button></li>`,
+            query,
+          )}">${escapeHtml(query)}</button></li>`,
       )
       .join("");
     showRecent(true);
@@ -299,7 +299,8 @@ export default function start(): void {
       if (mine !== sequence) return;
       hits = [];
       active = -1;
-      if (statusLine) statusLine.textContent = "Search is unavailable. Press Enter for the full page.";
+      if (statusLine)
+        statusLine.textContent = "Search is unavailable. Press Enter for the full page.";
       render();
     }
   }

@@ -32,7 +32,17 @@ export function plural(count: number, one: string, many: string) {
  * buttons that ask for it, so a Check's answer is in view. The status region is always in the DOM, so a result is
  * announced; a refusal is an alert. `onFile` names the committed file when no Check has run yet.
  */
-export function KbCheckSave({ busy, actionData, errors, onFile = false }: { busy: string; actionData?: KbEditorActionData; errors: string[]; onFile?: boolean }) {
+export function KbCheckSave({
+  busy,
+  actionData,
+  errors,
+  onFile = false,
+}: {
+  busy: string;
+  actionData?: KbEditorActionData;
+  errors: string[];
+  onFile?: boolean;
+}) {
   const checked = actionData?.intent === "check" ? actionData : null;
   return (
     <>
@@ -40,18 +50,29 @@ export function KbCheckSave({ busy, actionData, errors, onFile = false }: { busy
         <Button type="submit" name="intent" value="check" pending={busy === "check"}>
           Check
         </Button>
-        <Button type="submit" name="intent" value="save" variant="primary" pending={busy === "save"}>
+        <Button
+          type="submit"
+          name="intent"
+          value="save"
+          variant="primary"
+          pending={busy === "save"}
+        >
           Save
         </Button>
       </div>
-      <div role="status">{checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}</div>
+      <div role="status">
+        {checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}
+      </div>
       {actionData?.intent === "save" && actionData.conflict ? (
         <Alert tone="crit" title="Not saved">
           {actionData.conflict}
         </Alert>
       ) : null}
       {errors.length > 0 ? (
-        <Alert tone="crit" title={`${plural(errors.length, "check fails", "checks fail")}${onFile && !checked ? " on this file" : ""}`}>
+        <Alert
+          tone="crit"
+          title={`${plural(errors.length, "check fails", "checks fail")}${onFile && !checked ? " on this file" : ""}`}
+        >
           <ul>
             {errors.map((error) => (
               <li key={error}>{error}</li>
@@ -78,12 +99,17 @@ export function KbFileEditor({
   saved?: { commit: string; unchanged: boolean } | null;
 }) {
   const navigation = useNavigation();
-  const busy = navigation.state === "submitting" ? String(navigation.formData?.get("intent") ?? "") : "";
+  const busy =
+    navigation.state === "submitting" ? String(navigation.formData?.get("intent") ?? "") : "";
   const [raw, setRaw] = useState(actionData?.raw ?? file.raw);
 
   // The latest word on the file: a check just run, else what the loader's check said of the committed file.
   const checked = actionData?.intent === "check" ? actionData : null;
-  const errors = checked ? checked.errors : actionData?.intent === "save" && actionData.refused ? actionData.refused : file.errors;
+  const errors = checked
+    ? checked.errors
+    : actionData?.intent === "save" && actionData.refused
+      ? actionData.refused
+      : file.errors;
   const gaps = checked ? checked.gaps : file.gaps;
 
   return (
@@ -147,7 +173,11 @@ export function KbFileEditor({
         <Panel title="Needs info" count={gaps.length} flush>
           <RowList label="Needs info">
             {gaps.map((gap) => (
-              <Row key={`${gap.field}#${gap.reason}`} title={<code>{gap.field}</code>} detail={gap.reason} />
+              <Row
+                key={`${gap.field}#${gap.reason}`}
+                title={<code>{gap.field}</code>}
+                detail={gap.reason}
+              />
             ))}
           </RowList>
         </Panel>

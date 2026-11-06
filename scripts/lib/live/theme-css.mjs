@@ -33,7 +33,9 @@ export async function run() {
     const { text, status } = await get("/");
     const headEnd = text.indexOf("</head>");
     const head = headEnd === -1 ? "" : text.slice(0, headEnd + 7);
-    const inlineSetsTheme = /<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?data-theme[\s\S]*?<\/script>/.test(head);
+    const inlineSetsTheme = /<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?data-theme[\s\S]*?<\/script>/.test(
+      head,
+    );
     check(
       "theme: no inline script sets data-theme (nothing to flash)",
       status === 200 && headEnd !== -1 && !inlineSetsTheme,
@@ -92,10 +94,7 @@ export async function run() {
         check(`css: ${label}`, css.toLowerCase().includes(needle));
       }
 
-      check(
-        "css: base anchor rule underlines",
-        /a\{[^}]*text-decoration:underline/.test(css),
-      );
+      check("css: base anchor rule underlines", /a\{[^}]*text-decoration:underline/.test(css));
       check(
         "css: .btn-danger uses --fill-danger, in the admin stylesheet",
         /\.btn-danger\{[^}]*background:var\(--fill-danger\)/.test(adminCss),
