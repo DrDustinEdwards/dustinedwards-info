@@ -21,7 +21,7 @@ export async function getPublishedEntryByPath(env: Env, path: string): Promise<D
   return row ? (JSON.parse(row.record) as DictionaryEntry) : null;
 }
 
-/** For list_dictionary and Carrel's list: every row, drafts included, with when D1 last wrote it. */
+/** For Carrel's list: every row, drafts included, with when D1 last wrote it. */
 export async function listDictionaryRows(env: Env) {
   const rows = await getDb(env)
     .select({

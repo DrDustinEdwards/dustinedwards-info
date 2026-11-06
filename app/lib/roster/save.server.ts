@@ -1,5 +1,5 @@
 // The one roster save, called by the site-api adapter for Carrel (app/lib/carrel/roster-handler.server.ts), and
-// the read the operator's get_roster tool answers. The roster is edited through Carrel and nothing else:
+// the reads sync_roster and its drift check use. The roster is edited through Carrel and nothing else:
 // there is no save tool and no admin editor. A save compiles the file the way CI does (compile.mjs), refuses
 // it with every message if it fails, commits it to the repository (unless it is byte-identical,
 // commitUnlessUnchanged), then writes its D1 row and purges the pages that embed the roster, so the roster
@@ -34,7 +34,7 @@ function sourceHost(env: RosterEnv): RosterHost {
   return { photo: async (src) => (await publicFileEntry(env, src)) !== null };
 }
 
-/** The one compile door: the save, get_roster and sync_roster all read a file through it. */
+/** The one compile door: the save and sync_roster both read a file through it. */
 export async function compile(env: RosterEnv, slug: string, raw: string) {
   const { findWideDashes } = await loadPipeline();
   return compileCohort({ slug, raw, host: sourceHost(env), pipeline: { findWideDashes } });
@@ -48,15 +48,6 @@ function registered(slug: string) {
     throw new RosterInvalid(slug, [`"${slug}" is not a cohort file key; a cohort's file is named for its year, such as 2025`]);
   }
   return { slug, file: rosterPath(slug) };
-}
-
-/** The cohort the stored file holds, judged by the same validator, for get_roster. */
-export async function readRoster(env: RosterEnv, slug: string) {
-  const { file } = registered(slug);
-  const existing = await readFile(env, file);
-  if (!existing) return null;
-  const compiled = await compile(env, slug, existing.content);
-  return { slug, path: file, cohort: compiled.ok ? compiled.cohort : null, errors: compiled.ok ? [] : compiled.errors };
 }
 
 /** The D1 row, in one statement: a cohort is one row, so it moves whole. */

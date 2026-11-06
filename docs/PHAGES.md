@@ -10,8 +10,7 @@ Only a change to the components, the columns or this format goes through a build
 
 There is ONE write path: Carrel saves a phage through site-api's adapter (`phage.<slug>` in the `/content` group,
 handler `app/lib/carrel/phage-handler.server.ts`). There is no admin editor and no operator save tool. The
-operator can read: `list_phages` and `get_phage`, which return only what the public table already shows.
-`sync_phages` converges D1 to the files.
+table is read through Carrel too. `sync_phages` converges D1 to the files.
 
 ## The file
 

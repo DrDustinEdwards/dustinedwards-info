@@ -1,5 +1,5 @@
 // The one CV save, called by the site-api adapter for Carrel (app/lib/carrel/cv-handler.server.ts), and the reads
-// the operator's list_cv and get_cv tools answer. The CV is edited through Carrel and nothing else: there is no
+// sync_cv and the cv-drift check use. The CV is edited through Carrel and nothing else: there is no
 // save tool and no admin editor. A save judges the file the way CI does (compile.mjs), joins it to the other
 // files D1 holds and to the publications, compiles the page its search records come from, refuses it with every
 // message if any of that fails, commits it to the repository (unless it is byte-identical, commitUnlessUnchanged),
@@ -7,8 +7,6 @@
 // request with no build or deploy. The commit is never reverted when the D1 write fails; the error
 // says the commit landed and how to repair the row. A save cannot create a file: the set of files is structure
 // and lives in CV_FILES.
-
-import matter from "gray-matter";
 
 import { listCvRows, readCv } from "~/db/cv";
 import { listPublishedPublications } from "~/db/publications";
@@ -68,20 +66,6 @@ async function judge(env: CvEnv, slug: string, raw: string) {
   const { renderBody, findWideDashes } = await loadPipeline();
   const page = await compileCvPage({ cv: whole.cv, pipeline: { renderBody, findWideDashes } });
   return page.ok ? compiled : page;
-}
-
-/** The file, and its front matter as parsed, with what the validator says of it now. */
-export async function readCvFile(env: CvEnv, slug: string) {
-  const { path } = registeredCvFile(slug);
-  const existing = await readFile(env, path);
-  if (!existing) return null;
-  const judged = await judge(env, slug, existing.content);
-  return {
-    slug,
-    raw: existing.content,
-    record: matter(existing.content).data,
-    errors: judged.ok ? [] : judged.errors,
-  };
 }
 
 /** The CV's search records, compiled from D1's rows as they stand. */

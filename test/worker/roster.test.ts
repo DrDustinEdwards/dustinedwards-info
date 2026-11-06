@@ -1,7 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cacheTags } from "~/lib/seo";
-import { isToolName, runTool } from "~/lib/operator/api.server";
 import { rosterPath } from "~/lib/roster/compile.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
 import ContentPage, { headers as contentPageHeaders, loader as pageLoader } from "~/routes/content-page";
@@ -48,8 +47,6 @@ function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Respo
     argsFor(new Request(url, { method, headers: headersFor(testEnv.CARREL_SITE_KEY), body: JSON.stringify(body) })),
   );
 }
-const operatorEnv = () => testEnv as unknown as Parameters<typeof runTool>[0];
-const operator = { kind: "operator", id: "test" } as const;
 
 /** The rendered roster section of the program page, and the loader data behind it. */
 async function programPage() {
@@ -245,29 +242,6 @@ describe("Carrel lists cohorts beside posts, and the operator reads them and can
     expect(res.items.find((i) => i.id === ID)).toMatchObject({ kind: "roster", path: `${PAGE}#year-${SLUG}`, status: "published" });
   });
 
-  it("list_roster and get_roster read the fields the public page shows, and there is no save tool", async () => {
-    const list = await runTool(operatorEnv(), operator, "list_roster", {});
-    expect(list).toMatchObject({ ok: true });
-    const data = (list as { data: { count: number; cohorts: Array<Record<string, unknown>> } }).data;
-    expect(data.count).toBe(SYNTHETIC_COHORTS.length);
-    expect(data.cohorts[0]).toEqual({
-      slug: SLUG,
-      year: CURRENT.year,
-      photo: CURRENT.photo.src,
-      researchers: CURRENT.researchers.length,
-    });
-
-    const one = await runTool(operatorEnv(), operator, "get_roster", { slug: SLUG });
-    expect(one).toMatchObject({ ok: true, data: { slug: SLUG, errors: [], cohort: { year: CURRENT.year, photo: CURRENT.photo } } });
-    // The fields of the public page and no others.
-    const cohort = (one as { data: { cohort: Record<string, unknown> } }).data.cohort;
-    expect(Object.keys(cohort).sort()).toEqual(["photo", "researchers", "year"]);
-
-    expect(await runTool(operatorEnv(), operator, "get_roster", { slug: "../x" })).toMatchObject({ ok: false, status: 400 });
-    expect(await runTool(operatorEnv(), operator, "get_roster", { slug: "1999" })).toMatchObject({ ok: false, status: 404 });
-    // The roster is edited through Carrel and nowhere else, so no save tool exists.
-    expect(isToolName("save_roster")).toBe(false);
-  });
 });
 
 versionCases({

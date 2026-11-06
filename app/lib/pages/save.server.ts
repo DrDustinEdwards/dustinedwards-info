@@ -1,5 +1,5 @@
 // The one page save, called by the site-api adapter for Carrel (app/lib/pages/adapter.server.ts), and the
-// read the operator's get_page tool answers. Content is edited through Carrel and nothing else: there is no
+// reads sync_pages and its drift check use. Content is edited through Carrel and nothing else: there is no
 // save tool and no admin editor. A save compiles the file the way CI does (compile.mjs), judges its internal
 // links (links.mjs), refuses it with every message if it fails, commits it to the repository (unless it is
 // byte-identical, commitUnlessUnchanged), then writes its D1 row and search records, so the page changes on
@@ -112,23 +112,6 @@ async function judge(env: PageEnv, slug: string, raw: string) {
   if (!compiled.ok) return compiled;
   const errors = pageLinkErrors(compiled.page, await addressBook(env, compiled.page));
   return errors.length > 0 ? { ok: false as const, errors } : compiled;
-}
-
-/** The file, and its front matter and body as parsed. */
-export async function readPage(env: PageEnv, path: string) {
-  const { slug, file } = registeredPage(path);
-  const existing = await readFile(env, file);
-  if (!existing) return null;
-  const parsed = matter(existing.content);
-  const judged = await judge(env, slug, existing.content);
-  return {
-    slug,
-    path,
-    raw: existing.content,
-    draft: parsed.data.draft === true,
-    record: { data: parsed.data, body: parsed.content },
-    errors: judged.ok ? [] : judged.errors,
-  };
 }
 
 /**

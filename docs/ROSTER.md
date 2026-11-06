@@ -8,8 +8,7 @@ the placement or this format goes through a build.
 
 There is ONE write path: Carrel saves a cohort through site-api's adapter (`roster.<year>` in the `/content`
 group, handler `app/lib/carrel/roster-handler.server.ts`). There is no admin editor and no operator save tool.
-The operator can read: `list_roster` and `get_roster`, which return only the fields the public page already
-shows (the year, the photograph and the names). `sync_roster` converges D1 to the files.
+The roster is read through Carrel too. `sync_roster` converges D1 to the files.
 
 ## The file
 

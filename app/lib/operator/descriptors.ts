@@ -6,10 +6,6 @@ export type ToolResult =
   | { ok: false; status: number; error: string; detail?: unknown };
 
 const TOOLS = [
-  "list_posts",
-  "get_post",
-  "save_post",
-  "delete_post",
   "sync_status",
   "sync_ask",
   "sync_media",
@@ -26,27 +22,13 @@ const TOOLS = [
   "sync_registry",
   "backup_media",
   "backup_d1",
-  "upload_media",
   "list_mentions",
   "decide_mention",
   "list_procedures",
   "get_procedure",
   "save_procedure",
-  "list_publications",
-  "get_publication",
   "refresh_citations",
   "check_publications",
-  "list_pages",
-  "get_page",
-  "get_llms",
-  "list_cv",
-  "get_cv",
-  "list_dictionary",
-  "get_dictionary",
-  "list_roster",
-  "get_roster",
-  "list_phages",
-  "get_phage",
   "list_registry",
   "get_registry",
   "purge_zero_results",
@@ -66,39 +48,6 @@ export function toolNames(): readonly ToolName[] {
 export const TOOL_DESCRIPTORS: Readonly<
   Record<ToolName, { args: Record<string, string>; returns: string; policy?: string }>
 > = {
-  list_posts: {
-    args: {},
-    returns:
-      "Every post row in D1, drafts included, with the head sha. `updated` " +
-      "is the revision date the row carries.",
-  },
-  get_post: {
-    args: { slug: "string" },
-    returns: "The complete markdown file, the head sha, and operatorMayPublish.",
-  },
-  save_post: {
-    args: {
-      slug: "string",
-      raw: "string, the complete markdown file including frontmatter",
-      expectedHeadSha: "string, optional, for editor-style conflict detection",
-      isNew: "boolean, optional, inferred from whether the file exists",
-    },
-    returns:
-      "commitSha, and the gate's own message with field and line on rejection. A file identical to the " +
-      "stored one writes nothing: unchanged is true and commitSha is the current head.",
-    policy:
-      "An operator may create, edit, unpublish and republish. It may NOT " +
-      "perform a post's first transition to draft:false; that is reserved " +
-      "to the human admin and is refused with 403 " +
-      "first-publish-requires-admin.",
-  },
-  delete_post: {
-    args: { slug: "string" },
-    returns: "commitSha.",
-    policy:
-      "Deleting a post is reserved to the human admin and is refused with " +
-      "403 delete-requires-admin. Unpublish instead (draft: true).",
-  },
   sync_status: {
     args: {},
     returns: "Repository, D1 and search index counts, reported separately.",
@@ -284,19 +233,6 @@ export const TOOL_DESCRIPTORS: Readonly<
       "time (draft true to false, or a new procedure saved as published); that is refused with 403 " +
       "first-publish-requires-admin.",
   },
-  list_publications: {
-    args: {},
-    returns:
-      "Every publication row in D1, drafts included: slug, doi (null for a manuscript), stage (published or " +
-      "submitted), type, title, year and draft (boolean), with the head sha and the number of publications. " +
-      "A publication is written through Carrel (site-api), never through this surface, so there is no save tool.",
-  },
-  get_publication: {
-    args: { slug: "string, the page slug (the DOI with every run of punctuation a hyphen)" },
-    returns:
-      "The complete publication file (raw), the head sha, draft, the compiled record when the file is valid, " +
-      "and every validation error when it is not. The format is docs/PUBLICATIONS.md.",
-  },
   refresh_citations: {
     args: { dois: "array of strings, optional: the DOIs to refresh; every published paper's when omitted" },
     returns:
@@ -313,79 +249,6 @@ export const TOOL_DESCRIPTORS: Readonly<
       "confirm by hand), notOnOrcid (published papers missing from the ORCID record), manuscripts (files " +
       "with no DOI yet) and failures. Writes nothing. A source that could not be read is a 502 whose detail " +
       "is the same report from the sources that answered. The watchdog calls this daily.",
-  },
-  list_pages: {
-    args: {},
-    returns:
-      "Every Research, Teaching and Software prose page row in D1, drafts included: path, slug, title and " +
-      "draft, with the count and the head sha. Pages are edited through Carrel, not here.",
-  },
-  get_page: {
-    args: { path: "string, a registered page path such as /research/phages" },
-    returns:
-      "The complete page file (raw), the head sha, the page as structured data (front matter and body), " +
-      "and any validation errors the file has now. The format is docs/PAGES.md. Read only: a page is " +
-      "saved through Carrel.",
-  },
-  get_llms: {
-    args: {},
-    returns:
-      "The complete content/llms.txt (raw) and its size, the head sha, any validation errors the file has " +
-      "now, and whether the row /llms.txt is served from holds exactly this file. The format is " +
-      "docs/LLMS.md. Read only: it is saved through Carrel, as the document llms.",
-  },
-  list_cv: {
-    args: {},
-    returns:
-      "Every file of the CV in D1 (the profile, appointments, education, publications, grants, honors, talks, " +
-      "courses, mentoring, service, development): slug, type and when D1 last wrote it, with the count and the " +
-      "head sha. The CV is edited through Carrel, not here.",
-  },
-  get_cv: {
-    args: { slug: "string, a CV file such as grants or profile" },
-    returns:
-      "The complete CV file (raw), the head sha, the file as structured data and any validation errors the " +
-      "file has now. The format is docs/CV.md. Read only: a CV file is saved through Carrel.",
-  },
-  list_dictionary: {
-    args: {},
-    returns:
-      "Every dictionary entry row in D1, drafts included: key, path (the Software page it opens), term and draft, " +
-      "with the count and the head sha. Entries are edited through Carrel, not here.",
-  },
-  get_dictionary: {
-    args: { key: "string, the entry's file name without .md, such as capsid" },
-    returns:
-      "The complete entry file (raw), the head sha, draft, the entry as the page reads it when the file is valid, " +
-      "and every validation error when it is not. The format is docs/DICTIONARY.md. Read only: an entry is saved " +
-      "through Carrel.",
-  },
-  list_roster: {
-    args: {},
-    returns:
-      "Every Phage Discovery cohort row in D1, newest first: slug (the year), year, the photograph's path and the " +
-      "count of names, with the count of cohorts and the head sha. Only what the public roster page already shows. " +
-      "The roster is edited through Carrel, not here.",
-  },
-  get_roster: {
-    args: { slug: "string, a cohort's file key: its four-digit year, such as 2025" },
-    returns:
-      "The cohort the stored file holds (year, photograph and names, the fields the public page shows), the " +
-      "head sha, and any validation errors the file has now. The format is docs/ROSTER.md. Read only: a cohort " +
-      "is saved through Carrel.",
-  },
-  list_phages: {
-    args: {},
-    returns:
-      "Every phage row in D1, in the page's order (year, then name): slug, name, year, host, county, PhagesDB record, " +
-      "genome-paper slug, former name and note, with the count and the head sha. Only what the public phage table " +
-      "already shows. The table is edited through Carrel, not here.",
-  },
-  get_phage: {
-    args: { slug: "string, a phage's file key: its name in lower case, such as acorn15" },
-    returns:
-      "The phage the stored file holds (the fields the public table shows), its raw file, the head sha, and any " +
-      "validation errors the file has now. The format is docs/PHAGES.md. Read only: a phage is saved through Carrel.",
   },
   list_registry: {
     args: { kind: "string, optional: one registry kind, such as primer" },
@@ -431,29 +294,5 @@ export const TOOL_DESCRIPTORS: Readonly<
       "the retention policy (14 daily, 8 weekly, 6 monthly). Returns run_id, exported_at, tables, rows, " +
       "kept, pruned and locked (stale runs an R2 bucket lock kept). A failed check answers an error and leaves the run without its marker. The watchdog " +
       "calls this nightly.",
-  },
-  upload_media: {
-    args: {
-      data: "string, optional, base64 bytes or a full data: URI. Either this or url.",
-      url: "string, optional, an https URL the API fetches server-side. Either this or data.",
-      type: "string, optional, the image MIME type. Defaults to the data: URI's " +
-        "own type or the fetched response's Content-Type.",
-      name: "string, optional, the filename to record as original_name. Defaults " +
-        "to the URL's last path segment, or upload.<ext>.",
-      alt: "string, what the picture shows. Required unless decorative is true; not the file name, an address or a word such as \"image\".",
-      decorative: "boolean, optional, true for a picture that adds nothing a reader would miss (stored with empty alt). Never with alt.",
-    },
-    returns:
-      "url and key, the same two the editor's upload returns, plus bytes, " +
-      "width, height and `recorded` (always true: a row that cannot be written takes " +
-      "its object with it). The url is what goes in the markdown. Idempotent: bytes " +
-      "the library already holds answer with that file, so the same image uploaded " +
-      "twice is one object.",
-    policy:
-      "MEDIA is the irreplaceable bucket and there is no delete tool over " +
-      "this token, so an object put here stays until an admin removes it. " +
-      "Accepts only the raster image types in ALLOWED (SVG is refused: it " +
-      "can carry script), refuses anything over " +
-      "MAX_BYTES, and fetches only https URLs.",
   },
 };
