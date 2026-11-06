@@ -81,9 +81,11 @@ jobs:
   site:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@a4c3bbf859fe126913e28c6199ff66fa98e0261d # v0.21.4
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@4d0c8fdb2f1794272b31d3c4354059eb2f19a26a # v0.22.0
     with:
       worker-name: dustinedwards
+      # site-runtime withAdminIdle's key, minted once by the deploy and never shown (devkit "generated-secrets").
+      generated-secrets: ADMIN_IDLE_SECRET
       d1-database: dustinedwards
       health-url: https://dustinedwards.info/health
       sha-var: DEPLOY_SHA
@@ -155,7 +157,7 @@ jobs:
   # example and the live Worker's own bindings (scripts/apply-mcp-config.mjs).
   mcp:
     needs: site
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@a4c3bbf859fe126913e28c6199ff66fa98e0261d # v0.21.4
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@4d0c8fdb2f1794272b31d3c4354059eb2f19a26a # v0.22.0
     with:
       worker-name: dustinedwards-admin-mcp
       working-directory: mcp
