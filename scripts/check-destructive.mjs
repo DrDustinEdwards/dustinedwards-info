@@ -167,6 +167,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["list_posts", "a read"],
     ["get_post", "a read"],
     ["sync_status", "a read"],
+    ["backup_status", "a read"],
     ["list_mentions", "a read"],
     [
       "save_post",

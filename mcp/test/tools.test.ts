@@ -43,7 +43,7 @@ beforeEach(() => {
 afterEach(() => api.restore());
 
 describe("the tool surface", () => {
-  test("is exactly the eleven dei_ tools, each named once", () => {
+  test("is exactly the ten dei_ tools, each named once", () => {
     assert.deepEqual(
       TOOLS.map((t) => t.name),
       [
@@ -52,7 +52,6 @@ describe("the tool surface", () => {
         "dei_review_mentions",
         "dei_decide_mention",
         "dei_upload_media",
-        "dei_backup_media",
         "dei_read_registry",
         "dei_refresh_citations",
         "dei_check_publications",
@@ -74,7 +73,6 @@ describe("the tool surface", () => {
       dei_review_mentions: [true, false, true, false],
       dei_decide_mention: [false, false, true, false],
       dei_upload_media: [false, false, true, true],
-      dei_backup_media: [false, false, true, false],
       dei_read_registry: [true, false, true, false],
       dei_refresh_citations: [false, false, true, true],
       dei_check_publications: [true, false, true, true],
@@ -106,7 +104,6 @@ const MAPPINGS: Array<{ name: string; args: Record<string, unknown>; tool: strin
     tool: "upload_media",
     sent: { data: "aGk=", type: "image/png", name: "a.png", alt: "A plaque assay plate" },
   },
-  { name: "dei_backup_media", args: {}, tool: "backup_media", sent: {} },
   { name: "dei_refresh_citations", args: {}, tool: "refresh_citations", sent: {} },
   { name: "dei_refresh_citations", args: { dois: ["10.1/x"] }, tool: "refresh_citations", sent: { dois: ["10.1/x"] } },
   { name: "dei_check_publications", args: {}, tool: "check_publications", sent: {} },
@@ -294,7 +291,7 @@ describe("tool results", () => {
 
   test("a wrapper-side failure reads differently from an API refusal", async () => {
     api.reply({ throws: new TypeError("fetch failed") });
-    const out = await call("dei_backup_media", {});
+    const out = await call("dei_refresh_citations", {});
     assert.equal(out.isError, true);
     // The kind of failure, never the error's own text (S4): that goes to the Worker log.
     assert.equal(
@@ -305,7 +302,7 @@ describe("tool results", () => {
   });
 
   test("an unconfigured wrapper says so as a tool error and sends nothing", async () => {
-    const out = await tool("dei_backup_media").handler({ ...ENV, SITE: undefined }, {});
+    const out = await tool("dei_refresh_citations").handler({ ...ENV, SITE: undefined }, {});
     assert.match(out.content[0].text, /\(unconfigured\)\./);
     assert.equal(api.calls.length, 0);
   });
@@ -347,7 +344,6 @@ describe("least scope: read by default, write only when granted", () => {
     ["dei_repair_drift", {}],
     ["dei_decide_mention", { mention_id: 1, decision: "approve" }],
     ["dei_upload_media", { url: "https://x.test/a.png" }],
-    ["dei_backup_media", {}],
     ["dei_refresh_citations", {}],
     ["dei_save_procedure", { slug: "p", raw: "r" }],
   ] as const) {

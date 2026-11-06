@@ -1,5 +1,5 @@
 /**
- * The eleven tools. Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * The ten tools (the files backup moved to Capsid Admin's backups, 2026-11-06). Ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6.
  *
  * WHOLE JOBS, NOT ENDPOINT MIRRORS (rule 4). Eleven one-call tools became nine
@@ -537,24 +537,6 @@ export const TOOLS: ToolDefinition[] = [
         ...(args.alt ? { alt: args.alt } : {}),
         ...(args.decorative ? { decorative: true } : {}),
       }),
-  },
-
-  {
-    name: "dei_backup_media",
-    scope: SCOPE_WRITE,
-    config: {
-      title: "Back up the media now",
-      description:
-        "Runs the nightly files backup now: one pass each over the media bucket and the revision store into " +
-        "the backups bucket (files/media/ and files/revisions/), which Capsid copies to Amazon. It copies new " +
-        "and changed files and drops a copy only 30 days after its file is gone; it never writes or deletes in " +
-        "the media bucket or the revision store. A pass stops at 1000 writes or five minutes and the next " +
-        "goes on from there. Reports each backup's counts and whether its pass completed.",
-      inputSchema: z.strictObject({}),
-      outputSchema: API_ANSWER,
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    },
-    handler: (env) => run(env, "backup_media", {}),
   },
 
   {
