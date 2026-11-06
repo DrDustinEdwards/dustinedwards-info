@@ -89,6 +89,7 @@ function StepCard({
   const rawLines = step.lines.filter((line) => "raw" in line).map((line) => (line as { raw: string }).raw);
   const label = `Step ${number}`;
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a step card is focused for Alt+Up and Alt+Down, the keyboard twin of dragging it (WCAG 2.5.7)
     <li
       id={anchor}
       className="kb-step"
@@ -122,7 +123,7 @@ function StepCard({
       <p className="cap-field-label" id={`${anchor}-label`}>
         What to do
       </p>
-      <StepText id={`${anchor}-text`} label={`${label}: what to do`} text={step.text} names={inserts.names} caret={caret} onChange={(next) => onChange({ ...step, text: next })} />
+      <StepText id={`${anchor}-text`} label={`${label}: what to do`} text={step.text} names={inserts.names} caretRef={caret} onChange={(next) => onChange({ ...step, text: next })} />
 
       <details className="kb-insert">
         <summary>Insert into this step: a reagent, equipment, a primer, a strain, a timer or a temperature</summary>

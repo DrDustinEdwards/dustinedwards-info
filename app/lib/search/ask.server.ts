@@ -212,7 +212,7 @@ function askPublishable(post: { draft?: boolean; publishAt?: string | null }): b
  * key that resolves to the wrong URL. The heading is in the text: the body alone loses what the
  * section is about.
  */
-function askItemFor(record: Record<string, any>) {
+function askItemFor(record: { url: string; title: string; body: string }) {
   if (record.url.includes(KEY_SEPARATOR)) {
     throw new Error(
       `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +

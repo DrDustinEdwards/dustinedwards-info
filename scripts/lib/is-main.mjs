@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
  * of a drive letter, and a writer whose guard misses exits 0 having written nothing.
  *
  * @param {string} url the caller's import.meta.url
- * @param {string | undefined} [entry] the started script, process.argv[1] by default
+ * @param {string} [entry] the started script, process.argv[1] by default
  * @returns {boolean}
  */
 export function isMain(url, entry = process.argv[1]) {

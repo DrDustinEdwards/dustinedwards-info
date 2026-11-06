@@ -86,7 +86,7 @@ export default function start(): void {
       button.title = kept ? "Press to remove the copy kept on this device" : "Keep a copy that opens with no connection";
     };
 
-    button.addEventListener("click", async () => {
+    const toggle = async () => {
       const kept = button.getAttribute("aria-pressed") === "true";
       button.disabled = true;
       try {
@@ -106,7 +106,9 @@ export default function start(): void {
       } finally {
         button.disabled = false;
       }
-    });
+    };
+    // toggle reports its own failure, so the promise it returns has nothing left to report.
+    button.addEventListener("click", () => void toggle());
 
     paint(false);
     links.appendChild(button);

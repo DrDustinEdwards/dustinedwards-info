@@ -7,7 +7,8 @@ export function Picture({ picture }: { picture: PictureProps }) {
       {picture.sources.map((source) => (
         <source key={`${source.type} ${source.media ?? ""}`} type={source.type} srcSet={source.srcSet} sizes={source.sizes} media={source.media} />
       ))}
-      <img {...picture.img} />
+      {/* alt is in the spread already (pictureProps requires it); named again so the markup shows it. Same output. */}
+      <img {...picture.img} alt={picture.img.alt} />
     </picture>
   );
 }

@@ -117,7 +117,7 @@ export const PRIMER = {
  */
 export function primerFacts(sequence) {
   if (!/^[ACGT]+$/.test(sequence)) return { length: /^[A-Z]+$/.test(sequence) ? sequence.length : null, gcPercent: null, tm: null };
-  const gc = [...sequence].filter((base) => base === "G" || base === "C").length;
+  const gc = sequence.split("").filter((base) => base === "G" || base === "C").length;
   return { length: sequence.length, gcPercent: Math.round((gc / sequence.length) * 1000) / 10, tm: primerTmRounded(sequence) };
 }
 

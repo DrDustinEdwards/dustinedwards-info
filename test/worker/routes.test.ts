@@ -17,7 +17,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const themePost = (body: string, headers: HeadersInit = {}) =>
+const themePost = (body: string, headers: Record<string, string> = {}) =>
   new Request("https://example.com/theme", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", ...headers },

@@ -253,7 +253,7 @@ export function parseProcedure({ file, raw }) {
   /** @type {Section[]} */
   const sections = [];
   /** @type {string[]} */
-  let intro = [];
+  const intro = [];
   let current = /** @type {{ title: string, id: string, custom: boolean, line: number, lines: string[] } | null} */ (null);
   const close = () => {
     if (!current) return;

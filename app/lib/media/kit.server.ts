@@ -11,7 +11,7 @@ import { carrelSiteAdapter } from "~/lib/carrel/site-adapter.server";
 import { documentHandlerContext, getEnv, getExecutionContext } from "~/lib/context";
 
 /** Where a place that uses a file opens: a post is written in Carrel, so it opens on the site. */
-export function useHref(use: { type: string; id: string }): string {
+export function hrefForUse(use: { type: string; id: string }): string {
   return use.type === "post" ? `/writing/${encodeURIComponent(use.id)}` : "";
 }
 
@@ -23,7 +23,7 @@ export function adminMediaSource(context: Readonly<RouterContextProvider>, reque
     site: { id: "dustinedwards", name: "dustinedwards.info", origin },
     client: localClient(adapter),
     can: { edit: true, publish: true, deleteContent: true, deleteMedia: true, decideMentions: true },
-    editorHref: (id) => useHref({ type: "post", id }),
+    editorHref: (id) => hrefForUse({ type: "post", id }),
   };
 }
 

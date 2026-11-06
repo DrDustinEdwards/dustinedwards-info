@@ -30,7 +30,7 @@ const WIDE_DASH = String.fromCharCode(0x2014);
 const CAPSID = /^- \[Capsid\]\(https:\/\/dustinedwards\.info\/software\/capsid\).*\n/m;
 
 const optionalPagePaths = draftContentPagePaths(readPublishedPages());
-const judge = (/** @type {string} */ text, /** @type {Iterable<string> | undefined} */ twinUrls = undefined) =>
+const judge = (/** @type {string} */ text, /** @type {Iterable<string> | undefined} */ twinUrls) =>
   llmsErrors(llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls, optionalPagePaths }));
 
 /** The errors a changed file raises: asserts it was refused, and returns them joined. */

@@ -8,7 +8,7 @@ import { MediaLibrary, type FormComponent } from "capsomer/react/media-library";
 import { PageHead } from "capsomer/react/page-head";
 
 import { prefersType } from "~/lib/negotiate.mjs";
-import { adminMediaSource, runAdminMediaIntent, useHref } from "~/lib/media/kit.server";
+import { adminMediaSource, runAdminMediaIntent, hrefForUse } from "~/lib/media/kit.server";
 import type { Route } from "./+types/admin.media._index";
 
 /*
@@ -28,7 +28,7 @@ export function meta() {
 async function libraryData(context: Route.LoaderArgs["context"], request: Request) {
   const search = new URL(request.url).searchParams;
   const kit = await loadMedia(adminMediaSource(context, request), readMediaQuery(search));
-  return mediaDataOfKit(kit, { usedHref: useHref, view: readMediaView(search) });
+  return mediaDataOfKit(kit, { usedHref: hrefForUse, view: readMediaView(search) });
 }
 
 /*

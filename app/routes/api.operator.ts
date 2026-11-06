@@ -13,7 +13,8 @@ import type { Route } from "./+types/api.operator";
 // The largest call is save_procedure's whole file, which is text: a megabyte is far above any procedure.
 const OPERATOR_BODY_BYTES = 1024 * 1024;
 
-const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
+// A plain record, not HeadersInit: spreading a Headers or an entry list into the object drops it.
+const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body, null, 2), {
     status,
     headers: {

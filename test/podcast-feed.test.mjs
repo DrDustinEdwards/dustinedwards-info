@@ -103,7 +103,7 @@ await test("the home page's episode is episodes[0], which is always the newest: 
 
 await test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
   for (const adminNonce of [undefined, "a-test-nonce-0123456789"]) {
-    const media = (await contentSecurityPolicy("/", adminNonce))
+    const media = contentSecurityPolicy("/", adminNonce)
       .split("; ")
       .find((d) => d.startsWith("media-src "));
     assert.ok(media, "no media-src directive");

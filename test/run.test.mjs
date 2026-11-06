@@ -76,7 +76,7 @@ await test("run functions never change the run they are given", () => {
 await test("a timer counts to the moment it ends, so a reload or a sleeping phone still knows what is left", () => {
   const key = timerKey(1, 0);
   assert.equal(key, "1.0");
-  let run = startTimer(newRun(procedure, T0), key, 300_000, T0);
+  const run = startTimer(newRun(procedure, T0), key, 300_000, T0);
   assert.equal(timerRemaining(run, key, T0), 300_000);
   assert.equal(timerRemaining(run, key, T0 + 120_000), 180_000, "two minutes in, three left");
   assert.equal(timerRemaining(run, key, T0 + 999_000), 0, "never negative");
