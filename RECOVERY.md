@@ -181,10 +181,9 @@ Live buckets for reference: `dustinedwards-media` is location `ENAM`,
   R2-wins reconciliation, can be brought back for 90 days.
 - **Watched.** `/health`'s `backup` field carries `files.media` and
   `files.revisions` beside the dump's age, and warns past 26 hours. Capsid's
-  watcher alerts on a stale Amazon copy. `check:restore` asserts every object in
-  both buckets has an identical copy under `files/` (a file newer than 26 hours
-  is noted, not failed), and devkit's restore drill restores a sample of the
-  copies and checks their bytes.
+  watcher alerts on a stale Amazon copy. A complete pass compared every object
+  in the bucket with its copy, and devkit's weekly restore drill restores a
+  sample of the copies and checks their bytes.
 - **Never the reverse by code.** Nothing copies the backup back to media. A
   restore is a deliberate `restoreFiles` (a dry run unless `apply` is set, and it
   never overwrites a file that differs unless told to), or the wrangler

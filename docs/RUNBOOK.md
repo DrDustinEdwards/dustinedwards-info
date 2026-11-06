@@ -178,7 +178,7 @@ npx wrangler r2 object get dustinedwards-backups/backups/json/<run id>/_complete
 npx d1-dump drill --dir dump --backend sqlite
 ```
 
-The weekly `restore-drill.yml` is separate and keeps nothing.
+The weekly `restore-drill.yml` (devkit's shared drill) does exactly this to the newest complete run, and keeps nothing.
 
 ### 4a. Time Travel, first, always
 
@@ -202,8 +202,7 @@ timestamp is gone. Before running it, take an export (4b, step 1) so you can
 get back whatever you are about to overwrite.
 
 **It cannot be rehearsed.** There is no form of Time Travel that restores into a
-different database, which is why `check:restore` cannot drill this path and
-drills the export path instead. The first time you run this command will be for
+different database, so no drill can rehearse it. The first time you run this command will be for
 real. That is a known and accepted gap.
 
 ### 4b. From a per-table export
@@ -234,7 +233,7 @@ npx wrangler d1 migrations apply dustinedwards --remote
 A migrated database is not an empty one. `drizzle/0001_init.sql` seeds a
 `settings` row, so a restore into a freshly migrated database dies with
 `UNIQUE constraint failed: settings.key` and looks exactly like a corrupt
-backup. Measured 2026-09-08 by `check:restore`.
+backup. Measured 2026-09-08 by the export drill.
 
 Empty children before parents:
 
@@ -252,7 +251,7 @@ Do not load them in alphabetical order. `account` references `user` and
 `post_tags` references `posts` and `tags`, and alphabetically every child comes
 before its parent. Wrangler splits a `--file` across more than one transaction
 and `PRAGMA defer_foreign_keys` resets at each commit, so deferring does not
-save you. Order does. Measured 2026-09-08, twice, by `check:restore` failing
+save you. Order does. Measured 2026-09-08, twice, by the export drill failing
 both other ways first.
 
 ```powershell
@@ -272,20 +271,17 @@ Before running that last line, if the migrations made any triggers (they did:
 put a `DROP TRIGGER` for each at the top of `_restore.sql` and its `CREATE TRIGGER`
 from `drizzle/` at the bottom. Otherwise loading `media` fires the trigger and the
 dump's own `media_changes` rows then fail with `UNIQUE constraint failed:
-media_changes.seq`. `check:restore` does this and prints the triggers it held off.
-Found 2026-10-31 by `check:restore`, which restored 0 posts.
+media_changes.seq`. Found 2026-10-31 by the export drill, which restored 0 posts.
 
 `split-dump` is not optional. D1 refuses one statement over 100 KB (`SQLITE_TOOBIG`) and the
 export writes each row as one literal `INSERT`, so a paper's full text in `publications` (five rows
 are over the line, the largest about 141 KB) or a long protocol cannot load as exported. The script
 rewrites such a row as the `INSERT` plus `UPDATE ... SET col = col || '...'` statements that append
 the rest, and throws, naming the statement, if one cannot be cut. Found 2026-10-04 by
-`check:restore`, which failed with `statement too long: SQLITE_TOOBIG` and restored 0 posts.
+the export drill, which failed with `statement too long: SQLITE_TOOBIG` and restored 0 posts.
 
-That order is parents before children. `check:restore` derives it from the
-`REFERENCES` clauses in `drizzle/` on every run and prints it as `load order`,
-so if a migration adds a relation, run the drill and copy the line it prints
-rather than trusting this snippet.
+That order is parents before children. If a migration adds a relation, derive
+it again from the `REFERENCES` clauses in `drizzle/` rather than trusting this snippet.
 
 wrangler asks you to confirm. **Read the database name in that prompt before you
 say yes.** This is the one moment in this runbook where a typo is unrecoverable.
@@ -306,9 +302,9 @@ section 3.
 curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/health
 ```
 
-**This whole path is rehearsed weekly** by `npm run check:restore`, which does
-exactly these steps against a scratch database and compares the result to
-production. If it has been green, these commands work.
+**This path is not rehearsed.** The weekly drill proves the nightly dump (4-pre),
+so restore from a dump whenever a complete one exists, and use these steps only
+when none does.
 
 ### 4c. Media
 

@@ -61,8 +61,6 @@ export const TIERS = {
   "check:browser": "network",
   // Network for check:browser's reason: a preview boot. Its own workflow runs it on each pull request that touches the map.
   "check:systems-map": "network",
-  /* A local form would compare two empty databases. Weekly, because it is the slowest gate. */
-  "check:restore": "network",
 };
 
 /** @type {Record<string, string[] | undefined>} */
