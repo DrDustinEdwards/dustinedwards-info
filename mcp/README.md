@@ -20,7 +20,6 @@ Read tools need `dei.read`; the others need `dei.write`, ticked on the consent p
 | `dei_review_mentions` | the webmention queue, a page at a time, stranger text marked as data | read, no, yes, no |
 | `dei_decide_mention` | approve or reject one mention (delete stays in the admin screen) | write, no, yes, no |
 | `dei_upload_media` | one image into the media bucket, content-addressed | write, no, yes, yes |
-| `dei_delete_media` | library pictures by key, through the library's own delete (in-use files refused, last bytes kept) | write, yes, yes, no |
 | `dei_backup_media` | run the nightly files backup of the media bucket and revision store now | write, no, yes, no |
 | `dei_read_registry` | list or read pages, llms, cv, dictionary, roster, phages, registry, publications | read, no, yes, no |
 | `dei_refresh_citations` | fresh OpenAlex citation counts, all or by DOI | write, no, yes, yes |

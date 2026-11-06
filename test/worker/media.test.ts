@@ -7,7 +7,6 @@ import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
 import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
-import { deleteMediaTool } from "~/lib/operator/delete-media.server";
 import { uploadMediaTool } from "~/lib/operator/upload-media.server";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 
@@ -149,31 +148,6 @@ describe("media upload", () => {
     await adminMediaAction({ intent: "delete", ids: key, versions: await versionOf(key), confirm: "1" });
     expect(await env.MEDIA.get(key)).toBeNull();
     expect(await mediaRow(key)).toBeNull();
-  });
-});
-
-describe("the operator's delete_media", () => {
-  const operatorEnv = env as unknown as Parameters<typeof deleteMediaTool>[0];
-
-  it("deletes an unused upload through the library, keeps its last bytes, and names what it could not delete", async () => {
-    const { key } = await upload({ name: "spare.png", type: "image/png", body: "raster bytes: spare" }, { width: 640, height: 480 });
-    const result = await deleteMediaTool(operatorEnv, { keys: [key, key, "dustin-edwards-none-0123456789abcdef-10x10.png"] });
-    expect(result).toEqual({ ok: true, data: { deleted: [key], refused: [], missing: ["dustin-edwards-none-0123456789abcdef-10x10.png"] } });
-    expect(await env.MEDIA.get(key)).toBeNull();
-    expect(await mediaRow(key)).toBeNull();
-    expect((await env.MEDIA_REVISIONS.list({ prefix: "replaced/" })).objects.length).toBeGreaterThan(0);
-  });
-
-  it("refuses a request with no keys, and a picture a post still uses", async () => {
-    for (const args of [{}, { keys: [] }, { keys: [""] }, { keys: Array.from({ length: 26 }, (_, i) => `k${i}.png`) }]) {
-      expect(await deleteMediaTool(operatorEnv, args)).toMatchObject({ ok: false, status: 400 });
-    }
-    const { key } = await upload({ name: "used.png", type: "image/png", body: "raster bytes: used" }, { width: 640, height: 480 });
-    await seedPost("uses-a-picture", { body: `![A wheat field](/media/${key})` });
-    const result = await deleteMediaTool(operatorEnv, { keys: [key] });
-    expect(result).toMatchObject({ ok: true, data: { deleted: [] } });
-    expect((result as { data: { refused: Array<{ reason: string }> } }).data.refused[0]?.reason).toMatch(/^in use:/);
-    expect(await env.MEDIA.get(key)).toBeTruthy();
   });
 });
 

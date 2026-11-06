@@ -160,7 +160,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    * DESTRUCTIVE operator tools. Each removes something no derivation can
    * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
    */
-  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention", "purge_zero_results", "delete_media"]);
+  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention", "purge_zero_results"]);
 
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([

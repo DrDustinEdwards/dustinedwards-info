@@ -43,7 +43,7 @@ beforeEach(() => {
 afterEach(() => api.restore());
 
 describe("the tool surface", () => {
-  test("is exactly the twelve dei_ tools, each named once", () => {
+  test("is exactly the eleven dei_ tools, each named once", () => {
     assert.deepEqual(
       TOOLS.map((t) => t.name),
       [
@@ -52,7 +52,6 @@ describe("the tool surface", () => {
         "dei_review_mentions",
         "dei_decide_mention",
         "dei_upload_media",
-        "dei_delete_media",
         "dei_backup_media",
         "dei_read_registry",
         "dei_refresh_citations",
@@ -75,7 +74,6 @@ describe("the tool surface", () => {
       dei_review_mentions: [true, false, true, false],
       dei_decide_mention: [false, false, true, false],
       dei_upload_media: [false, false, true, true],
-      dei_delete_media: [false, true, true, false],
       dei_backup_media: [false, false, true, false],
       dei_read_registry: [true, false, true, false],
       dei_refresh_citations: [false, false, true, true],
@@ -108,7 +106,6 @@ const MAPPINGS: Array<{ name: string; args: Record<string, unknown>; tool: strin
     tool: "upload_media",
     sent: { data: "aGk=", type: "image/png", name: "a.png", alt: "A plaque assay plate" },
   },
-  { name: "dei_delete_media", args: { keys: ["a.webp"] }, tool: "delete_media", sent: { keys: ["a.webp"] } },
   { name: "dei_backup_media", args: {}, tool: "backup_media", sent: {} },
   { name: "dei_refresh_citations", args: {}, tool: "refresh_citations", sent: {} },
   { name: "dei_refresh_citations", args: { dois: ["10.1/x"] }, tool: "refresh_citations", sent: { dois: ["10.1/x"] } },
