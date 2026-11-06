@@ -1,103 +1,7 @@
-import { listMediaPage } from "~/db";
-
 import { isContentKey } from "./classify.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 
-// Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
-
-export type MediaObject = {
-  key: string;
-  url: string;
-  size: number;
-  uploaded: string;
-  storage: string;
-  kind: string;
-  role: string;
-  mime: string | null;
-  originalName: string | null;
-  width: number | null;
-  height: number | null;
-  alt: string;
-  caption: string;
-  tags: string;
-  placeholder: string | null;
-  deletable: boolean;
-  /** The focal point in site-runtime ./image's spelling ("XxY", 0 to 1), or null for the center. */
-  focus: string | null;
-  /** When the file was trashed (the index's `trashed_at`), or null in the library. */
-  trashedAt: string | null;
-  /** The index row's revision, which every metadata edit, trash move and replace bump (writeMediaAtRev). */
-  rev: number;
-  /* site-api v0.13.0: the content hash, credit, license, source, license end and when it was taken. */
-  sha256: string | null;
-  credit: string;
-  license: string;
-  sourceUrl: string | null;
-  licenseExpires: string | null;
-  takenAt: string | null;
-};
-
-type MediaPage = {
-  objects: MediaObject[];
-  page: number;
-  hasMore: boolean;
-};
-
-// Derived from `listMediaPage` and forwarded by spread: a hand-copied options type dropped axes
-// silently, because spreads are exempt from excess-property checks.
-type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
-
-type MediaRow = Awaited<ReturnType<typeof listMediaPage>>["rows"][number];
-
-/** One index row as the library shows it; Carrel's media adapter reads the same shape. */
-export function mediaObjectOf(row: MediaRow): MediaObject {
-  return {
-    key: row.key,
-    // Static assets live on the assets host, not in the bucket, so `/media/` would 404.
-    url: row.storage === "static" ? row.key : `/media/${row.key}`,
-    size: row.bytes ?? 0,
-    uploaded: row.uploadedAt ?? "",
-    storage: row.storage,
-    kind: row.kind,
-    role: row.role,
-    mime: row.mime,
-    originalName: row.originalName,
-    width: row.width,
-    height: row.height,
-    alt: row.alt,
-    caption: row.caption,
-    tags: row.tags,
-    placeholder: row.placeholder,
-    deletable: row.storage !== "static",
-    focus: focusText(row.focalX, row.focalY),
-    trashedAt: row.trashedAt,
-    rev: row.rev,
-    sha256: row.sha256,
-    credit: row.credit,
-    license: row.license,
-    sourceUrl: row.sourceUrl,
-    licenseExpires: row.licenseExpires,
-    takenAt: row.takenAt,
-  };
-}
-
-/** The index's two focal columns as one focal point, or null when either is unset. */
-function focusText(x: number | null, y: number | null): string | null {
-  if (x === null || y === null) return null;
-  const part = (n: number) => String(Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000);
-  return `${part(x)}x${part(y)}`;
-}
-
-export async function listMedia(
-  env: Env,
-  options: ListMediaOptions = {},
-): Promise<MediaPage> {
-  const { rows, page, hasMore } = await listMediaPage(env, options);
-
-  return { objects: rows.map(mediaObjectOf), page, hasMore };
-}
-
-// Measured before a key exists, because the key carries the dimensions. Null means the binding answered
+// Measured for the index (the rebuild and the R2 events), whose rows hold what pages size by. Null means the binding answered
 // with no pixel dimensions (an SVG); a binding that throws is NOT that answer, so the throw propagates:
 // read as null it would mint a permanent key with no size, or write empty sizes over measured ones.
 export async function measureDimensions(
@@ -120,11 +24,6 @@ export async function measureDimensions(
     return { width: info.width, height: info.height };
   }
   return null;
-}
-
-// No reference check here on purpose: the safety belongs in the action, which has the resolver's answer.
-export async function deleteMediaObject(env: Env, key: string) {
-  await env.MEDIA.delete(key);
 }
 
 export function isManagedKey(key: string) {

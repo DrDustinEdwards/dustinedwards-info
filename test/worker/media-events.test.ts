@@ -1,10 +1,10 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import { mediaRecord, upsertMediaRecord } from "~/db";
+import { mediaRecord } from "~/db";
 import { handleMediaEvents } from "../../workers/media-events";
 
-import { bytesFor, envWithImages as imagesEnv, pngKey } from "./media-fixtures";
+import { bytesFor, envWithImages as imagesEnv, pngKey, seedMediaRow } from "./media-fixtures";
 
 /* An absent placeholder must never be written as NULL over one a bulk pass derived, and nothing
  * in the consumer mentions the column. `IMAGES` has no local emulation, so each case hands it a
@@ -57,12 +57,7 @@ describe("the queue consumer derives the placeholder", () => {
     /* The row carries a placeholder from a bulk rebuild and the transformer cannot read the
      * source: the upsert must not write NULL over it. */
     const key = await seedObject("preserves");
-    await upsertMediaRecord(env as unknown as Parameters<typeof upsertMediaRecord>[0], {
-      key,
-      storage: "r2",
-      kind: "image",
-      role: "content",
-    });
+    await seedMediaRow(key);
     const db = env as unknown as Parameters<typeof mediaRecord>[0];
     await env.DB.prepare("UPDATE media SET placeholder = ?1 WHERE key = ?2")
       .bind("data:image/webp;base64,PRIOR", key)

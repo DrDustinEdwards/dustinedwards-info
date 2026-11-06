@@ -36,8 +36,8 @@ for (const file of files) {
   }
 }
 
-/* Measured by running this gate (2026-11-05: 1894 test calls, after the retired ship tests and the media mirror's drift tests went), and it moves with the suite: slack is the defect. */
-const floorBreach = assertFloor("check:test-assertions", "test calls scanned", scanned, 1894);
+/* Measured by running this gate (2026-11-06: 1884 test calls, after the media library moved to site-api and its re-tests here went), and it moves with the suite: slack is the defect. */
+const floorBreach = assertFloor("check:test-assertions", "test calls scanned", scanned, 1884);
 if (floorBreach) tally.fail(floorBreach);
 
 if (tally.failures > 0) {

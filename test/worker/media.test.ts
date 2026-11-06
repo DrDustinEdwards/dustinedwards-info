@@ -2,27 +2,19 @@ import { createExecutionContext, env } from "cloudflare:test";
 import type { IntentResult } from "@dustinedwards/site-api/admin";
 import { describe, expect, it } from "vitest";
 
-import {
-  claimMediaKeyForDelete,
-  listMediaPage,
-  mediaRefsFor,
-  mediaTwins,
-  trashMediaRecord,
-  trashedMediaKeys,
-  upsertMediaRecord,
-} from "~/db";
+import { mediaLibraryStore, mediaRefsFor } from "~/db";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
-import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
-import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
+import { dimensionsFromKey } from "~/lib/media/classify.mjs";
+import { measureDimensions } from "~/lib/media/core.server";
 import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
-import { storeUpload } from "~/lib/media/upload.server";
+import { uploadMediaTool } from "~/lib/operator/upload-media.server";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 
-import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
+import { bytesFor, envWithImages, pngKey, seedMediaRow } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
 import { seedPost } from "./seed";
 
-const mediaEnv = () => env as unknown as Parameters<typeof upsertMediaRecord>[0];
+const mediaEnv = () => env as unknown as Env;
 
 async function uploadKey(seed: string, dimensions: { width: number; height: number } | null) {
   const bytes = bytesFor(seed);
@@ -36,16 +28,18 @@ async function uploadKey(seed: string, dimensions: { width: number; height: numb
 
 type Dimensions = { width: number; height: number } | null;
 
+/** Through the operator's upload_media, the site's own upload path outside Carrel, into the same media library. */
 async function upload(
   file: { name: string; type: string; body: string },
   dimensions: Dimensions,
   overrides: Record<string, unknown> = {},
 ) {
-  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof storeUpload>[0];
-  const stored = await storeUpload(uploadEnv, { bytes: bytesFor(file.body), type: file.type, name: file.name });
-  return stored.ok
-    ? { status: 200, url: `/media/${stored.key}`, key: stored.key, error: undefined }
-    : { status: stored.status, url: undefined, key: "", error: stored.message };
+  const uploadEnv = { ...envWithImages(dimensions), ...overrides } as unknown as Parameters<typeof uploadMediaTool>[0];
+  const data = btoa(String.fromCharCode(...bytesFor(file.body)));
+  const result = await uploadMediaTool(uploadEnv, { data, type: file.type, name: file.name, decorative: true });
+  if (!result.ok) return { status: result.status, url: undefined, key: "", error: result.error };
+  const { url, key } = result.data as { url: string; key: string };
+  return { status: 200, url, key, error: undefined };
 }
 
 async function adminMediaAction(fields: Record<string, string>, routeEnv: object = env) {
@@ -118,7 +112,8 @@ describe("media upload", () => {
       },
     );
 
-    expect(status).toBe(503);
+    // The library refuses a picture the binding cannot read (site-api v0.24.0), before any key or row.
+    expect(status).toBe(415);
     expect(await count()).toBe(before);
   });
 
@@ -133,27 +128,6 @@ describe("media upload", () => {
     expect(row?.width).toBe(1200);
     expect(row?.original_name).toBe("annotated.png");
     expect(row?.alt).toBe("");
-  });
-
-  it("keeps the object when the annotation write fails, because the upload already succeeded", async () => {
-    const brokenDb = new Proxy(env.DB, {
-      get(target, property, receiver) {
-        if (property === "prepare") {
-          return () => {
-            throw new Error("planted D1 failure during the annotation write");
-          };
-        }
-        return Reflect.get(target, property, receiver);
-      },
-    });
-    const { status, key } = await upload(
-      { name: "non-fatal.png", type: "image/png", body: "raster bytes: non-fatal" },
-      { width: 10, height: 10 },
-      { DB: brokenDb },
-    );
-
-    expect(status).toBe(200);
-    expect(await env.MEDIA.get(key)).toBeTruthy();
   });
 
   it("lets the library's alt, trash and delete act on the raster key an upload produced", async () => {
@@ -191,70 +165,27 @@ describe("a stored object that can carry script", () => {
   });
 });
 
-describe("set-alt", () => {
-  it("updates the ROW on a raster key and leaves every column it did not name", async () => {
-    const { key } = await uploadKey("alt-target", { width: 640, height: 480 });
-    expect(key).toMatch(/-\d+x\d+\.png$/);
-    expect(isManagedKey(key)).toBe(true);
-
-    await upsertMediaRecord(mediaEnv(), {
-      key,
-      alt: "",
-      storage: "r2",
-      kind: "image",
-      originalName: "alt-target.png",
-    });
-    await upsertMediaRecord(mediaEnv(), { key, alt: "a wheat field at dusk" });
-
-    const row = await env.DB.prepare(
-      "SELECT alt, kind, original_name FROM media WHERE key = ?1",
-    )
-      .bind(key)
-      .first<{ alt: string; kind: string; original_name: string }>();
-
-    expect(row?.alt).toBe("a wheat field at dusk");
-    expect(row?.kind).toBe("image");
-    expect(row?.original_name).toBe("alt-target.png");
-  });
-});
-
 describe("the atomic delete claim", () => {
-  it("REMOVES an uncited key and reports that it won", async () => {
-    const { bytes, key } = await uploadKey("uncited", { width: 20, height: 20 });
-    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-    await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
+  /* The library's delete ends in the store's remove: the row goes only while no recorded citation names it. */
+  const rowOf = (key: string) => env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first();
 
-    expect(await claimMediaKeyForDelete(mediaEnv(), key)).toBe(true);
-    await deleteMediaObject(mediaEnv(), key);
+  it("REMOVES an uncited key with its revisions", async () => {
+    const { key } = await uploadKey("uncited", { width: 20, height: 20 });
+    await seedMediaRow(key);
+    await env.DB.prepare("INSERT INTO media_revisions (media_key, at, bytes, reason) VALUES (?1, '2030-01-01T00:00:00.000Z', 1, 'upload')").bind(key).run();
 
-    expect(await env.MEDIA.get(key)).toBeNull();
-    expect(
-      await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first(),
-    ).toBeNull();
-  });
-
-  it("KEEPS a cited key and reports that it lost", async () => {
-    const { bytes, key } = await uploadKey("cited", { width: 20, height: 20 });
-    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-    await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
-    await env.DB.prepare(
-      `INSERT INTO media_refs (media_key, source_type, source_id, form, detail)
-       VALUES (?1, 'post', 'a-post', 'markdown-image', 'line 4')`,
-    )
-      .bind(key)
-      .run();
-
-    expect(await claimMediaKeyForDelete(mediaEnv(), key)).toBe(false);
-    expect(await env.MEDIA.get(key)).toBeTruthy();
-    expect((await mediaRefsFor(mediaEnv(), [key])).get(key)).toHaveLength(1);
+    // Only at the version the reference check saw.
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 1)).toBe("stale");
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("removed");
+    expect(await rowOf(key)).toBeNull();
+    expect(await env.DB.prepare("SELECT id FROM media_revisions WHERE media_key = ?1").bind(key).first()).toBeNull();
   });
 
   it("OBSERVES THE `NOT EXISTS` THROUGH A PLANTED CONCURRENT CITATION (finding B009)", async () => {
     /* A citation landing after the caller's read and before the claim is the race, made
      * deterministic. A ref inserted before the read would not tell a read-then-delete apart. */
-    const { bytes, key } = await uploadKey("raced", { width: 20, height: 20 });
-    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-    await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
+    const { key } = await uploadKey("raced", { width: 20, height: 20 });
+    await seedMediaRow(key);
 
     const seenByTheCaller = (await mediaRefsFor(mediaEnv(), [key])).get(key) ?? [];
     expect(seenByTheCaller).toHaveLength(0);
@@ -267,47 +198,8 @@ describe("the atomic delete claim", () => {
       .run();
 
     /* Must lose: the check runs inside the statement, not on the caller's stale read. */
-    expect(await claimMediaKeyForDelete(mediaEnv(), key)).toBe(false);
-
-    expect(await env.MEDIA.get(key)).toBeTruthy();
-    expect(
-      await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first(),
-    ).toBeTruthy();
-  });
-
-  it("reports that it lost when the key was already gone", async () => {
-    /* false means cited OR absent, and the caller must refuse either way. */
-    expect(await claimMediaKeyForDelete(mediaEnv(), "dustin-edwards-0123456789abcdef-1x1.png")).toBe(false);
-  });
-});
-
-describe("the duplicates lens", () => {
-  it("FILTERS IN SQL BEFORE THE PAGE IS CUT, so a page of twins is a full page", async () => {
-    const digest = await crypto.subtle.digest("SHA-256", bytesFor("twin-bytes"));
-    const twins = ["first copy", "second copy"].map((name) =>
-      contentKey(digest, "png", { width: 10, height: 10 }, name),
-    );
-    const singles = await Promise.all(
-      ["single-a", "single-b", "single-c"].map((seed) => pngKey(seed, { width: 10, height: 10 })),
-    );
-    /* The singles are newest, so an unfiltered first page would be all singles. */
-    for (const [i, key] of [...twins, ...singles].entries()) {
-      await upsertMediaRecord(mediaEnv(), {
-        key,
-        alt: "",
-        storage: "r2",
-        kind: "image",
-        role: "content",
-        uploadedAt: new Date(Date.UTC(2030, 0, 1 + i)).toISOString(),
-      });
-    }
-
-    const known = await mediaTwins(mediaEnv());
-    const { rows } = await listMediaPage(mediaEnv(), { lens: "duplicates", limit: 2 });
-
-    expect(rows).toHaveLength(2);
-    for (const row of rows) expect(known.has(row.key), row.key).toBe(true);
-    expect(rows.map((row) => row.key).sort()).toEqual([...twins].sort());
+    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("in-use");
+    expect(await rowOf(key)).toBeTruthy();
   });
 });
 
@@ -315,12 +207,12 @@ describe("emptying the trash", () => {
   async function trashedUpload(seed: string) {
     const { bytes, key } = await uploadKey(seed, { width: 20, height: 20 });
     await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-    await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
-    await trashMediaRecord(mediaEnv(), key);
+    await seedMediaRow(key, { trashed_at: "2030-01-01 00:00:00" });
     return key;
   }
 
-  const trashedCount = async () => (await trashedMediaKeys(mediaEnv())).length;
+  const trashedCount = async () =>
+    (await env.DB.prepare("SELECT count(*) AS n FROM media WHERE storage = 'r2' AND trashed_at IS NOT NULL").first<{ n: number }>())?.n ?? 0;
 
   it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
     const cited = await trashedUpload("trash-cited");
@@ -343,32 +235,6 @@ describe("emptying the trash", () => {
     expect(result.outcomes?.find((o) => o.id === cited)).toMatchObject({ ok: false, usedBy: [expect.objectContaining({ id: "cites-a-trashed-file" })] });
     expect(await env.MEDIA.get(uncited)).toBeNull();
   });
-
-  it("deletes NOTHING when the citation scan fails", async () => {
-    const key = await trashedUpload("trash-scan-fails");
-    /* Only the posts read fails, so the trash listing still works and the scan is the one that breaks. */
-    const brokenDb = new Proxy(env.DB, {
-      get(target, property) {
-        if (property === "prepare") {
-          return (query: string) => {
-            if (/from "posts"/i.test(query)) throw new Error("planted posts read failure");
-            return target.prepare(query);
-          };
-        }
-        const value = Reflect.get(target, property);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-
-    const result = (await adminMediaAction(
-      { intent: "empty-trash", confirm: String(await trashedCount()) },
-      { ...env, DB: brokenDb },
-    )) as IntentResult;
-
-    expect(result.outcomes?.find((o) => o.id === key)).toMatchObject({ ok: false, message: expect.stringMatching(/reference (scan failed|check could not complete)/) });
-    expect(await env.MEDIA.get(key)).toBeTruthy();
-    expect(await mediaRow(key)).toBeTruthy();
-  });
 });
 
 describe("an unknown intent", () => {
@@ -381,14 +247,7 @@ describe("an unknown intent", () => {
 describe("quick search", () => {
   it("is answered as JSON, which a document loader cannot do", async () => {
     const { key } = await uploadKey("palette-target", { width: 20, height: 20 });
-    await upsertMediaRecord(mediaEnv(), {
-      key,
-      alt: "",
-      storage: "r2",
-      kind: "image",
-      role: "content",
-      originalName: "zanzibar-palette-target.png",
-    });
+    await seedMediaRow(key, { original_name: "zanzibar-palette-target.png" });
 
     const middleware = adminMediaMiddleware[0] as unknown as (
       args: never,

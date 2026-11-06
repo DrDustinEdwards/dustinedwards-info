@@ -58,3 +58,15 @@ export function envWithImages(dimensions: Dimensions, encodes?: boolean) {
     },
   } as unknown as typeof env;
 }
+
+/**
+ * An upload's index row as the library reads it, written straight to D1 so a case can start from any state. Only the
+ * columns a case names besides the key are set; the schema's defaults fill the rest.
+ */
+export async function seedMediaRow(key: string, columns: Record<string, string | number | null> = {}) {
+  const row = { storage: "r2", kind: "image", role: "content", ...columns };
+  const names = Object.keys(row);
+  await env.DB.prepare(`INSERT INTO media (key, ${names.join(", ")}) VALUES (?, ${names.map(() => "?").join(", ")})`)
+    .bind(key, ...Object.values(row))
+    .run();
+}

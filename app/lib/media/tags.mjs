@@ -1,6 +1,6 @@
-// A column, not a join table like posts: media tags have no public page, and search stays one LIKE chain.
-// Stored DELIMITER-WRAPPED (`,alpha,beta,`) so an exact match is `LIKE '%,art,%'` and misses `chart`;
-// the empty list is "" so an untagged row cannot match `%,%`.
+// A column, not a join table like posts: media tags have no public page. Stored DELIMITER-WRAPPED (`,alpha,beta,`),
+// the empty list as "", the form every row has held since the column was added; the media library's store reads and
+// writes it here (app/db/media.ts), and filters by tag in the Worker.
 
 const TAG_DELIMITER = ",";
 
@@ -65,16 +65,4 @@ export function serializeTags(input) {
 export function parseTags(stored) {
   if (typeof stored !== "string" || stored === "") return [];
   return normalizeTags(stored);
-}
-
-/**
- * Null means "no filter", never a needle: `%,,%` would match every tagged row.
- *
- * @param {unknown} raw
- * @returns {string | null}
- */
-export function exactTagNeedle(raw) {
-  const tag = normalizeTag(raw);
-  if (!tag) return null;
-  return `%${TAG_DELIMITER}${tag}${TAG_DELIMITER}%`;
 }
