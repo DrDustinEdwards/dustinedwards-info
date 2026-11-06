@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
@@ -73,6 +74,20 @@ const REMOTE_ARGS = {
 const all = process.argv.includes("--all");
 const ci = process.argv.includes("--ci");
 
+/*
+ * How many gates run at once. CI runs them side by side, as many as the runner has cores: run one after another, the
+ * Gates step took about 230 s of gate time, 152 s of it check:worker, while the runner's other cores idled. The local tier
+ * and ship stay one at a time unless `--jobs N` asks: there the RSS sampler gives each gate its own peak, which overlap
+ * would blur, and the machine is Dustin's, where concurrent spawn on a saturated host is the one environment failure
+ * classifyEnvironmentFailure below exists to name.
+ */
+const jobsArg = process.argv.indexOf("--jobs");
+const JOBS = Math.max(1, jobsArg >= 0 ? Number(process.argv[jobsArg + 1]) || 1 : ci ? availableParallelism() : 1);
+
+/* The slow gates start first, so the short ones fill the cores beside them instead of a slow one starting last. An
+   order, not a list of gates: a gate missing here still runs, after these. */
+const SLOW_FIRST = ["check:worker", "check:tests", "check:types"];
+
 function discoverGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   /* Excluding the runners stops this one invoking itself. */
@@ -109,12 +124,59 @@ function discoverGates() {
  */
 export function runGate(name, args) {
   const started = Date.now();
-  const result = spawnSync(`npm run ${name}${args.length ? ` -- ${args.join(" ")}` : ""}`, {
+  const result = spawnSync(gateCommand(name, args), {
     cwd: root,
     encoding: "utf8",
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
   });
+  return gateResult(name, started, result);
+}
+
+/** @param {string} name @param {string[]} args */
+const gateCommand = (name, args) => `npm run ${name}${args.length ? ` -- ${args.join(" ")}` : ""}`;
+
+/** @type {Set<import("node:child_process").ChildProcess>} */
+const running = new Set();
+
+/**
+ * runGate without blocking, so several gates run at once. The same command, shell and result.
+ * @param {string} name @param {string[]} args @returns {Promise<ReturnType<typeof runGate>>}
+ */
+function runGateAsync(name, args) {
+  const started = Date.now();
+  return new Promise((resolve) => {
+    /** @type {Buffer[]} */
+    const out = [];
+    /** @type {Buffer[]} */
+    const err = [];
+    /** @type {Error | undefined} */
+    let error;
+    const child = spawn(gateCommand(name, args), { cwd: root, shell: true, stdio: ["ignore", "pipe", "pipe"] });
+    running.add(child);
+    child.stdout.on("data", (chunk) => out.push(chunk));
+    child.stderr.on("data", (chunk) => err.push(chunk));
+    child.on("error", (e) => (error = e));
+    child.on("close", (status, signal) => {
+      running.delete(child);
+      resolve(
+        gateResult(name, started, {
+          stdout: Buffer.concat(out).toString("utf8"),
+          stderr: Buffer.concat(err).toString("utf8"),
+          status,
+          signal,
+          error,
+        }),
+      );
+    });
+  });
+}
+
+/**
+ * @param {string} name @param {number} started
+ * @param {{ stdout?: string | null, stderr?: string | null, status: number | null, signal?: NodeJS.Signals | null, error?: Error }} result
+ */
+function gateResult(name, started, result) {
   /* A gate that could not run is not a gate that failed. Both streams empty is the test, because every
      gate here prints on a pass. */
   const stdout = result.stdout ?? "";
@@ -299,6 +361,7 @@ function runSelected(selected) {
       process.pid,
     );
     for (const pid of alive) killTree(pid);
+    for (const child of running) child.kill();
     sampler.stop();
   };
   process.on("exit", cleanUp);
@@ -313,6 +376,7 @@ function runSelected(selected) {
 
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
+  if (JOBS > 1) return runConcurrently(selected).then((done) => ({ results: done, sampler, cleanUp }));
   for (const name of selected) {
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
@@ -332,7 +396,35 @@ function runSelected(selected) {
           : `FAILED (${seconds}s${peak})`,
     );
   }
-  return { results, sampler, cleanUp };
+  return Promise.resolve({ results, sampler, cleanUp });
+}
+
+/**
+ * Up to JOBS gates at once. Each gate's line prints when it finishes, whole, so no two gates' words interleave; a
+ * failed gate's output is printed by summarize, in the declared order, as in a serial run. Peak memory is per gate only
+ * when nothing overlaps it, so it is not attributed here.
+ * @param {string[]} selected
+ */
+async function runConcurrently(selected) {
+  const queue = [...SLOW_FIRST.filter((name) => selected.includes(name)), ...selected.filter((name) => !SLOW_FIRST.includes(name))];
+  console.log(`  ${JOBS} at a time (--jobs, or the runner's cores under --ci); each gate's line prints when it finishes\n`);
+  /** @type {Map<string, ReturnType<typeof runGate>>} */
+  const done = new Map();
+  const worker = async () => {
+    for (let name = queue.shift(); name !== undefined; name = queue.shift()) {
+      const args = all ? (REMOTE_ARGS[name] ?? []) : [];
+      // Every gate runs even after a failure: stopping at the first red lets one failure mask a second.
+      const result = await runGateAsync(name, args);
+      done.set(name, result);
+      const seconds = (result.ms / 1000).toFixed(1);
+      console.log(
+        `  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... ` +
+          (result.errored ? `ERRORED (${seconds}s) ${result.reason}` : result.ok ? `ok (${seconds}s)` : `FAILED (${seconds}s)`),
+      );
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(JOBS, selected.length) }, worker));
+  return selected.map((name) => /** @type {ReturnType<typeof runGate>} */ (done.get(name)));
 }
 
 /**
@@ -432,7 +524,7 @@ function summarize(results, skipped, sampler) {
   return { failed, errored, environment };
 }
 
-function main() {
+async function main() {
   /* The schema test compares the live database only when asked; every spawned gate inherits this. */
   if (all) process.env.SCHEMA_LIVE = "1";
   const gates = discoverGates();
@@ -471,7 +563,7 @@ function main() {
 
   reapOrphans();
 
-  const { results, sampler, cleanUp } = runSelected(selected);
+  const { results, sampler, cleanUp } = await runSelected(selected);
   const { failed, errored, environment } = summarize(results, skipped, sampler);
 
   /*
@@ -489,10 +581,8 @@ function main() {
  * `file://C:\...` URL never equals import.meta.url on Windows.
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  try {
-    main();
-  } catch (error) {
+  main().catch((error) => {
     console.error(`\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
-  }
+  });
 }

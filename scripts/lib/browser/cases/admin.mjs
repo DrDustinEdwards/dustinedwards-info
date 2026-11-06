@@ -11,7 +11,7 @@ import {
   credentialAuthenticates,
   smokeRepair,
 } from "../credential.mjs";
-import { countCssRules, ok, overflowScan } from "../harness.mjs";
+import { countCssRules, ok, overflowScan, say } from "../harness.mjs";
 
 /** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
 const ADMIN_RULE_MEASURED = 74;
@@ -82,7 +82,7 @@ export async function run({ browser }) {
     );
   } else {
     /* State which credential ran: the smoke token is read-only, so its green says nothing about writes. */
-    console.log(
+    say(
       `\n  admin credential: THE SMOKE TOKEN, read from ${SMOKE_SOURCE}` +
         `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)` +
         `\n  the smoke actor is READ ONLY: every case below is a GET, and no write surface is exercised\n`,
