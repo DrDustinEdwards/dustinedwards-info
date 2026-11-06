@@ -52,10 +52,10 @@ function canonical(unit) {
     millilitres: "ml",
     milliliter: "ml",
     milliliters: "ml",
-    litre: "l",
-    litres: "l",
+    litre: "l", // codespell:ignore (British input accepted)
+    litres: "l", // codespell:ignore (British input accepted)
     liter: "l",
-    liters: "l", // codespell:ignore (British input accepted)
+    liters: "l",
     teaspoon: "tsp",
     teaspoons: "tsp",
     tablespoon: "tbsp",

@@ -497,7 +497,7 @@ for (const name of EXPECTED_TOOLS) {
   );
   check(
     "invokeTool names this server's scopes, so a tool's declared scope is checked against dei.read and dei.write",
-    /const SERVER: McpServerInfo = \{ site: "", scopes: SCOPES,/.test(handlerCode),
+    /const SERVER: McpServerInfo = \{\s*site: "",\s*scopes: SCOPES,/.test(handlerCode),
     "Rule 12.1 and 12.3: the per-call ownership proof and the scope check.",
   );
 }
