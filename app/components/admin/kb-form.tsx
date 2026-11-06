@@ -28,13 +28,6 @@ const PREVIEW_DELAY_MS = 900;
 /** The width at which the preview sits beside the form; below it, the preview is a tab. Matches app/admin.css. */
 const SIDE_BY_SIDE = "(min-width: 72rem)";
 
-/** The preview's frame document: the page's own stylesheets, the admin's theme, links opening outside the frame. */
-function previewDocument(result: { html: string; styles: string[] }) {
-  const styles = result.styles.map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`).join("");
-  const theme = document.documentElement.getAttribute("data-theme");
-  return `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${result.html}</body></html>`;
-}
-
 /**
  * The entry the form describes, rendered as its public page by the server a beat after the form stops changing. A
  * sequence number keeps a slow answer from landing over a newer one. Busy is derived: the form's current request is
@@ -60,7 +53,11 @@ function useEntryPreview(slug: string | null, original: string, model: string, a
         if (mine !== seq.current) return;
         const answer = json ?? { error: `The preview request failed with HTTP ${response.status}.` };
         setResult(answer);
-        if ("html" in answer) setDoc(previewDocument(answer));
+        if ("html" in answer) {
+          const styles = answer.styles.map((href) => `<link rel="stylesheet" href="${new URL(href, window.location.href).href}">`).join("");
+          const theme = document.documentElement.getAttribute("data-theme");
+          setDoc(`<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}><head><meta charset="utf-8"><base target="_blank">${styles}</head><body>${answer.html}</body></html>`);
+        }
       } catch (error) {
         if (mine === seq.current) setResult({ error: error instanceof Error ? error.message : String(error) });
       } finally {
