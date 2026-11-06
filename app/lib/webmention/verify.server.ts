@@ -1,6 +1,7 @@
 import { parseHTML } from "linkedom";
 
 import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
+import { guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
 import { readCapped } from "@dustinedwards/site-runtime/body";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
@@ -17,8 +18,9 @@ const MAX_SOURCE_BYTES = 1024 * 1024;
 
 const SOURCE_TIMEOUT_MS = 5000;
 
-// Redirects are followed by hand, each hop re-checked: an automatic follow would let a public source
-// bounce the fetch to a loopback name or an IP literal the route refused on the first URL.
+// Every address, the first and each redirect, goes through site-api's outbound guard (guardedFetch): its host
+// must resolve only to public addresses (DNS over HTTPS), so a name like 127.0.0.1.nip.io is refused, and it
+// must pass sourceVerdict, so a hop back onto this site is refused too.
 const MAX_REDIRECTS = 5;
 
 // A fixed set, not a message: free text would put a remote server's prose into the admin plane.
@@ -81,37 +83,25 @@ export async function inspectSource(
   // which differ before the cutover. A hop to either is a redirect back onto this site.
   const siteOrigins = [...new Set([SITE_ORIGIN, new URL(targetUrl).origin])];
   let response: Response;
-  let at = sourceUrl;
-  for (let hop = 0; ; hop += 1) {
-    try {
-      response = await fetch(at, {
-        method: "GET",
-        headers: { accept: "text/html, application/xhtml+xml" },
-        redirect: "manual",
-        signal,
-      });
-    } catch {
-      return {
-        status: "failed",
-        failureReason: signal.aborted ? FAILURE_REASONS.timeout : FAILURE_REASONS.fetchError,
-      };
-    }
-    const location = response.headers.get("location");
-    if (response.status < 300 || response.status > 399 || !location) break;
-    await response.body?.cancel();
-    if (hop >= MAX_REDIRECTS) {
+  try {
+    ({ response } = await guardedFetch(
+      fetch,
+      sourceUrl,
+      { method: "GET", headers: { accept: "text/html, application/xhtml+xml" }, signal },
+      {
+        allowHttp: true,
+        maxRedirects: MAX_REDIRECTS,
+        refuse: (url) => (sourceVerdict(url, targetUrl, siteOrigins).ok ? null : "refused"),
+      },
+    ));
+  } catch (error) {
+    if (error instanceof OutboundRefusal) {
       return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
     }
-    let next: string;
-    try {
-      next = new URL(location, at).href;
-    } catch {
-      return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
-    }
-    if (!sourceVerdict(next, targetUrl, siteOrigins).ok) {
-      return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
-    }
-    at = next;
+    return {
+      status: "failed",
+      failureReason: signal.aborted ? FAILURE_REASONS.timeout : FAILURE_REASONS.fetchError,
+    };
   }
 
   if (!response.ok) {

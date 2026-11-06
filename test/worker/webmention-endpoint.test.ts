@@ -43,6 +43,14 @@ type StubPage =
 function stubSources(pages: Record<string, StubPage>) {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    // site-api's outbound guard resolves each host over DNS over HTTPS first: one name answers a loopback
+    // address (as nip.io does), every other a public one.
+    if (url.startsWith("https://cloudflare-dns.com/dns-query")) {
+      const name = new URL(url).searchParams.get("name");
+      const v4 = new URL(url).searchParams.get("type") === "A";
+      const data = name === "127.0.0.1.nip.io" ? "127.0.0.1" : "93.184.215.14";
+      return Response.json({ Status: 0, Answer: v4 ? [{ type: 1, data }] : [] });
+    }
     const page = pages[url];
     if (!page) {
       throw new Error(
@@ -531,8 +539,8 @@ describe("/webmention accepts and verifies", () => {
     expect((await mentionRow(source))?.status).toBe("pending");
   });
 
-  it("REFUSES a redirect to a loopback name or an IP literal, which the first URL could not name", async () => {
-    for (const [index, hop] of ["http://localhost/admin", "http://169.254.169.254/latest"].entries()) {
+  it("REFUSES a redirect to a loopback name, a name that resolves to loopback, or an IP literal, which the first URL could not name", async () => {
+    for (const [index, hop] of ["http://localhost/admin", "http://169.254.169.254/latest", "https://127.0.0.1.nip.io/"].entries()) {
       const source = `https://elsewhere.example/bounce-${index}`;
       /* The hop has no recorded page, so reaching it would throw inside the stub. */
       stubSources({ [source]: { redirect: hop } });
