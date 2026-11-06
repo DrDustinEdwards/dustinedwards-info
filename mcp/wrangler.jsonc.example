@@ -99,7 +99,7 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"name": "OPERATOR_RATE_LIMIT",
+				"name": "MCP_RATE_LIMIT",
 				"class_name": "OperatorRateLimit"
 			},
 			{
