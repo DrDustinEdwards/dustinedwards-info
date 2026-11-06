@@ -132,7 +132,7 @@ function isoOf(value: string | null): string | null {
 const d1Time = (iso: string) => new Date(iso).toISOString().replace("T", " ").slice(0, 19);
 
 /** The two focal columns as site-runtime's "XxY", or null when either is unset. */
-function focusOf(x: number | null, y: number | null): string | null {
+function focusFromColumns(x: number | null, y: number | null): string | null {
   if (x === null || y === null) return null;
   const part = (n: number) => String(Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000);
   return `${part(x)}x${part(y)}`;
@@ -161,7 +161,7 @@ function recordOf(row: MediaRow): MediaRecord {
     alt: row.alt,
     caption: row.caption,
     tags: parseTags(row.tags),
-    focus: focusOf(row.focalX, row.focalY),
+    focus: focusFromColumns(row.focalX, row.focalY),
     credit: row.credit,
     license: row.license,
     sourceUrl: row.sourceUrl,
