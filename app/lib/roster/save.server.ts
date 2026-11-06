@@ -10,7 +10,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 
@@ -29,9 +29,9 @@ class RosterInvalid extends ContentInvalid {
   }
 }
 
-/** The photographs this deploy serves: they are static assets, so existence is all there is to read. */
+/** The photographs are media library files: one exists when its object is in the MEDIA bucket. */
 function sourceHost(env: RosterEnv): RosterHost {
-  return { photo: async (src) => (await publicFileEntry(env, src)) !== null };
+  return { photo: async (src) => (await env.MEDIA.head(src.slice("/media/".length))) !== null };
 }
 
 /** The one compile door: the save, get_roster and sync_roster all read a file through it. */

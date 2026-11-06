@@ -210,11 +210,7 @@ Every class of thing this site stores, and where its second copy is:
 | Earlier file versions | `dustinedwards-media-revisions` (`MEDIA_REVISIONS`) | **backed up nightly**: `files/revisions/` in `dustinedwards-backups`, then Amazon S3. The age lives in `/health` `backup.files.revisions` |
 | Social cards | `dustinedwards-og` (`OG`), all under `og/` | **regenerable**: `npm run build:og -- --remote` |
 | Static assets | `public/`, not R2 at all | **git** |
-| Roster photo WebPs | `public/phage-hunters/` | **git** |
-| Roster photo JPG SOURCES | gitignored, would be `public/phage-hunters/*.jpg` | **nowhere, if any existed** |
-
-The last row is the one to watch: `.gitignore` excludes those sources, so a JPG
-dropped there would exist on one machine and in no clone.
+| Roster photo WebPs | the media library (`dustinedwards-media`, `MEDIA`) | **backed up nightly** with the other media |
 
 The OG cards are regenerable in the strong sense: the object key is a hash of the
 template version, slug, title and description, all tracked in `content/`, so a

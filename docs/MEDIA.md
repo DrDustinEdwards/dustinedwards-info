@@ -45,4 +45,4 @@ Covered: markdown image, figure directive, frontmatter cover, links including re
 
 ## Not built
 
-Roster photos stay in `public/phage-hunters/`: a new cohort is a resize and a commit, not a runtime write, the static tier already gives dimensions, LQIP and transforms. Migrate only if Dustin wants "upload next year's photo in the editor". Media versioning, AI tagging, rights management and lifecycle rules are team features for an audience of one. Trash (`trashed_at`, migration 0011, hides a file but never takes its URL down), tags, folders and exact-hash duplicate detection were built.
+Roster photos are library files (moved from `public/phage-hunters/` on 2026-11-06, so they list in Carrel and the admin like every other picture). Media versioning, AI tagging, rights management and lifecycle rules are team features for an audience of one. Trash (`trashed_at`, migration 0011, hides a file but never takes its URL down), tags, folders and exact-hash duplicate detection were built.

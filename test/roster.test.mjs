@@ -1,25 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
 
 import matter from "gray-matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
 import {
-  ROSTER_PHOTO_DIR,
   compileCohort,
   rosterFacts,
   rosterPath,
   rosterSetErrors,
   sortCohorts,
 } from "../app/lib/roster/compile.mjs";
-import { buildRoster, compileAllRoster, repoHost } from "../scripts/lib/roster.mjs";
+import { buildRoster, compileAllRoster } from "../scripts/lib/roster.mjs";
 
 /* The roster validator is the one rule CI and the Carrel save share (docs/ROSTER.md). Everything here that
  * needs a person's name uses a placeholder: the real names live in content/roster/ and nowhere else. */
 
 const PIPELINE = { findWideDashes };
-const PHOTO = { src: `${ROSTER_PHOTO_DIR}example-2031.webp`, width: 1080, height: 720, alt: "Group photo of the 2031 cohort" };
+const PHOTO = { src: "/media/dustin-edwards-example-0123456789abcdef-1080x720.webp", width: 1080, height: 720, alt: "Group photo of the 2031 cohort" };
 const NAMES = ["Example Person One", "Example Person Two"];
 
 /** @param {Record<string, unknown>} data @param {string} [body] */
@@ -69,7 +67,7 @@ await test("REFUSES names that are not plain strings (a person is a name and not
 
 await test("REFUSES a body, a missing file, a wrong year and a slug that is not a year, with every message", async () => {
   assert.match((await compile(file(GOOD, "A paragraph.\n"))).errors.join("\n"), /body must be empty/);
-  assert.match((await compile(file(GOOD), { photo: false })).errors.join("\n"), /is not in the repository/);
+  assert.match((await compile(file(GOOD), { photo: false })).errors.join("\n"), /is not in the media library/);
   assert.match((await compile(file({ ...GOOD, year: 2030 }))).errors.join("\n"), /file is named for its year/);
   assert.match((await compile(file(GOOD), { slug: "notes" })).errors.join("\n"), /not a cohort file key/);
   assert.match((await compile("no front matter\n")).errors.join("\n"), /front matter/);
@@ -79,10 +77,13 @@ await test("REFUSES a body, a missing file, a wrong year and a slug that is not 
   assert.ok(many.errors.length >= 5, `every message, got ${many.errors.length}`);
 });
 
-await test("REFUSES a photograph outside /phage-hunters/ or not a .webp, and one with no alt text", async () => {
-  for (const src of ["/media/x.webp", "/phage-hunters/x.jpg", "https://example.com/phage-hunters/x.webp", "/phage-hunters/../x.webp"]) {
+await test("REFUSES a photograph that is not a media library .webp whose address matches its size, and one with no alt text", async () => {
+  const key = "dustin-edwards-example-0123456789abcdef-1080x720";
+  for (const src of ["/media/x.webp", "/phage-hunters/x.webp", `/media/${key}.jpg`, `https://example.com/media/${key}.webp`, `/media/../${key}.webp`]) {
     assert.equal((await compile(file({ ...GOOD, photo: { ...PHOTO, src } }))).ok, false, src);
   }
+  const wrongSize = await compile(file({ ...GOOD, photo: { ...PHOTO, width: 540 } }));
+  assert.match(wrongSize.errors.join("\n"), /its address says 1080x720/);
   const noAlt = await compile(file({ ...GOOD, photo: { ...PHOTO, alt: " " } }));
   assert.match(noAlt.errors.join("\n"), /photo\.alt is required/);
 });
@@ -117,7 +118,7 @@ await test("the home page's counts are counted from the cohorts, never typed", (
   assert.throws(() => rosterFacts([]), /no cohorts/);
 });
 
-await test("the committed roster compiles, in the shape the data file had, and every photograph exists", async () => {
+await test("the committed roster compiles, in the shape the data file had, and every photograph is a media library address", async () => {
   const compiled = await compileAllRoster();
   assert.ok(compiled.length >= 9, `the roster has ${compiled.length} files; it had nine cohorts when it moved to files`);
   const failed = compiled.filter((c) => !c.compiled.ok).map((c) => `${c.file}: ${c.compiled.errors.join("; ")}`);
@@ -128,15 +129,8 @@ await test("the committed roster compiles, in the shape the data file had, and e
   assert.deepEqual(cohorts.map((c) => c.year), cohorts.map((c) => c.year).sort((a, b) => b - a), "newest first");
   for (const c of cohorts) {
     assert.ok(c.photo, `the ${c.year} cohort has its group photograph, as every cohort had when it moved`);
-    assert.equal(await repoHost.photo(c.photo.src), true, `${c.photo.src} exists under public/`);
+    assert.match(c.photo.src, /^\/media\/dustin-edwards-/, "a cohort photograph is a media library file");
   }
-  // Every photograph under public/phage-hunters is a cohort's, so none is left behind by a rename.
-  const used = new Set(cohorts.flatMap((c) => (c.photo ? [c.photo.src] : [])));
-  const onDisk = readdirSync(new URL("../public/phage-hunters/", import.meta.url)).filter((n) => n.endsWith(".webp"));
-  assert.deepEqual(
-    onDisk.map((n) => `${ROSTER_PHOTO_DIR}${n}`).filter((src) => !used.has(src)),
-    [],
-  );
   // The file key is the year, and the file is where rosterPath says.
   for (const row of rows) assert.equal(row.sourcePath, rosterPath(row.slug));
 });

@@ -1,8 +1,7 @@
 import { pictureProps } from "@dustinedwards/site-runtime/image";
 
 import { Picture } from "~/components/picture";
-import { images, mediaSrc } from "~/lib/media/images.mjs";
-import { staticPhoto } from "~/lib/media/static-media";
+import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import type { Cohort } from "~/lib/roster/compile.mjs";
 
 /**
@@ -23,7 +22,7 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
               <Picture
                 picture={pictureProps(
                   images.attributes(
-                    { src: mediaSrc(entry.photo.src), width: entry.photo.width, height: entry.photo.height, ...staticPhoto(entry.photo.src) },
+                    { src: entry.photo.src, width: entry.photo.width, height: entry.photo.height, version: mediaContentVersion(entry.photo.src) },
                     "content",
                   ),
                   { alt: entry.photo.alt },

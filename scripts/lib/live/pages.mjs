@@ -19,7 +19,7 @@ const features = JSON.parse(
 
 export async function run() {
   {
-    // Never a prefix rule: /phage-hunters/* are kept files.
+    // The cohort photographs moved into the media library (/media/<key>), so the old folder is gone.
     const { status } = await get("/phage-hunters");
     check("retired: /phage-hunters is a bare 404", status === 404, `got ${status}`);
   }
