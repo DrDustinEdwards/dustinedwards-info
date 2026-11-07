@@ -449,15 +449,13 @@ for (const name of named) {
   );
 }
 
-// No zero-result purge: the site's own cron runs it, and it is not this server's job. Post and page tools cannot
-// come back: the operator API no longer offers them, which the check above enforces.
-for (const name of ["purge_zero_results"]) {
-  check(
-    `the wrapper never calls ${name}`,
-    !named.has(name) && !toolStrings.includes(`"${name}"`),
-    "Not this server's job.",
-  );
-}
+// Post and page tools cannot come back: the operator API no longer offers them, which the check above enforces. The
+// site's jobs run now through Capsid Admin and the operator API's run_job, never through a tool here.
+check(
+  "the wrapper never calls run_job",
+  !named.has("run_job") && !toolStrings.includes('"run_job"'),
+  "Running the site's jobs is Capsid Admin's, for every site.",
+);
 
 // Every declared tool reaches the API through the one transport.
 for (const name of EXPECTED_TOOLS) {

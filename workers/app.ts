@@ -47,21 +47,12 @@ import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
-import { countNotFound, pruneNotFound } from "@dustinedwards/site-runtime/not-found";
+import { countNotFound } from "@dustinedwards/site-runtime/not-found";
 import { d1SiteApiStore, tombstoned } from "@dustinedwards/site-api/store";
-import { cronJob, HEALTH_SNAPSHOT_EVERY_MINUTES } from "~/lib/cron-jobs.mjs";
 import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
 import { SITE_ORIGIN } from "~/lib/seo";
 
 export { AskBudget } from "./ask-budget";
-
-/** The one firing a day that takes the nightly D1 dump: 05:00 UTC. */
-function isNightly(at: Date): boolean {
-  return at.getUTCHours() === 5 && at.getUTCMinutes() === 0;
-}
-
-/** The one firing a day at `hour`:00 UTC, for a daily job of its own. */
-const isDailyAt = (at: Date, hour: number) => at.getUTCHours() === hour && at.getUTCMinutes() === 0;
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -238,74 +229,19 @@ const site = {
     else await handleMediaEvents(batch, env);
   },
 
-  // The one cron (wrangler.jsonc.example), every minute: every Carrel schedule that is due goes live with the publish
-  // hooks (IndexNow, the purge, webmentions), failed hooks run again and the trash past 30 days is emptied; at 05:00 UTC the nightly D1 dump, the media files backup and the 404 prune run too; every fifteen minutes the colophon's health snapshot, at 04:00 UTC the zero-result purge and at 06:00 UTC the publication check. runJobs records each job in cron_runs for /health's
-  // cron check and throws after the pass when one failed, so the invocation is recorded as failed and the next firing
-  // retries it. Each job's interval and timeout are CRON_JOBS (app/lib/cron-jobs.mjs), the list /health checks.
-  // Every firing of the one key gets the job list: there is no other key this Worker can receive.
-  // Imported here, not at the top: the gateway never loads the save path, and neither does the test entry.
+  // The one cron (wrangler.jsonc.example), every minute: each job in siteJobs (app/lib/cron-run.server.ts) that is due
+  // at this firing. runJobs records each job in cron_runs for /health's cron check and throws after the pass when one
+  // failed, so the invocation is recorded as failed and the next firing retries it. The operator API's run_job runs
+  // any of the same jobs now. Every firing of the one key gets the job list: there is no other key this Worker can receive.
   scheduled(controller, env, ctx) {
     const at = new Date(controller.scheduledTime);
     ctx.waitUntil(
-      runJobs(env.DB, [
-        {
-          ...cronJob("carrel-schedules"),
-          run: async () => {
-            const { runCarrelSchedules } = await import("~/lib/carrel/site-api.server");
-            const run = await runCarrelSchedules(env, ctx, at);
-            if (run.failed > 0)
-              throw new Error(`${run.failed} schedule(s) failed; the next firing retries them`);
-          },
-        },
-        ...(isNightly(at)
-          ? [
-              {
-                ...cronJob("backup"),
-                run: async () => (await import("~/lib/backup/d1-backup.server")).backupD1(env),
-              },
-              {
-                ...cronJob("media-backup"),
-                run: async () => (await import("~/lib/backup/d1-backup.server")).backupMedia(env),
-              },
-              // The 404 counts keep 90 days, as the privacy page says.
-              { ...cronJob("prune-404"), run: () => pruneNotFound(env.DB, { days: 90 }) },
-            ]
-          : []),
-        // The colophon's health verdict, every fifteen minutes (app/lib/health/snapshot-store.server.ts).
-        ...(at.getUTCMinutes() % HEALTH_SNAPSHOT_EVERY_MINUTES === 0
-          ? [
-              {
-                ...cronJob("health-snapshot"),
-                run: async () =>
-                  (await import("~/lib/health/snapshot-store.server")).storeHealthSnapshot(env, at),
-              },
-            ]
-          : []),
-        // Zero-result queries past their retention cutoff, the cutoff the admin Tools page names.
-        ...(isDailyAt(at, 4)
-          ? [
-              {
-                ...cronJob("purge-zero-results"),
-                run: async () => {
-                  await (await import("~/lib/search/zero-result.server")).purgeZeroResults(env, at);
-                },
-              },
-            ]
-          : []),
-        // New DOIs on ORCID or Crossref, each mailed once (app/lib/publications/notify.server.ts).
-        ...(isDailyAt(at, 6)
-          ? [
-              {
-                ...cronJob("check-publications"),
-                run: async () => {
-                  await (
-                    await import("~/lib/publications/notify.server")
-                  ).checkPublicationsDaily(env);
-                },
-              },
-            ]
-          : []),
-      ]),
+      import("~/lib/cron-run.server").then(({ siteJobs }) =>
+        runJobs(
+          env.DB,
+          siteJobs(env, ctx, at).filter((job) => job.due(at)),
+        ),
+      ),
     );
   },
 } satisfies ExportedHandler<Env>;

@@ -1,5 +1,5 @@
 {
   "unprobed": {
-    "AUDIT_BUCKET": "Only the daily exportAuditLog may touch it (scripts/check-wrapper.mjs). The tool-call-log check on /health alerts when rows go uncopied to it for two days."
+    "AUDIT_BUCKET": "Only exportAuditLog may touch it, as site-runtime's tool-call-log-export job: the daily cron, or that job run now through the server's own /api/operator run_job (site-runtime adminMcpWorker; no source file here names it, scripts/check-wrapper.mjs). The tool-call-log check on /health alerts when rows go uncopied to it for two days."
   }
 }

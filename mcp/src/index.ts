@@ -11,7 +11,8 @@
  *
  * The Worker is site-runtime's adminMcpWorker, the door every admin MCP server shares: the Origin and Host checks, the
  * list-only test key, the OAuth provider bound to PUBLIC_ORIGIN + /mcp, the Cloudflare Access sign-in admitting the
- * single ADMIN_EMAIL (on every request too), the rate limit, /owner, /health and the tool-call log's daily copy. What
+ * single ADMIN_EMAIL (on every request too), the rate limit, /owner, /health and the tool-call log's daily copy (also
+ * run now through /api/operator's run_job, behind OPERATOR_TOKEN, by Capsid Admin). What
  * is this server's own is below:
  *
  *   agentKeys              ruling 37: Grok cannot complete OAuth (measured 2026-09-07), so its AGENT_KEY_GROK secret is

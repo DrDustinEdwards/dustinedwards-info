@@ -8,6 +8,7 @@ import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
 import { testEnv } from "./test-env";
 
 const OPERATOR: Actor = { kind: "operator", id: "test-operator" };
+const CTX = { waitUntil: () => undefined, passThroughOnException: () => undefined } as never;
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 
 /* Raw D1, not the drizzle builder: the column is `mode: "timestamp"`, so the builder wants a Date and
@@ -31,21 +32,39 @@ async function remainingQueries(): Promise<string[]> {
   return results.map((row) => row.query);
 }
 
-describe("the purge_zero_results operator tool", () => {
+describe("the purge-zero-results job, run now through run_job", () => {
   it("removes exactly the rows past the retention cutoff, which is the button's old rule", async () => {
     const now = Math.floor(Date.now() / 1000);
     await seedZeroResult("an old unanswered question", now - ZERO_RESULT_RETENTION_SECONDS - 10);
     await seedZeroResult("a recent unanswered question", now - 10);
 
-    const result = await runTool(operatorEnv(), OPERATOR, "purge_zero_results", {});
-    expect(result).toMatchObject({ ok: true, data: { purged: 1 } });
+    const result = await runTool(
+      operatorEnv(),
+      OPERATOR,
+      "run_job",
+      { job: "purge-zero-results" },
+      CTX,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { runs: [{ job: "purge-zero-results", status: "ok", result: { purged: 1 } }] },
+    });
 
     expect(await remainingQueries()).toEqual(["a recent unanswered question"]);
   });
 
   it("purges nothing, and reports 0, when every row is still live demand", async () => {
     await seedZeroResult("a live question", Math.floor(Date.now() / 1000));
-    const result = await runTool(operatorEnv(), OPERATOR, "purge_zero_results", {});
-    expect(result).toMatchObject({ ok: true, data: { purged: 0 } });
+    const result = await runTool(
+      operatorEnv(),
+      OPERATOR,
+      "run_job",
+      { job: "purge-zero-results" },
+      CTX,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { runs: [{ job: "purge-zero-results", status: "ok", result: { purged: 0 } }] },
+    });
   });
 });
