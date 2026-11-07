@@ -384,12 +384,12 @@ and confirm the next Capsid watcher pass repairs rather than reports.
 token itself (`app/lib/access.server.ts`: signature against the team's published keys, `aud` equal to
 `ACCESS_AUD`, `iss` equal to the team domain, expiry). Both values are plain vars in `wrangler.jsonc`.
 
-**Who may administer the site is the `ADMIN_EMAILS` secret** (comma-separated), and the Access policy
+**Who may administer the site is the `ADMIN_EMAIL` secret (the main admin) and the `CO_OWNER_EMAILS` secret (co-owners, comma-separated; full use, no say over admins)**, and the Access policy
 `dustinedwards-admin` (Zero Trust > Access > Applications > `dustinedwards-login` > Policies >
 `dustinedwards-admin` > the Include rule "Emails") must admit the same people. The Worker checks the
-token's email against `ADMIN_EMAILS` too, so a policy that admits too much makes nobody else an
+token's email against that roster too, so a policy that admits too much makes nobody else an
 administrator (they get a 403). Add or remove an administrator in both: `npx wrangler secret put
-ADMIN_EMAILS` and the policy; no deploy. Unset, nobody is an administrator. Every edit is recorded
+ADMIN_EMAIL` or `CO_OWNER_EMAILS` and the policy; no deploy. `ADMIN_EMAIL` unset, nobody is an administrator. Every edit is recorded
 under the email in that person's token.
 
 **Machines** (CI, smoke) cannot sign in, so they use an Access service token in a second policy of
@@ -412,7 +412,7 @@ development build and the host is localhost; a production build compiles that br
 `/lab-bench` is the lab members' workspace. Lab members are not administrators: they are the people with an
 active row in `members` (managed at `/lab-bench/members`) plus the Primary Owner (`PRIMARY_OWNER_EMAIL`). So
 `/lab-bench` has its own Access application, never `dustinedwards-login`: that application's people are
-administrators (`ADMIN_EMAILS`), and a lab token must never open `/admin` (capsid
+administrators (`ADMIN_EMAIL`, `CO_OWNER_EMAILS`), and a lab token must never open `/admin` (capsid
 docs/design/design-identity-roles.md). The Worker checks the lab token against `ACCESS_LAB_AUD` and
 refuses an /admin token there, and the reverse at /admin. Until the application exists, `/lab-bench` answers
 403 "not set up yet" and admits nobody. Both planes sign a person out of Access after an hour idle

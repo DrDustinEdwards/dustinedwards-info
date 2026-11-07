@@ -14,7 +14,8 @@ const AUD = "app-tag-0123";
 const VARS = {
   ACCESS_TEAM_DOMAIN: TEAM,
   ACCESS_AUD: AUD,
-  ADMIN_EMAILS: "Dustin@Example.com, wife@example.com, a@b.c",
+  ADMIN_EMAIL: "Dustin@Example.com",
+  CO_OWNER_EMAILS: "wife@example.com, a@b.c",
 };
 
 async function signer() {
@@ -165,7 +166,7 @@ describe("the admin layout with Cloudflare Access", () => {
     return { thrown: null, actor };
   }
 
-  it("admits a person on ADMIN_EMAILS as the actor, and refuses one Access admitted who is not, or anyone when it is unset", async () => {
+  it("admits the main admin or a co-owner as the actor, and refuses one Access admitted who is not, or anyone when it is unset", async () => {
     const { mint, fetch } = await signer();
     vi.spyOn(globalThis, "fetch").mockImplementation(fetch);
     const admitted = await through(request(await mint({ email: "wife@example.com" })), VARS);
@@ -175,7 +176,7 @@ describe("the admin layout with Cloudflare Access", () => {
     expect((stranger.thrown as Response).status).toBe(403);
     const unset = await through(request(await mint({ email: "wife@example.com" })), {
       ...VARS,
-      ADMIN_EMAILS: "",
+      ADMIN_EMAIL: "",
     });
     expect(unset.actor).toBeUndefined();
     expect((unset.thrown as Response).status).toBe(403);

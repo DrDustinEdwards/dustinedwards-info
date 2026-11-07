@@ -1,7 +1,7 @@
 name: access-drift
 
 # The daily Access drift check (devkit's access-drift.yml, area 3 I2): who dustinedwards-login lets in, against
-# ADMIN_EMAILS, read hashed from /admin/access-drift.
+# ADMIN_EMAIL and CO_OWNER_EMAILS, read hashed from /admin/access-drift.
 # It fails until ACCESS_READ_TOKEN, CLOUDFLARE_ACCOUNT_ID, ACCESS_CLIENT_ID and ACCESS_CLIENT_SECRET are set, by design.
 
 on:

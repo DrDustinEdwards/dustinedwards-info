@@ -9,7 +9,7 @@ import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runti
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
  * for each request it lets through; this reads that token and trusts nothing else. The administrators
- * are ADMIN_EMAILS (a secret, comma-separated, read by site-runtime's `adminEmails`), checked here as
+ * are ADMIN_EMAIL and CO_OWNER_EMAILS (secrets, read by site-runtime's `adminEmails`), checked here as
  * well as by the Access policy (Zero Trust > Access > Applications > dustinedwards-login > Policies),
  * so a policy that admits too much still makes nobody else an administrator. Unset, nobody is.
  *
@@ -18,7 +18,7 @@ import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runti
  * site's own reading of a verdict:
  *
  * - `human`: a person Access admitted; `email` is who (lowercased), and is what edits are attributed to.
- *   From `accessIdentity`, also on ADMIN_EMAILS; a person Access admitted who is not is `refused`
+ *   From `accessIdentity`, also on the roster; a person Access admitted who is not is `refused`
  *   (`not-admin`). /lab-bench's identity (app/lab/access.server.ts) is not checked against the list: its
  *   members are not administrators, and their rows decide what they may do.
  * - `service`: an Access service token (no person). Never an administrator; it only gets a request
