@@ -2,6 +2,7 @@ import { LAB_BENCH_PATH } from "../lab/path.mjs";
 import {
   defineHead,
   searchTitle as prelumSearchTitle,
+  shareCard,
   type HeadImage,
   type PageHead,
 } from "@drdustinedwards/site-helpers/head";
@@ -30,13 +31,7 @@ export { SITE_ORIGIN };
 /** The `license` of every Dataset: the site's terms page (app/lib/license.mjs). */
 export const LICENSE_URL = `${SITE_ORIGIN}${TERMS_PATH}`;
 
-/** The size every share card is drawn at: build:og's cards and the site card. */
-const CARD_SIZE = { width: 1200, height: 630 } as const;
-
-/** A drawn share card as Prelum's head reads it, so og:image carries its size and alt text. */
-export function shareCard(url: string, alt: string): HeadImage {
-  return { url, ...CARD_SIZE, alt };
-}
+export { shareCard };
 
 const DEFAULT_OG_IMAGE = shareCard(
   `${SITE_ORIGIN}/dustin-edwards-og-image.png`,
