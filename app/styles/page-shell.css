@@ -79,6 +79,7 @@
   font-weight: var(--t-h1-weight);
   letter-spacing: var(--t-h1-tracking);
   line-height: var(--t-h1-leading);
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 

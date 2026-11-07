@@ -503,13 +503,15 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               data-find="migrations"
               hidden
             />
-            <ul className="colophon-scroll" aria-label="Migrations" data-list="migrations">
-              {stack.migrations.map((file) => (
-                <li key={file}>
-                  <code>{file}</code>
-                </li>
-              ))}
-            </ul>
+            <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Migrations">
+              <ul data-list="migrations">
+                {stack.migrations.map((file) => (
+                  <li key={file}>
+                    <code>{file}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div>
             <SectionHead id="gates" />
@@ -522,13 +524,15 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               data-find="checks"
               hidden
             />
-            <ul className="colophon-scroll" aria-label="Checks" data-list="checks">
-              {stack.gates.map((gate) => (
-                <li key={gate}>
-                  <code>{gate}</code>
-                </li>
-              ))}
-            </ul>
+            <div className="colophon-scroll" tabIndex={0} role="region" aria-label="Checks">
+              <ul data-list="checks">
+                {stack.gates.map((gate) => (
+                  <li key={gate}>
+                    <code>{gate}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
           <div>
             <SectionHead id="dependencies" />
@@ -541,17 +545,20 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               data-find="dependencies"
               hidden
             />
-            <ul
+            <div
               className="colophon-scroll"
+              tabIndex={0}
+              role="region"
               aria-label="Runtime dependencies"
-              data-list="dependencies"
             >
-              {stack.dependencies.map((dep) => (
-                <li key={dep.name}>
-                  <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
-                </li>
-              ))}
-            </ul>
+              <ul data-list="dependencies">
+                {stack.dependencies.map((dep) => (
+                  <li key={dep.name}>
+                    <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
