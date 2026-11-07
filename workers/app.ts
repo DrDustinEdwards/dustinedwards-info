@@ -46,6 +46,7 @@ import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
+import { maintenanceOn, maintenanceResponse } from "@dustinedwards/site-runtime/maintenance";
 import { withRequestLog } from "@dustinedwards/site-runtime/log";
 import { countNotFound } from "@dustinedwards/site-runtime/not-found";
 import { d1SiteApiStore, tombstoned } from "@dustinedwards/site-api/store";
@@ -301,6 +302,14 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
   if (canonical !== null) {
     applySecurityHeaders(canonical.headers);
     return canonical;
+  }
+
+  // The maintenance page (site-runtime ./maintenance): every path but /health answers 503 while the MAINTENANCE var is
+  // on. A dashboard var, not a secret, so it is not in Env (app/env.d.ts lists only the secrets).
+  if (maintenanceOn(env as Env & { MAINTENANCE?: string }) && url.pathname !== "/health") {
+    const down = maintenanceResponse({ siteName: "Dustin Edwards" });
+    applySecurityHeaders(down.headers);
+    return down;
   }
 
   // The prefetch rules every public page's header names: one file, the same for every page, so no route renders it.
