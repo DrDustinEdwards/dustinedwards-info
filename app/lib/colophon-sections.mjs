@@ -22,9 +22,8 @@ export const COLOPHON_VERSIONS =
   "on WordPress, in 2016, and this one in 2026.";
 
 export const COLOPHON_INTRO =
-  "This page describes how the site is built. Most of it is generated from the " +
-  "repository's own configuration and checked against it on every build, so it " +
-  "cannot drift out of date unnoticed. The reasons behind each choice are written by hand.";
+  "Most of this page is generated from the repository's configuration and checked on " +
+  "every build. The reasons behind each choice are written by hand.";
 
 /**
  * Order is load-bearing: record `ordinal` is derived from the index here.
@@ -36,101 +35,85 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
     id: "run",
     title: "The network behind this site",
     lead:
-      "Other systems of mine sit behind or beside this one, and several packages " +
-      "are shared with my other sites. None is part of this repository.",
+      "Other systems run behind or beside this site, and some packages are shared with " +
+      "my other sites. None is in this repository.",
   },
   {
     id: "features",
     title: "What the site does",
     lead:
-      "Nothing in this section can be generated from configuration, so each " +
-      "entry carries an anchor and a gate verifies that the thing the claim is " +
-      "about still exists. It does not verify that the sentence is true, which " +
-      "is the honest boundary of the technique.",
+      "Each entry names an anchor, and a gate checks that the anchor still exists. " +
+      "The gate does not check that the sentence is true.",
   },
   {
     id: "ai",
     title: "AI disclosure",
-    lead:
-      "This site is built with AI assistance and says so here rather than " +
-      "leaving you to guess, because a site about how it is built owes you " +
-      "that before it owes you anything else.",
+    lead: "Claude, Anthropic's model, helps write the code and the prose of this site.",
   },
   {
     id: "security",
     title: "A tradeoff in the security headers",
     lead:
-      "The content security policy is enforced, not merely reported. One part " +
-      "of it is a compromise rather than a clean win, and the compromise is " +
-      "worth stating plainly.",
+      "The content security policy is enforced, not report-only. One part of it is a " +
+      "tradeoff.",
   },
   {
     id: "runtime",
     title: "Runtime",
-    lead:
-      "The compatibility date, the flags the Worker runs under, and the Node " +
-      "version the build is pinned to.",
+    lead: "Compatibility date, Worker flags and the pinned Node version.",
   },
   {
     id: "bindings",
     title: "Bindings",
     lead:
-      "Every resource this Worker holds a handle to, with what it is for and " +
-      "the measurement that put it there rather than a logo wall.",
+      "Every resource the Worker binds to, what it is for, and the measurement that " +
+      "put it there.",
   },
   {
     id: "schema",
     title: "Schema",
     lead:
-      "Hand-written migrations, applied in order. drizzle-kit is deliberately " +
-      "not a dependency, and because the database export command is broken on " +
-      "this schema, this directory is the only copy of the table definitions " +
-      "that exists anywhere.",
+      "Hand-written migrations, applied in order. drizzle-kit is not a dependency. The " +
+      "database export command fails on this schema, so this directory is the only copy " +
+      "of the table definitions.",
   },
   {
     id: "gates",
     title: "Gates",
     lead:
-      "Checks that run before anything ships. The list is derived from the " +
-      "scripts themselves rather than maintained beside them, so a gate that " +
-      "is added and forgotten is not possible.",
+      "Checks that run before anything ships. The list is derived from the scripts, so a " +
+      "gate cannot be added and forgotten.",
   },
   {
     id: "dependencies",
     title: "Dependencies",
-    lead:
-      "The runtime dependencies. Build tooling is excluded: this is what " +
-      "serves the site, not what assembles it.",
+    lead: "Runtime dependencies only. Build tooling is excluded.",
   },
   {
     id: "credits",
     title: "Credits",
     lead:
-      "The packages this site shares with my other sites adapt code from three " +
-      "open-source projects, each under the MIT license.",
+      "The packages shared with my other sites adapt code from three open-source " +
+      "projects, each under the MIT license.",
   },
   {
     id: "not-adopted",
     title: "What was not adopted",
-    lead:
-      "Anyone can list what they shipped. A refusal is a decision that was " +
-      "made and recorded: not a thing nobody got to, but a thing somebody " +
-      "ruled out, with the reason beside it.",
+    lead: "Choices ruled out on purpose, each with its reason.",
   },
 ]);
 
 /** @type {ReadonlyArray<string>} */
 export const SECURITY_TRADEOFF = Object.freeze([
-  "Every response carries a one-time number that scripts on the page must " +
-    "quote to be allowed to run. That number is generated per response.",
-  "Seven pages of this site are cached at Cloudflare's edge and served to " +
-    "everyone from the same stored copy for up to ten minutes. The number is " +
-    "part of that copy, so visitors served from one cache entry share it.",
-  "We took that trade deliberately. The alternative is to stop caching those " +
-    "pages, which would make every reader wait for the origin on every visit.",
-  "It is acceptable only because these pages carry no writing from anyone but " +
-    "me. There are no comments and no user submissions, so there is nowhere " +
-    "for a stranger's script to get in and use the shared number.",
+  "Each response carries a one-time nonce, and scripts must quote it to run. The nonce " +
+    "is generated per response.",
+  "Seven pages are cached at Cloudflare's edge and served from one stored copy for up " +
+    "to ten minutes. The nonce is part of that copy, so visitors served from one cache " +
+    "entry share it.",
+  "I chose this over uncached pages, which would make every reader wait for the origin " +
+    "on every visit.",
+  "It is safe only because those pages hold no one else's writing. There are no " +
+    "comments and no submissions, so no stranger's script can reach the shared nonce.",
 ]);
 
 /**
@@ -140,29 +123,22 @@ export const SECURITY_TRADEOFF = Object.freeze([
  * @type {ReadonlyArray<string>}
  */
 export const AI_DISCLOSURE = Object.freeze([
-  "The code and the prose here are written with AI assistance. The model is " +
-    "Anthropic's Claude, driven through Claude Code, and it reaches this site " +
-    "through exactly the same publishing API and the same gates a person does.",
-  "Nothing goes public on a model's say-so. Making a post public for the first " +
-    "time is reserved to me and the reservation is enforced in code, not asked " +
-    "for in a prompt: an agent that attempts it is refused by name.",
-  "Every published post has been read and edited by me before it went live, so " +
-    "what you are reading is human-reviewed writing I am answerable for rather " +
-    "than model output passed straight through.",
-  "Where a provider marks its model's output in a machine-readable way, that " +
-    "mark does not survive being edited, so it is not something you can check " +
-    "on this page. The review above is the guarantee instead, which is why it " +
-    "is stated as a practice and not as a badge.",
+  "The model runs through Claude Code and publishes through the same API, and passes " +
+    "the same gates, as I do.",
+  "A model cannot make a post public for the first time. Code enforces that " +
+    "reservation, and an agent that tries is refused by name.",
+  "I read and edit every post before it goes live, and I am answerable for it.",
+  "Provider marks on model output do not survive editing, so you cannot check for one " +
+    "here. My review is the guarantee.",
 ]);
 
 /** @type {ReadonlyArray<string>} */
 export const SITE_OPERATION = Object.freeze([
-  "Capsid is the site's memory and job queue. It stores the project's " +
-    "decisions and current state, and it hands work from a conversation to a " +
-    "working session as a signed job that ends in a pull request.",
-  "A small admin server lets me run the site from a chat. It works with the " +
-    "site's registry, citations and lab procedures. It cannot write or publish " +
-    "posts, because Carrel does that.",
+  "Capsid is the site's memory and job queue. It stores decisions and current state, " +
+    "and hands work from a conversation to a working session as a signed job that " +
+    "ends in a pull request.",
+  "A small admin server lets me run the site from a chat, covering the registry, " +
+    "citations and lab procedures. It cannot write or publish posts. Carrel does that.",
 ]);
 
 /**
@@ -173,8 +149,8 @@ export const CARREL_PAGE_PATH = "/software/carrel";
 export const CARREL_NAME = "Carrel";
 const CARREL_SENTENCE =
   "Carrel is my private writing hub, behind a login, where articles are " +
-  "written before they are published here. A finished article reaches this " +
-  "site through a small keyed API.";
+  "written before publication. A finished article reaches this site through " +
+  "a small keyed API.";
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CARREL_SENTENCE_REST = CARREL_SENTENCE.slice(CARREL_NAME.length);
@@ -189,8 +165,8 @@ export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
 export const CAPSOMER_NAME = "Capsomer";
 export const CAPSOMER_URL = "https://capsomer.dustinedwards.info";
 const CAPSOMER_SENTENCE =
-  "Capsomer is the shared design system this site is drawn with: the color tokens, " +
-  "the header and footer, and the components, in plain CSS.";
+  "Capsomer is the shared design system: color tokens, header, footer and " +
+  "components, in plain CSS.";
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);
@@ -206,14 +182,14 @@ export const SHARED_PACKAGES = Object.freeze([
     name: "Prelum",
     url: "https://github.com/DrDustinEdwards/prelum",
     rest:
-      " turns the markdown into pages, feeds, sitemaps, search records, " +
-      "llms.txt and the structured data in each page's head.",
+      " turns markdown into pages, feeds, sitemaps, search records, llms.txt " +
+      "and each page's structured data.",
   },
   {
     name: "site-runtime",
     url: "https://github.com/DrDustinEdwards/site-runtime",
     rest:
-      " supplies the security headers, the rate limiter, the health report, " +
+      " supplies security headers, the rate limiter, the health report, " +
       "responsive images, sign-in and the edge page cache.",
   },
   {
@@ -226,19 +202,19 @@ export const SHARED_PACKAGES = Object.freeze([
     url: "https://github.com/DrDustinEdwards/d1-dump",
     rest:
       " backs up each table of the database to the site's own storage and " +
-      "restores it, which the database's own export cannot do for tables with full-text search.",
+      "restores it. The database's own export cannot handle tables with full-text search.",
   },
   {
     name: "Enarratio",
     url: "https://github.com/DrDustinEdwards/enarratio",
-    rest: " draws the charts on the server, with a text alternative and a data table for each.",
+    rest: " renders charts on the server, each with a text alternative and a data table.",
   },
   {
     name: "devkit",
     url: "https://github.com/DrDustinEdwards/devkit",
     rest:
       " holds the shared test workflows, the dependency update rules and the " +
-      "check that fails a copy of code a shared package already provides.",
+      "check that fails on a copy of code a shared package already provides.",
   },
 ]);
 
@@ -252,25 +228,24 @@ export const CREDITS = Object.freeze([
     name: "Astro",
     url: "https://astro.build",
     rest:
-      " is the source of devkit's rules for when an island loads and of its dev " +
-      "toolbar audit rules. Site-runtime adapts Astro's speculation-rules " +
-      "approach to prefetching and its image layouts and widths, and Capsomer " +
-      "adapts Astro's size-matched fallback fonts.",
+      " is the source of devkit's island-loading rules and dev-toolbar audit " +
+      "rules. Site-runtime adapts its speculation-rules prefetching and image " +
+      "layouts and widths. Capsomer adapts its size-matched fallback fonts.",
   },
   {
     name: "EmDash",
     url: "https://github.com/emdash-cms/emdash",
     rest:
       " is the source of the scheduled updates to live posts that site-api and " +
-      "Carrel apply, and of the ideas behind focal points and captions on media.",
+      "Carrel apply, and of the ideas for focal points and captions on media.",
   },
   {
     name: "Cloudflare Nimbus",
     url: "https://github.com/cloudflare/nimbus",
     rest:
       " is the model for how Prelum serves Markdown copies of pages to AI " +
-      "agents, and Prelum uses Nimbus's own code to decide when a request " +
-      "prefers Markdown.",
+      "agents. Prelum uses Nimbus's own code to decide when a request prefers " +
+      "Markdown.",
   },
 ]);
 
