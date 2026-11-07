@@ -25,7 +25,7 @@ export async function run({ page, browser }) {
     { path: "/terms", module: "terms.tsx" },
     /* A markdown page with a route module of its own, like /terms. */
     { path: "/accessibility", module: "accessibility.tsx" },
-    /* A markdown page with a route module of its own, like /accessibility. */
+    /* The network's features, drawn from one list in code: the same bytes for every reader. */
     { path: "/features", module: "features.tsx" },
     { path: "/contact", module: "contact.tsx" },
     /* The site map for people: drawn from D1 at request time, the same bytes for every reader. */

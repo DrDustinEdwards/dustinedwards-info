@@ -102,10 +102,10 @@ describe("the site map and sitemap.xml", () => {
       "/contact",
       "/site-map",
       "/colophon",
+      "/features",
       "/privacy",
       "/terms",
       "/accessibility",
-      "/features",
     ]);
   });
 

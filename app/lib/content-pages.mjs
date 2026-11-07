@@ -58,8 +58,6 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   // The accessibility statement (job_fea2f94832b3): what the gates check, in Carrel with the legal pages but
   // not one of them. It ships as a draft until Dustin approves its text, and the footer links it once published.
   "/accessibility",
-  // What the whole network does, by job (Dustin, 2026-11-07). Linked from the footer's Site group.
-  "/features",
 ]);
 
 /**
