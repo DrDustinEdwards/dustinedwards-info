@@ -12,6 +12,7 @@ declare module "virtual:islands" {
     | "blog"
     | "catalog"
     | "charts"
+    | "colophon"
     | "cv"
     | "features"
     | "header"
