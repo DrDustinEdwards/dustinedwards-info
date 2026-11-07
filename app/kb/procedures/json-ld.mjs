@@ -4,6 +4,7 @@
 // for a sequence of commands with tools and supplies. Only facts the record states: a gap stays out.
 
 import { thing } from "@drdustinedwards/site-helpers/schema";
+import { isoDuration } from "@drdustinedwards/site-helpers/text";
 
 import { citeFacts } from "./cite.mjs";
 import { readConditions } from "./marks.mjs";
@@ -100,9 +101,7 @@ function minutesToIso(value) {
   const m = /^(\d+(?:\.\d+)?) (minutes?|hours?)$/.exec(String(value ?? ""));
   if (!m) return null;
   const minutes = Math.round(Number(m[1]) * (m[2]?.startsWith("hour") ? 60 : 1));
-  const h = Math.floor(minutes / 60);
-  const min = minutes % 60;
-  return `PT${h ? `${h}H` : ""}${min || !h ? `${min}M` : ""}`;
+  return isoDuration(minutes * 60) ?? "PT0M";
 }
 
 /**

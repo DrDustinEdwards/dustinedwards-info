@@ -28,7 +28,7 @@ import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
 import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
-import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
+import { cloudflareContext, cspNonceContext, postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
@@ -441,7 +441,7 @@ export function carrelSiteAdapter(options: {
       // public page carries none (workers/csp.mjs).
       const context = new RouterContextProvider();
       context.set(cloudflareContext, { env, ctx });
-      context.set(nonceContext, undefined);
+      context.set(cspNonceContext, undefined);
       context.set(postPreviewContext, post);
       const response = await renderDocument(
         new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),
