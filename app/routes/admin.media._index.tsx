@@ -1,5 +1,5 @@
 import { UPLOAD_FORM_BYTES, cappedForm } from "~/lib/body.server";
-import { Form, data, useRevalidator, type FormProps } from "react-router";
+import { data } from "react-router";
 
 import {
   loadMedia,
@@ -13,7 +13,8 @@ import {
   type KitMediaChanges,
 } from "capsomer/behavior/media-library";
 import type { MediaRecord } from "capsomer/behavior/media";
-import { MediaLibrary, type FormComponent } from "capsomer/react/media-library";
+import { KitForm, useKitSubmit } from "capsomer/react/kit-form";
+import { MediaLibrary } from "capsomer/react/media-library";
 import { PageHead } from "capsomer/react/page-head";
 
 import { prefersType } from "~/lib/negotiate.mjs";
@@ -70,34 +71,11 @@ export async function action({ request, context }: Route.ActionArgs): Promise<In
   return runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES));
 }
 
-// Moving between views (search, a tag, a file to open) is the router's GET, so it stays in the app; a
-// post is a plain form, which the library sends through `submit` with script and the browser sends to
-// this route's action without.
-const LibraryForm: FormComponent = ({ method, action, ...props }) =>
-  (method ?? "get").toLowerCase() === "get" ? (
-    <Form
-      {...(props as Omit<FormProps, "method" | "action">)}
-      action={typeof action === "string" ? action : undefined}
-      method="get"
-    />
-  ) : (
-    <form {...props} action={action} method={method} />
-  );
-
 const BASE = "/admin/media";
 const JSON_HEADERS = { accept: "application/json" };
 
 export default function AdminMedia({ loaderData, actionData }: Route.ComponentProps) {
-  const revalidator = useRevalidator();
-  const submit = async (form: FormData): Promise<IntentResult> => {
-    const response = await fetch(BASE, { method: "POST", body: form, headers: JSON_HEADERS });
-    const body = (await response.json().catch(() => null)) as IntentResult | null;
-    if (body && "ok" in body) {
-      if (!body.confirm) void revalidator.revalidate();
-      return body;
-    }
-    return { ok: false, message: `The server answered ${response.status}.` };
-  };
+  const submit = useKitSubmit(BASE);
   const search = async (q: string, signal: AbortSignal): Promise<MediaRecord[]> => {
     const response = await fetch(`${BASE}?q=${encodeURIComponent(q)}`, {
       signal,
@@ -126,7 +104,7 @@ export default function AdminMedia({ loaderData, actionData }: Route.ComponentPr
       <MediaLibrary
         data={loaderData.library}
         action={BASE}
-        Form={LibraryForm}
+        Form={KitForm}
         submit={submit}
         result={actionData ?? null}
         inspector="form"

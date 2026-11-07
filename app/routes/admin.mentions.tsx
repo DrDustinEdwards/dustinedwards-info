@@ -1,8 +1,9 @@
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
-import { data, useRevalidator } from "react-router";
+import { data } from "react-router";
 
 import { loadMentions, readMentionsQuery, type IntentResult } from "@dustinedwards/site-api/admin";
 import { kitMentionsSearch, mentionsDataOfKit } from "capsomer/behavior/mentions-list";
+import { useKitSubmit } from "capsomer/react/kit-form";
 import { MentionsList } from "capsomer/react/mentions-list";
 import { PageHead } from "capsomer/react/page-head";
 
@@ -57,20 +58,7 @@ export async function action({ request, context }: Route.ActionArgs): Promise<In
 const BASE = "/admin/mentions";
 
 export default function AdminMentions({ loaderData, actionData }: Route.ComponentProps) {
-  const revalidator = useRevalidator();
-  const submit = async (form: FormData): Promise<IntentResult> => {
-    const response = await fetch(BASE, {
-      method: "POST",
-      body: form,
-      headers: { accept: "application/json" },
-    });
-    const body = (await response.json().catch(() => null)) as IntentResult | null;
-    if (body && "ok" in body) {
-      if (!body.confirm) void revalidator.revalidate();
-      return body;
-    }
-    return { ok: false, message: `The server answered ${response.status}.` };
-  };
+  const submit = useKitSubmit(BASE);
   return (
     <div className="app-page">
       <PageHead
