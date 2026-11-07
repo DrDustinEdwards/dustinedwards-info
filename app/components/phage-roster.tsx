@@ -12,7 +12,7 @@ import type { Cohort } from "~/lib/roster/compile.mjs";
  */
 export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
   return (
-    <section aria-labelledby="roster" className="phage-roster">
+    <section aria-labelledby="roster" className="phage-roster" data-cap="lightbox">
       <h2 id="roster">Roster</h2>
       {cohorts.map((entry) => (
         <section

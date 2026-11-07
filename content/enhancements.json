@@ -54,7 +54,7 @@
     {
       "id": "image-lightbox",
       "module": "app/enhance/blog.ts",
-      "enhancement": "Intercepts a click on a post image and opens it full size in an overlay.",
+      "enhancement": "Intercepts a click on a post image and opens it full size in an overlay (Capsomer's lightbox).",
       "fallback": "The image is a link to its original file; clicking it opens the original. Only the overlay is lost.",
       "fallbackKind": "selector",
       "fallbackAt": ".image-link",
@@ -261,7 +261,7 @@
     {
       "id": "roster-photo-lightbox",
       "module": "app/enhance/roster.ts",
-      "enhancement": "Intercepts a click on a roster photo and opens it full size in an overlay (Prelum's lightbox, the one the posts use).",
+      "enhancement": "Intercepts a click on a roster photo and opens it full size in an overlay (Capsomer's lightbox, the one the posts use).",
       "fallback": "Each photo is a link to its original file; clicking it opens the original. Only the overlay is lost.",
       "fallbackKind": "selector",
       "fallbackAt": ".phage-roster",

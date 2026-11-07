@@ -1,7 +1,7 @@
-import { enhance } from "@drdustinedwards/site-helpers/render/enhance";
+import { enhance } from "capsomer/behavior/lightbox";
 
 // An island (devkit ./islands): each <template data-island="roster"> on the page calls this. The roster's cohort photos
-// open full size in Prelum's lightbox (render-enhance.mjs), scoped to the roster so the rest of the page is left alone.
+// open full size in Capsomer's lightbox, the one the posts use; the roster marks itself data-cap="lightbox".
 export default function start(): void {
-  enhance({ root: ".phage-roster" });
+  enhance();
 }

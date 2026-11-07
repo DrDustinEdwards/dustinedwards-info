@@ -37,7 +37,9 @@ import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
 import "~/styles/media-split.css";
-import "~/styles/lightbox.css";
+import "capsomer/dialog.css";
+import "capsomer/button.css";
+import "capsomer/lightbox.css";
 import { RENDERED } from "~/lib/content/render-version";
 
 /**
