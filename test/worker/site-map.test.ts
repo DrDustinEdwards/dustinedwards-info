@@ -105,6 +105,7 @@ describe("the site map and sitemap.xml", () => {
       "/privacy",
       "/terms",
       "/accessibility",
+      "/features",
     ]);
   });
 

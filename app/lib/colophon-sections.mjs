@@ -101,8 +101,9 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
     id: "run",
     title: "How the site is run",
     lead:
-      "Three other systems of mine sit behind or beside this one. None is part " +
-      "of this repository.",
+      "Other systems of mine sit behind or beside this one, and several packages " +
+      "are shared with my other sites. None is part of this repository. " +
+      "The full list of what they do is on the features page.",
   },
   {
     id: "credits",
@@ -162,6 +163,9 @@ export const SITE_OPERATION = Object.freeze([
   "Capsid is the site's memory and job queue. It stores the project's " +
     "decisions and current state, and it hands work from a conversation to a " +
     "working session as a signed job that ends in a pull request.",
+  "A small admin server lets me run the site from a chat. It works with the " +
+    "site's registry, citations and lab procedures. It cannot write or publish " +
+    "posts, because Carrel does that.",
 ]);
 
 /**
@@ -187,10 +191,59 @@ export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
  */
 export const CAPSOMER_NAME = "Capsomer";
 export const CAPSOMER_URL = "https://capsomer.dustinedwards.info";
-const CAPSOMER_SENTENCE = "Capsomer is the shared design system this site will adopt.";
+const CAPSOMER_SENTENCE =
+  "Capsomer is the shared design system this site is drawn with: the color tokens, " +
+  "the header and footer, and the components, in plain CSS.";
 
 /** The sentence after its linked name, which is how the page renders it. */
 export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);
+
+/**
+ * The packages this site shares with my other sites, each rendered as its linked name followed by `rest`.
+ * No version numbers: the dependencies section lists those from package.json.
+ *
+ * @type {ReadonlyArray<{ name: string, url: string, rest: string }>}
+ */
+export const SHARED_PACKAGES = Object.freeze([
+  {
+    name: "Prelum",
+    url: "https://github.com/DrDustinEdwards/prelum",
+    rest:
+      " turns the markdown into pages, feeds, sitemaps, search records, " +
+      "llms.txt and the structured data in each page's head.",
+  },
+  {
+    name: "site-runtime",
+    url: "https://github.com/DrDustinEdwards/site-runtime",
+    rest:
+      " supplies the security headers, the rate limiter, the health report, " +
+      "responsive images, sign-in and the edge page cache.",
+  },
+  {
+    name: "site-api",
+    url: "https://github.com/DrDustinEdwards/site-api",
+    rest: " is the contract Carrel uses to list, edit and publish this site's content.",
+  },
+  {
+    name: "d1-dump",
+    url: "https://github.com/DrDustinEdwards/d1-dump",
+    rest:
+      " backs up each table of the database to the site's own storage and " +
+      "restores it, which the database's own export cannot do for tables with full-text search.",
+  },
+  {
+    name: "Enarratio",
+    url: "https://github.com/DrDustinEdwards/enarratio",
+    rest: " draws the charts on the server, with a text alternative and a data table for each.",
+  },
+  {
+    name: "devkit",
+    url: "https://github.com/DrDustinEdwards/devkit",
+    rest:
+      " holds the shared test workflows, the dependency update rules and the " +
+      "check that fails a copy of code a shared package already provides.",
+  },
+]);
 
 /**
  * Each credit renders as its linked name followed by `rest`, so `rest` starts right after the name.
@@ -299,7 +352,7 @@ function colophonPageInput(stack, features) {
       return AI_DISCLOSURE.join(" ");
     }
     if (id === "run") {
-      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}. ${CAPSOMER_SENTENCE} Its site is ${CAPSOMER_URL}.`;
+      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}. ${CAPSOMER_SENTENCE} Its site is ${CAPSOMER_URL}. ${SHARED_PACKAGES.map((p) => `${p.name}${p.rest}`).join(" ")}`;
     }
     if (id === "credits") {
       return CREDITS.map((c) => `${c.name}${c.rest}`).join(" ");
