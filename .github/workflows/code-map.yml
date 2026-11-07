@@ -1,15 +1,17 @@
 name: code-map
 
 # The site's code map for the Capsid system explorer (capsid/research/design-system-explorer.md, section 5, slice 10):
-# after each push to main, devkit's code-map workflow maps app/ and workers/ with the node:test suite's coverage and
-# publishes code-map.json to the orphan code-map branch, which Capsid's public build reads. Never a gate on a pull request.
+# nightly, devkit's code-map workflow maps app/ and workers/ with the node:test suite's coverage and publishes
+# code-map.json to the orphan code-map branch, which Capsid's public build reads. Never a gate on a pull request.
+# Nightly, not after each push to main: a run per merge took a runner while the account's 20 were the bottleneck, and
+# the explorer reads the newest map, which is then at most a day behind (devkit README, "No second run on main").
 #
 # Mutation scores come from the weekly mutation run (mutation.yml), whose last job publishes the map with its Stryker
 # reports. Every map after it carries those numbers forward while a function is unchanged and marks the rest stale.
 
 on:
-  push:
-    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +22,7 @@ jobs:
     # A called workflow holds no more than this job grants: the write lets it push to the code-map branch.
     permissions:
       contents: write
-    # Shared with mutation.yml's map job, so a push's map never lands over the weekly one mid-run.
+    # Shared with mutation.yml's map job, so a nightly map never lands over the weekly one mid-run.
     concurrency:
       group: code-map
       cancel-in-progress: false
