@@ -22,7 +22,6 @@ export const siteLinks = (published: readonly string[] = PUBLISHED_PAGES) =>
 export const legalLinks = (published: readonly string[] = PUBLISHED_PAGES) =>
   familyLegalLinks(published);
 
-export const SITE_LINKS = siteLinks();
 export const LEGAL_LINKS = legalLinks();
 
 /** Every href the footer renders, in page order: social links, profiles and feed, Workspace, Site, Legal. */
