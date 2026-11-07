@@ -51,11 +51,10 @@ export default adminMcpWorker<Env>({
   site: dustinedwardsMcp,
   // The site's contact and expiry (app/routes/security-txt.ts); renew both together.
   securityTxt: { contact: "security@dustinedwards.info", expires: "2027-09-28T00:00:00.000Z" },
-  about: `<p>Dustin Edwards Admin runs dustinedwards.info: site health, drift repair,
-webmentions, media backups, the Knowledge Base, citations and procedures. It cannot
-write posts or change the media library; Carrel owns both.</p>
-<p>It will always be able to read. Changes (repairing drift, deciding mentions,
-backing up media, refreshing citations, saving a procedure) need the
+  about: `<p>Dustin Edwards Admin runs dustinedwards.info: the Knowledge Base, citations
+and procedures. It cannot write posts, change the media library or moderate
+webmentions; Carrel owns all three.</p>
+<p>It will always be able to read. Changes (refreshing citations, saving a procedure) need the
 box below. It will not be able to publish a procedure for the first time; that
 stays with you.</p>`,
   // The service binding is checked by presence only: a request over it would be an operator API call.

@@ -393,14 +393,13 @@ check(
 
 const toolsText = readFileSync(join(SRC, "tools.ts"), "utf8");
 /*
- * THE EIGHT TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
+ * THE SIX TOOLS, ruling mcp-2026-10-10 and capsid/research/design-mcp-servers.md
  * section 6. Whole jobs, each prefixed dei_, regrouped from the eleven one-call
- * tools of the separate repo, with the four post tools removed (Carrel owns
- * writing, rule 11).
+ * tools of the separate repo, with the post tools removed (Carrel owns
+ * writing, rule 11) and the mention tools too (Carrel moderates every site's
+ * webmentions: carrel_review_mentions, carrel_decide_mention).
  */
 const EXPECTED_TOOLS = [
-  "dei_review_mentions",
-  "dei_decide_mention",
   "dei_read_registry",
   "dei_refresh_citations",
   "dei_check_publications",
@@ -410,7 +409,7 @@ const EXPECTED_TOOLS = [
 const declared = [...toolsText.matchAll(/^\s{4}name:\s*"([a-z_]+)",$/gm)].map((m) => m[1]);
 
 check(
-  "The declared tools are exactly the seven dei_ tools",
+  "The declared tools are exactly the five dei_ tools",
   JSON.stringify(declared) === JSON.stringify(EXPECTED_TOOLS),
   `Expected [${EXPECTED_TOOLS.join(", ")}] but found [${declared.join(", ")}].`,
 );

@@ -22,8 +22,6 @@ const TOOLS = [
   "sync_registry",
   "backup_status",
   "run_job",
-  "list_mentions",
-  "decide_mention",
   "list_procedures",
   "get_procedure",
   "save_procedure",
@@ -176,29 +174,6 @@ export const TOOL_DESCRIPTORS: Readonly<
       "rather than deleting every row; with no files and no rows there is nothing to do and it says so. Answers 422 " +
       "naming any file the validator refuses after converging the rest. Idempotent. A read-back reconciliation: " +
       "expected, present, and a converged verdict.",
-  },
-  list_mentions: {
-    args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
-    returns:
-      "Received webmentions, newest first, with id, source, target slug, status, " +
-      "author, excerpt and the received, verified and decided timestamps. " +
-      "Unfiltered when no status is given, which is what the moderation queue " +
-      "shows.",
-  },
-  decide_mention: {
-    args: {
-      id: "number, the mention row id from list_mentions",
-      decision: "string: approve, reject or delete",
-    },
-    returns:
-      "changed, and the target slug when a row moved. Approving or rejecting " +
-      "PURGES that post's cached page, so the change reaches readers on the " +
-      "next fetch rather than within the ten minute shared-cache lifetime.",
-    policy:
-      "Approve and reject need write and are reversible. DELETE is refused " +
-      "with 403 mention-delete-requires-admin: it removes the only copy of " +
-      "what a stranger sent, and there is no repository behind this table. " +
-      "Reject instead.",
   },
   list_procedures: {
     args: {},

@@ -9,14 +9,12 @@ The design is Capsid `capsid/research/design-mcp-servers.md` section 6.
 
 ## Tools
 
-Ten, each a whole job. Every step of each is an authenticated request to
+Five, each a whole job. Every step of each is an authenticated request to
 `POST /api/operator` over the `SITE` service binding; the API owns every rule.
 Read tools need `dei.read`; the others need `dei.write`, ticked on the consent page.
 
 | Tool                     | Does                                                                  | Hints (read, destructive, idempotent, open world) |
 | ------------------------ | --------------------------------------------------------------------- | ------------------------------------------------- |
-| `dei_review_mentions`    | the webmention queue, a page at a time, stranger text marked as data  | read, no, yes, no                                 |
-| `dei_decide_mention`     | approve or reject one mention (delete stays in the admin screen)      | write, no, yes, no                                |
 | `dei_read_registry`      | list or read the Knowledge Base registry                              | read, no, yes, no                                 |
 | `dei_refresh_citations`  | fresh OpenAlex citation counts, all or by DOI                         | write, no, yes, yes                               |
 | `dei_check_publications` | DOIs on ORCID or Crossref the site lacks, and papers ORCID lacks      | read, no, yes, yes                                |

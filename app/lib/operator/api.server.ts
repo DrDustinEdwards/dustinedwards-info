@@ -2,8 +2,6 @@
 
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 
-import { listWebmentionsForAdmin } from "~/db";
-import { webmentions as webmentionsTable } from "~/db/schema";
 import {
   currentHead,
   EditorError,
@@ -12,7 +10,6 @@ import {
   type Actor,
 } from "~/lib/editor/publish.server";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
-import { decideMention } from "~/lib/webmention/decide.server";
 import { readFile } from "~/lib/source/store.server";
 
 import { backupStatus } from "~/lib/backup/d1-backup.server";
@@ -70,95 +67,6 @@ function readSlug(args: Record<string, unknown>, tool: string) {
     };
   }
   return { slug, error: "" };
-}
-
-// Unfiltered by default: a queue that hides its failures cannot tell "nothing arrived" from "all refused".
-async function listMentionsTool(
-  env: OperatorEnv,
-  args: Record<string, unknown>,
-): Promise<ToolResult> {
-  const status = typeof args.status === "string" ? args.status.trim() : "";
-
-  // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty. Checked
-  // before the read, and against the schema's own enum, so a new status cannot be refused here.
-  const allowed: readonly string[] = webmentionsTable.status.enumValues;
-  if (status && !allowed.includes(status)) {
-    return {
-      ok: false,
-      status: 400,
-      error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
-    };
-  }
-
-  const rows = await listWebmentionsForAdmin(env);
-
-  const filtered = status ? rows.filter((row) => row.status === status) : rows;
-
-  return {
-    ok: true,
-    data: {
-      status: status || "all",
-      count: filtered.length,
-      mentions: filtered.map((row) => ({
-        id: row.id,
-        source: row.sourceUrl,
-        target: row.targetSlug,
-        status: row.status,
-        author: row.authorName,
-        authorUrl: row.authorUrl,
-        excerpt: row.excerpt,
-        failureReason: row.failureReason,
-        receivedAt: row.receivedAt,
-        verifiedAt: row.verifiedAt,
-        decidedAt: row.decidedAt,
-      })),
-    },
-  };
-}
-
-// Calls `decideMention` only: the write and the cache purge travel together there.
-async function decideMentionTool(
-  env: OperatorEnv,
-  actor: Actor,
-  args: Record<string, unknown>,
-): Promise<ToolResult> {
-  const id = typeof args.id === "number" ? args.id : Number(args.id);
-  if (!Number.isInteger(id) || id <= 0) {
-    return {
-      ok: false,
-      status: 400,
-      error:
-        `decide_mention needs a positive integer id, got ${JSON.stringify(args.id)}. ` +
-        `Call list_mentions for the ids.`,
-    };
-  }
-
-  const decision = typeof args.decision === "string" ? args.decision.trim() : "";
-  if (decision !== "approve" && decision !== "reject" && decision !== "delete") {
-    return {
-      ok: false,
-      status: 400,
-      error:
-        `decide_mention needs a decision of approve, reject or delete, got ` +
-        `${JSON.stringify(args.decision)}.`,
-    };
-  }
-
-  const result = await decideMention(env, id, decision, actor);
-
-  // `changed: false` is an answer, not a 404, so a caller does not retry something that cannot succeed.
-  return {
-    ok: true,
-    data: {
-      id,
-      decision,
-      changed: result.changed,
-      slug: result.slug,
-      purged: result.changed ? `post:${result.slug}` : null,
-      // True when the page's cache purge failed: the change is stored but the page stays stale.
-      purgeFailed: result.purged === false,
-    },
-  };
 }
 
 // Errors are translated, not thrown: a gate rejection returns its own message, field and line, so an
@@ -224,12 +132,6 @@ export async function runTool(
           ok: true,
           data: await runJobTool(env.DB, () => siteJobs(env, ctx, new Date())).run(args),
         };
-
-      case "list_mentions":
-        return await listMentionsTool(env, args);
-
-      case "decide_mention":
-        return await decideMentionTool(env, actor, args);
 
       case "list_procedures": {
         const procedures = await listProceduresForOperator(env);

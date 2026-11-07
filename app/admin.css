@@ -49,6 +49,10 @@
 @import "capsomer/shortcuts.css";
 @import "capsomer/content.css";
 @import "capsomer/media-library.css";
+/* The mentions queue (/admin/mentions). */
+@import "capsomer/avatar.css";
+@import "capsomer/moderation-queue.css";
+@import "capsomer/mentions-list.css";
 
 /* The page inside the shell: the shell's page frame (.cap-admin-page) owns the padding, the width and the
    gap between a page's blocks; this is the page's own stack: Capsomer's page head, then panels. The error

@@ -17,12 +17,12 @@ import { MediaLibrary, type FormComponent } from "capsomer/react/media-library";
 import { PageHead } from "capsomer/react/page-head";
 
 import { prefersType } from "~/lib/negotiate.mjs";
-import { adminMediaSource, runAdminMediaIntent, hrefForUse } from "~/lib/media/kit.server";
+import { adminKitSource, runAdminMediaIntent, hrefForUse } from "~/lib/admin-kit.server";
 import type { Route } from "./+types/admin.media._index";
 
 /*
  * The media library: Capsomer's MediaLibrary over site-api's content kit, the same screen and the same
- * intents as Carrel's, through the adapter Carrel's requests reach (lib/media/kit.server.ts). Browse,
+ * intents as Carrel's, through the adapter Carrel's requests reach (lib/admin-kit.server.ts). Browse,
  * search, tags, the lenses, upload, the inspector (alt text, tags, caption, focal point, crop and
  * replace), Trash with Undo, and delete for good after the kit asks for the count. Every action is a
  * form post, so it all works with no script; with script the posts answer in place, and the page picks
@@ -36,7 +36,7 @@ export function meta() {
 /** The page's data, for the library and for a fetch that asks for JSON (quick search, and posts with script). */
 async function libraryData(context: Route.LoaderArgs["context"], request: Request) {
   const search = new URL(request.url).searchParams;
-  const kit = await loadMedia(adminMediaSource(context, request), readMediaQuery(search));
+  const kit = await loadMedia(adminKitSource(context, request), readMediaQuery(search));
   return mediaDataOfKit(kit, { usedHref: hrefForUse, view: readMediaView(search) });
 }
 
@@ -56,7 +56,7 @@ export const middleware: Route.MiddlewareFunction[] = [
     const body =
       cursor === null
         ? await libraryData(context, request)
-        : await loadMediaChanges(adminMediaSource(context, request), cursor);
+        : await loadMediaChanges(adminKitSource(context, request), cursor);
     return Response.json(body, { headers: { "cache-control": "private, no-store" } });
   },
 ];
