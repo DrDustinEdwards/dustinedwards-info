@@ -96,7 +96,7 @@ function text(html) {
  *
  * @param {string | null} value
  */
-function isoDuration(value) {
+function minutesToIso(value) {
   const m = /^(\d+(?:\.\d+)?) (minutes?|hours?)$/.exec(String(value ?? ""));
   if (!m) return null;
   const minutes = Math.round(Number(m[1]) * (m[2]?.startsWith("hour") ? 60 : 1));
@@ -181,21 +181,21 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
         : {}),
       ...(record.expectedResultsHtml ? { protocolOutcome: text(record.expectedResultsHtml) } : {}),
       ...(record.limitationsHtml ? { protocolLimitation: text(record.limitationsHtml) } : {}),
-      ...(isoDuration(record.time.total) ? { totalTime: isoDuration(record.time.total) } : {}),
+      ...(minutesToIso(record.time.total) ? { totalTime: minutesToIso(record.time.total) } : {}),
       ...(protocolParameters(record).length ? { parameter: protocolParameters(record) } : {}),
       step: steps,
     });
   }
 
   if (record.profile === "recipe") {
-    const prep = isoDuration(record.prepTime);
-    const cook = isoDuration(record.cookTime);
+    const prep = minutesToIso(record.prepTime);
+    const cook = minutesToIso(record.cookTime);
     const minutes = (/** @type {string | null} */ d) => {
       const m = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(d ?? "");
       return m ? Number(m[1] ?? 0) * 60 + Number(m[2] ?? 0) : null;
     };
     const total =
-      prep && cook ? isoDuration(`${(minutes(prep) ?? 0) + (minutes(cook) ?? 0)} minutes`) : null;
+      prep && cook ? minutesToIso(`${(minutes(prep) ?? 0) + (minutes(cook) ?? 0)} minutes`) : null;
     return thing("Recipe", {
       ...common,
       ...(record.image ? { image: [`${origin}${record.image.src}`] } : {}),
