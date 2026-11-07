@@ -63,7 +63,8 @@ function NavEntry({ item, pathname }: { item: NavItem; pathname: string }) {
 
 /**
  * The running head under the header on every page but the home page, whose cover takes its place: the section's
- * number and trail, and the deepest route's folio (its `handle.folio`) or the site's name.
+ * number and trail, and the deepest route's folio (its `handle.folio`) or the site's name. Hidden from screen readers, as in the
+ * Capsid explorer: it sits outside every landmark and says only what the h1 and the breadcrumb say.
  */
 function RunningHead({ pathname }: { pathname: string }) {
   const matches = useMatches();
@@ -75,7 +76,7 @@ function RunningHead({ pathname }: { pathname: string }) {
     if (handle?.folio) folio = handle.folio(match.loaderData) ?? folio;
   }
   return (
-    <div className="cap-page tracks running-head-tracks">
+    <div className="cap-page tracks running-head-tracks" aria-hidden="true">
       <div className="cap-running-head u-wide">
         <span className="cap-running-head-name">
           <span className="cap-running-head-no">{section.no}</span>
