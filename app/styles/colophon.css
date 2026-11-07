@@ -185,6 +185,11 @@
   font-size: 0.875rem;
 }
 
+.colophon-scroll ul {
+  margin: 0;
+  padding: 0;
+}
+
 .colophon-scroll li {
   padding-block: 0.125rem;
   overflow-wrap: anywhere;
