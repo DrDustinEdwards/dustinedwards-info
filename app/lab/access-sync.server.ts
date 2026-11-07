@@ -74,7 +74,7 @@ async function callCapsid(env: Env, nowMs: number, fetchImpl: FetchLike): Promis
     namespace: ACCESS_SYNC_NAMESPACE,
     members: allowList(rows, nowMs, LAB_CATALOG),
     removed: await unsyncedRemovals(env),
-    fetch: fetchImpl,
+    fetch: (input, init) => fetchImpl(String(input), init),
   });
   return result.ok ? { ok: true } : { ok: false, error: result.refusal };
 }
