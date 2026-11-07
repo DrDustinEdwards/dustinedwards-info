@@ -2,10 +2,6 @@
   .reading-progress {
     transition: none;
   }
-  .lightbox,
-  .lightbox[data-reduced] {
-    animation: none;
-  }
   *,
   *::before,
   *::after {
@@ -33,7 +29,7 @@
   .code-lang,
   .selection-link,
   .skip-link,
-  .lightbox {
+  .cap-lightbox {
     display: none !important;
   }
 
