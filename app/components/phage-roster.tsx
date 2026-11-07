@@ -12,7 +12,7 @@ import type { Cohort } from "~/lib/roster/compile.mjs";
  */
 export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
   return (
-    <section aria-labelledby="roster">
+    <section aria-labelledby="roster" className="phage-roster">
       <h2 id="roster">Roster</h2>
       {cohorts.map((entry) => (
         <section
@@ -34,21 +34,27 @@ export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
           )}
           {entry.photo ? (
             <figure className="media-split__media">
-              {/* Below the page's prose, so none is the LCP: every photo loads lazily, through /media's sizes. */}
-              <Picture
-                picture={pictureProps(
-                  images.attributes(
-                    {
-                      src: entry.photo.src,
-                      width: entry.photo.width,
-                      height: entry.photo.height,
-                      version: mediaContentVersion(entry.photo.src),
-                    },
-                    "content",
-                  ),
-                  { alt: entry.photo.alt },
-                )}
-              />
+              {/* Below the page's prose, so none is the LCP: every photo loads lazily, through /media's sizes. A click opens the full-size file in Prelum's lightbox (the roster island). */}
+              <a
+                className="image-link"
+                href={entry.photo.src}
+                aria-label={`View the ${entry.year} cohort photo full size`}
+              >
+                <Picture
+                  picture={pictureProps(
+                    images.attributes(
+                      {
+                        src: entry.photo.src,
+                        width: entry.photo.width,
+                        height: entry.photo.height,
+                        version: mediaContentVersion(entry.photo.src),
+                      },
+                      "content",
+                    ),
+                    { alt: entry.photo.alt },
+                  )}
+                />
+              </a>
             </figure>
           ) : null}
         </section>
