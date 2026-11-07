@@ -4,13 +4,6 @@
  * `<id>/art.svg`, and everything here only reads it.
  */
 
-/** The regions every ad draws, per layout. Their shapes (view boxes and where they sit) belong to the template, not to an ad. */
-/** @type {Record<string, Record<string, [number, number]>>} */
-const REGIONS = {
-  wide: { top: [1200, 200], left: [300, 500], right: [300, 500], bottom: [1200, 160] },
-  tall: { top: [600, 360], bottom: [600, 200] },
-};
-
 /** The lettering. Display and slab are the two self-hosted Open Font License faces; serif is the site's own Source Serif 4. */
 const FONTS = ["display", "slab", "serif"];
 
@@ -18,6 +11,10 @@ const PART_KINDS = ["text", "burst", "rect", "use"];
 
 const ID = /^[a-z][a-z0-9-]*$/;
 const HEX = /^#[0-9a-f]{6}$/i;
+
+/** A fill is a hex color, or "ink": the page's text color for the ad, light in dark mode, so copy never vanishes into the page. */
+const isFill = (/** @type {unknown} */ value) =>
+  value === "ink" || (typeof value === "string" && HEX.test(value));
 
 /**
  * Everything wrong with an ad's data, as sentences; an empty list is a valid ad.
@@ -32,43 +29,29 @@ export function adProblems(ad, art) {
   if (!ad?.title) out.push("title is missing");
   if (!/^19[4-7]0s$/.test(ad?.era ?? "")) out.push("era must be 1940s to 1970s");
   if (!ad?.credit) out.push("credit is missing (say who made the art and copy)");
-  if (!HEX.test(ad?.ground?.color ?? "")) out.push("ground.color must be a hex color");
-  if (ad?.ground?.dots !== undefined && !HEX.test(ad.ground.dots))
-    out.push("ground.dots must be a hex color");
+  const [w, h] = Array.isArray(ad?.viewBox) ? ad.viewBox : [0, 0];
+  if (!(w > 0 && h > 0)) out.push("viewBox must be [width, height]");
   const symbols = new Set([...art.matchAll(/<symbol\s+id="([^"]+)"/g)].map((m) => m[1]));
-  for (const [layout, regions] of Object.entries(REGIONS)) {
-    for (const [name, [w, h]] of Object.entries(regions)) {
-      const region = ad?.layouts?.[layout]?.[name];
-      const where = `${layout}.${name}`;
-      if (!region) {
-        out.push(`${where} is missing`);
-        continue;
-      }
-      if (region.viewBox?.[0] !== w || region.viewBox?.[1] !== h)
-        out.push(`${where}.viewBox must be ${w} by ${h}, the template's`);
-      for (const [i, part] of (region.parts ?? []).entries()) {
-        const at = `${where}.parts[${i}]`;
-        if (!PART_KINDS.includes(part.kind)) {
-          out.push(`${at}.kind is unknown`);
-          continue;
-        }
-        if (part.kind === "text") {
-          if (!FONTS.includes(part.font)) out.push(`${at}.font must be one of ${FONTS.join(", ")}`);
-          if (!Array.isArray(part.lines) || part.lines.length === 0)
-            out.push(`${at}.lines is empty`);
-          if (!HEX.test(part.fill ?? "")) out.push(`${at}.fill must be a hex color`);
-          if (!(part.size > 0)) out.push(`${at}.size must be positive`);
-        }
-        if (part.kind === "use" && !symbols.has(part.ref))
-          out.push(`${at}.ref "${part.ref}" is not a symbol in art.svg`);
-        if (part.kind === "burst" && !(part.outer > part.inner && part.inner > 0))
-          out.push(`${at} needs outer > inner > 0`);
-        const x = part.x ?? part.cx;
-        const y = part.y ?? part.cy;
-        if (!(x >= 0 && x <= w && y >= 0 && y <= h))
-          out.push(`${at} is placed outside the ${w} by ${h} region`);
-      }
+  for (const [i, part] of (ad?.parts ?? []).entries()) {
+    const at = `parts[${i}]`;
+    if (!PART_KINDS.includes(part.kind)) {
+      out.push(`${at}.kind is unknown`);
+      continue;
     }
+    if (part.kind === "text") {
+      if (!FONTS.includes(part.font)) out.push(`${at}.font must be one of ${FONTS.join(", ")}`);
+      if (!Array.isArray(part.lines) || part.lines.length === 0) out.push(`${at}.lines is empty`);
+      if (!isFill(part.fill)) out.push(`${at}.fill must be a hex color or "ink"`);
+      if (!(part.size > 0)) out.push(`${at}.size must be positive`);
+    }
+    if (part.kind === "use" && !symbols.has(part.ref))
+      out.push(`${at}.ref "${part.ref}" is not a symbol in art.svg`);
+    if (part.kind === "burst" && !(part.outer > part.inner && part.inner > 0))
+      out.push(`${at} needs outer > inner > 0`);
+    const x = part.x ?? part.cx;
+    const y = part.y ?? part.cy;
+    if (!(x >= 0 && x <= w && y >= 0 && y <= h))
+      out.push(`${at} is placed outside the ${w} by ${h} box`);
   }
   return out;
 }

@@ -1,6 +1,6 @@
 /**
  * The vintage ads behind the utility pages (docs/UTILITY-ADS.md). Adding an ad is adding a folder, so this is the
- * gate on that folder: every ad.json must fit the template's regions and name only symbols its art.svg has, or the
+ * gate on that folder: every ad.json must be well formed and name only symbols its art.svg has, or the
  * page would render a hole. Server-side choice is checked once, since a random pick that ignores `?ad=` breaks the gallery's links.
  */
 

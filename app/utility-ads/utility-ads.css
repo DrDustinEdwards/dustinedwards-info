@@ -21,131 +21,27 @@
   src: url("./fonts/alfa-slab-one-latin-400-normal.woff2") format("woff2");
 }
 
-.ad-scene {
-  --ad-tall: min(100vw, 40rem);
-  --ad-wide: min(100vw, 75rem);
-  --ad-ui: 34rem;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  box-sizing: border-box;
-  justify-content: center;
-  max-inline-size: none;
-  inline-size: 100%;
-  padding-inline: var(--pad-x, 1rem);
-  /* Room for the top and bottom regions, which are sized from the same variables below (their aspect ratios, 360/600 and 200/600). */
-  padding-block: calc(var(--ad-tall) * 0.6 + 1rem) calc(var(--ad-tall) * 0.3334 + 1rem);
-}
-
-/* The fixed UI: always the same column, always over a solid backing, whatever the ad. */
-.ad-scene > :not(.ad-layer) {
-  position: relative;
-  z-index: 1;
-  inline-size: 100%;
-  max-inline-size: var(--ad-ui);
-  box-sizing: border-box;
-  padding-inline: 1.25rem;
-  background: var(--surface, Canvas);
-  color: var(--text, CanvasText);
-}
-.ad-scene > .cap-empty {
-  border-radius: 0.75rem 0.75rem 0 0;
-  padding-block-end: 1rem;
-}
-.ad-scene > :last-child:not(.ad-layer),
-.ad-scene > :nth-last-child(2):has(+ .ad-layer) {
-  border-radius: 0 0 0.75rem 0.75rem;
-  padding-block-end: 1.25rem;
-}
-
-.ad-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
+.ad-corner {
+  align-self: flex-end;
+  inline-size: min(100%, 26rem);
+  margin-block-start: var(--space-8, 2rem);
   pointer-events: none;
   user-select: none;
 }
-.ad-ground,
-.ad-defs {
-  position: absolute;
-  inset: 0;
+.ad-corner[data-size="large"] {
+  align-self: center;
+  inline-size: min(100%, 40rem);
 }
-.ad-ground {
-  inline-size: 100%;
-  block-size: 100%;
-}
-.ad-defs {
-  inline-size: 0;
-  block-size: 0;
-}
-.ad-layout {
-  position: absolute;
-  inset: 0;
-  display: none;
-}
-.ad-region {
-  position: absolute;
+.ad-art {
   display: block;
+  inline-size: 100%;
+  block-size: auto;
   overflow: visible;
 }
-
-/* Tall: a headline band above the column and a price band below it. */
-.ad-layout[data-layout="tall"] {
-  display: block;
-}
-.ad-layout[data-layout="tall"] .ad-region {
-  inline-size: var(--ad-tall);
-  inset-inline-start: calc(50% - var(--ad-tall) / 2);
-}
-.ad-region[data-region="top"] {
-  inset-block-start: 0;
-}
-.ad-region[data-region="bottom"] {
-  inset-block-end: 0;
-}
-.ad-layout[data-layout="tall"] .ad-region[data-region="top"] {
-  aspect-ratio: 600 / 360;
-}
-.ad-layout[data-layout="tall"] .ad-region[data-region="bottom"] {
-  aspect-ratio: 600 / 200;
-}
-
-/* Wide: the headline across the top, art and copy in the two gutters, the price band below. */
-@media (min-width: 64rem) {
-  .ad-scene {
-    padding-block: calc(var(--ad-wide) / 6 + 1rem) calc(var(--ad-wide) * 0.1334 + 1rem);
-    min-block-size: calc(var(--ad-wide) * 0.3 + 30rem);
-  }
-  .ad-layout[data-layout="tall"] {
-    display: none;
-  }
-  .ad-layout[data-layout="wide"] {
-    display: block;
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="top"],
-  .ad-layout[data-layout="wide"] .ad-region[data-region="bottom"] {
-    inline-size: var(--ad-wide);
-    inset-inline-start: calc(50% - var(--ad-wide) / 2);
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="top"] {
-    aspect-ratio: 1200 / 200;
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="bottom"] {
-    aspect-ratio: 1200 / 160;
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="left"],
-  .ad-layout[data-layout="wide"] .ad-region[data-region="right"] {
-    inline-size: calc((var(--ad-wide) - var(--ad-ui)) / 2);
-    block-size: calc(100% - var(--ad-wide) / 6 - var(--ad-wide) * 0.1334);
-    inset-block-start: calc(var(--ad-wide) / 6);
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="left"] {
-    inset-inline-start: calc(50% - var(--ad-wide) / 2);
-  }
-  .ad-layout[data-layout="wide"] .ad-region[data-region="right"] {
-    inset-inline-end: calc(50% - var(--ad-wide) / 2);
-  }
+.ad-defs {
+  position: absolute;
+  inline-size: 0;
+  block-size: 0;
 }
 
 .ad-f-display {
@@ -160,24 +56,33 @@
   font-weight: 700;
 }
 
-/* The ad is decoration: not printed, and not drawn when the reader has asked for system colors. */
-@media print, (forced-colors: active) {
-  .ad-layer {
-    display: none;
-  }
-  .ad-scene {
-    padding-block: var(--space-8, 2rem);
+/* "ink": the ad's own text color, dark on a light page and light on a dark one (the site's data-theme, else the system's). */
+.ad-ink {
+  fill: #1b1f3b;
+}
+:root[data-theme="dark"] .ad-ink {
+  fill: #f4ecd0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ad-ink {
+    fill: #f4ecd0;
   }
 }
 
-/* The gallery's controls: plain links under the ad, on the same backing. */
+/* Decoration: not printed, and not drawn when the reader has asked for system colors. */
+@media print, (forced-colors: active) {
+  .ad-corner {
+    display: none;
+  }
+}
+
+/* The gallery's controls: plain links above the ad. */
 .ad-gallery-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  justify-content: center;
 }
 .ad-gallery-list {
-  margin: 0;
+  margin-block: var(--space-4, 1rem) 0;
   padding-inline-start: 1.25rem;
 }

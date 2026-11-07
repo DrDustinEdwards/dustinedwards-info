@@ -29,20 +29,13 @@ export interface AdPart {
   points?: number;
   color?: string;
 }
-export interface AdRegion {
-  viewBox: [number, number];
-  parts: AdPart[];
-}
 export interface Ad {
   id: string;
   title: string;
   era: string;
   credit: string;
-  ground: { color: string; dots?: string };
-  layouts: {
-    wide: { top: AdRegion; left: AdRegion; right: AdRegion; bottom: AdRegion };
-    tall: { top: AdRegion; bottom: AdRegion };
-  };
+  viewBox: [number, number];
+  parts: AdPart[];
 }
 
 const data = import.meta.glob<Ad>("./*/ad.json", { eager: true, import: "default" });

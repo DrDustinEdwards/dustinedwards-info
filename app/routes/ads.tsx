@@ -1,8 +1,7 @@
 import { Link } from "react-router";
 
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
-import { UtilityAd, AD_SCENE } from "~/components/utility-ad";
+import { PageShell } from "~/components/page-shell";
+import { UtilityAd } from "~/components/utility-ad";
 import { SITE } from "~/lib/seo";
 import { ADS } from "~/utility-ads/registry";
 
@@ -32,40 +31,36 @@ export default function AdGallery({ loaderData }: Route.ComponentProps) {
   const previous = ADS[(loaderData.index + ADS.length - 1) % ADS.length]!;
   const next = ADS[(loaderData.index + 1) % ADS.length]!;
   return (
-    <>
-      <SiteHeader />
-      <main id="main" tabIndex={-1} className={`cap-page page ${AD_SCENE}`}>
-        <header className="page-head">
-          <h1>{ad.title}</h1>
-          <p className="muted">
-            {ad.era}. {ad.credit}
-          </p>
-        </header>
-        <nav className="ad-gallery-nav" aria-label="Ads">
-          <Link className="cap-btn" to={`/ads/${previous.id}`} rel="prev">
-            Previous
-          </Link>
-          <Link className="cap-btn" to="/ads/random" reloadDocument>
-            Random
-          </Link>
-          <Link className="cap-btn" to={`/ads/${next.id}`} rel="next">
-            Next
-          </Link>
-        </nav>
-        <ul className="ad-gallery-list">
-          {ADS.map((entry) => (
-            <li key={entry.id}>
-              {entry.id === ad.id ? (
-                <strong aria-current="page">{entry.title}</strong>
-              ) : (
-                <Link to={`/ads/${entry.id}`}>{entry.title}</Link>
-              )}
-            </li>
-          ))}
-        </ul>
-        <UtilityAd ad={ad} />
-      </main>
-      <ShellFooter />
-    </>
+    <PageShell>
+      <header className="page-head">
+        <h1>{ad.title}</h1>
+        <p className="muted">
+          {ad.era}. {ad.credit}
+        </p>
+      </header>
+      <nav className="ad-gallery-nav" aria-label="Ads">
+        <Link className="cap-btn" to={`/ads/${previous.id}`} rel="prev">
+          Previous
+        </Link>
+        <Link className="cap-btn" to="/ads/random" reloadDocument>
+          Random
+        </Link>
+        <Link className="cap-btn" to={`/ads/${next.id}`} rel="next">
+          Next
+        </Link>
+      </nav>
+      <ul className="ad-gallery-list">
+        {ADS.map((entry) => (
+          <li key={entry.id}>
+            {entry.id === ad.id ? (
+              <strong aria-current="page">{entry.title}</strong>
+            ) : (
+              <Link to={`/ads/${entry.id}`}>{entry.title}</Link>
+            )}
+          </li>
+        ))}
+      </ul>
+      <UtilityAd ad={ad} size="large" />
+    </PageShell>
   );
 }
