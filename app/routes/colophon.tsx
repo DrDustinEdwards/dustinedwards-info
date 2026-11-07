@@ -329,20 +329,12 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           ))}
         </ul>
 
-        <div className="colophon-pair">
-          <section className="cap-panel colophon-note" aria-labelledby="ai">
-            <div className="cap-panel-body">
-              <SectionHead id="ai" />
-              <Statements sentences={AI_DISCLOSURE} />
-            </div>
-          </section>
-          <section className="cap-panel colophon-note" aria-labelledby="security">
-            <div className="cap-panel-body">
-              <SectionHead id="security" />
-              <Statements sentences={SECURITY_TRADEOFF} />
-            </div>
-          </section>
-        </div>
+        <section className="cap-panel colophon-note" aria-labelledby="security">
+          <div className="cap-panel-body">
+            <SectionHead id="security" />
+            <Statements sentences={SECURITY_TRADEOFF} />
+          </div>
+        </section>
 
         <SectionHead id="runtime" />
         <dl className="colophon-facts">
@@ -512,6 +504,13 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             ))}
           </tbody>
         </table>
+
+        <section className="cap-panel colophon-note" aria-labelledby="ai">
+          <div className="cap-panel-body">
+            <SectionHead id="ai" />
+            <Statements sentences={AI_DISCLOSURE} />
+          </div>
+        </section>
       </div>
 
       <template data-island="colophon" />

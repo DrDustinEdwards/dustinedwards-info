@@ -46,11 +46,6 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "The gate does not check that the sentence is true.",
   },
   {
-    id: "ai",
-    title: "AI disclosure",
-    lead: "Claude, Anthropic's model, helps write the code and the prose of this site.",
-  },
-  {
     id: "security",
     title: "A tradeoff in the security headers",
     lead:
@@ -100,6 +95,11 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
     id: "not-adopted",
     title: "What was not adopted",
     lead: "Choices ruled out on purpose, each with its reason.",
+  },
+  {
+    id: "ai",
+    title: "AI disclosure",
+    lead: "Claude, Anthropic's model, helps write the code and the prose of this site.",
   },
 ]);
 
