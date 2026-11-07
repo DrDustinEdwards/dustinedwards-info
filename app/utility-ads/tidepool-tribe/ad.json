@@ -1,0 +1,281 @@
+{
+  "id": "tidepool-tribe",
+  "title": "Tidepool Tribe",
+  "era": "1960s",
+  "credit": "Original period-style art and copy for this site. Not a reproduction of any existing ad.",
+  "ground": { "color": "#ffe9a8", "dots": "#f7c948" },
+  "layouts": {
+    "wide": {
+      "top": {
+        "viewBox": [1200, 200],
+        "parts": [
+          {
+            "kind": "text",
+            "x": 600,
+            "y": 52,
+            "anchor": "middle",
+            "font": "slab",
+            "size": 30,
+            "fill": "#1b1f3b",
+            "lines": ["A WHOLE FAMILY OF SEA FOLK AND A CASTLE TO MATCH!"]
+          },
+          {
+            "kind": "text",
+            "x": 600,
+            "y": 160,
+            "anchor": "middle",
+            "font": "display",
+            "size": 112,
+            "fill": "#ef3b2d",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 7,
+            "shadow": { "dx": 6, "dy": 6, "fill": "#1b1f3b" },
+            "rotate": -2,
+            "lines": ["TIDEPOOL TRIBE!"]
+          }
+        ]
+      },
+      "left": {
+        "viewBox": [300, 500],
+        "parts": [
+          { "kind": "use", "ref": "tank", "x": 10, "y": 50, "w": 280, "h": 392 },
+          {
+            "kind": "burst",
+            "cx": 245,
+            "cy": 62,
+            "outer": 54,
+            "inner": 38,
+            "points": 14,
+            "fill": "#2f7de1",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 4
+          },
+          {
+            "kind": "text",
+            "x": 245,
+            "y": 76,
+            "anchor": "middle",
+            "font": "display",
+            "size": 40,
+            "fill": "#ffffff",
+            "rotate": 10,
+            "lines": ["NEW!"]
+          }
+        ]
+      },
+      "right": {
+        "viewBox": [300, 500],
+        "parts": [
+          {
+            "kind": "text",
+            "x": 22,
+            "y": 62,
+            "font": "slab",
+            "size": 32,
+            "fill": "#ef3b2d",
+            "lines": ["YOU GET:"]
+          },
+          {
+            "kind": "text",
+            "x": 22,
+            "y": 108,
+            "font": "serif",
+            "size": 21,
+            "leading": 36,
+            "fill": "#1b1f3b",
+            "lines": [
+              "• Snap-together castle",
+              "• Three jolly sea folk",
+              "• Wavy plastic seaweed",
+              "• A real see-through tank"
+            ]
+          },
+          {
+            "kind": "burst",
+            "cx": 150,
+            "cy": 370,
+            "outer": 118,
+            "inner": 90,
+            "points": 18,
+            "fill": "#ef3b2d",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 5,
+            "rotate": -6
+          },
+          {
+            "kind": "text",
+            "x": 150,
+            "y": 336,
+            "anchor": "middle",
+            "font": "slab",
+            "size": 26,
+            "fill": "#ffffff",
+            "lines": ["ONLY"]
+          },
+          {
+            "kind": "text",
+            "x": 150,
+            "y": 408,
+            "anchor": "middle",
+            "font": "display",
+            "size": 92,
+            "fill": "#ffd23f",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 6,
+            "lines": ["98¢"]
+          },
+          {
+            "kind": "text",
+            "x": 150,
+            "y": 438,
+            "anchor": "middle",
+            "font": "slab",
+            "size": 19,
+            "fill": "#ffffff",
+            "lines": ["POSTPAID!"]
+          }
+        ]
+      },
+      "bottom": {
+        "viewBox": [1200, 160],
+        "parts": [
+          {
+            "kind": "text",
+            "x": 600,
+            "y": 76,
+            "anchor": "middle",
+            "font": "display",
+            "size": 66,
+            "fill": "#2f7de1",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 5,
+            "lines": ["SEND TODAY — THE TRIBE IS WAITING!"]
+          },
+          {
+            "kind": "text",
+            "x": 600,
+            "y": 130,
+            "anchor": "middle",
+            "font": "serif",
+            "size": 28,
+            "fill": "#1b1f3b",
+            "lines": ["Tidepool Novelties. Satisfaction guaranteed or your money back!"]
+          }
+        ]
+      }
+    },
+    "tall": {
+      "top": {
+        "viewBox": [600, 360],
+        "parts": [
+          {
+            "kind": "text",
+            "x": 22,
+            "y": 48,
+            "font": "slab",
+            "size": 22,
+            "fill": "#1b1f3b",
+            "lines": ["A WHOLE FAMILY", "OF SEA FOLK!"],
+            "leading": 28
+          },
+          {
+            "kind": "text",
+            "x": 18,
+            "y": 160,
+            "font": "display",
+            "size": 62,
+            "fill": "#ef3b2d",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 6,
+            "shadow": { "dx": 5, "dy": 5, "fill": "#1b1f3b" },
+            "rotate": -3,
+            "lines": ["TIDEPOOL"]
+          },
+          {
+            "kind": "text",
+            "x": 40,
+            "y": 232,
+            "font": "display",
+            "size": 62,
+            "fill": "#ef3b2d",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 6,
+            "shadow": { "dx": 5, "dy": 5, "fill": "#1b1f3b" },
+            "rotate": -3,
+            "lines": ["TRIBE!"]
+          },
+          {
+            "kind": "text",
+            "x": 22,
+            "y": 312,
+            "font": "serif",
+            "size": 20,
+            "fill": "#1b1f3b",
+            "lines": ["Castle, tank and three sea folk!"]
+          },
+          { "kind": "use", "ref": "tank", "x": 360, "y": 22, "w": 220, "h": 308 }
+        ]
+      },
+      "bottom": {
+        "viewBox": [600, 200],
+        "parts": [
+          {
+            "kind": "burst",
+            "cx": 112,
+            "cy": 100,
+            "outer": 92,
+            "inner": 70,
+            "points": 16,
+            "fill": "#ef3b2d",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 4,
+            "rotate": -6
+          },
+          {
+            "kind": "text",
+            "x": 112,
+            "y": 120,
+            "anchor": "middle",
+            "font": "display",
+            "size": 64,
+            "fill": "#ffd23f",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 5,
+            "lines": ["98¢"]
+          },
+          {
+            "kind": "text",
+            "x": 112,
+            "y": 70,
+            "anchor": "middle",
+            "font": "slab",
+            "size": 18,
+            "fill": "#ffffff",
+            "lines": ["ONLY"]
+          },
+          {
+            "kind": "text",
+            "x": 224,
+            "y": 96,
+            "font": "display",
+            "size": 46,
+            "fill": "#2f7de1",
+            "stroke": "#1b1f3b",
+            "strokeWidth": 4,
+            "lines": ["SEND TODAY!"]
+          },
+          {
+            "kind": "text",
+            "x": 226,
+            "y": 134,
+            "font": "serif",
+            "size": 21,
+            "leading": 28,
+            "fill": "#1b1f3b",
+            "lines": ["Money back if you are", "not delighted!"]
+          }
+        ]
+      }
+    }
+  }
+}

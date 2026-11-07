@@ -122,6 +122,9 @@ export default [
     // route's.
     route("software/*", "routes/software.tsx"),
     route("about", "routes/about.tsx"),
+    // The vintage ads behind the utility pages, one at a time (docs/UTILITY-ADS.md); /ads/random redirects to a random one.
+    route("ads/random", "routes/ads.random.ts"),
+    route("ads/:id?", "routes/ads.tsx"),
     // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
     route("cv", "routes/cv.tsx"),
     // The CV twin, drawn from the same D1 rows as the page (docs/CV.md).

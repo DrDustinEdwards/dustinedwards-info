@@ -1,0 +1,183 @@
+/*
+ * The vintage ad behind a utility page (docs/UTILITY-ADS.md). Linked from the page, not imported, so only an error page
+ * or the gallery pays for it. Unlayered, so it wins over Capsomer's error-page layout where the two meet.
+ *
+ * The template's geometry lives here and nowhere else: the ad's art sits in four regions (wide) or two (tall) around the
+ * page's fixed UI column, which is 34rem wide and has a solid backing. An ad supplies content for the regions; it
+ * never moves them, so the status, message and buttons are in the same place whichever ad is served.
+ */
+@font-face {
+  font-family: "Ad Bangers";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("./fonts/bangers-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ad Alfa Slab One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("./fonts/alfa-slab-one-latin-400-normal.woff2") format("woff2");
+}
+
+.ad-scene {
+  --ad-tall: min(100vw, 40rem);
+  --ad-wide: min(100vw, 75rem);
+  --ad-ui: 34rem;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-sizing: border-box;
+  justify-content: center;
+  max-inline-size: none;
+  inline-size: 100%;
+  padding-inline: var(--pad-x, 1rem);
+  /* Room for the top and bottom regions, which are sized from the same variables below (their aspect ratios, 360/600 and 200/600). */
+  padding-block: calc(var(--ad-tall) * 0.6 + 1rem) calc(var(--ad-tall) * 0.3334 + 1rem);
+}
+
+/* The fixed UI: always the same column, always over a solid backing, whatever the ad. */
+.ad-scene > :not(.ad-layer) {
+  position: relative;
+  z-index: 1;
+  inline-size: 100%;
+  max-inline-size: var(--ad-ui);
+  box-sizing: border-box;
+  padding-inline: 1.25rem;
+  background: var(--surface, Canvas);
+  color: var(--text, CanvasText);
+}
+.ad-scene > .cap-empty {
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding-block-end: 1rem;
+}
+.ad-scene > :last-child:not(.ad-layer),
+.ad-scene > :nth-last-child(2):has(+ .ad-layer) {
+  border-radius: 0 0 0.75rem 0.75rem;
+  padding-block-end: 1.25rem;
+}
+
+.ad-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.ad-ground,
+.ad-defs {
+  position: absolute;
+  inset: 0;
+}
+.ad-ground {
+  inline-size: 100%;
+  block-size: 100%;
+}
+.ad-defs {
+  inline-size: 0;
+  block-size: 0;
+}
+.ad-layout {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.ad-region {
+  position: absolute;
+  display: block;
+  overflow: visible;
+}
+
+/* Tall: a headline band above the column and a price band below it. */
+.ad-layout[data-layout="tall"] {
+  display: block;
+}
+.ad-layout[data-layout="tall"] .ad-region {
+  inline-size: var(--ad-tall);
+  inset-inline-start: calc(50% - var(--ad-tall) / 2);
+}
+.ad-region[data-region="top"] {
+  inset-block-start: 0;
+}
+.ad-region[data-region="bottom"] {
+  inset-block-end: 0;
+}
+.ad-layout[data-layout="tall"] .ad-region[data-region="top"] {
+  aspect-ratio: 600 / 360;
+}
+.ad-layout[data-layout="tall"] .ad-region[data-region="bottom"] {
+  aspect-ratio: 600 / 200;
+}
+
+/* Wide: the headline across the top, art and copy in the two gutters, the price band below. */
+@media (min-width: 64rem) {
+  .ad-scene {
+    padding-block: calc(var(--ad-wide) / 6 + 1rem) calc(var(--ad-wide) * 0.1334 + 1rem);
+    min-block-size: calc(var(--ad-wide) * 0.3 + 30rem);
+  }
+  .ad-layout[data-layout="tall"] {
+    display: none;
+  }
+  .ad-layout[data-layout="wide"] {
+    display: block;
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="top"],
+  .ad-layout[data-layout="wide"] .ad-region[data-region="bottom"] {
+    inline-size: var(--ad-wide);
+    inset-inline-start: calc(50% - var(--ad-wide) / 2);
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="top"] {
+    aspect-ratio: 1200 / 200;
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="bottom"] {
+    aspect-ratio: 1200 / 160;
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="left"],
+  .ad-layout[data-layout="wide"] .ad-region[data-region="right"] {
+    inline-size: calc((var(--ad-wide) - var(--ad-ui)) / 2);
+    block-size: calc(100% - var(--ad-wide) / 6 - var(--ad-wide) * 0.1334);
+    inset-block-start: calc(var(--ad-wide) / 6);
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="left"] {
+    inset-inline-start: calc(50% - var(--ad-wide) / 2);
+  }
+  .ad-layout[data-layout="wide"] .ad-region[data-region="right"] {
+    inset-inline-end: calc(50% - var(--ad-wide) / 2);
+  }
+}
+
+.ad-f-display {
+  font-family: "Ad Bangers", Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 0.02em;
+}
+.ad-f-slab {
+  font-family: "Ad Alfa Slab One", Rockwell, "Arial Black", serif;
+}
+.ad-f-serif {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 700;
+}
+
+/* The ad is decoration: not printed, and not drawn when the reader has asked for system colors. */
+@media print, (forced-colors: active) {
+  .ad-layer {
+    display: none;
+  }
+  .ad-scene {
+    padding-block: var(--space-8, 2rem);
+  }
+}
+
+/* The gallery's controls: plain links under the ad, on the same backing. */
+.ad-gallery-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+.ad-gallery-list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
