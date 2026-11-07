@@ -49,6 +49,11 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/enarratio",
   "/software/carrel",
   "/software/capsomer",
+  "/software/prelum",
+  "/software/site-runtime",
+  "/software/site-api",
+  "/software/d1-dump",
+  "/software/devkit",
   // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
   // The legal pages, in Carrel with the rest (job_044f96426efa). /terms is also the terms the site's data is

@@ -2,10 +2,10 @@
 
 import {
   AI_DISCLOSURE,
-  CAPSID_REPO_URL,
+  CAPSID_PAGE_PATH,
   CAPSOMER_NAME,
   CAPSOMER_SENTENCE_REST,
-  CAPSOMER_URL,
+  CAPSOMER_PAGE_PATH,
   CARREL_NAME,
   CARREL_PAGE_PATH,
   CARREL_SENTENCE_REST,
@@ -76,8 +76,8 @@ export function colophonFacts(stack, features, id) {
       ...SITE_OPERATION.map(el),
       `href="${CARREL_PAGE_PATH}">${CARREL_NAME}</a>`,
       el(CARREL_SENTENCE_REST),
-      `href="${CAPSID_REPO_URL}"`,
-      `href="${CAPSOMER_URL}">${CAPSOMER_NAME}</a>`,
+      `href="${CAPSID_PAGE_PATH}">its page</a>`,
+      `href="${CAPSOMER_PAGE_PATH}">${CAPSOMER_NAME}</a>`,
       el(CAPSOMER_SENTENCE_REST),
       ...SHARED_PACKAGES.flatMap((/** @type {any} */ p) => [
         `href="${p.url}">${p.name}</a>`,

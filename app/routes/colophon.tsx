@@ -12,10 +12,10 @@ import {
   COLOPHON_VERSIONS,
   COLOPHON_SECTIONS,
   AI_DISCLOSURE,
-  CAPSID_REPO_URL,
+  CAPSID_PAGE_PATH,
   CAPSOMER_NAME,
   CAPSOMER_SENTENCE_REST,
-  CAPSOMER_URL,
+  CAPSOMER_PAGE_PATH,
   CARREL_NAME,
   CARREL_PAGE_PATH,
   CARREL_SENTENCE_REST,
@@ -204,7 +204,7 @@ function StackDiagram() {
               <a href="#run">Prelum, site-runtime, site-api</a>
             </li>
             <li>
-              <a href={CAPSOMER_URL}>Capsomer</a>
+              <Link to={CAPSOMER_PAGE_PATH}>Capsomer</Link>
             </li>
           </ul>
         </li>
@@ -340,19 +340,19 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           </li>
           <li className="cap-panel">
             <p className="cap-panel-body">
-              Capsid's source is public <a href={CAPSID_REPO_URL}>on GitHub</a>.
+              Capsid's source is public; read about it on <Link to={CAPSID_PAGE_PATH}>its page</Link>.
             </p>
           </li>
           <li className="cap-panel">
             <p className="cap-panel-body">
-              <a href={CAPSOMER_URL}>{CAPSOMER_NAME}</a>
+              <Link to={CAPSOMER_PAGE_PATH}>{CAPSOMER_NAME}</Link>
               {CAPSOMER_SENTENCE_REST}
             </p>
           </li>
           {SHARED_PACKAGES.map((pkg) => (
             <li key={pkg.name} className="cap-panel">
               <p className="cap-panel-body">
-                <a href={pkg.url}>{pkg.name}</a>
+                <Link to={pkg.url}>{pkg.name}</Link>
                 {pkg.rest}
               </p>
             </li>
