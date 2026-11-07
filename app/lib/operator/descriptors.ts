@@ -20,9 +20,8 @@ const TOOLS = [
   "sync_roster",
   "sync_phages",
   "sync_registry",
-  "backup_media",
   "backup_status",
-  "backup_d1",
+  "run_job",
   "list_mentions",
   "decide_mention",
   "list_procedures",
@@ -32,7 +31,6 @@ const TOOLS = [
   "check_publications",
   "list_registry",
   "get_registry",
-  "purge_zero_results",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -267,27 +265,6 @@ export const TOOL_DESCRIPTORS: Readonly<
       "waiting for Dustin), and any validation errors the file has now. The format is docs/REGISTRY.md. Read only: " +
       "an item is saved through Carrel.",
   },
-  purge_zero_results: {
-    args: {},
-    returns:
-      "purged, the number of zero-result query rows removed: every row whose last_seen is older than " +
-      "ZERO_RESULT_RETENTION_SECONDS. The site's purge-zero-results cron job runs the same purge daily.",
-    policy:
-      "Takes no argument that names a row, so there is nothing to target beyond the fixed retention " +
-      "cutoff: a caller cannot choose what is removed. The rows have no derivation to rebuild them from, " +
-      "which is why this is destructive rather than a sync, but there is no identity-based refusal to " +
-      "document because every caller gets the same unconditional sweep.",
-  },
-  backup_media: {
-    args: {},
-    returns:
-      "Runs the nightly files backup now: one d1-dump backupFiles pass each over MEDIA and MEDIA_REVISIONS " +
-      "into BACKUPS under files/media/ and files/revisions/. It copies new and changed objects, and removes a " +
-      "copy only 30 days after its source is gone, under files/ in BACKUPS alone; it never writes or deletes " +
-      "in MEDIA or MEDIA_REVISIONS. A pass stops at 1000 writes or five minutes and the next goes on from " +
-      "there. Returns files: one entry per backup with name, complete, objects, copied, skipped, gone, " +
-      "kept_deleted, removed, locked and reserved. The site's cron runs it nightly at 05:00 UTC.",
-  },
   backup_status: {
     args: {},
     returns:
@@ -295,14 +272,21 @@ export const TOOL_DESCRIPTORS: Readonly<
       "backup (media, revisions) under files with its own, and a warning when any is past 26 hours. The same " +
       "read as /health's backup field. Capsid Admin's backups read it for every site.",
   },
-  backup_d1: {
-    args: {},
+  run_job: {
+    args: {
+      job: "string: a job in CRON_JOBS (app/lib/cron-jobs.mjs), or",
+      backup: "true: every backup job (backup, the D1 dump, and media-backup, the files) in turn",
+    },
     returns:
-      "Dumps every D1 table to the BACKUPS bucket under backups/json/<run id>/, checks the dump against " +
-      "the backup policy (the required non-derived tables are present, nothing credential-bearing is in it, " +
-      "it is not empty), writes the completion marker only if the check passes, then prunes runs outside " +
-      "the retention policy (14 daily, 8 weekly, 6 monthly). Returns run_id, exported_at, tables, rows, " +
-      "kept, pruned and locked (stale runs an R2 bucket lock kept). A failed check answers an error and leaves the run without its marker. The site's " +
-      "backup cron job runs the same dump nightly.",
+      "Runs the site's scheduled job now, through the code its cron runs (app/lib/cron-run.server.ts, site-runtime's " +
+      "runJobTool): recorded in cron_runs as the cron records it, so /health's cron check reads the run. Returns runs: " +
+      "one { job, status: ok | skipped | failed, ms, result?, error? } per job. backup writes a new D1 dump run and prunes " +
+      "runs outside retention; media-backup copies MEDIA and MEDIA_REVISIONS under files/ in BACKUPS; purge-zero-results " +
+      "removes the zero-result rows past ZERO_RESULT_RETENTION_SECONDS; check-publications mails each new DOI once.",
+    policy:
+      "Runs only a job the cron already runs, unchanged: a caller names a job, never a row, an object or an argument " +
+      "to it, so nothing can be targeted beyond what the schedule would do at its hour. The one job that removes rows " +
+      "no derivation rebuilds, purge-zero-results, removes exactly what its daily run removes (the fixed retention " +
+      "cutoff). Capsid Admin's back up now calls it with backup: true.",
   },
 };

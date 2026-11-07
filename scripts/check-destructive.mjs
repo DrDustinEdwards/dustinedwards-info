@@ -162,7 +162,7 @@ console.log(
    * DESTRUCTIVE operator tools. Each removes something no derivation can
    * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
    */
-  const OPERATOR_DESTRUCTIVE = new Set(["decide_mention", "purge_zero_results"]);
+  const OPERATOR_DESTRUCTIVE = new Set(["decide_mention", "run_job"]);
 
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([
@@ -244,18 +244,6 @@ console.log(
       "sync_registry",
       "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set " +
         "while rows exist rather than deleting every row (with no files and no rows there is nothing to converge)",
-    ],
-    [
-      "backup_media",
-      "d1-dump backupFiles passes over MEDIA and MEDIA_REVISIONS into BACKUPS: it only reads the two " +
-        "sources, and removes a copy under files/ in BACKUPS only 30 days after its source is gone. The " +
-        "MEDIA_REVISIONS sweep and the BACKUPS allow-list below hold that",
-    ],
-    [
-      "backup_d1",
-      "WRITES a new dump run and deletes only dump runs outside the retention policy, on the BACKUPS " +
-        "binding alone (the sweep below holds that); the newest complete run is never deleted and nothing " +
-        "is pruned while the bucket holds no complete run. The dumps are copies of D1, never the source",
     ],
   ]);
 

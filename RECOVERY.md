@@ -171,8 +171,8 @@ Live buckets for reference: `dustinedwards-media` is location `ENAM`,
   `dustinedwards-backups`. A pass copies only new and changed objects (it
   compares etags), stops at 1,000 writes or five minutes, and the next night
   goes on from where it stopped. A copy whose source is gone is kept 30 days,
-  then removed. `backup_media` on the operator API runs the same pass by hand,
-  from Capsid Admin's backups (the `site_backup` control, one for every site),
+  then removed. `run_job` on the operator API runs the same job by hand,
+  from Capsid Admin's backups (back up now, one control for every site),
   and `backup_status` reads the state now.
 - **Off the account, nightly.** capsid-backups' `offaccount.yml` (11:23 UTC)
   syncs all of `files/` to `files/dustinedwards/` in the Amazon S3 backup

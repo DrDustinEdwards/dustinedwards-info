@@ -15,7 +15,9 @@ import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readFile } from "~/lib/source/store.server";
 
-import { backupD1, backupMedia, backupStatus } from "~/lib/backup/d1-backup.server";
+import { backupStatus } from "~/lib/backup/d1-backup.server";
+import { runJobTool } from "@dustinedwards/site-runtime/cron";
+import { siteJobs } from "~/lib/cron-run.server";
 import type { OperatorEnv } from "./auth.server";
 import type { ToolName, ToolResult } from "./descriptors";
 import {
@@ -36,7 +38,6 @@ import {
 } from "./sync-tools.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
-import { purgeZeroResults } from "~/lib/search/zero-result.server";
 import { listPublishedPublications } from "~/db/publications";
 import { refreshCitations } from "~/lib/citations.server";
 import { checkPublicationSources } from "~/lib/publications/sources.server";
@@ -167,6 +168,7 @@ export async function runTool(
   actor: Actor,
   name: ToolName,
   args: Record<string, unknown>,
+  ctx?: ExecutionContext,
 ): Promise<ToolResult> {
   try {
     switch (name) {
@@ -212,14 +214,16 @@ export async function runTool(
       case "sync_registry":
         return await syncRegistry(env);
 
-      case "backup_media":
-        return { ok: true, data: { files: await backupMedia(env) } };
-
       case "backup_status":
         return { ok: true, data: await backupStatus(env) };
 
-      case "backup_d1":
-        return { ok: true, data: await backupD1(env) };
+      // Any cron job now, through the path the cron runs (app/lib/cron-run.server.ts, site-runtime runJobTool).
+      case "run_job":
+        if (!ctx) return { ok: false, status: 500, error: "run_job needs the request's context." };
+        return {
+          ok: true,
+          data: await runJobTool(env.DB, () => siteJobs(env, ctx, new Date())).run(args),
+        };
 
       case "list_mentions":
         return await listMentionsTool(env, args);
@@ -283,11 +287,6 @@ export async function runTool(
 
       case "get_registry":
         return await getRegistryTool(env, args);
-
-      case "purge_zero_results": {
-        const purged = await purgeZeroResults(env);
-        return { ok: true, data: { purged } };
-      }
     }
   } catch (error) {
     return translate(error);

@@ -1,5 +1,5 @@
 import { cappedJson } from "~/lib/body.server";
-import { getEnv } from "~/lib/context";
+import { cloudflareContext, getEnv } from "~/lib/context";
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
 import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
 
@@ -76,6 +76,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     { kind: "operator", id: auth.id },
     tool,
     (args ?? {}) as Record<string, unknown>,
+    context.get(cloudflareContext).ctx,
   );
 
   if (!result.ok) {

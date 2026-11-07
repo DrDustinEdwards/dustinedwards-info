@@ -1,5 +1,5 @@
-// The nightly D1 dump, run by the site Worker's own cron at 05:00 UTC (workers/app.ts), and by hand
-// through the operator API's backup_d1.
+// The nightly D1 dump, run by the site Worker's own cron at 05:00 UTC (app/lib/cron-run.server.ts), and by hand
+// as the same job through the operator API's run_job.
 //
 // BACKUPS holds the dumps under backups/json/ and the files backups under files/<name>/, both from d1-dump, and
 // Capsid's nightly off-account copy (capsid-backups offaccount.yml) takes both to Amazon. check:destructive lets only
@@ -59,8 +59,8 @@ export async function backupD1(env: BackupEnv) {
 const FILES_NAMES = ["media", "revisions"] as const;
 
 /**
- * One backupFiles pass over each bucket into BACKUPS, by the nightly cron and by hand through the operator API's
- * backup_media. A pass goes on where the last one stopped, so a large first copy finishes over several nights.
+ * One backupFiles pass over each bucket into BACKUPS, by the nightly cron and by hand as the same job through the
+ * operator API's run_job. A pass goes on where the last one stopped, so a large first copy finishes over several nights.
  * backupFiles only lists and reads its source; it writes, and removes a copy 30 days after its source is gone, under
  * files/<name>/ in BACKUPS alone. Each pass runs even when the other throws, and the run then throws, so the cron
  * records it failed and the next night retries.

@@ -30,14 +30,18 @@ describe("the nightly D1 dump", () => {
     for (const name of REQUIRED_TABLES) expect(dumped).toContain(name);
   });
 
-  it("is reachable as the operator tool", async () => {
+  it("runs now as the backup job through the operator API's run_job", async () => {
     const out = await runTool(
       testEnv as never,
       { kind: "operator", id: "test" } as never,
-      "backup_d1",
-      {},
+      "run_job",
+      { job: "backup" },
+      { waitUntil: () => undefined, passThroughOnException: () => undefined } as never,
     );
-    expect(out).toMatchObject({ ok: true, data: { tables: expect.any(Number) } });
+    expect(out).toMatchObject({
+      ok: true,
+      data: { runs: [{ job: "backup", status: "ok", result: { tables: expect.any(Number) } }] },
+    });
   });
 
   it("PLANTED: a credential table left in refuses the marker, so the run is never the restore point", async () => {
@@ -70,15 +74,24 @@ describe("the nightly files backup", () => {
     const out = await runTool(
       testEnv as never,
       { kind: "operator", id: "test" } as never,
-      "backup_media",
-      {},
+      "run_job",
+      { job: "media-backup" },
+      { waitUntil: () => undefined, passThroughOnException: () => undefined } as never,
     );
     expect(out).toMatchObject({
       ok: true,
       data: {
-        files: [
-          { name: "media", complete: true },
-          { name: "revisions", complete: true },
+        runs: [
+          {
+            job: "media-backup",
+            status: "ok",
+            result: {
+              files: [
+                { name: "media", complete: true },
+                { name: "revisions", complete: true },
+              ],
+            },
+          },
         ],
       },
     });

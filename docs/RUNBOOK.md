@@ -165,7 +165,7 @@ Two paths. Try them in this order.
 
 Since the Knowledge Base, D1 holds rows the repository does not (webmentions, sealed procedure
 versions, inventory lots and locations, lab members and their audit trails). The site Worker's own
-cron runs the `backup` job every day at 05:00 UTC (`workers/app.ts`; by hand, the operator API's `backup_d1`). It dumps every table to `dustinedwards-backups`
+cron runs the `backup` job every day at 05:00 UTC (`app/lib/cron-run.server.ts`; by hand, the operator API's `run_job` with `{ job: "backup" }`). It dumps every table to `dustinedwards-backups`
 (`BACKUPS`) under `backups/json/<run id>/`, checks the dump against `app/lib/backup/policy.mjs`,
 writes `_complete.json` only if the check passes, then prunes to 14 daily, 8 weekly and 6 monthly runs.
 `/health` reports `backup.last_ok` and `backup.age_hours` and warns past 26 hours; a failed run is
@@ -310,7 +310,7 @@ when none does.
 
 Media is backed up nightly like every other site's: the cron's `media-backup` job copies `MEDIA` to
 `files/media/` and `MEDIA_REVISIONS` (earlier file versions) to `files/revisions/` in
-`dustinedwards-backups` with d1-dump's `backupFiles` (by hand, the operator API's `backup_media`), and
+`dustinedwards-backups` with d1-dump's `backupFiles` (by hand, the operator API's `run_job` with `{ job: "media-backup" }`), and
 capsid-backups copies `files/` to Amazon S3 nightly. `/health` reports `backup.files.media` and
 `backup.files.revisions` and warns past 26 hours. RECOVERY.md section 3 has the whole posture.
 
