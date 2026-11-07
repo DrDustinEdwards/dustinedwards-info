@@ -5,6 +5,7 @@ seo_title: "site-runtime: the shared runtime for Dustin Edwards's sites"
 description: "site-runtime supplies security headers, the rate limiter, the health report, responsive images, sign-in and the edge page cache to Dustin Edwards's sites."
 schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/site-runtime
+programming_language: JavaScript
 ---
 
 ## The shared runtime

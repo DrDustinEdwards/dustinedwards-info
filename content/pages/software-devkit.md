@@ -5,6 +5,8 @@ seo_title: "devkit: shared tests, dependency rules and checks"
 description: "devkit holds the shared test workflows, the dependency update rules and the check that fails on a copy of code a shared package already provides."
 schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/devkit
+license: https://spdx.org/licenses/MIT.html
+programming_language: JavaScript
 ---
 
 ## Shared tooling

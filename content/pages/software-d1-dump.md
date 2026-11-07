@@ -5,6 +5,8 @@ seo_title: "d1-dump: per-table D1 backup and restore"
 description: "d1-dump backs up each table of a Cloudflare D1 database to the site's own R2 bucket and restores it, including databases with full-text search tables."
 schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/d1-dump
+license: https://spdx.org/licenses/MIT.html
+programming_language: TypeScript
 ---
 
 ## Backups that work with full-text search

@@ -5,6 +5,8 @@ seo_title: "site-api: the contract Carrel uses to publish to a site"
 description: "site-api is the contract Carrel uses to list, edit and publish a site's content. Each of Dustin Edwards's sites mounts the same handler."
 schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/site-api
+license: https://spdx.org/licenses/MIT.html
+programming_language: TypeScript
 ---
 
 ## The contract with Carrel

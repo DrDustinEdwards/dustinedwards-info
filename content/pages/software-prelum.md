@@ -5,6 +5,8 @@ seo_title: "Prelum: the publishing library behind these sites"
 description: "Prelum turns markdown into pages, feeds, sitemaps, search records, llms.txt and structured data for Dustin Edwards's sites."
 schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/prelum
+license: https://spdx.org/licenses/MIT.html
+programming_language: JavaScript
 ---
 
 ## The publishing library
