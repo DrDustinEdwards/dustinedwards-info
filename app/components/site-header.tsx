@@ -117,7 +117,7 @@ export function SiteHeader() {
             <span className="cap-site-header-agency">{SITE.name}</span>
           </span>
         </Link>
-        <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Site" data-site-nav="">
+        <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Main" data-site-nav="">
           <ul>
             <li>
               <Link
