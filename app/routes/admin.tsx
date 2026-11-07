@@ -83,7 +83,7 @@ export const middleware: Route.MiddlewareFunction[] = [
     const access = await timed(timings, "auth_access", () => accessIdentity(env, request));
     if (access.kind === "refused") {
       /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page.
-         A verified person off ADMIN_EMAILS is a 403: Access let them in, this site does not. */
+         A verified person off the roster is a 403: Access let them in, this site does not. */
       const notAdmin = access.reason === "not-admin";
       throw refusal(
         request,
