@@ -171,10 +171,10 @@
     {
       "id": "post-chart-redraw",
       "module": "app/enhance/charts.ts",
-      "enhancement": "A post's or page's :::chart is redrawn to its column's width by Prelum's render/chart-enhance, so a phone gets a chart at its own size with 12 px text, and gains Enarratio's enhancement layer: a keyboard walk between points, focus announcements, tooltips, legend filters, a sortable table, and Download SVG and PNG.",
+      "enhancement": "A post's or page's :::chart is redrawn to its column's width by Enarratio's redrawCharts, so a phone gets a chart at its own size with 12 px text, and gains Enarratio's enhancement layer: a keyboard walk between points, focus announcements, tooltips, legend filters, a sortable table, and Download SVG and PNG.",
       "fallback": "Prelum draws the chart into the stored HTML at 700 px, with its title, finding, data table behind Show data and Download CSV link, so it reads in full with script off.",
       "fallbackKind": "selector",
-      "fallbackAt": "[data-prelum-chart]",
+      "fallbackAt": "[data-enarratio-redraw]",
       "why": null
     },
     {
