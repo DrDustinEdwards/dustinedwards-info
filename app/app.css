@@ -749,15 +749,17 @@ a:where([href]:not([class], nav a, .cap-site-header a, .cap-family-footer a)):ac
   }
 }
 
-a:visited:not(:where(.cap-site-header a, .cap-family-footer a)) {
+/* The direction strip keeps its own link states (capsomer manual.css): a visited, hovered or pressed crumb
+   painted in these purples vanishes on the dark band. */
+a:visited:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
   color: var(--visited);
 }
 
-a:hover:not(:where(.cap-site-header a, .cap-family-footer a)) {
+a:hover:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
   color: var(--brand-hover);
 }
 
-a:active:not(:where(.cap-site-header a, .cap-family-footer a)) {
+a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a)) {
   color: var(--brand-pressed);
 }
 
