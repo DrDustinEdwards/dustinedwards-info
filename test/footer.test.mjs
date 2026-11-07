@@ -4,7 +4,13 @@ import assert from "node:assert/strict";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import { readFileSync } from "node:fs";
 
-import { SITE_LINKS, SOCIAL_LINKS, footerHrefs, siteLinks } from "../app/lib/footer.ts";
+import {
+  LEGAL_LINKS,
+  SOCIAL_LINKS,
+  footerHrefs,
+  legalLinks,
+  siteLinks,
+} from "../app/lib/footer.ts";
 import { PUBLISHED_PAGES } from "../app/lib/published-pages.generated.mjs";
 import { readPublishedPages } from "../scripts/lib/published-pages.mjs";
 import { OWNER_PROFILES } from "../app/lib/seo.ts";
@@ -44,9 +50,15 @@ await test("rel=me marks exactly the owner's profiles, and never a social link",
 // Dustin, 2026-10-11: the brand block, then Workspace and Site, then the copyright line. These pin his decision.
 
 await test("Accessibility is listed only while its page is published; the other Site links always are", () => {
-  const without = siteLinks([]).map((link) => link.to);
-  assert.deepEqual(without, ["/contact", "/site-map", "/colophon", "/privacy", "/terms"]);
-  assert.ok(siteLinks(["/accessibility"]).some((link) => link.to === "/accessibility"));
+  assert.deepEqual(
+    siteLinks([]).map((link) => link.to),
+    ["/contact", "/site-map", "/features", "/colophon"],
+  );
+  assert.deepEqual(
+    legalLinks([]).map((link) => link.to),
+    ["/privacy", "/terms"],
+  );
+  assert.ok(legalLinks(["/accessibility"]).some((link) => link.to === "/accessibility"));
   // The footer as built agrees with the page files as they are now.
   assert.deepEqual(
     [...PUBLISHED_PAGES],
@@ -54,7 +66,7 @@ await test("Accessibility is listed only while its page is published; the other 
     "published-pages.generated.mjs is stale: run build:content",
   );
   assert.equal(
-    SITE_LINKS.some((link) => link.to === "/accessibility"),
+    LEGAL_LINKS.some((link) => link.to === "/accessibility"),
     PUBLISHED_PAGES.includes("/accessibility"),
   );
 });
