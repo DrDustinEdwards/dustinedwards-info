@@ -39,6 +39,21 @@
   gap: 1.25rem;
   font-family: var(--font-sans);
   font-size: 0.875rem;
+  /* The run and keep-on-device buttons join this row after the page loads (enhance/run.ts, offline.ts). The row holds
+     the height it ends at, so they do not push the workflow and steps below down (layout shift, web.dev/cls). */
+  min-height: 9.5rem;
+}
+
+@media (min-width: 600px) {
+  .procedure-links {
+    min-height: 6.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .procedure-links {
+    min-height: 2.75rem;
+  }
 }
 
 .procedure-draft {
