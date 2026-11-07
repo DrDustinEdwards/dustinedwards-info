@@ -3,7 +3,7 @@ import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
-import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
+import { cloudflareContext, documentHandlerContext, cspNonceContext } from "~/lib/context";
 import { httpsRedirectStatus } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { cacheTags, EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
@@ -145,7 +145,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // The private planes only (/admin, /lab-bench): a public page is edge-cached with its header, so a nonce there would be shared
     // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
     const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
-    context.set(nonceContext, adminNonce);
+    context.set(cspNonceContext, adminNonce);
 
     // Server-Timing on every response (site-runtime ./server-timing): `render`, and each loader's marks. The
     // response comes back with mutable headers, rebuilt when the handler's were not (`Response.redirect()`).

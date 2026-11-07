@@ -1,24 +1,18 @@
 import { createContext, type RouterContextProvider } from "react-router";
 
+import {
+  cloudflareContext,
+  cspNonceContext,
+  getEnv,
+  getExecutionContext,
+  getNonce,
+} from "@dustinedwards/site-runtime/context";
+
 import type { previewBlogPost } from "~/db/posts";
 
-export const cloudflareContext = createContext<{
-  env: Env;
-  ctx: ExecutionContext;
-}>();
-
-export function getEnv(context: Readonly<RouterContextProvider>): Env {
-  return context.get(cloudflareContext).env;
-}
-
-// Admin only. Unlike the other response headers, the nonce must exist before the render: the same
-// value goes in the CSP header and on every `<script>` in the body. Public pages are edge-cached and
-// carry none, so it is undefined there (workers/csp.mjs).
-export const nonceContext = createContext<string | undefined>(undefined);
-
-export function getNonce(context: Readonly<RouterContextProvider>): string | undefined {
-  return context.get(nonceContext);
-}
+// The request context, the admin render's CSP nonce (public pages are edge-cached and carry none, workers/csp.mjs) and
+// their readers are site-runtime's ./context, re-exported so routes keep one import.
+export { cloudflareContext, cspNonceContext, getEnv, getExecutionContext, getNonce };
 
 /**
  * The Renderer's own document handler, so the Carrel preview renders a page in-process through the
@@ -38,7 +32,3 @@ export const documentHandlerContext = createContext<
 export const postPreviewContext = createContext<Awaited<ReturnType<typeof previewBlogPost>> | null>(
   null,
 );
-
-export function getExecutionContext(context: Readonly<RouterContextProvider>): ExecutionContext {
-  return context.get(cloudflareContext).ctx;
-}
