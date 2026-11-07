@@ -340,7 +340,8 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           </li>
           <li className="cap-panel">
             <p className="cap-panel-body">
-              Capsid's source is public; read about it on <Link to={CAPSID_PAGE_PATH}>its page</Link>.
+              Capsid's source is public; read about it on{" "}
+              <Link to={CAPSID_PAGE_PATH}>its page</Link>.
             </p>
           </li>
           <li className="cap-panel">
