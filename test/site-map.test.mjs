@@ -51,6 +51,7 @@ await test("the site map page is in sitemap.xml, at the address routes.ts gives 
  * as a page must be listed by gatherSiteUrls, so a new page cannot be left out of both maps by forgetting.
  */
 const EXEMPT = new Map([
+  ["/ads/random", "a 302 to a random ad of the noindex ad gallery, never a destination"],
   ["/gone", "the 410 page for removed WordPress addresses, never a destination"],
   ["/search", "a results page, different for every query"],
   ["/search/ask", "a streamed answer, not a page"],

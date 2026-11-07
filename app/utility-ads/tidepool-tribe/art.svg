@@ -1,0 +1,30 @@
+<!-- Original art for the Tidepool Tribe ad: flat shapes in the manner of a 1960s mail-order comic ad. Drawn for this site; no part of it is traced from any existing ad. Ids are bare here; the renderer prefixes them with the ad's id. -->
+<symbol id="critter" viewBox="0 0 100 130">
+  <path d="M34 78 C20 96 30 122 52 118 C70 114 66 100 74 92 C80 86 72 76 66 80 C60 84 62 96 54 100 C46 104 42 92 50 82 Z" fill="currentColor" stroke="#1b1f3b" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M38 24 C30 8 18 6 14 14" fill="none" stroke="#1b1f3b" stroke-width="4" stroke-linecap="round"/>
+  <path d="M62 24 C70 8 82 6 86 14" fill="none" stroke="#1b1f3b" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="14" cy="14" r="6" fill="#ffd23f" stroke="#1b1f3b" stroke-width="3"/>
+  <circle cx="86" cy="14" r="6" fill="#ffd23f" stroke="#1b1f3b" stroke-width="3"/>
+  <circle cx="50" cy="52" r="34" fill="currentColor" stroke="#1b1f3b" stroke-width="4"/>
+  <circle cx="38" cy="46" r="9" fill="#fff" stroke="#1b1f3b" stroke-width="3"/>
+  <circle cx="62" cy="46" r="9" fill="#fff" stroke="#1b1f3b" stroke-width="3"/>
+  <circle cx="40" cy="48" r="4" fill="#1b1f3b"/>
+  <circle cx="60" cy="48" r="4" fill="#1b1f3b"/>
+  <path d="M36 64 C42 78 58 78 64 64 Z" fill="#fff" stroke="#1b1f3b" stroke-width="3" stroke-linejoin="round"/>
+</symbol>
+<symbol id="tank" viewBox="0 0 300 420">
+  <rect x="14" y="44" width="272" height="364" rx="26" fill="#d9f3fa" stroke="#1b1f3b" stroke-width="8"/>
+  <path d="M18 120 C60 104 90 136 140 120 C190 104 230 136 282 118 L282 380 Q282 404 258 404 L42 404 Q18 404 18 380 Z" fill="#1f8fc4"/>
+  <path d="M24 372 L276 372 L276 392 Q276 400 268 400 L32 400 Q24 400 24 392 Z" fill="#f2d48f"/>
+  <path d="M190 372 L190 330 L202 330 L202 340 L214 340 L214 330 L226 330 L226 340 L238 340 L238 330 L250 330 L250 372 Z" fill="#e9eef7" stroke="#1b1f3b" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M214 372 L214 356 Q226 344 238 356 L238 372 Z" fill="#1b1f3b"/>
+  <path d="M40 372 C28 340 52 322 40 290 C34 274 44 262 44 262" fill="none" stroke="#2f9e5a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M62 372 C52 346 72 332 64 306" fill="none" stroke="#2f9e5a" stroke-width="8" stroke-linecap="round"/>
+  <use href="#critter" x="70" y="210" width="84" height="110" color="#ef5b3b"/>
+  <use href="#critter" x="150" y="180" width="96" height="125" color="#f4a72a"/>
+  <use href="#critter" x="120" y="296" width="52" height="68" color="#9b6bd6"/>
+  <circle cx="60" cy="190" r="9" fill="none" stroke="#fff" stroke-width="4"/>
+  <circle cx="82" cy="160" r="6" fill="none" stroke="#fff" stroke-width="4"/>
+  <circle cx="248" cy="228" r="8" fill="none" stroke="#fff" stroke-width="4"/>
+  <circle cx="230" cy="150" r="5" fill="none" stroke="#fff" stroke-width="4"/>
+</symbol>
