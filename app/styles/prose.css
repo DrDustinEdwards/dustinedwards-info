@@ -64,8 +64,15 @@
   margin: 0 0 1.125rem;
 }
 
-.prose a {
+/* Not the dark signs (a.cap-sign), whose own color Capsomer sets: brand purple on them is 1.67:1. */
+.prose a:where(:not(.cap-sign)) {
   color: var(--brand);
+}
+
+/* A link in a table's row header is already bold, so weight cannot tell it from the text around it, and its purple is
+   under 3:1 against the near-black text (WCAG 1.4.1: G183, F73): italic is the cue for a cross-reference. */
+.prose th a {
+  font-style: italic;
 }
 
 .prose ul,

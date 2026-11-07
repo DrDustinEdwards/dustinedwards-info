@@ -198,7 +198,7 @@
 }
 
 /* Restated because .prose a would otherwise outrank the base hover. */
-.post-body .prose a {
+.post-body .prose a:where(:not(.cap-sign)) {
   color: var(--brand);
 }
 

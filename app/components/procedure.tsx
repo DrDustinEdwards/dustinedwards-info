@@ -36,7 +36,7 @@ import { RENDERED } from "~/lib/content/render-version";
 
 function TroubleshootingTable({ record }: { record: ProcedureRecord }) {
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" tabIndex={0} role="region" aria-label="Troubleshooting">
       <table className="procedure-trouble">
         <thead>
           <tr>
