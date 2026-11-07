@@ -1,7 +1,7 @@
 // The dustinedwards.info side of Carrel's site API (the site-api package): the package owns the
 // route, the key, the rate limit and every body's shape; this adapter maps its content and preview
 // calls onto the site's own save, render and history code. Nothing here writes around savePost.
-// Media (v0.2.0) is its own module, over the site's media code.
+// Media (v0.2.0) is its own module, over the site's media code, and so are mentions (mentions-adapter.server.ts).
 //
 // v0.17.0 on posts: trash and restore (a trashed post is a draft listed only in the trash, content_trash), rename (the
 // file and its history move, and the old address of a post ever public answers a 301, post_redirects), a publish under
@@ -25,6 +25,7 @@ import { RouterContextProvider } from "react-router";
 import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
+import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
 import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
@@ -476,6 +477,8 @@ export function carrelSiteAdapter(options: {
     content: { ...registry.adapter, searchFields: SEARCH_FIELDS },
     preview: { render: registry.render },
     media: carrelMediaAdapter(env),
+    // The webmention queue, for Carrel and the site's own admin alike (mentions-adapter.server.ts).
+    mentions: carrelMentionsAdapter(env),
     schedules: postSchedules(env, write),
     // Carrel's 404 report: the counts workers/app.ts keeps with site-runtime's countNotFound (drizzle/0041).
     insight: { notFound: (options) => notFoundReport(env.DB, options) },

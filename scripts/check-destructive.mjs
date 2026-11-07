@@ -29,9 +29,6 @@ const DESTRUCTIVE = new Set([
   // a count of one.
   "admin.tools.tsx:rebuild",
   "admin.tools.tsx:sync-ask",
-  // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
-  "admin.mentions.tsx:delete",
-  "admin.mentions.tsx:sweep",
 ]);
 
 /**
@@ -41,18 +38,12 @@ const DESTRUCTIVE = new Set([
 const REVERSIBLE = new Map([
   ["admin.tools.tsx:regenerate", "rewrites D1 rows from the artifact, idempotent"],
   ["admin.tools.tsx:reset-ask-budget", "a counter; see the report, no data is lost"],
-  [
-    "admin.mentions.tsx:approve",
-    "sets a decision on a verified mention, undone by reject: the DB layer's " +
-      "decidable set holds approved and rejected alongside pending precisely so " +
-      "the pair is a two-way door, and no column is removed either way",
-  ],
-  ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
 ]);
 
-// The media library's intents are site-api's content kit (runMediaIntent), which this detector cannot
-// see: its delete and empty-trash ask for the count before anything goes (askFirst, tested in site-api
-// and in test/worker/media.test.ts), and a site with a trash deletes only from it.
+// The media library's and the mentions queue's intents are site-api's content kit (runMediaIntent,
+// runMentionsIntent), which this detector cannot see: a media delete and empty-trash, and a mention delete
+// and sweep, ask before anything goes (tested in site-api, and in test/worker/media.test.ts and
+// test/worker/webmention-moderation.test.ts), and a site with a trash deletes only from it.
 
 const tally = createTally({ blankLine: true });
 const { ok } = tally;
@@ -111,8 +102,8 @@ ok(
 );
 ok(
   "the intent vocabulary is non-empty",
-  found.size >= 7,
-  `parsed ${found.size} intent(s), floor 7, measured 8 on 2026-10-29 (the media library's moved to the content kit); every per-intent assertion above is vacuous if this is empty`,
+  found.size >= 3,
+  `parsed ${found.size} intent(s), floor 3, measured 4 on 2026-11-06 (the media library's and the mentions queue's moved to the content kit); every per-intent assertion above is vacuous if this is empty`,
 );
 
 // A new intent nobody classified fails by name rather than defaulting to safe.
@@ -162,13 +153,12 @@ console.log(
    * DESTRUCTIVE operator tools. Each removes something no derivation can
    * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
    */
-  const OPERATOR_DESTRUCTIVE = new Set(["decide_mention", "run_job"]);
+  const OPERATOR_DESTRUCTIVE = new Set(["run_job"]);
 
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([
     ["sync_status", "a read"],
     ["backup_status", "a read"],
-    ["list_mentions", "a read"],
     [
       "sync_ask",
       "converges a DERIVED index to the corpus through its own derivation, which " +
@@ -499,7 +489,7 @@ console.log(
 }
 
 // Measured by running this gate. Not raised on every addition: its job is to catch a whole block being skipped.
-const MINIMUM_CHECKS = 99;
+const MINIMUM_CHECKS = 83;
 tally.floor("check:destructive", "checks", MINIMUM_CHECKS);
 
 console.log(
