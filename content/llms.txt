@@ -81,6 +81,7 @@ An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesti
 - [Home](https://dustinedwards.info/): the home page, which has no markdown twin
 - [About](https://dustinedwards.info/about): about Dustin Edwards
 - [Contact](https://dustinedwards.info/contact): how to reach Dustin Edwards
+- [Features](https://dustinedwards.info/features): what the whole network of programs and sites does, by job
 - [Colophon](https://dustinedwards.info/colophon): how this site is built
 - [Privacy](https://dustinedwards.info/privacy): what the site collects
 - [Accessibility](https://dustinedwards.info/accessibility): what the site's checks test about accessibility, and how to report a problem

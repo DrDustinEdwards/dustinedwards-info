@@ -1,0 +1,109 @@
+/*
+ * The features page (app/routes/features.tsx): chips that filter by program, then a card for each thing a program does.
+ * Complete with script off: every card is in the HTML, and the script only hides the cards a chip leaves out. The cards are
+ * Capsomer's panels and the chips Capsomer's solid chips, on the site's tokens.
+ */
+.features-lead {
+  max-inline-size: 46rem;
+  margin-block: 0.5rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+.features-chips {
+  margin-block-end: 2rem;
+}
+
+/* The line a screen reader hears when the filter changes; it is not drawn. */
+.features-status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.features {
+  counter-reset: features-section;
+}
+
+.features-section {
+  margin-block-end: 3rem;
+  scroll-margin-block-start: 6rem;
+}
+
+.features-section[hidden],
+.features-card[hidden] {
+  display: none;
+}
+
+.features-section > h2 {
+  counter-increment: features-section;
+  margin-block-end: 0.25rem;
+}
+
+.features-section > h2::before {
+  content: counter(features-section);
+  display: inline-block;
+  min-inline-size: 2rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.features-intro {
+  margin-block: 0 1.25rem;
+  color: var(--text-secondary);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.features-card {
+  margin: 0;
+}
+
+.features-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 0.375rem;
+}
+
+.features-card-name {
+  font-family: var(--ui);
+  font-weight: 600;
+}
+
+/* The program, as a label: mono capitals, the one cue that is not the card's words. */
+.features-card-tag {
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.features-card-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.features-source {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+/* A pressed chip fills with the primary color, so its count takes the chip's own text color to stay readable. */
+.features-chips .cap-chip[aria-pressed="true"] .cap-chip-count {
+  color: inherit;
+}

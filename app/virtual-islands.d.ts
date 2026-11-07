@@ -13,6 +13,7 @@ declare module "virtual:islands" {
     | "catalog"
     | "charts"
     | "cv"
+    | "features"
     | "header"
     | "offline"
     | "palette"

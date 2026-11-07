@@ -53,6 +53,11 @@ export const STATIC_PAGES = [
     sources: ["app/routes/colophon.tsx", "content/stack-notes.json"],
   },
   {
+    path: "/features",
+    title: "Features",
+    sources: ["app/routes/features.tsx", "app/lib/features.mjs"],
+  },
+  {
     path: "/systems",
     title: "System map",
     sources: ["app/routes/systems.tsx", "data/system-model.json"],

@@ -248,6 +248,15 @@
       "fallbackKind": "selector",
       "fallbackAt": ".systems-map",
       "why": null
+    },
+    {
+      "id": "features",
+      "module": "app/enhance/features.ts",
+      "enhancement": "On the features page, a press on a program's chip shows only that program's cards, hides a section left with none, and says how many are showing.",
+      "fallback": "The page is complete as served: every card is in the HTML under its section, each naming its program, and every chip is a button that only narrows the list, so nothing is missing without the script.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".features-grid",
+      "why": null
     }
   ]
 }

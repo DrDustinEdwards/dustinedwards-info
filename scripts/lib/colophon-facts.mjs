@@ -11,6 +11,7 @@ import {
   CARREL_SENTENCE_REST,
   CREDITS,
   SECURITY_TRADEOFF,
+  SHARED_PACKAGES,
   SITE_OPERATION,
   statusLabel,
 } from "../../app/lib/colophon-sections.mjs";
@@ -78,6 +79,10 @@ export function colophonFacts(stack, features, id) {
       `href="${CAPSID_REPO_URL}"`,
       `href="${CAPSOMER_URL}">${CAPSOMER_NAME}</a>`,
       el(CAPSOMER_SENTENCE_REST),
+      ...SHARED_PACKAGES.flatMap((/** @type {any} */ p) => [
+        `href="${p.url}">${p.name}</a>`,
+        el(html(p.rest)),
+      ]),
     ];
   if (id === "credits")
     return CREDITS.flatMap((/** @type {any} */ c) => [
