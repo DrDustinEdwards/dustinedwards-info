@@ -6,7 +6,8 @@
 // build:content and the install step both call it.
 //
 // A shallow clone (CI's checkout) holds one commit, which would date every file to it: that is no fact about the
-// files, so a shallow clone writes no dates and the sitemap leaves `lastmod` out, as it did before.
+// files, so a shallow clone takes no dates from git. It still takes the pull manifest's, the day D1 last changed each
+// file it holds, which is how a deploy dates the pages (the next lines of this comment say so).
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -33,44 +34,56 @@ const git = (/** @type {string[]} */ args, cwd = ROOT) =>
  * @returns {Record<string, string>}
  */
 export function readSourceDates(cwd = ROOT) {
-  let log;
-  try {
-    if (git(["rev-parse", "--is-shallow-repository"], cwd).trim() !== "false") return {};
-    log = git(
-      [
-        "-c",
-        "log.showSignature=false",
-        "-c",
-        "core.quotePath=false",
-        "log",
-        "--no-renames",
-        "--format=%x00%ct",
-        "--name-only",
-        "--",
-        ...SOURCE_TREES,
-      ],
-      cwd,
-    );
-  } catch {
-    return {};
-  }
-  const tracked = new Set(
-    git(["ls-files", "--", ...SOURCE_TREES], cwd)
-      .split("\n")
-      .filter(Boolean),
-  );
   /** @type {Record<string, string>} */
   const dates = {};
-  for (const block of log.split("\0").slice(1)) {
-    const [seconds, ...files] = block.split("\n").filter(Boolean);
-    const day = new Date(Number(seconds) * 1000).toISOString().slice(0, 10);
-    for (const file of files) if (tracked.has(file) && !(file in dates)) dates[file] = day;
+  // A shallow clone has no history to date files from, but the pull manifest below still dates every file D1 holds, so
+  // the deploy (a shallow checkout that pulls the content) keeps its dates: returning here dropped all of them.
+  if (isFullClone(cwd)) {
+    let log;
+    try {
+      log = git(
+        [
+          "-c",
+          "log.showSignature=false",
+          "-c",
+          "core.quotePath=false",
+          "log",
+          "--no-renames",
+          "--format=%x00%ct",
+          "--name-only",
+          "--",
+          ...SOURCE_TREES,
+        ],
+        cwd,
+      );
+    } catch {
+      log = "";
+    }
+    const tracked = new Set(
+      git(["ls-files", "--", ...SOURCE_TREES], cwd)
+        .split("\n")
+        .filter(Boolean),
+    );
+    for (const block of log.split("\0").slice(1)) {
+      const [seconds, ...files] = block.split("\n").filter(Boolean);
+      const day = new Date(Number(seconds) * 1000).toISOString().slice(0, 10);
+      for (const file of files) if (tracked.has(file) && !(file in dates)) dates[file] = day;
+    }
   }
   for (const [file, entry] of Object.entries(readPullManifest(cwd) ?? {})) {
     if (entry.day) dates[file] = entry.day;
     else delete dates[file];
   }
   return Object.fromEntries(Object.entries(dates).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+/** Whether git holds the whole history; false for a shallow clone, or where git is missing. @param {string} cwd */
+function isFullClone(cwd) {
+  try {
+    return git(["rev-parse", "--is-shallow-repository"], cwd).trim() === "false";
+  } catch {
+    return false;
+  }
 }
 
 /** The generated module's text. @param {Record<string, string>} dates */

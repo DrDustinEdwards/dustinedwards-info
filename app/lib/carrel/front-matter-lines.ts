@@ -1,4 +1,4 @@
-// Front matter edits for every kind Carrel writes, on site-api's frontmatter module (`@dustinedwards/site-api/
+// Front matter edits for every kind Carrel writes, on Prelum's frontmatter module (`@drdustinedwards/site-helpers/
 // frontmatter`), which replaces one top-level key's block and returns every other block byte for byte: a status change
 // must leave the keys the site does not know as they were.
 

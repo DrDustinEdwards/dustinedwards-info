@@ -1,3 +1,4 @@
+import { postAccessSync } from "@dustinedwards/site-runtime/access-sync";
 import { allowList } from "@dustinedwards/site-runtime/members";
 
 import {
@@ -22,9 +23,7 @@ import { LAB_CATALOG } from "./titles.mjs";
  * reason, the page shows it beside each person, and Retry runs this again.
  */
 
-export const ACCESS_SYNC_URL = "https://mcp.dustinedwards.info/ops/access-sync";
 const ACCESS_SYNC_NAMESPACE = "dustinedwards";
-const TIMEOUT_MS = 15_000;
 
 /** What the page says while the site holds no key: the change is recorded and Access is untouched. */
 export const SYNC_NOT_SET_UP =
@@ -37,22 +36,6 @@ export const SYNC_NOT_SET_UP_REASON =
 export type SyncOutcome = { ok: true } | { ok: false; error: string };
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
-
-/** Capsid's refusal in its own words: JSON `refusal` on a 409 or 502, plain text otherwise. */
-async function refusalText(response: Response): Promise<string> {
-  const text = (await response.text()).slice(0, 600);
-  try {
-    const body = JSON.parse(text) as { refusal?: unknown };
-    if (typeof body.refusal === "string" && body.refusal)
-      return `Cloudflare refused: ${body.refusal}`;
-  } catch {
-    // Plain text: Capsid's own refusals (401, 403, 409 with no pin, 503 with no token) are words already.
-  }
-  const notSetUp = /CF_ACCESS_SYNC_TOKEN is not set/.test(text)
-    ? " Access sync is not set up yet at Capsid (Dustin's step), so nothing was changed in Cloudflare Access."
-    : "";
-  return `Capsid answered ${response.status}: ${text.trim() || response.statusText}.${notSetUp}`;
-}
 
 /**
  * Two managers' changes can sync at once and finish in either order. So a sync settles only the audit rows that existed
@@ -86,25 +69,12 @@ async function callCapsid(env: Env, nowMs: number, fetchImpl: FetchLike): Promis
   if (!key) return { ok: false, error: SYNC_NOT_SET_UP_REASON };
 
   const rows = await listMembers(env);
-  const body = {
+  const result = await postAccessSync({
+    key,
     namespace: ACCESS_SYNC_NAMESPACE,
     members: allowList(rows, nowMs, LAB_CATALOG),
     removed: await unsyncedRemovals(env),
-  };
-  let response: Response;
-  try {
-    response = await fetchImpl(ACCESS_SYNC_URL, {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-  } catch (error) {
-    return {
-      ok: false,
-      error: `Capsid could not be reached: ${error instanceof Error ? error.message : String(error)}`,
-    };
-  }
-  if (response.ok) return { ok: true };
-  return { ok: false, error: await refusalText(response) };
+    fetch: (input, init) => fetchImpl(String(input), init),
+  });
+  return result.ok ? { ok: true } : { ok: false, error: result.refusal };
 }
