@@ -259,6 +259,15 @@
       "why": null
     },
     {
+      "id": "colophon",
+      "module": "app/enhance/colophon.ts",
+      "enhancement": "On the colophon, the side index marks the section being read, and chips appear that show one group of the site's features at a time and say how many are showing.",
+      "fallback": "The page is complete as served: every section and every feature card is in the HTML in order, with the side index linking each section, so nothing is missing without the script.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".colophon-features",
+      "why": null
+    },
+    {
       "id": "roster-photo-lightbox",
       "module": "app/enhance/roster.ts",
       "enhancement": "Intercepts a click on a roster photo and opens it full size in an overlay (Capsomer's lightbox, the one the posts use).",

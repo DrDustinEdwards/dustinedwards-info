@@ -3,8 +3,8 @@
   "features": [
     {
       "component": "Content pipeline",
-      "name": "Markdown is the source of truth, D1 owns every read",
-      "what": "Posts are markdown files in the repository, and git holds the markdown and nothing else. D1 holds the only rendered copy, and every public read queries D1. Each row records the git blob sha of the source it came from and a hash of its own render, so a ship compares both against a fresh build before writing and names by slug every row that has drifted. A row whose source is unchanged but whose render differs fails the run after the deploy stands, because that is a defect in the pipeline rather than staleness.",
+      "name": "D1 holds the source, and every read comes from it",
+      "what": "D1's source_files table holds every file a save writes, keyed by repository path, and source_revisions holds each version. The repository copies are the seed and CI's test corpus. A deploy pulls D1's files over the checkout, builds from them and restores the checkout. Each rendered row records the blob sha of its source and a hash of its own render, so a ship compares both against a fresh build before writing and names every row that has drifted. A row whose source is unchanged but whose render differs fails the run after the deploy stands, because that is a pipeline defect, not staleness.",
       "anchors": [
         {
           "kind": "route",
@@ -43,6 +43,70 @@
         {
           "kind": "gate",
           "gate": "check:machine-readable"
+        }
+      ]
+    },
+    {
+      "component": "Writing",
+      "name": "Posts are written in Carrel, through one save",
+      "what": "The admin has no post editor. Carrel writes posts through /api/carrel/v1, and the operator API calls the same save. A save validates the frontmatter, writes the file and its revision in one D1 batch, renders the rows and purges the cache by tag. Ask is updated last and cannot fail the save. The save names the blob sha it loaded, and a file changed since is refused, with the same check inside the batch.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/api/carrel/v1/*",
+          "anonymousGet": false
+        },
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        }
+      ]
+    },
+    {
+      "component": "Writing",
+      "name": "Each caller has a fixed set of capabilities",
+      "what": "One table in the publish policy lists what each caller may do. The admin may do everything. An operator may write but not publish a post for the first time or delete one. Carrel may write and publish for the first time but not delete. A refusal is a 403 that names the rule.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/api/operator",
+          "anonymousGet": false
+        },
+        {
+          "kind": "gate",
+          "gate": "check:policy"
+        }
+      ]
+    },
+    {
+      "component": "Writing",
+      "name": "First publication is a fact in the file",
+      "what": "A post's first_published date lives in its frontmatter, not in a database column, because rows are rebuilt from the source and a column would be dropped silently and fail open. The value is read only from the stored file and overwritten on the way out, so a caller cannot publish a draft by asserting the fact the gate checks.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/api/operator",
+          "anonymousGet": false
+        },
+        {
+          "kind": "assertion",
+          "gate": "check:policy",
+          "text": "readState reads a previously published post"
+        }
+      ]
+    },
+    {
+      "component": "Writing",
+      "name": "Scheduled posts go live with no write",
+      "what": "A per-minute cron puts schedules live. A post scheduled before it was ever live goes live by its publish_at with no write, and the cron announces it once, so IndexNow, the page purge and the outgoing webmentions all hear it.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/webmention"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:worker"
         }
       ]
     },
@@ -186,83 +250,6 @@
           "kind": "route",
           "path": "/search/ask",
           "anonymousGet": false
-        }
-      ]
-    },
-    {
-      "component": "Admin editor",
-      "name": "The markdown is committed before the database is touched",
-      "what": "A save commits exactly the markdown, through the Git Data API, and writes D1 only after that commit lands. Files are the source of truth, so nothing reaches the database that is not already in git, and the ordering is the whole guarantee: a database row can always be rebuilt from the repository, and a commit can never be rebuilt from a row. If the repository host is unreachable the save fails whole; there is no database-only write and no reconcile-later queue.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:policy"
-        }
-      ]
-    },
-    {
-      "component": "Admin editor",
-      "name": "The editor records the head commit and refuses a conflict",
-      "what": "The editor notes the head commit when it loads and sends it back on save. If the branch moved, the save is refused with the divergence named and no commit is created. The reference update is never forced, so the editor cannot overwrite a change it did not see.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:worker"
-        }
-      ]
-    },
-    {
-      "component": "Admin editor",
-      "name": "Version history restores by writing a new commit",
-      "what": "History lists the commits touching a post's file, shows a diff per commit, and restores by reading the file at an old commit and putting it back through the ordinary save path. A restore is therefore a new commit, never a force push and never a rewrite, and the gates run again on restored content so an old commit cannot bypass a newer rule.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:content"
-        }
-      ]
-    },
-    {
-      "component": "Admin editor",
-      "name": "One feedback slot, four named outcomes",
-      "what": "A first publication used to complete in silence, which is a design failure for the one act the system reserves to a human. The slot names the transition rather than the action: saved, first publication, republished, unpublished. The transition is decided by the publish policy module and not by the interface, because current state cannot tell a first publication from a republication: a post marked draft is either brand new or previously withdrawn.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:policy"
-        }
-      ]
-    },
-    {
-      "component": "Operator API",
-      "name": "Agents write through the same path a human does",
-      "what": "A bearer-token JSON endpoint exposes the editor's save machinery to non-browser callers. It calls the same save and delete functions the browser action calls, so an agent gets the same schema gates, the same style check, the same single atomic commit, the same database sync and the same index sync. Nothing in the operator layer touches the repository, the database or the AI index directly.",
-      "anchors": [
-        {
-          "kind": "route",
-          "path": "/api/operator",
-          "anonymousGet": false
-        },
-        {
-          "kind": "gate",
-          "gate": "check:policy"
-        }
-      ]
-    },
-    {
-      "component": "Operator API",
-      "name": "An agent may not perform a post's first publication",
-      "what": "An operator may create, edit, unpublish and republish. It may not make a post public for the first time; that is refused with a 403 naming the policy. The durable fact lives in frontmatter, is stamped once by the save path, and is read only from the committed file and always overwritten on the way out, because otherwise an agent could publish any draft by asserting the very fact the gate checks.",
-      "anchors": [
-        {
-          "kind": "route",
-          "path": "/api/operator",
-          "anonymousGet": false
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:policy",
-          "text": "readState reads a previously published post"
         }
       ]
     },
@@ -474,6 +461,126 @@
           "gate": "check:tests",
           "file": "test/visibility-invariants.test.mjs",
           "text": "both predicates admit the same posts"
+        }
+      ]
+    },
+    {
+      "component": "Pages",
+      "name": "Prose pages are rows, not deploys",
+      "what": "The Research, Teaching and Software pages and About are markdown files saved into D1's pages table. The page, its markdown twin, its sitemap entry and its search records are drawn from that row at request time, so an edit goes live without a build or a deploy. A save runs the same validator CI runs.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/about"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:links"
+        }
+      ]
+    },
+    {
+      "component": "CV",
+      "name": "One source, four outputs",
+      "what": "The CV is one file per section, saved into D1. The page at /cv, its charts at /cv/charts.json, its markdown twin at /cv.md and its PDF are all drawn from those rows. The page filters, searches and sorts without a reload.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/cv"
+        },
+        {
+          "kind": "route",
+          "path": "/cv.md"
+        }
+      ]
+    },
+    {
+      "component": "Publications",
+      "name": "Citations export in BibTeX, RIS and JSON",
+      "what": "Each paper is a file named by its DOI and saved into D1, and its page is drawn from the row. The list exports as BibTeX, RIS and JSON, and each paper as BibTeX, RIS and markdown. The CV gives each paper copy buttons for its plain citation, BibTeX and RIS.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/research/publications"
+        },
+        {
+          "kind": "route",
+          "path": "/research/publications.bib"
+        }
+      ]
+    },
+    {
+      "component": "Procedures",
+      "name": "One format for protocols, recipes and computational procedures",
+      "what": "A procedure is a file with a profile (protocol, recipe or computational), saved into D1 and drawn from the row. A procedure page can run as a checklist with a Done check and a note for each step, and can be kept on the device for offline use.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/research/protocols"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:protocols"
+        }
+      ]
+    },
+    {
+      "component": "Systems map",
+      "name": "The network is a map, not a list",
+      "what": "/systems draws the network of systems. Pointing at a system lights the ones it uses and the ones that use it, and mutes the rest. Each system has its own page with its parts and flows, and every flow is an ordered list without script.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/systems"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:systems-map"
+        }
+      ]
+    },
+    {
+      "component": "Error pages",
+      "name": "Each error page carries a vintage comic ad",
+      "what": "The not found, gone, forbidden and server error pages show a small comic-book ad at the foot, below the page's plain message and buttons. /ads is the gallery, and adding a folder under app/utility-ads adds an ad.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/ads/:id?"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:tests"
+        }
+      ]
+    },
+    {
+      "component": "Reading aids",
+      "name": "Posts add reading aids without script",
+      "what": "A reading-progress bar, a table of contents that follows the section on screen, copy buttons on code blocks, footnote previews, an image lightbox and click-to-copy heading links are each added by script to a page that is complete without them.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/writing"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:features"
+        }
+      ]
+    },
+    {
+      "component": "Search",
+      "name": "A command palette opens on / or Cmd-K",
+      "what": "The header's search link becomes a modal palette with live results. Without script it is the search page.",
+      "anchors": [
+        {
+          "kind": "route",
+          "path": "/search"
+        },
+        {
+          "kind": "gate",
+          "gate": "check:features"
         }
       ]
     },
