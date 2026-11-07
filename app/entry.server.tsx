@@ -5,6 +5,9 @@ import { renderToReadableStream } from "react-dom/server";
 import { getNonce } from "~/lib/context";
 import { errorMessage } from "~/lib/error-message.mjs";
 
+// React Router prints every route error, so each scanner 404 wrote a stack trace; a route 404 is counted, not logged.
+export { handleServerError as handleError } from "@dustinedwards/site-runtime/log";
+
 export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
