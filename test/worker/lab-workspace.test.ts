@@ -4,7 +4,7 @@ import { env } from "cloudflare:test";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Actor, MemberRow } from "@dustinedwards/site-runtime/members";
 
-import { ACCESS_SYNC_URL, SYNC_NOT_SET_UP, SYNC_NOT_SET_UP_REASON } from "~/lab/access-sync.server";
+import { SYNC_NOT_SET_UP, SYNC_NOT_SET_UP_REASON } from "~/lab/access-sync.server";
 import { labActorContext, loadLabActor } from "~/lab/actor.server";
 import { membersAction, membersPage } from "~/lab/members.server";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -403,7 +403,7 @@ describe("each change, its audit row and the Access sync", () => {
     });
     expect(bodies).toEqual([
       {
-        url: ACCESS_SYNC_URL,
+        url: "https://mcp.dustinedwards.info/ops/access-sync",
         auth: `Bearer ${"k".repeat(40)}`,
         body: {
           namespace: "dustinedwards",
