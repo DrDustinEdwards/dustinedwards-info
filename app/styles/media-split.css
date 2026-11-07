@@ -2,7 +2,7 @@
    every other block (.media-split--flip). The reusable pattern behind the cohorts on /teaching/phage-discovery
    (app/components/phage-roster.tsx), which sets the flip from the year so adding a cohort never moves the others.
    Source order is heading, text, picture, so reading order and focus order stay the same at every width; only
-   the layout moves them. Narrow screens stack heading, picture, text. Children: .media-split__head,
+   the layout moves them. The picture's top lines up with the first line of text, under the heading. Narrow screens stack heading, picture, text. Children: .media-split__head,
    .media-split__text, .media-split__media. */
 .media-split {
   display: grid;
@@ -52,14 +52,13 @@
   .media-split {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
-      "head media"
+      "head ."
       "text media";
-    grid-template-rows: auto 1fr;
   }
 
   .media-split--flip {
     grid-template-areas:
-      "media head"
+      ". head"
       "media text";
   }
 
