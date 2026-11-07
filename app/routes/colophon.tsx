@@ -28,11 +28,16 @@ import {
   COLOPHON_URL,
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
+import { PageContents } from "~/components/page-contents";
 import { PageShell } from "~/components/page-shell";
 import { HEALTH_EDGE_CACHE_CONTROL, publicHtmlHeaders, SITE, pageMeta } from "~/lib/seo";
 
 import "~/styles/evidence-row.css";
+import "capsomer/tokens.css";
 import "~/styles/prose.css";
+import "capsomer/chips.css";
+import "capsomer/panel.css";
+import "~/styles/colophon.css";
 
 /**
  * Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. The short edge
@@ -142,6 +147,21 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   );
 }
 
+/** A statement as a lead sentence and the rest as a short list, so it reads in a glance and not as a wall. */
+function Statements({ sentences }: { sentences: readonly string[] }) {
+  const [lead, ...rest] = sentences;
+  return (
+    <>
+      <p className="colophon-note-lead">{lead}</p>
+      <ul className="colophon-note-list">
+        {rest.map((sentence) => (
+          <li key={sentence.slice(0, 32)}>{sentence}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 /** A /health status as a cockpit light: at rest, caution (amber) or warning (red), and the word it says. */
 const LIGHTS = {
   pass: { state: "normal", word: "Pass" },
@@ -187,7 +207,14 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
   const healthAge = "ageSeconds" in health ? String(health.ageSeconds) : undefined;
 
   return (
-    <PageShell rail={null}>
+    <PageShell
+      rail={
+        <PageContents
+          label="Sections"
+          sections={COLOPHON_SECTIONS.map((section) => ({ id: section.id, text: section.title }))}
+        />
+      }
+    >
       <h1 className="page-title cap-layout-grid">{COLOPHON_TITLE}</h1>
 
       {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
@@ -214,151 +241,279 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
       <HealthPanel health={health} />
 
-      <div className="prose">
-        <p>{COLOPHON_VERSIONS}</p>
-        <p>{COLOPHON_INTRO}</p>
+      <p className="colophon-versions">{COLOPHON_VERSIONS}</p>
+      <p className="colophon-intro">{COLOPHON_INTRO}</p>
 
-        <SectionHead id="runtime" />
-        <dl>
-          <dt>Compatibility date</dt>
-          <dd>
-            <code>{stack.runtime.compatibilityDate}</code>
-          </dd>
-          <dt>Compatibility flags</dt>
-          <dd>
-            {stack.runtime.compatibilityFlags.length > 0
-              ? stack.runtime.compatibilityFlags.join(", ")
-              : "none"}
-          </dd>
-          <dt>Node</dt>
-          <dd>
-            <code>{stack.runtime.nodeVersion}</code>
-          </dd>
-        </dl>
-
-        <SectionHead id="bindings" />
-        <p>{stack.bindings.length} resources.</p>
-        {stack.bindings.map((binding) => (
-          <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
-            <h3 id={`binding-${binding.name}`}>
-              <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
-            </h3>
-            <p>{binding.what}</p>
-            <p>
-              <strong>Why it is load-bearing.</strong> {binding.whyLoadBearing}
-            </p>
-          </section>
+      <div className="prose colophon-body" data-colophon>
+        <SectionHead id="run" />
+        {SITE_OPERATION.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
         ))}
-
-        <SectionHead id="schema" />
-        <p>{stack.migrations.length} migrations.</p>
-        <ul>
-          {stack.migrations.map((file) => (
-            <li key={file}>
-              <code>{file}</code>
-            </li>
-          ))}
-        </ul>
-
-        <SectionHead id="gates" />
-        <p>{stack.gates.length} checks.</p>
-        <ul>
-          {stack.gates.map((gate) => (
-            <li key={gate}>
-              <code>{gate}</code>
-            </li>
-          ))}
-        </ul>
-
-        <SectionHead id="dependencies" />
-        <p>{stack.dependencies.length} runtime dependencies.</p>
-        <ul>
-          {stack.dependencies.map((dep) => (
-            <li key={dep.name}>
-              <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
+        <ul className="colophon-systems">
+          <li className="cap-panel">
+            <p className="cap-panel-body">
+              <Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>
+              {CARREL_SENTENCE_REST}
+            </p>
+          </li>
+          <li className="cap-panel">
+            <p className="cap-panel-body">
+              Capsid's source is public <a href={CAPSID_REPO_URL}>on GitHub</a>.
+            </p>
+          </li>
+          <li className="cap-panel">
+            <p className="cap-panel-body">
+              <a href={CAPSOMER_URL}>{CAPSOMER_NAME}</a>
+              {CAPSOMER_SENTENCE_REST}
+            </p>
+          </li>
+          {SHARED_PACKAGES.map((pkg) => (
+            <li key={pkg.name} className="cap-panel">
+              <p className="cap-panel-body">
+                <a href={pkg.url}>{pkg.name}</a>
+                {pkg.rest}
+              </p>
             </li>
           ))}
         </ul>
 
         <SectionHead id="features" />
-        <p>{features.features.length} entries.</p>
-
-        {byComponent().map(([component, entries]) => (
-          <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
-            <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
-            {entries.map((feature) => (
-              <section key={feature.name}>
-                <h4>{feature.name}</h4>
+        <p>
+          {features.features.length} entries. What the whole network does is on the{" "}
+          <Link to="/features">features page</Link>.
+        </p>
+        <div
+          className="cap-chips colophon-chips"
+          data-variant="solid"
+          role="group"
+          aria-label="Show one group of features"
+          hidden
+        >
+          <button type="button" className="cap-chip" data-value="all" aria-pressed="true">
+            All<span className="cap-chip-count">{features.features.length}</span>
+          </button>
+          {byComponent().map(([component, entries]) => (
+            <button
+              key={component}
+              type="button"
+              className="cap-chip"
+              data-value={component}
+              aria-pressed="false"
+            >
+              {component}
+              <span className="cap-chip-count">{entries.length}</span>
+            </button>
+          ))}
+        </div>
+        <span className="colophon-status" role="status" />
+        <ul className="colophon-cards colophon-features">
+          {features.features.map((feature) => (
+            <li
+              key={feature.name}
+              className="cap-panel colophon-card"
+              data-group={feature.component}
+            >
+              <div className="cap-panel-body">
+                <p className="colophon-card-tag">
+                  <span>{feature.component}</span>
+                </p>
+                <h3>{feature.name}</h3>
                 <p>{feature.what}</p>
-                <ul>
+                <ul className="colophon-anchors">
                   {(feature.anchors as Anchor[]).map((anchor, i) => (
                     <AnchorItem key={i} anchor={anchor} />
                   ))}
                 </ul>
-              </section>
-            ))}
-          </section>
-        ))}
-
-        <SectionHead id="security" />
-        {SECURITY_TRADEOFF.map((sentence) => (
-          <p key={sentence.slice(0, 32)}>{sentence}</p>
-        ))}
-
-        <SectionHead id="ai" />
-        {AI_DISCLOSURE.map((sentence) => (
-          <p key={sentence.slice(0, 32)}>{sentence}</p>
-        ))}
-
-        <SectionHead id="run" />
-        {SITE_OPERATION.map((sentence) => (
-          <p key={sentence.slice(0, 32)}>{sentence}</p>
-        ))}
-        <p>
-          <Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>
-          {CARREL_SENTENCE_REST}
-        </p>
-        <p>
-          Capsid's source is public <a href={CAPSID_REPO_URL}>on GitHub</a>.
-        </p>
-        <p>
-          <a href={CAPSOMER_URL}>{CAPSOMER_NAME}</a>
-          {CAPSOMER_SENTENCE_REST}
-        </p>
-        <p>The packages shared with my other sites:</p>
-        <ul>
-          {SHARED_PACKAGES.map((pkg) => (
-            <li key={pkg.name}>
-              <a href={pkg.url}>{pkg.name}</a>
-              {pkg.rest}
+              </div>
             </li>
           ))}
         </ul>
-        <p>
-          What the whole network does is on the <Link to="/features">features page</Link>.
-        </p>
+
+        <section className="cap-panel colophon-note" aria-labelledby="security">
+          <div className="cap-panel-body">
+            <SectionHead id="security" />
+            <Statements sentences={SECURITY_TRADEOFF} />
+          </div>
+        </section>
+
+        <SectionHead id="runtime" />
+        <dl className="colophon-facts">
+          <div>
+            <dt>Compatibility date</dt>
+            <dd>
+              <code>{stack.runtime.compatibilityDate}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Compatibility flags</dt>
+            <dd>
+              {stack.runtime.compatibilityFlags.length > 0
+                ? stack.runtime.compatibilityFlags.join(", ")
+                : "none"}
+            </dd>
+          </div>
+          <div>
+            <dt>Node</dt>
+            <dd>
+              <code>{stack.runtime.nodeVersion}</code>
+            </dd>
+          </div>
+        </dl>
+
+        <SectionHead id="bindings" />
+        <p>{stack.bindings.length} resources.</p>
+        <div
+          className="cap-chips colophon-kinds"
+          data-variant="solid"
+          role="group"
+          aria-label="Show one kind of resource"
+          hidden
+        >
+          <button type="button" className="cap-chip" data-value="all" aria-pressed="true">
+            All<span className="cap-chip-count">{stack.bindings.length}</span>
+          </button>
+          {[...new Set(stack.bindings.map((binding) => binding.kind))].map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className="cap-chip"
+              data-value={kind}
+              aria-pressed="false"
+            >
+              {kind}
+              <span className="cap-chip-count">
+                {stack.bindings.filter((binding) => binding.kind === kind).length}
+              </span>
+            </button>
+          ))}
+        </div>
+        <table className="colophon-table" data-cols="3">
+          <thead>
+            <tr>
+              <th scope="col">Resource</th>
+              <th scope="col">What it is</th>
+              <th scope="col">Why it is load-bearing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stack.bindings.map((binding) => (
+              <tr key={binding.id} data-kind={binding.kind}>
+                <th scope="row" id={`binding-${binding.name}`}>
+                  <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
+                </th>
+                <td>{binding.what}</td>
+                <td>{binding.whyLoadBearing}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="colophon-lists">
+          <div>
+            <SectionHead id="schema" />
+            <p>{stack.migrations.length} migrations.</p>
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter migrations"
+              placeholder="Filter"
+              data-find="migrations"
+              hidden
+            />
+            <ul className="colophon-scroll" aria-label="Migrations" data-list="migrations">
+              {stack.migrations.map((file) => (
+                <li key={file}>
+                  <code>{file}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <SectionHead id="gates" />
+            <p>{stack.gates.length} checks.</p>
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter checks"
+              placeholder="Filter"
+              data-find="checks"
+              hidden
+            />
+            <ul className="colophon-scroll" aria-label="Checks" data-list="checks">
+              {stack.gates.map((gate) => (
+                <li key={gate}>
+                  <code>{gate}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <SectionHead id="dependencies" />
+            <p>{stack.dependencies.length} runtime dependencies.</p>
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter runtime dependencies"
+              placeholder="Filter"
+              data-find="dependencies"
+              hidden
+            />
+            <ul
+              className="colophon-scroll"
+              aria-label="Runtime dependencies"
+              data-list="dependencies"
+            >
+              {stack.dependencies.map((dep) => (
+                <li key={dep.name}>
+                  <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
 
         <SectionHead id="credits" />
-        {CREDITS.map((credit) => (
-          <p key={credit.name}>
-            <a href={credit.url}>{credit.name}</a>
-            {credit.rest}
-          </p>
-        ))}
+        <ul className="colophon-systems">
+          {CREDITS.map((credit) => (
+            <li key={credit.name} className="cap-panel">
+              <p className="cap-panel-body">
+                <a href={credit.url}>{credit.name}</a>
+                {credit.rest}
+              </p>
+            </li>
+          ))}
+        </ul>
 
         <SectionHead id="not-adopted" />
         <p>{stack.notAdopted.length} entries.</p>
-        <dl>
-          {stack.notAdopted.map((entry) => (
-            <div key={entry.name}>
-              <dt>
-                {entry.name} <span className="muted">({statusLabel(entry.status)})</span>
-              </dt>
-              <dd>{entry.reason}</dd>
-            </div>
-          ))}
-        </dl>
+        <table className="colophon-table">
+          <thead>
+            <tr>
+              <th scope="col">Choice</th>
+              <th scope="col">Why not</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stack.notAdopted.map((entry) => (
+              <tr key={entry.name}>
+                <th scope="row">
+                  {entry.name} <span className="muted">({statusLabel(entry.status)})</span>
+                </th>
+                <td>{entry.reason}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <section className="cap-panel colophon-note" aria-labelledby="ai">
+          <div className="cap-panel-body">
+            <SectionHead id="ai" />
+            <Statements sentences={AI_DISCLOSURE} />
+          </div>
+        </section>
       </div>
+
+      <template data-island="colophon" />
 
       <p className="muted">
         For what the site records about a visit, and where each of those facts lives in the code,

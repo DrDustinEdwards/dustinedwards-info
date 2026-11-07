@@ -1,0 +1,273 @@
+/*
+ * The colophon (app/routes/colophon.tsx): a pattern for each part. The network and credits are cards, features are cards
+ * a chip filters, the two statements sit side by side, bindings and choices not made are tables, and the three long lists
+ * scroll in their own boxes. All of it is in the HTML with script off; the side index is Capsomer's.
+ */
+.colophon-versions,
+.colophon-intro {
+  max-inline-size: 46rem;
+  margin-block: 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.colophon-intro {
+  margin-block-end: 1.5rem;
+}
+
+.colophon-body h2[id] {
+  scroll-margin-block-start: 6rem;
+}
+
+.colophon-chips {
+  margin-block: 0.75rem 1rem;
+}
+
+.colophon-status {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The network and the credits: one small card each, not a paragraph each. */
+.colophon-systems,
+.colophon-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.colophon-systems > li,
+.colophon-card {
+  margin: 0;
+}
+
+.colophon-systems .cap-panel-body {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.colophon-card[hidden] {
+  display: none;
+}
+
+.colophon-body .colophon-card h3 {
+  margin-block: 0 0.375rem;
+  font-size: 1rem;
+}
+
+.colophon-body .colophon-card p {
+  margin-block: 0 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.colophon-body .colophon-card .colophon-card-tag {
+  margin-block-end: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.colophon-anchors {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+/* The two statements side by side: read together, short enough for one screen. */
+.colophon-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 0 2.5rem;
+}
+
+.colophon-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2.5rem;
+  margin-block: 0.75rem 1.5rem;
+}
+
+.colophon-facts dt {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.colophon-facts dd {
+  margin: 0;
+}
+
+/* Bindings and the choices not made: a table to compare across, stacked into labeled rows on a phone. */
+.colophon-table {
+  inline-size: 100%;
+  margin-block: 0.75rem 1.5rem;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.colophon-table th,
+.colophon-table td {
+  padding: 0.625rem 0.75rem 0.625rem 0;
+  border-block-start: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.colophon-table thead th {
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-block-start: 0;
+}
+
+.colophon-table tbody th {
+  inline-size: 11rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.colophon-table[data-cols="3"] td:nth-child(2) {
+  inline-size: 28%;
+}
+
+@media (max-width: 40rem) {
+  .colophon-table thead {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .colophon-table tr,
+  .colophon-table th,
+  .colophon-table td {
+    display: block;
+  }
+
+  .colophon-table tbody th {
+    padding-block-end: 0;
+    border-block-start: 1px solid var(--border);
+    inline-size: auto;
+  }
+
+  .colophon-table td {
+    padding-block: 0.25rem 0.5rem;
+    border-block-start: 0;
+  }
+}
+
+/* Migrations, checks and dependencies: three short boxes that scroll inside themselves. */
+.colophon-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0 2rem;
+}
+
+.colophon-scroll {
+  max-block-size: 16rem;
+  margin: 0.5rem 0 1.5rem;
+  padding: 0.5rem 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.colophon-scroll li {
+  padding-block: 0.125rem;
+  overflow-wrap: anywhere;
+}
+
+/* A pressed chip fills with the primary color, so its count takes the chip's own text color to stay readable. */
+.colophon-chips .cap-chip[aria-pressed="true"] .cap-chip-count {
+  color: inherit;
+}
+
+/* The two statements: a panel each, the first sentence as the lead and the rest small, so neither is a wall of text. */
+.colophon-note {
+  margin: 0.75rem 0 1.5rem;
+}
+
+.colophon-body .colophon-note h2 {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  border: 0;
+  font-size: 1.125rem;
+}
+
+.colophon-body .colophon-note p {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.colophon-body .colophon-note .colophon-note-lead {
+  font-weight: 600;
+}
+
+.colophon-body .colophon-note-list {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.colophon-note-list li {
+  margin-block-end: 0.375rem;
+}
+
+/* Runtime: three tiles, the value large. */
+.colophon-facts > div {
+  min-inline-size: 11rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+}
+
+.colophon-facts dd {
+  font-size: 1.125rem;
+}
+
+.colophon-kinds {
+  margin-block: 0 0.75rem;
+}
+
+.colophon-kinds .cap-chip[aria-pressed="true"] .cap-chip-count {
+  color: inherit;
+}
+
+tr[hidden],
+.colophon-scroll li[hidden] {
+  display: none;
+}
+
+.colophon-find {
+  inline-size: 100%;
+  margin-block-start: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--paper, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.colophon-find[hidden] {
+  display: none;
+}
+
+.colophon-find + .colophon-scroll {
+  margin-block-start: 0.5rem;
+}
