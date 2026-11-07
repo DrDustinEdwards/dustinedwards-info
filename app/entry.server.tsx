@@ -10,7 +10,7 @@ export default async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  // The request context `workers/app.ts` built and set `nonceContext` into (admin paths only).
+  // The request context `workers/app.ts` built and set `cspNonceContext` into (admin paths only).
   loadContext: RouterContextProvider,
 ) {
   let shellRendered = false;
