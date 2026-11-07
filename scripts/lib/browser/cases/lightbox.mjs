@@ -85,7 +85,7 @@ export async function run({ page, browser }) {
     );
     await new Promise((r) => setTimeout(r, 250));
     const overlay = await page.evaluate(() => {
-      const shown = document.querySelector(".lightbox img");
+      const shown = document.querySelector(".cap-lightbox img");
       return {
         open: shown instanceof HTMLImageElement,
         src: shown instanceof HTMLImageElement ? shown.getAttribute("src") : null,
@@ -105,12 +105,12 @@ export async function run({ page, browser }) {
      * satisfies: attributes on a div are a claim, modality is a behavior.
      */
     const modal = await page.evaluate(() => {
-      const el = document.querySelector(".lightbox");
+      const el = document.querySelector(".cap-lightbox");
       return {
         tag: el?.tagName ?? "(absent)",
         isModal: el instanceof HTMLDialogElement && el.matches("dialog:modal"),
         label: el?.getAttribute("aria-label") ?? "",
-        closeButton: Boolean(el?.querySelector("button.lightbox-close")),
+        closeButton: Boolean(el?.querySelector(".cap-lightbox [data-cap-part=close]")),
         focusInside: Boolean(el && document.activeElement && el.contains(document.activeElement)),
       };
     });
@@ -130,7 +130,7 @@ export async function run({ page, browser }) {
     ok(
       `${imagePost}: the lightbox has a visible close control`,
       modal.closeButton,
-      `no button.lightbox-close. Escape and a backdrop click are both real ways out ` +
+      `no .cap-lightbox [data-cap-part=close]. Escape and a backdrop click are both real ways out ` +
         `and neither is discoverable, so a touch reader with no keyboard had none.`,
     );
     ok(
@@ -143,7 +143,7 @@ export async function run({ page, browser }) {
     await page.keyboard.press("Escape");
     await new Promise((r) => setTimeout(r, 200));
     const afterEscape = await page.evaluate(() => ({
-      gone: document.querySelector(".lightbox") === null,
+      gone: document.querySelector(".cap-lightbox") === null,
       focusedLink: document.activeElement?.classList.contains("image-link") ?? false,
     }));
     ok(

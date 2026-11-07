@@ -55,7 +55,9 @@ import "capsomer/chart-frame.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
-import "~/styles/lightbox.css";
+import "capsomer/dialog.css";
+import "capsomer/button.css";
+import "capsomer/lightbox.css";
 import "~/styles/post-head-blocks.css";
 import "~/styles/post-disclosures.css";
 import { RENDERED } from "~/lib/content/render-version";
@@ -282,6 +284,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
           <div
             className="prose e-content"
+            data-cap="lightbox"
             {...RENDERED}
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
