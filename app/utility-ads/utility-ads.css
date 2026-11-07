@@ -23,14 +23,14 @@
 
 .ad-corner {
   align-self: flex-end;
-  inline-size: min(100%, 26rem);
+  inline-size: min(100%, 32rem);
   margin-block-start: var(--space-8, 2rem);
   pointer-events: none;
   user-select: none;
 }
 .ad-corner[data-size="large"] {
   align-self: center;
-  inline-size: min(100%, 40rem);
+  inline-size: min(100%, 46rem);
 }
 .ad-art {
   display: block;

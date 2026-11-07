@@ -3,22 +3,60 @@
   "title": "Tidepool Tribe",
   "era": "1960s",
   "credit": "Original period-style art and copy for this site. Not a reproduction of any existing ad.",
-  "viewBox": [600, 390],
+  "viewBox": [600, 520],
   "parts": [
+    {
+      "kind": "text",
+      "x": 300,
+      "y": 32,
+      "anchor": "middle",
+      "font": "slab",
+      "size": 21,
+      "fill": "ink",
+      "lines": ["FUN FOR THE WHOLE FAMILY!"]
+    },
+    {
+      "kind": "text",
+      "x": 300,
+      "y": 116,
+      "anchor": "middle",
+      "font": "display",
+      "size": 80,
+      "fill": "#ef3b2d",
+      "stroke": "#1b1f3b",
+      "strokeWidth": 6,
+      "shadow": {
+        "dx": 5,
+        "dy": 5,
+        "fill": "#1b1f3b"
+      },
+      "rotate": -2,
+      "lines": ["TIDEPOOL TRIBE!"]
+    },
+    {
+      "kind": "text",
+      "x": 300,
+      "y": 156,
+      "anchor": "middle",
+      "font": "serif",
+      "size": 18,
+      "fill": "ink",
+      "lines": ["The tiny undersea family that lives in your own tank!"]
+    },
     {
       "kind": "use",
       "ref": "tank",
-      "x": 8,
-      "y": 40,
-      "w": 220,
-      "h": 308
+      "x": 14,
+      "y": 184,
+      "w": 210,
+      "h": 294
     },
     {
       "kind": "burst",
       "cx": 206,
-      "cy": 62,
-      "outer": 46,
-      "inner": 32,
+      "cy": 206,
+      "outer": 44,
+      "inner": 31,
       "points": 14,
       "fill": "#2f7de1",
       "stroke": "#1b1f3b",
@@ -27,74 +65,44 @@
     {
       "kind": "text",
       "x": 206,
-      "y": 74,
+      "y": 218,
       "anchor": "middle",
       "font": "display",
-      "size": 36,
+      "size": 34,
       "fill": "#ffffff",
       "rotate": 10,
       "lines": ["NEW!"]
     },
     {
       "kind": "text",
-      "x": 262,
-      "y": 50,
+      "x": 252,
+      "y": 214,
       "font": "slab",
-      "size": 20,
-      "leading": 25,
-      "fill": "ink",
-      "lines": ["A WHOLE FAMILY", "OF SEA FOLK!"]
-    },
-    {
-      "kind": "text",
-      "x": 244,
-      "y": 160,
-      "font": "display",
-      "size": 88,
+      "size": 24,
       "fill": "#ef3b2d",
-      "stroke": "#1b1f3b",
-      "strokeWidth": 6,
-      "shadow": {
-        "dx": 5,
-        "dy": 5,
-        "fill": "#1b1f3b"
-      },
-      "rotate": -3,
-      "lines": ["TIDEPOOL"]
+      "lines": ["YOU GET:"]
     },
     {
       "kind": "text",
-      "x": 272,
-      "y": 238,
-      "font": "display",
-      "size": 88,
-      "fill": "#ef3b2d",
-      "stroke": "#1b1f3b",
-      "strokeWidth": 6,
-      "shadow": {
-        "dx": 5,
-        "dy": 5,
-        "fill": "#1b1f3b"
-      },
-      "rotate": -3,
-      "lines": ["TRIBE!"]
-    },
-    {
-      "kind": "text",
-      "x": 250,
-      "y": 296,
+      "x": 252,
+      "y": 252,
       "font": "serif",
       "size": 21,
-      "leading": 26,
+      "leading": 32,
       "fill": "ink",
-      "lines": ["Castle, tank", "and three jolly", "sea folk!"]
+      "lines": [
+        "• Snap-together castle",
+        "• Three jolly sea folk",
+        "• Wavy plastic seaweed",
+        "• A see-through tank"
+      ]
     },
     {
       "kind": "burst",
-      "cx": 522,
-      "cy": 330,
-      "outer": 74,
-      "inner": 56,
+      "cx": 500,
+      "cy": 424,
+      "outer": 78,
+      "inner": 58,
       "points": 16,
       "fill": "#ef3b2d",
       "stroke": "#1b1f3b",
@@ -103,25 +111,45 @@
     },
     {
       "kind": "text",
-      "x": 522,
-      "y": 310,
+      "x": 500,
+      "y": 402,
       "anchor": "middle",
       "font": "slab",
-      "size": 18,
+      "size": 17,
       "fill": "#ffffff",
       "lines": ["ONLY"]
     },
     {
       "kind": "text",
-      "x": 522,
-      "y": 358,
+      "x": 500,
+      "y": 446,
       "anchor": "middle",
       "font": "display",
-      "size": 56,
+      "size": 58,
       "fill": "#ffd23f",
       "stroke": "#1b1f3b",
       "strokeWidth": 4,
       "lines": ["98¢"]
+    },
+    {
+      "kind": "text",
+      "x": 500,
+      "y": 465,
+      "anchor": "middle",
+      "font": "slab",
+      "size": 12,
+      "fill": "#ffffff",
+      "lines": ["POSTPAID"]
+    },
+    {
+      "kind": "text",
+      "x": 252,
+      "y": 420,
+      "font": "serif",
+      "size": 19,
+      "leading": 25,
+      "fill": "ink",
+      "lines": ["Send today!", "Money back if you", "are not delighted."]
     }
   ]
 }

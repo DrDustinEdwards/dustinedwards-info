@@ -10,7 +10,7 @@ A small vintage comic-book ad sits at the foot of each error page (404, 410, 403
 
 ## Placement
 
-One corner piece, bottom right of the page column, 26 rem wide at most and full width on a phone. It has no ground and no frame, so the page background shows through. Text uses the `ink` color, which is dark on a light page and light on a dark one. The ad is `aria-hidden`, comes after the message in the document, takes no pointer events, and is neither printed nor drawn in forced-colors mode. The gallery shows the same piece larger.
+One corner piece, bottom right of the page column, 32 rem wide at most and full width on a phone. It has no ground and no frame, so the page background shows through. Text uses the `ink` color, which is dark on a light page and light on a dark one. The ad is `aria-hidden`, comes after the message in the document, takes no pointer events, and is neither printed nor drawn in forced-colors mode. The gallery shows the same piece larger.
 
 ## The ad format
 
