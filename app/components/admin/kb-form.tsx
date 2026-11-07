@@ -4,6 +4,7 @@ import { Form, Link, useNavigation } from "react-router";
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
+import { Tabs, TabsList, TabsTrigger } from "capsomer/react/tabs";
 
 import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
@@ -441,32 +442,16 @@ export function KbFormEditor({
       ) : null}
 
       {isEntry ? (
-        <div className="kb-pane-tabs" role="tablist" aria-label="Form or preview">
-          <button
-            type="button"
-            role="tab"
-            id="kb-tab-form"
-            aria-controls="kb-pane-form"
-            aria-selected={pane === "form"}
-            className="cap-btn"
-            data-variant={pane === "form" ? "primary" : "quiet"}
-            onClick={() => setPane("form")}
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="kb-tab-preview"
-            aria-controls="kb-pane-preview"
-            aria-selected={pane === "preview"}
-            className="cap-btn"
-            data-variant={pane === "preview" ? "primary" : "quiet"}
-            onClick={() => setPane("preview")}
-          >
-            Preview
-          </button>
-        </div>
+        <Tabs value={pane} onValueChange={(v) => setPane(v as "form" | "preview")}>
+          <TabsList className="kb-pane-tabs" aria-label="Form or preview">
+            <TabsTrigger value="form" id="kb-tab-form" aria-controls="kb-pane-form">
+              Edit
+            </TabsTrigger>
+            <TabsTrigger value="preview" id="kb-tab-preview" aria-controls="kb-pane-preview">
+              Preview
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       ) : null}
 
       <div className={isEntry ? "kb-layout" : undefined} data-pane={pane}>

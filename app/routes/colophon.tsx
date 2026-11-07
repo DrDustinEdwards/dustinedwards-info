@@ -21,6 +21,7 @@ import {
   CARREL_SENTENCE_REST,
   CREDITS,
   SECURITY_TRADEOFF,
+  SHARED_PACKAGES,
   SITE_OPERATION,
   COLOPHON_TITLE,
   statusLabel,
@@ -323,6 +324,18 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         <p>
           <a href={CAPSOMER_URL}>{CAPSOMER_NAME}</a>
           {CAPSOMER_SENTENCE_REST}
+        </p>
+        <p>The packages shared with my other sites:</p>
+        <ul>
+          {SHARED_PACKAGES.map((pkg) => (
+            <li key={pkg.name}>
+              <a href={pkg.url}>{pkg.name}</a>
+              {pkg.rest}
+            </li>
+          ))}
+        </ul>
+        <p>
+          What the whole network does is on the <Link to="/features">features page</Link>.
         </p>
 
         <SectionHead id="credits" />

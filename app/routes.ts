@@ -140,6 +140,9 @@ export default [
     route("terms", "routes/terms.tsx"),
     // The accessibility statement, a markdown page like privacy and terms (docs/PAGES.md).
     route("accessibility", "routes/accessibility.tsx"),
+    // What the whole network does (app/lib/features.mjs): the twin first, so `.md` is not read as part of the path.
+    route("features.md", "routes/features[.md].ts"),
+    route("features", "routes/features.tsx"),
     route("contact", "routes/contact.tsx"),
     // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
     route("gone", "routes/gone.tsx"),

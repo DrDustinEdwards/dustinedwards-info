@@ -40,6 +40,7 @@ const SECTIONS: Section[] = [
   { prefix: "/recipes", no: "7.3", trail: ["About", "Recipes"] },
   { prefix: "/search", no: "0", trail: ["Site", "Search"] },
   { prefix: "/site-map", no: "0", trail: ["Site", "Site map"] },
+  { prefix: "/features", no: "0", trail: ["Site", "Features"] },
   { prefix: "/colophon", no: "0", trail: ["Site", "Colophon"] },
   { prefix: "/privacy", no: "0", trail: ["Site", "Privacy"] },
   { prefix: "/terms", no: "0", trail: ["Site", "Terms"] },

@@ -248,6 +248,24 @@
       "fallbackKind": "selector",
       "fallbackAt": ".systems-map",
       "why": null
+    },
+    {
+      "id": "features",
+      "module": "app/enhance/features.ts",
+      "enhancement": "On the features page, a press on a program's chip shows only that program's cards, hides a section left with none, and says how many are showing.",
+      "fallback": "The page is complete as served: every card is in the HTML under its section, each naming its program, and every chip is a button that only narrows the list, so nothing is missing without the script.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".features-grid",
+      "why": null
+    },
+    {
+      "id": "roster-photo-lightbox",
+      "module": "app/enhance/roster.ts",
+      "enhancement": "Intercepts a click on a roster photo and opens it full size in an overlay (Prelum's lightbox, the one the posts use).",
+      "fallback": "Each photo is a link to its original file; clicking it opens the original. Only the overlay is lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".phage-roster",
+      "why": null
     }
   ]
 }

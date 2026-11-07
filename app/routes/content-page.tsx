@@ -36,6 +36,8 @@ import "capsomer/tokens.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
+import "~/styles/media-split.css";
+import "~/styles/lightbox.css";
 import { RENDERED } from "~/lib/content/render-version";
 
 /**
@@ -159,6 +161,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       {roster ? (
         <div className="prose">
           <PhageRoster cohorts={roster} />
+          <template data-island="roster" />
         </div>
       ) : null}
       {signs.prev || signs.next ? (

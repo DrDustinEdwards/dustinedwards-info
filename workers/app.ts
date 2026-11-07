@@ -231,7 +231,7 @@ const withMarkdownCopies = markdownCopies(
   // The wrapper types the request as a plain Request; it hands on the one the runtime gave it, or a GET it made from it.
   (request: Request, env: Env, ctx: ExecutionContext) =>
     site.fetch(request as FetchArgs[0], env, ctx),
-  { origin: SITE_ORIGIN, llmsFull: false, skip: isPrivatePath },
+  { origin: SITE_ORIGIN, llmsFull: false, siteMarkdown: false, skip: isPrivatePath },
 );
 
 // A person idle for an hour on either private plane, /admin or /lab-bench, is signed out of Access (site-runtime ./access).

@@ -4,11 +4,11 @@
 // library may change, where earlier bytes are kept, and the objects' metadata.
 
 import {
+  PICTURE_RESIZE,
   RefusedError,
   mediaLibrary,
   type MediaAdapter,
   type MediaKeyInput,
-  type MediaResize,
   type MediaUse,
 } from "@dustinedwards/site-api";
 import { fromHex } from "@dustinedwards/site-runtime/encoding";
@@ -21,13 +21,6 @@ import { suggestFor } from "~/lib/media/suggest.server";
 import { ALLOWED, DATA_TYPES, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
 import { IMMUTABLE_CACHE_CONTROL } from "~/lib/seo";
 import templateRefs from "../../../content/generated/template-refs.json";
-
-/**
- * What an upload shrinks to when it asks (Carrel's, unless it says `resize=no`): the longer edge kept, and the quality
- * it is encoded at. Wide enough that a phone photo (4032 pixels) keeps its size; a larger camera file is shrunk, its
- * original kept in MEDIA_REVISIONS and in the file's history.
- */
-const RESIZE: MediaResize = { maxEdge: 4096, quality: 85 };
 
 /** Repository code that names a file by its address (build:template-refs), which a post scan cannot see. */
 const TEMPLATE_REFS = (templateRefs as { refs: Record<string, string[]> }).refs;
@@ -102,7 +95,7 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     limits: { maxBytes: MAX_BYTES, types: [...ALLOWED.keys()] },
     url: (key) => `/media/${key}`,
     key: keyFor,
-    resize: RESIZE,
+    resize: PICTURE_RESIZE,
     // Every address carries its picture's size, so a stored picture is never shrunk in place, a replace keeps the size
     // and a quarter turn of a picture that is not square is a new file.
     shrink: false,
@@ -119,8 +112,5 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
     customMetadata: (record): Record<string, string> =>
       record.filename ? { originalName: record.filename } : {},
     suggest: (picture, id) => suggestFor(env, picture, id),
-    // The package checks every address and each redirect before this fetch runs.
-    importFetch: ((input: RequestInfo | URL, init?: RequestInit) =>
-      fetch(input, init)) as typeof fetch,
   });
 }
