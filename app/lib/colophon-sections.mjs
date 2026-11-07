@@ -125,8 +125,8 @@ export const SECURITY_TRADEOFF = Object.freeze([
 export const AI_DISCLOSURE = Object.freeze([
   "The model runs through Claude Code and publishes through the same API, and passes " +
     "the same gates, as I do.",
-  "A model cannot make a post public for the first time. Code enforces that " +
-    "reservation, and an agent that tries is refused by name.",
+  "An agent on the operator API cannot publish a post for the first time. Code refuses " +
+    "it by name. Carrel publishes only when I tell it to.",
   "I read and edit every post before it goes live, and I am answerable for it.",
   "Provider marks on model output do not survive editing, so you cannot check for one " +
     "here. My review is the guarantee.",
