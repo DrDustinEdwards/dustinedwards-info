@@ -57,7 +57,7 @@ await test("each file is dated by the last commit that touched it, and only sour
   });
 });
 
-await test("a shallow clone dates nothing", (t) => {
+await test("a shallow clone takes no dates from git, only from the pull manifest", (t) => {
   const { dir, git, write } = repo();
   const clone = mkdtempSync(path.join(os.tmpdir(), "source-dates-shallow-"));
   t.after(() => {
@@ -71,6 +71,17 @@ await test("a shallow clone dates nothing", (t) => {
   git(["commit", "-qam", "two"], "2026-03-02T12:00:00Z");
   execFileSync("git", ["clone", "-q", "--depth", "1", `file://${dir}`, clone]);
   assert.deepEqual(readSourceDates(clone), {});
+  // The deploy is a shallow checkout that pulls its content from D1: the pull manifest's days still date those files.
+  writeFileSync(
+    path.join(clone, ".content-pull.json"),
+    JSON.stringify({
+      files: {
+        "content/a.md": { sha: "x", day: "2026-02-02" },
+        "content/b.md": { sha: null, day: null },
+      },
+    }),
+  );
+  assert.deepEqual(readSourceDates(clone), { "content/a.md": "2026-02-02" });
 });
 
 await test("the module is a frozen object of the dates", () => {

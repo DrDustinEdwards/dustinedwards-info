@@ -382,7 +382,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       </main>
       <ShellFooter />
       <template data-island="blog" />
-      {post.html.includes("data-prelum-chart") ? <template data-island="charts" /> : null}
+      {post.html.includes("data-enarratio-redraw") ? <template data-island="charts" /> : null}
     </>
   );
 }

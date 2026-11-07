@@ -85,7 +85,7 @@ export function discoveryProblems({ prm, as, discover }, origin) {
  * @param {Omit<RequestInit, "headers"> & { headers?: Record<string, string> }} [init]
  * @returns {Promise<{ status: number, body: any, challenge: string, error?: string }>}
  */
-async function readJson(url, init) {
+async function readJsonResponse(url, init) {
   try {
     const res = await fetch(url, {
       ...init,
@@ -115,9 +115,9 @@ if (import.meta.main) {
     console.log(`COULD NOT RUN: ${config.why}`);
     process.exit(3);
   }
-  const prm = await readJson(`${config.origin}/.well-known/oauth-protected-resource/mcp`);
-  const as = await readJson(`${config.origin}/.well-known/oauth-authorization-server`);
-  const discover = await readJson(`${config.origin}/mcp`, {
+  const prm = await readJsonResponse(`${config.origin}/.well-known/oauth-protected-resource/mcp`);
+  const as = await readJsonResponse(`${config.origin}/.well-known/oauth-authorization-server`);
+  const discover = await readJsonResponse(`${config.origin}/mcp`, {
     method: "POST",
     headers: {
       "content-type": "application/json",

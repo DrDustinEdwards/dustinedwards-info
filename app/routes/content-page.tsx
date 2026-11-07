@@ -155,7 +155,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
       <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: page.html }} />
-      {page.html.includes("data-prelum-chart") ? <template data-island="charts" /> : null}
+      {page.html.includes("data-enarratio-redraw") ? <template data-island="charts" /> : null}
       {roster ? (
         <div className="prose">
           <PhageRoster cohorts={roster} />
