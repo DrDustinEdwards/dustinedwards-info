@@ -8,6 +8,8 @@ export default function start(): void {
   started = true;
   spy();
   filter();
+  kinds();
+  finders();
 }
 
 function spy(): void {
@@ -65,4 +67,38 @@ function filter(): void {
   /* One group on screen to begin with; All is a press away, and the HTML holds every card either way. */
   const firstGroup = chips.find((chip) => chip.dataset.value !== "all")?.dataset.value;
   if (firstGroup) choose(firstGroup);
+}
+
+function kinds(): void {
+  const bar = document.querySelector<HTMLElement>(".colophon-kinds");
+  if (!bar) return;
+  const chips = [...bar.querySelectorAll<HTMLButtonElement>(".cap-chip[data-value]")];
+  const rows = [...document.querySelectorAll<HTMLElement>("tr[data-kind]")];
+  bar.hidden = false;
+  for (const chip of chips)
+    chip.addEventListener("click", () => {
+      const value = chip.dataset.value ?? "all";
+      for (const other of chips) other.setAttribute("aria-pressed", String(other === chip));
+      for (const row of rows) row.hidden = value !== "all" && row.dataset.kind !== value;
+    });
+}
+
+function finders(): void {
+  const status = document.querySelector<HTMLElement>(".colophon-status");
+  for (const input of document.querySelectorAll<HTMLInputElement>(".colophon-find")) {
+    const list = document.querySelector<HTMLElement>(`[data-list="${input.dataset.find}"]`);
+    if (!list) continue;
+    const items = [...list.querySelectorAll<HTMLElement>("li")];
+    input.hidden = false;
+    input.addEventListener("input", () => {
+      const query = input.value.trim().toLowerCase();
+      let shown = 0;
+      for (const item of items) {
+        const show = !query || (item.textContent ?? "").toLowerCase().includes(query);
+        item.hidden = !show;
+        if (show) shown += 1;
+      }
+      if (status) status.textContent = `${shown} of ${items.length} shown`;
+    });
+  }
 }

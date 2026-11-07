@@ -147,6 +147,21 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   );
 }
 
+/** A statement as a lead sentence and the rest as a short list, so it reads in a glance and not as a wall. */
+function Statements({ sentences }: { sentences: readonly string[] }) {
+  const [lead, ...rest] = sentences;
+  return (
+    <>
+      <p className="colophon-note-lead">{lead}</p>
+      <ul className="colophon-note-list">
+        {rest.map((sentence) => (
+          <li key={sentence.slice(0, 32)}>{sentence}</li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 /** A /health status as a cockpit light: at rest, caution (amber) or warning (red), and the word it says. */
 const LIGHTS = {
   pass: { state: "normal", word: "Pass" },
@@ -315,18 +330,18 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         </ul>
 
         <div className="colophon-pair">
-          <div>
-            <SectionHead id="ai" />
-            {AI_DISCLOSURE.map((sentence) => (
-              <p key={sentence.slice(0, 32)}>{sentence}</p>
-            ))}
-          </div>
-          <div>
-            <SectionHead id="security" />
-            {SECURITY_TRADEOFF.map((sentence) => (
-              <p key={sentence.slice(0, 32)}>{sentence}</p>
-            ))}
-          </div>
+          <section className="cap-panel colophon-note" aria-labelledby="ai">
+            <div className="cap-panel-body">
+              <SectionHead id="ai" />
+              <Statements sentences={AI_DISCLOSURE} />
+            </div>
+          </section>
+          <section className="cap-panel colophon-note" aria-labelledby="security">
+            <div className="cap-panel-body">
+              <SectionHead id="security" />
+              <Statements sentences={SECURITY_TRADEOFF} />
+            </div>
+          </section>
         </div>
 
         <SectionHead id="runtime" />
@@ -355,6 +370,31 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
         <SectionHead id="bindings" />
         <p>{stack.bindings.length} resources.</p>
+        <div
+          className="cap-chips colophon-kinds"
+          data-variant="solid"
+          role="group"
+          aria-label="Show one kind of resource"
+          hidden
+        >
+          <button type="button" className="cap-chip" data-value="all" aria-pressed="true">
+            All<span className="cap-chip-count">{stack.bindings.length}</span>
+          </button>
+          {[...new Set(stack.bindings.map((binding) => binding.kind))].map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className="cap-chip"
+              data-value={kind}
+              aria-pressed="false"
+            >
+              {kind}
+              <span className="cap-chip-count">
+                {stack.bindings.filter((binding) => binding.kind === kind).length}
+              </span>
+            </button>
+          ))}
+        </div>
         <table className="colophon-table" data-cols="3">
           <thead>
             <tr>
@@ -365,7 +405,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           </thead>
           <tbody>
             {stack.bindings.map((binding) => (
-              <tr key={binding.id}>
+              <tr key={binding.id} data-kind={binding.kind}>
                 <th scope="row" id={`binding-${binding.name}`}>
                   <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
                 </th>
@@ -380,7 +420,20 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="schema" />
             <p>{stack.migrations.length} migrations.</p>
-            <ul className="colophon-scroll" tabIndex={0} aria-label="Migrations">
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter migrations"
+              placeholder="Filter"
+              data-find="migrations"
+              hidden
+            />
+            <ul
+              className="colophon-scroll"
+              tabIndex={0}
+              aria-label="Migrations"
+              data-list="migrations"
+            >
               {stack.migrations.map((file) => (
                 <li key={file}>
                   <code>{file}</code>
@@ -391,7 +444,15 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="gates" />
             <p>{stack.gates.length} checks.</p>
-            <ul className="colophon-scroll" tabIndex={0} aria-label="Checks">
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter checks"
+              placeholder="Filter"
+              data-find="checks"
+              hidden
+            />
+            <ul className="colophon-scroll" tabIndex={0} aria-label="Checks" data-list="checks">
               {stack.gates.map((gate) => (
                 <li key={gate}>
                   <code>{gate}</code>
@@ -402,7 +463,20 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           <div>
             <SectionHead id="dependencies" />
             <p>{stack.dependencies.length} runtime dependencies.</p>
-            <ul className="colophon-scroll" tabIndex={0} aria-label="Runtime dependencies">
+            <input
+              type="search"
+              className="colophon-find"
+              aria-label="Filter runtime dependencies"
+              placeholder="Filter"
+              data-find="dependencies"
+              hidden
+            />
+            <ul
+              className="colophon-scroll"
+              tabIndex={0}
+              aria-label="Runtime dependencies"
+              data-list="dependencies"
+            >
               {stack.dependencies.map((dep) => (
                 <li key={dep.name}>
                   <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
