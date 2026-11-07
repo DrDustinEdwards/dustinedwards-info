@@ -148,6 +148,12 @@ const MISSING: Missing[] = [
   },
   {
     type: "SoftwareSourceCode",
+    property: "license",
+    page: /^\/software\/site-runtime$/,
+    reason: "site-runtime's package declares no open license",
+  },
+  {
+    type: "SoftwareSourceCode",
     property: "description",
     page: /^\/software\/capsid$/,
     reason:

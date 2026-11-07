@@ -155,7 +155,7 @@ const CARREL_SENTENCE =
 /** The sentence after its linked name, which is how the page renders it. */
 export const CARREL_SENTENCE_REST = CARREL_SENTENCE.slice(CARREL_NAME.length);
 
-export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
+export const CAPSID_PAGE_PATH = "/software/capsid";
 
 /**
  * Capsomer's one sentence. Its name links to its public site, which answers 200 (checked 2026-10-02).
@@ -163,7 +163,7 @@ export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
  * link until it does (job_a8f7cfc629de).
  */
 export const CAPSOMER_NAME = "Capsomer";
-export const CAPSOMER_URL = "https://capsomer.dustinedwards.info";
+export const CAPSOMER_PAGE_PATH = "/software/capsomer";
 const CAPSOMER_SENTENCE =
   "Capsomer is the shared design system: color tokens, header, footer and " +
   "components, in plain CSS.";
@@ -180,38 +180,38 @@ export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.leng
 export const SHARED_PACKAGES = Object.freeze([
   {
     name: "Prelum",
-    url: "https://github.com/DrDustinEdwards/prelum",
+    url: "/software/prelum",
     rest:
       " turns markdown into pages, feeds, sitemaps, search records, llms.txt " +
       "and each page's structured data.",
   },
   {
     name: "site-runtime",
-    url: "https://github.com/DrDustinEdwards/site-runtime",
+    url: "/software/site-runtime",
     rest:
       " supplies security headers, the rate limiter, the health report, " +
       "responsive images, sign-in and the edge page cache.",
   },
   {
     name: "site-api",
-    url: "https://github.com/DrDustinEdwards/site-api",
+    url: "/software/site-api",
     rest: " is the contract Carrel uses to list, edit and publish this site's content.",
   },
   {
     name: "d1-dump",
-    url: "https://github.com/DrDustinEdwards/d1-dump",
+    url: "/software/d1-dump",
     rest:
       " backs up each table of the database to the site's own storage and " +
       "restores it. The database's own export cannot handle tables with full-text search.",
   },
   {
     name: "Enarratio",
-    url: "https://github.com/DrDustinEdwards/enarratio",
+    url: "/software/enarratio",
     rest: " renders charts on the server, each with a text alternative and a data table.",
   },
   {
     name: "devkit",
-    url: "https://github.com/DrDustinEdwards/devkit",
+    url: "/software/devkit",
     rest:
       " holds the shared test workflows, the dependency update rules and the " +
       "check that fails on a copy of code a shared package already provides.",
@@ -324,7 +324,7 @@ function colophonPageInput(stack, features) {
       return AI_DISCLOSURE.join(" ");
     }
     if (id === "run") {
-      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}. ${CAPSOMER_SENTENCE} Its site is ${CAPSOMER_URL}. ${SHARED_PACKAGES.map((p) => `${p.name}${p.rest}`).join(" ")}`;
+      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public; its page is ${CAPSID_PAGE_PATH}. ${CAPSOMER_SENTENCE} ${SHARED_PACKAGES.map((p) => `${p.name}${p.rest}`).join(" ")}`;
     }
     if (id === "credits") {
       return CREDITS.map((c) => `${c.name}${c.rest}`).join(" ");

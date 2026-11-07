@@ -271,6 +271,11 @@ export function checkProjects(ctx) {
     "/software/enarratio",
     "/software/carrel",
     "/software/capsomer",
+    "/software/prelum",
+    "/software/site-runtime",
+    "/software/site-api",
+    "/software/d1-dump",
+    "/software/devkit",
   ];
   for (const softwarePath of SOFTWARE_PAGES) {
     ok(

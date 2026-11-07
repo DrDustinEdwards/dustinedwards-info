@@ -25,6 +25,11 @@ Dustin Edwards builds software as well as doing the virology. This page is the i
 - [Enarratio](/software/enarratio) is an open-source library for accessible, server-rendered charts. It is in early alpha.
 - [Carrel](/software/carrel) is the private writing hub where this site's articles are written.
 - [Capsomer](/software/capsomer) is the shared design system of plain-CSS components, color tokens and page patterns that these apps and sites are built from.
+- [Prelum](/software/prelum) is the publishing library: markdown to pages, feeds, sitemaps, search records and llms.txt.
+- [site-runtime](/software/site-runtime) is the shared runtime: security headers, rate limiting, health, images, sign-in and the edge cache.
+- [site-api](/software/site-api) is the contract Carrel uses to list, edit and publish a site's content.
+- [d1-dump](/software/d1-dump) backs up and restores D1 databases table by table.
+- [devkit](/software/devkit) is the shared test workflows, dependency rules and shared-code check.
 - This site has no page here. How it is built is the [colophon](/colophon). The articles that document it are [How this blog stores posts in git and serves them from D1](/writing/posts-in-git-served-from-d1), [A blog reading experience that works without JavaScript](/writing/blog-reading-without-javascript), [Site search on Cloudflare D1 with SQLite full-text search](/writing/site-search-on-d1), [Designing a color palette the build can check](/writing/color-palette-the-build-can-check), and [Every Cloudflare product, and which ones this site runs on](/writing/ten-years-on-cloudflare).
 
 Lab tools are [under Research](/research/tools).

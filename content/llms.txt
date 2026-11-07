@@ -64,6 +64,11 @@ A page is /software/{name}. /projects 301s to /software.
 - [Enarratio](https://dustinedwards.info/software/enarratio): an open-source chart library in early alpha, at https://github.com/DrDustinEdwards/enarratio with a gallery at https://enarratio.dustinedwards.info
 - [Carrel](https://dustinedwards.info/software/carrel): the private writing hub this site's articles are written in; it has a page but no public app address
 - [Capsomer](https://dustinedwards.info/software/capsomer): the shared design system of plain-CSS components, color tokens and page patterns these apps are built from; its home is https://capsomer.dustinedwards.info
+- [Prelum](https://dustinedwards.info/software/prelum): the publishing library: markdown to pages, feeds, sitemaps, search records, llms.txt and structured data
+- [site-runtime](https://dustinedwards.info/software/site-runtime): the shared runtime: security headers, rate limiter, health, images, sign-in and edge cache
+- [site-api](https://dustinedwards.info/software/site-api): the contract Carrel uses to list, edit and publish a site's content
+- [d1-dump](https://dustinedwards.info/software/d1-dump): per-table D1 backup and restore
+- [devkit](https://dustinedwards.info/software/devkit): shared test workflows, dependency rules and the shared-code check
 
 TXASM (https://txasm.org) is a site of Dustin's and has no page on this site. This site is described at the [colophon](https://dustinedwards.info/colophon). The lab tools are listed above under Lab calculators. Each of the Capsid, Enarratio, Carrel and Capsomer pages opens with a dictionary entry for its name.
 
