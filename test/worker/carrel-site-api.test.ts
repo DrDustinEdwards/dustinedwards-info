@@ -980,7 +980,7 @@ describe("media: meta declares what the site accepts", () => {
       mediaTransform: true,
       mediaHistory: true,
       mediaChanges: true,
-      mediaResize: { maxEdge: 4096, quality: 85 },
+      mediaResize: { maxEdge: 2560, quality: 85 },
       mediaEmbedded: true,
       mediaSuggestions: true,
     });
