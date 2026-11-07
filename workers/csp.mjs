@@ -3,10 +3,6 @@ import { LAB_BENCH_PATH } from "../app/lab/path.mjs";
 // Separate from app.ts so the worker tests can call it on both branches.
 
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
-import { buildContentSecurityPolicy, buildStagedPolicy } from "@dustinedwards/site-runtime/csp";
-import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
-
-export { CSP_REPORT_GROUP, CSP_REPORT_PATH } from "@dustinedwards/site-runtime/csp";
 
 /**
  * Exact-or-slash, not a bare prefix, so a future `/administrator` route cannot pick up the admin
@@ -49,7 +45,7 @@ export function isPrivatePath(pathname) {
  * @param {string} pathname
  * @returns {boolean}
  */
-function isMediaPath(pathname) {
+export function isMediaPath(pathname) {
   return pathname === "/media" || pathname.startsWith("/media/");
 }
 
@@ -68,54 +64,23 @@ function isMediaPath(pathname) {
 // site-runtime (CLOUDFLARE_WEB_ANALYTICS), and the policy below asks the package for it by name.
 
 /**
- * Public pages get no nonce: header and body are edge-cached together, so a nonce there would be
- * one value shared by every reader for the cache lifetime. They run no inline script at all: /site.js
- * and the islands it imports are same-origin, so 'self' covers them, and the prefetch rules come from
- * a same-origin file the response header names (site-runtime ./prefetch), which needs no allowance.
- * The admin plane is `private, no-store`, so its per-request nonce is sound, and it keeps it for
- * <Scripts>, the sidebar script and CodeMirror's inline <style>. A /media path gets UPLOAD_HEADERS' policy instead,
- * chosen here so the Renderer keeps one place that sets the header.
- *
- * @param {string} pathname the request URL's pathname
- * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab-bench), else undefined
- * @returns {string}
- */
-export function contentSecurityPolicy(pathname, adminNonce) {
-  // Every /media response, whatever its type: stored bytes are never a page of this site, so they get UPLOAD_HEADERS'
-  // sandboxed default-src 'none', which stops an SVG or an HTML body from running as the site. TRAP: `sandbox` breaks
-  // Chrome's built-in PDF viewer; no PDF is served from /media, and one must never be.
-  if (isMediaPath(pathname))
-    return /** @type {string} */ (UPLOAD_HEADERS["Content-Security-Policy"]);
-  return buildContentSecurityPolicy(pagePolicy(adminNonce)).value;
-}
-
-/**
- * What the site's registry entry stages (Trusted Types and default-src 'none'), sent as
- * Content-Security-Policy-Report-Only beside the enforced policy until the reports are quiet. A /media
- * file has none: its policy is already default-src 'none' and runs no script.
- *
- * @param {string} pathname the request URL's pathname
- * @param {string | undefined} adminNonce this render's nonce on a private path (/admin, /lab-bench), else undefined
- * @returns {string | undefined}
- */
-export function stagedPolicy(pathname, adminNonce) {
-  if (isMediaPath(pathname)) return undefined;
-  return buildStagedPolicy(pagePolicy(adminNonce), { trustedTypes: true, denyUnlisted: true })
-    .value;
-}
-
-/**
- * What this site loads, the one list the package builds the policy from. No 'strict-dynamic': browsers ignore every host
+ * What this site loads, the one list site-runtime's pageSecurity builds the policy from (workers/security-headers.mjs).
+ * Public pages get no nonce: header and body are edge-cached together, so a nonce there would be one value shared by every
+ * reader for the cache lifetime. They run no inline script at all: /site.js and the islands it imports are same-origin, so
+ * 'self' covers them, and the prefetch rules come from a same-origin file the response header names (site-runtime
+ * ./prefetch), which needs no allowance. The private planes are `private, no-store`, so their per-request nonce is sound.
+ * A /media path keeps the UPLOAD_HEADERS policy its response carries (workers/app.ts), which the package leaves alone.
+ * No 'strict-dynamic': browsers ignore every host
  * source while it is present, so an approved file could never run; 'self' covers /site.js and the islands. The
  * admin plane's nonce also covers CodeMirror's inline <style>, which cannot be turned off. Nonces do not apply to style
  * attributes, and Shiki emits about 117 inline style="" per post, so those are allowed as attributes only.
  *
- * @param {string | undefined} adminNonce
+ * @param {{ nonce: string | undefined }} context
  */
-function pagePolicy(adminNonce) {
+export function pagePolicy({ nonce }) {
   return {
     sources: { img: ["data:"], media: PODCAST_AUDIO_HOSTS.map((host) => `https://${host}`) },
-    nonce: adminNonce || undefined,
+    nonce: nonce || undefined,
     styleAttributesInline: true,
     cloudflareWebAnalytics: true,
     // The post players (YouTube, Spotify and the rest of Dustin's list) a post may embed; the registry entry's `embeds`
