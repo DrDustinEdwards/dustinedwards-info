@@ -330,10 +330,6 @@ console.log(
    */
   const BACKUP_PASSED_TO = new Map([
     [
-      "app/lib/backup/d1-backup.server.ts:backupFiles",
-      "d1-dump's files backup: it lists and reads its source and writes and deletes only in the backup bucket it is given",
-    ],
-    [
       "app/lib/health/response.server.ts:r2Check",
       "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else",
     ],
@@ -489,7 +485,7 @@ console.log(
 }
 
 // Measured by running this gate. Not raised on every addition: its job is to catch a whole block being skipped.
-const MINIMUM_CHECKS = 83;
+const MINIMUM_CHECKS = 81;
 tally.floor("check:destructive", "checks", MINIMUM_CHECKS);
 
 console.log(
