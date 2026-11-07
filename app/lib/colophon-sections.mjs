@@ -22,11 +22,9 @@ export const COLOPHON_VERSIONS =
   "on WordPress, in 2016, and this one in 2026.";
 
 export const COLOPHON_INTRO =
-  "Everything below is generated from this repository's own configuration and " +
-  "checked against it in both directions on every build. If a binding is added " +
-  "and this page is not regenerated, the build fails. The one thing no " +
-  "generator can produce is why each piece is load-bearing, so those notes are " +
-  "written by hand and reconciled against the bindings they describe.";
+  "This page describes how the site is built. Most of it is generated from the " +
+  "repository's own configuration and checked against it on every build, so it " +
+  "cannot drift out of date unnoticed. The reasons behind each choice are written by hand.";
 
 /**
  * Order is load-bearing: record `ordinal` is derived from the index here.
@@ -34,6 +32,38 @@ export const COLOPHON_INTRO =
  * @type {ReadonlyArray<{ id: string, title: string, lead: string }>}
  */
 export const COLOPHON_SECTIONS = /** @type {const} */ ([
+  {
+    id: "run",
+    title: "The network behind this site",
+    lead:
+      "Other systems of mine sit behind or beside this one, and several packages " +
+      "are shared with my other sites. None is part of this repository.",
+  },
+  {
+    id: "features",
+    title: "What the site does",
+    lead:
+      "Nothing in this section can be generated from configuration, so each " +
+      "entry carries an anchor and a gate verifies that the thing the claim is " +
+      "about still exists. It does not verify that the sentence is true, which " +
+      "is the honest boundary of the technique.",
+  },
+  {
+    id: "ai",
+    title: "AI disclosure",
+    lead:
+      "This site is built with AI assistance and says so here rather than " +
+      "leaving you to guess, because a site about how it is built owes you " +
+      "that before it owes you anything else.",
+  },
+  {
+    id: "security",
+    title: "A tradeoff in the security headers",
+    lead:
+      "The content security policy is enforced, not merely reported. One part " +
+      "of it is a compromise rather than a clean win, and the compromise is " +
+      "worth stating plainly.",
+  },
   {
     id: "runtime",
     title: "Runtime",
@@ -71,39 +101,6 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
     lead:
       "The runtime dependencies. Build tooling is excluded: this is what " +
       "serves the site, not what assembles it.",
-  },
-  {
-    id: "features",
-    title: "What it does",
-    lead:
-      "Nothing in this section can be generated from configuration, so each " +
-      "entry carries an anchor and a gate verifies that the thing the claim is " +
-      "about still exists. It does not verify that the sentence is true, which " +
-      "is the honest boundary of the technique.",
-  },
-  {
-    id: "security",
-    title: "A tradeoff in the security headers",
-    lead:
-      "The content security policy is enforced, not merely reported. One part " +
-      "of it is a compromise rather than a clean win, and the compromise is " +
-      "worth stating plainly.",
-  },
-  {
-    id: "ai",
-    title: "AI disclosure",
-    lead:
-      "This site is built with AI assistance and says so here rather than " +
-      "leaving you to guess, because a site about how it is built owes you " +
-      "that before it owes you anything else.",
-  },
-  {
-    id: "run",
-    title: "How the site is run",
-    lead:
-      "Other systems of mine sit behind or beside this one, and several packages " +
-      "are shared with my other sites. None is part of this repository. " +
-      "The full list of what they do is on the features page.",
   },
   {
     id: "credits",

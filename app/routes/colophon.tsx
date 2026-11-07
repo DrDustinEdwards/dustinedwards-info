@@ -32,7 +32,10 @@ import { PageShell } from "~/components/page-shell";
 import { HEALTH_EDGE_CACHE_CONTROL, publicHtmlHeaders, SITE, pageMeta } from "~/lib/seo";
 
 import "~/styles/evidence-row.css";
+import "capsomer/tokens.css";
+import "capsomer/panel.css";
 import "~/styles/prose.css";
+import "~/styles/colophon.css";
 
 /**
  * Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. The short edge
@@ -175,6 +178,13 @@ function HealthPanel({ health }: { health: Route.ComponentProps["loaderData"]["h
   );
 }
 
+/** The jump list: the story first, then the reference. Every id is a section in COLOPHON_SECTIONS. */
+const CONTENTS = [
+  { label: "How it works", ids: ["run", "features", "ai", "security"] },
+  { label: "Reference", ids: ["runtime", "bindings", "schema", "gates", "dependencies"] },
+  { label: "More", ids: ["credits", "not-adopted"] },
+];
+
 export default function Colophon({ loaderData }: Route.ComponentProps) {
   const { health } = loaderData;
   const gates = stack.gates.length;
@@ -214,102 +224,25 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
       <HealthPanel health={health} />
 
-      <div className="prose">
-        <p>{COLOPHON_VERSIONS}</p>
-        <p>{COLOPHON_INTRO}</p>
+      <p className="colophon-versions">{COLOPHON_VERSIONS}</p>
+      <p className="colophon-intro">{COLOPHON_INTRO}</p>
 
-        <SectionHead id="runtime" />
-        <dl>
-          <dt>Compatibility date</dt>
-          <dd>
-            <code>{stack.runtime.compatibilityDate}</code>
-          </dd>
-          <dt>Compatibility flags</dt>
-          <dd>
-            {stack.runtime.compatibilityFlags.length > 0
-              ? stack.runtime.compatibilityFlags.join(", ")
-              : "none"}
-          </dd>
-          <dt>Node</dt>
-          <dd>
-            <code>{stack.runtime.nodeVersion}</code>
-          </dd>
-        </dl>
-
-        <SectionHead id="bindings" />
-        <p>{stack.bindings.length} resources.</p>
-        {stack.bindings.map((binding) => (
-          <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
-            <h3 id={`binding-${binding.name}`}>
-              <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
-            </h3>
-            <p>{binding.what}</p>
-            <p>
-              <strong>Why it is load-bearing.</strong> {binding.whyLoadBearing}
-            </p>
-          </section>
+      <nav className="colophon-contents" aria-label="On this page">
+        {CONTENTS.map((group) => (
+          <div key={group.label}>
+            <h2 className="colophon-contents-label">{group.label}</h2>
+            <ol>
+              {group.ids.map((id) => (
+                <li key={id}>
+                  <a href={`#${id}`}>{COLOPHON_SECTIONS.find((s) => s.id === id)?.title}</a>
+                </li>
+              ))}
+            </ol>
+          </div>
         ))}
+      </nav>
 
-        <SectionHead id="schema" />
-        <p>{stack.migrations.length} migrations.</p>
-        <ul>
-          {stack.migrations.map((file) => (
-            <li key={file}>
-              <code>{file}</code>
-            </li>
-          ))}
-        </ul>
-
-        <SectionHead id="gates" />
-        <p>{stack.gates.length} checks.</p>
-        <ul>
-          {stack.gates.map((gate) => (
-            <li key={gate}>
-              <code>{gate}</code>
-            </li>
-          ))}
-        </ul>
-
-        <SectionHead id="dependencies" />
-        <p>{stack.dependencies.length} runtime dependencies.</p>
-        <ul>
-          {stack.dependencies.map((dep) => (
-            <li key={dep.name}>
-              <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
-            </li>
-          ))}
-        </ul>
-
-        <SectionHead id="features" />
-        <p>{features.features.length} entries.</p>
-
-        {byComponent().map(([component, entries]) => (
-          <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
-            <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
-            {entries.map((feature) => (
-              <section key={feature.name}>
-                <h4>{feature.name}</h4>
-                <p>{feature.what}</p>
-                <ul>
-                  {(feature.anchors as Anchor[]).map((anchor, i) => (
-                    <AnchorItem key={i} anchor={anchor} />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </section>
-        ))}
-
-        <SectionHead id="security" />
-        {SECURITY_TRADEOFF.map((sentence) => (
-          <p key={sentence.slice(0, 32)}>{sentence}</p>
-        ))}
-
-        <SectionHead id="ai" />
-        {AI_DISCLOSURE.map((sentence) => (
-          <p key={sentence.slice(0, 32)}>{sentence}</p>
-        ))}
-
+      <div className="prose colophon-body">
         <SectionHead id="run" />
         {SITE_OPERATION.map((sentence) => (
           <p key={sentence.slice(0, 32)}>{sentence}</p>
@@ -326,7 +259,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
           {CAPSOMER_SENTENCE_REST}
         </p>
         <p>The packages shared with my other sites:</p>
-        <ul>
+        <ul className="colophon-packages">
           {SHARED_PACKAGES.map((pkg) => (
             <li key={pkg.name}>
               <a href={pkg.url}>{pkg.name}</a>
@@ -334,9 +267,129 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             </li>
           ))}
         </ul>
+
+        <SectionHead id="features" />
         <p>
-          What the whole network does is on the <Link to="/features">features page</Link>.
+          {features.features.length} entries. What the whole network does is on the{" "}
+          <Link to="/features">features page</Link>.
         </p>
+        {byComponent().map(([component, entries]) => (
+          <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
+            <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
+            <details className="colophon-more">
+              <summary>
+                {entries.length} {entries.length === 1 ? "entry" : "entries"}
+              </summary>
+              <div className="colophon-cards">
+                {entries.map((feature) => (
+                  <section key={feature.name} className="cap-panel colophon-card">
+                    <div className="cap-panel-body">
+                      <h4>{feature.name}</h4>
+                      <p>{feature.what}</p>
+                      <ul className="colophon-anchors">
+                        {(feature.anchors as Anchor[]).map((anchor, i) => (
+                          <AnchorItem key={i} anchor={anchor} />
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </details>
+          </section>
+        ))}
+
+        <SectionHead id="ai" />
+        {AI_DISCLOSURE.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
+        ))}
+
+        <SectionHead id="security" />
+        {SECURITY_TRADEOFF.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
+        ))}
+
+        <SectionHead id="runtime" />
+        <dl className="colophon-facts">
+          <div>
+            <dt>Compatibility date</dt>
+            <dd>
+              <code>{stack.runtime.compatibilityDate}</code>
+            </dd>
+          </div>
+          <div>
+            <dt>Compatibility flags</dt>
+            <dd>
+              {stack.runtime.compatibilityFlags.length > 0
+                ? stack.runtime.compatibilityFlags.join(", ")
+                : "none"}
+            </dd>
+          </div>
+          <div>
+            <dt>Node</dt>
+            <dd>
+              <code>{stack.runtime.nodeVersion}</code>
+            </dd>
+          </div>
+        </dl>
+
+        <SectionHead id="bindings" />
+        <p>{stack.bindings.length} resources.</p>
+        <div className="colophon-cards">
+          {stack.bindings.map((binding) => (
+            <section
+              key={binding.id}
+              className="cap-panel colophon-card"
+              aria-labelledby={`binding-${binding.name}`}
+            >
+              <div className="cap-panel-body">
+                <h3 id={`binding-${binding.name}`}>
+                  <code>{binding.name}</code> <span className="muted">({binding.kind})</span>
+                </h3>
+                <p>{binding.what}</p>
+                <p>
+                  <strong>Why it is load-bearing.</strong> {binding.whyLoadBearing}
+                </p>
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <SectionHead id="schema" />
+        <details className="colophon-more">
+          <summary>{stack.migrations.length} migrations</summary>
+          <ul className="colophon-columns">
+            {stack.migrations.map((file) => (
+              <li key={file}>
+                <code>{file}</code>
+              </li>
+            ))}
+          </ul>
+        </details>
+
+        <SectionHead id="gates" />
+        <details className="colophon-more">
+          <summary>{stack.gates.length} checks</summary>
+          <ul className="colophon-columns">
+            {stack.gates.map((gate) => (
+              <li key={gate}>
+                <code>{gate}</code>
+              </li>
+            ))}
+          </ul>
+        </details>
+
+        <SectionHead id="dependencies" />
+        <details className="colophon-more">
+          <summary>{stack.dependencies.length} runtime dependencies</summary>
+          <ul className="colophon-columns">
+            {stack.dependencies.map((dep) => (
+              <li key={dep.name}>
+                <code>{dep.name}</code> <span className="muted dep-range">{dep.range}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
 
         <SectionHead id="credits" />
         {CREDITS.map((credit) => (
@@ -348,7 +401,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
         <SectionHead id="not-adopted" />
         <p>{stack.notAdopted.length} entries.</p>
-        <dl>
+        <dl className="colophon-notes">
           {stack.notAdopted.map((entry) => (
             <div key={entry.name}>
               <dt>
