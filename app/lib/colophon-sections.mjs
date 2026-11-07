@@ -18,7 +18,7 @@ export const COLOPHON_DESCRIPTION =
  * dated 2016-12-05; version 1's platform is not recorded anywhere this repo can read, so it is not named.
  */
 export const COLOPHON_VERSIONS =
-  "This is the third version of dustinedwards.info. The first launched in 2006, the second, " +
+  "This is the third version of this site. The first launched in 2006, the second, " +
   "on WordPress, in 2016, and this one in 2026.";
 
 export const COLOPHON_INTRO =
