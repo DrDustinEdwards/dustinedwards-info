@@ -26,7 +26,6 @@ export function LabTable({
   children: ReactNode;
 }) {
   return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region takes the keyboard so it can be scrolled (axe scrollable-region-focusable)
     <div className="cap-table-wrap" role="region" aria-label={label} tabIndex={0}>
       <table className="cap-table">
         <thead>

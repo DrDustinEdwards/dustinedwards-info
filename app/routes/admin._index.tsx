@@ -112,7 +112,6 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         }
       >
         {failing.length > 0 ? (
-          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region takes the keyboard so it can be scrolled (axe scrollable-region-focusable)
           <div className="cap-table-wrap" role="region" aria-label="Failing checks" tabIndex={0}>
             <table className="cap-table">
               <thead>

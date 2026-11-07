@@ -35,7 +35,7 @@ jobs:
       pull-requests: write
       id-token: write
       checks: write
-    uses: DrDustinEdwards/devkit/.github/workflows/pr.yml@507d1be20e6cbf76badcfeaadf944818c66cf54f # v0.26.1
+    uses: DrDustinEdwards/devkit/.github/workflows/pr.yml@562daa2dbfb23f2987f81caeac34f9e054b3d03b # v0.26.4
     with:
       review: true
       # The generated files the app imports, built as ci.yml builds them, local only. typegen writes the routes'
