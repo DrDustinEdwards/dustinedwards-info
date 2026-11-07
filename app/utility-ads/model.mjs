@@ -6,15 +6,15 @@
 
 /** The regions every ad draws, per layout. Their shapes (view boxes and where they sit) belong to the template, not to an ad. */
 /** @type {Record<string, Record<string, [number, number]>>} */
-export const REGIONS = {
+const REGIONS = {
   wide: { top: [1200, 200], left: [300, 500], right: [300, 500], bottom: [1200, 160] },
   tall: { top: [600, 360], bottom: [600, 200] },
 };
 
 /** The lettering. Display and slab are the two self-hosted Open Font License faces; serif is the site's own Source Serif 4. */
-export const FONTS = ["display", "slab", "serif"];
+const FONTS = ["display", "slab", "serif"];
 
-export const PART_KINDS = ["text", "burst", "rect", "use"];
+const PART_KINDS = ["text", "burst", "rect", "use"];
 
 const ID = /^[a-z][a-z0-9-]*$/;
 const HEX = /^#[0-9a-f]{6}$/i;
