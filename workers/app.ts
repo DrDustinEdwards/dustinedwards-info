@@ -12,16 +12,9 @@ import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordp
 import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
 import { themeFromRequest } from "~/lib/theme";
 import { timingsContext } from "~/lib/timing";
-import {
-  CSP_REPORT_GROUP,
-  CSP_REPORT_PATH,
-  contentSecurityPolicy,
-  isPrivatePath,
-  stagedPolicy,
-} from "./csp.mjs";
-import { isUnpolicedType } from "./feed-types.mjs";
+import { isMediaPath, isPrivatePath } from "./csp.mjs";
 import { withAdminIdle } from "@dustinedwards/site-runtime/access";
-import { applyHeaderSet, corpFor } from "@dustinedwards/site-runtime/headers";
+import { applyHeaderSet, UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
 import {
   cacheKey,
   forReader,
@@ -33,13 +26,12 @@ import {
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
 import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
-import { generateNonce, reportingEndpoints } from "@dustinedwards/site-runtime/csp";
 import {
   SPECULATION_RULES_HEADER,
   SPECULATION_RULES_PATH,
   speculationRulesResponse,
 } from "@dustinedwards/site-runtime/prefetch";
-import { SECURITY_HEADERS } from "./security-headers.mjs";
+import { nonceFor, SECURITY_HEADERS, withSecurityHeaders } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
@@ -90,26 +82,10 @@ function applySecurityHeaders(headers: Headers) {
 const PREFETCH_EXCLUDE = [LAB_BENCH_PATH, "/media", "/login", "/theme", "/search/ask"];
 
 /**
- * Every header a rendered response leaves with: the security set, the report endpoint, the policy and its Report-Only stage (feeds excepted),
- * the prefetch rules on a public page and the day-long edge lifetime on a shared response that names none. An image or
- * a feed may be embedded by another origin (corpFor).
+ * What a rendered response leaves with beyond the security set (site-runtime pageSecurity, applied in the Renderer): the
+ * prefetch rules on a public page and the day-long edge lifetime on a shared response that names none.
  */
-function applyDocumentHeaders(
-  headers: Headers,
-  {
-    reportTo,
-    csp,
-    staged,
-    publicPage,
-  }: { reportTo: string; csp: string; staged: string | undefined; publicPage: boolean },
-) {
-  applySecurityHeaders(headers);
-  headers.set("Cross-Origin-Resource-Policy", corpFor(headers.get("content-type")));
-  headers.set("Reporting-Endpoints", reportTo);
-  if (!isUnpolicedType(headers.get("content-type"))) {
-    headers.set("Content-Security-Policy", csp);
-    if (staged) headers.set("Content-Security-Policy-Report-Only", staged);
-  }
+function applyDocumentHeaders(headers: Headers, { publicPage }: { publicPage: boolean }) {
   // Public HTML only: the signed-in planes never prefetch.
   if (publicPage && (headers.get("content-type") ?? "").startsWith("text/html")) {
     headers.set(SPECULATION_RULES_HEADER.name, SPECULATION_RULES_HEADER.value);
@@ -143,8 +119,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     context.set(documentHandlerContext, requestHandler);
 
     // The private planes only (/admin, /lab-bench): a public page is edge-cached with its header, so a nonce there would be shared
-    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
-    const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
+    // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs pagePolicy).
+    const adminNonce = isPrivatePath(url.pathname) ? nonceFor(request) : undefined;
     context.set(cspNonceContext, adminNonce ?? null);
 
     // Server-Timing on every response (site-runtime ./server-timing): `render`, and each loader's marks. The
@@ -154,20 +130,21 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
       return requestHandler(request, context);
     });
 
-    // Absolute https (the gateway has already redirected plaintext): `Reporting-Endpoints` ignores anything else.
-    const reportTo = reportingEndpoints(CSP_REPORT_GROUP, new URL(CSP_REPORT_PATH, url.origin));
-    const csp = contentSecurityPolicy(url.pathname, adminNonce);
-    const staged = stagedPolicy(url.pathname, adminNonce);
-    applyDocumentHeaders(response.headers, {
-      reportTo,
-      csp,
-      staged,
-      publicPage: !isPrivatePath(url.pathname),
-    });
-
+    // Every /media response, whatever its type: stored bytes are never a page of this site, so they carry UPLOAD_HEADERS'
+    // sandboxed default-src 'none' (an SVG or an HTML body cannot run as the site), which pageSecurity leaves alone as the
+    // route's own. TRAP: `sandbox` breaks Chrome's built-in PDF viewer; no PDF is served from /media, and one must never be.
+    const media = isMediaPath(url.pathname)
+      ? withHeader(
+          response,
+          "Content-Security-Policy",
+          UPLOAD_HEADERS["Content-Security-Policy"] as string,
+        )
+      : response;
+    const secured = withSecurityHeaders(media, request, adminNonce);
+    applyDocumentHeaders(secured.headers, { publicPage: !isPrivatePath(url.pathname) });
     // Every HTML page: the preloads root.tsx links, as the `Link` header Cloudflare Early Hints reads. Appended,
     // because a post already sends its markdown alternate and webmention endpoint in `Link`.
-    const hinted = withPreloadHeader(response, PRELOADS.header);
+    const hinted = withPreloadHeader(secured, PRELOADS.header);
     // Last: anything not a shared 200, setting a cookie, rendered for a HEAD or for a cookie other than the theme (which
     // the key holds) leaves private, no-store with no edge header or tag.
     return settleCacheHeaders(hinted, request, { publicCookies: [THEME_COOKIE] });

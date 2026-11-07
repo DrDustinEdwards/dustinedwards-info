@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 import { PODCAST_AUDIO_HOSTS, parseDuration, parsePodcastFeed } from "../app/lib/podcast/feed.mjs";
 import { clockTime } from "../app/lib/podcast/clock.mjs";
-import { contentSecurityPolicy } from "../workers/csp.mjs";
+import { buildContentSecurityPolicy } from "@dustinedwards/site-runtime/csp";
+import { pagePolicy } from "../workers/csp.mjs";
 
 /** @param {Record<string, string>} over */
 function item(over = {}) {
@@ -111,7 +112,7 @@ await test("the home page's episode is episodes[0], which is always the newest: 
 
 await test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
   for (const adminNonce of [undefined, "a-test-nonce-0123456789"]) {
-    const media = contentSecurityPolicy("/", adminNonce)
+    const media = buildContentSecurityPolicy(pagePolicy({ nonce: adminNonce })).value
       .split("; ")
       .find((d) => d.startsWith("media-src "));
     assert.ok(media, "no media-src directive");
