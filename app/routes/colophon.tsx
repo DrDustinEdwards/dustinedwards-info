@@ -428,12 +428,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               data-find="migrations"
               hidden
             />
-            <ul
-              className="colophon-scroll"
-              tabIndex={0}
-              aria-label="Migrations"
-              data-list="migrations"
-            >
+            <ul className="colophon-scroll" aria-label="Migrations" data-list="migrations">
               {stack.migrations.map((file) => (
                 <li key={file}>
                   <code>{file}</code>
@@ -452,7 +447,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
               data-find="checks"
               hidden
             />
-            <ul className="colophon-scroll" tabIndex={0} aria-label="Checks" data-list="checks">
+            <ul className="colophon-scroll" aria-label="Checks" data-list="checks">
               {stack.gates.map((gate) => (
                 <li key={gate}>
                   <code>{gate}</code>
@@ -473,7 +468,6 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
             />
             <ul
               className="colophon-scroll"
-              tabIndex={0}
               aria-label="Runtime dependencies"
               data-list="dependencies"
             >
