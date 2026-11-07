@@ -36,6 +36,7 @@ import "capsomer/tokens.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
+import "~/styles/media-split.css";
 import { RENDERED } from "~/lib/content/render-version";
 
 /**
