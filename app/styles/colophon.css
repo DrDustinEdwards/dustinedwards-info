@@ -355,4 +355,13 @@ tr[hidden],
   .colophon-stack-tag {
     padding-block-start: 0;
   }
+
+  /* One box to a line on a phone, edge to edge, so the rows never ragged-wrap. */
+  .colophon-stack-boxes {
+    flex-direction: column;
+  }
+
+  .colophon-stack-boxes > li {
+    inline-size: 100%;
+  }
 }
