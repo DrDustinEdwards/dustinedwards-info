@@ -441,7 +441,7 @@ export function carrelSiteAdapter(options: {
       // public page carries none (workers/csp.mjs).
       const context = new RouterContextProvider();
       context.set(cloudflareContext, { env, ctx });
-      context.set(cspNonceContext, undefined);
+      context.set(cspNonceContext, null);
       context.set(postPreviewContext, post);
       const response = await renderDocument(
         new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),

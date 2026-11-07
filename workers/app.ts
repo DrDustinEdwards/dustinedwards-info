@@ -145,7 +145,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     // The private planes only (/admin, /lab-bench): a public page is edge-cached with its header, so a nonce there would be shared
     // by every reader; it runs no inline script, only same-origin files (workers/csp.mjs).
     const adminNonce = isPrivatePath(url.pathname) ? generateNonce() : undefined;
-    context.set(cspNonceContext, adminNonce);
+    context.set(cspNonceContext, adminNonce ?? null);
 
     // Server-Timing on every response (site-runtime ./server-timing): `render`, and each loader's marks. The
     // response comes back with mutable headers, rebuilt when the handler's were not (`Response.redirect()`).
