@@ -460,6 +460,65 @@
     justify-content: center;
     padding-block-start: var(--space-5);
   }
+
+  /* The key explains the plate, so the cover and the key row share one screen: the cover takes what the window
+     leaves under the letterhead and the key row (8.5rem: the row, its margin and a little air), never less than
+     22rem. The name and the plate size down to it (Dustin, 2026-11-08). */
+  .home-hero {
+    --hero-h: max(22rem, calc(100dvh - var(--header-h) - 8.5rem));
+  }
+
+  .intro-name {
+    font-size: min(clamp(3.25rem, 1.6rem + 9.2vw, 10rem), calc((var(--hero-h) - 11rem) / 1.76));
+  }
+
+  .home-hero .plate--wide {
+    max-block-size: calc(var(--hero-h) - 4.75rem);
+  }
+
+  .tracks > .home-hero + .plate-key {
+    margin-block-start: var(--space-4);
+  }
+}
+
+/* From 68rem the key row is six short boxes: the drawing beside the numeral and the name, the note under. */
+@media (min-width: 68rem) {
+  .plate-key-entry {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    column-gap: var(--space-3);
+    align-items: center;
+    padding: var(--space-3);
+  }
+
+  .plate-key-entry > figcaption {
+    display: contents;
+  }
+
+  .plate-key-art {
+    grid-row: 1 / 3;
+    inline-size: 2rem;
+    block-size: 2rem;
+    margin: 0;
+  }
+
+  .plate-key-num {
+    order: 0;
+    grid-column: 2;
+  }
+
+  .plate-key-name {
+    grid-column: 2;
+    margin-block: 0;
+    font-size: 0.9375rem;
+  }
+
+  .plate-key-note {
+    grid-column: 1 / -1;
+    margin-block-start: var(--space-2);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
 }
 
 .podcast {
