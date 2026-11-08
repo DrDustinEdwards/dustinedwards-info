@@ -26,11 +26,10 @@ import {
 import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
-import { listPublishedPublications } from "~/db/publications";
+import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db/publications";
 import { listRoster } from "~/db/roster";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { rosterFacts } from "~/lib/roster/compile.mjs";
-import type { Publication } from "~/lib/publications/types";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
@@ -64,7 +63,7 @@ const HOME_PAPERS = 3;
  * Chosen in the loader and not the component, so the publication records (abstracts, author lists)
  * stay out of the page's script.
  */
-function homePapers(papers: Publication[]) {
+function homePapers(papers: PublicationSummary[]) {
   const newest = [...papers].sort(
     (a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""),
   );
@@ -87,7 +86,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
     timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
-    timed(timings, "home_papers", () => listPublishedPublications(env)),
+    timed(timings, "home_papers", () => listPublishedPublicationSummaries(env)),
     timed(timings, "home_roster", () => listRoster(env)),
   ]);
 
