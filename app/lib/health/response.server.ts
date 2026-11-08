@@ -8,7 +8,6 @@
 
 import { cronCheck } from "@dustinedwards/site-runtime/cron";
 import {
-  aiCheck,
   durableObjectCheck,
   healthResponse,
   imagesCheck,
@@ -62,7 +61,6 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       { ...kvCheck("kv", env.APP_KV), level: "warn" },
       { ...r2Check("media-revisions", env.MEDIA_REVISIONS), level: "warn" },
       imagesCheck("images", env.IMAGES),
-      aiCheck("ai", env.AI),
       // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
       {
         name: "browser",

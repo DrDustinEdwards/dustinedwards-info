@@ -232,13 +232,6 @@
 	// Carries no id, so this line is complete as written. Not restated under `previews`: a preview has no CV
 	// save, and quickAction has no local emulation.
 	"browser": { "binding": "BROWSER" },
-	// Workers AI, for the media library's suggested tags and alt text (app/lib/media/suggest.server.ts): one
-	// call when an editor asks for a file's suggestions in Carrel or the admin library, never on a visitor's
-	// request, and never applied unasked. Through AI Gateway when AI_GATEWAY_BASE_URL (below) names one,
-	// which site-runtime's ./ai-gateway checks, with request and response bodies kept out of its logs. Carries
-	// no id, so this line is complete as written. Not restated under `previews`: a preview has no editor
-	// sign-in, and without the binding a suggestion is refused rather than billed.
-	"ai": { "binding": "AI" },
 	// The deployed version's upload time, which /health's cron check uses to hold back a job that has
 	// not had its first window since the deploy (app/lib/health/response.server.ts).
 	"version_metadata": { "binding": "CF_VERSION_METADATA" },
@@ -257,16 +250,13 @@
 	// every token Access issues. Empty, /lab-bench would say it is not set up and admit nobody; it was empty until that
 	// application existed.
 	//
-	// AI_GATEWAY_BASE_URL names the AI Gateway the media suggestions run through, as site-runtime's ./ai-gateway
-	// spells it: https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/anthropic. Empty here because it
-	// carries the account id (the real value lives in the gitignored wrangler.jsonc); empty, Workers AI is called
-	// directly. Not a credential: the binding authenticates itself.
+	// The media suggestions (app/lib/media/suggest.server.ts) call Claude Haiku 5.5 straight at Anthropic with the
+	// secret ANTHROPIC_API_KEY (`wrangler secret put`), never through AI Gateway.
 	"vars": {
 		"PREVIEW": "",
 		"ACCESS_TEAM_DOMAIN": "dustinedwards.cloudflareaccess.com",
 		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25",
-		"ACCESS_LAB_AUD": "8ec1420e613392850264f5ea03c02479d1fa21c12936625b2c87e62e195d4b80",
-		"AI_GATEWAY_BASE_URL": ""
+		"ACCESS_LAB_AUD": "8ec1420e613392850264f5ea03c02479d1fa21c12936625b2c87e62e195d4b80"
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
