@@ -37,16 +37,12 @@
   line-height: 0.88;
 }
 
-/* The grid behind the name is drawn quieter than Capsomer's default, as paper under the name, and the cover
-   leaves its label off: the label belongs on the colophon, where the grid is shown (Dustin, 2026-11-08). */
+/* The grid behind the name is drawn quieter than Capsomer's default, as paper under the name. It has no label
+   (Capsomer 0.85 draws one only where data-labeled is set). */
 .intro-name.cap-layout-grid {
   --grid-line: color-mix(in oklab, var(--crit) 30%, transparent);
   --grid-soft: color-mix(in oklab, var(--crit) 9%, transparent);
   --grid-fill: color-mix(in oklab, var(--crit) 3%, transparent);
-}
-
-.intro-name.cap-layout-grid::after {
-  content: none;
 }
 
 .intro-affil {
@@ -518,7 +514,7 @@
   }
 
   .tracks > .home-hero + .plate-key {
-    margin-block-start: 2rem;
+    margin-block-start: 2.5rem;
   }
 
   .plate-key-note {
