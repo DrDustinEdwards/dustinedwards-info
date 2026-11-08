@@ -155,10 +155,10 @@ const CANVAS_WIDE: PlateLayout = {
   ],
 };
 
-// 640 is the hero's right half at 1280 with a desktop scrollbar, less the gap beside the name. The dish
+// 610 is the hero's right half at 1280 with a desktop scrollbar, which is half the page less the gap. The dish
 // takes what the labels leave, so it fills the plate box's height.
 // Only the dish, plaques, leader starts and 1 cm bar scale; labels, tails and strokes keep canvas size.
-const WIDE_WIDTH = 640;
+const WIDE_WIDTH = 610;
 // Longest left label is 143 and longest right label ("ii · turbid") is 92, measured in the drawing's
 // own units; the spare room keeps a label from meeting the frame.
 const LEFT_LABELS = 152;

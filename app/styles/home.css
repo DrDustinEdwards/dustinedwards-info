@@ -31,7 +31,7 @@
   max-inline-size: min-content;
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: clamp(3.25rem, 1.6rem + 8.6vw, 8.5rem);
+  font-size: clamp(3.25rem, 1.6rem + 9.2vw, 10rem);
   font-weight: var(--weight-title);
   letter-spacing: -0.045em;
   line-height: 0.88;
@@ -408,7 +408,7 @@
 
 @media (min-width: 64rem) {
   .home-hero {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: var(--space-7);
     row-gap: 0;
     align-items: start;
