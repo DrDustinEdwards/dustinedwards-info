@@ -614,8 +614,8 @@ describe("media: alt, tags and the trash", () => {
 });
 
 /* The media library's v0.13.0 ideas: duplicates, turns with their history, the change log, embedded metadata,
- * the shrink at upload and the model's suggestions. Images and Workers AI have no local emulation, so both are
- * recorded shapes: the transformer appends what it was asked to do, so its output differs from its input. */
+ * the shrink at upload and the model's suggestions. Images has no local emulation and Anthropic is not called from a
+ * test, so both are recorded shapes: the transformer appends what it was asked to do, so its output differs from its input. */
 
 type Size = { width: number; height: number };
 
@@ -932,31 +932,46 @@ describe("media: the v0.13.0 library", () => {
 
   it("suggests tags and alt text from the model, in the contract's spelling, and applies neither", async () => {
     const id = await uploadThroughApi("suggest-case");
-    const sent: unknown[] = [];
-    const AI = {
-      run: async (model: string, input: unknown) => {
-        sent.push({ model, input });
-        return {
-          response: {
-            alt: "Three brass plaques set in a lawn.",
-            tags: ["Plaques", "lawn", "lawn", "not a tag!"],
+    const sent: string[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (url: unknown, init?: { body?: string }) => {
+      sent.push(String(url), init?.body ?? "");
+      return Response.json({
+        id: "msg_1",
+        type: "message",
+        role: "assistant",
+        stop_reason: "end_turn",
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              alt: "Three brass plaques set in a lawn.",
+              tags: ["Plaques", "lawn", "lawn", "not a tag!"],
+            }),
           },
-        };
-      },
-    };
-    const response = await mediaCall(
-      "GET",
-      `${PREFIX}/media/${id}/suggestions`,
-      {},
-      { AI, IMAGES: imagesThatTransform() },
-    );
+        ],
+        usage: { input_tokens: 10, output_tokens: 20 },
+      });
+    }) as typeof fetch;
+    let response: Response;
+    try {
+      response = await mediaCall(
+        "GET",
+        `${PREFIX}/media/${id}/suggestions`,
+        {},
+        { ANTHROPIC_API_KEY: "sk-ant-test", IMAGES: imagesThatTransform() },
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+    }
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({
       id,
       alt: "Three brass plaques set in a lawn.",
       tags: ["plaques", "lawn"],
     });
-    expect(JSON.stringify(sent)).toContain("data:image/jpeg;base64,");
+    expect(sent[0]).toBe("https://api.anthropic.com/v1/messages");
+    expect(sent[1]).toContain('"media_type":"image/jpeg"');
     expect(await mediaItem(id)).toMatchObject({ alt: "", tags: [] });
   });
 });
