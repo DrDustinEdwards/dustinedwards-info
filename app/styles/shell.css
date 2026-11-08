@@ -69,38 +69,3 @@
   font-family: var(--font-sans);
   font-size: 0.875rem;
 }
-
-/* The layout grid on request (app/enhance/grid.ts sets `data-grid` on <html> for `?grid=1` or the G key): twelve columns
-   across the page's width and a baseline every 24 px, four columns on a phone, in the layout grid's own red (Capsomer
-   `.cap-layout-grid`). It is drawn over the page and takes no click. */
-html[data-grid]::after {
-  content: "";
-  position: fixed;
-  inset-block: 0;
-  inset-inline: 0;
-  z-index: 2147483000;
-  inline-size: calc(min(var(--page-max), 100%) - 2 * var(--page-gutter));
-  margin-inline: auto;
-  pointer-events: none;
-  --cols: 12;
-  --gap: 24px;
-  --grid-line: color-mix(in oklab, var(--crit) 45%, transparent);
-  --grid-soft: color-mix(in oklab, var(--crit) 14%, transparent);
-  --grid-fill: color-mix(in oklab, var(--crit) 6%, transparent);
-  background:
-    repeating-linear-gradient(to bottom, transparent 0 23px, var(--grid-soft) 23px 24px),
-    linear-gradient(to right, var(--grid-line) 0 1px, var(--grid-fill) 1px calc(100% - var(--gap) - 1px), var(--grid-line) calc(100% - var(--gap) - 1px) calc(100% - var(--gap)), transparent calc(100% - var(--gap))) 0 0 / calc((100% + var(--gap)) / var(--cols)) 100% repeat-x;
-}
-
-@media (max-width: 40rem) {
-  html[data-grid]::after {
-    --cols: 4;
-    --gap: 16px;
-  }
-}
-
-@media (forced-colors: active) {
-  html[data-grid]::after {
-    display: none;
-  }
-}

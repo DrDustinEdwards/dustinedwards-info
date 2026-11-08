@@ -295,10 +295,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         />
       }
     >
-      {/* The one page that labels its grid: here the grid is the subject (Capsomer `data-labeled`). */}
-      <h1 className="page-title cap-layout-grid" data-labeled>
-        {COLOPHON_TITLE}
-      </h1>
+      <h1 className="page-title cap-layout-grid">{COLOPHON_TITLE}</h1>
 
       {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
       <div className="colophon-evidence">

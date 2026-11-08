@@ -21,18 +21,6 @@
   display: grid;
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
-  padding: var(--space-5);
-  /* Graph paper under the inputs and the working: a 24 px square, in the layout grid's own red, kept faint so the
-     numbers on it stay legible. */
-  background:
-    linear-gradient(to right, color-mix(in oklab, var(--crit) 12%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
-    linear-gradient(to bottom, color-mix(in oklab, var(--crit) 12%, transparent) 1px, transparent 1px) 0 0 / 24px 24px;
-}
-
-@media (forced-colors: active) {
-  .phage-tool-body {
-    background: none;
-  }
 }
 
 @media (min-width: 48rem) {
