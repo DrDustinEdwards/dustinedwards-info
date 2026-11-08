@@ -149,6 +149,7 @@ export function SiteHeader() {
             className="cap-site-header-icon cap-site-header-theme"
           />
           <template data-island="theme" />
+          <template data-island="grid" />
         </div>
         {/* Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts. */}
         <template data-island="header" />
