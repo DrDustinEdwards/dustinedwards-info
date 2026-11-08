@@ -3,7 +3,7 @@
 }
 
 /* The cover: the department and the place over a heavy rule, the name large, the role, then the
-   organization over a hairline (the manual theme's technical-report cover). */
+   organization (the manual theme's technical-report cover). */
 .home-intro {
   display: flex;
   flex-direction: column;
@@ -62,9 +62,7 @@
 }
 
 .cover-foot {
-  margin: var(--space-5) 0 0;
-  padding-block-start: 0.625rem;
-  border-block-start: var(--line-w) solid var(--text);
+  margin: var(--space-4) 0 0;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   line-height: 1.4;
@@ -422,14 +420,10 @@
 
   /* The left half stops a gutter short of the plate, whose left edge is the page's middle, the line between
      the key row's third and fourth boxes (the key has six boxes from 68rem). */
-  .cover-top,
-  .cover-foot {
-    margin-inline-end: var(--space-7);
-  }
-
   .cover-top {
     grid-column: 1;
     grid-row: 1;
+    margin-inline-end: var(--space-7);
   }
 
   .intro-name {
