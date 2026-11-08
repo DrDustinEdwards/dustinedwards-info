@@ -49,6 +49,8 @@ declare global {
      * Optional by contract: absent, the check-publications job fails and says so.
      */
     ALERT_EMAIL?: string;
+    /** The media suggestions' key (app/lib/media/suggest.server.ts): Claude Haiku 5.5 straight at Anthropic. Optional by contract: absent, a suggestion is refused. */
+    ANTHROPIC_API_KEY?: string;
   }
 }
 
