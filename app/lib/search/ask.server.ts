@@ -9,7 +9,7 @@ import {
   writeCachedDrift,
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
-import { uploadTwins, withRetry } from "./ask-twins.mjs";
+import { ASK_UPLOAD_CONCURRENCY, mapPool, uploadTwins, withRetry } from "./ask-twins.mjs";
 import { answerDelta, takeSseFrames } from "./sse.mjs";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
@@ -237,13 +237,14 @@ async function deleteAskItemsWhere(env: Env, matches: (key: string) => boolean) 
 export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   // From D1 with visibilityClause composed in the SQL, so drafts and future posts never enter the index.
   const records = await askCorpusRecords(env);
-  const keys: string[] = [];
+  // Every item is built before the first upload, so a bad url fails the sync before it writes anything.
+  const items = records.map(askItemFor);
+  const keys: string[] = items.map(({ key }) => key);
 
-  for (const record of records) {
-    const { key, body } = askItemFor(record);
-    await env.AI_SEARCH.items.upload(key, body);
-    keys.push(key);
-  }
+  // Bounded parallel: one request carries the whole sync, and the caller stops waiting after 300 s.
+  await mapPool(items, ASK_UPLOAD_CONCURRENCY, ({ key, body }) =>
+    withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 }),
+  );
 
   // Papers from their twins, not search_docs: uploading both would let the shorter win questions the longer answers.
   const twins = await uploadPaperTwins(env);

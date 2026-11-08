@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { TWIN_ATTEMPTS, uploadTwins, withRetry } from "../app/lib/search/ask-twins.mjs";
+import { TWIN_ATTEMPTS, mapPool, uploadTwins, withRetry } from "../app/lib/search/ask-twins.mjs";
 import { askSyncReport, askSyncSummary } from "../app/lib/operator/sync-report.mjs";
 
 const TWINS = [
@@ -166,4 +166,29 @@ await test("withRetry returns the value when a later attempt succeeds", async ()
   );
   assert.equal(value, "uploaded");
   assert.equal(calls, 2);
+});
+
+await test("mapPool never exceeds its limit, keeps order, and stops starting work after a failure", async () => {
+  let inFlight = 0;
+  let peak = 0;
+  const out = await mapPool([1, 2, 3, 4, 5, 6, 7], 3, async (n) => {
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise((r) => setTimeout(r, 5));
+    inFlight -= 1;
+    return n * 2;
+  });
+  assert.deepEqual(out, [2, 4, 6, 8, 10, 12, 14]);
+  assert.equal(peak, 3);
+
+  const started = [];
+  await assert.rejects(
+    mapPool([1, 2, 3, 4, 5, 6], 2, async (n) => {
+      started.push(n);
+      if (n === 2) throw new Error("boom");
+      await new Promise((r) => setTimeout(r, 5));
+    }),
+    /boom/,
+  );
+  assert.ok(started.length < 6, "no new work starts once one call has failed");
 });
