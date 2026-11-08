@@ -461,23 +461,58 @@
     padding-block-start: var(--space-5);
   }
 
-  /* The key explains the plate, so the cover and the key row share one screen: the cover takes what the window
-     leaves under the letterhead and the key row (8.5rem: the row, its margin and a little air), never less than
-     22rem. The name and the plate size down to it (Dustin, 2026-11-08). */
+  /* The name fills the column under the rule: "Edwards" is 3.7075 times the font size wide, so the size is the
+     column's width over that (Dustin, 2026-11-08). The plate's box ends level with the last line of the organization,
+     and its caption hangs below it, over the gap above the key row. */
   .home-hero {
-    --hero-h: max(22rem, calc(100dvh - var(--header-h) - 8.5rem));
+    container-type: inline-size;
+  }
+
+  .cover-top {
+    margin-block: var(--space-3) var(--space-4);
   }
 
   .intro-name {
-    font-size: min(clamp(3.25rem, 1.6rem + 9.2vw, 10rem), calc((var(--hero-h) - 11rem) / 1.76));
+    margin-block-end: var(--space-3);
+    font-size: calc((50cqi - var(--space-7)) / 3.7075);
+    line-height: 0.86;
+  }
+
+  .home-hero .home-plate {
+    position: relative;
+  }
+
+  .home-hero .cap-plate-caption {
+    position: absolute;
+    inset-block-start: 100%;
+    margin-block-start: 0.375rem;
+  }
+
+  .tracks > .home-hero + .plate-key {
+    margin-block-start: 2.5rem;
+  }
+}
+
+/* The key explains the plate, so the cover and the key row share one screen. Where the window is shorter than
+   the two-line name needs, the name is one line across the column, and the cover takes what the window leaves
+   under the letterhead and the key row. */
+@media (min-width: 64rem) and (max-height: 43rem) {
+  .home-hero {
+    --hero-h: max(22rem, calc(100dvh - var(--header-h) - 11rem));
+    grid-template-rows: auto 1fr auto auto;
+    min-block-size: var(--hero-h);
+  }
+
+  .intro-name {
+    align-self: center;
+    inline-size: fit-content;
+    max-inline-size: none;
+    font-size: calc((50cqi - var(--space-7)) / 6.62);
+    white-space: nowrap;
   }
 
   .home-hero .plate--wide {
     max-block-size: calc(var(--hero-h) - 4.75rem);
-  }
-
-  .tracks > .home-hero + .plate-key {
-    margin-block-start: var(--space-4);
   }
 }
 
@@ -487,6 +522,7 @@
     display: grid;
     grid-template-columns: 2rem minmax(0, 1fr);
     column-gap: var(--space-3);
+    align-content: start;
     align-items: center;
     padding: var(--space-3);
   }
