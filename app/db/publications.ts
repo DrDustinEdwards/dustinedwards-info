@@ -1,7 +1,7 @@
 // The publications and publication_citations tables: read by the paper pages, the exports, the sitemap,
 // the home page and the operator API. Written only by app/lib/publications/write.server.ts, from a compile
 // (app/lib/publications/compile.mjs).
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import type { Publication } from "~/lib/publications/types";
 import { sortPublications } from "~/lib/publications/record.mjs";
@@ -17,6 +17,32 @@ export async function listPublishedPublications(env: Env): Promise<Publication[]
     .from(publications)
     .where(eq(publications.status, PUBLISHED_STATUS));
   return sortPublications(rows.map((row) => JSON.parse(row.record) as Publication));
+}
+
+/** What the home page reads of a published paper. */
+export type PublicationSummary = Pick<
+  Publication,
+  "id" | "slug" | "year" | "title" | "journal" | "publishedDate" | "selected"
+>;
+
+/**
+ * Every published paper's summary for the home page: the columns it needs and three JSON fields, so the abstracts and
+ * author lists, most of every record, are neither read from D1 nor parsed on a render the edge cache misses.
+ */
+export async function listPublishedPublicationSummaries(env: Env): Promise<PublicationSummary[]> {
+  const rows = await getDb(env)
+    .select({
+      id: sql<string>`json_extract(${publications.record}, '$.id')`,
+      slug: publications.slug,
+      year: publications.year,
+      title: publications.title,
+      journal: sql<string | null>`json_extract(${publications.record}, '$.journal')`,
+      publishedDate: sql<string | null>`json_extract(${publications.record}, '$.publishedDate')`,
+      selected: publications.selected,
+    })
+    .from(publications)
+    .where(eq(publications.status, PUBLISHED_STATUS));
+  return rows.map((row) => ({ ...row, selected: row.selected === 1 }));
 }
 
 /** For the sitemap's dates (app/lib/site-urls.server.ts): every published paper's source file, by slug. */
