@@ -12,6 +12,10 @@ import paletteDialogCss from "~/styles/palette-dialog.css?url";
 
 const NAV_ID = "site-nav";
 
+// SITE.name is "Dustin Edwards": the header sets the first word small over the second.
+const [GIVEN_NAME = "", ...REST] = SITE.name.split(" ");
+const FAMILY_NAME = REST.join(" ");
+
 /**
  * Capsomer's search icon and its field (searchHtml, the markup letterheadHtml writes): a link to /search with no
  * script; app/enhance/header.ts wires it to answer from the site's /search as the person types. Its own wrapper
@@ -114,8 +118,11 @@ export function SiteHeader() {
         <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
           {/* Decorative: the name beside it is the link's name. */}
           <SiteLogoHeader className="site-header-mark" />
+          {/* "Dustin" small over "Edwards" bold, as Capsomer sets an agency over a site's name; the space keeps the
+              visible text "Dustin Edwards" (WCAG 2.5.3). */}
           <span className="cap-site-header-names" aria-hidden="true">
-            <span className="cap-site-header-agency">{SITE.name}</span>
+            <span className="cap-site-header-agency">{GIVEN_NAME}</span>{" "}
+            <span className="cap-site-header-name">{FAMILY_NAME}</span>
           </span>
         </Link>
         <nav className="cap-site-header-sections" id={NAV_ID} aria-label="Main" data-site-nav="">
