@@ -11,7 +11,10 @@ import { healthChecks } from "../../app/lib/health/rows.mjs";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 
-/** Generous: sync_ask uploads every changed document with retries inside one request. */
+/**
+ * Generous, but not the real limit: Node's fetch gives up after 300 s without response headers, whatever this
+ * says. A tool must answer inside that, which is why sync_ask uploads in parallel (ASK_UPLOAD_CONCURRENCY).
+ */
 const OPERATOR_TIMEOUT_MS = 10 * 60_000;
 
 /**
