@@ -27,9 +27,8 @@ import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db/publications";
-import { listRoster } from "~/db/roster";
+import { rosterFactsFromDb } from "~/db/roster";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { rosterFacts } from "~/lib/roster/compile.mjs";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
@@ -87,7 +86,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
     timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
     timed(timings, "home_papers", () => listPublishedPublicationSummaries(env)),
-    timed(timings, "home_roster", () => listRoster(env)),
+    timed(timings, "home_roster", () => rosterFactsFromDb(env)),
   ]);
 
   return data(
@@ -98,7 +97,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       papers: homePapers(papers),
       paperCount: papers.length,
       // Counted from the roster table, never typed: a typed number drifts when a cohort lands. The names stay out of the payload.
-      discovery: rosterFacts(cohorts),
+      discovery: cohorts,
       podcast,
     },
     {

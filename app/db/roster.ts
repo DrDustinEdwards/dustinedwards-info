@@ -1,7 +1,7 @@
 // The roster table: read by the home page's counts, the roster on /teaching/phage-discovery and the operator
 // API. Written only by writeRosterRow in app/lib/roster/save.server.ts and by sync:content, from a compile
 // (app/lib/roster/compile.mjs).
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 
 import { sortCohorts, type Cohort } from "~/lib/roster/compile.mjs";
 
@@ -24,6 +24,32 @@ export async function listRoster(env: Env): Promise<Cohort[]> {
     );
   }
   return sortCohorts(rows.map((row) => JSON.parse(row.record) as Cohort));
+}
+
+/**
+ * What the home page counts, summed in D1 (`rosterFacts` over every cohort, without reading and parsing the
+ * records, which carry each researcher's bio and photo). An empty table is the same fault as in `listRoster`.
+ */
+export async function rosterFactsFromDb(
+  env: Env,
+): Promise<{ researchers: number; cohorts: number; since: number }> {
+  const [row] = await getDb(env)
+    .select({
+      researchers: sql<number>`coalesce(sum(json_array_length(json_extract(${roster.record}, '$.researchers'))), 0)`,
+      cohorts: sql<number>`count(*)`,
+      since: sql<number>`min(${roster.year})`,
+    })
+    .from(roster);
+  if (!row || row.cohorts === 0) {
+    throw new Error(
+      "the roster table is empty, so there is nothing to count. Run the content sync (npm run sync:content -- --remote), or sync_roster.",
+    );
+  }
+  return {
+    researchers: Number(row.researchers),
+    cohorts: Number(row.cohorts),
+    since: Number(row.since),
+  };
 }
 
 /** For Carrel's list: every row, with when D1 last wrote it. */

@@ -45,7 +45,8 @@ function logFailure(stage: string, detail: unknown) {
 
 async function readCache(kv: KVNamespace): Promise<CachedFeed | null> {
   try {
-    return await kv.get<CachedFeed>(CACHE_KEY, "json");
+    // cacheTtl keeps the value at the edge for the minimum 30 s, so a render does not wait on a cold KV read each time.
+    return await kv.get<CachedFeed>(CACHE_KEY, { type: "json", cacheTtl: 60 });
   } catch (error) {
     // A KV hiccup must never take the page down.
     logFailure("kv-read", error);
