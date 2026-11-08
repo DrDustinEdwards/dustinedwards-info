@@ -3,7 +3,7 @@
 }
 
 /* The cover: the department and the place over a heavy rule, the name large, the role, then the
-   organization over a hairline (the manual theme's technical-report cover). */
+   organization (the manual theme's technical-report cover). */
 .home-intro {
   display: flex;
   flex-direction: column;
@@ -37,6 +37,18 @@
   line-height: 0.88;
 }
 
+/* The grid behind the name is drawn quieter than Capsomer's default, as paper under the name, and the cover
+   leaves its label off: the label belongs on the colophon, where the grid is shown (Dustin, 2026-11-08). */
+.intro-name.cap-layout-grid {
+  --grid-line: color-mix(in oklab, var(--crit) 30%, transparent);
+  --grid-soft: color-mix(in oklab, var(--crit) 9%, transparent);
+  --grid-fill: color-mix(in oklab, var(--crit) 3%, transparent);
+}
+
+.intro-name.cap-layout-grid::after {
+  content: none;
+}
+
 .intro-affil {
   margin: 0;
   color: var(--text);
@@ -50,9 +62,7 @@
 }
 
 .cover-foot {
-  margin: var(--space-5) 0 0;
-  padding-block-start: 0.625rem;
-  border-block-start: var(--line-w) solid var(--text);
+  margin: var(--space-4) 0 0;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   line-height: 1.4;
