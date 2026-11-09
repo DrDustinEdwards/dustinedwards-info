@@ -12,6 +12,8 @@ import {
   DIAGRAM_ROLE_NAMES,
 } from "@drdustinedwards/site-helpers/render/diagram-draw";
 
+import { escapeHtml } from "@dustinedwards/site-runtime/html";
+
 import {
   BLOG_DIAGRAMS,
   BLOG_DIAGRAM_KEYS,
@@ -131,11 +133,11 @@ function auditInline(slug, html, key) {
 
   assert(
     `${name} names itself from its title`,
-    figure.includes(`<title id="bd-${key}-title">${diagram.title}</title>`),
+    figure.includes(`<title id="bd-${key}-title">${escapeHtml(diagram.title)}</title>`),
   );
   assert(
     `${name} describes itself`,
-    figure.includes(`<desc id="bd-${key}-desc">${diagram.alt}</desc>`),
+    figure.includes(`<desc id="bd-${key}-desc">${escapeHtml(diagram.alt)}</desc>`),
   );
   assert(
     `${name} points its accessible name at that title and description`,
