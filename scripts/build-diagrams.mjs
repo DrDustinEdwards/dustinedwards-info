@@ -1,9 +1,10 @@
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import { DIAGRAM_ASSET_DIR, DIAGRAM_THEMES } from "@drdustinedwards/site-helpers/render/diagram";
 import { drawDiagrams, pruneDiagrams } from "@drdustinedwards/site-helpers/render/diagram-draw";
 
+import { BLOG_DIAGRAM_KEYS, inlineAssetNames } from "../app/lib/content/blog-diagrams.mjs";
 import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
@@ -17,10 +18,29 @@ const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
 async function main() {
   const diagrams = diagramsFrom(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
+  // These three are drawn inline. Mermaid must not write their light/dark files back.
+  const mermaid = diagrams.filter((d) => !BLOG_DIAGRAM_KEYS.has(d.key));
+
+  let removed = 0;
+  for (const name of inlineAssetNames()) {
+    try {
+      await unlink(path.join(DIAGRAM_DIR, name));
+      removed += 1;
+      console.log(`  pruned /${DIAGRAM_ASSET_DIR}/${name}`);
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
+    }
+  }
+
+  if (mermaid.length === 0) {
+    console.log(`build:diagrams ${diagrams.length} inline, 0 mermaid, ${removed} pruned`);
+    if (removed > 0) await buildAssetManifest();
+    return;
+  }
 
   // Prelum draws what is missing, in Mermaid's own renderer, and refuses a drawing that paints a color outside these.
   const { written, current, stale } = await drawDiagrams({
-    diagrams: diagrams.map((d) => ({ ...d, label: d.posts.join(", ") })),
+    diagrams: mermaid.map((d) => ({ ...d, label: d.posts.join(", ") })),
     dir: DIAGRAM_DIR,
     assetPrefix: ASSET_PREFIX,
     colors: {
@@ -38,7 +58,7 @@ async function main() {
   // alone is not enough.
   const refusal = deleteFloor({
     what: "diagram files",
-    keeping: diagrams.length * DIAGRAM_THEMES.length,
+    keeping: mermaid.length * DIAGRAM_THEMES.length,
     removing: stale.length,
   });
   if (refusal) {
@@ -51,7 +71,7 @@ async function main() {
   for (const name of stale) console.log(`  pruned /${DIAGRAM_ASSET_DIR}/${name}`);
 
   console.log(
-    `build:diagrams ${diagrams.length} diagrams, ${written.length} rendered, ` +
+    `build:diagrams ${diagrams.length} diagrams (${mermaid.length} mermaid), ${written.length} rendered, ` +
       `${current} already current, ${stale.length} pruned`,
   );
 

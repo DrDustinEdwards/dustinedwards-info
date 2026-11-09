@@ -160,6 +160,14 @@ live in `public/diagrams/` under a key that is a hash of the source, and the
 rendered HTML carries the key. Same pattern as the social cards, and the same gap: **a
 new or edited diagram has no picture until someone runs `build:diagrams`.**
 
+Three posts do not use that pair. `policy-in-the-api-not-the-mcp`,
+`mcp-server-on-workers-with-oauth` and `agent-write-access-to-a-live-site` keep
+their `:::diagram` block, and `app/lib/content/blog-diagrams.mjs` replaces the
+images with one inline SVG (`figure.blog-diagram`). The fills are this site's
+tokens, so the same drawing works in both themes. `build:diagrams` does not
+draw these three. A change to their mermaid source changes the key, and
+`check:diagrams` refuses it until the inline drawing is updated to match.
+
 ## Syntax
 
 A container directive whose body is exactly one fenced `mermaid` block,

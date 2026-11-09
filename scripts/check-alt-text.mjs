@@ -89,11 +89,13 @@ async function main() {
   const pages = [...(await renderContentPages()), ...(await renderOwnRoutePages())];
   const { documents, images, failures } = altTextFailures({ posts: readArtifact().posts, pages });
 
-  /* Proves the gate read the content; not a count of it, so removing an image in Carrel never fails the build (2026-10-29: 50 documents, 6 images). */
-  const breaches = [
-    assertFloor("check:alt-text", "published documents read", documents, 1),
-    assertFloor("check:alt-text", "images read", images, 1),
-  ].filter(Boolean);
+  /* The document floor proves the scan ran. The image count is not floored: the published corpus
+     has no <img> once the three architecture diagrams are inline SVG, and a floor of 1 failed on
+     that removal (those six mermaid images were the whole count on 2026-10-29). check:diagrams
+     holds the drawings' names. */
+  const breaches = [assertFloor("check:alt-text", "published documents read", documents, 1)].filter(
+    Boolean,
+  );
 
   for (const failure of failures) console.log(`  FAIL  ${failure}`);
   for (const breach of breaches) console.log(`  FAIL  ${breach}`);
