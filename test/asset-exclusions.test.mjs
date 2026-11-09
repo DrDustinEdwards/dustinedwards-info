@@ -15,6 +15,12 @@ await test("_headers is excluded, with a reason", () => {
   assert.ok(reason.length > 20, `reason too thin to be one: ${JSON.stringify(reason)}`);
 });
 
+await test("diagram sizes are build data, not a library picture", () => {
+  const reason = excludedFromAssets("/diagrams/sizes.json");
+  assert.equal(typeof reason, "string");
+  assert.ok(reason && reason.length > 20, `reason too thin to be one: ${JSON.stringify(reason)}`);
+});
+
 await test("_redirects is excluded, with a reason", () => {
   const reason = excludedFromAssets("/_redirects");
   assert.equal(typeof reason, "string");

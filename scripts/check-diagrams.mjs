@@ -12,6 +12,11 @@ import {
   DIAGRAM_ROLE_NAMES,
 } from "@drdustinedwards/site-helpers/render/diagram-draw";
 
+import {
+  BLOG_DIAGRAMS,
+  BLOG_DIAGRAM_KEYS,
+  inlineAssetNames,
+} from "../app/lib/content/blog-diagrams.mjs";
 import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
@@ -86,6 +91,98 @@ assert(
     JSON.stringify(palettes.light) !== JSON.stringify(palettes.dark),
 );
 
+const TONES = ["neutral", "accent", "success", "warning", "info"];
+const PAINT = new Set([
+  ...TONES.flatMap((tone) => [
+    `var(--diagram-${tone})`,
+    `var(--diagram-${tone}-line)`,
+    `var(--diagram-${tone}-ink)`,
+  ]),
+  "var(--diagram-arrow)",
+]);
+
+const proseCss = readFileSync(join(root, "app/styles/prose.css"), "utf8");
+for (const tone of TONES) {
+  assert(`prose.css defines --diagram-${tone}`, proseCss.includes(`--diagram-${tone}:`));
+}
+const svgRule = proseCss.match(/\.blog-diagram svg\s*\{([^}]*)\}/)?.[1] ?? "";
+assert(
+  "an inline diagram keeps its natural width and only shrinks",
+  /max-width:\s*100%/.test(svgRule) &&
+    /height:\s*auto/.test(svgRule) &&
+    !/(?<![\w-])width:\s*100%/.test(svgRule),
+);
+
+/**
+ * @param {string} slug
+ * @param {string} html
+ * @param {string} key
+ */
+function auditInline(slug, html, key) {
+  const diagram = BLOG_DIAGRAMS[key];
+  const name = `${slug} ${key}`;
+  const figure = html.match(
+    new RegExp(
+      `<figure class="blog-diagram" role="img"[^>]*aria-labelledby="bd-${key}-title"[\\s\\S]*?</figure>`,
+    ),
+  )?.[0];
+  assert(`${name} is an inline blog-diagram`, Boolean(figure));
+  if (!figure || !diagram) return;
+
+  assert(
+    `${name} names itself from its title`,
+    figure.includes(`<title id="bd-${key}-title">${diagram.title}</title>`),
+  );
+  assert(
+    `${name} describes itself`,
+    figure.includes(`<desc id="bd-${key}-desc">${diagram.alt}</desc>`),
+  );
+  assert(
+    `${name} points its accessible name at that title and description`,
+    figure.includes(`aria-describedby="bd-${key}-desc"`),
+  );
+  assert(`${name} still shows its caption`, figure.includes("<figcaption"));
+  assert(
+    `${name} is not a mermaid image`,
+    !figure.includes("/diagrams/") && !html.includes(`/diagrams/${fileName(key, "light")}`),
+  );
+
+  const svg = figure.match(/<svg\b[\s\S]*<\/svg>/)?.[0] ?? "";
+  assert(
+    `${name} has one fixed viewBox at its natural size`,
+    svg.includes(`viewBox="0 0 ${diagram.width} ${diagram.height}"`) &&
+      svg.includes(`width="${diagram.width}"`) &&
+      svg.includes(`height="${diagram.height}"`) &&
+      diagram.width <= 680 &&
+      svg.includes('preserveAspectRatio="xMidYMid meet"'),
+  );
+  assert(`${name} has no foreignObject`, !svg.includes("foreignObject"));
+  assert(`${name} has no style attribute`, !svg.includes("style="));
+  assert(`${name} has no hex color`, !/#[0-9a-fA-F]{3,8}\b/.test(svg));
+
+  /** @type {Set<string>} */
+  const tones = new Set();
+  for (const tag of svg.matchAll(/<(rect|line|path|text)\b[^>]*>/g)) {
+    const open = tag[0];
+    for (const attr of open.matchAll(/\b(?:fill|stroke)="([^"]+)"/g)) {
+      declarations += 1;
+      const paint = attr[1] ?? "";
+      assert(`${name} paints with a diagram token (${paint})`, PAINT.has(paint));
+    }
+    if (tag[1] !== "text") continue;
+    const size = /\bfont-size="(\d+)"/.exec(open)?.[1];
+    declarations += 1;
+    assert(`${name} text is 11 to 13px`, size === "11" || size === "12" || size === "13");
+    assert(`${name} text uses the site font`, /\bfont-family="var\(--font-sans\)"/.test(open));
+  }
+  for (const tone of svg.matchAll(
+    /fill="var\(--diagram-(neutral|accent|success|warning|info)\)"/g,
+  )) {
+    if (tone[1]) tones.add(tone[1]);
+  }
+  assert(`${name} uses more than one semantic fill`, tones.size >= 2);
+}
+
 if (!existsSync(ARTIFACT)) {
   failures.push(`the artifact is missing at ${ARTIFACT}; run build:content`);
 } else {
@@ -100,73 +197,86 @@ if (!existsSync(ARTIFACT)) {
     }
   }
 
-  for (const [key, { posts }] of referenced) {
-    for (const theme of DIAGRAM_THEMES) {
-      const file = join(DIAGRAM_DIR, fileName(key, theme));
-      const present = existsSync(file);
-      assert(`${posts.join(", ")} references ${fileName(key, theme)}, which is on disk`, present);
-      if (!present) continue;
+  for (const post of artifact.posts ?? []) {
+    for (const diagram of post.diagrams ?? []) {
+      if (BLOG_DIAGRAM_KEYS.has(diagram.key)) {
+        auditInline(post.slug, post.html, diagram.key);
+        continue;
+      }
+      for (const theme of DIAGRAM_THEMES) {
+        const file = join(DIAGRAM_DIR, fileName(diagram.key, theme));
+        const present = existsSync(file);
+        assert(
+          `${post.slug} references ${fileName(diagram.key, theme)}, which is on disk`,
+          present,
+        );
+        if (!present) continue;
 
-      const svg = readFileSync(file, "utf8");
-      // An <img> needs an intrinsic size or the browser falls back to 300x150.
-      assert(
-        `${fileName(key, theme)} carries an explicit width and height`,
-        /<svg\b[^>]*\swidth="\d+"[^>]*\sheight="\d+"/.test(svg.slice(0, 4000)),
-      );
-      // foreignObject is not rendered when an SVG is loaded through <img>, so a
-      // diagram carrying one comes out with blank labels on the page while
-      // looking correct in a standalone viewer.
-      assert(`${fileName(key, theme)} has no foreignObject`, !svg.includes("foreignObject"));
+        const svg = readFileSync(file, "utf8");
+        // An <img> needs an intrinsic size or the browser falls back to 300x150.
+        assert(
+          `${fileName(diagram.key, theme)} carries an explicit width and height`,
+          /<svg\b[^>]*\swidth="\d+"[^>]*\sheight="\d+"/.test(svg.slice(0, 4000)),
+        );
+        // foreignObject is not rendered when an SVG is loaded through <img>, so a
+        // diagram carrying one comes out with blank labels on the page while
+        // looking correct in a standalone viewer.
+        assert(
+          `${fileName(diagram.key, theme)} has no foreignObject`,
+          !svg.includes("foreignObject"),
+        );
 
-      const audit = auditDiagramSvg(svg, Object.values(palettes[theme]));
-      // Tallied apart from `checks`: added in, a few hundred declarations hid a skipped block from the floor.
-      declarations += audit.checked;
-      assert(
-        `${fileName(key, theme)} uses only ratified token colors` +
-          (audit.problems.length > 0 ? `: ${audit.problems.join("; ")}` : ""),
-        audit.problems.length === 0,
-      );
-      assert(`${fileName(key, theme)} had colors to check`, audit.checked > 0);
+        const audit = auditDiagramSvg(svg, Object.values(palettes[theme]));
+        declarations += audit.checked;
+        assert(
+          `${fileName(diagram.key, theme)} uses only ratified token colors` +
+            (audit.problems.length > 0 ? `: ${audit.problems.join("; ")}` : ""),
+          audit.problems.length === 0,
+        );
+        assert(`${fileName(diagram.key, theme)} had colors to check`, audit.checked > 0);
+      }
     }
   }
 
   const onDisk = existsSync(DIAGRAM_DIR)
     ? readdirSync(DIAGRAM_DIR).filter((n) => n.endsWith(".svg"))
     : [];
-  const live = new Set(
-    [...referenced.keys()].flatMap((k) => DIAGRAM_THEMES.map((t) => fileName(k, t))),
-  );
+  const mermaidKeys = [...referenced.keys()].filter((key) => !BLOG_DIAGRAM_KEYS.has(key));
+  const live = new Set(mermaidKeys.flatMap((k) => DIAGRAM_THEMES.map((t) => fileName(k, t))));
   for (const name of onDisk) {
     assert(`${name} is referenced by a post (run build:diagrams to prune)`, live.has(name));
+  }
+  for (const name of inlineAssetNames()) {
+    assert(`${name} is not a leftover mermaid asset`, !onDisk.includes(name));
+  }
+  for (const key of BLOG_DIAGRAM_KEYS) {
+    assert(`${key} is still a diagram in the corpus`, referenced.has(key));
   }
 
   // Not set just under the measurement: these counts are content, and a post may drop a diagram.
   assert(
     `the artifact yielded diagrams to check (${referenced.size} referenced)`,
-    referenced.size >= 2,
-  );
-  assert(
-    `the diagram directory yielded assets to check (${onDisk.length} on disk)`,
-    onDisk.length >= 4,
+    referenced.size >= BLOG_DIAGRAM_KEYS.size,
   );
 
   console.log(
-    `check:diagrams ${referenced.size} diagrams referenced, ${onDisk.length} assets on disk`,
+    `check:diagrams ${referenced.size} diagrams referenced, ${onDisk.length} mermaid assets on disk`,
   );
 }
 
-// Measured by running it, never summed: 83 checks and 202 declarations on 2026-10-25, over 3 diagrams
-// and Prelum's 10 color roles.
-const MINIMUM_CHECKS = 80;
+// Measured by running it, never summed: 322 checks and 179 declarations on 2026-11-09.
+// The declarations are fill, stroke and font-size on the three inline drawings. A mermaid
+// drawing that is still an image adds its own color declarations on top of that.
+const MINIMUM_CHECKS = 320;
 const floorBreach = assertFloor("check:diagrams", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
-const MINIMUM_DECLARATIONS = 190;
+const MINIMUM_DECLARATIONS = 179;
 const declarationBreach = assertFloor(
   "check:diagrams",
   "declarations",
   declarations,
   MINIMUM_DECLARATIONS,
-  "The color audit examined fewer declarations than the committed diagrams carry.",
+  "The inline drawings exposed fewer fill, stroke and font-size attributes than they carry.",
 );
 if (declarationBreach) failures.push(declarationBreach);
 

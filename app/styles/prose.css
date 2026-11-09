@@ -200,6 +200,34 @@
   color: var(--text);
 }
 
+/* One drawing for both themes: an inline SVG inherits these, and an <img> cannot. The SVG keeps its
+   own width, and max-width only shrinks it, so a wide column does not stretch the drawing. */
+.blog-diagram {
+  --diagram-neutral: var(--paper);
+  --diagram-neutral-line: var(--border);
+  --diagram-neutral-ink: var(--text);
+  --diagram-accent: var(--tint-brand);
+  --diagram-accent-line: var(--brand);
+  --diagram-accent-ink: var(--text);
+  --diagram-success: var(--tint-success);
+  --diagram-success-line: var(--border-success);
+  --diagram-success-ink: var(--on-tint-success);
+  --diagram-warning: var(--tint-warning);
+  --diagram-warning-line: var(--border-warning);
+  --diagram-warning-ink: var(--on-tint-warning);
+  --diagram-info: color-mix(in srgb, var(--chart-cadet) 14%, var(--paper));
+  --diagram-info-line: var(--chart-cadet);
+  --diagram-info-ink: var(--text);
+  --diagram-arrow: var(--border-strong);
+}
+
+.blog-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
 /* Unscoped on purpose: every table the pipeline wraps, and /playground/ui's, scrolls here instead of
    the document. */
 .table-scroll {

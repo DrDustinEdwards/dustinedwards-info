@@ -10,10 +10,16 @@ import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
 import { z } from "zod";
 
-// Each diagram drawing's size, which build:diagrams writes beside the drawings (Prelum's DIAGRAM_SIZES_FILE), so a
-// diagram's <img> carries width and height and nothing shifts as it loads.
+// Mermaid drawings Prelum still emits as an <img> pair are sized from this file. The three hand-built
+// diagrams are inlined and have no files; their sizes are merged in so Prelum does not warn that the
+// drawing is missing, and the <img> is then replaced.
 import diagramSizes from "../../../public/diagrams/sizes.json" with { type: "json" };
 import { ASSET_PREFIX, classify, dimensionsFromKey } from "../media/classify.mjs";
+import {
+  inlineBlogDiagrams,
+  inlineDiagramSizes,
+  withoutInlinedDiagramRefs,
+} from "./blog-diagrams.mjs";
 import { makeChartData } from "./chart-data.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
@@ -232,7 +238,7 @@ function packsFor(readChartData, cited) {
     editorialPack({
       assetPrefix: ASSET_PREFIX,
       strictCharts: true,
-      diagramSizes,
+      diagramSizes: { ...diagramSizes, ...inlineDiagramSizes() },
       ...(readChartData ? { chartData: makeChartData(readChartData, cited) } : {}),
     }),
   ];
@@ -255,7 +261,14 @@ export async function renderBody({ file, body, resolveImage, readChartData }) {
     options: { ...SITE_OPTIONS, packs: packsFor(readChartData, cited), highlight: getHighlight() },
   });
   for (const key of cited) mediaRefs.push({ key, form: "other", detail: "chart data" });
-  return { html, toc, hasMath, diagrams, mediaRefs, blockedUrls };
+  return {
+    html: inlineBlogDiagrams(html),
+    toc,
+    hasMath,
+    diagrams,
+    mediaRefs: withoutInlinedDiagramRefs(mediaRefs),
+    blockedUrls,
+  };
 }
 
 /** @param {string} html */

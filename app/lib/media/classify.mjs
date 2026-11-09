@@ -68,6 +68,10 @@ const NOT_ASSETS = new Map([
     "/sw.js",
     "The offline service worker (app/enhance/offline.ts). Code the browser registers, not media.",
   ],
+  [
+    "/diagrams/sizes.json",
+    "Widths and heights for a mermaid drawing that is still an image. The content build reads the file; the page does not request it, so it is not a picture in the library.",
+  ],
 ]);
 
 // A pattern is allowed here because it matches only the slug shape paths.mjs generates. The twins are
