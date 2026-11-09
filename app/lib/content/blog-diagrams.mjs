@@ -4,16 +4,9 @@
 // hash of that mermaid. The renderer swaps the pair for one inline figure. A changed source hashes
 // to a new key and the swap misses it: check:diagrams fails until the drawing here is updated.
 
-import { ASSET_PREFIX } from "../media/classify.mjs";
+import { escapeHtml } from "@dustinedwards/site-runtime/html";
 
-/** @param {string} value */
-function esc(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
+import { ASSET_PREFIX } from "../media/classify.mjs";
 
 /** @param {string} id */
 function marker(id) {
@@ -82,7 +75,7 @@ function hairline(x1, y1, x2, y2) {
 function label(x, y, text, size = 11, tone = "neutral") {
   return (
     `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" ` +
-    `font-family="var(--font-sans)" font-size="${size}" fill="var(--diagram-${tone}-ink)">${esc(text)}</text>`
+    `font-family="var(--font-sans)" font-size="${size}" fill="var(--diagram-${tone}-ink)">${escapeHtml(text)}</text>`
   );
 }
 
@@ -273,11 +266,11 @@ function figureFor(key, caption) {
   const descId = `bd-${key}-desc`;
   return (
     `<figure class="blog-diagram" role="img" aria-labelledby="${titleId}" aria-describedby="${descId}">` +
-    `<p class="diagram-title">${esc(diagram.title)}</p>` +
+    `<p class="diagram-title">${escapeHtml(diagram.title)}</p>` +
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${diagram.width} ${diagram.height}" ` +
     `width="${diagram.width}" height="${diagram.height}" preserveAspectRatio="xMidYMid meet">` +
-    `<title id="${titleId}">${esc(diagram.title)}</title>` +
-    `<desc id="${descId}">${esc(diagram.alt)}</desc>` +
+    `<title id="${titleId}">${escapeHtml(diagram.title)}</title>` +
+    `<desc id="${descId}">${escapeHtml(diagram.alt)}</desc>` +
     diagram.body +
     `</svg>${caption}</figure>`
   );
