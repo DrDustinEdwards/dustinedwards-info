@@ -4,7 +4,7 @@ import { Form, useNavigate } from "react-router";
 // Capsomer's ConfirmModal, opened by the server's answer, so the second step exists without script too. This
 // file is only the router glue: the post is a client navigation through <Form>, and Cancel keeps the scroll
 // position, since the page behind the dialog is where the reader still is. The typed value posts as
-// CONFIRM_FIELD ("confirm"), which each action checks again.
+// "confirm", beside confirmed=1, which each action checks again with site-runtime's confirmationSatisfied.
 export function ConfirmDialog({
   title,
   body,

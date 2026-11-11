@@ -22,6 +22,7 @@ import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
 import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
+import { countCssRules } from "capsomer/testing/page";
 import * as runMode from "./lib/browser/cases/run-mode.mjs";
 import * as offline from "./lib/browser/cases/offline.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
@@ -34,7 +35,6 @@ import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
 import {
   BASE,
   DRIVES_PREVIEW,
-  countCssRules,
   lane,
   ok,
   skipped,
@@ -132,7 +132,7 @@ try {
   /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
-  const css = await page.evaluate(countCssRules);
+  const css = await countCssRules(page);
   ok(
     "the blog page's stylesheets are actually applied",
     css >= 144,

@@ -18,7 +18,7 @@ import {
 } from "~/lib/admin/tools-actions.server";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
-import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
+import { confirmationSatisfied } from "@dustinedwards/site-runtime/confirm";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mediaRowTotal, rebuildMedia } from "~/lib/media/actions.server";
 import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
@@ -83,8 +83,7 @@ export async function action({ request, context }: Route.ActionArgs) {
      * "Sync" reads as additive and is not: `pruneAskCorpus` deletes every record this run did not
      * upload. The count is 1 because how many it removes cannot be known first.
      */
-    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
-    if (!confirmationSatisfied(typed, 1)) {
+    if (!confirmationSatisfied(form, "1")) {
       return { confirmSyncAsk: await askSyncConfirmCount(env) };
     }
     return syncAskIndex(env);
@@ -94,8 +93,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "rebuild") {
     /* A rebuild prunes rows whose source is gone. Count 1: the rows at risk are unknowable beforehand. */
-    const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
-    if (!confirmationSatisfied(typed, 1)) {
+    if (!confirmationSatisfied(form, "1")) {
       return { confirmRebuild: await mediaRowTotal(env) };
     }
     return rebuildMedia(env);
@@ -150,6 +148,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="sync-ask" />
+          <input type="hidden" name="confirmed" value="1" />
         </ConfirmDialog>
       ) : null}
 
@@ -220,6 +219,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="rebuild" />
+          <input type="hidden" name="confirmed" value="1" />
         </ConfirmDialog>
       ) : null}
 
