@@ -1324,7 +1324,7 @@ describe("the v0.17.0 contract on posts", () => {
     );
     expect(moved).toBeInstanceOf(Response);
     expect((moved as Response).status).toBe(301);
-    expect((moved as Response).headers.get("location")).toBe("/writing/v17-new");
+    expect((moved as Response).headers.get("location")).toBe(`${ORIGIN}/writing/v17-new`);
   });
 
   it("publishes under the date Carrel names", async () => {
