@@ -24,7 +24,6 @@
   .post-toc,
   .post-actions,
   .post-nav,
-  .tag-chips,
   .code-copy,
   .code-lang,
   .selection-link,
@@ -173,7 +172,6 @@
      slice of the viewport, and a cover range would leave it at the from opacity. */
   @supports (animation-timeline: view()) {
     .home-plate,
-    .home-figure,
     .post-cover,
     .prose figure,
     .chart-figure {
@@ -189,7 +187,6 @@
 
 @media print {
   .home-plate,
-  .home-figure,
   .post-cover,
   .prose figure,
   .chart-figure {

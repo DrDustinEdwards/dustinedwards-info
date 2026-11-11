@@ -138,10 +138,6 @@
   position-try-fallbacks: flip-block;
 }
 
-.prose img.zoomable {
-  cursor: zoom-in;
-}
-
 .further-reading,
 .post-backlinks,
 .post-mentions {

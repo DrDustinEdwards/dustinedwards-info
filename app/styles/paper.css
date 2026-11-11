@@ -1,5 +1,4 @@
 .paper-links a,
-.paper-breadcrumb a,
 .paper-machine b a {
   color: var(--brand);
   text-decoration: none;
@@ -13,7 +12,6 @@
 }
 
 .paper-links a:hover,
-.paper-breadcrumb a:hover,
 .paper-machine b a:hover,
 .paper-topics a:hover {
   color: var(--brand-hover);
@@ -26,12 +24,6 @@
 
 .paper-head {
   margin-block-start: var(--space-7);
-}
-
-.paper-breadcrumb {
-  margin: 0 0 0.75rem;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
 }
 
 .paper-title {
@@ -194,8 +186,5 @@
 @media (max-width: 47.99rem) {
   .paper-title {
     max-width: none;
-  }
-  .paper-field input[type="search"] {
-    min-width: 0;
   }
 }
