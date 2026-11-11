@@ -1,6 +1,7 @@
+import { trustedHtml } from "capsomer/behavior/trusted-html";
 import { enhance, type EnhancedChart, type SelectDetail } from "enarratio/enhance";
 
-import { copyText } from "../lib/clipboard";
+import { copyText, report } from "capsomer/behavior/copy";
 import {
   CHART_SERIES,
   TIMELINE_ID,
@@ -48,7 +49,6 @@ export default function start(): void {
   const form: HTMLFormElement = formElement;
   const results = must(root, "[data-cv-results]");
   const summary = must(root, "[data-cv-summary]");
-  const copied = must(root, "[data-cv-copied]");
   const timelineHost = must(root, "[data-cv-timeline]");
   const clear = must(root, "[data-cv-clear]");
   const PATH = form.getAttribute("action") ?? location.pathname;
@@ -197,7 +197,7 @@ export default function start(): void {
         drawTimeline(charts.timeline, state);
         for (const name of ["papers", "grants", "students"] as const) {
           const host = root.querySelector(`[data-cv-spark="${name}"]`);
-          if (host) host.innerHTML = charts[name];
+          if (host) host.innerHTML = trustedHtml(charts[name]);
         }
         // What the drawn charts answer to. The URL is written before they arrive, so it cannot say they are here.
         timelineHost.dataset.cvDrawn = stateToSearch(state);
@@ -214,18 +214,18 @@ export default function start(): void {
    */
   function drawTimeline(markup: string, state: CvState) {
     const drawn = new DOMParser()
-      .parseFromString(markup, "text/html")
+      .parseFromString(trustedHtml(markup), "text/html")
       .querySelector("figure.enarratio");
     if (!drawn) {
       timeline?.destroy();
       timeline = undefined;
-      timelineHost.innerHTML = markup;
+      timelineHost.innerHTML = trustedHtml(markup);
       return;
     }
     if (timeline) {
       timeline.update(drawn.outerHTML);
     } else {
-      timelineHost.innerHTML = markup;
+      timelineHost.innerHTML = trustedHtml(markup);
       timeline = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
       if (!timeline) throw new Error("cv: the timeline is not an Enarratio figure.");
     }
@@ -367,24 +367,17 @@ export default function start(): void {
     return (await response.text()).trim();
   }
 
-  const COPY_NAMES: Record<string, string> = { plain: "Citation", bibtex: "BibTeX", ris: "RIS" };
-
+  // Capsomer's copy: its bubble beside the button says Copied or not, with the words the button names.
+  for (const wrap of root.querySelectorAll<HTMLElement>("[data-cv-copy-wrap]")) wrap.hidden = false;
   for (const button of root.querySelectorAll<HTMLButtonElement>("button[data-cv-copy]")) {
-    button.hidden = false;
     button.addEventListener("click", () => {
-      const name = COPY_NAMES[button.dataset.cvCopy ?? ""] ?? "Text";
-      copied.textContent = "";
-      citationText(button)
-        .then((text) => copyText(text))
-        .then(() => {
-          copied.textContent = `${name} copied.`;
-          button.dataset.copied = "";
-          window.setTimeout(() => delete button.dataset.copied, 1600);
-        })
-        .catch((error: unknown) => {
-          copied.textContent = `${name} was not copied. The file links beside the button download it.`;
+      citationText(button).then(
+        async (text) => report(button, (await copyText(text)) ? "copied" : "failed"),
+        (error: unknown) => {
+          report(button, "failed");
           throw error;
-        });
+        },
+      );
     });
   }
 

@@ -19,7 +19,7 @@ One folder per ad, `app/utility-ads/<id>/`, found by `import.meta.glob`. Adding 
 - `ad.json`: `id` (the folder name), `title`, `era` (`1940s` to `1970s`), `credit` (who made the art and copy), `viewBox` (`[width, height]`), and `parts`, drawn in order.
 - `art.svg`: `<symbol id="...">` elements with the ad's illustrations. Write bare ids; the renderer prefixes them with the ad id.
 - Parts: `text` (`lines`, `font`, `size`, `x`, `y`, `anchor`, `fill`, `stroke`, `strokeWidth`, `shadow`, `rotate`, `leading`), `burst` (`cx`, `cy`, `outer`, `inner`, `points`, `fill`, `stroke`), `rect`, and `use` (`ref` is a symbol, with `x`, `y`, `w`, `h`, `color`). A `fill` is a hex color or `ink`.
-- Fonts: `display` (Bangers), `slab` (Alfa Slab One) and `serif` (the site's Source Serif 4, bold). Bangers and Alfa Slab One are SIL Open Font License, self-hosted in `app/utility-ads/fonts/` with their licenses; `font-display: optional` and a preload, as the site's other faces.
+- Fonts: `display` (Bangers), `slab` (Alfa Slab One) and `serif` (the site's Source Serif 4, bold). Bangers and Alfa Slab One are SIL Open Font License, self-hosted by Capsomer (`capsomer/fonts/`, with their license; its `error-ad` component); `font-display: optional` and a preload.
 
 `test/utility-ads.test.mjs` checks every folder.
 

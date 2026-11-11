@@ -192,15 +192,6 @@ export const NON_PARTICIPATING = new Map([
  */
 export const OPACITY_EXEMPT = [
   {
-    /* Anchored at the end, per the vacuity rule: a bare `backdrop` matches `.backdrop-blur`. */
-    test: /(?:::backdrop|-backdrop)$/,
-    why:
-      "a modal veil, not text. Nothing is drawn on this layer: it exists to dim " +
-      "what is behind it, so there is no foreground to price a ratio against. " +
-      "Same class as -scrim above, reached by a different selector shape since " +
-      "the dialogs became native <dialog> and their scrims became ::backdrop",
-  },
-  {
     /* Anchored at the end, per the vacuity rule. */
     test: /\[data-enarratio-dimmed\]$|\[data-cv-out\]$/,
     why:

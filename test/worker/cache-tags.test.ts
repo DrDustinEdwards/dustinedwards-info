@@ -1,7 +1,13 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
-import { blogFeed, feedResponse, seriesFeed, tagFeed, type FeedFormat } from "~/lib/feed-response";
+import {
+  blogFeed,
+  scopedFeedResponse,
+  seriesFeed,
+  tagFeed,
+  type FeedFormat,
+} from "~/lib/feed-response";
 import { purgePages, purgePosts, purgeProcedures, purgeRegistry } from "~/lib/cache-purge.server";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
@@ -85,7 +91,7 @@ describe("the cache tags of the machine documents", () => {
     const postsPurge = await purgedBy(() => purgePosts("test"));
     for (const scope of scopes) {
       for (const format of ["json", "rss", "atom"] as FeedFormat[]) {
-        const tags = tagsOf(await feedResponse(env as never, format, scope));
+        const tags = tagsOf(await scopedFeedResponse(env as never, format, scope));
         expect(tags, `${scope.path} ${format}`).toEqual([cacheTags()]);
         expect(tags.some((tag) => postsPurge.includes(tag))).toBe(true);
       }

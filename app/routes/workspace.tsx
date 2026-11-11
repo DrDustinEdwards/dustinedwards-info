@@ -26,6 +26,7 @@ import type { loader as rootLoader } from "~/root";
 import "capsomer/fonts.css";
 import "~/admin.css";
 import "~/lab.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 export function meta() {
   return [{ title: "Lab bench" }, { name: "robots", content: "noindex" }];
@@ -178,7 +179,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: themeScript() }} />
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={markup(themeScript())} />
       <AdminShell
         title="Lab bench"
         letterhead

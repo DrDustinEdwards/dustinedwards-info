@@ -10,7 +10,7 @@ import {
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
 import { ASK_UPLOAD_CONCURRENCY, mapPool, uploadTwins, withRetry } from "./ask-twins.mjs";
-import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { answerDelta, replayFrames, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
@@ -18,18 +18,17 @@ import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
   ASK_MAX_TOKENS,
   ASK_TIMEOUT_MS,
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
-  guardAnswerStream,
-  replayFrames,
+  guardAsk,
 } from "./ask-prompt.mjs";
 
-export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
+export { answerLeaksPrompt, citedSlugs, guardAsk };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
@@ -50,10 +49,10 @@ export function askAvailable(env: Env): boolean {
 
 /**
  * The raw upstream SSE is handed through untouched: the client already parses SSE. The binding takes no
- * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAnswerStream
+ * signal, so a call that has not started answering by ASK_TIMEOUT_MS is abandoned here (guardAsk
  * bounds the rest). `max_tokens` is not in the binding's documented parameters; Cloudflare's own
  * ai-search-provider sends it there, and its docs say it reaches the model and truncates the answer, so the guard
- * reads each answer's finish_reason and a cut one is never cached (guardAnswerStream).
+ * reads each answer's finish_reason and a cut one is never cached (guardAsk).
  *
  * The gateway (checklist G1, C13): AI Search has no per-request gateway option and no route through site-runtime's
  * shared caller, which speaks Anthropic's Messages API. Every AI Search instance is connected to an AI Gateway, and

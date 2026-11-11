@@ -1,3 +1,5 @@
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
 import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
@@ -9,7 +11,6 @@ import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { countOf } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
@@ -125,23 +126,16 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
     },
   });
   return (
-    <PageShell
-      trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }}
-        />
-      }
-    >
+    <PageShell trail={<JsonLd data={collection} />}>
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid" id="library-title">
         {base.name}
       </h1>
       {empty ? (
-        <p className="procedure-draft">
+        <DraftNotice label="Not public">
           Only you can see this page: no {base.singular.toLowerCase()} is published yet. It goes
           public with the first one.
-        </p>
+        </DraftNotice>
       ) : null}
       <p className="library-counts">{lead(base, items)}</p>
       <div className="library site-catalog site-catalog-wide">

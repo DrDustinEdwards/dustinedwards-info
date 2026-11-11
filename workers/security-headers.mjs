@@ -19,13 +19,13 @@ export const SECURITY_HEADERS = Object.freeze({
 
 /**
  * Pages are stored at the edge (`renew`), so a stored page that carries a nonce gets a fresh one per reader. The
- * Report-Only companion stages Trusted Types and default-src 'none' until the reports are quiet. An image or a feed may be
+ * Report-Only companion stages default-src 'none' until the reports are quiet; Trusted Types is enforced (csp.mjs). An image or a feed may be
  * embedded by another origin (`corp`).
  */
 export const { withSecurityHeaders, nonceFor } = pageSecurity({
   set: SECURITY_HEADERS,
   policy: pagePolicy,
-  staged: { trustedTypes: true, denyUnlisted: true },
+  staged: { denyUnlisted: true },
   corp: true,
   renew: true,
   unpoliced: isUnpolicedType,

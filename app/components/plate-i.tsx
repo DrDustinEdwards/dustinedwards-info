@@ -1,3 +1,5 @@
+import { AnnotatedDrawing, AnnotatedFigure, AnnotatedKey } from "capsomer/react/annotated-figure";
+
 import {
   KEY_ICONS,
   NARROW,
@@ -7,8 +9,11 @@ import {
   type Shape,
 } from "./plate-i-geometry";
 
-// CSS shows one of the two drawings; `display: none` removes the other from the accessibility
-// tree and the tab order, so a reader meets one plate either way.
+import "capsomer/annotated-figure.css";
+
+// Capsomer's annotated figure (capsomer/annotated-figure.css) shows one of the two drawings by the
+// figure's width; `display: none` removes the other from the accessibility tree and the tab order, so a
+// reader meets one plate either way.
 
 /** The six, in numeral order. The drawing, its labels and the row all read from this. */
 const PLAQUES = [
@@ -63,106 +68,84 @@ function ShapeOf({ s }: { s: Shape }) {
 }
 
 function Drawing({ layout, variant }: { layout: PlateLayout; variant: "wide" | "narrow" }) {
-  const v = VIEW[variant];
   const { cx, cy, rim, lawn } = layout.dish;
   const [sx1, sy1, sx2, sy2] = layout.scale.line;
   return (
-    <svg
-      className={`plate plate--${variant}`}
-      viewBox={`${v.x} ${v.y} ${v.w} ${v.h}`}
-      role="group"
-      aria-labelledby={`plate-i-title-${variant} plate-i-desc-${variant}`}
-    >
-      <title id={`plate-i-title-${variant}`}>Plate I. Plaque morphology, drawn.</title>
-      <desc id={`plate-i-desc-${variant}`}>{DESCRIPTION}</desc>
-
-      <circle cx={cx} cy={cy} r={rim} fill="var(--paper)" stroke="var(--text)" strokeWidth="1.6" />
-      <circle cx={cx} cy={cy} r={lawn} fill="var(--fig-lawn)" />
-
-      {layout.plaques.map((p) => {
+    <AnnotatedDrawing
+      id={`plate-i-${variant}`}
+      layout={variant}
+      view={VIEW[variant]}
+      title="Plate I. Plaque morphology, drawn."
+      description={DESCRIPTION}
+      art={
+        <>
+          <circle
+            cx={cx}
+            cy={cy}
+            r={rim}
+            fill="var(--paper)"
+            stroke="var(--text)"
+            strokeWidth="1.6"
+          />
+          <circle cx={cx} cy={cy} r={lawn} fill="var(--fig-lawn)" />
+        </>
+      }
+      callouts={layout.plaques.map((p) => {
         const meta = plaque(p.id);
-        return (
-          <g
-            key={p.id}
-            className="plate-plaque"
-            data-plaque={p.id}
-            role="img"
-            aria-label={`Plaque ${p.id}, ${meta.name}`}
-          >
-            {p.shapes.map((s, j) => (
-              <ShapeOf key={j} s={s} />
-            ))}
-          </g>
-        );
+        return {
+          id: p.id,
+          name: `Plaque ${p.id}, ${meta.name}`,
+          label: `${p.id} · ${meta.name}`,
+          target: p.shapes.map((s, j) => <ShapeOf key={j} s={s} />),
+          leader: p.leader,
+          text: p.label,
+        };
       })}
-
-      {/* Annotation after every plaque, so no fill is ever drawn over a leader. */}
-      {layout.plaques.map((p) => (
-        <g key={p.id} className="plate-leader" data-plaque={p.id}>
-          {p.leader.map(([x1, y1, x2, y2], j) => (
-            <line key={j} x1={x1} y1={y1} x2={x2} y2={y2} />
-          ))}
+      after={
+        <>
+          <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke="var(--text)" strokeWidth="1.5" />
           <text
-            x={p.label.x}
-            y={p.label.y}
-            textAnchor={p.label.anchor}
-            className="plate-label"
+            x={layout.scale.label.x}
+            y={layout.scale.label.y}
+            className="plate-scale"
             aria-hidden="true"
           >
-            {`${p.id} · ${plaque(p.id).name}`}
+            {layout.scale.label.text}
           </text>
-        </g>
-      ))}
-
-      <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke="var(--text)" strokeWidth="1.5" />
-      <text
-        x={layout.scale.label.x}
-        y={layout.scale.label.y}
-        className="plate-scale"
-        aria-hidden="true"
-      >
-        {layout.scale.label.text}
-      </text>
-    </svg>
+        </>
+      }
+    />
   );
 }
 
+/** Plate I's two drawings, wide and narrow, as one figure the key below names. */
 export function PlateI() {
   return (
-    <>
+    <AnnotatedFigure id="plate-i" draw>
       <Drawing layout={WIDE} variant="wide" />
       <Drawing layout={NARROW} variant="narrow" />
-    </>
+    </AnnotatedFigure>
   );
 }
 
 export function PlateKeyRow() {
   return (
-    <section className="plate-key u-wide" aria-label="Plate I key">
-      {KEY_ICONS.map((icon, i) => {
-        const p = plaque(PLAQUE_IDS[i] ?? "");
-        return (
-          <figure key={p.id} className="plate-key-entry" data-plaque={p.id}>
-            <svg
-              className="plate-key-art"
-              viewBox="0 0 76 76"
-              width="76"
-              height="76"
-              role="img"
-              aria-label={`${p.title} plaque, drawn.`}
-            >
-              {icon.map((s, j) => (
-                <ShapeOf key={j} s={s} />
-              ))}
-            </svg>
-            <figcaption>
-              <span className="plate-key-num">{p.id}</span>
-              <b className="plate-key-name">{p.title}</b>
-              <span className="plate-key-note">{p.note}</span>
-            </figcaption>
-          </figure>
-        );
-      })}
-    </section>
+    <div className="u-wide home-key">
+      <AnnotatedKey
+        for="plate-i"
+        label="Plate I key"
+        entries={KEY_ICONS.map((icon, i) => {
+          const p = plaque(PLAQUE_IDS[i] ?? "");
+          return {
+            id: p.id,
+            number: p.id,
+            name: p.title,
+            note: p.note,
+            art: icon.map((s, j) => <ShapeOf key={j} s={s} />),
+            artLabel: `${p.title} plaque, drawn.`,
+          };
+        })}
+      />
+    </div>
   );
 }

@@ -28,7 +28,7 @@
   .code-copy,
   .code-lang,
   .selection-link,
-  .skip-link,
+  .cap-skip,
   .cap-lightbox {
     display: none !important;
   }

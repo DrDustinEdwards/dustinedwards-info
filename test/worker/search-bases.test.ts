@@ -73,6 +73,13 @@ describe("the knowledge base facet", () => {
     expect((await search(searchEnv, { q: WORD, base: "nonsense" })).total).toBe(0);
   });
 
+  it("takes any number of type: operators, as one bound parameter", async () => {
+    const many = Array.from({ length: 150 }, (_, i) => `type:kind${i}`).join(" ");
+    expect((await search(searchEnv, { q: `${WORD} ${many}` })).total).toBe(0);
+    const withReal = await search(searchEnv, { q: `${WORD} ${many} type:page` });
+    expect(withReal.total).toBeGreaterThan(0);
+  });
+
   it("is a filter on its own: base:recipes with no words lists the base's records", async () => {
     expect(urls((await search(searchEnv, { q: "base:recipes" })).hits)).toEqual([
       "/recipes/zymograd-bread",

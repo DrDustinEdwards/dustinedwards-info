@@ -2,13 +2,13 @@
  * /health: site-runtime's healthResponse, the site's one health endpoint. The outside reads it (the UptimeRobot
  * monitor, Capsid's watcher, the network's ops audit, Capsomer's network board), and so do the instruments that act
  * on it: Capsid's watcher (which repairs drift), ship's readiness, operator-sync and the admin MCP, each through
- * healthChecks in app/lib/health/rows.mjs. The answer itself is app/lib/health/response.server.ts, which the
+ * site-runtime ./health-read healthChecks. The answer itself is app/lib/health/response.server.ts, which the
  * health-snapshot cron job also runs for the colophon. Rate limited, because the drift checks cost.
  */
 
 import { logEvent } from "@dustinedwards/site-runtime/log";
 
-import { clientIp } from "~/lib/client-ip";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { siteHealthResponse } from "~/lib/health/response.server";

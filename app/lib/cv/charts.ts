@@ -70,8 +70,9 @@ export function timelineSvg(input: TimelineInput): string {
     series: "type",
     filterBy: "x",
     href: (year) => input.hrefForYear(Number(year)),
-    // Every year where there is room, every other year on a laptop, every fifth on a phone.
-    maxXTicks: width < 520 ? 5 : width < 1000 ? 11 : years.length,
+    // At most eleven years labeled, five on a phone. Enarratio 0.12 sets the count it is given, and every year
+    // at full width ran the labels together beside its direct series labels.
+    maxXTicks: width < 520 ? 5 : 11,
     xDomain: years,
     seriesDomain: series.map((s) => s.label),
     xLabel: null,
@@ -96,7 +97,7 @@ function fadeOutside(markup: string, selected: [number, number] | null) {
 
 /**
  * A line of per-year values beside its count (a chart in a sentence, so no frame), with its numbers by
- * year behind "Show data".
+ * year in a visually hidden table.
  */
 export function sparklineSvg(input: SparklineInput): string {
   const svg = sparkline({ values: input.values, alt: input.label, area: true, inline: true });

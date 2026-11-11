@@ -1,6 +1,6 @@
 import { listAllPostsForAdmin } from "~/db";
 import { regenerateAllFromRepo } from "~/lib/editor/publish.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { askAvailable, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { readAskBudget, resetAskBudget } from "~/lib/search/ask-guard.server";
 

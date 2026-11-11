@@ -45,6 +45,7 @@ import "capsomer/fonts.css";
 import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 export function meta() {
   return [{ title: "Admin" }, { name: "robots", content: "noindex" }];
@@ -294,7 +295,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
-      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: themeScript() }} />
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={markup(themeScript())} />
       <AdminShell
         app="info"
         letterhead

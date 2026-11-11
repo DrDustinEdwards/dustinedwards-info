@@ -4,9 +4,8 @@
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
 import { decodeEntities } from "./entities.mjs";
+import { toBibtex } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
-
-export { canonicalAuthor };
 
 /**
  * Best effort; the CSL export does not use this, it reads the structured given and family fields.
@@ -22,38 +21,6 @@ function splitName(name) {
   };
 }
 
-// The backslash goes first, or it escapes the escapes that follow it.
-/** @type {[string, string][]} */
-const BIBTEX_ESCAPES = [
-  ["\\", "\\textbackslash{}"],
-  ["{", "\\{"],
-  ["}", "\\}"],
-  ["&", "\\&"],
-  ["%", "\\%"],
-  ["$", "\\$"],
-  ["#", "\\#"],
-  ["_", "\\_"],
-  ["~", "\\textasciitilde{}"],
-  ["^", "\\textasciicircum{}"],
-];
-
-/** @param {string} value */
-function escapeBibtex(value) {
-  let out = decodeEntities(value);
-  for (const [from, to] of BIBTEX_ESCAPES) out = out.split(from).join(to);
-  return out;
-}
-
-/**
- * Many BibTeX styles lowercase titles, and a lowercased genus is wrong under the nomenclature codes.
- * Applied after escaping, or the braces would be escaped into visible punctuation.
- *
- * @param {string} escaped a string already through `escapeBibtex`
- */
-function protectOrganisms(escaped) {
-  return escaped.replace(ORGANISM_PATTERN, "{$1}");
-}
-
 /**
  * For check:machine-readable. A substring test is wrong: Mycobacterium smegmatis contains the bare
  * genus, which the matcher correctly never braces.
@@ -65,51 +32,19 @@ export function organismsIn(text) {
   return [...String(text ?? "").matchAll(ORGANISM_PATTERN)].map((m) => m[0]);
 }
 
-// misc, not electronic, which the standard styles render as nothing.
-const BIBTEX_TYPE = {
-  article: "article",
-  review: "article",
-  abstract: "inproceedings",
-  chapter: "incollection",
-  "teaching-resource": "misc",
-};
+/**
+ * What Prelum's ./scholar formats need from this site: its alias table, so one person's spellings export as one name,
+ * and the organism names BibTeX styles must not lowercase (a lowercased genus is wrong under the nomenclature codes).
+ */
+export const CITATION_OPTIONS = { author: canonicalAuthor, protect: ORGANISM_PATTERN };
 
 /**
- * The key is the record's curated id: a second key scheme would give one work two identities.
+ * One paper as a BibTeX entry, keyed by the record's curated id: a second key scheme would give one work two identities.
  *
  * @param {any} paper
  */
-export function toBibtex(paper) {
-  const type = BIBTEX_TYPE[/** @type {keyof typeof BIBTEX_TYPE} */ (paper.type)] ?? "article";
-  const field = (/** @type {string} */ k, /** @type {string} */ v) => `  ${k} = {${v}},`;
-
-  const lines = [`@${type}{${paper.id},`];
-  lines.push(field("title", protectOrganisms(escapeBibtex(paper.title))));
-  lines.push(
-    field(
-      "author",
-      paper.authors
-        .map((/** @type {string} */ n) => escapeBibtex(canonicalAuthor(n)))
-        .join(" and "),
-    ),
-  );
-  if (paper.journal) {
-    const key = type === "incollection" ? "booktitle" : "journal";
-    lines.push(field(key, protectOrganisms(escapeBibtex(paper.journal))));
-  }
-  if (paper.year) lines.push(field("year", String(paper.year)));
-  if (paper.volume) lines.push(field("volume", escapeBibtex(String(paper.volume))));
-  if (paper.issue) lines.push(field("number", escapeBibtex(String(paper.issue))));
-  // Verbatim, not rebuilt from first and last: article-number records have no first page.
-  if (paper.pages) lines.push(field("pages", escapeBibtex(String(paper.pages))));
-  // As deposited: lowercasing would make the export disagree with the registry.
-  // A manuscript with no DOI yet has neither line, rather than a registry address that does not exist.
-  if (paper.doi) {
-    lines.push(field("doi", paper.doi));
-    lines.push(field("url", `https://doi.org/${paper.doi}`));
-  }
-  lines.push("}");
-  return lines.join("\n");
+export function paperBibtex(paper) {
+  return toBibtex(paper, CITATION_OPTIONS);
 }
 
 // TY first, ER last, exactly two spaces before the dash: reference managers are strict about that.
@@ -193,7 +128,7 @@ function header(comment, count) {
 
 /** @param {any[]} papers */
 export function toBibtexAll(papers) {
-  return `${header("%", papers.length)}\n${papers.map(toBibtex).join("\n\n")}\n`;
+  return `${header("%", papers.length)}\n${papers.map(paperBibtex).join("\n\n")}\n`;
 }
 
 /** @param {any[]} papers */

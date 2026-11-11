@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import { Fragment, type ReactNode } from "react";
 
 import { PageShell } from "~/components/page-shell";
@@ -32,7 +33,6 @@ import {
   yearOptions,
 } from "~/lib/cv/view.mjs";
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   SITE_ORIGIN,
@@ -48,9 +48,11 @@ import type { Route } from "./+types/cv";
 
 import "capsomer/tokens.css";
 import "capsomer/status.css";
+import "capsomer/copy.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /*
  * THE CV (content/cv/, drawn from D1 at request time and resolved by app/lib/cv/entries.mjs, docs/CV.md). A CV
@@ -83,7 +85,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     cv,
     facts,
-    jsonLd: serializeJsonLd(cvJsonLd(cv)),
+    jsonLd: cvJsonLd(cv),
     state,
     shownIds: shown.map((f) => f.id),
     groups: groupEntries(facts, state.sort),
@@ -178,6 +180,8 @@ function Tags({ entry }: { entry: CvEntry }) {
   return <p className="cv-tags">{parts.join(" · ")}</p>;
 }
 
+const COPY_NAMES = { plain: "Citation", bibtex: "BibTeX", ris: "RIS" } as const;
+
 function CopyButton({
   kind,
   label,
@@ -190,17 +194,23 @@ function CopyButton({
   const paper = entry.paper;
   if (!paper) return null;
   const src = kind === "bibtex" ? paper.bibtexPath : kind === "ris" ? paper.risPath : null;
+  const name = COPY_NAMES[kind];
+  // Capsomer's copy (components/copy): the bubble beside the button is the message and the live region.
   return (
-    <button
-      type="button"
-      className="cv-copy"
-      data-cv-copy={kind}
-      data-cv-src={src ?? undefined}
-      data-cv-for={entry.id}
-      hidden
-    >
-      {label}
-    </button>
+    <span className="cap-copy" data-cv-copy-wrap="" hidden>
+      <button
+        type="button"
+        className="cv-copy"
+        data-cv-copy={kind}
+        data-cv-src={src ?? undefined}
+        data-cv-for={entry.id}
+        data-cap-copied={`${name} copied`}
+        data-cap-failed={`${name} not copied: use the file links`}
+      >
+        {label}
+      </button>
+      <span className="cap-copy-tip" role="status" />
+    </span>
   );
 }
 
@@ -358,11 +368,7 @@ function Stat({
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
         </span>
-        <div
-          className="cv-spark"
-          data-cv-spark={name}
-          dangerouslySetInnerHTML={{ __html: spark }}
-        />
+        <div className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={markup(spark)} />
         {sub ? <span className="cv-stat-sub">{sub}</span> : null}
       </dd>
     </div>
@@ -386,9 +392,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
   const ORDER = new Map(CV.entries.map((e, i) => [e.id, i]));
   const YEARS = yearOptions(FACTS);
   return (
-    <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}
-    >
+    <PageShell trail={<JsonLd data={jsonLd} />}>
       <div className="cv" data-cv="">
         <header className="cv-head">
           <p className="cv-eyebrow">
@@ -446,7 +450,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             <div
               className="cv-timeline-plot"
               data-cv-timeline=""
-              dangerouslySetInnerHTML={{ __html: charts.timeline }}
+              dangerouslySetInnerHTML={markup(charts.timeline)}
             />
             <p className="cv-timeline-hint" data-cv-hint="">
               Select a year&rsquo;s bar to show only that year, and select it again for every year.
@@ -597,7 +601,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
         <p className="cv-summary" role="status" data-cv-summary="">
           {summaryText(shownIds.length, FACTS.length)}
         </p>
-        <p className="sr-only" role="status" data-cv-copied="" />
 
         <div className="cv-results" data-cv-results="">
           {groups.map((group) => {

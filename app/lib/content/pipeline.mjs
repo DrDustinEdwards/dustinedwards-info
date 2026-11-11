@@ -8,6 +8,8 @@ import { createHighlight } from "@drdustinedwards/site-helpers/render/highlight"
 import { editorialPack } from "@drdustinedwards/site-helpers/render/packs";
 import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
+// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
+import "@dustinedwards/site-runtime/zod-jitless";
 import { z } from "zod";
 
 // Mermaid drawings Prelum still emits as an <img> pair are sized from this file. The three hand-built
@@ -142,7 +144,7 @@ export const frontmatterSchema = z.object({
   }
 });
 
-export { findWideDashes } from "./wide-dash.mjs";
+export { findWideDashes } from "@drdustinedwards/site-helpers/text";
 
 export { readingTimeMinutes };
 

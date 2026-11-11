@@ -7,7 +7,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createTally } from "../tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 export const PORT = 4173;
@@ -173,17 +173,6 @@ export const bundleFetches = (target, stem) =>
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
-/** The reachable CSS rules; a cross-origin sheet throws on `cssRules` and counts zero. */
-export function countCssRules() {
-  return [...document.styleSheets].reduce((n, s) => {
-    try {
-      return n + s.cssRules.length;
-    } catch {
-      return n;
-    }
-  }, 0);
-}
-
 /**
  * The document's widths and the first four elements reaching past its right edge. Anything left of
  * -1000px is off-screen by design: the skip link, and a closed drawer translated out of view.
@@ -206,7 +195,7 @@ export function overflowScan() {
 
 /** Whether the skip link exists, where it points, and whether anything carries that id. */
 export function readSkipLink() {
-  const link = document.querySelector("a.skip-link");
+  const link = document.querySelector("a.cap-skip");
   if (!link) return { link: false, href: "", target: false };
   const href = link.getAttribute("href") ?? "";
   const id = href.startsWith("#") ? href.slice(1) : "";

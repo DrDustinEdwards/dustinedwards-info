@@ -1,33 +1,26 @@
-import { Fragment, type ReactNode } from "react";
+import { initialValues } from "capsomer/behavior/calculator";
+import { Calculator, type CalculatorField } from "capsomer/react/calculator";
 
-import {
-  TOOLS,
-  resultView,
-  runTool,
-  textParts,
-  toolValues,
-  toolsOnPage,
-  type ViewNode,
-} from "~/lib/phage-tools.mjs";
+import { TOOLS, runTool, toolValues, toolsOnPage } from "~/lib/phage-tools.mjs";
 
+import "capsomer/field.css";
+import "capsomer/calculator.css";
 import "~/styles/phage-tools.css";
 
-/** A view node from app/lib/phage-tools.mjs as React, the same markup app/enhance/tools.ts builds. */
-function renderNode(node: ViewNode | string, key: number): ReactNode {
-  if (typeof node === "string") return <Fragment key={key}>{node}</Fragment>;
-  const Tag = node.tag;
-  return (
-    <Tag key={key} className={node.className}>
-      {node.children.map(renderNode)}
-    </Tag>
+/** A calculator's fields as Capsomer's Calculator takes them: a lab default names its source as one. */
+function fieldsOf(id: string): CalculatorField[] {
+  const tool = TOOLS[id];
+  if (!tool) throw new Error(`No calculator named ${id}.`);
+  return tool.fields.map((field) =>
+    field.source ? { ...field, sourceLead: "Lab default:" } : field,
   );
 }
 
 /**
- * One calculator's form and its result. `instance` keys the ids and the status regions, so the same
- * calculator can sit under several steps of one page (a page of its own uses the tool's id). `embedded`
- * is a calculator inside a procedure step: its form still submits to the tool's own page, which answers
- * with script off, and app/enhance/tools.ts leaves the address bar alone.
+ * One calculator, Capsomer's (capsomer/react/calculator). `instance` keys the ids, so the same calculator
+ * can sit under several steps of one page (a page of its own uses the tool's id). `embedded` is a calculator
+ * inside a procedure step: its form still submits to the tool's own page, which answers with script off,
+ * and the page's enhance call (app/enhance/tools.ts) leaves the address bar alone.
  */
 function ToolBody({
   id,
@@ -42,72 +35,16 @@ function ToolBody({
 }) {
   const tool = TOOLS[id];
   if (!tool) throw new Error(`No calculator named ${id}.`);
-  const view = resultView(runTool(id, values));
   return (
-    <div className="phage-tool-body">
-      <form
-        className="phage-tool-form"
-        method="get"
-        action={tool.path}
-        data-tool={id}
-        data-tool-instance={instance}
-        data-tool-embedded={embedded ? "" : undefined}
-      >
-        {tool.fields.map((field) => {
-          const inputId = `${instance}-${field.name}`;
-          const hintId = `${inputId}-hint`;
-          const described = field.hint || field.source;
-          return (
-            <div className="phage-tool-field" key={field.name}>
-              <label htmlFor={inputId}>
-                {field.label}
-                {field.unit ? <span className="phage-tool-unit"> ({field.unit})</span> : null}
-              </label>
-              <input
-                id={inputId}
-                name={field.name}
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                spellCheck={false}
-                defaultValue={values[field.name]}
-                aria-describedby={described ? hintId : undefined}
-              />
-              {described ? (
-                <p id={hintId} className="phage-tool-hint">
-                  {field.hint
-                    ? textParts(field.hint).map((part, i) =>
-                        part.sup ? (
-                          <sup key={i}>{part.text}</sup>
-                        ) : (
-                          <Fragment key={i}>{part.text}</Fragment>
-                        ),
-                      )
-                    : null}
-                  {field.hint && field.source ? " " : null}
-                  {field.source ? (
-                    <>
-                      Lab default: <a href={field.source.href}>{field.source.label}</a>.
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-            </div>
-          );
-        })}
-        <button type="submit" className="phage-tool-submit">
-          Calculate
-        </button>
-      </form>
-      <div className="phage-tool-output">
-        <div className="phage-tool-status" role="status" data-tool-status={instance}>
-          {view.summary.map(renderNode)}
-        </div>
-        <div className="phage-tool-detail" data-tool-detail={instance}>
-          {view.detail.map(renderNode)}
-        </div>
-      </div>
-    </div>
+    <Calculator
+      id={instance}
+      calculator={id}
+      action={tool.path}
+      fields={fieldsOf(id)}
+      values={values}
+      run={(v) => runTool(id, v)}
+      embedded={embedded}
+    />
   );
 }
 
@@ -131,7 +68,7 @@ export function PhageTools({ path, search }: { path: string; search: string }) {
             <h2 id={titleId} className="phage-tool-title">
               {tool.title}
             </h2>
-            <ToolBody id={id} values={toolValues(id, params)} />
+            <ToolBody id={id} values={initialValues(tool.fields, params)} />
           </section>
         );
       })}
@@ -172,7 +109,9 @@ export function StepCalculators({
               embedded
             />
             <p className="phage-tool-more">
-              <a href={tool.path}>Open the {tool.title.toLowerCase()} on its own page</a>
+              <a href={tool.path} data-link="next">
+                Open the {tool.title.toLowerCase()} on its own page
+              </a>
             </p>
           </details>
         );

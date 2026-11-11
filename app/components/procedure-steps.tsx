@@ -1,4 +1,4 @@
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { StepCalculators } from "~/components/phage-tool";
 import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";
@@ -75,7 +75,7 @@ export function StepItem({
         dangerouslySetInnerHTML={html(text)}
       />
       {ingredients.length > 0 ? (
-        <p className="procedure-step-ingredients">
+        <p className="procedure-step-ingredients" data-run-swap="ingredients">
           <span className="procedure-step-ingredients-label">Ingredients: </span>
           {ingredients.map((i) => (i.amount ? `${i.amount} ${i.name}` : i.name)).join(", ")}
         </p>

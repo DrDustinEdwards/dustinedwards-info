@@ -2,7 +2,7 @@
  * A JavaScript tokenizer, so not for CSS, where `//` is never a comment. An apostrophe in JSX or SVG
  * text is read as a string only when a matching quote closes it on the same line, which still
  * misreads two apostrophes on one line; `stripTsxComments` is the one for TSX, and for anything
- * that must be exact, read the syntax tree (scripts/lib/syntax.mjs).
+ * that must be exact, read the syntax tree (@dustinedwards/devkit/node/syntax).
  */
 
 import { createRequire } from "node:module";

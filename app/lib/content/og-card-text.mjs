@@ -2,7 +2,7 @@
 // route names a page's card through it without importing the markdown renderer. Characters stand in
 // for width, so every number here was measured off rendered cards.
 
-import { fnv1a32 } from "../fingerprint.mjs";
+import { fnv1a32 } from "@dustinedwards/site-runtime/encoding";
 import { longDateUTC } from "../long-date.mjs";
 import { ASSET_PREFIX } from "../media/classify.mjs";
 
@@ -55,23 +55,6 @@ export function cardTitle(title) {
  */
 export function cardDescription(description) {
   return clampWords(description, DESCRIPTION_MAX);
-}
-
-/**
- * Throws, never falls back: a title past the last rung means TITLE_MAX and the ladder disagree.
- *
- * @param {string} title the title AS DRAWN, i.e. already through `cardTitle`
- * @returns {number}
- */
-export function titleFontSize(title) {
-  const length = (title ?? "").length;
-  for (const rung of TITLE_SIZES) {
-    if (length <= rung.maxChars) return rung.fontSize;
-  }
-  throw new Error(
-    `og-card-text: a ${length}-character title is past the last rung of the ` +
-      `ladder (${TITLE_MAX}). Titles must go through cardTitle() first.`,
-  );
 }
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache

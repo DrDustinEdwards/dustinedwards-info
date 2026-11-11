@@ -2,7 +2,7 @@
 # that commit, through devkit's worker-deploy.yml, as the network's other Worker sites do. worker-deploy reads the D1
 # Time Travel bookmark, runs the pre-deploy guard below (config ids, queues, additive migrations, the content's source
 # from D1, the build), deploys with DEPLOY_SHA set, waits for /health to report this commit, runs
-# scripts/verify-deploy.mjs, and rolls the Worker back when it refuses. Its limits are devkit's README, "The shared
+# devkit-verify-deploy, and rolls the Worker back when it refuses. Its limits are devkit's README, "The shared
 # deploy": a rollback swaps code and bindings, never a migration; that is the bookmark's restore command, in the summary.
 #
 # Then `converge` (scripts/converge.mjs) brings the deployed site's data and helpers into step: the
@@ -81,7 +81,7 @@ jobs:
   site:
     needs: decide
     if: needs.decide.outputs.deploy == 'true'
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@250d737c13b6f4c74987652818d262cb1d1c9cf7 # v0.27.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@be764c572506cf64f434eb7ad026c9389440e7cd # v0.33.0
     with:
       worker-name: dustinedwards
       # site-runtime withAdminIdle's key, minted once by the deploy and never shown (devkit "generated-secrets").
@@ -89,7 +89,7 @@ jobs:
       d1-database: dustinedwards
       health-url: https://dustinedwards.info/health
       sha-var: DEPLOY_SHA
-      verify-command: node scripts/verify-deploy.mjs
+      verify-command: node "$DEVKIT_DIR/bin/verify-deploy.mjs" https://dustinedwards.info --page / --page /colophon --health /health
       # The config's redacted values, any new queue, the additive migrations, then the build from D1's content (a path
       # D1 has never held is seeded from the repository first).
       pre-deploy: >-
@@ -157,7 +157,7 @@ jobs:
   # example and the live Worker's own bindings (scripts/apply-mcp-config.mjs).
   mcp:
     needs: site
-    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@250d737c13b6f4c74987652818d262cb1d1c9cf7 # v0.27.0
+    uses: DrDustinEdwards/devkit/.github/workflows/worker-deploy.yml@be764c572506cf64f434eb7ad026c9389440e7cd # v0.33.0
     with:
       worker-name: dustinedwards-admin-mcp
       # site-runtime audit-log's signing key (0.85), minted once by the deploy and never shown (devkit "generated-secrets").

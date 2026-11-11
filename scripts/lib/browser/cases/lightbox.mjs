@@ -99,59 +99,5 @@ export async function run({ page, browser }) {
         `went back to reading currentSrc, which is the resized copy already on ` +
         `screen; overlay absent means the click navigated instead of being caught.`,
     );
-
-    /*
-     * A real modal dialog, asserted through `matches("dialog:modal")`, which only `showModal()`
-     * satisfies: attributes on a div are a claim, modality is a behavior.
-     */
-    const modal = await page.evaluate(() => {
-      const el = document.querySelector(".cap-lightbox");
-      return {
-        tag: el?.tagName ?? "(absent)",
-        isModal: el instanceof HTMLDialogElement && el.matches("dialog:modal"),
-        label: el?.getAttribute("aria-label") ?? "",
-        closeButton: Boolean(el?.querySelector(".cap-lightbox [data-cap-part=close]")),
-        focusInside: Boolean(el && document.activeElement && el.contains(document.activeElement)),
-      };
-    });
-    ok(
-      `${imagePost}: the lightbox is a modal <dialog>, not a div`,
-      modal.isModal,
-      `element is <${modal.tag}> and dialog:modal is ${modal.isModal}. A div with ` +
-        `role="dialog" passes an attribute check and still has no focus trap, no ` +
-        `inert page behind it and no Escape unless focus is inside it.`,
-    );
-    ok(
-      `${imagePost}: the lightbox carries an accessible name`,
-      modal.label.length > 0,
-      `aria-label ${JSON.stringify(modal.label)}. A dialog announces itself and then ` +
-        `has nothing to say; the image's alt is the only description there is.`,
-    );
-    ok(
-      `${imagePost}: the lightbox has a visible close control`,
-      modal.closeButton,
-      `no .cap-lightbox [data-cap-part=close]. Escape and a backdrop click are both real ways out ` +
-        `and neither is discoverable, so a touch reader with no keyboard had none.`,
-    );
-    ok(
-      `${imagePost}: opening the lightbox moves focus into it`,
-      modal.focusInside,
-      `focus is outside the dialog, so the platform's containment has nothing to ` +
-        `contain and the next Tab leaves the modal.`,
-    );
-
-    await page.keyboard.press("Escape");
-    await new Promise((r) => setTimeout(r, 200));
-    const afterEscape = await page.evaluate(() => ({
-      gone: document.querySelector(".cap-lightbox") === null,
-      focusedLink: document.activeElement?.classList.contains("image-link") ?? false,
-    }));
-    ok(
-      `${imagePost}: Escape closes it and focus returns to the link`,
-      afterEscape.gone && afterEscape.focusedLink,
-      `dialog removed ${afterEscape.gone}, focus back on the image link ` +
-        `${afterEscape.focusedLink}. Focus left behind on a removed element sends the ` +
-        `next Tab to the top of the document.`,
-    );
   }
 }

@@ -13,8 +13,8 @@ import {
   startHere,
 } from "../../app/lib/blog-listing.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
-import { assertFloor } from "../lib/floor.mjs";
-import { createTally } from "../lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const { mf2 } = await import("microformats-parser");
 
