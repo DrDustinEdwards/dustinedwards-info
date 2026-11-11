@@ -111,7 +111,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {adminPlane ? null : (
-          <a className="skip-link" href="#main">
+          <a className="cap-skip" href="#main">
             Skip to content
           </a>
         )}

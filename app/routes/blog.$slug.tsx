@@ -27,7 +27,7 @@ import { renameRedirect } from "@dustinedwards/site-runtime/url";
 import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { articleCrops, contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {

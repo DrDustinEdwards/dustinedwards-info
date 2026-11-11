@@ -48,6 +48,7 @@ import type { Route } from "./+types/cv";
 
 import "capsomer/tokens.css";
 import "capsomer/status.css";
+import "capsomer/copy.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -178,6 +179,8 @@ function Tags({ entry }: { entry: CvEntry }) {
   return <p className="cv-tags">{parts.join(" · ")}</p>;
 }
 
+const COPY_NAMES = { plain: "Citation", bibtex: "BibTeX", ris: "RIS" } as const;
+
 function CopyButton({
   kind,
   label,
@@ -190,17 +193,23 @@ function CopyButton({
   const paper = entry.paper;
   if (!paper) return null;
   const src = kind === "bibtex" ? paper.bibtexPath : kind === "ris" ? paper.risPath : null;
+  const name = COPY_NAMES[kind];
+  // Capsomer's copy (components/copy): the bubble beside the button is the message and the live region.
   return (
-    <button
-      type="button"
-      className="cv-copy"
-      data-cv-copy={kind}
-      data-cv-src={src ?? undefined}
-      data-cv-for={entry.id}
-      hidden
-    >
-      {label}
-    </button>
+    <span className="cap-copy" data-cv-copy-wrap="" hidden>
+      <button
+        type="button"
+        className="cv-copy"
+        data-cv-copy={kind}
+        data-cv-src={src ?? undefined}
+        data-cv-for={entry.id}
+        data-cap-copied={`${name} copied`}
+        data-cap-failed={`${name} not copied: use the file links`}
+      >
+        {label}
+      </button>
+      <span className="cap-copy-tip" role="status" />
+    </span>
   );
 }
 
@@ -597,7 +606,6 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
         <p className="cv-summary" role="status" data-cv-summary="">
           {summaryText(shownIds.length, FACTS.length)}
         </p>
-        <p className="sr-only" role="status" data-cv-copied="" />
 
         <div className="cv-results" data-cv-results="">
           {groups.map((group) => {

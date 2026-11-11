@@ -92,7 +92,9 @@ export default function start(): void {
 
   // Command-K or Control-K opens the palette. The header's search icon is Capsomer's (app/enhance/header.ts) and
   // does not open it.
+  // A handled key is left alone: Control-K inside the open palette closes it (Capsomer's command menu).
   document.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented) return;
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openPalette();

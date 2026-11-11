@@ -206,7 +206,7 @@ export function overflowScan() {
 
 /** Whether the skip link exists, where it points, and whether anything carries that id. */
 export function readSkipLink() {
-  const link = document.querySelector("a.skip-link");
+  const link = document.querySelector("a.cap-skip");
   if (!link) return { link: false, href: "", target: false };
   const href = link.getAttribute("href") ?? "";
   const id = href.startsWith("#") ? href.slice(1) : "";

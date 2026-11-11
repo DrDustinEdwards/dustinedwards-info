@@ -1,4 +1,4 @@
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { StepCalculators } from "~/components/phage-tool";
 import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { PLATFORMS } from "~/kb/procedures/parse.mjs";

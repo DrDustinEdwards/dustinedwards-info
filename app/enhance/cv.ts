@@ -1,6 +1,6 @@
 import { enhance, type EnhancedChart, type SelectDetail } from "enarratio/enhance";
 
-import { copyText } from "../lib/clipboard";
+import { copyText, report } from "capsomer/behavior/copy";
 import {
   CHART_SERIES,
   TIMELINE_ID,
@@ -48,7 +48,6 @@ export default function start(): void {
   const form: HTMLFormElement = formElement;
   const results = must(root, "[data-cv-results]");
   const summary = must(root, "[data-cv-summary]");
-  const copied = must(root, "[data-cv-copied]");
   const timelineHost = must(root, "[data-cv-timeline]");
   const clear = must(root, "[data-cv-clear]");
   const PATH = form.getAttribute("action") ?? location.pathname;
@@ -367,24 +366,17 @@ export default function start(): void {
     return (await response.text()).trim();
   }
 
-  const COPY_NAMES: Record<string, string> = { plain: "Citation", bibtex: "BibTeX", ris: "RIS" };
-
+  // Capsomer's copy: its bubble beside the button says Copied or not, with the words the button names.
+  for (const wrap of root.querySelectorAll<HTMLElement>("[data-cv-copy-wrap]")) wrap.hidden = false;
   for (const button of root.querySelectorAll<HTMLButtonElement>("button[data-cv-copy]")) {
-    button.hidden = false;
     button.addEventListener("click", () => {
-      const name = COPY_NAMES[button.dataset.cvCopy ?? ""] ?? "Text";
-      copied.textContent = "";
-      citationText(button)
-        .then((text) => copyText(text))
-        .then(() => {
-          copied.textContent = `${name} copied.`;
-          button.dataset.copied = "";
-          window.setTimeout(() => delete button.dataset.copied, 1600);
-        })
-        .catch((error: unknown) => {
-          copied.textContent = `${name} was not copied. The file links beside the button download it.`;
+      citationText(button).then(
+        async (text) => report(button, (await copyText(text)) ? "copied" : "failed"),
+        (error: unknown) => {
+          report(button, "failed");
           throw error;
-        });
+        },
+      );
     });
   }
 

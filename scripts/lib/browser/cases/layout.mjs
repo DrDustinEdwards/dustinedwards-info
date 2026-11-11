@@ -71,7 +71,7 @@ export async function run({ page, browser }) {
       s.link
         ? `href is ${JSON.stringify(s.href)} and no element carries that id, so the link ` +
             `moves focus nowhere`
-        : "there is no .skip-link at all",
+        : "there is no .cap-skip at all",
     );
   }
 

@@ -1,4 +1,4 @@
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";

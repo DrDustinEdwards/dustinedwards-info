@@ -24,6 +24,8 @@ import "capsomer/dialog.css";
 import "capsomer/site-header.css";
 // Capsomer's utilities without its base: the family arrow on the footer's links.
 import "capsomer/utilities.css";
+// Capsomer's picture (capsomer/react/picture): the <picture> leaves the box to its <img>, and the stored placeholder.
+import "capsomer/picture.css";
 // Capsomer's link system: the mark for a link that leaves the site, opens a file or sends mail (app.css draws
 // the rest of each link from Capsomer's link tokens).
 import "capsomer/link.css";
@@ -41,7 +43,6 @@ import "capsomer/error-page.css";
 import "~/styles/public-chrome.css";
 import "~/styles/page-shell.css";
 import "~/styles/chrome-nav.css";
-import "~/styles/skip-link.css";
 import "~/styles/motion-print.css";
 // Last: shell.css must win where it and page-shell.css touch the same thing.
 import "~/styles/shell.css";

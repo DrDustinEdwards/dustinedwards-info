@@ -3,7 +3,7 @@ import { data } from "react-router";
 import { pictureProps } from "@dustinedwards/site-runtime/image";
 
 import { PageShell } from "~/components/page-shell";
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { getPageByPath } from "~/db/pages";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
