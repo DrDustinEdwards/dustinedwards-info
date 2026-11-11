@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import { Fragment, type ReactNode } from "react";
 
 import { PageShell } from "~/components/page-shell";
@@ -32,7 +33,6 @@ import {
   yearOptions,
 } from "~/lib/cv/view.mjs";
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   SITE_ORIGIN,
@@ -84,7 +84,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     cv,
     facts,
-    jsonLd: serializeJsonLd(cvJsonLd(cv)),
+    jsonLd: cvJsonLd(cv),
     state,
     shownIds: shown.map((f) => f.id),
     groups: groupEntries(facts, state.sort),
@@ -383,9 +383,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
   const ORDER = new Map(CV.entries.map((e, i) => [e.id, i]));
   const YEARS = yearOptions(FACTS);
   return (
-    <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={markup(jsonLd)} />}
-    >
+    <PageShell trail={<JsonLd data={jsonLd} />}>
       <div className="cv" data-cv="">
         <header className="cv-head">
           <p className="cv-eyebrow">

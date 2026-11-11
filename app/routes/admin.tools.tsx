@@ -148,6 +148,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="sync-ask" />
+          <input type="hidden" name="confirmed" value="1" />
         </ConfirmDialog>
       ) : null}
 
@@ -218,6 +219,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="rebuild" />
+          <input type="hidden" name="confirmed" value="1" />
         </ConfirmDialog>
       ) : null}
 

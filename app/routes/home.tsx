@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import type { ReactNode } from "react";
 import { Link, data } from "react-router";
 
@@ -5,7 +6,6 @@ import { ShellFooter } from "~/components/shell-footer";
 import { HomeIntro } from "~/components/home-intro";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
 import { longDateUTC } from "~/lib/long-date.mjs";
@@ -33,7 +33,6 @@ import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
 import "~/styles/home.css";
-import { markup } from "capsomer/behavior/trusted-html";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
 // The home faces as a `Link` header too, so Early Hints starts them; the Renderer appends every page's own.
@@ -408,11 +407,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <HomePodcast episode={podcast} />
 
         {structuredData.map((data, i) => (
-          <script
-            key={i}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={markup(serializeJsonLd(data))}
-          />
+          <JsonLd key={i} data={data} />
         ))}
       </main>
       <ShellFooter />

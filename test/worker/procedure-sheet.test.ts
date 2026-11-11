@@ -86,7 +86,7 @@ describe("the printed sheet", () => {
       // The live sheet is the current version, version 2, and its code opens that version's copy.
       const { html: sheet } = await liveSheet();
       expect(sheet).toContain(`role="img" aria-label="QR code for ${ORIGIN}${PATH}/v/2"`);
-      expect(sheet).toMatch(/<figure class="procedure-sheet-qr"><div[^>]*><svg /);
+      expect(sheet).toMatch(/<figure class="cap-qr"><svg class="cap-qr-code"/);
       expect(sheet).toContain(`Version 2, 2026-10-01. ${ORIGIN}${PATH}/v/2`);
       expect(sheet).toContain("Pour 6 to 10 replicate plates");
       expect(sheet).not.toContain("phage-tool");

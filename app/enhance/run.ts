@@ -1,3 +1,5 @@
+import { enhance as enhanceField } from "capsomer/behavior/field";
+import { enhance as enhanceSelect } from "capsomer/behavior/select";
 import { copyChildren, trustedHtml } from "capsomer/behavior/trusted-html";
 import {
   clock,
@@ -66,8 +68,13 @@ export default function start(): void {
   const stepKeys = stepItems.map(keyOf);
   // Where each timer's alert says the step is: its printed number.
   const timerStep = new Map<string, string>();
-  const scaleForm = root.querySelector<HTMLFormElement>("form.procedure-scale");
+  const scaleForm = root.querySelector<HTMLFormElement>("form.cap-scale-control");
   const scaleField = scaleForm?.querySelector<HTMLInputElement>("input[name]") ?? null;
+  // The scale control's steppers and its unit select (capsomer/scale-control.md); the form works without them.
+  if (scaleForm) {
+    enhanceField(scaleForm);
+    enhanceSelect(scaleForm);
+  }
 
   let run: Run | null = null;
   // One step at a time: whether it is on, remembered in this browser, and which step it shows.
@@ -539,7 +546,7 @@ export default function start(): void {
       const mise = root!.querySelector(".procedure-mise");
       const nextMise = next.querySelector(".procedure-mise");
       if (mise && nextMise) copyChildren(mise, nextMise);
-      const nextField = next.querySelector<HTMLInputElement>("form.procedure-scale input[name]");
+      const nextField = next.querySelector<HTMLInputElement>("form.cap-scale-control input[name]");
       if (nextField && scaleField) scaleField.value = nextField.defaultValue;
       history.replaceState(history.state, "", href);
       if (run && nextField) update(setScale(run, Number(nextField.defaultValue)));

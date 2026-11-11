@@ -3,7 +3,7 @@
 // and Capsomer's network board read it every few minutes and would keep a stopped job looking alive).
 // Measured: running the suite in a page loader cost about 1.2 s, so the colophon reads this instead.
 
-import { healthChecks } from "./rows.mjs";
+import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 import { HEALTH_SNAPSHOT_EVERY_MINUTES } from "../cron-jobs.mjs";
 
 /** One key, not a prefix: a prefix would invite a second writer. */

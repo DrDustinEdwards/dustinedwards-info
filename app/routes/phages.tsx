@@ -1,15 +1,16 @@
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { Catalog } from "capsomer/react/catalog";
-import { data } from "react-router";
 import type { ReactNode } from "react";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listPhages } from "~/db/phages";
+import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath, contentPageTrail } from "~/lib/content-pages.mjs";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { phagesDbUrl } from "~/lib/phage-table.mjs";
@@ -68,10 +69,9 @@ function aroundTable(html: string): [string, string] {
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
-  const row = await getPageByPath(env, PHAGES_PAGE_PATH);
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  const { row, draft } = await draftGate(await getPageByPath(env, PHAGES_PAGE_PATH), () =>
+    isAdminViewer(env, request),
+  );
   const page = row.record;
   const [before, after] = aroundTable(page.html);
   const titles = await getPublishedPageTitles(env, ["/research"]);
@@ -83,7 +83,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     trail,
     phages: await listPhages(env),
     search: url.search,
-    draft: row.status === "draft",
+    draft,
   };
 }
 
@@ -98,7 +98,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
     },
-    ...(draft ? [{ name: "robots", content: "noindex" }] : []),
+    ...draftRobots(draft),
   ];
 }
 
@@ -123,11 +123,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
       trail={
         <>
           {contentPageJsonLd(page, null).map((block, i) => (
-            <script
-              key={i}
-              type="application/ld+json"
-              dangerouslySetInnerHTML={markup(serializeJsonLd(block))}
-            />
+            <JsonLd key={i} data={block} />
           ))}
         </>
       }
@@ -136,7 +132,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
       <h1 className="page-title cap-layout-grid" id="phages-title">
         {page.title}
       </h1>
-      {draft ? <p>Draft: only you can see this page.</p> : null}
+      <DraftNotice show={draft} />
       <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(before)} />
       <div className="phage-catalog site-catalog site-catalog-wide">
         <Catalog
