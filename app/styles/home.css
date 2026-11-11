@@ -616,88 +616,10 @@
   line-height: 1.55;
 }
 
-.podcast-player {
-  margin-block-start: 1.25rem;
-  border-block: var(--line-w) solid var(--dust);
-  padding-block: 1rem;
-}
-
-.podcast-audio {
-  display: block;
-  inline-size: 100%;
-}
-
-.podcast-controls[hidden] {
-  display: none;
-}
-
-.podcast-scrub {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.podcast-time {
-  min-inline-size: 3.5ch;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.podcast-scrub .podcast-time:last-child {
-  text-align: right;
-}
-
-.podcast-range {
-  inline-size: 100%;
-  margin: 0;
-  accent-color: var(--brand);
-  cursor: pointer;
-}
-
-.podcast-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-block-start: 0.875rem;
-}
-
-/* The manual's sign panels: a dark panel of light type. */
-.podcast-btn {
-  min-block-size: 2.75rem;
-  min-inline-size: 5.5rem;
-  border: 0;
-  border-radius: 0;
-  background: var(--text);
-  padding: 0 1rem;
-  color: var(--paper);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  cursor: pointer;
-}
-
-.podcast-btn:hover {
-  text-decoration: underline;
-}
-
-.podcast-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
+.podcast > .cap-player {
+  margin-block: 1.25rem 0;
 }
 
 .home-more.podcast-x {
   margin-block-start: 0.5rem;
-}
-
-@media (max-width: 47.99rem) {
-  .podcast-btn {
-    flex: 1 1 0;
-    min-inline-size: 0;
-    padding-inline: 0.25rem;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
 }

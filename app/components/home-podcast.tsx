@@ -1,10 +1,12 @@
+import "capsomer/player.css";
 import { formatDate } from "capsomer/behavior/time";
+import { Audio } from "capsomer/react/player";
 import { clockTime } from "~/lib/podcast/clock.mjs";
 import { PODCAST_SITE_URL, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
 import { GERMOMICS_X_URL } from "~/lib/seo";
 
-// The hand-drawn controls are server markup marked `hidden` that the bundle swaps in, so a
-// reader without script gets the native audio controls and never a button that does nothing.
+// The episode plays in Capsomer's audio player: native controls, nothing downloaded before play, and its transcript one
+// link away. It needs no script.
 export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
   return (
     <section className="cap-part home-section home-scicomm" aria-labelledby="germomics-heading">
@@ -12,7 +14,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
         Germomics
       </h2>
       {episode ? (
-        <article className="podcast" data-podcast>
+        <article className="podcast">
           <h3 className="podcast-title">
             <a href={episode.link}>{episode.title}</a>
           </h3>
@@ -46,63 +48,15 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
           {episode.description ? (
             <p className="podcast-description">{episode.description}</p>
           ) : null}
-          <div className="podcast-player">
-            <audio
-              className="podcast-audio"
-              controls
-              preload="none"
+          {/* An audio file owes a text alternative (WCAG 1.2.1): the feed declares the episode's transcript, and the
+              episode page holds it, so the player links to it there. An episode with none is not played here. */}
+          {episode.transcriptUrl ? (
+            <Audio
               src={episode.audioUrl}
-              aria-label={`Play ${episode.title}`}
-            >
-              <a href={episode.audioUrl}>Download the episode</a>
-            </audio>
-            {/* A named group, so Play and Seek carry the episode they act on. */}
-            <div
-              className="podcast-controls"
-              data-podcast-controls
-              role="group"
-              aria-label={`Player for ${episode.title}`}
-              hidden
-            >
-              <div className="podcast-scrub">
-                <span className="podcast-time" data-podcast-elapsed>
-                  0:00
-                </span>
-                <input
-                  className="podcast-range"
-                  type="range"
-                  min={0}
-                  max={episode.durationSeconds ?? 0}
-                  step={1}
-                  defaultValue={0}
-                  aria-label="Seek"
-                  data-podcast-seek
-                />
-                <span className="podcast-time" data-podcast-total>
-                  {episode.durationSeconds ? clockTime(episode.durationSeconds) : "--:--"}
-                </span>
-              </div>
-              <div className="podcast-buttons">
-                <button type="button" className="podcast-btn" data-podcast-play>
-                  Play
-                </button>
-                <button type="button" className="podcast-btn" data-podcast-skip="-15">
-                  Back 15 s
-                </button>
-                <button type="button" className="podcast-btn" data-podcast-skip="30">
-                  Forward 30 s
-                </button>
-              </div>
-            </div>
-          </div>
-          <p className="home-more podcast-links">
-            {/* An audio file owes a text alternative (WCAG 1.2.1). The feed declares the episode's transcript, and the episode
-                page holds it (with its own jump link to it), so one link names both rather than two links to one page. */}
-            <a href={episode.link}>
-              {episode.transcriptUrl ? "Episode page and transcript" : "Episode page"}
-            </a>
-          </p>
-          <template data-island="podcast" />
+              title={episode.title}
+              transcript={`${episode.link}#transcript`}
+            />
+          ) : null}
         </article>
       ) : (
         <p className="home-more">

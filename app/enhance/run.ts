@@ -384,7 +384,7 @@ export default function start(): void {
       say(done.checked ? `Step ${step} done.` : `Step ${step} not done.`);
     });
     const note = el("textarea", {
-      class: "run-note-text",
+      class: "cap-input run-note-text",
       rows: "2",
       id: `run-note-${key}`,
       maxlength: "2000",
@@ -637,7 +637,7 @@ export default function start(): void {
     const slug = procedure.path.split("/").pop() ?? "run";
     const stamp = new Date(current.finishedAt ?? Date.now()).toISOString().slice(0, 10);
     const runNote = el("textarea", {
-      class: "run-note-text",
+      class: "cap-input run-note-text",
       rows: "3",
       id: "run-summary-note",
       "aria-label": "Note on the whole run",

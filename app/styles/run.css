@@ -155,18 +155,6 @@
   cursor: pointer;
   color: var(--text-secondary);
 }
-.run-note-text {
-  display: block;
-  inline-size: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--paper);
-  color: var(--text);
-  font: inherit;
-  font-size: 1rem;
-}
-
 .run-summary {
   margin-block-start: 1.5rem;
   padding: 1rem;
@@ -186,13 +174,6 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-block-end: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .run-start,
-  .run-bar button {
-    transition: none;
-  }
 }
 
 /* A printed run is the record: the steps with their checks and notes, none of the controls. */

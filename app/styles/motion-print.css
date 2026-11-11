@@ -1,14 +1,3 @@
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 @media print {
   /* Never a theme token: check:contrast requires every theme token in a measured screen pair. */
   :root {
@@ -36,8 +25,9 @@
   }
 }
 
-/* The duration kill at the top of this file does not reach ::view-transition-* pseudos, so reduced
-   motion opts out here rather than shortening a fade. Chrome's default root crossfade uses
+/* Still by default (Capsomer base.css): every motion below sits inside prefers-reduced-motion: no-preference,
+   with no global duration override, which would end some animations in a jump and break scroll-driven ones.
+   Page transitions are off unless motion is allowed. Chrome's default root crossfade uses
    plus-lighter and stacks both pages; type `site` keeps the outgoing page solid and fades the
    incoming one over it. The image viewer is a same-document transition with no type, so these
    rules do not restyle it. Where the at-rule is unsupported, the navigation is an ordinary load. */

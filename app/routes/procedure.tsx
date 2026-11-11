@@ -19,6 +19,7 @@ import type { Route } from "./+types/procedure";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
+import "capsomer/field.css";
 import "~/styles/procedure.css";
 import "~/styles/run.css";
 

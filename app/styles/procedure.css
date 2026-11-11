@@ -482,16 +482,6 @@
   font-size: 0.875rem;
 }
 
-.procedure-mise-copy textarea {
-  padding: 0.5rem;
-  border: var(--line-w) solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--paper);
-  color: var(--text);
-  font: inherit;
-  resize: vertical;
-}
-
 /* A software how-to (docs/KNOWLEDGE-BASE.md, step 10). A tutorial's overview and key points (S2) sit in a ruled box. */
 .procedure-overview {
   padding: 0.25rem 1rem 0.5rem;

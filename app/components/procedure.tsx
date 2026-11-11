@@ -273,7 +273,12 @@ function MiseEnPlace({
       </ul>
       <label className="procedure-mise-copy">
         <span>Shopping list, to copy</span>
-        <textarea readOnly rows={Math.min(12, items.length)} value={text} />
+        <textarea
+          className="cap-input"
+          readOnly
+          rows={Math.min(12, items.length)}
+          value={text}
+        />
       </label>
     </div>
   );
