@@ -53,12 +53,12 @@ export function seriesFeed(series: { name: string }): FeedScope {
   };
 }
 
-/** One feed document for a scope, in JSON Feed, RSS or Atom, shared-cached. */
+/** One feed document for a scope, in JSON Feed, RSS or Atom (Prelum's feedResponse), shared-cached. */
 export async function scopedFeedResponse(env: Env, format: FeedFormat, scope: FeedScope) {
   const pageUrl = `${SITE_ORIGIN}${scope.path}`;
   const selfUrl = `${pageUrl}/${FEED_FILES[format]}`;
 
-  let body: string;
+  let body: string | object;
   if (format === "json") {
     const posts = await listBlogPostsFullText(env, scope.list);
     const feed = jsonFeedDocument({
@@ -70,7 +70,7 @@ export async function scopedFeedResponse(env: Env, format: FeedFormat, scope: Fe
       posts,
       origin: SITE_ORIGIN,
     });
-    body = `${JSON.stringify(feed, null, 2)}\n`;
+    body = feed;
   } else {
     const posts = await listBlogPostsRendered(env, scope.list);
     body =
@@ -96,9 +96,11 @@ export async function scopedFeedResponse(env: Env, format: FeedFormat, scope: Fe
 
   const nextPublishAt = await nextScheduledPublishAt(env);
 
+  // Prelum's Content-Type for the format (application/json for JSON Feed: Cloudflare does not compress `+json`, and
+  // this is the largest response on the site); the caching is the site's, since every scope lists posts only, so a
+  // posts purge (a save, a delete) must reach it.
   return feedResponse(format, body, {
     "cache-control": SHARED_CACHE_CONTROL,
-    // Every scope lists posts only, so a posts purge (a save, a delete) must reach it.
     "cache-tag": cacheTags(),
     [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
   });
