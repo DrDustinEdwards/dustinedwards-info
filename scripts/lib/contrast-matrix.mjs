@@ -202,11 +202,11 @@ export const OPACITY_EXEMPT = [
   },
   {
     /* Anchored at the end, per the vacuity rule. */
-    test: /\[data-enarratio-dimmed\]$|\[data-cv-out\]$/,
+    test: /\[data-enarratio-dimmed\]$|\[data-out-of-range\]$/,
     why:
       "a chart bar outside the active filter, faded on purpose to show what the filter left out. " +
       "A graphic, not text: its value is in the chart's hover details and data table, and the bars " +
-      "in the filter stay at full strength (enarratio/base.css, app/styles/cv.css)",
+      "in the filter stay at full strength (enarratio/base.css, capsomer/chart-frame.css)",
   },
   {
     test: /^\.search-why-sep$/,

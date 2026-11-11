@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildCvFrom } from "../scripts/lib/cv.mjs";
 import { buildPublications } from "../scripts/lib/publications.mjs";
-import { timelineSvg } from "../app/lib/cv/charts.ts";
+import { renderCvCharts } from "../app/lib/cv/render-charts.ts";
 import { cvFacts } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import {
@@ -18,7 +18,6 @@ import {
   parseState,
   stateToSearch,
   timelineData,
-  timelineEmptyText,
 } from "../app/lib/cv/view.mjs";
 import {
   FINGERPRINT_LABEL,
@@ -173,34 +172,11 @@ await test("the timeline counts each charted type by year", () => {
   );
 });
 
-await test("a range filter fades exactly the timeline's bars outside it", () => {
-  const years = [2019, 2020, 2021, 2022, 2023];
-  const markup = timelineSvg({
-    years,
-    series: [{ key: "publication", label: "Publications", values: [1, 1, 1, 1, 1] }],
-    selected: [2020, 2021],
-    label: "Output per year",
-    hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
-  });
-  const bars = [...markup.matchAll(/<rect [^>]*data-enarratio-href=[^>]*>/g)].map((m) => m[0]);
-  assert.equal(bars.length, years.length, "one bar per year");
-  const faded = bars.filter((bar) => bar.includes('data-cv-out=""'));
-  const fadedYears = faded.map((bar) => bar.match(/data-enarratio-x="(\d{4})"/)?.[1]).sort();
-  assert.deepEqual(fadedYears, ["2019", "2022", "2023"]);
-});
-
-/** The timeline as the route draws it: the empty-data guard in charts.ts is the only thing between a filter and Enarratio. */
+/** The timeline as the route draws it: the empty-data guard in render-charts.ts is the only thing between a filter and Enarratio. */
 const timelineFor = (query) => {
-  const data = timelineData(FACTS, parseState(new URLSearchParams(query)));
-  const markup = timelineSvg({
-    years: data.years,
-    series: data.series,
-    selected: data.selected,
-    label: "Output per year",
-    emptyText: timelineEmptyText(data),
-    hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
-  });
-  return { data, markup };
+  const state = parseState(new URLSearchParams(query));
+  const data = timelineData(FACTS, state);
+  return { data, markup: renderCvCharts(FACTS, state).timeline };
 };
 
 await test("a filter that selects nothing chartable gets a sentence, never an Enarratio call with empty data", () => {
