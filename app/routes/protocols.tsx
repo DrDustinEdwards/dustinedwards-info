@@ -45,6 +45,7 @@ import "capsomer/empty.css";
 import "capsomer/pagination.css";
 import "capsomer/catalog.css";
 import "capsomer/tabs.css";
+import "capsomer/step-indicator.css";
 import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
