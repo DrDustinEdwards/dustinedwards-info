@@ -9,6 +9,7 @@
 // A cited version is a frozen copy (drizzle/0027_procedure_versions.sql), so a citation and a printed sheet's QR
 // code point at `<page>/v/<version>`, which never changes, and not at the page, which moves on to the next version.
 
+import { escapeBibtex } from "../../lib/publications/bibtex.mjs";
 import { METHODS } from "./taxonomy.mjs";
 
 /**
@@ -121,7 +122,10 @@ export function citationText(record, facts, { origin, creator }) {
 export function bibtex(record, facts, { origin, creator }) {
   const { family, given } = familyGiven(creator.name);
   const year = facts.date.slice(0, 4);
+  // Text fields are escaped; the doi and the url are addresses, which BibTeX's url handling reads as they are.
   const field = (/** @type {string} */ name, /** @type {string} */ value) =>
+    `  ${name} = {${escapeBibtex(value)}},`;
+  const address = (/** @type {string} */ name, /** @type {string} */ value) =>
     `  ${name} = {${value.replace(/[{}]/g, "")}},`;
   return [
     `@misc{${family.toLowerCase()}${year}${record.slug}v${facts.version.replace(/[^A-Za-z0-9.]/g, "")},`,
@@ -130,8 +134,8 @@ export function bibtex(record, facts, { origin, creator }) {
     field("year", year),
     field("version", facts.version),
     field("howpublished", "Laboratory protocol"),
-    ...(facts.doi ? [field("doi", facts.doi)] : []),
-    field("url", target(record, facts, origin)),
+    ...(facts.doi ? [address("doi", facts.doi)] : []),
+    address("url", target(record, facts, origin)),
     "}",
   ].join("\n");
 }

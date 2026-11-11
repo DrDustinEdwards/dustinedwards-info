@@ -3,6 +3,7 @@
 
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
+import { escapeBibtex } from "./bibtex.mjs";
 import { decodeEntities } from "./entities.mjs";
 import { SITE_ORIGIN } from "../site-origin.mjs";
 
@@ -20,28 +21,6 @@ function splitName(name) {
     family: parts[parts.length - 1] ?? "",
     given: parts.slice(0, -1).join(" "),
   };
-}
-
-// The backslash goes first, or it escapes the escapes that follow it.
-/** @type {[string, string][]} */
-const BIBTEX_ESCAPES = [
-  ["\\", "\\textbackslash{}"],
-  ["{", "\\{"],
-  ["}", "\\}"],
-  ["&", "\\&"],
-  ["%", "\\%"],
-  ["$", "\\$"],
-  ["#", "\\#"],
-  ["_", "\\_"],
-  ["~", "\\textasciitilde{}"],
-  ["^", "\\textasciicircum{}"],
-];
-
-/** @param {string} value */
-function escapeBibtex(value) {
-  let out = decodeEntities(value);
-  for (const [from, to] of BIBTEX_ESCAPES) out = out.split(from).join(to);
-  return out;
 }
 
 /**

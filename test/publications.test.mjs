@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 import { contentIdFits, decodeContentId, encodeContentId } from "../app/lib/carrel/content-id.mjs";
+import { bibtexPages, escapeBibtex } from "../app/lib/publications/bibtex.mjs";
 import { decideFileWrite } from "../app/lib/editor/publish-policy.mjs";
 import { compilePublication } from "../app/lib/publications/compile.mjs";
 import { parsePublication } from "../app/lib/publications/parse.mjs";
@@ -262,6 +263,15 @@ await test("content ids: a post keeps its bare slug, every other kind is kind.sl
       slug,
     });
   }
+});
+
+await test("the BibTeX helper escapes every character BibTeX reads as markup and turns each page range into --", () => {
+  assert.equal(
+    escapeBibtex("R&D 50% of $5 #1 a_b {x} ~ ^ \\ &amp; c"),
+    "R\\&D 50\\% of \\$5 \\#1 a\\_b \\{x\\} \\textasciitilde{} \\textasciicircum{} \\textbackslash{} \\& c",
+  );
+  assert.equal(bibtexPages("1234-1245"), "1234--1245");
+  assert.equal(bibtexPages("e1\u20132 - e3, 7-9"), "e1--2--e3, 7--9");
 });
 
 await test("the write policy: an operator may edit but never first-publish, Carrel may, a read-only credential may not write", () => {

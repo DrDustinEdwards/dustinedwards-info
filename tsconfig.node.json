@@ -30,6 +30,8 @@
     // the escaped form the corpus stores, and this project must reach every
     // file a listed file reaches. Dependency-free, so it costs nothing.
     "app/lib/publications/entities.mjs",
+    // The BibTeX escaper the CV entries, the procedure citation and the publications export share.
+    "app/lib/publications/bibtex.mjs",
     // Also imported by `app/lib/seo.ts`: `isSiteOwner` matches authors through
     // the exact alias table here, so this project must reach it too.
     "app/lib/publications/authors.mjs",
