@@ -1,6 +1,7 @@
 // Every link on this page is built by `hrefWith` from the WHOLE state: no gate can see a dropped query
 // parameter, so dropping one has to be a visible act rather than an omission.
 
+import { oneOf } from "capsomer/behavior/catalog";
 import { folderFor, folderRank } from "./folders.mjs";
 import { suggestedAlt } from "./usage.mjs";
 
@@ -54,11 +55,6 @@ export const DEFAULTS = {
 };
 
 export const PARAM_NAMES = Object.keys(DEFAULTS);
-
-/** @param {unknown} value @param {string[]} allowed @param {string} fallback */
-function oneOf(value, allowed, fallback) {
-  return typeof value === "string" && allowed.includes(value) ? value : fallback;
-}
 
 /**
  * Total: an unrecognized value falls back to its default, so a hand-edited URL still shows a library.
@@ -269,50 +265,4 @@ export function displaySummary(state) {
   const group = { flat: "Flat", folder: "Folder", month: "Month" }[state.group];
   const sort = { added: "Newest", name: "A to Z", size: "Largest", usage: "Usage" }[state.sort];
   return [group, sort, state.size.toUpperCase()].join(" · ");
-}
-
-// These never reach SQL, so a change skips the server (test/media-display-axes.test.mjs). `sort` and
-// `dir` must NOT be added: the page paginates, so reordering changes which rows page one holds.
-const DISPLAY_AXES = ["view", "group", "size"];
-
-/**
- * Overlaid on the loader's view so a display change renders from the client URL with no revalidation.
- *
- * @param {{ get(name: string): string | null }} params
- * @returns {{ view: string, group: string, size: string }}
- */
-export function readDisplayAxes(params) {
-  return {
-    view: oneOf(params.get("view"), VIEWS, DEFAULTS.view),
-    group: oneOf(params.get("group"), GROUPS, DEFAULTS.group),
-    size: oneOf(params.get("size"), SIZES, DEFAULTS.size),
-  };
-}
-
-/**
- * Identical URLs return FALSE: a post-action revalidation has the same URL on both sides, and skipping
- * it would hide the write.
- *
- * @param {URL} currentUrl
- * @param {URL} nextUrl
- * @returns {boolean}
- */
-export function onlyDisplayChanged(currentUrl, nextUrl) {
-  if (currentUrl.pathname !== nextUrl.pathname) return false;
-
-  const a = currentUrl.searchParams;
-  const b = nextUrl.searchParams;
-
-  // Compared through `readView` so `?view=list` and the bare URL count as the same state.
-  const from = readView(a);
-  const to = readView(b);
-  const names = /** @type {(keyof typeof from)[]} */ (PARAM_NAMES);
-  for (const name of names) {
-    if (DISPLAY_AXES.includes(name)) continue;
-    if (from[name] !== to[name]) return false;
-  }
-
-  return /** @type {(keyof typeof from)[]} */ (DISPLAY_AXES).some(
-    (name) => from[name] !== to[name],
-  );
 }

@@ -1,4 +1,5 @@
 import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import { plural } from "capsomer/behavior/format";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -235,7 +236,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
       trail: trailOf(page),
       ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}),
     });
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (page.view === "kind") {
     if (page.kind === "strain") {
       return head(

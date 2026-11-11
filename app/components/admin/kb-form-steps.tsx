@@ -7,7 +7,7 @@ import { StepText } from "~/components/admin/kb-step-text";
 import type { FormBlock, FormBody, FormStep } from "~/kb/form.mjs";
 import { stepAnchor } from "~/kb/gap-labels.mjs";
 import type { Choice, KbForm } from "~/kb/form.server";
-import { plural } from "~/components/admin/kb-file-editor";
+import { plural } from "capsomer/behavior/format";
 import { DURATIONS, ReferencePicker, UNITS } from "~/components/admin/kb-form-fields";
 
 /* The form editor's method (kb-form.tsx): the step cards in their sections, and the body editor that orders them. */

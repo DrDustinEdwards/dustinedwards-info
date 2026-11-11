@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Form, Link, useNavigation } from "react-router";
 
+import { plural } from "capsomer/behavior/format";
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { MarkdownEditor } from "capsomer/react/markdown-editor";
@@ -21,10 +22,6 @@ export type KbEditorActionData =
 function documentCspNonce(): string {
   if (typeof document === "undefined") return "";
   return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
-}
-
-export function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 /**

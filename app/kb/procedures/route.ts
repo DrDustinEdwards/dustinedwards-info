@@ -1,9 +1,10 @@
 // What the procedure page, its sheet and its twin share: the cache tag, the trail and the scale a
 // request asks for.
+import { oneOf } from "capsomer/behavior/catalog";
 import { LIBRARY_BASES, libraryTrail } from "../libraries.mjs";
 import type { ProcedureRecord } from "./render.mjs";
 import { scaleFactor } from "./render.mjs";
-import { readUnits } from "./recipe-views.mjs";
+import { UNIT_SYSTEMS, type UnitSystem } from "./recipe-views.mjs";
 
 /** Every procedure response carries it; a save purges it (app/kb/procedures/save.server.ts). */
 export const PROCEDURES_CACHE_TAG = "procedures";
@@ -36,6 +37,6 @@ export function readScale(record: ProcedureRecord, url: URL) {
   // A protocol's steps stay per unit; only its material totals scale, by count. A recipe's steps scale.
   const factor = record.profile === "recipe" ? scaleFactor(record, count) : 1;
   // A recipe's amounts in metric or imperial, at its own address (`?units=imperial`), as scaling is (recipe-views.mjs).
-  const units = record.profile === "recipe" ? readUnits(url.searchParams.get("units")) : null;
+  const units = record.profile === "recipe" ? oneOf(url.searchParams.get("units"), Object.keys(UNIT_SYSTEMS) as UnitSystem[], null) : null;
   return { count, factor, units };
 }

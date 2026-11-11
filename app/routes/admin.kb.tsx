@@ -1,5 +1,6 @@
 import { Form, Link, data } from "react-router";
 
+import { plural } from "capsomer/behavior/format";
 import { Empty } from "capsomer/react/empty";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
@@ -80,10 +81,6 @@ function ViewLink({ href, what }: { href: string; what: string }) {
       View page
     </Link>
   );
-}
-
-function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps) {

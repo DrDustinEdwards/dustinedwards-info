@@ -22,6 +22,7 @@ import {
   type MemberRow,
   type Title,
 } from "@dustinedwards/site-runtime/members";
+import { listText, pluralWord } from "capsomer/behavior/format";
 import type { HistoryEntry, PeopleData, PersonRow, TitleOption } from "capsomer/react/people-roles";
 
 import {
@@ -161,15 +162,6 @@ function historyEntry(row: Awaited<ReturnType<typeof memberHistory>>[number]): H
   };
 }
 
-function plural(label: string): string {
-  return label.endsWith("s") ? label : `${label}s`;
-}
-
-function listText(words: string[]): string {
-  if (words.length <= 1) return words.join("");
-  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
-}
-
 /** What the members page shows this actor: the people they may manage and themselves, never anyone else. */
 export async function membersPage(
   env: Env,
@@ -220,7 +212,7 @@ export async function membersPage(
       : undefined;
 
   const lead = titles.length
-    ? `You manage ${listText([...titles].reverse().map((t) => plural(t.label)))}.${terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? "" : ` ${NO_TERMS}`}`
+    ? `You manage ${listText([...titles].reverse().map((t) => pluralWord(2, t.label)))}.${terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? "" : ` ${NO_TERMS}`}`
     : undefined;
 
   return {
