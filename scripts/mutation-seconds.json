@@ -53,7 +53,6 @@
   "app/lib/editor/intent.mjs": 5,
   "app/lib/editor/publish-policy.mjs": 58,
   "app/lib/health/ask-converge.mjs": 125,
-  "app/lib/health/rows.mjs": 31,
   "app/lib/health/snapshot.mjs": 10,
   "app/lib/health/verdicts.mjs": 100,
   "app/lib/https-redirect.mjs": 6,

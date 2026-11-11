@@ -1,4 +1,4 @@
-import { healthChecks } from "../../app/lib/health/rows.mjs";
+import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /**
  * @typedef {import("../../app/lib/health/ask-converge.mjs").HealthCheckRow} HealthCheckRow
