@@ -4,8 +4,9 @@
  * the font urls repointed at app/fonts/katex/, and font-display swap in place
  * of block. Grounds, including why this is
  * derived, committed, and not under public/, are in that script. Regenerate
- * with `npm run build:katex`; check:content byte-compares it against a fresh
- * derivation, so a katex bump that nobody regenerated is a named failure.
+ * with `npm run build:katex` after a katex bump and commit the result. No gate
+ * byte-compares it against a fresh derivation: the formatter reflows the
+ * committed file, so the bytes differ from this script's output by design.
  *
  * Everything below the site-overrides marker at the end of this file is
  * app/styles/katex-overrides.css, which is hand written and is where a site

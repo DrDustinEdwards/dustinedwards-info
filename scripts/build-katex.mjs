@@ -93,8 +93,9 @@ function generateKatexCss() {
     ` * the font urls repointed at app/fonts/katex/, and font-display swap in place\n` +
     ` * of block. Grounds, including why this is\n` +
     ` * derived, committed, and not under public/, are in that script. Regenerate\n` +
-    ` * with \`npm run build:katex\`; check:content byte-compares it against a fresh\n` +
-    ` * derivation, so a katex bump that nobody regenerated is a named failure.\n` +
+    ` * with \`npm run build:katex\` after a katex bump and commit the result. No gate\n` +
+    ` * byte-compares it against a fresh derivation: the formatter reflows the\n` +
+    ` * committed file, so the bytes differ from this script's output by design.\n` +
     ` *\n` +
     ` * Everything below the site-overrides marker at the end of this file is\n` +
     ` * app/styles/katex-overrides.css, which is hand written and is where a site\n` +
