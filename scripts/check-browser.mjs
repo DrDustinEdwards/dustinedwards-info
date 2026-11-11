@@ -210,7 +210,12 @@ if (subjectReachable) {
    * circles' zooming, the arrow keys, the ?system= address and its facts went (26 checks), and the cards, their
    * lighting, the system pages, a flow's steps and the 404 came (15).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 220 : 195;
+  /*
+   * Less 10 on both on 2026-11-11: the checks Capsomer's lightbox and site-header specs now own (the
+   * lightbox's modal, name, close control, focus and Escape; the header's click, Enter and arrows,
+   * open card, hover and no-menu-role checks).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 210 : 185;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
