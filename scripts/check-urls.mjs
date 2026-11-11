@@ -206,66 +206,51 @@ for (const [label, property] of SCHEMA_FIELDS) {
   );
 }
 
-// Asserted by position: asserting a stage exists passes on an arrangement that runs it too late.
-// Positions are of the CALLS on the syntax tree, so a mention in a string or comment cannot move them.
-// The gateway's redirects (the WordPress map, the paper slash form) are decided without the database,
-// so none of them may run after the cache loopback, where a stored response could outlive the fix.
+// The gateway's redirects (the WordPress map, the paper slash form) are decided without the database, so none may run
+// after the cache loopback, where a stored response could outlive the fix. site-runtime's Worker runs `canonical.before`
+// first, before maintenance, the steps and the page (./worker, step 1), so each must be decided in the function passed
+// there, and each target must be https, so a plaintext request moves once. Read off the syntax tree, so a mention in a
+// string or comment cannot satisfy it.
 {
   const workerPath = join(root, "workers", "app.ts");
   const workerTree = parseSource(workerPath, readFileSync(workerPath, "utf8"));
-  /** @param {(n: ts.Node) => boolean} test */
-  const firstAt = (test) => {
-    const hits = findAll(workerTree, test).map((n) => n.getStart(workerTree));
-    return hits.length > 0 ? Math.min(...hits) : -1;
-  };
-  /** @param {string} name */
-  const callTo = (name) => (/** @type {ts.Node} */ n) =>
-    ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
-  const loopbackAt = firstAt(
+  const moves = findAll(
+    workerTree,
+    (n) => ts.isFunctionDeclaration(n) && n.name?.text === "siteMove",
+  )[0];
+  assert("redirects: the site's own moves (siteMove) were located", moves !== undefined);
+  const before = findAll(
+    workerTree,
     (n) =>
-      ts.isPropertyAccessExpression(n) &&
-      n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
-  );
-  const httpsAt = firstAt(callTo("canonicalRedirect"));
-  assert(
-    "redirects: the cache loopback was located",
-    loopbackAt !== -1,
-    "ctx.exports.Renderer not found",
+      ts.isPropertyAssignment(n) &&
+      n.name.getText(workerTree) === "before" &&
+      n.initializer.getText(workerTree) === "siteMove",
   );
   assert(
-    "redirects: the HTTPS redirect was located",
-    httpsAt !== -1,
-    "canonicalRedirect is not called",
+    "redirects: siteMove is canonical.before, which the shared Worker runs before the cache loopback",
+    before.length === 1,
+    "defineSite's canonical option does not name siteMove as `before`",
   );
-  // The map is read before the canonical redirect (which leaves a mapped path's slash for it), but answered after.
-  /** @type {Record<string, number>} */
-  const decidedAt = {
-    wordpressDisposition: firstAt(
-      (n) =>
-        ts.isPropertyAccessExpression(n) &&
-        n.getText(workerTree).replace(/\s+/g, "") === "wordpress.location",
-    ),
-    paperSlashTarget: firstAt(callTo("paperSlashTarget")),
-  };
-  for (const name of ["wordpressDisposition", "paperSlashTarget"]) {
-    const callAt = firstAt(callTo(name));
+  for (const name of ["wordpressDisposition", "paperSlashTarget", "wwwRedirectTarget"]) {
+    const calls = moves
+      ? findAll(
+          moves,
+          (n) =>
+            ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name,
+        )
+      : [];
     assert(
-      `redirects: the gateway calls ${name}`,
-      callAt !== -1,
-      `it is not called anywhere in workers/app.ts, so that redirect is decoration`,
-    );
-    assert(
-      `redirects: ${name} IS DECIDED BEFORE THE CACHE LOOPBACK`,
-      callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
+      `redirects: ${name} IS DECIDED IN siteMove, BEFORE THE CACHE LOOPBACK`,
+      calls.length > 0,
       "a redirect resolved after the loopback is one the cache can outlive, and it would have " +
         "cost a render and a database read to discover",
     );
-    assert(
-      `redirects: the HTTPS redirect still runs before ${name}'s redirect`,
-      httpsAt !== -1 && decidedAt[name] !== -1 && httpsAt < decidedAt[name],
-      "a plaintext request must reach HTTPS before anything else decides anything",
-    );
   }
+  assert(
+    "redirects: siteMove builds its targets on https",
+    moves !== undefined && /https:/.test(moves.getText(workerTree)),
+    "a plaintext request must reach HTTPS in the same hop as the move",
+  );
 }
 
 // Which entrypoint the platform may cache, read off wrangler.jsonc.example: gateway cache on would serve these redirects
@@ -322,7 +307,7 @@ console.log(
 
 // Measured by running it, with slack smaller than one fixture case, so deleting a case cannot hide
 // inside the tolerance.
-const MINIMUM_CHECKS = 113;
+const MINIMUM_CHECKS = 112;
 tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

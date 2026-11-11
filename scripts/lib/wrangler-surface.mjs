@@ -56,6 +56,15 @@ const READERS = {
       out.set(`durable_object:${dobj.name}`, `class_name=${dobj.class_name}`);
     }
   },
+  // Keyed by `name`; the limit is compared, the namespace id is the account's.
+  ratelimits: (config, out) => {
+    for (const limit of config.ratelimits ?? []) {
+      out.set(
+        `ratelimit:${limit.name}`,
+        `limit=${limit.simple?.limit} period=${limit.simple?.period}`,
+      );
+    }
+  },
   images: (config, out) => {
     if (config.images?.binding) out.set(`images:${config.images.binding}`, "");
   },

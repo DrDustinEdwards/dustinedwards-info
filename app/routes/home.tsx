@@ -9,7 +9,7 @@ import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { timed, timingsContext } from "~/lib/timing";
+import { getTimings, timed } from "~/lib/timing";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
@@ -79,7 +79,7 @@ function homePapers(papers: PublicationSummary[]) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
+  const timings = getTimings(context);
 
   const [start, podcast, nextPublishAt, papers, cohorts] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),

@@ -208,7 +208,6 @@ export default [
   // read it, and so do ship's readiness, the admin MCP and operator-sync.
   route("health", "routes/health.ts"),
   // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.

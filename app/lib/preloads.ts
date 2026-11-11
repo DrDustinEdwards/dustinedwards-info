@@ -7,11 +7,13 @@ import textFontUrl from "~/fonts/source-serif-4-latin-core-normal.woff2?url";
 const font = (href: string) => ({ href, as: "font" as const, type: "font/woff2" });
 
 /**
- * Every page's preloads, declared once: root.tsx's `links` and the `Link` header workers/app.ts adds to HTML
- * responses, which Cloudflare Early Hints sends ahead as a 103. Capsomer's UI face (capsomer/fonts.css), which every
- * page draws; site-runtime adds the `crossorigin` a font preload needs, or the file is fetched twice.
+ * Every page's preloads, declared once: root.tsx's `links`, and beside the root stylesheets the `Link` header
+ * site-runtime's Worker adds to HTML responses, which Cloudflare Early Hints sends ahead as a 103. Capsomer's UI face
+ * (capsomer/fonts.css), which every page draws; site-runtime adds the `crossorigin` a font preload needs, or the file
+ * is fetched twice.
  */
-export const PRELOADS = preloads([font(uiFontUrl)]);
+export const FONT_PRELOADS = [font(uiFontUrl)];
+export const PRELOADS = preloads(FONT_PRELOADS);
 
 /**
  * The home page's other two faces, Source Serif (app.css, its Latin core) and Capsomer's mono, which it draws above

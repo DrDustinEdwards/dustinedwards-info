@@ -27,7 +27,7 @@ import {
   originRefusal,
   refuseCrossSite,
 } from "@dustinedwards/site-runtime/origin";
-import { timed, timedLoader, timingsContext } from "~/lib/timing";
+import { getTimings, timed, timedLoader } from "~/lib/timing";
 import {
   askAvailable,
   askDriftCount,
@@ -78,8 +78,8 @@ export const middleware: Route.MiddlewareFunction[] = [
       return isolated;
     }
 
-    /* Read, not created: root's middleware made one first, and a second would discard its marks. */
-    const timings = context.get(timingsContext).timings;
+    /* The render's marks, set by site-runtime's Worker. */
+    const timings = getTimings(context);
     const access = await timed(timings, "auth_access", () => accessIdentity(env, request));
     if (access.kind === "refused") {
       /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page.

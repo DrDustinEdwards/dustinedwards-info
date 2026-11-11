@@ -1,6 +1,6 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { createElement as h } from "react";
-import { expect, it, vi } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
 
 import { NAV } from "~/lib/nav";
 import {
@@ -77,6 +77,17 @@ vi.mock("virtual:react-router/server-build", async () => {
   return { ...build, default: build };
 });
 
+/*
+ * One request before the cases. Through site-runtime's Worker, the first request a test file sends renders through the
+ * unmocked stub build rather than the mock above (vitest's module runner, seen 2026-11-11); every later one gets the
+ * mock. /health is answered without a render.
+ */
+beforeAll(async () => {
+  const ctx = createExecutionContext();
+  await worker.fetch(new Request("https://example.com/health") as never, env as never, ctx);
+  await waitOnExecutionContext(ctx);
+});
+
 async function render(path: string) {
   const ctx = createExecutionContext();
   const response = await worker.fetch(
@@ -95,20 +106,19 @@ async function render(path: string) {
   return { response, html, scripts, policy: response.headers.get("content-security-policy") ?? "" };
 }
 
-it("renders a public page with no inline script, no hash and no nonce, and /site.js to start its islands", async () => {
+it("renders a public page with no inline script and no hash, and /site.js to start its islands", async () => {
   const { response, html, scripts, policy } = await render("/");
   expect(response.status).toBe(200);
 
-  /* The policy: no nonce and no hash; 'self' covers /site.js and the islands it imports. */
-  expect(policy).not.toContain("nonce-");
+  /* The policy: no hash; 'self' covers /site.js and the islands it imports. The nonce site-runtime's Worker gives
+   * every render is renewed per reader, so it allows nothing an attacker could name. */
   expect(policy).not.toMatch(/'sha256-/);
 
-  /* The document: no nonce anywhere, and one script, /site.js, deferred. */
-  expect(html).not.toMatch(/\snonce=/);
+  /* The document: one script, /site.js, deferred. */
   expect([...html.matchAll(/<script\b[^>]*\ssrc="([^"]*)"[^>]*>/g)].map((m) => m[1])).toEqual([
     "/site.js",
   ]);
-  expect(html).toMatch(/<script src="\/site\.js" defer="">/);
+  expect(html).toMatch(/<script src="\/site\.js" defer=""/);
   expect(scripts.filter((s) => s.type !== "application/ld+json").map((s) => s.text)).toEqual([""]);
   expect(scripts.filter((s) => s.type === "application/ld+json")).toHaveLength(1);
 

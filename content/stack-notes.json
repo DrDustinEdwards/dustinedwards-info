@@ -33,6 +33,10 @@
       "what": "The per-IP burst limit and the site-wide daily ceiling for Ask, on the synchronous SQLite storage API.",
       "whyLoadBearing": "Both cheaper mechanisms were built first and both leaked. The GA ratelimit binding, configured at 5 per 60 seconds and attacked with 12 concurrent requests, refused 1, then 2, then 9, then 0 across four runs. A Durable Object using async storage.get then storage.put allowed 8 through a ceiling of 3, because a read and a write spanning an await is not atomic. The synchronous API allowed exactly 3, which is why the class is registered as new_sqlite_classes."
     },
+    "ratelimit:CSP_REPORT_RATE_LIMIT": {
+      "what": "Sixty CSP violation reports a minute per caller address, the same limit every site in the network sets on the report sink its gateway answers.",
+      "whyLoadBearing": "The sink is a public POST that anyone can call, and the limit keeps a flood out of the logs. A report over the limit is dropped and still answered 204. The binding's count is loose (see ASK_BUDGET), which costs nothing here, because a dropped report loses nothing a later one will not repeat."
+    },
     "images:IMAGES": {
       "what": "Thumbnail and content-width transforms, computed on request from the original. Written back only when an editor turns or mirrors a picture, or uploads one larger than the library keeps, and then the earlier bytes are kept.",
       "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 on both of this site's addresses, with Cloudflare error 1042 on the workers.dev address (which has no zone) and a plain 404 on dustinedwards.info, so the binding is the only route to resizing."

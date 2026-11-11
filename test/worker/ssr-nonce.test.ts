@@ -1,7 +1,7 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { createElement as h, lazy, Suspense } from "react";
 import { Outlet } from "react-router";
-import { expect, it, vi } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
 
 import worker from "../../workers/app";
 
@@ -49,6 +49,17 @@ vi.mock("virtual:react-router/server-build", async () => {
     },
   });
   return { ...build, default: build };
+});
+
+/*
+ * One request before the cases. Through site-runtime's Worker, the first request a test file sends renders through the
+ * unmocked stub build rather than the mock above (vitest's module runner, seen 2026-11-11); every later one gets the
+ * mock. /health is answered without a render.
+ */
+beforeAll(async () => {
+  const ctx = createExecutionContext();
+  await worker.fetch(new Request("https://example.com/health") as never, env as never, ctx);
+  await waitOnExecutionContext(ctx);
 });
 
 async function render(path: string) {
