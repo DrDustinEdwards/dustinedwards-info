@@ -23,6 +23,7 @@ import {
   picksFirst,
   startHere,
 } from "../lib/blog-listing.mjs";
+import { inList } from "@dustinedwards/site-runtime/d1";
 import { PUBLISHED_STATUS } from "../lib/search/visibility.mjs";
 import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
@@ -35,7 +36,7 @@ export async function publiclyVisibleSlugs(env: Env, slugs: string[]): Promise<S
   const rows = await getDb(env)
     .select({ slug: posts.slug })
     .from(posts)
-    .where(and(inArray(posts.slug, slugs), publiclyVisible()));
+    .where(and(inList(posts.slug, slugs), publiclyVisible()));
   return new Set(rows.map((r) => r.slug));
 }
 
@@ -166,7 +167,7 @@ async function tagsForPosts(db: DB, postIds: number[]) {
     .select({ postId: postTags.postId, name: tags.name, slug: tags.slug })
     .from(postTags)
     .innerJoin(tags, eq(tags.id, postTags.tagId))
-    .where(inArray(postTags.postId, postIds))
+    .where(inList(postTags.postId, postIds))
     .orderBy(asc(tags.slug));
 
   return groupValues(
