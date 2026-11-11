@@ -1,5 +1,5 @@
 import { listPublicationIdentities } from "~/db/publications";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { OWNER_ORCID, SITE } from "~/lib/seo";
 
 import { canonicalAuthor } from "./authors.mjs";

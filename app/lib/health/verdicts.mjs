@@ -1,4 +1,4 @@
-import { errorMessage } from "../error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * A derived index against its source: the sizes, what it lacks and what it holds beyond the source,

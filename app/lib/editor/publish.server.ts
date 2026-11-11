@@ -24,7 +24,7 @@ import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
   deletePostFromD1,
   syncPostToD1,
@@ -529,11 +529,11 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
   // Through deletePostFromD1, the one delete door: a bare row delete would leave the post in /search
   // and its media_refs blocking its images' deletion forever.
   const keep = files.map((f) => f.slug);
-  const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
+  // One JSON parameter, not a placeholder per post, which D1 refuses past 100 (the pattern of db/media.ts).
   const orphans = await env.DB.prepare(
-    `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
+    `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (SELECT value FROM json_each(?1))`,
   )
-    .bind(...keep)
+    .bind(JSON.stringify(keep))
     .all<{ slug: string }>();
   let unpurged = 0;
   for (const { slug } of orphans.results ?? []) {

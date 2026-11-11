@@ -5,7 +5,7 @@
 // shared client (origin, requests, counter) in scripts/lib/live/client.mjs.
 
 import { pageCount } from "../app/lib/blog-listing.mjs";
-import { assertFloor } from "./lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import * as blogDraftsAsk from "./lib/live/blog-drafts-ask.mjs";
 import { ASK_PROBE_LIMIT } from "./lib/live/blog-drafts-ask.mjs";
 import * as cache from "./lib/live/cache.mjs";

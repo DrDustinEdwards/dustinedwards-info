@@ -1,5 +1,5 @@
 import { receiveCspReport } from "@dustinedwards/site-runtime/csp-report";
-import { clientIp } from "~/lib/client-ip";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 

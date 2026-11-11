@@ -81,11 +81,11 @@ function unchanged(row: Webmention): SQL {
 }
 
 /** The cursor is the last row's received time and id, so a page never repeats or skips a row another write moved. */
-function encodeCursor(row: Webmention): string {
+function mentionCursor(row: Webmention): string {
   return btoa(`${row.receivedAt.getTime()}:${row.id}`);
 }
 
-function decodeCursor(cursor: string): { at: Date; id: number } {
+function readMentionCursor(cursor: string): { at: Date; id: number } {
   let decoded = "";
   try {
     decoded = atob(cursor);
@@ -100,14 +100,14 @@ function decodeCursor(cursor: string): { at: Date; id: number } {
 
 /** What the sweep removes, by status: shared so the count and the sweep cannot drift apart. */
 function expired(now: Date) {
-  const olderThan = (status: "failed" | "rejected", days: number) =>
+  const pastRetention = (status: "failed" | "rejected", days: number) =>
     and(
       eq(webmentions.status, status),
       lt(webmentions.receivedAt, new Date(now.getTime() - daysInMilliseconds(days))),
     );
   return {
-    failed: olderThan("failed", FAILED_RETENTION_DAYS),
-    rejected: olderThan("rejected", REJECTED_RETENTION_DAYS),
+    failed: pastRetention("failed", FAILED_RETENTION_DAYS),
+    rejected: pastRetention("rejected", REJECTED_RETENTION_DAYS),
   };
 }
 
@@ -166,7 +166,7 @@ export function carrelMentionsAdapter(env: Env): MentionsAdapter {
         );
       }
       if (query.cursor) {
-        const { at, id } = decodeCursor(query.cursor);
+        const { at, id } = readMentionCursor(query.cursor);
         filters.push(
           or(
             lt(webmentions.receivedAt, at),
@@ -196,7 +196,7 @@ export function carrelMentionsAdapter(env: Env): MentionsAdapter {
       const last = page.at(-1);
       return {
         items: await Promise.all(page.map(itemOf)),
-        nextCursor: rows.length > query.limit && last ? encodeCursor(last) : null,
+        nextCursor: rows.length > query.limit && last ? mentionCursor(last) : null,
         counts,
         expiring: { failed: failed[0]?.n ?? 0, rejected: rejected[0]?.n ?? 0 },
         ...(query.q !== undefined || query.targetId !== undefined

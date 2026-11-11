@@ -6,7 +6,7 @@ description: How to get work from a clean gate run onto the deployed site on dus
 # Shipping dustinedwards.info
 
 The deploy CONTRACT is `.github/workflows/deploy.yml`, devkit's worker-deploy
-with this site's pre-deploy guard, live gate (`scripts/verify-deploy.mjs`) and
+with this site's pre-deploy guard, live gate (`devkit-verify-deploy`) and
 converge job (`scripts/converge.mjs`); what each refuses and why lives there, and
 `.claude/hooks/no-direct-deploy.sh` refuses every local way to deploy. This is the
 PROCEDURE around it.
@@ -54,7 +54,7 @@ Two hazards, both measured:
 Every one of these, and no substitutes:
 
 - The deployed **sha** and the **version id** from the `site / deploy` step.
-- The **live gate** lines `scripts/verify-deploy.mjs` printed.
+- The **live gate** lines `devkit-verify-deploy` printed.
 - The **drift table** line from `sync:content`, verbatim.
 - Both **index counts**: Ask converged, media converged.
 - **Anything that did not behave as expected**, including a gate that needed a

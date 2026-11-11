@@ -4,7 +4,7 @@ import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
 import { placeholderAndColor } from "@dustinedwards/site-api";
 import { measureDimensions } from "./core.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 
 // `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and recoverable from nothing, so a rebuild

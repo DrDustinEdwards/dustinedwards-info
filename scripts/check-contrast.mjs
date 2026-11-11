@@ -27,8 +27,8 @@ import {
   TEXT,
   UI,
 } from "./lib/contrast-matrix.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
