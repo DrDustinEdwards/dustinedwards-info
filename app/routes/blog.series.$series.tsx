@@ -8,7 +8,8 @@ import {
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
 import { getBlogSeries, listSeriesPosts, nextScheduledPublishAt } from "~/db";
-import { POSTS_PER_PAGE, readPage } from "~/lib/blog-listing.mjs";
+import { parsePage } from "capsomer/react/pagination";
+import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
@@ -32,7 +33,7 @@ import "~/styles/entry-list.css";
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
-  const page = readPage(url.searchParams.get("page"));
+  const page = parsePage(url.searchParams.get("page"));
 
   const series = await getBlogSeries(env, params.series);
   if (!series) throw data("Not found", { status: 404 });

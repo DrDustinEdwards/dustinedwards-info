@@ -1,9 +1,13 @@
 import { LAB_BENCH_PATH } from "~/lab/path.mjs";
-import { Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import { Outlet, data, useLocation, useRouteLoaderData } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
-import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, FAMILY_APPS, type AdminEntry } from "capsomer/react/admin-shell";
+import {
+  AdminErrorView,
+  AdminShell,
+  FAMILY_APPS,
+  type AdminEntry,
+} from "capsomer/react/admin-shell";
 import { themeScript } from "capsomer/theme-server";
 
 import { Icon, shellLink } from "~/components/admin/shell-parts";
@@ -124,8 +128,6 @@ const ICONS = {
 
 const RouterLink = shellLink(LAB_BENCH_PATH);
 
-const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
-
 export default function LabLayout({ loaderData }: Route.ComponentProps) {
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
   const { pathname } = useLocation();
@@ -201,7 +203,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
           role: loaderData.title,
           email: loaderData.email,
           appLinks: [{ label: "View site", href: "/" }],
-          onSignOut: () => window.location.assign(ACCESS_LOGOUT_PATH),
+          accessLogout: true,
         }}
         prefKey="lab-rail"
       >
@@ -215,19 +217,7 @@ export default function LabLayout({ loaderData }: Route.ComponentProps) {
   );
 }
 
-/** The lab's own error page, in Capsomer: a refusal's words are the answer, never a login page. */
+/** The lab's own error page, Capsomer's (AdminErrorView): a refusal's words are the answer, never a login page. */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const known = isRouteErrorResponse(error);
-  const title = known
-    ? error.status === 403
-      ? "No access"
-      : `${error.status} ${error.statusText}`
-    : "Something went wrong";
-  return (
-    <main className="app-page">
-      <Empty kind={known && error.status === 404 ? "no-match" : "failed"} title={title}>
-        {known && typeof error.data === "string" ? error.data : "Nothing you entered is lost."}
-      </Empty>
-    </main>
-  );
+  return <AdminErrorView error={error} home={LAB_BENCH_PATH} dev={import.meta.env.DEV} />;
 }

@@ -1,10 +1,12 @@
 import { initialValues } from "capsomer/behavior/calculator";
 import { Calculator, type CalculatorField } from "capsomer/react/calculator";
+import { Disclosure } from "capsomer/react/disclosure";
 
 import { TOOLS, runTool, toolValues, toolsOnPage } from "~/lib/phage-tools.mjs";
 
 import "capsomer/field.css";
 import "capsomer/calculator.css";
+import "capsomer/disclosure.css";
 import "~/styles/phage-tools.css";
 
 /** A calculator's fields as Capsomer's Calculator takes them: a lab default names its source as one. */
@@ -95,8 +97,14 @@ export function StepCalculators({
         const tool = TOOLS[id];
         if (!tool) throw new Error(`No calculator named ${id}.`);
         return (
-          <details key={id} className="phage-tool phage-tool-step">
-            <summary>Calculator: {tool.title}</summary>
+          <Disclosure
+            key={id}
+            className="phage-tool-step"
+            summary={`Calculator: ${tool.title}`}
+            variant="inline"
+            marker="sign"
+            print="hide"
+          >
             <p className="phage-tool-hint">
               The fields start on the lab&apos;s worked example
               {Object.keys(values).length ? ", except what this step states" : ""}. Enter your own
@@ -113,7 +121,7 @@ export function StepCalculators({
                 Open the {tool.title.toLowerCase()} on its own page
               </a>
             </p>
-          </details>
+          </Disclosure>
         );
       })}
     </>

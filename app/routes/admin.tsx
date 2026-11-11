@@ -1,15 +1,11 @@
-import { useEffect } from "react";
-import {
-  Form,
-  Outlet,
-  data,
-  isRouteErrorResponse,
-  useLocation,
-  useRouteLoaderData,
-} from "react-router";
-import { Empty } from "capsomer/react/empty";
+import { Outlet, data, useLocation, useRouteLoaderData } from "react-router";
 import { MessageProvider } from "capsomer/react/message";
-import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
+import {
+  AdminErrorView,
+  AdminShell,
+  FIRST_PAGE,
+  type AdminEntry,
+} from "capsomer/react/admin-shell";
 import { themeScript } from "capsomer/theme-server";
 
 import { Icon, shellLink } from "~/components/admin/shell-parts";
@@ -207,8 +203,6 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
 
 const RouterLink = shellLink("/admin");
 
-const SIGN_OUT_FORM = "admin-signout-form";
-
 /** "Dustin Edwards" -> "DE": the avatar's letters, from the site's own name. */
 const INITIALS = SITE.name
   .split(/\s+/)
@@ -276,23 +270,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /* The tab title is "<page> · dustinedwards.info": the menu entry the reader is in names the page. */
   const page = nav.find((entry) => entry.current)?.label;
 
-  /* The shell names `[` in the collapse control's tip and leaves binding it to the app. It presses that
-     control, so the choice is remembered by the shell's own preference. Never while someone types. */
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "[" || event.ctrlKey || event.metaKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        target.closest("input, textarea, select, [contenteditable], .cm-editor")
-      )
-        return;
-      document.querySelector<HTMLButtonElement>('[data-cap-part="menu-toggle"]')?.click();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
   return (
     <>
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={markup(themeScript())} />
@@ -310,10 +287,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           initials: INITIALS,
           role: "Admin",
           email: loaderData.email,
-          // Access owns the session: the logout route sends the browser to Access's own endpoint, which a
-          // fetch cannot follow into a navigation, so a real form post (reloadDocument) does it.
-          onSignOut: () =>
-            (document.getElementById(SIGN_OUT_FORM) as HTMLFormElement | null)?.requestSubmit(),
+          // Access owns the session: the logout route clears this origin's storage and sends the browser to
+          // Access's own endpoint, which a fetch cannot follow into a navigation, so Sign out is the header's
+          // plain form post, which works before script.
+          signOutAction: "/admin/logout",
         }}
         prefKey="admin-rail"
       >
@@ -324,31 +301,14 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </div>
         </MessageProvider>
       </AdminShell>
-      <Form id={SIGN_OUT_FORM} method="post" action="/admin/logout" reloadDocument hidden />
     </>
   );
 }
 
 /*
- * The admin's own error page, in Capsomer: root's error page is the public site's and, with the public CSS
- * no longer loaded here, would show unstyled. It keeps the admin's link back to the Overview.
+ * The admin's own error page is Capsomer's (AdminErrorView): root's error page is the public site's and, with the
+ * public CSS no longer loaded here, would show unstyled. Its way out is the Overview.
  */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const known = isRouteErrorResponse(error);
-  const title = known ? `${error.status} ${error.statusText}` : "Something went wrong";
-  return (
-    <main className="app-page">
-      <Empty
-        kind="failed"
-        title={title}
-        action={
-          <a className="cap-btn" href="/admin">
-            Go to the Overview
-          </a>
-        }
-      >
-        {known && typeof error.data === "string" ? error.data : "Nothing you wrote is lost."}
-      </Empty>
-    </main>
-  );
+  return <AdminErrorView error={error} home="/admin" dev={import.meta.env.DEV} />;
 }
