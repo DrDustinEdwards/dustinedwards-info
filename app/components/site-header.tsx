@@ -5,7 +5,7 @@ import { Link, useLocation, useMatches } from "react-router";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteNavPanel } from "~/components/site-nav-panel";
 import { buildNav, type NavItem } from "~/lib/nav";
-import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
+import { type RunningHeadHandle, runningHeadSection } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 import askCss from "~/styles/ask.css?url";
 import listboxCss from "capsomer/listbox.css?url";
@@ -72,7 +72,7 @@ function NavEntry({ item, pathname }: { item: NavItem; pathname: string }) {
 function RunningHead({ pathname }: { pathname: string }) {
   const matches = useMatches();
   if (pathname === "/") return null;
-  const section = sectionOf(pathname);
+  const section = runningHeadSection(pathname);
   let folio: string | null | undefined;
   for (const match of matches) {
     const handle = match.handle as RunningHeadHandle | undefined;
