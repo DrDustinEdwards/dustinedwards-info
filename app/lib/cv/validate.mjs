@@ -6,7 +6,7 @@
 
 import matter from "gray-matter";
 
-import { findWideDashes } from "../content/wide-dash.mjs";
+import { findWideDashes } from "@drdustinedwards/site-helpers/text";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { AREAS, ROLES } from "./view.mjs";
 

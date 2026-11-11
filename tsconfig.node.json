@@ -173,8 +173,6 @@
     "app/lib/cv/markdown.mjs",
     // The print document and the fingerprint, which the Worker and scripts/build-cv-pdf.mjs both draw from.
     "app/lib/cv/pdf-html.mjs",
-    // The no-wide-dash rule, which the pipeline re-exports and the CV validator imports without the renderer.
-    "app/lib/content/wide-dash.mjs",
     // The Ask item key mapping. check:machine-readable round-trips every paper's
     // page URL through it, because the key is the citation: AI Search carries
     // nothing else about where a chunk came from, so a key that does not map
@@ -260,12 +258,9 @@
     // The Ask settle loop, which the deploy's two Ask steps call: one cadence and one window.
     "app/lib/health/ask-converge.mjs",
     // Imported by modules listed above, so this project must reach them too:
-    // the status rule (pdf-redirect), the thrown-value reader (pipeline,
-    // upload-contract), the byte and hash encodings (classify, hashes, diagram,
-    // pipeline) and the hast builders (chart, diagram). Each is dependency-free.
+    // the status rule (pdf-redirect) and the hast builders (chart, diagram).
+    // Each is dependency-free.
     "app/lib/https-redirect.mjs",
-    "app/lib/error-message.mjs",
-    "app/lib/fingerprint.mjs",
     // check:links resolves every internal link through the gateway's own redirect rules and the
     // site's own path builders, and reads the header menus as they render.
     "app/lib/wordpress-redirects.mjs",

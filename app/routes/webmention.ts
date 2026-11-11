@@ -1,5 +1,5 @@
 import { countOpenWebmentions, receiveWebmention, webmentionTarget } from "~/db";
-import { clientIp } from "~/lib/client-ip";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv } from "~/lib/context";
 import { readCapped } from "@dustinedwards/site-runtime/body";
 import { limitHit } from "~/lib/rate-limit.mjs";
@@ -8,7 +8,7 @@ import type { WebmentionVerifyMessage } from "~/lib/webmention/queue";
 import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
 
 import type { Route } from "./+types/webmention";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * Public by necessity, and it writes rows, so four bounds: a per-IP rate, a publicly visible target,
