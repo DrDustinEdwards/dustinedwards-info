@@ -12,6 +12,7 @@ import { plural } from "@drdustinedwards/site-helpers/text";
 import { deriveIdentity } from "../identity.mjs";
 import { IDENTITY } from "../identity.generated.mjs";
 import { canonicalAuthor } from "../publications/authors.mjs";
+import { bibtexPages, escapeBibtex } from "@drdustinedwards/site-helpers/scholar";
 import { decodeEntities } from "../publications/entities.mjs";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
 import { areaLabel, foldText, formatDollars, roleLabel, typeLabel } from "./view.mjs";
@@ -218,13 +219,13 @@ function resolveOne(source, byDoi) {
       const key = `${entrySlug(source.authors[0]?.split(" ").pop() ?? "cv")}-${source.year}-${entrySlug(source.title).split("-").slice(0, 3).join("-")}`;
       const bibtex = [
         `@article{${key},`,
-        `  title = {${source.title}},`,
-        `  author = {${source.authors.join(" and ")}},`,
-        `  journal = {${source.journal}},`,
+        `  title = {${escapeBibtex(source.title)}},`,
+        `  author = {${source.authors.map(escapeBibtex).join(" and ")}},`,
+        `  journal = {${escapeBibtex(source.journal)}},`,
         `  year = {${source.year}},`,
-        ...(source.volume ? [`  volume = {${source.volume}},`] : []),
-        ...(source.issue ? [`  number = {${source.issue}},`] : []),
-        ...(source.pages ? [`  pages = {${source.pages.replace("-", "--")}},`] : []),
+        ...(source.volume ? [`  volume = {${escapeBibtex(String(source.volume))}},`] : []),
+        ...(source.issue ? [`  number = {${escapeBibtex(String(source.issue))}},`] : []),
+        ...(source.pages ? [`  pages = {${bibtexPages(String(source.pages))}},`] : []),
         "}",
       ].join("\n");
       const pages = source.pages?.split("-") ?? [];
