@@ -1,3 +1,4 @@
+import "capsomer/tabs.css";
 import { Picture } from "capsomer/react/picture";
 import { StepCalculators } from "~/components/phage-tool";
 import { fillQuantities, type ProcedureRecord } from "~/kb/procedures/render.mjs";
@@ -193,33 +194,37 @@ function Command({ cmd }: { cmd: Cmd }) {
 const platformName = (p: string | null) => PLATFORMS[p as keyof typeof PLATFORMS] ?? p ?? "";
 
 /**
- * One command for each platform (S4). With no script every block shows, under its name, and the tabs are links to them;
- * app/enhance/platforms.ts turns the links into tabs and remembers the reader's platform. The sheet lists them all.
+ * One command for each platform (S4), as Capsomer's progressive tabs (capsomer/tabs.md): with no script every block
+ * shows under its name and the tabs are links to them; the "platforms" island runs Capsomer's tabs behavior, which turns
+ * the links into tabs and remembers the reader's platform (capsomer.tabs.platform), else starts on their system. The
+ * sheet has no tabs and lists them all.
  */
 function Platforms({ group, id, brief }: { group: Cmd[]; id: string; brief: boolean }) {
   return (
-    <div className="procedure-platforms" data-platforms="">
+    <div
+      className="cap-tabs procedure-platforms"
+      data-cap="tabs"
+      data-progressive=""
+      data-remember="platform"
+      data-remember-guess="platform"
+    >
       {brief ? null : (
-        <p className="procedure-platform-tabs">
+        <div className="cap-tabs-list" data-variant="line" data-label="Platform">
           {group.map((cmd) => (
             <a
               key={cmd.platform}
+              className="cap-tab"
               href={`#${id}-${cmd.platform}`}
-              data-platform={cmd.platform ?? ""}
+              data-value={cmd.platform ?? ""}
             >
               {platformName(cmd.platform)}
             </a>
           ))}
-        </p>
+        </div>
       )}
       {group.map((cmd) => (
-        <div
-          key={cmd.platform}
-          id={`${id}-${cmd.platform}`}
-          className="procedure-platform"
-          data-platform={cmd.platform ?? ""}
-        >
-          <p className="procedure-platform-label">{platformName(cmd.platform)}</p>
+        <div key={cmd.platform} id={`${id}-${cmd.platform}`} className="cap-tabs-panel">
+          <p className="cap-tabs-panel-label">{platformName(cmd.platform)}</p>
           <Command cmd={cmd} />
         </div>
       ))}

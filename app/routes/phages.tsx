@@ -39,6 +39,7 @@ import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/phages.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 import { markup } from "capsomer/behavior/trusted-html";
 
 /**
@@ -133,7 +134,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
         {page.title}
       </h1>
       <DraftNotice show={draft} />
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(before)} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(before)} />
       <div className="phage-catalog site-catalog site-catalog-wide">
         <Catalog
           definition={PHAGES}
@@ -150,7 +151,7 @@ export default function PhagesRoute({ loaderData }: Route.ComponentProps) {
           emptyText={{ noMatch: "No phages match this search." }}
         />
       </div>
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(after)} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(after)} />
       <template data-island="catalog" />
     </PageShell>
   );

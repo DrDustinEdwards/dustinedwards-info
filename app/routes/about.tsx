@@ -26,6 +26,7 @@ import type { Route } from "./+types/about";
 import "~/styles/prose.css";
 import "~/styles/about.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 import { markup } from "capsomer/behavior/trusted-html";
 
 /**
@@ -101,7 +102,7 @@ export default function About({ loaderData }: Route.ComponentProps) {
       <Picture picture={photo} />
 
       {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(html)} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={markup(html)} />
     </PageShell>
   );
 }

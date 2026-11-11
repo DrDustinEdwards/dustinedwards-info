@@ -34,7 +34,7 @@ LATIN = (
 )
 # ASCII plus these. The footer draws the copyright sign and middle dot on every page; prose draws the
 # quotes, dashes, bullet and ellipsis; procedures and posts draw the units and marks (degree, micro,
-# squared, registered, times, prime, minus, which post-disclosures.css draws as content); the three
+# squared, registered, times, prime, minus, which Capsomer's prose blocks draw as content); the three
 # combining accents attach to ASCII letters and must shape in the same file as them.
 CORE_EXTRA = [
     0xA0, 0xA9, 0xAE, 0xB0, 0xB2, 0xB5, 0xB7, 0xD7, 0x0304, 0x0308, 0x0329,

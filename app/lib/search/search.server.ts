@@ -1,14 +1,30 @@
 // Raw D1 rather than drizzle: bm25(), snippet() and MATCH have no drizzle surface. Nothing here
 // awaits a third party, so the AI layer cannot slow or break classic search.
 
-import { RRF_K, fuse, hasFilters, parseQuery, toMatchExpression } from "./query.mjs";
-import { applySort, parseSort, type SearchSort } from "./sort.mjs";
-import { PUBLISHED_STATUS } from "./visibility.mjs";
+import {
+  PUBLISHED_STATUS,
+  RRF_K,
+  applySort,
+  fuse,
+  hasFilters,
+  parseQuery as parseTyped,
+  parseSort,
+  toMatchExpression,
+} from "@drdustinedwards/site-helpers/search";
 import { clampWords } from "~/lib/content/og-card-text.mjs";
 import { escapeXml } from "@drdustinedwards/site-helpers";
 import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
 
+/** The operators a search accepts: tag:, type: and base: (app/kb/search-bases.mjs). */
+function parseQuery(input: string) {
+  const { filters, ...rest } = parseTyped(input, { operators: ["tag", "type", "base"] });
+  return {
+    ...rest,
+    filters: { tag: filters.tag ?? [], type: filters.type ?? [], base: filters.base ?? [] },
+  };
+}
 type ParsedQuery = ReturnType<typeof parseQuery>;
+type SearchSort = ReturnType<typeof parseSort>;
 
 /** Facet counts are computed over the fused set, so this bounds facet accuracy too. */
 const CANDIDATE_LIMIT = 100;
@@ -149,22 +165,22 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
   const clauses: string[] = [visibilityClause()];
   const params: unknown[] = [nowSeconds];
 
-  if (parsed.types.length > 0) {
+  if (parsed.filters.type.length > 0) {
     // One JSON parameter, not a placeholder per type: the operators are free text, and D1 refuses past 100.
     clauses.push(`d.type IN (SELECT value FROM json_each(?))`);
-    params.push(JSON.stringify(parsed.types));
+    params.push(JSON.stringify(parsed.filters.type));
   }
 
   // A record is in one knowledge base, read from its address, so base:a base:b widens to either. An id no base has
   // matches nothing, as an unknown type does.
-  if (parsed.bases.length > 0) {
-    const prefixes = parsed.bases.map(basePrefix);
+  if (parsed.filters.base.length > 0) {
+    const prefixes = parsed.filters.base.map(basePrefix);
     clauses.push(`(${prefixes.map(() => "d.doc_url LIKE ?").join(" OR ")})`);
     params.push(...prefixes.map((prefix) => (prefix === null ? "\u0000" : `${prefix}%`)));
   }
 
   // Every tag must be present, so tag:a tag:b narrows rather than widens.
-  for (const tag of parsed.tags) {
+  for (const tag of parsed.filters.tag) {
     clauses.push(`instr(d.doc_tags, ?) > 0`);
     params.push(`|${tag}|`);
   }
@@ -285,9 +301,9 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
 
   // ?tag=d1 and a typed tag:d1 merge into one parse, so facet links can be plain hrefs.
   const parsed = parseQuery(options.q ?? "");
-  if (options.type) parsed.types.push(options.type.toLowerCase());
-  if (options.base) parsed.bases.push(options.base.toLowerCase());
-  if (options.tag) parsed.tags.push(options.tag.toLowerCase());
+  if (options.type) parsed.filters.type.push(options.type.toLowerCase());
+  if (options.base) parsed.filters.base.push(options.base.toLowerCase());
+  if (options.tag) parsed.filters.tag.push(options.tag.toLowerCase());
   if (options.year && /^\d{4}$/.test(options.year)) parsed.year = Number(options.year);
 
   const empty: SearchResult = {

@@ -13,21 +13,21 @@
     ]
   },
   "baseline": {
-    "measured_at": "5f2c251",
+    "measured_at": "26bad88",
     "knip": {},
     "jscpd": {
       "clones": 26,
-      "lines": 408,
-      "percentage": 0.38
+      "lines": 401,
+      "percentage": 0.4
     },
     "tests": {
-      "files": 220,
-      "cases": 1760
+      "files": 210,
+      "cases": 1669
     },
     "comments": {
-      "lines": 18956,
-      "code": 113989,
-      "percentage": 14.26
+      "lines": 18186,
+      "code": 108532,
+      "percentage": 14.35
     }
   }
 }

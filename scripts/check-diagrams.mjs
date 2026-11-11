@@ -107,12 +107,18 @@ const proseCss = readFileSync(join(root, "app/styles/prose.css"), "utf8");
 for (const tone of TONES) {
   assert(`prose.css defines --diagram-${tone}`, proseCss.includes(`--diagram-${tone}:`));
 }
-const svgRule = proseCss.match(/\.blog-diagram svg\s*\{([^}]*)\}/)?.[1] ?? "";
+// The SVG is sized by Capsomer's prose blocks (the `.blog-diagram` rule's nested `& svg`), which prose.css imports.
+const blocksCss = readFileSync(
+  join(root, "node_modules/capsomer/components/prose-blocks/prose-blocks.css"),
+  "utf8",
+);
+const svgRule = blocksCss.match(/:where\(\.blog-diagram\)\s*\{[^]*?& svg\s*\{([^}]*)\}/)?.[1] ?? "";
 assert(
   "an inline diagram keeps its natural width and only shrinks",
-  /max-width:\s*100%/.test(svgRule) &&
-    /height:\s*auto/.test(svgRule) &&
-    !/(?<![\w-])width:\s*100%/.test(svgRule),
+  proseCss.includes('@import "capsomer/prose-blocks.css"') &&
+    /max-inline-size:\s*100%/.test(svgRule) &&
+    /block-size:\s*auto/.test(svgRule) &&
+    !/(?<![\w-])(inline-size|width):\s*100%/.test(svgRule),
 );
 
 /**

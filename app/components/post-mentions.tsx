@@ -1,4 +1,4 @@
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { safeHttpHref } from "~/lib/webmention/urls.mjs";
 
 import type { Route } from "../routes/+types/blog.$slug";
@@ -13,7 +13,7 @@ function Mention({ mention }: { mention: Route.ComponentProps["loaderData"]["men
 
   /* Falls back to the source URL, a fact, never an invented name attributed to a real person. */
   const name = mention.authorName ?? mention.sourceUrl;
-  const decided = longDateUTC(mention.decidedAt);
+  const decided = formatDate(mention.decidedAt);
 
   return (
     <li>

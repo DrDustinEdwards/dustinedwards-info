@@ -2,7 +2,8 @@ import { desc, sql } from "drizzle-orm";
 
 import { getDb } from "~/db";
 import { zeroResultQueries } from "~/db/schema";
-import { normalizeZeroResultQuery, ZERO_RESULT_RETENTION_SECONDS } from "./zero-result.mjs";
+import { normalizeZeroResultQuery } from "@drdustinedwards/site-helpers/search";
+import { ZERO_RESULT_RETENTION_SECONDS } from "./zero-result.mjs";
 
 // Stores the query and counters only, never an IP, user agent or session. The write never fails a search.
 
