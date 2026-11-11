@@ -19,11 +19,11 @@ import {
   HOME_CARDS,
   HOME_PICKS,
   POSTS_PER_PAGE,
-  pageCount,
   picksFirst,
   startHere,
 } from "../lib/blog-listing.mjs";
 import { inList } from "@dustinedwards/site-runtime/d1";
+import { pageEnvelope } from "capsomer/react/pagination";
 import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
@@ -274,7 +274,7 @@ export async function listBlogPosts(
     total,
     page,
     perPage,
-    pageCount: pageCount(total, perPage),
+    pageCount: pageEnvelope(page, perPage, total).pageCount,
     /* The whole filtered list, not this page of it. */
     span: spanOf(stats),
   };
@@ -392,7 +392,7 @@ export async function listSeriesPosts(
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
     total,
     page,
-    pageCount: pageCount(total, perPage),
+    pageCount: pageEnvelope(page, perPage, total).pageCount,
     span: spanOf(statRows[0]),
   };
 }
