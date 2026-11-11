@@ -48,6 +48,8 @@ Counters are a Durable Object on the synchronous SQLite API (`ASK_BUDGET`, now t
 
 Every save uploads that post's section records and drops cached answers; the sync cannot fail the save. Ship converges Ask last and Capsid's watcher repairs drift, so a row written outside a save does not leave Ask stale. AI Search cannot filter by status at query time, so drafts are excluded at upload: `publishableForAsk()` must agree with `publiclyVisible()`, and a draft actively removes anything it already has. `items.list()` is paged (max 50); `listAllAskItems()` is the only listing path. Test with a phrase unique to a draft.
 
+The corpus sync (`sync_ask`) uploads only what changed. AI Search reports no usable checksum (every item reads `"0"`), so the D1 table `ask_uploads` keeps the sha-256 of the body last uploaded for each key, written only after AI Search accepts the upload. An item is sent again when its hash differs, when it is missing from the index, or when its status is not `completed`, `queued` or `running` (`askUploadsNeeded`). A key whose upload outlives four tries is reported in `failed` and stops convergence, but it never fails the whole sync. A full re-upload on every deploy drew "You are being rate limited" (2026-11-11), and from 2026-12-01 it would also cost ingestion tokens.
+
 ## Machine endpoints
 
 `llms.txt` is served from the D1 `settings` row with `content/llms.txt` as the source; edit the file, never the row.
