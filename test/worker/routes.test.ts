@@ -149,6 +149,26 @@ describe("/health", () => {
      * the same list the scheduled handler runs is the list /health expects. */
     expect(byName).toMatchObject({ db: "pass", cron: "warn", "ask-index-drift": "warn" });
     expect(byName).toHaveProperty("backup");
+    /* A failed cache purge is kept in KV by site-runtime's recordPurge and shown as a warning with only its time. */
+    expect(byName["cache-purge"]).toBe("pass");
+    await env.APP_KV.put(
+      "purge:failed",
+      JSON.stringify({ why: "save post secret", at: "2026-11-11T00:00:00.000Z" }),
+    );
+    const ctx2 = createExecutionContext();
+    const failed = (await (
+      await healthLoader({
+        request: healthRequest("203.0.113.21"),
+        context: routeContext(ctx2),
+        params: {},
+      } as never)
+    ).json()) as { checks: Array<{ name: string; status: string; detail?: string }> };
+    await waitOnExecutionContext(ctx2);
+    await env.APP_KV.delete("purge:failed");
+    expect(failed.checks.find((c) => c.name === "cache-purge")).toMatchObject({
+      status: "warn",
+      detail: expect.not.stringContaining("secret"),
+    });
     /* /health names its drift checks before the run, from HEALTH_CHECK_NAMES: a check added to the run and not to
      * the list would never reach /health. */
     const run = await runHealthChecks(env as never);

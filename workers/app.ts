@@ -19,9 +19,8 @@ import {
   cacheKey,
   forReader,
   forRenderer,
-  purgeTags,
   settleCacheHeaders,
-  type PurgeCache,
+  withPurgePages,
 } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
@@ -111,14 +110,17 @@ function applyDocumentHeaders(headers: Headers, { publicPage }: { publicPage: bo
 /**
  * The cacheable entrypoint; `default` has cache disabled. Document headers belong here, or they are absent from every hit.
  */
-export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
+export class Renderer extends withPurgePages(WorkerEntrypoint<Env, RendererProps>, {
+  kv: (env: Env) => env.APP_KV,
+}) {
   /**
-   * The RPC method site-runtime's schedulePurgeHook calls over the Worker's loopback when a Carrel schedule changes a
-   * post (app/lib/carrel/site-api.server.ts): the cron's entrypoint cannot reach this one's cache. Every page that
-   * shows a post carries `posts` (cacheTags). RPC methods bypass the cache.
+   * site-runtime's purge RPC, which purgeAfterWrite calls after a Carrel write and schedulePurgeHook after a schedule
+   * (app/lib/carrel/site-api.server.ts): the cron's entrypoint cannot reach this one's cache. Every page that shows a
+   * post carries `posts` (cacheTags). RPC methods bypass the cache. A failure is kept in KV until a purge succeeds,
+   * where /health's cache-purge check reads it.
    */
-  async purgePages(why: string) {
-    return purgeTags(this.ctx.cache as PurgeCache | undefined, [cacheTags()], why);
+  override async purgePages(why: string, tags: string[] = [cacheTags()]) {
+    return super.purgePages(why, tags);
   }
 
   override async fetch(request: Request): Promise<Response> {

@@ -1,6 +1,6 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
-import { cache } from "cloudflare:workers";
-import { purgeTags, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
+import { cache, env } from "cloudflare:workers";
+import { purgeTags, recordPurge, type PurgeCache } from "@dustinedwards/site-runtime/edge-cache";
 
 import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
@@ -26,13 +26,16 @@ export function combinePurges(...outcomes: PurgeOutcome[]): PurgeOutcome {
 
 /**
  * site-runtime's purge (./edge-cache): never throws, `null` where Miniflare has no purge API, and a refusal or a
- * throw logged as `cache-purge-refused` or `cache-purge-threw`.
+ * throw logged as `cache-purge-refused` or `cache-purge-threw`. A failure is also kept in KV until a purge succeeds
+ * (recordPurge), which /health's cache-purge check shows; the Renderer's purgePages records its own the same way.
  *
  * @param tags the cache tags to invalidate
  * @param why  one phrase naming the write that caused this, for the log line
  */
-function purge(tags: string[], why: string): Promise<PurgeOutcome> {
-  return purgeTags(cache as PurgeCache, tags, why);
+async function purge(tags: string[], why: string): Promise<PurgeOutcome> {
+  const purged = await purgeTags(cache as PurgeCache, tags, why);
+  await recordPurge(env.APP_KV, why, purged);
+  return purged;
 }
 
 /**
