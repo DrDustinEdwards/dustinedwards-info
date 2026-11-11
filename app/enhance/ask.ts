@@ -1,6 +1,6 @@
 import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
-import { CUT_EVENT, answerDelta, takeSseFrames } from "../lib/search/sse.mjs";
+import { CUT_EVENT, answerDelta, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 
 const CHUNKS_EVENT = "chunks";
 
