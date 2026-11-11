@@ -1,5 +1,5 @@
 import { listPublishedLibraryRecords } from "~/db/procedures";
-import { csvResponse } from "capsomer/behavior/csv";
+import { csvResponse } from "@dustinedwards/site-runtime/csv";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";

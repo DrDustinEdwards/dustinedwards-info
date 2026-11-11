@@ -146,7 +146,7 @@ await test("the downloads carry every fact with words for the ids and honor the 
   assert.deepEqual(rows[0].methods, ["Plating and titering", "Culture"]);
   assert.deepEqual(rows[0].courses, ["Phage Discovery Program"]);
   assert.equal(rows[0].url, "https://example.test/research/protocols/isolation");
-  // The CSV's quoting and joins are Capsomer's (capsomer/behavior/csv), tested there; the columns are the rows' own.
+  // The CSV's quoting and joins are site-runtime's (./csv), tested there; the columns are the rows' own.
   assert.ok(libraryCsv(libraryRecords(items, "", "https://example.test")).startsWith("id,title,url,kind,methods"));
 });
 

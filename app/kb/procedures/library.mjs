@@ -3,7 +3,7 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
-import { recordsCsv } from "capsomer/behavior/csv";
+import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import {
   catalogRedirect,
   defineCatalog,
@@ -197,15 +197,12 @@ export function libraryRecords(items, params, origin) {
 }
 
 /**
- * The same rows as CSV, Capsomer's (RFC 4180, the formula guard on): a list field is its values joined with "; ".
+ * The same rows as CSV, site-runtime's (RFC 4180, the formula guard on): a list field is its values joined with "; ".
  *
  * @param {Array<Record<string, unknown>>} rows a library's download rows, its own or another base's (app/kb/libraries.mjs)
  */
 export function libraryCsv(rows) {
-  return recordsCsv(
-    /** @type {Array<Record<string, import("capsomer/behavior/csv").CsvValue>>} */ (rows),
-    Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }),
-  );
+  return recordsCsv(rows, Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }));
 }
 
 /** One cell of a markdown table. @param {string} text */
