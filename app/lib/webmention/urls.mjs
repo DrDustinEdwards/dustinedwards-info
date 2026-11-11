@@ -130,22 +130,3 @@ export function collapseExcerpt(text) {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > EXCERPT_MAX_CHARS ? flat.slice(0, EXCERPT_MAX_CHARS) : flat;
 }
-
-/**
- * Checked again at RENDER: a row can outlive the code that wrote it or be hand-written, and a wrong `href`
- * is executable. Null means render the name without a link. Returns the parser's output, not the input.
- *
- * @param {string | null | undefined} value
- * @returns {string | null}
- */
-export function safeHttpHref(value) {
-  if (!value) return null;
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-  return url.href;
-}

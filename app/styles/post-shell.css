@@ -47,45 +47,8 @@
   height: auto;
 }
 
-.post-nav,
-.post-series-steps {
+.post-nav {
   margin-block-start: var(--space-7);
-}
-
-.post-series {
-  margin-block-start: var(--space-7);
-}
-
-.post-backlinks {
-  margin-block-start: var(--space-7);
-  border-block-start: var(--line-w) solid var(--dust);
-  padding-block-start: var(--space-5);
-}
-
-.post-backlinks > p {
-  margin: 0 0 0.625rem;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.post-backlinks ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.post-backlinks li {
-  border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 0.625rem;
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.4;
-}
-
-.post-backlinks a {
-  text-decoration: none;
 }
 
 .post-history {
@@ -150,25 +113,6 @@
   font-family: var(--font-sans);
   font-size: 0.875rem;
   line-height: 1.5;
-}
-
-.post-mentions {
-  margin-block-start: var(--space-7);
-}
-
-.post-mention-excerpt {
-  margin: 0.25rem 0 0;
-  color: var(--text-secondary);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-}
-
-.post-mention-date {
-  display: block;
-  margin-block-start: 0.25rem;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
 }
 
 /* Scoped to .post-body: prose.css is shared with about, colophon, privacy, phage-discovery and both
@@ -248,7 +192,6 @@
 
 @media print {
   .post-nav,
-  .post-backlinks,
   .post-actions {
     display: none;
   }
