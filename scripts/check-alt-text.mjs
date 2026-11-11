@@ -12,7 +12,7 @@
 import { fromHtml } from "hast-util-from-html";
 import { visit } from "unist-util-visit";
 
-import { assertFloor } from "./lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { isMain } from "./lib/is-main.mjs";
 
 /**

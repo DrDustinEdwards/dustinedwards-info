@@ -4,7 +4,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createTally } from "../tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 

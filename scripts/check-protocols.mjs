@@ -16,7 +16,7 @@ import {
   PROCEDURE_FIXTURES_DIR,
   PROCEDURES_SOURCE_DIR,
 } from "./lib/procedures.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const tally = createTally({ separator: ": " });
 const { ok } = tally;
