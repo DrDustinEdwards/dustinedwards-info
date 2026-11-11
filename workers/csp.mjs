@@ -2,6 +2,7 @@ import { LAB_BENCH_PATH } from "../app/lab/path.mjs";
 
 // Separate from app.ts so the worker tests can call it on both branches.
 
+import { TRUSTED_TYPES_NAMES } from "@dustinedwards/site-runtime/trusted-types";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 
 /**
@@ -86,5 +87,7 @@ export function pagePolicy({ nonce }) {
     // The post players (YouTube, Spotify and the rest of Dustin's list) a post may embed; the registry entry's `embeds`
     // opt-in delegates their features in the Permissions-Policy.
     embeds: true,
+    // Trusted Types is enforced: every sink takes a policy's value (site-runtime ./trusted-types, installed by startPage).
+    trustedTypes: TRUSTED_TYPES_NAMES,
   };
 }
