@@ -32,9 +32,7 @@ export const SERVER_INFO = {
   title: "Dustin Edwards Admin",
   version: "0.4.0",
   websiteUrl: "https://dustinedwards.info",
-  icons: [
-    { src: "https://dustinedwards.info/dustin-edwards-favicon.svg", mimeType: "image/svg+xml" },
-  ],
+  icons: [{ src: "https://dustinedwards.info/icon.svg", mimeType: "image/svg+xml" }],
 };
 
 /** This server as refusals, the step-up challenge and the tool-call log name it. */
