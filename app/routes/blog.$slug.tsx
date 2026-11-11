@@ -1,12 +1,13 @@
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { Breadcrumb } from "~/components/breadcrumb";
-import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
-import { PostMentions } from "~/components/post-mentions";
 import { PostRail, ymd } from "~/components/post-rail";
-import { SeriesNav } from "~/components/post-series-nav";
-import { Signs } from "~/components/signs";
+import { Signs } from "capsomer/react/manual";
+import { RelatedLinks } from "capsomer/react/related-links";
+import { SeriesNav } from "capsomer/react/series-nav";
+import { httpHref } from "capsomer/behavior/related-links";
+import { seriesPath } from "~/lib/series-path.mjs";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ISLAND_GZIP_BYTES } from "virtual:islands";
 
@@ -53,6 +54,8 @@ import "~/styles/evidence-row.css";
 import "capsomer/tokens.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
+import "capsomer/series-nav.css";
+import "capsomer/related-links.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
@@ -283,7 +286,15 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           )}
 
           {post.series && seriesParts.length > 1 && (
-            <SeriesNav post={post} series={post.series} seriesParts={seriesParts} />
+            <SeriesNav
+              name={post.series}
+              href={seriesPath(post.series)}
+              parts={seriesParts.map((entry) => ({
+                href: `/writing/${entry.slug}`,
+                title: entry.title,
+              }))}
+              current={`/writing/${post.slug}`}
+            />
           )}
 
           {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
@@ -294,20 +305,11 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             dangerouslySetInnerHTML={{ __html: post.html }}
           />
 
-          {post.furtherReading.length > 0 && (
-            <section className="further-reading" aria-labelledby="further-heading">
-              <h2 id="further-heading">Further reading</h2>
-              <ul>
-                {post.furtherReading.map((item) => (
-                  <li key={item.url}>
-                    <a href={item.url} rel="noopener noreferrer">
-                      {item.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <RelatedLinks
+            kind="external"
+            title="Further reading"
+            items={post.furtherReading.map((item) => ({ href: item.url, title: item.title }))}
+          />
 
           {/* The runway holding position marking (capsomer/manual.css .cap-hold): the post ends here; what follows is
               about it. Drawn, with no words (Dustin, 2026-11-04). */}
@@ -348,7 +350,18 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </a>
           </nav>
 
-          {mentions.length > 0 && <PostMentions mentions={mentions} />}
+          {/* A mention is a stranger's: its author's address if that passes, else its source; its name falls back to
+              the source address, a fact, never an invented name attributed to a real person. */}
+          <RelatedLinks
+            kind="mentions"
+            title="Mentions"
+            items={mentions.map((mention) => ({
+              href: httpHref(mention.authorUrl) ?? mention.sourceUrl,
+              title: mention.authorName ?? mention.sourceUrl,
+              excerpt: mention.excerpt,
+              date: mention.decidedAt,
+            }))}
+          />
 
           <p className="post-colophon-note">
             Built on the stack described at <Link to="/colophon">/colophon</Link>.
@@ -362,7 +375,14 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             />
           )}
 
-          {post.backlinks.length > 0 && <PostBacklinks backlinks={post.backlinks} />}
+          <RelatedLinks
+            kind="internal"
+            title="Linked from"
+            items={post.backlinks.map((item) => ({
+              href: `/writing/${item.slug}`,
+              title: item.title,
+            }))}
+          />
 
           <div className="post-nav">
             <Signs

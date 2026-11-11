@@ -7,7 +7,7 @@ import { CONTENTS_MIN, contentsOf, PageContents } from "~/components/page-conten
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
-import { Signs } from "~/components/signs";
+import { Signs } from "capsomer/react/manual";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
