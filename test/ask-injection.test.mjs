@@ -76,7 +76,7 @@ await test("the substituted answer carries an empty chunks frame, so the client 
 
 await test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources cannot be checked", async () => {
   // Fails closed: with no chunks frame there is no way to tell whether the answer summarizes a draft.
-  // A changed upstream frame order is logged as ask-guard-unverifiable rather than passed through.
+  // A changed upstream frame order is logged as ask_guard_unverifiable rather than passed through.
   const upstream = sseStream(undefined, ["a draft says"], { done: false });
   const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), NO_ANSWER_TEXT);

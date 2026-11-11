@@ -10,7 +10,7 @@ import {
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
 import { ASK_UPLOAD_CONCURRENCY, mapPool, uploadTwins, withRetry } from "./ask-twins.mjs";
-import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { answerDelta, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";

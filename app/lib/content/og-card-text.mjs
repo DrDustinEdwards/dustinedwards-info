@@ -57,22 +57,9 @@ export function cardDescription(description) {
   return clampWords(description, DESCRIPTION_MAX);
 }
 
-/**
- * Throws, never falls back: a title past the last rung means TITLE_MAX and the ladder disagree.
- *
- * @param {string} title the title AS DRAWN, i.e. already through `cardTitle`
- * @returns {number}
- */
-export function titleFontSize(title) {
-  const length = (title ?? "").length;
-  for (const rung of TITLE_SIZES) {
-    if (length <= rung.maxChars) return rung.fontSize;
-  }
-  throw new Error(
-    `og-card-text: a ${length}-character title is past the last rung of the ` +
-      `ladder (${TITLE_MAX}). Titles must go through cardTitle() first.`,
-  );
-}
+// site-runtime's share-card ladder is this one (72, 54, 42 up to 150), measured off these cards; it throws past the
+// last rung, so a title must go through cardTitle() first.
+export { titleFontSize } from "@dustinedwards/site-runtime/share-card";
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache
 // ignores a restyled PNG under an unchanged key forever.

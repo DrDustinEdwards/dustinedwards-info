@@ -1,10 +1,10 @@
 // Plain .mjs so node --test can reach it; nothing here touches a binding.
 
-import { checkProse, WRITING_RULES } from "@dustinedwards/site-runtime/prose";
+import { guardAnswerStream as guardShared } from "@dustinedwards/site-runtime/ai-ask";
+import { WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
-import { CUT_EVENT, answerDelta, finishReason, frameFields } from "./sse.mjs";
 
 /** The longest answer: two or three sentences and a follow-up line fit with room to spare. */
 export const ASK_MAX_TOKENS = 400;
@@ -95,114 +95,12 @@ export function citedSlugs(chunks) {
 }
 
 /**
- * A zero-chunk answer came from the model's weights, not this site: it is replaced here and not cached.
- * FAILS CLOSED: a chunks frame that does not parse to an array, or a stream that ends without one, cannot
- * be checked for drafts, so it is replaced too and logged under `ask-guard-unverifiable`, which is how a
- * changed upstream frame order shows up. Runs before teeForCache so the cache stores what was shown.
- */
-
-/**
- * @param {string} reason
- */
-function logUnverifiable(reason) {
-  console.error(JSON.stringify({ alert: "ask-guard-unverifiable", reason }));
-}
-
-/**
- * Whether the chunks frame refuses the answer: it is empty, it is not a JSON array, or it cites a post
- * `resolveVisible` does not return.
- *
- * @param {string} frame
- * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
- * @returns {Promise<boolean>}
- */
-async function chunksVerdict(frame, resolveVisible) {
-  const { data } = frameFields(frame);
-
-  let empty = false;
-  let unverifiable = false;
-  /** @type {unknown[]} */
-  let parsedChunks = [];
-  try {
-    /** @type {unknown} */
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed)) {
-      parsedChunks = parsed;
-      empty = parsed.length === 0;
-    } else {
-      unverifiable = true;
-    }
-  } catch {
-    unverifiable = true;
-  }
-  if (unverifiable) logUnverifiable("the chunks frame is not a JSON array");
-
-  // Same verdict as the cache replay. Refused whole, not filtered: the prose was written from those
-  // chunks, so dropping only the link would keep a summary of a post nobody may read.
-  const slugs = citedSlugs(parsedChunks);
-  let leaked = false;
-  if (!empty && !unverifiable && slugs.length > 0) {
-    const visible = await resolveVisible(slugs);
-    leaked = slugs.some((slug) => !visible.has(slug));
-  }
-  return empty || leaked || unverifiable;
-}
-
-/**
- * The checks of site-runtime's checkProse that a paragraph trips at high severity (a chatbot's refusal or
- * cutoff note, a blank, its markup, a stock phrase). A paragraph with any is not shown.
- *
- * @param {string} paragraph
- * @returns {string[]}
- */
-function highFindings(paragraph) {
-  return checkProse(paragraph)
-    .filter((issue) => issue.severity === "high")
-    .map((issue) => issue.check);
-}
-
-/**
- * Where the first finished paragraph of `text` ends (after its blank line), or -1 while none has.
- *
- * @param {string} text
- */
-function paragraphEnd(text) {
-  const blank = /\n[ \t]*\n/.exec(text);
-  return blank ? blank.index + blank[0].length : -1;
-}
-
-/**
- * The next read, or a rejection once `deadline` passes, so a stalled upstream ends the answer.
- *
- * @param {ReadableStreamDefaultReader} reader
- * @param {number} deadline
- */
-function readBy(reader, deadline) {
-  /** @type {ReturnType<typeof setTimeout> | undefined} */
-  let timer;
-  const late = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`the answer took longer than ${ASK_TIMEOUT_MS} ms`)),
-      deadline - Date.now(),
-    );
-  });
-  return Promise.race([reader.read(), late]).finally(() => clearTimeout(timer));
-}
-
-const DONE_FRAME = "data: [DONE]\n\n";
-
-/**
- * The answer is shown a paragraph at a time: each is held until its blank line (or the end of the stream),
- * checked whole with checkProse, and only then sent. The chunks frame is checked first (a refusal there
- * stops the model at once) and is held with the first paragraph, so no citations show for an answer that
- * never does. A refused paragraph ends the answer where it stands; if nothing was shown yet, the no-answer
- * text takes its place. `onRefused` hears every refusal, and the caller must not cache that answer: a cut
- * answer is not the answer. Only the chunks frame and the text reach the reader; other upstream frames are
- * dropped, and the guard writes its own closing [DONE].
- *
- * An answer the model did not finish (a `finish_reason` other than `stop`, such as `length` at ASK_MAX_TOKENS) is
- * shown as far as it got, followed by a `cut` event naming the reason, so the reader is told; `onCut` hears it, and
- * the caller must not cache that answer either.
+ * The Ask answer through site-runtime's guardAnswerStream (./ai-ask, extracted from this file): shown a paragraph at a
+ * time, each checked whole with checkProse at high severity; a chunks frame that is empty, not a JSON array, missing, or
+ * citing a post `resolveVisible` does not return refuses the whole answer (logged as `ask_guard_unverifiable` when it
+ * cannot be checked), and NO_ANSWER_TEXT takes its place if nothing was shown. `onRefused` hears every refusal and
+ * `onCut` an answer the model did not finish (followed by a `cut` event); the caller caches neither. Runs before
+ * teeForCache so the cache stores what was shown.
  *
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
@@ -216,109 +114,14 @@ export function guardAnswerStream(
   onRefused = () => {},
   onCut = () => {},
 ) {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-
-  return new ReadableStream({
-    async start(controller) {
-      /** @param {string} text */
-      const send = (text) => controller.enqueue(encoder.encode(text));
-      const reader = upstream.getReader();
-      const deadline = Date.now() + ASK_TIMEOUT_MS;
-      let buffer = "";
-      // Answer text not yet checked: the unfinished paragraph.
-      let text = "";
-      /** @type {string | null} */
-      let chunksFrame = null;
-      let shown = false;
-      /** @type {string | undefined} */
-      let stopped;
-
-      const refuse = async () => {
-        onRefused();
-        await reader.cancel().catch(() => {});
-        if (shown) send(DONE_FRAME);
-        else for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) send(piece);
-        controller.close();
-      };
-
-      /** Sends a paragraph that passes; false for one that does not. @param {string} paragraph */
-      const release = (paragraph) => {
-        const findings = highFindings(paragraph);
-        if (findings.length > 0) {
-          console.error(JSON.stringify({ alert: "ask-answer-refused-prose", checks: findings }));
-          return false;
-        }
-        if (!shown) send(`${chunksFrame}\n\n`);
-        shown = true;
-        if (paragraph)
-          send(`data: ${JSON.stringify({ choices: [{ delta: { content: paragraph } }] })}\n\n`);
-        return true;
-      };
-
-      try {
-        for (;;) {
-          const { done, value } = await readBy(reader, deadline);
-          // At the end, a closing blank line finishes a last frame the upstream left open.
-          buffer += done ? `${decoder.decode()}\n\n` : decoder.decode(value, { stream: true });
-          const frames = buffer.split("\n\n");
-          buffer = frames.pop() ?? "";
-
-          for (const frame of frames) {
-            const { event, data } = frameFields(frame);
-            if (event === "chunks") {
-              if (chunksFrame !== null) continue;
-              chunksFrame = frame;
-              if (await chunksVerdict(frame, resolveVisible)) return await refuse();
-              continue;
-            }
-            try {
-              const parsed = JSON.parse(data);
-              text += answerDelta(parsed) ?? "";
-              stopped = finishReason(parsed) ?? stopped;
-            } catch {
-              // [DONE], a keep-alive or a frame that is not JSON carries no text.
-            }
-          }
-
-          // Nothing is released before the chunks frame passes: until then no paragraph can be checked.
-          if (chunksFrame !== null) {
-            for (let end = paragraphEnd(text); end !== -1; end = paragraphEnd(text)) {
-              if (!release(text.slice(0, end))) return await refuse();
-              text = text.slice(end);
-            }
-          }
-          if (done) break;
-        }
-
-        // Closed without ever showing a chunks event: nothing held can be checked, so none of it is shown.
-        if (chunksFrame === null) {
-          logUnverifiable("the stream ended without a chunks frame");
-          return await refuse();
-        }
-        if (!release(text)) return await refuse();
-        if (stopped !== undefined && stopped !== "stop") {
-          onCut(stopped);
-          send(`event: ${CUT_EVENT}\ndata: ${JSON.stringify({ reason: stopped })}\n\n`);
-        }
-        send(DONE_FRAME);
-        controller.close();
-      } catch (error) {
-        await reader.cancel().catch(() => {});
-        controller.error(error);
-      }
-    },
+  return guardShared(upstream, {
+    resolveVisible,
+    citedSlugs,
+    noAnswerText: NO_ANSWER_TEXT,
+    timeoutMs: ASK_TIMEOUT_MS,
+    onRefused,
+    onCut,
   });
 }
 
-/**
- * @param {{ answer: string, chunks: unknown[] }} cached
- * @returns {string[]}
- */
-export function replayFrames(cached) {
-  return [
-    `event: chunks\ndata: ${JSON.stringify(cached.chunks)}\n\n`,
-    `data: ${JSON.stringify({ choices: [{ delta: { content: cached.answer } }] })}\n\n`,
-    `data: [DONE]\n\n`,
-  ];
-}
+export { replayFrames } from "@dustinedwards/site-runtime/ai-ask";

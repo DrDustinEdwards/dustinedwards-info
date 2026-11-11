@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { pacedAllowance, secondsPerPacedUnit } from "../app/lib/search/ask-pacing.mjs";
+import { pacedAllowance, secondsPerPacedUnit } from "@dustinedwards/site-runtime/ai-caps";
 
 const DAILY = 200;
 const BURST = 25;
