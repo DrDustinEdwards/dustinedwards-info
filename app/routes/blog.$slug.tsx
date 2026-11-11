@@ -59,6 +59,7 @@ import "~/styles/post-enhancements.css";
 import "capsomer/dialog.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
+import "capsomer/reading-progress.css";
 import "~/styles/post-head-blocks.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";
@@ -210,6 +211,8 @@ function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
 }
 
 /** One day: a post synced the day it was published has been deployed, not revised. */
+// Two screens of text, the length below which a reading bar fills in one flick.
+const READING_BAR_MIN_WORDS = 500;
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
@@ -259,6 +262,12 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
         <PostRail post={post} revisedLabel={revisedLabel} sections={sections} />
 
+        {/* Capsomer's reading bar, CSS only, filling through the post body below. Only on a post of two screens or more
+            (about 500 words), as Prelum's script bar did: on a shorter one it would fill in one flick. */}
+        {post.wordCount >= READING_BAR_MIN_WORDS && (
+          <div className="cap-reading-progress" aria-hidden="true" />
+        )}
+
         <article className="post post-body">
           <PostHeadBlocks
             writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
@@ -287,6 +296,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             className="prose e-content"
             {...PROSE}
             data-cap="lightbox"
+            data-cap-reading
             {...RENDERED}
             dangerouslySetInnerHTML={markup(post.html)}
           />

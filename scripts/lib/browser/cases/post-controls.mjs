@@ -17,13 +17,6 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     skip("a post page's enhancements", "the listing yielded no post links at all");
   } else {
     await page.goto(`${BASE}${postForShape}`, { waitUntil: "networkidle0" });
-    ok(
-      `${postForShape}: the reading progress bar exists`,
-      await page.evaluate(() => Boolean(document.querySelector(".reading-progress"))),
-      "script-created and absent without script, so its absence here means the blog " +
-        "bundle did not run",
-    );
-
     /* The sentinel proves no navigation happened: a fallback form post would still look right. */
     /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
     /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
