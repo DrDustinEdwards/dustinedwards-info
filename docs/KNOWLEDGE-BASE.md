@@ -235,7 +235,7 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
    (R2, R3 and R5 done: `app/kb/procedures/recipe-views.mjs`, rendered on the server at their addresses
    (`?units=metric|imperial` beside `?servings=`), with `grams_per_cup` the only way a volume becomes a weight. Cook view
    (R4) done: run mode's "One step at a time" shows the step being worked alone, in larger text, with Previous and Next
-   (`shownStep` and `stepBeside` in `app/kb/procedures/run.mjs`); a scale or units change in a run keeps the units and
+   (`shownStep` and `stepBeside` in `capsomer/behavior/checklist-run-model`); a scale or units change in a run keeps the units and
    swaps each step's ingredients and the mise-en-place too.)
 10. **How-to format**: type, objectives, platform tabs, challenges (S1, S2, S4, S5).
     (Done: `type: tutorial | how-to` as a fact on the page and the library's Type facet, `explanation:` links, and a
@@ -249,7 +249,7 @@ Each step is one pull request, labeled `visual` where a reader sees it, and name
     title as "Based on", linked to that copy (P3, `app/kb/procedures/lineage.mjs`).)
 12. **Offline** (A3).
     (Done: "Keep on this device" on every procedure page stores that page and the files it uses, and registers
-    `public/sw.js`, which serves the kept copy only when the network fails. Nothing is stored until a reader asks, and
+    Capsomer's `capsomer/offline-sw.js` (served at `/sw.js`), which serves the kept copy only when the network fails. Nothing is stored until a reader asks, and
     removing the last kept page clears the store and unregisters the worker. See "Keep on this device" in
     `docs/PROCEDURES.md`.)
 
