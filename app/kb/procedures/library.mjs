@@ -202,7 +202,10 @@ export function libraryRecords(items, params, origin) {
  * @param {Array<Record<string, unknown>>} rows a library's download rows, its own or another base's (app/kb/libraries.mjs)
  */
 export function libraryCsv(rows) {
-  return recordsCsv(rows, Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }));
+  return recordsCsv(
+    /** @type {Array<Record<string, import("@dustinedwards/site-runtime/csv").CsvValue>>} */ (rows),
+    Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }),
+  );
 }
 
 /** One cell of a markdown table. @param {string} text */
