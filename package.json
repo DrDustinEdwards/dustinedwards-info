@@ -85,7 +85,7 @@
     "@observablehq/plot": "0.6.17",
     "@shikijs/rehype": "4.5.0",
     "@shikijs/transformers": "4.5.0",
-    "capsomer": "github:DrDustinEdwards/capsomer#v0.91.1",
+    "capsomer": "github:DrDustinEdwards/capsomer#v0.94.0",
     "drizzle-orm": "0.45.2",
     "enarratio": "0.12.2",
     "github-slugger": "2.0.0",
