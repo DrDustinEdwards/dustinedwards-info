@@ -8,7 +8,6 @@ import {
   resetTimer,
   runMarkdown,
   runProgress,
-  runRecord,
   setNote,
   setRunNote,
   setScale,
@@ -22,7 +21,9 @@ import {
   toggleDone,
   type Run,
   type StepTimer,
-} from "../kb/procedures/run.mjs";
+} from "capsomer/behavior/checklist-run-model";
+
+import { labRunRecord } from "../kb/procedures/run.mjs";
 
 // An island (devkit ./islands): each <template data-island="run"> on the page calls this, and the first one runs it.
 let started = false;
@@ -664,7 +665,11 @@ export default function start(): void {
           "run-download",
           () =>
             run &&
-            download(`${slug}-${stamp}.md`, runMarkdown(run, stepRecords()), "text/markdown"),
+            download(
+              `${slug}-${stamp}.md`,
+              runMarkdown(run, stepRecords(), "Protocol"),
+              "text/markdown",
+            ),
         ),
         button(
           "Download as JSON",
@@ -673,7 +678,7 @@ export default function start(): void {
             run &&
             download(
               `${slug}-${stamp}.json`,
-              `${JSON.stringify(runRecord(run, stepRecords(), location.origin), null, 2)}\n`,
+              `${JSON.stringify(labRunRecord(run, stepRecords(), location.origin), null, 2)}\n`,
               "application/json",
             ),
         ),

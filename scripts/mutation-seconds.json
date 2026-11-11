@@ -47,7 +47,6 @@
   "app/lib/cv/pdf-html.mjs": 39,
   "app/lib/cv/validate.mjs": 309,
   "app/lib/cv/view.mjs": 587,
-  "app/lib/destructive.mjs": 5,
   "app/lib/dictionary-entries.mjs": 22,
   "app/lib/dictionary/compile.mjs": 130,
   "app/lib/editor/converge.mjs": 6,

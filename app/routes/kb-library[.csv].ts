@@ -1,4 +1,5 @@
 import { listPublishedRecordsOfProfile } from "~/db/procedures";
+import { csvResponse } from "@dustinedwards/site-runtime/csv";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
@@ -22,13 +23,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   const rows = baseRecords(base, items, url.searchParams, SITE_ORIGIN);
-  return new Response(libraryCsv(rows), {
+  return csvResponse(libraryCsv(rows), `dustin-edwards-${base.id}.csv`, {
     headers: {
-      "content-type": "text/csv; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,
       "cache-tag": PROCEDURES_CACHE_TAG,
       "x-robots-tag": "noindex",
-      "content-disposition": `attachment; filename="dustin-edwards-${base.id}.csv"`,
       link: `${canonicalLink(base.library)}, ${LICENSE_LINK}`,
     },
   });
