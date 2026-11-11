@@ -1,9 +1,9 @@
 // Every generated answer bills Workers AI and the route is public. Nothing reaches the model until
 // rate, cache and daily budget have passed, and budget sits AFTER the cache so a hit costs nothing.
 
+import { limitHit } from "~/lib/rate-limit.mjs";
 import { answerKey } from "@dustinedwards/site-runtime/ai-ask";
 import { pacedAllowance, secondsPerPacedUnit } from "@dustinedwards/site-runtime/ai-caps";
-import { limitHit } from "~/lib/rate-limit.mjs";
 
 /** Per IP per minute: more than a reading human asks, far less than a loop wants. */
 const ASK_RATE_LIMIT = 5;
@@ -34,12 +34,8 @@ export interface CachedAnswer {
   chunks: unknown[];
 }
 
-/**
- * site-runtime's answerKey: the prefix and the SHA-256 hex of the question lowercased, whitespace collapsed and trailing
- * punctuation dropped (normalizeQuestion), with no stemming or stopword dropping, so differently worded questions never
- * share an answer.
- */
-export async function questionKey(question: string): Promise<string> {
+/** The question normalized (no stemming or stopword dropping: differently worded questions must not share an answer), hashed. */
+export function questionKey(question: string): Promise<string> {
   return answerKey(question, ANSWER_CACHE_PREFIX);
 }
 

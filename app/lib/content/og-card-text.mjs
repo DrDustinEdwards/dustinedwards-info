@@ -57,10 +57,6 @@ export function cardDescription(description) {
   return clampWords(description, DESCRIPTION_MAX);
 }
 
-// site-runtime's share-card ladder is this one (72, 54, 42 up to 150), measured off these cards; it throws past the
-// last rung, so a title must go through cardTitle() first.
-export { titleFontSize } from "@dustinedwards/site-runtime/share-card";
-
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache
 // ignores a restyled PNG under an unchanged key forever.
 const OG_TEMPLATE_VERSION = 7;

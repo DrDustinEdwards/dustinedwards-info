@@ -18,7 +18,11 @@ import type { Route } from "./+types/procedure.version";
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
 import "~/styles/procedure.css";
-import "~/styles/run.css";
+import "capsomer/button.css";
+import "capsomer/offline-keep.css";
+import "capsomer/checklist-run.css";
+import "capsomer/field.css";
+import "capsomer/manual.css";
 
 /**
  * A procedure as it was when a version was published, at `<page>/v/<version>` (drizzle/0027_procedure_versions.sql).

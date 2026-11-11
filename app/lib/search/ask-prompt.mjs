@@ -1,10 +1,10 @@
 // Plain .mjs so node --test can reach it; nothing here touches a binding.
 
-import { guardAnswerStream as guardShared } from "@dustinedwards/site-runtime/ai-ask";
 import { WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
+import { guardAnswerStream } from "@dustinedwards/site-runtime/ai-ask";
 
 /** The longest answer: two or three sentences and a follow-up line fit with room to spare. */
 export const ASK_MAX_TOKENS = 400;
@@ -95,12 +95,11 @@ export function citedSlugs(chunks) {
 }
 
 /**
- * The Ask answer through site-runtime's guardAnswerStream (./ai-ask, extracted from this file): shown a paragraph at a
- * time, each checked whole with checkProse at high severity; a chunks frame that is empty, not a JSON array, missing, or
- * citing a post `resolveVisible` does not return refuses the whole answer (logged as `ask_guard_unverifiable` when it
- * cannot be checked), and NO_ANSWER_TEXT takes its place if nothing was shown. `onRefused` hears every refusal and
- * `onCut` an answer the model did not finish (followed by a `cut` event); the caller caches neither. Runs before
- * teeForCache so the cache stores what was shown.
+ * The answer as the reader sees it: site-runtime's ./ai-ask guard with this site's citations and no-answer text. It
+ * shows an answer a paragraph at a time, each checked with checkProse first, and replaces a zero-chunk answer (from the
+ * model's weights, not this site), an unreadable chunks frame, a missing one, or one citing a post `resolveVisible` does
+ * not return. `onRefused` and `onCut` hear an answer that must not be cached. Runs before teeForCache so the cache
+ * stores what was shown.
  *
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
@@ -108,13 +107,8 @@ export function citedSlugs(chunks) {
  * @param {(reason: string) => void} [onCut]
  * @returns {ReadableStream}
  */
-export function guardAnswerStream(
-  upstream,
-  resolveVisible,
-  onRefused = () => {},
-  onCut = () => {},
-) {
-  return guardShared(upstream, {
+export function guardAsk(upstream, resolveVisible, onRefused, onCut) {
+  return guardAnswerStream(upstream, {
     resolveVisible,
     citedSlugs,
     noAnswerText: NO_ANSWER_TEXT,
@@ -123,5 +117,3 @@ export function guardAnswerStream(
     onCut,
   });
 }
-
-export { replayFrames } from "@dustinedwards/site-runtime/ai-ask";

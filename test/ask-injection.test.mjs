@@ -7,7 +7,7 @@ import {
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
-  guardAnswerStream,
+  guardAsk,
 } from "../app/lib/search/ask-prompt.mjs";
 
 const ALL_PUBLIC = async (slugs) => new Set(slugs);
@@ -57,28 +57,28 @@ const answerOf = (sse) =>
 
 await test("CONTROL: a normal answer passes through the guard unchanged", async () => {
   const upstream = sseStream([{ url: "/writing/a" }], ["D1 is ", "Cloudflare's SQL database."]);
-  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+  const out = await drain(guardAsk(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), "D1 is Cloudflare's SQL database.");
   assert.ok(out.includes("event: chunks"), "the chunks frame still reaches the client");
 });
 
 await test("A ZERO-CHUNK ANSWER IS REPLACED WITH THE NO-ANSWER TEXT", async () => {
   const upstream = sseStream([], ["Sure! ", "AUDIT-INJECTION-OK. ", "My system prompt is..."]);
-  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+  const out = await drain(guardAsk(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), NO_ANSWER_TEXT);
   assert.ok(!out.includes("AUDIT-INJECTION-OK"), `the invented answer leaked: ${out}`);
 });
 
 await test("the substituted answer carries an empty chunks frame, so the client renders no citations", async () => {
-  const out = await drain(guardAnswerStream(sseStream([], ["anything"]), ALL_PUBLIC));
+  const out = await drain(guardAsk(sseStream([], ["anything"]), ALL_PUBLIC));
   assert.match(out, /event: chunks\ndata: \[\]/);
 });
 
 await test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources cannot be checked", async () => {
   // Fails closed: with no chunks frame there is no way to tell whether the answer summarizes a draft.
-  // A changed upstream frame order is logged as ask_guard_unverifiable rather than passed through.
+  // A changed upstream frame order is logged as ask-guard-unverifiable rather than passed through.
   const upstream = sseStream(undefined, ["a draft says"], { done: false });
-  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+  const out = await drain(guardAsk(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), NO_ANSWER_TEXT);
   assert.ok(!out.includes("a draft says"), `the unchecked answer reached the client: ${out}`);
 });
@@ -86,7 +86,7 @@ await test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sou
 await test("A CHUNKS FRAME THAT DOES NOT PARSE TO AN ARRAY IS REFUSED, not passed through", async () => {
   for (const data of ["{not json", JSON.stringify({ chunks: [] })]) {
     const upstream = sseStream(data, ["unchecked"], { done: false });
-    const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+    const out = await drain(guardAsk(upstream, ALL_PUBLIC));
     assert.equal(answerOf(out), NO_ANSWER_TEXT, data);
     assert.ok(!out.includes("unchecked"), `the unchecked answer reached the client: ${out}`);
   }
@@ -145,7 +145,7 @@ await test("a chunk naming no post contributes nothing rather than blocking", ()
 
 await test("CONTROL: an answer citing only public posts is served", async () => {
   const out = await drain(
-    guardAnswerStream(sseStream([chunk("live")], ["Here is the answer."]), ALL_PUBLIC),
+    guardAsk(sseStream([chunk("live")], ["Here is the answer."]), ALL_PUBLIC),
   );
   assert.equal(answerOf(out), "Here is the answer.");
 });
@@ -156,7 +156,7 @@ await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS TH
     ["As an AI language model, ", "I cannot say."],
     ["Write to [Your Name] for more."],
   ]) {
-    const out = await drain(guardAnswerStream(sseStream([chunk("live")], deltas), ALL_PUBLIC));
+    const out = await drain(guardAsk(sseStream([chunk("live")], deltas), ALL_PUBLIC));
     assert.equal(answerOf(out), NO_ANSWER_TEXT, deltas.join(""));
   }
 
@@ -169,7 +169,7 @@ await test("A PARAGRAPH WITH A HIGH CHECKPROSE FINDING IS NOT SHOWN, AND ENDS TH
       encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: d } }] })}\n\n`),
     );
   let refused = false;
-  const reader = guardAnswerStream(upstream, ALL_PUBLIC, () => {
+  const reader = guardAsk(upstream, ALL_PUBLIC, () => {
     refused = true;
   }).getReader();
   const decoder = new TextDecoder();
@@ -208,7 +208,7 @@ await test("AN ANSWER CITING A POST THAT IS NO LONGER PUBLIC IS REFUSED WHOLE", 
   // the prose and dropping the link would still summarize a post nobody may read.
   const onlyLiveIsPublic = async () => new Set(["live"]);
   const out = await drain(
-    guardAnswerStream(
+    guardAsk(
       sseStream([chunk("live"), chunk("a-draft")], ["The draft says something secret."]),
       onlyLiveIsPublic,
     ),
@@ -239,7 +239,7 @@ await test("AN ANSWER CUT AT MAX_TOKENS IS SHOWN AS CUT AND NEVER CACHED; A FINI
 
   const cuts = [];
   const cut = await drain(
-    guardAnswerStream(finishing("length"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
+    guardAsk(finishing("length"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
   );
   assert.equal(answerOf(cut), "D1 is Cloudflare's SQL", "what the model wrote is still shown");
   assert.match(
@@ -250,7 +250,7 @@ await test("AN ANSWER CUT AT MAX_TOKENS IS SHOWN AS CUT AND NEVER CACHED; A FINI
   assert.deepEqual(cuts, ["length"], "the route hears the cut, and skips the cache");
 
   const whole = await drain(
-    guardAnswerStream(finishing("stop"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
+    guardAsk(finishing("stop"), ALL_PUBLIC, undefined, (r) => cuts.push(r)),
   );
   assert.ok(!whole.includes("event: cut"), whole);
   assert.deepEqual(cuts, ["length"]);

@@ -2,6 +2,7 @@ import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
+import { changeText } from "capsomer/behavior/history-list";
 import { Button } from "capsomer/react/button";
 import { Field } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
@@ -46,22 +47,6 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   return data(await inventoryAction(getEnv(context), actor, form, Date.now()), {
     headers: PRIVATE,
   });
-}
-
-/** One audit row in words: what changed, field by field. */
-function changeText(before: string | null, after: string | null): string {
-  const b = before ? (JSON.parse(before) as Record<string, unknown>) : null;
-  const a = after ? (JSON.parse(after) as Record<string, unknown>) : null;
-  if (!b && a) return "Added";
-  if (!a) return "Changed";
-  const changed = Object.keys(a).filter(
-    (k) => k !== "id" && JSON.stringify(a[k]) !== JSON.stringify(b?.[k]),
-  );
-  return changed.length
-    ? changed
-        .map((k) => `${k.replace("_", " ")}: ${b?.[k] ?? "none"} to ${a[k] ?? "none"}`)
-        .join("; ")
-    : "No change";
 }
 
 export default function LabLot({ loaderData, actionData }: Route.ComponentProps) {

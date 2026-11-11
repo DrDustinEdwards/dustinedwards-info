@@ -9,7 +9,7 @@ import {
   askAvailable,
   askStream,
   citedSlugs,
-  guardAnswerStream,
+  guardAsk,
   replayCachedAnswer,
   teeForCache,
 } from "~/lib/search/ask.server";
@@ -143,7 +143,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     let refused = false;
     let cut = false;
     const { toReader, captured } = teeForCache(
-      guardAnswerStream(
+      guardAsk(
         upstream,
         (slugs) => publiclyVisibleSlugs(env, slugs),
         () => {
