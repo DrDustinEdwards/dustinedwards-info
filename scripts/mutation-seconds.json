@@ -58,7 +58,6 @@
   "app/lib/health/rows.mjs": 31,
   "app/lib/health/snapshot.mjs": 10,
   "app/lib/health/verdicts.mjs": 100,
-  "app/lib/https-redirect.mjs": 6,
   "app/lib/identity.mjs": 15,
   "app/lib/llms/validate.mjs": 80,
   "app/lib/long-date.mjs": 19,
