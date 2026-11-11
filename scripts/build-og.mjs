@@ -21,7 +21,8 @@ import {
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { formatDate } from "capsomer/behavior/time";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, renderContentPages } from "./build-content.mjs";
 import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
 import { markElement } from "./lib/mark.mjs";

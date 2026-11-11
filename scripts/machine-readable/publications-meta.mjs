@@ -1,4 +1,5 @@
-import { doiSlug, paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
+import { doiSlug } from "@drdustinedwards/site-helpers/scholar";
+import { paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import {
   buildCitationTags,
   REQUIRED_CITATION_TAGS,

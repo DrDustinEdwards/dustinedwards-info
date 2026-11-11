@@ -185,13 +185,11 @@
     // same module rather than restating its rules. No DOM: it takes a Request,
     // which the Node lib provides.
     "app/lib/theme.ts",
-    "app/lib/search/query.mjs",
-    // The color math. check:contrast computes with it, on the same principle as
-    // query.mjs: there is one rule for a ratio, not one per reader.
+    // The color math. check:contrast computes with it: there is one rule for a
+    // ratio, not one per reader.
     "app/lib/contrast.mjs",
-    // What an asset IS. The Worker imports it and build:assets imports it, on
-    // the same principle as query.mjs: there must never be a second answer to
-    // "what kind of thing is this file".
+    // What an asset IS. The Worker imports it and build:assets imports it: there must never
+    // be a second answer to "what kind of thing is this file".
     "app/lib/media/classify.mjs",
     // The site's images (site-runtime ./image defineImages). The pipeline writes
     // srcset from it and the Worker serves from it, so both projects must reach

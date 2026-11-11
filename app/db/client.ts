@@ -1,6 +1,6 @@
 // The connection and the predicates more than one table module composes.
 // Only `getDb` and `publiclyVisible` are re-exported from `~/db`.
-import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { and, eq, isNull, lte, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";

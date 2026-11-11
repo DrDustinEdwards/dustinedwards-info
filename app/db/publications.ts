@@ -5,7 +5,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 
 import type { Publication } from "~/lib/publications/types";
 import { sortPublications } from "~/lib/publications/record.mjs";
-import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 
 import { getDb } from "./client";
 import { publications } from "./schema";

@@ -91,7 +91,6 @@
   "app/lib/search/ask-twins.mjs": 65,
   "app/lib/search/follow-up.mjs": 67,
   "app/lib/search/records.mjs": 146,
-  "app/lib/search/sort.mjs": 5,
   "app/lib/search/visibility.mjs": 6,
   "app/lib/search/zero-result.mjs": 7,
   "app/lib/secrets.mjs": 5,

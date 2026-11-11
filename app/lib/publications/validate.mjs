@@ -9,7 +9,8 @@
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
 import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
-import { doiSlug, paperPdfPath } from "./paths.mjs";
+import { doiSlug } from "@drdustinedwards/site-helpers/scholar";
+import { paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
 
