@@ -39,7 +39,7 @@ import { isWorkerPreview } from "~/lib/worker-preview";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { maintenanceOn, maintenanceResponse } from "@dustinedwards/site-runtime/maintenance";
-import { withRequestLog } from "@dustinedwards/site-runtime/log";
+import { routeNamer, withRequestLog } from "@dustinedwards/site-runtime/log";
 import { countNotFound } from "@dustinedwards/site-runtime/not-found";
 import { d1SiteApiStore, tombstoned } from "@dustinedwards/site-api/store";
 import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
@@ -47,10 +47,23 @@ import { SITE_ORIGIN } from "~/lib/seo";
 
 export { AskBudget } from "./ask-budget";
 
-const requestHandler = createRequestHandler(
-  () => import("virtual:react-router/server-build"),
-  import.meta.env.MODE,
-);
+const serverBuild = () => import("virtual:react-router/server-build");
+const requestHandler = createRequestHandler(serverBuild, import.meta.env.MODE);
+
+// The route pattern each `request` log line names (`/blog/:slug`), from the React Router build's route table, made once
+// per isolate (site-runtime ./log's routeNamer). Requests the Worker answers itself (/api, /health, /mcp, /media) carry
+// the path alone. The build loads beside the request, so the first few lines in an isolate may go without a route.
+let nameRoute: ((request: Request) => string | undefined) | undefined;
+function routeName(request: Request): string | undefined {
+  if (!nameRoute)
+    void serverBuild().then(
+      (build) => (nameRoute ??= routeNamer(build.routes)),
+      () => undefined,
+    );
+  return /^\/(api|health|mcp|media)(\/|$)/.test(new URL(request.url).pathname)
+    ? undefined
+    : nameRoute?.(request);
+}
 
 // site-runtime's `cacheKey`: the path and the query without tracking parameters, plus the theme an HTML read is
 // rendered in. The platform cache is the only cache; do not add `caches.default`.
@@ -258,6 +271,7 @@ export default {
     {
       sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
       tokenPath: /\/preview\/[^/?#\s'"]+/g,
+      route: routeName,
     },
   ),
 } satisfies ExportedHandler<Env>;
