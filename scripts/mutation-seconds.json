@@ -89,7 +89,6 @@
   "app/lib/return-to.mjs": 6,
   "app/lib/roster/compile.mjs": 66,
   "app/lib/search/ask-keys.mjs": 9,
-  "app/lib/search/ask-pacing.mjs": 5,
   "app/lib/search/ask-prompt.mjs": 1107,
   "app/lib/search/ask-twins.mjs": 65,
   "app/lib/search/follow-up.mjs": 67,

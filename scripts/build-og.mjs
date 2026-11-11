@@ -10,11 +10,13 @@ import path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
 
+import { titleFontSize } from "@dustinedwards/site-runtime/share-card";
+
 import {
+  TITLE_SIZES,
   cardDescription,
   cardTitle,
   ogImageKey,
-  titleFontSize,
 } from "../app/lib/content/og-card-text.mjs";
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
@@ -210,7 +212,7 @@ function card(post) {
         {
           style: {
             display: "flex",
-            fontSize: titleFontSize(title),
+            fontSize: titleFontSize(title, TITLE_SIZES),
             fontWeight: 600,
             color: INK,
             lineHeight: 1.12,
