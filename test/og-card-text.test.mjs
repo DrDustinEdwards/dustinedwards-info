@@ -4,11 +4,9 @@ import assert from "node:assert/strict";
 import {
   DESCRIPTION_MAX,
   TITLE_MAX,
-  TITLE_SIZES,
   cardDescription,
   cardTitle,
   clampWords,
-  titleFontSize,
 } from "../app/lib/content/og-card-text.mjs";
 
 /**
@@ -23,50 +21,6 @@ function titleOfLength(n) {
     .trimEnd()
     .padEnd(n, "z");
 }
-
-await test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
-  for (let i = 0; i < TITLE_SIZES.length - 1; i += 1) {
-    const rung = TITLE_SIZES[i];
-    const next = TITLE_SIZES[i + 1];
-
-    assert.equal(
-      titleFontSize(titleOfLength(rung.maxChars)),
-      rung.fontSize,
-      `${rung.maxChars} characters must still take ${rung.fontSize}px`,
-    );
-    assert.equal(
-      titleFontSize(titleOfLength(rung.maxChars + 1)),
-      next.fontSize,
-      `${rung.maxChars + 1} characters must drop to ${next.fontSize}px`,
-    );
-    assert.ok(
-      next.fontSize < rung.fontSize,
-      `rung ${i + 1} must be SMALLER than rung ${i}, not ${next.fontSize} against ${rung.fontSize}`,
-    );
-  }
-});
-
-await test("a longer title never takes larger type, and a drawn title always has a size", () => {
-  let previous = Infinity;
-  for (let n = 0; n <= TITLE_MAX + 100; n += 1) {
-    const size = titleFontSize(cardTitle(titleOfLength(n)));
-    assert.ok(size <= previous, `${n} characters took ${size}px after ${previous}px`);
-    previous = size;
-  }
-});
-
-await test("the shortest titles take the largest size", () => {
-  assert.equal(titleFontSize("Hi"), TITLE_SIZES[0].fontSize);
-  assert.equal(titleFontSize(""), TITLE_SIZES[0].fontSize);
-});
-
-await test("PAST THE LADDER IT THROWS, and does not substitute a size", () => {
-  assert.throws(
-    () => titleFontSize(titleOfLength(TITLE_MAX + 1)),
-    /past the last rung/,
-    "an over-long title must be an error, never a quiet fallback",
-  );
-});
 
 await test("a title inside the cap is returned untouched", () => {
   const title = "Where should a blog store its words?";

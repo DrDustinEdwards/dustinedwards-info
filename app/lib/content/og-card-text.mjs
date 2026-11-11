@@ -8,17 +8,6 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
 
 export const TITLE_MAX = 150;
 
-/**
- * Measured off rendered 1200x630 cards against the layout in build-og.mjs.
- *
- * @type {ReadonlyArray<{ maxChars: number, fontSize: number }>}
- */
-export const TITLE_SIZES = [
-  { maxChars: 72, fontSize: 72 },
-  { maxChars: 110, fontSize: 54 },
-  { maxChars: TITLE_MAX, fontSize: 42 },
-];
-
 // Two lines of description, enforced here because satori's WebkitLineClamp does nothing.
 export const DESCRIPTION_MAX = 132;
 
@@ -55,23 +44,6 @@ export function cardTitle(title) {
  */
 export function cardDescription(description) {
   return clampWords(description, DESCRIPTION_MAX);
-}
-
-/**
- * Throws, never falls back: a title past the last rung means TITLE_MAX and the ladder disagree.
- *
- * @param {string} title the title AS DRAWN, i.e. already through `cardTitle`
- * @returns {number}
- */
-export function titleFontSize(title) {
-  const length = (title ?? "").length;
-  for (const rung of TITLE_SIZES) {
-    if (length <= rung.maxChars) return rung.fontSize;
-  }
-  throw new Error(
-    `og-card-text: a ${length}-character title is past the last rung of the ` +
-      `ladder (${TITLE_MAX}). Titles must go through cardTitle() first.`,
-  );
 }
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache

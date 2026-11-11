@@ -1,14 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { guardAnswerStream as guardStream } from "@dustinedwards/site-runtime/ai-ask";
+
 import {
+  ASK_GUARD,
   NO_ANSWER_TEXT,
   SYSTEM_PROMPT,
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
-  guardAnswerStream,
 } from "../app/lib/search/ask-prompt.mjs";
+
+/** The shared guard with this site's settings, called as the site calls it. */
+const guardAnswerStream = (upstream, resolveVisible, onRefused, onCut) =>
+  guardStream(upstream, { ...ASK_GUARD, resolveVisible, onRefused, onCut });
 
 const ALL_PUBLIC = async (slugs) => new Set(slugs);
 

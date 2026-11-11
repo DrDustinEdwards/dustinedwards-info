@@ -1,9 +1,9 @@
 // Every generated answer bills Workers AI and the route is public. Nothing reaches the model until
 // rate, cache and daily budget have passed, and budget sits AFTER the cache so a hit costs nothing.
 
-import { toHex } from "@dustinedwards/site-runtime/encoding";
+import { answerKey } from "@dustinedwards/site-runtime/ai-ask";
+import { pacedAllowance, secondsPerPacedUnit } from "@dustinedwards/site-runtime/ai-caps";
 import { limitHit } from "~/lib/rate-limit.mjs";
-import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
 
 /** Per IP per minute: more than a reading human asks, far less than a loop wants. */
 const ASK_RATE_LIMIT = 5;
@@ -35,18 +35,8 @@ export interface CachedAnswer {
 }
 
 /** No stemming or stopword dropping: differently worded questions must not share an answer. */
-function normalizeQuestion(question: string): string {
-  return question
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[?!.,;:]+$/g, "")
-    .trim();
-}
-
-export async function questionKey(question: string): Promise<string> {
-  const normalized = normalizeQuestion(question);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
-  return `${ANSWER_CACHE_PREFIX}${toHex(digest)}`;
+export function questionKey(question: string): Promise<string> {
+  return answerKey(question, ANSWER_CACHE_PREFIX);
 }
 
 interface GuardVerdict {

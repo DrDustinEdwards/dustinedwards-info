@@ -9,7 +9,7 @@ import { SiteHeader } from "~/components/site-header";
 import { listPublishedPublications } from "~/db/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
-import { coinsTitle } from "~/lib/publications/coins.mjs";
+import { coinsOf } from "~/lib/publications/exports.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import {
   PUBLICATIONS,
@@ -170,7 +170,7 @@ function PaperCell({ p, cited }: { p: Publication; cited?: CitationEntry }) {
           ) : null}
         </p>
         {/* COinS on the index only: Highwire `citation_*` tags describe the one document they sit in. */}
-        <span className="Z3988" title={coinsTitle(p)} />
+        <span className="Z3988" title={coinsOf(p)} />
         {p.abstract ? (
           <details className="paper-abstract-peek">
             <summary>Abstract</summary>

@@ -10,7 +10,7 @@ import {
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
 import { ASK_UPLOAD_CONCURRENCY, mapPool, uploadTwins, withRetry } from "./ask-twins.mjs";
-import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { answerDelta, replayFrames, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
@@ -25,11 +25,9 @@ import {
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
-  guardAnswerStream,
-  replayFrames,
 } from "./ask-prompt.mjs";
 
-export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
+export { answerLeaksPrompt, citedSlugs };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
