@@ -71,10 +71,7 @@ stays with you.</p>`,
     // Every capture is a KV write anyone can trigger, so it is metered per address like /register. Its health answer
     // writes nothing and stays open.
     if (url.pathname !== "/probe/health") {
-      const limit = await checkRateLimit(
-        env.MCP_RATE_LIMIT,
-        `probe:${clientIp(request)}`,
-      );
+      const limit = await checkRateLimit(env.MCP_RATE_LIMIT, `probe:${clientIp(request)}`);
       if (!limit.allowed)
         return refuse("Rate limited.", 429, { "retry-after": String(limit.retryAfter) });
     }
