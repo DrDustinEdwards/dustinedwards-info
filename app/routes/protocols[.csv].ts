@@ -1,4 +1,5 @@
 import { listPublishedLibraryRecords } from "~/db/procedures";
+import { csvResponse } from "@dustinedwards/site-runtime/csv";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
@@ -17,13 +18,11 @@ import type { Route } from "./+types/protocols[.csv]";
 export async function loader({ request, context }: Route.LoaderArgs) {
   const items = libraryItems(await listPublishedLibraryRecords(getEnv(context)));
   const rows = libraryRecords(items, new URL(request.url).searchParams, SITE_ORIGIN);
-  return new Response(libraryCsv(rows), {
+  return csvResponse(libraryCsv(rows), "dustin-edwards-protocols.csv", {
     headers: {
-      "content-type": "text/csv; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,
       "cache-tag": PROCEDURES_CACHE_TAG,
       "x-robots-tag": "noindex",
-      "content-disposition": 'attachment; filename="dustin-edwards-protocols.csv"',
       // A CSV has no place for a comment that every reader would ignore, so the terms travel in the header.
       link: `${canonicalLink(LIBRARY_PATH)}, ${LICENSE_LINK}`,
     },

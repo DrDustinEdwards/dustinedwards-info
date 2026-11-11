@@ -1,7 +1,6 @@
-import { data } from "react-router";
-
 import { ProcedureSheet } from "~/components/procedure";
 import { getProcedureByPath } from "~/db/procedures";
+import { draftGate } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { sheetAddress } from "~/kb/procedures/cite.mjs";
@@ -26,10 +25,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/sheet\/?$/, "");
-  const row = await getProcedureByPath(env, path);
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  const { row } = await draftGate(await getProcedureByPath(env, path), () =>
+    isAdminViewer(env, request),
+  );
   const { count, factor } = readScale(row.record, url);
   return { record: row.record, count, factor };
 }

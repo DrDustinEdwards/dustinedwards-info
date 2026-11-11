@@ -97,6 +97,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Before any stylesheet: data-theme means nothing to the browser until the CSS is parsed. */}
         <meta name="color-scheme" content={colorSchemeMeta(data?.theme ?? "system")} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="text-scale" content="scale" />
         {/* Literal hexes, the palette's ground: browser chrome does not resolve a custom property. */}
         <ThemeColor choice={theme ?? null} ground={THEME_GROUND} />
         <Meta />

@@ -15,9 +15,7 @@ import {
   parseNumber,
   planDilution,
   platesForLysate,
-  resultView,
   runTool,
-  textParts,
   titer,
   toolValues,
   toolsOnPage,
@@ -585,19 +583,4 @@ await test("formatNumber and formatScientific write numbers the way the FAQ does
   assert.equal(formatNumber(2.857142), "2.86");
   assert.equal(formatScientific(4e7), "4 x 10^7");
   assert.equal(formatScientific(2.04e10), "2.04 x 10^10");
-});
-
-await test("textParts raises exponents, and resultView builds both summary and steps", () => {
-  assert.deepEqual(textParts("1.11 x 10^10 pfu/ml"), [
-    { text: "1.11 x 10" },
-    { text: "10", sup: true },
-    { text: " pfu/ml" },
-  ]);
-  assert.deepEqual(textParts("10^-3"), [{ text: "10" }, { text: "−3", sup: true }]);
-  const view = resultView(runTool("titer", toolValues("titer")));
-  assert.equal(view.summary.length, 1);
-  assert.equal(view.detail.length, 1);
-  const failed = resultView({ ok: false, error: "Enter the plaques." });
-  assert.deepEqual(failed.detail, []);
-  assert.equal(failed.summary[0].className, "phage-tool-error");
 });

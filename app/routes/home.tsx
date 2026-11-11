@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import type { ReactNode } from "react";
 import { Link, data } from "react-router";
 
@@ -5,7 +6,6 @@ import { ShellFooter } from "~/components/shell-footer";
 import { HomeIntro } from "~/components/home-intro";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
 import { longDateUTC } from "~/lib/long-date.mjs";
@@ -407,11 +407,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <HomePodcast episode={podcast} />
 
         {structuredData.map((data, i) => (
-          <script
-            key={i}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
-          />
+          <JsonLd key={i} data={data} />
         ))}
       </main>
       <ShellFooter />

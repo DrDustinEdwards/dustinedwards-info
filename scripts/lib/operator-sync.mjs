@@ -7,7 +7,7 @@ import {
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
 } from "../../app/lib/health/ask-converge.mjs";
-import { healthChecks } from "../../app/lib/health/rows.mjs";
+import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 

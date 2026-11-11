@@ -49,12 +49,17 @@ export function siteJobs(env: Env, ctx: ExecutionContext, at: Date): SiteJob[] {
     },
     // The 404 counts keep 90 days, as the privacy page says.
     { ...cronJob("prune-404"), due: isNightly, run: () => pruneNotFound(env.DB, { days: 90 }) },
-    // The colophon's health verdict, every fifteen minutes (app/lib/health/snapshot-store.server.ts).
+    // The colophon's health verdict, every fifteen minutes (site-runtime ./health-snapshot).
     {
       ...cronJob("health-snapshot"),
       due: (t) => t.getUTCMinutes() % HEALTH_SNAPSHOT_EVERY_MINUTES === 0,
       run: async () =>
-        (await import("~/lib/health/snapshot-store.server")).storeHealthSnapshot(env, at),
+        (await import("@dustinedwards/site-runtime/health-snapshot")).storeHealthSnapshot({
+          kv: env.APP_KV,
+          answer: async () =>
+            (await import("~/lib/health/response.server")).siteHealthResponse(env),
+          now: at,
+        }),
     },
     // Zero-result queries past their retention cutoff, the cutoff the admin Tools page names.
     {

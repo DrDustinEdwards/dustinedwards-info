@@ -11,6 +11,7 @@ import askCss from "~/styles/ask.css?url";
 import listboxCss from "capsomer/listbox.css?url";
 import commandMenuCss from "capsomer/command-menu.css?url";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
+import { markup } from "capsomer/behavior/trusted-html";
 
 const NAV_ID = "site-nav";
 
@@ -140,7 +141,7 @@ export function SiteHeader() {
           <div
             className="cap-site-header-search"
             data-cap-part="search"
-            dangerouslySetInnerHTML={{ __html: SEARCH_INNER }}
+            dangerouslySetInnerHTML={markup(SEARCH_INNER)}
           />
           {/* Capsomer's no-script theme form: each button posts to /theme, which sets the cookie the server reads,
             and with script the theme module switches at once. The admin plane's shell reads the same choice

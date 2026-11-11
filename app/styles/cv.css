@@ -92,8 +92,8 @@
 
 /* The counts as the manual's form: ruled boxes sharing their rules. */
 /* Each box is a count with its inline sparkline (Capsomer's inline primitive: role="img", named by its
-   numbers, so no frame) and the numbers behind "Show data" in .cap-data, laid out as the manual's form box
-   rather than .cap-data's grid. */
+   numbers, so no frame), laid out as the manual's form box rather than .cap-data's grid. The numbers
+   behind it are Enarratio's visually hidden table. */
 .cv-stat {
   display: block;
   min-width: 0;
@@ -126,8 +126,7 @@
   line-height: 1;
 }
 
-/* The sparkline and its "Show data" join the count's grid: the line beside the figure, the table under
-   the detail line. */
+/* The sparkline joins the count's grid: the line beside the figure. Its table is visually hidden. */
 .cv-spark {
   display: contents;
 }
@@ -142,13 +141,6 @@
   display: block;
   width: 100%;
   height: auto;
-}
-
-.cv-spark > .enarratio-data {
-  grid-column: 1 / -1;
-  order: 1;
-  margin-block-start: var(--space-2);
-  font-size: var(--t-small-size);
 }
 
 .cv-stat-sub {

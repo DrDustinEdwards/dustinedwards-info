@@ -14,7 +14,7 @@
 // expired zero-result queries at 04:00 UTC (one DELETE, one minute); check-publications reads ORCID and Crossref at
 // 06:00 UTC and mails each new DOI once (two outside APIs, so five minutes).
 
-/** How often the colophon's health verdict is taken; snapshot.mjs derives its stale bound from it. */
+/** How often the colophon's health verdict is taken; site-runtime ./health-snapshot derives its stale bound from it. */
 export const HEALTH_SNAPSHOT_EVERY_MINUTES = 15;
 
 export const CRON_JOBS = Object.freeze([

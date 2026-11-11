@@ -1,11 +1,12 @@
 import { Picture } from "capsomer/react/picture";
+import { Qr } from "capsomer/react/qr";
+import { encode } from "uqr";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/kb/procedures/proof.mjs";
 import type { workflowContext } from "~/kb/procedures/library.mjs";
 import { bibtex, citationText, citeFacts, versionPath } from "~/kb/procedures/cite.mjs";
-import { sheetQr } from "~/kb/procedures/qr.mjs";
 import { fixedSectionIds, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import type { Lineage } from "~/kb/procedures/lineage.mjs";
 import { keyResources } from "~/kb/procedures/key-resources.mjs";
@@ -27,6 +28,8 @@ import {
 } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
 import { RENDERED } from "~/lib/content/render-version";
+
+import "capsomer/qr.css";
 
 /**
  * Every procedure page is drawn by these components from its D1 record (docs/PROCEDURES.md): the page,
@@ -558,14 +561,13 @@ export function ProcedureSheet({
         <p>
           {stamp}. {address}
         </p>
-        <figure className="procedure-sheet-qr">
-          <div
-            role="img"
-            aria-label={`QR code for ${address}`}
-            dangerouslySetInnerHTML={html(sheetQr(address))}
-          />
-          <figcaption>Scan to open this version online.</figcaption>
-        </figure>
+        {/* Medium error correction survives a smudged or folded sheet; the address is printed above. */}
+        <Qr
+          url={address}
+          modules={encode(address, { ecc: "M", border: 0 }).data}
+          caption="Scan to open this version online."
+          showUrl={false}
+        />
       </header>
       <ProcedureFacts record={record} />
       <h2>{materialsHeading(record)}</h2>
