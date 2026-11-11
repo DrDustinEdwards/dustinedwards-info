@@ -4,10 +4,10 @@ import { Empty } from "capsomer/react/empty";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
 import { Status } from "capsomer/react/status";
-import { TabsNav } from "capsomer/react/tabs";
+import { TabLink, TabsNav } from "capsomer/react/tabs";
 
 import { PageHead } from "capsomer/react/page-head";
-import { TabLink } from "~/components/admin/tab-link";
+import { tabLink } from "~/components/admin/shell-parts";
 import { listProceduresForAdmin } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import {
@@ -102,11 +102,11 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
         }
       />
 
-      <TabsNav aria-label="Knowledge bases" variant="line">
+      <TabsNav aria-label="Knowledge bases" variant="line" renderLink={tabLink}>
         {tabs.map((t) => (
           <TabLink
             key={t.id}
-            to={tabHref(t.id, q)}
+            href={tabHref(t.id, q)}
             current={t.id === tab}
             count={t.count}
             aria-label={`${t.label}, ${plural(t.count, t.id === NEEDS_INFO ? "gap" : "entry", t.id === NEEDS_INFO ? "gaps" : "entries")}`}

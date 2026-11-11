@@ -9,7 +9,7 @@ import { Pill, Status } from "capsomer/react/status";
 import { Row, RowList } from "capsomer/react/row-list";
 
 import { PageHead } from "capsomer/react/page-head";
-import { ConfirmDialog } from "~/components/admin/confirm-dialog";
+import { RouterConfirmModal } from "capsomer/react/router";
 import {
   askSyncConfirmCount,
   regeneratePosts,
@@ -136,21 +136,21 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       {message && failed ? <Alert tone="crit">{message}</Alert> : null}
 
       {confirmSyncAsk !== undefined ? (
-        <ConfirmDialog
+        <RouterConfirmModal
           title="Rebuild the search answer index?"
-          body={
+          lead={
             <p>
               Every record not in this run is removed from the index, and saved answers are dropped.
               The site currently has <strong>{confirmSyncAsk}</strong> post(s), so that is what the
               index will hold afterwards.
             </p>
           }
-          requireTyped="1"
-          confirmLabel="Rebuild the index"
+          typeToConfirm="1"
+          action_label="Rebuild the index"
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="sync-ask" />
-        </ConfirmDialog>
+        </RouterConfirmModal>
       ) : null}
 
       <Panel
@@ -206,21 +206,21 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       </Panel>
 
       {confirmRebuild !== undefined ? (
-        <ConfirmDialog
+        <RouterConfirmModal
           title="Rebuild the media index?"
-          body={
+          lead={
             <p>
               Every row is derived again from R2 and the repository, and a row whose file is gone is
               removed. Alt text, captions and focal points are kept. The index holds{" "}
               <strong>{confirmRebuild}</strong> row(s) now.
             </p>
           }
-          requireTyped="1"
-          confirmLabel="Rebuild the media index"
+          typeToConfirm="1"
+          action_label="Rebuild the media index"
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="rebuild" />
-        </ConfirmDialog>
+        </RouterConfirmModal>
       ) : null}
 
       <Panel
