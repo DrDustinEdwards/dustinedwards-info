@@ -1,34 +1,36 @@
 import { useRef, useState } from "react";
 
+import { focusTarget } from "capsomer/behavior/error-summary";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
+import { RepeaterField } from "capsomer/react/repeater-field";
 
 import { StepText } from "~/components/admin/kb-step-text";
 import type { FormBlock, FormBody, FormStep } from "~/kb/form.mjs";
 import { stepAnchor } from "~/kb/gap-labels.mjs";
 import type { Choice, KbForm } from "~/kb/form.server";
 import { plural } from "~/components/admin/kb-file-editor";
-import { DURATIONS, ReferencePicker, UNITS } from "~/components/admin/kb-form-fields";
+import { DURATIONS, ReferencePicker, UNITS, isGap } from "~/components/admin/kb-form-fields";
 
 /* The form editor's method (kb-form.tsx): the step cards in their sections, and the body editor that orders them. */
 
 /**
- * Scrolls to where a gap is filled in and puts the cursor there: the input itself, or in a step card the note that still
- * says MISSING. Without script the link is a plain #anchor.
+ * Scrolls to where a gap is filled in and puts the cursor there (Capsomer's focusTarget): the input itself, or in a step
+ * card or a list the control marked invalid, the note or cell that still says MISSING. Without script the link is a
+ * plain #anchor.
  */
 export function goTo(e: React.MouseEvent | null, anchor: string) {
   const target = document.getElementById(anchor);
   if (!target) return;
   e?.preventDefault();
   target.scrollIntoView({ block: "center" });
-  const inputs = [...target.querySelectorAll<HTMLInputElement>("input")];
-  const field = target.matches("input, select, textarea")
-    ? target
-    : (inputs.find((i) => i.value.startsWith("MISSING:")) ??
-      target.querySelector<HTMLElement>("input, select, textarea"));
-  (field ?? target).focus({ preventScroll: true });
+  focusTarget(target).focus({ preventScroll: true });
   if (e) history.replaceState(null, "", `#${anchor}`);
 }
+
+type Flag = { kind: string; text: string; indent: string };
+/** A note under a step, with its place among the step's lines (-1 for one just added). */
+type FlagRow = { flag: Flag; at: number };
 
 /** The things a step card can insert, from the protocol's own lists and the lab registry. */
 export type Inserts = {
@@ -101,7 +103,9 @@ function StepCard({
       );
       if (words) add(words);
     };
-  const flagLines = step.lines.flatMap((line, i) => ("kind" in line ? [{ line, i }] : []));
+  const flagRows = step.lines.flatMap((line, at): FlagRow[] =>
+    "kind" in line ? [{ flag: line as Flag, at }] : [],
+  );
   const rawLines = step.lines
     .filter((line) => "raw" in line)
     .map((line) => (line as { raw: string }).raw);
@@ -295,92 +299,76 @@ function StepCard({
         </div>
       </details>
 
-      {flagLines.map(({ line, i }) => {
-        const flag = line as { kind: string; text: string; indent: string };
-        return (
-          <div className="kb-flag" key={i} data-flag={flag.kind}>
-            <select
-              className="cap-input"
-              aria-label={`${label}: note kind`}
-              value={flag.kind}
-              onChange={(e) => {
-                // A note that names something starts empty, to be picked; words carry over between the other kinds.
-                const named = (k: string) => k === "TROUBLESHOOTING" || k === "CALC";
-                const text = named(e.target.value) || named(flag.kind) ? "" : flag.text;
-                onChange({
-                  ...step,
-                  lines: step.lines.map((l, j) =>
-                    j === i ? { ...flag, kind: e.target.value, text } : l,
-                  ),
-                });
-              }}
-            >
-              {flags.map((f) => (
-                <option key={f} value={f}>
-                  {f.charAt(0) + f.slice(1).toLowerCase()}
-                </option>
-              ))}
-            </select>
-            {flag.kind === "TROUBLESHOOTING" || flag.kind === "CALC" ? (
-              <ReferencePicker
-                label={`${label}: ${flag.kind === "CALC" ? "calculator" : "troubleshooting row"}`}
-                choices={
-                  flag.kind === "CALC"
-                    ? inserts.references.calculators
-                    : inserts.references.troubleshooting
-                }
-                empty={
-                  flag.kind === "CALC"
-                    ? "Choose a calculator"
-                    : "Choose a row of the troubleshooting table"
-                }
-                text={flag.text}
-                onChange={(next) =>
-                  onChange({
-                    ...step,
-                    lines: step.lines.map((l, j) => (j === i ? { ...flag, text: next } : l)),
-                  })
-                }
-              />
-            ) : (
-              <input
-                className="cap-input"
-                aria-label={`${label}: ${flag.kind.toLowerCase()} note`}
-                value={flag.text}
-                onChange={(e) =>
-                  onChange({
-                    ...step,
-                    lines: step.lines.map((l, j) =>
-                      j === i ? { ...flag, text: e.target.value } : l,
-                    ),
-                  })
-                }
-              />
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="quiet"
-              onClick={() => onChange({ ...step, lines: step.lines.filter((_, j) => j !== i) })}
-              aria-label={`Remove this ${flag.kind.toLowerCase()} note`}
-            >
-              Remove
-            </Button>
-          </div>
-        );
-      })}
-      <Button
-        type="button"
-        size="sm"
-        onClick={() =>
+      <RepeaterField<FlagRow>
+        legend="Notes"
+        rows={flagRows}
+        onChange={(next) => {
+          // The other lines (commands, wrapped words) stay where they were; a new note goes last.
+          const kept = new Set(next.map((r) => r.at));
           onChange({
             ...step,
-            lines: [...step.lines, { kind: "CRITICAL", text: "", indent: "   " }],
-          })
-        }
+            lines: [
+              ...step.lines.filter((l, j) => !("kind" in l) || kept.has(j)),
+              ...next.filter((r) => r.at < 0).map((r) => r.flag),
+            ],
+          });
+        }}
+        newRow={() => ({ flag: { kind: "CRITICAL", text: "", indent: "   " }, at: -1 })}
+        rowLabel={(i) => `${label} note ${i + 1}`}
+        addLabel="Add a note"
       >
-        Add a note
-      </Button>
+        {({ flag, at }) => {
+          const setFlag = (next: Flag) =>
+            onChange({ ...step, lines: step.lines.map((l, j) => (j === at ? next : l)) });
+          return (
+            <>
+              <select
+                className="cap-input kb-flag-kind"
+                aria-label={`${label}: note kind`}
+                value={flag.kind}
+                onChange={(e) => {
+                  // A note that names something starts empty, to be picked; words carry over between the other kinds.
+                  const named = (k: string) => k === "TROUBLESHOOTING" || k === "CALC";
+                  const text = named(e.target.value) || named(flag.kind) ? "" : flag.text;
+                  setFlag({ ...flag, kind: e.target.value, text });
+                }}
+              >
+                {flags.map((f) => (
+                  <option key={f} value={f}>
+                    {f.charAt(0) + f.slice(1).toLowerCase()}
+                  </option>
+                ))}
+              </select>
+              {flag.kind === "TROUBLESHOOTING" || flag.kind === "CALC" ? (
+                <ReferencePicker
+                  label={`${label}: ${flag.kind === "CALC" ? "calculator" : "troubleshooting row"}`}
+                  choices={
+                    flag.kind === "CALC"
+                      ? inserts.references.calculators
+                      : inserts.references.troubleshooting
+                  }
+                  empty={
+                    flag.kind === "CALC"
+                      ? "Choose a calculator"
+                      : "Choose a row of the troubleshooting table"
+                  }
+                  text={flag.text}
+                  onChange={(next) => setFlag({ ...flag, text: next })}
+                />
+              ) : (
+                // A note that still says MISSING is marked invalid, so a Needs info link to its step lands on it.
+                <input
+                  className="cap-input"
+                  aria-label={`${label}: ${flag.kind.toLowerCase()} note`}
+                  aria-invalid={isGap(flag.text) || undefined}
+                  value={flag.text}
+                  onChange={(e) => setFlag({ ...flag, text: e.target.value })}
+                />
+              )}
+            </>
+          );
+        }}
+      </RepeaterField>
       {rawLines.length > 0 ? (
         <details className="kb-raw-lines">
           <summary>

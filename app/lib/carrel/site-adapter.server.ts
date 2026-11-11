@@ -27,7 +27,8 @@ import { posts } from "~/db/schema";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
-import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
+import { postPath, SLUG_MAX_LENGTH } from "~/lib/content/slug.mjs";
 import { cloudflareContext, cspNonceContext, postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
@@ -396,7 +397,7 @@ export function carrelSiteAdapter(options: {
     async rename(id, input) {
       const file = await current(id, input.expectedVersion);
       const to = input.newSlug;
-      if (!SLUG_PATTERN.test(to) || to.length > SLUG_MAX_LENGTH) {
+      if (!isSlug(to, { max: SLUG_MAX_LENGTH })) {
         throw new RefusedError(
           `"${to}" is not a post slug: lower case letters and digits joined by single hyphens.`,
         );

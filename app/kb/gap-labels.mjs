@@ -2,6 +2,8 @@
 // "Step 4: rotor", "Biosafety level", never the path the validator records it under. The words below the top-level field
 // come from the compile (validate.mjs, `where`), so the admin's list and the editor say the same thing.
 
+import { specId } from "capsomer/behavior/schema-form";
+
 import { fieldLabel, keyWords } from "./form-fields.mjs";
 
 /** What a step flag's gap is missing, in words. */
@@ -9,8 +11,11 @@ const STEP_WORDS = /** @type {Record<string, string>} */ ({ spin: "rotor" });
 
 const STEP_GAP = /^step (\d+) \(line \d+\)\.(\w+)$/;
 
+/** The prefix of the ids the form's fields take (Capsomer's specId), so a Needs info link lands on its input. */
+export const FIELD_PREFIX = "kb-field";
+
 /** An input's id from a field key, the id the form gives the field's input. @param {string} key */
-export const fieldAnchor = (key) => `kb-field-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+export const fieldAnchor = (key) => specId(key, FIELD_PREFIX);
 
 /** A cell's id in a list the form edits as rows (materials): the list, the row's name, the column. */
 export const cellAnchor = (

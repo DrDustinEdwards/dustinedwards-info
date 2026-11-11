@@ -6,6 +6,8 @@
 // (is this id or DOI taken) arrive as `host` and `others`, so CI reads a clone and the Worker asks GitHub
 // and D1 without this module knowing which.
 
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
+
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
 import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
@@ -60,7 +62,6 @@ const FRONT_MATTER_FIELDS = new Set([
   "csl",
 ]);
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const PMC_URL = /^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/;
 const DATE_PATTERN = /^\d{4}(-\d{2}){0,2}$/;
@@ -128,7 +129,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   }
   const submitted = status === "submitted";
 
-  if (!SLUG_PATTERN.test(slug)) {
+  if (!isSlug(slug)) {
     bad("slug", `the file name "${slug}" is not a lowercase kebab-case slug`);
   } else if (!contentIdFits(PUBLICATION_KIND, slug)) {
     bad(
@@ -154,7 +155,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
       );
   } else if (!isString(doi) || !DOI_PATTERN.test(doi)) {
     bad("doi", `${JSON.stringify(doi)} is not a DOI name (10.<registrant>/<suffix>)`);
-  } else if (SLUG_PATTERN.test(slug) && doiSlug(doi) !== slug) {
+  } else if (isSlug(slug) && doiSlug(doi) !== slug) {
     bad(
       "doi",
       `its page slug would be "${doiSlug(doi)}", but the file is named "${slug}". The file name is the DOI's slug and never changes after Google Scholar has indexed it`,
@@ -304,7 +305,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
   const hasPdfPath = data.pdfPath !== undefined && data.pdfPath !== null;
   if (access === "self-hosted") {
     if (submitted) bad("access", "a submitted manuscript has no PDF on this site; use external");
-    const derived = SLUG_PATTERN.test(slug) ? paperPdfPath(slug) : null;
+    const derived = isSlug(slug) ? paperPdfPath(slug) : null;
     if (!hasPdfPath) {
       bad("pdfPath", `is required for a self-hosted paper (${derived ?? "the derived path"})`);
     } else if (derived && data.pdfPath !== derived) {

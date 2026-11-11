@@ -12,8 +12,12 @@ import {
 } from "./procedures/taxonomy.mjs";
 
 /**
- * @typedef {"text" | "textarea" | "lines" | "date" | "number" | "checkbox" | "select" | "multi" | "choice" | "materials" | "equipment" | "primers" | "strains" | "readonly" | "yaml"} FieldKind
- * @typedef {{ key: string, label: string, kind: FieldKind, help?: string, options?: Array<{ value: string, label: string }> }} FieldSpec
+ * Capsomer's field spec (schema-form) with the kinds this form uses: Capsomer's own, then the Knowledge Base's, which
+ * the editor draws itself (kb-form-fields.tsx).
+ *
+ * @typedef {Extract<import("capsomer/behavior/schema-form").FieldKind, "text" | "textarea" | "lines" | "date" | "number" | "checkbox" | "select" | "multi" | "choice" | "readonly">} SharedKind
+ * @typedef {SharedKind | "materials" | "equipment" | "primers" | "strains" | "yaml"} FieldKind
+ * @typedef {Omit<import("capsomer/behavior/schema-form").FieldSpec, "kind"> & { kind: FieldKind }} FieldSpec
  */
 
 /** A key the form has no label for, in words: "published_doi" is "Published DOI". @param {string} key */
@@ -79,6 +83,7 @@ const PROTOCOL = [
     key: "start_here",
     label: "Start-here position",
     kind: "number",
+    min: 0,
     help: "Its place in the library's Start here list; leave empty for none.",
   },
   { key: "host_strain", label: "Host strains", kind: "strains" },
@@ -97,7 +102,7 @@ const PROTOCOL = [
 
 /** @type {FieldSpec[]} */
 const RECIPE = [
-  { key: "servings", label: "Servings", kind: "number" },
+  { key: "servings", label: "Servings", kind: "number", min: 0 },
   { key: "prep_time", label: "Prep time", kind: "text" },
   { key: "cook_time", label: "Cook time", kind: "text" },
   { key: "cuisine", label: "Cuisine", kind: "text" },

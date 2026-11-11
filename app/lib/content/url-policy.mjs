@@ -1,7 +1,7 @@
 // The site's link rules on top of Prelum's URL policy (@drdustinedwards/site-helpers/render/url), which
 // stays the one protocol check: these compose with isAllowedUrl, never replace it.
 
-import { SLUG_PATTERN } from "./slug.mjs";
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
 
 const INTERNAL_LINK_PREFIX = "/writing/";
 
@@ -32,5 +32,5 @@ export function isFurtherReadingUrl(value) {
 export function internalLinkSlug(value) {
   if (!value.startsWith(INTERNAL_LINK_PREFIX)) return null;
   const slug = value.slice(INTERNAL_LINK_PREFIX.length);
-  return SLUG_PATTERN.test(slug) ? slug : null;
+  return isSlug(slug) ? slug : null;
 }

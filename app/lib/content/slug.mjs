@@ -1,7 +1,7 @@
 // Split out of pipeline.mjs so importing a constant does not evaluate the renderer in the Worker;
 // pipeline.mjs re-exports every name here.
 
-export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 /**
  * A separate rule, not a lookahead in SLUG_PATTERN, because unanchor() would strip the wrong anchor.

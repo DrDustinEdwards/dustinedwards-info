@@ -23,7 +23,9 @@ import {
 import { makeChartData } from "./chart-data.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
-import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+
+import { SLUG_MAX_LENGTH, postPath } from "./slug.mjs";
 
 import { readingTimeMinutes } from "./reading-time.mjs";
 import { withBacklinks, withRelated } from "./corpus.mjs";
@@ -55,7 +57,7 @@ const isoDateTime = z.preprocess(
     .refine((v) => !Number.isNaN(Date.parse(v)), "must be a parseable date-time"),
 );
 
-export { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN, postPath } from "./slug.mjs";
+export { SLUG_ATTRIBUTE_PATTERN, postPath } from "./slug.mjs";
 
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),

@@ -3,6 +3,8 @@
 // compileDictionaryEntry, so a file CI passes is the file the save accepts and the page draws. The rules
 // below are the ones the CI tests used to read the entries for (docs/DICTIONARY.md).
 
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
+
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { CONTENT_PAGE_PATHS } from "../content-pages.mjs";
@@ -31,7 +33,6 @@ const FRONT_MATTER_FIELDS = new Set([
   "draft",
 ]);
 
-const KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const AUDIO_PATTERN = /^\/audio\/[a-z]+\.mp3$/;
 const LANGUAGE_PATTERN = /^[a-z]{2,3}$/;
 /** A pronunciation clip is a few seconds of speech, not a recording. */
@@ -179,8 +180,7 @@ export async function compileDictionaryEntry({ key, raw, pipeline, host, others 
   ];
   if (parsed.problems.length > 0) return { ok: false, errors };
 
-  if (!KEY_PATTERN.test(key))
-    errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
+  if (!isSlug(key)) errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
   else if (!contentIdFits(DICTIONARY_KIND, key))
     errors.push(`the key "${key}" is too long for a Carrel id`);
   errors.push(...shapeProblems(parsed.data));

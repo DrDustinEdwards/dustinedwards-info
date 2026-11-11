@@ -3,6 +3,7 @@
 // editor (editor.server.ts); and Duplicate, a new draft copied from an entry that records where it came from.
 
 import matter from "gray-matter";
+import { isSlug } from "@drdustinedwards/site-helpers/slug";
 
 import { listRegistry } from "~/db/registry";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
@@ -149,8 +150,6 @@ export function rawFromForm(
   }
 }
 
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 /** A slug from a title: lower-case words joined by hyphens. */
 function slugFor(title: string): string {
   return title
@@ -182,7 +181,7 @@ export async function duplicateEntry(
   const slug = (wanted.slug.trim() || slugFor(title)).toLowerCase();
   const errors: string[] = [];
   if (!title) errors.push("The copy needs a title.");
-  if (!SLUG.test(slug))
+  if (!isSlug(slug))
     errors.push(`"${slug}" is not a file name: use lower-case letters, digits and hyphens.`);
   if (slug === from.slug) errors.push("The copy needs a file name of its own.");
   if (errors.length > 0) return { outcome: "refused", errors };

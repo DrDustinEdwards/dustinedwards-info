@@ -14,7 +14,7 @@ import type { FormBody, FormModel } from "~/kb/form.mjs";
 import type { Choice, FormField, KbForm } from "~/kb/form.server";
 import {
   type EquipmentEntry,
-  FieldInput,
+  KbFields,
   type Material,
   type Values,
 } from "~/components/admin/kb-form-fields";
@@ -139,7 +139,10 @@ function PreviewPane({
   );
 }
 
-/** What the form posts: the model, with each YAML field sent as its text for the server to read. */
+/**
+ * What the form posts: the model, with each YAML field sent as its text for the server to read, and each list of lines
+ * trimmed, without the empty lines the box keeps while it is typed in.
+ */
 function posted(
   model: FormModel,
   values: Values,
@@ -148,8 +151,12 @@ function posted(
   body: FormBody | null,
 ) {
   const data: Values = { ...values };
-  for (const f of fields)
+  for (const f of fields) {
     if (f.kind === "yaml" && f.key in yaml) data[f.key] = { $yaml: yaml[f.key] };
+    const lines = data[f.key];
+    if (f.kind === "lines" && Array.isArray(lines))
+      data[f.key] = lines.map((l) => String(l).trim()).filter(Boolean);
+  }
   return JSON.stringify({ ...model, data, body });
 }
 
@@ -308,16 +315,15 @@ export function KbFormEditor({
     return nameOf(form.registry.strain, value);
   };
 
-  const input = (f: FormField) => (
-    <FieldInput
-      key={f.key}
-      field={f}
-      value={values[f.key]}
-      original={original[f.key]}
-      yaml={yaml[f.key] ?? ""}
+  const fieldsOf = (fields: FormField[]) => (
+    <KbFields
+      fields={fields}
+      values={values}
+      original={original}
+      yaml={yaml}
       form={form}
-      onValue={(v) => setValues((cur) => ({ ...cur, [f.key]: v }))}
-      onYaml={(t) => setYaml((cur) => ({ ...cur, [f.key]: t }))}
+      onValue={(key, v) => setValues((cur) => ({ ...cur, [key]: v }))}
+      onYaml={(key, t) => setYaml((cur) => ({ ...cur, [key]: t }))}
     />
   );
   const isEntry = file.target.type === "entry";
@@ -457,7 +463,7 @@ export function KbFormEditor({
       <div className={isEntry ? "kb-layout" : undefined} data-pane={pane}>
         <Form
           method="post"
-          className="kb-editor-form kb-pane-form"
+          className="kb-editor-form kb-pane-form cap-schema-form"
           id="kb-pane-form"
           role={isEntry && !wide ? "tabpanel" : undefined}
           aria-labelledby={isEntry && !wide ? "kb-tab-form" : undefined}
@@ -472,7 +478,7 @@ export function KbFormEditor({
               count={gapFields.length + nested.length}
               description="Values nobody has yet. Fill one in here and it is saved with the rest; leave it empty and it keeps its reason."
             >
-              <div className="kb-fields">{gapFields.map(input)}</div>
+              {fieldsOf(gapFields)}
               {nested.length > 0 ? (
                 <ul className="kb-nested-gaps">
                   {nested.map((g) => (
@@ -488,9 +494,7 @@ export function KbFormEditor({
             </Panel>
           ) : null}
 
-          <Panel title="Details">
-            <div className="kb-fields">{otherFields.map(input)}</div>
-          </Panel>
+          <Panel title="Details">{fieldsOf(otherFields)}</Panel>
 
           {body ? (
             <BodyEditor
