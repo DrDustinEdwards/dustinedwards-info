@@ -69,10 +69,9 @@ export default function start(): void {
   const scaleForm = root.querySelector<HTMLFormElement>("form.cap-scale-control");
   const scaleField = scaleForm?.querySelector<HTMLInputElement>("input[name]") ?? null;
   // The scale control's steppers and its unit select (capsomer/scale-control.md); the form works without them.
-  // The page's only Capsomer field group and select are the scale control's.
   if (scaleForm) {
-    enhanceField();
-    enhanceSelect();
+    enhanceField(scaleForm);
+    enhanceSelect(scaleForm);
   }
 
   let run: Run | null = null;

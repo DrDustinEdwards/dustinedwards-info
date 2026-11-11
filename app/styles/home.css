@@ -227,13 +227,10 @@
   letter-spacing: 0.04em;
 }
 
+/* The scale bar's unit at the callout labels' size. */
 .plate-scale {
   fill: var(--text-secondary);
-  font-size: 12px;
-}
-
-[data-layout="narrow"] .plate-scale {
-  font-size: 11px;
+  font-size: var(--fs-detail);
 }
 
 .home-hero .home-plate {

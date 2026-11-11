@@ -181,6 +181,7 @@ export function ScaleForm({
         label="Servings"
         name="servings"
         value={count}
+        step="any"
         submitLabel="Show"
         units={{
           label: "Units",

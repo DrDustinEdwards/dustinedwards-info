@@ -109,7 +109,9 @@ export function StepCalculators({
               embedded
             />
             <p className="phage-tool-more">
-              <a href={tool.path}>Open the {tool.title.toLowerCase()} on its own page</a>
+              <a href={tool.path} data-link="next">
+                Open the {tool.title.toLowerCase()} on its own page
+              </a>
             </p>
           </details>
         );
