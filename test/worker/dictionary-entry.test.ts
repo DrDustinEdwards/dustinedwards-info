@@ -28,17 +28,12 @@ describe.each(DICTIONARY_ENTRIES.map((entry) => [entry.term, entry] as const))(
       expect(html).toContain('<span class="term-ety-label">Etymology</span>');
     });
 
-    it("names the speaker exactly, as a real button and as the no-script link", () => {
+    it("names the speaker exactly (Capsomer's PlayClip, its button and its no-script link)", () => {
       const label = `Listen to the pronunciation of ${term}`;
-      expect(html).toMatch(
-        new RegExp(`<button type="button" class="term-listen"[^>]*aria-label="${label}"`),
+      expect(html).toContain(
+        `class="cap-player-clip-link" href="${entry.audio}" aria-label="${label}"`,
       );
-      expect(html).toMatch(
-        new RegExp(
-          `<a class="term-listen term-listen-link" href="${entry.audio}"[^>]*aria-label="${label}"`,
-        ),
-      );
-      expect(html).toContain('aria-pressed="false"');
+      expect(html).toMatch(new RegExp(`class="cap-player-clip-button"[^>]*aria-label="${label}"`));
     });
 
     it("never autoplays: no audio element in the markup, and nothing marked to play on load", () => {

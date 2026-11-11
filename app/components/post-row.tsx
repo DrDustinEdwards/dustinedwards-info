@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { tagPath } from "~/lib/tag-path.mjs";
 
 type RowPost = {
@@ -21,7 +21,7 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
       <p className="entry-when">
         {post.publishAt && (
           <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
-            {longDateUTC(post.publishAt)}
+            {formatDate(post.publishAt)}
           </time>
         )}
         {post.readingTimeMinutes ? (

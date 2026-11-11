@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { LinkProps } from "capsomer/react/admin-shell";
 import type { BreadcrumbProps } from "capsomer/react/breadcrumb";
+import type { RenderTabLink } from "capsomer/react/tabs";
 
 /* The shell's own family: a 24 box, a 1.6 stroke, drawn in currentColor (admin-shell.md, "Icons"). */
 export function Icon({ d }: { d: string }) {
@@ -32,6 +33,13 @@ export function shellLink(prefix: string) {
 /** A breadcrumb level as a router link, for Capsomer's PageHead. */
 export const crumbLink: BreadcrumbProps["renderLink"] = ({ href, className, children }) => (
   <Link to={href} className={className}>
+    {children}
+  </Link>
+);
+
+/** A tab as a router link, for Capsomer's TabsNav, so a filter tab navigates without a page load. */
+export const tabLink: RenderTabLink = ({ href, children, ...rest }) => (
+  <Link to={href} {...rest}>
     {children}
   </Link>
 );

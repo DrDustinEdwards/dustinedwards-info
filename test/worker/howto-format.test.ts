@@ -47,16 +47,16 @@ describe("a software how-to's page", () => {
   it("shows every platform's command with no script, each under a link the tabs are made from", () => {
     const html = page();
     const links = [
-      ...html.matchAll(/<a href="#(count-the-reads-0-step-2-0-(\w+))" data-platform="\2">/g),
+      ...html.matchAll(
+        /<a class="cap-tab" href="#(count-the-reads-0-step-2-0-(\w+))" data-value="\2">/g,
+      ),
     ].map((m) => m[2]);
     expect(links).toEqual(["linux", "macos", "windows"]);
     for (const platform of links)
-      expect(html).toContain(
-        `id="count-the-reads-0-step-2-0-${platform}" class="procedure-platform"`,
-      );
+      expect(html).toContain(`id="count-the-reads-0-step-2-0-${platform}" class="cap-tabs-panel"`);
     expect(html).toContain("(Select-String -Pattern &#x27;^&gt;&#x27; -Path reads.fasta).Count");
     // The panels are all there and none is hidden: hiding is the script's, so a page with none shows them all.
-    expect(html).not.toMatch(/class="procedure-platform"[^>]*hidden/);
+    expect(html).not.toMatch(/class="cap-tabs-panel"[^>]*hidden/);
     expect(html).toContain('<template data-island="platforms"></template>');
   });
 
@@ -79,9 +79,9 @@ describe("a software how-to's page", () => {
         address: "https://example.com/x",
       }),
     );
-    expect(sheet).not.toContain("procedure-platform-tabs");
+    expect(sheet).not.toContain("cap-tabs-list");
     expect(
-      [...sheet.matchAll(/<p class="procedure-platform-label">(\w+)<\/p>/g)].map((m) => m[1]),
+      [...sheet.matchAll(/<p class="cap-tabs-panel-label">(\w+)<\/p>/g)].map((m) => m[1]),
     ).toEqual(["Linux", "macOS", "Windows", "Linux", "macOS", "Windows"]);
   });
 });

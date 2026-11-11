@@ -147,7 +147,11 @@ await test("the downloads carry every fact with words for the ids and honor the 
   assert.deepEqual(rows[0].courses, ["Phage Discovery Program"]);
   assert.equal(rows[0].url, "https://example.test/research/protocols/isolation");
   // The CSV's quoting and joins are site-runtime's (./csv), tested there; the columns are the rows' own.
-  assert.ok(libraryCsv(libraryRecords(items, "", "https://example.test")).startsWith("id,title,url,kind,methods"));
+  assert.ok(
+    libraryCsv(libraryRecords(items, "", "https://example.test")).startsWith(
+      "id,title,url,kind,methods",
+    ),
+  );
 });
 
 await test("the twin's table links each protocol by its address and escapes a pipe in a cell", () => {

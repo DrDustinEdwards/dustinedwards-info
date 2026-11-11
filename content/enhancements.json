@@ -154,9 +154,9 @@
       "id": "pronunciation-button",
       "module": "app/enhance/pronounce.ts",
       "enhancement": "On the Capsid, Enarratio, Carrel and Capsomer pages, swaps the dictionary entry's link to the pronunciation clip for a button that plays it in place on click, Enter or Space, pressed while it plays and stopped by a second press. Nothing plays until asked.",
-      "fallback": "The speaker is a server-rendered link to the clip, which the browser plays on its own page.",
+      "fallback": "The speaker is a server-rendered link to the clip (Capsomer's PlayClip, inside the entry's pronunciation), which the browser plays on its own page.",
       "fallbackKind": "selector",
-      "fallbackAt": "[data-term-audio-link]",
+      "fallbackAt": ".term-pron",
       "why": null
     },
     {

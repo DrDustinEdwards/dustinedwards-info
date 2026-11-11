@@ -292,7 +292,7 @@ describe("a draft entry is not shown", () => {
       // The page itself stays up: only its dictionary lead goes.
       expect((await pageData()).entry).toBeNull();
       const page = await html();
-      expect(page).not.toContain("data-term-entry");
+      expect(page).not.toContain('class="term-entry"');
       expect(page).not.toContain("DefinedTerm");
       expect(await (await twin()).text()).not.toContain("Pronunciation audio");
       expect((await searchBodies()).some((body) => body.includes("KAP-sid"))).toBe(false);
@@ -304,7 +304,7 @@ describe("a draft entry is not shown", () => {
       expect(up.status, await up.clone().text()).toBe(200);
       expect(await up.json()).toMatchObject({ status: "published" });
       expect((await pageData()).entry?.term).toBe("Capsid");
-      expect(await html()).toContain("data-term-entry");
+      expect(await html()).toContain('class="term-entry"');
       expect(await (await twin()).text()).toContain("[Pronunciation audio](/audio/capsid.mp3)");
     },
   );

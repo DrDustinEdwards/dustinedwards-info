@@ -8,7 +8,7 @@ import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { timed, timingsContext } from "~/lib/timing";
 import {
   cacheTags,
@@ -364,7 +364,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                         className="dt-published"
                         dateTime={new Date(post.publishAt).toISOString()}
                       >
-                        {longDateUTC(post.publishAt)}
+                        {formatDate(post.publishAt)}
                       </time>
                     ) : null}
                   </span>

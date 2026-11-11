@@ -1,4 +1,4 @@
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { clockTime } from "~/lib/podcast/clock.mjs";
 import { PODCAST_SITE_URL, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
 import { GERMOMICS_X_URL } from "~/lib/seo";
@@ -25,7 +25,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
                 </span>
               ) : null,
               <time key="date" dateTime={episode.publishedAt}>
-                {longDateUTC(new Date(episode.publishedAt))}
+                {formatDate(new Date(episode.publishedAt))}
               </time>,
               episode.durationSeconds ? (
                 <span key="length">{clockTime(episode.durationSeconds)}</span>

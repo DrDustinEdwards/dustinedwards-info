@@ -18,7 +18,7 @@ import {
 } from "../app/lib/content/og-card-text.mjs";
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { longDateUTC } from "../app/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, renderContentPages } from "./build-content.mjs";
 import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
@@ -167,7 +167,7 @@ function card(post) {
 
   // Filtered, because the formatter returns null rather than "Invalid Date", which would be permanent
   // on an immutable object.
-  const date = longDateUTC(post.publishAt);
+  const date = formatDate(post.publishAt);
 
   /* THE MEASURE: the side padding sets the width og-card-text.mjs's ladder was measured against. */
   const PAD_X = 72;

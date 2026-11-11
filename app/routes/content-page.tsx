@@ -13,7 +13,7 @@ import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { patchOf } from "~/lib/running-head";
 import {
   contentPageCardPath,
@@ -41,6 +41,7 @@ import "capsomer/dialog.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 
 /**
  * Every Research, Teaching and Software page (app/lib/content-pages.mjs): the research/* splat, and
@@ -151,17 +152,22 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
           {page.banner ? <p className="legal-banner">{page.banner}</p> : null}
           {page.lastUpdated ? (
             <p className="legal-updated">
-              Last updated <time dateTime={page.lastUpdated}>{longDateUTC(page.lastUpdated)}</time>
+              Last updated <time dateTime={page.lastUpdated}>{formatDate(page.lastUpdated)}</time>
             </p>
           ) : null}
         </div>
       ) : null}
       {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: page.html }} />
+      <div
+        className="prose"
+        {...PROSE}
+        {...RENDERED}
+        dangerouslySetInnerHTML={{ __html: page.html }}
+      />
       {page.html.includes("data-enarratio-redraw") ? <template data-island="charts" /> : null}
       {roster ? (
-        <div className="prose">
+        <div className="prose" {...PROSE}>
           <PhageRoster cohorts={roster} />
           <template data-island="roster" />
         </div>

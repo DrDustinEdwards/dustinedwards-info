@@ -18,7 +18,7 @@ import {
 } from "../scripts/lib/nav-data.mjs";
 import { NAV_DATA } from "../app/lib/nav-data.generated.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
-import { longDateUTC } from "../app/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { newestFirst } from "../app/lib/post-order.mjs";
 import { seriesSlug } from "../app/lib/series-path.mjs";
 import {
@@ -293,7 +293,7 @@ await test("the Writing tiles are the three newest published articles, with thei
     const post = live.find((p) => p.slug === slug);
     assert.ok(post, `${slug} is not a published post`);
     assert.equal(tile.label, post.title);
-    assert.equal(tile.description, longDateUTC(`${post.date}T00:00:00Z`));
+    assert.equal(tile.description, formatDate(`${post.date}T00:00:00Z`));
     assert.ok(
       newestThree.includes(post.date),
       `${slug} (${post.date}) is not among the three newest dates`,

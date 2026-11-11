@@ -529,63 +529,9 @@
   cursor: pointer;
 }
 
-/* Platform tabs (S4). With no script every block shows under its name and the tabs are links to them. */
+/* Platform tabs (S4) are Capsomer's progressive tabs (capsomer/tabs.css); this only places the set in the step. */
 .procedure-platforms {
   margin: 0.5rem 0 0;
-}
-
-.procedure-platform-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin: 0;
-  border-block-end: 1px solid var(--border);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-}
-
-.procedure-platform-tabs a {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 2.75rem;
-  padding: 0 0.75rem;
-  border-radius: 0;
-  color: var(--text);
-  font-weight: inherit;
-  text-decoration: none;
-  border-block-end: 3px solid transparent;
-}
-
-.procedure-platform-tabs a[aria-selected="true"] {
-  border-block-end-color: var(--brand);
-  font-weight: 600;
-}
-
-.procedure-platform-label {
-  margin: 0.5rem 0 0;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-}
-
-/* Once the tabs work, the tab names the block, so its label goes. */
-[data-platforms][data-enhanced] .procedure-platform-label {
-  display: none;
-}
-
-/* On paper every platform prints, under its name, as the sheet and the twin list them. */
-@media print {
-  .procedure-platform-tabs {
-    display: none;
-  }
-
-  .procedure-platform[hidden] {
-    display: block;
-  }
-
-  [data-platforms][data-enhanced] .procedure-platform-label {
-    display: block;
-  }
 }
 
 /* Keep on this device (app/enhance/offline.ts, A3): an outline button beside Run this procedure, pressed while kept. */

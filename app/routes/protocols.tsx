@@ -49,6 +49,7 @@ import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 
 /**
  * The protocol library at /research/protocols (docs/PROCEDURES.md): the page's own introduction, then every
@@ -153,7 +154,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         {page.title}
       </h1>
       {draft ? <p>Draft: only you can see this page.</p> : null}
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: intro }} />
+      <div className="prose" {...PROSE} {...RENDERED} dangerouslySetInnerHTML={{ __html: intro }} />
       <LibraryOverview overview={libraryOverview(items)} />
       <div className="library site-catalog site-catalog-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
@@ -185,7 +186,12 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         })}
       />
       {rest ? (
-        <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: rest }} />
+        <div
+          className="prose"
+          {...PROSE}
+          {...RENDERED}
+          dangerouslySetInnerHTML={{ __html: rest }}
+        />
       ) : null}
       <template data-island="catalog" />
     </PageShell>

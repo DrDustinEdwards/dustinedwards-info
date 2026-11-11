@@ -26,7 +26,7 @@ import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { renameRedirect } from "@dustinedwards/site-runtime/url";
 import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
-import { longDateUTC } from "~/lib/long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { Picture } from "~/components/picture";
 import { articleCrops, contentPicture } from "~/lib/media/images.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
@@ -60,8 +60,8 @@ import "capsomer/dialog.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
 import "~/styles/post-head-blocks.css";
-import "~/styles/post-disclosures.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 
 /** Middleware, not the loader: a document route's loader cannot return a raw Response. */
 export const middleware: Route.MiddlewareFunction[] = [
@@ -220,7 +220,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
   const revisedLabel =
     published !== null && revised !== null && revised - published > REVISED_THRESHOLD_MS
-      ? longDateUTC(post.updatedAt)
+      ? formatDate(post.updatedAt)
       : null;
 
   const sections = toc.filter((entry) => entry.depth === 2);
@@ -289,6 +289,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
           <div
             className="prose e-content"
+            {...PROSE}
             data-cap="lightbox"
             {...RENDERED}
             dangerouslySetInnerHTML={{ __html: post.html }}

@@ -27,6 +27,7 @@ import {
 } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 
 /**
  * Every procedure page is drawn by these components from its D1 record (docs/PROCEDURES.md): the page,
@@ -315,6 +316,7 @@ export function ProcedureView({
   return (
     <div
       className="prose procedure"
+      {...PROSE}
       {...RENDERED}
       data-profile={record.profile}
       data-run-path={basePath}
@@ -552,7 +554,7 @@ export function ProcedureSheet({
         .filter(Boolean)
         .join(", ");
   return (
-    <article className="procedure-sheet prose">
+    <article className="procedure-sheet prose" {...PROSE}>
       <header className="procedure-sheet-head">
         <h1 className="cap-layout-grid">{record.title}</h1>
         <p>

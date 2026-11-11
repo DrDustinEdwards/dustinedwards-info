@@ -38,6 +38,7 @@ import "~/styles/prose.css";
 import "capsomer/chips.css";
 import "capsomer/panel.css";
 import "~/styles/colophon.css";
+import { PROSE } from "~/lib/prose-context";
 
 /**
  * Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. The short edge
@@ -326,7 +327,7 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
 
       <StackDiagram />
 
-      <div className="prose colophon-body" data-colophon>
+      <div className="prose colophon-body" {...PROSE} data-colophon>
         <SectionHead id="run" />
         {SITE_OPERATION.map((sentence) => (
           <p key={sentence.slice(0, 32)}>{sentence}</p>
