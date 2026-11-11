@@ -150,14 +150,12 @@ describe("one primer", () => {
   });
 
   it("answers 404 for an item that does not exist, and a draft is the admin's alone", async () => {
-    await expect(kindPage("primers", "no-such-primer")).rejects.toMatchObject({
-      init: { status: 404 },
-    });
+    await expect(kindPage("primers", "no-such-primer")).rejects.toHaveProperty("status", 404);
     await env.DB.prepare(
       "UPDATE registry SET status = 'draft' WHERE kind = 'primer' AND id = 'hco2198'",
     ).run();
     try {
-      await expect(kindPage("primers", "hco2198")).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(kindPage("primers", "hco2198")).rejects.toHaveProperty("status", 404);
       expect((await inventory()).html).not.toContain("/research/lab/primers/hco2198");
     } finally {
       await env.DB.prepare(
@@ -210,9 +208,7 @@ describe("one strain", () => {
   });
 
   it("answers 404 for a strain that does not exist, and serves its twin", async () => {
-    await expect(kindPage("strains", "no-such-strain")).rejects.toMatchObject({
-      init: { status: 404 },
-    });
+    await expect(kindPage("strains", "no-such-strain")).rejects.toHaveProperty("status", 404);
     const text = await (await twin({ kind: "strains", id: "smegmatis" })).text();
     expect(text).toContain("# Mycobacterium smegmatis mc²155");
     expect(text).toContain("- Collection: ATCC 700084");
@@ -396,9 +392,7 @@ describe("the reagents table", () => {
     expect((await kindPage("reagents")).html).toContain(
       'href="/research/lab/reagents/zinc-chloride"',
     );
-    await expect(kindPage("reagents", "no-such-reagent")).rejects.toMatchObject({
-      init: { status: 404 },
-    });
+    await expect(kindPage("reagents", "no-such-reagent")).rejects.toHaveProperty("status", 404);
     const one = await twin({ kind: "reagents", id: "zinc-chloride" });
     expect(one.headers.get("link")).toBe(
       `<https://dustinedwards.info/research/lab/reagents/zinc-chloride>; rel="canonical"`,

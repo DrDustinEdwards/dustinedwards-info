@@ -73,26 +73,9 @@
   color: var(--text);
 }
 
-.pub-authors {
-  margin: 0.25rem 0 0;
-  max-width: 62ch;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-}
-
-.pub-author-me {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.pub-authors-more > summary {
-  cursor: pointer;
-}
-
-.pub-authors-full {
-  margin: 0.25rem 0 0;
+/* Capsomer's author list (capsomer/author-list.css), a line under the paper's title. */
+.paper-body > .cap-author-list {
+  margin-block-start: 0.25rem;
 }
 
 .paper-venue {

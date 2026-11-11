@@ -1,6 +1,7 @@
 import { familyFooterHtml } from "capsomer/behavior/family-footer";
 
 import { PUBLISHED_PAGES } from "~/lib/published-pages.generated.mjs";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The family footer every dustinedwards.info site closes with (capsomer/family-footer, Dustin, 2026-10-26),
@@ -15,13 +16,13 @@ export function ShellFooter() {
     <footer className="site-shell-footer">
       <div
         className="cap-page"
-        dangerouslySetInnerHTML={{
-          __html: familyFooterHtml({
+        dangerouslySetInnerHTML={markup(
+          familyFooterHtml({
             site: "dustinedwards",
             origin: "",
             published: PUBLISHED_PAGES,
           }),
-        }}
+        )}
       />
     </footer>
   );

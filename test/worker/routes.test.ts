@@ -140,7 +140,7 @@ describe("/health", () => {
     };
     expect(body).toMatchObject({ status: "warn", db: "up" });
     /* PUBLIC, so a drift check's detail is its two counts and nothing else: the run's own detail names R2 keys and
-       FTS shadow tables. rows.mjs healthChecks reads the counts back for ship. */
+       FTS shadow tables. site-runtime ./health-read healthChecks reads the counts back for ship. */
     for (const check of body.checks.filter((c) => HEALTH_CHECK_NAMES.includes(c.name as never))) {
       if (check.detail !== undefined) expect(check.detail).toMatch(/^(\d+ of \d+)?$/);
     }
