@@ -1,6 +1,11 @@
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
-import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogDownloads,
+  catalogRedirect,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -20,10 +25,8 @@ import {
   LIBRARY,
   LIBRARY_PATH,
   libraryCitation,
-  libraryDownloads,
   libraryItems,
   libraryOverview,
-  libraryRedirect,
   libraryTabs,
   type LibraryItem,
 } from "~/kb/procedures/library.mjs";
@@ -71,7 +74,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (row.status === "draft" && !(await isAdminViewer(env, request)))
     throw data(null, { status: 404 });
   // A state written in another order, or with a default spelled out, goes to its one address.
-  const canonical = libraryRedirect(url);
+  const canonical = catalogRedirect(LIBRARY, url, { keepUnknown: true });
   if (canonical) throw redirect(canonical, 301);
   const items = libraryItems(await listPublishedLibraryRecords(env));
   // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
@@ -178,7 +181,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       </div>
       <LibraryCite
         count={result.count}
-        downloads={libraryDownloads(result)}
+        downloads={catalogDownloads(LIBRARY, result)}
         citation={libraryCitation({
           name: SITE.name,
           affiliation: SITE.affiliation,

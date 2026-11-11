@@ -1,5 +1,10 @@
 import { Catalog } from "capsomer/react/catalog";
-import { parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
+import {
+  catalogDownloads,
+  catalogRedirect,
+  parseCatalogParams,
+  queryCatalog,
+} from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -17,10 +22,8 @@ import {
   baseAtLibrary,
   baseCatalog,
   baseCitation,
-  baseDownloads,
   baseItems,
   howtoTypeLabel,
-  baseRedirect,
   libraryTrail,
   nounOf,
   type BaseItem,
@@ -60,7 +63,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const items = baseItems(base, await listPublishedRecordsOfProfile(env, base.profile));
   const empty = items.length === 0;
   if (empty && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
-  const canonical = baseRedirect(base, url);
+  const canonical = catalogRedirect(baseCatalog(base), url, { keepUnknown: true });
   if (canonical) throw redirect(canonical, 301);
   return { base, items, empty, search: url.search };
 }
@@ -162,7 +165,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         <LibraryCite
           count={result.count}
           noun={nounOf(base)}
-          downloads={baseDownloads(base, result)}
+          downloads={catalogDownloads(catalog, result)}
           citation={baseCitation(base, {
             name: SITE.name,
             affiliation: SITE.affiliation,

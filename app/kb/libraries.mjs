@@ -3,12 +3,7 @@
 // protocol library is in procedures/library.mjs. The page, its facets, its downloads and its markdown twin all read the
 // declaration, and every fact is drawn from the records, never typed. Pure: the routes pass in the records from D1.
 
-import {
-  catalogRedirect,
-  defineCatalog,
-  parseCatalogParams,
-  queryCatalog,
-} from "capsomer/behavior/catalog";
+import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 
 import { BASES } from "./bases.mjs";
 import { stepCount } from "./procedures/library.mjs";
@@ -213,28 +208,6 @@ export function baseCatalog(base) {
 }
 
 /**
- * The address a request should have, or null: the catalog's own clean address, with unknown parameters (a tracking
- * tag) served rather than redirected, as the protocol library does.
- *
- * @param {KnowledgeBase} base
- * @param {URL} url
- */
-export function baseRedirect(base, url) {
-  const catalog = baseCatalog(base);
-  const known = new Set([
-    "q",
-    "sort",
-    "page",
-    ...catalog.fields.filter((f) => f.facet).map((f) => f.key),
-  ]);
-  const kept = new URLSearchParams();
-  for (const [key, value] of url.searchParams) if (known.has(key)) kept.append(key, value);
-  const only = new URL(url);
-  only.search = kept.toString();
-  return catalogRedirect(catalog, only);
-}
-
-/**
  * The library as rows for a download, for the filter state in the address: every fact the page shows, ids with their
  * words. The CSV and the JSON are both this.
  *
@@ -313,17 +286,6 @@ export function baseMarkdown(base, items, origin) {
     `| ${head.map(() => "---").join(" | ")} |`,
     ...rows.map((r) => `| ${r.join(" | ")} |`),
   ].join("\n");
-}
-
-/** The downloads of a view, carrying its filter state; the twin is always the whole library. @param {KnowledgeBase} base @param {{ href: () => string }} result */
-export function baseDownloads(base, result) {
-  const href = result.href();
-  const query = href.includes("?") ? href.slice(href.indexOf("?")) : "";
-  return {
-    csv: `${base.library}.csv${query}`,
-    json: `${base.library}.json${query}`,
-    markdown: `${base.library}.md`,
-  };
 }
 
 /** How to cite the library, from the site's identity and the library's address. @param {KnowledgeBase} base @param {{ name: string, affiliation: string, origin: string }} who */

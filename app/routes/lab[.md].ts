@@ -1,3 +1,5 @@
+import { catalogMarkdown } from "capsomer/behavior/catalog";
+
 import { listPhages } from "~/db/phages";
 import { listPublishedLibraryRecords } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
@@ -5,7 +7,8 @@ import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
 import {
   LAB_PATH,
-  inventoryMarkdown,
+  INVENTORY,
+  STRAINS,
   inventoryRows,
   itemPath,
   kindFromSegment,
@@ -24,7 +27,6 @@ import {
   reagentsMarkdown,
   strainMarkdown,
   strainRows,
-  strainsMarkdown,
   tmNote,
 } from "~/kb/registry/catalog.mjs";
 import { LAB_CACHE_TAGS } from "~/kb/registry/route";
@@ -63,7 +65,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     ]);
     const rows = inventoryRows(items, phages);
     return respond(
-      `# Lab registry\n\nThe lab's reference catalog, with the phages it has isolated. It records what a thing is, never how much of it the lab has or where it sits.\n\n${inventoryMarkdown(rows, SITE_ORIGIN)}\n`,
+      `# Lab registry\n\nThe lab's reference catalog, with the phages it has isolated. It records what a thing is, never how much of it the lab has or where it sits.\n\n${catalogMarkdown(INVENTORY, rows, "", { origin: SITE_ORIGIN, href: (row) => row.path })}\n`,
       LAB_PATH,
     );
   }
@@ -105,7 +107,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const strains = strainRows(published, await listPhages(env));
     if (id === undefined) {
       return respond(
-        `# Strains\n\nThe bacterial hosts the lab's phages are isolated on. Each strain's phages are counted from the phages table.\n\n${strainsMarkdown(strains, SITE_ORIGIN)}\n`,
+        `# Strains\n\nThe bacterial hosts the lab's phages are isolated on. Each strain's phages are counted from the phages table.\n\n${catalogMarkdown(STRAINS, strains, "", { origin: SITE_ORIGIN, href: (s) => s.path })}\n`,
         kindPath(kind),
       );
     }
