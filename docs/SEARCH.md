@@ -27,7 +27,7 @@ A query with filters but no text (a bare year, `tag:x`) takes the browse path: t
 - `COUNT(*)` on an external-content FTS5 table reads through to the content table and cannot show drift. Count the `*_docsize` tables.
 - Never `DELETE FROM` an external-content FTS table (`SQLITE_CORRUPT_VTAB`). Repair with `('rebuild')`.
 - No interactive transactions on D1; bulk loads are a generated SQL file applied with `wrangler d1 execute --file`.
-- `snippet()` does not escape, so markers are control characters, the snippet is HTML-escaped, then markers become `<mark>`.
+- `snippet()` does not escape, so markers are Capsomer's control characters (`MARK_OPEN`, `MARK_CLOSE`); a hit's snippet stays that text, the page marks it with Capsomer's `Snippet` and the JSON answer with `snippetHtml`, which escapes every run.
 - FTS5 synonyms need a C tokenizer, which D1 cannot load. Query-side expansion is the only route.
 
 ## Ask

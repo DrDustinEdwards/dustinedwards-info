@@ -641,7 +641,6 @@
   .search-submit,
   .skip-link,
   .ask-badge,
-  .search-chip.is-active,
   .admin-chip.is-active,
   .palette-option[aria-selected="true"] {
     outline: 1px solid transparent;

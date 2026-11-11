@@ -37,6 +37,9 @@ export function readScale(record: ProcedureRecord, url: URL) {
   // A protocol's steps stay per unit; only its material totals scale, by count. A recipe's steps scale.
   const factor = record.profile === "recipe" ? scaleFactor(record, count) : 1;
   // A recipe's amounts in metric or imperial, at its own address (`?units=imperial`), as scaling is (recipe-views.mjs).
-  const units = record.profile === "recipe" ? oneOf(url.searchParams.get("units"), Object.keys(UNIT_SYSTEMS) as UnitSystem[], null) : null;
+  const units =
+    record.profile === "recipe"
+      ? oneOf(url.searchParams.get("units"), Object.keys(UNIT_SYSTEMS) as UnitSystem[], null)
+      : null;
   return { count, factor, units };
 }
