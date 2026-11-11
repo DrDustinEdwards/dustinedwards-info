@@ -7,7 +7,7 @@ import { SiteHeader } from "~/components/site-header";
 import { nextScheduledPublishAt } from "~/db";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
-import { hasFilters } from "~/lib/search/query.mjs";
+import { hasFilters } from "@drdustinedwards/site-helpers/search";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
 import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
@@ -69,9 +69,9 @@ export const middleware: Route.MiddlewareFunction[] = [
           parsed: {
             terms: result.parsed.terms,
             phrases: result.parsed.phrases,
-            tags: result.parsed.tags,
-            types: result.parsed.types,
-            bases: result.parsed.bases,
+            tags: result.parsed.filters.tag,
+            types: result.parsed.filters.type,
+            bases: result.parsed.filters.base,
             year: result.parsed.year,
           },
           total: result.total,

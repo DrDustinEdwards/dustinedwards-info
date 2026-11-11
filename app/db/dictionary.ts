@@ -4,7 +4,7 @@
 import { and, asc, eq } from "drizzle-orm";
 
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
-import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 
 import { getDb } from "./client";
 import { dictionaryEntries } from "./schema";

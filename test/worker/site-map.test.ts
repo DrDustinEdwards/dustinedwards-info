@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { SITE_ORIGIN } from "~/lib/seo";
-import { lineText } from "~/lib/site-map.mjs";
+import { lineText } from "@drdustinedwards/site-helpers/site-map";
 import SiteMap, { headers as siteMapHeaders, loader as siteMapLoader } from "~/routes/site-map";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 

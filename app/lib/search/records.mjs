@@ -1,7 +1,8 @@
 // Section-grained: a reader lands on the matching heading, and fusion needs more than one hit per
 // index to do anything. Pure: no clock, filesystem or git, so a record never carries a revision date.
 
-import { PUBLISHED_STATUS, statusForDraft } from "./visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "./visibility.mjs";
 
 /**
  * Fenced code is kept: the identifiers readers search for live in code blocks as often as in prose.

@@ -10,7 +10,8 @@ import { stripComments } from "./lib/strip-comments.mjs";
 import { functionBody } from "./lib/source-body.mjs";
 
 import { originVerdict } from "@dustinedwards/site-runtime/origin";
-import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
+import { isPubliclyVisible } from "@drdustinedwards/site-helpers/search";
+import { statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { createTally } from "@dustinedwards/devkit/node";
 
