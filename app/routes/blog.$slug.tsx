@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -22,7 +23,6 @@ import {
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
-import { jsonLdText } from "@drdustinedwards/site-helpers/xml";
 import { renameRedirect } from "@dustinedwards/site-runtime/url";
 import { redirectFor } from "~/lib/carrel/post-state.server";
 import { getEnv, postPreviewContext } from "~/lib/context";
@@ -240,12 +240,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
        * article-scoped h-entry would have no p-name and no dt-published.
        */}
       <main className="cap-page tracks post-tracks h-entry" id="main" tabIndex={-1}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
-          }}
-        />
+        <JsonLd data={articleJsonLd(SITE_ORIGIN, toArticleSeo(post))} />
 
         <header className="post-head">
           <Breadcrumb trail={postTrail(post)} />

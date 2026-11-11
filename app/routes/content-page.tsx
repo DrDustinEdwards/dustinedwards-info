@@ -1,8 +1,9 @@
+import { JsonLd } from "capsomer/react/json-ld";
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { patchSvg } from "capsomer/behavior/manual";
-import { data } from "react-router";
+import { DictionaryEntry } from "capsomer/react/dictionary-entry";
 
 import { Breadcrumb } from "~/components/breadcrumb";
-import { DictionaryEntry } from "~/components/dictionary-entry";
 import { CONTENTS_MIN, contentsOf, PageContents } from "~/components/page-contents";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
@@ -11,8 +12,10 @@ import { Signs } from "~/components/signs";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
+import { draftGate } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
+import { entryProps } from "~/lib/dictionary-entries.mjs";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { patchOf } from "~/lib/running-head";
 import {
@@ -23,7 +26,6 @@ import {
 } from "~/lib/content-pages.mjs";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
@@ -38,6 +40,7 @@ import "capsomer/chart-frame.css";
 import "~/styles/prose.css";
 import "~/styles/media-split.css";
 import "capsomer/dialog.css";
+import "capsomer/dictionary-entry.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
 import { RENDERED } from "~/lib/content/render-version";
@@ -59,11 +62,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
-  const row = await getPageByPath(env, pathname);
-  // A path with no row: not a page, or a page the content sync has not written yet.
-  if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
+  // A path with no row (not a page, or a page the content sync has not written yet) and a draft the viewer may
+  // not see are the same 404 (site-runtime draftGate).
+  const { row, draft } = await draftGate(await getPageByPath(env, pathname), () =>
+    isAdminViewer(env, request),
+  );
   const page = row.record;
   // The page it sits under, by title, for the trail above it (the course above its FAQ).
   const parent = page.path.slice(0, page.path.lastIndexOf("/"));
@@ -89,7 +92,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     entry,
     roster,
     signs,
-    draft: row.status === "draft",
+    draft,
     search: toolsOnPage(page.path).length > 0 ? url.search : "",
   };
 }
@@ -126,11 +129,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       trail={
         <>
           {contentPageJsonLd(page, entry).map((block, i) => (
-            <script
-              key={i}
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }}
-            />
+            <JsonLd key={i} data={block} />
           ))}
         </>
       }
@@ -145,7 +144,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       ) : (
         <h1 className="page-title cap-layout-grid">{page.title}</h1>
       )}
-      {draft ? <p>Draft: only you can see this page.</p> : null}
+      <DraftNotice show={draft} />
       {page.banner || page.lastUpdated ? (
         <div className="legal-status">
           {page.banner ? <p className="legal-banner">{page.banner}</p> : null}
@@ -156,7 +155,12 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
           ) : null}
         </div>
       ) : null}
-      {entry ? <DictionaryEntry entry={entry} /> : null}
+      {entry ? (
+        <>
+          <DictionaryEntry {...entryProps(entry)} />
+          <template data-island="pronounce" />
+        </>
+      ) : null}
       <PhageTools path={page.path} search={search} />
       <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: page.html }} />
       {page.html.includes("data-enarratio-redraw") ? <template data-island="charts" /> : null}

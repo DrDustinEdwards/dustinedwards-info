@@ -1,3 +1,5 @@
+import { ScaleControl } from "capsomer/react/scale-control";
+
 import { reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
 import { HOWTO_TYPES } from "~/kb/procedures/validate.mjs";
@@ -11,6 +13,10 @@ import {
   type UnitSystem,
 } from "~/kb/procedures/recipe-views.mjs";
 import { formatNumber, parseNumber } from "~/kb/procedures/marks.mjs";
+
+import "capsomer/field.css";
+import "capsomer/select.css";
+import "capsomer/scale-control.css";
 
 /* The procedure page's parts above the method (procedure.tsx): its facts, the scale form, and the materials, key resources, equipment and solutions tables. */
 
@@ -168,37 +174,34 @@ export function ScaleForm({
   units?: UnitSystem | null;
 }) {
   if (record.profile === "recipe" && record.servings) {
+    // Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script.
     return (
-      <form className="procedure-scale" method="get" action={action}>
-        <label>
-          Servings{" "}
-          <input name="servings" type="number" min={1} max={1000} step="any" defaultValue={count} />
-        </label>
-        {/* Metric or imperial (recipe-views.mjs): the same GET, so each state is an address and works with no script. */}
-        <label>
-          Units{" "}
-          <select name="units" defaultValue={units ?? ""}>
-            <option value="">As written</option>
-            {Object.entries(UNIT_SYSTEMS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit">Show</button>
-      </form>
+      <ScaleControl
+        action={action}
+        label="Servings"
+        name="servings"
+        value={count}
+        submitLabel="Show"
+        units={{
+          label: "Units",
+          name: "units",
+          value: units ?? "",
+          options: [
+            { value: "", label: "As written" },
+            ...Object.entries(UNIT_SYSTEMS).map(([value, label]) => ({ value, label })),
+          ],
+        }}
+      />
     );
   }
   if (record.profile === "protocol" && record.scale) {
     return (
-      <form className="procedure-scale" method="get" action={action}>
-        <label>
-          {record.scale.unit === "tube" ? "Tubes" : `Count (${record.scale.unit})`}{" "}
-          <input name="n" type="number" min={1} max={1000} step={1} defaultValue={count} />
-        </label>
-        <button type="submit">Scale</button>
-      </form>
+      <ScaleControl
+        action={action}
+        label={record.scale.unit === "tube" ? "Tubes" : `Count (${record.scale.unit})`}
+        name="n"
+        value={count}
+      />
     );
   }
   return null;

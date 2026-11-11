@@ -48,7 +48,7 @@ describe("a recipe's views", () => {
 
   it("shows metric or imperial at its own address, scaled, from the same GET form as servings", () => {
     const html = page("?servings=8&units=imperial");
-    expect(html).toContain('<select name="units">');
+    expect(html).toMatch(/<select name="units"[^>]*>/);
     expect(html).toContain('<option value="imperial" selected="">Imperial (US)</option>');
     expect(html).toContain(
       "Ingredients: </span>1.1 lb plain flour, 1 tsp salt, 2 tsp instant yeast",
