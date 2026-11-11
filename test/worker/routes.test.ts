@@ -1,9 +1,12 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
-import { readHealthTile } from "~/lib/health/snapshot.server";
-import { storeHealthSnapshot } from "~/lib/health/snapshot-store.server";
+import {
+  HEALTH_SNAPSHOT_KEY,
+  readHealthTile,
+  storeHealthSnapshot,
+} from "@dustinedwards/site-runtime/health-snapshot";
+import { siteHealthResponse } from "~/lib/health/response.server";
 import { HEALTH_CHECK_NAMES, runHealthChecks } from "~/lib/health/checks.server";
 import { ORIGIN_REFUSAL } from "@dustinedwards/site-runtime/origin";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
@@ -211,20 +214,20 @@ describe("the colophon health tile", () => {
         throw new Error("planted KV read failure");
       },
     };
-    const tile = await readHealthTile({ ...env, APP_KV: brokenKv } as never);
+    const tile = await readHealthTile({ kv: brokenKv as never });
     expect(tile.state).toBe("unreadable");
   });
 
   it("still reads an absent snapshot as missing", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
-    const tile = await readHealthTile(env as never);
+    const tile = await readHealthTile({ kv: env.APP_KV });
     expect(tile.state).toBe("missing");
   });
 
   it("is fresh once the health-snapshot job has run, with every check /health names", async () => {
     await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
-    await storeHealthSnapshot(env as never);
-    const tile = await readHealthTile(env as never);
+    await storeHealthSnapshot({ kv: env.APP_KV, answer: () => siteHealthResponse(env as never) });
+    const tile = await readHealthTile({ kv: env.APP_KV });
     expect(tile.state).toBe("fresh");
     expect(tile.state === "fresh" && tile.checks.map((c) => c.name)).toEqual(
       expect.arrayContaining(["db", ...HEALTH_CHECK_NAMES]),

@@ -241,14 +241,7 @@
     // The ratified secret list. check:secrets imports its expectation from it
     // and the Worker audits against it, so this project has to reach it.
     "app/lib/secrets.mjs",
-    // The health snapshot's poll interval and staleness rule. The home tile
-    // decides with it and check:browser asserts against it, so both projects
-    // reach the one statement rather than the gate carrying a third copy of a
-    // number that already has two owners. Named exactly, not globbed:
-    // app/lib/health also holds checks.server.ts and snapshot.server.ts, which
-    // are Worker-only and take an Env this project cannot resolve.
-    "app/lib/health/snapshot.mjs",
-    // The cron job list, which snapshot.mjs reads the snapshot's interval from.
+    // The cron job list, which the health-snapshot job reads its interval from.
     "app/lib/cron-jobs.mjs",
     // How every reader of /health turns its checks into rows: ship's readiness, operator-sync and the snapshot.
     // The Ask settle loop, which the deploy's two Ask steps call: one cadence and one window.
