@@ -8,7 +8,7 @@ import { keyForUrl, urlForKey } from "../search/ask-keys.mjs";
 import { buildCitationTags, REQUIRED_CITATION_TAGS } from "./citation-tags.mjs";
 import { citedByFetchedAt, citedByFor } from "./cited-by.mjs";
 import { decodeEntities } from "./entities.mjs";
-import { organismsIn, toBibtex, toRis } from "./exports.mjs";
+import { organismsIn, paperBibtex, toRis } from "./exports.mjs";
 import { parsePublication, publicationPath } from "./parse.mjs";
 import { paperAskUrl, paperMarkdownPath, paperPath, paperPdfPath } from "./paths.mjs";
 import { recordFromData } from "./record.mjs";
@@ -60,7 +60,7 @@ function derivedProblems(record, built) {
       errors.push(error instanceof Error ? error.message : String(error));
     }
 
-    const bib = toBibtex(record);
+    const bib = paperBibtex(record);
     const ris = toRis(record);
     if (!bib.includes(record.doi) || !ris.includes(record.doi))
       errors.push("exports: the DOI is missing from the BibTeX or RIS entry");
