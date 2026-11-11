@@ -184,7 +184,9 @@ export function startServer() {
         env: previewEnv,
         shell: true,
         stdio: ["ignore", "pipe", "pipe"],
-        detached: false,
+        // Its own process group on POSIX, the leader killTree's `kill(-pid)` needs to reach vite below the shell.
+        // Windows has no groups; killTree walks the tree there with taskkill /T.
+        detached: process.platform !== "win32",
       })
     : null;
   server?.stdout?.on("data", recordServerOutput);

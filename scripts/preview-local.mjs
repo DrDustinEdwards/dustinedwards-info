@@ -77,6 +77,8 @@ server = spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"
   env,
   shell: true,
   stdio: "inherit",
+  // Its own process group on POSIX, the leader killTree's `kill(-pid)` needs; the signal handlers above stop it.
+  detached: process.platform !== "win32",
 });
 // The spawned pid is a shell above vite; its tree is what the kill takes.
 registry.record(server.pid, "the vite preview server", SERVER_NEEDLES);
