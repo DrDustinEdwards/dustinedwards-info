@@ -286,7 +286,12 @@ export default function start(): void {
       };
       if (mine !== sequence) return;
       askAvailable = data.askAvailable === true;
-      hits = data.results ?? [];
+      // The JSON carries absolute URLs (SITE_ORIGIN); a same-origin path keeps a preview host on the preview, as
+      // search-suggest.ts does for the header.
+      hits = (data.results ?? []).map((hit) => ({
+        ...hit,
+        url: hit.url.replace(/^https?:\/\/[^/]+/, ""),
+      }));
       active = hits.length > 0 ? 0 : -1;
       if (statusLine) {
         statusLine.textContent =
