@@ -95,7 +95,8 @@ export default function start(): void {
       group: hit.type,
       label: hit.title,
       hint: hit.anchor && hit.documentTitle !== hit.title ? `in ${hit.documentTitle}` : undefined,
-      run: () => go(hit.url, query),
+      // The JSON carries absolute URLs (SITE_ORIGIN); a same-origin path keeps a preview host on the preview.
+      run: () => go(hit.url.replace(/^https?:\/\/[^/]+/, ""), query),
     }));
     return [...found, allResults(query)];
   }
