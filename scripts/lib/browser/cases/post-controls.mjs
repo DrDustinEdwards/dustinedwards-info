@@ -299,8 +299,8 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     ({ paletteOpen, navigatedToSearch } = await pollUntil(
       async () => ({
         paletteOpen: await page.evaluate(() => ({
-          open: Boolean(document.querySelector("dialog.palette[open]")),
-          focused: document.activeElement?.classList.contains("palette-input") ?? false,
+          open: Boolean(document.querySelector("dialog.cap-cmd[open]")),
+          focused: document.activeElement?.classList.contains("cap-cmd-input") ?? false,
         })),
         // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
         navigatedToSearch: /\/search(\?|$)/.test(page.url()),
@@ -321,24 +321,20 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     // Everything that reads the open dialog runs before anything that submits it, because Enter
     // navigates to /search. The dialog CSS loads on demand, and an unstyled `<dialog open>` still passes.
     const dialogStyled = await page.evaluate(() => {
-      const dialog = document.querySelector("dialog.palette");
-      if (!dialog) return null;
-      const style = getComputedStyle(dialog);
-      return {
-        borderTopWidth: style.borderTopWidth,
-        paddingTop: style.paddingTop,
-        background: style.backgroundColor,
-      };
+      // Capsomer's command-menu.css draws the search field as a flex row with a 1px border.
+      const field = document.querySelector("dialog.cap-cmd .cap-cmd-search");
+      if (!field) return null;
+      const style = getComputedStyle(field);
+      return { display: style.display, borderTopWidth: style.borderTopWidth };
     });
     ok(
       "the palette dialog is styled by the time it opens",
       dialogStyled !== null &&
-        dialogStyled.borderTopWidth === "1px" &&
-        dialogStyled.paddingTop === "0px",
+        dialogStyled.display === "flex" &&
+        dialogStyled.borderTopWidth === "1px",
       `computed ${JSON.stringify(dialogStyled)}. The dialog's stylesheet is fetched ` +
         `on the gesture beside the bundle and awaited before opening; a default ` +
-        `border or padding here means it did not arrive, or arrived after the modal was up. ` +
-        `The NASA theme squares the corners, so the radius is no signal.`,
+        `display or border here means it did not arrive, or arrived after the modal was up.`,
     );
 
     const afterGesture = await bundleFetches(page, "palette");
@@ -351,12 +347,12 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     );
     if (paletteOpen.open) {
       // Guarded: a missing field here throws and voids the rest of the run.
-      const resultsField = await page.$(".palette-input");
+      const resultsField = await page.$(".cap-cmd-input");
       if (!resultsField) {
         ok(
           "the palette returns live results",
           false,
-          "the palette is open and has no .palette-input, so no query could be typed.",
+          "the palette is open and has no .cap-cmd-input, so no query could be typed.",
         );
       } else {
         await resultsField.type("cloudflare");
@@ -365,10 +361,13 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         paletteResult = await pollUntil(
           () =>
             page.evaluate(() => ({
-              options: document.querySelectorAll(".palette-option").length,
-              status: document.querySelector(".palette-status")?.textContent ?? "",
+              options: document.querySelectorAll(
+                "dialog.cap-cmd [role='option']:not([data-cap-command='all-results'])",
+              ).length,
+              status:
+                document.querySelector("dialog.cap-cmd .cap-listbox-empty")?.textContent ?? "",
             })),
-          (r) => r.options > 0 || /result|unavailable/i.test(r.status),
+          (r) => r.options > 0 || /match/i.test(r.status),
         );
         ok(
           "the palette returns live results",
@@ -388,12 +387,12 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     if (paletteOpen.open) {
       const QUERY = "phage cocktail";
       /* Typed through a handle, not `page.type`, which throws on a missing field and voids the run. */
-      const field = await page.$(".palette-input");
+      const field = await page.$(".cap-cmd-input");
       if (!field) {
         ok(
           "the typed query survives the search gesture and reaches the URL",
           false,
-          "the palette reported itself open but carries no .palette-input to type into, " +
+          "the palette reported itself open but carries no .cap-cmd-input to type into, " +
             "so the query could not be entered. The dialog opened without its field.",
         );
       } else {

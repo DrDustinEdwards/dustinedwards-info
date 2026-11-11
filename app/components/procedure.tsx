@@ -1,7 +1,6 @@
+import { Picture } from "capsomer/react/picture";
 import { Qr } from "capsomer/react/qr";
 import { encode } from "uqr";
-
-import { Picture } from "~/components/picture";
 import { ProcedurePrimers } from "~/components/procedure-primers";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";

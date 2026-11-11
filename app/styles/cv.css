@@ -606,13 +606,13 @@
   color: var(--brand);
 }
 
-.cv-copy[data-copied] {
+.cv-copy[data-state="done"] {
   border-color: var(--brand);
   background: var(--tint-brand);
   color: var(--brand);
 }
 
-.cv-copy[hidden] {
+.cap-copy[hidden] {
   display: none;
 }
 

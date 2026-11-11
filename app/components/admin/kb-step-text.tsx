@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type MutableRefObject } from "react";
 
 import { Button } from "capsomer/react/button";
+import { isImeEnter } from "capsomer/behavior/shortcuts";
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 import { markup, trustedHtml } from "capsomer/behavior/trusted-html";
 
@@ -108,6 +109,7 @@ function ChipPopover({
           onCancel();
         } else if (
           e.key === "Enter" &&
+          !isImeEnter(e.nativeEvent) &&
           (e.target as HTMLElement).tagName === "INPUT" &&
           (e.target as HTMLInputElement).type !== "checkbox"
         ) {
@@ -318,7 +320,7 @@ export function StepText({
             return;
           }
           // A step is one line.
-          if (e.key === "Enter") e.preventDefault();
+          if (e.key === "Enter" && !isImeEnter(e.nativeEvent)) e.preventDefault();
         }}
         onClick={(e) => {
           const chip = (e.target as HTMLElement).closest<HTMLElement>(".kb-chip");

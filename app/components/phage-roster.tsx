@@ -1,6 +1,6 @@
 import { pictureProps } from "@dustinedwards/site-runtime/image";
 
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import type { Cohort } from "~/lib/roster/compile.mjs";
 
