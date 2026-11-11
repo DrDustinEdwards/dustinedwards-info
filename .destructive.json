@@ -5,10 +5,7 @@
     "min_files": 34,
     "min_actions": 12,
     "min_intents": 3,
-    "destructive": [
-      "admin.tools.tsx:rebuild",
-      "admin.tools.tsx:sync-ask"
-    ],
+    "destructive": ["admin.tools.tsx:rebuild", "admin.tools.tsx:sync-ask"],
     "reversible": {
       "admin.tools.tsx:regenerate": "rewrites D1 rows from the artifact, idempotent",
       "admin.tools.tsx:reset-ask-budget": "a counter; see the report, no data is lost"
@@ -19,9 +16,7 @@
     "list": "TOOLS",
     "descriptors": "TOOL_DESCRIPTORS",
     "min": 9,
-    "destructive": [
-      "run_job"
-    ],
+    "destructive": ["run_job"],
     "reversible": {
       "sync_status": "a read",
       "backup_status": "a read",
@@ -60,11 +55,7 @@
       "rule": "d1-dump"
     }
   ],
-  "sources": [
-    "app",
-    "workers",
-    "scripts"
-  ],
+  "sources": ["app", "workers", "scripts"],
   "min_sources": 100,
   "minimum_checks": 81
 }
