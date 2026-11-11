@@ -4,7 +4,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
-import { readDevVar } from "./lib/dev-vars.mjs";
+import { readDevVar } from "@dustinedwards/devkit/node";
 import { KEY_ABSENT_EXIT, KEY_ABSENT_LINE, keylessRunIsExpected } from "./lib/uptime-step.mjs";
 import {
   COMPARED_FIELDS,

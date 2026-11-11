@@ -55,10 +55,10 @@ import { hasItemPage, itemPath, kindPath } from "../app/kb/registry/catalog.mjs"
 import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/kb/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
-import { parseSource, ts } from "./lib/syntax.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { parseSource, ts } from "@dustinedwards/devkit/node/syntax";
+import { createTally } from "@dustinedwards/devkit/node";
 import { readPublishedPages } from "./lib/published-pages.mjs";
-import { walkFiles } from "./lib/walk-files.mjs";
+import { walkFiles } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rel = (/** @type {string} */ file) => relative(root, file).split(sep).join("/");

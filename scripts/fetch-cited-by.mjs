@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readDevVar } from "./lib/dev-vars.mjs";
+import { readDevVar } from "@dustinedwards/devkit/node";
 import { buildPublications } from "./lib/publications.mjs";
 import { SITE_USER_AGENT } from "../app/lib/site-origin.mjs";
 

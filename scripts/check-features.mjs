@@ -16,7 +16,7 @@ import { checkEnhancements } from "./lib/features/enhancements.mjs";
 import { checkProjects } from "./lib/features/projects.mjs";
 import { checkFeatureProse } from "./lib/features/prose-numbers.mjs";
 import { root } from "./lib/features/shared.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const FEATURES_PATH = join(root, "content", "features.json");
 

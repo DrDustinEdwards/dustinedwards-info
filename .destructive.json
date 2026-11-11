@@ -1,0 +1,70 @@
+{
+  "intents": {
+    "routes": "app/routes",
+    "predicate": "confirmationSatisfied",
+    "min_files": 34,
+    "min_actions": 12,
+    "min_intents": 3,
+    "destructive": [
+      "admin.tools.tsx:rebuild",
+      "admin.tools.tsx:sync-ask"
+    ],
+    "reversible": {
+      "admin.tools.tsx:regenerate": "rewrites D1 rows from the artifact, idempotent",
+      "admin.tools.tsx:reset-ask-budget": "a counter; see the report, no data is lost"
+    }
+  },
+  "tools": {
+    "file": "app/lib/operator/descriptors.ts",
+    "list": "TOOLS",
+    "descriptors": "TOOL_DESCRIPTORS",
+    "min": 9,
+    "destructive": [
+      "run_job"
+    ],
+    "reversible": {
+      "sync_status": "a read",
+      "backup_status": "a read",
+      "sync_ask": "converges a DERIVED index to the corpus through its own derivation, which is repair rather than destruction. Idempotent, and it reports a read-back reconciliation rather than its own counters",
+      "list_procedures": "a read",
+      "get_procedure": "a read",
+      "save_procedure": "creates or edits a procedure file through compile.mjs, the validator CI runs; the file and its git history stand, its D1 row and search records are derived, and there is no delete branch",
+      "refresh_citations": "replaces rows of a DERIVED table (the citation counts, read from OpenAlex) and has no delete branch: a DOI that fails keeps its count. Idempotent, and the failures come back in the response",
+      "check_publications": "a read of ORCID, Crossref and the publication rows; writes nothing",
+      "list_registry": "a read",
+      "get_registry": "a read",
+      "sync_media": "the media index, on sync_ask's terms: derived, idempotent, read back",
+      "sync_posts": "D1 rows, on sync_ask's terms: derived from the repository, idempotent",
+      "sync_procedures": "D1 rows, on sync_posts's terms: derived from the repository, idempotent, and it refuses an empty file set rather than deleting every row",
+      "sync_dictionary": "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set rather than deleting every row, and it refreshes the one page row each entry opens through the page compile",
+      "sync_pages": "D1 rows, on sync_procedures's terms: derived from the repository, idempotent, and it refuses an empty file set rather than deleting every row",
+      "sync_publications": "D1 rows, on sync_procedures's terms: derived from the repository, idempotent, it refuses an empty file set rather than deleting every row, and it seeds a citation row only where none exists",
+      "sync_llms": "the llms.txt settings row, on sync_procedures's terms: derived from the repository file, idempotent, read back, and it refuses a repository with no llms.txt rather than deleting the row",
+      "sync_cv": "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set rather than deleting every row, and it rewrites the CV's search records from the rows it converged",
+      "sync_cv_pdf": "ONE derived object in OG, replaced by a put and never deleted: derived from D1's CV, idempotent (an object carrying the data's fingerprint is left alone), the put is conditional on the object read, and a failed render changes nothing stored",
+      "sync_roster": "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set rather than deleting every row",
+      "sync_phages": "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set rather than deleting every row, and it re-derives the one page that embeds the table from the final set before any row moves",
+      "sync_registry": "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set while rows exist rather than deleting every row (with no files and no rows there is nothing to converge)"
+    }
+  },
+  "bindings": [
+    {
+      "binding": "MEDIA_REVISIONS",
+      "rule": "no-delete",
+      "passed_to": {
+        "app/lib/health/response.server.ts:r2Check": "site-runtime's /health check: one bucket.head() of a fixed probe key, and nothing else"
+      }
+    },
+    {
+      "binding": "BACKUPS",
+      "rule": "d1-dump"
+    }
+  ],
+  "sources": [
+    "app",
+    "workers",
+    "scripts"
+  ],
+  "min_sources": 100,
+  "minimum_checks": 81
+}
