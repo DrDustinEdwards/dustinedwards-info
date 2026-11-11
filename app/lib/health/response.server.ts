@@ -12,6 +12,7 @@ import {
   healthResponse,
   imagesCheck,
   kvCheck,
+  purgeCheck,
   queueCheck,
   r2Check,
 } from "@dustinedwards/site-runtime/health";
@@ -59,6 +60,8 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       { ...r2Check("media", env.MEDIA), level: "warn" },
       { ...r2Check("og", env.OG), level: "warn" },
       { ...kvCheck("kv", env.APP_KV), level: "warn" },
+      // A cache purge that failed after a write, kept in KV until one succeeds (site-runtime recordPurge): pages may be stale.
+      purgeCheck(env.APP_KV),
       { ...r2Check("media-revisions", env.MEDIA_REVISIONS), level: "warn" },
       imagesCheck("images", env.IMAGES),
       // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
