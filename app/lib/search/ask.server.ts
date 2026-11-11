@@ -9,7 +9,8 @@ import {
   writeCachedDrift,
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
-import { askBodyHash, askUploadsNeeded, uploadAskItems, withRetry } from "./ask-twins.mjs";
+import { askUploadsNeeded, uploadAskItems, withRetry } from "./ask-twins.mjs";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import { forgetAskUploads, readAskUploads, recordAskUploads } from "~/db/ask-uploads";
 import { answerDelta, replayFrames, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
 import { setDrift } from "~/lib/health/verdicts.mjs";
@@ -241,7 +242,7 @@ async function deleteAskItemsWhere(env: Env, matches: (key: string) => boolean) 
  */
 async function uploadAskItem(env: Env, key: string, body: string): Promise<void> {
   await withRetry(() => env.AI_SEARCH.items.upload(key, body));
-  await recordAskUploads(env, [{ key, hash: await askBodyHash(body) }]);
+  await recordAskUploads(env, [{ key, hash: await sha256Hex(body) }]);
 }
 
 /**
@@ -263,7 +264,7 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
     ...twins.map(({ slug, markdown }) => ({ key: keyForUrl(paperPath(slug)), body: markdown })),
   ];
   const hashed = await Promise.all(
-    items.map(async (item) => ({ ...item, hash: await askBodyHash(item.body) })),
+    items.map(async (item) => ({ ...item, hash: await sha256Hex(item.body) })),
   );
   const needed = askUploadsNeeded(hashed, listed, ledger);
 

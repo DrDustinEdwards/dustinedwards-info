@@ -129,14 +129,3 @@ export function askUploadsNeeded(items, listed, ledger) {
   );
   return items.filter((item) => !held.has(item.key) || ledger.get(item.key) !== item.hash);
 }
-
-/**
- * Hex sha-256 of a body, the ledger's record of what was uploaded.
- *
- * @param {string} body
- * @returns {Promise<string>}
- */
-export async function askBodyHash(body) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
-}
