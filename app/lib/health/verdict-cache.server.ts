@@ -3,10 +3,12 @@
 // job and the Capsid watcher read /health all day. The media index check lists MEDIA and OG in full, so an uncached /health made
 // about 324K listings a month. (The BACKUPS read is kept by site-runtime's healthResponse, in the Cache API, see health.ts.)
 //
-// Same pattern as the Ask drift badge (ask-guard.server.ts): a TTL entry in APP_KV. KV refuses a TTL under 60
-// seconds and a fresh write can take up to 60 seconds to reach other locations
-// (developers.cloudflare.com/kv/api/write-key-value-pairs/), both fine for a verdict an hour old. A repair
+// A TTL entry in APP_KV through site-runtime's kvCached: KV refuses a TTL under 60 seconds and a fresh write can take
+// up to 60 seconds to reach other locations (developers.cloudflare.com/kv/api/write-key-value-pairs/), both fine for a
+// verdict an hour old. A repair
 // drops its entry (dropHealthVerdicts), so the recheck after it reads the bucket, not the verdict it fixed.
+
+import { kvCached } from "@dustinedwards/site-runtime/kv-cache";
 
 /** An hour: drift is repaired within a Capsid watcher pass, and a verdict this old harms nothing. */
 const HEALTH_VERDICT_TTL_SECONDS = 60 * 60;
@@ -28,28 +30,19 @@ function isVerdict(value: unknown): value is Verdict {
   return typeof v.ok === "boolean" && typeof v.detail === "string";
 }
 
-/** The kept verdict for `name`, or the result of `run`, which is then kept. A run that throws keeps nothing. */
-export async function cachedVerdict(
+/** The kept verdict for `name`, or the result of `run`, which is then kept (site-runtime ./kv-cache). A run that throws
+ *  keeps nothing; a KV fault never fails the check. */
+export function cachedVerdict(
   env: Pick<Env, "APP_KV">,
   name: (typeof CACHED_VERDICTS)[number],
   run: () => Promise<Verdict>,
 ): Promise<Verdict> {
-  const key = `${PREFIX}${name}`;
-  try {
-    const kept = await env.APP_KV.get(key, "json");
-    if (isVerdict(kept)) return kept;
-  } catch {
-    // An unreadable entry is a miss: the check still runs.
-  }
-  const verdict = await run();
-  try {
-    await env.APP_KV.put(key, JSON.stringify(verdict), {
-      expirationTtl: HEALTH_VERDICT_TTL_SECONDS,
-    });
-  } catch {
-    // A failed write costs one more listing, never the answer.
-  }
-  return verdict;
+  return kvCached(
+    env.APP_KV,
+    `${PREFIX}${name}`,
+    { ttl: HEALTH_VERDICT_TTL_SECONDS, valid: isVerdict },
+    run,
+  );
 }
 
 /** For a repair: what it changed is not what the kept verdict says. */
