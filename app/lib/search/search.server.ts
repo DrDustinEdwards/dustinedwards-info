@@ -150,8 +150,9 @@ function buildFilters(parsed: ParsedQuery, nowSeconds: number): FilterSql {
   const params: unknown[] = [nowSeconds];
 
   if (parsed.types.length > 0) {
-    clauses.push(`d.type IN (${parsed.types.map(() => "?").join(", ")})`);
-    params.push(...parsed.types);
+    // One JSON parameter, not a placeholder per type: the operators are free text, and D1 refuses past 100.
+    clauses.push(`d.type IN (SELECT value FROM json_each(?))`);
+    params.push(JSON.stringify(parsed.types));
   }
 
   // A record is in one knowledge base, read from its address, so base:a base:b widens to either. An id no base has

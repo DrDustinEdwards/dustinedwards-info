@@ -19,7 +19,6 @@ import type {
   MentionStatus,
   MentionsAdapter,
 } from "@dustinedwards/site-api";
-import { decodeCursor, encodeCursor, olderThan } from "@dustinedwards/site-runtime/d1";
 import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import { and, count, desc, eq, isNull, lt, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
 
@@ -81,16 +80,34 @@ function unchanged(row: Webmention): SQL {
   ) as SQL;
 }
 
+/** The cursor is the last row's received time and id, so a page never repeats or skips a row another write moved. */
+function mentionCursor(row: Webmention): string {
+  return btoa(`${row.receivedAt.getTime()}:${row.id}`);
+}
+
+function readMentionCursor(cursor: string): { at: Date; id: number } {
+  let decoded = "";
+  try {
+    decoded = atob(cursor);
+  } catch {
+    /* refused below */
+  }
+  const match = /^(\d{1,15}):(\d{1,15})$/.exec(decoded);
+  if (!match)
+    throw new RefusedError("That cursor is not one this site gave. Start from the first page.");
+  return { at: new Date(Number(match[1])), id: Number(match[2]) };
+}
+
 /** What the sweep removes, by status: shared so the count and the sweep cannot drift apart. */
 function expired(now: Date) {
-  const before = (status: "failed" | "rejected", days: number) =>
+  const pastRetention = (status: "failed" | "rejected", days: number) =>
     and(
       eq(webmentions.status, status),
       lt(webmentions.receivedAt, new Date(now.getTime() - daysInMilliseconds(days))),
     );
   return {
-    failed: before("failed", FAILED_RETENTION_DAYS),
-    rejected: before("rejected", REJECTED_RETENTION_DAYS),
+    failed: pastRetention("failed", FAILED_RETENTION_DAYS),
+    rejected: pastRetention("rejected", REJECTED_RETENTION_DAYS),
   };
 }
 
@@ -148,12 +165,13 @@ export function carrelMentionsAdapter(env: Env): MentionsAdapter {
           ) as SQL,
         );
       }
-      // The last row's received time and id (site-runtime ./d1), so a page never repeats or skips a row another
-      // write moved; a cursor this site did not give reads as the first page.
-      const cursor = decodeCursor(query.cursor);
-      if (cursor && /^\d{1,15}$/.test(cursor.id)) {
+      if (query.cursor) {
+        const { at, id } = readMentionCursor(query.cursor);
         filters.push(
-          olderThan(webmentions.receivedAt, webmentions.id, new Date(cursor.at), cursor.id),
+          or(
+            lt(webmentions.receivedAt, at),
+            and(eq(webmentions.receivedAt, at), lt(webmentions.id, id)),
+          ) as SQL,
         );
       }
       const now = new Date();
@@ -178,10 +196,7 @@ export function carrelMentionsAdapter(env: Env): MentionsAdapter {
       const last = page.at(-1);
       return {
         items: await Promise.all(page.map(itemOf)),
-        nextCursor:
-          rows.length > query.limit && last
-            ? encodeCursor(last.receivedAt.getTime(), String(last.id))
-            : null,
+        nextCursor: rows.length > query.limit && last ? mentionCursor(last) : null,
         counts,
         expiring: { failed: failed[0]?.n ?? 0, rejected: rejected[0]?.n ?? 0 },
         ...(query.q !== undefined || query.targetId !== undefined
