@@ -326,7 +326,7 @@ for a person working it at the bench, on a phone:
 
 The pure half (what a run is, how timers count, the record and its Markdown, and parsing a stored run, which accepts
 only the shape this module writes) is `capsomer/behavior/checklist-run-model`, tested in Capsomer; the site's own JSON
-(a Bioschemas LabProcess) is `app/kb/procedures/run-record.mjs`; the browser behavior is the run-mode case of `check:browser`.
+(a Bioschemas LabProcess) is `app/kb/procedures/run.mjs`; the browser behavior is the run-mode case of `check:browser`.
 
 ## Keep on this device
 

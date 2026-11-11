@@ -193,16 +193,16 @@ export async function run({ page }) {
   );
 
   // The scale changes in place: no navigation, the address follows, the materials are the server's numbers.
-  const hasScale = await page.$("form.procedure-scale input[name]");
+  const hasScale = await page.$("form.cap-scale-control input[name]");
   if (hasScale) {
     await page.evaluate(() => {
       /** @type {any} */ (window).__runMarker = 1;
     });
     const beforeScale = await page.$eval('[data-run-swap="materials"]', (n) => n.textContent ?? "");
-    await page.$eval("form.procedure-scale input[name]", (n) => {
+    await page.$eval("form.cap-scale-control input[name]", (n) => {
       /** @type {HTMLInputElement} */ (n).value = "9";
     });
-    await page.click("form.procedure-scale button[type=submit]");
+    await page.click("form.cap-scale-control button[type=submit]");
     /** @type {string} */
     const swapped = await pollUntil(
       () => page.$eval('[data-run-swap="materials"]', (n) => n.textContent ?? ""),

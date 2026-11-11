@@ -22,6 +22,7 @@ import "capsomer/tokens.css";
 import "capsomer/button.css";
 import "capsomer/system-map.css";
 import "~/styles/systems.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * One system at /systems/<id>: its address, its repo (or that the repo is private) and its page in the Capsid
@@ -99,7 +100,7 @@ export default function SystemRoute({ loaderData }: Route.ComponentProps) {
         ))}
       </p>
       {/* The map is a string from Capsomer, every text in it escaped there. */}
-      <div className="systems-map" dangerouslySetInnerHTML={{ __html: map }} />
+      <div className="systems-map" dangerouslySetInnerHTML={markup(map)} />
       <p className="systems-source">
         Public model, {MODEL.as_of}. <a href={`${systemPath(s.id)}.md`}>Markdown</a>
       </p>

@@ -173,17 +173,6 @@ export const bundleFetches = (target, stem) =>
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
-/** The reachable CSS rules; a cross-origin sheet throws on `cssRules` and counts zero. */
-export function countCssRules() {
-  return [...document.styleSheets].reduce((n, s) => {
-    try {
-      return n + s.cssRules.length;
-    } catch {
-      return n;
-    }
-  }, 0);
-}
-
 /**
  * The document's widths and the first four elements reaching past its right edge. Anything left of
  * -1000px is off-screen by design: the skip link, and a closed drawer translated out of view.

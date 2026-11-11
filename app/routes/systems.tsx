@@ -13,6 +13,7 @@ import "capsomer/system-map.css";
 // The map's two views, hexagons and the plain map, are Capsomer's tabs.
 import "capsomer/tabs.css";
 import "~/styles/systems.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The network of systems at /systems: Capsomer's system map at level 1, hexagons first (the core in the middle, the shared
@@ -54,7 +55,7 @@ export default function SystemsRoute() {
       <Breadcrumb trail={TRAIL} />
       <h1 className="page-title cap-layout-grid">{TITLE}</h1>
       {/* The map is a string from Capsomer, every text in it escaped there. */}
-      <div className="systems-map" dangerouslySetInnerHTML={{ __html: MAP }} />
+      <div className="systems-map" dangerouslySetInnerHTML={markup(MAP)} />
       <p className="systems-source">
         Public model, {MODEL.as_of}. <a href={`${SYSTEMS_PATH}.md`}>Markdown</a>
       </p>

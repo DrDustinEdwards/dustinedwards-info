@@ -39,9 +39,24 @@ function labelPrefix(label) {
   return label ? `${label}. ` : "";
 }
 
-/** @param {string} term */
-export function listenLabel(term) {
-  return `Listen to the pronunciation of ${term}`;
+/**
+ * An entry as Capsomer's DictionaryEntry takes it (capsomer/react/dictionary-entry): each sense with its
+ * subject label.
+ *
+ * @param {DictionaryEntry} entry
+ */
+export function entryProps(entry) {
+  return {
+    term: entry.term,
+    syllables: entry.syllables,
+    ipa: entry.ipa,
+    respelling: entry.respelling,
+    partOfSpeech: entry.partOfSpeech,
+    plural: entry.plural,
+    senses: entry.senses.map((text, i) => ({ label: entry.senseLabels[i] ?? null, text })),
+    etymology: entry.etymology,
+    audio: entry.audio,
+  };
 }
 
 /** @param {DictionaryEntry} entry */

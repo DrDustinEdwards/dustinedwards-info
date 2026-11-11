@@ -14,5 +14,6 @@ export default function start(): void {
   const slot = document.createElement("span");
   slot.dataset.cap = "offline-keep";
   links.appendChild(slot);
-  enhance(links);
+  // The page has one slot, so the whole document is the scope.
+  enhance(document);
 }

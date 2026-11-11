@@ -1,3 +1,4 @@
+import { DraftNotice } from "capsomer/react/draft-notice";
 import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
 
@@ -16,6 +17,7 @@ import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
 import { listPublishedLibraryRecords } from "~/db/procedures";
+import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import {
@@ -150,12 +152,10 @@ export async function loader({
 
   // A kind that is only one table has no page for an item, and no address is kept for one that had a page.
   if (!hasItemPage(kind)) throw data(null, { status: 404 });
-  const item = await getRegistryItem(env, kind, params.id);
-  if (!item) throw data(null, { status: 404 });
   // A draft is the signed-in admin's alone; that request carries a cookie, and the Worker never stores it.
-  if (item.status === "draft" && !(await isAdminViewer(env, request)))
-    throw data(null, { status: 404 });
-  const draft = item.status === "draft";
+  const { row: item, draft } = await draftGate(await getRegistryItem(env, kind, params.id), () =>
+    isAdminViewer(env, request),
+  );
   // A reagent's and an item of equipment's protocols are computed from the protocols that name them (docs/KNOWLEDGE-BASE.md, A1).
   if (kind === "reagent")
     return {
@@ -264,7 +264,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       kindPath(page.kind),
     );
   }
-  const noindex = page.draft ? [{ name: "robots", content: "noindex" }] : [];
+  const noindex = draftRobots(page.draft);
   // The protocols by name, so a page with no supplier or maker on record still says what it is for.
   const usedIn = (uses: Used) =>
     uses.length > 0
@@ -356,7 +356,7 @@ export default function LabKindRoute({ loaderData }: Route.ComponentProps) {
         <h1 className="page-title cap-layout-grid" id="registry-title">
           {item?.name}
         </h1>
-        {draft ? <p>Draft: only you can see this page.</p> : null}
+        <DraftNotice show={draft} />
         {page.kind === "strain" ? (
           <LabStrain strain={page.strain} usedBy={page.usedBy} />
         ) : page.kind === "reagent" ? (

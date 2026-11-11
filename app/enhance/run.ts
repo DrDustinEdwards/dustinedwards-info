@@ -1,6 +1,8 @@
 import { start } from "capsomer/behavior/checklist-run";
+import { enhance as enhanceField } from "capsomer/behavior/field";
+import { enhance as enhanceSelect } from "capsomer/behavior/select";
 
-import { labProcessRecord } from "../kb/procedures/run-record.mjs";
+import { labRunRecord } from "../kb/procedures/run.mjs";
 
 // An island (devkit ./islands): each <template data-island="run"> on the page calls this, and the first one runs it.
 let started = false;
@@ -15,19 +17,25 @@ export default function startRun(): void {
    * is fetched as the page at that scale and the [data-run-swap] regions are swapped in.
    *
    * What stays the site's: which markup is the steps (below) and the JSON download, a Bioschemas LabProcess
-   * (kb/procedures/run-record.mjs).
+   * (kb/procedures/run.mjs).
    */
   const root = document.querySelector<HTMLElement>(".procedure[data-run-path]");
   if (!root) throw new Error("run: this page has no .procedure[data-run-path] to run");
+  // The scale control's steppers and its unit select (capsomer/scale-control.md); the form works without them.
+  const scaleForm = root.querySelector<HTMLFormElement>("form.cap-scale-control");
+  if (scaleForm) {
+    enhanceField(scaleForm);
+    enhanceSelect(scaleForm);
+  }
   start(root, {
     noun: "procedure",
     storageKey: `dustinedwards.run:${root.dataset.runPath ?? ""}`,
     steps: "li.procedure-step[data-step]",
     stepText: ".procedure-step-text",
     startSlot: ".procedure-links",
-    scaleForm: "form.procedure-scale",
+    scaleForm: "form.cap-scale-control",
     markdownLabel: "Protocol",
     recordName: "dustinedwards.info run",
-    toRecord: (run, steps, origin) => labProcessRecord(run, steps, origin),
+    toRecord: (run, steps, origin) => labRunRecord(run, steps, origin),
   });
 }
