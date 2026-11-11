@@ -4,6 +4,7 @@ import { Form, data } from "react-router";
 import { MANAGE_MEMBERS, can } from "@dustinedwards/site-runtime/members";
 import { Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
+import { ButtonLink } from "capsomer/react/link";
 import { Field } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 import { PeopleRoles } from "capsomer/react/people-roles";
@@ -72,9 +73,7 @@ export default function LabMembers({ loaderData, actionData }: Route.ComponentPr
             <Button type="submit" variant="danger">
               Remove {confirm.name}
             </Button>{" "}
-            <a className="cap-btn" href={`${LAB_BENCH_PATH}/members`}>
-              Cancel
-            </a>
+            <ButtonLink href={`${LAB_BENCH_PATH}/members`}>Cancel</ButtonLink>
           </Form>
         </Panel>
       ) : null}

@@ -10,6 +10,7 @@ import {
 import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
 import { AdminShell, FIRST_PAGE, type AdminEntry } from "capsomer/react/admin-shell";
+import { ButtonLink } from "capsomer/react/link";
 import { themeScript } from "capsomer/theme-server";
 
 import { Icon, shellLink } from "~/components/admin/shell-parts";
@@ -340,11 +341,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       <Empty
         kind="failed"
         title={title}
-        action={
-          <a className="cap-btn" href="/admin">
-            Go to the Overview
-          </a>
-        }
+        action={<ButtonLink href="/admin">Go to the Overview</ButtonLink>}
       >
         {known && typeof error.data === "string" ? error.data : "Nothing you wrote is lost."}
       </Empty>

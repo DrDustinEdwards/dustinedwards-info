@@ -6,7 +6,8 @@ import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
-import { LabTable, Result } from "~/components/lab/lab-ui";
+import { Table } from "capsomer/react/table";
+import { LabStatus } from "~/components/lab/lab-ui";
 import { RunForm } from "~/components/lab/run-form";
 import { labActorContext } from "~/lab/actor.server";
 import { amountText, idOf } from "~/lab/forms.mjs";
@@ -59,7 +60,7 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
         crumbs={[{ label: "Runs", href: `${LAB_BENCH_PATH}/runs` }, { label: `Run ${run.id}` }]}
         title={`Run ${run.id}: ${run.title}`}
       />
-      <Result result={actionData} />
+      <LabStatus result={actionData} />
       {run.replaced_by ? (
         <p>
           Corrected by{" "}
@@ -100,20 +101,30 @@ export default function LabRun({ loaderData, actionData }: Route.ComponentProps)
         {lots.length === 0 ? (
           <p className="cap-muted">No lots recorded.</p>
         ) : (
-          <LabTable label="Lots used" head={["Item", "Lot", "Used", ""]}>
-            {lots.map((l) => (
-              <tr key={l.lot_id}>
-                <th scope="row">{l.item}</th>
-                <td>
-                  <Link to={`${LAB_BENCH_PATH}/inventory/${l.lot_id}`} className="cap-mono">
-                    {l.lot_number}
-                  </Link>
-                </td>
-                <td>{l.amount_used === null ? "" : amountText(l.amount_used, l.unit)}</td>
-                <td>{l.emptied ? "Emptied it" : ""}</td>
+          <Table caption="Lots used" captionHidden>
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Lot</th>
+                <th scope="col">Used</th>
+                <th scope="col"></th>
               </tr>
-            ))}
-          </LabTable>
+            </thead>
+            <tbody>
+              {lots.map((l) => (
+                <tr key={l.lot_id}>
+                  <th scope="row">{l.item}</th>
+                  <td>
+                    <Link to={`${LAB_BENCH_PATH}/inventory/${l.lot_id}`} className="cap-mono">
+                      {l.lot_number}
+                    </Link>
+                  </td>
+                  <td>{l.amount_used === null ? "" : amountText(l.amount_used, l.unit)}</td>
+                  <td>{l.emptied ? "Emptied it" : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </Panel>
       {canCorrect ? (

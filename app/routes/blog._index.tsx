@@ -1,7 +1,8 @@
 import { Form, data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
-import { FilterLink } from "~/components/filter-link";
+import { LinkChips } from "capsomer/react/chips";
+import { chipLink, filterName } from "~/components/filter-chips";
 import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -21,6 +22,7 @@ import type { Route } from "./+types/blog._index";
 
 /* evidence-row.css is imported here, not by the component: every sheet a page loads shows in its route's imports. */
 import "~/styles/evidence-row.css";
+import "capsomer/chips.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
@@ -174,35 +176,49 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         </Form>
 
         {tags.length > 0 && (
-          <nav className="list-filter" aria-label="Filter posts by tag">
+          <div className="list-filter">
             <span className="list-filter-label">Tags</span>
-            <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
-            {tags.map((tag) => (
-              <FilterLink
-                key={tag.slug}
-                to={filterHref({ tag: tag.slug })}
-                label={tag.name}
-                count={tag.total}
-                active={activeTag === tag.slug}
-              />
-            ))}
-          </nav>
+            <LinkChips
+              label="Filter posts by tag"
+              renderLink={chipLink}
+              chips={[
+                {
+                  href: filterHref({ tag: null }),
+                  label: filterName("All", !activeTag),
+                  current: !activeTag,
+                },
+                ...tags.map((tag) => ({
+                  href: filterHref({ tag: tag.slug }),
+                  label: filterName(tag.name, activeTag === tag.slug),
+                  count: tag.total,
+                  current: activeTag === tag.slug,
+                })),
+              ]}
+            />
+          </div>
         )}
 
         {years.length > 1 && (
-          <nav className="list-filter" aria-label="Filter posts by year">
+          <div className="list-filter">
             <span className="list-filter-label">Years</span>
-            <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
-            {years.map((entry) => (
-              <FilterLink
-                key={entry.year}
-                to={filterHref({ year: String(entry.year) })}
-                label={String(entry.year)}
-                count={entry.total}
-                active={activeYear === entry.year}
-              />
-            ))}
-          </nav>
+            <LinkChips
+              label="Filter posts by year"
+              renderLink={chipLink}
+              chips={[
+                {
+                  href: filterHref({ year: null }),
+                  label: filterName("All", !activeYear),
+                  current: !activeYear,
+                },
+                ...years.map((entry) => ({
+                  href: filterHref({ year: String(entry.year) }),
+                  label: filterName(String(entry.year), activeYear === entry.year),
+                  count: entry.total,
+                  current: activeYear === entry.year,
+                })),
+              ]}
+            />
+          </div>
         )}
 
         {posts.length === 0 && !featured ? (

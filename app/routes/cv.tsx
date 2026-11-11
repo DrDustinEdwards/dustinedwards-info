@@ -48,6 +48,7 @@ import type { Route } from "./+types/cv";
 
 import "capsomer/tokens.css";
 import "capsomer/status.css";
+import "capsomer/chips.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -487,20 +488,18 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             <div className="cv-more-body">
               <fieldset className="cv-facet">
                 <legend className="cv-label">Type</legend>
-                <div className="cv-chips">
+                <div className="cap-chips">
                   {TYPES.map(([id, , plural]) => (
-                    <label key={id} className="cv-chip">
+                    <label key={id} className="cap-chip">
                       <input
                         type="checkbox"
                         name="type"
                         value={id}
                         defaultChecked={state.types.includes(id)}
                       />
-                      <span className="cv-chip-text">
-                        {plural}
-                        <span className="cv-chip-count" data-cv-facet={`type:${id}`}>
-                          {facets.types[id] ?? 0}
-                        </span>
+                      {plural}
+                      <span className="cap-chip-count" data-cv-facet={`type:${id}`}>
+                        {facets.types[id] ?? 0}
                       </span>
                     </label>
                   ))}
@@ -509,21 +508,19 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               <div className="cv-filter-row">
                 <fieldset className="cv-facet">
                   <legend className="cv-label">Research area</legend>
-                  <div className="cv-chips">
+                  <div className="cap-chips">
                     {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
                       ([id, label]) => (
-                        <label key={id} className="cv-chip">
+                        <label key={id} className="cap-chip">
                           <input
                             type="checkbox"
                             name="area"
                             value={id}
                             defaultChecked={state.areas.includes(id)}
                           />
-                          <span className="cv-chip-text">
-                            {label}
-                            <span className="cv-chip-count" data-cv-facet={`area:${id}`}>
-                              {facets.areas[id] ?? 0}
-                            </span>
+                          {label}
+                          <span className="cap-chip-count" data-cv-facet={`area:${id}`}>
+                            {facets.areas[id] ?? 0}
                           </span>
                         </label>
                       ),

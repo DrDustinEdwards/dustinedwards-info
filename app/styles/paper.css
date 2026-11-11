@@ -14,14 +14,8 @@
 
 .paper-links a:hover,
 .paper-breadcrumb a:hover,
-.paper-machine b a:hover,
-.paper-topics a:hover {
+.paper-machine b a:hover {
   color: var(--brand-hover);
-}
-
-.paper-topics a {
-  color: var(--text-secondary);
-  text-decoration: none;
 }
 
 .paper-head {
@@ -135,15 +129,6 @@
 
 .paper-citedby-list li {
   margin-block-start: 0.375rem;
-}
-
-.paper-topics {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 0.875rem;
-  margin: var(--space-7) 0 0;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
 }
 
 .paper-update-notice {

@@ -3,6 +3,7 @@ import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
+import { ButtonLink } from "capsomer/react/link";
 import { Panel } from "capsomer/react/panel";
 import { Tabs, TabsList, TabsTrigger } from "capsomer/react/tabs";
 
@@ -373,9 +374,9 @@ export function KbFormEditor({
                 Duplicate
               </Button>
             ) : null}
-            <Link to="?view=file" className="cap-btn" data-variant="quiet">
+            <ButtonLink to="?view=file" variant="quiet">
               Advanced: edit the file
-            </Link>
+            </ButtonLink>
           </>
         }
       />

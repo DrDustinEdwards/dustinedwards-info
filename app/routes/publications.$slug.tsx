@@ -1,5 +1,5 @@
-import { Link } from "react-router";
-
+import { LinkChips } from "capsomer/react/chips";
+import { chipLink } from "~/components/filter-chips";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -38,6 +38,7 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";
 
+import "capsomer/chips.css";
 import "~/styles/paper.css";
 
 /**
@@ -283,13 +284,14 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {topics.length > 0 ? (
-            <p className="paper-topics">
-              {topics.map((t) => (
-                <Link key={t.id} to={`${PUBLICATIONS_PATH}?topic=${t.id}`}>
-                  {t.label}
-                </Link>
-              ))}
-            </p>
+            <LinkChips
+              label="Topics"
+              renderLink={chipLink}
+              chips={topics.map((t) => ({
+                href: `${PUBLICATIONS_PATH}?topic=${t.id}`,
+                label: t.label,
+              }))}
+            />
           ) : null}
         </div>
 

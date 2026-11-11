@@ -1,4 +1,5 @@
 import { Form, Link, data } from "react-router";
+import { ButtonLink } from "capsomer/react/link";
 
 import { Empty } from "capsomer/react/empty";
 import { Panel } from "capsomer/react/panel";
@@ -69,16 +70,15 @@ function AdminLink({ href, children, ...rest }: RowLinkProps) {
 /** The public page, a document navigation since the public pages bring their own stylesheets; named for its row. */
 function ViewLink({ href, what }: { href: string; what: string }) {
   return (
-    <Link
+    <ButtonLink
       to={href}
       reloadDocument
-      className="cap-btn"
-      data-variant="quiet"
-      data-size="sm"
+      variant="quiet"
+      size="sm"
       aria-label={`View the page for ${what}`}
     >
       View page
-    </Link>
+    </ButtonLink>
   );
 }
 

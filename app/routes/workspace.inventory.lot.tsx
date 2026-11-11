@@ -8,7 +8,8 @@ import { Panel } from "capsomer/react/panel";
 
 import { PageHead } from "capsomer/react/page-head";
 import { crumbLink } from "~/components/admin/shell-parts";
-import { LabTable, Result } from "~/components/lab/lab-ui";
+import { Table } from "capsomer/react/table";
+import { LabStatus } from "~/components/lab/lab-ui";
 import { labActorContext } from "~/lab/actor.server";
 import { inventoryAction, lotPage } from "~/lab/inventory.server";
 import { amountText, idOf } from "~/lab/forms.mjs";
@@ -76,7 +77,7 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
         ]}
         title={`${lot.item}, lot ${lot.lot_number}`}
       />
-      <Result result={actionData} />
+      <LabStatus result={actionData} />
       <dl className="lab-facts">
         <dt>Left</dt>
         <dd>{lot.amount === null ? "Not recorded" : amountText(lot.amount, lot.unit)}</dd>
@@ -108,25 +109,33 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
         {runs.length === 0 ? (
           <p className="cap-muted">No runs yet.</p>
         ) : (
-          <LabTable
-            label="Runs that used this lot"
-            head={["Run", "Protocol", "Day", "Outcome", "By"]}
-          >
-            {runs.map((r) => (
-              <tr key={r.id}>
-                <th scope="row">
-                  <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
-                  {r.replaced_by ? (
-                    <span className="cap-muted">, corrected by run {r.replaced_by}</span>
-                  ) : null}
-                </th>
-                <td>{r.title}</td>
-                <td>{r.run_on}</td>
-                <td>{r.outcome}</td>
-                <td>{r.actor}</td>
+          <Table caption="Runs that used this lot" captionHidden>
+            <thead>
+              <tr>
+                <th scope="col">Run</th>
+                <th scope="col">Protocol</th>
+                <th scope="col">Day</th>
+                <th scope="col">Outcome</th>
+                <th scope="col">By</th>
               </tr>
-            ))}
-          </LabTable>
+            </thead>
+            <tbody>
+              {runs.map((r) => (
+                <tr key={r.id}>
+                  <th scope="row">
+                    <Link to={`${LAB_BENCH_PATH}/runs/${r.id}`}>Run {r.id}</Link>
+                    {r.replaced_by ? (
+                      <span className="cap-muted">, corrected by run {r.replaced_by}</span>
+                    ) : null}
+                  </th>
+                  <td>{r.title}</td>
+                  <td>{r.run_on}</td>
+                  <td>{r.outcome}</td>
+                  <td>{r.actor}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </Panel>
 
@@ -182,15 +191,24 @@ export default function LabLot({ loaderData, actionData }: Route.ComponentProps)
       ) : null}
 
       <Panel title="History">
-        <LabTable label="History of this lot" head={["When", "Who", "What"]}>
-          {audit.map((row) => (
-            <tr key={row.id}>
-              <td>{new Date(row.at * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC</td>
-              <td>{row.actor}</td>
-              <td>{changeText(row.before_row, row.after_row)}</td>
+        <Table caption="History of this lot" captionHidden>
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">Who</th>
+              <th scope="col">What</th>
             </tr>
-          ))}
-        </LabTable>
+          </thead>
+          <tbody>
+            {audit.map((row) => (
+              <tr key={row.id}>
+                <td>{new Date(row.at * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC</td>
+                <td>{row.actor}</td>
+                <td>{changeText(row.before_row, row.after_row)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       </Panel>
     </>
   );

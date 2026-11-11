@@ -3,6 +3,7 @@ import { Form, Link, useNavigation } from "react-router";
 
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
+import { ButtonLink } from "capsomer/react/link";
 import { MarkdownEditor } from "capsomer/react/markdown-editor";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList } from "capsomer/react/row-list";
@@ -122,9 +123,9 @@ export function KbFileEditor({
         ]}
         title={file.title}
         actions={
-          <Link to={{ search: "" }} className="cap-btn" data-variant="quiet">
+          <ButtonLink to={{ search: "" }} variant="quiet">
             Back to the form
-          </Link>
+          </ButtonLink>
         }
         lead={
           <>
