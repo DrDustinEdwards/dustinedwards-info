@@ -22,7 +22,6 @@ import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
 import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
-import { countCssRules } from "capsomer/testing/page";
 import * as runMode from "./lib/browser/cases/run-mode.mjs";
 import * as offline from "./lib/browser/cases/offline.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
@@ -32,14 +31,8 @@ import * as sitemapFeeds from "./lib/browser/cases/sitemap-feeds.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
-import {
-  BASE,
-  DRIVES_PREVIEW,
-  lane,
-  ok,
-  skipped,
-  tally,
-} from "./lib/browser/harness.mjs";
+import { BASE, DRIVES_PREVIEW, lane, ok, skipped, tally } from "./lib/browser/harness.mjs";
+import { countCssRules } from "capsomer/testing/page";
 import {
   build,
   cleanupChildren,
@@ -135,9 +128,9 @@ try {
   const css = await countCssRules(page);
   ok(
     "the blog page's stylesheets are actually applied",
-    css >= 144,
-    `${css} CSS rule(s) reachable on /writing, floor 144, measured 157 on 2026-08-27 ` +
-      `after the per-route CSS split. Below this the page is effectively unstyled ` +
+    css >= 900,
+    `${css} CSS rule(s) reachable on /writing, nested rules counted, floor 900, measured 1128 on ` +
+      `2026-11-11. Below this the page is effectively unstyled ` +
       `and every layout assertion below is measuring browser defaults.`,
   );
 

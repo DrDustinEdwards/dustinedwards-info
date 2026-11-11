@@ -139,19 +139,19 @@ await test("search ranks by field weight: a title match comes before a descripti
   );
 });
 
-await test("the downloads carry every fact with words for the ids, honor the filters, and quote what needs it", () => {
+await test("the downloads carry every fact with words for the ids and honor the filters", () => {
   const items = libraryItems(RECORDS);
   const rows = libraryRecords(items, "method=plating", "https://example.test");
   assert.equal(rows.length, 1);
   assert.deepEqual(rows[0].methods, ["Plating and titering", "Culture"]);
   assert.deepEqual(rows[0].courses, ["Phage Discovery Program"]);
   assert.equal(rows[0].url, "https://example.test/research/protocols/isolation");
-  const csv = libraryCsv(libraryRecords(items, "", "https://example.test"));
-  const lines = csv.split("\r\n");
-  assert.equal(lines.at(-1), "", "ends with a line break");
-  assert.ok(lines[0].startsWith("id,title,url,kind,methods"));
-  assert.match(csv, /"Phage isolation, a \| b"/, "a comma makes the cell quoted");
-  assert.match(csv, /Plating and titering; Culture/, "a list is joined with a semicolon");
+  // The CSV's quoting and joins are site-runtime's (./csv), tested there; the columns are the rows' own.
+  assert.ok(
+    libraryCsv(libraryRecords(items, "", "https://example.test")).startsWith(
+      "id,title,url,kind,methods",
+    ),
+  );
 });
 
 await test("the twin's table links each protocol by its address and escapes a pipe in a cell", () => {

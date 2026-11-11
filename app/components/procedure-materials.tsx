@@ -1,4 +1,5 @@
 import { ScaleControl } from "capsomer/react/scale-control";
+import { markup } from "capsomer/behavior/trusted-html";
 
 import { reagentSource, type ProcedureRecord } from "~/kb/procedures/render.mjs";
 import { lineageText, type Lineage } from "~/kb/procedures/lineage.mjs";
@@ -24,7 +25,7 @@ type Section = ProcedureRecord["sections"][number];
 export type Block = Section["blocks"][number];
 export type Step = Extract<Block, { type: "steps" }>["steps"][number];
 
-export const html = (value: string | null | undefined) => ({ __html: value ?? "" });
+export const html = (value: string | null | undefined) => markup(value ?? "");
 
 /** The words for the materials section, by profile. */
 export function materialsHeading(record: ProcedureRecord) {

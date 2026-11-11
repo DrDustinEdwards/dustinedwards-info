@@ -36,6 +36,7 @@ import "~/styles/search-page.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
+import { markup } from "capsomer/behavior/trusted-html";
 
 const PAGE_SIZE = 10;
 
@@ -271,7 +272,7 @@ function Result({ hit }: { hit: SearchHit }) {
 
       {/* Safe as HTML: the snippet was escaped before its <mark> markers were
           substituted in. See renderSnippet in search.server.ts. */}
-      <p className="search-snippet" dangerouslySetInnerHTML={{ __html: hit.snippet }} />
+      <p className="search-snippet" dangerouslySetInnerHTML={markup(hit.snippet)} />
 
       <p className="search-why">
         matched on{" "}

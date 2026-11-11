@@ -3,6 +3,7 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
+import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import {
   catalogRedirect,
   defineCatalog,
@@ -196,18 +197,15 @@ export function libraryRecords(items, params, origin) {
 }
 
 /**
- * The same rows as CSV (RFC 4180): a list field is its values joined with "; ". A cell is quoted when it holds a
- * comma, a quote or a line break.
+ * The same rows as CSV, site-runtime's (RFC 4180, the formula guard on): a list field is its values joined with "; ".
  *
  * @param {Array<Record<string, unknown>>} rows a library's download rows, its own or another base's (app/kb/libraries.mjs)
  */
 export function libraryCsv(rows) {
-  const columns = Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 });
-  const cellOf = (/** @type {unknown} */ value) => {
-    const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
-    return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-  };
-  return `${[columns.join(","), ...rows.map((row) => columns.map((c) => cellOf(row[c])).join(","))].join("\r\n")}\r\n`;
+  return recordsCsv(
+    /** @type {Array<Record<string, import("@dustinedwards/site-runtime/csv").CsvValue>>} */ (rows),
+    Object.keys(rows[0] ?? { id: 1, title: 1, url: 1 }),
+  );
 }
 
 /** One cell of a markdown table. @param {string} text */

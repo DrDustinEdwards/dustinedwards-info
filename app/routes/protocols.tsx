@@ -51,6 +51,7 @@ import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The protocol library at /research/protocols (docs/PROCEDURES.md): the page's own introduction, then every
@@ -147,7 +148,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
         {page.title}
       </h1>
       <DraftNotice show={draft} />
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: intro }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(intro)} />
       <LibraryOverview overview={libraryOverview(items)} />
       <div className="library site-catalog site-catalog-wide">
         <TabsNav aria-label="Protocols by kind of work" variant="line">
@@ -178,9 +179,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
           origin: SITE_ORIGIN,
         })}
       />
-      {rest ? (
-        <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: rest }} />
-      ) : null}
+      {rest ? <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(rest)} /> : null}
       <template data-island="catalog" />
     </PageShell>
   );

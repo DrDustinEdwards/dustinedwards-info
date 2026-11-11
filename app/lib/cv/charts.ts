@@ -97,7 +97,7 @@ function fadeOutside(markup: string, selected: [number, number] | null) {
 
 /**
  * A line of per-year values beside its count (a chart in a sentence, so no frame), with its numbers by
- * year behind "Show data".
+ * year in a visually hidden table.
  */
 export function sparklineSvg(input: SparklineInput): string {
   const svg = sparkline({ values: input.values, alt: input.label, area: true, inline: true });

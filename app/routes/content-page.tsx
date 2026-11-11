@@ -44,6 +44,7 @@ import "capsomer/dictionary-entry.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * Every Research, Teaching and Software page (app/lib/content-pages.mjs): the research/* splat, and
@@ -139,7 +140,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
         <div className="page-patched">
           <h1 className="page-title cap-layout-grid">{page.title}</h1>
           {/* Decorative: the trail and the running head say the same in words. */}
-          <span dangerouslySetInnerHTML={{ __html: patchSvg(patch) }} />
+          <span dangerouslySetInnerHTML={markup(patchSvg(patch))} />
         </div>
       ) : (
         <h1 className="page-title cap-layout-grid">{page.title}</h1>
@@ -162,7 +163,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
         </>
       ) : null}
       <PhageTools path={page.path} search={search} />
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: page.html }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(page.html)} />
       {page.html.includes("data-enarratio-redraw") ? <template data-island="charts" /> : null}
       {roster ? (
         <div className="prose">

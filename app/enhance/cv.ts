@@ -1,3 +1,4 @@
+import { trustedHtml } from "capsomer/behavior/trusted-html";
 import { enhance, type EnhancedChart, type SelectDetail } from "enarratio/enhance";
 
 import { copyText } from "../lib/clipboard";
@@ -197,7 +198,7 @@ export default function start(): void {
         drawTimeline(charts.timeline, state);
         for (const name of ["papers", "grants", "students"] as const) {
           const host = root.querySelector(`[data-cv-spark="${name}"]`);
-          if (host) host.innerHTML = charts[name];
+          if (host) host.innerHTML = trustedHtml(charts[name]);
         }
         // What the drawn charts answer to. The URL is written before they arrive, so it cannot say they are here.
         timelineHost.dataset.cvDrawn = stateToSearch(state);
@@ -214,18 +215,18 @@ export default function start(): void {
    */
   function drawTimeline(markup: string, state: CvState) {
     const drawn = new DOMParser()
-      .parseFromString(markup, "text/html")
+      .parseFromString(trustedHtml(markup), "text/html")
       .querySelector("figure.enarratio");
     if (!drawn) {
       timeline?.destroy();
       timeline = undefined;
-      timelineHost.innerHTML = markup;
+      timelineHost.innerHTML = trustedHtml(markup);
       return;
     }
     if (timeline) {
       timeline.update(drawn.outerHTML);
     } else {
-      timelineHost.innerHTML = markup;
+      timelineHost.innerHTML = trustedHtml(markup);
       timeline = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
       if (!timeline) throw new Error("cv: the timeline is not an Enarratio figure.");
     }

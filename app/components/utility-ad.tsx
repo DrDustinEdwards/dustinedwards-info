@@ -7,6 +7,7 @@ import type { Ad, AdPart } from "~/utility-ads/registry";
 import adCssUrl from "~/utility-ads/utility-ads.css?url";
 import bangersUrl from "~/utility-ads/fonts/bangers-latin-400-normal.woff2?url";
 import alfaUrl from "~/utility-ads/fonts/alfa-slab-one-latin-400-normal.woff2?url";
+import { markup } from "capsomer/behavior/trusted-html";
 
 function Part({ part, adId }: { part: AdPart; adId: string }) {
   const rotate = part.rotate
@@ -110,7 +111,7 @@ export function UtilityAd({
       <link rel="stylesheet" href={adCssUrl} />
       <div className="ad-corner" data-size={size} aria-hidden="true" data-ad={ad.id}>
         {/* The art's symbols, defined once. Trusted markup from this repository. */}
-        <svg className="ad-defs" focusable="false" dangerouslySetInnerHTML={{ __html: ad.art }} />
+        <svg className="ad-defs" focusable="false" dangerouslySetInnerHTML={markup(ad.art)} />
         <svg className="ad-art" viewBox={`0 0 ${ad.viewBox[0]} ${ad.viewBox[1]}`} focusable="false">
           {ad.parts.map((part, i) => (
             <Part key={i} part={part} adId={ad.id} />
