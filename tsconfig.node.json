@@ -135,7 +135,6 @@
     // project must list every file it reaches, so a transitive import of a
     // listed file lands here too. Dependency-free, so it costs nothing.
     "app/lib/media/byte-size.mjs",
-    "app/lib/destructive.mjs",
     // The two webmention retention windows. The admin page labels its sweep
     // with them rather than with a copy of the sentence, on exactly the footing
     // CACHE_SENTENCE below is on: a paraphrase in the route that hard-coded 30
