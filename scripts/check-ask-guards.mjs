@@ -224,7 +224,8 @@ const { eq } = tally;
 
   eq(
     "syncAskCorpus sources its records from askCorpusRecords",
-    /const records = await askCorpusRecords\(env\)/.test(askSource),
+    // The first of the reads syncAskCorpus runs together, destructured as `records`.
+    /const \[records,[^\]]*\] = await Promise\.all\(\[\s*askCorpusRecords\(env\),/.test(askSource),
     true,
   );
   eq(

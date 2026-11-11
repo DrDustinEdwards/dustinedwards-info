@@ -992,3 +992,11 @@ export const page404Daily = sqliteTable(
   },
   (t) => [uniqueIndex("page_404_daily_day_path_referrer_uq").on(t.day, t.path, t.referrerHost)],
 );
+
+// The Ask upload ledger (drizzle/0043_ask_uploads.sql): the sha-256 of the body last uploaded to AI Search under each
+// item key, so sync_ask uploads only what changed. Derived, so not in the backup's required tables.
+export const askUploads = sqliteTable("ask_uploads", {
+  key: text("key").primaryKey(),
+  bodySha256: text("body_sha256").notNull(),
+  uploadedAt: text("uploaded_at").notNull(),
+});
