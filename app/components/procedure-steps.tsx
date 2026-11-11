@@ -75,7 +75,7 @@ export function StepItem({
         dangerouslySetInnerHTML={html(text)}
       />
       {ingredients.length > 0 ? (
-        <p className="procedure-step-ingredients">
+        <p className="procedure-step-ingredients" data-run-swap="ingredients">
           <span className="procedure-step-ingredients-label">Ingredients: </span>
           {ingredients.map((i) => (i.amount ? `${i.amount} ${i.name}` : i.name)).join(", ")}
         </p>

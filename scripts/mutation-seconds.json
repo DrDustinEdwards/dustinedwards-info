@@ -15,7 +15,6 @@
   "app/kb/procedures/proof.mjs": 11,
   "app/kb/procedures/recipe-views.mjs": 126,
   "app/kb/procedures/render.mjs": 1225,
-  "app/kb/procedures/run.mjs": 29,
   "app/kb/procedures/validate.mjs": 1138,
   "app/kb/registry/align.mjs": 66,
   "app/kb/registry/catalog.mjs": 3162,
