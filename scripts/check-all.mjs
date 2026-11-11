@@ -5,7 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { assertFloor } from "./lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { killTree, readProcessTable, recordedTreeLeftovers } from "./lib/child-processes.mjs";
 import { WINDOWS_CRASH_CODES } from "./lib/windows-crash-codes.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";

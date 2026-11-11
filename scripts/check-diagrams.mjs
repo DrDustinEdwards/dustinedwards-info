@@ -23,8 +23,8 @@ import { DIAGRAM_ROLE_TOKENS } from "../app/lib/content/diagram.mjs";
 import { ASSET_PREFIX } from "../app/lib/media/classify.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   basename(diagramAssetPath(key, theme, ASSET_PREFIX));

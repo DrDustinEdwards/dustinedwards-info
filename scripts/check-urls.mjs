@@ -3,8 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
-import { parseSource, ts } from "./lib/syntax.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { parseSource, ts } from "@dustinedwards/devkit/node/syntax";
+import { createTally } from "@dustinedwards/devkit/node";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");

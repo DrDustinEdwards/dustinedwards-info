@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { ts } from "./syntax.mjs";
+import { ts } from "@dustinedwards/devkit/node/syntax";
 
 /**
  * TypeScript's own JSONC reader, which knows a string from a comment. The regex it replaces took
