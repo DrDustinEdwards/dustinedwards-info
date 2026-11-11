@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import {
   Form,
   Outlet,
@@ -275,23 +274,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   ];
   /* The tab title is "<page> · dustinedwards.info": the menu entry the reader is in names the page. */
   const page = nav.find((entry) => entry.current)?.label;
-
-  /* The shell names `[` in the collapse control's tip and leaves binding it to the app. It presses that
-     control, so the choice is remembered by the shell's own preference. Never while someone types. */
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "[" || event.ctrlKey || event.metaKey || event.altKey) return;
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        target.closest("input, textarea, select, [contenteditable], .cm-editor")
-      )
-        return;
-      document.querySelector<HTMLButtonElement>('[data-cap-part="menu-toggle"]')?.click();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <>
