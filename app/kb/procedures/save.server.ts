@@ -8,7 +8,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
+import { blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
@@ -96,14 +96,20 @@ export async function readProcedure(env: ProcedureEnv, slug: string) {
 
 /**
  * An operator may edit, unpublish and republish a procedure, never publish one for the first time:
- * the same rule as posts (the first-publish rule, `WRITE_CAPABILITIES` in `publish-policy.mjs`), read from the prior FILE, the only authority.
+ * the same rule as posts (the first-publish rule, `WRITE_CAPABILITIES` in `publish-policy.mjs`), read from the prior file and its stored revisions.
  */
-function decideProcedure(actor: Actor, incomingDraft: boolean, prior: string | null) {
+function decideProcedure(
+  actor: Actor,
+  incomingDraft: boolean,
+  prior: string | null,
+  history: readonly string[],
+) {
   decideFileWrite({
     actor,
     noun: "procedure",
     incomingDraft,
     priorRaw: prior,
+    history,
     isDraft: (raw) => parseProcedure({ file: "", raw }).data.draft === true,
   });
 }
@@ -236,7 +242,12 @@ export async function saveProcedure(
 
   const compiled = await compile(env, slug, raw);
   if (!compiled.ok) throw new ProcedureInvalid(slug, compiled.errors);
-  decideProcedure(actor, compiled.record.draft, existing?.content ?? null);
+  decideProcedure(
+    actor,
+    compiled.record.draft,
+    existing?.content ?? null,
+    await fileHistory(env, path),
+  );
 
   const tag =
     actor.kind === "operator"
