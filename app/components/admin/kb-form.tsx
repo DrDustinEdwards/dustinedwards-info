@@ -503,9 +503,7 @@ export function KbFormEditor({
             />
           ) : null}
 
-          <div className="kb-savebar">
-            <KbCheckSave busy={busy} actionData={actionData} errors={errors} />
-          </div>
+          <KbCheckSave busy={busy} actionData={actionData} errors={errors} sticky />
         </Form>
         {isEntry ? (
           <aside

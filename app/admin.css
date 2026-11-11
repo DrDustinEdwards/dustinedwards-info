@@ -23,6 +23,7 @@
 @import "capsomer/time.css";
 @import "capsomer/banner.css";
 @import "capsomer/form-status.css";
+@import "capsomer/save-bar.css";
 @import "capsomer/message.css";
 @import "capsomer/empty.css";
 @import "capsomer/panel.css";
@@ -253,16 +254,6 @@ main.app-page {
 
 .kb-nested-gaps {
   margin: var(--space-3) 0 0;
-}
-
-/* Check and Save stay in reach at the foot of a long form. */
-.kb-savebar {
-  position: sticky;
-  bottom: 0;
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  background: var(--ground);
 }
 
 /* Drag is a pointer's shortcut; on a narrow screen the cards move with their buttons (GOV.UK's reorderable list). */

@@ -6,6 +6,7 @@ import { Button } from "capsomer/react/button";
 import { ButtonLink } from "capsomer/react/link";
 import { MarkdownEditor } from "capsomer/react/markdown-editor";
 import { Panel } from "capsomer/react/panel";
+import { SaveBar } from "capsomer/react/save-bar";
 import { Row, RowList } from "capsomer/react/row-list";
 
 import { PageHead } from "capsomer/react/page-head";
@@ -38,29 +39,29 @@ export function KbCheckSave({
   actionData,
   errors,
   onFile = false,
+  sticky = false,
 }: {
   busy: string;
   actionData?: KbEditorActionData;
   errors: string[];
   onFile?: boolean;
+  /** The bar stays at the foot of the window while a long form scrolls. */
+  sticky?: boolean;
 }) {
   const checked = actionData?.intent === "check" ? actionData : null;
   return (
     <>
-      <div className="app-actions">
+      <SaveBar
+        state={busy === "save" ? "saving" : "idle"}
+        label="Save"
+        name="intent"
+        value="save"
+        sticky={sticky}
+      >
         <Button type="submit" name="intent" value="check" pending={busy === "check"}>
           Check
         </Button>
-        <Button
-          type="submit"
-          name="intent"
-          value="save"
-          variant="primary"
-          pending={busy === "save"}
-        >
-          Save
-        </Button>
-      </div>
+      </SaveBar>
       <div role="status">
         {checked?.ok ? <Banner tone="ok">Passes every check. Nothing was saved.</Banner> : null}
       </div>
