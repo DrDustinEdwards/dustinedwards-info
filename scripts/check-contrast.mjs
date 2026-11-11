@@ -712,8 +712,10 @@ const buildPresent = existsSync(assetDir);
 // reaches the absent branch; measure it by moving build/ aside, never by reasoning.
 // Re-measured 2026-09-27 with the build absent: 515 ran after the unpainted tokens and
 // their pairs were deleted, on top of the five pin checks removed the same day. Present
-// is that branch's measured 646 minus those five.
-const MINIMUM_CHECKS = buildPresent ? 635 : 510;
+// is that branch's measured 646 minus those five. Re-measured 2026-11-11 by running both branches after the five
+// DECLARED_ELSEWHERE exemptions (two assertions each) went with the move to Capsomer's prose blocks: 630 present,
+// 506 absent.
+const MINIMUM_CHECKS = buildPresent ? 625 : 501;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

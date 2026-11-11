@@ -106,10 +106,6 @@
     // module: the key must hash the string the template draws, not the field
     // it was drawn from. Both readers are in this project.
     "app/lib/content/og-card-text.mjs",
-    // The one owner of "a timestamp as a date a person reads". The card draws
-    // the publication date with it and the key hashes the STRING it returns, so
-    // this project reaches it through pipeline.mjs and through build-og.mjs.
-    "app/lib/long-date.mjs",
     // The two provenance hashes. The pipeline computes them into every record
     // and sync-content.mjs compares D1 against them at ship, so both projects
     // reach the module; one statement, per the module's own header.
@@ -189,13 +185,11 @@
     // same module rather than restating its rules. No DOM: it takes a Request,
     // which the Node lib provides.
     "app/lib/theme.ts",
-    "app/lib/search/query.mjs",
-    // The color math. check:contrast computes with it, on the same principle as
-    // query.mjs: there is one rule for a ratio, not one per reader.
+    // The color math. check:contrast computes with it: there is one rule for a
+    // ratio, not one per reader.
     "app/lib/contrast.mjs",
-    // What an asset IS. The Worker imports it and build:assets imports it, on
-    // the same principle as query.mjs: there must never be a second answer to
-    // "what kind of thing is this file".
+    // What an asset IS. The Worker imports it and build:assets imports it: there must never
+    // be a second answer to "what kind of thing is this file".
     "app/lib/media/classify.mjs",
     // The site's images (site-runtime ./image defineImages). The pipeline writes
     // srcset from it and the Worker serves from it, so both projects must reach

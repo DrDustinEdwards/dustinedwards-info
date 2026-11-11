@@ -511,7 +511,7 @@ export function validateProcedure(parsed, expect) {
   }
 
   // A step's section, so a gap in it can say where it is (app/kb/gap-labels.mjs).
-  const sectionOf = new Map(
+  const stepSection = new Map(
     parsed.sections.flatMap((section) =>
       section.blocks.flatMap((block) =>
         block.type === "steps" ? block.steps.map((s) => [s, section.title]) : [],
@@ -610,7 +610,7 @@ export function validateProcedure(parsed, expect) {
           gaps.push({
             field: `step ${step.number} (line ${step.line}).spin`,
             reason: spin.replace(/^MISSING:\s*/, ""),
-            section: sectionOf.get(step) ?? "",
+            section: stepSection.get(step) ?? "",
           });
         else if (!/x g\b/.test(spin)) errors.push(`${at}: SPIN "${spin}" is not in x g`);
       }

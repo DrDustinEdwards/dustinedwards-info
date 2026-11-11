@@ -3,7 +3,7 @@
 // for width, so every number here was measured off rendered cards.
 
 import { fnv1a32 } from "@dustinedwards/site-runtime/encoding";
-import { longDateUTC } from "../long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { ASSET_PREFIX } from "../media/classify.mjs";
 
 export const TITLE_MAX = 150;
@@ -62,7 +62,7 @@ export function cardDescription(description) {
 const OG_TEMPLATE_VERSION = 7;
 
 /**
- * Hashes exactly what the card draws, AS DRAWN (through cardTitle, cardDescription, longDateUTC), so
+ * Hashes exactly what the card draws, AS DRAWN (through cardTitle, cardDescription, formatDate), so
  * the key changes when the picture would and never otherwise. FNV-1a: identical in Node and a Worker,
  * and this is a cache-busting key, not a security boundary.
  *
@@ -74,7 +74,7 @@ const OG_TEMPLATE_VERSION = 7;
  * }} post
  */
 export function ogImageKey(post) {
-  const drawnDate = longDateUTC(post.publishAt);
+  const drawnDate = formatDate(post.publishAt);
   const input =
     `${OG_TEMPLATE_VERSION}\n${post.slug}\n${cardTitle(post.title)}\n` +
     `${cardDescription(post.description)}\n${drawnDate === null ? "" : drawnDate}`;

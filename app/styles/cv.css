@@ -275,9 +275,14 @@
   color: var(--text);
   font-size: 0.875rem;
   line-height: 1.2;
-  transition:
-    background-color var(--motion-state) var(--ease-state),
-    border-color var(--motion-state) var(--ease-state);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cv-chip-text {
+    transition:
+      background-color var(--motion-state) var(--ease-state),
+      border-color var(--motion-state) var(--ease-state);
+  }
 }
 
 .cv-chip:hover .cv-chip-text {
@@ -684,12 +689,6 @@
 
   .cv-years-row select {
     flex: 1 1 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cv-chip-text {
-    transition: none;
   }
 }
 
