@@ -579,12 +579,19 @@
     display: none;
   }
 
-  .procedure-platform[hidden] {
-    display: block;
-  }
-
   [data-platforms][data-enhanced] .procedure-platform-label {
     display: block;
+  }
+}
+
+/* reset.css makes [hidden] display:none !important in cap.reset, and a layered !important beats every unlayered
+   rule, so the tabs' hidden panels print only if this rule is !important in that same layer, where its
+   higher specificity wins. */
+@layer cap.reset {
+  @media print {
+    .procedure-platform[hidden] {
+      display: block !important;
+    }
   }
 }
 
