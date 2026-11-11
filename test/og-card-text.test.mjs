@@ -4,10 +4,15 @@ import assert from "node:assert/strict";
 import {
   DESCRIPTION_MAX,
   TITLE_MAX,
+  TITLE_SIZES,
   cardDescription,
   cardTitle,
   clampWords,
 } from "../app/lib/content/og-card-text.mjs";
+import { titleFontSize as sharedTitleFontSize } from "@dustinedwards/site-runtime/share-card";
+
+/** The site's ladder, through the shared function that reads it (tested where it lives). @param {string} title */
+const titleFontSize = (title) => sharedTitleFontSize(title, TITLE_SIZES);
 
 /**
  * Short words, so character count tracks rendered width the way the ladder was measured.
@@ -21,6 +26,37 @@ function titleOfLength(n) {
     .trimEnd()
     .padEnd(n, "z");
 }
+
+await test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
+  for (let i = 0; i < TITLE_SIZES.length - 1; i += 1) {
+    const rung = TITLE_SIZES[i];
+    const next = TITLE_SIZES[i + 1];
+
+    assert.equal(
+      titleFontSize(titleOfLength(rung.maxChars)),
+      rung.fontSize,
+      `${rung.maxChars} characters must still take ${rung.fontSize}px`,
+    );
+    assert.equal(
+      titleFontSize(titleOfLength(rung.maxChars + 1)),
+      next.fontSize,
+      `${rung.maxChars + 1} characters must drop to ${next.fontSize}px`,
+    );
+    assert.ok(
+      next.fontSize < rung.fontSize,
+      `rung ${i + 1} must be SMALLER than rung ${i}, not ${next.fontSize} against ${rung.fontSize}`,
+    );
+  }
+});
+
+await test("a longer title never takes larger type, and a drawn title always has a size", () => {
+  let previous = Infinity;
+  for (let n = 0; n <= TITLE_MAX + 100; n += 1) {
+    const size = titleFontSize(cardTitle(titleOfLength(n)));
+    assert.ok(size <= previous, `${n} characters took ${size}px after ${previous}px`);
+    previous = size;
+  }
+});
 
 await test("a title inside the cap is returned untouched", () => {
   const title = "Where should a blog store its words?";

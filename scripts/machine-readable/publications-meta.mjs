@@ -7,7 +7,7 @@ import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
 import { SHOWCASE_TYPES as PAGE_SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
 import {
   organismsIn,
-  bibtexOf,
+  paperBibtex,
   toBibtexAll,
   toCslJson,
   toRisAll,
@@ -261,7 +261,7 @@ ok(
     "a zero would make the brace assertion below vacuous",
   );
   const unprotected = withOrganism.filter((p) => {
-    const entry = bibtexOf(p);
+    const entry = paperBibtex(p);
     return organismsIn(p.title).some((o) => !entry.includes(`{${o}}`));
   });
   ok(

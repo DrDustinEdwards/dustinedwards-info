@@ -66,7 +66,6 @@
   "app/lib/media/tile-nav.mjs": 11,
   "app/lib/media/upload-contract.mjs": 10,
   "app/lib/media/usage.mjs": 18,
-  "app/lib/media/view.mjs": 31,
   "app/lib/negotiate.mjs": 9,
   "app/lib/not-found-query.mjs": 7,
   "app/lib/operator/sync-report.mjs": 13,

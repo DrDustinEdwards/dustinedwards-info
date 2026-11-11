@@ -23,6 +23,7 @@ import {
   type Title,
 } from "@dustinedwards/site-runtime/members";
 import type { HistoryEntry, PeopleData, PersonRow, TitleOption } from "capsomer/react/people-roles";
+import { manageLead, personFromParam } from "capsomer/behavior/people-roles";
 
 import {
   getMember,
@@ -161,15 +162,6 @@ function historyEntry(row: Awaited<ReturnType<typeof memberHistory>>[number]): H
   };
 }
 
-function plural(label: string): string {
-  return label.endsWith("s") ? label : `${label}s`;
-}
-
-function listText(words: string[]): string {
-  if (words.length <= 1) return words.join("");
-  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
-}
-
 /** What the members page shows this actor: the people they may manage and themselves, never anyone else. */
 export async function membersPage(
   env: Env,
@@ -201,10 +193,9 @@ export async function membersPage(
       }
     : undefined;
 
-  const personParam = url.searchParams.get("person");
-  const shown = personParam
-    ? visible.find((r) => r.email === personParam.toLowerCase())
-    : undefined;
+  const emails = visible.map((r) => r.email);
+  const shownEmail = personFromParam(url.searchParams, "person", emails);
+  const shown = shownEmail ? visible.find((r) => r.email === shownEmail) : undefined;
   const history = shown
     ? {
         email: shown.email,
@@ -213,15 +204,14 @@ export async function membersPage(
       }
     : undefined;
 
-  const changeParam = url.searchParams.get("change");
-  const changing =
-    changeParam && visible.some((r) => r.email === changeParam.toLowerCase() && manages(actor, r))
-      ? changeParam.toLowerCase()
-      : undefined;
+  const changing = personFromParam(url.searchParams, "change", emails, (email) =>
+    visible.some((r) => r.email === email && manages(actor, r)),
+  );
 
-  const lead = titles.length
-    ? `You manage ${listText([...titles].reverse().map((t) => plural(t.label)))}.${terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? "" : ` ${NO_TERMS}`}`
-    : undefined;
+  const lead = manageLead(
+    [...titles].reverse().map((t) => t.label),
+    terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? undefined : NO_TERMS,
+  );
 
   return {
     people: {

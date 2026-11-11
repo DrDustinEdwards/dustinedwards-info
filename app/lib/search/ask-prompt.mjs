@@ -4,6 +4,7 @@ import { WRITING_RULES } from "@dustinedwards/site-runtime/prose";
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
+import { guardAnswerStream } from "@dustinedwards/site-runtime/ai-ask";
 
 /** The longest answer: two or three sentences and a follow-up line fit with room to spare. */
 export const ASK_MAX_TOKENS = 400;
@@ -93,9 +94,26 @@ export function citedSlugs(chunks) {
   ];
 }
 
-/** What the shared answer guard (site-runtime's ./ai-ask guardAnswerStream) needs from this site. */
-export const ASK_GUARD = {
-  citedSlugs,
-  noAnswerText: NO_ANSWER_TEXT,
-  timeoutMs: ASK_TIMEOUT_MS,
-};
+/**
+ * The answer as the reader sees it: site-runtime's ./ai-ask guard with this site's citations and no-answer text. It
+ * shows an answer a paragraph at a time, each checked with checkProse first, and replaces a zero-chunk answer (from the
+ * model's weights, not this site), an unreadable chunks frame, a missing one, or one citing a post `resolveVisible` does
+ * not return. `onRefused` and `onCut` hear an answer that must not be cached. Runs before teeForCache so the cache
+ * stores what was shown.
+ *
+ * @param {ReadableStream} upstream
+ * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
+ * @param {() => void} [onRefused]
+ * @param {(reason: string) => void} [onCut]
+ * @returns {ReadableStream}
+ */
+export function guardAsk(upstream, resolveVisible, onRefused, onCut) {
+  return guardAnswerStream(upstream, {
+    resolveVisible,
+    citedSlugs,
+    noAnswerText: NO_ANSWER_TEXT,
+    timeoutMs: ASK_TIMEOUT_MS,
+    onRefused,
+    onCut,
+  });
+}

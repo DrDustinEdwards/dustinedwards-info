@@ -3,14 +3,13 @@
  * then a cached answer, then the model.
  */
 
-import { guardAnswerStream } from "@dustinedwards/site-runtime/ai-ask";
-import { ASK_GUARD } from "~/lib/search/ask-prompt.mjs";
 import { FORM_BYTES, cappedForm } from "~/lib/body.server";
 import {
   answerLeaksPrompt,
   askAvailable,
   askStream,
   citedSlugs,
+  guardAsk,
   replayCachedAnswer,
   teeForCache,
 } from "~/lib/search/ask.server";
@@ -144,17 +143,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     let refused = false;
     let cut = false;
     const { toReader, captured } = teeForCache(
-      guardAnswerStream(upstream, {
-        ...ASK_GUARD,
-        resolveVisible: (slugs) => publiclyVisibleSlugs(env, slugs),
-        onRefused: () => {
+      guardAsk(
+        upstream,
+        (slugs) => publiclyVisibleSlugs(env, slugs),
+        () => {
           refused = true;
         },
-        onCut: (reason) => {
+        (reason) => {
           cut = true;
           logEvent("ask_answer_cut", { reason }, { level: "warn" });
         },
-      }),
+      ),
     );
 
     getExecutionContext(context).waitUntil(

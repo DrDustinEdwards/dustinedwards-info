@@ -9,9 +9,15 @@ import path from "node:path";
 
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
+
 import { titleFontSize } from "@dustinedwards/site-runtime/share-card";
 
-import { cardDescription, cardTitle, ogImageKey } from "../app/lib/content/og-card-text.mjs";
+import {
+  TITLE_SIZES,
+  cardDescription,
+  cardTitle,
+  ogImageKey,
+} from "../app/lib/content/og-card-text.mjs";
 import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
@@ -206,7 +212,7 @@ function card(post) {
         {
           style: {
             display: "flex",
-            fontSize: titleFontSize(title),
+            fontSize: titleFontSize(title, TITLE_SIZES),
             fontWeight: 600,
             color: INK,
             lineHeight: 1.12,
