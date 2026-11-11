@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { DEFERRED_CHECKS, deferredMisses, readinessVerdict } from "../scripts/lib/readiness.mjs";
-import { healthChecks } from "../app/lib/health/rows.mjs";
+import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 import { bodyDrifted, HEALTHY as HEALTHY_BODY } from "./lib/health-bodies.mjs";
 
 const HEALTHY = JSON.stringify(HEALTHY_BODY);

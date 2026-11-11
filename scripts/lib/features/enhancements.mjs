@@ -118,6 +118,25 @@ export async function checkEnhancements({ ok, routes }) {
 
   /* Comments stripped, so a comment cannot satisfy a fallback. */
   const sourceBlobs = serverSources.map((file) => codeOf(file));
+  /* Plus the Capsomer React components the app renders (`capsomer/react/<name>`): their markup is the
+     server's too, so a fallback that is a Capsomer component's link or form counts where the app uses it. */
+  const capsomerComponents = new Set(
+    sourceBlobs.flatMap((blob) =>
+      [...blob.matchAll(/from "capsomer\/react\/([\w-]+)"/g)].map((m) => m[1]),
+    ),
+  );
+  for (const name of capsomerComponents) {
+    const file = join(
+      root,
+      "node_modules",
+      "capsomer",
+      "dist",
+      "components",
+      name,
+      `${name}.react.js`,
+    );
+    if (existsSync(file)) sourceBlobs.push(codeOf(file));
+  }
 
   const renderedMarkup = await renderBody({
     file: "check-features fixture",

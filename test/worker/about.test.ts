@@ -205,7 +205,7 @@ describe("About has a route of its own", () => {
       const downBody = (await down.json()) as { status: string; version: string };
       expect(downBody.status).toBe("draft");
 
-      await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(aboutData()).rejects.toHaveProperty("status", 404);
       expect(await sitemapPaths()).not.toContain("/about");
 
       const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
@@ -225,7 +225,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     { timeout: 180_000 },
     async () => {
       await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
-      await expect(aboutData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(aboutData()).rejects.toHaveProperty("status", 404);
 
       const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: aboutFile,

@@ -31,15 +31,8 @@ import * as sitemapFeeds from "./lib/browser/cases/sitemap-feeds.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
 import * as systems from "./lib/browser/cases/systems.mjs";
 import * as themeCache from "./lib/browser/cases/theme-cache.mjs";
-import {
-  BASE,
-  DRIVES_PREVIEW,
-  countCssRules,
-  lane,
-  ok,
-  skipped,
-  tally,
-} from "./lib/browser/harness.mjs";
+import { BASE, DRIVES_PREVIEW, lane, ok, skipped, tally } from "./lib/browser/harness.mjs";
+import { countCssRules } from "capsomer/testing/page";
 import {
   build,
   cleanupChildren,
@@ -132,12 +125,12 @@ try {
   /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
-  const css = await page.evaluate(countCssRules);
+  const css = await countCssRules(page);
   ok(
     "the blog page's stylesheets are actually applied",
-    css >= 144,
-    `${css} CSS rule(s) reachable on /writing, floor 144, measured 157 on 2026-08-27 ` +
-      `after the per-route CSS split. Below this the page is effectively unstyled ` +
+    css >= 900,
+    `${css} CSS rule(s) reachable on /writing, nested rules counted, floor 900, measured 1128 on ` +
+      `2026-11-11. Below this the page is effectively unstyled ` +
       `and every layout assertion below is measuring browser defaults.`,
   );
 
@@ -210,7 +203,12 @@ if (subjectReachable) {
    * circles' zooming, the arrow keys, the ?system= address and its facts went (26 checks), and the cards, their
    * lighting, the system pages, a flow's steps and the 404 came (15).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 220 : 195;
+  /*
+   * Less 10 on both on 2026-11-11: the checks Capsomer's lightbox and site-header specs now own (the
+   * lightbox's modal, name, close control, focus and Escape; the header's click, Enter and arrows,
+   * open card, hover and no-menu-role checks).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 210 : 185;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

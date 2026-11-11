@@ -22,8 +22,6 @@
  * @property {Source} [source] set when `value` is a lab default rather than the worked example's number
  */
 
-/** @typedef {{ text: string, sup?: false } | { text: string, sup: true }} TextPart */
-
 /**
  * @typedef {object} ToolSection
  * @property {string} heading
@@ -139,27 +137,6 @@ export function formatScientific(value) {
 /** `10^-6`, and `undiluted` for 10^0. @param {number} n */
 function formatDilution(n) {
   return n === 0 ? "undiluted" : `10^-${n}`;
-}
-
-/**
- * A line split into plain runs and superscripts, so both renderers show `10^6` as 10 with a raised 6
- * and neither parses markup.
- *
- * @param {string} line
- * @returns {TextPart[]}
- */
-export function textParts(line) {
-  /** @type {TextPart[]} */
-  const parts = [];
-  let last = 0;
-  for (const match of line.matchAll(/10\^(-?\d+)/g)) {
-    const at = match.index ?? 0;
-    parts.push({ text: `${line.slice(last, at)}10` });
-    parts.push({ text: (match[1] ?? "").replace("-", "−"), sup: true });
-    last = at + match[0].length;
-  }
-  parts.push({ text: line.slice(last) });
-  return parts.filter((part) => part.text !== "");
 }
 
 /**
@@ -1060,65 +1037,4 @@ export function runTool(id, values) {
   const tool = TOOLS[id];
   if (!tool) throw new Error(`No calculator named ${id}.`);
   return tool.run(values);
-}
-
-/* ---------------------------------------------------------------- view */
-
-/**
- * @typedef {{ tag: "div" | "h3" | "ol" | "li" | "p" | "strong" | "sup", className?: string, children: Array<ViewNode | string> }} ViewNode
- */
-
-/** @param {string} line @returns {Array<ViewNode | string>} */
-function lineNodes(line) {
-  return textParts(line).map((part) =>
-    part.sup ? { tag: "sup", children: [part.text] } : part.text,
-  );
-}
-
-/**
- * What a result looks like, as plain nodes, so the server component and the browser module build the
- * same markup from one description and neither parses HTML. `summary` is the one line per section the
- * status region announces; `detail` is the worked steps under it.
- *
- * @param {ToolResult} result
- * @returns {{ summary: Array<ViewNode | string>, detail: ViewNode[] }}
- */
-export function resultView(result) {
-  if (!result.ok) {
-    return {
-      summary: [{ tag: "p", className: "phage-tool-error", children: [result.error] }],
-      detail: [],
-    };
-  }
-  const summary = result.sections
-    .filter((section) => section.result)
-    .map((section) => ({
-      tag: /** @type {const} */ ("p"),
-      className: "phage-tool-answer",
-      children: [
-        `${section.heading}: `,
-        { tag: /** @type {const} */ ("strong"), children: lineNodes(section.result ?? "") },
-      ],
-    }));
-  const detail = result.sections.map((section) => ({
-    tag: /** @type {const} */ ("div"),
-    className: "phage-tool-section",
-    children: [
-      { tag: /** @type {const} */ ("h3"), children: [section.heading] },
-      {
-        tag: /** @type {const} */ ("ol"),
-        className: "phage-tool-steps",
-        children: section.steps.map((step) => ({
-          tag: /** @type {const} */ ("li"),
-          children: lineNodes(step),
-        })),
-      },
-      ...(section.notes ?? []).map((note) => ({
-        tag: /** @type {const} */ ("p"),
-        className: "phage-tool-note",
-        children: lineNodes(note),
-      })),
-    ],
-  }));
-  return { summary, detail };
 }

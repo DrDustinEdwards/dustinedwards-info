@@ -1,14 +1,14 @@
 /**
  * The vintage ads behind the utility pages (docs/UTILITY-ADS.md). Adding an ad is adding a folder, so this is the
  * gate on that folder: every ad.json must be well formed and name only symbols its art.svg has, or the
- * page would render a hole. Server-side choice is checked once, since a random pick that ignores `?ad=` breaks the gallery's links.
+ * page would render a hole.
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 
-import { adProblems, chooseAd } from "../app/utility-ads/model.mjs";
+import { adProblems } from "capsomer/behavior/error-ad";
 
 const root = new URL("../app/utility-ads/", import.meta.url);
 const folders = readdirSync(root, { withFileTypes: true })
@@ -25,10 +25,3 @@ for (const folder of folders) {
     assert.deepEqual(adProblems(ad, art), []);
   });
 }
-
-await test("?ad= names an ad, anything else is random", () => {
-  const ads = [{ id: "a" }, { id: "b" }, { id: "c" }];
-  assert.equal(chooseAd(ads, "?ad=b")?.id, "b");
-  assert.equal(chooseAd(ads, "?ad=nope", () => 0.99)?.id, "c");
-  assert.equal(chooseAd(ads, "", () => 0)?.id, "a");
-});

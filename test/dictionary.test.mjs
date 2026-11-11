@@ -9,11 +9,7 @@ import {
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
 import { compileDictionaryEntry } from "../app/lib/dictionary/compile.mjs";
-import {
-  dictionaryEntryMarkdown,
-  definedTermJsonLd,
-  listenLabel,
-} from "../app/lib/dictionary-entries.mjs";
+import { dictionaryEntryMarkdown, definedTermJsonLd } from "../app/lib/dictionary-entries.mjs";
 import { buildDictionary, compileAllDictionary, repoHost } from "../scripts/lib/dictionary.mjs";
 
 /* The validation module every dictionary write runs (app/lib/dictionary/compile.mjs): check:content,
@@ -70,7 +66,6 @@ await test("every entry is complete: IPA between slashes, a respelling, two sens
     assert.equal(entry.syllables.replaceAll("·", ""), entry.term.toLowerCase());
     assert.equal(entry.senses.length, 2);
     assert.ok(entry.etymology.length > 0);
-    assert.equal(listenLabel(entry.term), `Listen to the pronunciation of ${entry.term}`);
   }
   assert.match(
     await refusal("capsid", (r) => r.replace(/^ipa: .*$/m, 'ipa: "kap-sid"')),

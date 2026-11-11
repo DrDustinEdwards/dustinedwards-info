@@ -1,20 +1,7 @@
 .paper-links a,
 .paper-breadcrumb a,
-.paper-machine b a {
-  color: var(--brand);
-  text-decoration: none;
-}
-
-/* These sit in a line of text, so they keep the global link weight from app.css: brand and body
-   text are under 3:1 apart, and color alone fails axe link-in-text-block. */
-.paper-cited a,
-.paper-citedby-list a {
-  color: var(--brand);
-}
-
 .paper-links a:hover,
 .paper-breadcrumb a:hover,
-.paper-machine b a:hover,
 .paper-topics a:hover {
   color: var(--brand-hover);
 }
@@ -45,45 +32,15 @@
   line-height: 1.2;
 }
 
-.paper-head .paper-authors {
+/* Capsomer's author list (capsomer/author-list.css) under the title, at the head's 15px. */
+.paper-head .cap-author-list {
   margin: var(--space-5) 0 0;
-  max-width: 54ch;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
   font-size: 0.9375rem;
-  line-height: 1.6;
 }
 
-.paper-machine {
-  margin: 0;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1.7;
-}
-
-.paper-machine b {
-  display: block;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
-.paper-machine b + b {
-  margin-block-start: 0.875rem;
-}
-
-.paper-cited {
-  margin: var(--space-5) 0 0;
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-}
-
-.paper-provenance {
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+/* Capsomer's citation count (capsomer/cited-by.css) under the paper's links. */
+.paper-text > .cap-cited-by-count {
+  margin-block-start: var(--space-5);
 }
 
 .paper-summary {
@@ -97,13 +54,14 @@
 
 .paper-abstract,
 .paper-data,
-.paper-citedby {
+/* Capsomer's cited-by list (capsomer/cited-by.css), its heading set as the page's other section heads. */
+.paper-text > .cap-cited-by {
   margin-block-start: var(--space-7);
 }
 
 .paper-abstract h2,
 .paper-data h2,
-.paper-citedby h2 {
+.paper-text .cap-cited-by-title {
   margin: 0 0 0.5rem;
   color: var(--text-secondary);
   font-family: var(--font-serif);
@@ -118,23 +76,6 @@
   font-family: var(--font-serif);
   font-size: 1.0625rem;
   line-height: 1.7;
-}
-
-.paper-citedby-source {
-  margin: 0 0 0.75rem;
-}
-
-.paper-citedby-list {
-  margin: 0;
-  padding-left: 1.25rem;
-  max-width: 64ch;
-  font-family: var(--font-serif);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-}
-
-.paper-citedby-list li {
-  margin-block-start: 0.375rem;
 }
 
 .paper-topics {

@@ -25,7 +25,7 @@ import { backupStatus } from "~/lib/backup/d1-backup.server";
 export function siteHealthResponse(env: Env): Promise<Response> {
   /* The drift checks run once, started here and not awaited, so each named check below waits on the run inside
      healthResponse's checkTimeoutMs, beside the binding checks: a slow run holds /health no longer than any other
-     check. A detail carries only "present of expected" (rows.mjs reads it back), because this is public; the full
+     check. A detail carries only "present of expected" (site-runtime ./health-read reads it back), because this is public; the full
      detail (the missing keys) goes to Workers Logs under alert=health-check-failed. */
   const drift = runHealthChecks(env);
   drift.then(

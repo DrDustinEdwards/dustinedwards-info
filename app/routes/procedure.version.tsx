@@ -1,3 +1,4 @@
+import { JsonLd } from "capsomer/react/json-ld";
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -6,7 +7,6 @@ import { ProcedureView, VersionNotice } from "~/components/procedure";
 import { getFrozenVersion, listFrozenVersions } from "~/db/procedure-versions";
 import { getProcedureByPath } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
-import { jsonLdText as serializeJsonLd } from "@drdustinedwards/site-helpers/xml";
 import { versionPath } from "~/kb/procedures/cite.mjs";
 import { procedureJsonLd } from "~/kb/procedures/json-ld.mjs";
 import { lineageFor } from "~/kb/procedures/lineage.server";
@@ -19,7 +19,11 @@ import type { Route } from "./+types/procedure.version";
 import "~/styles/prose.css";
 import "capsomer/field.css";
 import "~/styles/procedure.css";
-import "~/styles/run.css";
+import "capsomer/button.css";
+import "capsomer/offline-keep.css";
+import "capsomer/checklist-run.css";
+import "capsomer/field.css";
+import "capsomer/manual.css";
 
 /**
  * A procedure as it was when a version was published, at `<page>/v/<version>` (drizzle/0027_procedure_versions.sql).
@@ -87,16 +91,7 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
   };
   const basePath = versionPath(record.path, String(record.version));
   return (
-    <PageShell
-      trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
-          }}
-        />
-      }
-    >
+    <PageShell trail={<JsonLd data={procedureJsonLd(record, SITE_ORIGIN, person, lineage)} />}>
       <Breadcrumb trail={trail} />
       <h1 className="page-title cap-layout-grid">{record.title}</h1>
       <VersionNotice record={record} current={current} />

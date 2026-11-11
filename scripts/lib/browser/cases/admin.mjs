@@ -11,7 +11,9 @@ import {
   credentialAuthenticates,
   smokeRepair,
 } from "../credential.mjs";
-import { countCssRules, ok, overflowScan, say } from "../harness.mjs";
+import { countCssRules } from "capsomer/testing/page";
+
+import { ok, overflowScan, say } from "../harness.mjs";
 
 /** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
 const ADMIN_RULE_MEASURED = 74;
@@ -207,7 +209,7 @@ export async function run({ browser }) {
     /* A rule count proves the admin's sheets arrived; the computed style proves the cascade applied them. */
     await admin.setViewport({ width: 1280, height: 900 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
-    const rules = await admin.evaluate(countCssRules);
+    const rules = await countCssRules(admin);
     const adminCss = await admin.evaluate(() => {
       const rail = document.querySelector(".cap-admin-menu");
       const style = rail ? getComputedStyle(rail) : null;

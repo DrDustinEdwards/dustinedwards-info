@@ -37,7 +37,7 @@ export const crumbLink: BreadcrumbProps["renderLink"] = ({ href, className, chil
   </Link>
 );
 
-/** A tab as a router link, for Capsomer's TabsNav, so a filter tab navigates without a page load. */
+/** A filter tab as a router link, for Capsomer's TabsNav, so a tab navigates without a page load. */
 export const tabLink: RenderTabLink = ({ href, children, ...rest }) => (
   <Link to={href} {...rest}>
     {children}

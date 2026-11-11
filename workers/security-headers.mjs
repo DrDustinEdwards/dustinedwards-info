@@ -5,6 +5,7 @@ import { TDM_RESERVATION_HEADERS } from "@drdustinedwards/site-helpers/robots";
 import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
 import { pageSecurity } from "@dustinedwards/site-runtime/page-headers";
 import { dustinedwardsInfo } from "@dustinedwards/site-runtime/sites";
+import { TRUSTED_TYPES_NAMES } from "@dustinedwards/site-runtime/trusted-types";
 import { pagePolicy } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 
@@ -25,7 +26,7 @@ export const SECURITY_HEADERS = Object.freeze({
 export const { withSecurityHeaders, nonceFor } = pageSecurity({
   set: SECURITY_HEADERS,
   policy: pagePolicy,
-  staged: { trustedTypes: true, denyUnlisted: true },
+  staged: { trustedTypes: TRUSTED_TYPES_NAMES, denyUnlisted: true },
   corp: true,
   renew: true,
   unpoliced: isUnpolicedType,

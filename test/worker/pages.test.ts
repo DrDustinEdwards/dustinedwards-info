@@ -217,7 +217,7 @@ describe("a draft is not public", () => {
       expect(downBody.status).toBe("draft");
       expect(await source(FILE)).toMatch(/^draft: true$/m);
 
-      await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(pageData()).rejects.toHaveProperty("status", 404);
       expect((await twin()).status).toBe(404);
       expect(await sitemapPaths()).not.toContain(PATH);
       const hits = await testEnv.DB.prepare(
@@ -259,7 +259,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
     { timeout: 180_000 },
     async () => {
       await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
-      await expect(pageData()).rejects.toMatchObject({ init: { status: 404 } });
+      await expect(pageData()).rejects.toHaveProperty("status", 404);
 
       const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: foxhound,

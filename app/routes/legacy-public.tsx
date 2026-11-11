@@ -35,6 +35,7 @@ import "capsomer/family-footer.css";
 import "capsomer/button.css";
 import "capsomer/empty.css";
 import "capsomer/error-page.css";
+import "capsomer/draft-notice.css";
 
 // Module imports, not @import in app.css, which CSS drops after any rule.
 // The order is the cascade: do not sort.
