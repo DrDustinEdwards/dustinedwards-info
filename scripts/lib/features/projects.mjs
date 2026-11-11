@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { isAllowedUrl } from "../../../app/lib/content/pipeline.mjs";
 import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
 import { METRIC_DERIVATIONS, PROJECTS_URL, metricValue } from "../../../app/lib/projects-page.mjs";
-import { assertFloor } from "../floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { checkRosterProse } from "./prose-numbers.mjs";
 import { codeOf, pageRecordParity, root } from "./shared.mjs";
 

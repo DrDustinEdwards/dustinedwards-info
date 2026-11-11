@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { assertFloor } from "../lib/floor.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
 import { compileAllPublications, readCitedBy } from "../lib/publications.mjs";
-import { createTally } from "../lib/tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 import { stripTsxComments } from "../lib/strip-comments.mjs";
 
 /*

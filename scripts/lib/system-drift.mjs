@@ -9,7 +9,7 @@
 // site it serves or the schedule it runs, so a Worker
 // counts against any of those three; and a Worker's cron expressions are one schedule. A private system, one without a repo, and a repo with
 // no config the raw host serves (a private repo answers 404 too) are skipped, not failed.
-import { ts } from "./syntax.mjs";
+import { ts } from "@dustinedwards/devkit/node/syntax";
 
 // Where a system's configs live in its repo, when not one at the root. The site's repo holds two
 // systems: the site and the admin MCP (mcp/); so do Foxing's and Foxhound's.

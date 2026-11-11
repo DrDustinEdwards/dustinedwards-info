@@ -11,8 +11,8 @@ export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", ".
 
 /**
  * @typedef {object} FeaturesContext
- * @property {ReturnType<typeof import("../tally.mjs").createTally>} tally
- * @property {ReturnType<typeof import("../tally.mjs").createTally>["ok"]} ok
+ * @property {ReturnType<typeof import("@dustinedwards/devkit/node").createTally>} tally
+ * @property {ReturnType<typeof import("@dustinedwards/devkit/node").createTally>["ok"]} ok
  * @property {any[]} features
  * @property {Map<string, string>} routeModules
  * @property {Set<string>} routes
