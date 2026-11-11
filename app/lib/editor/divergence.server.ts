@@ -1,4 +1,4 @@
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 // KV, not D1, because the record says D1 failed. One key per slug, because one shared
 // array is a read-modify-write that loses a record when two saves fail at once.

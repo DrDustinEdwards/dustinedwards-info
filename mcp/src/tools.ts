@@ -73,12 +73,12 @@ const limitSchema = z
  */
 const CURSOR = /^[A-Za-z0-9+/]{1,16}$/;
 
-function encodeCursor(offset: number): string {
+function encodeOffsetCursor(offset: number): string {
   return btoa(`o:${offset}`).replace(/=+$/, "");
 }
 
 /** The offset a cursor names, or null for one this server never gave. */
-export function decodeCursor(cursor: string): number | null {
+export function decodeOffsetCursor(cursor: string): number | null {
   if (!CURSOR.test(cursor)) return null;
   let decoded = "";
   try {
@@ -93,7 +93,7 @@ export function decodeCursor(cursor: string): number | null {
 const cursorSchema = z
   .string()
   .refine(
-    (cursor) => decodeCursor(cursor) !== null,
+    (cursor) => decodeOffsetCursor(cursor) !== null,
     "cursor is not one this tool gave. Leave it out to start from the first page.",
   )
   .optional()
@@ -211,14 +211,14 @@ async function runPaged(
     const all = data[key] as unknown[];
     const limit = typeof page.limit === "number" ? page.limit : 25;
     // The schema refused a cursor this server never gave, so a string here decodes.
-    const offset = typeof page.cursor === "string" ? (decodeCursor(page.cursor) ?? 0) : 0;
+    const offset = typeof page.cursor === "string" ? (decodeOffsetCursor(page.cursor) ?? 0) : 0;
     data[key] = all.slice(offset, offset + limit);
     const hasMore = offset + limit < all.length;
     data.page = {
       limit,
       total: all.length,
       has_more: hasMore,
-      next_cursor: hasMore ? encodeCursor(offset + limit) : null,
+      next_cursor: hasMore ? encodeOffsetCursor(offset + limit) : null,
     };
     return ok(data);
   } catch (cause) {

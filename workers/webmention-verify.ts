@@ -1,6 +1,6 @@
 import { webmentionToVerify } from "~/db";
 import { readVerifyMessage } from "~/lib/webmention/queue";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * The webmention queue consumer. Queues delivers at least once, so each message re-reads its row and

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ProcedureView } from "~/components/procedure";
 import { getEnv } from "~/lib/context";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { rawFromForm } from "~/kb/form.server";
 import { compile } from "~/kb/procedures/save.server";
 

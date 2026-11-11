@@ -8,6 +8,7 @@ import {
   type MediaRevisionRecord,
 } from "@dustinedwards/site-api";
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { inList } from "@dustinedwards/site-runtime/d1";
 import { classify, digestFromKey, roleOf } from "../lib/media/classify.mjs";
 import { parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { media, mediaChanges, mediaRefs, mediaRevisions, type MediaRef } from "./schema";
@@ -110,8 +111,8 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   const rows = await getDb(env)
     .select()
     .from(mediaRefs)
-    // One JSON parameter, not an IN list: the library asks about every file at once, past D1's bound-parameter cap.
-    .where(sql`${mediaRefs.mediaKey} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`);
+    // inList binds one JSON parameter: the library asks about every file at once, past D1's bound-parameter cap.
+    .where(inList(mediaRefs.mediaKey, keys));
   const out = new Map<string, MediaRef[]>(keys.map((key) => [key, []]));
   for (const row of rows) out.get(row.mediaKey)?.push(row);
   return out;
@@ -253,12 +254,7 @@ export function mediaLibraryStore(env: Env): MediaLibraryStore {
       const rows = await db
         .select()
         .from(media)
-        .where(
-          and(
-            isLibraryRow,
-            sql`${media.key} IN (SELECT value FROM json_each(${JSON.stringify(keys)}))`,
-          ),
-        );
+        .where(and(isLibraryRow, inList(media.key, keys)));
       return rows.map(recordOf);
     },
 

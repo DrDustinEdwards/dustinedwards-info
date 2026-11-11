@@ -1,7 +1,7 @@
 // A reader that could write would turn a cache miss on the busiest page back into a health run.
 
 import { HEALTH_SNAPSHOT_KEY, healthTile, type HealthTile } from "./snapshot.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * A throw renders as `unreadable`, never as `missing`: the home page must render whatever KV is doing,

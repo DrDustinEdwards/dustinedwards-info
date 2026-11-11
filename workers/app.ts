@@ -34,7 +34,7 @@ import { nonceFor, SECURITY_HEADERS, withSecurityHeaders } from "./security-head
 import { handleMediaEvents } from "./media-events";
 import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
-import { isWorkerPreview } from "~/lib/worker-preview";
+import { isWorkerPreview } from "@dustinedwards/site-runtime/http";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { maintenanceOn, maintenanceResponse } from "@dustinedwards/site-runtime/maintenance";

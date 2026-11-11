@@ -1,5 +1,6 @@
 import { listBlogPostsFullText, listBlogPostsRendered, nextScheduledPublishAt } from "~/db";
 import { atomDocument, jsonFeedDocument, rssDocument } from "@drdustinedwards/site-helpers";
+import { feedResponse } from "@drdustinedwards/site-helpers/feeds";
 import {
   EDGE_CACHE_HEADER,
   SHARED_CACHE_CONTROL,
@@ -12,17 +13,6 @@ import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 
 export type FeedFormat = "json" | "rss" | "atom";
-
-/** Each is a type isUnpolicedType() exempts from the CSP (workers/feed-types.mjs). */
-const FEED_CONTENT_TYPES = {
-  /*
-   * `application/json`, not `application/feed+json`: Cloudflare does not compress `+json` types, and
-   * this is the largest response on the site. Readers identify it by the `version` member.
-   */
-  json: "application/json; charset=utf-8",
-  rss: "application/rss+xml; charset=utf-8",
-  atom: "application/atom+xml; charset=utf-8",
-} as const;
 
 const FEED_FILES = { json: "feed.json", rss: "rss.xml", atom: "atom.xml" } as const;
 
@@ -64,7 +54,7 @@ export function seriesFeed(series: { name: string }): FeedScope {
 }
 
 /** One feed document for a scope, in JSON Feed, RSS or Atom, shared-cached. */
-export async function feedResponse(env: Env, format: FeedFormat, scope: FeedScope) {
+export async function scopedFeedResponse(env: Env, format: FeedFormat, scope: FeedScope) {
   const pageUrl = `${SITE_ORIGIN}${scope.path}`;
   const selfUrl = `${pageUrl}/${FEED_FILES[format]}`;
 
@@ -106,13 +96,10 @@ export async function feedResponse(env: Env, format: FeedFormat, scope: FeedScop
 
   const nextPublishAt = await nextScheduledPublishAt(env);
 
-  return new Response(body, {
-    headers: {
-      "content-type": FEED_CONTENT_TYPES[format],
-      "cache-control": SHARED_CACHE_CONTROL,
-      // Every scope lists posts only, so a posts purge (a save, a delete) must reach it.
-      "cache-tag": cacheTags(),
-      [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
-    },
+  return feedResponse(format, body, {
+    "cache-control": SHARED_CACHE_CONTROL,
+    // Every scope lists posts only, so a posts purge (a save, a delete) must reach it.
+    "cache-tag": cacheTags(),
+    [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
   });
 }

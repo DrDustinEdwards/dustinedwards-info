@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { openSync } from "fontkit";
 
-import { createTally } from "./lib/tally.mjs";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "font-baseline.json");

@@ -12,7 +12,7 @@ export type MediaCitation = {
 export type ReferenceResolver = (env: Env, keys: string[]) => Promise<Map<string, MediaCitation[]>>;
 
 import { postsResolver } from "./resolvers/posts.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 // A plain array, not a runtime `register()`, so there is no import-order problem.
 const RESOLVERS: Array<{ name: string; resolve: ReferenceResolver }> = [

@@ -1,5 +1,5 @@
 import { isContentKey } from "./classify.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 // Measured for the index (the rebuild and the R2 events), whose rows hold what pages size by. Null means the binding answered
 // with no pixel dimensions (an SVG); a binding that throws is NOT that answer, so the throw propagates:

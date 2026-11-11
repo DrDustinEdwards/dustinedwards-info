@@ -2,7 +2,7 @@ import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { placeholderAndColor } from "@dustinedwards/site-api";
 import { measureDimensions } from "~/lib/media/core.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * The authoritative media row writer, fed by R2 event notifications rather than a dual write. Must be

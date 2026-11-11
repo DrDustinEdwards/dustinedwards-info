@@ -5,7 +5,7 @@ import { guardedFetch, OutboundRefusal } from "@dustinedwards/site-api";
 import { readCapped } from "@dustinedwards/site-runtime/body";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 // linkedom's document, not the DOM's.
 type ParsedDocument = ReturnType<typeof parseHTML>["document"];

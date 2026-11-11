@@ -1,7 +1,7 @@
 import type { getBlogPost, listSeriesParts } from "~/db";
 import { htmlHasMath } from "@drdustinedwards/site-helpers/render/math";
 import { countWords } from "~/lib/content/reading-time.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import type { PostSearchFields } from "~/lib/seo";
 
 // The public post and the draft preview both render this one projection, so the preview cannot

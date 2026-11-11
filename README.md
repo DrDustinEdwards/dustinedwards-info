@@ -166,7 +166,7 @@ secret.
 
 A merge to main deploys. Once CI passes, `.github/workflows/deploy.yml` deploys
 main's tip through devkit's worker-deploy, which rolls the Worker back when
-`scripts/verify-deploy.mjs` refuses it, then runs `scripts/converge.mjs` (the
+`devkit-verify-deploy` refuses it, then runs `scripts/converge.mjs` (the
 uptime monitors, the D1 sync and the derived indexes) and deploys the admin MCP the
 same way, unless `AUTO_DEPLOY` is `off`. Never run `npm run deploy` by hand or
 bare `wrangler deploy`; `.claude/hooks/no-direct-deploy.sh` refuses both.
