@@ -7,8 +7,6 @@ import { decodeEntities } from "./entities.mjs";
 import { toBibtex } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
 
-export { canonicalAuthor };
-
 /**
  * Best effort; the CSL export does not use this, it reads the structured given and family fields.
  *
