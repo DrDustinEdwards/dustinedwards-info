@@ -7,15 +7,6 @@
   },
   "enhancements": [
     {
-      "id": "reading-progress",
-      "module": "app/enhance/blog.ts",
-      "enhancement": "A scroll-linked bar across the top of a post showing how far through it you are.",
-      "fallback": "Nothing. The bar is absent and the post is unchanged.",
-      "fallbackKind": "none",
-      "fallbackAt": null,
-      "why": "It is decoration and carries no information the post does not. Writing the nothing down is what makes it a decision rather than an omission."
-    },
-    {
       "id": "toc-scrollspy",
       "module": "app/enhance/blog.ts",
       "enhancement": "Highlights the table of contents entry for the section currently on screen.",

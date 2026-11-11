@@ -557,7 +557,7 @@
     {
       "component": "Reading aids",
       "name": "Posts add reading aids without script",
-      "what": "A reading-progress bar, a table of contents that follows the section on screen, copy buttons on code blocks, footnote previews, an image lightbox and click-to-copy heading links are each added by script to a page that is complete without them.",
+      "what": "A reading-progress bar (CSS only, where the browser has scroll-driven animations), a table of contents that follows the section on screen, copy buttons on code blocks, footnote previews, an image lightbox and click-to-copy heading links are each added to a page that is complete without them.",
       "anchors": [
         {
           "kind": "route",

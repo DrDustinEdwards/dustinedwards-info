@@ -1,3 +1,9 @@
+/* Capsomer's reading bar in the brand color, above the pinned header as it always was. */
+.cap-reading-progress {
+  --reading-progress-color: var(--brand);
+  z-index: var(--z-progress);
+}
+
 .post-series {
   margin: 1.5rem 0;
   padding: 0.75rem 1rem 1rem;
