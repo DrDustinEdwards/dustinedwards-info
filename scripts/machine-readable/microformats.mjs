@@ -7,12 +7,12 @@ import { postLoaderData } from "../lib/route-fixtures.mjs";
 
 import {
   POSTS_PER_PAGE,
-  pageCount,
   picksFirst,
   splitFeatured,
   startHere,
 } from "../../app/lib/blog-listing.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
+import { pageEnvelope } from "capsomer/behavior/pagination";
 import { assertFloor } from "@dustinedwards/devkit/node";
 import { createTally } from "@dustinedwards/devkit/node";
 
@@ -277,7 +277,7 @@ const ordered = [...published].sort(
   (/** @type {any} */ a, /** @type {any} */ b) =>
     new Date(b.publishAt).getTime() - new Date(a.publishAt).getTime(),
 );
-const totalPages = pageCount(ordered.length);
+const totalPages = pageEnvelope(1, POSTS_PER_PAGE, ordered.length).pageCount;
 
 /**
  * @param {number} page

@@ -57,7 +57,7 @@ describe("calculators in a procedure's steps", () => {
       );
       const folded = [
         ...html.matchAll(
-          /<details class="phage-tool phage-tool-step"><summary>Calculator: ([^<]+)<\/summary>/g,
+          /<details class="cap-disclosure phage-tool-step"[^>]*><summary>Calculator: ([^<]+)<\/summary>/g,
         ),
       ].map((m) => m[1]);
       expect(folded).toEqual([

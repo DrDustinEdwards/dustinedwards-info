@@ -6,7 +6,8 @@ import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
-import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
+import { parsePage } from "capsomer/react/pagination";
+import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
@@ -30,7 +31,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const tag = url.searchParams.get("tag");
   const year = url.searchParams.get("year");
-  const page = readPage(url.searchParams.get("page"));
+  const page = parsePage(url.searchParams.get("page"));
 
   return timedLoader(context, async (timings) => {
     const [listing, tagList, yearList, nextPublishAt] = await timed(timings, "queries_all", () =>
