@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
+import { SortableList, useRows } from "capsomer/react/sortable-list";
 
 import { StepText } from "~/components/admin/kb-step-text";
 import type { FormBlock, FormBody, FormStep } from "~/kb/form.mjs";
@@ -41,36 +42,27 @@ export type Inserts = {
   references: KbForm["references"];
 };
 
+/** A step's words, what can be put into them, then its notes; Capsomer's SortableList draws its number and its moves. */
 function StepCard({
   step,
-  index,
-  count,
-  number,
+  label,
   anchor,
   flags,
   inserts,
   onChange,
-  onMove,
-  onRemove,
   onInsert,
-  dragProps,
 }: {
   step: FormStep;
-  index: number;
-  count: number;
-  number: number;
+  label: string;
   anchor: string;
   flags: readonly string[];
   inserts: Inserts;
   onChange: (step: FormStep) => void;
-  onMove: (to: number) => void;
-  onRemove: () => void;
   onInsert: (
     kind: "reagent" | "equipment" | "primer" | "strain",
     value: string,
     amount?: string,
   ) => string | null;
-  dragProps: React.HTMLAttributes<HTMLLIElement>;
 }) {
   const caret = useRef<number | null>(null);
   const [amount, setAmount] = useState({ value: "", unit: "µl" });
@@ -105,63 +97,8 @@ function StepCard({
   const rawLines = step.lines
     .filter((line) => "raw" in line)
     .map((line) => (line as { raw: string }).raw);
-  const label = `Step ${number}`;
   return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a step card is focused for Alt+Up and Alt+Down, the keyboard twin of dragging it (WCAG 2.5.7)
-    <li
-      id={anchor}
-      className="kb-step"
-      aria-label={label}
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
-        e.preventDefault();
-        onMove(e.key === "ArrowUp" ? index - 1 : index + 1);
-      }}
-      {...dragProps}
-    >
-      <div className="kb-step-head">
-        <span className="kb-drag" aria-hidden="true" title="Drag to reorder">
-          ⠿
-        </span>
-        <span className="kb-step-number">{label}</span>
-        <div className="app-actions" role="toolbar" aria-label={`${label}: move or remove`}>
-          {/* Native buttons, so the first step's Move up and the last step's Move down are simply off, with no reason to read. */}
-          <button
-            type="button"
-            className="cap-btn"
-            data-variant="quiet"
-            data-size="sm"
-            aria-keyshortcuts="Alt+ArrowUp"
-            disabled={index === 0}
-            onClick={() => onMove(index - 1)}
-            aria-label={`Move ${label.toLowerCase()} up`}
-          >
-            Move up
-          </button>
-          <button
-            type="button"
-            className="cap-btn"
-            data-variant="quiet"
-            data-size="sm"
-            aria-keyshortcuts="Alt+ArrowDown"
-            disabled={index === count - 1}
-            onClick={() => onMove(index + 1)}
-            aria-label={`Move ${label.toLowerCase()} down`}
-          >
-            Move down
-          </button>
-          <Button
-            type="button"
-            size="sm"
-            variant="quiet"
-            onClick={onRemove}
-            aria-label={`Remove ${label.toLowerCase()}`}
-          >
-            Remove
-          </Button>
-        </div>
-      </div>
+    <div id={anchor} className="kb-step">
       <p className="cap-field-label" id={`${anchor}-label`}>
         What to do
       </p>
@@ -394,8 +331,19 @@ function StepCard({
           </p>
         </details>
       ) : null}
-    </li>
+    </div>
   );
+}
+
+/** A step's name in what the list says and on its buttons: its first words, so a move names the step that moved. */
+function stepName(step: FormStep) {
+  const words = step.text
+    .replace(/[~@#]?\{[^}]*\}/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 6)
+    .join(" ");
+  return words ? `"${words}"` : "the new step";
 }
 
 function StepList({
@@ -405,7 +353,6 @@ function StepList({
   inserts,
   onChange,
   onInsert,
-  announce,
 }: {
   block: Extract<FormBlock, { type: "steps" }>;
   sectionTitle: string;
@@ -417,63 +364,40 @@ function StepList({
     value: string,
     amount?: string,
   ) => string | null;
-  announce: (text: string) => void;
 }) {
-  const list = useRef<HTMLOListElement>(null);
-  const [dragging, setDragging] = useState<number | null>(null);
-  const move = (from: number, to: number) => {
-    if (to < 0 || to >= block.steps.length || from === to) return;
-    const steps = [...block.steps];
-    const [moved] = steps.splice(from, 1);
-    if (!moved) return;
-    steps.splice(to, 0, moved);
-    onChange({ ...block, steps });
-    announce(
-      `Moved to step ${block.start + to} of ${block.start + steps.length - 1}, in ${sectionTitle}.`,
-    );
-    // Focus stays on the step that moved, so it can be moved again and its new place is read out.
-    requestAnimationFrame(() =>
-      list.current?.querySelectorAll<HTMLLIElement>(":scope > li")[to]?.focus(),
-    );
-  };
+  const rows = useRows(block.steps, (steps) => onChange({ ...block, steps }));
   return (
-    <ol className="kb-steps" ref={list} start={block.start}>
-      {block.steps.map((step, i) => (
-        <StepCard
-          key={i}
-          step={step}
-          index={i}
-          count={block.steps.length}
-          number={block.start + i}
-          anchor={stepAnchor(sectionTitle, block.start + i)}
-          flags={flags}
-          inserts={inserts}
-          onChange={(next) =>
-            onChange({ ...block, steps: block.steps.map((s, j) => (j === i ? next : s)) })
-          }
-          onMove={(to) => move(i, to)}
-          onRemove={() => onChange({ ...block, steps: block.steps.filter((_, j) => j !== i) })}
-          onInsert={onInsert}
-          dragProps={{
-            draggable: true,
-            onDragStart: (e) => {
-              setDragging(i);
-              e.dataTransfer.effectAllowed = "move";
-            },
-            onDragOver: (e) => {
-              if (dragging !== null) e.preventDefault();
-            },
-            onDrop: (e) => {
-              e.preventDefault();
-              if (dragging !== null) move(dragging, i);
-              setDragging(null);
-            },
-            onDragEnd: () => setDragging(null),
-            className: `kb-step${dragging === i ? " kb-step-dragging" : ""}`,
-          }}
-        />
-      ))}
-    </ol>
+    <SortableList
+      {...rows}
+      className="kb-steps"
+      layout="stack"
+      altKeys
+      start={block.start}
+      aria-label={`Steps in ${sectionTitle || "this section"}`}
+      getLabel={(row) => stepName(row.value)}
+      renderHead={(row, state) => (
+        <span className="kb-step-number">Step {block.start + state.index}</span>
+      )}
+      renderItem={(row, state) => {
+        const number = block.start + state.index;
+        return (
+          <StepCard
+            step={row.value}
+            label={`Step ${number}`}
+            anchor={stepAnchor(sectionTitle, number)}
+            flags={flags}
+            inserts={inserts}
+            onInsert={onInsert}
+            onChange={(next) =>
+              onChange({
+                ...block,
+                steps: block.steps.map((s, j) => (j === row.index ? next : s)),
+              })
+            }
+          />
+        );
+      }}
+    />
   );
 }
 
@@ -494,14 +418,10 @@ export function BodyEditor({
     amount?: string,
   ) => string | null;
 }) {
-  const [said, setSaid] = useState("");
   const setSection = (i: number, next: FormBody["sections"][number]) =>
     onChange({ ...body, sections: body.sections.map((s, j) => (j === i ? next : s)) });
   return (
     <>
-      <div aria-live="polite" className="cap-sr-only">
-        {said}
-      </div>
       <Panel title="Introduction">
         <div className="cap-field">
           <label className="cap-field-label" htmlFor="kb-intro">
@@ -561,7 +481,6 @@ export function BodyEditor({
                 flags={flags}
                 inserts={inserts}
                 onInsert={onInsert}
-                announce={setSaid}
                 onChange={(next) =>
                   setSection(i, {
                     ...section,

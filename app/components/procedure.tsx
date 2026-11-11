@@ -28,6 +28,7 @@ import {
 } from "~/components/procedure-materials";
 import { Bullets, StepItem, Steps } from "~/components/procedure-steps";
 import { RENDERED } from "~/lib/content/render-version";
+import { PROSE } from "~/lib/prose-context";
 
 import "capsomer/qr.css";
 
@@ -275,7 +276,7 @@ function MiseEnPlace({
       </ul>
       <label className="procedure-mise-copy">
         <span>Shopping list, to copy</span>
-        <textarea readOnly rows={Math.min(12, items.length)} value={text} />
+        <textarea className="cap-input" readOnly rows={Math.min(12, items.length)} value={text} />
       </label>
     </div>
   );
@@ -318,6 +319,7 @@ export function ProcedureView({
   return (
     <div
       className="prose procedure"
+      {...PROSE}
       {...RENDERED}
       data-profile={record.profile}
       data-run-path={basePath}
@@ -555,7 +557,7 @@ export function ProcedureSheet({
         .filter(Boolean)
         .join(", ");
   return (
-    <article className="procedure-sheet prose">
+    <article className="procedure-sheet prose" {...PROSE}>
       <header className="procedure-sheet-head">
         <h1 className="cap-layout-grid">{record.title}</h1>
         <p>

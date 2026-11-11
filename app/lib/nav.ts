@@ -2,7 +2,7 @@
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "./content-pages.mjs";
 import { CV_PDF_PATH } from "./cv/entries.mjs";
 import { IDENTITY } from "./identity.generated.mjs";
-import { longDateUTC } from "./long-date.mjs";
+import { formatDate } from "capsomer/behavior/time";
 import { NAV_DATA } from "./nav-data.generated.mjs";
 import { OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
 import { seriesPath, seriesSlug } from "./series-path.mjs";
@@ -320,7 +320,7 @@ function writingMenu(now: number): Menu {
     tiles: posts.slice(0, 3).map((post) => ({
       to: `/writing/${post.slug}`,
       label: post.title,
-      description: longDateUTC(post.publishAt) ?? undefined,
+      description: formatDate(post.publishAt) ?? undefined,
     })),
     rows: [
       {

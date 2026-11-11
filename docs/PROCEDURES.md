@@ -79,7 +79,7 @@ not marked, so the sentence stays the one a person wrote.
 - A computational command that differs by system is given once per platform: ` ```bash platform=linux `,
   ` ```bash platform=macos `, ` ```powershell platform=windows `, each with its own output block. A step names
   each platform once and never one alone. The page shows them as tabs (links to each block with no script;
-  `app/enhance/platforms.ts` makes them tabs and remembers the reader's platform); the twin and the sheet list
+  `app/enhance/platforms.ts` runs Capsomer's tabs, which remember the platform as `capsomer.tabs.platform`); the twin and the sheet list
   every one under its name.
 - A tutorial's step may set a task: `> CHALLENGE:` with the task, then `> SOLUTION:` with its answer. The page
   folds the solution into a `<details>`, which opens with no script, and the twin carries both.

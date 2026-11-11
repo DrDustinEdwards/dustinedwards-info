@@ -2,7 +2,7 @@
 // writeProcedureRow, from a compile (app/kb/procedures/compile.mjs).
 import { and, asc, eq } from "drizzle-orm";
 
-import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import type { ProcedureRecord } from "~/kb/procedures/render.mjs";
 
 import { getDb } from "./client";

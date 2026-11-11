@@ -3,6 +3,7 @@ import { OWNER_FACULTY_PAGE, publicHtmlHeaders, siteHead } from "~/lib/seo";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
+import { PROSE } from "~/lib/prose-context";
 
 /** The site's general address (Dustin, 2026-09-28); the About page publishes the same one. */
 const EMAIL = "contact@dustinedwards.info";
@@ -28,7 +29,7 @@ export default function Contact() {
         <h1 className="cap-layout-grid">Contact</h1>
       </header>
 
-      <div className="prose">
+      <div className="prose" {...PROSE}>
         <p>
           Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. It reaches me directly, for research,
           teaching, collaboration or anything on this site.

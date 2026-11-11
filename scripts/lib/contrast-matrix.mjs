@@ -129,26 +129,13 @@ export const MATRIX = [
   ["--text", "--fig-turbid", UI, "plaque outline on the turbid tone"],
 ];
 
-/** @type {Map<string, string>} token -> why it is declared outside app.css */
-export const DECLARED_ELSEWHERE = new Map([
-  ["--shiki-light", "written inline by Shiki on each highlighted span, per token, per code block"],
-  ["--shiki-dark", "the dark half of the same inline pair"],
-  [
-    "--shiki-light-bg",
-    "inline on the span; app.css matches it with span[style*=...] and reads it back",
-  ],
-  ["--shiki-dark-bg", "the dark half of the same inline background pair"],
-  [
-    "--swatch",
-    "written inline by the :swatch directive on each chip, one per chip, per post; " +
-      "prose.css reads it back as var(--swatch, transparent). Same shape as the four " +
-      "Shiki tokens above and for the same reason: the value is per instance and comes " +
-      "from the post, so there is no theme block it could live in. It is deliberately " +
-      "NOT declared, which is what keeps the participation assertion below untouched " +
-      "and its exemption map empty: the color being SHOWN is not a color this system " +
-      "chose, and no ratio can be asserted about it",
-  ],
-]);
+/**
+ * Tokens the site reads but never declares. Empty since the move to Capsomer's prose blocks (0.92.0): the per-span Shiki
+ * pair and the :swatch chip color are read only by capsomer/prose-blocks.css now, which this gate does not scan.
+ *
+ * @type {Map<string, string>} token -> why it is declared outside app.css
+ */
+export const DECLARED_ELSEWHERE = new Map();
 
 /** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
 export const NON_PARTICIPATING = new Map([

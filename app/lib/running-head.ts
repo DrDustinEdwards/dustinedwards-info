@@ -58,7 +58,7 @@ const under = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
 /** The section a path sits in, for the running head and the letterhead's folio. */
-export function sectionOf(pathname: string): Section {
+export function runningHeadSection(pathname: string): Section {
   let best = SITE_SECTION;
   for (const section of SECTIONS) {
     if (under(pathname, section.prefix) && section.prefix.length > best.prefix.length)
