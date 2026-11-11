@@ -35,7 +35,7 @@ import "~/styles/blog-search.css";
 import "~/styles/search-page.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 const PAGE_SIZE = 10;
 

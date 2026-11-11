@@ -142,7 +142,7 @@ export const frontmatterSchema = z.object({
   }
 });
 
-export { findWideDashes } from "./wide-dash.mjs";
+export { findWideDashes } from "@drdustinedwards/site-helpers/text";
 
 export { readingTimeMinutes };
 

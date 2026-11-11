@@ -21,7 +21,7 @@ import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
 import { askAvailable, syncAskPaper } from "~/lib/search/ask.server";

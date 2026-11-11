@@ -8,7 +8,7 @@
 
 import { logEvent } from "@dustinedwards/site-runtime/log";
 
-import { clientIp } from "~/lib/client-ip";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv } from "~/lib/context";
 import { limitHit } from "~/lib/rate-limit.mjs";
 import { siteHealthResponse } from "~/lib/health/response.server";

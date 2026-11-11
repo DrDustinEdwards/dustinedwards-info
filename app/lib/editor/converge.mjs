@@ -1,4 +1,4 @@
-import { errorMessage } from "../error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
  * A name string, not a class: the thrower is .mjs and the catcher is .ts, and instanceof across

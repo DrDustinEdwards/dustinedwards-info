@@ -33,7 +33,7 @@ import {
   syncRoster,
   syncStatus,
 } from "./sync-tools.server";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listProceduresForOperator } from "~/db/procedures";
 import { listPublishedPublications } from "~/db/publications";
 import { refreshCitations } from "~/lib/citations.server";

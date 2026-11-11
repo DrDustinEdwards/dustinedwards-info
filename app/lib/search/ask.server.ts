@@ -18,7 +18,7 @@ import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
   ASK_MAX_TOKENS,
   ASK_TIMEOUT_MS,
