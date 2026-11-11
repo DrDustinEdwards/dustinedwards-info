@@ -6,6 +6,7 @@
  * the PDF fingerprint are reproducible.
  */
 
+import { toBibtex, toRis } from "@drdustinedwards/site-helpers/scholar";
 import { slugify } from "@drdustinedwards/site-helpers/slug";
 
 import { deriveIdentity } from "../identity.mjs";
@@ -215,30 +216,21 @@ function resolveOne(source, byDoi) {
     case "publication": {
       const venue = venueOf(source.journal, source.volume, source.issue, source.pages);
       const key = `${entrySlug(source.authors[0]?.split(" ").pop() ?? "cv")}-${source.year}-${entrySlug(source.title).split("-").slice(0, 3).join("-")}`;
-      const bibtex = [
-        `@article{${key},`,
-        `  title = {${source.title}},`,
-        `  author = {${source.authors.join(" and ")}},`,
-        `  journal = {${source.journal}},`,
-        `  year = {${source.year}},`,
-        ...(source.volume ? [`  volume = {${source.volume}},`] : []),
-        ...(source.issue ? [`  number = {${source.issue}},`] : []),
-        ...(source.pages ? [`  pages = {${source.pages.replace("-", "--")}},`] : []),
-        "}",
-      ].join("\n");
-      const pages = source.pages?.split("-") ?? [];
-      const ris = [
-        "TY  - JOUR",
-        `TI  - ${source.title}`,
-        ...source.authors.map((name) => `AU  - ${name}`),
-        `JO  - ${source.journal}`,
-        `PY  - ${source.year}`,
-        ...(source.volume ? [`VL  - ${source.volume}`] : []),
-        ...(source.issue ? [`IS  - ${source.issue}`] : []),
-        ...(pages[0] ? [`SP  - ${pages[0]}`] : []),
-        ...(pages[1] ? [`EP  - ${pages[1]}`] : []),
-        "ER  - ",
-      ].join("\n");
+      const pages = source.pages?.split(/\s*[-\u2010-\u2015]+\s*/) ?? [];
+      const work = {
+        id: key,
+        title: source.title,
+        authors: source.authors,
+        journal: source.journal,
+        year: source.year,
+        volume: source.volume,
+        issue: source.issue,
+        pages: source.pages,
+        firstPage: pages[0],
+        lastPage: pages[1],
+      };
+      const bibtex = toBibtex(work);
+      const ris = toRis(work);
       return {
         ...common,
         type: "publication",

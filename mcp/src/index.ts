@@ -31,6 +31,7 @@
 import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { adminMcpWorker, type AdminMcpEnv } from "@dustinedwards/site-runtime/admin-mcp";
 import { kvCheck } from "@dustinedwards/site-runtime/health";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { checkRateLimit, refuse } from "@dustinedwards/site-runtime/mcp-server";
 import { RateLimiter } from "@dustinedwards/site-runtime/rate-limit/durable-object";
 import { dustinedwardsMcp } from "@dustinedwards/site-runtime/sites";
@@ -70,10 +71,7 @@ stays with you.</p>`,
     // Every capture is a KV write anyone can trigger, so it is metered per address like /register. Its health answer
     // writes nothing and stays open.
     if (url.pathname !== "/probe/health") {
-      const limit = await checkRateLimit(
-        env.MCP_RATE_LIMIT,
-        `probe:${request.headers.get("cf-connecting-ip") ?? "unknown"}`,
-      );
+      const limit = await checkRateLimit(env.MCP_RATE_LIMIT, `probe:${clientIp(request)}`);
       if (!limit.allowed)
         return refuse("Rate limited.", 429, { "retry-after": String(limit.retryAfter) });
     }
