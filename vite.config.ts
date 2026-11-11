@@ -1,8 +1,34 @@
 import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
-import { defineConfig } from "vite";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { defineConfig, type Plugin } from "vite";
 
 import { islandsPlugin } from "./scripts/lib/islands.mjs";
+
+// "Keep on this device" worker: Capsomer's (capsomer/offline-sw.js), written into the client build as sw.js and served at
+// /sw.js in dev, so the site keeps no copy (app/enhance/offline.ts registers it on a reader's first press).
+const offlineWorker = createRequire(import.meta.url).resolve("capsomer/offline-sw.js");
+function offlineServiceWorker(): Plugin {
+  return {
+    name: "capsomer-offline-sw",
+    configureServer(server) {
+      server.middlewares.use("/sw.js", (_req, res) => {
+        res.setHeader("content-type", "text/javascript");
+        res.setHeader("cache-control", "no-cache");
+        res.end(readFileSync(offlineWorker, "utf8"));
+      });
+    },
+    generateBundle() {
+      if (this.environment.name !== "client") return;
+      this.emitFile({
+        type: "asset",
+        fileName: "sw.js",
+        source: readFileSync(offlineWorker, "utf8"),
+      });
+    },
+  };
+}
 
 /**
  * A value that is DIFFERENT FOR EVERY BUILD, and its only job is to namespace
@@ -66,6 +92,7 @@ export default defineConfig({
     // /site.js and the islands it starts (app/enhance/*.ts), built beside the app and emitted into its client
     // assets; the server reads their URLs and sizes from `virtual:islands`.
     islandsPlugin(),
+    offlineServiceWorker(),
   ],
   resolve: {
     tsconfigPaths: true,

@@ -262,7 +262,7 @@ function MiseEnPlace({
   const { items, text } = miseEnPlace(record, factor, units);
   if (items.length === 0) return null;
   return (
-    <div className="procedure-mise">
+    <div className="procedure-mise" data-run-swap="mise">
       <h3 id="mise-en-place">Mise en place</h3>
       <ul className="procedure-mise-list">
         {items.map((item) => (

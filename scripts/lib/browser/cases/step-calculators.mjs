@@ -86,7 +86,7 @@ export async function run({ page }) {
   // so typing the first number again changes nothing and no recompute could show (run 37231091128).
   await exercise("before a run is started", "22200");
 
-  await page.click(".run-start");
+  await page.click(".cap-run-start");
   const started = await page.evaluate(() => ({
     mode: document.querySelector(".procedure")?.getAttribute("data-run") ?? "",
     folded: document.querySelectorAll("li.procedure-step details.phage-tool-step").length,
