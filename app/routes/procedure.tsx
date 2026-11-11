@@ -21,6 +21,7 @@ import type { Route } from "./+types/procedure";
 import "~/styles/prose.css";
 import "~/styles/procedure.css";
 import "~/styles/run.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * Every procedure page (docs/PROCEDURES.md): a protocol, a recipe or a computational procedure, drawn
@@ -99,9 +100,9 @@ export default function ProcedureRoute({ loaderData }: Route.ComponentProps) {
       trail={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
-          }}
+          dangerouslySetInnerHTML={markup(
+            serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
+          )}
         />
       }
     >

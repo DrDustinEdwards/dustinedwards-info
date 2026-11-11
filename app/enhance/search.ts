@@ -4,6 +4,8 @@
  * list; arrow keys anywhere else still scroll the page.
  */
 
+import { trustedHtml } from "capsomer/behavior/trusted-html";
+
 const MIN_QUERY = 3;
 const DEBOUNCE_MS = 200;
 
@@ -62,7 +64,7 @@ function renderHit(hit: JsonHit): HTMLLIElement {
   const snippet = document.createElement("p");
   snippet.className = "search-snippet";
   // The one field written as HTML: the server escaped the text before substituting its <mark> markers.
-  snippet.innerHTML = hit.snippet;
+  snippet.innerHTML = trustedHtml(hit.snippet);
   item.appendChild(snippet);
 
   return item;

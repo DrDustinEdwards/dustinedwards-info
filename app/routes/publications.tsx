@@ -43,6 +43,7 @@ import "capsomer/catalog.css";
 import "~/styles/listing.css";
 import "~/styles/site-catalog.css";
 import "~/styles/publications.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   "human-simian-retroviruses": {
@@ -306,7 +307,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
         {/* `jsonLdText`, not `JSON.stringify`: only `</script` ends a script element, and these strings come from third-party registries. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdText(publicationsJsonLd(origin, items)) }}
+          dangerouslySetInnerHTML={markup(jsonLdText(publicationsJsonLd(origin, items)))}
         />
         <template data-island="catalog" />
       </main>

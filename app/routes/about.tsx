@@ -26,6 +26,7 @@ import type { Route } from "./+types/about";
 import "~/styles/prose.css";
 import "~/styles/about.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The portrait as the page draws it: its sizes carry the file's version, the bytes' hash from its library row (a replace
@@ -94,11 +95,9 @@ export default function About({ loaderData }: Route.ComponentProps) {
       trail={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(
-              profilePageJsonLd(SITE_ORIGIN, { path: "/about", description }),
-            ),
-          }}
+          dangerouslySetInnerHTML={markup(
+            serializeJsonLd(profilePageJsonLd(SITE_ORIGIN, { path: "/about", description })),
+          )}
         />
       }
     >
@@ -111,7 +110,7 @@ export default function About({ loaderData }: Route.ComponentProps) {
       <Picture picture={photo} />
 
       {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
-      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="prose" {...RENDERED} dangerouslySetInnerHTML={markup(html)} />
     </PageShell>
   );
 }

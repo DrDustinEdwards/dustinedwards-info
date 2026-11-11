@@ -1,4 +1,8 @@
 import { startIslands } from "@dustinedwards/devkit/islands";
+import { startPage } from "@dustinedwards/site-runtime/page-client";
+
+// First: the Trusted Types policy and the page's INP and CSP reports are in place before any island runs.
+startPage();
 
 // The one script every page runs, /site.js (devkit's siteScript in vite.config.ts): it starts each
 // <template data-island> on the page, importing that island's content-hashed module from /islands/.

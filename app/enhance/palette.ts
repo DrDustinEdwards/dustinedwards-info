@@ -1,3 +1,4 @@
+import { trustedHtml } from "capsomer/behavior/trusted-html";
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 
 // An island (devkit ./islands): each <template data-island="palette"> on the page calls this, and the first one runs it.
@@ -76,7 +77,7 @@ export default function start(): void {
     dialog.setAttribute("aria-label", "Search this site");
     if (reduceMotion.matches) dialog.dataset.reduceMotion = "";
 
-    dialog.innerHTML = `
+    dialog.innerHTML = trustedHtml(`
     <form class="palette-form" method="dialog" role="search">
       <input
         type="search"
@@ -108,7 +109,7 @@ export default function start(): void {
       <span><kbd>Enter</kbd> to open</span>
       <a href="/search" class="palette-all-results">All results</a>
     </p>
-  `;
+  `);
 
     document.body.appendChild(dialog);
     input = dialog.querySelector(".palette-input");
@@ -148,7 +149,7 @@ export default function start(): void {
     showRecent(false);
 
     if (hits.length === 0) {
-      listbox.innerHTML = "";
+      listbox.replaceChildren();
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
       return;
@@ -200,7 +201,7 @@ export default function start(): void {
       }
       html += `</li>`;
     }
-    listbox.innerHTML = html;
+    listbox.innerHTML = trustedHtml(html);
 
     if (active >= 0) {
       input.setAttribute("aria-activedescendant", optionId(active));
@@ -245,7 +246,7 @@ export default function start(): void {
     input.setAttribute("aria-expanded", "false");
     input.removeAttribute("aria-activedescendant");
 
-    listbox.innerHTML = "";
+    listbox.replaceChildren();
     const recent = readRecent();
     const list = recentList?.querySelector("ul");
     if (recent.length === 0 || !list) {
@@ -253,14 +254,16 @@ export default function start(): void {
       if (statusLine) statusLine.textContent = "";
       return;
     }
-    list.innerHTML = recent
-      .map(
-        (query) =>
-          `<li class="palette-recent"><button type="button" data-recent="${escapeHtml(
-            query,
-          )}">${escapeHtml(query)}</button></li>`,
-      )
-      .join("");
+    list.innerHTML = trustedHtml(
+      recent
+        .map(
+          (query) =>
+            `<li class="palette-recent"><button type="button" data-recent="${escapeHtml(
+              query,
+            )}">${escapeHtml(query)}</button></li>`,
+        )
+        .join(""),
+    );
     showRecent(true);
     for (const button of list.querySelectorAll<HTMLButtonElement>("[data-recent]")) {
       button.addEventListener("click", () => {
@@ -438,7 +441,7 @@ export default function start(): void {
     active = -1;
     clearTimeout(debounce);
     resetAsk();
-    if (listbox) listbox.innerHTML = "";
+    if (listbox) listbox.replaceChildren();
     showRecent(false);
     if (statusLine) statusLine.textContent = "";
     if (input) {
