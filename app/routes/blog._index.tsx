@@ -2,7 +2,10 @@ import { Form, data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
-import { PostRow, Pager } from "~/components/post-row";
+import { Pagination } from "capsomer/react/pagination";
+import { routerRenderLink } from "capsomer/react/link";
+import "capsomer/pagination.css";
+import { PostRow } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
@@ -217,7 +220,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </ul>
         )}
 
-        <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
+        <Pagination
+          form="steps"
+          page={page}
+          pageCount={pageCount}
+          hrefFor={pageHref}
+          prevLabel="Newer"
+          nextLabel="Older"
+          renderLink={routerRenderLink}
+        />
       </main>
       <ShellFooter />
       {/* No blog island: its enhancements target `.prose` markup, which this page has none of. */}
