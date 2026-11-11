@@ -39,6 +39,7 @@ import {
 import type { Route } from "./+types/publications.$slug";
 
 import "~/styles/paper.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * The URL ends in a slash: `citation_pdf_url` must sit in the HTML abstract's subdirectory. The slug
@@ -295,8 +296,8 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
 
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText([
+          dangerouslySetInnerHTML={markup(
+            jsonLdText([
               ...paperJsonLd(paper, {
                 origin: SITE_ORIGIN,
                 pageUrl,
@@ -307,7 +308,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 topics,
               }),
             ]),
-          }}
+          )}
         />
       </main>
       <ShellFooter />

@@ -19,6 +19,7 @@ import type { Route } from "./+types/procedure.version";
 import "~/styles/prose.css";
 import "~/styles/procedure.css";
 import "~/styles/run.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * A procedure as it was when a version was published, at `<page>/v/<version>` (drizzle/0027_procedure_versions.sql).
@@ -90,9 +91,9 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       trail={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
-          }}
+          dangerouslySetInnerHTML={markup(
+            serializeJsonLd(procedureJsonLd(record, SITE_ORIGIN, person, lineage)),
+          )}
         />
       }
     >

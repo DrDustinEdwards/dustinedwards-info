@@ -62,6 +62,7 @@ import "capsomer/lightbox.css";
 import "~/styles/post-head-blocks.css";
 import "~/styles/post-disclosures.css";
 import { RENDERED } from "~/lib/content/render-version";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /** Middleware, not the loader: a document route's loader cannot return a raw Response. */
 export const middleware: Route.MiddlewareFunction[] = [
@@ -242,9 +243,9 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       <main className="cap-page tracks post-tracks h-entry" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
-          }}
+          dangerouslySetInnerHTML={markup(
+            jsonLdText(articleJsonLd(SITE_ORIGIN, toArticleSeo(post))),
+          )}
         />
 
         <header className="post-head">
@@ -291,7 +292,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             className="prose e-content"
             data-cap="lightbox"
             {...RENDERED}
-            dangerouslySetInnerHTML={{ __html: post.html }}
+            dangerouslySetInnerHTML={markup(post.html)}
           />
 
           {post.furtherReading.length > 0 && (

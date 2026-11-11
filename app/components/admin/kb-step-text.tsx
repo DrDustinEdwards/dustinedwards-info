@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type MutableRefObj
 
 import { Button } from "capsomer/react/button";
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
+import { markup, trustedHtml } from "capsomer/behavior/trusted-html";
 
 import { PIECE_NAMES, pieceLabel, stepPieces, writePiece, type Piece } from "~/kb/step-marks.mjs";
 
@@ -215,7 +216,7 @@ export function StepText({
   const own = useRef(text);
   // One object for the editor's life: React writes the markup again whenever this object changes, which would wipe what
   // is being typed, so after the first paint only redraw() writes it.
-  const [initial] = useState(() => ({ __html: chipHtml(text) }));
+  const [initial] = useState(() => markup(chipHtml(text)));
   const [open, setOpen] = useState<{ at: number; chip: Chip; top: number; left: number } | null>(
     null,
   );
@@ -223,7 +224,7 @@ export function StepText({
 
   const redraw = (next: string) => {
     own.current = next;
-    if (root.current) root.current.innerHTML = chipHtml(next);
+    if (root.current) root.current.innerHTML = trustedHtml(chipHtml(next));
   };
   useLayoutEffect(() => {
     if (text !== own.current) redraw(text);

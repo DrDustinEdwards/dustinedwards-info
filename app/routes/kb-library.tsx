@@ -41,6 +41,7 @@ import "capsomer/catalog.css";
 import "~/styles/prose.css";
 import "~/styles/site-catalog.css";
 import "~/styles/library.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /**
  * A knowledge base's library (docs/KNOWLEDGE-BASE.md, step 8): Recipes at /recipes and Software how-tos at
@@ -129,7 +130,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
       trail={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(collection) }}
+          dangerouslySetInnerHTML={markup(serializeJsonLd(collection))}
         />
       }
     >

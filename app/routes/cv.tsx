@@ -51,6 +51,7 @@ import "capsomer/status.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /*
  * THE CV (content/cv/, drawn from D1 at request time and resolved by app/lib/cv/entries.mjs, docs/CV.md). A CV
@@ -358,11 +359,7 @@ function Stat({
         <span className="cv-stat-value" data-cv-count={name}>
           {value}
         </span>
-        <div
-          className="cv-spark"
-          data-cv-spark={name}
-          dangerouslySetInnerHTML={{ __html: spark }}
-        />
+        <div className="cv-spark" data-cv-spark={name} dangerouslySetInnerHTML={markup(spark)} />
         {sub ? <span className="cv-stat-sub">{sub}</span> : null}
       </dd>
     </div>
@@ -387,7 +384,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
   const YEARS = yearOptions(FACTS);
   return (
     <PageShell
-      trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}
+      trail={<script type="application/ld+json" dangerouslySetInnerHTML={markup(jsonLd)} />}
     >
       <div className="cv" data-cv="">
         <header className="cv-head">
@@ -446,7 +443,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             <div
               className="cv-timeline-plot"
               data-cv-timeline=""
-              dangerouslySetInnerHTML={{ __html: charts.timeline }}
+              dangerouslySetInnerHTML={markup(charts.timeline)}
             />
             <p className="cv-timeline-hint" data-cv-hint="">
               Select a year&rsquo;s bar to show only that year, and select it again for every year.

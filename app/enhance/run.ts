@@ -1,3 +1,4 @@
+import { copyChildren, trustedHtml } from "capsomer/behavior/trusted-html";
 import {
   clock,
   finishRun,
@@ -514,29 +515,29 @@ export default function start(): void {
         credentials: "same-origin",
       });
       if (!res.ok) throw new Error(`run: ${href} answered ${res.status}`);
-      const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+      const doc = new DOMParser().parseFromString(trustedHtml(await res.text()), "text/html");
       const next = doc.querySelector<HTMLElement>(".procedure[data-run-path]");
       if (!next) throw new Error(`run: ${href} is not a procedure page`);
       const table = root!.querySelector('[data-run-swap="materials"]');
       const nextTable = next.querySelector('[data-run-swap="materials"]');
-      if (table && nextTable) table.innerHTML = nextTable.innerHTML;
+      if (table && nextTable) copyChildren(table, nextTable);
       for (const li of stepItems) {
         const mine = li.querySelector('[data-run-swap="step"]');
         const theirs = next.querySelector(
           `li[data-step="${li.dataset.step}"] [data-run-swap="step"]`,
         );
-        if (mine && theirs) mine.innerHTML = theirs.innerHTML;
+        if (mine && theirs) copyChildren(mine, theirs);
         // A recipe step's own ingredient line carries the same amounts.
         const mineList = li.querySelector(".procedure-step-ingredients");
         const theirList = next.querySelector(
           `li[data-step="${li.dataset.step}"] .procedure-step-ingredients`,
         );
-        if (mineList && theirList) mineList.innerHTML = theirList.innerHTML;
+        if (mineList && theirList) copyChildren(mineList, theirList);
       }
       // So does a recipe's mise-en-place.
       const mise = root!.querySelector(".procedure-mise");
       const nextMise = next.querySelector(".procedure-mise");
-      if (mise && nextMise) mise.innerHTML = nextMise.innerHTML;
+      if (mise && nextMise) copyChildren(mise, nextMise);
       const nextField = next.querySelector<HTMLInputElement>("form.procedure-scale input[name]");
       if (nextField && scaleField) scaleField.value = nextField.defaultValue;
       history.replaceState(history.state, "", href);

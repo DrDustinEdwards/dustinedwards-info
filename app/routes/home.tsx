@@ -33,6 +33,7 @@ import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
 import "~/styles/home.css";
+import { markup } from "capsomer/behavior/trusted-html";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
 // The home faces as a `Link` header too, so Early Hints starts them; the Renderer appends every page's own.
@@ -410,7 +411,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <script
             key={i}
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
+            dangerouslySetInnerHTML={markup(serializeJsonLd(data))}
           />
         ))}
       </main>
