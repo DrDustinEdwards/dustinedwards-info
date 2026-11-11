@@ -4,13 +4,8 @@
  * @typedef {"relevance" | "date"} SearchSort
  */
 
-/**
- * @param {string | null | undefined} value
- * @returns {SearchSort}
- */
-export function parseSort(value) {
-  return value === "date" ? "date" : "relevance";
-}
+/** The sorts a request may name (`?sort=date`), for Capsomer's `oneOf`; anything else is relevance. */
+export const SORTS = /** @type {const} */ (["relevance", "date"]);
 
 /**
  * Undated rows sort last via -Infinity, not 0, which would misplace a pre-epoch date. The caller

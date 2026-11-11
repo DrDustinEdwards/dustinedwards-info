@@ -1,3 +1,4 @@
+import { oneOf } from "capsomer/behavior/catalog";
 import { resultsText, snippetHtml } from "capsomer/behavior/search-results";
 import { Pagination } from "capsomer/react/pagination";
 import { SearchResult, SearchResults } from "capsomer/react/search-results";
@@ -14,13 +15,8 @@ import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import { recordZeroResult } from "~/lib/search/zero-result.server";
 import { SEARCH_BASES, baseLabel } from "~/kb/search-bases.mjs";
-import {
-  parseSort,
-  search,
-  zeroState,
-  type MatchReason,
-  type SearchHit,
-} from "~/lib/search/search.server";
+import { SORTS } from "~/lib/search/sort.mjs";
+import { search, zeroState, type MatchReason, type SearchHit } from "~/lib/search/search.server";
 import {
   EDGE_CACHE_HEADER,
   NO_STORE_CACHE_CONTROL,
@@ -53,7 +49,7 @@ function readParams(url: URL) {
     base: url.searchParams.get("base"),
     tag: url.searchParams.get("tag"),
     year: url.searchParams.get("year"),
-    sort: parseSort(url.searchParams.get("sort")),
+    sort: oneOf(url.searchParams.get("sort"), SORTS, "relevance"),
     page: Number.isFinite(page) && page > 0 ? page : 1,
   };
 }

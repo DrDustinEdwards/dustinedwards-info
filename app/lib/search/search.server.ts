@@ -2,7 +2,7 @@
 // awaits a third party, so the AI layer cannot slow or break classic search.
 
 import { RRF_K, fuse, hasFilters, parseQuery, toMatchExpression } from "./query.mjs";
-import { applySort, parseSort, type SearchSort } from "./sort.mjs";
+import { applySort, type SearchSort } from "./sort.mjs";
 import { PUBLISHED_STATUS } from "./visibility.mjs";
 import { clampWords } from "~/lib/content/og-card-text.mjs";
 import { MARK_CLOSE, MARK_OPEN } from "capsomer/behavior/search-results";
@@ -507,5 +507,3 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
     })),
   };
 }
-
-export { parseSort };

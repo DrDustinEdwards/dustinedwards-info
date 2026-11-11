@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applySort, parseSort } from "../app/lib/search/sort.mjs";
+import { applySort } from "../app/lib/search/sort.mjs";
 
 /** Deliberately NOT in date order, so a pass cannot come from the input already being sorted. */
 const HITS = [
@@ -15,19 +15,6 @@ const HITS = [
   { uid: "c", publishAt: null },
   { uid: "d", publishAt: 2000 },
 ];
-
-await test("relevance is the default for absent, unknown and misspelled", () => {
-  assert.equal(parseSort(null), "relevance");
-  assert.equal(parseSort(undefined), "relevance");
-  assert.equal(parseSort(""), "relevance");
-  assert.equal(parseSort("newest"), "relevance");
-  assert.equal(parseSort("DATE"), "relevance");
-  assert.equal(parseSort("relevance"), "relevance");
-});
-
-await test("only the exact string date selects date", () => {
-  assert.equal(parseSort("date"), "date");
-});
 
 await test("relevance returns the fused list untouched, and the SAME array", () => {
   const out = applySort(HITS, "relevance");
