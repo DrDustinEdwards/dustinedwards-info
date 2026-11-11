@@ -1,16 +1,21 @@
-// A failed key still joins keys: the caller prunes every key it is not given, so leaving it out would
-// turn a transient into a deletion. Failures are returned so the sync report can refuse to converge.
-
-export const TWIN_ATTEMPTS = 3;
+// The Ask upload path, pure so `node --test` reaches it. A failed key is reported, never thrown: the caller prunes
+// every key it is not given, so dropping it would turn a transient into a deletion, and one key's failure must not
+// fail the whole sync (a single AI Search "rate limited" once turned sync_ask into a 500, 2026-11-11).
 
 /**
- * Uploads in flight at once during sync_ask. The corpus is one document per search record (552 on 2026-11-08),
- * and one at a time took over five minutes, past the 300 s Node's fetch waits for response headers, so the
- * converge job's call died "fetch failed" with the Worker still uploading.
+ * Four tries, 1 s then 2 s then 4 s apart. AI Search answers a burst with "You are being rate limited" and now and
+ * then with "Internal Error"; two tries 500 ms apart outlived neither on the deploys of 2026-11-11.
  */
-export const ASK_UPLOAD_CONCURRENCY = 8;
+export const ASK_UPLOAD_ATTEMPTS = 4;
 
-const TWIN_BACKOFF_MS = 500;
+/**
+ * Uploads in flight at once during sync_ask. Since the sync uploads only what changed (askUploadsNeeded) a deploy
+ * usually sends a handful; a first sync or a corpus-wide change sends every item, and one at a time that took over
+ * five minutes, past the 300 s Node's fetch waits for response headers.
+ */
+const ASK_UPLOAD_CONCURRENCY = 8;
+
+const ASK_UPLOAD_BACKOFF_MS = 1000;
 
 /**
  * @template T
@@ -19,8 +24,8 @@ const TWIN_BACKOFF_MS = 500;
  * @returns {Promise<T>}
  */
 export async function withRetry(fn, opts = {}) {
-  const attempts = opts.attempts ?? TWIN_ATTEMPTS;
-  const backoffMs = opts.backoffMs ?? TWIN_BACKOFF_MS;
+  const attempts = opts.attempts ?? ASK_UPLOAD_ATTEMPTS;
+  const backoffMs = opts.backoffMs ?? ASK_UPLOAD_BACKOFF_MS;
   const sleep = opts.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
   /** @type {unknown} */
   let last;
@@ -70,32 +75,68 @@ export async function mapPool(items, limit, fn) {
 }
 
 /**
- * @param {Array<{ key: string, path: string }>} twins the item key and the asset path of each twin
+ * Uploads every item, at most ASK_UPLOAD_CONCURRENCY at once, each retried. Never rejects: an item whose upload
+ * outlives its retries is logged and returned in `failed`, so the report can refuse to converge on it by name.
+ *
+ * @param {ReadonlyArray<{ key: string, body: string }>} items
  * @param {{
- *   fetchText: (path: string) => Promise<string>,
  *   upload: (key: string, body: string) => Promise<unknown>,
  *   log?: (...args: unknown[]) => void,
  *   attempts?: number,
  *   backoffMs?: number,
  *   sleep?: (ms: number) => Promise<void>,
- * }} io `fetchText` throws on a missing or unreadable twin
- * @returns {Promise<{ keys: string[], failed: Array<{ key: string, error: string }> }>}
+ * }} io
+ * @returns {Promise<{ uploaded: string[], failed: Array<{ key: string, error: string }> }>}
  */
-export async function uploadTwins(twins, io) {
+export async function uploadAskItems(items, io) {
   const retry = { attempts: io.attempts, backoffMs: io.backoffMs, sleep: io.sleep };
   const log = io.log ?? console.error;
-  const keys = [];
+  /** @type {string[]} */
+  const uploaded = [];
+  /** @type {Array<{ key: string, error: string }>} */
   const failed = [];
-  for (const { key, path } of twins) {
-    keys.push(key);
+  await mapPool(items, ASK_UPLOAD_CONCURRENCY, async ({ key, body }) => {
     try {
-      const body = await withRetry(() => io.fetchText(path), retry);
       await withRetry(() => io.upload(key, body), retry);
+      uploaded.push(key);
     } catch (error) {
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-      log("ask twin upload failed after retries", key, message);
+      log("ask upload failed after retries", key, message);
       failed.push({ key, error: message });
     }
-  }
-  return { keys, failed };
+  });
+  return { uploaded, failed };
+}
+
+/** Item statuses that hold, or will hold, the uploaded body. `error`, `outdated` and `skipped` do not. */
+const HELD = new Set(["completed", "queued", "running"]);
+
+/**
+ * The items a sync must upload: those the index does not hold in a good state, and those whose body differs from
+ * the one last uploaded under that key (the `ask_uploads` ledger). AI Search reports no usable checksum (every item
+ * reads "0"), so the ledger is the only record of what an item holds. Re-uploading an unchanged body costs a rate
+ * limited request and, from 2026-12-01, ingestion tokens, for nothing.
+ *
+ * @template {{ key: string, hash: string }} T
+ * @param {readonly T[]} items each with the sha-256 of its body
+ * @param {ReadonlyArray<{ key: string, status?: string | null }>} listed the index, every page
+ * @param {ReadonlyMap<string, string>} ledger key to the sha-256 last uploaded under it
+ * @returns {T[]}
+ */
+export function askUploadsNeeded(items, listed, ledger) {
+  const held = new Set(
+    listed.filter((item) => HELD.has(item.status ?? "")).map((item) => item.key),
+  );
+  return items.filter((item) => !held.has(item.key) || ledger.get(item.key) !== item.hash);
+}
+
+/**
+ * Hex sha-256 of a body, the ledger's record of what was uploaded.
+ *
+ * @param {string} body
+ * @returns {Promise<string>}
+ */
+export async function askBodyHash(body) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
