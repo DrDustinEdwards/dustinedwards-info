@@ -5,7 +5,6 @@ import { TDM_RESERVATION_HEADERS } from "@drdustinedwards/site-helpers/robots";
 import { buildSecurityHeaders } from "@dustinedwards/site-runtime/headers";
 import { pageSecurity } from "@dustinedwards/site-runtime/page-headers";
 import { dustinedwardsInfo } from "@dustinedwards/site-runtime/sites";
-import { TRUSTED_TYPES_NAMES } from "@dustinedwards/site-runtime/trusted-types";
 import { pagePolicy } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
 
@@ -20,13 +19,13 @@ export const SECURITY_HEADERS = Object.freeze({
 
 /**
  * Pages are stored at the edge (`renew`), so a stored page that carries a nonce gets a fresh one per reader. The
- * Report-Only companion stages Trusted Types and default-src 'none' until the reports are quiet. An image or a feed may be
+ * Report-Only companion stages default-src 'none' until the reports are quiet; Trusted Types is enforced (csp.mjs). An image or a feed may be
  * embedded by another origin (`corp`).
  */
 export const { withSecurityHeaders, nonceFor } = pageSecurity({
   set: SECURITY_HEADERS,
   policy: pagePolicy,
-  staged: { trustedTypes: TRUSTED_TYPES_NAMES, denyUnlisted: true },
+  staged: { denyUnlisted: true },
   corp: true,
   renew: true,
   unpoliced: isUnpolicedType,
