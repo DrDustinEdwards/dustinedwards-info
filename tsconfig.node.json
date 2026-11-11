@@ -11,10 +11,8 @@
     // typo in it should fail here rather than at the next test run.
     "vitest.config.ts",
     "scripts/**/*",
-    // The site origin (site-origin.mjs, re-exported by seo.ts). `verify-deploy.mjs` reads the deploy it just made, so the copy
-    // that goes stale is the one that polls the wrong host and reports a
-    // healthy site nobody is looking at. It imports the constant rather than
-    // restating it, so this project has to reach the module.
+    // The site origin (site-origin.mjs, re-exported by seo.ts): the Node scripts import the constant rather than restating it,
+    // so this project has to reach the module.
     "app/lib/seo.ts",
     "app/lib/site-origin.mjs",
     // The owner's identity, derived from the CV: `app/lib/seo.ts` and `app/lib/cv/entries.mjs` import both, so this

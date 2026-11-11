@@ -49,7 +49,7 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:policy": "node scripts/check-policy.mjs",
     "check:ask-guards": "node scripts/check-ask-guards.mjs",
-    "check:test-assertions": "node scripts/check-test-assertions.mjs",
+    "check:test-assertions": "devkit-test-assertions",
     "check:enhance-a11y": "node scripts/check-enhance-a11y.mjs",
     "check:alt-text": "node scripts/check-alt-text.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
@@ -121,7 +121,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.67.0",
     "@cloudflare/vitest-plugin": "1.6.0",
-    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.27.0",
+    "@dustinedwards/devkit": "github:DrDustinEdwards/devkit#v0.30.0",
     "@mermaid-js/mermaid-cli": "12.2.0",
     "@react-router/dev": "8.5.1",
     "@resvg/resvg-js": "2.6.2",
