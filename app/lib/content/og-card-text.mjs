@@ -8,6 +8,17 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
 
 export const TITLE_MAX = 150;
 
+/**
+ * Measured off rendered 1200x630 cards against the layout in build-og.mjs.
+ *
+ * @type {ReadonlyArray<{ maxChars: number, fontSize: number }>}
+ */
+export const TITLE_SIZES = [
+  { maxChars: 72, fontSize: 72 },
+  { maxChars: 110, fontSize: 54 },
+  { maxChars: TITLE_MAX, fontSize: 42 },
+];
+
 // Two lines of description, enforced here because satori's WebkitLineClamp does nothing.
 export const DESCRIPTION_MAX = 132;
 
