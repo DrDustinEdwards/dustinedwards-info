@@ -200,16 +200,4 @@ export const OPACITY_EXEMPT = [
       "Same class as -scrim above, reached by a different selector shape since " +
       "the dialogs became native <dialog> and their scrims became ::backdrop",
   },
-  {
-    /* Anchored at the end, per the vacuity rule. */
-    test: /\[data-enarratio-dimmed\]$|\[data-out-of-range\]$/,
-    why:
-      "a chart bar outside the active filter, faded on purpose to show what the filter left out. " +
-      "A graphic, not text: its value is in the chart's hover details and data table, and the bars " +
-      "in the filter stay at full strength (enarratio/base.css, capsomer/chart-frame.css)",
-  },
-  {
-    test: /^\.search-why-sep$/,
-    why: 'incidental punctuation, the "/" between why-terms, recorded as LEFT in this header',
-  },
 ];
