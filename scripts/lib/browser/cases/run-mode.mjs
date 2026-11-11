@@ -12,7 +12,8 @@ import { BASE, ok, pollUntil, skip } from "../harness.mjs";
  * @param {import("../harness.mjs").CaseContext} ctx
  */
 export async function run({ page }) {
-  await page.setViewport({ width: 390, height: 844 });
+  // A phone has a touch screen: Capsomer sizes its tap targets at 44px only for a coarse pointer.
+  await page.setViewport({ width: 390, height: 844, hasTouch: true });
   const path = "/research/protocols/phage-dna-extraction";
   /** @type {string[]} */
   const errors = [];
