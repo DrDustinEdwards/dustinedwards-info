@@ -24,7 +24,7 @@ import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
   deletePostFromD1,
   syncPostToD1,

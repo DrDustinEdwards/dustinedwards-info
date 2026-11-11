@@ -19,7 +19,7 @@ import {
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mediaRowTotal, rebuildMedia } from "~/lib/media/actions.server";
 import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";

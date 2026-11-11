@@ -102,7 +102,7 @@ const OPERATOR_TOKEN = operatorToken.token;
 
 /*
  * Before the sync, the first write: every check but the deferred ones (which the sync repairs) must be ok. A warn
- * counts here though it does not roll a deploy back (scripts/verify-deploy.mjs). `ok` is read from the body; a 429
+ * counts here though it does not roll a deploy back (devkit-verify-deploy). `ok` is read from the body; a 429
  * is reported apart.
  */
 announce(`Readiness: ${READINESS_PATH} reports ok`);

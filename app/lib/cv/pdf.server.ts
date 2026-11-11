@@ -22,7 +22,7 @@ import {
   PDF_FONTS,
   renderCvHtml,
 } from "~/lib/cv/pdf-html.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import sansNormalUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
 import serifItalicUrl from "~/fonts/source-serif-4-latin-italic.woff2?url";
 import serifNormalUrl from "~/fonts/source-serif-4-latin-normal.woff2?url";

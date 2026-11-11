@@ -23,12 +23,11 @@ import {
   reserveAskBudget,
   writeCachedAnswer,
 } from "~/lib/search/ask-guard.server";
-import { logEvent } from "@dustinedwards/site-runtime/log";
+import { errorMessage, logEvent } from "@dustinedwards/site-runtime/log";
 import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { publiclyVisibleSlugs } from "~/db";
-import { clientIp } from "~/lib/client-ip";
+import { clientIp } from "@dustinedwards/site-runtime/http";
 import { getEnv, getExecutionContext } from "~/lib/context";
-import { errorMessage } from "~/lib/error-message.mjs";
 import type { Route } from "./+types/search.ask";
 
 /** Long enough for a real question, short enough that the model is not a toy. */
