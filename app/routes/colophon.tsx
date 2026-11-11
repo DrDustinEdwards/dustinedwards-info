@@ -2,7 +2,7 @@ import { Link } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { getEnv } from "~/lib/context";
-import { readHealthTile } from "~/lib/health/snapshot.server";
+import { readHealthTile } from "@dustinedwards/site-runtime/health-snapshot";
 import type { Route } from "./+types/colophon";
 
 import features from "../../content/features.json";
@@ -54,7 +54,7 @@ export function headers() {
  * edge round trip naming an origin that changes at cutover.
  */
 export async function loader({ context }: Route.LoaderArgs) {
-  return { health: await readHealthTile(getEnv(context)) };
+  return { health: await readHealthTile({ kv: getEnv(context).APP_KV }) };
 }
 
 /**

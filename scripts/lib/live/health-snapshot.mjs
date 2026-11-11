@@ -1,7 +1,9 @@
 // The health-snapshot cron job's freshness, read off the colophon's health tile.
 
-import { HEALTH_POLL_INTERVAL_SECONDS } from "../../../app/lib/health/snapshot.mjs";
+import { HEALTH_SNAPSHOT_EVERY_MINUTES } from "../../../app/lib/cron-jobs.mjs";
 import { check, get, strip } from "./client.mjs";
+
+const HEALTH_POLL_INTERVAL_SECONDS = HEALTH_SNAPSHOT_EVERY_MINUTES * 60;
 
 /* The site's health-snapshot cron job is the snapshot's one writer, so the tile's age is the job's. */
 export async function run() {

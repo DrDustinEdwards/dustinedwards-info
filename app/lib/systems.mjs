@@ -8,6 +8,8 @@
 // link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
 import { modelMapData } from "capsomer/behavior/system-map";
+// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
+import "@dustinedwards/site-runtime/zod-jitless";
 import { z } from "zod";
 
 export const SYSTEMS_PATH = "/systems";

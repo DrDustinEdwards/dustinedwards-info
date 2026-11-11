@@ -8,8 +8,11 @@ import {
   cardDescription,
   cardTitle,
   clampWords,
-  titleFontSize,
 } from "../app/lib/content/og-card-text.mjs";
+import { titleFontSize as sharedTitleFontSize } from "@dustinedwards/site-runtime/share-card";
+
+/** The site's ladder, through the shared function that reads it (tested where it lives). @param {string} title */
+const titleFontSize = (title) => sharedTitleFontSize(title, TITLE_SIZES);
 
 /**
  * Short words, so character count tracks rendered width the way the ladder was measured.
@@ -53,19 +56,6 @@ await test("a longer title never takes larger type, and a drawn title always has
     assert.ok(size <= previous, `${n} characters took ${size}px after ${previous}px`);
     previous = size;
   }
-});
-
-await test("the shortest titles take the largest size", () => {
-  assert.equal(titleFontSize("Hi"), TITLE_SIZES[0].fontSize);
-  assert.equal(titleFontSize(""), TITLE_SIZES[0].fontSize);
-});
-
-await test("PAST THE LADDER IT THROWS, and does not substitute a size", () => {
-  assert.throws(
-    () => titleFontSize(titleOfLength(TITLE_MAX + 1)),
-    /past the last rung/,
-    "an over-long title must be an error, never a quiet fallback",
-  );
 });
 
 await test("a title inside the cap is returned untouched", () => {
