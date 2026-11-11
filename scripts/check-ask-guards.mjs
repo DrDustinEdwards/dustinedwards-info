@@ -11,8 +11,8 @@ import { functionBody } from "./lib/source-body.mjs";
 
 import { originVerdict } from "@dustinedwards/site-runtime/origin";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
-import { assertFloor } from "./lib/floor.mjs";
-import { createTally } from "./lib/tally.mjs";
+import { assertFloor } from "@dustinedwards/devkit/node";
+import { createTally } from "@dustinedwards/devkit/node";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
