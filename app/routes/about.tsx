@@ -3,7 +3,7 @@ import { DraftNotice } from "capsomer/react/draft-notice";
 import { pictureProps } from "@dustinedwards/site-runtime/image";
 
 import { PageShell } from "~/components/page-shell";
-import { Picture } from "~/components/picture";
+import { Picture } from "capsomer/react/picture";
 import { getPageByPath } from "~/db/pages";
 import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";

@@ -8,6 +8,8 @@ import { buildNav, type NavItem } from "~/lib/nav";
 import { type RunningHeadHandle, sectionOf } from "~/lib/running-head";
 import { SITE } from "~/lib/seo";
 import askCss from "~/styles/ask.css?url";
+import listboxCss from "capsomer/listbox.css?url";
+import commandMenuCss from "capsomer/command-menu.css?url";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
 import { markup } from "capsomer/behavior/trusted-html";
 
@@ -110,7 +112,7 @@ export function SiteHeader() {
         data-variant="letterhead"
         data-site-header=""
         data-palette=""
-        data-palette-css={`${paletteDialogCss},${askCss}`}
+        data-palette-css={`${listboxCss},${commandMenuCss},${paletteDialogCss},${askCss}`}
       >
         <Link to="/" className="cap-site-header-logo" aria-label={SITE.name}>
           {/* Decorative: the name beside it is the link's name. */}

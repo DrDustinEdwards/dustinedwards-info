@@ -218,7 +218,6 @@
   --z-overlay-scrim: 700; /* @kind other */
   --z-progress: 900; /* @kind other */
   --z-transient: 1000; /* @kind other */
-  --z-skip-link: 2000; /* @kind other */
 }
 
 /* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
@@ -639,16 +638,11 @@
   .btn-danger,
   .btn-ghost,
   .search-submit,
-  .skip-link,
+  .cap-skip,
   .ask-badge,
   .search-chip.is-active,
-  .admin-chip.is-active,
-  .palette-option[aria-selected="true"] {
+  .admin-chip.is-active {
     outline: 1px solid transparent;
-  }
-
-  .palette-option[aria-selected="true"] {
-    outline-offset: -2px;
   }
 
   .posts-table tbody tr:hover {
