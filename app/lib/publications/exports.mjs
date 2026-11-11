@@ -7,7 +7,6 @@ import { decodeEntities } from "./entities.mjs";
 import { coinsTitle, toBibtex, toRis } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
 
-
 /**
  * For check:machine-readable. A substring test is wrong: Mycobacterium smegmatis contains the bare
  * genus, which the matcher correctly never braces.
