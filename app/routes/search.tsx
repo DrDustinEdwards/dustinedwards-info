@@ -33,6 +33,7 @@ import {
 import type { Route } from "./+types/search";
 
 import "~/styles/search-page.css";
+import "~/styles/search-form.css";
 import "capsomer/pagination.css";
 import "capsomer/field.css";
 import "capsomer/button.css";

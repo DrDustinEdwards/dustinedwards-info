@@ -1,0 +1,14 @@
+.search-form {
+  margin: 0 0 1.5rem;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.search-input-row > .cap-search {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}

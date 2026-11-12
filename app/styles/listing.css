@@ -61,39 +61,6 @@
   margin-block-end: 0;
 }
 
-.list-search {
-  display: flex;
-  align-items: stretch;
-  max-width: 32rem;
-}
-
-.list-search input[type="search"] {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: var(--line-w) solid var(--text);
-  border-radius: 0;
-  padding: 0.5rem 0.75rem;
-  background: var(--paper);
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  /* The UA's search decorations put a rounded box back on some platforms. */
-  appearance: none;
-}
-
-.list-search button {
-  min-block-size: 2.75rem;
-  border: var(--line-w) solid var(--text);
-  border-radius: 0;
-  padding: 0.5rem 1.125rem;
-  background: var(--text);
-  color: var(--paper);
-  font-weight: 500;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  cursor: pointer;
-}
-
 .list-filter {
   display: flex;
   flex-wrap: wrap;
@@ -159,11 +126,6 @@
    axe link-in-text-block against the secondary text around it. */
 .list-feeds a {
   color: var(--brand);
-}
-
-.list-search button:hover {
-  border-color: var(--brand);
-  background: var(--brand);
 }
 
 .list-filter a:hover,

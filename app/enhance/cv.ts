@@ -1,3 +1,4 @@
+import { enhance as enhanceField } from "capsomer/behavior/field";
 import { trustedHtml } from "capsomer/behavior/trusted-html";
 import { enhance, type EnhancedChart, type SelectDetail } from "enarratio/enhance";
 
@@ -47,6 +48,8 @@ export default function start(): void {
   if (!(formElement instanceof HTMLFormElement))
     throw new Error("cv: [data-cv-form] is not a form.");
   const form: HTMLFormElement = formElement;
+  // The search box's Clear button (Capsomer's search field); it sends the input event the filter listens for.
+  enhanceField(form);
   const results = must(root, "[data-cv-results]");
   const summary = must(root, "[data-cv-summary]");
   const timelineHost = must(root, "[data-cv-timeline]");

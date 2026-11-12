@@ -286,34 +286,34 @@
   --border-strong: #686471;
 
   --brand: #4f2d7f;
-  --brand-hover: #412764;
+  --brand-hover: #4f2d7f;
   --on-brand: #ffffff;
-  --tint-brand: #ede8f5;
+  --tint-brand: #ece5ff;
   --visited: #5a2b63;
-  --selection-bg: #d9ccee;
+  --selection-bg: #f4efff;
   --focus-ring-on-brand: #f3e3b8;
 
   /* Opaque on purpose: a fade makes the photograph the backdrop, so text contrast would vary by image. */
   --scrim: #1c1727;
   --on-scrim: #ffffff;
 
-  --text-danger: #a1122a;
-  --tint-danger: #f7e1e1;
+  --text-danger: #ae453f;
+  --tint-danger: #fee7e4;
   --on-tint-danger: #7c0e20;
   --border-danger: #c4677a;
   --fill-danger: #8e1024;
   --fill-danger-hover: #75091c;
   --on-fill-danger: #ffffff;
 
-  --text-warning: #7a5a08;
-  --tint-warning: #f6eac8;
+  --text-warning: #8a5f01;
+  --tint-warning: #ffeaca;
   --on-tint-warning: #6b4f07;
   --border-warning: #a67c24;
   --fill-warning: #e0a428;
   --on-fill-warning: #2b2320;
 
-  --text-success: #3e5d4b;
-  --tint-success: #e3ebdd;
+  --text-success: #047735;
+  --tint-success: #d6f7dc;
   --on-tint-success: #31503e;
   --border-success: #5e7c6a;
   --fill-success: #3e5d4b;
@@ -380,37 +380,37 @@
     --text-heading: #efedf3;
     --text-disabled: #59575f;
     --text-disabled: color-mix(in srgb, #96949e 55%, #0e0c12);
-    --border: #6b6970;
+    --border: #7d7b82;
     --border-strong: #8a8890;
 
-    --brand: #b7a5e0;
-    --brand-hover: #b9a6d9;
+    --brand: #d8c7ff;
+    --brand-hover: #d8c7ff;
     --on-brand: #1a1614;
-    --tint-brand: #2b2440;
+    --tint-brand: #2c243c;
     --visited: #a898cd;
-    --selection-bg: #4a3a6b;
+    --selection-bg: #211c2c;
     --focus-ring-on-brand: #2f2410;
 
     --scrim: #0e0c12;
     --on-scrim: #ffffff;
 
-    --text-danger: #ec9aa8;
-    --tint-danger: #3a2226;
+    --text-danger: #fe9e94;
+    --tint-danger: #3e1e1c;
     --on-tint-danger: #f0aeba;
     --border-danger: #9c5766;
     --fill-danger: #a62239;
     --fill-danger-hover: #8e1024;
     --on-fill-danger: #ffffff;
 
-    --text-warning: #e2bc6b;
-    --tint-warning: #3a311a;
+    --text-warning: #e7ae4e;
+    --tint-warning: #362508;
     --on-tint-warning: #e5c078;
     --border-warning: #9c8347;
     --fill-warning: #e9b44c;
     --on-fill-warning: #1a1614;
 
-    --text-success: #93b29b;
-    --tint-success: #252c1e;
+    --text-success: #72cc87;
+    --tint-success: #15301b;
     --on-tint-success: #93b29b;
     --border-success: #6e8259;
     --fill-success: #8fac77;
@@ -430,8 +430,8 @@
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
 
-    --paper: #0e0c12;
-    --text-secondary: #96949e;
+    --paper: #18161c;
+    --text-secondary: #b7b5bf;
     --placeholder: #888690;
     --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
     --dust: #343238;
@@ -465,38 +465,38 @@
   --text-heading: #efedf3;
   --text-disabled: #59575f;
   --text-disabled: color-mix(in srgb, #96949e 55%, #0e0c12);
-  --border: #6b6970;
+  --border: #7d7b82;
   --border-strong: #8a8890;
 
-  --brand: #b7a5e0;
-  --brand-hover: #b9a6d9;
+  --brand: #d8c7ff;
+  --brand-hover: #d8c7ff;
   /* No ratified dark brand-active: reuses the hover hex. */
   --on-brand: #1a1614;
-  --tint-brand: #2b2440;
+  --tint-brand: #2c243c;
   --visited: #a898cd;
-  --selection-bg: #4a3a6b;
+  --selection-bg: #211c2c;
   --focus-ring-on-brand: #2f2410;
 
   --scrim: #0e0c12;
   --on-scrim: #ffffff;
 
-  --text-danger: #ec9aa8;
-  --tint-danger: #3a2226;
+  --text-danger: #fe9e94;
+  --tint-danger: #3e1e1c;
   --on-tint-danger: #f0aeba;
   --border-danger: #9c5766;
   --fill-danger: #a62239;
   --fill-danger-hover: #8e1024;
   --on-fill-danger: #ffffff;
 
-  --text-warning: #e2bc6b;
-  --tint-warning: #3a311a;
+  --text-warning: #e7ae4e;
+  --tint-warning: #362508;
   --on-tint-warning: #e5c078;
   --border-warning: #9c8347;
   --fill-warning: #e9b44c;
   --on-fill-warning: #1a1614;
 
-  --text-success: #93b29b;
-  --tint-success: #252c1e;
+  --text-success: #72cc87;
+  --tint-success: #15301b;
   --on-tint-success: #93b29b;
   --border-success: #6e8259;
   --fill-success: #8fac77;
@@ -516,8 +516,8 @@
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
 
-  --paper: #0e0c12;
-  --text-secondary: #96949e;
+  --paper: #18161c;
+  --text-secondary: #b7b5bf;
   --placeholder: #888690;
   --placeholder: color-mix(in srgb, #96949e 90%, #0e0c12);
   --dust: #343238;
