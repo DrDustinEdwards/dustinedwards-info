@@ -1436,12 +1436,9 @@ describe("the site-api conformance suite", () => {
           args.context.set(
             documentHandlerContext,
             async (_request, set) =>
-              new Response(
-                `<!doctype html><title>${previewTitle(set)}</title>`,
-                {
-                  headers: { "content-type": "text/html; charset=utf-8" },
-                },
-              ),
+              new Response(`<!doctype html><title>${previewTitle(set)}</title>`, {
+                headers: { "content-type": "text/html; charset=utf-8" },
+              }),
           );
           return await action(args as never);
         } catch (thrown) {
