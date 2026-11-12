@@ -51,6 +51,7 @@ import "capsomer/tokens.css";
 import "capsomer/status.css";
 import "capsomer/copy.css";
 import "capsomer/button.css";
+import "capsomer/chips.css";
 import "capsomer/field.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
@@ -502,50 +503,44 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               </span>
             </summary>
             <div className="cv-more-body">
-              <fieldset className="cv-facet">
+              <fieldset className="cv-facet cap-chips">
                 <legend className="cv-label">Type</legend>
-                <div className="cv-chips">
-                  {TYPES.map(([id, , plural]) => (
-                    <label key={id} className="cv-chip">
-                      <input
-                        type="checkbox"
-                        name="type"
-                        value={id}
-                        defaultChecked={state.types.includes(id)}
-                      />
-                      <span className="cv-chip-text">
-                        {plural}
-                        <span className="cv-chip-count" data-cv-facet={`type:${id}`}>
-                          {facets.types[id] ?? 0}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                {TYPES.map(([id, , plural]) => (
+                  <label key={id} className="cap-chip">
+                    <input
+                      className="cap-chip-input"
+                      type="checkbox"
+                      name="type"
+                      value={id}
+                      defaultChecked={state.types.includes(id)}
+                    />
+                    {plural}{" "}
+                    <span className="cap-chip-count" data-cv-facet={`type:${id}`}>
+                      {facets.types[id] ?? 0}
+                    </span>
+                  </label>
+                ))}
               </fieldset>
               <div className="cv-filter-row">
-                <fieldset className="cv-facet">
+                <fieldset className="cv-facet cap-chips">
                   <legend className="cv-label">Research area</legend>
-                  <div className="cv-chips">
-                    {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
-                      ([id, label]) => (
-                        <label key={id} className="cv-chip">
-                          <input
-                            type="checkbox"
-                            name="area"
-                            value={id}
-                            defaultChecked={state.areas.includes(id)}
-                          />
-                          <span className="cv-chip-text">
-                            {label}
-                            <span className="cv-chip-count" data-cv-facet={`area:${id}`}>
-                              {facets.areas[id] ?? 0}
-                            </span>
-                          </span>
-                        </label>
-                      ),
-                    )}
-                  </div>
+                  {AREAS.filter(([id]) => FACTS.some((f) => f.areas.includes(id))).map(
+                    ([id, label]) => (
+                      <label key={id} className="cap-chip">
+                        <input
+                          className="cap-chip-input"
+                          type="checkbox"
+                          name="area"
+                          value={id}
+                          defaultChecked={state.areas.includes(id)}
+                        />
+                        {label}{" "}
+                        <span className="cap-chip-count" data-cv-facet={`area:${id}`}>
+                          {facets.areas[id] ?? 0}
+                        </span>
+                      </label>
+                    ),
+                  )}
                 </fieldset>
                 <fieldset className="cv-facet cv-years">
                   <legend className="cv-label">Years</legend>
