@@ -42,7 +42,7 @@ const { eq } = tally;
   /* And the question is read from the BODY, or a restored loader bills on a hand-made GET. */
   eq(
     "ask: the question is read from the request body, to a ceiling",
-    /cappedForm\(\s*request\s*,/.test(askCode),
+    /readForm\(\s*request\s*,/.test(askCode),
     true,
   );
   eq(
@@ -224,7 +224,8 @@ const { eq } = tally;
 
   eq(
     "syncAskCorpus sources its records from askCorpusRecords",
-    /const records = await askCorpusRecords\(env\)/.test(askSource),
+    // The first of the reads syncAskCorpus runs together, destructured as `records`.
+    /const \[records,[^\]]*\] = await Promise\.all\(\[\s*askCorpusRecords\(env\),/.test(askSource),
     true,
   );
   eq(

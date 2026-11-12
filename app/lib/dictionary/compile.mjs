@@ -12,6 +12,7 @@ import {
   definedTermJsonLd,
 } from "../dictionary-entries.mjs";
 import { dictionaryPath, parseDictionaryEntry } from "./parse.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 const DICTIONARY_KIND = "dictionary";
 
@@ -31,7 +32,6 @@ const FRONT_MATTER_FIELDS = new Set([
   "draft",
 ]);
 
-const KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const AUDIO_PATTERN = /^\/audio\/[a-z]+\.mp3$/;
 const LANGUAGE_PATTERN = /^[a-z]{2,3}$/;
 /** A pronunciation clip is a few seconds of speech, not a recording. */
@@ -179,7 +179,7 @@ export async function compileDictionaryEntry({ key, raw, pipeline, host, others 
   ];
   if (parsed.problems.length > 0) return { ok: false, errors };
 
-  if (!KEY_PATTERN.test(key))
+  if (!SLUG_PATTERN.test(key))
     errors.push(`the file name "${key}" is not a lowercase kebab-case key`);
   else if (!contentIdFits(DICTIONARY_KIND, key))
     errors.push(`the key "${key}" is too long for a Carrel id`);

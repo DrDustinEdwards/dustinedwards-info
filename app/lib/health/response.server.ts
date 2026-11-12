@@ -8,6 +8,7 @@
 
 import { cronCheck } from "@dustinedwards/site-runtime/cron";
 import {
+  browserCheck,
   durableObjectCheck,
   healthResponse,
   imagesCheck,
@@ -64,13 +65,7 @@ export function siteHealthResponse(env: Env): Promise<Response> {
       purgeCheck(env.APP_KV),
       { ...r2Check("media-revisions", env.MEDIA_REVISIONS), level: "warn" },
       imagesCheck("images", env.IMAGES),
-      // No helper for Browser Rendering, and a probe would spend browser minutes: the binding is there or not.
-      {
-        name: "browser",
-        level: "warn",
-        run: async () =>
-          typeof env.BROWSER?.fetch === "function" || { ok: false, detail: "binding missing" },
-      },
+      browserCheck("browser", env.BROWSER),
       queueCheck("webmention-verify", env.WEBMENTION_VERIFY),
       durableObjectCheck("ask-budget", env.ASK_BUDGET),
       // The deploy's time holds a job back until its first window since the deploy has passed: a job added

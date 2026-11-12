@@ -9,6 +9,7 @@ import {
 } from "@dustinedwards/site-api";
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { inList } from "@dustinedwards/site-runtime/d1";
+import { parseSqlTime } from "@dustinedwards/site-runtime/time";
 import { classify, digestFromKey, roleOf } from "../lib/media/classify.mjs";
 import { parseTags, serializeTags } from "../lib/media/tags.mjs";
 import { media, mediaChanges, mediaRefs, mediaRevisions, type MediaRef } from "./schema";
@@ -130,9 +131,8 @@ const isLibraryRow = eq(media.storage, "r2");
 
 /** D1's "YYYY-MM-DD HH:MM:SS" (UTC) or an ISO time, as an ISO time; null for none or one that does not parse. */
 function isoOf(value: string | null): string | null {
-  if (!value) return null;
-  const at = Date.parse(value.replace(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/, "$1T$2Z"));
-  return Number.isNaN(at) ? null : new Date(at).toISOString();
+  const at = parseSqlTime(value);
+  return at === null ? null : new Date(at).toISOString();
 }
 
 /** An ISO time in D1's datetime('now') spelling, the one `trashed_at` has always held, so its order stays one order. */

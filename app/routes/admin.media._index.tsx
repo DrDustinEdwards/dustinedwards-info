@@ -1,4 +1,5 @@
-import { UPLOAD_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { UPLOAD_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { data } from "react-router";
 
 import {
@@ -20,6 +21,7 @@ import { PageHead } from "capsomer/react/page-head";
 import { prefersType } from "~/lib/negotiate.mjs";
 import { adminKitSource, runAdminMediaIntent, hrefForUse } from "~/lib/admin-kit.server";
 import type { Route } from "./+types/admin.media._index";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 /*
  * The media library: Capsomer's MediaLibrary over site-api's content kit, the same screen and the same
@@ -50,7 +52,7 @@ export const middleware: Route.MiddlewareFunction[] = [
     if (!prefersType(request, "application/json")) return next();
     if (request.method === "POST") {
       return Response.json(
-        await runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES)),
+        await runAdminMediaIntent(context, request, await readForm(request, UPLOAD_FORM_BYTES)),
       );
     }
     const cursor = new URL(request.url).searchParams.get("changes");
@@ -58,7 +60,7 @@ export const middleware: Route.MiddlewareFunction[] = [
       cursor === null
         ? await libraryData(context, request)
         : await loadMediaChanges(adminKitSource(context, request), cursor);
-    return Response.json(body, { headers: { "cache-control": "private, no-store" } });
+    return Response.json(body, { headers: { "cache-control": UNCACHED } });
   },
 ];
 
@@ -68,7 +70,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
 /* The kit asks before a delete or emptying the trash (`confirm`), and changes nothing until the count is typed. */
 export async function action({ request, context }: Route.ActionArgs): Promise<IntentResult> {
-  return runAdminMediaIntent(context, request, await cappedForm(request, UPLOAD_FORM_BYTES));
+  return runAdminMediaIntent(context, request, await readForm(request, UPLOAD_FORM_BYTES));
 }
 
 const BASE = "/admin/media";

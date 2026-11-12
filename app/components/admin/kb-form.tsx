@@ -20,6 +20,7 @@ import {
   type Values,
 } from "~/components/admin/kb-form-fields";
 import { BodyEditor, type Inserts, goTo } from "~/components/admin/kb-form-steps";
+import { SLUG_ATTRIBUTE_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 /*
  * The Knowledge Base's form editor (docs/KNOWLEDGE-BASE.md): every field its own input, the values nobody has yet at the
@@ -427,7 +428,7 @@ export function KbFormEditor({
                 id="kb-dup-slug"
                 name="slug"
                 className="cap-input"
-                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                pattern={SLUG_ATTRIBUTE_PATTERN}
                 placeholder="made from the title"
               />
             </div>

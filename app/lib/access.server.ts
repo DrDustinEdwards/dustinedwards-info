@@ -5,6 +5,7 @@ import {
 } from "@dustinedwards/site-runtime/access";
 import type { KeySource } from "@dustinedwards/site-runtime/access-login";
 import { OWASP_EVENTS, logEvent, requestFields } from "@dustinedwards/site-runtime/log";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 /**
  * Who Cloudflare Access says is asking. Access sits in front of /admin on the apex and signs a token
@@ -110,7 +111,7 @@ export async function verifyAccessRequest(
 /** The headers every /admin and /lab-bench refusal carries. */
 export const REFUSAL_HEADERS = {
   "content-type": "text/plain; charset=utf-8",
-  "cache-control": "private, no-store",
+  "cache-control": UNCACHED,
   "x-robots-tag": "noindex, nofollow",
 } as const;
 

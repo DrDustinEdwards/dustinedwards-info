@@ -31,7 +31,7 @@ import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { logEvent } from "@dustinedwards/site-runtime/log";
 import { z } from "zod";
 
-import { callOperator, ApiLegError, type ApiEnv } from "./api-client";
+import { callSiteOperator, ApiLegError, type ApiEnv } from "./api-client";
 import { SCOPE_READ, SCOPE_WRITE, type Scope } from "./auth";
 
 export type ToolEnv = Partial<ApiEnv> & Partial<AuditEnv> & { ADMIN_EMAIL?: string };
@@ -183,7 +183,7 @@ function wrapperFailure(cause: unknown): ToolOutput {
 /** Runs one operator tool and shapes the result for MCP. */
 async function run(env: ToolEnv, tool: string, args: Record<string, unknown>): Promise<ToolOutput> {
   try {
-    const result = await callOperator(env, tool, args);
+    const result = await callSiteOperator(env, tool, args);
     if (!result.ok) return refusal(result);
     return ok((result.data ?? {}) as Record<string, unknown>);
   } catch (cause) {
@@ -203,7 +203,7 @@ async function runPaged(
   page: { limit?: unknown; cursor?: unknown },
 ): Promise<ToolOutput> {
   try {
-    const result = await callOperator(env, tool, args);
+    const result = await callSiteOperator(env, tool, args);
     if (!result.ok) return refusal(result);
     const data = { ...((result.data ?? {}) as Record<string, unknown>) };
     const key = Object.keys(data).find((k) => Array.isArray(data[k]));

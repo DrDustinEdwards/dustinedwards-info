@@ -147,36 +147,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  column-gap: var(--space-6);
-  margin-block-start: var(--space-7);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-}
-
-/* Newer and older are signs: an ink panel under a band of the family's color. */
-.pager a,
-.pager a:visited {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 2.75rem;
-  padding-inline: 1.125rem;
-  border-block-start: 0.25rem solid var(--brand);
-  border-radius: 0;
-  background: var(--text);
-  color: var(--paper);
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.pager-where {
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-}
-
 .list-feeds {
   margin-block-start: var(--space-6);
   color: var(--text-secondary);
@@ -189,11 +159,6 @@
    axe link-in-text-block against the secondary text around it. */
 .list-feeds a {
   color: var(--brand);
-}
-
-.pager a:hover {
-  background: var(--brand);
-  box-shadow: none;
 }
 
 .list-search button:hover {

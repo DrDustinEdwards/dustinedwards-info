@@ -1,4 +1,4 @@
-import { cappedJson } from "~/lib/body.server";
+import { readJson } from "@dustinedwards/site-runtime/body";
 import { cloudflareContext, getEnv } from "~/lib/context";
 import { authenticateOperator, meterOperator } from "~/lib/operator/auth.server";
 import { TOOL_DESCRIPTORS, isToolName, runTool, toolNames } from "~/lib/operator/api.server";
@@ -53,7 +53,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   let body: unknown;
   try {
-    body = await cappedJson(request, OPERATOR_BODY_BYTES);
+    body = await readJson(request, OPERATOR_BODY_BYTES);
   } catch (error) {
     if (error instanceof Response) return error;
     return json({ ok: false, error: "Body must be JSON." }, 400);

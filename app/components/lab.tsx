@@ -1,3 +1,4 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
 import { Catalog } from "capsomer/react/catalog";
 import type { CatalogResult } from "capsomer/behavior/catalog";
 
@@ -360,8 +361,7 @@ export function LabStrain({
       ) : (
         <>
           <p>
-            {strain.phages.length} phage{strain.phages.length === 1 ? "" : "s"}, found {years},
-            counted from the phages table.
+            {plural(strain.phages.length, "phage")}, found {years}, counted from the phages table.
           </p>
           <ul className="registry-used registry-phages">
             {strain.phages.map((phage) => (
