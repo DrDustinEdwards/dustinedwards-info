@@ -15,6 +15,8 @@
 
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
+import { stated } from "./primer.mjs";
+
 const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
@@ -97,16 +99,14 @@ export const REAGENT = {
  */
 export function storedReagent(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  const text = (/** @type {unknown} */ value) =>
-    typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null;
   return {
     id: item.id,
     name: item.name,
     status: item.status,
     preparedInLab: f.prepared_in_lab === true,
-    supplier: text(f.supplier),
-    catalogNumber: text(f.catalog_number),
-    productUrl: text(f.product_url),
-    recipe: text(f.recipe),
+    supplier: stated(f.supplier),
+    catalogNumber: stated(f.catalog_number),
+    productUrl: stated(f.product_url),
+    recipe: stated(f.recipe),
   };
 }
