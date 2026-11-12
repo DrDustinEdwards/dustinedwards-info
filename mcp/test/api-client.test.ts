@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { ApiLegError, callOperator } from "../src/api-client.ts";
+import { ApiLegError, callSiteOperator } from "../src/api-client.ts";
 import {
   API_URL,
   HEALTH_URL,
@@ -21,9 +21,9 @@ beforeEach(() => {
 });
 afterEach(() => api.restore());
 
-describe("callOperator: the request it sends", () => {
+describe("callSiteOperator: the request it sends", () => {
   test("POSTs { tool, args } as JSON to SITE_ORIGIN/api/operator over the SITE binding", async () => {
-    await callOperator(ENV, "get_post", { slug: "hello" });
+    await callSiteOperator(ENV, "get_post", { slug: "hello" });
     assert.equal(api.calls.length, 1);
     const [call] = api.calls;
     assert.equal(call.url, API_URL);
@@ -33,23 +33,23 @@ describe("callOperator: the request it sends", () => {
   });
 
   test("sends the operator token as the bearer", async () => {
-    await callOperator(ENV, "list_procedures", {});
+    await callSiteOperator(ENV, "list_procedures", {});
     assert.equal(api.calls[0].headers.get("authorization"), `Bearer ${TOKEN}`);
   });
 
   test("names itself in the user-agent without carrying the token", async () => {
-    await callOperator(ENV, "list_procedures", {});
+    await callSiteOperator(ENV, "list_procedures", {});
     const ua = api.calls[0].headers.get("user-agent") ?? "";
     assert.match(ua, /^dustinedwards-mcp\//);
     assert.ok(!ua.includes(TOKEN));
   });
 
   test("never logs the operator token, on success or refusal", async () => {
-    await callOperator(ENV, "list_procedures", {});
+    await callSiteOperator(ENV, "list_procedures", {});
     api.reply(FIRST_PUBLISH_REFUSAL);
-    await callOperator(ENV, "save_procedure", { slug: "a", raw: "x" });
+    await callSiteOperator(ENV, "save_procedure", { slug: "a", raw: "x" });
     api.reply({ throws: new Error("socket hang up") });
-    await callOperator(ENV, "list_procedures", {}).catch(() => {});
+    await callSiteOperator(ENV, "list_procedures", {}).catch(() => {});
     assert.ok(
       api.logs.every((line) => !line.includes(TOKEN)),
       api.logs.join("\n"),
@@ -59,11 +59,11 @@ describe("callOperator: the request it sends", () => {
 
 // Configuration, unreachable and not-JSON are site-runtime's callApi, tested there (test/mcp-server.test.mjs).
 
-describe("callOperator: what comes back", () => {
+describe("callSiteOperator: what comes back", () => {
   test("returns the API's data unchanged on ok:true", async () => {
     const data = { procedures: [{ slug: "a" }], headSha: "abc1234" };
     api.reply({ body: { ok: true, data } });
-    assert.deepEqual(await callOperator(ENV, "list_procedures", {}), {
+    assert.deepEqual(await callSiteOperator(ENV, "list_procedures", {}), {
       status: 200,
       ok: true,
       data,
@@ -72,7 +72,7 @@ describe("callOperator: what comes back", () => {
 
   test("relays a 403 first-publish refusal in the API's own words", async () => {
     api.reply(FIRST_PUBLISH_REFUSAL);
-    const result = await callOperator(ENV, "save_procedure", { slug: "a", raw: "x" });
+    const result = await callSiteOperator(ENV, "save_procedure", { slug: "a", raw: "x" });
     assert.deepEqual(result, {
       status: 403,
       ok: false,
@@ -83,14 +83,14 @@ describe("callOperator: what comes back", () => {
 
   test("an ok:false body is a refusal even with HTTP 200", async () => {
     api.reply({ status: 200, body: { ok: false, error: "nope" } });
-    const result = await callOperator(ENV, "list_procedures", {});
+    const result = await callSiteOperator(ENV, "list_procedures", {});
     assert.equal(result.ok, false);
     assert.equal(result.error, "nope");
   });
 
   test("names the status when a refusal carries no error string", async () => {
     api.reply({ status: 500, body: { ok: false } });
-    const result = await callOperator(ENV, "list_procedures", {});
+    const result = await callSiteOperator(ENV, "list_procedures", {});
     assert.equal(result.error, "The operator API refused with status 500.");
   });
 
@@ -98,7 +98,7 @@ describe("callOperator: what comes back", () => {
     for (const raw of ["", "{}", '{"ok":"true"}', "[]", "null"]) {
       api.reply({ status: 200, raw });
       await assert.rejects(
-        callOperator(ENV, "list_procedures", {}),
+        callSiteOperator(ENV, "list_procedures", {}),
         (e: unknown) =>
           e instanceof ApiLegError &&
           e.kind === "malformed" &&

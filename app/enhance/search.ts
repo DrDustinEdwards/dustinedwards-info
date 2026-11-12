@@ -149,6 +149,8 @@ export function enhanceSearch(): void {
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
       ".search-sort a, .search-facets a, .search-active-filters a, .cap-pagination a",
     )) {
+      // A disabled end of the pager is an anchor with no href; rewriting it would make it link to "/".
+      if (!link.hasAttribute("href")) continue;
       const next = new URL(link.href, location.origin);
       next.searchParams.set("q", query);
       link.href = next.pathname + next.search;
