@@ -25,9 +25,7 @@
   },
   "baseline": {
     "measured_at": "8b318aa1",
-    "knip": {
-      "unresolved": 3
-    },
+    "knip": {},
     "jscpd": {
       "clones": 61,
       "lines": 853,
