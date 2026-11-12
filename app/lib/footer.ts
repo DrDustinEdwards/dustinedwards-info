@@ -12,8 +12,6 @@ import { PUBLISHED_PAGES } from "./published-pages.generated.mjs";
  * still fails a test.
  */
 
-export { SOCIAL_LINKS } from "capsomer/behavior/family-footer";
-
 /** The Site group: Contact, Site map, Features, Colophon. */
 export const siteLinks = (published: readonly string[] = PUBLISHED_PAGES) =>
   familySiteLinks(published);

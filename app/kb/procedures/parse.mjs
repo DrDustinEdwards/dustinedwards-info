@@ -2,6 +2,7 @@
 // body as an intro and sections, each section a run of prose blocks and step lists. Nothing here renders
 // or judges; validate.mjs judges and render.mjs renders, so the check and the save tool read one parse.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { slug as githubSlug } from "github-slugger";
 import matter from "gray-matter";
 
@@ -283,9 +284,7 @@ export function parseProcedure({ file, raw }) {
       data: /** @type {Record<string, any>} */ ({}),
       intro: "",
       sections: /** @type {Section[]} */ ([]),
-      problems: [
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
-      ],
+      problems: [`the front matter is not valid YAML: ${errorMessage(error)}`],
     };
   }
   const data = /** @type {Record<string, any>} */ (yamlPlain(parsed.data));

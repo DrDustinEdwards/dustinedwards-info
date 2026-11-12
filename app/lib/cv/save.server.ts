@@ -8,6 +8,7 @@
 // says the commit landed and how to repair the row. A save cannot create a file: the set of files is structure
 // and lives in CV_FILES.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { listCvRows, readCv } from "~/db/cv";
 import { listPublishedPublications } from "~/db/publications";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
@@ -238,7 +239,7 @@ export async function saveCvFile(
   } else {
     pdf = await render.then(
       (rendered): CvPdfReport => ({ rendered }),
-      (error): CvPdfReport => ({ failed: error instanceof Error ? error.message : String(error) }),
+      (error): CvPdfReport => ({ failed: errorMessage(error) }),
     );
   }
 

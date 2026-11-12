@@ -5,6 +5,7 @@
 //
 //   node ../scripts/verify-mcp.mjs
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -34,7 +35,7 @@ export function mcpConfig(root) {
   } catch (error) {
     return {
       ok: false,
-      why: `${rel} does not parse: ${error instanceof Error ? error.message : String(error)}`,
+      why: `${rel} does not parse: ${errorMessage(error)}`,
     };
   }
   const origin = String(config?.vars?.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
@@ -104,7 +105,7 @@ async function readJsonResponse(url, init) {
       status: 0,
       body: null,
       challenge: "",
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     };
   }
 }

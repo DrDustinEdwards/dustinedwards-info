@@ -1,4 +1,4 @@
-import { LAB_BENCH_PATH } from "~/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, Link, data } from "react-router";

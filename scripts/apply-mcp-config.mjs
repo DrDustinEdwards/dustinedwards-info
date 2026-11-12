@@ -3,6 +3,7 @@
 // new secret and the admin MCP keeps the values it was last shipped with by hand. Patches by text, as
 // apply-config-ids.mjs does, so the comments survive. It never prints a value.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,11 +60,7 @@ const response = await fetch(
     headers: { Authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(30_000),
   },
-).catch((error) =>
-  refuse(
-    `the Cloudflare API could not be reached: ${error instanceof Error ? error.message : String(error)}.`,
-  ),
-);
+).catch((error) => refuse(`the Cloudflare API could not be reached: ${errorMessage(error)}.`));
 const body = await response.json().catch(() => ({}));
 if (!response.ok || !Array.isArray(body?.result?.bindings)) {
   refuse(`the settings of ${WORKER} could not be read (HTTP ${response.status}).`);

@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
@@ -80,7 +81,7 @@ try {
 } catch (error) {
   console.error(
     `  FAIL  microformats: the corpus would not build, so there is nothing to ` +
-      `render.\n\n  ${error instanceof Error ? error.message : String(error)}\n\n  ` +
+      `render.\n\n  ${errorMessage(error)}\n\n  ` +
       `If this names content/generated/stack.json, run npm run build:stack first; ` +
       `check:all builds it for the tier.\n`,
   );

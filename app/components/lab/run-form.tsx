@@ -1,7 +1,7 @@
 // The form a lab member records a run with, and the correction of one: the protocol, the day, the outcome, a note and
 // the lots it used. Plain fields, so it works with no script.
 
-import { LAB_BENCH_PATH } from "~/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { Form } from "react-router";
 import { Button } from "capsomer/react/button";
 import { Field } from "capsomer/react/field";

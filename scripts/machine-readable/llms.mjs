@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFileSync, existsSync } from "node:fs";
 import { retryRead } from "../lib/retry.mjs";
 import { runWrangler, wranglerTail } from "../lib/wrangler-run.mjs";
@@ -97,7 +98,7 @@ if (target) {
   try {
     parsed = JSON.parse(match[0]);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = errorMessage(error);
     console.log(`\n  FAIL  query output was not JSON: ${detail}`);
     throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`, {
       cause: error,

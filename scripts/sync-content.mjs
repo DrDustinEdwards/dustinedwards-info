@@ -1,6 +1,7 @@
 // This script runs no gate: run `npm run check:content` first. It writes production D1, and the
 // bulk path deletes the search index and replaces the media citations wholesale.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 
@@ -914,6 +915,6 @@ async function main() {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(`sync:content failed. ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`sync:content failed. ${errorMessage(error)}`);
   process.exit(1);
 });

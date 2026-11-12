@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -314,7 +315,7 @@ export function lastCommitDate(file) {
   } catch (error) {
     throw new Error(
       `git log could not read the history of ${file}, so its revision date is unknown: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
       { cause: error },
     );
   }
@@ -459,9 +460,7 @@ async function pruneContentTwins(dir, urlDir) {
 
 if (isMain(import.meta.url)) {
   main().catch((/** @type {unknown} */ error) => {
-    console.error(
-      `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`build:content failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

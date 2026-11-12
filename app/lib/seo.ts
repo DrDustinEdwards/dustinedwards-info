@@ -1,4 +1,4 @@
-import { LAB_BENCH_PATH } from "../lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import {
   defineHead,
   searchTitle as prelumSearchTitle,
@@ -188,8 +188,6 @@ export function pageMeta(page: {
     ...(page.title.includes(SITE.name) ? { fullTitle: true } : {}),
   });
 }
-
-export { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 
 /**
  * The `<title>` a search result shows (Prelum's `searchTitle`), with this site's name as the default suffix. Only this

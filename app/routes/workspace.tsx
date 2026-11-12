@@ -1,4 +1,4 @@
-import { LAB_BENCH_PATH } from "~/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 import { Outlet, data, useLocation, useRouteLoaderData } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { MessageProvider } from "capsomer/react/message";

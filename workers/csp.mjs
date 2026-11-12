@@ -1,4 +1,4 @@
-import { LAB_BENCH_PATH } from "../app/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 
 // Separate from app.ts so the worker tests can call it on both branches.
 

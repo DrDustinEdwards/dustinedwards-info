@@ -8,6 +8,7 @@
 // Posts carry their publish instant so the header can leave out a scheduled post until its time has come, by
 // the same test the listings use (status published, publish_at null or past); drafts never enter the file.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -128,7 +129,7 @@ export function readLatestPaper(dir = PUBLICATIONS_DIR, problems = []) {
         const record = recordFromData(plain, name.slice(0, -3));
         return SHOWCASE_TYPES.has(record.type) && record.stage === "published" ? [record] : [];
       } catch (error) {
-        problems.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+        problems.push(`${name}: ${errorMessage(error)}`);
         return [];
       }
     });

@@ -1,6 +1,6 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { LAB_BENCH_PATH } from "~/lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 
 import { documentHandlerContext } from "~/lib/context";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";

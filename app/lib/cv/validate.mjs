@@ -4,6 +4,7 @@
 // rules that need the whole CV: a cited paper exists and lists Dustin, and each section reads newest first.
 // Pure: no Env, no filesystem, no clock beyond the year bound below.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import matter from "gray-matter";
 
 import { findWideDashes } from "@drdustinedwards/site-helpers/text";
@@ -357,10 +358,7 @@ export function parseCvFile(file, raw) {
   } catch (error) {
     return {
       ok: false,
-      errors: [
-        ...errors,
-        `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`,
-      ],
+      errors: [...errors, `the front matter is not valid YAML: ${errorMessage(error)}`],
     };
   }
   const data = /** @type {Record<string, unknown>} */ (parsed.data);

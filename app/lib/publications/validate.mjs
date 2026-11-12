@@ -6,6 +6,7 @@
 // (is this id or DOI taken) arrive as `host` and `others`, so CI reads a clone and the Worker asks GitHub
 // and D1 without this module knowing which.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
 import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
@@ -443,7 +444,7 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
         bad(`accessions[${i}]`, `builds ${url}, which is not an NCBI URL ending in its own id`);
       }
     } catch (error) {
-      bad(`accessions[${i}].kind`, error instanceof Error ? error.message : String(error));
+      bad(`accessions[${i}].kind`, errorMessage(error));
     }
   });
   // Both directions: the statement in the paper, not a bare regex, decides what this paper deposited.

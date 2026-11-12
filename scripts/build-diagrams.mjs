@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 
@@ -80,10 +81,9 @@ async function main() {
     try {
       await buildAssetManifest();
     } catch (error) {
-      throw new Error(
-        `build:assets failed after diagrams changed. ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
-      );
+      throw new Error(`build:assets failed after diagrams changed. ${errorMessage(error)}`, {
+        cause: error,
+      });
     }
     console.log(
       `\n  NOTE: ${written.length + stale.length} diagram asset(s) changed, so the media index is now\n` +
@@ -95,9 +95,7 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((error) => {
-    console.error(
-      `build:diagrams failed. ${error instanceof Error ? error.message : String(error)}`,
-    );
+    console.error(`build:diagrams failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

@@ -2,6 +2,7 @@
 // twin and the search input. check:protocols, sync:content and the operator API's save_procedure all
 // call compileProcedure, so a file CI passes is the file the save tool accepts and the page draws.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../../lib/content/hashes.mjs";
 import { itemPath } from "../registry/catalog.mjs";
 import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
@@ -155,7 +156,7 @@ export async function compileProcedure({ slug, raw, pipeline, resolveImage, regi
       ),
     });
   } catch (error) {
-    return { ok: false, errors: [error instanceof Error ? error.message : String(error)], gaps };
+    return { ok: false, errors: [errorMessage(error)], gaps };
   }
   const searchInput = procedureSearchInput(record, parsed);
   return {
