@@ -8,9 +8,9 @@ import { NON_STRAIN_ORGANISMS } from "./taxonomy.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 import { procedureSearchInput, renderProcedure } from "./render.mjs";
 import { validateProcedure } from "./validate.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 /** The file name a slug is written in; the same rule as a post's. */
-const PROCEDURE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * @param {{
@@ -32,7 +32,7 @@ const PROCEDURE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * >}
  */
 export async function compileProcedure({ slug, raw, pipeline, resolveImage, registry }) {
-  if (!PROCEDURE_SLUG.test(slug)) {
+  if (!SLUG_PATTERN.test(slug)) {
     return { ok: false, errors: [`"${slug}" is not a lowercase kebab-case slug`], gaps: [] };
   }
   const file = procedurePath(slug);

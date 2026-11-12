@@ -43,6 +43,7 @@ import "@fontsource-variable/source-serif-4/index.css";
 import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
 import { markup } from "capsomer/behavior/trusted-html";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Admin" }, { name: "robots", content: "noindex" }];
@@ -105,7 +106,7 @@ export const middleware: Route.MiddlewareFunction[] = [
           status: smoke.status,
           headers: {
             "content-type": "text/plain; charset=utf-8",
-            "cache-control": "private, no-store",
+            "cache-control": UNCACHED,
             "x-robots-tag": "noindex, nofollow",
             ...(smoke.retryAfter ? { "retry-after": String(smoke.retryAfter) } : {}),
           },

@@ -9,6 +9,7 @@ import matter from "gray-matter";
 import { findWideDashes } from "@drdustinedwards/site-helpers/text";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { AREAS, ROLES } from "./view.mjs";
+import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
 
 const AREA_IDS = new Set(AREAS.map(([id]) => /** @type {string} */ (id)));
 const ROLE_IDS = new Set(ROLES.map(([id]) => /** @type {string} */ (id)));
@@ -23,7 +24,6 @@ const EDITION_PATTERN = /^(Spring|Summer|Fall|Winter) (\d{4})$/;
 const YEAR_MIN = 1950;
 const YEAR_MAX = 2100;
 
-const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const HTTPS = /^https:\/\/\S+$/;
 
 /** The sections an appointment or a service line sits under, in the order the CV prints them. */

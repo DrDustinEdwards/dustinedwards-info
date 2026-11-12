@@ -1,5 +1,6 @@
 import { LAB_BENCH_PATH } from "~/lab/path.mjs";
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { Link, data, redirect } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { Panel } from "capsomer/react/panel";
@@ -12,12 +13,13 @@ import { recordRun, runsPage } from "~/lab/runs.server";
 import { PERMISSION } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.runs";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Runs · Lab" }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": "private, no-store" };
+const PRIVATE = { "cache-control": UNCACHED };
 
 function requireRecorder(actor: Parameters<typeof can>[0]) {
   if (!can(actor, PERMISSION.recordRun))
@@ -37,7 +39,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   const result = await recordRun(
     getEnv(context),
     actor,
-    await cappedForm(request, ADMIN_FORM_BYTES),
+    await readForm(request, ADMIN_FORM_BYTES),
     Date.now(),
   );
   if (result.ok && result.runId)

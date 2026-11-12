@@ -14,6 +14,7 @@ import { entryFields, gapReason, itemFields, type FieldSpec } from "./form-field
 import { fileToForm, formToFile, STEP_FLAGS, type FormModel } from "./form.mjs";
 import { compile as compileProcedure, saveProcedure } from "./procedures/save.server";
 import { KINDS } from "./registry/kinds.mjs";
+import { SLUG_PATTERN, slugify } from "@drdustinedwards/site-helpers/slug";
 
 type FormEnv = Env;
 
@@ -149,20 +150,6 @@ export function rawFromForm(
   }
 }
 
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/** A slug from a title: lower-case words joined by hyphens. */
-function slugFor(title: string): string {
-  return title
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/, "");
-}
-
 export type DuplicateResult =
   | { outcome: "created"; slug: string }
   | { outcome: "refused"; errors: string[] };
@@ -179,10 +166,10 @@ export async function duplicateEntry(
   actor: Actor,
 ): Promise<DuplicateResult> {
   const title = wanted.title.trim();
-  const slug = (wanted.slug.trim() || slugFor(title)).toLowerCase();
+  const slug = (wanted.slug.trim() || slugify(title, { max: 60 })).toLowerCase();
   const errors: string[] = [];
   if (!title) errors.push("The copy needs a title.");
-  if (!SLUG.test(slug))
+  if (!SLUG_PATTERN.test(slug))
     errors.push(`"${slug}" is not a file name: use lower-case letters, digits and hyphens.`);
   if (slug === from.slug) errors.push("The copy needs a file name of its own.");
   if (errors.length > 0) return { outcome: "refused", errors };

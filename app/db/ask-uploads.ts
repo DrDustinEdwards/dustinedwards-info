@@ -1,10 +1,8 @@
 // The Ask upload ledger: what was last uploaded to AI Search under each key (drizzle/0043_ask_uploads.sql).
-import { inArray, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { chunked, inList, rowsPerInsert } from "@dustinedwards/site-runtime/d1";
 import { askUploads } from "./schema";
 import { getDb } from "./client";
-
-/** D1 binds at most 100 parameters per statement; three per row. */
-const ROWS_PER_INSERT = 30;
 
 export async function readAskUploads(env: Env): Promise<Map<string, string>> {
   const rows = await getDb(env)
@@ -20,10 +18,9 @@ export async function recordAskUploads(
 ): Promise<void> {
   const uploadedAt = new Date().toISOString();
   const db = getDb(env);
-  for (let i = 0; i < uploads.length; i += ROWS_PER_INSERT) {
-    const values = uploads
-      .slice(i, i + ROWS_PER_INSERT)
-      .map(({ key, hash }) => ({ key, bodySha256: hash, uploadedAt }));
+  // Three bound parameters per row.
+  for (const part of chunked(uploads, rowsPerInsert(3))) {
+    const values = part.map(({ key, hash }) => ({ key, bodySha256: hash, uploadedAt }));
     await db
       .insert(askUploads)
       .values(values)
@@ -36,8 +33,6 @@ export async function recordAskUploads(
 
 /** An item deleted from the index takes its ledger row with it, so a key that returns is uploaded again. */
 export async function forgetAskUploads(env: Env, keys: readonly string[]): Promise<void> {
-  const db = getDb(env);
-  for (let i = 0; i < keys.length; i += 90) {
-    await db.delete(askUploads).where(inArray(askUploads.key, keys.slice(i, i + 90)));
-  }
+  if (keys.length === 0) return;
+  await getDb(env).delete(askUploads).where(inList(askUploads.key, keys));
 }

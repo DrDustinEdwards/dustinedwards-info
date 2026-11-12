@@ -31,6 +31,7 @@ import "capsomer/fonts.css";
 import "~/admin.css";
 import "~/lab.css";
 import { markup } from "capsomer/behavior/trusted-html";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Lab bench" }, { name: "robots", content: "noindex" }];
@@ -113,7 +114,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       reads: can(actor, PERMISSION.read),
       records: can(actor, PERMISSION.recordRun),
     },
-    { headers: { "cache-control": "private, no-store" } },
+    { headers: { "cache-control": UNCACHED } },
   );
 }
 

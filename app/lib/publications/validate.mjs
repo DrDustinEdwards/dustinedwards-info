@@ -9,10 +9,11 @@
 import { contentIdFits } from "../carrel/content-id.mjs";
 import { accessionUrl, accessionsInText } from "./accessions.mjs";
 import { HOSTED_WITHOUT_LICENSE, permitsRedistribution } from "./hosting.mjs";
-import { doiSlug } from "@drdustinedwards/site-helpers/scholar";
+import { DOI_PATTERN, doiSlug } from "@drdustinedwards/site-helpers/scholar";
 import { paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 
 const PUBLICATION_KIND = "publication";
 const TYPES = /** @type {const} */ ([
@@ -61,8 +62,6 @@ const FRONT_MATTER_FIELDS = new Set([
   "csl",
 ]);
 
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
 const PMC_URL = /^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/;
 const DATE_PATTERN = /^\d{4}(-\d{2}){0,2}$/;
 const SHA256 = /^[0-9a-f]{64}$/;

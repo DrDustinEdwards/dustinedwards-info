@@ -42,7 +42,7 @@ const { eq } = tally;
   /* And the question is read from the BODY, or a restored loader bills on a hand-made GET. */
   eq(
     "ask: the question is read from the request body, to a ceiling",
-    /cappedForm\(\s*request\s*,/.test(askCode),
+    /readForm\(\s*request\s*,/.test(askCode),
     true,
   );
   eq(
