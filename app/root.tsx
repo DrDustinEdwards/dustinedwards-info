@@ -42,21 +42,18 @@ export const links: Route.LinksFunction = () => [
   ...iconLinks(),
   // feed+json although served as application/json: readers scan autodiscovery for the feed types.
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/rss+xml",
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/rss.xml`,
   },
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/atom+xml",
     title: `${SITE.name} blog`,
     href: `${SITE_ORIGIN}/writing/atom.xml`,
   },
   {
-    tagName: "link",
     rel: "alternate",
     type: "application/feed+json",
     title: `${SITE.name} blog`,
