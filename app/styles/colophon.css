@@ -84,13 +84,6 @@
   font-size: 0.8125rem;
 }
 
-/* The two statements side by side: read together, short enough for one screen. */
-.colophon-pair {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  gap: 0 2.5rem;
-}
-
 .colophon-facts {
   display: flex;
   flex-wrap: wrap;
