@@ -4,7 +4,7 @@
 // output, and check:machine-readable refuses a file whose hash is not the PDF's. The text is stored as the
 // twin prints it, with no de-hyphenation, so it is fit for retrieval, not citation.
 
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,7 +40,7 @@ async function extractOne(slug) {
   if (data.access !== "self-hosted") return null;
 
   const bytes = await readFile(join(root, paperPdfDiskPath(slug)));
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const sha256 = await sha256Hex(bytes);
   const doc = await getDocumentProxy(new Uint8Array(bytes));
   const { text } = await extractText(doc, { mergePages: false });
   const fullText = /** @type {string[]} */ (text)
