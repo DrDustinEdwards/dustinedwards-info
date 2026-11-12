@@ -162,8 +162,9 @@ const { eq } = tally;
   }
 
   /* Stripped: a comment naming the rule would otherwise stand in for it. Prelum's robotsDocument writes each path in
-     the route's `disallow` list into every group; the list is ROBOTS_DISALLOW in app/lib/seo.ts, which /ai.txt shares. */
-  const robots = stripComments(readFileSync(join(root, "app/routes/robots.ts"), "utf8"));
+     the `disallow` list workers/app.ts hands standardFiles into every group; the list is ROBOTS_DISALLOW in app/lib/seo.ts,
+     which /ai.txt shares. */
+  const robots = stripComments(readFileSync(join(root, "workers/app.ts"), "utf8"));
   const seo = stripComments(readFileSync(join(root, "app/lib/seo.ts"), "utf8"));
   eq(
     "ask: robots.txt disallows /search/ask",
