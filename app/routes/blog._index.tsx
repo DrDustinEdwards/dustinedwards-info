@@ -31,6 +31,7 @@ import "~/styles/listing.css";
 import "~/styles/search-form.css";
 import "capsomer/field.css";
 import "capsomer/button.css";
+import "capsomer/chips.css";
 import "~/styles/entry-list.css";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -172,34 +173,38 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         </SearchForm>
 
         {tags.length > 0 && (
-          <nav className="list-filter" aria-label="Filter posts by tag">
-            <span className="list-filter-label">Tags</span>
-            <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
-            {tags.map((tag) => (
-              <FilterLink
-                key={tag.slug}
-                to={filterHref({ tag: tag.slug })}
-                label={tag.name}
-                count={tag.total}
-                active={activeTag === tag.slug}
-              />
-            ))}
+          <nav className="list-filter cap-chips" aria-label="Filter posts by tag">
+            <span className="cap-chips-label">Tags</span>
+            <ul className="cap-chips">
+              <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
+              {tags.map((tag) => (
+                <FilterLink
+                  key={tag.slug}
+                  to={filterHref({ tag: tag.slug })}
+                  label={tag.name}
+                  count={tag.total}
+                  active={activeTag === tag.slug}
+                />
+              ))}
+            </ul>
           </nav>
         )}
 
         {years.length > 1 && (
-          <nav className="list-filter" aria-label="Filter posts by year">
-            <span className="list-filter-label">Years</span>
-            <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
-            {years.map((entry) => (
-              <FilterLink
-                key={entry.year}
-                to={filterHref({ year: String(entry.year) })}
-                label={String(entry.year)}
-                count={entry.total}
-                active={activeYear === entry.year}
-              />
-            ))}
+          <nav className="list-filter cap-chips" aria-label="Filter posts by year">
+            <span className="cap-chips-label">Years</span>
+            <ul className="cap-chips">
+              <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
+              {years.map((entry) => (
+                <FilterLink
+                  key={entry.year}
+                  to={filterHref({ year: String(entry.year) })}
+                  label={String(entry.year)}
+                  count={entry.total}
+                  active={activeYear === entry.year}
+                />
+              ))}
+            </ul>
           </nav>
         )}
 

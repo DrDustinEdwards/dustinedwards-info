@@ -673,7 +673,7 @@ function opacityExempt(selectorGroup) {
   }
 
   /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 8);
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 7);
 
   assert(
     unparsed.length === 0

@@ -1,8 +1,6 @@
-import type { CSSProperties } from "react";
 import { Link } from "react-router";
-import { uiWidthEm } from "~/lib/ui-width";
 
-/** One link in a `.list-filter` row: its name box is Inter's width, whichever face draws it. */
+/** One link chip in a filter row (capsomer/chips.css link chips): the current one carries aria-current. */
 export function FilterLink({
   to,
   label,
@@ -16,13 +14,12 @@ export function FilterLink({
   active: boolean;
   title?: string;
 }) {
-  const width = { "--name-w": `${uiWidthEm(label, active ? 600 : 400)}em` } as CSSProperties;
   return (
-    <Link to={to} aria-current={active ? "true" : undefined} title={title}>
-      <span className="filter-name" style={width}>
+    <li>
+      <Link to={to} className="cap-chip" aria-current={active ? "true" : undefined} title={title}>
         {label}
-      </span>
-      {count === undefined ? null : <span className="filter-count">{count}</span>}
-    </Link>
+        {count === undefined ? null : <span className="cap-chip-count">{count}</span>}
+      </Link>
+    </li>
   );
 }

@@ -61,57 +61,9 @@
   margin-block-end: 0;
 }
 
+/* The tag and year rows are Capsomer link chips (capsomer/chips.css); this sets only their place in the list head. */
 .list-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 0.875rem;
-  row-gap: 0.375rem;
   margin-block-start: var(--space-6);
-}
-
-.list-filter-label {
-  flex: 0 0 auto;
-  min-inline-size: 3.25rem;
-  color: var(--text-secondary);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.list-filter a {
-  display: inline-flex;
-  align-items: center;
-  /* A bare inline anchor's box is its line box; links alone in a nav get no inline-link exception, so
-     the box carries the 24px target. */
-  min-block-size: var(--control-min-dense);
-  color: var(--brand);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  text-decoration: none;
-}
-
-.list-filter a[aria-current] {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* The UI face's width, set per link by FilterLink, so the row wraps the same before and after the font swap;
-   the fallback's text may run a pixel short or long inside it. */
-.filter-name {
-  --name-w: auto;
-  display: inline-block;
-  inline-size: var(--name-w);
-  white-space: nowrap;
-}
-
-/* A token, never opacity: opacity on text hides a failing composite behind a passing pair. */
-.filter-count {
-  margin-inline-start: 0.25rem;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .list-feeds {
@@ -128,7 +80,6 @@
   color: var(--brand);
 }
 
-.list-filter a:hover,
 .list-feeds a:hover {
   color: var(--brand-hover);
 }
