@@ -51,69 +51,43 @@ export async function compile(
   });
 }
 
+/** The stored form of each id of one registry kind that has a file which compiles; an id without one is left out, and the validator names it. */
+async function readKind<T>(
+  env: RegistryEnv,
+  kind: string,
+  ids: string[],
+  stored: (item: Parameters<typeof storedPrimer>[0]) => T,
+): Promise<Map<string, T>> {
+  const found = new Map<string, T>();
+  for (const id of ids) {
+    const slug = registrySlug(kind, id);
+    const file = await readFile(env, registryPath(slug));
+    if (!file) continue;
+    const compiled = await compile(env, slug, file.content);
+    if (compiled.ok) found.set(id, stored(compiled.item));
+  }
+  return found;
+}
+
 /**
  * The primers a protocol names, as the repository holds them, for the procedure compile. An id with no file, or a file that
  * does not compile, is left out of the answer, so the validator reports it as a primer the registry does not hold.
  */
-export async function readPrimers(
-  env: RegistryEnv,
-  ids: string[],
-): Promise<Map<string, StoredPrimer>> {
-  const found = new Map<string, StoredPrimer>();
-  for (const id of ids) {
-    const slug = registrySlug("primer", id);
-    const file = await readFile(env, registryPath(slug));
-    if (!file) continue;
-    const compiled = await compile(env, slug, file.content);
-    if (compiled.ok) found.set(id, storedPrimer(compiled.item));
-  }
-  return found;
-}
+export const readPrimers = (env: RegistryEnv, ids: string[]): Promise<Map<string, StoredPrimer>> =>
+  readKind(env, "primer", ids, storedPrimer);
 
 /** The host strains a protocol names, as the repository holds them; an id with no compiling file is left out, and the validator names it. */
-export async function readStrains(
-  env: RegistryEnv,
-  ids: string[],
-): Promise<Map<string, StoredStrain>> {
-  const found = new Map<string, StoredStrain>();
-  for (const id of ids) {
-    const slug = registrySlug("strain", id);
-    const file = await readFile(env, registryPath(slug));
-    if (!file) continue;
-    const compiled = await compile(env, slug, file.content);
-    if (compiled.ok) found.set(id, storedStrain(compiled.item));
-  }
-  return found;
-}
+export const readStrains = (env: RegistryEnv, ids: string[]): Promise<Map<string, StoredStrain>> =>
+  readKind(env, "strain", ids, storedStrain);
 
 /** The reagents a protocol's materials name, as the repository holds them; an id with no compiling file is left out, and the validator names it. */
-export async function readReagents(
+export const readReagents = (
   env: RegistryEnv,
   ids: string[],
-): Promise<Map<string, StoredReagent>> {
-  const found = new Map<string, StoredReagent>();
-  for (const id of ids) {
-    const slug = registrySlug("reagent", id);
-    const file = await readFile(env, registryPath(slug));
-    if (!file) continue;
-    const compiled = await compile(env, slug, file.content);
-    if (compiled.ok) found.set(id, storedReagent(compiled.item));
-  }
-  return found;
-}
+): Promise<Map<string, StoredReagent>> => readKind(env, "reagent", ids, storedReagent);
 
 /** The equipment a protocol's list names, as the repository holds it; an id with no compiling file is left out, and the validator names it. */
-export async function readEquipment(
+export const readEquipment = (
   env: RegistryEnv,
   ids: string[],
-): Promise<Map<string, StoredEquipment>> {
-  const found = new Map<string, StoredEquipment>();
-  for (const id of ids) {
-    const slug = registrySlug("equipment", id);
-    const file = await readFile(env, registryPath(slug));
-    if (!file) continue;
-    const compiled = await compile(env, slug, file.content);
-    if (compiled.ok) found.set(id, storedEquipment(compiled.item));
-  }
-  return found;
-}
+): Promise<Map<string, StoredEquipment>> => readKind(env, "equipment", ids, storedEquipment);

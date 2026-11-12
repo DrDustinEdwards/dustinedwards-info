@@ -24,6 +24,29 @@ export async function run({ browser }) {
 }
 
 /**
+ * Waits for the keep button's `aria-pressed` to be `pressed`; a timeout is not a failure here, the check that follows reads the state.
+ *
+ * @param {import("puppeteer").Page} page
+ * @param {"true" | "false"} pressed
+ * @param {number} timeout
+ */
+const keepPressed = (page, pressed, timeout) =>
+  page
+    .waitForFunction(
+      (want) => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === want,
+      { timeout },
+      pressed,
+    )
+    .catch(() => {});
+
+/** The workers registered and the stores kept on the page's origin. @param {import("puppeteer").Page} page */
+const workersAndStores = (page) =>
+  page.evaluate(async () => ({
+    registrations: (await navigator.serviceWorker.getRegistrations()).length,
+    stores: await caches.keys(),
+  }));
+
+/**
  * @param {import("puppeteer").BrowserContext} context
  * @param {import("puppeteer").Page} page
  */
@@ -44,10 +67,7 @@ async function keepOffline(context, page) {
     "no .cap-keep button in the page's links",
   );
   if (!button) return;
-  const before = await page.evaluate(async () => ({
-    registrations: (await navigator.serviceWorker.getRegistrations()).length,
-    stores: await caches.keys(),
-  }));
+  const before = await workersAndStores(page);
   ok(
     "nothing is registered or stored before the reader asks",
     before.registrations === 0 && !before.stores.includes("kept-v1"),
@@ -55,12 +75,7 @@ async function keepOffline(context, page) {
   );
 
   await button.click();
-  await page
-    .waitForFunction(
-      () => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === "true",
-      { timeout: 15_000 },
-    )
-    .catch(() => {});
+  await keepPressed(page, "true", 15_000);
   await page.evaluate(() => navigator.serviceWorker.ready);
   const kept = await page.evaluate(async (p) => {
     const cache = await caches.open("kept-v1");
@@ -97,12 +112,7 @@ async function keepOffline(context, page) {
   await cut(true);
   try {
     const offline = await page.reload({ waitUntil: "load" }).catch(() => null);
-    await page
-      .waitForFunction(
-        () => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === "true",
-        { timeout: 10_000 },
-      )
-      .catch(() => {});
+    await keepPressed(page, "true", 10_000);
     const drawn = await page
       .evaluate(() => ({
         title: document.querySelector("h1")?.textContent ?? "",
@@ -136,23 +146,10 @@ async function keepOffline(context, page) {
   }
 
   await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-  await page
-    .waitForFunction(
-      () => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === "true",
-      { timeout: 15_000 },
-    )
-    .catch(() => {});
+  await keepPressed(page, "true", 15_000);
   await page.click(".procedure-links .cap-keep");
-  await page
-    .waitForFunction(
-      () => document.querySelector(".cap-keep")?.getAttribute("aria-pressed") === "false",
-      { timeout: 15_000 },
-    )
-    .catch(() => {});
-  const after = await page.evaluate(async () => ({
-    registrations: (await navigator.serviceWorker.getRegistrations()).length,
-    stores: await caches.keys(),
-  }));
+  await keepPressed(page, "false", 15_000);
+  const after = await workersAndStores(page);
   ok(
     "removing the last kept page leaves no store and no worker",
     after.registrations === 0 && !after.stores.includes("kept-v1"),

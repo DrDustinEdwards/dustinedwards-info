@@ -4,15 +4,17 @@ import {
 } from "../../app/lib/publications/hosting.mjs";
 import { paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import { TOPICS } from "../../app/lib/publications/topics.mjs";
-import { closePart, hosted, openPart, records, refusalsFor } from "./publications-context.mjs";
+import {
+  closePart,
+  hosted,
+  openPart,
+  records,
+  refusalsFor,
+  shown,
+} from "./publications-context.mjs";
 
 /* Topics, page slugs, where each PDF lives and the hosting licenses. */
 const { tally, ok } = openPart("paths");
-
-/** @param {string[]} messages */
-const shown = (messages) =>
-  messages.slice(0, 8).join("; ") +
-  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 const declaredTopics = new Set(TOPICS.map((t) => t.id));
 ok(

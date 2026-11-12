@@ -4,7 +4,7 @@ import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
 import { listFrozenVersions } from "~/db/procedure-versions";
-import { getProcedureByPath, listPublishedLibraryRecords } from "~/db/procedures";
+import { getProcedureByPath, listPublishedRecordsOfProfile } from "~/db/procedures";
 import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
@@ -48,7 +48,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // Where a protocol sits in the phage workflow: its neighbors are the other published protocols, so they are read here.
   const workflow =
     row.record.profile === "protocol"
-      ? workflowContext(libraryItems(await listPublishedLibraryRecords(env)), row.record.path)
+      ? workflowContext(
+          libraryItems(await listPublishedRecordsOfProfile(env, "protocol")),
+          row.record.path,
+        )
       : null;
   // Proof of use is slugs in the file; the papers' and phages' words and addresses are read from their rows.
   const proof = await proofFor(env, row.record.proofOfUse);

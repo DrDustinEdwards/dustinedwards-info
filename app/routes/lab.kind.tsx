@@ -17,7 +17,7 @@ import {
 import { PageShell } from "~/components/page-shell";
 import { listPhages } from "~/db/phages";
 import { getRegistryItem, listRegistry } from "~/db/registry";
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
@@ -137,7 +137,7 @@ export async function loader({
         page: {
           view: "kind",
           kind,
-          reagents: reagentRows(published, await listPublishedLibraryRecords(env)),
+          reagents: reagentRows(published, await listPublishedRecordsOfProfile(env, "protocol")),
           search: url.search,
         },
       };
@@ -145,7 +145,7 @@ export async function loader({
       page: {
         view: "kind",
         kind,
-        items: equipmentRows(published, await listPublishedLibraryRecords(env)),
+        items: equipmentRows(published, await listPublishedRecordsOfProfile(env, "protocol")),
         search: url.search,
       },
     };
@@ -163,7 +163,7 @@ export async function loader({
       page: {
         view: "item",
         kind,
-        reagent: reagentRow(item, await listPublishedLibraryRecords(env)),
+        reagent: reagentRow(item, await listPublishedRecordsOfProfile(env, "protocol")),
         draft,
       },
     };
@@ -172,14 +172,14 @@ export async function loader({
       page: {
         view: "item",
         kind,
-        equipment: equipmentRow(item, await listPublishedLibraryRecords(env)),
+        equipment: equipmentRow(item, await listPublishedRecordsOfProfile(env, "protocol")),
         draft,
       },
     };
   if (kind === "strain") {
     const [phages, protocols] = await Promise.all([
       listPhages(env),
-      listPublishedLibraryRecords(env),
+      listPublishedRecordsOfProfile(env, "protocol"),
     ]);
     const strain = strainRow(item, phages);
     return {
@@ -188,7 +188,7 @@ export async function loader({
   }
   const [others, protocols] = await Promise.all([
     listRegistry(env, { kind, published: true }),
-    listPublishedLibraryRecords(env),
+    listPublishedRecordsOfProfile(env, "protocol"),
   ]);
   const primer = primerRow(item);
   const primers = others.map(primerRow);

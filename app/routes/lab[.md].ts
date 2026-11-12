@@ -1,5 +1,5 @@
 import { listPhages } from "~/db/phages";
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
@@ -74,7 +74,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const published = await listRegistry(env, { kind, published: true });
 
   if (kind === "equipment") {
-    const items = equipmentRows(published, await listPublishedLibraryRecords(env));
+    const items = equipmentRows(published, await listPublishedRecordsOfProfile(env, "protocol"));
     if (id !== undefined) {
       const item = items.find((e) => e.id === id);
       return item
@@ -88,7 +88,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   if (kind === "reagent") {
-    const reagents = reagentRows(published, await listPublishedLibraryRecords(env));
+    const reagents = reagentRows(published, await listPublishedRecordsOfProfile(env, "protocol"));
     if (id !== undefined) {
       const reagent = reagents.find((r) => r.id === id);
       return reagent
@@ -111,7 +111,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     }
     const strain = strains.find((s) => s.id === id);
     if (!strain) return notFound();
-    const usedBy = protocolsUsingStrain(strain, await listPublishedLibraryRecords(env));
+    const usedBy = protocolsUsingStrain(
+      strain,
+      await listPublishedRecordsOfProfile(env, "protocol"),
+    );
     return respond(strainMarkdown(strain, usedBy, SITE_ORIGIN), itemPath(kind, strain.id));
   }
 
@@ -126,6 +129,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
   const primer = primers.find((p) => p.id === id);
   if (!primer) return notFound();
-  const usedBy = protocolsUsing(primer, await listPublishedLibraryRecords(env));
+  const usedBy = protocolsUsing(primer, await listPublishedRecordsOfProfile(env, "protocol"));
   return respond(primerMarkdown(primer, primers, usedBy, SITE_ORIGIN), itemPath(kind, primer.id));
 }

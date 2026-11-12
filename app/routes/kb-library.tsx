@@ -11,17 +11,15 @@ import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { countOf } from "~/kb/procedures/library.mjs";
+import { countOf, libraryDownloads, libraryRedirect } from "~/kb/procedures/library.mjs";
 import { methodLabel } from "~/kb/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/kb/procedures/route";
 import {
   baseAtLibrary,
   baseCatalog,
   baseCitation,
-  baseDownloads,
   baseItems,
   howtoTypeLabel,
-  baseRedirect,
   libraryTrail,
   nounOf,
   type BaseItem,
@@ -61,7 +59,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const items = baseItems(base, await listPublishedRecordsOfProfile(env, base.profile));
   const empty = items.length === 0;
   if (empty && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
-  const canonical = baseRedirect(base, url);
+  const canonical = libraryRedirect(url, baseCatalog(base));
   if (canonical) throw redirect(canonical, 301);
   return { base, items, empty, search: url.search };
 }
@@ -156,7 +154,7 @@ export default function KbLibraryRoute({ loaderData }: Route.ComponentProps) {
         <LibraryCite
           count={result.count}
           noun={nounOf(base)}
-          downloads={baseDownloads(base, result)}
+          downloads={libraryDownloads(result, base.library)}
           citation={baseCitation(base, {
             name: SITE.name,
             affiliation: SITE.affiliation,

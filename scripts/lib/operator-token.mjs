@@ -3,6 +3,8 @@
 
 import { readFileSync } from "node:fs";
 
+import { MIN_TOKEN_LENGTH } from "@dustinedwards/site-runtime/operator";
+
 /**
  * The token, or the refusal ship makes when it cannot have one. Checked before the build, so a
  * missing token costs no deploy. The length floor matches `auth.server.ts`.
@@ -31,7 +33,7 @@ export function readOperatorToken(tokenFile) {
       remedy: "Nothing has been built or deployed.",
     };
   }
-  if (token.length < 32) {
+  if (token.length < MIN_TOKEN_LENGTH) {
     return {
       token: "",
       why: "the token in OPERATOR_TOKEN_FILE is shorter than the 32 characters the Worker requires",
