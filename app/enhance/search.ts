@@ -147,7 +147,7 @@ export function enhanceSearch(): void {
    */
   function followQuery(query: string) {
     for (const link of document.querySelectorAll<HTMLAnchorElement>(
-      ".search-sort a, .search-facets a, .search-active-filters a, .search-pagination a",
+      ".search-sort a, .search-facets a, .search-active-filters a, .cap-pagination a",
     )) {
       const next = new URL(link.href, location.origin);
       next.searchParams.set("q", query);

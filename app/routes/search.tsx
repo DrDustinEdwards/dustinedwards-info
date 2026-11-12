@@ -1,3 +1,4 @@
+import { Pagination } from "capsomer/react/pagination";
 import { Link, data } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
@@ -33,6 +34,7 @@ import type { Route } from "./+types/search";
 
 import "~/styles/blog-search.css";
 import "~/styles/search-page.css";
+import "capsomer/pagination.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
@@ -339,39 +341,28 @@ function ZeroState({
   );
 }
 
-/** Previous and next around "Page n of m"; an empty span holds each missing side's place. */
-function Pagination({
+/** Capsomer's steps pager. A truncated match set has no true total, so it reads "Page n" with no "of m". */
+function ResultsPagination({
   params,
   page,
   pageCount,
-  floor,
+  truncated,
 }: {
   params: SearchParams;
   page: number;
   pageCount: number;
-  floor: string;
+  truncated: boolean;
 }) {
   return (
-    <nav className="search-pagination" aria-label="Search results pages">
-      {page > 1 ? (
-        <Link rel="prev" to={searchHref(params, { page: page - 1 })}>
-          Previous
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-      <span>
-        Page {page} of {pageCount}
-        {floor}
-      </span>
-      {page < pageCount ? (
-        <Link rel="next" to={searchHref(params, { page: page + 1 })}>
-          Next
-        </Link>
-      ) : (
-        <span aria-hidden="true" />
-      )}
-    </nav>
+    <Pagination
+      form="steps"
+      label="Search results pages"
+      page={page}
+      pageCount={truncated ? 0 : pageCount}
+      hasNext={page < pageCount}
+      hrefFor={(n) => searchHref(params, { page: n })}
+      renderLink={({ href, ...rest }) => <Link to={href} {...rest} />}
+    />
   );
 }
 
@@ -535,7 +526,12 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {pageCount > 1 ? (
-          <Pagination params={params} page={result.page} pageCount={pageCount} floor={floor} />
+          <ResultsPagination
+            params={params}
+            page={result.page}
+            pageCount={pageCount}
+            truncated={result.truncated}
+          />
         ) : null}
       </main>
       <ShellFooter />
