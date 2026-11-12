@@ -161,6 +161,19 @@ function groupValues<R, K, V>(rows: Iterable<R>, key: (row: R) => K, value: (row
   return out;
 }
 
+/** The year a post was published, as SQL; a new chunk each call, because `.as()` marks the chunk it is called on. */
+const publishYear = <T = unknown>() => sql<T>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`;
+
+/** Each row with its tags, by slug, from the admin's tag rows. */
+function withTags<R extends { slug: string }>(rows: R[], tagRows: { slug: string; tag: string }[]) {
+  const tagsBySlug = groupValues(
+    tagRows,
+    (row) => row.slug,
+    (row) => row.tag,
+  );
+  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+}
+
 async function tagsForPosts(db: DB, postIds: number[]) {
   if (postIds.length === 0) return new Map<number, string[]>();
 
@@ -203,7 +216,7 @@ export async function listBlogPosts(
   if (tag) narrowing.push(carriesTag(db, tag));
   if (options.indexedOnly) narrowing.push(indexable());
   if (year) {
-    narrowing.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
+    narrowing.push(sql`${publishYear()} = ${year}`);
   }
   const where = and(isBlogPost(), ...narrowing);
 
@@ -326,13 +339,13 @@ export async function listHomeStartHere(
 export async function listBlogYears(env: Env) {
   return getDb(env)
     .select({
-      year: sql<string>`strftime('%Y', ${posts.publishAt}, 'unixepoch')`.as("year"),
+      year: publishYear<string>().as("year"),
       total: count(),
     })
     .from(posts)
     .where(isBlogPost())
-    .groupBy(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`)
-    .orderBy(desc(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`));
+    .groupBy(publishYear())
+    .orderBy(desc(publishYear()));
 }
 
 export async function listSeriesParts(env: Env, series: string) {
@@ -525,12 +538,7 @@ export async function listAllPostsForAdmin(env: Env) {
       .orderBy(desc(posts.publishAt)),
     listAllPostTagsForAdmin(env),
   ]);
-  const tagsBySlug = groupValues(
-    tagRows,
-    (row) => row.slug,
-    (row) => row.tag,
-  );
-  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+  return withTags(rows, tagRows);
 }
 
 /** Corpus for `withRelated`, drafts included: it filters candidates itself. */
@@ -548,12 +556,7 @@ export async function listPostCorpusForRelated(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
   const tagRows = await listAllPostTagsForAdmin(env);
 
-  const tagsBySlug = groupValues(
-    tagRows,
-    (row) => row.slug,
-    (row) => row.tag,
-  );
-  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
+  return withTags(rows, tagRows);
 }
 
 /** Drafts included: it filters the linking post itself. Carries `html` because a backlink is read out of a rendered body. */

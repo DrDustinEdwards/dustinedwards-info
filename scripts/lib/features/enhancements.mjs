@@ -1,7 +1,9 @@
 // The enhancement inventory: every module in app/enhance/ names a fallback this gate can verify.
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+
+import { walkFiles } from "@dustinedwards/devkit/node";
 
 import { renderBody } from "../../../app/lib/content/pipeline.mjs";
 import { codeOf, root } from "./shared.mjs";
@@ -14,20 +16,6 @@ const EXPECTED_ENHANCE_MODULES = 19;
 
 /** Set under measured, to catch a module that stopped being read. */
 const MINIMUM_ENHANCEMENT_ENTRIES = 9;
-
-/** Sources under `app/` except `app/enhance/` and stylesheets: neither renders a fallback. */
-function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} */ out = []) {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) {
-      if (full === ENHANCE_DIR) continue;
-      serverRenderedSources(full, out);
-    } else if (/\.(ts|tsx|mjs)$/.test(name)) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 /* Plus the shared renderer's output (remark-gfm footnotes), from a fixture: the claim is about the
    renderer, not the corpus. */
@@ -106,7 +94,11 @@ export async function checkEnhancements({ ok, routes }) {
     );
   }
 
-  const serverSources = serverRenderedSources(join(root, "app"));
+  // Sources under `app/` except `app/enhance/` and stylesheets: neither renders a fallback.
+  const serverSources = walkFiles(join(root, "app"), {
+    keep: (name) => /\.(ts|tsx|mjs)$/.test(name),
+    skipDir: (name) => name === "enhance",
+  });
 
   /* Catches a walk that stops descending; re-measure by running the gate. */
   ok(

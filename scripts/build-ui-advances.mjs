@@ -4,9 +4,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import puppeteer from "puppeteer";
 import { isMain } from "./lib/is-main.mjs";
-import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const UI_FILE = join(

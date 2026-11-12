@@ -83,13 +83,6 @@
   text-wrap: balance;
 }
 
-.page-intro {
-  margin: 1rem 0 0;
-  max-width: 42rem;
-  font-size: 1.0625rem;
-  line-height: 1.6;
-}
-
 /* The shell owns the viewport so the editor has one scroll context; other pages scroll .admin-content. */
 
 /* A legal page's status under its title (content/pages/privacy.md, terms.md): the banner is the single word

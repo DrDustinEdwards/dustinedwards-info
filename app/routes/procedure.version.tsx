@@ -22,7 +22,6 @@ import "~/styles/procedure.css";
 import "capsomer/button.css";
 import "capsomer/offline-keep.css";
 import "capsomer/checklist-run.css";
-import "capsomer/field.css";
 import "capsomer/manual.css";
 
 /**

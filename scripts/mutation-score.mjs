@@ -17,31 +17,20 @@
 // low score, and it exits non-zero only when Stryker itself could not run.
 
 import { spawnSync } from "node:child_process";
-import {
-  copyFileSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { walkFiles } from "@dustinedwards/devkit/node";
 
 const STRYKER = "@stryker-mutator/core@10.0.0";
 const root = process.cwd();
 const outDir = join(root, "reports", "mutation");
 const SECONDS = join(fileURLToPath(new URL(".", import.meta.url)), "mutation-seconds.json");
 
-/** @param {string} dir @returns {string[]} */
-function walk(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name === "node_modules" ? [] : walk(path);
-    return [path];
-  });
-}
+const walk = (/** @type {string} */ dir) =>
+  walkFiles(dir, { skipDir: (name) => name === "node_modules" });
 const posix = (/** @type {string} */ path) => relative(root, path).replaceAll("\\", "/");
 
 /**

@@ -5,6 +5,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,4 +73,20 @@ export function jsonRows(read, what) {
   const match = read.stdout.match(/\[[\s\S]*\]/);
   if (!match) throw new Error(`${what} printed no JSON:\n${read.output}`);
   return JSON.parse(match[0])[0].results;
+}
+
+/**
+ * Whether the repository holds a publication's file, for a host's `paper`: a registry field or a phage that names a
+ * paper means a paper this site has a file for.
+ *
+ * @param {string} slug a publication's file key
+ */
+export async function paperExists(slug) {
+  const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch(
+    (/** @type {any} */ error) => {
+      if (error?.code === "ENOENT") return null;
+      throw error;
+    },
+  );
+  return info !== null && info.isFile();
 }

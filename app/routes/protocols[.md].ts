@@ -1,5 +1,5 @@
 import { getPublishedPageMarkdown } from "~/db/pages";
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
@@ -31,7 +31,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
-  const items = libraryItems(await listPublishedLibraryRecords(env));
+  const items = libraryItems(await listPublishedRecordsOfProfile(env, "protocol"));
   const citation = libraryCitation({
     name: SITE.name,
     affiliation: SITE.affiliation,

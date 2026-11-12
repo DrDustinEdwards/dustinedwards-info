@@ -3,6 +3,8 @@
 // drill and RUNBOOK 4b) and scripts/sync-content.mjs. Both pass their SQL through here, so a row of any size
 // is written as a small INSERT plus UPDATEs that append the rest of each long text column.
 
+import { sqlLiteral } from "./sql-literal.mjs";
+
 /** D1's cap on one statement, in bytes. */
 export const D1_STATEMENT_LIMIT = 100_000;
 
@@ -114,9 +116,6 @@ function unquoteIdentifier(name) {
 /** @param {string} name */
 const quoteIdentifier = (name) => `"${name.replace(/"/g, '""')}"`;
 
-/** @param {string} text */
-const quoteLiteral = (text) => `'${text.replace(/'/g, "''")}'`;
-
 const STRING_LITERAL = /^'(?:[^']|'')*'$/;
 
 /**
@@ -189,7 +188,7 @@ function pieces(expression, escaped = false) {
     for (const ch of text) {
       const cost = ch === "'" ? 2 : bytes(ch);
       if (size + runBytes + cost > PIECE_BYTES && run !== "" && !(escaped && run.endsWith("\\"))) {
-        add(quoteLiteral(run));
+        add(sqlLiteral(run));
         flush();
         run = "";
         runBytes = 2;
@@ -197,7 +196,7 @@ function pieces(expression, escaped = false) {
       run += ch;
       runBytes += cost;
     }
-    if (run !== "" || text === "") add(quoteLiteral(run));
+    if (run !== "" || text === "") add(sqlLiteral(run));
   }
   flush();
   return out.length > 0 ? out : ["''"];

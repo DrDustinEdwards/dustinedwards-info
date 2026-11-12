@@ -10,7 +10,7 @@ import { LibraryCite } from "~/components/library-cite";
 import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { listRegistry } from "~/db/registry";
 import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
@@ -75,7 +75,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // A state written in another order, or with a default spelled out, goes to its one address.
   const canonical = libraryRedirect(url);
   if (canonical) throw redirect(canonical, 301);
-  const items = libraryItems(await listPublishedLibraryRecords(env));
+  const items = libraryItems(await listPublishedRecordsOfProfile(env, "protocol"));
   // The registry's kinds are tabs beside the calculators, counted from its rows (docs/REGISTRY.md).
   const registry = registryTabs(await listRegistry(env, { published: true }));
   return { page: row.record, draft, items, registry, search: url.search };

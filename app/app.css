@@ -207,17 +207,8 @@
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
 /* Not in the color blocks: check:contrast requires every token there to be a hex. */
 :root {
-  --z-tile-raise: 10; /* @kind other */
-  --z-tile-body: 20; /* @kind other */
-  --z-tile-action: 30; /* @kind other */
   --z-dropdown: 200; /* @kind other */
-  --z-popover: 300; /* @kind other */
-  --z-drawer-scrim: 400; /* @kind other */
-  --z-drawer: 500; /* @kind other */
-  --z-pinned-bar: 600; /* @kind other */
-  --z-overlay-scrim: 700; /* @kind other */
   --z-progress: 900; /* @kind other */
-  --z-transient: 1000; /* @kind other */
 }
 
 /* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
@@ -232,20 +223,15 @@
   --font-mono: "Martian Mono", "Martian Mono Fallback", ui-monospace, Menlo, Consolas, monospace;
   --font-serif:
     "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
-
-  /* Not in the color blocks: check:contrast needs a hex in a measured pair. */
-  --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
 /* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
    Capsomer's type tokens. */
 :root {
   --t-small-size: 0.875rem;
-  --t-small-leading: 1.5;
 
   /* The manual's heads: Medium sans, the h2 a part title over a hairline (capsomer/manual.css). */
   --t-h2-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
-  --t-h2-leading: 1.15;
 
   --t-h1-family: var(--font-sans);
   --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
@@ -565,27 +551,20 @@
 /* Outside the palette blocks because it is translucent. */
 :root {
   --glass-pane: color-mix(in srgb, var(--paper) 82%, transparent);
-  --glass-blur: 12px;
 }
 
 :root,
 [data-theme="light"] {
-  --lamp-origin: 18%;
-  --lamp-reach: 62%;
   --surface-catch: 0.14;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --lamp-origin: 30%;
-    --lamp-reach: 58%;
     --surface-catch: 0.22;
   }
 }
 
 [data-theme="dark"] {
-  --lamp-origin: 30%;
-  --lamp-reach: 58%;
   --surface-catch: 0.22;
 }
 
@@ -624,54 +603,9 @@
 
 /* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
-  /* Box-shadow edges vanish in forced-colors, so real borders come back here. */
-  .admin-topbar {
-    border-bottom: 1px solid;
-  }
-
-  .admin-sidebar {
-    border-right: 1px solid;
-  }
-
-  .btn,
-  .btn-brand,
   .btn-danger,
-  .btn-ghost,
-  .search-submit,
   .cap-skip,
-  .ask-badge,
-  .search-chip.is-active,
-  .admin-chip.is-active {
-    outline: 1px solid transparent;
-  }
-
-  .posts-table tbody tr:hover {
-    outline: 1px solid CanvasText;
-    outline-offset: -1px;
-  }
-
-  .status-pill {
-    outline: 1px solid transparent;
-  }
-
-  .status-pill[data-state="scheduled"] {
-    outline-style: dashed;
-  }
-
-  .status-pill[data-state="draft"] {
-    outline-style: dotted;
-  }
-
-  .overflow-menu-panel {
-    outline: 1px solid transparent;
-  }
-
-  .overflow-menu-item:hover {
-    outline: 1px solid CanvasText;
-    outline-offset: -1px;
-  }
-
-  .row-action {
+  .ask-badge {
     outline: 1px solid transparent;
   }
 }
@@ -757,40 +691,6 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a))
   color: var(--brand-pressed);
 }
 
-.hero {
-  min-height: calc(100dvh - 8rem);
-  display: grid;
-  place-items: center;
-  padding: 2rem;
-}
-
-.gate {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 2rem;
-}
-
-.gate-card {
-  width: 100%;
-  max-width: 22rem;
-  padding: 2rem;
-  border: 1px solid var(--border);
-  border-radius: 0;
-}
-
-.gate-mark {
-  display: block;
-  width: 4rem;
-  height: auto;
-  margin: 0 0 1rem;
-}
-
-.gate-card h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
-}
-
 .muted {
   color: var(--text-secondary);
 }
@@ -798,37 +698,6 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a))
 /* A dependency pinned to a git commit has a range with no break in it (the colophon lists them). */
 .dep-range {
   overflow-wrap: anywhere;
-}
-
-.btn-brand,
-.btn-ghost {
-  margin-top: 1.25rem;
-  padding: 0.625rem 1rem;
-  border-radius: 0;
-  font: inherit;
-  cursor: pointer;
-}
-
-.btn-brand {
-  background: var(--brand);
-  color: var(--on-brand);
-  border: 1px solid var(--brand);
-}
-
-.btn-brand:hover {
-  background: var(--brand-hover);
-  border-color: var(--brand-hover);
-}
-
-.btn-brand:active {
-  background: var(--brand-pressed);
-  border-color: var(--brand-pressed);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
 }
 
 /* The site's focus ring, in Capsomer's base layer as capsomer/base.css draws it, so a component that
@@ -839,15 +708,6 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a))
     outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
-}
-
-/* Focus is an outline, never a box-shadow: forced-colors strips shadows. Never the inner ring on the
-   danger fill, where it is invisible. */
-.btn:focus-visible,
-.btn-brand:focus-visible,
-.search-submit:focus-visible {
-  outline: 2px solid var(--focus-ring-on-brand);
-  outline-offset: -4px;
 }
 
 .site-logo-brand {

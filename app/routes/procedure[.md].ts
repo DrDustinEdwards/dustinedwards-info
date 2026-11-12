@@ -1,7 +1,7 @@
 import {
   getProcedureByPath,
   getPublishedProcedureMarkdown,
-  listPublishedLibraryRecords,
+  listPublishedRecordsOfProfile,
 } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
@@ -31,7 +31,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }
   // A protocol's place in the phage workflow depends on the other protocols, so it is added here, not stored in the row.
   const workflow = workflowMarkdown(
-    workflowContext(libraryItems(await listPublishedLibraryRecords(env)), path),
+    workflowContext(libraryItems(await listPublishedRecordsOfProfile(env, "protocol")), path),
     SITE_ORIGIN,
   );
   // Proof of use is slugs in the file; the twin gives the papers' titles and the phages' names, as the page does.

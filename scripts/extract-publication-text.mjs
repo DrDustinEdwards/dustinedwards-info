@@ -8,8 +8,8 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { extractText, getDocumentProxy } from "unpdf";
 import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
+import { extractText, getDocumentProxy } from "unpdf";
 
 import { parsePublication, publicationPath } from "../app/lib/publications/parse.mjs";
 import { paperPdfDiskPath } from "../app/lib/publications/paths.mjs";
@@ -40,7 +40,6 @@ async function extractOne(slug) {
   if (data.access !== "self-hosted") return null;
 
   const bytes = await readFile(join(root, paperPdfDiskPath(slug)));
-  const pdfSha256 = await sha256Hex(bytes);
   const doc = await getDocumentProxy(new Uint8Array(bytes));
   const { text } = await extractText(doc, { mergePages: false });
   const fullText = /** @type {string[]} */ (text)
@@ -48,7 +47,11 @@ async function extractOne(slug) {
     .filter(Boolean)
     .join("\n\n");
 
-  await writeFile(file, renderPublicationFile({ ...data, pdfSha256 }, fullText), "utf8");
+  await writeFile(
+    file,
+    renderPublicationFile({ ...data, pdfSha256: await sha256Hex(bytes) }, fullText),
+    "utf8",
+  );
   return { slug, characters: fullText.length };
 }
 
