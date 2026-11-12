@@ -1,14 +1,14 @@
 import assetManifest from "../../../content/generated/assets.json";
 
-import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
-import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
-import { placeholderAndColor } from "@dustinedwards/site-api";
+import { deleteSiteAsset, listSiteAssets, upsertSiteAsset } from "~/db";
+import { classify, isRaster, roleOf, storageOf } from "./classify.mjs";
 import { measureDimensions } from "./core.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 
-// `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and recoverable from nothing, so a rebuild
-// upserts derived columns only, never delete-then-insert. R2 wins: rows are removed, objects never.
+// The index of the site's own files (site_assets): the Worker's generated objects in OG and the paths in public/.
+// Every column is derived, and the files win: rows are removed, objects never. The library's uploads in MEDIA are
+// not here: site-api's mediaLibrary writes their rows (app/db/media.ts).
 
 type RebuildReport = {
   scannedObjects: number;
@@ -32,40 +32,36 @@ async function dimensionsFor(env: Env, body: ReadableStream | null): Promise<Mea
   }
 }
 
-type MediaSource = { key: string; size: number; uploaded: string };
+type AssetSource = { key: string; size: number; uploaded: string };
 
 // Shared with the reconciliation so the two cannot disagree about what exists. Exhaustive to the end of
 // the cursor: a partial listing makes every absent key look like a deletion. A Worker cannot list its
 // own static assets (the binding only has `fetch()`), so the static half is the committed manifest.
-async function enumerateMediaSources(
-  env: Env,
-): Promise<{ objects: MediaSource[]; files: string[] }> {
-  const objects: MediaSource[] = [];
-  for (const bucket of [env.MEDIA, env.OG]) {
-    let cursor: string | undefined;
-    for (;;) {
-      const page = await bucket.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
-      for (const object of page.objects) {
-        objects.push({
-          key: object.key,
-          size: object.size,
-          uploaded:
-            object.uploaded instanceof Date
-              ? object.uploaded.toISOString()
-              : String(object.uploaded ?? ""),
-        });
-      }
-      if (!page.truncated) break;
-      cursor = (page as { cursor?: string }).cursor;
-      if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
+async function enumerateSiteAssets(env: Env): Promise<{ objects: AssetSource[]; files: string[] }> {
+  const objects: AssetSource[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await env.OG.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
+    for (const object of page.objects) {
+      objects.push({
+        key: object.key,
+        size: object.size,
+        uploaded:
+          object.uploaded instanceof Date
+            ? object.uploaded.toISOString()
+            : String(object.uploaded ?? ""),
+      });
     }
+    if (!page.truncated) break;
+    cursor = (page as { cursor?: string }).cursor;
+    if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
   }
 
   const files: string[] = assetManifest.paths;
 
   if (objects.length === 0 && files.length === 0) {
     throw new Error(
-      "rebuild found neither R2 objects nor static files. Refusing to run: it would read as " +
+      "rebuild found neither OG objects nor static files. Refusing to run: it would read as " +
         "'everything was deleted' and remove every row.",
     );
   }
@@ -74,15 +70,15 @@ async function enumerateMediaSources(
 }
 
 // Both sides read after any write. `missing` and `extra` are kept apart so they cannot cancel out.
-export async function mediaIndexStatus(env: Env): Promise<{
+export async function siteAssetStatus(env: Env): Promise<{
   expected: number;
   present: number;
   missing: string[];
   extra: string[];
 }> {
   const [{ objects, files }, rows] = await Promise.all([
-    enumerateMediaSources(env),
-    listMediaRecords(env),
+    enumerateSiteAssets(env),
+    listSiteAssets(env),
   ]);
 
   const expected = new Set<string>([...objects.map((o) => o.key), ...files]);
@@ -91,43 +87,24 @@ export async function mediaIndexStatus(env: Env): Promise<{
   return setDrift(expected, present);
 }
 
-// The failure to report for one R2 object, or null once it is indexed and measured.
-async function indexObject(env: Env, object: MediaSource): Promise<string | null> {
+// The failure to report for one OG object, or null once it is indexed and measured.
+async function indexObject(env: Env, object: AssetSource): Promise<string | null> {
   try {
     const { kind, mime } = classify(object.key);
-    // An OG card lives in the OG bucket, so the read follows the key rather than assuming MEDIA.
-    const bucket = bucketFor(env, object.key);
-    // Two GETs: a body is a stream and can be read only once.
-    const measurable = isRaster(object.key);
-    const measured = measurable
-      ? await bucket.get(object.key).then((o) => dimensionsFor(env, o?.body ?? null))
+    const measured = isRaster(object.key)
+      ? await env.OG.get(object.key).then((o) => dimensionsFor(env, o?.body ?? null))
       : null;
     const dimensions = measured?.dimensions ?? null;
-    const placeholder = measurable
-      ? await bucket
-          .get(object.key)
-          .then(async (o) =>
-            o
-              ? (await placeholderAndColor(env.IMAGES, new Uint8Array(await o.arrayBuffer())))
-                  .placeholder
-              : null,
-          )
-      : null;
 
-    // The filename is re-derived from the object's custom metadata, so `original_name` is truly derived.
-    const named = await bucket.head(object.key);
-
-    await upsertDerivedMedia(env, {
+    await upsertSiteAsset(env, {
       key: object.key,
       storage: storageOf(object.key),
       kind,
       role: roleOf(object.key),
-      originalName: named?.customMetadata?.originalName ?? null,
       mime,
       bytes: object.size,
       width: dimensions?.width ?? null,
       height: dimensions?.height ?? null,
-      placeholder,
       uploadedAt: object.uploaded,
     });
     return measured?.failure ? `${object.key}: ${measured.failure}` : null;
@@ -145,16 +122,12 @@ async function indexStaticFile(env: Env, path: string): Promise<string | null> {
     if (!response.ok) return `${path}: ASSETS returned ${response.status}`;
     const buffer = await response.arrayBuffer();
 
-    const measurable = isRaster(path);
-    const measured = measurable
-      ? await dimensionsFor(env, new Response(buffer.slice(0)).body as ReadableStream)
+    const measured = isRaster(path)
+      ? await dimensionsFor(env, new Response(buffer).body as ReadableStream)
       : null;
     const dimensions = measured?.dimensions ?? null;
-    const placeholder = measurable
-      ? (await placeholderAndColor(env.IMAGES, new Uint8Array(buffer))).placeholder
-      : null;
 
-    await upsertDerivedMedia(env, {
+    await upsertSiteAsset(env, {
       key: path,
       storage: storageOf(path),
       kind,
@@ -163,7 +136,6 @@ async function indexStaticFile(env: Env, path: string): Promise<string | null> {
       bytes: buffer.byteLength,
       width: dimensions?.width ?? null,
       height: dimensions?.height ?? null,
-      placeholder,
       // No upload event: a build-machine mtime would be an invented fact.
       uploadedAt: null,
     });
@@ -173,10 +145,10 @@ async function indexStaticFile(env: Env, path: string): Promise<string | null> {
   }
 }
 
-export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
+export async function rebuildSiteAssets(env: Env): Promise<RebuildReport> {
   const failures: string[] = [];
 
-  const { objects, files } = await enumerateMediaSources(env);
+  const { objects, files } = await enumerateSiteAssets(env);
 
   let indexed = 0;
 
@@ -194,11 +166,11 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
 
   // Last, and from the same enumerations just written from, so a transient read failure cannot delete.
   const live = new Set<string>([...objects.map((o) => o.key), ...files]);
-  const rows = await listMediaRecords(env);
+  const rows = await listSiteAssets(env);
   let removed = 0;
   for (const row of rows) {
     if (live.has(row.key)) continue;
-    await deleteMediaRecord(env, row.key);
+    await deleteSiteAsset(env, row.key);
     removed += 1;
   }
 

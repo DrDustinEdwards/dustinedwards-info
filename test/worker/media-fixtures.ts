@@ -25,16 +25,11 @@ export async function pngKey(seed: string, dimensions: Dimensions) {
   return contentKey(await crypto.subtle.digest("SHA-256", bytesFor(seed)), "png", dimensions);
 }
 
-/** What the recorded transformer encodes: the four bytes of a RIFF header. */
-export const PLACEHOLDER_BODY = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
-
 /**
- * The env with an `IMAGES` binding of a recorded shape, since it has no local emulation.
- * `dimensions` null models an SVG: the real binding answers with no `width`. Pass `encodes` to
- * give it a transformer too, false being the unreadable source (an SVG, a PDF, a corrupt upload)
- * that makes the placeholder null rather than throw. Without it there is no transformer.
+ * The env with an `IMAGES` binding of a recorded shape, since it has no local emulation. `dimensions` null models an
+ * SVG: the real binding answers with no `width`. It has no transformer, so an upload derives no placeholder.
  */
-export function envWithImages(dimensions: Dimensions, encodes?: boolean) {
+export function envWithImages(dimensions: Dimensions) {
   return {
     ...env,
     IMAGES: {
@@ -43,21 +38,6 @@ export function envWithImages(dimensions: Dimensions, encodes?: boolean) {
         await new Response(stream).arrayBuffer();
         return dimensions ?? { format: "image/svg+xml" };
       },
-      ...(encodes === undefined
-        ? {}
-        : {
-            input: (stream: ReadableStream) => ({
-              transform: () => ({
-                output: async () => {
-                  /* Drained, because the real binding consumes the stream and a case
-                   * that left it open would not be exercising the same call. */
-                  await new Response(stream).arrayBuffer();
-                  if (!encodes) throw new Error("the transformer could not read this source");
-                  return { response: () => new Response(PLACEHOLDER_BODY) };
-                },
-              }),
-            }),
-          }),
     },
   } as unknown as typeof env;
 }
@@ -70,7 +50,13 @@ export async function seedMediaRow(
   key: string,
   columns: Record<string, string | number | null> = {},
 ) {
-  const row = { storage: "r2", kind: "image", role: "content", ...columns };
+  const row = {
+    content_type: "image/png",
+    bytes: 1,
+    sha256: "",
+    uploaded_at: "2026-01-01T00:00:00.000Z",
+    ...columns,
+  };
   const names = Object.keys(row);
   await env.DB.prepare(
     `INSERT INTO media (key, ${names.join(", ")}) VALUES (?, ${names.map(() => "?").join(", ")})`,

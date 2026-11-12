@@ -2,31 +2,16 @@
 // route names a page's card through it without importing the markdown renderer. Characters stand in
 // for width, so every number here was measured off rendered cards.
 
-import {
-  CARD_DESCRIPTION_MAX,
-  CARD_TITLE_MAX,
-  CARD_TITLE_SIZES,
-  cardKey,
-  clampTitle,
-} from "@dustinedwards/site-runtime/share-card";
+import { CARD_DESCRIPTION_MAX, cardKey, clampTitle } from "@dustinedwards/site-runtime/share-card";
 import { formatDate } from "capsomer/behavior/time";
 import { ASSET_PREFIX } from "../media/classify.mjs";
-
-/** The network's card sizes (site-runtime ./share-card), measured off rendered 1200x630 cards. */
-export const TITLE_MAX = CARD_TITLE_MAX;
-export const TITLE_SIZES = CARD_TITLE_SIZES;
-// Two lines of description, enforced here because satori's WebkitLineClamp does nothing.
-export const DESCRIPTION_MAX = CARD_DESCRIPTION_MAX;
-
-/** `value` cut at a word to at most `max` characters, ending in an ellipsis (site-runtime clampTitle). */
-export const clampWords = clampTitle;
 
 /**
  * @param {string | null | undefined} title
  * @returns {string}
  */
 export function cardTitle(title) {
-  return clampTitle(title, TITLE_MAX);
+  return clampTitle(title);
 }
 
 /**
@@ -34,7 +19,7 @@ export function cardTitle(title) {
  * @returns {string}
  */
 export function cardDescription(description) {
-  return clampTitle(description, DESCRIPTION_MAX);
+  return clampTitle(description, CARD_DESCRIPTION_MAX);
 }
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache

@@ -2,7 +2,8 @@ import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, data } from "react-router";
 
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";
@@ -21,7 +22,7 @@ import {
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
-import { mediaRowTotal, rebuildMedia } from "~/lib/media/actions.server";
+import { siteAssetTotal, rebuildSiteAssetIndex } from "~/lib/media/actions.server";
 import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";
 import { topZeroResults } from "~/lib/search/zero-result.server";
@@ -65,7 +66,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
 /*
  * Posts are written in Carrel. What stays here is upkeep of what the site derives: the rendered rows,
- * the answer index and the media index. Each destructive intent checks its typed confirmation in its
+ * the answer index and the site file index. Each destructive intent checks its typed confirmation in its
  * own branch, where check:destructive reads it, before the handler runs.
  */
 export async function action({ request, context }: Route.ActionArgs) {
@@ -96,9 +97,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === "rebuild") {
     /* A rebuild prunes rows whose source is gone. Count 1: the rows at risk are unknowable beforehand. */
     if (!confirmationSatisfied(form, "1")) {
-      return { confirmRebuild: await mediaRowTotal(env) };
+      return { confirmRebuild: await siteAssetTotal(env) };
     }
-    return rebuildMedia(env);
+    return rebuildSiteAssetIndex(env);
   }
 
   return data(
@@ -125,7 +126,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
     <div className="app-page">
       <PageHead
         title="Tools"
-        lead="The site's upkeep: the search and media indexes, which secrets this deployment holds, and searches that found nothing."
+        lead="The site's upkeep: the search and site file indexes, which secrets this deployment holds, and searches that found nothing."
       />
 
       {/*
@@ -208,16 +209,16 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
 
       {confirmRebuild !== undefined ? (
         <RouterConfirmModal
-          title="Rebuild the media index?"
+          title="Rebuild the site file index?"
           lead={
             <p>
-              Every row is derived again from R2 and the repository, and a row whose file is gone is
-              removed. Alt text, captions and focal points are kept. The index holds{" "}
+              Every row is derived again from the OG bucket and the repository, and a row whose file
+              is gone is removed. The media library is not touched. The index holds{" "}
               <strong>{confirmRebuild}</strong> row(s) now.
             </p>
           }
           typeToConfirm="1"
-          action_label="Rebuild the media index"
+          action_label="Rebuild the site file index"
           cancelHref="/admin/tools"
         >
           <input type="hidden" name="intent" value="rebuild" />
@@ -226,18 +227,19 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       ) : null}
 
       <Panel
-        title="Media index"
+        title="Site file index"
         footer={
           <Form method="post" className="cap-cluster">
             <Button type="submit" name="intent" value="rebuild">
-              Rebuild the media index
+              Rebuild the site file index
             </Button>
           </Form>
         }
       >
         <p>
-          The media library reads an index of every file in R2 and every static asset in the
-          repository. A rebuild derives it again from both, for when the health check reports drift.
+          An index of the site's own files: every static asset in the repository and every card and
+          document the Worker generates in OG. A rebuild derives it again from both, for when the
+          health check reports drift. The media library keeps its own rows.
         </p>
       </Panel>
 

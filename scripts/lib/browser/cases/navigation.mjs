@@ -110,9 +110,11 @@ export async function run({ browser }) {
       { everyMs: 150, sleepFirst: false },
     );
     /* The event fires on the incoming document, so give it a moment to land. */
-    for (let i = 0; i < 6 && !reveals.some((r) => r.path === href); i += 1) {
-      await new Promise((r) => setTimeout(r, 200));
-    }
+    await pollUntil(async () => reveals.some((r) => r.path === href), Boolean, {
+      tries: 6,
+      everyMs: 200,
+      sleepFirst: false,
+    });
     const reveal = reveals.find((r) => r.path === href) ?? reveals[reveals.length - 1] ?? null;
     return { arrived, reveal };
   };
@@ -147,9 +149,11 @@ export async function run({ browser }) {
     await probe.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
     reveals.length = 0;
     await probe.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
-    for (let i = 0; i < 6 && !reveals.some((r) => r.path === "/writing"); i += 1) {
-      await new Promise((r) => setTimeout(r, 200));
-    }
+    await pollUntil(async () => reveals.some((r) => r.path === "/writing"), Boolean, {
+      tries: 6,
+      everyMs: 200,
+      sleepFirst: false,
+    });
     const second = await clickNav("/about");
     reducedArrived = second.arrived;
     reducedReveal = second.reveal;

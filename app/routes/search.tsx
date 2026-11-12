@@ -32,9 +32,11 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/search";
 
-import "~/styles/blog-search.css";
 import "~/styles/search-page.css";
 import "capsomer/pagination.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
+import "capsomer/chips.css";
 import "~/styles/ask.css";
 import "~/styles/search-facets.css";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
@@ -212,7 +214,7 @@ function ActiveFilterChip({
 }) {
   return (
     <li>
-      <Link to={searchHref(params, { [facet]: null })} className="search-chip is-active">
+      <Link to={searchHref(params, { [facet]: null })} className="cap-chip" aria-current="true">
         {label} <span aria-hidden="true">x</span>
         <span className="sr-only">remove filter</span>
       </Link>
@@ -240,9 +242,9 @@ function FacetSection({
       <ul>
         {values.map((entry) => (
           <li key={entry.value}>
-            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="search-chip">
+            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="cap-chip">
               {entry.label ?? entry.value}{" "}
-              <span className="search-chip-count">
+              <span className="cap-chip-count">
                 {entry.count}
                 {floor}
               </span>
@@ -325,7 +327,7 @@ function ZeroState({
           <ul className="search-chip-row">
             {suggestions.nearestTags.map((tag) => (
               <li key={tag}>
-                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
+                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="cap-chip">
                   {tag}
                 </Link>
               </li>
@@ -453,7 +455,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               <li>
                 <Link
                   to={searchHref(params, { sort: "relevance" })}
-                  className="search-chip"
+                  className="cap-chip"
                   aria-current={params.sort === "relevance" ? "true" : undefined}
                 >
                   Relevance
@@ -462,7 +464,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               <li>
                 <Link
                   to={searchHref(params, { sort: "date" })}
-                  className="search-chip"
+                  className="cap-chip"
                   aria-current={params.sort === "date" ? "true" : undefined}
                 >
                   Newest

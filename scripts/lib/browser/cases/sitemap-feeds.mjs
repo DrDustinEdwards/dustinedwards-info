@@ -2,6 +2,7 @@
 // the old feed addresses keep answering with the feed, because a feed reader may never follow a
 // redirect. Plain fetches, not the browser page, because the status is what is being read and a page
 // would follow a redirect.
+import { sitemapLocs } from "@drdustinedwards/site-helpers/markdown-copy";
 import { BASE, ok } from "../harness.mjs";
 
 /** @param {string} path */
@@ -10,7 +11,7 @@ const head = (path) => fetch(`${BASE}${path}`, { redirect: "manual" });
 /** @param {import("../harness.mjs").CaseContext} _ctx */
 export async function run(_ctx) {
   const sitemap = await (await fetch(`${BASE}/sitemap.xml`)).text();
-  const paths = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const paths = sitemapLocs(sitemap).map((loc) => new URL(loc).pathname);
   ok("the sitemap lists pages to check", paths.length > 20, `${paths.length} <loc> entries`);
 
   /** @type {string[]} */

@@ -10,7 +10,7 @@ import { SiteHeader } from "~/components/site-header";
 import { getCitationCounts } from "~/lib/citations.server";
 import { getEnv } from "~/lib/context";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
-import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
+import { citationTags } from "@drdustinedwards/site-helpers/scholar";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
 import { publicationBySlug } from "~/lib/publications/by-slug";
 import { TOPICS } from "~/lib/publications/topics.mjs";
@@ -101,7 +101,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       trail: paperTrail(title, pagePath),
     }),
     // A manuscript with no DOI has no registry record to cite, so it carries no Scholar tags.
-    ...(paper.doi ? buildCitationTags(paper, { abstractUrl, pdfUrl }) : []),
+    ...(paper.doi ? citationTags(paper, { abstractUrl, pdfUrl }) : []),
     /* Every paper has a twin (the markdown route reads it from D1); the head is how an agent finds it. */
     {
       tagName: "link",

@@ -9,7 +9,8 @@ import { Pill, Status } from "capsomer/react/status";
 import { StatTile, StatTiles } from "capsomer/react/stat-tile";
 
 import { PageHead } from "capsomer/react/page-head";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { syncStatus } from "~/lib/operator/api.server";

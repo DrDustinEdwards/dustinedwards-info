@@ -1,15 +1,9 @@
 @media print {
-  /* Never a theme token: check:contrast requires every theme token in a measured screen pair. */
-  :root {
-    --print-rule: #999;
-  }
-
   .cap-site-header,
   .site-shell-footer,
   .post-toc,
   .post-actions,
   .post-nav,
-  .tag-chips,
   .cap-skip,
   .cap-lightbox {
     display: none !important;
@@ -99,8 +93,7 @@
   }
 
   .search-form[data-pending],
-  .ask-body[aria-busy="true"],
-  .btn-brand[aria-disabled="true"] {
+  .ask-body[aria-busy="true"] {
     background-image: linear-gradient(var(--brand), var(--brand));
     background-repeat: no-repeat;
     background-position: 0 100%;
@@ -108,19 +101,13 @@
     animation: motion-wait var(--motion-wait) var(--ease-out) infinite;
   }
 
-  .btn-brand[aria-disabled="true"] {
-    background-image: linear-gradient(var(--focus-ring-on-brand), var(--focus-ring-on-brand));
-  }
-
   /* Opacity only, and only while the figure is entering. Already on screen, the range is over
      and the figure is fully painted. `entry`, not `cover`: a small figure never covers a fixed
      slice of the viewport, and a cover range would leave it at the from opacity. */
   @supports (animation-timeline: view()) {
     .home-plate,
-    .home-figure,
     .post-cover,
-    .prose figure,
-    .chart-figure {
+    .prose figure {
       animation-name: motion-in;
       animation-duration: auto;
       animation-timing-function: linear;
@@ -133,10 +120,8 @@
 
 @media print {
   .home-plate,
-  .home-figure,
   .post-cover,
-  .prose figure,
-  .chart-figure {
+  .prose figure {
     animation: none;
     opacity: 1;
   }

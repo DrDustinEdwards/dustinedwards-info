@@ -1,5 +1,5 @@
-// Every writer and comparer of posts.source_blob_sha and posts.render_hash uses this module;
-// a second implementation is drift. The git header counts UTF-8 BYTES, not string.length.
+// Every writer and comparer of posts.source_blob_sha uses this module (posts.render_hash is site-runtime's
+// sha256Hex of the html); a second implementation is drift. The git header counts UTF-8 BYTES, not string.length.
 
 import { toHex } from "@dustinedwards/site-runtime/encoding";
 
@@ -26,12 +26,4 @@ export async function gitBlobSha(source) {
   framed.set(header, 0);
   framed.set(body, header.byteLength);
   return digestHex("SHA-1", framed);
-}
-
-/**
- * @param {string} html
- * @returns {Promise<string>}
- */
-export async function renderHash(html) {
-  return digestHex("SHA-256", encoder.encode(html));
 }

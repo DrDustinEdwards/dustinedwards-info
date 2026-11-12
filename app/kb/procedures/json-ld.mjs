@@ -4,7 +4,7 @@
 // for a sequence of commands with tools and supplies. Only facts the record states: a gap stays out.
 
 import { thing } from "@drdustinedwards/site-helpers/schema";
-import { isoDuration } from "@drdustinedwards/site-helpers/text";
+import { htmlToText, isoDuration } from "@drdustinedwards/site-helpers/text";
 
 import { citeFacts } from "./cite.mjs";
 import { readConditions } from "./marks.mjs";
@@ -79,19 +79,6 @@ function lineageWork(lineage, origin) {
   ];
 }
 
-/** @param {string | null | undefined} html */
-function text(html) {
-  return String(html ?? "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;|&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
  * "20 minutes", "1.5 hours" as ISO 8601; null for anything else.
  *
@@ -153,7 +140,9 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
     ...(record.version ? { version: record.version } : {}),
     ...(cite?.doi ? { identifier: `https://doi.org/${cite.doi}` } : {}),
     ...(basedOn.length ? { isBasedOn: basedOn } : {}),
-    ...(record.references.length ? { citation: record.references.map(text) } : {}),
+    ...(record.references.length
+      ? { citation: record.references.map((html) => htmlToText(html)) }
+      : {}),
   };
 
   if (record.profile === "protocol") {
@@ -178,8 +167,10 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
               .join(" "),
           }
         : {}),
-      ...(record.expectedResultsHtml ? { protocolOutcome: text(record.expectedResultsHtml) } : {}),
-      ...(record.limitationsHtml ? { protocolLimitation: text(record.limitationsHtml) } : {}),
+      ...(record.expectedResultsHtml
+        ? { protocolOutcome: htmlToText(record.expectedResultsHtml) }
+        : {}),
+      ...(record.limitationsHtml ? { protocolLimitation: htmlToText(record.limitationsHtml) } : {}),
       ...(minutesToIso(record.time.total) ? { totalTime: minutesToIso(record.time.total) } : {}),
       ...(protocolParameters(record).length ? { parameter: protocolParameters(record) } : {}),
       step: steps,

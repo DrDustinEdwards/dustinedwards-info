@@ -4,30 +4,46 @@
       "app",
       "workers",
       "scripts",
+      "mcp",
+      "test",
+      "oxfmt.config.ts",
+      "oxlint.config.ts",
+      "react-router.config.ts",
+      "vite.config.ts",
+      "vitest.config.ts",
       "--min-lines",
       "8",
       "--min-tokens",
       "80",
+      "--max-lines",
+      "100000",
+      "--max-size",
+      "10mb",
       "--ignore",
-      "**/node_modules/**,**/build/**,**/*.d.ts,**/fixtures/**,**/*.md,**/*.json"
+      "**/node_modules/**,**/build/**,**/fixtures/**,**/*.md,**/*.json"
     ]
   },
   "baseline": {
-    "measured_at": "26bad88",
+    "measured_at": "acbfe70",
     "knip": {},
     "jscpd": {
-      "clones": 26,
-      "lines": 401,
-      "percentage": 0.4
+      "clones": 55,
+      "lines": 793,
+      "percentage": 0.55,
+      "unread": 0
+    },
+    "shared copies": {
+      "clones": 1,
+      "lines": 23
     },
     "tests": {
-      "files": 210,
-      "cases": 1669
+      "files": 207,
+      "cases": 1646
     },
     "comments": {
-      "lines": 18186,
-      "code": 108532,
-      "percentage": 14.35
+      "lines": 17904,
+      "code": 106763,
+      "percentage": 14.36
     }
   }
 }

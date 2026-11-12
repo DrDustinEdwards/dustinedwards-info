@@ -9,6 +9,7 @@
  * one Access sync through Capsid (app/lab/access-sync.server.ts), whose answer lands on the audit row.
  */
 
+import { isEmail } from "@dustinedwards/site-runtime/email";
 import {
   MANAGE_MEMBERS,
   auditRow,
@@ -40,7 +41,7 @@ import {
 
 import { SYNC_NOT_SET_UP, syncAccess } from "./access-sync.server";
 import { labRules } from "./actor.server";
-import { field, isDate } from "./forms.mjs";
+import { field, isDate, today } from "./forms.mjs";
 import { LAB_CATALOG, canEditTerms, titleLabel } from "./titles.mjs";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -61,8 +62,6 @@ export type MembersPageData = {
   syncNotice: string | null;
   primaryOwner: boolean;
 };
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function titleOf(id: string): Title | undefined {
   return LAB_CATALOG.titles.get(id);
@@ -210,7 +209,7 @@ export async function membersPage(
 
   const lead = manageLead(
     [...titles].reverse().map((t) => t.label),
-    terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? undefined : NO_TERMS,
+    terms.some((d) => d >= today(nowMs)) ? undefined : NO_TERMS,
   );
 
   return {
@@ -277,7 +276,7 @@ export async function membersAction(
 
   if (intent === "add") {
     const typed = field(form, "email");
-    if (!EMAIL.test(typed)) return refused("Type the email address they sign in with.");
+    if (!isEmail(typed)) return refused("Type the email address they sign in with.");
     const email = normalizeEmail(typed);
     const titleId = field(form, "title");
     const title = titleOf(titleId);

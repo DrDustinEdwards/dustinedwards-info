@@ -52,29 +52,6 @@
   margin: var(--space-5) 0 0;
 }
 
-.cv-action {
-  min-height: var(--control-min-dense);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--brand);
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: var(--link-weight);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.cv-action:hover {
-  color: var(--brand-hover);
-  background: var(--link-hover-bg);
-  box-shadow: 0 0 0 var(--link-tint-pad) var(--link-hover-bg);
-}
-
-.cv-action[hidden] {
-  display: none;
-}
-
 /* At a glance: three counts with their sparklines, then the timeline */
 
 .cv-overview {
@@ -228,9 +205,7 @@
 
 .cv-filters input[type="search"]:focus-visible,
 .cv-filters select:focus-visible,
-.cv-apply:focus-visible,
-.cv-copy:focus-visible,
-.cv-action:focus-visible {
+.cv-apply:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
@@ -592,29 +567,6 @@
   align-items: center;
   gap: var(--space-3) var(--space-4);
   margin: var(--space-3) 0 0;
-}
-
-.cv-copy {
-  min-height: var(--control-min-dense);
-  padding: 0.25rem 0.625rem;
-  border: var(--line-w) solid var(--line-strong);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.8125rem;
-  cursor: pointer;
-}
-
-.cv-copy:hover {
-  border-color: var(--brand);
-  color: var(--brand);
-}
-
-.cv-copy[data-state="done"] {
-  border-color: var(--brand);
-  background: var(--tint-brand);
-  color: var(--brand);
 }
 
 .cap-copy[hidden] {

@@ -3,7 +3,7 @@
 export function AskMount({ question }: { question: string }) {
   return (
     <div className="ask-mount" data-ask-mount="" data-ask-question={question}>
-      <button type="button" className="ask-trigger" data-ask-trigger="" hidden>
+      <button type="button" className="cap-btn" data-size="sm" data-ask-trigger="" hidden>
         Ask AI about this
       </button>
       <div className="ask-container" data-ask-container="" hidden />

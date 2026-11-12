@@ -3,7 +3,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { pageSourcePath } from "~/lib/pages/compile.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as pageLoader } from "~/routes/content-page";
 import { loader as twinLoader } from "~/routes/content-page[.md]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
@@ -12,7 +11,7 @@ import foxhound from "../../content/pages/software-foxhound.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { routeContext } from "./route-helpers";
+import { routeContext, carrelRequest } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -36,9 +35,9 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const get = (url: string) =>
-  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(
+  return carrelRequest(
     argsFor(
       new Request(url, {
         method,

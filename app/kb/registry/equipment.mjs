@@ -11,6 +11,8 @@
 // water bath for molten top agar, plate incubator at 29 °C for M. foliorum) and names the record with `equipment: <id>`, so the
 // setting is the protocol's own and the table lists the protocols that name it.
 
+import { stated } from "./primer.mjs";
+
 const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
@@ -40,14 +42,12 @@ export const EQUIPMENT = {
  */
 export function storedEquipment(item) {
   const f = /** @type {Record<string, unknown>} */ (item.fields);
-  const text = (/** @type {unknown} */ value) =>
-    typeof value === "string" && value !== "" && !value.startsWith("MISSING") ? value : null;
   return {
     id: item.id,
     name: item.name,
     status: item.status,
-    manufacturer: text(f.manufacturer),
-    rotor: text(f.rotor),
+    manufacturer: stated(f.manufacturer),
+    rotor: stated(f.rotor),
     rotorGap: typeof f.rotor === "string" && f.rotor.startsWith("MISSING"),
   };
 }

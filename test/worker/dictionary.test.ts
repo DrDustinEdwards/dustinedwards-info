@@ -2,7 +2,6 @@ import { getHead } from "~/lib/source/store.server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { saveDictionaryEntry } from "~/lib/dictionary/save.server";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import ContentPage, { loader as pageLoader } from "~/routes/content-page";
 import { loader as twinLoader } from "~/routes/content-page[.md]";
 
@@ -11,7 +10,7 @@ import capsidPage from "../../content/pages/software-capsid.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, carrelRequest, recordPurges } from "./route-helpers";
 import { seedDictionary, seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -20,12 +19,9 @@ import { testEnv } from "./test-env";
  * writes the entry's row, and the NEXT request for the page and its markdown twin carries the edit (job_06a07623695b,
  * docs/DICTIONARY.md). The repository is the source and D1 is derived. */
 
-// The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one.
+// The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
@@ -46,9 +42,9 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const get = (url: string) =>
-  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(
+  return carrelRequest(
     argsFor(
       new Request(url, {
         method,

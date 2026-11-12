@@ -4,7 +4,7 @@ import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { and, eq, isNull, lte, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./schema";
-import { media, posts } from "./schema";
+import { posts } from "./schema";
 
 export function getDb(env: Env) {
   return drizzle(env.DB, { schema: schema });
@@ -21,9 +21,4 @@ export function publiclyVisible() {
 
 export function isBlogPost() {
   return and(eq(posts.kind, "post"), publiclyVisible());
-}
-
-/** Reconciliation readers must not use this filter, or a rebuild restores trashed rows. */
-export function notTrashed() {
-  return isNull(media.trashedAt);
 }

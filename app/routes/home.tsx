@@ -9,7 +9,8 @@ import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
 import { formatDate } from "capsomer/behavior/time";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { getTimings } from "@dustinedwards/site-runtime/context";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
@@ -79,7 +80,7 @@ function homePapers(papers: PublicationSummary[]) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
+  const timings = getTimings(context);
 
   const [start, podcast, nextPublishAt, papers, cohorts] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),

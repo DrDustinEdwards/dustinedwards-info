@@ -1,3 +1,5 @@
+import { htmlToText } from "@drdustinedwards/site-helpers/text";
+
 /** Below this, a contents list is furniture rather than a map. */
 export const CONTENTS_MIN = 2;
 
@@ -38,24 +40,11 @@ export function PageContents({
   );
 }
 
-const ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  "#39": "'",
-  nbsp: " ",
-};
-
 /** The h2s of rendered page HTML, by their ids, with the heading's anchor link left out. */
 export function contentsOf(html: string): ContentsEntry[] {
   const out: ContentsEntry[] = [];
   for (const [, id = "", inner = ""] of html.matchAll(/<h2 id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g)) {
-    const text = inner
-      .replace(/<a class="heading-anchor"[\s\S]*?<\/a>/g, "")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, name: string) => ENTITIES[name] ?? "")
-      .trim();
+    const text = htmlToText(inner);
     if (text) out.push({ id, text });
   }
   return out;

@@ -8,8 +8,9 @@ import { MENTION_POST_PATH } from "../seed.mjs";
 
 /*
  * Keying the public cache on path plus theme is sound only if public bytes depend on
- * the theme alone. Nothing is masked for the CSP: public pages carry no nonce, so one
- * appearing is a difference this case should report.
+ * the theme alone. The one value masked for the CSP is the nonce: site-runtime gives every
+ * reader of a stored page its own (renewNonce), so only its value differs; where it appears
+ * is still compared.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ page, browser }) {
@@ -113,6 +114,7 @@ export async function run({ page, browser }) {
   const mask = (html) =>
     html
       .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
+      .replace(/ nonce="[A-Za-z0-9+/=_-]+"/g, ' nonce="N"')
       .replace(/data-health-age="\d+"/g, 'data-health-age="A"')
       /*
        * The age sentence differs between same-cookie renders (KV edge cache plus clock), so
@@ -391,8 +393,8 @@ export async function run({ page, browser }) {
       `${label}: an ${accept} request is answered with ${wanted}`,
       type.includes(wanted),
       `got ${JSON.stringify(type)}. The route stopped negotiating, or the gateway's ` +
-        `key stopped excluding the negotiated representation. See ` +
-        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and cacheDimensions in ` +
+        `cache stopped skipping the negotiated representation. See ` +
+        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and \`cacheable\` in ` +
         `workers/app.ts.`,
     );
     /* `no-store` keeps the platform from storing it under the HTML reader's key. */

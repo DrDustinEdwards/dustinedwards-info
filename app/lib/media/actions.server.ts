@@ -1,34 +1,34 @@
-import { mediaCounts, mediaRoleCounts } from "~/db";
-import { rebuildMediaIndex } from "./rebuild.server";
+import { siteAssetCounts, siteAssetRoleCounts } from "~/db";
+import { rebuildSiteAssets } from "./rebuild.server";
 
-// The rebuild on /admin/tools: the row count its confirmation shows, and the report of what the index holds after it.
-// Every other media write is site-api's media library (app/lib/carrel/media-adapter.server.ts).
+// The rebuild of the site's own files on /admin/tools: the row count its confirmation shows, and the report of what the
+// index holds after it. The library's files are site-api's media library's (app/lib/carrel/media-adapter.server.ts).
 
 type Message = { message: string };
 
 /** The row count the rebuild confirmation shows. */
-export async function mediaRowTotal(env: Env) {
-  const before = await mediaCounts(env);
+export async function siteAssetTotal(env: Env) {
+  const before = await siteAssetCounts(env);
   return before.reduce((sum, row) => sum + Number(row.n), 0);
 }
 
 /** Runs the rebuild the route has confirmed and reports what the index holds after it. */
-export async function rebuildMedia(env: Env): Promise<Message> {
-  const report = await rebuildMediaIndex(env);
-  const after = await mediaCounts(env);
+export async function rebuildSiteAssetIndex(env: Env): Promise<Message> {
+  const report = await rebuildSiteAssets(env);
+  const after = await siteAssetCounts(env);
   const total = after.reduce((sum, row) => sum + Number(row.n), 0);
   const breakdown = after
     .map((row) => `${row.n} ${row.storage}/${row.kind}`)
     .sort()
     .join(", ");
-  const roles = await mediaRoleCounts(env);
+  const roles = await siteAssetRoleCounts(env);
   const roleBreakdown = roles
     .map((row) => `${row.n} ${row.role}`)
     .sort()
     .join(", ");
 
   const parts = [
-    `Rebuilt from ${report.scannedObjects} R2 object(s) and ${report.scannedFiles} static ` +
+    `Rebuilt from ${report.scannedObjects} OG object(s) and ${report.scannedFiles} static ` +
       `file(s). The index now holds ${total} row(s): ${breakdown}`,
     `By role: ${roleBreakdown}`,
   ];
@@ -41,6 +41,5 @@ export async function rebuildMedia(env: Env): Promise<Message> {
         (report.failures.length > 3 ? ` and ${report.failures.length - 3} more` : ""),
     );
   }
-  parts.push("Alt text, captions and focal points were preserved");
   return { message: `${parts.join(". ")}.` };
 }

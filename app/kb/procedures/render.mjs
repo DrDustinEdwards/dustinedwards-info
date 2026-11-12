@@ -7,7 +7,7 @@
 // `renderBody` is passed in, not imported: the pipeline is 4 MB, so the Worker loads it lazily
 // (load-pipeline.server.ts) and a Node script imports it directly.
 
-import { plural } from "@drdustinedwards/site-helpers/text";
+import { mdCell, plural } from "@drdustinedwards/site-helpers/text";
 import GithubSlugger from "github-slugger";
 
 import { TOOLS } from "../../lib/phage-tools.mjs";
@@ -842,10 +842,8 @@ export function procedureMarkdown(record, parsed) {
       "| --- | --- | --- | --- |",
     );
     for (const r of list(d.troubleshooting)) {
-      const cell = (/** @type {unknown} */ v) =>
-        String(v).replace(/\|/g, "\\|").replace(/\n/g, " ");
       out.push(
-        `| ${cell(r.step)} | ${cell(r.problem)} | ${cell(r.reason)} | ${cell(r.solution)} |`,
+        `| ${mdCell(String(r.step ?? ""))} | ${mdCell(String(r.problem ?? ""))} | ${mdCell(String(r.reason ?? ""))} | ${mdCell(String(r.solution ?? ""))} |`,
       );
     }
     out.push("");

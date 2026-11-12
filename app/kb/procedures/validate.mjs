@@ -8,6 +8,7 @@
 
 import { VERSION_PATTERN } from "./cite.mjs";
 import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
 import { allSteps, PLATFORMS, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./taxonomy.mjs";
@@ -319,7 +320,7 @@ export function validateProcedure(parsed, expect) {
       !f ||
       typeof f !== "object" ||
       Array.isArray(f) ||
-      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(f.slug ?? ""))
+      !SLUG_PATTERN.test(String(f.slug ?? ""))
     ) {
       errors.push(
         "forked_from is { slug, version }: the file name of the procedure this one was copied from, and its version if it had one",

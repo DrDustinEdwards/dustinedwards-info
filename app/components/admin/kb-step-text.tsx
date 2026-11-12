@@ -5,6 +5,7 @@ import { isImeEnter } from "capsomer/behavior/shortcuts";
 import { escapeHtml } from "@dustinedwards/site-runtime/html";
 import { markup, trustedHtml } from "capsomer/behavior/trusted-html";
 
+import { DURATIONS, UNITS } from "./kb-form-fields";
 import { PIECE_NAMES, pieceLabel, stepPieces, writePiece, type Piece } from "~/kb/step-marks.mjs";
 
 /*
@@ -14,9 +15,6 @@ import { PIECE_NAMES, pieceLabel, stepPieces, writePiece, type Piece } from "~/k
  * read from, so a step nobody touched is written back byte for byte, and an edited chip is written in the format's own
  * spelling (step-marks.mjs). Marks typed by hand become chips when the text loses focus.
  */
-
-const DURATIONS = ["seconds", "minutes", "hours", "days"];
-const UNITS = ["µl", "ml", "l", "mg", "g", "µg", "ng", "mM", "M", "%", "U", "tubes", "plates"];
 
 type Chip = Exclude<Piece, { kind: "text" }>;
 

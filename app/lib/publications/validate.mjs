@@ -15,6 +15,7 @@ import { paperPdfPath } from "./paths.mjs";
 import { updateNoticeProblem } from "./update-notice.mjs";
 import { TOPIC_IDS } from "./topics.mjs";
 import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+import { hasWideDash } from "@drdustinedwards/site-helpers/text";
 
 const PUBLICATION_KIND = "publication";
 const TYPES = /** @type {const} */ ([
@@ -69,8 +70,6 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 /** A character reference: titles are stored decoded, so one left in is a value that would render twice-decoded. */
 const CHARACTER_REFERENCE = /&(?:#\d+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);/;
-/** The PreToolUse hook cannot reach data files; escapes keep this file free of the dashes. */
-const WIDE_DASH = new RegExp("[\\u2013\\u2014]");
 /** A scanned PDF extracts to nothing and everything else still passes. */
 const MIN_FULL_TEXT_CHARS = 500;
 const SUMMARY_MAX = 200;
@@ -394,8 +393,8 @@ export async function validatePublicationFile({ parsed, slug, host, others = [] 
       if (summary.length > SUMMARY_MAX)
         bad("summary", `is ${summary.length} characters; the limit is ${SUMMARY_MAX}`);
       if (/[.!?]\s+[A-Z]/.test(summary)) bad("summary", "is more than one sentence");
-      if (WIDE_DASH.test(summary))
-        bad("summary", "carries an em dash or en dash; use a comma, period, parentheses or colon");
+      if (hasWideDash(summary))
+        bad("summary", "carries a wide dash; use a hyphen, comma, period, parentheses or colon");
     }
   }
 

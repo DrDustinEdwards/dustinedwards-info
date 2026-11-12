@@ -2,7 +2,10 @@ import { Form, data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
-import { PostRow, Pager } from "~/components/post-row";
+import { Pagination } from "capsomer/react/pagination";
+import { routerRenderLink } from "capsomer/react/link";
+import "capsomer/pagination.css";
+import { PostRow } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
@@ -10,7 +13,8 @@ import { parsePage } from "capsomer/react/pagination";
 import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
@@ -217,7 +221,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </ul>
         )}
 
-        <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
+        <Pagination
+          form="steps"
+          page={page}
+          pageCount={pageCount}
+          hrefFor={pageHref}
+          prevLabel="Newer"
+          nextLabel="Older"
+          renderLink={routerRenderLink}
+        />
       </main>
       <ShellFooter />
       {/* No blog island: its enhancements target `.prose` markup, which this page has none of. */}

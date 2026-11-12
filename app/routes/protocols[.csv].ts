@@ -1,4 +1,4 @@
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { csvResponse } from "@dustinedwards/site-runtime/csv";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
@@ -16,7 +16,7 @@ import type { Route } from "./+types/protocols[.csv]";
 
 /** The library as CSV, for the filter state in the query string (the page's own parameters). */
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const items = libraryItems(await listPublishedLibraryRecords(getEnv(context)));
+  const items = libraryItems(await listPublishedRecordsOfProfile(getEnv(context), "protocol"));
   const rows = libraryRecords(items, new URL(request.url).searchParams, SITE_ORIGIN);
   return csvResponse(libraryCsv(rows), "dustin-edwards-protocols.csv", {
     headers: {
