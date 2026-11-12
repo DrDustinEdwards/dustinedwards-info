@@ -8,7 +8,7 @@ import { getPageByPath } from "~/db/pages";
 import { draftGate, draftRobots } from "@dustinedwards/site-runtime/draft-gate";
 import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
-import { mediaRecord } from "~/db/media";
+import { mediaStore } from "~/db/media";
 import { images, mediaContentVersion } from "~/lib/media/images.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import {
@@ -35,14 +35,17 @@ import { markup } from "capsomer/behavior/trusted-html";
  * leaves the key's digest and no placeholder, rather than taking the page down.
  */
 async function portrait(env: Env) {
-  const row = await mediaRecord(env, OWNER_PHOTO.key).catch(() => null);
+  const row = await mediaStore(env)
+    .record(OWNER_PHOTO.key)
+    .catch(() => null);
   return pictureProps(
     images.attributes(
       {
         src: `/media/${OWNER_PHOTO.key}`,
         width: OWNER_PHOTO.width,
         height: OWNER_PHOTO.height,
-        version: mediaContentVersion(OWNER_PHOTO.key, row?.sha256 ?? null),
+        // A row with no hash yet stores "", which is no version.
+        version: mediaContentVersion(OWNER_PHOTO.key, row?.sha256 || null),
         placeholder: row?.placeholder ?? null,
       },
       "portrait",

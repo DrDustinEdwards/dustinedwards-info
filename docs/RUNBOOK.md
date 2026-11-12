@@ -267,7 +267,7 @@ npx wrangler d1 execute dustinedwards --remote --file "$dir\_restore.sql"
 ```
 
 Before running that last line, if the migrations made any triggers (they did:
-`media_changes_ai` and its siblings write `media_changes` whenever `media` changes),
+`media_changes_insert` and its siblings write `media_changes` whenever `media` changes),
 put a `DROP TRIGGER` for each at the top of `_restore.sql` and its `CREATE TRIGGER`
 from `drizzle/` at the bottom. Otherwise loading `media` fires the trigger and the
 dump's own `media_changes` rows then fail with `UNIQUE constraint failed:
