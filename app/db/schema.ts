@@ -187,6 +187,20 @@ export const media = sqliteTable(
   ],
 );
 
+// site-api's own tables (media byte history and change log, scheduled updates, its store): its Drizzle mirrors,
+// re-exported so drizzle-kit reads them from the package that creates them.
+export {
+  gonePaths,
+  hookRetries,
+  hookRuns,
+  mediaChanges,
+  mediaUploads,
+  previewLinks,
+  scheduledUpdates,
+  siteApiWrites,
+  webmentionTargets,
+} from "@dustinedwards/site-api/drizzle";
+
 /**
  * A file's byte history (site-api v0.13.0): one row per set of bytes. The newest row for a key is the bytes in
  * MEDIA; each earlier one names its copy in MEDIA_REVISIONS, which nothing deletes. A file with no row has had only
@@ -208,22 +222,6 @@ export const mediaRevisions = sqliteTable(
     backupKey: text("backup_key"),
   },
   (t) => [index("media_revisions_key_idx").on(t.mediaKey, t.id)],
-);
-
-/**
- * Every change to an uploaded file's row, written by triggers on `media` (drizzle/0035_media_library.sql), so a
- * library screen can ask what changed since a point (site-api's `changedSince`). Derived; never written here.
- */
-export const mediaChanges = sqliteTable(
-  "media_changes",
-  {
-    seq: integer("seq").primaryKey({ autoIncrement: true }),
-    mediaKey: text("media_key").notNull(),
-    at: text("at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-  },
-  (t) => [index("media_changes_key_idx").on(t.mediaKey, t.seq)],
 );
 
 /**
@@ -841,95 +839,6 @@ export const sourceRevisions = sqliteTable(
 export const sourceGuard = sqliteTable("source_guard", { ok: integer("ok").notNull() }, (t) => [
   check("source_guard_ok", sql`${t.ok} = 1`),
 ]);
-
-// Scheduled updates to live posts (drizzle/0033_scheduled_updates.sql, the site-api package's SCHEDULED_UPDATES_SQL):
-// one waiting update per post, read and written only through the package's d1ScheduledUpdates helper
-// (app/lib/carrel/schedules-adapter.server.ts). Times are UTC ISO text, so the due scan is a text comparison.
-export const scheduledUpdates = sqliteTable(
-  "scheduled_updates",
-  {
-    contentId: text("content_id").primaryKey(),
-    source: text("source").notNull(),
-    publishAt: text("publish_at").notNull(),
-    changeId: text("change_id").notNull(),
-    scheduledAt: text("scheduled_at").notNull(),
-  },
-  (t) => [index("scheduled_updates_due").on(t.publishAt)],
-);
-
-// site-api's store (drizzle/0037_site_api_store.sql, the package's SITE_API_STORE_SQL): safe retries by change id, failed
-// publish hooks waiting to run again, preview links (only each token's SHA-256) and the webmentions each page last sent.
-// Read and written only through d1SiteApiStore (app/lib/carrel/site-api.server.ts).
-export const siteApiWrites = sqliteTable(
-  "site_api_writes",
-  {
-    changeId: text("change_id").primaryKey(),
-    route: text("route").notNull(),
-    requestHash: text("request_hash").notNull(),
-    status: integer("status"),
-    response: text("response"),
-    state: text("state").notNull(),
-    at: text("at").notNull(),
-  },
-  (t) => [index("site_api_writes_at").on(t.at)],
-);
-
-export const hookRetries = sqliteTable(
-  "hook_retries",
-  {
-    id: text("id").primaryKey(),
-    hook: text("hook").notNull(),
-    event: text("event").notNull(),
-    attempts: integer("attempts").notNull(),
-    nextAt: text("next_at").notNull(),
-    lastError: text("last_error").notNull(),
-  },
-  (t) => [index("hook_retries_due").on(t.nextAt)],
-);
-
-export const previewLinks = sqliteTable(
-  "preview_links",
-  {
-    tokenHash: text("token_hash").primaryKey(),
-    contentId: text("content_id").notNull(),
-    createdAt: text("created_at").notNull(),
-    expiresAt: text("expires_at").notNull(),
-    revokedAt: text("revoked_at"),
-    changeId: text("change_id").notNull(),
-  },
-  (t) => [index("preview_links_content").on(t.contentId, t.expiresAt)],
-);
-
-export const webmentionTargets = sqliteTable("webmention_targets", {
-  source: text("source").primaryKey(),
-  targets: text("targets").notNull(),
-  sentAt: text("sent_at").notNull(),
-});
-
-// site-api 0.21.0 (migration 0040): the media file each upload's duplicates key became. Only d1SiteApiStore reads it.
-export const mediaUploads = sqliteTable("media_uploads", {
-  sha256: text("sha256").primaryKey(),
-  mediaId: text("media_id").notNull(),
-  at: text("at").notNull(),
-});
-
-// site-api 0.22.0 (migration 0042): the public path of each live post deleted or trashed, answered 410, and each
-// publish hook's run. Only d1SiteApiStore reads and writes them.
-export const gonePaths = sqliteTable("gone_paths", {
-  path: text("path").primaryKey(),
-  goneAt: text("gone_at").notNull(),
-});
-
-export const hookRuns = sqliteTable(
-  "hook_runs",
-  {
-    changeId: text("change_id").notNull(),
-    hook: text("hook").notNull(),
-    ok: integer("ok").notNull(),
-    at: text("at").notNull(),
-  },
-  (t) => [index("hook_runs_change").on(t.changeId), index("hook_runs_at").on(t.at)],
-);
 
 // What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,
 // app/lib/carrel/post-state.server.ts): the trash, the redirects a rename leaves, and the first publishes that go live
