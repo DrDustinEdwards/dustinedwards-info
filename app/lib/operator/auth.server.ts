@@ -2,14 +2,13 @@
 
 import { safeEqual } from "@dustinedwards/site-runtime/compare";
 import { logEvent, OWASP_EVENTS } from "@dustinedwards/site-runtime/log";
+import { MIN_TOKEN_LENGTH } from "@dustinedwards/site-runtime/operator";
 
 import { tokenLabel } from "~/lib/bearer.server";
 import { limitHit } from "~/lib/rate-limit.mjs";
 
 const OPERATOR_RATE_LIMIT = 30;
 const OPERATOR_RATE_PERIOD_SECONDS = 60;
-
-const MIN_TOKEN_LENGTH = 32;
 
 /* Refusals are logged under the OWASP Logging Vocabulary's names (area 8, L4), with no part of the presented token. */
 function refused(): AuthResult {

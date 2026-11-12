@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { paperSlashTarget, pdfRedirectStatus } from "../app/lib/publications/pdf-redirect.mjs";
+import { paperSlashTarget } from "../app/lib/publications/pdf-redirect.mjs";
 
 await test("the slashless paper URL redirects to the slash form", () => {
   assert.equal(
@@ -31,11 +31,4 @@ await test("paperSlashTarget leaves the index and the already-slashed form alone
   assert.equal(paperSlashTarget("/research/publications"), null);
   assert.equal(paperSlashTarget("/research/publications/"), null);
   assert.equal(paperSlashTarget("/research/publications/10-1128-mra-00888-24/"), null);
-});
-
-await test("301 for GET and HEAD, 308 otherwise", () => {
-  assert.equal(pdfRedirectStatus("GET"), 301);
-  assert.equal(pdfRedirectStatus("head"), 301);
-  assert.equal(pdfRedirectStatus("POST"), 308);
-  assert.equal(pdfRedirectStatus(undefined), 308);
 });

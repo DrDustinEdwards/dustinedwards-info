@@ -13,7 +13,8 @@ import { parsePage } from "capsomer/react/pagination";
 import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,
