@@ -15,7 +15,7 @@ import { MAX_MISMATCHES, pairProducts, placePrimer } from "./align.mjs";
 import { missingReason, primerFacts, stated } from "./primer.mjs";
 import { designationOf } from "./strain.mjs";
 import { NEB_TM_CALCULATOR, TM_CONDITIONS, annealingSentence, tmStatement } from "./tm.mjs";
-import { plural } from "@drdustinedwards/site-helpers/text";
+import { mdCell, plural } from "@drdustinedwards/site-helpers/text";
 
 /** The master inventory, and the root every kind's page sits under. */
 export const LAB_PATH = "/research/lab";
@@ -397,7 +397,7 @@ export function phageYearsText(strain) {
 export function strainsMarkdown(strains, origin) {
   const lines = strains.map(
     (s) =>
-      `| [${cell(s.name)}](${origin}${s.path}) | ${cell(s.organism)} | ${cell(s.collection)} | ${cell(s.collectionNumber)} | ${s.phages.length} |`,
+      `| [${mdCell(s.name)}](${origin}${s.path}) | ${mdCell(s.organism)} | ${mdCell(s.collection)} | ${mdCell(s.collectionNumber)} | ${s.phages.length} |`,
   );
   return [
     "| Strain | Organism | Collection | Collection number | Phages isolated |",
@@ -602,10 +602,10 @@ export function reagentsMarkdown(reagents, origin) {
         ? `[recipe](${origin}${r.recipePath})`
         : "";
   const uses = (/** @type {ReagentRow} */ r) =>
-    r.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+    r.uses.map((u) => `[${mdCell(u.title)}](${origin}${u.path})`).join(", ");
   const lines = reagents.map(
     (r) =>
-      `| ${cell(reagentLabel(r))} | ${cell(reagentSource(r))} | ${cell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`,
+      `| ${mdCell(reagentLabel(r))} | ${mdCell(reagentSource(r))} | ${mdCell(r.catalogNumber)} | ${link(r)} | ${uses(r)} |`,
   );
   const gaps = reagents.flatMap((r) => reagentGapText(r).map((text) => `- ${r.name}, ${text}`));
   return [
@@ -749,9 +749,9 @@ export function equipmentGapText(e) {
  */
 export function equipmentMarkdown(items, origin) {
   const uses = (/** @type {EquipmentRow} */ e) =>
-    e.uses.map((u) => `[${cell(u.title)}](${origin}${u.path})`).join(", ");
+    e.uses.map((u) => `[${mdCell(u.title)}](${origin}${u.path})`).join(", ");
   const lines = items.map(
-    (e) => `| ${cell(e.name)} | ${cell(e.manufacturer)} | ${cell(e.rotor)} | ${uses(e)} |`,
+    (e) => `| ${mdCell(e.name)} | ${mdCell(e.manufacturer)} | ${mdCell(e.rotor)} | ${uses(e)} |`,
   );
   const gaps = items.flatMap((e) => equipmentGapText(e).map((text) => `- ${e.name}, ${text}`));
   return [
@@ -933,9 +933,6 @@ export const INVENTORY = defineCatalog(
 
 /* ------------------------------------------------------------------------------------------------ markdown twins */
 
-const cell = (/** @type {string | number | null} */ value) =>
-  String(value ?? "").replaceAll("|", "\\|");
-
 /**
  * The inventory as a markdown table, for the twin: the facts a person sees.
  *
@@ -945,7 +942,7 @@ const cell = (/** @type {string | number | null} */ value) =>
 export function inventoryMarkdown(rows, origin) {
   const lines = rows.map(
     (row) =>
-      `| [${cell(row.name)}](${origin}${row.path}) | ${cell(row.kindLabel)} | ${cell(row.summary)} |`,
+      `| [${mdCell(row.name)}](${origin}${row.path}) | ${mdCell(row.kindLabel)} | ${mdCell(row.summary)} |`,
   );
   return ["| Name | Kind | About |", "| --- | --- | --- |", ...lines].join("\n");
 }
@@ -983,7 +980,7 @@ export function productSpanText(product) {
 export function primersMarkdown(primers, origin) {
   const lines = primers.map(
     (p) =>
-      `| [${cell(p.name)}](${origin}${p.path}) | \`${p.sequence ?? ""}\` | ${cell(p.direction)} | ${cell(p.target)} | ${cell(p.length)} | ${cell(p.tm)} | ${cell(productText(p.product))} |`,
+      `| [${mdCell(p.name)}](${origin}${p.path}) | \`${p.sequence ?? ""}\` | ${mdCell(p.direction)} | ${mdCell(p.target)} | ${mdCell(p.length)} | ${mdCell(p.tm)} | ${mdCell(productText(p.product))} |`,
   );
   return [
     "| Primer | Sequence (5′ to 3′) | Direction | Target | Length (nt) | Tm estimate (°C) | Product (computed) |",

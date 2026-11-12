@@ -38,7 +38,7 @@ import { isWorkerPreview } from "@dustinedwards/site-runtime/http";
 import { PRELOADS } from "~/lib/preloads";
 import { runJobs } from "@dustinedwards/site-runtime/cron";
 import { maintenanceOn, maintenanceResponse } from "@dustinedwards/site-runtime/maintenance";
-import { routeNamer, withRequestLog } from "@dustinedwards/site-runtime/log";
+import { PREVIEW_TOKEN, routeNamer, withRequestLog } from "@dustinedwards/site-runtime/log";
 import { countNotFound } from "@dustinedwards/site-runtime/not-found";
 import { d1SiteApiStore, tombstoned } from "@dustinedwards/site-api/store";
 import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
@@ -272,7 +272,7 @@ export default {
     },
     {
       sha: (env: Env) => (env as { DEPLOY_SHA?: string }).DEPLOY_SHA,
-      tokenPath: /\/preview\/[^/?#\s'"]+/g,
+      tokenPath: PREVIEW_TOKEN,
       route: routeName,
     },
   ),
