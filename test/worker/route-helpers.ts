@@ -6,7 +6,12 @@ import { vi } from "vitest";
 
 import { carrelStep } from "~/lib/carrel/site-api.server";
 import { Renderer } from "../../workers/app";
-import { cloudflareContext, documentHandlerContext, getEnv, getExecutionContext } from "~/lib/context";
+import {
+  cloudflareContext,
+  documentHandlerContext,
+  getEnv,
+  getExecutionContext,
+} from "~/lib/context";
 
 /**
  * Driving route modules directly: the router context their loaders read, the middleware chain in
@@ -59,7 +64,9 @@ export async function carrelRequest({
  * A save's purge goes to the Renderer over the Worker's loopback (cache-purge.server.ts), which Miniflare cannot purge:
  * each purge's tags go to `purge` in its place, answered with its `success`.
  */
-export function recordPurges(purge: (options: { tags: string[] }) => Promise<{ success: boolean }>) {
+export function recordPurges(
+  purge: (options: { tags: string[] }) => Promise<{ success: boolean }>,
+) {
   vi.spyOn(Renderer.prototype, "purgePages").mockImplementation(
     async (_why: string, tags: string[] = []) => (await purge({ tags })).success,
   );
