@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Imported from the pipeline so the gate cannot check a theme the renderer does not use.
-import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
+import { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
 
 import { apca, channels, contrast } from "../app/lib/contrast.mjs";
 

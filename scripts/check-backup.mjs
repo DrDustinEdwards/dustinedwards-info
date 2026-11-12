@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFile, readdir, mkdir, rm, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
@@ -306,6 +307,6 @@ async function main() {
 }
 
 main().catch((/** @type {unknown} */ error) => {
-  console.error(`check:backup failed. ${error instanceof Error ? error.message : String(error)}`);
+  console.error(`check:backup failed. ${errorMessage(error)}`);
   process.exit(1);
 });

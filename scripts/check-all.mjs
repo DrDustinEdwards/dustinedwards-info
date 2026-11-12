@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
@@ -594,9 +595,7 @@ async function main() {
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().catch((error) => {
-    console.error(
-      `\ncheck failed to start. ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    console.error(`\ncheck failed to start. ${errorMessage(error)}\n`);
     process.exit(1);
   });
 }

@@ -27,6 +27,7 @@
  * (12.4). A tool handler never runs without all three.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import type { AuditEnv } from "@dustinedwards/site-runtime/audit-log";
 import { logEvent } from "@dustinedwards/site-runtime/log";
 import { z } from "zod";
@@ -167,7 +168,7 @@ function refusal(result: { status: number; error?: string; detail?: unknown }): 
 function wrapperFailure(cause: unknown): ToolOutput {
   // The detail goes to the Worker log only (checklist S4): the client hears what kind of failure it was, never the
   // error's own text, which can name a binding, an address or an upstream answer.
-  const detail = cause instanceof Error ? cause.message : String(cause);
+  const detail = errorMessage(cause);
   logEvent(
     "wrapper_failure",
     { kind: cause instanceof ApiLegError ? cause.kind : "unexpected", detail },

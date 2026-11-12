@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { BASE, bundleFetches, clickOrFail, ok, pollUntil, report, skip } from "../harness.mjs";
 
 /**
@@ -101,7 +102,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         };
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       // A real navigation destroys the context the read ran in; nothing else means that.
       if (!/Execution context was destroyed/i.test(message)) flipReadError = message;
       flipped = null;

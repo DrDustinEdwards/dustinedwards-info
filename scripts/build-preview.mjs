@@ -3,6 +3,7 @@
 // ONLY the preview resources: the ids are looked up by the preview names, and no production id is
 // ever needed, so a missing lookup refuses rather than falling back to anything.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -56,9 +57,7 @@ function previewKvId() {
   try {
     namespaces = JSON.parse(listed.stdout.slice(start));
   } catch (error) {
-    refuse(
-      `kv namespace list did not parse: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    refuse(`kv namespace list did not parse: ${errorMessage(error)}`);
   }
   const found = namespaces.find((n) => n.title === PREVIEW_KV);
   if (typeof found?.id !== "string" || found.id.length === 0) {

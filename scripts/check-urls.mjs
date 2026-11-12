@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,7 +63,7 @@ for (const probe of fixture.cases) {
     html = out.html;
     blocked = out.blockedUrls;
   } catch (error) {
-    assert(`render: ${probe.label}`, false, error instanceof Error ? error.message : String(error));
+    assert(`render: ${probe.label}`, false, errorMessage(error));
     continue;
   }
 

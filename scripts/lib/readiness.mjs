@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { healthChecks } from "@dustinedwards/site-runtime/health-read";
 
 /**
@@ -206,6 +207,6 @@ export async function fetchHealth(url) {
     });
     return { status: res.status, text: await res.text(), error: "" };
   } catch (error) {
-    return { status: 0, text: "", error: error instanceof Error ? error.message : String(error) };
+    return { status: 0, text: "", error: errorMessage(error) };
   }
 }

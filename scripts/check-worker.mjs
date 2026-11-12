@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -66,7 +67,7 @@ try {
     try {
       report = JSON.parse(readFileSync(reportPath, "utf8"));
     } catch (error) {
-      reportProblem = `the report did not parse: ${error instanceof Error ? error.message : String(error)}`;
+      reportProblem = `the report did not parse: ${errorMessage(error)}`;
     }
   }
 } finally {

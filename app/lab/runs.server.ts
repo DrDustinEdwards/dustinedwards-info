@@ -12,6 +12,7 @@
  * page, which audits that too.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { can, type Actor } from "@dustinedwards/site-runtime/members";
 
 import { getLot, listLots, lotChange, type LotRow } from "~/db/inventory";
@@ -240,7 +241,7 @@ export async function recordRun(
   try {
     await env.DB.batch(statements);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     if (/kb_lots_amount_check/.test(message))
       return refused(
         "A lot ran short or left stock while the run was saved; nothing was recorded. Check the lots and try again.",

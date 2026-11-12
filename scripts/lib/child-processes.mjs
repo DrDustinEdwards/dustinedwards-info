@@ -1,5 +1,6 @@
 // Windows reuses pids, so nothing here kills on a pid alone: the live command line must still match.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -210,7 +211,7 @@ export class ChildRegistry {
       // but it is said out loud: the next run's preflight will not know about this child.
       process.stderr.write(
         `  registry: could not record pid ${pid} (${kind}) in ${this.filePath}: ` +
-          `${error instanceof Error ? error.message : String(error)}\n`,
+          `${errorMessage(error)}\n`,
       );
     }
   }
@@ -259,8 +260,7 @@ export class ChildRegistry {
     } catch (error) {
       // Safe to carry on: the next preflight re-checks every entry's command line before a kill.
       process.stderr.write(
-        `  registry: could not clear ${this.filePath}: ` +
-          `${error instanceof Error ? error.message : String(error)}\n`,
+        `  registry: could not clear ${this.filePath}: ` + `${errorMessage(error)}\n`,
       );
     }
   }

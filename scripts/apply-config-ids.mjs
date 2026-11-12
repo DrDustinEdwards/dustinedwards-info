@@ -7,6 +7,7 @@
 // Patches placeholders by text and never parse-and-reserialises, which would strip the comments these configs depend
 // on. It never prints a value.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,11 +63,7 @@ for (const worker of new Set(FIELDS.flatMap((f) => (f.worker ? [f.worker] : []))
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(30_000),
     },
-  ).catch((error) =>
-    refuse(
-      `the Cloudflare API could not be reached: ${error instanceof Error ? error.message : String(error)}.`,
-    ),
-  );
+  ).catch((error) => refuse(`the Cloudflare API could not be reached: ${errorMessage(error)}.`));
   const body = await response.json().catch(() => ({}));
   if (!response.ok || !Array.isArray(body?.result?.bindings))
     refuse(`the settings of ${worker} could not be read (HTTP ${response.status}).`);

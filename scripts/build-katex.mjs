@@ -1,6 +1,7 @@
 // Importing the upstream sheet from a component would put it in a route stylesheet for every post,
 // most with no math, and ship three font formats where every supported browser reads one.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -140,7 +141,7 @@ if (isMain(import.meta.url)) {
   try {
     main();
   } catch (error) {
-    console.error(`build:katex failed. ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`build:katex failed. ${errorMessage(error)}`);
     process.exit(1);
   }
 }

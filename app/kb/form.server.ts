@@ -2,6 +2,7 @@
 // pickers choose from; the file a submitted form describes, which then goes through the same Check and Save as the raw
 // editor (editor.server.ts); and Duplicate, a new draft copied from an entry that records where it came from.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import matter from "gray-matter";
 
 import { listRegistry } from "~/db/registry";
@@ -146,7 +147,7 @@ export function rawFromForm(
   try {
     return { raw: formToFile(original, { ...model, data }) };
   } catch (error) {
-    return { errors: [error instanceof Error ? error.message : String(error)] };
+    return { errors: [errorMessage(error)] };
   }
 }
 

@@ -2,6 +2,7 @@
 // artifact references while the live site serves D1, so run outside a ship window it deletes live cards.
 // The target is never defaulted: `-- --remote` or `-- --local` on every run that touches R2.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { execSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -536,7 +537,7 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((error) => {
-    console.error(`build:og failed. ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`build:og failed. ${errorMessage(error)}`);
     process.exit(1);
   });
 }

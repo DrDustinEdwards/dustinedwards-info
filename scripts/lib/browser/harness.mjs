@@ -3,6 +3,7 @@
 // What every check:browser case shares: the origin under test, the counter, and the helpers that
 // drive a page. The cases share ONE page, so a case that navigates voids the ones after it.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,7 +93,7 @@ export async function clickOrFail(target, selector, label) {
     ok(
       label,
       false,
-      `${error instanceof Error ? error.message : String(error)} (clicking ${selector}). ` +
+      `${errorMessage(error)} (clicking ${selector}). ` +
         `Every later case still ran, which is the point of failing here rather than throwing.`,
     );
     return false;

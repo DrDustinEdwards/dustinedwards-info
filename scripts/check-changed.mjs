@@ -3,6 +3,7 @@
 // Tests: only those whose imports reach a changed file. Types, the full suites and the
 // browser test run in CI.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -337,7 +338,7 @@ function main() {
   } catch (error) {
     console.error(
       `check:changed could not list what changed, so it cannot say what to check: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
     );
     process.exit(2);
   }

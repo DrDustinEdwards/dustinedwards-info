@@ -26,17 +26,16 @@ import {
 } from "~/lib/publications/paths.mjs";
 import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
 import citedByArtifact from "../../data/publications.cited-by.json";
+import { SERP_DESCRIPTION, truncateForSerp } from "@drdustinedwards/site-helpers/head";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
   personId,
   personNode,
   publicHtmlHeaders,
-  SERP_DESCRIPTION,
   SITE,
   SITE_ORIGIN,
   siteHead,
-  truncateForSerp,
   type Trail,
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";

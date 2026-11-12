@@ -5,7 +5,7 @@ import { INDEXNOW_KEY } from "./lib/indexnow.mjs";
 import { BASES } from "./kb/bases.mjs";
 import { LIBRARY_BASES } from "./kb/libraries.mjs";
 import { LIBRARY_PATH } from "./kb/procedures/taxonomy.mjs";
-import { LAB_BENCH_PATH } from "./lab/path.mjs";
+import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
 
 export default [
   // TEMPORARY: everything a visitor can see sits under one layout, which owns the old public CSS. The public

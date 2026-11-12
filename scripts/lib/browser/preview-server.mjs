@@ -1,6 +1,7 @@
 // The preview server check:browser drives: the port preflight, the build, the spawn, the readiness
 // probe and its diagnosis, and the cleanup of every child the run started.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { spawn, spawnSync } from "node:child_process";
 import { join } from "node:path";
 
@@ -218,7 +219,7 @@ export async function waitForServer(timeoutMs = 180_000) {
         return true;
       }
     } catch (error) {
-      originError = error instanceof Error ? error.message : String(error);
+      originError = errorMessage(error);
     }
     return false;
   }

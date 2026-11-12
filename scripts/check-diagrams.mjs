@@ -1,3 +1,4 @@
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -80,7 +81,7 @@ function paletteFor(theme) {
     assert(`the ${theme} palette resolves`, true);
     return palette;
   } catch (error) {
-    assert(error instanceof Error ? error.message : String(error), false);
+    assert(errorMessage(error), false);
     return {};
   }
 }

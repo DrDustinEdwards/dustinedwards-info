@@ -31,8 +31,6 @@ import { readingTimeMinutes } from "./reading-time.mjs";
 import { withBacklinks, withRelated } from "./corpus.mjs";
 import { internalLinkSlug, isFurtherReadingUrl } from "./url-policy.mjs";
 
-export { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
-
 // Re-exported: build scripts, gates and tests import these from here, the renderer's one door.
 export { ContentError, internalLinkSlug, isAllowedUrl, withBacklinks, withRelated };
 

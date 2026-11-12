@@ -3,6 +3,7 @@
  * throwaway config, so it cannot leak into the real one and point local development at production R2.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -39,7 +40,7 @@ async function disposeProxy(proxy) {
     await proxy.dispose();
   } catch (error) {
     console.error(
-      `  r2: proxy teardown failed (${error instanceof Error ? error.message : String(error)}); ` +
+      `  r2: proxy teardown failed (${errorMessage(error)}); ` +
         `the listing or download itself is unaffected`,
     );
   }

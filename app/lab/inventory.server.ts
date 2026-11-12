@@ -6,6 +6,7 @@
  * or empty, `edit_inventory` to add and change lots and locations.
  */
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { can, type Actor } from "@dustinedwards/site-runtime/members";
 
 import {
@@ -98,7 +99,7 @@ function refused(text: string): InventoryResult {
 
 /** A D1 constraint error read as the words a person needs; anything else is thrown on. */
 function constraintText(error: unknown): string | null {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessage(error);
   if (/UNIQUE/.test(message)) return "That is already recorded.";
   if (/kb_lots_amount_check/.test(message)) return "A lot's amount cannot go below zero.";
   if (/CHECK|FOREIGN KEY/.test(message))

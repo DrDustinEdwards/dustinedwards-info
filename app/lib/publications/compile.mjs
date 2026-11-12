@@ -3,6 +3,7 @@
 // build and the Carrel adapter's save all call compilePublication, so a file CI passes is the file the
 // save accepts and the page draws, and the twin a machine reads is the one a person's page agrees with.
 
+import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { gitBlobSha } from "../content/hashes.mjs";
 import { keyForUrl, urlForKey } from "../search/ask-keys.mjs";
 import { buildCitationTags, REQUIRED_CITATION_TAGS } from "./citation-tags.mjs";
@@ -57,7 +58,7 @@ function derivedProblems(record, built) {
         errors.push(`citation tags: citation_pdf_url is not under ${paperPath(slug)}`);
       }
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : String(error));
+      errors.push(errorMessage(error));
     }
 
     const bib = paperBibtex(record);
