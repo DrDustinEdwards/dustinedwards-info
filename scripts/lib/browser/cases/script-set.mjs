@@ -56,8 +56,11 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       /* The IDL property, because a browser hides a nonce's value from getAttribute. */
       nonce: /** @type {HTMLElement | null} */ (document.querySelector("[nonce]"))?.nonce ?? "",
     }));
-    /* A second reader of the same (by now stored) page: site-runtime's renewNonce gives each its own. */
+    /* A second reader of the same (by now stored) page: site-runtime's renewNonce gives each its own.
+       Past this browser's own cache, whose 304 revalidation keeps the first reader's copy. */
+    await page.setCacheEnabled(false);
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    await page.setCacheEnabled(true);
     const again = await page.evaluate(
       () => /** @type {HTMLElement | null} */ (document.querySelector("[nonce]"))?.nonce ?? "",
     );
