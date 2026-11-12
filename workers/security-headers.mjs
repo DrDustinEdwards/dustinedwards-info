@@ -12,7 +12,7 @@ import { isUnpolicedType } from "./feed-types.mjs";
  *
  * @type {Readonly<Record<string, string>>}
  */
-export const SECURITY_HEADERS = Object.freeze({
+const SECURITY_HEADERS = Object.freeze({
   ...buildSecurityHeaders({ site: dustinedwardsInfo }),
   ...TDM_RESERVATION_HEADERS,
 });
@@ -22,7 +22,7 @@ export const SECURITY_HEADERS = Object.freeze({
  * Report-Only companion stages default-src 'none' until the reports are quiet; Trusted Types is enforced (csp.mjs). An image or a feed may be
  * embedded by another origin (`corp`).
  */
-export const { withSecurityHeaders, nonceFor } = pageSecurity({
+export const { withSecurityHeaders } = pageSecurity({
   set: SECURITY_HEADERS,
   policy: pagePolicy,
   staged: { denyUnlisted: true },

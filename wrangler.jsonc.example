@@ -164,6 +164,12 @@
 	// `SendEmail` type requires `to` anyway, so the secret is the one owner of the
 	// address. Carries no account-scoped id.
 	"send_email": [{ "name": "EMAIL" }],
+	// /csp-report, which site-runtime's gateway answers for every site: reports limited per client address, 60 a minute.
+	// An approximate count is fine here, unlike the guards ASK_BUDGET holds: an extra report costs a log line. No binding
+	// drops every report. Each Worker on the account has its own namespace id; no other one uses 7201 (checked 2026-11-12).
+	"ratelimits": [
+		{ "name": "CSP_REPORT_RATE_LIMIT", "namespace_id": "7201", "simple": { "limit": 60, "period": 60 } }
+	],
 	// Static assets, so the Worker can read them through a binding. The Vite
 	// plugin supplies `directory` from the client build output; setting it here
 	// would fight that.
@@ -317,9 +323,9 @@
 	// measured across four runs, the binding refused 1, 2, 9 and then 0 of
 	// twelve concurrent requests against a limit of five.
 	//
-	// EIGHT SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
+	// SEVEN SUBSYSTEMS NOW METER THROUGH IT, each with its own instance-name
 	// prefix: `auth:` (sign-in and /api/auth/*), `op:` (the operator API),
-	// `wm:` (webmention), `health:` (/health), `csp:` (/csp-report),
+	// `wm:` (webmention), `health:` (/health),
 	// plus the smoke actor, preview links and Ask itself. So deleting this
 	// block does not "disable Ask": it disables SIGN-IN, and it makes
 	// /health answer 503 by design, because a route that cannot reach its

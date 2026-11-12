@@ -1,4 +1,5 @@
 import { createExecutionContext } from "cloudflare:test";
+import { RouterContextProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
@@ -30,6 +31,13 @@ import { bytesFor, envWithImages } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
 import { seedPost } from "./seed";
 import { testEnv } from "./test-env";
+
+/** The title of the post a preview render was handed, through the context its `set` writes. */
+function previewTitle(set: (context: RouterContextProvider) => void): string | undefined {
+  const context = new RouterContextProvider();
+  set(context);
+  return context.get(postPreviewContext)?.title;
+}
 
 /* Through the real route module, so the package's guard, the site's limiter and the adapter are the
  * ones that run in production. Each refusal also checks that the repository did not change. */
@@ -384,8 +392,8 @@ describe("the preview", () => {
     const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
     args.context.set(
       documentHandlerContext,
-      async (_request, context) =>
-        new Response(`<title>${context.get(postPreviewContext)?.title}</title>`, {
+      async (_request, set) =>
+        new Response(`<title>${previewTitle(set)}</title>`, {
           headers: { "content-type": "text/html" },
         }),
     );
@@ -1375,8 +1383,8 @@ describe("the v0.17.0 contract on posts", () => {
       const context = routeContext();
       context.set(
         documentHandlerContext,
-        async (_request, ctx) =>
-          new Response(`<title>${ctx.get(postPreviewContext)?.title}</title>`, {
+        async (_request, set) =>
+          new Response(`<title>${previewTitle(set)}</title>`, {
             headers: { "content-type": "text/html" },
           }),
       );
@@ -1422,18 +1430,15 @@ describe("the site-api conformance suite", () => {
         });
         try {
           if (request.method === "GET") return await loader(argsFor(request));
-          // The Worker puts the app's document renderer on the context (workers/app.ts); a test has no app build, so
+          // The Worker puts site-runtime's in-process render on the context (workers/app.ts); a test has no app build, so
           // this stand-in renders the post the preview handed it, which is what the preview case reads.
           const args = argsFor(request) as unknown as { context: ReturnType<typeof routeContext> };
           args.context.set(
             documentHandlerContext,
-            async (_request, context) =>
-              new Response(
-                `<!doctype html><title>${context.get(postPreviewContext)?.title}</title>`,
-                {
-                  headers: { "content-type": "text/html; charset=utf-8" },
-                },
-              ),
+            async (_request, set) =>
+              new Response(`<!doctype html><title>${previewTitle(set)}</title>`, {
+                headers: { "content-type": "text/html; charset=utf-8" },
+              }),
           );
           return await action(args as never);
         } catch (thrown) {

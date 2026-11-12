@@ -155,7 +155,6 @@ export default [
     route("robots.txt", "routes/robots.ts"),
     route("site.webmanifest", "routes/site-webmanifest.ts"),
     route("ai.txt", "routes/ai-txt.ts"),
-    route(".well-known/security.txt", "routes/security-txt.ts"),
     route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),
     route("llms.txt", "routes/llms.ts"),
     route("llms-full.txt", "routes/llms-full[.txt].ts"),
@@ -207,8 +206,6 @@ export default [
   // The site's one health endpoint, in the network shape: the uptime monitor, Capsid's watcher and the colophon link
   // read it, and so do ship's readiness, the admin MCP and operator-sync.
   route("health", "routes/health.ts"),
-  // Unauthenticated because browsers send reports without credentials; capped and rate limited there.
-  route("csp-report", "routes/csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.
