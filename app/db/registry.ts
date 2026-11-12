@@ -2,6 +2,7 @@
 // app/kb/registry/save.server.ts and by sync:content, from a compile (app/kb/registry/compile.mjs).
 import { and, asc, eq } from "drizzle-orm";
 
+import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { itemFromRow, sortRegistry, type RegistryItem } from "~/kb/registry/compile.mjs";
 
 import { getDb } from "./client";
@@ -17,7 +18,7 @@ export async function listRegistry(
 ): Promise<RegistryItem[]> {
   const where = [
     ...(options.kind ? [eq(registry.kind, options.kind)] : []),
-    ...(options.published ? [eq(registry.status, "published")] : []),
+    ...(options.published ? [eq(registry.status, PUBLISHED_STATUS)] : []),
   ];
   const rows = await getDb(env)
     .select({
@@ -37,7 +38,7 @@ export async function listPublishedRegistrySources(env: Env) {
   const rows = await getDb(env)
     .select({ kind: registry.kind, id: registry.id, sourcePath: registry.sourcePath })
     .from(registry)
-    .where(eq(registry.status, "published"));
+    .where(eq(registry.status, PUBLISHED_STATUS));
   return new Map(rows.map((row) => [`${row.kind}/${row.id}`, row.sourcePath]));
 }
 

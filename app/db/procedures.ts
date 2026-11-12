@@ -101,16 +101,6 @@ export async function listPublishedRecordsOfProfile(
   return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
 }
 
-/** For the protocol library: every published protocol, with its full record. */
-export async function listPublishedLibraryRecords(env: Env): Promise<ProcedureRecord[]> {
-  const rows = await getDb(env)
-    .select({ record: procedures.record })
-    .from(procedures)
-    .where(and(eq(procedures.status, PUBLISHED_STATUS), eq(procedures.profile, "protocol")))
-    .orderBy(asc(procedures.path));
-  return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
-}
-
 /** For the admin's Knowledge Base page: every row, drafts included, with each recorded gap as the compile stated it. */
 export async function listProceduresForAdmin(env: Env) {
   const rows = await getDb(env)

@@ -2,13 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { UI_FILE, sha256 } from "../scripts/build-ui-advances.mjs";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
+
+import { UI_FILE } from "../scripts/build-ui-advances.mjs";
 import { UI_SHA256 } from "../app/lib/ui-advances.generated.ts";
 import { uiWidthEm } from "../app/lib/ui-width.ts";
 
-await test("the advance table was measured from the UI face the site serves", () => {
+await test("the advance table was measured from the UI face the site serves", async () => {
   assert.equal(
-    sha256(readFileSync(UI_FILE)),
+    await sha256Hex(readFileSync(UI_FILE)),
     UI_SHA256,
     "capsomer/fonts/schibsted-grotesk-latin-wght-normal.woff2 changed; run npm run build:ui-advances and commit the table",
   );

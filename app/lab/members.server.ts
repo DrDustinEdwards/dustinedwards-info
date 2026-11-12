@@ -41,7 +41,7 @@ import {
 
 import { SYNC_NOT_SET_UP, syncAccess } from "./access-sync.server";
 import { labRules } from "./actor.server";
-import { field, isDate } from "./forms.mjs";
+import { field, isDate, today } from "./forms.mjs";
 import { LAB_CATALOG, canEditTerms, titleLabel } from "./titles.mjs";
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -209,7 +209,7 @@ export async function membersPage(
 
   const lead = manageLead(
     [...titles].reverse().map((t) => t.label),
-    terms.some((d) => d >= new Date(nowMs).toISOString().slice(0, 10)) ? undefined : NO_TERMS,
+    terms.some((d) => d >= today(nowMs)) ? undefined : NO_TERMS,
   );
 
   return {

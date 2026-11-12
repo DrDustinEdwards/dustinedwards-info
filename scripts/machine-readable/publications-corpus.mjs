@@ -8,6 +8,7 @@ import {
   records,
   refusalsFor,
   refused,
+  shown,
 } from "./publications-context.mjs";
 
 /*
@@ -15,11 +16,6 @@ import {
  * from them, PMC links and abstracts. The rules are validate.mjs's; this part reports them by category.
  */
 const { tally, ok } = openPart("corpus");
-
-/** @param {string[]} messages */
-const shown = (messages) =>
-  messages.slice(0, 8).join("; ") +
-  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 ok(
   `every publication file passes the validation module the save uses (${files.length} files)`,
