@@ -8,17 +8,22 @@
       "8",
       "--min-tokens",
       "80",
+      "--max-lines",
+      "100000",
+      "--max-size",
+      "10mb",
       "--ignore",
-      "**/node_modules/**,**/build/**,**/*.d.ts,**/fixtures/**,**/*.md,**/*.json"
+      "**/node_modules/**,**/build/**,**/fixtures/**,**/*.md,**/*.json"
     ]
   },
   "baseline": {
-    "measured_at": "e3419b5",
+    "measured_at": "2e06e30",
     "knip": {},
     "jscpd": {
       "clones": 25,
       "lines": 391,
-      "percentage": 0.39
+      "percentage": 0.38,
+      "unread": 0
     },
     "shared copies": {
       "clones": 1,
