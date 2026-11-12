@@ -20,6 +20,10 @@
       "lines": 391,
       "percentage": 0.39
     },
+    "shared copies": {
+      "clones": 1,
+      "lines": 23
+    },
     "tests": {
       "files": 208,
       "cases": 1660
