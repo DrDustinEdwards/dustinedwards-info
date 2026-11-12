@@ -5,7 +5,6 @@ import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import Cv, { headers as cvHeaders, loader as cvLoader } from "~/routes/cv";
 import { loader as chartsLoader } from "~/routes/cv.charts[.json]";
 import { loader as twinLoader } from "~/routes/cv[.md]";
@@ -15,7 +14,7 @@ import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 import { versionCases } from "./carrel-version-cases";
 import { putSource, source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
 import { collectingContext, fakeAssets, workingBrowser } from "./cv-pdf-fixtures";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -68,9 +67,9 @@ const argsFor = (request: Request) =>
     params: {},
   }) as never;
 const get = (url: string) =>
-  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(
+  return carrelRequest(
     argsFor(
       new Request(url, {
         method,

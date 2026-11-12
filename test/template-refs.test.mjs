@@ -118,7 +118,7 @@ await test("css has block comments and no line comments", () => {
 });
 
 await test("the scan reads source, and refuses the artifact that lists every asset", () => {
-  assert.ok(isSourceFile("app/lib/media/tags.mjs"));
+  assert.ok(isSourceFile("app/lib/media/classify.mjs"));
   // Each cohort's file names its photograph by path, so these markdown files are sources too.
   assert.ok(isSourceFile("content/roster/2025.md"));
   assert.ok(isSourceFile("workers/app.ts"));

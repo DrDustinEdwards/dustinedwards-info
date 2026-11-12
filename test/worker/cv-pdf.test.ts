@@ -7,7 +7,6 @@ import { CV_PDF_KEY, FINGERPRINT_FIELD, ensureCvPdf } from "~/lib/cv/pdf.server"
 import { CV_FILES, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
-import { action } from "~/routes/api.carrel.v1.$";
 import { loader as pdfLoader } from "~/routes/cv-pdf";
 
 import {
@@ -18,7 +17,7 @@ import {
   workingBrowser,
 } from "./cv-pdf-fixtures";
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { routeContext } from "./route-helpers";
+import { routeContext, carrelRequest } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -64,7 +63,7 @@ function world(browser: Env["BROWSER"]) {
   const background = collectingContext();
   const withBindings = { ...env, BROWSER: browser, ASSETS: fakeAssets } as unknown as Env;
   const put = async (source: string, changeId: string) => {
-    const response = await action({
+    const response = await carrelRequest({
       request: new Request(`${PREFIX}/content/cv.grants/draft`, {
         method: "PUT",
         headers: headersFor(),

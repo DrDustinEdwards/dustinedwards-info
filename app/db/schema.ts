@@ -102,129 +102,33 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
 });
 
-/**
- * Derived: R2 and `public/` win any conflict. A row with no object is deleted, an object with no row
- * is backfilled, never the reverse. Citations live in `mediaRefs`, never here.
- */
-export const media = sqliteTable(
-  "media",
-  {
-    /** R2 object key, or the site-absolute public path when storage='static'. */
-    key: text("key").primaryKey(),
-    /** 'r2' | 'r2-derived' | 'static'. */
-    storage: text("storage").notNull().default("r2"),
-    /** 'image' | 'document' | 'other'. */
-    kind: text("kind").notNull().default("image"),
-    /**
-     * 'content' | 'brand' | 'generated' | 'icon'. The picker takes `content` only, because inserting
-     * one half of a generated diagram pair produces a broken post.
-     */
-    role: text("role").notNull().default("content"),
-    mime: text("mime"),
-    bytes: integer("bytes"),
-    /** NULL means "not measured", which an SVG and a PDF legitimately are. */
-    width: integer("width"),
-    height: integer("height"),
-    /** Keys are content-addressed, so the readable upload name survives only here. */
-    originalName: text("original_name"),
-
-    /* Authored, and recoverable from nothing: a rebuild merges these rather than truncating. */
-    alt: text("alt").notNull().default(""),
-    caption: text("caption").notNull().default(""),
-    focalX: real("focal_x"),
-    focalY: real("focal_y"),
-
-    /**
-     * Delimiter-wrapped, `,alpha,beta,` or "", so an exact LIKE match on `art` does not hit `chart`.
-     * Only `serializeTags()` writes it; it strips the delimiter and both LIKE wildcards.
-     */
-    tags: text("tags").notNull().default(""),
-
-    /**
-     * NULL means not trashed. Library state only: R2 and the public URL are untouched, so a trashed
-     * asset a post cites keeps rendering. Reconciliation ignores it on purpose.
-     */
-    trashedAt: text("trashed_at"),
-
-    /** LQIP as a base64 data URI, so it renders with no script. */
-    placeholder: text("placeholder"),
-    uploadedAt: text("uploaded_at"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-    /**
-     * Bumped by every write to alt, caption, tags, focal point, trash state or bytes, and checked in the
-     * same UPDATE's WHERE, so a stale write is refused rather than lost. Carrel's media version is "r<rev>".
-     */
-    rev: integer("rev").notNull().default(0),
-
-    /* site-api v0.13.0 (drizzle/0035_media_library.sql). */
-    /** SHA-256 of the current bytes, lower case hex; NULL for a row written before it, whose key's digest stands in. */
-    sha256: text("sha256"),
-    /** Authored, like alt: who made it and the terms it is used under, "" for none. */
-    credit: text("credit").notNull().default(""),
-    license: text("license").notNull().default(""),
-    sourceUrl: text("source_url"),
-    /** YYYY-MM-DD, or NULL for a license with no end. */
-    licenseExpires: text("license_expires"),
-    /** From the file's embedded metadata at upload. */
-    takenAt: text("taken_at"),
-  },
-  (t) => [
-    index("media_uploaded_idx").on(t.uploadedAt),
-    index("media_sha256_idx").on(t.sha256),
-    index("media_storage_idx").on(t.storage),
-    index("media_kind_idx").on(t.kind),
-    index("media_role_idx").on(t.role),
-    /*
-     * Partial in the migration (`WHERE trashed_at IS NOT NULL`). Drizzle cannot model the predicate
-     * and the schema test does not compare predicates, so it lives only in the SQL.
-     */
-    index("media_trashed_idx").on(t.trashedAt),
-  ],
-);
+// The media library (drizzle/0044_shared_media_store.sql, site-api's MEDIA_LIBRARY_SQL): the uploads in MEDIA, written
+// only by d1MediaStore (app/db/media.ts). Citations live in `mediaRefs`, never here. site-api's own mirrors.
+export { media, mediaRevisions, mediaChanges } from "@dustinedwards/site-api/drizzle";
 
 /**
- * A file's byte history (site-api v0.13.0): one row per set of bytes. The newest row for a key is the bytes in
- * MEDIA; each earlier one names its copy in MEDIA_REVISIONS, which nothing deletes. A file with no row has had only
- * the bytes it was uploaded with.
+ * The site's own files, derived: the paths in public/ (storage 'static', from the committed asset manifest) and the
+ * Worker's generated objects in OG (storage 'r2-derived': og/ cards, derived/ documents). Written only by the rebuild
+ * and the R2 events (app/lib/media/rebuild.server.ts, workers/media-events.ts); OG and public/ win any conflict, so a
+ * row with no file is deleted and a file with no row is indexed, never the reverse. Never the library's.
  */
-export const mediaRevisions = sqliteTable(
-  "media_revisions",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    mediaKey: text("media_key").notNull(),
-    at: text("at").notNull(),
-    bytes: integer("bytes").notNull(),
-    width: integer("width"),
-    height: integer("height"),
-    /** upload | import | replace | transform | resize | revert */
-    reason: text("reason").notNull(),
-    sha256: text("sha256"),
-    /** Where MEDIA_REVISIONS keeps these bytes; NULL while they are the current ones. */
-    backupKey: text("backup_key"),
-  },
-  (t) => [index("media_revisions_key_idx").on(t.mediaKey, t.id)],
-);
-
-/**
- * Every change to an uploaded file's row, written by triggers on `media` (drizzle/0035_media_library.sql), so a
- * library screen can ask what changed since a point (site-api's `changedSince`). Derived; never written here.
- */
-export const mediaChanges = sqliteTable(
-  "media_changes",
-  {
-    seq: integer("seq").primaryKey({ autoIncrement: true }),
-    mediaKey: text("media_key").notNull(),
-    at: text("at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-  },
-  (t) => [index("media_changes_key_idx").on(t.mediaKey, t.seq)],
-);
+export const siteAssets = sqliteTable("site_assets", {
+  /** The site-absolute path when storage is 'static', else the OG object key. */
+  key: text("key").primaryKey(),
+  /** 'static' | 'r2-derived' (classify.mjs storageOf). */
+  storage: text("storage").notNull(),
+  /** 'image' | 'document' | 'other'. */
+  kind: text("kind").notNull(),
+  /** 'content' | 'brand' | 'generated' | 'icon' (classify.mjs roleOf). */
+  role: text("role").notNull(),
+  mime: text("mime"),
+  bytes: integer("bytes"),
+  /** NULL means "not measured", which an SVG and a PDF legitimately are. */
+  width: integer("width"),
+  height: integer("height"),
+  /** When OG stored the object; NULL for a file in public/, which has no upload event. */
+  uploadedAt: text("uploaded_at"),
+});
 
 /**
  * Who cites what, written by the pipeline at render time. A record of what the renderer emitted,
@@ -842,94 +746,19 @@ export const sourceGuard = sqliteTable("source_guard", { ok: integer("ok").notNu
   check("source_guard_ok", sql`${t.ok} = 1`),
 ]);
 
-// Scheduled updates to live posts (drizzle/0033_scheduled_updates.sql, the site-api package's SCHEDULED_UPDATES_SQL):
-// one waiting update per post, read and written only through the package's d1ScheduledUpdates helper
-// (app/lib/carrel/schedules-adapter.server.ts). Times are UTC ISO text, so the due scan is a text comparison.
-export const scheduledUpdates = sqliteTable(
-  "scheduled_updates",
-  {
-    contentId: text("content_id").primaryKey(),
-    source: text("source").notNull(),
-    publishAt: text("publish_at").notNull(),
-    changeId: text("change_id").notNull(),
-    scheduledAt: text("scheduled_at").notNull(),
-  },
-  (t) => [index("scheduled_updates_due").on(t.publishAt)],
-);
-
-// site-api's store (drizzle/0037_site_api_store.sql, the package's SITE_API_STORE_SQL): safe retries by change id, failed
-// publish hooks waiting to run again, preview links (only each token's SHA-256) and the webmentions each page last sent.
-// Read and written only through d1SiteApiStore (app/lib/carrel/site-api.server.ts).
-export const siteApiWrites = sqliteTable(
-  "site_api_writes",
-  {
-    changeId: text("change_id").primaryKey(),
-    route: text("route").notNull(),
-    requestHash: text("request_hash").notNull(),
-    status: integer("status"),
-    response: text("response"),
-    state: text("state").notNull(),
-    at: text("at").notNull(),
-  },
-  (t) => [index("site_api_writes_at").on(t.at)],
-);
-
-export const hookRetries = sqliteTable(
-  "hook_retries",
-  {
-    id: text("id").primaryKey(),
-    hook: text("hook").notNull(),
-    event: text("event").notNull(),
-    attempts: integer("attempts").notNull(),
-    nextAt: text("next_at").notNull(),
-    lastError: text("last_error").notNull(),
-  },
-  (t) => [index("hook_retries_due").on(t.nextAt)],
-);
-
-export const previewLinks = sqliteTable(
-  "preview_links",
-  {
-    tokenHash: text("token_hash").primaryKey(),
-    contentId: text("content_id").notNull(),
-    createdAt: text("created_at").notNull(),
-    expiresAt: text("expires_at").notNull(),
-    revokedAt: text("revoked_at"),
-    changeId: text("change_id").notNull(),
-  },
-  (t) => [index("preview_links_content").on(t.contentId, t.expiresAt)],
-);
-
-export const webmentionTargets = sqliteTable("webmention_targets", {
-  source: text("source").primaryKey(),
-  targets: text("targets").notNull(),
-  sentAt: text("sent_at").notNull(),
-});
-
-// site-api 0.21.0 (migration 0040): the media file each upload's duplicates key became. Only d1SiteApiStore reads it.
-export const mediaUploads = sqliteTable("media_uploads", {
-  sha256: text("sha256").primaryKey(),
-  mediaId: text("media_id").notNull(),
-  at: text("at").notNull(),
-});
-
-// site-api 0.22.0 (migration 0042): the public path of each live post deleted or trashed, answered 410, and each
-// publish hook's run. Only d1SiteApiStore reads and writes them.
-export const gonePaths = sqliteTable("gone_paths", {
-  path: text("path").primaryKey(),
-  goneAt: text("gone_at").notNull(),
-});
-
-export const hookRuns = sqliteTable(
-  "hook_runs",
-  {
-    changeId: text("change_id").notNull(),
-    hook: text("hook").notNull(),
-    ok: integer("ok").notNull(),
-    at: text("at").notNull(),
-  },
-  (t) => [index("hook_runs_change").on(t.changeId), index("hook_runs_at").on(t.at)],
-);
+// Scheduled updates to live posts (drizzle/0033_scheduled_updates.sql, SCHEDULED_UPDATES_SQL) and site-api's store
+// (drizzle/0037, 0040, 0042, SITE_API_STORE_SQL): read and written only through the package's d1ScheduledUpdates and
+// d1SiteApiStore (app/lib/carrel/). site-api's own mirrors, re-exported so drizzle-kit and the schema test see them.
+export {
+  scheduledUpdates,
+  siteApiWrites,
+  hookRetries,
+  previewLinks,
+  webmentionTargets,
+  mediaUploads,
+  gonePaths,
+  hookRuns,
+} from "@dustinedwards/site-api/drizzle";
 
 // What Carrel's contract needs about posts that a post's file does not hold (drizzle/0038_carrel_posts.sql,
 // app/lib/carrel/post-state.server.ts): the trash, the redirects a rename leaves, and the first publishes that go live

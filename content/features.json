@@ -52,9 +52,10 @@
       "what": "The admin has no post editor. Carrel writes posts through /api/carrel/v1, and the operator API calls the same save. A save validates the frontmatter, writes the file and its revision in one D1 batch, renders the rows and purges the cache by tag. Ask is updated last and cannot fail the save. The save names the blob sha it loaded, and a file changed since is refused, with the same check inside the batch.",
       "anchors": [
         {
-          "kind": "route",
-          "path": "/api/carrel/v1/*",
-          "anonymousGet": false
+          "kind": "assertion",
+          "gate": "check:worker",
+          "file": "test/worker/carrel-site-api.test.ts",
+          "text": "answers the key on its prefix"
         },
         {
           "kind": "gate",

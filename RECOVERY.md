@@ -227,9 +227,10 @@ In the order it would be done, and none of it is a restore from a backup:
 1. **Static assets** (`public/`): `git clone`.
 2. **OG cards**: `npm run build:og -- --remote`, after step 9's
    content sync, because it renders from the artifact.
-3. **The `media` index rows**: rebuilt from R2 and `public/`, then compared by
+3. **The `site_assets` index rows**: rebuilt from OG and `public/` (`sync_media`), then compared by
    the health endpoint's `media-index-drift` check, which would report any of the
-   above being incomplete.
+   above being incomplete. The library's `media` and `media_revisions` rows (alt text, captions,
+   tags) are authored, so they come back with the D1 dump, which requires them.
 4. **Uploaded originals and earlier versions**: `restoreFiles` from `files/media/` into `MEDIA` and
    from `files/revisions/` into `MEDIA_REVISIONS` (d1-dump README, Restore files), or, with the
    account gone, from the Amazon copy's `files/dustinedwards/`; then let `media-index-drift` confirm.
@@ -238,25 +239,21 @@ In the order it would be done, and none of it is a restore from a backup:
 
 ## 3a. Media events queue, and the notifications that feed it
 
-**Without this the media index is never written.** The module's write path is an
+**Without this the site file index is never written.** Its write path is an
 R2 event notification into a Queue, never a dual write: the Worker writes only to
-R2, the bucket emits, and the consumer derives the D1 row. A rebuild with no
-queue leaves every upload invisible to the library until someone runs the
-backfill by hand, and nothing announces that. It was missing from this runbook
-entirely. Finding B005.
+OG, the bucket emits, and the consumer derives the `site_assets` row. A rebuild with no
+queue leaves every new card out of the index until someone runs `sync_media`
+by hand. It was missing from this runbook entirely. Finding B005. The library's
+uploads in MEDIA need no notification: site-api's media library writes their rows.
 
 ```sh
 npx wrangler queues create dustinedwards-media-events
 npx wrangler queues create dustinedwards-media-events-dlq
 ```
 
-Then point BOTH buckets at the first queue. Verified live 2026-08-04: each
-bucket carries one rule, all prefixes, all suffixes, and they share one queue.
+Then point OG at the first queue, one rule, all prefixes, all suffixes.
 
 ```sh
-npx wrangler r2 bucket notification create dustinedwards-media \
-  --queue dustinedwards-media-events \
-  --event-type object-create --event-type object-delete
 npx wrangler r2 bucket notification create dustinedwards-og \
   --queue dustinedwards-media-events \
   --event-type object-create --event-type object-delete

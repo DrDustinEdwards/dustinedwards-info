@@ -8,7 +8,7 @@ import { action as previewAction } from "~/routes/admin.kb.preview";
 import protocol from "../../content/procedures/phage-dna-extraction.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, recordPurges } from "./route-helpers";
 import {
   equipmentRepoFiles,
   reagentRepoFiles,
@@ -22,12 +22,9 @@ import { testEnv } from "./test-env";
  * the save's checks and commits nothing, Save commits through the save the operator API uses, and a file that moved since
  * it was opened is refused. */
 
-// The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one.
+// The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one.
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const SLUG = "phage-dna-extraction";
 const FILE = `content/procedures/${SLUG}.md`;
