@@ -9,6 +9,7 @@
  * one Access sync through Capsid (app/lab/access-sync.server.ts), whose answer lands on the audit row.
  */
 
+import { isEmail } from "@dustinedwards/site-runtime/email";
 import {
   MANAGE_MEMBERS,
   auditRow,
@@ -61,8 +62,6 @@ export type MembersPageData = {
   syncNotice: string | null;
   primaryOwner: boolean;
 };
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function titleOf(id: string): Title | undefined {
   return LAB_CATALOG.titles.get(id);
@@ -277,7 +276,7 @@ export async function membersAction(
 
   if (intent === "add") {
     const typed = field(form, "email");
-    if (!EMAIL.test(typed)) return refused("Type the email address they sign in with.");
+    if (!isEmail(typed)) return refused("Type the email address they sign in with.");
     const email = normalizeEmail(typed);
     const titleId = field(form, "title");
     const title = titleOf(titleId);

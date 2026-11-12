@@ -4,6 +4,8 @@
 // compiled, so the table, the page's own tables and the twin print the same facts. A fact the registry records as a gap
 // reads "Not recorded", and an identifier a resource does not have reads "N/A", as STAR tables write it.
 
+import { mdCell } from "@drdustinedwards/site-helpers/text";
+
 const NOT_RECORDED = "Not recorded";
 const NONE = "N/A";
 
@@ -82,9 +84,6 @@ export function keyResources(record) {
   ].filter((group) => group.rows.length > 0);
 }
 
-/** A cell's text for a markdown table: pipes escaped, so a citation with one cannot split the row. @param {string} text */
-const cell = (text) => text.replace(/\|/g, "\\|");
-
 /**
  * The table as the twin prints it: one markdown table, each group a bold row above its resources.
  *
@@ -100,11 +99,11 @@ export function keyResourcesMarkdown(groups) {
     "| --- | --- | --- |",
   ];
   for (const group of groups) {
-    out.push(`| **${cell(group.heading)}** | | |`);
+    out.push(`| **${mdCell(group.heading)}** | | |`);
     for (const row of group.rows) {
-      const name = row.href ? `[${cell(row.resource)}](${row.href})` : cell(row.resource);
+      const name = row.href ? `[${mdCell(row.resource)}](${row.href})` : mdCell(row.resource);
       const sequence = row.sequence ? `: \`${row.sequence}\`` : "";
-      out.push(`| ${name}${sequence} | ${cell(row.source)} | ${cell(row.identifier)} |`);
+      out.push(`| ${name}${sequence} | ${mdCell(row.source)} | ${mdCell(row.identifier)} |`);
     }
   }
   out.push("");

@@ -3,6 +3,7 @@
 // protocol library is in procedures/library.mjs. The page, its facets, its downloads and its markdown twin all read the
 // declaration, and every fact is drawn from the records, never typed. Pure: the routes pass in the records from D1.
 
+import { mdCell } from "@drdustinedwards/site-helpers/text";
 import {
   catalogRedirect,
   defineCatalog,
@@ -271,9 +272,6 @@ export function baseRecords(base, items, params, origin) {
   );
 }
 
-/** One cell of a markdown table. @param {string} text */
-const cell = (text) => text.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
-
 /**
  * The twin's table: every entry with the facts the page shows, linked to its own page. An empty library says so.
  *
@@ -290,7 +288,7 @@ export function baseMarkdown(base, items, origin) {
   const rows = items.map((p) =>
     (recipe
       ? [
-          `[${cell(p.title)}](${origin}${p.path})`,
+          `[${mdCell(p.title)}](${origin}${p.path})`,
           p.category,
           p.cuisine,
           p.diet.join(", "),
@@ -299,14 +297,14 @@ export function baseMarkdown(base, items, origin) {
           p.updated,
         ]
       : [
-          `[${cell(p.title)}](${origin}${p.path})`,
+          `[${mdCell(p.title)}](${origin}${p.path})`,
           p.type ? howtoTypeLabel(p.type) : "",
           p.methods.map(methodLabel).join(", "),
           p.courses.map(courseLabel).join(", "),
           String(p.steps),
           p.updated,
         ]
-    ).map((c, i) => (i === 0 ? c : cell(c))),
+    ).map((c, i) => (i === 0 ? c : mdCell(c))),
   );
   return [
     `| ${head.join(" | ")} |`,

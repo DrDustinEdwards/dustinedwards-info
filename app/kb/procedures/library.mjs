@@ -3,6 +3,7 @@
 // JSON downloads and the markdown twin all read this, so a field is described in exactly one place and a protocol's
 // facts are drawn from its record, never typed again. Pure: the route passes in the records it read from D1.
 
+import { mdCell } from "@drdustinedwards/site-helpers/text";
 import { recordsCsv } from "@dustinedwards/site-runtime/csv";
 import {
   catalogRedirect,
@@ -208,9 +209,6 @@ export function libraryCsv(rows) {
   );
 }
 
-/** One cell of a markdown table. @param {string} text */
-const cell = (text) => text.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
-
 /**
  * The twin's table: every protocol with the facts the page shows, drawn from the same items. Links are to the
  * protocols' own pages, so an agent can follow them.
@@ -222,14 +220,14 @@ export function libraryMarkdown(items, origin) {
   const head = ["Protocol", "Method", "Organism", "Target", "Course", "Steps", "Updated"];
   const rows = items.map((p) =>
     [
-      `[${cell(p.title)}](${origin}${p.path})`,
+      `[${mdCell(p.title)}](${origin}${p.path})`,
       p.methods.map(methodLabel).join(", "),
       p.organisms.map(organismLabel).join(", "),
       p.targets.join(", "),
       p.courses.map(courseLabel).join(", "),
       String(p.steps),
       p.updated,
-    ].map((c, i) => (i === 0 ? c : cell(c))),
+    ].map((c, i) => (i === 0 ? c : mdCell(c))),
   );
   return [
     `| ${head.join(" | ")} |`,
