@@ -25,6 +25,7 @@ import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";
 import { topZeroResults } from "~/lib/search/zero-result.server";
 import type { Route } from "./+types/admin.tools";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 export function meta() {
   return [{ title: "Tools · Admin" }, { name: "robots", content: "noindex" }];
@@ -289,9 +290,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
               <Row
                 key={miss.query}
                 title={miss.query}
-                status={
-                  <Pill variant="outline">{`${miss.count} time${miss.count === 1 ? "" : "s"}`}</Pill>
-                }
+                status={<Pill variant="outline">{plural(miss.count, "time")}</Pill>}
               />
             ))}
           </RowList>
