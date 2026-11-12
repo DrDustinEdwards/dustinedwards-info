@@ -9,7 +9,8 @@ import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
 import { HOME_PRELOADS } from "~/lib/preloads";
 import { formatDate } from "capsomer/behavior/time";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timingsContext } from "~/lib/timing";
 import {
   cacheTags,
   EDGE_CACHE_HEADER,

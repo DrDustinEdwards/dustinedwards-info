@@ -19,7 +19,8 @@ import { statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { listPublishedPublicationTwins } from "~/db/publications";
 import { paperPath } from "~/lib/publications/paths.mjs";
-import { timed, type Timings } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {

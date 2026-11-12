@@ -2,7 +2,8 @@ import { ADMIN_FORM_BYTES } from "~/lib/body.server";
 import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, data } from "react-router";
 
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 import { Alert, Banner } from "capsomer/react/banner";
 import { Button } from "capsomer/react/button";
 import { Panel } from "capsomer/react/panel";

@@ -23,7 +23,8 @@ import {
   originRefusal,
   refuseCrossSite,
 } from "@dustinedwards/site-runtime/origin";
-import { timed, timedLoader, timingsContext } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
   askDriftCount,
