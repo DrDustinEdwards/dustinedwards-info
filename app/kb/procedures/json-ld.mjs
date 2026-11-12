@@ -140,7 +140,9 @@ export function procedureJsonLd(record, origin, person, lineage = null) {
     ...(record.version ? { version: record.version } : {}),
     ...(cite?.doi ? { identifier: `https://doi.org/${cite.doi}` } : {}),
     ...(basedOn.length ? { isBasedOn: basedOn } : {}),
-    ...(record.references.length ? { citation: record.references.map((html) => htmlToText(html)) } : {}),
+    ...(record.references.length
+      ? { citation: record.references.map((html) => htmlToText(html)) }
+      : {}),
   };
 
   if (record.profile === "protocol") {
