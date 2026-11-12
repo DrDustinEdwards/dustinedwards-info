@@ -791,7 +791,7 @@ describe("media: the v0.13.0 library", () => {
     await testEnv.MEDIA_REVISIONS.put(copyKey, bytesFor("legacy-copy-case-before"));
     await testEnv.DB.prepare("DELETE FROM media_revisions WHERE media_key = ?1").bind(id).run();
     await testEnv.DB.prepare(
-      "INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, backup_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', NULL)",
+      "INSERT INTO media_revisions (media_key, at, bytes, width, height, reason, sha256, copy_key) VALUES (?1, '2026-01-01T00:00:00.000Z', 1, 10, 10, 'upload', '', ?2), (?1, '2026-01-02T03:04:05.000Z', 1, 10, 10, 'replace', '', NULL)",
     )
       .bind(id, copyKey)
       .run();

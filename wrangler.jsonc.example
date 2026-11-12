@@ -264,7 +264,7 @@
 		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25",
 		"ACCESS_LAB_AUD": "8ec1420e613392850264f5ea03c02479d1fa21c12936625b2c87e62e195d4b80"
 	},
-	// The media index write path. R2 emits a notification, this Worker's queue()
+	// The site file index write path (site_assets). OG emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
 	// the Worker writes ONLY to R2, so the two systems cannot diverge silently.
 	//

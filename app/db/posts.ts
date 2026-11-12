@@ -8,6 +8,7 @@ import {
   gt,
   inArray,
   isNotNull,
+  isNull,
   lt,
   max,
   ne,
@@ -29,7 +30,7 @@ import { seriesSlug } from "../lib/series-path.mjs";
 import { timed } from "@dustinedwards/site-runtime/server-timing";
 import { type Timings } from "../lib/timing";
 import { media, postTags, posts, tags } from "./schema";
-import { getDb, type DB, publiclyVisible, isBlogPost, notTrashed } from "./client";
+import { getDb, type DB, publiclyVisible, isBlogPost } from "./client";
 
 /** Ask's cache replay re-checks visibility here because KV invalidation lags. */
 export async function publiclyVisibleSlugs(env: Env, slugs: string[]): Promise<Set<string>> {
@@ -510,15 +511,12 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
   };
 }
 
-/**
- * Admin only, so exempt from visibility. The rows the media page lists: not trashed, and stored
- * files only, since the site's static assets (fonts, favicons, diagrams) are not in the library.
- */
+/** Admin only, so exempt from visibility. The files the media page lists: the library's, not trashed. */
 export async function adminNavCounts(env: Env) {
   const mediaRow = await getDb(env)
     .select({ n: count() })
     .from(media)
-    .where(and(notTrashed(), ne(media.storage, "static")));
+    .where(isNull(media.trashedAt));
   return { media: Number(mediaRow[0]?.n ?? 0) };
 }
 
