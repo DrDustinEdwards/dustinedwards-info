@@ -1,5 +1,5 @@
 import { Pagination } from "capsomer/react/pagination";
-import { Link, data } from "react-router";
+import { Link, data, redirect } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
 import { SearchForm } from "~/components/search-form";
@@ -112,6 +112,10 @@ export const middleware: Route.MiddlewareFunction[] = [
   },
 ];
 
+function pageCountOf(result: { total: number; pageSize: number }) {
+  return Math.max(1, Math.ceil(result.total / result.pageSize));
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = readParams(url);
@@ -121,6 +125,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     search(env, { ...params, pageSize: PAGE_SIZE }),
     nextScheduledPublishAt(env),
   ]);
+
+  // Out of range goes to the last real page, as the blog's listings do.
+  const pageCount = pageCountOf(result);
+  if (params.page > pageCount) throw redirect(searchHref(params, { page: pageCount }));
 
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
@@ -369,7 +377,7 @@ function ResultsPagination({
 export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
-  const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
+  const pageCount = pageCountOf(result);
   /* A truncated match set makes every count a floor, so it says so rather than reading as exact. */
   const floor = result.truncated ? "+" : "";
   // `isEmpty` means no matchable text, not no request: a bare year or tag is answered by the browse path.
