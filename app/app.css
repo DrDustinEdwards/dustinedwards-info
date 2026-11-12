@@ -604,10 +604,8 @@
 /* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
   .btn-danger,
-  .search-submit,
   .cap-skip,
-  .ask-badge,
-  .search-chip.is-active {
+  .ask-badge {
     outline: 1px solid transparent;
   }
 }
@@ -710,13 +708,6 @@ a:active:not(:where(.cap-site-header a, .cap-family-footer a, .cap-direction a))
     outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
-}
-
-/* Focus is an outline, never a box-shadow: forced-colors strips shadows. Never the inner ring on the
-   danger fill, where it is invisible. */
-.search-submit:focus-visible {
-  outline: 2px solid var(--focus-ring-on-brand);
-  outline-offset: -4px;
 }
 
 .site-logo-brand {

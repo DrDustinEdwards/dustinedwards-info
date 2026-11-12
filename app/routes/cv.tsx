@@ -49,6 +49,7 @@ import type { Route } from "./+types/cv";
 import "capsomer/tokens.css";
 import "capsomer/status.css";
 import "capsomer/copy.css";
+import "capsomer/button.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -200,7 +201,9 @@ function CopyButton({
     <span className="cap-copy" data-cv-copy-wrap="" hidden>
       <button
         type="button"
-        className="cv-copy"
+        className="cap-btn"
+        data-variant="quiet"
+        data-size="sm"
         data-cv-copy={kind}
         data-cv-src={src ?? undefined}
         data-cv-for={entry.id}
@@ -405,16 +408,16 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             {CV.person.title}, {CV.person.department}, {CV.person.org}.
           </p>
           <p className="cv-actions">
-            <a href={CV_PDF_PATH} className="cv-action">
+            <a href={CV_PDF_PATH} className="cap-btn" data-variant="link">
               Download PDF
             </a>
-            <button type="button" className="cv-action" data-cv-print="">
+            <button type="button" className="cap-btn" data-variant="link" data-cv-print="">
               Print
             </button>
-            <a href={contentPageMarkdownPath(PATH)} className="cv-action">
+            <a href={contentPageMarkdownPath(PATH)} className="cap-btn" data-variant="link">
               Markdown
             </a>
-            <a href="/research/publications" className="cv-action">
+            <a href="/research/publications" className="cap-btn" data-variant="link">
               All publications
             </a>
           </p>
