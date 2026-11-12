@@ -1,7 +1,7 @@
 // Every registry file compiled the one way the Carrel adapter's registry save compiles it
 // (app/kb/registry/compile.mjs), for build:content, sync:content, the gates and the tests.
 
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +18,7 @@ import { storedPrimer } from "../../app/kb/registry/primer.mjs";
 import { storedEquipment } from "../../app/kb/registry/equipment.mjs";
 import { storedReagent } from "../../app/kb/registry/reagent.mjs";
 import { storedStrain } from "../../app/kb/registry/strain.mjs";
+import { paperExists } from "./content-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 /** The D1 rows sync:content writes. */
@@ -36,16 +37,7 @@ export const repoHost = {
     });
     return raw !== null && /^profile:\s*recipe\s*$/m.test(raw.split(/^---\s*$/m)[1] ?? "");
   },
-  /** @param {string} slug a publication's file key */
-  async paper(slug) {
-    const info = await stat(path.join(ROOT, "content", "publications", `${slug}.md`)).catch(
-      (error) => {
-        if (error?.code === "ENOENT") return null;
-        throw error;
-      },
-    );
-    return info !== null && info.isFile();
-  },
+  paper: paperExists,
 };
 
 /**

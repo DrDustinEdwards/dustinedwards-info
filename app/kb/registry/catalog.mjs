@@ -64,6 +64,14 @@ export function registryTabs(items, kinds = KINDS) {
   });
 }
 
+/** An item's markdown twin: its name as the title over the lines, with runs of blank lines collapsed. @param {string} name @param {string[]} lines */
+function itemTwin(name, lines) {
+  return `# ${name}\n\n${lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()}\n`;
+}
+
 /* ------------------------------------------------------------------------------------------------ primers */
 
 /**
@@ -434,10 +442,7 @@ export function strainMarkdown(strain, usedBy, origin) {
     "",
     ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
   ];
-  return `# ${strain.name}\n\n${lines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()}\n`;
+  return itemTwin(strain.name, lines);
 }
 
 /* ------------------------------------------------------------------------------------------------ reagents */
@@ -636,10 +641,7 @@ export function reagentItemMarkdown(r, origin) {
     "",
     ...r.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
   ];
-  return `# ${r.name}\n\n${lines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()}\n`;
+  return itemTwin(r.name, lines);
 }
 
 /* ------------------------------------------------------------------------------------------------ equipment */
@@ -780,10 +782,7 @@ export function equipmentItemMarkdown(e, origin) {
     "",
     ...e.uses.map((u) => `- Used in: [${u.title}](${origin}${u.path})`),
   ];
-  return `# ${e.name}\n\n${lines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()}\n`;
+  return itemTwin(e.name, lines);
 }
 
 /* ------------------------------------------------------------------------------------------------ inventory */
@@ -1063,8 +1062,5 @@ export function primerMarkdown(primer, primers, usedBy, origin) {
     "",
     ...usedBy.map((protocol) => `- Used in: [${protocol.title}](${origin}${protocol.path})`),
   ];
-  return `# ${primer.name}\n\n${lines
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim()}\n${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
+  return `${itemTwin(primer.name, lines)}${primer.tm !== null ? `\n${tmNote().statement} ${tmNote().annealing}\n` : ""}`;
 }

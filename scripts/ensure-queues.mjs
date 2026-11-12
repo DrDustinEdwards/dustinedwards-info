@@ -14,6 +14,7 @@
  * Env: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID. Argument: the config path (default
  * wrangler.jsonc).
  */
+import { isMain } from "./lib/is-main.mjs";
 import { parseJsonc } from "./lib/wrangler-surface.mjs";
 
 const API = "https://api.cloudflare.com/client/v4";
@@ -87,7 +88,7 @@ async function main() {
   console.log(`All ${wanted.length} queues the config names exist.`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(`::error::${error.message} Nothing was deployed.`);
     process.exit(1);

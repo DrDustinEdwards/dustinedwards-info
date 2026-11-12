@@ -21,15 +21,11 @@ import {
   records,
   refusalsFor,
   SLUG_ROUTE,
+  shown,
 } from "./publications-context.mjs";
 
 /* Citation tags, plain-language lines, the cited-by artifact, the showcase set, the exports and preprints. */
 const { tally, ok } = openPart("meta");
-
-/** @param {string[]} messages */
-const shown = (messages) =>
-  messages.slice(0, 8).join("; ") +
-  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 /** The papers every public surface lists: a draft is a file, not yet a paper. */
 const published = compiled.filter((c) => !c.draft).map((c) => c.record);

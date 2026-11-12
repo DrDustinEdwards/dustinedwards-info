@@ -15,15 +15,11 @@ import {
   refusalsFor,
   root,
   SLUG_ROUTE,
+  shown,
 } from "./publications-context.mjs";
 
 /* The markdown twins, their llms.txt listing, the paper search records and the Ask keys and URLs. */
 const { tally, ok } = openPart("twins");
-
-/** @param {string[]} messages */
-const shown = (messages) =>
-  messages.slice(0, 8).join("; ") +
-  (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
 
 /* The papers every public surface lists. */
 const published = compiled.filter((c) => !c.draft);

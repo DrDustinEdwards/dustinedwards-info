@@ -1,4 +1,4 @@
-import { listPublishedLibraryRecords } from "~/db/procedures";
+import { listPublishedRecordsOfProfile } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
@@ -10,7 +10,7 @@ import type { Route } from "./+types/protocols[.json]";
 
 /** The library as JSON, for the filter state in the query string (the page's own parameters). */
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const items = libraryItems(await listPublishedLibraryRecords(getEnv(context)));
+  const items = libraryItems(await listPublishedRecordsOfProfile(getEnv(context), "protocol"));
   const rows = libraryRecords(items, new URL(request.url).searchParams, SITE_ORIGIN);
   return new Response(
     `${JSON.stringify({ license: LICENSE_URL, count: rows.length, protocols: rows }, null, 2)}\n`,
