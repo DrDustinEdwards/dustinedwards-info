@@ -2,7 +2,10 @@ import { redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { EvidenceRow } from "~/components/evidence-row";
-import { PostRow, Pager } from "~/components/post-row";
+import { Pagination } from "capsomer/react/pagination";
+import { routerRenderLink } from "capsomer/react/link";
+import "capsomer/pagination.css";
+import { PostRow } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listingFacts } from "~/lib/blog-listing.mjs";
@@ -80,7 +83,15 @@ export function TaxonomyListing({
           </ul>
         )}
 
-        <Pager page={page} pageCount={pageCount} hrefFor={(n) => listingHref(base, n)} />
+        <Pagination
+          form="steps"
+          page={page}
+          pageCount={pageCount}
+          hrefFor={(n) => listingHref(base, n)}
+          prevLabel="Newer"
+          nextLabel="Older"
+          renderLink={routerRenderLink}
+        />
 
         <p className="list-feeds">
           Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
