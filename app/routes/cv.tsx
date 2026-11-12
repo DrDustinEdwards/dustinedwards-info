@@ -602,7 +602,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
             </div>
           </details>
           <div className="cv-filter-actions">
-            <button type="submit" className="cv-apply" data-cv-apply="">
+            <button type="submit" className="cap-btn" data-variant="primary" data-cv-apply="">
               Apply filters
             </button>
             <a href={PATH} className="cv-clear" data-cv-clear="" hidden={!isFiltered(state)}>

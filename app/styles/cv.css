@@ -194,8 +194,7 @@
   font-size: 1rem;
 }
 
-.cv-filters select:focus-visible,
-.cv-apply:focus-visible {
+.cv-filters select:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
@@ -295,23 +294,6 @@
   display: none;
 }
 
-.cv-apply {
-  min-height: var(--control-min);
-  padding: 0.5rem 1.25rem;
-  border: var(--line-w) solid var(--brand);
-  border-radius: 0;
-  background: transparent;
-  color: var(--brand);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cv-apply:hover {
-  background: var(--tint-brand);
-}
-
-.cv-apply[hidden],
 .cv-clear[hidden] {
   display: none;
 }
@@ -329,7 +311,7 @@
 }
 
 @media (scripting: enabled) {
-  .cv-apply,
+  [data-cv-apply],
   .cv-filter-actions:not(:has(> .cv-clear:not([hidden]))) {
     display: none;
   }
