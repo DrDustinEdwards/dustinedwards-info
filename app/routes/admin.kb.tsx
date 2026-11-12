@@ -25,6 +25,7 @@ import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
 
 import type { Route } from "./+types/admin.kb";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /*
  * The Knowledge Base (docs/KNOWLEDGE-BASE.md, steps 2 and 3): a tab per base listing its entries, and Needs info, every
@@ -80,10 +81,6 @@ function ViewLink({ href, what }: { href: string; what: string }) {
       View page
     </Link>
   );
-}
-
-function plural(count: number, one: string, many: string) {
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps) {

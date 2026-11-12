@@ -16,9 +16,6 @@ import { METHODS } from "./taxonomy.mjs";
  * @typedef {{ version: string, date: string, doi: string | null }} CiteFacts
  */
 
-/** The shape Zenodo's DOIs and DataCite's share: the registrant prefix, a slash, the suffix. */
-export const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
-
 /** A version that can sit in a URL and a file name: letters, digits, dots, hyphens and underscores. */
 export const VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 

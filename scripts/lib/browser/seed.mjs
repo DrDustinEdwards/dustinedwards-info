@@ -11,7 +11,7 @@ import { runWrangler } from "../wrangler-run.mjs";
 import { DRIVES_PREVIEW, root } from "./harness.mjs";
 import { refuseUnlessRan, registry } from "./preview-server.mjs";
 
-/* Hand-written: the endpoint refuses the hostile row `safeHttpHref` must render. */
+/* Hand-written: the endpoint refuses the hostile row Capsomer's `httpHref` must render. */
 export const MENTION_POST_PATH = "/writing/ten-years-on-cloudflare";
 const MENTION_SLUG = MENTION_POST_PATH.slice("/writing/".length);
 const MENTION_SEED_PREFIX = "https://gate.example/";

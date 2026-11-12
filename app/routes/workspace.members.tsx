@@ -1,5 +1,6 @@
 import { LAB_BENCH_PATH } from "~/lab/path.mjs";
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, data } from "react-router";
 import { MANAGE_MEMBERS, can } from "@dustinedwards/site-runtime/members";
 import { Banner } from "capsomer/react/banner";
@@ -13,12 +14,13 @@ import { labActorContext } from "~/lab/actor.server";
 import { membersAction, membersPage } from "~/lab/members.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.members";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Members · Lab" }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": "private, no-store" };
+const PRIVATE = { "cache-control": UNCACHED };
 
 /** A page a person cannot use is a 404, so a Lab worker learns nothing from its address. */
 function requireManager(actor: Parameters<typeof can>[0]) {
@@ -38,7 +40,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   const result = await membersAction(
     getEnv(context),
     actor,
-    await cappedForm(request, ADMIN_FORM_BYTES),
+    await readForm(request, ADMIN_FORM_BYTES),
     Date.now(),
   );
   return data(result, { headers: PRIVATE });

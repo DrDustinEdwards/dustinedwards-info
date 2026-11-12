@@ -1,3 +1,4 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
 export const POSTS_PER_PAGE = 10;
 
 /** The home page's Writing section is a taste, not a feed: the featured post and two more. */
@@ -96,5 +97,5 @@ export function listingFacts(total, span) {
       ? `${Math.round(span.minutes / 60)} hours of reading`
       : `${span.minutes} minutes of reading`
     : null;
-  return [`${total} post${total === 1 ? "" : "s"}`, years, reading];
+  return [plural(total, "post"), years, reading];
 }

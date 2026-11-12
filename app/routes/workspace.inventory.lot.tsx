@@ -1,5 +1,6 @@
 import { LAB_BENCH_PATH } from "~/lab/path.mjs";
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, Link, data } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { changeText } from "capsomer/behavior/history-list";
@@ -16,12 +17,13 @@ import { amountText, idOf } from "~/lab/forms.mjs";
 import { PERMISSION } from "~/lab/titles.mjs";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/workspace.inventory.lot";
+import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Lot · Lab" }, { name: "robots", content: "noindex" }];
 }
 
-const PRIVATE = { "cache-control": "private, no-store" };
+const PRIVATE = { "cache-control": UNCACHED };
 
 function notFound(): never {
   throw data("Not found.", { status: 404, headers: PRIVATE });
@@ -41,7 +43,7 @@ export async function action({ context, request, params }: Route.ActionArgs) {
   if (!can(actor, PERMISSION.read)) notFound();
   const id = idOf(params.id);
   if (!id) notFound();
-  const form = await cappedForm(request, ADMIN_FORM_BYTES);
+  const form = await readForm(request, ADMIN_FORM_BYTES);
   // The lot is the one in the address, whatever the form says.
   form.set("lot", String(id));
   return data(await inventoryAction(getEnv(context), actor, form, Date.now()), {

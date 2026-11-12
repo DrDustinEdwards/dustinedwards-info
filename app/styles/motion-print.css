@@ -19,8 +19,7 @@
     padding: 0;
   }
 
-  .post,
-  .further-reading {
+  .post {
     max-width: none;
   }
 }

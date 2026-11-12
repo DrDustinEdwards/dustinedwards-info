@@ -1,4 +1,4 @@
-import { Signs } from "~/components/signs";
+import { Signs } from "capsomer/react/manual";
 import type { workflowContext } from "~/kb/procedures/library.mjs";
 
 /**

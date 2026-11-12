@@ -1,3 +1,4 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
 import { ScaleControl } from "capsomer/react/scale-control";
 import { markup } from "capsomer/behavior/trusted-html";
 
@@ -328,7 +329,7 @@ export function MaterialsTable({
   // Where each reagent of the lab registry comes from, in one column, drawn from the registry's record.
   const hasSource = record.materials.some((m) => m.reagent);
   const hasKind = record.profile === "computational";
-  const unitWord = record.scale ? `${count} ${record.scale.unit}${count === 1 ? "" : "s"}` : "";
+  const unitWord = record.scale ? plural(count, record.scale.unit) : "";
   return (
     <div className="table-scroll" data-run-swap="materials">
       <table className="procedure-materials">

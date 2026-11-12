@@ -15,6 +15,7 @@ import { MAX_MISMATCHES, pairProducts, placePrimer } from "./align.mjs";
 import { missingReason, primerFacts, stated } from "./primer.mjs";
 import { designationOf } from "./strain.mjs";
 import { NEB_TM_CALCULATOR, TM_CONDITIONS, annealingSentence, tmStatement } from "./tm.mjs";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /** The master inventory, and the root every kind's page sits under. */
 export const LAB_PATH = "/research/lab";
@@ -427,7 +428,7 @@ export function strainMarkdown(strain, usedBy, origin) {
     "",
     strain.phages.length === 0
       ? "No phage in the lab's table names this host."
-      : `${strain.phages.length} phage${strain.phages.length === 1 ? "" : "s"}, found ${years}, counted from the phages table.`,
+      : `${plural(strain.phages.length, "phage")}, found ${years}, counted from the phages table.`,
     "",
     ...strain.phages.map((phage) => `- [${phage.name}](${origin}${phage.path}), ${phage.year}`),
     "",
@@ -960,7 +961,7 @@ export function siteText(site) {
   const mismatch =
     n === 0
       ? "no mismatches"
-      : `${n} mismatch${n === 1 ? "" : "es"} (primer base${n === 1 ? "" : "s"} ${site.mismatchPositions.join(", ")}, counted from its 5′ end)`;
+      : `${plural(n, "mismatch", "mismatches")} (primer base${n === 1 ? "" : "s"} ${site.mismatchPositions.join(", ")}, counted from its 5′ end)`;
   return `${site.start} to ${site.end}, ${site.strand} strand, ${mismatch}`;
 }
 

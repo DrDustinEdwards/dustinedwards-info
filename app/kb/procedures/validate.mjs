@@ -6,7 +6,8 @@
 // the check can print it and the read tool can show it. A bare MISSING, or a required field left out,
 // is an error: a forgotten field cannot pass as a recorded gap.
 
-import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
+import { VERSION_PATTERN } from "./cite.mjs";
+import { DOI_PATTERN } from "@drdustinedwards/site-helpers/scholar";
 import { allSteps, PLATFORMS, readCalcs, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, NON_STRAIN_ORGANISMS, PROTOCOL_STATUSES } from "./taxonomy.mjs";
