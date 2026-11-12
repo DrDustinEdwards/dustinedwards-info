@@ -77,7 +77,7 @@ const LEG = {
  * The request shape is `{ tool, args }` because that is what the API already
  * takes. This function is a transport, not a translator.
  */
-export async function callOperator(
+export async function callSiteOperator(
   env: Partial<ApiEnv>,
   tool: string,
   args: Record<string, unknown>,
