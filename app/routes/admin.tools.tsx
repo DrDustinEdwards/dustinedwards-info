@@ -290,9 +290,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
               <Row
                 key={miss.query}
                 title={miss.query}
-                status={
-                  <Pill variant="outline">{plural(miss.count, "time")}</Pill>
-                }
+                status={<Pill variant="outline">{plural(miss.count, "time")}</Pill>}
               />
             ))}
           </RowList>

@@ -194,8 +194,7 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
   }
   if (drift <= 0) return size;
   const minutes = Math.round(maxAgeSeconds / 60);
-  const age =
-    minutes >= 1 ? plural(minutes, "minute") : `${maxAgeSeconds} seconds`;
+  const age = minutes >= 1 ? plural(minutes, "minute") : `${maxAgeSeconds} seconds`;
   return (
     `${lead}${plural(drift, "Ask index item")} drifted. ` +
     `This count is up to ${age} old; open Tools for the current figure and the repair.`

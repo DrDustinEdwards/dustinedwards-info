@@ -236,7 +236,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       trail: trailOf(page),
       ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}),
     });
-    if (page.view === "kind") {
+  if (page.view === "kind") {
     if (page.kind === "strain") {
       return head(
         "Strains: the bacterial hosts of the lab's phage work",

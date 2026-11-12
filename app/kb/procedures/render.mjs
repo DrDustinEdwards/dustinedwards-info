@@ -610,12 +610,7 @@ export function procedureMarkdown(record, parsed) {
     ["First used", record.firstUsed],
     ["Last run", record.lastRun],
     ["Status", record.status],
-    [
-      "Scale",
-      record.scale
-        ? plural(record.scale.count, record.scale.unit)
-        : null,
-    ],
+    ["Scale", record.scale ? plural(record.scale.count, record.scale.unit) : null],
     ["Servings", record.servings],
     ["Prep time", record.prepTime],
     ["Cook time", record.cookTime],

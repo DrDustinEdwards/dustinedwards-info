@@ -361,8 +361,7 @@ export function LabStrain({
       ) : (
         <>
           <p>
-            {plural(strain.phages.length, "phage")}, found {years},
-            counted from the phages table.
+            {plural(strain.phages.length, "phage")}, found {years}, counted from the phages table.
           </p>
           <ul className="registry-used registry-phages">
             {strain.phages.map((phage) => (
