@@ -1,13 +1,13 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import worker, { cacheDimensions } from "../../workers/app";
+import worker from "../../workers/app";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
 import { STUB_PATHS, STUB_PAGE_BODY, STUB_MARKDOWN_BODY } from "./stub-server-build";
 
-/* miniflare does not implement Workers Cache, so nothing here can see a HIT: this asserts the
- * key the gateway builds and the headers that make a response storable. Storage is verify-live's. */
+/* miniflare does not implement Workers Cache, so nothing here can see a HIT: this asserts the headers that make a
+ * response storable. The key is site-runtime ./worker's (tested there); storage is verify-live's. */
 
 const ORIGIN = "https://example.com";
 
@@ -20,39 +20,6 @@ async function fetchThrough(request: Request) {
 
 let counter = 0;
 const freshPath = (base: string) => `${base}?case=${(counter += 1)}`;
-
-const dimensionsFor = (url: string, theme = "system", init: RequestInit = {}) =>
-  cacheDimensions(new URL(url), new Request(url, init), theme);
-
-describe("the cache key the gateway builds", () => {
-  it("is STABLE for the same path and theme", async () => {
-    /* Props are in the platform's key too, so a stable string with unstable props would still
-     * fragment the cache. */
-    const a = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
-    const b = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
-    expect(a.cacheKey).toBe(b.cacheKey);
-    expect(a.props).toEqual(b.props);
-    expect(a.props).toEqual({ theme: "dark" });
-  });
-
-  it("SEPARATES BY THEME, so one reader's colors never reach another", async () => {
-    const dark = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
-    const light = dimensionsFor(`${ORIGIN}/writing/a-post`, "light");
-
-    expect(dark.cacheKey).not.toBe(light.cacheKey);
-    expect(dark.props).not.toEqual(light.props);
-    expect(dark.cacheKey).toContain("theme=dark");
-    expect(light.cacheKey).toContain("theme=light");
-  });
-
-  it("separates by PATH and by QUERY", async () => {
-    const post = dimensionsFor(`${ORIGIN}/writing/a-post`);
-    expect(post.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/writing/another-post`).cacheKey);
-
-    const cloudflare = dimensionsFor(`${ORIGIN}/search?q=cloudflare`, "dark");
-    expect(cloudflare.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/search?q=d1`, "dark").cacheKey);
-  });
-});
 
 describe("the gateway's wire policy", () => {
   it("leaves a COOKIELESS reader on the shared string, so the platform stores it", async () => {
@@ -99,16 +66,6 @@ describe("negotiation", () => {
       new Request(`${ORIGIN}${path}`, { headers: { accept: "text/html" } }),
     );
     expect(await html.text()).toBe(STUB_PAGE_BODY);
-  });
-
-  it("treats a browser's Accept, and an absent one, as votes for HTML", async () => {
-    /* Both spellings land on one entry, so browsers' differing Accept headers do not fragment
-     * the shared document. */
-    const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-    const withAccept = dimensionsFor(`${ORIGIN}/`, "system", { headers: { accept: browser } });
-    const without = dimensionsFor(`${ORIGIN}/`, "system");
-    expect(withAccept.cacheKey).toBe(without.cacheKey);
-    expect(withAccept.props).toEqual(without.props);
   });
 });
 

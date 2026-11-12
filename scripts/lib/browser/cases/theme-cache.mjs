@@ -391,8 +391,8 @@ export async function run({ page, browser }) {
       `${label}: an ${accept} request is answered with ${wanted}`,
       type.includes(wanted),
       `got ${JSON.stringify(type)}. The route stopped negotiating, or the gateway's ` +
-        `key stopped excluding the negotiated representation. See ` +
-        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and cacheDimensions in ` +
+        `cache stopped skipping the negotiated representation. See ` +
+        `negotiatesAwayFromHtml in app/lib/negotiate.mjs and \`cacheable\` in ` +
         `workers/app.ts.`,
     );
     /* `no-store` keeps the platform from storing it under the HTML reader's key. */

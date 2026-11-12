@@ -100,6 +100,15 @@ const READERS = {
       out.set(`send_email:${mail.name}`, restriction);
     }
   },
+  // The namespace and the limit are compared: a second Worker on the same namespace shares the count.
+  ratelimits: (config, out) => {
+    for (const limit of config.ratelimits ?? []) {
+      out.set(
+        `ratelimit:${limit.name}`,
+        `namespace_id=${limit.namespace_id} limit=${limit.simple?.limit} period=${limit.simple?.period}`,
+      );
+    }
+  },
   queues: (config, out) => {
     for (const q of config.queues?.consumers ?? []) {
       out.set(

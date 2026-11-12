@@ -53,6 +53,10 @@
       "what": "Email Sending from the Worker, used once a day at most: when ORCID or Crossref lists a paper of Dustin's that the publications list does not have yet, the DOI is mailed to him once.",
       "whyLoadBearing": "A new paper is added through Carrel by hand, so nothing on the site notices one by itself. The mail is what turns a paper published elsewhere into a line on this site, and each DOI is mailed once so a paper waiting to be added is not mailed every day."
     },
+    "ratelimit:CSP_REPORT_RATE_LIMIT": {
+      "what": "The limit on Content-Security-Policy reports: 60 a minute per client address, counted by the ratelimit binding the network's shared Worker reads for /csp-report.",
+      "whyLoadBearing": "A report is an unauthenticated POST any page can send, so without a limit one visitor could fill the logs. An approximate count is enough here, unlike Ask's guards: a report let through costs one log line, and with no binding every report is dropped."
+    },
     "assets:ASSETS": {
       "what": "The static files under public/, served without a Worker invocation.",
       "whyLoadBearing": "The binding has exactly one method, fetch(), so a Worker can serve any path it is given and discover none of them. That is why the media rebuild reads a committed manifest: the one thing it cannot do for itself is find out which static files exist."

@@ -7,9 +7,9 @@ import { UPLOAD_HEADERS } from "@dustinedwards/site-runtime/headers";
 const MEDIA_CSP = UPLOAD_HEADERS["Content-Security-Policy"];
 
 /*
- * /media through the WHOLE worker: the gateway, the Renderer and its applyDocumentHeaders, which set
- * the policy last. A route-level assertion cannot see the header, because a policy a route set would
- * be overwritten there; this is where the reader's browser gets it.
+ * /media through the WHOLE worker: site-runtime's gateway and Renderer, with the site's security set (workers/app.ts),
+ * which sets the policy. A route-level assertion cannot see the header, because a policy a route set would be
+ * overwritten there; this is where the reader's browser gets it.
  */
 vi.mock("virtual:react-router/server-build", async () => {
   const entryServer = await import("~/entry.server");

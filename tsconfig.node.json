@@ -243,7 +243,6 @@
     // Imported by modules listed above, so this project must reach them too:
     // the status rule (pdf-redirect) and the hast builders (chart, diagram).
     // Each is dependency-free.
-    "app/lib/https-redirect.mjs",
     // check:links resolves every internal link through the gateway's own redirect rules and the
     // site's own path builders, and reads the header menus as they render.
     "app/lib/wordpress-redirects.mjs",
