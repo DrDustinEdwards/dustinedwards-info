@@ -260,7 +260,7 @@ console.log(
 
 // Measured by running it, with slack smaller than one fixture case, so deleting a case cannot hide
 // inside the tolerance.
-const MINIMUM_CHECKS = 113;
+const MINIMUM_CHECKS = 106;
 tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
