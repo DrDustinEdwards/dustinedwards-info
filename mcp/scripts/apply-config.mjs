@@ -8,8 +8,9 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// In mcp/ so its imports resolve from mcp/node_modules: the deploy job installs only mcp/.
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CONFIG = join(root, "mcp", "wrangler.jsonc");
+const CONFIG = join(root, "wrangler.jsonc");
 const WORKER = "dustinedwards-admin-mcp";
 
 /** @param {string} why @returns {never} */
