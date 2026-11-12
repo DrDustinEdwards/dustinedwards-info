@@ -4,7 +4,6 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 import { LLMS_CACHE_TAG, LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
-import { action, loader } from "~/routes/api.carrel.v1.$";
 import { loader as llmsLoader } from "~/routes/llms";
 import { SITE_ORIGIN } from "~/lib/seo";
 
@@ -20,7 +19,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
-import { routeContext } from "./route-helpers";
+import { routeContext, carrelRequest, recordPurges } from "./route-helpers";
 import { seedPages, seedProcedures, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -29,12 +28,9 @@ import { testEnv } from "./test-env";
  * row /llms.txt is served from, purges its cache tag, and the NEXT request carries the edit (docs/LLMS.md).
  * The repository is the source and D1 is derived. */
 
-/* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
+/* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
@@ -54,9 +50,9 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const get = (url: string) =>
-  loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
+  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return action(
+  return carrelRequest(
     argsFor(
       new Request(url, {
         method,

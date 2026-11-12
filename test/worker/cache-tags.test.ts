@@ -16,17 +16,14 @@ import { cacheTags, SITE_ORIGIN } from "~/lib/seo";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, recordPurges } from "./route-helpers";
 
 /* A document that can be stored and carries no tag a save purges stays stale until a deploy. These
  * pin that the sitemap, every feed and llms-full carry the tags the two purges send. */
 
-/* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
+/* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const tagsOf = (response: Response) =>
   (response.headers.get("cache-tag") ?? "").split(",").filter(Boolean);
@@ -47,7 +44,7 @@ async function llmsFull() {
   } as never)) as Response;
 }
 
-/** Tags handed to `cache.purge` by `run`. */
+/** Tags handed to the Renderer's purge by `run`. */
 async function purgedBy(run: () => Promise<unknown>): Promise<string[]> {
   purge.mockClear();
   await run();
