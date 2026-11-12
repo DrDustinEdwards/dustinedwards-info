@@ -54,24 +54,3 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
     </li>
   );
 }
-
-export function Pager({
-  page,
-  pageCount,
-  hrefFor,
-}: {
-  page: number;
-  pageCount: number;
-  hrefFor: (page: number) => string;
-}) {
-  if (pageCount <= 1) return null;
-  return (
-    <nav className="pager" aria-label="Pagination">
-      {page > 1 && <Link to={hrefFor(page - 1)}>Newer</Link>}
-      <span className="pager-where">
-        Page {page} of {pageCount}
-      </span>
-      {page < pageCount && <Link to={hrefFor(page + 1)}>Older</Link>}
-    </nav>
-  );
-}

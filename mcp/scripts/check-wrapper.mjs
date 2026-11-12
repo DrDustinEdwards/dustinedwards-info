@@ -434,7 +434,7 @@ check(
 
 const toolStrings = withoutComments(toolsText);
 const named = new Set([
-  ...[...toolStrings.matchAll(/\b(?:run|runPaged|callOperator)\(env,\s*"([a-z_]+)"/g)].map(
+  ...[...toolStrings.matchAll(/\b(?:run|runPaged|callSiteOperator)\(env,\s*"([a-z_]+)"/g)].map(
     (m) => m[1],
   ),
   ...[...toolStrings.matchAll(/\b(?:list|get):\s*"([a-z_]+)"/g)].map((m) => m[1]),
@@ -462,8 +462,8 @@ for (const name of EXPECTED_TOOLS) {
   const next = toolsText.indexOf('\n    name: "', start + 1);
   const block = codeOnly(toolsText.slice(start, next === -1 ? undefined : next));
   check(
-    `Tool ${name} reaches the API only through run, runPaged or callOperator`,
-    /\b(run|runPaged|callOperator)\(env,/.test(block) && !/fetch\(/.test(block),
+    `Tool ${name} reaches the API only through run, runPaged or callSiteOperator`,
+    /\b(run|runPaged|callSiteOperator)\(env,/.test(block) && !/fetch\(/.test(block),
   );
 }
 
@@ -522,14 +522,14 @@ check(
 );
 
 // The API leg has one definition and one consumer. api-client.ts defines
-// callOperator; tools.ts is the only module allowed to invoke it. Spreading the
+// callSiteOperator; tools.ts is the only module allowed to invoke it. Spreading the
 // call across modules would mean several places knew how to reach the app, which
 // is how a second write path starts.
 const callers = files
-  .filter((f) => f.name !== "api-client.ts" && /callOperator\s*\(/.test(codeOnly(f.text)))
+  .filter((f) => f.name !== "api-client.ts" && /callSiteOperator\s*\(/.test(codeOnly(f.text)))
   .map((f) => f.name);
 check(
-  "callOperator has exactly one consumer, tools.ts",
+  "callSiteOperator has exactly one consumer, tools.ts",
   JSON.stringify(callers) === JSON.stringify(["tools.ts"]),
   `Called from: ${callers.join(", ") || "(nowhere)"}. The API leg is one seam with one consumer.`,
 );
