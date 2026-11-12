@@ -1,6 +1,6 @@
 // Writes the redacted values into wrangler.jsonc for the deploy (deploy.yml's pre-deploy
 // guard and its converge job): each value is read from what the live Worker is bound to now, through the Cloudflare
-// API, as scripts/apply-mcp-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
+// API, as mcp/scripts/apply-config.mjs does for the admin MCP. So the deploy needs no secret beyond the Cloudflare
 // token and account id that devkit's worker-deploy passes, and a Worker keeps the database, namespace and address it
 // was last deployed with. The account id comes from CLOUDFLARE_ACCOUNT_ID.
 //
