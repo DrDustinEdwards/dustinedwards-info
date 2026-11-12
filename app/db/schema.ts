@@ -373,6 +373,18 @@ export type MediaRef = typeof mediaRefs.$inferSelect;
 export type Webmention = typeof webmentions.$inferSelect;
 
 /**
+ * The columns every row derived from a repository file ends with: the file's path, the blob sha it was built from, and
+ * when it was synced. A function, so each table gets its own column builders.
+ */
+const sourceColumns = () => ({
+  sourcePath: text("source_path").notNull().unique(),
+  sourceBlobSha: text("source_blob_sha").notNull(),
+  syncedAt: integer("synced_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/**
  * Procedures (drizzle/0019_procedures.sql, docs/PROCEDURES.md): derived from content/procedures/*.md by
  * app/kb/procedures/compile.mjs. `record` is the rendered procedure as JSON and `markdown` its twin.
  */
@@ -390,11 +402,7 @@ export const procedures = sqliteTable(
     updated: text("updated"),
     record: text("record").notNull(),
     markdown: text("markdown").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     check("procedures_profile_check", sql`${t.profile} in ('protocol', 'recipe', 'computational')`),
@@ -455,11 +463,7 @@ export const publications = sqliteTable(
     record: text("record").notNull(),
     csl: text("csl"),
     markdown: text("markdown").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     check("publications_status_check", sql`${t.status} in ('draft', 'published')`),
@@ -501,11 +505,7 @@ export const pages = sqliteTable(
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     record: text("record").notNull(),
     markdown: text("markdown").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     check("pages_status_check", sql`${t.status} in ('draft', 'published')`),
@@ -535,11 +535,7 @@ export const cv = sqliteTable(
       ],
     }).notNull(),
     record: text("record").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     check(
@@ -563,11 +559,7 @@ export const dictionaryEntries = sqliteTable(
     term: text("term").notNull(),
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     record: text("record").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     check("dictionary_entries_status_check", sql`${t.status} in ('draft', 'published')`),
@@ -582,11 +574,7 @@ export const roster = sqliteTable("roster", {
   slug: text("slug").notNull().unique(),
   year: integer("year").notNull().unique(),
   record: text("record").notNull(),
-  sourcePath: text("source_path").notNull().unique(),
-  sourceBlobSha: text("source_blob_sha").notNull(),
-  syncedAt: integer("synced_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`(unixepoch())`),
+  ...sourceColumns(),
 });
 
 // The phages of the table on /research/phages (docs/PHAGES.md). Derived from content/phages/*.md, one row per
@@ -600,11 +588,7 @@ export const phages = sqliteTable(
     name: text("name").notNull(),
     year: integer("year").notNull(),
     record: text("record").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [index("phages_year_idx").on(t.year)],
 );
@@ -621,11 +605,7 @@ export const registry = sqliteTable(
     name: text("name").notNull(),
     status: text("status").notNull(),
     record: text("record").notNull(),
-    sourcePath: text("source_path").notNull().unique(),
-    sourceBlobSha: text("source_blob_sha").notNull(),
-    syncedAt: integer("synced_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    ...sourceColumns(),
   },
   (t) => [
     primaryKey({ columns: [t.kind, t.id] }),
@@ -979,19 +959,8 @@ export const scheduledPublishes = sqliteTable(
 );
 
 // The 404 counts (drizzle/0041_not_found.sql, site-runtime's NOT_FOUND_SQL), written by countNotFound in workers/app.ts
-// and read by Carrel's 404 report (notFoundReport). Declared so the schema test sees its index; the SQL is the package's.
-export const page404Daily = sqliteTable(
-  "page_404_daily",
-  {
-    id: text("id").primaryKey(),
-    day: integer("day").notNull(),
-    path: text("path").notNull(),
-    referrerHost: text("referrer_host").notNull().default(""),
-    kind: text("kind").notNull().default("page"),
-    hitCount: integer("hit_count").notNull().default(0),
-  },
-  (t) => [uniqueIndex("page_404_daily_day_path_referrer_uq").on(t.day, t.path, t.referrerHost)],
-);
+// and read by Carrel's 404 report (notFoundReport). site-runtime's own mirror, re-exported so the schema test sees its index.
+export { page404Daily } from "@dustinedwards/site-runtime/drizzle";
 
 // The Ask upload ledger (drizzle/0043_ask_uploads.sql): the sha-256 of the body last uploaded to AI Search under each
 // item key, so sync_ask uploads only what changed. Derived, so not in the backup's required tables.
