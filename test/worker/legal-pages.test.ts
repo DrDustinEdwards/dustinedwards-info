@@ -6,7 +6,6 @@ import { pageSourcePath } from "~/lib/pages/compile.mjs";
 import { deletePageRow } from "~/lib/pages/save.server";
 import { contentPageJsonLd } from "~/lib/pages/page-json-ld";
 import { LICENSE_URL } from "~/lib/seo";
-import { action } from "~/routes/api.carrel.v1.$";
 import ContentPage, { loader as pageLoader } from "~/routes/content-page";
 import { loader as twinLoader } from "~/routes/content-page[.md]";
 import { loader as csvLoader } from "~/routes/protocols[.csv]";
@@ -15,7 +14,7 @@ import privacy from "../../content/pages/privacy.md?raw";
 import terms from "../../content/pages/terms.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext } from "./route-helpers";
+import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
 import { seedPages, seedProcedures } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -36,7 +35,7 @@ const headersFor = (key: string) => ({
 });
 const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
 const send = (method: "PUT" | "POST", url: string, body: unknown) =>
-  action(
+  carrelRequest(
     argsFor(
       new Request(url, {
         method,

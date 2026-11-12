@@ -14,6 +14,7 @@ import {
   writes,
   type SourceStub,
 } from "./source-stub";
+import { recordPurges } from "./route-helpers";
 
 /* The registry framework, end to end, with no real kind: the registry ships with none (app/kb/registry/kinds.mjs),
  * so this file brings one, a "widget", and holds the save, sync_registry, the registry-drift check, the operator's
@@ -47,12 +48,9 @@ vi.mock("~/kb/registry/kinds.mjs", () => ({
   kindKeys: () => ["widget"],
 }));
 
-/* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
+/* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const operator = { kind: "operator", id: "test" } as const;

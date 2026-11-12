@@ -4,7 +4,7 @@ import { LAB_BENCH_PATH } from "~/lab/path.mjs";
 
 import { documentHandlerContext } from "~/lib/context";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
-import { cacheTags, SITE_ORIGIN } from "~/lib/seo";
+import { cacheTags, ROBOTS_DISALLOW, SITE_ORIGIN } from "~/lib/seo";
 import { THEME_COOKIE } from "capsomer/theme-server";
 import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
 import { PUBLICATIONS_PREFIX, paperSlashTarget } from "~/lib/publications/pdf-redirect.mjs";
@@ -15,9 +15,11 @@ import { isWorkerPreview, redirectResponse } from "@dustinedwards/site-runtime/h
 import { redirectStatus } from "@dustinedwards/site-runtime/url";
 import { defineSite, siteRenderer, siteWorker } from "@dustinedwards/site-runtime/worker";
 import { d1SiteApiStore, tombstoned } from "@dustinedwards/site-api/store";
+import { standardFiles } from "@drdustinedwards/site-helpers/files";
 import { markdownCopies } from "@drdustinedwards/site-helpers/markdown-copy";
 import { withSecurityHeaders } from "./security-headers.mjs";
 import { handleMediaEvents } from "./media-events";
+import { carrelStep } from "~/lib/carrel/site-api.server";
 import { handleWebmentionVerify } from "./webmention-verify";
 import { WEBMENTION_VERIFY_QUEUE } from "~/lib/webmention/queue";
 import { PAGE_PRELOADS } from "~/lib/preloads";
@@ -57,6 +59,17 @@ const site = defineSite<Env>({
     except: [`${PUBLICATIONS_PREFIX}*`],
     keep: (url) => isApexHost(url.hostname) && wordpressDisposition(url.pathname) !== null,
   },
+  // Prelum's robots.txt and ai.txt. A request on any other origin (a Worker Preview, a PR's draft of the site) tells
+  // every crawler `Disallow: /`, with no-store and noindex. The real controls: `X-Robots-Tag` and `no-store` on
+  // /preview, and POST-only on /search/ask, which is disallowed because every answer is billed. ai.txt is the family's
+  // AI usage policy: answer engines may cite and link, training rights are reserved (the TDMRep header says the same)
+  // and licensed on request. site.webmanifest and the IndexNow key file stay routes: standardFiles would change their
+  // Content-Type and Cache-Control.
+  files: standardFiles({
+    origin: SITE_ORIGIN,
+    disallow: ROBOTS_DISALLOW,
+    ai: { name: "Dustin Edwards", contact: "contact@dustinedwards.info" },
+  }),
   // /lab-bench and /admin are signed in, /media is files, /login and /theme act on a request, and `/search/ask` is billed:
   // prefetching it would spend model tokens on a click nobody made.
   speculationExclude: [LAB_BENCH_PATH, "/admin", "/media", "/login", "/theme", "/search/ask"],
@@ -67,6 +80,8 @@ const site = defineSite<Env>({
       isApexHost(kit.url.hostname) && wordpressDisposition(kit.url.pathname)?.status === 410
         ? privateRender(await kit.render(new Request(new URL("/gone", kit.url), request)))
         : undefined,
+    // Carrel's site API under /api/carrel/v1 and its preview links (site-api's step); an accepted write purges.
+    carrelStep,
   ],
   // A webmention is a cross-site POST by design (W3C Webmention 3.2).
   crossSiteExempt: ["/webmention"],
@@ -75,8 +90,8 @@ const site = defineSite<Env>({
   // search's JSON) is too: the key holds no Accept, so a stored HTML page would answer it.
   cacheable: (request, url) => !isPrivatePath(url.pathname) && !negotiatesAwayFromHtml(request),
   preloads: PAGE_PRELOADS,
-  // The Carrel preview renders a page through the same routes in-process, never through the Renderer, whose response is
-  // the one the edge stores.
+  // The admin's media and mentions kit (app/lib/admin-kit.server.ts) previews a post through the same routes in-process,
+  // never through the Renderer, whose response is the one the edge stores. Carrel's own preview uses the step's kit.
   context: (context, env, ctx) =>
     context.set(documentHandlerContext, (request, set) => site.render(request, env, ctx, { set })),
   purgeKv: (env) => env.APP_KV,

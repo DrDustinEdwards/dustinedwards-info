@@ -152,9 +152,7 @@ export default [
     route("sitemap.xml", "routes/sitemap.ts"),
     // The site map for people, from the same URL list as sitemap.xml (app/lib/site-urls.server.ts).
     route("site-map", "routes/site-map.tsx"),
-    route("robots.txt", "routes/robots.ts"),
     route("site.webmanifest", "routes/site-webmanifest.ts"),
-    route("ai.txt", "routes/ai-txt.ts"),
     route(`${INDEXNOW_KEY}.txt`, "routes/indexnow-key.ts"),
     route("llms.txt", "routes/llms.ts"),
     route("llms-full.txt", "routes/llms-full[.txt].ts"),
@@ -208,8 +206,5 @@ export default [
   route("health", "routes/health.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
-  // Carrel's key, not the session, and only this prefix: the site-api package guards it.
-  route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
-  // Carrel's shareable preview links: no key, the token is the address, and the package answers private and noindex.
-  route("preview/:token", "routes/preview.$token.ts"),
+  // Carrel's site API (/api/carrel/v1) and its preview links (/preview/<token>) are a gateway step (workers/app.ts).
 ] satisfies RouteConfig;

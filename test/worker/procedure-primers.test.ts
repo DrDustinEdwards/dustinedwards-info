@@ -12,7 +12,7 @@ import { loader as twinLoader } from "~/routes/procedure[.md]";
 
 import coi from "../../content/procedures/coi-primers.md?raw";
 
-import { routeContext } from "./route-helpers";
+import { routeContext, recordPurges } from "./route-helpers";
 import { putSource, removeSource, source, stubSources, type SourceStub } from "./source-stub";
 import { equipmentRepoFiles, reagentRepoFiles } from "./seed";
 
@@ -35,12 +35,9 @@ const LCO = "content/registry/primer/lco1490.md";
 const SLUG = "coi-primers";
 const PAGE = `https://example.com/research/protocols/${SLUG}`;
 
-/* The runtime's own `cache` has no settable purge here, so the module is wrapped with a recording one. */
+/* The save's purge goes to the Renderer over the loopback (cache-purge.server.ts), replaced here with a recording one. */
 const purge = vi.hoisted(() => vi.fn(async (_options: { tags: string[] }) => ({ success: true })));
-vi.mock("cloudflare:workers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("cloudflare:workers")>()),
-  cache: { purge },
-}));
+recordPurges(purge);
 
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 const gitEnv = () => env as unknown as Parameters<typeof saveRegistryItem>[0];
