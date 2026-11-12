@@ -1,4 +1,5 @@
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ProcedureView } from "~/components/procedure";
@@ -31,7 +32,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const slug = params.slug;
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
     return Response.json({ error: "No such entry." }, { status: 404 });
-  const form = await cappedForm(request, ADMIN_FORM_BYTES);
+  const form = await readForm(request, ADMIN_FORM_BYTES);
   const written = rawFromForm(String(form.get("original") ?? ""), String(form.get("model") ?? ""));
   if ("errors" in written) return Response.json({ errors: written.errors });
   try {

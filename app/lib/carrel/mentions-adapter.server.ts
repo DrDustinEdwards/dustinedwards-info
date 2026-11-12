@@ -20,7 +20,8 @@ import type {
   MentionsAdapter,
 } from "@dustinedwards/site-api";
 import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
-import { and, count, desc, eq, isNull, lt, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { likeContains } from "@dustinedwards/site-runtime/d1";
+import { and, count, desc, eq, isNull, lt, or, type AnyColumn, type SQL } from "drizzle-orm";
 
 import { getDb } from "~/db/client";
 import { webmentions, type Webmention } from "~/db/schema";
@@ -155,8 +156,8 @@ export function carrelMentionsAdapter(env: Env): MentionsAdapter {
       if (query.targetId) filters.push(eq(webmentions.targetSlug, query.targetId));
       if (query.q) {
         // LIKE's own characters in the words are matched as themselves. SQLite's LIKE ignores ASCII case.
-        const words = `%${query.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-        const has = (column: AnyColumn) => sql`${column} LIKE ${words} ESCAPE '\\'`;
+        const words = query.q;
+        const has = (column: AnyColumn) => likeContains(column, words);
         filters.push(
           or(
             has(webmentions.sourceUrl),

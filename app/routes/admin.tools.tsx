@@ -1,4 +1,5 @@
-import { ADMIN_FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { ADMIN_FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { Form, data } from "react-router";
 
 import { timed, timedLoader } from "~/lib/timing";
@@ -68,7 +69,7 @@ export async function loader({ context }: Route.LoaderArgs) {
  * own branch, where check:destructive reads it, before the handler runs.
  */
 export async function action({ request, context }: Route.ActionArgs) {
-  const form = await cappedForm(request, ADMIN_FORM_BYTES);
+  const form = await readForm(request, ADMIN_FORM_BYTES);
   const env = getEnv(context);
   const intent = form.get("intent");
 

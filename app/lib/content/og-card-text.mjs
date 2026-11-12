@@ -2,51 +2,31 @@
 // route names a page's card through it without importing the markdown renderer. Characters stand in
 // for width, so every number here was measured off rendered cards.
 
-import { fnv1a32 } from "@dustinedwards/site-runtime/encoding";
+import {
+  CARD_DESCRIPTION_MAX,
+  CARD_TITLE_MAX,
+  CARD_TITLE_SIZES,
+  cardKey,
+  clampTitle,
+} from "@dustinedwards/site-runtime/share-card";
 import { formatDate } from "capsomer/behavior/time";
 import { ASSET_PREFIX } from "../media/classify.mjs";
 
-export const TITLE_MAX = 150;
-
-/**
- * Measured off rendered 1200x630 cards against the layout in build-og.mjs.
- *
- * @type {ReadonlyArray<{ maxChars: number, fontSize: number }>}
- */
-export const TITLE_SIZES = [
-  { maxChars: 72, fontSize: 72 },
-  { maxChars: 110, fontSize: 54 },
-  { maxChars: TITLE_MAX, fontSize: 42 },
-];
-
+/** The network's card sizes (site-runtime ./share-card), measured off rendered 1200x630 cards. */
+export const TITLE_MAX = CARD_TITLE_MAX;
+export const TITLE_SIZES = CARD_TITLE_SIZES;
 // Two lines of description, enforced here because satori's WebkitLineClamp does nothing.
-export const DESCRIPTION_MAX = 132;
+export const DESCRIPTION_MAX = CARD_DESCRIPTION_MAX;
 
-// Dashes as escapes in a string: a hook bans those characters from the repo's bytes.
-const DANGLING_PUNCTUATION = new RegExp("[,;:.\\u2014\\u2013-]+$");
-
-/**
- * A single word longer than max is still cut: running off the card is worse.
- *
- * @param {string | null | undefined} value
- * @param {number} max
- * @returns {string}
- */
-export function clampWords(value, max) {
-  const text = (value ?? "").trim();
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  const kept = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
-  return `${kept.replace(DANGLING_PUNCTUATION, "")}…`;
-}
+/** `value` cut at a word to at most `max` characters, ending in an ellipsis (site-runtime clampTitle). */
+export const clampWords = clampTitle;
 
 /**
  * @param {string | null | undefined} title
  * @returns {string}
  */
 export function cardTitle(title) {
-  return clampWords(title, TITLE_MAX);
+  return clampTitle(title, TITLE_MAX);
 }
 
 /**
@@ -54,7 +34,7 @@ export function cardTitle(title) {
  * @returns {string}
  */
 export function cardDescription(description) {
-  return clampWords(description, DESCRIPTION_MAX);
+  return clampTitle(description, DESCRIPTION_MAX);
 }
 
 // Bump on any card template change: the key hashes only the card's inputs, and an immutable cache
@@ -74,9 +54,10 @@ const OG_TEMPLATE_VERSION = 7;
  * }} post
  */
 export function ogImageKey(post) {
-  const drawnDate = formatDate(post.publishAt);
-  const input =
-    `${OG_TEMPLATE_VERSION}\n${post.slug}\n${cardTitle(post.title)}\n` +
-    `${cardDescription(post.description)}\n${drawnDate === null ? "" : drawnDate}`;
-  return `og/${ASSET_PREFIX}${post.slug}-${fnv1a32(input)}.png`;
+  return cardKey({
+    slug: post.slug,
+    parts: [cardTitle(post.title), cardDescription(post.description), formatDate(post.publishAt)],
+    version: OG_TEMPLATE_VERSION,
+    prefix: `og/${ASSET_PREFIX}`,
+  });
 }

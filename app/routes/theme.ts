@@ -1,4 +1,5 @@
-import { FORM_BYTES, cappedForm } from "~/lib/body.server";
+import { FORM_BYTES } from "~/lib/body.server";
+import { readForm } from "@dustinedwards/site-runtime/body";
 import { refuseCrossSite } from "@dustinedwards/site-runtime/origin";
 import { safeReturnTo } from "~/lib/return-to.mjs";
 import { isThemeChoice, themeCookie } from "capsomer/theme-server";
@@ -11,7 +12,7 @@ export async function action({ request }: Route.ActionArgs) {
   const refused = refuseCrossSite(request);
   if (refused) return refused;
 
-  const form = await cappedForm(request, FORM_BYTES);
+  const form = await readForm(request, FORM_BYTES);
   const choice = form.get("theme");
 
   /*

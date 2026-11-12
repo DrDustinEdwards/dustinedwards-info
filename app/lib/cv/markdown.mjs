@@ -9,18 +9,8 @@ import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { contentPageMarkdownBody } from "../content-pages.mjs";
 import { CV_PAGE, CV_PDF_PATH, formatDollars } from "./entries.mjs";
 import { TYPES } from "./view.mjs";
-
-/**
- * Markdown-significant characters in data text are escaped, and a colon before a letter is escaped
- * because the pipeline reads `:word` as a directive and fails closed on unknown ones.
- *
- * @param {string} text
- */
-function esc(text) {
-  return String(text)
-    .replace(/([\\`*_[\]<>#|])/g, "\\$1")
-    .replace(/:(?=[A-Za-z])/g, "\\:");
-}
+// escapeMarkdown also escapes a colon before a letter: the pipeline reads `:word` as a directive and fails closed.
+import { escapeMarkdown as esc } from "@drdustinedwards/site-helpers/text";
 
 const OWNER_NAMES = new Set([
   "Dustin Edwards",
