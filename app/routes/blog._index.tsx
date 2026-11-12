@@ -1,4 +1,4 @@
-import { Form, data, redirect } from "react-router";
+import { data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
@@ -6,6 +6,7 @@ import { Pagination } from "capsomer/react/pagination";
 import { routerRenderLink } from "capsomer/react/link";
 import "capsomer/pagination.css";
 import { PostRow } from "~/components/post-row";
+import { SearchForm } from "~/components/search-form";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
@@ -27,6 +28,9 @@ import type { Route } from "./+types/blog._index";
 /* evidence-row.css is imported here, not by the component: every sheet a page loads shows in its route's imports. */
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
+import "~/styles/search-form.css";
+import "capsomer/field.css";
+import "capsomer/button.css";
 import "~/styles/entry-list.css";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -163,20 +167,9 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        <Form method="get" action="/search" role="search" className="list-search">
-          <label className="sr-only" htmlFor="blog-search-input">
-            Search the blog
-          </label>
-          <input
-            type="search"
-            id="blog-search-input"
-            name="q"
-            placeholder="Search the blog"
-            autoComplete="off"
-          />
+        <SearchForm label="Search the blog" labelHidden placeholder="Search the blog">
           <input type="hidden" name="type" value="post" />
-          <button type="submit">Search</button>
-        </Form>
+        </SearchForm>
 
         {tags.length > 0 && (
           <nav className="list-filter" aria-label="Filter posts by tag">

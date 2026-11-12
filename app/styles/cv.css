@@ -182,7 +182,6 @@
   flex: 1 1 18rem;
 }
 
-.cv-filters input[type="search"],
 .cv-filters select {
   box-sizing: border-box;
   min-height: var(--control-min);
@@ -195,15 +194,6 @@
   font-size: 1rem;
 }
 
-.cv-filters input[type="search"] {
-  width: 100%;
-}
-
-.cv-filters input::placeholder {
-  color: var(--placeholder);
-}
-
-.cv-filters input[type="search"]:focus-visible,
 .cv-filters select:focus-visible,
 .cv-apply:focus-visible {
   outline: 2px solid var(--brand);

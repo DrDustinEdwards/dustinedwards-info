@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Form, Link, data } from "react-router";
 
 import { Empty } from "capsomer/react/empty";
+import { SearchField } from "capsomer/react/field";
 import { Panel } from "capsomer/react/panel";
 import { Row, RowList, type RowLinkProps } from "capsomer/react/row-list";
 import { Status } from "capsomer/react/status";
@@ -60,6 +62,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 /** A row opens its file in the editor, inside the admin. */
+function KbSearch({ label, defaultValue }: { label: string; defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <SearchField
+      label={label}
+      landmark="Search"
+      name="q"
+      value={value}
+      onChange={setValue}
+      placeholder="Title, description or slug"
+    />
+  );
+}
+
 function AdminLink({ href, children, ...rest }: RowLinkProps) {
   return (
     <Link to={href} {...rest}>
@@ -116,21 +132,9 @@ export default function AdminKnowledgeBase({ loaderData }: Route.ComponentProps)
 
       {base ? (
         <>
-          <Form method="get" action={KB_ADMIN_PATH} role="search" className="app-filters">
+          <Form method="get" action={KB_ADMIN_PATH} className="app-filters">
             <input type="hidden" name="tab" value={tab} />
-            <div className="cap-field">
-              <label className="cap-field-label" htmlFor="kb-q">
-                Search {base.name.toLowerCase()}
-              </label>
-              <input
-                id="kb-q"
-                className="cap-input"
-                type="search"
-                name="q"
-                defaultValue={q}
-                placeholder="Title, description or slug"
-              />
-            </div>
+            <KbSearch label={`Search ${base.name.toLowerCase()}`} defaultValue={q} />
           </Form>
 
           {rows.length === 0 ? (

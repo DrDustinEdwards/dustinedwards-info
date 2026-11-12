@@ -1,3 +1,5 @@
+import { enhance as enhanceField } from "capsomer/behavior/field";
+
 // An island (devkit ./islands): each <template data-island="colophon"> on the page calls this, and the first one runs it.
 // The server sends the whole page. This adds two things: the side index marks the section being read (aria-current), and the
 // feature chips, which appear only here, show one group of features at a time.
@@ -10,6 +12,8 @@ export default function start(): void {
   filter();
   kinds();
   finders();
+  // Each filter box's Clear button (Capsomer's search field).
+  enhanceField();
 }
 
 function spy(): void {
@@ -85,11 +89,11 @@ function kinds(): void {
 
 function finders(): void {
   const status = document.querySelector<HTMLElement>(".colophon-status");
-  for (const input of document.querySelectorAll<HTMLInputElement>(".colophon-find")) {
+  for (const input of document.querySelectorAll<HTMLInputElement>("[data-find]")) {
     const list = document.querySelector<HTMLElement>(`[data-list="${input.dataset.find}"]`);
     if (!list) continue;
     const items = [...list.querySelectorAll<HTMLElement>("li")];
-    input.hidden = false;
+    input.closest<HTMLElement>("[data-find-field]")!.hidden = false;
     input.addEventListener("input", () => {
       const query = input.value.trim().toLowerCase();
       let shown = 0;
