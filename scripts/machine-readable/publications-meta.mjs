@@ -1,9 +1,9 @@
-import { doiSlug } from "@drdustinedwards/site-helpers/scholar";
-import { paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import {
-  buildCitationTags,
+  citationTags,
+  doiSlug,
   REQUIRED_CITATION_TAGS,
-} from "../../app/lib/publications/citation-tags.mjs";
+} from "@drdustinedwards/site-helpers/scholar";
+import { paperPath, paperPdfPath } from "../../app/lib/publications/paths.mjs";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
 import { SHOWCASE_TYPES as PAGE_SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
 import {
@@ -49,7 +49,7 @@ const cited = published.filter((p) => p.doi !== null);
     const isHosted = paper.access === "self-hosted" && paper.pdfPath !== null;
     let tags;
     try {
-      tags = buildCitationTags(paper, {
+      tags = citationTags(paper, {
         abstractUrl: `${ORIGIN}${paperPath(slug)}`,
         pdfUrl: isHosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
       });
@@ -99,13 +99,13 @@ const cited = published.filter((p) => p.doi !== null);
 
   const routeSource = SLUG_ROUTE;
   ok(
-    "the paper route calls buildCitationTags",
-    /buildCitationTags\s*\(/.test(routeSource),
+    "the paper route calls citationTags",
+    /citationTags\s*\(/.test(routeSource),
     "a correct builder nobody calls is a page with no citation tags",
   );
   ok(
-    "the paper route imports buildCitationTags from the gated module",
-    /import\s*\{[^}]*buildCitationTags[^}]*\}\s*from\s*"~\/lib\/publications\/citation-tags\.mjs"/.test(
+    "the paper route imports citationTags from Prelum's scholar module",
+    /import\s*\{[^}]*citationTags[^}]*\}\s*from\s*"@drdustinedwards\/site-helpers\/scholar"/.test(
       routeSource,
     ),
     "a locally defined builder would satisfy the call check above and be unchecked",

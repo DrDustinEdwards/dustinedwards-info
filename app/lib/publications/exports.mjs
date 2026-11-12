@@ -4,22 +4,8 @@
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
 import { decodeEntities } from "./entities.mjs";
-import { toBibtex } from "@drdustinedwards/site-helpers/scholar";
+import { toBibtex, toRis } from "@drdustinedwards/site-helpers/scholar";
 import { SITE_ORIGIN } from "../site-origin.mjs";
-
-/**
- * Best effort; the CSL export does not use this, it reads the structured given and family fields.
- *
- * @param {string} name
- */
-function splitName(name) {
-  const parts = canonicalAuthor(name).split(" ").filter(Boolean);
-  if (parts.length < 2) return { family: parts[0] ?? "", given: "" };
-  return {
-    family: parts[parts.length - 1] ?? "",
-    given: parts.slice(0, -1).join(" "),
-  };
-}
 
 /**
  * For check:machine-readable. A substring test is wrong: Mycobacterium smegmatis contains the bare
@@ -47,39 +33,13 @@ export function paperBibtex(paper) {
   return toBibtex(paper, CITATION_OPTIONS);
 }
 
-// TY first, ER last, exactly two spaces before the dash: reference managers are strict about that.
-const RIS_TYPE = {
-  article: "JOUR",
-  review: "JOUR",
-  abstract: "ABST",
-  chapter: "CHAP",
-  "teaching-resource": "ELEC",
-};
-
-/** @param {any} paper */
-export function toRis(paper) {
-  /** @type {[string, string][]} */
-  const rows = [["TY", RIS_TYPE[/** @type {keyof typeof RIS_TYPE} */ (paper.type)] ?? "JOUR"]];
-  rows.push(["TI", decodeEntities(paper.title)]);
-  for (const name of paper.authors) {
-    const { family, given } = splitName(name);
-    rows.push(["AU", given ? `${family}, ${given}` : family]);
-  }
-  if (paper.journal) rows.push(["JO", decodeEntities(paper.journal)]);
-  if (paper.year) rows.push(["PY", String(paper.year)]);
-  // RIS wants slashes and tolerates a trailing empty field, which is how a partial date is expressed.
-  if (paper.publishedDate) rows.push(["DA", paper.publishedDate.replace(/-/g, "/")]);
-  if (paper.volume) rows.push(["VL", String(paper.volume)]);
-  if (paper.issue) rows.push(["IS", String(paper.issue)]);
-  if (paper.firstPage) rows.push(["SP", paper.firstPage]);
-  if (paper.lastPage) rows.push(["EP", paper.lastPage]);
-  if (paper.abstract) rows.push(["AB", decodeEntities(paper.abstract)]);
-  if (paper.doi) {
-    rows.push(["DO", paper.doi]);
-    rows.push(["UR", `https://doi.org/${paper.doi}`]);
-  }
-  rows.push(["ER", ""]);
-  return rows.map(([tag, value]) => `${tag}  - ${value}`).join("\n");
+/**
+ * One paper as a RIS record, by the same alias table.
+ *
+ * @param {any} paper
+ */
+export function paperRis(paper) {
+  return toRis(paper, CITATION_OPTIONS);
 }
 
 /**
@@ -133,5 +93,5 @@ export function toBibtexAll(papers) {
 
 /** @param {any[]} papers */
 export function toRisAll(papers) {
-  return `${header("", papers.length)}\n${papers.map(toRis).join("\n\n")}\n`;
+  return `${header("", papers.length)}\n${papers.map(paperRis).join("\n\n")}\n`;
 }
