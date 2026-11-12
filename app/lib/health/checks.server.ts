@@ -36,7 +36,7 @@ import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { PHAGES_DIR } from "~/lib/phages/compile.mjs";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
-import { mediaIndexStatus } from "~/lib/media/rebuild.server";
+import { siteAssetStatus } from "~/lib/media/rebuild.server";
 import { cachedVerdict } from "~/lib/health/verdict-cache.server";
 
 /**
@@ -244,7 +244,7 @@ export async function runHealthChecks(env: Env, options: HealthOptions = {}): Pr
   pending.push(
     guard("media-index-drift", () =>
       cachedVerdict(env, "media-index-drift", async () =>
-        mediaDriftVerdict(await mediaIndexStatus(env)),
+        mediaDriftVerdict(await siteAssetStatus(env)),
       ),
     ),
   );

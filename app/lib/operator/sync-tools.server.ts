@@ -15,7 +15,7 @@ import {
   pruneAskCorpus,
   syncAskCorpus,
 } from "~/lib/search/ask.server";
-import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
+import { siteAssetStatus, rebuildSiteAssets } from "~/lib/media/rebuild.server";
 import { dropHealthVerdicts } from "~/lib/health/verdict-cache.server";
 import {
   readContentSides,
@@ -130,8 +130,8 @@ export async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
 }
 
 export async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
-  const rebuilt = await rebuildMediaIndex(env);
-  const status = await mediaIndexStatus(env);
+  const rebuilt = await rebuildSiteAssets(env);
+  const status = await siteAssetStatus(env);
   await dropHealthVerdicts(env);
 
   return {

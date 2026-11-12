@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 
-import { mediaLibraryStore } from "~/db";
+import { mediaStore } from "~/db";
 import {
   EditorError,
   deletePost,
@@ -154,16 +154,16 @@ describe("savePost", () => {
       });
 
     await save(`A paragraph.\n\n${image}\n\nAnother paragraph.\n\n${image}\n`, true);
-    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("in-use");
+    expect(await mediaStore(env as never).remove(key, 0)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     await save(`A paragraph.\n\n${image}\n`, false);
-    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("in-use");
+    expect(await mediaStore(env as never).remove(key, 0)).toBe("in-use");
     expect(await env.MEDIA.get(key)).not.toBeNull();
 
     /* The refusals above were the citations, not a missing row. */
     await save("A paragraph with no image.\n", false);
-    expect(await mediaLibraryStore(env as never).remove(key, 0)).toBe("removed");
+    expect(await mediaStore(env as never).remove(key, 0)).toBe("removed");
   });
 
   it("records two citations whose parts collide under a space join as two rows", async () => {
