@@ -1,5 +1,5 @@
 // Carrel's media group, and the admin library's through the content kit: site-api's shared media library (v0.24.0)
-// over this site's own index (mediaLibraryStore, app/db/media.ts) and its buckets. What is this site's own is set here
+// over site-api's d1MediaStore on the standard tables (mediaStore, app/db/media.ts) and this site's buckets. What is this site's own is set here
 // and nowhere else: the content-addressed keys that carry a picture's size, the reference check, which files the
 // library may change, where earlier bytes are kept, and the objects' metadata.
 
@@ -13,7 +13,7 @@ import {
 } from "@dustinedwards/site-api";
 import { fromHex } from "@dustinedwards/site-runtime/encoding";
 
-import { mediaLibraryStore, mediaRefsFor } from "~/db";
+import { mediaRefsFor, mediaStore } from "~/db";
 import { contentKey } from "~/lib/media/classify.mjs";
 import { isManagedKey } from "~/lib/media/core.server";
 import { resolveCitations } from "~/lib/media/resolvers.server";
@@ -49,7 +49,7 @@ function keyFor(file: MediaKeyInput, attempt: number): string {
  * throws, so the library refuses a delete rather than reading the failure as "nothing uses it".
  */
 async function usesOf(env: Env, asked?: string[]): Promise<Map<string, MediaUse[]>> {
-  const keys = asked ?? (await mediaLibraryStore(env).all()).map((r) => r.key);
+  const keys = asked ?? (await mediaStore(env).all()).map((r) => r.key);
   const [resolution, refs] = await Promise.all([
     resolveCitations(env, keys),
     mediaRefsFor(env, keys),
@@ -89,7 +89,7 @@ async function usesOf(env: Env, asked?: string[]): Promise<Map<string, MediaUse[
 
 export function carrelMediaAdapter(env: Env): MediaAdapter {
   return mediaLibrary({
-    store: mediaLibraryStore(env),
+    store: mediaStore(env),
     bucket: env.MEDIA,
     images: env.IMAGES,
     limits: { maxBytes: MAX_BYTES, types: [...ALLOWED.keys()] },

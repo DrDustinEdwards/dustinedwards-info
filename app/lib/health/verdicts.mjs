@@ -52,16 +52,16 @@ export function mediaDriftVerdict(status) {
   if (drift === 0) {
     return {
       ok: true,
-      detail: `Media index agrees with R2 and public/: ${status.expected} expected, ${status.present} present.`,
+      detail: `Site file index agrees with OG and public/: ${status.expected} expected, ${status.present} present.`,
     };
   }
   return {
     ok: false,
     detail:
-      `Media index drift ${drift}: ${status.missing.length} missing, ` +
+      `Site file index drift ${drift}: ${status.missing.length} missing, ` +
       `${status.extra.length} extra, ${status.expected} expected, ` +
       `${status.present} present. Repair with sync_media on the operator API, ` +
-      `or Rebuild the media index on /admin/tools.`,
+      `or Rebuild the site file index on /admin/tools.`,
     counts: { expected: status.expected, present: status.present },
   };
 }

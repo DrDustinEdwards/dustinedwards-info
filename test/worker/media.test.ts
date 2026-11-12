@@ -3,7 +3,7 @@ import { RefusedError } from "@dustinedwards/site-api";
 import type { IntentResult } from "@dustinedwards/site-api/admin";
 import { describe, expect, it } from "vitest";
 
-import { mediaLibraryStore, mediaRefsFor } from "~/db";
+import { mediaRefsFor, mediaStore } from "~/db";
 import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
@@ -74,9 +74,9 @@ const versionOf = async (key: string) =>
   (await carrelMediaAdapter(mediaEnv()).get(key))?.version ?? "";
 
 const mediaRow = (key: string) =>
-  env.DB.prepare("SELECT width, height, original_name, alt FROM media WHERE key = ?1")
+  env.DB.prepare("SELECT width, height, filename, alt FROM media WHERE key = ?1")
     .bind(key)
-    .first<{ width: number | null; height: number | null; original_name: string; alt: string }>();
+    .first<{ width: number | null; height: number | null; filename: string; alt: string }>();
 
 describe("media upload", () => {
   it("puts the object in R2 under a CONTENT-ADDRESSED key carrying its dimensions", async () => {
@@ -148,7 +148,7 @@ describe("media upload", () => {
     const row = await mediaRow(key);
     expect({ width: row?.width, height: row?.height }).toEqual(dimensionsFromKey(key));
     expect(row?.width).toBe(1200);
-    expect(row?.original_name).toBe("annotated.png");
+    expect(row?.filename).toBe("annotated.png");
     expect(row?.alt).toBe("");
   });
 
@@ -214,24 +214,6 @@ describe("the atomic delete claim", () => {
   const rowOf = (key: string) =>
     env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first();
 
-  it("REMOVES an uncited key with its revisions", async () => {
-    const { key } = await uploadKey("uncited", { width: 20, height: 20 });
-    await seedMediaRow(key);
-    await env.DB.prepare(
-      "INSERT INTO media_revisions (media_key, at, bytes, reason) VALUES (?1, '2030-01-01T00:00:00.000Z', 1, 'upload')",
-    )
-      .bind(key)
-      .run();
-
-    // Only at the version the reference check saw.
-    expect(await mediaLibraryStore(mediaEnv()).remove(key, 1)).toBe("stale");
-    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("removed");
-    expect(await rowOf(key)).toBeNull();
-    expect(
-      await env.DB.prepare("SELECT id FROM media_revisions WHERE media_key = ?1").bind(key).first(),
-    ).toBeNull();
-  });
-
   it("OBSERVES THE `NOT EXISTS` THROUGH A PLANTED CONCURRENT CITATION (finding B009)", async () => {
     /* A citation landing after the caller's read and before the claim is the race, made
      * deterministic. A ref inserted before the read would not tell a read-then-delete apart. */
@@ -249,7 +231,7 @@ describe("the atomic delete claim", () => {
       .run();
 
     /* Must lose: the check runs inside the statement, not on the caller's stale read. */
-    expect(await mediaLibraryStore(mediaEnv()).remove(key, 0)).toBe("in-use");
+    expect(await mediaStore(mediaEnv()).remove(key, 0)).toBe("in-use");
     expect(await rowOf(key)).toBeTruthy();
   });
 });
@@ -258,14 +240,14 @@ describe("emptying the trash", () => {
   async function trashedUpload(seed: string) {
     const { bytes, key } = await uploadKey(seed, { width: 20, height: 20 });
     await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-    await seedMediaRow(key, { trashed_at: "2030-01-01 00:00:00" });
+    await seedMediaRow(key, { trashed_at: "2030-01-01T00:00:00.000Z" });
     return key;
   }
 
   const trashedCount = async () =>
     (
       await env.DB.prepare(
-        "SELECT count(*) AS n FROM media WHERE storage = 'r2' AND trashed_at IS NOT NULL",
+        "SELECT count(*) AS n FROM media WHERE trashed_at IS NOT NULL",
       ).first<{ n: number }>()
     )?.n ?? 0;
 
@@ -305,7 +287,7 @@ describe("an unknown intent", () => {
 describe("quick search", () => {
   it("is answered as JSON, which a document loader cannot do", async () => {
     const { key } = await uploadKey("palette-target", { width: 20, height: 20 });
-    await seedMediaRow(key, { original_name: "zanzibar-palette-target.png" });
+    await seedMediaRow(key, { filename: "zanzibar-palette-target.png" });
 
     const middleware = adminMediaMiddleware[0] as unknown as (
       args: never,

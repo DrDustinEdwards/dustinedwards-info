@@ -113,13 +113,13 @@ const CHECK_COPY = {
     repair: { action: "/admin/tools", intent: "sync-ask", label: "Rebuild the answer index" },
   },
   "media-index-drift": {
-    name: "Media library",
+    name: "Site files",
     failing: (counts) =>
       counts
-        ? `The library lists ${counts.present} files and ${counts.expected} are stored, so something is missing from one side.`
-        : "The library and the stored files disagree about what exists.",
-    passing: "Every stored file is listed, and nothing is listed that is not there.",
-    repair: { action: "/admin/media", intent: "rebuild", label: "Rebuild the library listing" },
+        ? `The index of the site's own files lists ${counts.present} and ${counts.expected} exist, so something is missing from one side.`
+        : "The index of the site's own files and the files themselves disagree about what exists.",
+    passing: "Every site file and generated card is indexed, and nothing is indexed that is not there.",
+    repair: { action: "/admin/tools", intent: "rebuild", label: "Rebuild the site file index" },
   },
   "fts-equality": {
     name: "Site search",

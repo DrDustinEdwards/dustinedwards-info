@@ -59,7 +59,7 @@ export const TOOL_DESCRIPTORS: Readonly<
   sync_media: {
     args: {},
     returns:
-      "Rebuilds the media index from R2 and the asset manifest, through the " +
+      "Rebuilds the index of the site's own files from the OG bucket and the asset manifest, through the " +
       "same derivation the admin button runs. Idempotent. A read-back " +
       "reconciliation: expected, present, missing and extra keys, and a " +
       "converged verdict.",

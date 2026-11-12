@@ -1,13 +1,13 @@
-import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
-import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
-import { placeholderAndColor } from "@dustinedwards/site-api";
+import { deleteSiteAsset, upsertSiteAsset } from "~/db";
+import { classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { measureDimensions } from "~/lib/media/core.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 
 /**
- * The authoritative media row writer, fed by R2 event notifications rather than a dual write. Must be
- * idempotent: Queues delivers at least once and out of order, so the object is re-read, never trusted
- * from the event, and R2 wins any disagreement.
+ * The writer of the site file index's OG rows (site_assets), fed by R2 event notifications rather than a dual write.
+ * Must be idempotent: Queues delivers at least once and out of order, so the object is re-read, never trusted from the
+ * event, and R2 wins any disagreement. An event for MEDIA, the library's bucket, writes nothing: site-api's
+ * mediaLibrary writes the library's rows as it stores the bytes (app/db/media.ts).
  */
 
 function objectKeyOf(body: unknown): string | null {
@@ -18,8 +18,6 @@ function objectKeyOf(body: unknown): string | null {
   return typeof key === "string" && key.length > 0 ? key : null;
 }
 
-// A missing object deletes the row, so reading the wrong bucket for a key deletes it too. Use the
-// shared `bucketFor`; never write a second copy.
 
 export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) {
   for (const message of batch.messages) {
@@ -45,19 +43,13 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
 
 /** Ignores the event's action on purpose: asking R2 what is true now makes reordering safe. */
 async function indexOne(env: Env, key: string) {
-  const object = await bucketFor(env, key).get(key);
+  // Only OG's keys are the index's (classify.mjs storageOf), and OG's events and MEDIA's share the queue.
+  if (storageOf(key) !== "r2-derived") return;
+  const object = await env.OG.get(key);
 
   if (!object) {
-    // Logged, because a genuine delete and a key looked up in the wrong bucket both land here.
-    console.log(
-      JSON.stringify({
-        event: "media-event-no-object",
-        key,
-        bucket: storageOf(key) === "r2-derived" ? "OG" : "MEDIA",
-        action: "deleting any row",
-      }),
-    );
-    await deleteMediaRecord(env, key);
+    console.log(JSON.stringify({ event: "media-event-no-object", key, action: "deleting any row" }));
+    await deleteSiteAsset(env, key);
     return;
   }
 
@@ -65,7 +57,6 @@ async function indexOne(env: Env, key: string) {
 
   let width: number | null = null;
   let height: number | null = null;
-  let placeholder: string | null = null;
   // An unreadable image still gets a row, or the index would disagree with the bucket; the stored
   // sizes are left alone and the failure is thrown after the write, so the message retries and a
   // permanent failure lands in the dead-letter queue.
@@ -78,17 +69,9 @@ async function indexOne(env: Env, key: string) {
     } catch (error) {
       measureFailure = error;
     }
-
-    // Derived here, or the upsert erases the bulk pass's placeholder. A second GET, because `.info()`
-    // consumed the first body stream.
-    const reread = await bucketFor(env, key).get(key);
-    if (reread)
-      placeholder = (
-        await placeholderAndColor(env.IMAGES, new Uint8Array(await reread.arrayBuffer()))
-      ).placeholder;
   }
 
-  await upsertDerivedMedia(env, {
+  await upsertSiteAsset(env, {
     key,
     storage: storageOf(key),
     kind,
@@ -97,17 +80,12 @@ async function indexOne(env: Env, key: string) {
     bytes: object.size,
     width,
     height,
-    // From the object: a content-addressed key cannot yield a filename. Null means "do not touch".
-    originalName: object.customMetadata?.originalName ?? null,
-    // Null means "do not touch", not "erase".
-    placeholder,
     uploadedAt:
       object.uploaded instanceof Date
         ? object.uploaded.toISOString()
         : String(object.uploaded ?? ""),
   });
 
-  // The backup is not taken here: the nightly files backup copies MEDIA into BACKUPS (d1-backup.server.ts).
   // Last, so the row is written before the retry is asked for.
   if (measureFailure) throw measureFailure;
 }

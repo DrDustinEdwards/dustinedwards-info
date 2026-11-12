@@ -103,95 +103,43 @@ export const settings = sqliteTable("settings", {
 });
 
 /**
- * Derived: R2 and `public/` win any conflict. A row with no object is deleted, an object with no row
- * is backfilled, never the reverse. Citations live in `mediaRefs`, never here.
+ * The media library's files: the uploads in MEDIA, written only by site-api's mediaLibrary through d1MediaStore
+ * (app/db/media.ts). The network's standard tables (site-api MEDIA_LIBRARY_SQL, drizzle/0044_shared_media_store.sql),
+ * modeled here for the admin's count and the schema test. Times are ISO 8601 UTC; `tags` a JSON array; `focus` "XxY".
+ * Citations live in `mediaRefs`, never here.
  */
 export const media = sqliteTable(
   "media",
   {
-    /** R2 object key, or the site-absolute public path when storage='static'. */
+    /** The R2 key in MEDIA and the media id: dustin-edwards-<name>-<16 hex>-<w>x<h>.<ext> (classify.mjs contentKey). */
     key: text("key").primaryKey(),
-    /** 'r2' | 'r2-derived' | 'static'. */
-    storage: text("storage").notNull().default("r2"),
-    /** 'image' | 'document' | 'other'. */
-    kind: text("kind").notNull().default("image"),
-    /**
-     * 'content' | 'brand' | 'generated' | 'icon'. The picker takes `content` only, because inserting
-     * one half of a generated diagram pair produces a broken post.
-     */
-    role: text("role").notNull().default("content"),
-    mime: text("mime"),
-    bytes: integer("bytes"),
-    /** NULL means "not measured", which an SVG and a PDF legitimately are. */
+    filename: text("filename"),
+    contentType: text("content_type").notNull(),
+    bytes: integer("bytes").notNull(),
     width: integer("width"),
     height: integer("height"),
-    /** Keys are content-addressed, so the readable upload name survives only here. */
-    originalName: text("original_name"),
-
-    /* Authored, and recoverable from nothing: a rebuild merges these rather than truncating. */
+    /** SHA-256 of the current bytes, lower case hex. */
+    sha256: text("sha256").notNull(),
     alt: text("alt").notNull().default(""),
     caption: text("caption").notNull().default(""),
-    focalX: real("focal_x"),
-    focalY: real("focal_y"),
-
-    /**
-     * Delimiter-wrapped, `,alpha,beta,` or "", so an exact LIKE match on `art` does not hit `chart`.
-     * Only `serializeTags()` writes it; it strips the delimiter and both LIKE wildcards.
-     */
-    tags: text("tags").notNull().default(""),
-
-    /**
-     * NULL means not trashed. Library state only: R2 and the public URL are untouched, so a trashed
-     * asset a post cites keeps rendering. Reconciliation ignores it on purpose.
-     */
-    trashedAt: text("trashed_at"),
-
-    /** LQIP as a base64 data URI, so it renders with no script. */
-    placeholder: text("placeholder"),
-    uploadedAt: text("uploaded_at"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-    updatedAt: text("updated_at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-    /**
-     * Bumped by every write to alt, caption, tags, focal point, trash state or bytes, and checked in the
-     * same UPDATE's WHERE, so a stale write is refused rather than lost. Carrel's media version is "r<rev>".
-     */
-    rev: integer("rev").notNull().default(0),
-
-    /* site-api v0.13.0 (drizzle/0035_media_library.sql). */
-    /** SHA-256 of the current bytes, lower case hex; NULL for a row written before it, whose key's digest stands in. */
-    sha256: text("sha256"),
-    /** Authored, like alt: who made it and the terms it is used under, "" for none. */
+    tags: text("tags").notNull().default("[]"),
+    focus: text("focus"),
     credit: text("credit").notNull().default(""),
     license: text("license").notNull().default(""),
     sourceUrl: text("source_url"),
-    /** YYYY-MM-DD, or NULL for a license with no end. */
     licenseExpires: text("license_expires"),
-    /** From the file's embedded metadata at upload. */
     takenAt: text("taken_at"),
+    uploadedAt: text("uploaded_at").notNull(),
+    /** NULL means not trashed. Library state only: a trashed file a post cites keeps rendering. */
+    trashedAt: text("trashed_at"),
+    rev: integer("rev").notNull().default(0),
+    placeholder: text("placeholder"),
+    color: text("color"),
   },
-  (t) => [
-    index("media_uploaded_idx").on(t.uploadedAt),
-    index("media_sha256_idx").on(t.sha256),
-    index("media_storage_idx").on(t.storage),
-    index("media_kind_idx").on(t.kind),
-    index("media_role_idx").on(t.role),
-    /*
-     * Partial in the migration (`WHERE trashed_at IS NOT NULL`). Drizzle cannot model the predicate
-     * and the schema test does not compare predicates, so it lives only in the SQL.
-     */
-    index("media_trashed_idx").on(t.trashedAt),
-  ],
+  (t) => [index("media_sha256").on(t.sha256)],
 );
 
-/**
- * A file's byte history (site-api v0.13.0): one row per set of bytes. The newest row for a key is the bytes in
- * MEDIA; each earlier one names its copy in MEDIA_REVISIONS, which nothing deletes. A file with no row has had only
- * the bytes it was uploaded with.
- */
+/** A library file's byte history: each earlier set of bytes names its copy in MEDIA_REVISIONS (`copy_key`). */
 export const mediaRevisions = sqliteTable(
   "media_revisions",
   {
@@ -203,28 +151,41 @@ export const mediaRevisions = sqliteTable(
     height: integer("height"),
     /** upload | import | replace | transform | resize | revert */
     reason: text("reason").notNull(),
-    sha256: text("sha256"),
-    /** Where MEDIA_REVISIONS keeps these bytes; NULL while they are the current ones. */
-    backupKey: text("backup_key"),
+    sha256: text("sha256").notNull(),
+    copyKey: text("copy_key"),
   },
-  (t) => [index("media_revisions_key_idx").on(t.mediaKey, t.id)],
+  (t) => [index("media_revisions_key").on(t.mediaKey, t.id)],
 );
 
+/** Every insert, update and delete of a library row, in order, written by the migration's triggers. */
+export const mediaChanges = sqliteTable("media_changes", {
+  seq: integer("seq").primaryKey({ autoIncrement: true }),
+  mediaKey: text("media_key").notNull(),
+});
+
 /**
- * Every change to an uploaded file's row, written by triggers on `media` (drizzle/0035_media_library.sql), so a
- * library screen can ask what changed since a point (site-api's `changedSince`). Derived; never written here.
+ * The site's own files, derived: the paths in public/ (storage 'static', from the committed asset manifest) and the
+ * Worker's generated objects in OG (storage 'r2-derived': og/ cards, derived/ documents). Written only by the rebuild
+ * and the R2 events (app/lib/media/rebuild.server.ts, workers/media-events.ts); OG and public/ win any conflict, so a
+ * row with no file is deleted and a file with no row is indexed, never the reverse. Never the library's.
  */
-export const mediaChanges = sqliteTable(
-  "media_changes",
-  {
-    seq: integer("seq").primaryKey({ autoIncrement: true }),
-    mediaKey: text("media_key").notNull(),
-    at: text("at")
-      .notNull()
-      .default(sql`(datetime('now'))`),
-  },
-  (t) => [index("media_changes_key_idx").on(t.mediaKey, t.seq)],
-);
+export const siteAssets = sqliteTable("site_assets", {
+  /** The site-absolute path when storage is 'static', else the OG object key. */
+  key: text("key").primaryKey(),
+  /** 'static' | 'r2-derived' (classify.mjs storageOf). */
+  storage: text("storage").notNull(),
+  /** 'image' | 'document' | 'other'. */
+  kind: text("kind").notNull(),
+  /** 'content' | 'brand' | 'generated' | 'icon' (classify.mjs roleOf). */
+  role: text("role").notNull(),
+  mime: text("mime"),
+  bytes: integer("bytes"),
+  /** NULL means "not measured", which an SVG and a PDF legitimately are. */
+  width: integer("width"),
+  height: integer("height"),
+  /** When OG stored the object; NULL for a file in public/, which has no upload event. */
+  uploadedAt: text("uploaded_at"),
+});
 
 /**
  * Who cites what, written by the pipeline at render time. A record of what the renderer emitted,

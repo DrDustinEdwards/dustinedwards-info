@@ -31,6 +31,9 @@ export const NON_DERIVED_TABLES = Object.freeze({
   gone_paths: "the addresses of deleted or trashed live posts, each answered 410 (0042)",
   page_404_daily:
     "missing-path counts per day, pruned after 90 days, converge toward nothing (0041)",
+  media:
+    "the media library's files and what was written about each (alt, caption, tags, credit), through site-api (0044)",
+  media_revisions: "each library file's earlier bytes and where their copies are kept (0044)",
 });
 
 /** A dump that lacks any of these is not complete, whatever else it holds. */
