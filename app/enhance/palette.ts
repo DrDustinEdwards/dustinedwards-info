@@ -147,7 +147,9 @@ export default function start(): void {
     box.className = "palette-ask";
     askTrigger = document.createElement("button");
     askTrigger.type = "button";
-    askTrigger.className = "palette-ask-trigger";
+    askTrigger.className = "cap-btn";
+    askTrigger.dataset.variant = "quiet";
+    askTrigger.dataset.size = "sm";
     askTrigger.textContent = "Ask AI about this";
     askTrigger.hidden = true;
     askTrigger.addEventListener("click", () => void runAsk());

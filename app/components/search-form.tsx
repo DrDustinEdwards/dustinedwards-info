@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { Form } from "react-router";
+import { Button } from "capsomer/react/button";
+import { SearchField } from "capsomer/react/field";
 
 /**
  * The site search box: a plain GET to /search with the query in `q`, so it works with no script.
@@ -13,24 +16,22 @@ export function SearchForm({
   defaultValue?: string;
   children?: React.ReactNode;
 }) {
+  const [value, setValue] = useState(defaultValue ?? "");
   return (
-    <Form method="get" action="/search" role="search" className="search-form">
-      <label className="search-label" htmlFor="q">
-        Search this site
-      </label>
+    <Form method="get" action="/search" className="search-form">
       <div className="search-input-row">
-        <input
-          type="search"
+        <SearchField
+          label="Search this site"
           id="q"
           name="q"
-          defaultValue={defaultValue}
+          value={value}
+          onChange={setValue}
           placeholder="Try: d1, tag:cloudflare, 2026, or a quoted phrase"
           autoComplete="off"
-          className="search-input"
         />
-        <button type="submit" className="search-submit">
+        <Button type="submit" variant="primary">
           Search
-        </button>
+        </Button>
       </div>
       {children}
     </Form>

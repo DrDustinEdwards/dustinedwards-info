@@ -4,25 +4,6 @@
   padding: 0 0.75rem;
 }
 
-.palette-ask-trigger {
-  width: 100%;
-  padding: 0.4rem 0.5rem;
-  border: 1px dashed var(--border);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 0.8125rem;
-  text-align: left;
-  cursor: pointer;
-  min-height: 1.5rem;
-}
-
-.palette-ask-trigger:hover {
-  border-color: var(--brand);
-  color: var(--text);
-}
-
 .palette-ask-status {
   margin: 0.25rem 0 0;
   color: var(--text-secondary);
