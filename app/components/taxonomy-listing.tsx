@@ -7,6 +7,7 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listingFacts } from "~/lib/blog-listing.mjs";
 import { SITE, type Trail } from "~/lib/seo";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /** A taxonomy page's URL for page `n`: the bare path for the first page, `?page=n` after it. */
 export function listingHref(base: string, n: number) {
@@ -15,7 +16,7 @@ export function listingHref(base: string, n: number) {
 
 /** A listing's description from its own posts: how many, and the titles on the page. */
 export function listingDescription(what: string, total: number, posts: Array<{ title: string }>) {
-  const count = `${total} post${total === 1 ? "" : "s"} on ${SITE.name}'s blog ${what}`;
+  const count = `${plural(total, "post")} on ${SITE.name}'s blog ${what}`;
   return posts.length > 0
     ? `${count}: ${posts.map((post) => post.title).join("; ")}.`
     : `${count}.`;

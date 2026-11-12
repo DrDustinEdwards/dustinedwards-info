@@ -32,6 +32,7 @@ import {
 } from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 /*
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
@@ -194,9 +195,9 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
   if (drift <= 0) return size;
   const minutes = Math.round(maxAgeSeconds / 60);
   const age =
-    minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
+    minutes >= 1 ? plural(minutes, "minute") : `${maxAgeSeconds} seconds`;
   return (
-    `${lead}${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
+    `${lead}${plural(drift, "Ask index item")} drifted. ` +
     `This count is up to ${age} old; open Tools for the current figure and the repair.`
   );
 }

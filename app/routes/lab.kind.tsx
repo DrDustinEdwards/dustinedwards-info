@@ -1,3 +1,4 @@
+import { plural } from "@drdustinedwards/site-helpers/text";
 import { DraftNotice } from "capsomer/react/draft-notice";
 import { catalogRedirect, parseCatalogParams, queryCatalog } from "capsomer/behavior/catalog";
 import { data, redirect } from "react-router";
@@ -235,8 +236,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
       trail: trailOf(page),
       ...(page.view === "kind" ? { pageType: "CollectionPage" } : {}),
     });
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  if (page.view === "kind") {
+    if (page.view === "kind") {
     if (page.kind === "strain") {
       return head(
         "Strains: the bacterial hosts of the lab's phage work",

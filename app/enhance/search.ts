@@ -5,6 +5,7 @@
  */
 
 import { trustedHtml } from "capsomer/behavior/trusted-html";
+import { plural } from "@drdustinedwards/site-helpers/text";
 
 const MIN_QUERY = 3;
 const DEBOUNCE_MS = 200;
@@ -132,7 +133,7 @@ export function enhanceSearch(): void {
 
     if (count) {
       const total = data.total ?? 0;
-      count.textContent = total === 0 ? "No results" : `${total} result${total === 1 ? "" : "s"}`;
+      count.textContent = total === 0 ? "No results" : plural(total, "result");
     }
 
     // Replaced, not pushed, so a reader who typed eight characters need not press Back eight times.
