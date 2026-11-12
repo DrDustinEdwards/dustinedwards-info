@@ -11,7 +11,7 @@ import {
   parseSort,
   toMatchExpression,
 } from "@drdustinedwards/site-helpers/search";
-import { clampWords } from "~/lib/content/og-card-text.mjs";
+import { clampTitle } from "@dustinedwards/site-runtime/share-card";
 import { escapeXml } from "@drdustinedwards/site-helpers";
 import { SEARCH_BASES, baseOfUrl, basePrefix } from "~/kb/search-bases.mjs";
 
@@ -385,7 +385,7 @@ async function browse(
   const browseTook = Date.now() - started;
   const browseHits: SearchHit[] = rows.map((item, index) =>
     // Rank is the date order this came back in, not a relevance score.
-    toHit(item, renderSnippet(clampWords(item.snippet, 200)), ["filter"], rows.length - index),
+    toHit(item, renderSnippet(clampTitle(item.snippet, 200)), ["filter"], rows.length - index),
   );
   return {
     parsed,

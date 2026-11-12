@@ -10,6 +10,7 @@ import { isAllowedUrl } from "@drdustinedwards/site-helpers/render/url";
 import matter from "gray-matter";
 // Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
 import "@dustinedwards/site-runtime/zod-jitless";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 import { z } from "zod";
 
 // Mermaid drawings Prelum still emits as an <img> pair are sized from this file. The three hand-built
@@ -23,7 +24,7 @@ import {
   withoutInlinedDiagramRefs,
 } from "./blog-diagrams.mjs";
 import { makeChartData } from "./chart-data.mjs";
-import { gitBlobSha, renderHash } from "./hashes.mjs";
+import { gitBlobSha } from "./hashes.mjs";
 import { contentImage, images, mediaContentVersion } from "../media/images.mjs";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
 
@@ -370,6 +371,6 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage, readCh
     sourcePath: postPath(fm.slug),
     // Over the whole raw file, frontmatter included, because that is the blob git stores.
     sourceBlobSha: await gitBlobSha(raw),
-    renderHash: await renderHash(html),
+    renderHash: await sha256Hex(html),
   };
 }

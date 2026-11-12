@@ -22,7 +22,8 @@ import {
 } from "~/kb/admin.mjs";
 import { BASES } from "~/kb/bases.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timedLoader } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { timedLoader } from "~/lib/timing";
 
 import type { Route } from "./+types/admin.kb";
 import { plural } from "@drdustinedwards/site-helpers/text";

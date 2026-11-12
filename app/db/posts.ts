@@ -26,7 +26,8 @@ import { inList } from "@dustinedwards/site-runtime/d1";
 import { pageEnvelope } from "capsomer/react/pagination";
 import { PUBLISHED_STATUS } from "@drdustinedwards/site-helpers/search";
 import { seriesSlug } from "../lib/series-path.mjs";
-import { timed, type Timings } from "../lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { type Timings } from "../lib/timing";
 import { media, postTags, posts, tags } from "./schema";
 import { getDb, type DB, publiclyVisible, isBlogPost, notTrashed } from "./client";
 

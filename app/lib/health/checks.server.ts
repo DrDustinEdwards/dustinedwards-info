@@ -19,7 +19,8 @@ import {
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus, type AskIndexStatus } from "~/lib/search/ask.server";
-import { timed, type Timings } from "~/lib/timing";
+import { timed } from "@dustinedwards/site-runtime/server-timing";
+import { type Timings } from "~/lib/timing";
 import { SourceError, listDirectory, listPostFiles } from "~/lib/source/store.server";
 import { REGISTRY_DIR } from "~/kb/registry/compile.mjs";
 import { KINDS } from "~/kb/registry/kinds.mjs";

@@ -13,6 +13,8 @@
 // What the protocols use of it is COMPUTED: a protocol names a reagent on one of its materials by id (`reagent: <id>`), keeps its
 // own amount, stock and final, and the table lists the protocols that name it.
 
+import { SLUG_PATTERN } from "@drdustinedwards/site-helpers/slug";
+
 const LINE = /^[^\r\n]+$/;
 
 /** @param {unknown} value @param {number} max */
@@ -51,9 +53,7 @@ export const REAGENT = {
     // The recipe of a reagent prepared in the lab: the file key of a procedure with the recipe profile, or MISSING.
     recipe: {
       check: async (value, { host }) =>
-        typeof value === "string" &&
-        /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
-        (await host.recipe(value))
+        typeof value === "string" && SLUG_PATTERN.test(value) && (await host.recipe(value))
           ? null
           : "is the file key of a procedure with the recipe profile (content/procedures/<key>.md, profile: recipe), or MISSING: <why>",
     },

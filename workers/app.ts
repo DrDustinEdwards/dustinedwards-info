@@ -4,7 +4,6 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { cloudflareContext, documentHandlerContext, cspNonceContext } from "~/lib/context";
-import { httpsRedirectStatus } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { cacheTags, EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { THEME_COOKIE } from "capsomer/theme-server";
@@ -24,7 +23,7 @@ import {
 } from "@dustinedwards/site-runtime/edge-cache";
 import { withPreloadHeader } from "@dustinedwards/site-runtime/preload";
 import { timedRender } from "@dustinedwards/site-runtime/server-timing";
-import { canonicalRedirect } from "@dustinedwards/site-runtime/url";
+import { canonicalRedirect, redirectStatus } from "@dustinedwards/site-runtime/url";
 import {
   SPECULATION_RULES_HEADER,
   SPECULATION_RULES_PATH,
@@ -173,7 +172,7 @@ export class Renderer extends withPurgePages(WorkerEntrypoint<Env, RendererProps
  */
 function redirectTo(request: Request, location: string) {
   return new Response(null, {
-    status: httpsRedirectStatus(request.method),
+    status: redirectStatus(request.method),
     headers: { ...SECURITY_HEADERS, Location: location, "Cache-Control": "no-store" },
   });
 }

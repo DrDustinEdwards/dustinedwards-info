@@ -1,7 +1,6 @@
 import { createContext, type RouterContextProvider } from "react-router";
 import { timed, type Mark } from "@dustinedwards/site-runtime/server-timing";
 
-export { timed };
 export type Timings = Mark[];
 
 // The marks site-runtime's `timedRender` gives the Renderer: every loader writes into the page's one Server-Timing header.

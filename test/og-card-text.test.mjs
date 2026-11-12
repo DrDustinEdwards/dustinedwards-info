@@ -1,15 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { cardDescription, cardTitle } from "../app/lib/content/og-card-text.mjs";
 import {
-  DESCRIPTION_MAX,
-  TITLE_MAX,
-  TITLE_SIZES,
-  cardDescription,
-  cardTitle,
-  clampWords,
-} from "../app/lib/content/og-card-text.mjs";
-import { titleFontSize as sharedTitleFontSize } from "@dustinedwards/site-runtime/share-card";
+  CARD_DESCRIPTION_MAX as DESCRIPTION_MAX,
+  CARD_TITLE_MAX as TITLE_MAX,
+  CARD_TITLE_SIZES as TITLE_SIZES,
+  clampTitle as clampWords,
+  titleFontSize as sharedTitleFontSize,
+} from "@dustinedwards/site-runtime/share-card";
 
 /** The site's ladder, through the shared function that reads it (tested where it lives). @param {string} title */
 const titleFontSize = (title) => sharedTitleFontSize(title, TITLE_SIZES);
