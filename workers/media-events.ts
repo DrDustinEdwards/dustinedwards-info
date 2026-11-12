@@ -18,7 +18,6 @@ function objectKeyOf(body: unknown): string | null {
   return typeof key === "string" && key.length > 0 ? key : null;
 }
 
-
 export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) {
   for (const message of batch.messages) {
     const key = objectKeyOf(message.body);
@@ -48,7 +47,9 @@ async function indexOne(env: Env, key: string) {
   const object = await env.OG.get(key);
 
   if (!object) {
-    console.log(JSON.stringify({ event: "media-event-no-object", key, action: "deleting any row" }));
+    console.log(
+      JSON.stringify({ event: "media-event-no-object", key, action: "deleting any row" }),
+    );
     await deleteSiteAsset(env, key);
     return;
   }

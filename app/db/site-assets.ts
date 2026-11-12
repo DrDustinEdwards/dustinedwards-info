@@ -36,7 +36,12 @@ export async function upsertSiteAsset(env: Env, record: typeof siteAssets.$infer
   };
   await getDb(env)
     .insert(siteAssets)
-    .values({ key: record.key, ...derived, width: record.width ?? null, height: record.height ?? null })
+    .values({
+      key: record.key,
+      ...derived,
+      width: record.width ?? null,
+      height: record.height ?? null,
+    })
     .onConflictDoUpdate({
       target: siteAssets.key,
       set: { ...derived, ...(measured ? { width: record.width, height: record.height } : {}) },

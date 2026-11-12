@@ -37,9 +37,7 @@ type AssetSource = { key: string; size: number; uploaded: string };
 // Shared with the reconciliation so the two cannot disagree about what exists. Exhaustive to the end of
 // the cursor: a partial listing makes every absent key look like a deletion. A Worker cannot list its
 // own static assets (the binding only has `fetch()`), so the static half is the committed manifest.
-async function enumerateSiteAssets(
-  env: Env,
-): Promise<{ objects: AssetSource[]; files: string[] }> {
+async function enumerateSiteAssets(env: Env): Promise<{ objects: AssetSource[]; files: string[] }> {
   const objects: AssetSource[] = [];
   let cursor: string | undefined;
   for (;;) {

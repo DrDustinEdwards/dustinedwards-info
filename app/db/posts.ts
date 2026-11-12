@@ -513,7 +513,10 @@ async function withNeighbors(db: DB, post: PostRow, tagSlugs: string[]) {
 
 /** Admin only, so exempt from visibility. The files the media page lists: the library's, not trashed. */
 export async function adminNavCounts(env: Env) {
-  const mediaRow = await getDb(env).select({ n: count() }).from(media).where(isNull(media.trashedAt));
+  const mediaRow = await getDb(env)
+    .select({ n: count() })
+    .from(media)
+    .where(isNull(media.trashedAt));
   return { media: Number(mediaRow[0]?.n ?? 0) };
 }
 

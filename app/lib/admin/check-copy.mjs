@@ -118,7 +118,8 @@ const CHECK_COPY = {
       counts
         ? `The index of the site's own files lists ${counts.present} and ${counts.expected} exist, so something is missing from one side.`
         : "The index of the site's own files and the files themselves disagree about what exists.",
-    passing: "Every site file and generated card is indexed, and nothing is indexed that is not there.",
+    passing:
+      "Every site file and generated card is indexed, and nothing is indexed that is not there.",
     repair: { action: "/admin/tools", intent: "rebuild", label: "Rebuild the site file index" },
   },
   "fts-equality": {

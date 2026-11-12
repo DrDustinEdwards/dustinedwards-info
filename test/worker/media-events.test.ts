@@ -64,7 +64,9 @@ describe("the queue consumer", () => {
     await handleMediaEvents(batch, consumerEnv({ width: 800, height: 600 }));
     expect(acked).toEqual(["ack"]);
     expect(await assetRow(key)).toBeNull();
-    expect(await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first()).toBeNull();
+    expect(
+      await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first(),
+    ).toBeNull();
   });
 });
 

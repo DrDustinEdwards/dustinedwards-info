@@ -212,8 +212,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           title="Rebuild the site file index?"
           lead={
             <p>
-              Every row is derived again from the OG bucket and the repository, and a row whose file is
-              gone is removed. The media library is not touched. The index holds{" "}
+              Every row is derived again from the OG bucket and the repository, and a row whose file
+              is gone is removed. The media library is not touched. The index holds{" "}
               <strong>{confirmRebuild}</strong> row(s) now.
             </p>
           }
@@ -238,8 +238,8 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       >
         <p>
           An index of the site's own files: every static asset in the repository and every card and
-          document the Worker generates in OG. A rebuild derives it again from both, for when the health
-          check reports drift. The media library keeps its own rows.
+          document the Worker generates in OG. A rebuild derives it again from both, for when the
+          health check reports drift. The media library keeps its own rows.
         </p>
       </Panel>
 

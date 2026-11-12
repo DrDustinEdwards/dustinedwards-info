@@ -246,9 +246,9 @@ describe("emptying the trash", () => {
 
   const trashedCount = async () =>
     (
-      await env.DB.prepare(
-        "SELECT count(*) AS n FROM media WHERE trashed_at IS NOT NULL",
-      ).first<{ n: number }>()
+      await env.DB.prepare("SELECT count(*) AS n FROM media WHERE trashed_at IS NOT NULL").first<{
+        n: number;
+      }>()
     )?.n ?? 0;
 
   it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
