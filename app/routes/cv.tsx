@@ -1,5 +1,6 @@
+import { SearchField } from "capsomer/react/field";
 import { JsonLd } from "capsomer/react/json-ld";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 
 import { PageShell } from "~/components/page-shell";
 import { readCv } from "~/db/cv";
@@ -50,6 +51,7 @@ import "capsomer/tokens.css";
 import "capsomer/status.css";
 import "capsomer/copy.css";
 import "capsomer/button.css";
+import "capsomer/field.css";
 import "capsomer/enarratio.css";
 import "capsomer/chart-frame.css";
 import "~/styles/cv.css";
@@ -378,6 +380,22 @@ function Stat({
   );
 }
 
+function CvSearch({ defaultValue }: { defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <SearchField
+      label="Search"
+      landmark="Search the CV"
+      name="q"
+      value={value}
+      onChange={setValue}
+      placeholder="Title, author, place, course"
+      autoComplete="off"
+      spellCheck={false}
+    />
+  );
+}
+
 export default function CvRoute({ loaderData }: Route.ComponentProps) {
   const {
     cv: CV,
@@ -470,17 +488,9 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
           data-cv-form=""
         >
           <div className="cv-filter-row cv-filter-top">
-            <label className="cv-field cv-search">
-              <span className="cv-label">Search</span>
-              <input
-                type="search"
-                name="q"
-                defaultValue={state.q}
-                placeholder="Title, author, place, course"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
+            <div className="cv-field cv-search">
+              <CvSearch defaultValue={state.q} />
+            </div>
           </div>
           {/* Sent as app/enhance/cv.ts leaves it on a phone, so the fold never moves the page; cv.css shows it
               open wider than that and with script off. */}
