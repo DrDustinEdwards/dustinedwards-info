@@ -2,7 +2,6 @@ import { createContext, type RouterContextProvider } from "react-router";
 
 import {
   cloudflareContext,
-  cspNonceContext,
   getEnv,
   getExecutionContext,
   getNonce,
@@ -12,7 +11,7 @@ import type { previewBlogPost } from "~/db/posts";
 
 // The request context, the render's CSP nonce (site-runtime ./worker, renewed per reader on a stored page) and
 // their readers are site-runtime's ./context, re-exported so routes keep one import.
-export { cloudflareContext, cspNonceContext, getEnv, getExecutionContext, getNonce };
+export { cloudflareContext, getEnv, getExecutionContext, getNonce };
 
 /**
  * site-runtime ./worker's in-process render, so the Carrel preview draws a page through the site's routes and root

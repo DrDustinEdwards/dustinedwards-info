@@ -12,7 +12,7 @@ import { isUnpolicedType } from "./feed-types.mjs";
  *
  * @type {Readonly<Record<string, string>>}
  */
-export const SECURITY_HEADERS = Object.freeze({
+const SECURITY_HEADERS = Object.freeze({
   ...buildSecurityHeaders({ site: dustinedwardsInfo }),
   ...TDM_RESERVATION_HEADERS,
 });

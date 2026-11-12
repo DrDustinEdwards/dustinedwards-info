@@ -4,12 +4,12 @@
 // output, and check:machine-readable refuses a file whose hash is not the PDF's. The text is stored as the
 // twin prints it, with no de-hyphenation, so it is fit for retrieval, not citation.
 
-import { createHash } from "node:crypto";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { extractText, getDocumentProxy } from "unpdf";
+import { sha256Hex } from "@dustinedwards/site-runtime/encoding";
 
 import { parsePublication, publicationPath } from "../app/lib/publications/parse.mjs";
 import { paperPdfDiskPath } from "../app/lib/publications/paths.mjs";
@@ -40,7 +40,7 @@ async function extractOne(slug) {
   if (data.access !== "self-hosted") return null;
 
   const bytes = await readFile(join(root, paperPdfDiskPath(slug)));
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const pdfSha256 = await sha256Hex(bytes);
   const doc = await getDocumentProxy(new Uint8Array(bytes));
   const { text } = await extractText(doc, { mergePages: false });
   const fullText = /** @type {string[]} */ (text)
@@ -48,7 +48,7 @@ async function extractOne(slug) {
     .filter(Boolean)
     .join("\n\n");
 
-  await writeFile(file, renderPublicationFile({ ...data, pdfSha256: sha256 }, fullText), "utf8");
+  await writeFile(file, renderPublicationFile({ ...data, pdfSha256 }, fullText), "utf8");
   return { slug, characters: fullText.length };
 }
 
