@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import {
@@ -43,7 +43,7 @@ function postsOnDisk() {
   return readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .map((name) => {
-      const { data, content } = matter(readFileSync(join(dir, name), "utf8"), {});
+      const { data, content } = matter(readFileSync(join(dir, name), "utf8"));
       const date =
         data.date instanceof Date ? data.date.toISOString().slice(0, 10) : String(data.date);
       return {
@@ -64,7 +64,7 @@ function newestPaperOnDisk() {
   const papers = readdirSync(dir)
     .filter((name) => name.endsWith(".md"))
     .map((name) => ({
-      ...matter(readFileSync(join(dir, name), "utf8"), {}).data,
+      ...matter(readFileSync(join(dir, name), "utf8")).data,
       slug: name.slice(0, -3),
     }))
     .filter(
@@ -190,9 +190,7 @@ await test("Recipes and Software how-tos are links only while their library has 
   const published = (profile) =>
     readdirSync(join(root, "content", "procedures"))
       .filter((name) => name.endsWith(".md"))
-      .map(
-        (name) => matter(readFileSync(join(root, "content", "procedures", name), "utf8"), {}).data,
-      )
+      .map((name) => matter(readFileSync(join(root, "content", "procedures", name), "utf8")).data)
       .filter((d) => d.profile === profile && d.draft !== true).length;
   assert.equal(isLive("/recipes", NOW), published("recipe") > 0);
   assert.equal(isLive("/software/how-tos", NOW), published("computational") > 0);
@@ -453,7 +451,7 @@ await test("each Teaching course tile carries its page's own description, read f
   assert.ok(tiles.length > 0 && tiles.every((t) => t.to.startsWith("/teaching/")));
   for (const tile of tiles) {
     const file = join(root, "content", "pages", `teaching-${tile.to.split("/").pop()}.md`);
-    const { data } = matter(readFileSync(file, "utf8"), {});
+    const { data } = matter(readFileSync(file, "utf8"));
     assert.equal(data.path, tile.to);
     assert.ok(
       typeof data.description === "string" && data.description !== "",

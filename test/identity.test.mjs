@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { IDENTITY } from "../app/lib/identity.generated.mjs";
 import { deriveIdentity, joinList } from "../app/lib/identity.mjs";
@@ -157,7 +157,7 @@ await test("no page types the headship or the role: each is a token, so a CV cha
   const dir = new URL("../content/pages/", import.meta.url);
   for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
     const raw = readFileSync(new URL(file, dir), "utf8");
-    const { data, content } = matter(raw, {});
+    const { data, content } = matter(raw);
     const text = `${JSON.stringify(data)}\n${content}`;
     assert.doesNotMatch(
       text,

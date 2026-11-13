@@ -9,7 +9,7 @@
 // visitor cannot already read in the table can enter the repository or D1: no sample, location beyond the county
 // the table shows, or personal data.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { gitBlobSha } from "../content/hashes.mjs";
 import { foldText } from "../cv/view.mjs";
@@ -129,8 +129,7 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
 
   let parsed;
   try {
-    // An options object, even an empty one: gray-matter caches by input when it is omitted.
-    parsed = matter(raw, {});
+    parsed = matter(raw);
   } catch (error) {
     return {
       ok: false,
