@@ -29,9 +29,13 @@ import { carrelMentionsAdapter } from "~/lib/carrel/mentions-adapter.server";
 import { postSchedules } from "~/lib/carrel/schedules-adapter.server";
 import { postPath, SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
 import { postPreviewContext } from "~/lib/context";
-import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import {
+  contentRegistry,
+  matchingSummaries,
+  type ContentKindHandler,
+} from "~/lib/carrel/content-kinds.server";
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
 import {
   effectivePublishAt,
   forPreview,
@@ -207,7 +211,6 @@ export function carrelSiteAdapter(options: {
 
     async list(query) {
       const now = Date.now();
-      const needle = query.q?.toLowerCase();
       const trash = await trashedAt(env);
       const rows = (await listAllPostsForAdmin(env)).filter(
         (row) => trash.has(row.slug) === (query.trashed === true),
@@ -235,9 +238,7 @@ export function carrelSiteAdapter(options: {
         for (const summary of summaries)
           summary.version = (await readFile(env, postPath(summary.id)))?.sha;
       }
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return matchingSummaries(summaries, query);
     },
 
     async get(id) {
@@ -269,8 +270,7 @@ export function carrelSiteAdapter(options: {
     // edits it live, and a new post starts as a draft.
     async saveDraft(id, input) {
       const file = await readFile(env, postPath(id));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      assertCreatesOrEdits(input.expectedVersion, file);
       const raw = file
         ? withPublication(input.source, {
             draft: readState(file.content).draft,

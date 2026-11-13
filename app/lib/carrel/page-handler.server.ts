@@ -10,8 +10,8 @@ import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { listPageRows } from "~/db/pages";
-import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { PAGES_DIR, pagePathForSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -86,7 +86,6 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
     kind: "page",
 
     async list(query) {
-      const needle = query.q?.toLowerCase();
       const summaries: ContentSummary[] = (await listPageRows(env)).map((row) => {
         const status: ContentStatus = row.draft ? "draft" : "published";
         return {
@@ -100,9 +99,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
           updatedAt: row.syncedAt.toISOString(),
         };
       });
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return matchingSummaries(summaries, query);
     },
 
     async get(slug) {
@@ -134,8 +131,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
     async saveDraft(slug, input) {
       const found = target(slug);
       const file = await readFile(env, found.file);
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      assertCreatesOrEdits(input.expectedVersion, file);
       if (!file)
         throw new RefusedError(
           `The file for ${found.path} is missing from the repository, so it cannot be saved.`,

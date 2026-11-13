@@ -32,3 +32,15 @@ export async function asSiteApiError(env: Env, error: unknown, path: string): Pr
   }
   throw error;
 }
+
+/**
+ * A save with no version creates the file and one with a version edits it: a create over a file that exists
+ * answers that file's version, and an edit of a file that does not exist answers none.
+ */
+export function assertCreatesOrEdits(
+  expectedVersion: string | null,
+  file: { sha: string } | null,
+): void {
+  if (expectedVersion === null && file) throw new VersionConflictError(file.sha);
+  if (expectedVersion !== null && !file) throw new VersionConflictError(null);
+}

@@ -9,8 +9,8 @@ import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listCvRows } from "~/db/cv";
-import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { saveCvFile } from "~/lib/cv/save.server";
@@ -84,7 +84,6 @@ export function cvHandler(
     kind: "cv",
 
     async list(query) {
-      const needle = query.q?.toLowerCase();
       const summaries: ContentSummary[] = (await listCvRows(env)).map((row) => ({
         id: row.slug,
         kind: "cv",
@@ -95,9 +94,7 @@ export function cvHandler(
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return matchingSummaries(summaries, query);
     },
 
     async get(slug) {
@@ -127,8 +124,7 @@ export function cvHandler(
     async saveDraft(slug, input) {
       const found = target(slug);
       const file = await readFile(env, found);
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      assertCreatesOrEdits(input.expectedVersion, file);
       if (!file)
         throw new RefusedError(
           `The file ${found} is missing from the repository, so it cannot be saved.`,

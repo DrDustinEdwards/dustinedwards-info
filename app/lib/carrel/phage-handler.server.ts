@@ -9,8 +9,8 @@ import { RefusedError, VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listPhageRows } from "~/db/phages";
-import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { PHAGES_PAGE_PATH, phagePath } from "~/lib/phages/compile.mjs";
 import { PHAGE_SLUG, savePhage } from "~/lib/phages/save.server";
@@ -49,7 +49,6 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
     kind: "phage",
 
     async list(query) {
-      const needle = query.q?.toLowerCase();
       const summaries: ContentSummary[] = (await listPhageRows(env)).map((row) => ({
         id: row.slug,
         kind: "phage",
@@ -61,9 +60,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
         publishedAt: null,
         updatedAt: row.syncedAt.toISOString(),
       }));
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return matchingSummaries(summaries, query);
     },
 
     async get(slug) {
@@ -95,8 +92,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
           `"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`,
         );
       const file = await readFile(env, phagePath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      assertCreatesOrEdits(input.expectedVersion, file);
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },
 

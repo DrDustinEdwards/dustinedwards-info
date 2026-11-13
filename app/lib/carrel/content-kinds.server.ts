@@ -22,6 +22,17 @@ import type {
 
 import { DEFAULT_KIND, decodeContentId, encodeContentId } from "./content-id.mjs";
 
+/** A kind's summaries that match a list query's status and its q (in the title, or the slug). */
+export function matchingSummaries(
+  summaries: ContentSummary[],
+  query: Pick<ListQuery, "q" | "status">,
+): ContentSummary[] {
+  const needle = query.q?.toLowerCase();
+  return summaries
+    .filter((s) => !query.status || s.status === query.status)
+    .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+}
+
 /**
  * One kind's side of the content group. Every id a handler takes or returns is its own slug; the
  * registry encodes it on the way out.

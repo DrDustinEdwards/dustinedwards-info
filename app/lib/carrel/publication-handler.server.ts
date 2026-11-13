@@ -6,8 +6,8 @@ import { VersionConflictError } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
 
 import { listPublicationIdentities } from "~/db/publications";
-import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
-import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { matchingSummaries, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { asSiteApiError, assertCreatesOrEdits } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { fileRevisions, fileRevisionSource, readFile } from "~/lib/source/store.server";
 import { parsePublication, publicationPath } from "~/lib/publications/parse.mjs";
@@ -65,7 +65,6 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     kind: "publication",
 
     async list(query) {
-      const needle = query.q?.toLowerCase();
       const rows = await listPublicationIdentities(env);
       const summaries: ContentSummary[] = rows.map((row) => {
         const record = JSON.parse(row.record) as Publication;
@@ -81,9 +80,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
           updatedAt: row.syncedAt ? row.syncedAt.toISOString() : null,
         };
       });
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return matchingSummaries(summaries, query);
     },
 
     async get(slug) {
@@ -114,8 +111,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
     // starts as a draft. First publication is a separate call, which Carrel's key may make.
     async saveDraft(slug, input) {
       const file = await readFile(env, publicationPath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
-      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      assertCreatesOrEdits(input.expectedVersion, file);
       const raw = withPublication(input.source, { draft: file ? fileIsDraft(file.content) : true });
       return write(slug, input.changeId, raw, input.expectedVersion);
     },
