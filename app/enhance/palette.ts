@@ -4,7 +4,7 @@ import { isImeEnter } from "capsomer/behavior/shortcuts";
 // An island (devkit ./islands): each <template data-island="palette"> on the page calls this, and the first one runs it.
 // The palette is Capsomer's command menu (components/command-menu): its dialog, combobox and listbox, with the site's
 // search as its live results (`search`), the reader's recent searches as its commands, and Ask AI under the list
-// (the menu's `answer`, filled by ./ask with Capsomer's AI answer).
+// (the menu's `answer`, filled by ./ask with Capsomer's Ask panel).
 let started = false;
 
 export default function start(): void {

@@ -111,11 +111,7 @@
   opacity: 0.5;
 }
 
-/* Ask under the results: the trigger, then Capsomer's AI answer (app/components/ask-panel.tsx). */
+/* Ask under the results: the trigger, then Capsomer's Ask panel (app/components/ask-panel.tsx). */
 .ask-mount {
-  margin: 1rem 0 0;
-}
-
-.ask-container {
-  margin-block-start: 0.75rem;
+  margin: 1rem 0;
 }

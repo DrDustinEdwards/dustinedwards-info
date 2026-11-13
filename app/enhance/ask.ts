@@ -1,168 +1,63 @@
 import { labelForUrl, urlForKey } from "../lib/search/ask-keys.mjs";
 import { splitFollowUp } from "../lib/search/follow-up.mjs";
-import { CUT_EVENT, answerDelta, takeSseFrames } from "@dustinedwards/site-runtime/ai-ask";
-import { buildAnswer, type AnswerSource } from "capsomer/behavior/ai-answer";
+import { CUT_EVENT, answerDelta } from "@dustinedwards/site-runtime/ai-ask";
+import {
+  ask as askPanel,
+  enhance,
+  postQuestion,
+  type AskHandle,
+  type AskOptions,
+  type AskRead,
+  type AskSource,
+} from "capsomer/behavior/ask-panel";
+import { jsonData, type SseEvent } from "capsomer/behavior/sse";
 
 const CHUNKS_EVENT = "chunks";
 
-interface AskHandle {
-  cancel(): void;
-  /** Settles when the stream has been read to its end, or has failed and said so. */
-  done: Promise<void>;
-}
-
 /**
- * The `chunks` event's payload as sources, deduplicated by URL. Same key-to-URL mapping as the
- * upload path, so a citation cannot disagree with what was indexed.
+ * The `chunks` event's payload as sources. Same key-to-URL mapping as the upload path, so a citation
+ * cannot disagree with what was indexed; the panel drops repeats.
  */
-function citationsFromChunks(parsed: unknown): AnswerSource[] {
+function citationsFromChunks(parsed: unknown): AskSource[] {
   const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed) ? parsed : [];
-  const seen = new Set<string>();
-  const out: AnswerSource[] = [];
+  const out: AskSource[] = [];
   for (const chunk of chunks) {
     const url = urlForKey(chunk?.item?.key ?? "");
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
-    out.push({
-      href: url,
-      title: labelForUrl(url),
-      kind: url.includes("#") ? "section" : undefined,
-    });
+    if (url)
+      out.push({ url, title: labelForUrl(url), kind: url.includes("#") ? "section" : undefined });
   }
   return out;
 }
 
-/** Reads the stream to its end, handing each complete SSE frame to `onFrame`; a read error throws. */
-async function readFrames(
-  stream: ReadableStream<Uint8Array>,
-  onFrame: (eventName: string | undefined, parsed: unknown) => void,
-): Promise<void> {
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    const taken = takeSseFrames(buffer);
-    buffer = taken.rest;
-
-    for (const { event: eventName, data: parsed } of taken.frames) onFrame(eventName, parsed);
-  }
+function read(e: SseEvent): AskRead {
+  if (e.event === CHUNKS_EVENT) return { sources: citationsFromChunks(jsonData(e)) };
+  if (e.event === CUT_EVENT) return { cut: true };
+  return { delta: answerDelta(jsonData(e)) };
 }
 
-/** Streams the answer to `question` into Capsomer's AI answer panel, in `container`. */
-export function ask(container: HTMLElement, question: string): AskHandle {
-  const controller = new AbortController();
-  container.textContent = "";
-  container.hidden = false;
+// POST, because the endpoint bills: a GET would be spendable by crawlers, prefetch or a foreign `<img src>`.
+const request = postQuestion("/search/ask");
 
-  const panel = buildAnswer();
-  // appendChild, never append(): with the Workers types in scope append() takes HTMLRewriter content.
-  container.appendChild(panel.el);
-
-  let answer = "";
-
-  function onAnswer(parsed: unknown) {
-    const delta = answerDelta(parsed);
-    if (delta === undefined || delta.length === 0) return;
-    answer += delta;
-    // Split on every frame so the raw "NEXT:" marker never shows in the prose mid-stream.
+const options: Omit<AskOptions, "request"> = {
+  read,
+  split: (answer) => {
     const parts = splitFollowUp(answer);
-    panel.write(parts.answer);
-    if (parts.followUp)
-      panel.setFollowUp(parts.followUp, `/search?q=${encodeURIComponent(parts.followUp)}`);
-  }
+    return { answer: parts.answer, followUp: parts.followUp ?? undefined };
+  },
+  followUpHref: (q) => `/search?q=${encodeURIComponent(q)}`,
+};
 
-  const done = (async () => {
-    let response: Response;
-    try {
-      // POST because the endpoint bills: a GET would be spendable by crawlers, prefetch or a foreign `<img src>`.
-      response = await fetch("/search/ask", {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          accept: "text/event-stream",
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({ q: question }),
-      });
-    } catch {
-      if (!controller.signal.aborted) panel.fail("Ask is unavailable.");
-      return;
-    }
-
-    if (!response.ok || !response.body) {
-      panel.fail("Ask is unavailable.");
-      return;
-    }
-
-    try {
-      await readFrames(response.body, (eventName, parsed) => {
-        if (eventName === CHUNKS_EVENT) panel.setSources(citationsFromChunks(parsed));
-        else if (eventName === CUT_EVENT) panel.markCut();
-        else onAnswer(parsed);
-      });
-    } catch {
-      if (!controller.signal.aborted) panel.fail("Ask stopped early.");
-      return;
-    }
-
-    if (answer.trim().length === 0) panel.fail("No answer for that one.");
-    else panel.finish();
-  })();
-
-  /*
-   * A trigger hidden on click drops focus to <body> (WCAG 2.4.3); focus is caught here, on the answer
-   * it asked for. Focus the caller still holds on something visible is left where it is.
-   */
-  const held = document.activeElement;
-  if (
-    !held ||
-    held === document.body ||
-    (held instanceof HTMLElement && held.closest("[hidden]"))
-  ) {
-    panel.el.focus();
-  }
-
-  return {
-    done,
-    cancel() {
-      controller.abort();
-      container.textContent = "";
-      container.hidden = true;
-    },
-  };
-}
-
-/**
- * Guarded on the DOM, not module state, because both bundles run this module on `/search` and two
- * listeners would stream two billed answers per click.
- */
-function mountAskTriggers() {
-  for (const mount of document.querySelectorAll<HTMLElement>("[data-ask-mount]")) {
-    const trigger = mount.querySelector<HTMLButtonElement>("[data-ask-trigger]");
-    const container = mount.querySelector<HTMLElement>("[data-ask-container]");
-    if (!trigger || !container) continue;
-    if (trigger.dataset.askBound) continue;
-    trigger.dataset.askBound = "true";
-    const question = () => (mount.dataset.askQuestion ?? "").trim();
-    if (!question()) continue;
-    trigger.hidden = false;
-    // Read at the click, not at binding: the live search rewrites the question as the reader retypes.
-    trigger.addEventListener("click", () => {
-      trigger.hidden = true;
-      ask(container, question());
-    });
-  }
+/** Streams the answer to `question` into Capsomer's Ask panel, in `container` (the palette's answer area). */
+export function ask(container: HTMLElement, question: string): AskHandle {
+  return askPanel(container, { ...options, request: (signal) => request(question, signal) });
 }
 
 // An island (devkit ./islands): each <template data-island="ask"> on the page calls this, and the first one runs it.
+// The panel's enhance() is guarded on the DOM, so both bundles on /search never stream two billed answers per click.
 let started = false;
 
 export default function start(): void {
   if (started) return;
   started = true;
-  mountAskTriggers();
+  enhance(document, { ...options, request });
 }

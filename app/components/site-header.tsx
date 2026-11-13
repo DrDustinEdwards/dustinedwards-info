@@ -9,8 +9,7 @@ import { SITE } from "~/lib/seo";
 import listboxCss from "capsomer/listbox.css?url";
 import buttonCss from "capsomer/button.css?url";
 import commandMenuCss from "capsomer/command-menu.css?url";
-import statusCss from "capsomer/status.css?url";
-import aiAnswerCss from "capsomer/ai-answer.css?url";
+import askPanelCss from "capsomer/ask-panel.css?url";
 
 const inside = (item: NavItem, pathname: string) =>
   pathname === item.to || pathname.startsWith(`${item.to}/`);
@@ -81,7 +80,7 @@ export function SiteHeader() {
         themePrefKey="cap-theme"
         attributes={{
           "data-palette": "",
-          "data-palette-css": `${listboxCss},${commandMenuCss},${buttonCss},${statusCss},${aiAnswerCss}`,
+          "data-palette-css": `${listboxCss},${commandMenuCss},${buttonCss},${askPanelCss}`,
         }}
         toolsEnd={<template data-island="theme" />}
         // Absent, every link is still in the markup and every panel still opens; see app/enhance/header.ts.

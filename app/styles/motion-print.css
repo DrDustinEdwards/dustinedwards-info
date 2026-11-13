@@ -93,7 +93,7 @@
   }
 
   .search-form[data-pending],
-  .cap-ai-answer-body[aria-busy="true"] {
+  .cap-ask-body[aria-busy="true"] {
     background-image: linear-gradient(var(--brand), var(--brand));
     background-repeat: no-repeat;
     background-position: 0 100%;

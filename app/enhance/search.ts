@@ -155,7 +155,7 @@ export function enhanceSearch(): void {
       next.searchParams.set("q", query);
       link.href = next.pathname + next.search;
     }
-    const mount = document.querySelector<HTMLElement>("[data-ask-mount]");
+    const mount = document.querySelector<HTMLElement>("[data-cap='ask']");
     if (mount) mount.dataset.askQuestion = query;
   }
 
