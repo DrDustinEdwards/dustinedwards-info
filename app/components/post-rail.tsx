@@ -21,7 +21,7 @@ export function PostRail({
   /* One authored date: `created_at` is when the sync ran, not when the post was written. */
   return (
     <div className="post-rail u-rail">
-      <p className="post-machine">
+      <p className="cap-rail-facts">
         {post.publishAt && (
           <>
             <b>

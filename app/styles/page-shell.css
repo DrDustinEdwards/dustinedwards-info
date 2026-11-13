@@ -3,6 +3,13 @@
   padding-block: 2rem;
 }
 
+/* On paper the column takes the sheet; the chrome is hidden by capsomer/print.css and data-print="hide". */
+@media print {
+  .page {
+    padding: 0;
+  }
+}
+
 .page-inner {
   max-width: 48rem;
 }
@@ -42,7 +49,7 @@
 .page-contents-label {
   margin: 0 0 var(--space-3);
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -127,22 +134,13 @@
   text-wrap: balance;
 }
 
-/* A member page's mission patch (running-head.ts patchOf) at the right of its title, on the title's grid. */
-.page-patched {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-6);
+/* A member page's mission patch (running-head.ts patchOf) at the right of its title (capsomer/manual.css
+   .cap-patched), which keeps the page's own space under it; the title's own
+   margin, unlayered here, would beat the manual's. */
+.cap-patched {
   margin-block-end: var(--space-6);
 
   > .page-title {
     margin: 0;
-  }
-}
-
-@media (max-width: 40rem) {
-  .page-patched .cap-patch {
-    inline-size: 72px;
-    block-size: 72px;
   }
 }

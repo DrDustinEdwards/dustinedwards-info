@@ -63,6 +63,8 @@ import "capsomer/dialog.css";
 import "capsomer/button.css";
 import "capsomer/lightbox.css";
 import "capsomer/reading-progress.css";
+// The rail's facts (components/post-rail.tsx): Capsomer's .cap-rail-facts.
+import "capsomer/tracks.css";
 import "~/styles/post-head-blocks.css";
 import { RENDERED } from "~/lib/content/render-version";
 import { PROSE } from "~/lib/prose-context";

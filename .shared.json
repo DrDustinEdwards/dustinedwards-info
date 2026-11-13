@@ -11,7 +11,8 @@
   "tokens": {
     "--text": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
     "--scrim": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
-    "--line-strong": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer"
+    "--line-strong": "the site's own palette (app.css's theme blocks, checked by scripts/check-contrast.mjs) still names it, until the site's colors move into Capsomer's purple family and its site layer",
+    "--z-progress": "the reading bar sits over the pinned header, which Capsomer's dustinedwards site entry raises to --z-sticky 100 (its default --z-progress is 90); until that entry carries --z-progress 900 as it does --z-sticky and --z-overlay"
   },
   "spelling": {
     "skip": [

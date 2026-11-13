@@ -26,7 +26,7 @@
   --crit: var(--text-danger);
   --crit-soft: var(--tint-danger);
   --shadow-xs: none;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
 }
 
 /* The page's column is the prose measure, narrower than a table of facets and results wants. Wide enough, a wide
@@ -52,7 +52,7 @@
   padding: 0.5rem var(--space-5);
   background: var(--text);
   color: var(--paper);
-  font: 700 0.75rem / 1.4 var(--font-mono);
+  font: 700 0.75rem / 1.4 var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -60,7 +60,7 @@
 .site-catalog .cap-catalog-facet > legend,
 .site-catalog .cap-catalog-bar .cap-field-label {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -68,7 +68,7 @@
 .site-catalog .cap-table thead th {
   border-block-end: var(--line-w-thick) solid var(--text);
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

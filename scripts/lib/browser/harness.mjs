@@ -174,26 +174,6 @@ export const bundleFetches = (target, stem) =>
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
 
-/**
- * The document's widths and the first four elements reaching past its right edge. Anything left of
- * -1000px is off-screen by design: the skip link, and a closed drawer translated out of view.
- */
-export function overflowScan() {
-  const doc = document.documentElement;
-  const over = [];
-  for (const el of document.querySelectorAll("body *")) {
-    const r = el.getBoundingClientRect();
-    if (r.left < -1000) continue;
-    if (r.right > doc.clientWidth + 0.5) {
-      const cls = typeof el.className === "string" ? el.className : "";
-      over.push(
-        `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
-      );
-    }
-  }
-  return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };
-}
-
 /** Whether the skip link exists, where it points, and whether anything carries that id. */
 export function readSkipLink() {
   const link = document.querySelector("a.cap-skip");

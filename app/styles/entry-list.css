@@ -17,7 +17,7 @@
   grid-column: 1;
   margin: 0;
   color: var(--text);
-  font: 700 0.6875rem / 1.8 var(--font-mono);
+  font: 700 0.6875rem / 1.8 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -50,7 +50,7 @@
 
 .entry-title {
   margin: 0;
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.25rem;
   font-weight: var(--weight-heading);
   line-height: 1.35;
@@ -73,7 +73,7 @@
   order: -1;
   margin: 0 0 0.25rem;
   color: var(--brand);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
+  font: 500 0.6875rem / 1.7 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -82,7 +82,7 @@
   margin: 0.3125rem 0 0;
   max-width: 62ch;
   color: var(--text-secondary);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1rem;
   line-height: 1.55;
 }
@@ -103,7 +103,7 @@
   border: var(--line-w) solid var(--text);
   border-radius: 0;
   color: var(--text);
-  font: 500 0.6875rem / 1 var(--font-mono);
+  font: 500 0.6875rem / 1 var(--mono);
   letter-spacing: 0.06em;
   text-decoration: none;
   text-transform: uppercase;
@@ -118,7 +118,7 @@
 .list-empty {
   margin-block-start: var(--space-7);
   color: var(--text-secondary);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.0625rem;
 }
 

@@ -2,7 +2,9 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveToken, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
+import { resolveToken } from "capsomer/token-check";
+
+import { THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(root, "content", "tokens.json");

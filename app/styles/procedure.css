@@ -9,7 +9,7 @@
   margin: 0 0 1.25rem;
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
 }
 
@@ -22,7 +22,7 @@
 
 .procedure-facts dt {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.4 var(--font-mono);
+  font: 500 0.6875rem / 1.4 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -37,7 +37,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.875rem;
 }
 
@@ -112,7 +112,7 @@
 .procedure-primers code {
   background: none;
   padding: 0;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 0.9em;
   overflow-wrap: anywhere;
   word-break: break-all;
@@ -166,7 +166,7 @@
 }
 
 .procedure-flag-label {
-  font: 700 0.6875rem / 1.6 var(--font-mono);
+  font: 700 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -187,7 +187,7 @@
 
 .procedure-step-trouble {
   margin: 0.5rem 0 0;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
@@ -199,7 +199,7 @@
 .procedure-output-label {
   margin: 0.5rem 0 0.25rem;
   color: var(--text-secondary);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.8125rem;
 }
 
@@ -213,7 +213,6 @@
   max-width: 100%;
   height: auto;
   margin: 0.75rem 0 0;
-  border-radius: var(--radius-control);
 }
 
 .procedure-trouble td {
@@ -241,14 +240,14 @@
 
 .procedure-sheet-head h1 {
   margin: 0;
-  font: 700 1.75rem / 1.1 var(--font-sans);
+  font: 700 1.75rem / 1.1 var(--ui);
   letter-spacing: -0.02em;
 }
 
 .procedure-sheet-head p {
   margin: 0.5rem 0 1rem;
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.04em;
   overflow-wrap: anywhere;
 }
@@ -293,7 +292,7 @@
   margin-block: 1rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
 }
 .procedure-workflow-stage {
@@ -310,7 +309,7 @@
 }
 .procedure-workflow-links dt {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 2 var(--font-mono);
+  font: 500 0.6875rem / 2 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -345,9 +344,8 @@
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;
   border: var(--line-w) solid var(--border);
-  border-radius: var(--radius-control);
   background: var(--paper);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
 }
 
 @media print {
@@ -396,14 +394,14 @@
   display: inline-flex;
   align-items: baseline;
   gap: 0.5rem;
-  min-height: var(--control-min);
+  min-height: var(--control-h-coarse);
 }
 
 .procedure-mise-copy {
   display: grid;
   gap: 0.25rem;
   max-width: 32rem;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.875rem;
 }
 
@@ -439,7 +437,7 @@
   min-block-size: 2.75rem;
   display: flex;
   align-items: center;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-weight: 600;
   cursor: pointer;
 }

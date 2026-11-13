@@ -32,11 +32,6 @@
   scroll-margin-block-start: 6rem;
 }
 
-.features-section[hidden],
-.features-card[hidden] {
-  display: none;
-}
-
 .features-section > h2 {
   counter-increment: features-section;
   margin-block-end: 0.25rem;

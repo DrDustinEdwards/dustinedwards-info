@@ -1,8 +1,9 @@
-/* Capsomer's layer order, first: the reset sits in the lowest layer, so Capsomer's components (the protocol
-   library) and every unlayered rule here win over it. Every reset selector is an element or universal one, so
-   no site rule changes what it wins; only Capsomer's layered rules gain the ability to override it. */
+/* Capsomer's layer order, first, then its element reset (Tailwind's preflight, capsomer/reset.css) in the lowest
+   layer, so Capsomer's components and every unlayered rule here win over it. Every reset selector is an element or
+   universal one, so no site rule changes what it wins; only Capsomer's layered rules gain the ability to override it.
+   Its [hidden] rule beats every class, so no sheet here writes `.x[hidden] { display: none }`. */
 @layer cap.reset, cap.tokens, cap.base, cap.components, cap.utilities;
-@import "./styles/reset.css" layer(cap.reset);
+@import "capsomer/reset.css";
 
 /* The type plan's weights, as Capsomer's base.css sets them: a page title in Inter Light, a heading in
    Medium, where the reset leaves a heading at its parent's weight. Any rule of the site's own still wins. */
@@ -17,212 +18,17 @@
   }
 }
 
-/* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
-   paths immutable. */
-/* optional, not swap (Dustin, 2026-11-04, Google's advice: web.dev "Best practices for fonts"): a face that
-   misses its ~100 ms window leaves the visit in its size-matched fallback below, so text never moves once
-   drawn. Under swap the fallbacks, within about 1% of each face, still re-wrapped a title or a control row
-   now and then (D5). This replaces the earlier swap ruling, made when a first visit fell back to plain Arial;
-   the fallbacks are matched now, and lib/preloads.ts preloads each page's first face so it usually arrives. */
-/* Each latin face is two files, a core of the characters pages draw and the rest of the range, cut
-   from the originals by scripts/split-latin-fonts.py; check:fonts holds each range below to its
-   file. A page drawing only the core never downloads the rest. */
-/* Inter's latin is Capsomer's (capsomer/fonts.css, the opsz file). These add the Greek and math blocks
-   under the same family name, minus the arrows and minus sign the latin carries, so a page with a minus
-   sign never fetches the math file. */
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: optional;
-  src: url("./fonts/inter-greek-normal.woff2") format("woff2");
-  unicode-range: U+0370-03FF;
-}
+/* The faces are Capsomer's (capsomer/fonts.css, imported in routes/legacy-public.tsx): Inter with its Greek and
+   math files, Source Serif 4 cut into a latin core, the rest of latin, Greek and math, Martian Mono, Overpass, Jost,
+   Capsomer Drafting and DSEG7, each with its size-matched fallback and font-display: optional (Dustin, 2026-11-04);
+   each downloads only where a page draws it, and lib/preloads.ts preloads a page's first face. Their stacks are
+   Capsomer's tokens too: --ui for labels and controls, --prose for running text (the report's serif, the manual
+   theme), --mono. */
 
-@font-face {
-  font-family: "Inter";
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: optional;
-  src: url("./fonts/inter-greek-italic.woff2") format("woff2");
-  unicode-range: U+0370-03FF;
-}
-
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: optional;
-  src: url("./fonts/inter-math-normal.woff2") format("woff2");
-  unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
-}
-
-@font-face {
-  font-family: "Inter";
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: optional;
-  src: url("./fonts/inter-math-italic.woff2") format("woff2");
-  unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
-}
-
-/* Namespaced "Web" so an installed retail copy with other metrics is never used. */
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-latin-core-normal.woff2") format("woff2");
-  unicode-range:
-    U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7, U+0304, U+0308,
-    U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-latin-rest-normal.woff2") format("woff2");
-  unicode-range:
-    U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6, U+00B8-00D6,
-    U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-2012, U+2015-2017,
-    U+201A-201B, U+201E-2021, U+2023-2025, U+2027-2031, U+2033-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2215, U+FEFF, U+FFFD;
-}
-
-/* Three rules on one name, from `capsomer fallback-font` (Capsomer 0.66): Georgia up to weight 549,
-   scaled to the face at opsz 17 and weight 400 (the 17px body); Georgia Bold from 550, scaled to the
-   face at opsz 22 and weight 600 or 700 (the 18 to 34px serif titles). Each rule covers its range, so
-   the browser never synthesizes bold. In Chrome against Gelasio (Georgia's metric twin), the fallback's
-   width is within 1% of the face in 17px body text and 3.5% in the serif titles; the one Georgia-regular
-   rule it replaces was 5% narrower in body text and 8% in 17px bold. */
-@font-face {
-  font-family: "Source Serif 4 Web Fallback";
-  font-style: normal;
-  src: local("Georgia"), local("Gelasio Regular");
-  font-weight: 1 549;
-  size-adjust: 104.0824%;
-  ascent-override: 99.5366%;
-  descent-override: 32.186%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: "Source Serif 4 Web Fallback";
-  font-style: normal;
-  src: local("Georgia Bold"), local("Gelasio Bold");
-  font-weight: 550 649;
-  size-adjust: 87.7439%;
-  ascent-override: 118.0709%;
-  descent-override: 38.1793%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: "Source Serif 4 Web Fallback";
-  font-style: normal;
-  src: local("Georgia Bold"), local("Gelasio Bold");
-  font-weight: 650 1000;
-  size-adjust: 89.2866%;
-  ascent-override: 116.0308%;
-  descent-override: 37.5196%;
-  line-gap-override: 0%;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: italic;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-latin-core-italic.woff2") format("woff2");
-  unicode-range:
-    U+0000-007E, U+00A0, U+00A9, U+00AE, U+00B0, U+00B2, U+00B5, U+00B7, U+00D7, U+0304, U+0308,
-    U+0329, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+2032, U+2212;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: italic;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-latin-rest-italic.woff2") format("woff2");
-  unicode-range:
-    U+007F-009F, U+00A1-00A8, U+00AA-00AD, U+00AF, U+00B1, U+00B3-00B4, U+00B6, U+00B8-00D6,
-    U+00D8-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-2012, U+2015-2017,
-    U+201A-201B, U+201E-2021, U+2023-2025, U+2027-2031, U+2033-206F, U+20AC, U+2122, U+2191, U+2193,
-    U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-greek-normal.woff2") format("woff2");
-  unicode-range: U+0370-03FF;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: italic;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-greek-italic.woff2") format("woff2");
-  unicode-range: U+0370-03FF;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-math-normal.woff2") format("woff2");
-  unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
-}
-
-@font-face {
-  font-family: "Source Serif 4 Web";
-  font-style: italic;
-  font-weight: 200 900;
-  font-display: optional;
-  src: url("./fonts/source-serif-4-math-italic.woff2") format("woff2");
-  unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
-}
-
-/* Sized at prose size (opsz 18, weight 400); ascent and descent are the serif's (1.036, 0.335) divided
-   by the size-adjust. */
-@font-face {
-  font-family: "Source Serif 4 Web Fallback";
-  font-style: italic;
-  font-weight: 200 900;
-  src: local("Georgia Italic"), local("Georgia-Italic");
-  size-adjust: 94.38%;
-  ascent-override: 109.76%;
-  descent-override: 35.49%;
-  line-gap-override: 0%;
-}
-
-/* The network's faces (Inter, Martian Mono, Overpass, Jost, Capsomer Drafting, DSEG7) are Capsomer's
-   (capsomer/fonts.css, imported in routes/legacy-public.tsx); each downloads only where a page uses it. */
-
-/* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
-/* Not in the color blocks: check:contrast requires every token there to be a hex. */
+/* Not in the color blocks: check:contrast requires every token there to be a hex. The reading bar sits over the
+   pinned header (Capsomer's site entry puts --z-sticky at 100 here). */
 :root {
-  --z-dropdown: 200; /* @kind other */
   --z-progress: 900; /* @kind other */
-}
-
-/* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
-
-:root {
-  --font-sans:
-    "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  /* Running text is the report's serif (the manual theme); labels and controls stay in the sans. */
-  --font-prose:
-    "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
-  --font-mono: "Martian Mono", "Martian Mono Fallback", ui-monospace, Menlo, Consolas, monospace;
-  --font-serif:
-    "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia, "Times New Roman", serif;
 }
 
 /* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
@@ -233,7 +39,7 @@
   /* The manual's heads: Medium sans, the h2 a part title over a hairline (capsomer/manual.css). */
   --t-h2-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
 
-  --t-h1-family: var(--font-sans);
+  --t-h1-family: var(--ui);
   --t-h1-size: clamp(2.5rem, 1.6rem + 3.6vw, 4.5rem);
   --t-h1-leading: 0.98;
   /* Titles in Inter Light (Capsomer's --weight-title), the 1976 manual's Helvetica Light; the opsz axis
@@ -243,29 +49,11 @@
   --t-h1-tracking: -0.02em;
 }
 
-/* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
+/* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. The header hit
+   target is Capsomer's --control-h-coarse (44px, WCAG 2.5.5, AAA); this is the AA floor, 24px, at every pointer.
+   Rule widths, the control radius and the motion timings are Capsomer's (--line-w, --radius-control, --dur-*). */
 :root {
-  /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
-  --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
-
-  --line-w: 0.0625rem;
-  --line-w-thick: 0.125rem;
-  --radius-control: 0;
-}
-
-:root {
-  /* Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device.
-     Palette exit (120ms), the image-viewer morph (240ms) and the phone header hide (350ms) stay
-     literals: those are the overlay timings, and folding them in here would retune them. */
-  --motion-instant: 90ms;
-  --motion-state: 160ms;
-  /* Incoming page only. Long enough to see which page arrived, short enough that it is not a wait. */
-  --motion-page: 180ms;
-  /* One cycle of a loading line, drawn only while something is actually in flight. */
-  --motion-wait: 900ms;
-
-  --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
 }
 
 /* Hexes are fixed values, never derived. The light and dark blocks do not cascade into
@@ -617,7 +405,7 @@ body {
   --site-inset: 1.5rem;
   background: var(--paper);
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
 }
 
 ::selection {

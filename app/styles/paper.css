@@ -17,7 +17,7 @@
   margin: 0;
   max-width: 26ch;
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: clamp(1.625rem, 1.2rem + 1.4vw, 2.125rem);
   font-weight: var(--weight-heading);
   letter-spacing: -0.008em;
@@ -39,7 +39,7 @@
   margin: var(--space-6) 0 0;
   max-width: 54ch;
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.125rem;
   line-height: 1.6;
 }
@@ -56,7 +56,7 @@
 .paper-text .cap-cited-by-title {
   margin: 0 0 0.5rem;
   color: var(--text-secondary);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.0625rem;
   font-weight: var(--weight-heading);
   line-height: 1.5;
@@ -65,7 +65,7 @@
 .paper-abstract p {
   margin: 0;
   max-width: 64ch;
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.0625rem;
   line-height: 1.7;
 }
@@ -75,7 +75,7 @@
   flex-wrap: wrap;
   column-gap: 0.875rem;
   margin: var(--space-7) 0 0;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.8125rem;
 }
 
@@ -86,7 +86,7 @@
   padding: 0.75rem 1rem;
   background: var(--tint-warning);
   color: var(--on-tint-warning);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
   line-height: 1.6;
 }

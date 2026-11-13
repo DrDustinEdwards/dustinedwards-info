@@ -2,8 +2,11 @@
  * The running head over every public page but the home page (capsomer/manual.css, .cap-running-head): the
  * section's number and trail on the left, as the NASA Graphics Standards Manual heads its pages, and a folio on
  * the right. The numbers are the home page's parts (1 Research to 7 About), with 0 for the site's own pages.
- * The longest matching prefix wins.
+ * The longest matching prefix wins: Prelum's sectionOf takes the first section a path is under, so they are tried
+ * longest first, with the site's own as the catch-all.
  */
+import { sectionOf } from "@drdustinedwards/site-helpers/site-map";
+
 type Section = { prefix: string; no: string; trail: string[] };
 
 const SECTIONS: Section[] = [
@@ -54,24 +57,26 @@ const SECTIONS: Section[] = [
 
 const SITE_SECTION: Section = { prefix: "/", no: "0", trail: ["Site"] };
 
-const under = (pathname: string, prefix: string) =>
-  pathname === prefix || pathname.startsWith(`${prefix}/`);
+const BY_PREFIX = new Map([...SECTIONS, SITE_SECTION].map((section) => [section.prefix, section]));
+const LONGEST_FIRST = [
+  ...[...SECTIONS]
+    .sort((a, b) => b.prefix.length - a.prefix.length)
+    .map(({ prefix, trail }) => ({
+      id: prefix,
+      heading: trail.join(" · "),
+      to: prefix,
+      roots: [prefix],
+    })),
+  { id: SITE_SECTION.prefix, heading: "Site", to: null, roots: [] },
+];
 
 /** The section a path sits in, for the running head and the letterhead's folio. */
 export function runningHeadSection(pathname: string): Section {
-  let best = SITE_SECTION;
-  for (const section of SECTIONS) {
-    if (under(pathname, section.prefix) && section.prefix.length > best.prefix.length)
-      best = section;
-  }
-  return best;
+  return BY_PREFIX.get(sectionOf(pathname, LONGEST_FIRST)) ?? SITE_SECTION;
 }
 
-/**
- * A route's folio for the running head's right side, from its loader data: `export const handle = { folio }`.
- * Without one the right side carries the site's name.
- */
-export type RunningHeadHandle = { folio?: (data: unknown) => string | null | undefined };
+/** A route's folio for the running head's right side (`export const handle = { folio }`): Capsomer's handle. */
+export type { RunningHeadHandle } from "capsomer/behavior/manual";
 
 /* The word under a patch's number, for each part whose pages wear one. */
 const PATCH_UNITS: Record<string, string> = {

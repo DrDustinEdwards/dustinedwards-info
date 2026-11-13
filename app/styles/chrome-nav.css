@@ -28,7 +28,7 @@
   background: var(--nav-card-bg);
   box-shadow: 0 18px 40px rgb(20 10 40 / 0.14);
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
   line-height: normal;
 }
@@ -164,7 +164,7 @@
 
 .site-nav-tile-label {
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.125rem;
   font-weight: 600;
   font-variation-settings: normal;

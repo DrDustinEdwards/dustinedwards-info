@@ -41,8 +41,6 @@ import { plural } from "@drdustinedwards/site-helpers/text";
  * Sign-in is Cloudflare Access, in front of this layout, so no public route needs it.
  */
 import "capsomer/fonts.css";
-import "@fontsource-variable/source-serif-4/index.css";
-import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
 import { markup } from "capsomer/behavior/trusted-html";
 import { PRIVATE_PAGE_HEADERS, UNCACHED } from "@dustinedwards/site-runtime/edge-cache";

@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { walkFiles } from "@dustinedwards/devkit/node";
+import { firstValues, readDeclarations, stripCss } from "capsomer/token-check";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -25,16 +26,6 @@ const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
 const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 /** The /lab-bench workspace's sheet: Capsomer's plane like admin.css, built on its tokens, not the public palette. */
 const LAB_CSS_PATH = join(root, "app", "lab.css");
-
-/**
- * CRLF first, because autocrlf gives a fresh clone CRLF and multi-line selectors stop matching;
- * then comments, because the token block's own comment spells out its selectors.
- *
- * @param {string} css
- */
-export function stripCss(css) {
-  return css.replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
-}
 
 /**
  * A relative `@import` in any spelling CSS accepts: `"./a.css"`, `'./a.css'`, `url("./a.css")` or
@@ -136,29 +127,20 @@ export const THEME_SELECTORS = {
 };
 
 /**
- * Every declaration under the first match of `selector` in app.css, in order. Palette blocks carry
- * no nested braces, so the first closing brace ends the block.
+ * Every declaration under the first match of `selector` in app.css, in order (Capsomer's readDeclarations).
  *
  * @param {string} label
  * @param {string} selector
  * @returns {Record<string, string[]>}
  */
 export function tokenDeclarations(label, selector) {
-  const css = stripCss(readFileSync(CSS_PATH, "utf8"));
-
-  const at = css.indexOf(selector);
-  if (at === -1) throw new Error(`${label}: selector not found in app.css: ${selector}`);
-  const open = css.indexOf("{", at + selector.length - 1);
-  const close = css.indexOf("}", open);
-  if (open === -1 || close === -1) throw new Error(`${label}: unterminated block`);
-
-  /** @type {Record<string, string[]>} */
-  const out = {};
-  for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    (out[m[1]] ??= []).push(m[2].trim());
+  try {
+    return readDeclarations(readFileSync(CSS_PATH, "utf8"), selector);
+  } catch (error) {
+    throw new Error(
+      `${label}: ${error instanceof Error ? error.message : String(error)} (app.css)`,
+    );
   }
-  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
-  return out;
 }
 
 /**
@@ -170,33 +152,7 @@ export function tokenDeclarations(label, selector) {
  * @returns {Record<string, string>}
  */
 export function tokenBlock(label, selector) {
-  return Object.fromEntries(
-    Object.entries(tokenDeclarations(label, selector)).map(([name, values]) => [name, values[0]]),
-  );
-}
-
-/**
- * Follows a `var()` chain to its literal: a figure series slot is declared as a ramp step, and what
- * ships is the step's color. `value` is null on a missing name or a cycle.
- *
- * @param {Record<string, string>} block
- * @param {string} name
- * @returns {{ value: string | null, chain: string[] }}
- */
-export function resolveToken(block, name) {
-  /** @type {string[]} */
-  const chain = [];
-  let current = name;
-  for (let i = 0; i <= Object.keys(block).length; i += 1) {
-    const raw = block[current];
-    if (raw === undefined) return { value: null, chain };
-    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
-    if (!ref) return { value: raw.trim(), chain };
-    if (chain.includes(ref[1])) return { value: null, chain };
-    chain.push(ref[1]);
-    current = ref[1];
-  }
-  return { value: null, chain };
+  return firstValues(tokenDeclarations(label, selector));
 }
 
 /**
@@ -221,21 +177,4 @@ export function resolveTokens(nameMap, block, label) {
     out[key] = value;
   }
   return out;
-}
-
-/**
- * The CSS toolchain rewrites long hex to short, so a literal comparison misses colors that are there.
- *
- * @param {string} hex
- */
-export function normalizeHex(hex) {
-  const h = hex.trim().toLowerCase().replace("#", "");
-  const full =
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h;
-  return `#${full}`;
 }

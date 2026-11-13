@@ -1,23 +1,3 @@
-@media print {
-  .cap-site-header,
-  .site-shell-footer,
-  .post-toc,
-  .post-actions,
-  .post-nav,
-  .cap-skip,
-  .cap-lightbox {
-    display: none !important;
-  }
-
-  .page {
-    padding: 0;
-  }
-
-  .post {
-    max-width: none;
-  }
-}
-
 /* Still by default (Capsomer base.css): every motion below sits inside prefers-reduced-motion: no-preference,
    with no global duration override, which would end some animations in a jump and break scroll-driven ones.
    Page transitions are off unless motion is allowed. Chrome's default root crossfade uses
@@ -58,7 +38,7 @@
   }
 
   html:active-view-transition-type(site)::view-transition-group(root) {
-    animation-duration: var(--motion-page);
+    animation-duration: var(--dur-base);
   }
 
   html:active-view-transition-type(site)::view-transition-old(root) {
@@ -69,14 +49,14 @@
 
   html:active-view-transition-type(site)::view-transition-new(root) {
     mix-blend-mode: normal;
-    animation: motion-in var(--motion-page) var(--ease-out) both;
+    animation: motion-in var(--dur-base) var(--ease-out) both;
   }
 
   :where(a, button, input, select, textarea, summary) {
     transition-property:
       color, background-color, border-color, text-decoration-color, outline-offset, opacity;
-    transition-duration: var(--motion-instant);
-    transition-timing-function: var(--ease-state);
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-out);
   }
 
   /* Transform is not on the rule above: the nav chevron's turn is instant on purpose. */
@@ -84,8 +64,8 @@
     transition-property:
       color, background-color, border-color, text-decoration-color, outline-offset, opacity,
       transform;
-    transition-duration: var(--motion-instant);
-    transition-timing-function: var(--ease-state);
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-out);
   }
 
   :where(main, .gate, dialog) :where(button, [type="submit"]):active {
@@ -98,7 +78,7 @@
     background-repeat: no-repeat;
     background-position: 0 100%;
     background-size: 0 1px;
-    animation: motion-wait var(--motion-wait) var(--ease-out) infinite;
+    animation: motion-wait var(--dur-wait) var(--ease-out) infinite;
   }
 
   /* Opacity only, and only while the figure is entering. Already on screen, the range is over

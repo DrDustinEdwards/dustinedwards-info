@@ -2,7 +2,7 @@ import { preloads } from "@dustinedwards/site-runtime/preload";
 
 import monoFontUrl from "capsomer/fonts/martian-mono-latin-wght-normal.woff2?url";
 import uiFontUrl from "capsomer/fonts/inter-latin-wght-normal.woff2?url";
-import textFontUrl from "~/fonts/source-serif-4-latin-core-normal.woff2?url";
+import textFontUrl from "capsomer/fonts/source-serif-4-latin-core-normal.woff2?url";
 
 const font = (href: string) => ({ href, as: "font" as const, type: "font/woff2" });
 
@@ -15,14 +15,14 @@ export const PAGE_PRELOADS = [font(uiFontUrl)];
 export const PRELOADS = preloads(PAGE_PRELOADS);
 
 /**
- * The home page's other two faces, Source Serif (app.css, its Latin core) and Capsomer's mono, which it draws above
+ * The home page's other two faces, Source Serif (capsomer/fonts.css, its Latin core) and Capsomer's mono, which it draws above
  * the fold; otherwise each is found only once its stylesheet has loaded (PageSpeed, 2026-10-30). Home only: preloaded
  * on every page they slowed /systems, which draws neither, from 2.0s to 2.5s LCP (check:systems-map, mobile profile).
  */
 export const HOME_PRELOADS = preloads([font(textFontUrl), font(monoFontUrl)]);
 
 /**
- * A post's text face, Source Serif (app.css, its Latin core): the title and body every post draws first. With
+ * A post's text face, Source Serif (capsomer/fonts.css, its Latin core): the title and body every post draws first. With
  * font-display: optional, a face that is found late leaves the visit in its fallback, so it is preloaded here
  * rather than left for the stylesheet to find.
  */

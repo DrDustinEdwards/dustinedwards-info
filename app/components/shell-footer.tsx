@@ -13,7 +13,7 @@ import { markup } from "capsomer/behavior/trusted-html";
  */
 export function ShellFooter() {
   return (
-    <footer className="site-shell-footer">
+    <footer className="site-shell-footer" data-print="hide">
       <div
         className="cap-page"
         dangerouslySetInnerHTML={markup(

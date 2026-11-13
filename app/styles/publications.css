@@ -27,7 +27,7 @@
 .paper-marks {
   margin: 0 0 0.125rem;
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
+  font: 500 0.6875rem / 1.7 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -54,7 +54,7 @@
 .paper-row-title {
   margin: 0;
   max-width: 62ch;
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.125rem;
   font-weight: var(--weight-heading);
   line-height: 1.35;
@@ -80,7 +80,7 @@
 
 .paper-venue {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -90,7 +90,7 @@
   flex-wrap: wrap;
   column-gap: 0.875rem;
   margin: 0.4375rem 0 0;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.8125rem;
 }
 
@@ -100,13 +100,13 @@
 
 .paper-abstract-peek {
   margin-block-start: 0.4375rem;
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 0.9375rem;
 }
 
 .paper-abstract-peek > summary {
   color: var(--text-secondary);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.8125rem;
   cursor: pointer;
 }

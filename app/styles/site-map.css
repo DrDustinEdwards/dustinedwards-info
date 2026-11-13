@@ -8,7 +8,7 @@
 
 .site-map-heading {
   margin: 0 0 var(--space-4);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 1.125rem;
   font-weight: var(--weight-heading);
   color: var(--text-heading);
@@ -18,7 +18,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
   line-height: 1.5;
 }

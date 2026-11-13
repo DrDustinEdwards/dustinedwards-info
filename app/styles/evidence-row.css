@@ -7,7 +7,7 @@
   border-block-start: var(--line-w) solid var(--text);
   border-inline-start: var(--line-w) solid var(--text);
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 1.125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -34,7 +34,7 @@
 .evidence-detail {
   margin: 0.5rem 0 0;
   color: var(--text-secondary);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.8125rem;
   line-height: 1.5;
 }

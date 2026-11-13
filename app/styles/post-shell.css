@@ -20,7 +20,7 @@
   margin: 0 0 var(--space-7);
   max-width: 44ch;
   color: var(--text-secondary);
-  font-family: var(--font-prose);
+  font-family: var(--prose);
   font-size: 1.3125rem;
   line-height: 1.5;
 }
@@ -56,7 +56,7 @@
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
   color: var(--text-secondary);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.75rem;
   line-height: 1.8;
 }
@@ -69,7 +69,7 @@
 
 .post-history-value {
   color: var(--text);
-  font-family: var(--font-mono);
+  font-family: var(--mono);
 }
 
 /* The only owner of .post-action: another sheet at the same (0,1,0), imported later, would win the tie
@@ -81,7 +81,7 @@
   margin-block-start: var(--space-7);
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
 }
 
@@ -110,7 +110,7 @@
 .post-colophon-note {
   margin-block-start: var(--space-6);
   color: var(--text-secondary);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -120,7 +120,7 @@
 
 /* The leading is a length, not a ratio, so 29px holds wherever the size is inherited. */
 .post-body .prose {
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.0625rem;
   font-weight: 400;
   line-height: 1.8125rem;
@@ -134,7 +134,7 @@
 .post-body .prose h3 {
   margin: 2rem 0 0.625rem;
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 1.125rem;
   font-weight: var(--weight-heading);
   letter-spacing: normal;
@@ -165,7 +165,7 @@
   border-block: var(--line-w) solid var(--dust);
   padding-block: 1.25rem;
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   font-size: 1.625rem;
   line-height: 1.35;
 }

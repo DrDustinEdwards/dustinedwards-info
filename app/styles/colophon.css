@@ -53,10 +53,6 @@
   line-height: 1.5;
 }
 
-.colophon-card[hidden] {
-  display: none;
-}
-
 .colophon-body .colophon-card h3 {
   margin-block: 0 0.375rem;
   font-size: 1rem;
@@ -244,11 +240,6 @@
 
 .colophon-kinds .cap-chip[aria-pressed="true"] .cap-chip-count {
   color: inherit;
-}
-
-tr[hidden],
-.colophon-scroll li[hidden] {
-  display: none;
 }
 
 .colophon-find {

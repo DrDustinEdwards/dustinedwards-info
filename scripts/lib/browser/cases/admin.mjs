@@ -13,7 +13,9 @@ import {
 } from "../credential.mjs";
 import { countCssRules } from "capsomer/testing/page";
 
-import { ok, overflowScan, say } from "../harness.mjs";
+import { overflowScan } from "capsomer/testing/page";
+
+import { ok, say } from "../harness.mjs";
 
 /** Re-measure when the admin's stylesheets change: the floor sits a few under a measured run. */
 const ADMIN_RULE_MEASURED = 74;
@@ -245,16 +247,11 @@ export async function run({ browser }) {
         ["/admin/kb?tab=needs-info", "the knowledge base, needs info"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
-        const o = await admin.evaluate(overflowScan);
+        const over = await overflowScan(admin);
         ok(
           `${path}: ${what} does not scroll sideways at ${width}px`,
-          o.scrollW <= o.clientW,
-          `scrollWidth ${o.scrollW} exceeds clientWidth ${o.clientW} by ` +
-            `${o.scrollW - o.clientW}px. Widest: ${
-              o.over.join(", ") ||
-              "(nothing measured wider " +
-                "than the viewport, so the overflow is on an element this scan skipped)"
-            }`,
+          over.length === 0,
+          `reaching past the right edge: ${over.join(", ")}`,
         );
       }
     }

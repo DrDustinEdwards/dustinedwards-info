@@ -75,7 +75,7 @@ function hairline(x1, y1, x2, y2) {
 function label(x, y, text, size = 11, tone = "neutral") {
   return (
     `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" ` +
-    `font-family="var(--font-sans)" font-size="${size}" fill="var(--diagram-${tone}-ink)">${escapeHtml(text)}</text>`
+    `font-family="var(--ui)" font-size="${size}" fill="var(--diagram-${tone}-ink)">${escapeHtml(text)}</text>`
   );
 }
 

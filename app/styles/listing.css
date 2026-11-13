@@ -51,7 +51,7 @@
   margin: 0 0 var(--space-6);
   max-width: 54ch;
   color: var(--text);
-  font-family: var(--font-prose);
+  font-family: var(--prose);
   font-size: 1.25rem;
   line-height: 1.45;
 }
@@ -69,7 +69,7 @@
 .list-feeds {
   margin-block-start: var(--space-6);
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 0.75rem;
   line-height: 1.7;
 }

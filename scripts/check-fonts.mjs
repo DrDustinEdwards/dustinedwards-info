@@ -7,6 +7,8 @@ import { openSync } from "fontkit";
 
 import { createTally } from "@dustinedwards/devkit/node";
 
+import { PDF_FONTS } from "../app/lib/cv/pdf-html.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "font-baseline.json");
 const update = process.argv.includes("--update");
@@ -16,9 +18,10 @@ const { ok } = tally;
 
 console.log("\ncheck:fonts\n");
 
-// Capsomer's faces (capsomer/fonts.css, which routes/legacy-public.tsx imports) are the family's sans and mono.
+// Capsomer's faces (capsomer/fonts.css, which routes/legacy-public.tsx imports) are the family's sans, serif and mono.
+const CAPSOMER_FONTS = join(root, "node_modules", "capsomer", "css", "fonts.css");
 const SHEETS = [
-  join(root, "node_modules", "capsomer", "css", "fonts.css"),
+  CAPSOMER_FONTS,
   join(root, "app", "app.css"),
   ...readdirSync(join(root, "app", "styles"))
     .filter((f) => f.endsWith(".css"))
@@ -30,6 +33,18 @@ const SHEETS = [
  * @returns {string}
  */
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+// The site's stacks: app.css, then Capsomer's token sheets, which set --ui, --prose and --mono.
+const TOKEN_SHEETS = [
+  join(root, "app", "app.css"),
+  join(root, "node_modules", "capsomer", "tokens", "color.css"),
+  join(root, "node_modules", "capsomer", "tokens", "scale.css"),
+];
+// A Capsomer face is checked here when the site names its family (another site's face, Foxhound's DM Sans, is
+// Capsomer's and that site's to check).
+const named = [...SHEETS.filter((f) => f !== CAPSOMER_FONTS), ...TOKEN_SHEETS]
+  .map((f) => stripComments(readFileSync(f, "utf8")))
+  .join("\n");
 
 /** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string|null, raw: string}[]} */
 const blocks = [];
@@ -48,6 +63,7 @@ for (const sheet of SHEETS) {
     // The FIRST url() is the file this block is about. A block with none is a
     // local()-only face and is skipped, counted, below.
     const url = body.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/)?.[1] ?? null;
+    if (sheet === CAPSOMER_FONTS && !named.includes(`"${family}"`)) continue;
     blocks.push({
       sheet,
       family,
@@ -119,29 +135,13 @@ for (const dir of [join(root, "app", "fonts"), join(root, "app", "fonts", "katex
 }
 
 const referenced = new Set(withFile.map((b) => b.file));
-// The whole latin files no block names: the sources scripts/split-latin-fonts.py cuts into the core and
-// rest faces the blocks do name (the CV PDF also reads three of them whole). Read from the script, so a
-// source it stops cutting is no longer excused.
-const SPLIT_SCRIPT = join(root, "scripts", "split-latin-fonts.py");
-const splitScript = readFileSync(SPLIT_SCRIPT, "utf8");
-// The latin range the script cuts, which the two halves must cover between them.
-const SPLIT_LATIN = [
-  ...(splitScript.match(/^LATIN = \(([^)]*)\)/m)?.[1] ?? "").matchAll(/"([^"]*)"/g),
-]
-  .map((m) => m[1])
-  .join("");
-const splitSources = [
-  ...(splitScript.match(/^FACES = \[([^\]]*)\]/m)?.[1] ?? "").matchAll(/"([^"]+)"/g),
-].map((m) => join(root, "app", "fonts", `${m[1]}.woff2`));
-ok(
-  "scripts/split-latin-fonts.py names the files it cuts",
-  splitSources.length > 0,
-  "no FACES list was read from it",
-);
+// The whole latin files no block names: the CV PDF embeds them (app/lib/cv/pdf-html.mjs PDF_FONTS). Read from
+// that list, so a file it stops reading is no longer excused. The page faces cut from them are Capsomer's.
+const pdfSources = PDF_FONTS.map((f) => join(root, "app", "fonts", f.file));
 for (const file of shipped) {
-  const source = splitSources.includes(file);
+  const source = pdfSources.includes(file);
   ok(
-    `${relative(root, file)} is ${source ? "cut into faces by scripts/split-latin-fonts.py" : "referenced by an @font-face block"}`,
+    `${relative(root, file)} is ${source ? "embedded by the CV PDF" : "referenced by an @font-face block"}`,
     source || referenced.has(file),
     `the file ships and no declaration names it, so nothing asserts what it is`,
   );
@@ -158,11 +158,9 @@ function fontFor(file) {
   return font;
 }
 
-// Namespaced families legitimately differ from the binary's name table: the serif is namespaced so a
-// reader with the retail family installed cannot put a different file in the resolution path.
+// Families that legitimately differ from the binary's name table.
 /** @type {Map<string, string>} declared family -> the family its file must report */
 const NAMESPACED = new Map([
-  ["Source Serif 4 Web", "Source Serif 4"],
   // The wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
   ["Martian Mono", "Martian Mono SemiExpanded"],
 ]);
@@ -299,7 +297,7 @@ ok(
 );
 
 /**
- * Resolves `var(--font-sans)` to the first family in that stack, the face the level actually sets in.
+ * Resolves `var(--ui)` to the first family in that stack, the face the level actually sets in.
  *
  * @param {string|null} value
  * @returns {string|null}
@@ -307,12 +305,12 @@ ok(
 function resolveFamily(value) {
   if (!value) return null;
   let v = value.trim();
-  const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
+  const sheet = TOKEN_SHEETS.map((f) => stripComments(readFileSync(f, "utf8"))).join("\n");
   for (let i = 0; i < 4 && v.startsWith("var("); i += 1) {
     // `var(--a, fallback)` names --a; the fallback is not part of the name.
     const name = v.slice(4, v.indexOf(")")).split(",")[0].trim();
     if (!/^--[a-z0-9-]+$/i.test(name)) return null;
-    // Anchored, so `--x--font-sans:` cannot answer for `--font-sans`.
+    // Anchored, so `--x--ui:` cannot answer for `--ui`.
     const decl = new RegExp(`(?:^|[\\s;{])${name}\\s*:\\s*([^;]+);`).exec(sheet);
     if (!decl) return null;
     v = decl[1].trim();
@@ -387,75 +385,6 @@ for (const face of OG_FACES) {
   );
 }
 
-// The latin core and rest faces (scripts/split-latin-fonts.py). A range the file does not match either
-// leaves a character with no face, so it draws in a fallback, or names a face for a character it
-// lacks. The two halves must cover their source exactly, and come from its current version.
-/** @param {string} range @returns {Set<number>} */
-const codepoints = (range) => {
-  const out = new Set();
-  for (const part of range.split(",")) {
-    const [first, last] = part.trim().replace(/^U\+/i, "").split("-");
-    for (let c = parseInt(first, 16); c <= parseInt(last ?? first, 16); c++) out.add(c);
-  }
-  return out;
-};
-const latin = codepoints(SPLIT_LATIN);
-ok(
-  "scripts/split-latin-fonts.py names the latin range it cuts",
-  latin.size > 0,
-  "no LATIN range was read from it",
-);
-for (const source of splitSources) {
-  const rel = relative(root, source);
-  const halves = ["core", "rest"].map((part) => {
-    const file = source.replace("-latin-", `-latin-${part}-`);
-    const block = withFile.find((b) => b.file === file);
-    const range = block?.raw.match(/unicode-range\s*:\s*([^;]+)/i)?.[1];
-    const has = existsSync(file)
-      ? new Set(fontFor(file).characterSet.filter((c) => c !== 0xffff))
-      : null;
-    return { part, file, declared: range ? codepoints(range) : null, has };
-  });
-  // 0xFFFF is the cmap's end marker, which fontkit reports as a character.
-  const sourceChars = new Set(fontFor(source).characterSet.filter((c) => c !== 0xffff));
-  for (const half of halves) {
-    const name = relative(root, half.file);
-    ok(
-      `${name} exists and a block declares its unicode-range`,
-      half.has !== null && half.declared !== null,
-      `cut ${rel} with the script and declare the face in app.css`,
-    );
-    if (half.has === null || half.declared === null) continue;
-    const declared = half.declared;
-    const unreachable = [...half.has].filter((c) => !declared.has(c) && c >= 0x20);
-    const missing = [...declared].filter((c) => sourceChars.has(c) && !half.has?.has(c));
-    ok(
-      `${name} holds exactly the characters its unicode-range declares`,
-      unreachable.length === 0 && missing.length === 0,
-      `in the file but not declared: ${unreachable.map((c) => c.toString(16)).join(" ") || "none"}; declared, in ${rel}, not in the file: ${missing.map((c) => c.toString(16)).join(" ") || "none"}`,
-    );
-    ok(
-      `${name} is cut from ${rel} as it is now`,
-      fontFor(half.file).version === fontFor(source).version,
-      `the cut says ${fontFor(half.file).version}, the source ${fontFor(source).version}; re-run scripts/split-latin-fonts.py`,
-    );
-  }
-  const [core, rest] = halves;
-  if (core.has && rest.has) {
-    const both = [...core.has].filter((c) => rest.has?.has(c) && c >= 0x20);
-    // Within the latin range: the source also maps a few combining marks outside it, which no face
-    // ever offered.
-    const lost = [...sourceChars].filter(
-      (c) => latin.has(c) && !core.has?.has(c) && !rest.has?.has(c),
-    );
-    ok(
-      `${rel}'s core and rest share no character and together hold all of it`,
-      both.length === 0 && lost.length === 0,
-      `in both: ${both.map((c) => c.toString(16)).join(" ") || "none"}; in neither: ${lost.map((c) => c.toString(16)).join(" ") || "none"}`,
-    );
-  }
-}
-
 // Every assertion above is satisfied by a file re-subsetted with its axes intact, so the bytes are pinned.
 /** @param {string} file */
 const digest = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
@@ -510,7 +439,9 @@ if (update) {
 // Capsomer's fonts.css, one variable file each, and the unused type levels and metric fallbacks went (2026-10-28).
 // 297 after the site nav set its weights with font-weight, not bare "wght" font-variation-settings (2026-11-04):
 // each bare request was checked against every variable face, and three such requests went; no block skipped.
-const MINIMUM_CHECKS = 297;
+// 243 after the serif and the Greek and math faces came from Capsomer (0.123.0, 2026-11-13): twelve binaries left
+// the site and its baseline, the split check went with the split script, and Foxhound's DM faces are not read.
+const MINIMUM_CHECKS = 243;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(

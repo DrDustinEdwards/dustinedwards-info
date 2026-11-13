@@ -182,7 +182,7 @@ function auditInline(slug, html, key) {
     const size = /\bfont-size="(\d+)"/.exec(open)?.[1];
     declarations += 1;
     assert(`${name} text is 11 to 13px`, size === "11" || size === "12" || size === "13");
-    assert(`${name} text uses the site font`, /\bfont-family="var\(--font-sans\)"/.test(open));
+    assert(`${name} text uses the site font`, /\bfont-family="var\(--ui\)"/.test(open));
   }
   for (const tone of svg.matchAll(
     /fill="var\(--diagram-(neutral|accent|success|warning|info)\)"/g,

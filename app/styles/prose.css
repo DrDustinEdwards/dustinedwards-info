@@ -3,14 +3,13 @@
 
 /* The reading look is Capsomer's reading context and prose blocks (capsomer/prose.css, capsomer/prose-blocks.css) in
    the manual's look: every .prose carries data-context="prose" and the parts, manual tables and ruled plus details
-   (app/lib/prose-context.ts). The site keeps its sizes, heading weight and code ground here, as tokens. --font-prose, not the inherited --font-sans: its fallback is sized to Inter at this
-   17px, so the swap does not re-wrap a paragraph. Posts override it with the serif (post-shell.css). */
+   (app/lib/prose-context.ts). The site keeps its sizes, heading weight and code ground here, as tokens; the face is
+   Capsomer's --prose, the serif. */
 .prose {
-  --prose: var(--font-prose);
   --fs-prose: 1.0625rem;
   --leading: 1.7;
   --prose-flow: 1.125rem;
-  --prose-heading-face: var(--font-sans);
+  --prose-heading-face: var(--ui);
   --prose-heading-weight: var(--weight-heading);
   --prose-h2-size: var(--t-h2-size);
   --prose-h3-size: 1.125rem;

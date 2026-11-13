@@ -24,6 +24,8 @@ import "capsomer/dialog.css";
 import "capsomer/site-header.css";
 // Capsomer's utilities without its base: the family arrow on the footer's links.
 import "capsomer/utilities.css";
+// Its paper, reduced-transparency and forced-colors rules (base.css imports them; the public pages load no base).
+import "capsomer/print.css";
 // Capsomer's picture (capsomer/react/picture): the <picture> leaves the box to its <img>, and the stored placeholder.
 import "capsomer/picture.css";
 // Capsomer's link system: the mark for a link that leaves the site, opens a file or sends mail (app.css draws

@@ -14,7 +14,7 @@
 
 /* A sequence is read letter by letter, so it is monospace and breaks anywhere rather than scrolling. */
 .registry-seq {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: var(--mono);
   font-size: 0.9em;
   overflow-wrap: anywhere;
   word-break: break-all;
@@ -102,7 +102,7 @@
 }
 .registry-facts dt {
   color: var(--text);
-  font: 500 0.6875rem / 1.9 var(--font-mono);
+  font: 500 0.6875rem / 1.9 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

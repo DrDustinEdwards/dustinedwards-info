@@ -5,14 +5,13 @@ import { fileURLToPath } from "node:url";
 // Imported from the pipeline so the gate cannot check a theme the renderer does not use.
 import { LANGUAGES, SHIKI_THEMES } from "@drdustinedwards/site-helpers/render/highlight";
 
-import { apca, channels, contrast } from "../app/lib/contrast.mjs";
+import { apca, contrast, normalizeHex, resolveToken, stripCss } from "capsomer/token-check";
+
+import { channels } from "../app/lib/contrast.mjs";
 
 import {
   allSourceCss,
   CSS_PATH,
-  normalizeHex,
-  resolveToken,
-  stripCss,
   stylesheetPaths,
   THEME_SELECTORS,
   tokenBlock,
@@ -177,7 +176,7 @@ for (const [mode] of MODES) {
 
 let apcaWorstDelta = 0;
 for (const [text, bg, expected] of APCA_KEYSTONE) {
-  const got = apca(String(text), String(bg));
+  const got = apca(normalizeHex(String(text)), normalizeHex(String(bg)));
   const delta = Math.abs(got - Number(expected));
   if (delta > apcaWorstDelta) apcaWorstDelta = delta;
   assert(`APCA keystone ${text} on ${bg}: expected ${expected}, got ${got}`, delta < 1e-9);
@@ -672,8 +671,9 @@ function opacityExempt(selectorGroup) {
     }
   }
 
-  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
-  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 7);
+  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. 5 since the element reset is
+     Capsomer's (capsomer/reset.css, 2026-11-13), which took its two opacity declarations with it. */
+  assert(`the opacity scan read declarations at all (${declarations} found)`, declarations >= 5);
 
   assert(
     unparsed.length === 0

@@ -25,7 +25,7 @@
 
 /* The overview above the catalog, in the manual theme (library-overview.tsx). */
 .library-part {
-  font-family: var(--font-sans);
+  font-family: var(--ui);
 }
 
 /* The workflow as a line of stations: a filled disc of the family's color where the lab has a protocol, a ring
@@ -70,7 +70,7 @@
   border: 2px solid var(--text);
   border-radius: 50%;
   background: var(--paper);
-  font: 700 0.6875rem / 1 var(--font-mono);
+  font: 700 0.6875rem / 1 var(--mono);
 }
 
 .library-stage:not([data-empty]) .library-stage-dot {
@@ -94,7 +94,7 @@ a.library-stage-name:hover {
 
 .library-stage-n {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
+  font: 500 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -140,7 +140,7 @@ a.library-stage-name:hover {
 }
 
 .library-start-mark {
-  font: 700 0.6875rem / 1.6 var(--font-mono);
+  font: 700 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.1em;
   text-decoration: underline;
   text-transform: uppercase;
@@ -167,7 +167,7 @@ a.library-stage-name:hover {
 .library-subtitle {
   margin: 0 0 var(--space-3);
   color: var(--text);
-  font: var(--weight-heading) 0.6875rem / 1.6 var(--font-mono);
+  font: var(--weight-heading) 0.6875rem / 1.6 var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -193,7 +193,7 @@ a.library-stage-name:hover {
 
 /* Download and cite: the citation is set apart as text to copy, in a ruled box under a mono label. */
 .library-cite {
-  font-family: var(--font-sans);
+  font-family: var(--ui);
 }
 .library-cite-text {
   padding: 0.75rem 1rem;

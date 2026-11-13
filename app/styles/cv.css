@@ -22,7 +22,7 @@
   padding-block-end: var(--space-3);
   border-block-end: 4px solid var(--text);
   color: var(--text);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
+  font: 500 0.6875rem / 1.7 var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -40,7 +40,7 @@
 .cv-lede {
   margin: var(--space-4) 0 0;
   max-width: 44rem;
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 1.1875rem;
   line-height: 1.5;
 }
@@ -81,7 +81,7 @@
 
 .cv-stat dt {
   color: var(--text);
-  font: 500 0.75rem / 1.6 var(--font-mono);
+  font: 500 0.75rem / 1.6 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -96,7 +96,7 @@
 
 .cv-stat-value {
   color: var(--text-heading);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
   font-weight: 700;
   font-variant-numeric: var(--figures) lining-nums;
@@ -184,7 +184,7 @@
 
 .cv-filters select {
   box-sizing: border-box;
-  min-height: var(--control-min);
+  min-height: var(--control-h-coarse);
   padding: 0.5rem 0.75rem;
   border: var(--line-w) solid var(--line-strong);
   border-radius: 0;
@@ -221,10 +221,6 @@
 }
 
 .cv-filter-actions:not(:has(> :not([hidden]))) {
-  display: none;
-}
-
-.cv-clear[hidden] {
   display: none;
 }
 
@@ -266,12 +262,6 @@
   margin-block-start: var(--space-7);
 }
 
-.cv-group[hidden],
-.cv-part[hidden],
-.cv-entry[hidden] {
-  display: none;
-}
-
 .cv-group-title {
   display: flex;
   align-items: baseline;
@@ -279,7 +269,7 @@
   margin: 0;
   padding-block: var(--space-4) var(--space-3);
   border-block-start: var(--line-w-thick) solid var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
   font-weight: var(--weight-heading);
   line-height: 1.2;
@@ -287,7 +277,7 @@
 
 .cv-group-count {
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 0.875rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
@@ -306,7 +296,7 @@
   padding-block-end: var(--space-2);
   border-block-end: var(--line-w) solid var(--text);
   color: var(--text);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
+  font: 500 0.6875rem / 1.7 var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -329,7 +319,7 @@
 .cv-when {
   padding-block-start: 0.2rem;
   color: var(--text);
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 0.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -347,7 +337,7 @@
 .cv-title {
   max-width: 62ch;
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.4;
@@ -365,7 +355,7 @@
 .cv-amount {
   margin-inline-end: 0.5rem;
   color: var(--brand);
-  font-family: var(--font-mono);
+  font-family: var(--mono);
   font-size: 0.9375rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
@@ -459,7 +449,7 @@
   padding: var(--space-3) var(--space-4);
   border: var(--line-w) solid var(--dust);
   border-radius: 0;
-  font-family: var(--font-serif);
+  font-family: var(--prose);
   user-select: all;
 }
 
@@ -469,10 +459,6 @@
   align-items: center;
   gap: var(--space-3) var(--space-4);
   margin: var(--space-3) 0 0;
-}
-
-.cap-copy[hidden] {
-  display: none;
 }
 
 .cv-duty ul {
@@ -611,7 +597,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    min-height: var(--control-min);
+    min-height: var(--control-h-coarse);
     color: var(--brand);
     font-weight: 600;
     cursor: pointer;
@@ -665,7 +651,7 @@
 }
 
 .cv-compact .cv-title {
-  font-family: var(--font-sans);
+  font-family: var(--ui);
   font-size: 0.9375rem;
   font-weight: 580;
   line-height: 1.5;

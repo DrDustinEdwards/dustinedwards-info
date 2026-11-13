@@ -1,6 +1,5 @@
 import { JsonLd } from "capsomer/react/json-ld";
 import { DraftNotice } from "capsomer/react/draft-notice";
-import { patchSvg } from "capsomer/behavior/manual";
 import { DictionaryEntry } from "capsomer/react/dictionary-entry";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -8,7 +7,7 @@ import { CONTENTS_MIN, contentsOf, PageContents } from "~/components/page-conten
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
-import { Signs } from "capsomer/react/manual";
+import { Patch, Signs } from "capsomer/react/manual";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
@@ -138,10 +137,10 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
     >
       <Breadcrumb trail={trail} />
       {patch ? (
-        <div className="page-patched">
+        <div className="cap-patched">
           <h1 className="page-title cap-layout-grid">{page.title}</h1>
-          {/* Decorative: the trail and the running head say the same in words. */}
-          <span dangerouslySetInnerHTML={markup(patchSvg(patch))} />
+          {/* Decorative (aria-hidden): the trail and the running head say the same in words. */}
+          <Patch {...patch} />
         </div>
       ) : (
         <h1 className="page-title cap-layout-grid">{page.title}</h1>

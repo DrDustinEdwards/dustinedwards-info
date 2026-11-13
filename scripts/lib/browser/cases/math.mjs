@@ -1,7 +1,9 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, ok, overflowScan, skip } from "../harness.mjs";
+import { overflowScan } from "capsomer/testing/page";
+
+import { BASE, ok, skip } from "../harness.mjs";
 import { MATHLESS_POST_PATH, MATH_POST_PATH } from "../seed.mjs";
 
 /* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
@@ -64,7 +66,7 @@ export async function run({ page }, mathPreviewSeeded) {
         `React "precedence" attribute on the math link puts it above the meta.`,
     );
 
-    const scan = await page.evaluate(overflowScan);
+    const over = await overflowScan(page);
     const colors = await page.evaluate(readMathColors);
     const sheets = await page.evaluate(stylesheetHrefs);
     const rendered = await page.evaluate(() => {
@@ -86,7 +88,7 @@ export async function run({ page }, mathPreviewSeeded) {
     });
     const math = {
       ...rendered,
-      ...scan,
+      over,
       sheets,
       proseColor: colors.prose,
       katexColor: colors.katex,
@@ -131,13 +133,8 @@ export async function run({ page }, mathPreviewSeeded) {
     );
     ok(
       `${MATH_PATH}: no horizontal scroll at ${NARROW_MATH}px`,
-      math.scrollW <= math.clientW,
-      `scrollWidth ${math.scrollW} exceeds clientWidth ${math.clientW} by ` +
-        `${math.scrollW - math.clientW}px. Widest: ${
-          math.over.join(", ") ||
-          "(nothing " +
-            "measured wider than the viewport, so it is on an element this scan skipped)"
-        }`,
+      math.over.length === 0,
+      `reaching past the right edge: ${math.over.join(", ")}`,
     );
 
     /* KaTeX declares no color, so it must compute to the `.prose` color. */
