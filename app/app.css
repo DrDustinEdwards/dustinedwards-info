@@ -252,6 +252,8 @@
   --line-w: 0.0625rem;
   --line-w-thick: 0.125rem;
   --radius-control: 0;
+  /* The mono labels (capsomer/eyebrow.css) keep their 0.08em tracking, not the eyebrow's 0.06em. */
+  --cap-eyebrow-tracking: 0.08em;
 }
 
 :root {

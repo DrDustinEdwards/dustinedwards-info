@@ -27,9 +27,7 @@
 .paper-marks {
   margin: 0 0 0.125rem;
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.7;
 }
 
 .paper-kind,
