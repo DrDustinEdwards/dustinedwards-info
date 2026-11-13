@@ -75,7 +75,7 @@ export async function run({ page }) {
       0.2126 * lin(c[0] ?? 0) + 0.7152 * lin(c[1] ?? 0) + 0.0722 * lin(c[2] ?? 0);
     function lin(/** @type {number} */ v) {
       const c = v / 255;
-      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     }
     const root = document.documentElement;
     const was = root.getAttribute("data-theme");

@@ -230,6 +230,19 @@ export async function commitFiles(
   return { commitSha: (await getHead(env)).commitSha, blobShas };
 }
 
+/**
+ * Every stored version of a file, oldest first: what the publish policy reads to tell a republication
+ * from a first publication for kinds with no first_published stamp (decideFileWrite).
+ */
+export async function fileHistory(env: SourceEnv, path: string): Promise<string[]> {
+  const rows = await env.DB.prepare(
+    `SELECT content FROM source_revisions WHERE path = ?1 AND content IS NOT NULL ORDER BY id`,
+  )
+    .bind(path)
+    .all<{ content: string }>();
+  return (rows.results ?? []).map((r) => r.content);
+}
+
 type PostCommit = { sha: string; message: string; author: string; date: string };
 
 /** A file's revisions, newest first. `sha` is the revision's blob sha, which readFile takes. */
