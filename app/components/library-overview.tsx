@@ -1,3 +1,4 @@
+import "capsomer/eyebrow.css";
 import { countOf, overviewSentence, type libraryOverview } from "~/kb/procedures/library.mjs";
 
 /**
@@ -30,7 +31,7 @@ export function LibraryOverview({ overview }: { overview: ReturnType<typeof libr
               ) : (
                 <span className="library-stage-name">{stage.label}</span>
               )}
-              <span className="library-stage-n">
+              <span className="cap-eyebrow library-stage-n" data-variant="mono">
                 {stage.count > 0
                   ? countOf(stage.count, ["protocol", "protocols"])
                   : "No protocol yet"}
