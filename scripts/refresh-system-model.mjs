@@ -18,7 +18,8 @@
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { loadSystemModel, sameModel } from "../app/lib/systems.mjs";
+import { sameModel } from "capsomer/behavior/system-model";
+import { loadSystemModel } from "../app/lib/systems.mjs";
 import { undeclaredParts } from "./lib/system-drift.mjs";
 
 const root = join(import.meta.dirname, "..");

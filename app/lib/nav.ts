@@ -9,7 +9,9 @@ import { seriesPath, seriesSlug } from "./series-path.mjs";
 import { tagPath } from "./tag-path.mjs";
 import { BASES } from "../kb/bases.mjs";
 import { paperPath } from "./publications/paths.mjs";
-import { EXPLORER_ORIGIN } from "./systems.mjs";
+// Zod builds its parsers when Capsomer's system model loads, so the flag goes first (site-runtime ./zod-jitless).
+import "@dustinedwards/site-runtime/zod-jitless";
+import { explorerHref } from "capsomer/behavior/system-model";
 
 /*
  * The header's five destinations and the panels that hang from them ("structured panels", decided
@@ -299,7 +301,7 @@ function softwareMenu(): Menu {
     footer: [
       { to: "/software", label: "All software", icon: "arrow" },
       { to: "/systems", label: "System map", icon: "map" },
-      { to: `${EXPLORER_ORIGIN}/`, label: "Capsid explorer", icon: "search" },
+      { to: explorerHref(), label: "Capsid explorer", icon: "search" },
     ],
   };
 }

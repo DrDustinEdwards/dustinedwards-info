@@ -25,12 +25,6 @@
    Capsomer's tokens too: --ui for labels and controls, --prose for running text (the report's serif, the manual
    theme), --mono. */
 
-/* Not in the color blocks: check:contrast requires every token there to be a hex. The reading bar sits over the
-   pinned header (Capsomer's site entry puts --z-sticky at 100 here). */
-:root {
-  --z-progress: 900; /* @kind other */
-}
-
 /* The site's own display scale: the cover's h1, the part titles and the small print. Everything else is
    Capsomer's type tokens. */
 :root {

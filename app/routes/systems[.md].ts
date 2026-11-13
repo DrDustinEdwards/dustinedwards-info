@@ -2,19 +2,21 @@ import { data } from "react-router";
 
 import { canonicalLink } from "~/lib/markdown-twin";
 import { SHARED_CACHE_CONTROL, SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
-import {
-  SYSTEMS_PATH,
-  loadSystemModel,
-  systemPath,
-  systemSectionMarkdown,
-  systemsMarkdown,
-} from "~/lib/systems.mjs";
+import { SYSTEMS_PATH, loadSystemModel, systemPath } from "~/lib/systems.mjs";
+import { modelMarkdown, systemMarkdown } from "capsomer/behavior/system-model";
 
 import type { Route } from "./+types/systems[.md]";
 
 import rawModel from "../../data/system-model.json";
 
 const MODEL = loadSystemModel(rawModel);
+// Capsomer writes the twin; the site gives its address, its pages and its words.
+const MARKDOWN = {
+  origin: SITE_ORIGIN,
+  pageHref: systemPath,
+  intro: `The systems Dustin Edwards runs. Public model of ${MODEL.as_of}.`,
+  rings: { core: "Runs everything", shared: "Shared parts", used: "What people use" },
+};
 
 /**
  * The markdown twins of /systems and of each /systems/<id>, drawn from the same model as the pages and holding every
@@ -23,9 +25,7 @@ const MODEL = loadSystemModel(rawModel);
 export function loader({ params }: Route.LoaderArgs) {
   const id = (params as { id?: string }).id;
   const body =
-    id === undefined
-      ? systemsMarkdown(MODEL, SITE_ORIGIN)
-      : systemSectionMarkdown(MODEL, id, SITE_ORIGIN);
+    id === undefined ? modelMarkdown(MODEL, MARKDOWN) : systemMarkdown(MODEL, id, MARKDOWN);
   if (body === null) throw data(null, { status: 404 });
   return new Response(body, {
     headers: {
