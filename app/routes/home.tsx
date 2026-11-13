@@ -29,7 +29,7 @@ import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublicationSummaries, type PublicationSummary } from "~/db/publications";
 import { rosterFactsFromDb } from "~/db/roster";
-import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
@@ -69,12 +69,12 @@ function homePapers(papers: PublicationSummary[]) {
     (a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""),
   );
   const selected = newest.filter((p) => p.selected);
-  /* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */
+  /* Titles and journals go through `unescapeHtml`: the deposited records carry HTML entities React would print literally. */
   return (selected.length > 0 ? selected : newest).slice(0, HOME_PAPERS).map((p) => ({
     id: p.id,
     year: p.year,
-    title: decodeEntities(p.title),
-    journal: p.journal ? decodeEntities(p.journal) : null,
+    title: unescapeHtml(p.title),
+    journal: p.journal ? unescapeHtml(p.journal) : null,
     href: `/research/publications/${p.slug}/`,
   }));
 }

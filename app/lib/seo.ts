@@ -14,7 +14,7 @@ import { TERMS_PATH } from "./license.mjs";
 import { dimensionsFromKey } from "./media/classify.mjs";
 import { canonicalAuthor } from "./publications/authors.mjs";
 import { schemaTypeFor } from "./publications/article-json-ld.mjs";
-import { decodeEntities } from "./publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { paperPath } from "./publications/paths.mjs";
 
 import { SITE_ORIGIN } from "./site-origin.mjs";
@@ -468,14 +468,14 @@ export function publicationsJsonLd(
       thing(p.type ? schemaTypeFor(p.type) : "ScholarlyArticle", {
         "@id": origin + paperPath(p.slug),
         // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
-        headline: decodeEntities(p.title),
-        name: decodeEntities(p.title),
+        headline: unescapeHtml(p.title),
+        name: unescapeHtml(p.title),
         author: p.authors.map((name) =>
           isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name: canonicalAuthor(name) },
         ),
         datePublished: String(p.year),
         ...(p.journal
-          ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
+          ? { isPartOf: { "@type": "Periodical", name: unescapeHtml(p.journal) } }
           : {}),
         ...(p.doi
           ? {

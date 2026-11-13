@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
-import { decodeEntities } from "../../app/lib/publications/entities.mjs";
+import { unescapeHtml } from "@dustinedwards/site-runtime/html";
 import { recordFromData } from "../../app/lib/publications/record.mjs";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
 import { newestFirst } from "../../app/lib/post-order.mjs";
@@ -143,8 +143,8 @@ export function readLatestPaper(dir = PUBLICATIONS_DIR, problems = []) {
   if (!top) return null;
   return {
     slug: top.slug,
-    title: decodeEntities(top.title),
-    journal: top.journal ? decodeEntities(top.journal) : null,
+    title: unescapeHtml(top.title),
+    journal: top.journal ? unescapeHtml(top.journal) : null,
     year: top.year,
   };
 }

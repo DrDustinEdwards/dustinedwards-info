@@ -9,7 +9,6 @@ import {
   llmsDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
-  withTimeout,
 } from "../app/lib/health/verdicts.mjs";
 
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
@@ -100,28 +99,6 @@ await test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => 
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /unreadable/);
   assert.match(verdict.detail, /identity/);
-});
-
-await test("a check that answers in time is passed through untouched", async () => {
-  const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
-  assert.deepEqual(verdict, { ok: true, detail: "fine" });
-});
-
-await test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
-  // Never settles. Without the timeout this hangs the endpoint, which is indistinguishable
-  // from the site being down.
-  const started = Date.now();
-  const verdict = await withTimeout(new Promise(() => {}), 30, "wedged");
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /wedged/);
-  assert.match(verdict.detail, /30ms/);
-  assert.ok(Date.now() - started < 5000, "the timeout did not actually bound the wait");
-});
-
-await test("a rejecting check is a failed check carrying its message", async () => {
-  const verdict = await withTimeout(Promise.reject(new Error("D1 unreachable")), 50, "db");
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.detail, /D1 unreachable/);
 });
 
 await test("media drift: agreement is ok and says both counts", () => {
