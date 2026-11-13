@@ -1,5 +1,5 @@
 import { LAB_BENCH_PATH } from "capsomer/behavior/family-footer";
-import { Outlet, data, useLocation, useRouteLoaderData } from "react-router";
+import { Outlet, useLocation, useRouteLoaderData } from "react-router";
 import { can } from "@dustinedwards/site-runtime/members";
 import { MessageProvider } from "capsomer/react/message";
 import {
@@ -31,13 +31,16 @@ import "capsomer/fonts.css";
 import "~/admin.css";
 import "~/lab.css";
 import { markup } from "capsomer/behavior/trusted-html";
-import { UNCACHED } from "@dustinedwards/site-runtime/edge-cache";
+import { PRIVATE_PAGE_HEADERS } from "@dustinedwards/site-runtime/edge-cache";
 
 export function meta() {
   return [{ title: "Lab bench" }, { name: "robots", content: "noindex" }];
 }
 
 export const handle = { hydrate: true };
+
+// A private page, like every child: no-transform keeps the Web Analytics beacon out (site-runtime PRIVATE_PAGE_HEADERS).
+export const headers = () => PRIVATE_PAGE_HEADERS;
 
 /** The words a person with no access reads. It names nobody, and it is the same for a stranger and a removed member. */
 export function noAccessText(email: string): string {
@@ -106,16 +109,13 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export async function loader({ context }: Route.LoaderArgs) {
   const actor = context.get(labActorContext);
-  return data(
-    {
-      email: actor.email,
-      title: titleLabel(actor.title),
-      manages: can(actor, PERMISSION.manageMembers),
-      reads: can(actor, PERMISSION.read),
-      records: can(actor, PERMISSION.recordRun),
-    },
-    { headers: { "cache-control": UNCACHED } },
-  );
+  return {
+    email: actor.email,
+    title: titleLabel(actor.title),
+    manages: can(actor, PERMISSION.manageMembers),
+    reads: can(actor, PERMISSION.read),
+    records: can(actor, PERMISSION.recordRun),
+  };
 }
 
 const ICONS = {
