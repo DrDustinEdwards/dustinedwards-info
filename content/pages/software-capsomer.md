@@ -17,11 +17,11 @@ Capsomer is an open-source design system for websites and web apps. It is plain 
 
 ## What it gives you
 
-- **Design tokens.** Color, type, spacing, radius, shadow, motion and density as CSS custom properties, also published as JSON. Color comes in ten ready families, each a 12-step OKLCH scale for light and dark, and the palette module builds a matching family from your own brand color.
-- **Plain CSS in cascade layers.** Every rule sits in Capsomer's own layers, so a site's own CSS wins without specificity fights. No Tailwind or other CSS framework.
-- **Only what a page uses.** Each component is its own import: its CSS and, where it needs them, its script and its React component.
-- **Accessibility checked in every state.** Each component's states are scanned with axe against WCAG 2.2 A and AA in light and dark, and the build refuses any color pair below WCAG contrast. The same scan is a helper a site can run on its own pages.
-- **Works under Trusted Types.** Its scripts hand markup to the page only through one Trusted Types policy, so they keep working on a site that enforces it.
+- Design tokens cover color, type, spacing, radius, shadow, motion and density, as CSS custom properties and as JSON. Color comes in ten ready families, each a 12-step OKLCH scale for light and dark, and the palette module builds a matching family from your own brand color.
+- Every rule sits in Capsomer's own cascade layers, so a site's own CSS wins without specificity fights. It uses no Tailwind or other CSS framework.
+- Each component is its own import: its CSS and, where it needs them, its script and its React component, so a page loads only what it uses.
+- Axe scans each component's states against WCAG 2.2 A and AA in light and dark, and the build refuses any color pair below WCAG contrast. A site can run the same scan on its own pages with the testing helper.
+- Its scripts hand markup to the page only through one Trusted Types policy, so they keep working on a site that enforces Trusted Types.
 
 ## How to use it
 
