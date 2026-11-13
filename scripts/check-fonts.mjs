@@ -212,11 +212,7 @@ for (const b of withFile) {
     if (axes.wght) {
       ok(
         `${rel} wght range matches the declaration exactly`,
-        // Capsomer's faces may declare less than their variable file holds (DM Sans declares 400 700 of 100 to 1000):
-        // nothing is synthesized, so a file that covers the declaration is enough there; the site's own must match.
-        b.sheet === SHEETS[0]
-          ? axes.wght.min <= Number(lo) && axes.wght.max >= Number(hi)
-          : axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
+        axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
         `css declares ${lo} ${hi}, the file's wght is ${axes.wght.min} to ${axes.wght.max}. A narrower file means ` +
           `weights the stylesheet asks for are synthesized rather than drawn.`,
       );
