@@ -17,16 +17,9 @@ import {
   type PurgeOutcome,
 } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
-import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import {
-  blobGuard,
-  commitFiles,
-  publicFileEntry,
-  fileHistory,
-  readFile,
-} from "~/lib/source/store.server";
+import { publicFileEntry, fileHistory, readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { commitAndConverge, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -289,24 +282,27 @@ export async function savePublication(
   const cv = await cvCitation(env, slug, compiled);
   if (cv.refusal) throw new PublicationInvalid(slug, [cv.refusal]);
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
-  // After the gate, so a file that fails validation is still refused even when it is unchanged.
-  const written = await commitUnlessUnchanged(env, {
+  const written = await commitAndConverge(env, {
+    actor,
+    file: path,
     existing,
     raw,
+    sourceBlobSha: compiled.sourceBlobSha,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
+    message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}`,
     rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(path, options.expectedBlobSha),
-        message: `${options.isNew ? "Add" : "Update"} publication: ${compiled.record.title}${tag}`,
-        changes: [{ path, content: raw }],
-      }),
+    write: async () => {
+      await writePublicationRow(env, compiled);
+      const purged = await purgePublications(`save_publication ${slug}`);
+      // The CV is joined to this paper at read time, so its page reads the new row already; its search
+      // records and its cache are what a save has to refresh.
+      if (!cv.cited) return purged;
+      await refreshCvSearch(env);
+      return combinePurges(purged, await purgeCv(`save_publication ${slug}`));
+    },
+    slug,
+    mismatch: { subject: `The publication "${slug}"`, target: "its page" },
   });
   if (written.action === "noop") {
     return {
@@ -321,34 +317,7 @@ export async function savePublication(
       note: UNCHANGED_NOTE,
     };
   }
-  const { commitSha } = written;
-  const blobSha = written.blobShas[path];
-  if (blobSha && blobSha !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The publication "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobSha}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
-
-  let purged: PurgeOutcome = false;
-  await convergeWithRetry({
-    write: async () => {
-      await writePublicationRow(env, compiled);
-      purged = await purgePublications(`save_publication ${slug}`);
-      // The CV is joined to this paper at read time, so its page reads the new row already; its search
-      // records and its cache are what a save has to refresh.
-      if (cv.cited) {
-        await refreshCvSearch(env);
-        purged = combinePurges(purged, await purgeCv(`save_publication ${slug}`));
-      }
-    },
-    // Nothing kept in KV for a publication: the thrown error names the commit and the repair (the content
-    // sync), and the next ship's sync converges the row from the repository anyway.
-    recordDivergence: async () => undefined,
-    slug,
-    commitSha,
-  });
+  const { commitSha, purged } = written;
 
   return {
     slug,

@@ -64,8 +64,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
   return {
     kind: "publication",
 
-    async list(query) {
-      const needle = query.q?.toLowerCase();
+    async list() {
       const rows = await listPublicationIdentities(env);
       const summaries: ContentSummary[] = rows.map((row) => {
         const record = JSON.parse(row.record) as Publication;
@@ -81,9 +80,7 @@ export function publicationHandler(env: PublicationEnv): ContentKindHandler {
           updatedAt: row.syncedAt ? row.syncedAt.toISOString() : null,
         };
       });
-      return summaries
-        .filter((s) => !query.status || s.status === query.status)
-        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+      return summaries;
     },
 
     async get(slug) {
