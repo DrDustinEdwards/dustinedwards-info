@@ -1,6 +1,6 @@
 /*
- * The publication index (app/routes/publications.tsx): a paper's cell in Capsomer's catalog, on the site's palette
- * (site-catalog.css). The year headings and the search, sort and filters are the catalog's own.
+ * The publication index (app/routes/publications.tsx): a paper's cell in Capsomer's catalog, in its purple family
+ * and manual look (capsomer/manual.css). The year headings and the search, sort and filters are the catalog's own.
  */
 
 /* Capsomer's table keeps every cell on one line; a paper is a title, authors, links and an abstract, so its cells wrap. */

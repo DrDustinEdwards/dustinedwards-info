@@ -144,3 +144,11 @@
     block-size: 72px;
   }
 }
+
+/* A wide block (a catalog with its facets and table) in the prose column: wide enough, it runs past the column to the
+   page's right gutter; below that it keeps the column, and the block answers to its own width. */
+@media (min-width: 60rem) {
+  .page-wide {
+    inline-size: calc(min(var(--page-max), 100vw) - 2 * var(--page-gutter));
+  }
+}
