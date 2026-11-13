@@ -7,7 +7,7 @@ import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
 import {
   SYSTEMS_PATH,
   explorerLabel,
-  explorerUrl,
+  explorerHref,
   loadSystemModel,
   mapData,
   repoOf,
@@ -76,7 +76,7 @@ export default function SystemRoute({ loaderData }: Route.ComponentProps) {
       </a>
     ) : null,
     s.private ? "private repo" : null,
-    <a key="explorer" href={explorerUrl(s.id)}>
+    <a key="explorer" href={explorerHref(s.id)}>
       {explorerLabel(s.id)}
     </a>,
   ].filter((f) => f !== null);

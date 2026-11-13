@@ -8,189 +8,37 @@
 // link. The file is refused unless every key is one the published shape allows and a private
 // system names no repo, so a mistake upstream stops the build rather than reaching the page.
 import { modelMapData } from "capsomer/behavior/system-map";
-// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime ./zod-jitless).
+// Zod builds its parsers, and probes `new Function`, when a schema is created, so the flag goes first (site-runtime
+// ./zod-jitless), before Capsomer's model schema loads.
 import "@dustinedwards/site-runtime/zod-jitless";
-import { z } from "zod";
+// The model's schema and checks, the explorer's address and the model's reading (its lines, parts and wires) are
+// Capsomer's, the explorer's own.
+import {
+  EXPLORER_ORIGIN,
+  SYSTEM_RINGS,
+  connectionsOf,
+  explorerHref,
+  explorerLabel,
+  outsideOf,
+  parsePublicModel,
+  partsOf,
+  sameModel,
+  wiresOf,
+} from "capsomer/behavior/system-model";
+
+export { explorerHref, explorerLabel, sameModel };
 
 export const SYSTEMS_PATH = "/systems";
 
-const Id = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
-/** @param {number} max */
-const Text = (max) => z.string().min(1).max(max);
-// The enums are capsid's (src/system-model.ts), so a value it publishes is never refused here.
-const FAMILIES = /** @type {const} */ (["system", "writing", "product", "plumbing", "site"]);
-const RINGS = /** @type {const} */ (["core", "shared", "used"]);
-const RELATIONSHIP_KINDS = /** @type {const} */ ([
-  "installs",
-  "publishes-to",
-  "coordinates",
-  "watches",
-  "reads",
-  "writes",
-  "deploys",
-  "serves",
-]);
-const CONTAINER_KINDS = /** @type {const} */ ([
-  "worker",
-  "database",
-  "bucket",
-  "kv",
-  "queue",
-  "cron",
-  "package",
-  "site",
-  "external",
-]);
-
-const OpenSystem = z.strictObject({
-  id: Id,
-  name: Text(40),
-  short: Text(12),
-  family: z.enum(FAMILIES),
-  ring: z.enum(RINGS),
-  private: z.literal(false),
-  description: Text(280).optional(),
-  domain: Text(253).optional(),
-  repos: z.array(z.url().max(512)).optional(),
-});
-
-// A private system is everything a public one is but its repo link (capsid src/system-model.ts).
-const PrivateSystem = OpenSystem.omit({ repos: true }).extend({ private: z.literal(true) });
-
-const PublicModel = z.strictObject({
-  version: z.literal(1),
-  as_of: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  systems: z.array(z.union([PrivateSystem, OpenSystem])),
-  containers: z.array(
-    z.strictObject({
-      id: Id,
-      system: Id,
-      name: Text(40),
-      kind: z.enum(CONTAINER_KINDS),
-      technology: Text(60),
-      description: Text(280).optional(),
-    }),
-  ),
-  relationships: z.array(
-    z.strictObject({
-      id: Text(200),
-      from: Id,
-      to: Id,
-      kind: z.enum(RELATIONSHIP_KINDS),
-      title: Text(280).optional(),
-    }),
-  ),
-  // Capsid's flows (design section 4): walks the explorer animates. Optional, as Capsid's own
-  // schema has it, so a model written before flows existed still parses. Not drawn here.
-  flows: z
-    .array(
-      z.strictObject({
-        id: Id,
-        name: Text(60),
-        description: Text(280).optional(),
-        steps: z
-          .array(
-            z.strictObject({
-              relationship: Text(200),
-              toward: Id,
-              text: Text(280),
-              lights: z.array(Id).max(8).optional(),
-            }),
-          )
-          .min(2)
-          .max(20),
-      }),
-    )
-    .optional(),
-  counts: z.strictObject({
-    systems: z.number().int(),
-    public: z.number().int(),
-    private: z.number().int(),
-    containers: z.number().int(),
-    relationships: z.number().int(),
-  }),
-});
-
-/** @typedef {z.infer<typeof PublicModel>} SystemModel */
+/** @typedef {import("capsomer/behavior/system-model").PublicModel} SystemModel */
 /** @typedef {SystemModel["systems"][number]} ModelSystem */
-
-/**
- * The model, or the reasons it is refused. Beyond the shape: ids are unique, every
- * relationship and container names something that exists, and every flow rides lines the
- * model has.
- * @param {unknown} raw
- * @returns {{ ok: true, model: SystemModel } | { ok: false, problems: string[] }}
- */
-export function parseSystemModel(raw) {
-  const parsed = PublicModel.safeParse(raw);
-  if (!parsed.success)
-    return {
-      ok: false,
-      problems: parsed.error.issues.map((i) => `${i.path.join(".") || "(model)"}: ${i.message}`),
-    };
-  const model = parsed.data;
-  const problems = [];
-  const systems = new Map(model.systems.map((s) => [s.id, s]));
-  const containers = new Map(model.containers.map((c) => [c.id, c]));
-  if (systems.size !== model.systems.length) problems.push("systems: an id is used twice");
-  if (containers.size !== model.containers.length) problems.push("containers: an id is used twice");
-  for (const c of model.containers) {
-    if (!systems.has(c.system)) problems.push(`containers.${c.id}: no system ${c.system}`);
-  }
-  for (const r of model.relationships) {
-    for (const end of [r.from, r.to]) {
-      if (!systems.has(end) && !containers.has(end))
-        problems.push(`relationships.${r.id}: no element ${end}`);
-    }
-  }
-  const edges = new Map(model.relationships.map((r) => [r.id, r]));
-  const flowIds = new Set();
-  for (const f of model.flows ?? []) {
-    if (flowIds.has(f.id)) problems.push(`flows.${f.id}: the id is used twice`);
-    flowIds.add(f.id);
-    f.steps.forEach((step, i) => {
-      const where = `flows.${f.id}.steps.${i + 1}`;
-      const edge = edges.get(step.relationship);
-      if (!edge) {
-        problems.push(
-          `${where}: rides ${step.relationship}, which is not a relationship in the model`,
-        );
-        return;
-      }
-      if (step.toward !== edge.from && step.toward !== edge.to)
-        problems.push(`${where}: goes toward ${step.toward}, which is not an end of ${edge.id}`);
-      // A light is a part the step touches, in a system one of its ends belongs to (Capsid's rule).
-      const within = new Set([edge.from, edge.to].map((end) => containers.get(end)?.system ?? end));
-      for (const l of step.lights ?? []) {
-        const part = containers.get(l);
-        if (!part) problems.push(`${where}: lights ${l}, which is not a container`);
-        else if (!within.has(part.system))
-          problems.push(
-            `${where}: lights ${l}, a part of ${part.system}, which the step does not run in`,
-          );
-      }
-    });
-  }
-  const counts = model.counts;
-  const privates = model.systems.filter((s) => s.private).length;
-  if (
-    counts.systems !== model.systems.length ||
-    counts.private !== privates ||
-    counts.public !== model.systems.length - privates ||
-    counts.containers !== model.containers.length ||
-    counts.relationships !== model.relationships.length
-  ) {
-    problems.push("counts: do not match the systems");
-  }
-  return problems.length ? { ok: false, problems } : { ok: true, model };
-}
 
 /**
  * The checked model, or a thrown error naming every problem: a bad file stops the build.
  * @param {unknown} raw
  */
 export function loadSystemModel(raw) {
-  const result = parseSystemModel(raw);
+  const result = parsePublicModel(raw);
   if (!result.ok)
     throw new Error(`data/system-model.json is refused:\n  ${result.problems.join("\n  ")}`);
   return result.model;
@@ -200,95 +48,14 @@ export function loadSystemModel(raw) {
 export const systemPath = (id) => `${SYSTEMS_PATH}/${encodeURIComponent(id)}`;
 
 /**
- * The Capsid explorer, built from the same public model, so every system here has a page
- * there under the same id, private ones included (design section 4, "Deep links both ways").
- */
-export const EXPLORER_ORIGIN = "https://capsid.dustinedwards.info";
-/** @param {string} id */
-export const explorerUrl = (id) => `${EXPLORER_ORIGIN}/s/${id}/`;
-/** How a page shows that address, as it shows the others: host and path. @param {string} id */
-export const explorerLabel = (id) => `${new URL(EXPLORER_ORIGIN).host}/s/${id}`;
-
-/**
  * What Capsomer's map shows, the same as the explorer's (Capsomer's modelMapData): every system, linking to its own
  * page here, every line and the parts.
  * @param {SystemModel} model
  */
 export const mapData = (model) => modelMapData(model, systemPath);
 
-// How a line reads from each end.
-/** @type {Record<SystemModel["relationships"][number]["kind"], [string, string]>} */
-const VERB = {
-  installs: ["installs", "is installed by"],
-  "publishes-to": ["publishes to", "is published to by"],
-  coordinates: ["coordinates", "is coordinated by"],
-  watches: ["watches", "is watched by"],
-  reads: ["reads", "is read by"],
-  writes: ["writes to", "is written to by"],
-  deploys: ["deploys", "is deployed by"],
-  serves: ["serves", "is served by"],
-};
-
-/**
- * One system's connections to other systems, in the model's order: the verb as read from this
- * end, and the system at the other.
- * @param {SystemModel} model
- * @param {string} id
- * @returns {Array<{ verb: string, other: string, name: string }>}
- */
-export function connectionsOf(model, id) {
-  const byId = new Map(model.systems.map((s) => [s.id, s]));
-  return model.relationships
-    .filter(
-      (r) =>
-        (r.from === id || r.to === id) && byId.has(r.from) && byId.has(r.to) && r.from !== r.to,
-    )
-    .map((r) => {
-      const out = r.from === id;
-      const other = /** @type {ModelSystem} */ (byId.get(out ? r.to : r.from));
-      const verb = VERB[r.kind][out ? 0 : 1];
-      return {
-        verb: `${verb.charAt(0).toUpperCase()}${verb.slice(1)}`,
-        other: other.id,
-        name: other.name,
-      };
-    });
-}
-
 /** @type {Record<ModelSystem["ring"], string>} */
 const RING_HEADINGS = { core: "Runs everything", shared: "Shared parts", used: "What people use" };
-
-/**
- * A system's parts, in the model's order.
- * @param {SystemModel} model
- * @param {string} id
- */
-export const partsOf = (model, id) =>
-  model.containers.filter((c) => c.system === id && c.kind !== "external");
-/**
- * What a system works with outside its boundary: its `external` containers, such as Capsid's
- * Agents and GitHub (Dustin, 2026-10-11), never counted among its own parts.
- * @param {SystemModel} model
- * @param {string} id
- */
-export const outsideOf = (model, id) =>
-  model.containers.filter((c) => c.system === id && c.kind === "external");
-
-/**
- * The lines touching a system's parts, to each other or to what is outside it, as sentences
- * ("MCP Worker writes to capsid"), in the model's order.
- * @param {SystemModel} model
- * @param {string} id
- */
-export function wiresOf(model, id) {
-  // A line to what is outside the system counts too (the Worker serves the Agents); a line
-  // between two outside things does not, since it touches none of the system's parts.
-  const own = new Set(partsOf(model, id).map((c) => c.id));
-  const parts = new Map(model.containers.filter((c) => c.system === id).map((c) => [c.id, c]));
-  return model.relationships
-    .filter((r) => parts.has(r.from) && parts.has(r.to) && (own.has(r.from) || own.has(r.to)))
-    .map((r) => `${parts.get(r.from)?.name} ${VERB[r.kind][0]} ${parts.get(r.to)?.name}`);
-}
 
 /**
  * One container as the twin and the page write it: name, what it runs on, what it does.
@@ -323,7 +90,7 @@ export function systemsMarkdown(model, origin) {
     `The systems Dustin Edwards runs. Public model of ${model.as_of}.`,
     "",
   ];
-  for (const ring of RINGS) {
+  for (const ring of SYSTEM_RINGS) {
     const inRing = model.systems.filter((s) => s.ring === ring);
     if (inRing.length === 0) continue;
     lines.push(`## ${RING_HEADINGS[ring]}`, "");
@@ -348,7 +115,7 @@ export function systemSectionMarkdown(model, id, origin) {
   if (s.domain) lines.push(`- Address: https://${s.domain}`);
   const repo = repoOf(s);
   if (repo) lines.push(`- Source: ${repo}`);
-  lines.push(`- In the Capsid explorer: ${explorerUrl(s.id)}`);
+  lines.push(`- In the Capsid explorer: ${explorerHref(s.id)}`);
   const parts = partsOf(model, id);
   const outside = outsideOf(model, id);
   if (parts.length) lines.push("", "#### Inside", "", ...parts.map((c) => `- ${containerLine(c)}`));
@@ -362,16 +129,4 @@ export function systemSectionMarkdown(model, id, origin) {
   for (const c of links) lines.push(`- ${c.verb} [${c.name}](${origin}${systemPath(c.other)})`);
   lines.push("");
   return lines.join("\n");
-}
-
-/**
- * Whether two models say the same thing. The date is left out: Capsid stamps its build every
- * day, and a pull request a day that changes only the date would teach a reviewer to skip them.
- * @param {SystemModel} a
- * @param {SystemModel} b
- */
-export function sameModel(a, b) {
-  const { as_of: _a, ...restA } = a;
-  const { as_of: _b, ...restB } = b;
-  return JSON.stringify(restA) === JSON.stringify(restB);
 }

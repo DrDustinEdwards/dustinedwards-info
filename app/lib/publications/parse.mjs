@@ -2,7 +2,7 @@
 // section it may carry, the extracted full text. Nothing here judges: validate.mjs does, so the check and
 // the save tool read one parse.
 
-import matter from "gray-matter";
+import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { yamlPlain } from "../yaml-plain.mjs";
 
@@ -33,9 +33,7 @@ export function parsePublication({ file, raw }) {
   let data = {};
   let content = "";
   try {
-    // An options object, even an empty one: gray-matter caches by input when it is omitted, and a
-    // cached parse is one object shared by every caller.
-    const parsed = matter(raw, {});
+    const parsed = matter(raw);
     data = /** @type {Record<string, unknown>} */ (yamlPlain(parsed.data));
     content = parsed.content;
   } catch (error) {
