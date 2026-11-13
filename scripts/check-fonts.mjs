@@ -165,8 +165,6 @@ const NAMESPACED = new Map([
   ["Source Serif 4 Web", "Source Serif 4"],
   // The wght-only cut is Martian Mono's default width, which its name table calls SemiExpanded.
   ["Martian Mono", "Martian Mono SemiExpanded"],
-  // Capsomer 0.123.0's DM Sans is the optical-size cut, whose name table calls it "DM Sans 9pt".
-  ["DM Sans", "DM Sans 9pt"],
 ]);
 
 for (const b of withFile) {
@@ -211,8 +209,8 @@ for (const b of withFile) {
     );
     if (axes.wght) {
       ok(
-        `${rel} wght range covers the declaration`,
-        axes.wght.min <= Number(lo) && axes.wght.max >= Number(hi),
+        `${rel} wght range matches the declaration exactly`,
+        axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
         `css declares ${lo} ${hi}, the file's wght is ${axes.wght.min} to ${axes.wght.max}. A narrower file means ` +
           `weights the stylesheet asks for are synthesized rather than drawn.`,
       );
