@@ -24,12 +24,12 @@
     ]
   },
   "baseline": {
-    "measured_at": "0978b29",
+    "measured_at": "cc9953a",
     "knip": {},
     "jscpd": {
-      "clones": 55,
-      "lines": 787,
-      "percentage": 0.56,
+      "clones": 29,
+      "lines": 393,
+      "percentage": 0.28,
       "unread": 0
     },
     "shared copies": {
@@ -41,9 +41,9 @@
       "cases": 1621
     },
     "comments": {
-      "lines": 17694,
-      "code": 105126,
-      "percentage": 14.41
+      "lines": 17727,
+      "code": 104818,
+      "percentage": 14.47
     }
   }
 }
