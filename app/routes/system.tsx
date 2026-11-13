@@ -1,18 +1,11 @@
 import { systemMapHtml } from "capsomer/behavior/system-map";
+import { explorerHref, explorerLabel } from "capsomer/behavior/system-model";
 import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { pageMeta, publicHtmlHeaders, type Trail } from "~/lib/seo";
-import {
-  SYSTEMS_PATH,
-  explorerLabel,
-  explorerHref,
-  loadSystemModel,
-  mapData,
-  repoOf,
-  systemPath,
-} from "~/lib/systems.mjs";
+import { SYSTEMS_PATH, loadSystemModel, mapData, repoOf, systemPath } from "~/lib/systems.mjs";
 
 import rawModel from "../../data/system-model.json";
 import type { Route } from "./+types/system";

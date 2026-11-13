@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
+import { catalogMarkdown } from "capsomer/behavior/catalog";
 import { matter } from "@drdustinedwards/site-helpers/matter";
 
 import { findWideDashes } from "../app/lib/content/pipeline.mjs";
@@ -13,7 +14,6 @@ import {
   strainMarkdown,
   strainRow,
   strainRows,
-  strainsMarkdown,
 } from "../app/kb/registry/catalog.mjs";
 import { compileRegistryItem, registrySetErrors } from "../app/kb/registry/compile.mjs";
 import { KINDS } from "../app/kb/registry/kinds.mjs";
@@ -241,7 +241,10 @@ await test("the twin states what the page states, and a biosafety level nobody h
   ])
     assert.ok(md.includes(line), line);
   assert.ok(
-    strainsMarkdown([row], "https://example.com").includes(
+    catalogMarkdown(STRAINS, [row], "", {
+      origin: "https://example.com",
+      href: (s) => s.path,
+    }).includes(
       "| [Mycobacterium smegmatis mc²155](https://example.com/research/lab/strains/smegmatis) |",
     ),
   );

@@ -146,7 +146,7 @@ export default function start(): void {
   /* Enarratio's layer: bar links become keyboard filter buttons with details on hover and focus. */
   /*
    * A filter that leaves nothing to chart is answered with the frame's no-data state in place of the figure
-   * (app/lib/cv/charts.ts), so the chart is absent then and comes back when a filter selects something.
+   * (app/lib/cv/render-charts.ts), so the chart is absent then and comes back when a filter selects something.
    */
   const EMPTY = '[data-state="nodata"]';
   let timeline: EnhancedChart | undefined = enhance().find(
