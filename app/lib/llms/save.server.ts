@@ -17,9 +17,14 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { draftContentPagePaths, publishedContentPagePaths } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
+import { readFile } from "~/lib/source/store.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  actorTag,
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 
@@ -116,24 +121,15 @@ export async function saveLlms(
     isDraft: () => false,
   });
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
     raw,
     rowIsCurrent: () => rowIsCurrent(env, raw),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(LLMS_PATH, options.expectedBlobSha),
-        message: `Update llms.txt${tag}`,
-        changes: [{ path: LLMS_PATH, content: raw }],
-      }),
+    path: LLMS_PATH,
+    message: `Update llms.txt${actorTag(actor)}`,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
   });
   if (written.action === "noop") {
     return {
@@ -144,18 +140,8 @@ export async function saveLlms(
       purged: null as PurgeOutcome,
     };
   }
-  const { commitSha, blobShas } = written;
-  if (
-    written.action === "commit" &&
-    blobShas[LLMS_PATH] &&
-    blobShas[LLMS_PATH] !== compiled.sourceBlobSha
-  ) {
-    throw new Error(
-      `${LLMS_PATH} WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[LLMS_PATH]}) are not ` +
-        `the bytes judged (${compiled.sourceBlobSha}), so the row was not updated. Run sync_llms to rebuild it ` +
-        "from the repository.",
-    );
-  }
+  assertStoredBytes(written, LLMS_PATH, compiled.sourceBlobSha, LLMS_PATH, "sync_llms");
+  const { commitSha } = written;
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

@@ -19,8 +19,13 @@ import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
 import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, readFile } from "~/lib/source/store.server";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import { readFile } from "~/lib/source/store.server";
+import {
+  actorTag,
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -176,24 +181,15 @@ export async function saveCvFile(
   if (!compiled.ok) throw new CvInvalid(slug, compiled.errors);
   decide(actor);
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
     raw,
     rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(path, options.expectedBlobSha),
-        message: `Update CV: ${slug}${tag}`,
-        changes: [{ path, content: raw }],
-      }),
+    path: path,
+    message: `Update CV: ${slug}${actorTag(actor)}`,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
   });
   if (written.action === "noop") {
     return {
@@ -206,14 +202,8 @@ export async function saveCvFile(
       pdf: "not-needed" as CvPdfReport,
     };
   }
-  const { commitSha, blobShas } = written;
-  if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The CV file "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[path]}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its row was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(written, path, compiled.sourceBlobSha, `The CV file "${slug}"`);
+  const { commitSha } = written;
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({

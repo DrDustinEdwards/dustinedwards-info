@@ -22,7 +22,7 @@ import {
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
-import { commitUnlessUnchanged } from "./write-path.server";
+import { actorTag, commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
 import { errorMessage } from "@dustinedwards/site-runtime/log";
 import {
@@ -349,13 +349,10 @@ export async function savePost(
     existing,
     raw,
     rowIsCurrent: () => postRowIsCurrent(env, options.slug, gated.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
-        message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
-        changes: [{ path: postPath(options.slug), content: raw }],
-      }),
+    path: postPath(options.slug),
+    message: `${options.isNew ? "Add" : "Update"} post: ${gated.title}${actorTag(actor)}`,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
   });
   const unchanged = written.action !== "commit";
   if (written.action === "noop") {
@@ -422,14 +419,6 @@ export async function savePost(
   };
 }
 
-function commitMessage(actor: Actor, verb: string, title: string) {
-  const base = `${verb} post: ${title}`;
-  if (actor.kind === "operator") return `${base} [operator:${actor.id}]`;
-  // The change id joins this commit to Carrel's authorship record, and records who published.
-  if (actor.kind === "carrel") return `${base} [carrel:${actor.changeId}]`;
-  return base;
-}
-
 async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
   if (!askAvailable(env)) return null;
   try {
@@ -475,7 +464,7 @@ export async function deletePost(
     expectedHeadSha: options.expectedHeadSha,
     // Carrel names a post by its blob sha: a file changed since it was loaded is refused at the head.
     expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
-    message: commitMessage(actor, "Remove", options.slug),
+    message: `Remove post: ${options.slug}${actorTag(actor)}`,
     changes: [{ path: postPath(options.slug), content: null }],
   });
 

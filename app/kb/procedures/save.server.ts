@@ -8,10 +8,15 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { blobGuard, commitFiles, fileHistory, readFile } from "~/lib/source/store.server";
+import { fileHistory, readFile } from "~/lib/source/store.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { readEquipment, readPrimers, readReagents, readStrains } from "~/kb/registry/host.server";
-import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
+import {
+  actorTag,
+  assertStoredBytes,
+  commitUnlessUnchanged,
+  UNCHANGED_NOTE,
+} from "~/lib/editor/write-path.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
@@ -249,24 +254,15 @@ export async function saveProcedure(
     await fileHistory(env, path),
   );
 
-  const tag =
-    actor.kind === "operator"
-      ? ` [operator:${actor.id}]`
-      : actor.kind === "carrel"
-        ? ` [carrel:${actor.changeId}]`
-        : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
   const written = await commitUnlessUnchanged(env, {
     existing,
     raw,
     rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
-    commit: () =>
-      commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs: blobGuard(path, options.expectedBlobSha),
-        message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
-        changes: [{ path, content: raw }],
-      }),
+    path: path,
+    message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${actorTag(actor)}`,
+    expectedHeadSha: options.expectedHeadSha,
+    expectedBlobSha: options.expectedBlobSha,
   });
   const unchanged = written.action !== "commit";
   if (written.action === "noop") {
@@ -283,14 +279,8 @@ export async function saveProcedure(
       purged: null as PurgeOutcome,
     };
   }
-  const { commitSha, blobShas } = written;
-  if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
-    throw new Error(
-      `The procedure "${slug}" WAS saved as revision ${commitSha}, but the stored bytes (${blobShas[path]}) are not ` +
-        `the bytes compiled (${compiled.sourceBlobSha}), so its page was not updated. Run the content sync to ` +
-        `rebuild the row from the stored source.`,
-    );
-  }
+  assertStoredBytes(written, path, compiled.sourceBlobSha, `The procedure "${slug}"`);
+  const { commitSha } = written;
 
   let purged: PurgeOutcome = false;
   await convergeWithRetry({
