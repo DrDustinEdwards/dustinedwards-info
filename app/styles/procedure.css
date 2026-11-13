@@ -22,9 +22,6 @@
 
 .procedure-facts dt {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.4 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .procedure-facts dd {
@@ -309,9 +306,7 @@
 }
 .procedure-workflow-links dt {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 2 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 2;
 }
 .procedure-workflow-links dd {
   display: flex;

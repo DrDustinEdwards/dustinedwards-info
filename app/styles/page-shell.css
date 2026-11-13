@@ -42,9 +42,7 @@
 .page-contents-label {
   margin: 0 0 var(--space-3);
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.6 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.6;
 }
 
 /* The public plane's link rules are unlayered and the index's layered, so its ink is restated here. */

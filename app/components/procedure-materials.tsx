@@ -16,6 +16,7 @@ import {
 } from "~/kb/procedures/recipe-views.mjs";
 import { formatNumber, parseNumber } from "~/kb/procedures/marks.mjs";
 
+import "capsomer/eyebrow.css";
 import "capsomer/field.css";
 import "capsomer/select.css";
 import "capsomer/scale-control.css";
@@ -152,7 +153,9 @@ export function ProcedureFacts({
     <dl className="procedure-facts">
       {facts.map(([label, value]) => (
         <div key={label}>
-          <dt>{label}</dt>
+          <dt className="cap-eyebrow" data-variant="mono">
+            {label}
+          </dt>
           <dd>{value}</dd>
         </div>
       ))}

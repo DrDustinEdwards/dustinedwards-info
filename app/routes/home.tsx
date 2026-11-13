@@ -33,6 +33,7 @@ import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
+import "capsomer/eyebrow.css";
 import "~/styles/home.css";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
@@ -196,7 +197,9 @@ function Row({
 }) {
   return (
     <li className="home-row">
-      <span className="home-row-date">{rail}</span>
+      <span className="cap-eyebrow home-row-date" data-variant="mono">
+        {rail}
+      </span>
       <span className="home-row-body">
         <span className="home-row-title">
           <Link to={to}>{title}</Link>
@@ -295,7 +298,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <span className="home-refs-body">
                   <Link to={paper.href}>{paper.title}</Link>
                   {paper.journal ? (
-                    <span className="home-refs-journal">{paper.journal}</span>
+                    <span className="cap-eyebrow home-refs-journal" data-variant="mono">
+                      {paper.journal}
+                    </span>
                   ) : null}
                 </span>
               </li>
@@ -359,7 +364,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
                 <li key={post.slug} className="home-row h-entry">
-                  <span className="home-row-date">
+                  <span className="cap-eyebrow home-row-date" data-variant="mono">
                     {post.publishAt ? (
                       <time
                         className="dt-published"

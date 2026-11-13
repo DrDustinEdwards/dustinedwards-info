@@ -96,9 +96,7 @@
 
 .home-row-date {
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.7 var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  line-height: 1.7;
 }
 
 .home-row-body {
@@ -171,9 +169,8 @@
   display: block;
   margin-block-start: 0.25rem;
   color: var(--text-secondary);
-  font: 500 0.6875rem / 1.5 var(--font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  --cap-eyebrow-tracking: 0.06em;
+  line-height: 1.5;
 }
 
 /* The checklist's step names restate their ink over the public link rules. */
