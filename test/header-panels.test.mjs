@@ -18,7 +18,6 @@ const { render } = await bundleRenderer(`
   }
 `);
 
-const SECTIONS = ["research", "teaching", "software", "writing", "about"];
 const html = render("/");
 
 /** The markup of one panel: Capsomer names its id after the section's, and the panel ends at its list item. */
