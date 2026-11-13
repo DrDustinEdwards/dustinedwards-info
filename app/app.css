@@ -239,8 +239,6 @@
   /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
-  /* The mono labels (capsomer/eyebrow.css) keep their 0.08em tracking, not the eyebrow's 0.06em. */
-  --cap-eyebrow-tracking: 0.08em;
 }
 
 :root {
