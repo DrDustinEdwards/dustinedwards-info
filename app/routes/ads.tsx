@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { ButtonLink } from "capsomer/react/link";
 
 import { PageShell } from "~/components/page-shell";
 import { UtilityAd } from "~/components/utility-ad";
@@ -39,15 +40,15 @@ export default function AdGallery({ loaderData }: Route.ComponentProps) {
         </p>
       </header>
       <nav className="ad-gallery-nav" aria-label="Ads">
-        <Link className="cap-btn" to={`/ads/${previous.id}`} rel="prev">
+        <ButtonLink to={`/ads/${previous.id}`} rel="prev">
           Previous
-        </Link>
-        <Link className="cap-btn" to="/ads/random" reloadDocument>
+        </ButtonLink>
+        <ButtonLink to="/ads/random" reloadDocument>
           Random
-        </Link>
-        <Link className="cap-btn" to={`/ads/${next.id}`} rel="next">
+        </ButtonLink>
+        <ButtonLink to={`/ads/${next.id}`} rel="next">
           Next
-        </Link>
+        </ButtonLink>
       </nav>
       <ul className="ad-gallery-list">
         {ADS.map((entry) => (
