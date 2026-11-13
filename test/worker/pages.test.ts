@@ -11,7 +11,7 @@ import foxhound from "../../content/pages/software-foxhound.md?raw";
 
 import { versionCases } from "./carrel-version-cases";
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { routeContext, carrelRequest } from "./route-helpers";
+import { routeContext, carrelSend, carrelGet } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -27,26 +27,6 @@ const SLUG = "software-foxhound";
 const ID = `page.${SLUG}`;
 const FILE = pageSourcePath(SLUG);
 const ADDED = "This sentence was added through Carrel and is live without a deploy.";
-
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const get = (url: string) =>
-  carrelRequest(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
-function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
-  return carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
-}
 
 /** The loader data for the page, or the 404 it throws. */
 async function pageData(path = PATH) {
@@ -99,7 +79,7 @@ describe("an edit through the adapter is live at the next request", () => {
       expect(await (await twin()).text()).not.toContain(ADDED);
 
       const edited = `${foxhound.trimEnd()}\n\n${ADDED}\n`;
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-page",
@@ -131,7 +111,7 @@ describe("an edit through the adapter is live at the next request", () => {
       expect(hits?.n).toBeGreaterThan(0);
 
       // And the file read back through Carrel is the edit, at the head.
-      const read = (await (await get(`${PREFIX}/content/${ID}`)).json()) as {
+      const read = (await (await carrelGet(`${PREFIX}/content/${ID}`)).json()) as {
         source: string;
         kind: string;
         version: string;
@@ -144,7 +124,7 @@ describe("an edit through the adapter is live at the next request", () => {
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
     const before = (await commits()).length;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: foxhound,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
@@ -160,7 +140,7 @@ describe("a save is held to what CI holds", () => {
     const bad = foxhound
       .replace(/^title: .*$/m, "title: ")
       .concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-bad",
@@ -173,7 +153,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a page no registered path names, and says a save cannot create one", async () => {
-    const response = await send("PUT", `${PREFIX}/content/page.software-brand-new/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/page.software-brand-new/draft`, {
       source: foxhound,
       expectedVersion: null,
       changeId: "chg-new",
@@ -186,7 +166,7 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a stale version, names the current one, and commits nothing", async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: `${foxhound.trimEnd()}\n\nAnother edit.\n`,
       expectedVersion: "b".repeat(40),
       changeId: "chg-stale",
@@ -207,7 +187,7 @@ describe("a draft is not public", () => {
     async () => {
       expect(await sitemapPaths()).toContain(PATH);
 
-      const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+      const down = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
         expectedVersion: await versionOf(FILE),
         changeId: "chg-down",
       });
@@ -226,7 +206,7 @@ describe("a draft is not public", () => {
         .first<{ n: number }>();
       expect(hits?.n).toBe(0);
 
-      const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
+      const up = await carrelSend("POST", `${PREFIX}/content/${ID}/publish`, {
         expectedVersion: downBody.version,
         changeId: "chg-up",
       });
@@ -260,7 +240,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
       await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
       await expect(pageData()).rejects.toHaveProperty("status", 404);
 
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: foxhound,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-repair",
@@ -274,7 +254,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
 
 describe("Carrel lists pages beside posts", () => {
   it("shows each page as kind page under its page.<slug> id", async () => {
-    const res = (await (await get(`${PREFIX}/content?limit=100&q=foxhound`)).json()) as {
+    const res = (await (await carrelGet(`${PREFIX}/content?limit=100&q=foxhound`)).json()) as {
       items: Array<{ id: string; kind: string; path: string | null; status: string }>;
     };
     expect(res.items.find((i) => i.id === ID)).toMatchObject({
@@ -290,7 +270,7 @@ versionCases({
   id: ID,
   file: FILE,
   edit: () => `${foxhound.trimEnd()}\n\n${ADDED}\n`,
-  get,
-  send,
+  get: carrelGet,
+  send: carrelSend,
   timeout: 240000,
 });

@@ -8,7 +8,7 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 import aboutFile from "../../content/pages/about.md?raw";
 
 import { source, stubSources, versionOf, writes, type SourceStub } from "./source-stub";
-import { renderRoute, routeContext, carrelRequest } from "./route-helpers";
+import { renderRoute, routeContext, carrelSend } from "./route-helpers";
 import { seedPages } from "./seed";
 import { testEnv } from "./test-env";
 
@@ -23,23 +23,6 @@ const SLUG = "about";
 const ID = `page.${SLUG}`;
 const FILE = pageSourcePath(SLUG);
 const ADDED = "This sentence was added through Carrel and is live without a deploy.";
-
-const headersFor = (key: string) => ({
-  authorization: `Bearer ${key}`,
-  "content-type": "application/json",
-  "cf-connecting-ip": "203.0.113.9",
-});
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
-const send = (method: "PUT" | "POST", url: string, body: unknown) =>
-  carrelRequest(
-    argsFor(
-      new Request(url, {
-        method,
-        headers: headersFor(testEnv.CARREL_SITE_KEY),
-        body: JSON.stringify(body),
-      }),
-    ),
-  );
 
 /** The loader data for /about, or the 404 it throws. */
 const aboutData = () =>
@@ -86,7 +69,7 @@ describe("an About edit through the adapter is live at the next request", () => 
       expect(before).toContain('class="about-photo"');
 
       const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-about",
@@ -124,7 +107,7 @@ describe("an About edit through the adapter is live at the next request", () => 
   );
 
   it("an unchanged save commits nothing", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: aboutFile,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-same",
@@ -137,7 +120,7 @@ describe("an About edit through the adapter is live at the next request", () => 
 describe("a save is held to what CI holds", () => {
   it("REFUSES an About with no prose (the render floor check:content held), commits nothing and keeps the page", async () => {
     const blank = `${aboutFile.split("\n---\n")[0]}\n---\n\nToo short.\n`;
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: blank,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-blank",
@@ -150,7 +133,7 @@ describe("a save is held to what CI holds", () => {
 
   it("REFUSES a missing seo_title and a link the URL allowlist refuses", async () => {
     const noSeo = aboutFile.replace(/^seo_title: .*$/m, "");
-    const first = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const first = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: noSeo,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-seo",
@@ -159,7 +142,7 @@ describe("a save is held to what CI holds", () => {
     expect(((await first.json()) as { message: string }).message).toMatch(/seo_title is required/);
 
     const bad = `${aboutFile.trimEnd()}\n\n[x](javascript:alert(1))\n`;
-    const second = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+    const second = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: bad,
       expectedVersion: await versionOf(FILE),
       changeId: "chg-link",
@@ -179,7 +162,7 @@ describe("About has a route of its own", () => {
       expect(paths.indexOf("/about")).toBe(1);
 
       const edited = `${aboutFile.trimEnd()}\n\n${ADDED}\n`;
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: edited,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-search",
@@ -196,7 +179,7 @@ describe("About has a route of its own", () => {
     "unpublish takes the page and its sitemap entry down, and publish restores them",
     { timeout: 180_000 },
     async () => {
-      const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, {
+      const down = await carrelSend("POST", `${PREFIX}/content/${ID}/unpublish`, {
         expectedVersion: await versionOf(FILE),
         changeId: "chg-down",
       });
@@ -207,7 +190,7 @@ describe("About has a route of its own", () => {
       await expect(aboutData()).rejects.toHaveProperty("status", 404);
       expect(await sitemapPaths()).not.toContain("/about");
 
-      const up = await send("POST", `${PREFIX}/content/${ID}/publish`, {
+      const up = await carrelSend("POST", `${PREFIX}/content/${ID}/publish`, {
         expectedVersion: downBody.version,
         changeId: "chg-up",
       });
@@ -226,7 +209,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
       await testEnv.DB.prepare("DELETE FROM pages WHERE slug = ?1").bind(SLUG).run();
       await expect(aboutData()).rejects.toHaveProperty("status", 404);
 
-      const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
+      const response = await carrelSend("PUT", `${PREFIX}/content/${ID}/draft`, {
         source: aboutFile,
         expectedVersion: await versionOf(FILE),
         changeId: "chg-repair",
